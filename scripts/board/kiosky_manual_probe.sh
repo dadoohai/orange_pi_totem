@@ -10,6 +10,7 @@ APP_ENTRY="$APP_DIR/kiosk.py"
 CONFIG_PATH="/data/config/config.json"
 RUNTIME_DIR="/tmp/kiosky"
 STATUS_FILE="/tmp/kiosky-status.json"
+MPV_LOG_FILE="/tmp/kiosky/mpv.log"
 BASE_DIR="${TOTEM_DIAG_BASE:-/root/totem-diag}"
 TIMESTAMP="${TOTEM_DIAG_TIMESTAMP:-$(date +%Y%m%d-%H%M%S%z)}"
 RUN_NAME="kiosky-manual-$TIMESTAMP"
@@ -155,6 +156,29 @@ copy_status_file() {
   fi
 }
 
+copy_mpv_log() {
+  local phase="$1"
+  local dest_name="$2"
+  local dest="$OUT_DIR/$dest_name"
+  local size=0
+
+  if [ -f "$MPV_LOG_FILE" ]; then
+    cp "$MPV_LOG_FILE" "$dest"
+    chmod 0600 "$dest"
+    size=$(wc -c <"$MPV_LOG_FILE" 2>/dev/null || printf '0')
+    append_summary "$phase-mpv-log-copy" "0" "$MPV_LOG_FILE copied to artifact without printing content; bytes=$size"
+  else
+    append_summary "$phase-mpv-log-copy" "missing" "$MPV_LOG_FILE not present"
+  fi
+}
+
+prepare_mpv_log_for_run() {
+  : >"$MPV_LOG_FILE"
+  chown "$APP_USER:$APP_GROUP" "$MPV_LOG_FILE" 2>/dev/null || true
+  chmod 0600 "$MPV_LOG_FILE" 2>/dev/null || true
+  append_summary "pre-mpv-log-truncate" "0" "$MPV_LOG_FILE truncated for current run"
+}
+
 finish_archive() {
   if command -v tar >/dev/null 2>&1; then
     tar -C "$BASE_DIR" -czf "$ARCHIVE" "$RUN_NAME"
@@ -183,6 +207,7 @@ finish_archive() {
   echo "config_path=$CONFIG_PATH"
   echo "runtime_dir=$RUNTIME_DIR"
   echo "status_file=$STATUS_FILE"
+  echo "mpv_log_file=$MPV_LOG_FILE"
   echo "marker=$MARKER"
   echo "hostname=$(hostname 2>/dev/null || true)"
   echo "created_at=$(stamp)"
@@ -226,6 +251,8 @@ run_shell "pre-journalctl-kernel-display-filter" "journalctl kernel DRM/display 
 run_shell "pre-journalctl-kernel-critical-filter" "journalctl kernel critical filter before app run" \
   "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'oops|panic|EXT4-fs error|Aborting journal|Remounting filesystem read-only|mmc.*timeout|mmc.*reset|voltage|fail|error' || true"
 copy_status_file "pre"
+copy_mpv_log "pre-existing" "pre-existing-mpv.log"
+prepare_mpv_log_for_run
 
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "ERROR: required config not found: $CONFIG_PATH" >&2
@@ -289,5 +316,6 @@ run_shell "post-journalctl-kernel-display-filter" "journalctl kernel DRM/display
 run_shell "post-journalctl-kernel-critical-filter" "journalctl kernel critical filter after app run" \
   "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'oops|panic|EXT4-fs error|Aborting journal|Remounting filesystem read-only|mmc.*timeout|mmc.*reset|voltage|fail|error' || true"
 copy_status_file "post"
+copy_mpv_log "post" "mpv.log"
 
 finish_archive
