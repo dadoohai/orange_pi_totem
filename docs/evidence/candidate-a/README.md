@@ -27,6 +27,7 @@ Nao executar atualizacao ampla em campo. Kernel, DTB, U-Boot e BSP permanecem co
 | Reboots curtos | 2026-04-28 | Aprovado | [Testes iniciais](../../03_TESTES_INICIAIS_E_EVIDENCIAS.md) |
 | Baseline de rede cabeada/NetworkManager | 2026-04-28 | Aprovado | [network-before-stress.txt](../../EVIDENCIAS/2026-04-28/network-before-stress.txt) |
 | Stress leve CPU/RAM 30 min | 2026-04-28 | Aprovado | [stress-30m.txt](../../EVIDENCIAS/2026-04-28/stress-30m.txt) |
+| Wi-Fi cliente 5 GHz | 2026-04-29 | Aprovado | [Rodada 20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap304-5g/README.md) |
 
 ## Coletas padronizadas
 
@@ -90,6 +91,19 @@ Exemplo:
 Ethernet deve permanecer conectada durante esta validacao para manter caminho de acesso e recuperacao. Hotspot/configurador e modo manutencao sao etapa posterior; nao fazem parte deste teste.
 
 Artefatos brutos de Wi-Fi podem conter SSID, IPs, nomes de conexao, rotas e logs do NetworkManager. Nao commitar `.tar.gz` brutos no repositorio publico; registrar apenas README sanitizado por rodada.
+
+### Resultado registrado - 20260429-020919-wifi-test-ap304-5g
+
+A rodada [20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap304-5g/README.md) aprovou a validacao de Wi-Fi cliente em 5 GHz com dados sensiveis redigidos:
+
+- `wlan0` conectou usando conexao NetworkManager existente.
+- `wlan0` recebeu IP.
+- `ping -I wlan0 -c 4 1.1.1.1` funcionou com 0% de perda.
+- Ethernet permaneceu conectada.
+- `systemctl --failed`: `0 loaded units listed`.
+- `kernel tainted`: `1024`, observado e aceito nesta fase.
+- Sem `Internal error: Oops`, `kernel panic`, `EXT4-fs error`, `Remounting filesystem read-only` ou `mmc timeout/reset`.
+- Artefatos brutos da rodada permanecem fora do Git.
 
 ## Template de registro
 
