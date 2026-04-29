@@ -75,6 +75,12 @@ else
   fail "python3 not found"
 fi
 
+if requests_version="$(python3 -c 'import requests; print(requests.__version__)' 2>/dev/null)"; then
+  ok "python3 requests available: $requests_version"
+else
+  fail "python3 requests module not available"
+fi
+
 if python3 -m venv -h >/dev/null 2>&1; then
   ok "python3 venv module available"
 else
