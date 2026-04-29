@@ -139,13 +139,23 @@ O filtro retornou mensagens conhecidas de boot com `Error applying setting, reve
 
 ## Recomendacao Para Proxima Etapa
 
-Pacote minimo recomendado para a proxima rodada de instalacao controlada, sem executar agora:
+Esta recomendacao inicial foi refinada pela rodada de simulacao APT [20260429-121613-runtime-apt-sim](../20260429-121613-runtime-apt-sim/README.md) e pela rodada de instalacao [20260429-123146-runtime-packages-install](../20260429-123146-runtime-packages-install/README.md).
+
+Recomendacao inicial desta rodada, superada pela decisao posterior:
 
 ```text
 mpv ffmpeg python3-pip python3-requests
 ```
 
-Manter `python3-venv` como dependencia explicita a considerar se a criacao real de `/opt/totem/venv` falhar ou se a imagem final preferir declarar o pacote mesmo com o modulo `venv` ja respondendo.
+Decisao atual apos simulacao APT e instalacao controlada:
+
+```text
+mpv ffmpeg python3-requests
+```
+
+Nao instalar `python3-pip` por enquanto. Nao instalar `python3-venv` por enquanto. Xorg, Wayland, compositor e Chromium tambem continuam fora desta fase.
+
+`python3-venv` fica como dependencia a reavaliar somente se a criacao real de `/opt/totem/venv` exigir o pacote ou se a imagem final decidir declarar venv explicitamente. `python3-pip` fica fora ate haver estrategia de wheelhouse/venv controlada.
 
 Como o kernel ja expoe DRM, framebuffer, HDMI e Panfrost, a primeira validacao de MPV deve tentar saida direta via DRM/KMS antes de instalar Xorg, Wayland ou compositor. Xorg/xinit/openbox ou Cage/Weston devem ficar como plano B caso MPV direto nao seja suficiente para o kiosk.
 
