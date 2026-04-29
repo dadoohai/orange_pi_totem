@@ -21,7 +21,7 @@ Status: aprovado em boot inicial, reboots curtos, baseline de rede cabeada/Netwo
 
 ## Scripts de bancada
 
-- `scripts/board/`: scripts para coleta de diagnóstico, snapshot de rede, stress leve, criação do layout `/data` e desativação idempotente de Bluetooth.
+- `scripts/board/`: scripts para coleta de diagnóstico, snapshot de rede, stress leve, criação idempotente do layout `/data` (`config`, `media/kiosky-player`, `state/kiosky-player`, `spool/kiosky-player`, `logs/kiosky-player`) e desativação idempotente de Bluetooth.
 - `scripts/remote/push_and_run.sh`: wrapper local para copiar um script de `scripts/board/` para a placa e executá-lo via SSH quando essa etapa for liberada.
 
 ## Regra operacional crítica

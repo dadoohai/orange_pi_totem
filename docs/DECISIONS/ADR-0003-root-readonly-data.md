@@ -17,7 +17,13 @@ Separar:
 /opt/totem     aplicação instalada
 /data/config   configuração persistente
 /data/media    mídias baixadas
+/data/media/kiosky-player
+/data/state    estado persistente de aplicações
+/data/state/kiosky-player
 /data/spool    telemetria pendente
+/data/spool/kiosky-player
+/data/logs     logs persistentes opcionais
+/data/logs/kiosky-player
 /tmp           tmpfs
 /var/log       zram/RAM ou log reduzido
 ```

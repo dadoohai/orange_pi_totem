@@ -18,8 +18,13 @@ fi
 install -d -m 0755 "$DATA_ROOT"
 install -d -m 0755 "$DATA_ROOT/config"
 install -d -m 0755 "$DATA_ROOT/media"
+install -d -m 0755 "$DATA_ROOT/media/kiosky-player"
+install -d -m 0755 "$DATA_ROOT/state"
+install -d -m 0755 "$DATA_ROOT/state/kiosky-player"
 install -d -m 0755 "$DATA_ROOT/spool"
+install -d -m 0755 "$DATA_ROOT/spool/kiosky-player"
 install -d -m 0755 "$DATA_ROOT/logs"
+install -d -m 0755 "$DATA_ROOT/logs/kiosky-player"
 
 echo
 echo "After:"
