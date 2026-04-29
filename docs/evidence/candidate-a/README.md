@@ -27,7 +27,13 @@ Nao executar atualizacao ampla em campo. Kernel, DTB, U-Boot e BSP permanecem co
 | Reboots curtos | 2026-04-28 | Aprovado | [Testes iniciais](../../03_TESTES_INICIAIS_E_EVIDENCIAS.md) |
 | Baseline de rede cabeada/NetworkManager | 2026-04-28 | Aprovado | [network-before-stress.txt](../../EVIDENCIAS/2026-04-28/network-before-stress.txt) |
 | Stress leve CPU/RAM 30 min | 2026-04-28 | Aprovado | [stress-30m.txt](../../EVIDENCIAS/2026-04-28/stress-30m.txt) |
+| Layout `/data` | 2026-04-29 | Aprovado | [Rodada 20260429-012638-data-layout](runs/20260429-012638-data-layout/README.md) |
 | Wi-Fi cliente 5 GHz | 2026-04-29 | Aprovado | [Rodada 20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap304-5g/README.md) |
+| Desabilitar `bluetooth.service` | 2026-04-29 | Aprovado | [Rodada 20260429-022612-disable-bluetooth](runs/20260429-022612-disable-bluetooth/README.md) |
+| Usuario/diretorios e pre-requisitos do app | 2026-04-29 | Preparacao aprovada; `mpv`, `pip` e venv pendentes | [Rodada 20260429-104348-app-prereqs](runs/20260429-104348-app-prereqs/README.md) |
+| Desabilitar `aw859a-bluetooth.service` | 2026-04-29 | Aprovado | [Rodada 20260429-110054-disable-aw859a-bluetooth](runs/20260429-110054-disable-aw859a-bluetooth/README.md) |
+
+Resumo: o Wi-Fi cliente 5 GHz foi aprovado e permaneceu funcional nas validacoes posteriores a desativacao de `bluetooth.service` e `aw859a-bluetooth.service`.
 
 ## Coletas padronizadas
 
@@ -57,7 +63,7 @@ O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada
 
 Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) devem ficar fora do Git porque podem conter IPs, hostnames, SSIDs, UUIDs e detalhes de rede. Cada rodada em `docs/evidence/candidate-a/runs/<timestamp>/` deve ter um `README.md` sanitizado com o resumo publicavel.
 
-## Sequencia recomendada
+## Sequencia de base ja exercitada
 
 1. `collect_diag.sh`
 2. `network_snapshot.sh`
@@ -65,7 +71,7 @@ Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) dev
 4. `setup_data_layout.sh`
 5. `disable_bluetooth.sh` somente apos baseline coletado
 
-Proximo passo operacional planejado: executar `setup_data_layout.sh` em bancada e, em seguida, rodar nova coleta com `collect_diag.sh` para registrar o estado de `/data`.
+Proximo passo operacional planejado: fazer probe controlado de display/runtime e planejar a resolucao de `mpv`, `pip` e venv antes de qualquer deploy do player.
 
 Observacao: `disable_bluetooth.sh` desabilita o servico userland quando ele existe. Ele pode nao remover logs de Bluetooth caso a mensagem venha do driver/kernel antes do servico `bluetooth.service`.
 
@@ -162,6 +168,9 @@ A rodada [20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap3
 - Validar Wi-Fi de campo.
 - Validar hotspot, se entrar no escopo.
 - Validar aplicacao do totem.
-- Validar layout `/data`.
 - Validar politica de logs.
+- Validar display/runtime para MPV.
+- Resolver `mpv`, `pip` e inicializacao do venv.
+- Fazer deploy controlado do app.
+- Validar root read-only.
 - Validar comportamento com cortes de energia em bancada controlada.

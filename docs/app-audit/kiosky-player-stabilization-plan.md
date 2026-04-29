@@ -9,6 +9,17 @@ Repositorios locais:
 
 Escopo desta etapa: plano tecnico e documentacao. Nao foi executado `kiosk.py`, nao foi iniciado MPV real, nao houve API real, nao houve download real de midia, nao houve SSH, nao houve apt e nada foi executado na Orange Pi.
 
+## Atualizacao curta - appliance-v0.1
+
+A branch `appliance-v0.1` ja foi criada no repositorio `kiosky-player` com hardening inicial. O ultimo commit relevante registrado nesta consolidacao e `f1fd196`.
+
+Commits relevantes para rastreabilidade:
+
+- `3474dc5`: appliance-v0.1 inicial.
+- `f1fd196`: safety checks.
+
+As secoes abaixo permanecem como plano de estabilizacao e criterios de revisao; itens que dizem "criar branch" devem ser lidos como historico ja concluido.
+
 ## Decisao recomendada
 
 Criar a branch `appliance-v0.1` a partir do HEAD atual `c62354ec17ee4175f25aa3ba5ebc11abf1a7698b`, nao a partir do segundo commit puro `fe2de3692ec4eec327ee048e96c2188bb1b10fb1`.
