@@ -76,6 +76,8 @@ run_cmd "/proc/sys/kernel/tainted" "proc-sys-kernel-tainted.txt" cat /proc/sys/k
 run_cmd "free -h" "free-h.txt" free -h
 run_cmd "df -h" "df-h.txt" df -h
 run_cmd "lsblk -f" "lsblk-f.txt" lsblk -f
+run_shell "data layout" "data-layout.txt" \
+  "if [ -d /data ]; then find /data -maxdepth 3 -printf '%M %u %g %p\n' | sort; else echo '/data does not exist'; fi"
 run_cmd "ip -br addr" "ip-br-addr.txt" ip -br addr
 run_cmd "nmcli device status" "nmcli-device-status.txt" nmcli device status
 run_cmd "nmcli connection show" "nmcli-connection-show.txt" nmcli connection show

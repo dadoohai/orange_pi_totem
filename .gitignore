@@ -1,0 +1,4 @@
+# Raw board diagnostic artifacts may contain IPs, hostnames, SSIDs and UUIDs.
+docs/evidence/candidate-a/runs/**/*.tar.gz
+docs/evidence/candidate-a/runs/**/extracted/
+docs/evidence/candidate-a/runs/**/raw/

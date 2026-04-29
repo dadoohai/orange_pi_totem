@@ -47,6 +47,8 @@ Para copiar os artefatos da placa para o repositorio local, depois que SSH estiv
 
 O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada na placa.
 
+Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) devem ficar fora do Git porque podem conter IPs, hostnames, SSIDs, UUIDs e detalhes de rede. Cada rodada em `docs/evidence/candidate-a/runs/<timestamp>/` deve ter um `README.md` sanitizado com o resumo publicavel.
+
 ## Sequencia recomendada
 
 1. `collect_diag.sh`
@@ -54,6 +56,8 @@ O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada
 3. `pull_artifacts.sh`
 4. `setup_data_layout.sh`
 5. `disable_bluetooth.sh` somente apos baseline coletado
+
+Proximo passo operacional planejado: executar `setup_data_layout.sh` em bancada e, em seguida, rodar nova coleta com `collect_diag.sh` para registrar o estado de `/data`.
 
 Observacao: `disable_bluetooth.sh` desabilita o servico userland quando ele existe. Ele pode nao remover logs de Bluetooth caso a mensagem venha do driver/kernel antes do servico `bluetooth.service`.
 
