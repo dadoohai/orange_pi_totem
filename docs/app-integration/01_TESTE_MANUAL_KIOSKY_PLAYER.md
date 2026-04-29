@@ -139,6 +139,8 @@ O probe:
 - usa `PYTHONDONTWRITEBYTECODE=1` e `XDG_RUNTIME_DIR=/tmp/kiosky`;
 - captura stdout/stderr em `/root/totem-diag/kiosky-manual-<timestamp>/`;
 - gera `/root/totem-diag/kiosky-manual-<timestamp>.tar.gz`;
+- em testes instrumentados com `mpv_log_file=/tmp/kiosky/mpv.log`, copia o log atual `mpv.log` e preserva os logs MPV por geracao/restart (`mpv-g*.log`) criados apos o marcador do run;
+- salva os logs por geracao em `mpv-generation-logs/` dentro do artefato bruto, sem imprimir conteudo dos logs no terminal;
 - verifica se houve escrita em `/opt/totem/kiosky-player` apos um marcador criado antes do run;
 - registra processos `kiosk.py`/`mpv` antes e depois do run, tanto do usuario `totem` quanto globais, para auditar processos remanescentes;
 - copia `/tmp/kiosky-status.json` para o artefato bruto se existir, sem imprimir seu conteudo.
@@ -169,7 +171,7 @@ mkdir -p "$RUN_DIR"
 ./scripts/remote/pull_artifacts.sh root@192.168.1.147 "$RUN_DIR" "totem-diag-*.tar.gz"
 ```
 
-Criar um `README.md` sanitizado para a rodada. Nao commitar `.tar.gz` brutos.
+Criar um `README.md` sanitizado para a rodada. Nao commitar `.tar.gz` brutos. Os artefatos brutos, incluindo `mpv.log` e `mpv-generation-logs/mpv-g*.log`, podem conter caminhos, detalhes de codec, nomes locais e outros dados sensiveis de diagnostico.
 
 ## Criterios de aprovacao
 

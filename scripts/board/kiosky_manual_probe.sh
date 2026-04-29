@@ -11,6 +11,7 @@ CONFIG_PATH="/data/config/config.json"
 RUNTIME_DIR="/tmp/kiosky"
 STATUS_FILE="/tmp/kiosky-status.json"
 MPV_LOG_FILE="/tmp/kiosky/mpv.log"
+MPV_GENERATION_LOG_DIR="/tmp/kiosky"
 BASE_DIR="${TOTEM_DIAG_BASE:-/root/totem-diag}"
 TIMESTAMP="${TOTEM_DIAG_TIMESTAMP:-$(date +%Y%m%d-%H%M%S%z)}"
 RUN_NAME="kiosky-manual-$TIMESTAMP"
@@ -172,7 +173,84 @@ copy_mpv_log() {
   fi
 }
 
+summarize_mpv_generation_logs() {
+  local phase="$1"
+  local list_file="$OUT_DIR/$phase-mpv-generation-logs.tsv"
+  local path=""
+  local name=""
+  local size=0
+  local count=0
+  local total_bytes=0
+  local names=""
+
+  printf 'name\tbytes\tpath\n' >"$list_file"
+
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    name="$(basename "$path")"
+    size=$(wc -c <"$path" 2>/dev/null || printf '0')
+    printf '%s\t%s\t%s\n' "$name" "$size" "$path" >>"$list_file"
+    count=$((count + 1))
+    total_bytes=$((total_bytes + size))
+    if [ -z "$names" ]; then
+      names="$name"
+    else
+      names="$names,$name"
+    fi
+  done < <(find -L "$MPV_GENERATION_LOG_DIR" -maxdepth 1 -type f -name 'mpv-g*.log' -print 2>/dev/null | sort)
+
+  if [ "$count" -eq 0 ]; then
+    names="none"
+  fi
+
+  chmod 0600 "$list_file"
+  append_summary "$phase-mpv-generation-logs" "0" "count=$count bytes=$total_bytes names=$names; list saved without log content"
+}
+
+copy_new_mpv_generation_logs() {
+  local dest_dir="$OUT_DIR/mpv-generation-logs"
+  local list_file="$OUT_DIR/post-mpv-generation-logs-copied.tsv"
+  local path=""
+  local name=""
+  local dest=""
+  local size=0
+  local count=0
+  local total_bytes=0
+  local names=""
+
+  mkdir -p "$dest_dir"
+  chmod 0700 "$dest_dir"
+  printf 'name\tbytes\tsource\tartifact\n' >"$list_file"
+
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    name="$(basename "$path")"
+    dest="$dest_dir/$name"
+    cp -L "$path" "$dest"
+    chmod 0600 "$dest"
+    size=$(wc -c <"$dest" 2>/dev/null || printf '0')
+    printf '%s\t%s\t%s\t%s\n' "$name" "$size" "$path" "$dest" >>"$list_file"
+    count=$((count + 1))
+    total_bytes=$((total_bytes + size))
+    if [ -z "$names" ]; then
+      names="$name"
+    else
+      names="$names,$name"
+    fi
+  done < <(find -L "$MPV_GENERATION_LOG_DIR" -maxdepth 1 -type f -name 'mpv-g*.log' -newer "$MARKER" -print 2>/dev/null | sort)
+
+  if [ "$count" -eq 0 ]; then
+    names="none"
+  fi
+
+  chmod 0600 "$list_file"
+  append_summary "post-mpv-generation-logs-copy" "0" "count=$count bytes=$total_bytes names=$names; logs copied with cp -L without printing content"
+}
+
 prepare_mpv_log_for_run() {
+  if [ -L "$MPV_LOG_FILE" ]; then
+    rm -f "$MPV_LOG_FILE"
+  fi
   : >"$MPV_LOG_FILE"
   chown "$APP_USER:$APP_GROUP" "$MPV_LOG_FILE" 2>/dev/null || true
   chmod 0600 "$MPV_LOG_FILE" 2>/dev/null || true
@@ -208,6 +286,7 @@ finish_archive() {
   echo "runtime_dir=$RUNTIME_DIR"
   echo "status_file=$STATUS_FILE"
   echo "mpv_log_file=$MPV_LOG_FILE"
+  echo "mpv_generation_log_dir=$MPV_GENERATION_LOG_DIR"
   echo "marker=$MARKER"
   echo "hostname=$(hostname 2>/dev/null || true)"
   echo "created_at=$(stamp)"
@@ -252,6 +331,7 @@ run_shell "pre-journalctl-kernel-critical-filter" "journalctl kernel critical fi
   "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'oops|panic|EXT4-fs error|Aborting journal|Remounting filesystem read-only|mmc.*timeout|mmc.*reset|voltage|fail|error' || true"
 copy_status_file "pre"
 copy_mpv_log "pre-existing" "pre-existing-mpv.log"
+summarize_mpv_generation_logs "pre-existing"
 prepare_mpv_log_for_run
 
 if [ ! -f "$CONFIG_PATH" ]; then
@@ -317,5 +397,6 @@ run_shell "post-journalctl-kernel-critical-filter" "journalctl kernel critical f
   "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'oops|panic|EXT4-fs error|Aborting journal|Remounting filesystem read-only|mmc.*timeout|mmc.*reset|voltage|fail|error' || true"
 copy_status_file "post"
 copy_mpv_log "post" "mpv.log"
+copy_new_mpv_generation_logs
 
 finish_archive
