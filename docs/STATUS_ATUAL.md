@@ -4,9 +4,9 @@ Data: 2026-04-29
 
 ## Resumo executivo
 
-O Candidato A avançou alem da validacao inicial da imagem base. A placa passou por boot inicial, reboots curtos, rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, layout `/data`, Wi-Fi cliente 5 GHz e desativacao dos servicos Bluetooth conhecidos sem regressao observada. O Wi-Fi cliente 5 GHz permaneceu funcional apos as desativacoes de Bluetooth/AW859A. Tambem foi feita a preparacao inicial de usuario e diretorios para o `kiosky-player`.
+O Candidato A avançou alem da validacao inicial da imagem base. A placa passou por boot inicial, reboots curtos, rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, layout `/data`, Wi-Fi cliente 5 GHz e desativacao dos servicos Bluetooth conhecidos sem regressao observada. O Wi-Fi cliente 5 GHz permaneceu funcional apos as desativacoes de Bluetooth/AW859A. Tambem foi feita a preparacao inicial de usuario/diretorios para o `kiosky-player` e a instalacao controlada do runtime minimo `mpv`, `ffmpeg` e `python3-requests`.
 
-Ainda nao ha homologacao para producao. A proxima etapa deve focar em display/runtime e planejamento de `mpv`, `pip` e venv antes de iniciar o player ou habilitar systemd da aplicacao.
+Ainda nao ha homologacao para producao. A proxima etapa deve focar no primeiro teste manual de MPV, ainda sem iniciar o app ou habilitar systemd da aplicacao.
 
 ## Composicao do Candidato A
 
@@ -30,6 +30,7 @@ Ainda nao ha homologacao para producao. A proxima etapa deve focar em display/ru
 - Desativacao de `bluetooth.service` sem regressao observada.
 - Desativacao de `aw859a-bluetooth.service` com `systemctl --failed` voltando para `0 loaded units listed`.
 - Criacao de usuario/grupo `totem` e diretorios iniciais para a aplicacao.
+- Instalacao controlada do runtime minimo `mpv`, `ffmpeg` e `python3-requests`, sem upgrades/removes e sem tocar em kernel/Armbian.
 
 ## O que foi alterado na placa
 
@@ -37,6 +38,8 @@ Ainda nao ha homologacao para producao. A proxima etapa deve focar em display/ru
 - Criado usuario/grupo `totem`.
 - Criados diretorios de aplicacao em `/opt/totem`, `/data/.../kiosky-player` e `/tmp/kiosky`.
 - Ajustado ownership de diretorios mutaveis para `totem:totem` onde previsto.
+- Usuario `totem` adicionado aos grupos existentes `audio`, `video` e `render`.
+- Instalados pacotes de runtime `mpv`, `ffmpeg` e `python3-requests` com `--no-upgrade --no-install-recommends`.
 - `bluetooth.service` foi desabilitado.
 - `aw859a-bluetooth.service` foi desabilitado e o estado falhado foi limpo.
 
@@ -44,10 +47,10 @@ Nenhum deploy do app foi executado, `kiosk.py` nao foi iniciado, MPV nao foi ini
 
 ## O que ainda esta pendente
 
-- `mpv` ausente.
 - `pip` ausente.
 - `/opt/totem/venv` ainda sem `bin/python` e `bin/pip` executaveis.
-- Stack de display/runtime ainda nao validada.
+- `/tmp/kiosky` precisa ser garantido antes do teste do app, pois `/tmp` pode ser limpo apos reboot.
+- MPV instalado, mas ainda nao testado manualmente.
 - Deploy do app ainda nao executado.
 - Configuracao privada ainda nao aplicada.
 - Teste manual do player ainda nao executado.
@@ -57,9 +60,9 @@ Nenhum deploy do app foi executado, `kiosk.py` nao foi iniciado, MPV nao foi ini
 
 ## Proximos 3 passos tecnicos
 
-1. Fazer probe controlado de display/runtime para decidir como o MPV sera executado.
-2. Planejar a entrega de `mpv`, `pip` e venv sem `apt` na placa, preferencialmente via imagem ou pacote controlado.
-3. Preparar roteiro de deploy manual supervisionado do `kiosky-player`, com config privada fora do Git e sem habilitar systemd antes do teste manual.
+1. Fazer teste manual de MPV em bancada, sem iniciar `kiosk.py` e sem habilitar systemd.
+2. Garantir `/tmp/kiosky` por mecanismo idempotente antes do teste manual do app.
+3. Preparar deploy manual supervisionado do `kiosky-player`, com config privada fora do Git e sem habilitar systemd antes do teste manual.
 
 ## Regras que continuam proibidas
 
