@@ -17,6 +17,7 @@ OUT_DIR="$BASE_DIR/$RUN_NAME"
 ARCHIVE="$BASE_DIR/$RUN_NAME.tar.gz"
 SUMMARY="$OUT_DIR/summary.tsv"
 MARKER="/tmp/kiosky-manual-$TIMESTAMP.marker"
+RUN_SHELL_LAST_RC=0
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: run this script as root." >&2
@@ -62,6 +63,81 @@ run_shell() {
     echo "stderr=$stderr_file"
   } >>"$meta_file"
 
+  RUN_SHELL_LAST_RC="$rc"
+  append_summary "$label" "$rc" "$title"
+  return 0
+}
+
+check_config_placeholders() {
+  local label="pre-config-placeholder-check"
+  local title="check config for blocking placeholders without printing secrets"
+  local stdout_file="$OUT_DIR/$label.stdout.txt"
+  local stderr_file="$OUT_DIR/$label.stderr.txt"
+  local meta_file="$OUT_DIR/$label.meta.txt"
+  local rc=0
+
+  {
+    echo "### $title"
+    echo "### started: $(stamp)"
+    echo "### command: python3 placeholder check for $CONFIG_PATH"
+  } >"$meta_file"
+
+  python3 - "$CONFIG_PATH" >"$stdout_file" 2>"$stderr_file" <<'PY'
+import json
+import sys
+
+config_path = sys.argv[1]
+with open(config_path, "r", encoding="utf-8") as fh:
+    cfg = json.load(fh)
+
+errors = []
+
+
+def contains_placeholder(value, placeholder):
+    return isinstance(value, str) and placeholder in value
+
+
+def check_value(label, value, placeholders):
+    for placeholder in placeholders:
+        if contains_placeholder(value, placeholder):
+            errors.append(f"{label} contains blocked placeholder: {placeholder}")
+
+
+check_value("api_url", cfg.get("api_url"), ["api.example.invalid"])
+check_value(
+    "api_key",
+    cfg.get("api_key"),
+    ["replace-with-api-key", "replace-with-real-api-key"],
+)
+check_value(
+    "environment_id",
+    cfg.get("environment_id"),
+    ["replace-with-environment-id", "replace-with-real-environment-id"],
+)
+
+telemetry_enabled = cfg.get("telemetry_enabled")
+if isinstance(telemetry_enabled, str):
+    telemetry_enabled = telemetry_enabled.strip().lower() in {"1", "true", "yes", "on"}
+if telemetry_enabled is True:
+    check_value("telemetry_url", cfg.get("telemetry_url"), ["telemetry.example.invalid"])
+
+if errors:
+    for error in errors:
+        print(f"BLOCK: {error}")
+    sys.exit(1)
+
+print("OK: no blocking placeholders detected")
+PY
+  rc=$?
+
+  {
+    echo "### exit_code: $rc"
+    echo "### finished: $(stamp)"
+    echo "stdout=$stdout_file"
+    echo "stderr=$stderr_file"
+  } >>"$meta_file"
+
+  RUN_SHELL_LAST_RC="$rc"
   append_summary "$label" "$rc" "$title"
   return 0
 }
@@ -143,6 +219,8 @@ run_shell "pre-stat-config" "stat /data/config/config.json before app run withou
 run_shell "pre-data-media-files" "media files before app run" "find /data/media/kiosky-player -maxdepth 2 -type f -printf '%s %p\n' 2>/dev/null | sort || true"
 run_shell "pre-data-state-files" "state files before app run" "find /data/state/kiosky-player -maxdepth 2 -type f -printf '%s %p\n' 2>/dev/null | sort || true"
 run_shell "pre-ls-runtime-dir" "ls -lh /tmp/kiosky before app run" "ls -lh '$RUNTIME_DIR'"
+run_shell "pre-processes-totem" "totem kiosk/mpv processes before app run" "pgrep -a -u '$APP_USER' -f 'kiosk.py|mpv' || true"
+run_shell "pre-processes-all" "all kiosk/mpv processes before app run" "pgrep -a -f 'kiosk.py|mpv' || true"
 run_shell "pre-journalctl-kernel-display-filter" "journalctl kernel DRM/display filter before app run" \
   "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'drm|gpu|mali|panfrost|display|hdmi|cedrus|v4l2|codec|video|fb0|framebuffer|mpv' || true"
 run_shell "pre-journalctl-kernel-critical-filter" "journalctl kernel critical filter before app run" \
@@ -159,6 +237,22 @@ fi
 if [ ! -f "$APP_ENTRY" ]; then
   echo "ERROR: application entrypoint not found: $APP_ENTRY" >&2
   append_summary "prereq-app-entry" "1" "missing app entrypoint: $APP_ENTRY"
+  finish_archive
+  exit 1
+fi
+
+run_shell "pre-config-json-valid" "validate config JSON without printing content" "python3 -m json.tool '$CONFIG_PATH' >/dev/null"
+if [ "$RUN_SHELL_LAST_RC" -ne 0 ]; then
+  echo "ERROR: config is not valid JSON: $CONFIG_PATH" >&2
+  append_summary "prereq-config-json" "1" "invalid JSON; app was not started"
+  finish_archive
+  exit 1
+fi
+
+check_config_placeholders
+if [ "$RUN_SHELL_LAST_RC" -ne 0 ]; then
+  echo "ERROR: config contains blocking placeholder(s); app was not started." >&2
+  append_summary "prereq-config-placeholders" "1" "blocking placeholder detected; app was not started"
   finish_archive
   exit 1
 fi
@@ -186,6 +280,8 @@ run_shell "post-stat-config" "stat /data/config/config.json after app run withou
 run_shell "post-data-media-files" "media files after app run" "find /data/media/kiosky-player -maxdepth 2 -type f -printf '%s %p\n' 2>/dev/null | sort || true"
 run_shell "post-data-state-files" "state files after app run" "find /data/state/kiosky-player -maxdepth 2 -type f -printf '%s %p\n' 2>/dev/null | sort || true"
 run_shell "post-ls-runtime-dir" "ls -lh /tmp/kiosky after app run" "ls -lh '$RUNTIME_DIR'"
+run_shell "post-processes-totem" "totem kiosk/mpv processes after app run" "pgrep -a -u '$APP_USER' -f 'kiosk.py|mpv' || true"
+run_shell "post-processes-all" "all kiosk/mpv processes after app run" "pgrep -a -f 'kiosk.py|mpv' || true"
 run_shell "post-opt-newer-marker" "files written under /opt/totem/kiosky-player after marker" \
   "find '$APP_DIR' -newer '$MARKER' -printf '%TY-%Tm-%TdT%TH:%TM:%TS %u %g %m %p\n' 2>/dev/null | sort || true"
 run_shell "post-journalctl-kernel-display-filter" "journalctl kernel DRM/display filter after app run" \

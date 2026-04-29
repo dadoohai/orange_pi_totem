@@ -129,6 +129,8 @@ Depois que a config privada existir na placa, executar:
 O probe:
 
 - exige `/data/config/config.json`;
+- valida que `/data/config/config.json` e JSON valido sem imprimir seu conteudo;
+- bloqueia placeholders obvios antes de iniciar o app;
 - nao imprime o conteudo da config;
 - nao imprime `api_key`;
 - recria `/tmp/kiosky` como `totem:totem`, modo `0750`, se necessario;
@@ -138,6 +140,7 @@ O probe:
 - captura stdout/stderr em `/root/totem-diag/kiosky-manual-<timestamp>/`;
 - gera `/root/totem-diag/kiosky-manual-<timestamp>.tar.gz`;
 - verifica se houve escrita em `/opt/totem/kiosky-player` apos um marcador criado antes do run;
+- registra processos `kiosk.py`/`mpv` antes e depois do run, tanto do usuario `totem` quanto globais, para auditar processos remanescentes;
 - copia `/tmp/kiosky-status.json` para o artefato bruto se existir, sem imprimir seu conteudo.
 
 Comando base usado pelo probe:
@@ -145,6 +148,15 @@ Comando base usado pelo probe:
 ```bash
 runuser -u totem -- env PYTHONDONTWRITEBYTECODE=1 XDG_RUNTIME_DIR=/tmp/kiosky timeout 300s python3 /opt/totem/kiosky-player/kiosk.py --config /data/config/config.json
 ```
+
+Placeholders que bloqueiam o run antes do app iniciar:
+
+- `replace-with-api-key`
+- `replace-with-real-api-key`
+- `replace-with-environment-id`
+- `replace-with-real-environment-id`
+- `api.example.invalid`
+- `telemetry.example.invalid`, somente se `telemetry_enabled=true`
 
 ## Coleta de artefatos
 
@@ -172,12 +184,14 @@ Criar um `README.md` sanitizado para a rodada. Nao commitar `.tar.gz` brutos.
 - Nenhum pacote e instalado.
 - Nenhum servico systemd da aplicacao e instalado, habilitado ou iniciado.
 
-Exit code `124` do comando do app pode significar somente que o timeout de 300 segundos encerrou o teste. Interpretar junto com stdout/stderr, status JSON, display e logs de kernel.
+Exit code `124` do comando `app-run` pode significar somente que o timeout de 300 segundos encerrou a janela planejada do teste. Interpretar junto com stdout/stderr, status JSON, display, processos remanescentes e logs de kernel.
 
 ## Criterios de bloqueio
 
 - Config ausente, ilegivel por `totem`, com placeholders ou com JSON invalido.
+- Placeholders bloqueantes detectados pelo probe antes do app iniciar.
 - `api_key` ou outro segredo aparece em stdout/stderr, README ou arquivo versionado.
+- Processo `kiosk.py` ou `mpv` permanece rodando sem justificativa apos o timeout/encerramento do probe.
 - `requests` indisponivel.
 - MPV nao inicia ou nao exibe conteudo no HDMI.
 - O app grava arquivos em `/opt/totem/kiosky-player`.
