@@ -9,9 +9,11 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S%z)"
 RUN_DIR="$BASE_DIR/stress-light-30m-$TIMESTAMP"
 RUN_LOG="$RUN_DIR/run.log"
 STRESS_LOG="$RUN_DIR/stress-ng-30m.log"
+THERMAL_LOG="$RUN_DIR/thermal-samples.log"
 ARCHIVE="$BASE_DIR/stress-light-30m-$TIMESTAMP.tar.gz"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COLLECT_DIAG="${TOTEM_COLLECT_DIAG:-$SCRIPT_DIR/collect_diag.sh}"
+THERMAL_PID=""
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: run this script as root." >&2
@@ -37,6 +39,69 @@ log() {
   printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" | tee -a "$RUN_LOG"
 }
 
+thermal_sample_loop() {
+  while :; do
+    {
+      printf 'timestamp=%s' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+
+      if uptime_out="$(uptime 2>/dev/null)"; then
+        printf ' uptime="%s"' "$uptime_out"
+      fi
+
+      if loadavg="$(cat /proc/loadavg 2>/dev/null)"; then
+        printf ' loadavg="%s"' "$loadavg"
+      fi
+
+      for temp_file in /sys/class/thermal/thermal_zone*/temp; do
+        [ -e "$temp_file" ] || continue
+
+        zone_dir="${temp_file%/temp}"
+        zone_name="${zone_dir##*/}"
+        zone_type=""
+        temp_raw=""
+
+        if [ -r "$zone_dir/type" ]; then
+          zone_type="$(cat "$zone_dir/type" 2>/dev/null || true)"
+        fi
+
+        if [ -r "$temp_file" ]; then
+          temp_raw="$(cat "$temp_file" 2>/dev/null || true)"
+        fi
+
+        printf ' %s' "$zone_name"
+        if [ -n "$zone_type" ]; then
+          printf '(%s)' "$zone_type"
+        fi
+        printf '=%s_millicelsius' "$temp_raw"
+      done
+
+      printf '\n'
+    } >>"$THERMAL_LOG"
+
+    sleep 5 || break
+  done
+}
+
+stop_thermal_sampler() {
+  if [ -n "$THERMAL_PID" ]; then
+    kill "$THERMAL_PID" 2>/dev/null || true
+    wait "$THERMAL_PID" 2>/dev/null || true
+    THERMAL_PID=""
+  fi
+}
+
+cleanup() {
+  stop_thermal_sampler
+}
+
+on_signal() {
+  cleanup
+  exit 130
+}
+
+trap cleanup EXIT
+trap on_signal INT TERM
+
 log "stress_light_30m started"
 log "run_dir=$RUN_DIR"
 log "collect_diag=$COLLECT_DIAG"
@@ -52,8 +117,18 @@ if [ "$diag_before_rc" -ne 0 ]; then
 fi
 
 log "running: stress-ng --cpu 4 --vm 1 --vm-bytes 50% --timeout 30m --metrics-brief"
+{
+  echo "# thermal_samples_version=1"
+  echo "# interval_seconds=5"
+  echo "# units: thermal zone temperatures are raw millidegrees Celsius from /sys/class/thermal"
+} >"$THERMAL_LOG"
+thermal_sample_loop &
+THERMAL_PID=$!
+log "thermal sampling started pid=$THERMAL_PID log=$THERMAL_LOG"
 stress-ng --cpu 4 --vm 1 --vm-bytes 50% --timeout 30m --metrics-brief 2>&1 | tee "$STRESS_LOG"
 stress_rc=${PIPESTATUS[0]}
+stop_thermal_sampler
+log "thermal sampling stopped"
 log "stress-ng finished with exit_code=$stress_rc"
 
 log "collecting diagnostics after stress"

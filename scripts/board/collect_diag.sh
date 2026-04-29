@@ -81,8 +81,12 @@ run_cmd "nmcli device status" "nmcli-device-status.txt" nmcli device status
 run_cmd "nmcli connection show" "nmcli-connection-show.txt" nmcli connection show
 run_cmd "rfkill list" "rfkill-list.txt" rfkill list
 run_cmd "systemctl --failed" "systemctl-failed.txt" systemctl --failed
+run_cmd "journalctl kernel full current boot" "journalctl-kernel-full.txt" \
+  journalctl -k -b --no-pager --output=short-iso
 run_cmd "journalctl kernel critical" "journalctl-kernel-critical.txt" \
   journalctl -k -p crit -n 300 --no-pager --output=short-iso
+run_shell "journalctl kernel critical filter" "journalctl-kernel-critical-filter.txt" \
+  "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'oops|panic|tainted|EXT4-fs error|Aborting journal|Remounting filesystem read-only|mmc.*timeout|mmc.*reset|thermal|voltage|fail|error|Bluetooth: hci0' || true"
 run_cmd "journalctl NetworkManager tail" "journalctl-networkmanager-tail.txt" \
   journalctl -b -u NetworkManager -n 300 --no-pager --output=short-iso
 

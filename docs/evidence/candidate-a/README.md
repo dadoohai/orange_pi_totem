@@ -39,6 +39,24 @@ Os scripts de bancada ficam em `scripts/board/` e gravam artefatos em `/root/tot
 | `stress_light_30m.sh` | diretorio `/root/totem-diag/stress-light-30m-<timestamp>/` e arquivo `/root/totem-diag/stress-light-30m-<timestamp>.tar.gz` |
 | `disable_bluetooth.sh` | diretorio `/root/totem-diag/bluetooth-disable-<timestamp>/` e arquivo `/root/totem-diag/bluetooth-disable-<timestamp>.tar.gz` |
 
+Para copiar os artefatos da placa para o repositorio local, depois que SSH estiver liberado:
+
+```bash
+./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/2026-04-28/
+```
+
+O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada na placa.
+
+## Sequencia recomendada
+
+1. `collect_diag.sh`
+2. `network_snapshot.sh`
+3. `pull_artifacts.sh`
+4. `setup_data_layout.sh`
+5. `disable_bluetooth.sh` somente apos baseline coletado
+
+Observacao: `disable_bluetooth.sh` desabilita o servico userland quando ele existe. Ele pode nao remover logs de Bluetooth caso a mensagem venha do driver/kernel antes do servico `bluetooth.service`.
+
 ## Template de registro
 
 ### Identificacao
@@ -57,6 +75,7 @@ Os scripts de bancada ficam em `scripts/board/` e gravam artefatos em `/root/tot
 ```bash
 ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/collect_diag.sh
 ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/network_snapshot.sh
+./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/2026-04-28/
 ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/stress_light_30m.sh
 ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/setup_data_layout.sh
 ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/disable_bluetooth.sh
