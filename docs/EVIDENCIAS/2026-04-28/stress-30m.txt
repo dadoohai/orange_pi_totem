@@ -1,0 +1,56 @@
+Data: 2026-04-28
+
+Comando:
+
+```bash
+stress-ng --cpu 4 --vm 1 --vm-bytes 50% --timeout 30m --metrics-brief
+```
+
+Resultado principal:
+
+```text
+stress-ng: info: successful run completed in 1800.21s (30 mins, 0.21 secs)
+```
+
+Estado antes do teste:
+
+```text
+uptime: up 1:26
+Memória: 1.9 GiB total, 1.5 GiB livre
+Root: /dev/mmcblk0p1 29G, 5% usado
+tainted: 1024
+```
+
+Estado após o teste:
+
+```text
+uptime: up 1:58
+tainted: 1024
+systemctl --failed: 0 loaded units listed
+Memória: 1.9 GiB total, 1.5 GiB livre
+Swap: 396 KiB usado
+Root: 29G, 5% usado
+Temperaturas ao fim: ~52–54°C
+Temperatura máxima observada no watch: 75°C sobre a mesa
+Travou: não
+Reiniciou sozinho: não
+```
+
+Filtro crítico de kernel após o teste não mostrou:
+
+```text
+Internal error: Oops
+Kernel panic
+EXT4-fs error
+Aborting journal
+Remounting filesystem read-only
+mmc timeout
+mmc reset
+```
+
+Observações:
+
+- Mensagens `Error applying setting, reverse things back` persistem no boot, mas sem impacto observado.
+- `stress-30m-output.txt` ficou vazio porque a saída principal do `stress-ng` provavelmente foi emitida em stderr; comandos futuros devem usar `2>&1 | tee arquivo.log`.
+
+Classificação: aprovado em carga leve CPU/RAM. Temperatura aprovada com atenção para teste posterior em gabinete real.

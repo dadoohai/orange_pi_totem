@@ -1,0 +1,33 @@
+Data: 2026-04-28T21:50:02-03:00
+
+Resumo:
+- end0 ativo com IPv4 192.168.18.114/24.
+- wlan0 presente, DORMANT/desconectado.
+- Wi-Fi não bloqueado por rfkill.
+- Bluetooth não bloqueado por rfkill.
+- NetworkManager ativou Ethernet com sucesso.
+- Estado final: CONNECTED_GLOBAL.
+- Driver Wi-Fi informa suporte a modo Access Point.
+
+Trechos relevantes:
+
+```text
+end0             UP             192.168.18.114/24 ...
+wlan0            DORMANT
+
+DEVICE         TYPE      STATE                   CONNECTION
+end0           ethernet  conectado               Conexão cabeada 1
+wlan0          wifi      desconectado            --
+
+rfkill:
+0: bluetooth: Soft blocked: no / Hard blocked: no
+1: phy0 Wireless LAN: Soft blocked: no / Hard blocked: no
+2: hci0 Bluetooth: Soft blocked: no / Hard blocked: no
+
+NetworkManager:
+device (wlan0): driver supports Access Point (AP) mode
+device (end0): Activation: successful, device activated.
+manager: NetworkManager state is now CONNECTED_GLOBAL
+```
+
+Classificação: aprovado para prosseguir com stress leve.

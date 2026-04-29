@@ -681,3 +681,54 @@ Imagem própria gerada por Armbian Build
 ```
 
 A prioridade agora é não acelerar para instalação da aplicação antes de consolidar diagnóstico, layout `/data` e testes de base. Isso evita repetir o padrão antigo: configurar, funcionar por acaso, clonar e perder rastreabilidade.
+
+---
+
+## Atualização de status — 2026-04-28
+
+### Candidato A
+
+```text
+Armbian Build v25.11
+Debian Bookworm Minimal
+Orange Pi Zero3
+Kernel 6.12.58-current-sunxi64
+U-Boot 2025.04
+NetworkManager
+BSPFREEZE=yes
+```
+
+### Etapas concluídas
+
+- [x] H2testw do cartão;
+- [x] geração da imagem base;
+- [x] gravação e boot inicial;
+- [x] confirmação de kernel/DTB/U‑Boot/BSP em hold;
+- [x] reboots curtos limpos;
+- [x] baseline de rede cabeada/NetworkManager;
+- [x] stress leve CPU/RAM por 30 minutos.
+
+### Resultado do stress leve
+
+- `stress-ng` completou 1800.21s;
+- sem travamento;
+- sem reboot espontâneo;
+- sem serviços falhados;
+- sem Oops/panic;
+- sem erro EXT4;
+- sem `mmc timeout/reset`;
+- temperatura máxima observada: 75°C em bancada aberta.
+
+### Próximo bloco de trabalho
+
+- [ ] criar estrutura `/data`;
+- [ ] desabilitar Bluetooth se não usado;
+- [ ] criar script de diagnóstico local;
+- [ ] reforçar política de update nos scripts e documentação;
+- [ ] preparar instalação controlada dos componentes do player;
+- [ ] testar Wi‑Fi cliente;
+- [ ] testar hotspot/modo manutenção.
+
+### Regra reforçada
+
+Não executar `apt upgrade`, `apt full-upgrade`, `apt dist-upgrade` ou `armbian-upgrade` em campo. Para instalação pontual em bancada, usar `apt-get install --no-upgrade -y <pacote>`.

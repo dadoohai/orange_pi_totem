@@ -536,3 +536,137 @@ Error applying setting, reverse things back
 DNS local demora a resolver hostname
 ```
 
+
+---
+
+## 14. Baseline de rede antes do stress leve
+
+Data: 2026-04-28T21:50:02-03:00.
+
+Comandos executados:
+
+```bash
+ip -br addr
+nmcli device status
+NMCLI_PAGER=cat nmcli connection show
+rfkill list
+journalctl -u NetworkManager -b --no-pager | tail -n 120
+```
+
+Resultado resumido:
+
+```text
+end0  UP  192.168.18.114/24
+wlan0 DORMANT
+end0 ethernet conectado
+wlan0 wifi desconectado
+NetworkManager state: CONNECTED_GLOBAL
+```
+
+Interpretação:
+
+- Ethernet funcional via `end0`.
+- Wi‑Fi detectado como `wlan0`, sem bloqueio por rfkill.
+- NetworkManager gerenciando rede corretamente.
+- Driver Wi‑Fi informa suporte a Access Point, relevante para futuro modo manutenção/hotspot.
+- `wlan0` desconectado nesta etapa não reprova, pois o teste usou cabo.
+
+Evidência bruta/resumida:
+
+```text
+docs/EVIDENCIAS/2026-04-28/network-before-stress.txt
+```
+
+Classificação: aprovado para prosseguir com stress leve.
+
+---
+
+## 15. Stress leve CPU/RAM — 30 minutos
+
+Data: 2026-04-28.
+
+Comando executado:
+
+```bash
+apt update
+apt-get install --no-upgrade -y stress-ng
+stress-ng --cpu 4 --vm 1 --vm-bytes 50% --timeout 30m --metrics-brief
+```
+
+Observação: foi usado `apt install` específico para instalar `stress-ng`. Não foi executado `apt upgrade`.
+
+Resultado principal:
+
+```text
+stress-ng: successful run completed in 1800.21s (30 mins, 0.21 secs)
+```
+
+Estado após o teste:
+
+```text
+tainted: 1024
+systemctl --failed: 0 loaded units listed
+Memória: 1.9 GiB total, 1.5 GiB livre
+Swap: 396 KiB usado
+Root: 29G, 5% usado
+Temperatura ao fim: ~52–54°C
+Temperatura máxima observada: 75°C sobre a mesa
+Travou: não
+Reiniciou sozinho: não
+```
+
+O filtro crítico de kernel não mostrou:
+
+```text
+Internal error: Oops
+Kernel panic
+EXT4-fs error
+Aborting journal
+Remounting filesystem read-only
+mmc timeout
+mmc reset
+```
+
+Interpretação:
+
+- Carga leve CPU/RAM aprovada.
+- O kernel permaneceu sem Oops/panic.
+- O filesystem permaneceu sem erro EXT4.
+- O cartão/driver MMC não mostrou timeout/reset.
+- Temperatura máxima de 75°C em bancada aberta não reprova, mas exige teste posterior no gabinete real.
+- Mensagens `Error applying setting, reverse things back` persistem como ruído observado, sem impacto operacional nesta etapa.
+
+Evidência bruta/resumida:
+
+```text
+docs/EVIDENCIAS/2026-04-28/stress-30m.txt
+```
+
+Classificação: aprovado em carga leve CPU/RAM.
+
+---
+
+## 16. Status atualizado do Candidato A
+
+### Aprovado até aqui
+
+- H2testw do cartão;
+- build da imagem;
+- boot inicial;
+- reboots curtos;
+- rede cabeada/NetworkManager;
+- carga leve CPU/RAM de 30 minutos.
+
+### Continua pendente
+
+- Wi‑Fi real em modo cliente;
+- hotspot/modo manutenção;
+- estrutura `/data`;
+- desabilitação de Bluetooth se não usado;
+- script de diagnóstico;
+- instalação controlada do player;
+- reprodução Full HD real;
+- teste térmico no gabinete;
+- root read-only com overlay;
+- teste de corte seco;
+- homologação 24h/72h.

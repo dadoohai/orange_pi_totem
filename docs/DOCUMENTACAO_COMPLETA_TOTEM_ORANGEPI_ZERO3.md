@@ -1,3 +1,12 @@
+# Documentação completa — Totem Orange Pi Zero3
+
+Este documento consolida os documentos principais do projeto. Os arquivos separados continuam sendo a fonte preferencial de manutenção.
+
+
+
+---
+
+
 # Projeto Totem Orange Pi Zero 3 — Índice e plano estratégico
 
 **Data:** 2026-04-29  
@@ -176,6 +185,7 @@ travamento que exige power cycle
 
 
 ---
+
 
 # Decisão técnica e justificativa — Totem Orange Pi Zero 3
 
@@ -601,6 +611,7 @@ Conclusão: **o Candidato A é promissor e segue para testes de carga/rede/víde
 
 
 ---
+
 
 # Geração da imagem base — Armbian Build v25.11 / Orange Pi Zero 3
 
@@ -1154,6 +1165,7 @@ A placa não deve ser configurada manualmente e depois clonada. A personalizaç�
 
 ---
 
+
 # Testes iniciais e evidências — Candidato A
 
 **Imagem:** Armbian-unofficial 25.11.1 / Orange Pi Zero3 / Bookworm Minimal / current 6.12.58  
@@ -1693,8 +1705,143 @@ DNS local demora a resolver hostname
 ```
 
 
+---
+
+## 14. Baseline de rede antes do stress leve
+
+Data: 2026-04-28T21:50:02-03:00.
+
+Comandos executados:
+
+```bash
+ip -br addr
+nmcli device status
+NMCLI_PAGER=cat nmcli connection show
+rfkill list
+journalctl -u NetworkManager -b --no-pager | tail -n 120
+```
+
+Resultado resumido:
+
+```text
+end0  UP  192.168.18.114/24
+wlan0 DORMANT
+end0 ethernet conectado
+wlan0 wifi desconectado
+NetworkManager state: CONNECTED_GLOBAL
+```
+
+Interpretação:
+
+- Ethernet funcional via `end0`.
+- Wi‑Fi detectado como `wlan0`, sem bloqueio por rfkill.
+- NetworkManager gerenciando rede corretamente.
+- Driver Wi‑Fi informa suporte a Access Point, relevante para futuro modo manutenção/hotspot.
+- `wlan0` desconectado nesta etapa não reprova, pois o teste usou cabo.
+
+Evidência bruta/resumida:
+
+```text
+docs/EVIDENCIAS/2026-04-28/network-before-stress.txt
+```
+
+Classificação: aprovado para prosseguir com stress leve.
 
 ---
+
+## 15. Stress leve CPU/RAM — 30 minutos
+
+Data: 2026-04-28.
+
+Comando executado:
+
+```bash
+apt update
+apt-get install --no-upgrade -y stress-ng
+stress-ng --cpu 4 --vm 1 --vm-bytes 50% --timeout 30m --metrics-brief
+```
+
+Observação: foi usado `apt install` específico para instalar `stress-ng`. Não foi executado `apt upgrade`.
+
+Resultado principal:
+
+```text
+stress-ng: successful run completed in 1800.21s (30 mins, 0.21 secs)
+```
+
+Estado após o teste:
+
+```text
+tainted: 1024
+systemctl --failed: 0 loaded units listed
+Memória: 1.9 GiB total, 1.5 GiB livre
+Swap: 396 KiB usado
+Root: 29G, 5% usado
+Temperatura ao fim: ~52–54°C
+Temperatura máxima observada: 75°C sobre a mesa
+Travou: não
+Reiniciou sozinho: não
+```
+
+O filtro crítico de kernel não mostrou:
+
+```text
+Internal error: Oops
+Kernel panic
+EXT4-fs error
+Aborting journal
+Remounting filesystem read-only
+mmc timeout
+mmc reset
+```
+
+Interpretação:
+
+- Carga leve CPU/RAM aprovada.
+- O kernel permaneceu sem Oops/panic.
+- O filesystem permaneceu sem erro EXT4.
+- O cartão/driver MMC não mostrou timeout/reset.
+- Temperatura máxima de 75°C em bancada aberta não reprova, mas exige teste posterior no gabinete real.
+- Mensagens `Error applying setting, reverse things back` persistem como ruído observado, sem impacto operacional nesta etapa.
+
+Evidência bruta/resumida:
+
+```text
+docs/EVIDENCIAS/2026-04-28/stress-30m.txt
+```
+
+Classificação: aprovado em carga leve CPU/RAM.
+
+---
+
+## 16. Status atualizado do Candidato A
+
+### Aprovado até aqui
+
+- H2testw do cartão;
+- build da imagem;
+- boot inicial;
+- reboots curtos;
+- rede cabeada/NetworkManager;
+- carga leve CPU/RAM de 30 minutos.
+
+### Continua pendente
+
+- Wi‑Fi real em modo cliente;
+- hotspot/modo manutenção;
+- estrutura `/data`;
+- desabilitação de Bluetooth se não usado;
+- script de diagnóstico;
+- instalação controlada do player;
+- reprodução Full HD real;
+- teste térmico no gabinete;
+- root read-only com overlay;
+- teste de corte seco;
+- homologação 24h/72h.
+
+
+---
+
 
 # Roadmap de produto, testes, atualização e monitoramento
 
@@ -2379,3 +2526,169 @@ Imagem própria gerada por Armbian Build
 ```
 
 A prioridade agora é não acelerar para instalação da aplicação antes de consolidar diagnóstico, layout `/data` e testes de base. Isso evita repetir o padrão antigo: configurar, funcionar por acaso, clonar e perder rastreabilidade.
+
+---
+
+## Atualização de status — 2026-04-28
+
+### Candidato A
+
+```text
+Armbian Build v25.11
+Debian Bookworm Minimal
+Orange Pi Zero3
+Kernel 6.12.58-current-sunxi64
+U-Boot 2025.04
+NetworkManager
+BSPFREEZE=yes
+```
+
+### Etapas concluídas
+
+- [x] H2testw do cartão;
+- [x] geração da imagem base;
+- [x] gravação e boot inicial;
+- [x] confirmação de kernel/DTB/U‑Boot/BSP em hold;
+- [x] reboots curtos limpos;
+- [x] baseline de rede cabeada/NetworkManager;
+- [x] stress leve CPU/RAM por 30 minutos.
+
+### Resultado do stress leve
+
+- `stress-ng` completou 1800.21s;
+- sem travamento;
+- sem reboot espontâneo;
+- sem serviços falhados;
+- sem Oops/panic;
+- sem erro EXT4;
+- sem `mmc timeout/reset`;
+- temperatura máxima observada: 75°C em bancada aberta.
+
+### Próximo bloco de trabalho
+
+- [ ] criar estrutura `/data`;
+- [ ] desabilitar Bluetooth se não usado;
+- [ ] criar script de diagnóstico local;
+- [ ] reforçar política de update nos scripts e documentação;
+- [ ] preparar instalação controlada dos componentes do player;
+- [ ] testar Wi‑Fi cliente;
+- [ ] testar hotspot/modo manutenção.
+
+### Regra reforçada
+
+Não executar `apt upgrade`, `apt full-upgrade`, `apt dist-upgrade` ou `armbian-upgrade` em campo. Para instalação pontual em bancada, usar `apt-get install --no-upgrade -y <pacote>`.
+
+
+---
+
+
+# 05 — Política de atualização
+
+## 1. Objetivo
+
+Evitar que atualizações não controladas invalidem a homologação da imagem do totem ou introduzam regressões em kernel, DTB, U-Boot, BSP, rede, vídeo ou filesystem.
+
+A imagem Candidato A foi construída e validada inicialmente com uma composição específica:
+
+```text
+Armbian Build v25.11
+Commit: e172058
+Board: orangepizero3
+Release: Debian Bookworm
+Branch: current
+Kernel: 6.12.58-current-sunxi64
+U-Boot: 2025.04
+Build: Minimal
+Network stack: NetworkManager
+BSPFREEZE: yes
+```
+
+## 2. Regra principal
+
+Não executar em campo:
+
+```bash
+apt upgrade
+apt full-upgrade
+apt dist-upgrade
+armbian-upgrade
+```
+
+Motivo: esses comandos podem alterar bibliotecas, serviços, pacotes Armbian, kernel, DTB, U-Boot ou BSP, invalidando a composição validada.
+
+## 3. Permitido em bancada controlada
+
+Durante validação, é aceitável executar:
+
+```bash
+apt update
+apt-get install --no-upgrade -y <pacote-especifico>
+```
+
+Exemplo usado na triagem:
+
+```bash
+apt update
+apt-get install --no-upgrade -y stress-ng
+```
+
+A opção `--no-upgrade` reduz o risco de atualizar pacotes já instalados.
+
+## 4. Pacotes críticos devem permanecer em hold
+
+Verificação:
+
+```bash
+apt-mark showhold
+dpkg -l | grep -E "linux-image|linux-dtb|linux-u-boot|armbian-bsp"
+```
+
+No Candidato A, os pacotes críticos apareceram com status `hi`, indicando hold instalado:
+
+```text
+armbian-bsp-cli-orangepizero3-current
+linux-dtb-current-sunxi64
+linux-image-current-sunxi64
+linux-u-boot-orangepizero3-current
+```
+
+## 5. Tipos de atualização
+
+### 5.1 Conteúdo e configuração
+
+Podem ser atualizados pelo backend e gravados em `/data`:
+
+- playlist;
+- mídias;
+- ID de ambiente;
+- posição da tela;
+- parâmetros operacionais;
+- fila de telemetria.
+
+### 5.2 Aplicação
+
+Deve usar release versionada, com rollback:
+
+```text
+/opt/totem/releases/app-1.2.3
+/opt/totem/current -> /opt/totem/releases/app-1.2.3
+```
+
+O serviço systemd deve apontar para `/opt/totem/current`.
+
+### 5.3 Sistema operacional
+
+Atualizações de sistema devem gerar nova imagem, nova homologação e nova release.
+
+### 5.4 Kernel, DTB, U-Boot, BSP
+
+Só atualizar em bancada, com matriz completa de testes. Nunca via upgrade livre em campo.
+
+## 6. Direção futura
+
+Para frota maior, avaliar atualização A/B com Mender ou RAUC. Até lá, adotar:
+
+- app update com rollback;
+- imagem completa versionada;
+- diagnóstico remoto;
+- kernel/DTB/U-Boot congelados.
