@@ -6,15 +6,14 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 **Candidato A**: Armbian Build v25.11 + Debian Bookworm Minimal + kernel `6.12.58-current-sunxi64` + U-Boot `2025.04`.
 
-Status: aprovado em boot inicial, reboots curtos, baseline de rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, criação do layout `/data`, Wi-Fi cliente 5 GHz, desativação de `bluetooth.service`, desativação de `aw859a-bluetooth.service`, preparação inicial de usuário/diretórios para a aplicação, instalação controlada do runtime mínimo (`mpv`, `ffmpeg`, `python3-requests`) e validação de pré-requisitos com `/tmp/kiosky` garantido. O Wi-Fi cliente 5 GHz permaneceu funcional após as desativações de Bluetooth/AW859A, e `systemctl --failed` voltou a `0 loaded units listed` após a desativação do AW859A Bluetooth.
+Status: aprovado em boot inicial, reboots curtos, baseline de rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, criação do layout `/data`, Wi-Fi cliente 5 GHz, desativação de `bluetooth.service`, desativação de `aw859a-bluetooth.service`, preparação inicial de usuário/diretórios para a aplicação, instalação controlada do runtime mínimo (`mpv`, `ffmpeg`, `python3-requests`), validação de pré-requisitos com `/tmp/kiosky` garantido e teste manual de MPV via DRM/KMS com confirmação visual. O Wi-Fi cliente 5 GHz permaneceu funcional após as desativações de Bluetooth/AW859A, e `systemctl --failed` voltou a `0 loaded units listed` após a desativação do AW859A Bluetooth.
 
-O Candidato A ainda não está homologado para produção. A base está apta a seguir para o primeiro teste manual de MPV, ainda sem iniciar `kiosk.py` e sem habilitar `systemd` da aplicação.
+O Candidato A ainda não está homologado para produção. A base está apta a seguir para teste manual controlado do player/app via DRM/KMS, ainda sem iniciar `kiosk.py` por `systemd` e sem habilitar `systemd` da aplicação.
 
 Pendências atuais antes de produção:
 
 - `pip` ausente e `/opt/totem/venv` ainda sem Python/pip executáveis, por decisão desta fase.
 - Xorg, Wayland, compositor e Chromium continuam fora desta fase.
-- MPV instalado, mas ainda não testado manualmente.
 - Deploy do app ainda não executado.
 - Configuração privada ainda não aplicada.
 - Teste manual do player ainda não executado.

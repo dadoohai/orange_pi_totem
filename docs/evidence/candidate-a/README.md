@@ -34,8 +34,10 @@ Nao executar atualizacao ampla em campo. Kernel, DTB, U-Boot e BSP permanecem co
 | Desabilitar `aw859a-bluetooth.service` | 2026-04-29 | Aprovado | [Rodada 20260429-110054-disable-aw859a-bluetooth](runs/20260429-110054-disable-aw859a-bluetooth/README.md) |
 | Instalacao de runtime minimo | 2026-04-29 | Aprovado; `mpv`, `ffmpeg` e `python3-requests` instalados | [Rodada 20260429-123146-runtime-packages-install](runs/20260429-123146-runtime-packages-install/README.md) |
 | Runtime tmp e pre-requisitos | 2026-04-29 | Aprovado; `/tmp/kiosky` garantido e `check_app_prereqs.sh` passou | [Rodada 20260429-124135-runtime-tmp-prereqs](runs/20260429-124135-runtime-tmp-prereqs/README.md) |
+| MPV manual DRM/KMS | 2026-04-29 | Aprovado; `vo=drm` e `vo=gpu --gpu-context=drm` funcionaram como root e como usuario `totem`, com confirmacao visual HDMI | [Rodada 20260429-131803-mpv-manual-probe](runs/20260429-131803-mpv-manual-probe/README.md) |
 
 Resumo: o Wi-Fi cliente 5 GHz foi aprovado e permaneceu funcional nas validacoes posteriores a desativacao de `bluetooth.service` e `aw859a-bluetooth.service`.
+O MPV manual tambem foi aprovado via DRM/KMS direto, inclusive como usuario `totem`, sem indicacao atual para instalar Xorg, Wayland ou compositor.
 
 ## Coletas padronizadas
 
@@ -73,9 +75,9 @@ Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) dev
 4. `setup_data_layout.sh`
 5. `disable_bluetooth.sh` somente apos baseline coletado
 
-Proximo passo operacional planejado: fazer teste manual de MPV, sem iniciar `kiosk.py` e sem habilitar systemd da aplicacao.
+Proximo passo operacional planejado: fazer teste manual controlado do player/app, preservando DRM/KMS como caminho principal, ainda sem habilitar systemd da aplicacao.
 
-Estado corrente dos pre-requisitos: `check_app_prereqs.sh` passou apos a instalacao de `mpv`, `ffmpeg`, `python3-requests` e a criacao de `/tmp/kiosky`. `pip`, `/opt/totem/venv`, Xorg, Wayland, compositor e Chromium continuam fora desta fase por decisao de escopo.
+Estado corrente dos pre-requisitos: `check_app_prereqs.sh` passou apos a instalacao de `mpv`, `ffmpeg`, `python3-requests` e a criacao de `/tmp/kiosky`. O MPV manual via DRM/KMS passou como root e como `totem`, com confirmacao visual HDMI. `pip`, `/opt/totem/venv`, Xorg, Wayland, compositor e Chromium continuam fora desta fase por decisao de escopo.
 
 Observacao: `disable_bluetooth.sh` desabilita o servico userland quando ele existe. Ele pode nao remover logs de Bluetooth caso a mensagem venha do driver/kernel antes do servico `bluetooth.service`.
 
@@ -171,8 +173,7 @@ A rodada [20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap3
 
 - Validar Wi-Fi de campo.
 - Validar hotspot, se entrar no escopo.
-- Fazer teste manual de MPV.
-- Validar aplicacao do totem depois do teste manual de MPV.
+- Validar aplicacao do totem depois do teste manual de MPV aprovado.
 - Validar politica de logs.
 - Decidir estrategia futura de `pip`/venv somente se o deploy do app exigir.
 - Fazer deploy controlado do app.

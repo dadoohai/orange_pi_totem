@@ -76,9 +76,16 @@ Mensagens observadas sem falha do comando:
 
 ## Observacao Humana
 
-Video fisicamente visivel na tela: pendente de confirmacao humana.
+Video fisicamente visivel na tela: confirmado pelo operador.
 
-Os exit codes indicam que os modos DRM/KMS e GPU/DRM completaram com sucesso, mas esta rodada nao deve ser interpretada como confirmacao visual fisica sem observacao do operador.
+Observacao visual sanitizada:
+
+- Apareceu uma tela de listras coloridas verticais.
+- Apareceu uma faixa animada horizontal.
+- Apareceu uma contagem regressiva a direita.
+- A exibicao ocorreu algumas vezes durante a execucao dos testes.
+
+Os exit codes indicam que os modos DRM/KMS e GPU/DRM completaram com sucesso, e a observacao do operador confirma saida HDMI fisica nesta rodada.
 
 ## Escopo Negativo Confirmado
 
@@ -93,6 +100,6 @@ Os exit codes indicam que os modos DRM/KMS e GPU/DRM completaram com sucesso, ma
 
 ## Recomendacao
 
-Seguir com DRM/KMS como caminho provavel para a proxima etapa, preferencialmente validando primeiro a observacao humana de video na tela e depois um teste manual controlado do player/app usando o usuario `totem`.
+Seguir com DRM/KMS como caminho principal para a proxima etapa, preferencialmente com um teste manual controlado do player/app usando o usuario `totem`.
 
 Nao ha indicacao nesta rodada para instalar Xorg, Wayland ou compositor. Manter essas opcoes como plano B somente se testes reais do player exigirem.
