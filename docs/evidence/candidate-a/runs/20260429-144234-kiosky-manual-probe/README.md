@@ -47,7 +47,7 @@ Resultado:
 - `stderr` do app ficou vazio.
 - O log registrou `Playlist updated: 5 items`.
 - O log registrou reproducoes durante a janela do teste.
-- O log tambem registrou avisos repetidos de `MPV IPC unresponsive` e algumas reinicializacoes/falhas de carregamento de midia. Isto deve ser investigado antes de producao, mas nao impediu o run controlado de permanecer ativo ate o timeout.
+- O log tambem registrou avisos frequentes de `MPV IPC unresponsive` e algumas reinicializacoes/falhas de carregamento de midia. Isto deve ser investigado antes de teste longo e antes de qualquer ativacao por systemd, mas nao impediu o run controlado de permanecer ativo ate o timeout.
 
 ## Dados Gerados
 
@@ -57,6 +57,24 @@ Resultado:
 - Status sanitizado no snapshot: `playback_state=playing`, `playlist_size=5`, `mpv_running=true`.
 
 O README nao reproduz URLs, nomes privados de midia, identificadores de campanha ou qualquer conteudo da config.
+
+## Analise dos avisos MPV/IPC
+
+Analise feita localmente a partir dos artefatos extraidos em `/tmp/totem-kiosky-manual-review`, sem executar nada na placa.
+
+Analise complementar: [02_ANALISE_PRIMEIRO_RUN_KIOSKY.md](../../../../app-integration/02_ANALISE_PRIMEIRO_RUN_KIOSKY.md).
+
+- Janela do `app-run`: de aproximadamente 14:33:22 a 14:38:25, com `Signal 15` registrado ao final por causa do timeout controlado.
+- `MPV IPC unresponsive`: 21 ocorrencias no stdout do app, aproximadamente entre 14:33:35 e 14:38:23.
+- A cadencia foi frequente, perto de um aviso a cada 13-14 segundos durante boa parte do run.
+- Cada aviso de IPC foi registrado com `restarting`, indicando restart interno do MPV pelo watchdog do app.
+- `Failed to load media, restarting MPV`: 5 ocorrencias, aproximadamente em 14:35:23, 14:36:05, 14:36:33, 14:37:43 e 14:38:10.
+- As linhas de falha de load nao imprimem identificador de midia. Pela sequencia sanitizada, elas ocorreram em transicoes de playlist antes de retries bem-sucedidos, nao como falha definitiva de uma unica midia.
+- Todas as 5 midias da playlist apareceram em linhas `Playing` durante o run; cada alias sanitizado de midia apareceu 6 vezes.
+- O app continuou rodando depois dos avisos: houve novas linhas `Playing` apos as falhas, e o encerramento ocorreu por timeout do probe.
+- O status final sanitizado indicava `playback_state=playing`, `playlist_size=5`, `mpv_running=true`, `consecutive_failures=0`, `blocked_media_count=0`, `last_poll_error=null` e `last_render_error=null`.
+- A observacao humana de tela preta ou retorno ao terminal e compativel com restarts/falhas de load do MPV, mas a causa nao fica concluida pelos artefatos porque nao ha captura de tela e o stderr/stdout do MPV foram descartados pelo app.
+- O filtro de kernel/display permaneceu igual antes/depois no probe, sem novo erro de DRM/HDMI associado ao run.
 
 ## Escrita Em /opt
 
@@ -76,9 +94,13 @@ A auditoria com marcador temporal nao encontrou escrita em `/opt/totem/kiosky-pl
 
 ## Observacao Humana
 
-Midia fisicamente visivel na tela: pendente de confirmacao humana.
+Midia fisicamente visivel na tela: confirmado pelo operador.
 
-A confirmacao visual anterior do MPV manual valida HDMI/DRM-KMS na placa, mas esta rodada precisa de confirmacao especifica do operador para exibicao do app.
+Observacao visual sanitizada:
+
+- Algumas midias do app apareceram fisicamente na tela durante o run.
+- Tambem houve momentos de tela preta ou retorno ao terminal.
+- Esta observacao e registro humano de bancada; a causa nao fica concluida somente pelos artefatos.
 
 ## Escopo Negativo Confirmado
 
@@ -95,4 +117,4 @@ A confirmacao visual anterior do MPV manual valida HDMI/DRM-KMS na placa, mas es
 
 Classificar a rodada como aprovada para o objetivo de primeiro run manual controlado: o app iniciou como `totem`, usou a config privada, criou cache/estado/status, permaneceu ativo ate o timeout e nao deixou processos remanescentes.
 
-Antes de ativar systemd, investigar os avisos de IPC/restart do MPV e obter confirmacao humana da tela durante o run do app. Se a exibicao for confirmada, o proximo passo recomendado e preparar um teste manual mais longo ou o primeiro servico systemd ainda sem root read-only.
+Como os avisos de IPC/restart foram frequentes, nao liberar ainda teste longo nem ativacao por systemd. O proximo passo recomendado e um segundo teste manual curto e direcionado, ainda sem systemd, com mais instrumentacao de MPV/IPC e, se necessario, teste isolado das midias associadas aos retries de load por alias sanitizado.
