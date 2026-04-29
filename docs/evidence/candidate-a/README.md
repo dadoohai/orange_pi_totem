@@ -36,6 +36,8 @@ Os scripts de bancada ficam em `scripts/board/` e gravam artefatos em `/root/tot
 | --- | --- |
 | `collect_diag.sh` | diretorio `/root/totem-diag/<timestamp>/` e arquivo `/root/totem-diag/totem-diag-<timestamp>.tar.gz` |
 | `network_snapshot.sh` | diretorio `/root/totem-diag/network-<timestamp>/` e arquivo `/root/totem-diag/network-snapshot-<timestamp>.tar.gz` |
+| `wifi_snapshot.sh` | diretorio `/root/totem-diag/wifi-snapshot-<timestamp>/` e arquivo `/root/totem-diag/wifi-snapshot-<timestamp>.tar.gz` |
+| `wifi_client_test.sh` | diretorio `/root/totem-diag/wifi-client-<timestamp>/` e arquivo `/root/totem-diag/wifi-client-<timestamp>.tar.gz` |
 | `stress_light_30m.sh` | diretorio `/root/totem-diag/stress-light-30m-<timestamp>/` e arquivo `/root/totem-diag/stress-light-30m-<timestamp>.tar.gz` |
 | `disable_bluetooth.sh` | diretorio `/root/totem-diag/bluetooth-disable-<timestamp>/` e arquivo `/root/totem-diag/bluetooth-disable-<timestamp>.tar.gz` |
 
@@ -65,6 +67,29 @@ Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) dev
 Proximo passo operacional planejado: executar `setup_data_layout.sh` em bancada e, em seguida, rodar nova coleta com `collect_diag.sh` para registrar o estado de `/data`.
 
 Observacao: `disable_bluetooth.sh` desabilita o servico userland quando ele existe. Ele pode nao remover logs de Bluetooth caso a mensagem venha do driver/kernel antes do servico `bluetooth.service`.
+
+## Validacao Wi-Fi cliente
+
+A validacao de Wi-Fi cliente deve usar apenas conexoes ja existentes no NetworkManager. Os scripts nao pedem senha, nao registram senha, nao criam conexoes novas, nao apagam conexoes salvas e nao devem desconectar Ethernet nesta fase.
+
+Sequencia recomendada:
+
+1. Rodar `wifi_snapshot.sh` para capturar o estado Wi-Fi sem alterar nada.
+2. Escolher uma conexao Wi-Fi ja existente em `nmcli connection show`.
+3. Rodar `wifi_client_test.sh "<nome-da-conexao>"`.
+4. Copiar os artefatos com `pull_artifacts.sh`, preferencialmente filtrando pelo timestamp da rodada.
+
+Exemplo:
+
+```bash
+./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/wifi_snapshot.sh
+./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/wifi_client_test.sh "<nome-da-conexao>"
+./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/<timestamp>-wifi-client/ "wifi-*.tar.gz"
+```
+
+Ethernet deve permanecer conectada durante esta validacao para manter caminho de acesso e recuperacao. Hotspot/configurador e modo manutencao sao etapa posterior; nao fazem parte deste teste.
+
+Artefatos brutos de Wi-Fi podem conter SSID, IPs, nomes de conexao, rotas e logs do NetworkManager. Nao commitar `.tar.gz` brutos no repositorio publico; registrar apenas README sanitizado por rodada.
 
 ## Template de registro
 

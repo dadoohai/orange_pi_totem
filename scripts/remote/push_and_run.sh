@@ -4,21 +4,24 @@ set -eu
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  scripts/remote/push_and_run.sh <user@host> <scripts/board/script.sh>
-  scripts/remote/push_and_run.sh <host> <user> <scripts/board/script.sh>
+  scripts/remote/push_and_run.sh <user@host> <scripts/board/script.sh> [script-args...]
+  scripts/remote/push_and_run.sh <host> <user> <scripts/board/script.sh> [script-args...]
 
 Examples:
   ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/collect_diag.sh
   ./scripts/remote/push_and_run.sh orangepizero3 root scripts/board/network_snapshot.sh
+  ./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/wifi_client_test.sh "existing-wifi-connection"
 USAGE
 }
 
-if [ "$#" -eq 2 ]; then
+if [ "$#" -ge 2 ] && [ "${1#*@}" != "$1" ]; then
   TARGET="$1"
   SCRIPT="$2"
-elif [ "$#" -eq 3 ]; then
+  shift 2
+elif [ "$#" -ge 3 ]; then
   TARGET="$2@$1"
   SCRIPT="$3"
+  shift 3
 else
   usage
   exit 64
@@ -66,6 +69,12 @@ command -v ssh >/dev/null 2>&1 || {
 REMOTE_DIR="/tmp/totem-board-scripts"
 REMOTE_SCRIPT="$REMOTE_DIR/$SCRIPT_NAME"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+REMOTE_ARGS=""
+
+for arg in "$@"; do
+  printf -v quoted_arg '%q' "$arg"
+  REMOTE_ARGS="$REMOTE_ARGS $quoted_arg"
+done
 
 ssh "$TARGET" "mkdir -p '$REMOTE_DIR'"
 
@@ -76,4 +85,4 @@ fi
 scp "$SCRIPT" "$TARGET:$REMOTE_SCRIPT"
 
 ssh -t "$TARGET" \
-  "chmod 700 '$REMOTE_DIR'/*.sh && if [ \"\$(id -u)\" -eq 0 ]; then '$REMOTE_SCRIPT'; else sudo '$REMOTE_SCRIPT'; fi"
+  "chmod 700 '$REMOTE_DIR'/*.sh && if [ \"\$(id -u)\" -eq 0 ]; then '$REMOTE_SCRIPT'$REMOTE_ARGS; else sudo '$REMOTE_SCRIPT'$REMOTE_ARGS; fi"
