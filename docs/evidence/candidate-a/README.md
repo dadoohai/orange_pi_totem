@@ -45,7 +45,12 @@ Para copiar os artefatos da placa para o repositorio local, depois que SSH estiv
 ./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/2026-04-28/
 ```
 
-O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada na placa.
+O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada na placa. Por padrao ele copia todos os `.tar.gz`; para melhorar rastreabilidade, use o terceiro argumento para filtrar a rodada desejada:
+
+```bash
+./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/20260429-012638-data-layout/ "totem-diag-20260429-012629-0300.tar.gz"
+./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/20260429-012638-data-layout/ "totem-diag-20260429-0126*.tar.gz"
+```
 
 Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) devem ficar fora do Git porque podem conter IPs, hostnames, SSIDs, UUIDs e detalhes de rede. Cada rodada em `docs/evidence/candidate-a/runs/<timestamp>/` deve ter um `README.md` sanitizado com o resumo publicavel.
 
