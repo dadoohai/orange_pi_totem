@@ -12,10 +12,12 @@ Group=totem
 WorkingDirectory=/opt/totem/kiosky-player
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=XDG_RUNTIME_DIR=/tmp/kiosky
-ExecStartPre=/usr/bin/install -d -m 0750 /tmp/kiosky
-ExecStart=/usr/bin/python3 /opt/totem/kiosky-player/kiosk.py --config /data/config/config.json
-Restart=on-failure
-RestartSec=5s
+Environment=KIOSKY_RUNTIME_DIR=/tmp/kiosky
+Environment=KIOSKY_LAUNCHER_STATUS_FILE=/data/state/kiosky-player/launcher-status.json
+ExecStartPre=+/usr/bin/install -d -o totem -g totem -m 0750 /tmp/kiosky /data/state/kiosky-player
+ExecStart=/usr/bin/env bash /opt/totem/bin/kiosky_service_launcher.sh
+Restart=always
+RestartSec=10s
 UMask=0077
 ReadOnlyPaths=/opt/totem
 ReadWritePaths=/data /tmp
