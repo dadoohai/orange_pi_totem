@@ -45,9 +45,19 @@ Nao executar atualizacao ampla em campo. Kernel, DTB, U-Boot e BSP permanecem co
 | Watchdog threshold 2 com reset por geracao | 2026-04-29 | Corrigiu semantica do contador; ganho pequeno sobre threshold 2 e ainda restaram timeouts/`Bad file descriptor` | [Rodada 20260429-202035-kiosky-manual-probe-watchdog-threshold-2-generation-reset](runs/20260429-202035-kiosky-manual-probe-watchdog-threshold-2-generation-reset/README.md) |
 | Coordenacao IPC/restart | 2026-04-29 | Commit `9bdb38c` zerou `Bad file descriptor` e command send failed; reduziu restarts para 13, processos MPV para 14 e falhas de load para 2 | [Rodada 20260429-210204-kiosky-manual-probe-ipc-restart-coordination](runs/20260429-210204-kiosky-manual-probe-ipc-restart-coordination/README.md) |
 | Evolucao MPV IPC/watchdog | 2026-04-29 | Consolidacao comparativa das metricas e dos criterios para proximo A/B, teste longo e systemd futuro | [04_EVOLUCAO_MPV_IPC_WATCHDOG.md](../../app-integration/04_EVOLUCAO_MPV_IPC_WATCHDOG.md) |
+| Analise de midias problematicas | 2026-04-29 | Consolidou a suspeita inicial de midia/transicao antes dos probes isolados posteriores | [04_ANALISE_MIDIAS_PROBLEMATICAS.md](../../app-integration/04_ANALISE_MIDIAS_PROBLEMATICAS.md) |
+| Midia isolada suspeita | 2026-04-29 | Alias suspeito tocou com `vo=null` e via DRM/KMS como `totem`, encerrando por EOF; arquivo corrompido ficou improvavel | [Rodada 20260429-235338-media-isolated-suspect](runs/20260429-235338-media-isolated-suspect/README.md) |
+| Transicao de midia controlada | 2026-04-30 | `loadfile` controle -> suspeita -> controle retornou `success` e nao reproduziu a falha anterior | [Rodada 20260430-002436-media-transition-suspect](runs/20260430-002436-media-transition-suspect/README.md) |
+| Playlist watchdog probe | 2026-04-30 | Playlist completa com duracoes configuradas e pings concorrentes passou sem timeout de `loadfile` ou ping | [Rodada 20260430-004100-media-playlist-watchdog-probe](runs/20260430-004100-media-playlist-watchdog-probe/README.md) |
+| MPVController playlist probe | 2026-04-30 | `load_file` passou 5/5, mas `ping()` e `get_property()` pelo controller persistente deram timeout; foco mudou para IPC persistente | [Rodada 20260430-011115-mpv-controller-playlist-probe](runs/20260430-011115-mpv-controller-playlist-probe/README.md) |
+| Fresh IPC query | 2026-04-30 | `mpv_query_uses_fresh_ipc=true` estabilizou IPC/watchdog/loadfile: timeouts, ping failed, restarts e falhas de load ficaram em 0 | [Rodada 20260430-104949-kiosky-manual-probe-fresh-ipc-query](runs/20260430-104949-kiosky-manual-probe-fresh-ipc-query/README.md) |
+| Playback observer do app | 2026-04-30 | IPC estavel; observador externo mostrou 4 aliases sem avancar `time-pos`/frame e 1 alias avancando normalmente | [Rodada 20260430-113008-kiosky-playback-observer](runs/20260430-113008-kiosky-playback-observer/README.md) |
+| MPV flags progress probe | 2026-04-30 | Fora do app, flags app/low-resource pararam 4 aliases; perfil simples fez todos avancarem | [Rodada 20260430-115507-mpv-flags-progress-probe](runs/20260430-115507-mpv-flags-progress-probe/README.md) |
+| App com `low_resource_mode=false` | 2026-04-30 | IPC continuou estavel, mas 4 aliases seguiram sem avancar; remover low-resource isoladamente nao resolveu | [Rodada 20260430-122532-kiosky-playback-observer-low-resource-off](runs/20260430-122532-kiosky-playback-observer-low-resource-off/README.md) |
+| Remaining flags matrix | 2026-04-30 | V5, com `--vo=gpu --gpu-context=drm --ao=null`, fez aliases problematicos avancarem e preservou o alias bom | [Rodada 20260430-125237-mpv-remaining-flags-matrix](runs/20260430-125237-mpv-remaining-flags-matrix/README.md) |
 
 Resumo: o Wi-Fi cliente 5 GHz foi aprovado e permaneceu funcional nas validacoes posteriores a desativacao de `bluetooth.service` e `aw859a-bluetooth.service`.
-O MPV manual tambem foi aprovado via DRM/KMS direto, inclusive como usuario `totem`, sem indicacao atual para instalar Xorg, Wayland ou compositor. O app ja foi deployado e rodou manualmente; a camada OS permanece saudavel, mas o Candidato A ainda nao esta homologado para producao porque o bloqueio atual e app-MPV: IPC ping, watchdog e restart.
+O MPV manual tambem foi aprovado via DRM/KMS direto, inclusive como usuario `totem`, sem indicacao atual para instalar Xorg, Wayland ou compositor. O app ja foi deployado e rodou manualmente; a camada OS permanece saudavel, mas o Candidato A ainda nao esta homologado para producao. O bloqueio app-MPV mudou: IPC/watchdog/loadfile foi estabilizado por `mpv_query_uses_fresh_ipc=true`, e o problema visual foi isolado nas flags de saida MPV. A proxima candidata e aplicar `--vo=gpu --gpu-context=drm --ao=null` no appliance e repetir o observer do app real.
 
 Evolucao sanitizada das metricas do MPV:
 
@@ -56,6 +66,9 @@ Evolucao sanitizada das metricas do MPV:
 - Watchdog threshold 2: reduziu `Restarting MPV=18`, `MPV process started=19`, `Failed to load media=7`.
 - Threshold 2 com reset por geracao: reduziu pouco mais para `Restarting MPV=17`, `MPV process started=18`, mas deixou 3 `Bad file descriptor`.
 - Coordenacao IPC/restart: zerou `Bad file descriptor`/command send failed, reduziu `Restarting MPV=13`, `MPV process started=14`, `Failed to load media=2`, mas manteve `MPV IPC ping failed=23` e `MPV IPC unresponsive=11`.
+- Fresh IPC query: `MPV IPC command timeout=0`, `MPV IPC ping failed=0`, `Restarting MPV=0`, `MPV process started=1` e `Failed to load media=0`.
+- Playback observer: com IPC estavel, 4 aliases ficaram sem progressao real de `time-pos`/frame, apesar de `pause=false`, `idle-active=false` e `eof-reached=false`.
+- Remaining flags matrix: adicionar `--vo=gpu --gpu-context=drm --ao=null` ao perfil do app fez os aliases problematicos avancarem no MPV isolado.
 
 ## Coletas padronizadas
 
@@ -93,7 +106,7 @@ Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) dev
 4. `setup_data_layout.sh`
 5. `disable_bluetooth.sh` somente apos baseline coletado
 
-Proximo passo operacional planejado: fazer A/B curto com `mpv_watchdog_ping_failures_before_restart=999`, preservando DRM/KMS como caminho principal e mantendo systemd da aplicacao bloqueado.
+Proximo passo operacional planejado: aplicar no `kiosky-player` a saida explicita `--vo=gpu --gpu-context=drm --ao=null`, manter `mpv_query_uses_fresh_ipc=true` e repetir o observer do app real por 300s, preservando DRM/KMS como caminho principal e mantendo systemd da aplicacao bloqueado.
 
 Estado corrente dos pre-requisitos: `check_app_prereqs.sh` passou apos a instalacao de `mpv`, `ffmpeg`, `python3-requests` e a criacao de `/tmp/kiosky`. O MPV manual via DRM/KMS passou como root e como `totem`, com confirmacao visual HDMI. O app foi deployado em `/opt/totem/kiosky-player`, a config privada existe em `/data/config/config.json`, e os runs manuais criaram dados em `/data` e `/tmp` sem escrita em `/opt`. `pip`, `/opt/totem/venv`, Xorg, Wayland, compositor e Chromium continuam fora desta fase por decisao de escopo.
 
@@ -194,8 +207,8 @@ A rodada [20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap3
 - Validar aplicacao do totem depois do teste manual de MPV aprovado.
 - Validar politica de logs.
 - Decidir estrategia futura de `pip`/venv somente se a estabilizacao do app exigir.
-- Resolver MPV IPC/watchdog/restart antes de teste longo.
-- Fazer A/B curto com `mpv_watchdog_ping_failures_before_restart=999`, ainda sem systemd.
+- Validar no app real a saida MPV explicita `--vo=gpu --gpu-context=drm --ao=null`.
+- Repetir o observer de 300s com `mpv_query_uses_fresh_ipc=true`, ainda sem systemd.
 - Liberar teste manual mais longo somente apos rodada curta estavel.
 - Liberar systemd da aplicacao somente depois de estabilidade manual comprovada.
 - Validar root read-only.
