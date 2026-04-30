@@ -1,0 +1,24 @@
+[Unit]
+Description=Kiosky Player
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=totem
+Group=totem
+WorkingDirectory=/opt/totem/kiosky-player
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=XDG_RUNTIME_DIR=/tmp/kiosky
+ExecStartPre=/usr/bin/install -d -m 0750 /tmp/kiosky
+ExecStart=/usr/bin/python3 /opt/totem/kiosky-player/kiosk.py --config /data/config/config.json
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+ReadOnlyPaths=/opt/totem
+ReadWritePaths=/data /tmp
+
+[Install]
+WantedBy=multi-user.target
