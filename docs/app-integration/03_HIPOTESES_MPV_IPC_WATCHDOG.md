@@ -4,15 +4,19 @@ Data da analise: 2026-04-29
 
 ## Resumo executivo
 
-A base A da Orange Pi continua parecendo saudavel. As duas rodadas recentes mostram que o MPV inicia de forma consistente e cria o socket IPC em todas as geracoes observadas. O problema aparece depois do startup: o watchdog pinga o IPC, uma unica falha de ping vira restart imediato, e esse restart compete com o `playback_loop` durante ou perto de transicoes de midia.
+A base A da Orange Pi continua parecendo saudavel. As rodadas analisadas mostram que o MPV inicia de forma consistente e cria o socket IPC nas geracoes observadas. O problema aparece depois do startup: o watchdog pinga o IPC, falhas de ping podem virar restart, e esse restart compete com o `playback_loop` durante ou perto de transicoes de midia.
 
-A hipotese mais forte nao e "MPV nao sobe". O padrao mais provavel e uma combinacao de:
+A hipotese mais forte nao e "MPV nao sobe". As rodadas posteriores confirmaram parcialmente uma combinacao de:
 
-- watchdog reiniciando MPV apos uma unica falha de `ping`;
-- watchdog rodando em paralelo com `loadfile` e fechando o socket enquanto outra thread ainda tenta usar o IPC;
+- watchdog reiniciando MPV cedo demais apos falhas de `ping`;
+- watchdog/restart rodando em paralelo com `loadfile` e fechando o socket enquanto outra thread ainda tenta usar o IPC;
 - MPV ficando pouco responsivo durante reproducao/transicao em DRM/KMS, o que transforma o ping em falso positivo.
 
-O teste A/B com `mpv_ipc_timeout_sec=5` enfraquece a hipotese de timeout puramente agressivo. O timeout maior reduziu levemente pings falhos, mas manteve 31 restarts e piorou falhas de `loadfile`.
+O teste A/B com `mpv_ipc_timeout_sec=5` enfraqueceu a hipotese de timeout puramente agressivo. O timeout maior reduziu levemente pings falhos, mas manteve 31 restarts e piorou falhas de `loadfile`.
+
+A variante `mpv_watchdog_ping_failures_before_restart=2` confirmou que o watchdog agressivo era parte do problema: `Restarting MPV` caiu de 31 para 18 e `MPV process started` de 32 para 19. A correcao posterior de reset por geracao ajustou a semantica do contador, mas trouxe ganho pequeno. A coordenacao IPC/restart no commit `9bdb38c` confirmou a corrida de fechamento do socket: `Bad file descriptor` e `MPV IPC command send failed` cairam a zero, e `Failed to load media` caiu de 7 para 2.
+
+O problema aberto continua sendo responsividade de ping IPC: `MPV IPC ping failed`, `MPV IPC command timeout` e `MPV IPC unresponsive` ainda aparecem com frequencia demais para liberar teste longo ou systemd.
 
 Nao ha evidencia forte, nos artefatos analisados, de problema sistemico de kernel/SD, permissao DRM, systemd, sync, telemetria, hotkeys ou UI de configuracao.
 
@@ -21,11 +25,47 @@ Nao ha evidencia forte, nos artefatos analisados, de problema sistemico de kerne
 Esta analise usou apenas codigo local e artefatos locais ja coletados:
 
 - `orange_pi_totem`: branch `foundation-v0.1`.
-- `kiosky-player`: `/home/builder/kiosky-player`, branch `appliance-v0.1`, commit `7a5f75c`.
+- `kiosky-player`: `/home/builder/kiosky-player`, branch `appliance-v0.1`; analise inicial em `7a5f75c`, com rodadas posteriores ate `9bdb38c`.
 - Rodada `20260429-172733-kiosky-manual-probe-generation-logs`.
 - Rodada `20260429-174349-kiosky-manual-probe-ipc-timeout-5s`.
+- Rodada `20260429-194954-kiosky-manual-probe-watchdog-threshold-2`.
+- Rodada `20260429-202035-kiosky-manual-probe-watchdog-threshold-2-generation-reset`.
+- Rodada `20260429-210204-kiosky-manual-probe-ipc-restart-coordination`.
 
 Nao foi usado SSH, nenhum comando foi executado na Orange Pi, `kiosk.py` nao foi iniciado, MPV nao foi iniciado, nenhum pacote foi instalado e nenhum artefato bruto foi apagado.
+
+## Atualizacao apos rodadas subsequentes
+
+### Watchdog threshold 2
+
+- `Restarting MPV`: 31 -> 18.
+- `MPV process started`: 32 -> 19.
+- `Failed to load media`: 10 -> 7.
+- `Media load retry failed`: 0.
+
+Leitura: a politica de reiniciar o MPV apos uma unica falha de ping era agressiva demais e contribuia para o churn. A melhora foi real, mas a responsividade IPC continuou ruim: ainda houve 23 falhas de ping e 30 command timeouts em 300s.
+
+### Threshold 2 com reset por geracao
+
+- `Restarting MPV`: 18 -> 17.
+- `MPV process started`: 19 -> 18.
+- `MPV IPC command timeout`: 30 -> 28.
+- `Bad file descriptor`: 3 ocorrencias remanescentes em `loadfile`.
+
+Leitura: a correcao do contador funcionou semanticamente, mas nao resolveu sozinha a instabilidade principal.
+
+### Coordenacao IPC/restart
+
+- `Bad file descriptor`: 3 -> 0.
+- `MPV IPC command send failed`: 3 -> 0.
+- `Restarting MPV`: 17 -> 13.
+- `MPV process started`: 18 -> 14.
+- `Failed to load media`: 7 -> 2.
+- `Media load retry failed`: 1 -> 0.
+- `MPV IPC ping failed`: 23 -> 23.
+- `MPV IPC unresponsive`: 10 -> 11.
+
+Leitura: a corrida IPC/restart foi parcialmente confirmada e mitigada. A responsividade de ping IPC permanece aberta.
 
 ## Fatos observados
 
@@ -65,12 +105,13 @@ Nao foi usado SSH, nenhum comando foi executado na Orange Pi, `kiosk.py` nao foi
 ### Fatos de codigo relevantes
 
 - `MPVController._open_ipc()` espera o socket aparecer e conecta no socket Unix; nas rodadas, esse passo passou em todas as 32 geracoes.
-- `MPVController._send()` usa `_ipc_lock` para serializar comandos IPC, mas `restart()` / `_stop_locked()` fecham o IPC sem adquirir esse lock.
+- Na analise inicial, `MPVController._send()` usava `_ipc_lock` para serializar comandos IPC, mas `restart()` / `_stop_locked()` fechavam o IPC sem adquirir esse lock.
+- A rodada com commit `9bdb38c` corrigiu essa coordenacao, serializando fechamento de IPC com comandos em andamento.
 - `MPVController.ping()` usa `get_property idle-active` com resposta esperada e timeout `mpv_ipc_timeout_sec`.
-- `watchdog()` chama `mpv.ensure_running()`, executa um unico `mpv.ping()` e reinicia imediatamente se o ping retorna falso.
+- Na analise inicial, `watchdog()` chamava `mpv.ensure_running()`, executava um unico `mpv.ping()` e reiniciava imediatamente se o ping retornasse falso.
+- Rodadas posteriores adicionaram `mpv_watchdog_ping_failures_before_restart` e reset por geracao; isso reduziu churn, mas nao resolveu pings/timeouts.
 - `playback_loop()` tambem chama `mpv.ensure_running()`, executa `mpv.load_file()`, e se falhar chama `mpv.restart(reason=media_load_failed:...)` e tenta carregar de novo.
 - Nao ha flag de "transicao em andamento" nem supressao do watchdog durante `loadfile`.
-- Nao ha contador de falhas consecutivas de ping antes de reiniciar.
 - `mpv_ipc_timeout_sec` e usado para ping e `loadfile` com resposta quando `mpv_debug_events=true`.
 - `watchdog_interval_sec=10` explica a cadencia de restarts: intervalo de watchdog + timeout IPC + custo de restart.
 - `media_load_retry_cooldown_sec` so atua quando o segundo `loadfile`, apos restart, tambem falha.
@@ -97,38 +138,26 @@ Nao foi usado SSH, nenhum comando foi executado na Orange Pi, `kiosk.py` nao foi
 
 ## Hipoteses descartadas ou de baixa prioridade
 
-- Startup IPC do MPV: baixa prioridade, porque `MPV IPC startup wait complete` foi 32/32 nas duas rodadas.
+- Startup IPC do MPV: baixa prioridade, porque `MPV IPC startup wait complete` foi 32/32 na rodada com logs por geracao e permaneceu completo nas rodadas posteriores.
 - Systemd da aplicacao: fora de causa nesta fase, porque os runs foram manuais e ainda sem service habilitado/iniciado.
 - Sync/sincronismo: baixa prioridade, porque `sync_enabled=false` e `sync_ntp_command=""` no perfil appliance.
 - Telemetria, UI de configuracao e hotkeys: baixa prioridade, porque estao desativadas no perfil appliance.
 - Permissoes DRM como causa principal: baixa prioridade, porque MPV manual funcionou como `totem` e o app cria processo/socket em todas as geracoes.
 - Kernel/SD como causa principal: baixa prioridade, porque os filtros criticos dos diagnosticos permanecem limpos.
 
-## Proximos testes recomendados
+## Proximo teste recomendado
 
-1. Mudar somente a politica do watchdog para nao reiniciar MPV apos uma unica falha de ping.
+Fazer um A/B curto, ainda sem systemd, mantendo constantes o codigo com coordenacao IPC/restart, `mpv_ipc_timeout_sec=2.0`, `mpv_startup_timeout_sec=10.0`, `hwdec=auto-safe`, `mpv_msg_level=all=v`, `mpv_debug_events=true`, playlist/midias e demais campos operacionais.
 
-   Variante minima: exigir 2 falhas consecutivas de `ping` antes de `mpv.restart(reason="ipc_unresponsive")`, mantendo `mpv_ipc_timeout_sec=2`, `mpv_startup_timeout_sec=10`, `hwdec=auto-safe`, `mpv_msg_level=all=v` e `mpv_debug_events=true`.
+Alterar somente:
 
-   Melhora: `Restarting MPV reason=ipc_unresponsive` cai fortemente, `MPV process started` fica muito abaixo de 32, `Failed to load media` nao aumenta e `Media load retry failed` fica zero.
+```text
+mpv_watchdog_ping_failures_before_restart=999
+```
 
-   Piora: pings falhos continuam consecutivos, MPV para de exibir midia, status final deixa de ficar `playing` ou `mpv_running=true`, ou aumenta tempo de tela preta.
+Objetivo: observar se reiniciar por falha de ping IPC e destrutivo demais. Melhora esperada: menos `Restarting MPV`, menos `MPV process started`, zero `Bad file descriptor`, zero command send failed, `Failed to load media` nao aumenta, status final segue `playing`/`mpv_running=true` e nao ha tela preta prolongada. Piora: MPV para de exibir, status final degrada, processos ficam remanescentes ou o operador observa travamento sem recuperacao.
 
-2. Mudar somente a coordenacao de IPC/restart.
-
-   Variante minima: garantir que `restart()` / `_stop_locked()` nao fechem o socket enquanto `_send()` / `_recv_response()` estao usando o IPC. Nao mudar timeout, `hwdec` ou logging neste teste.
-
-   Melhora: `MPV IPC command send failed ... Bad file descriptor` cai a zero, restarts duplos desaparecem e `Failed to load media` cai mesmo que algum ping ainda falhe.
-
-   Piora: deadlock, parada sem restart, ou aumento claro de timeouts por comandos aguardando lock.
-
-3. Mudar somente `hwdec` para uma variante sem hardware decode.
-
-   Variante minima: `hwdec` vazio/desabilitado em probe curto, mantendo o restante igual a variante anterior aprovada. Nao mudar timeout, watchdog, logging ou midias no mesmo teste.
-
-   Melhora: queda de timeouts IPC e falhas `loadfile`, menor ruido de hwdec nos logs MPV e nenhuma piora visual observada.
-
-   Piora: aumento de CPU percebido, travamento de video, mais timeouts ou mais tela preta.
+Teste de `hwdec` desabilitado fica como rodada separada posterior, somente se o A/B de politica de ping nao explicar a maior parte do problema.
 
 ## Criterios para liberar teste mais longo
 

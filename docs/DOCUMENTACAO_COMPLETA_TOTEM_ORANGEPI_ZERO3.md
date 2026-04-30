@@ -2,6 +2,8 @@
 
 Este documento consolida os documentos principais do projeto. Os arquivos separados continuam sendo a fonte preferencial de manutenção.
 
+> Atualização de alto nível — 2026-04-29: o Candidato A avançou além da fundação de SO. O `kiosky-player` já foi deployado em `/opt/totem/kiosky-player`, a config privada já foi criada em `/data/config/config.json`, e o app já rodou manualmente como usuário `totem`, criando mídia/estado/status nos caminhos esperados e sem escrita em `/opt/totem/kiosky-player`. A base OS permanece saudável, mas o Candidato A ainda não está homologado para produção porque o bloqueio atual está na integração app-MPV: IPC, watchdog e restart. Para o estado canônico atualizado, consultar [`STATUS_ATUAL.md`](STATUS_ATUAL.md) e [`app-integration/04_EVOLUCAO_MPV_IPC_WATCHDOG.md`](app-integration/04_EVOLUCAO_MPV_IPC_WATCHDOG.md).
+
 
 
 ---
