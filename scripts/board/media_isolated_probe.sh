@@ -12,9 +12,11 @@ RUN_NAME="media-isolated-$TIMESTAMP"
 OUT_DIR="$BASE_DIR/$RUN_NAME"
 ARCHIVE="$BASE_DIR/$RUN_NAME.tar.gz"
 SUMMARY="$OUT_DIR/summary.tsv"
-MPV_LOG="$OUT_DIR/mpv.log"
+MPV_NULL_LOG="$RUNTIME_DIR/media-isolated-$TIMESTAMP-vo-null.log"
+MPV_DRM_LOG="$RUNTIME_DIR/media-isolated-$TIMESTAMP-drm.log"
 TIMEOUT_SEC="${MEDIA_ISOLATED_TIMEOUT_SEC:-60}"
 HWDEC="${MEDIA_ISOLATED_HWDEC:-auto-safe}"
+MEDIA_ROOT="/data/media/kiosky-player"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: run this script as root." >&2
@@ -45,6 +47,22 @@ if [ ! -f "$MEDIA_PATH" ]; then
   echo "ERROR: media path is not a regular file." >&2
   exit 2
 fi
+
+MEDIA_REALPATH="$(readlink -f -- "$MEDIA_PATH" 2>/dev/null || true)"
+if [ -z "$MEDIA_REALPATH" ]; then
+  echo "ERROR: failed to resolve media path." >&2
+  exit 2
+fi
+
+case "$MEDIA_REALPATH" in
+  "$MEDIA_ROOT"/*)
+    MEDIA_PATH="$MEDIA_REALPATH"
+    ;;
+  *)
+    echo "ERROR: media path must be under $MEDIA_ROOT." >&2
+    exit 2
+    ;;
+esac
 
 case "$TIMEOUT_SEC" in
   ''|*[!0-9]*)
@@ -105,6 +123,23 @@ run_shell() {
   return 0
 }
 
+copy_mpv_log() {
+  local label="$1"
+  local source="$2"
+  local dest_name="$3"
+  local dest="$OUT_DIR/$dest_name"
+  local size=0
+
+  if [ -f "$source" ]; then
+    cp "$source" "$dest"
+    chmod 0600 "$dest"
+    size=$(wc -c <"$source" 2>/dev/null || printf '0')
+    append_summary "$label" "0" "$dest_name copied from runtime log; bytes=$size"
+  else
+    append_summary "$label" "missing" "$dest_name runtime log not present"
+  fi
+}
+
 MEDIA_ALIAS="$(safe_media_alias)"
 MEDIA_SIZE="$(wc -c <"$MEDIA_PATH" 2>/dev/null || printf 'unknown')"
 MEDIA_BASENAME="$(basename "$MEDIA_PATH")"
@@ -114,7 +149,8 @@ if [ "$MEDIA_EXT" = "$MEDIA_BASENAME" ]; then
 fi
 
 export MEDIA_ISOLATED_TARGET="$MEDIA_PATH"
-export MEDIA_ISOLATED_MPV_LOG="$MPV_LOG"
+export MEDIA_ISOLATED_MPV_NULL_LOG="$MPV_NULL_LOG"
+export MEDIA_ISOLATED_MPV_DRM_LOG="$MPV_DRM_LOG"
 export MEDIA_ISOLATED_HWDEC="$HWDEC"
 export MEDIA_ISOLATED_TIMEOUT_SEC_VALUE="$TIMEOUT_SEC"
 
@@ -128,6 +164,7 @@ export MEDIA_ISOLATED_TIMEOUT_SEC_VALUE="$TIMEOUT_SEC"
   echo "media_alias=$MEDIA_ALIAS"
   echo "media_size_bytes=$MEDIA_SIZE"
   echo "media_extension=$MEDIA_EXT"
+  echo "media_root=$MEDIA_ROOT"
   echo "timeout_sec=$TIMEOUT_SEC"
   echo "hwdec=$HWDEC"
   echo "hostname=$(hostname 2>/dev/null || true)"
@@ -178,10 +215,16 @@ else
 fi
 
 if command -v runuser >/dev/null 2>&1; then
+  run_shell "mpv-isolated-vo-null-totem" "MPV isolated decode without video as totem" \
+    "runuser -u '$APP_USER' -- env XDG_RUNTIME_DIR='$RUNTIME_DIR' timeout \"\${MEDIA_ISOLATED_TIMEOUT_SEC_VALUE}s\" mpv --no-config --no-terminal --no-osc --osd-level=0 --vo=null --ao=null --log-file=\"\$MEDIA_ISOLATED_MPV_NULL_LOG\" --msg-level=all=v \"\$MEDIA_ISOLATED_TARGET\"" \
+    "runuser -u '$APP_USER' -- env XDG_RUNTIME_DIR='$RUNTIME_DIR' timeout '${TIMEOUT_SEC}s' mpv --no-config --no-terminal --no-osc --osd-level=0 --vo=null --ao=null --log-file='$MPV_NULL_LOG' --msg-level=all=v '$MEDIA_ALIAS'"
+  copy_mpv_log "mpv-vo-null-log-copy" "$MPV_NULL_LOG" "mpv-vo-null.log"
   run_shell "mpv-isolated-drm-totem" "MPV isolated DRM/KMS playback as totem" \
-    "runuser -u '$APP_USER' -- env XDG_RUNTIME_DIR='$RUNTIME_DIR' timeout \"\${MEDIA_ISOLATED_TIMEOUT_SEC_VALUE}s\" mpv --no-config --fs --force-window=yes --no-terminal --no-osc --osd-level=0 --vo=gpu --gpu-context=drm --ao=null --hwdec=\"\$MEDIA_ISOLATED_HWDEC\" --log-file=\"\$MEDIA_ISOLATED_MPV_LOG\" --msg-level=all=v \"\$MEDIA_ISOLATED_TARGET\"" \
-    "runuser -u '$APP_USER' -- env XDG_RUNTIME_DIR='$RUNTIME_DIR' timeout '${TIMEOUT_SEC}s' mpv --no-config --fs --force-window=yes --no-terminal --no-osc --osd-level=0 --vo=gpu --gpu-context=drm --ao=null --hwdec='$HWDEC' --log-file='$MPV_LOG' --msg-level=all=v '$MEDIA_ALIAS'"
+    "runuser -u '$APP_USER' -- env XDG_RUNTIME_DIR='$RUNTIME_DIR' timeout \"\${MEDIA_ISOLATED_TIMEOUT_SEC_VALUE}s\" mpv --no-config --fs --force-window=yes --no-terminal --no-osc --osd-level=0 --vo=gpu --gpu-context=drm --ao=null --hwdec=\"\$MEDIA_ISOLATED_HWDEC\" --log-file=\"\$MEDIA_ISOLATED_MPV_DRM_LOG\" --msg-level=all=v \"\$MEDIA_ISOLATED_TARGET\"" \
+    "runuser -u '$APP_USER' -- env XDG_RUNTIME_DIR='$RUNTIME_DIR' timeout '${TIMEOUT_SEC}s' mpv --no-config --fs --force-window=yes --no-terminal --no-osc --osd-level=0 --vo=gpu --gpu-context=drm --ao=null --hwdec='$HWDEC' --log-file='$MPV_DRM_LOG' --msg-level=all=v '$MEDIA_ALIAS'"
+  copy_mpv_log "mpv-drm-log-copy" "$MPV_DRM_LOG" "mpv-drm.log"
 else
+  append_summary "mpv-isolated-vo-null-totem" "skipped" "runuser not found"
   append_summary "mpv-isolated-drm-totem" "skipped" "runuser not found"
 fi
 
