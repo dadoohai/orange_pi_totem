@@ -55,9 +55,10 @@ Nao executar atualizacao ampla em campo. Kernel, DTB, U-Boot e BSP permanecem co
 | MPV flags progress probe | 2026-04-30 | Fora do app, flags app/low-resource pararam 4 aliases; perfil simples fez todos avancarem | [Rodada 20260430-115507-mpv-flags-progress-probe](runs/20260430-115507-mpv-flags-progress-probe/README.md) |
 | App com `low_resource_mode=false` | 2026-04-30 | IPC continuou estavel, mas 4 aliases seguiram sem avancar; remover low-resource isoladamente nao resolveu | [Rodada 20260430-122532-kiosky-playback-observer-low-resource-off](runs/20260430-122532-kiosky-playback-observer-low-resource-off/README.md) |
 | Remaining flags matrix | 2026-04-30 | V5, com `--vo=gpu --gpu-context=drm --ao=null`, fez aliases problematicos avancarem e preservou o alias bom | [Rodada 20260430-125237-mpv-remaining-flags-matrix](runs/20260430-125237-mpv-remaining-flags-matrix/README.md) |
+| Observer com saida MPV explicita | 2026-04-30 | Config candidata aprovada no app real por 300s: IPC/loadfile estaveis, 0 restarts e todos os 5 aliases avancando `time-pos`/frame | [Rodada 20260430-133130-kiosky-playback-observer-explicit-mpv-output](runs/20260430-133130-kiosky-playback-observer-explicit-mpv-output/README.md) |
 
 Resumo: o Wi-Fi cliente 5 GHz foi aprovado e permaneceu funcional nas validacoes posteriores a desativacao de `bluetooth.service` e `aw859a-bluetooth.service`.
-O MPV manual tambem foi aprovado via DRM/KMS direto, inclusive como usuario `totem`, sem indicacao atual para instalar Xorg, Wayland ou compositor. O app ja foi deployado e rodou manualmente; a camada OS permanece saudavel, mas o Candidato A ainda nao esta homologado para producao. O bloqueio app-MPV mudou: IPC/watchdog/loadfile foi estabilizado por `mpv_query_uses_fresh_ipc=true`, e o problema visual foi isolado nas flags de saida MPV. A proxima candidata e aplicar `--vo=gpu --gpu-context=drm --ao=null` no appliance e repetir o observer do app real.
+O MPV manual tambem foi aprovado via DRM/KMS direto, inclusive como usuario `totem`, sem indicacao atual para instalar Xorg, Wayland ou compositor. O app ja foi deployado e rodou manualmente; a camada OS permanece saudavel, mas o Candidato A ainda nao esta homologado para producao. O bloqueio app-MPV curto foi resolvido para a candidata atual: IPC/watchdog/loadfile foi estabilizado por `mpv_query_uses_fresh_ipc=true`, a saida MPV explicita foi aprovada, e todos os 5 aliases avancaram no app real. O proximo passo e homologacao `v0.1-rc1` em segunda placa/cartao e teste manual mais longo.
 
 Evolucao sanitizada das metricas do MPV:
 
@@ -69,6 +70,7 @@ Evolucao sanitizada das metricas do MPV:
 - Fresh IPC query: `MPV IPC command timeout=0`, `MPV IPC ping failed=0`, `Restarting MPV=0`, `MPV process started=1` e `Failed to load media=0`.
 - Playback observer: com IPC estavel, 4 aliases ficaram sem progressao real de `time-pos`/frame, apesar de `pause=false`, `idle-active=false` e `eof-reached=false`.
 - Remaining flags matrix: adicionar `--vo=gpu --gpu-context=drm --ao=null` ao perfil do app fez os aliases problematicos avancarem no MPV isolado.
+- Observer com saida MPV explicita: `MPV IPC command timeout=0`, `MPV IPC ping failed=0`, `Restarting MPV=0`, `MPV process started=1`, `Failed to load media=0` e todos os 5 aliases avancando `time-pos`/frame no app real.
 
 ## Coletas padronizadas
 
@@ -86,14 +88,14 @@ Os scripts de bancada ficam em `scripts/board/` e gravam artefatos em `/root/tot
 Para copiar os artefatos da placa para o repositorio local, depois que SSH estiver liberado:
 
 ```bash
-./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/2026-04-28/
+./scripts/remote/pull_artifacts.sh <usuario>@<host-de-bancada> docs/evidence/candidate-a/runs/2026-04-28/
 ```
 
 O script copia apenas arquivos `.tar.gz` de `/root/totem-diag/` e nao apaga nada na placa. Por padrao ele copia todos os `.tar.gz`; para melhorar rastreabilidade, use o terceiro argumento para filtrar a rodada desejada:
 
 ```bash
-./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/20260429-012638-data-layout/ "totem-diag-20260429-012629-0300.tar.gz"
-./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/20260429-012638-data-layout/ "totem-diag-20260429-0126*.tar.gz"
+./scripts/remote/pull_artifacts.sh <usuario>@<host-de-bancada> docs/evidence/candidate-a/runs/20260429-012638-data-layout/ "totem-diag-20260429-012629-0300.tar.gz"
+./scripts/remote/pull_artifacts.sh <usuario>@<host-de-bancada> docs/evidence/candidate-a/runs/20260429-012638-data-layout/ "totem-diag-20260429-0126*.tar.gz"
 ```
 
 Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) devem ficar fora do Git porque podem conter IPs, hostnames, SSIDs, UUIDs e detalhes de rede. Cada rodada em `docs/evidence/candidate-a/runs/<timestamp>/` deve ter um `README.md` sanitizado com o resumo publicavel.
@@ -106,7 +108,7 @@ Os artefatos brutos (`.tar.gz`, diretorios `raw/` e diretorios `extracted/`) dev
 4. `setup_data_layout.sh`
 5. `disable_bluetooth.sh` somente apos baseline coletado
 
-Proximo passo operacional planejado: aplicar no `kiosky-player` a saida explicita `--vo=gpu --gpu-context=drm --ao=null`, manter `mpv_query_uses_fresh_ipc=true` e repetir o observer do app real por 300s, preservando DRM/KMS como caminho principal e mantendo systemd da aplicacao bloqueado.
+Proximo passo operacional planejado: provisionar a homologacao `v0.1-rc1` em segunda placa/cartao, manter `mpv_query_uses_fresh_ipc=true`, `mpv_vo=gpu`, `mpv_gpu_context=drm`, `mpv_ao=null` e `low_resource_mode=false`, repetir o observer do app real por 300s, preservar DRM/KMS como caminho principal e manter systemd da aplicacao bloqueado.
 
 Estado corrente dos pre-requisitos: `check_app_prereqs.sh` passou apos a instalacao de `mpv`, `ffmpeg`, `python3-requests` e a criacao de `/tmp/kiosky`. O MPV manual via DRM/KMS passou como root e como `totem`, com confirmacao visual HDMI. O app foi deployado em `/opt/totem/kiosky-player`, a config privada existe em `/data/config/config.json`, e os runs manuais criaram dados em `/data` e `/tmp` sem escrita em `/opt`. `pip`, `/opt/totem/venv`, Xorg, Wayland, compositor e Chromium continuam fora desta fase por decisao de escopo.
 
@@ -126,9 +128,9 @@ Sequencia recomendada:
 Exemplo:
 
 ```bash
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/wifi_snapshot.sh
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/wifi_client_test.sh "<nome-da-conexao>"
-./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/<timestamp>-wifi-client/ "wifi-*.tar.gz"
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/wifi_snapshot.sh
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/wifi_client_test.sh "<nome-da-conexao>"
+./scripts/remote/pull_artifacts.sh <usuario>@<host-de-bancada> docs/evidence/candidate-a/runs/<timestamp>-wifi-client/ "wifi-*.tar.gz"
 ```
 
 Ethernet deve permanecer conectada durante esta validacao para manter caminho de acesso e recuperacao. Hotspot/configurador e modo manutencao sao etapa posterior; nao fazem parte deste teste.
@@ -164,12 +166,12 @@ A rodada [20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap3
 ### Comandos executados
 
 ```bash
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/collect_diag.sh
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/network_snapshot.sh
-./scripts/remote/pull_artifacts.sh root@orangepizero3 docs/evidence/candidate-a/runs/2026-04-28/
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/stress_light_30m.sh
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/setup_data_layout.sh
-./scripts/remote/push_and_run.sh root@orangepizero3 scripts/board/disable_bluetooth.sh
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/collect_diag.sh
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/network_snapshot.sh
+./scripts/remote/pull_artifacts.sh <usuario>@<host-de-bancada> docs/evidence/candidate-a/runs/2026-04-28/
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/stress_light_30m.sh
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/setup_data_layout.sh
+./scripts/remote/push_and_run.sh <usuario>@<host-de-bancada> scripts/board/disable_bluetooth.sh
 ```
 
 ### Artefatos coletados
@@ -207,9 +209,9 @@ A rodada [20260429-020919-wifi-test-ap304-5g](runs/20260429-020919-wifi-test-ap3
 - Validar aplicacao do totem depois do teste manual de MPV aprovado.
 - Validar politica de logs.
 - Decidir estrategia futura de `pip`/venv somente se a estabilizacao do app exigir.
-- Validar no app real a saida MPV explicita `--vo=gpu --gpu-context=drm --ao=null`.
-- Repetir o observer de 300s com `mpv_query_uses_fresh_ipc=true`, ainda sem systemd.
-- Liberar teste manual mais longo somente apos rodada curta estavel.
+- Homologar a configuracao `v0.1-rc1` em segunda placa/cartao.
+- Repetir observer de 300s com a configuracao candidata, ainda sem systemd.
+- Rodar teste manual observado de 30 a 60 minutos somente apos a segunda placa passar no observer curto.
 - Liberar systemd da aplicacao somente depois de estabilidade manual comprovada.
 - Validar root read-only.
 - Validar comportamento com cortes de energia em bancada controlada.

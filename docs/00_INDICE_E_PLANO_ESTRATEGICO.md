@@ -1,7 +1,7 @@
 # Projeto Totem Orange Pi Zero 3 — Índice e plano estratégico
 
 **Data:** 2026-04-29  
-**Status:** documentação de fundação após geração e boot inicial do Candidato A  
+**Status:** documentação de fundação com homologação v0.1-rc1 em preparação; ainda não é produção
 **Hardware alvo:** Orange Pi Zero 3, variante observada com ~2 GB RAM  
 **Uso:** totem de mídia Full HD com player Python, sincronização por endpoint, telemetria, Wi‑Fi e modo de manutenção/configuração.
 
@@ -48,6 +48,23 @@ Arquivo: `03_TESTES_INICIAIS_E_EVIDENCIAS.md`
 Organiza o que ainda precisa ser feito: stress, vídeo, Wi‑Fi, `/data`, root read-only, modo manutenção, atualização de app, atualização de sistema, telemetria, diagnóstico remoto e aprendizado de campo.
 
 Arquivo: `04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md`
+
+### 05 — Política de atualização
+
+Registra a regra operacional de não executar upgrades amplos em campo e separa atualização de conteúdo, aplicação, sistema e camada kernel/DTB/U-Boot/BSP.
+
+Arquivo: `05_POLITICA_DE_ATUALIZACAO.md`
+
+### Release de homologação v0.1-rc1
+
+Consolida a versão de homologação atual, ainda não produção, para reproduzir a configuração candidata em uma segunda placa/cartão. Inclui README da release, roteiro de provisionamento, checklist de homologação e template de config sanitizado.
+
+Arquivos:
+
+- `releases/v0.1-rc1-homologacao/README.md`
+- `releases/v0.1-rc1-homologacao/PROVISIONAMENTO_SEGUNDA_PLACA.md`
+- `releases/v0.1-rc1-homologacao/CHECKLIST_HOMOLOGACAO.md`
+- `app-integration/config.homologation-v0.1.example.json`
 
 ---
 

@@ -6,15 +6,19 @@ Data: 2026-04-30
 
 A base A da Orange Pi Zero 3 continua saudavel e o caminho MPV direto via DRM/KMS segue valido. O `kiosky-player` roda manualmente como usuario `totem`, baixa midias, cria estado/status e nao mostrou regressao de sistema nas rodadas recentes.
 
-O bloqueio atual nao e mais IPC/watchdog/restart de forma generica. A opcao `mpv_query_uses_fresh_ipc=true` estabilizou consultas do watchdog e eliminou timeouts, falhas de ping, restarts e falhas de `loadfile` nas rodadas curtas. Com IPC estavel, o problema restante apareceu como falta de progressao real de `time-pos` e frame em alguns aliases.
+O bloqueio curto app-MPV foi resolvido para a candidata atual. A opcao `mpv_query_uses_fresh_ipc=true` estabilizou consultas do watchdog e eliminou timeouts, falhas de ping, restarts e falhas de `loadfile` nas rodadas curtas. Com IPC estavel, o problema restante apareceu como falta de progressao real de `time-pos` e frame em alguns aliases, resolvida no app real ao explicitar a saida MPV.
 
-A melhor candidata atual e adicionar ao perfil MPV do app:
+A configuracao candidata aprovada para homologacao `v0.1-rc1` mantem:
 
 ```text
---vo=gpu --gpu-context=drm --ao=null
+mpv_query_uses_fresh_ipc=true
+mpv_vo=gpu
+mpv_gpu_context=drm
+mpv_ao=null
+low_resource_mode=false
 ```
 
-Essa combinacao fez os aliases problematicos avancarem na matriz isolada e nao quebrou o alias que ja avancava.
+Essa combinacao passou no observer de 300s do app real na rodada `20260430-133130`, com todos os 5 aliases avancando `time-pos` e `estimated-frame-number`.
 
 ## Linha do tempo curta
 
@@ -31,6 +35,7 @@ Essa combinacao fez os aliases problematicos avancarem na matriz isolada e nao q
 | Flags progress probe | Perfil simples avancou as 4 midias problematicas; perfil app/low-resource nao avancou. |
 | `low_resource_mode=false` | Removeu flags low-resource fortes, mas nao resolveu no app real. |
 | Remaining flags matrix | V5, com `--vo=gpu --gpu-context=drm --ao=null`, fez aliases problematicos avancarem. |
+| Observer com saida MPV explicita | Commit `c71318a` passou no app real por 300s com IPC/loadfile estaveis e todos os aliases avancando. |
 
 ## O que foi descartado
 
@@ -51,8 +56,9 @@ Essa combinacao fez os aliases problematicos avancarem na matriz isolada e nao q
   - `Restarting MPV=0`
   - `Failed to load media=0`
 - O problema visual observado depois disso corresponde a falta real de progressao de `time-pos`/frame em alguns aliases, nao apenas a uma impressao visual subjetiva.
-- A saida explicita `--vo=gpu --gpu-context=drm --ao=null` faz os aliases problematicos avancarem na matriz isolada.
+- A saida explicita `--vo=gpu --gpu-context=drm --ao=null` faz os aliases problematicos avancarem na matriz isolada e no app real.
 - O alias que ja avancava continuou avancando com a saida explicita.
+- A rodada `20260430-133130` teve `MPV IPC command timeout=0`, `MPV IPC ping failed=0`, `Restarting MPV=0`, `Failed to load media=0` e todos os 5 aliases avancando tempo/frame.
 - As rodadas recentes mantiveram `systemctl --failed` em `0 loaded units listed` e nao mostraram `Oops`, `panic`, erro EXT4, remount read-only ou `mmc timeout/reset`.
 
 ## Configuracao candidata atual
@@ -61,14 +67,12 @@ Manter:
 
 - MPV direto via DRM/KMS, sem desktop/compositor.
 - `mpv_query_uses_fresh_ipc=true`.
-- Watchdog com intervalo e limites ja usados nas rodadas fresh IPC.
+- `mpv_vo=gpu`.
+- `mpv_gpu_context=drm`.
+- `mpv_ao=null`.
+- `low_resource_mode=false`.
+- Watchdog com intervalo e limites ja usados na rodada aprovada.
 - Logs MPV por geracao durante validacao.
-
-Adicionar ao comando MPV do `kiosky-player`:
-
-```text
---vo=gpu --gpu-context=drm --ao=null
-```
 
 Nao alterar nesta etapa:
 
@@ -79,25 +83,24 @@ Nao alterar nesta etapa:
 
 ## Proximo teste obrigatorio
 
-1. Aplicar a saida explicita no `kiosky-player`.
-2. Redeployar sem habilitar `systemd`.
+1. Provisionar a homologacao `v0.1-rc1` em uma segunda placa/cartao.
+2. Redeployar o `kiosky-player` no commit `c71318a`, sem habilitar `systemd`.
 3. Rodar o observer do app real por 300s.
 4. Confirmar, por aliases sanitizados:
    - `MPV IPC command timeout=0`
    - `MPV IPC ping failed=0`
    - `Restarting MPV=0`
    - `Failed to load media=0`
-   - aliases problematicos avancando `time-pos` e frame
+   - todos os 5 aliases avancando `time-pos` e frame
    - `pause=false`, `idle-active=false` e sem EOF prematuro durante janelas esperadas
 5. Confirmar `systemctl --failed=0` e filtro critico de kernel limpo.
 
 ## Criterios para liberar teste longo
 
-Liberar teste manual mais longo somente se o observer de 300s com a saida explicita:
+Liberar teste manual observado de 30 a 60 minutos somente se a segunda placa/cartao repetir o observer de 300s com a configuracao candidata:
 
 - mantiver IPC/watchdog/loadfile estaveis;
-- fizer os aliases problematicos avancarem;
-- nao quebrar o alias que ja avancava;
+- fizer todos os 5 aliases avancarem;
 - nao gerar processos remanescentes reais;
 - nao escrever em `/opt` durante o app;
 - mantiver `systemctl --failed=0`;
