@@ -45,9 +45,12 @@ validacoes.
 A próxima frente de desenvolvimento é C0: planejamento do onboarding
 Wi-Fi/configuração. O objetivo é especificar fluxo, segurança, estados públicos,
 rollback e plano de teste antes de implementar hotspot, portal local, ativação
-backend ou escrita real de config por operador.
+backend ou escrita real de config por operador. A ordem é documentação primeiro:
+sem implementação de Wi-Fi, hotspot, portal ou QR funcional nesta etapa.
 
 Estratégia: [docs/product/01_ESTRATEGIA_PRODUTO_UX.md](docs/product/01_ESTRATEGIA_PRODUTO_UX.md)
+
+Planejamento C0: [docs/product/12_C0_ONBOARDING_WIFI_CONFIG.md](docs/product/12_C0_ONBOARDING_WIFI_CONFIG.md)
 
 Esta frente é separada da RC1/homologação. A RC1 continua dedicada a reproduzir a base técnica validada em outra placa/cartão antes de qualquer produção.
 
@@ -71,12 +74,15 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Conclusão da Fase A status/splash](docs/product/08_FASE_A_CONCLUSAO.md)
 - [Planejamento Fase B status visual e manutenção mínima](docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md)
 - [Marco desenvolvimento status/splash](docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md)
+- [Planejamento C0 onboarding Wi-Fi/configuração](docs/product/12_C0_ONBOARDING_WIFI_CONFIG.md)
+- [Riscos onboarding Wi-Fi/configuração](docs/product/13_RISCOS_ONBOARDING_WIFI_CONFIG.md)
 - [Homologação v0.1-rc1](docs/releases/v0.1-rc1-homologacao/README.md)
 - [Template de evidências do Candidato A](docs/evidence/candidate-a/README.md)
 - [Evolução MPV IPC/watchdog](docs/app-integration/04_EVOLUCAO_MPV_IPC_WATCHDOG.md)
 - [Estado atual do player MPV](docs/app-integration/05_ESTADO_ATUAL_PLAYER_MPV.md)
 - [ADR-0004 runtime MPV do kiosky-player](docs/DECISIONS/ADR-0004-kiosky-player-mpv-runtime.md)
 - [ADR-0007 launcher, status agregado e splash Dadooh](docs/DECISIONS/ADR-0007-status-splash-launcher.md)
+- [ADR-0008 onboarding Wi-Fi/configuração](docs/DECISIONS/ADR-0008-onboarding-wifi-config.md)
 - [Documentação consolidada](docs/DOCUMENTACAO_COMPLETA_TOTEM_ORANGEPI_ZERO3.md)
 
 ## Scripts de bancada

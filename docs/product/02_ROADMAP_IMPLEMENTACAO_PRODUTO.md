@@ -171,6 +171,12 @@ Criterio de rollback:
 
 Status: proxima fase recomendada. Nao implementa mudancas.
 
+Documentos:
+
+- `docs/product/12_C0_ONBOARDING_WIFI_CONFIG.md`;
+- `docs/product/13_RISCOS_ONBOARDING_WIFI_CONFIG.md`;
+- `docs/DECISIONS/ADR-0008-onboarding-wifi-config.md`.
+
 Objetivo:
 
 - especificar o fluxo de onboarding antes de qualquer implementacao de rede;
@@ -201,6 +207,18 @@ Fora de escopo em C0:
 - implementar telemetria;
 - instalar pacotes.
 
+Sequencia incremental proposta apos C0:
+
+- C1 - QR placeholder e texto de setup na tela, sem QR funcional e sem rede;
+- C2 - portal local mock, sem alterar NetworkManager;
+- C3 - diagnostico Wi-Fi read-only;
+- C4 - configuracao Wi-Fi em bancada com Ethernet de recuperacao;
+- C5 - hotspot Dadooh Setup;
+- C6 - ativacao backend por codigo;
+- C7 - gravacao segura de config;
+- C8 - reset/reparo;
+- C9 - validacao de campo.
+
 Criterios de aceite:
 
 - documento de arquitetura do onboarding aprovado;
@@ -210,10 +228,12 @@ Criterios de aceite:
   presente e ausencia de internet;
 - plano preserva a separacao entre homologacao `v0.1-rc1`, desenvolvimento
   pos-RC1 e producao futura.
+- Wi-Fi setup, hotspot, portal local, ativacao backend e escrita real de config
+  seguem nao implementados ao final de C0.
 
 ## Fase C - Wi-Fi/setup
 
-Status: nao implementada. Depende de C0.
+Status: nao implementada. Depende de C0 e dos incrementos preparatorios C1-C3.
 
 Objetivo:
 

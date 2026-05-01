@@ -37,6 +37,11 @@ backend, root read-only, corte seco, monitoramento, update e rollback.
 Proxima fase recomendada: C0, planejamento do onboarding Wi-Fi/configuracao,
 sem implementar hotspot, portal ou ativacao backend ainda.
 
+Nota C0: a frente de onboarding deve comecar por documentacao e arquitetura.
+Wi-Fi setup, hotspot, portal local, QR funcional, ativacao backend e escrita
+real de config continuam nao implementados. A homologacao `v0.1-rc1` segue
+separada.
+
 ## Resumo executivo
 
 O Candidato A avancou da validacao de base para uma versao de homologacao `v0.1-rc1`, ainda nao producao. A placa passou por boot inicial, reboots curtos, rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, layout `/data`, Wi-Fi cliente 5 GHz e desativacao dos servicos Bluetooth conhecidos sem regressao observada. O Wi-Fi cliente 5 GHz permaneceu funcional apos as desativacoes de Bluetooth/AW859A. Tambem foi feita a preparacao inicial de usuario/diretorios para o `kiosky-player`, a instalacao controlada do runtime minimo `mpv`, `ffmpeg` e `python3-requests`, a garantia de `/tmp/kiosky`, a aprovacao do `check_app_prereqs.sh` e o teste manual de MPV via DRM/KMS com confirmacao visual HDMI.
@@ -198,6 +203,8 @@ Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A audito
 - Desenvolver a frente produto/UX/onboarding sem misturar com os criterios da RC1.
 - Planejar C0 de produto/UX: onboarding Wi-Fi/configuracao, ainda sem
   implementar Wi-Fi setup, hotspot, portal local ou ativacao backend.
+- Documentar riscos e ADR proposta de onboarding antes de qualquer alteracao de
+  NetworkManager, portal local ou escrita de config.
 - Revisar ruido amplo de kernel da rodada B1 antes de qualquer decisao de
   producao.
 - `player_error` visual ainda nao validado operacionalmente.
