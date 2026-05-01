@@ -10,6 +10,17 @@ O app ja foi deployado em `/opt/totem/kiosky-player`, a config privada ja foi cr
 
 Ainda nao ha homologacao para producao. A camada OS continua saudavel: `systemctl --failed` permaneceu em `0 loaded units listed` e as rodadas recentes nao mostraram `Oops`, `panic`, erro EXT4, remount read-only ou `mmc timeout/reset`. O bloqueio app-MPV curto foi resolvido para a candidata atual: `mpv_query_uses_fresh_ipc=true` estabilizou IPC, pings, restart e `loadfile`, e a saida explicita `--vo=gpu --gpu-context=drm --ao=null` fez todos os 5 aliases avancarem `time-pos` e `estimated-frame-number` no app real por 300s. A configuracao aprovada na rodada `20260430-133130` vira base da homologacao `v0.1-rc1` em segunda placa/cartao.
 
+Atualizacao da placa de desenvolvimento: apos a definicao da RC1, o servico
+`kiosky-player.service` foi validado com `systemd` em start/stop controlado,
+autoboot com HDMI conectado e launcher para HDMI ausente/reconexao. Sem HDMI, o
+launcher registra `display_missing` e nao inicia app/MPV; ao reconectar HDMI, o
+app inicia automaticamente. Essa validacao nao muda o escopo da homologacao
+`v0.1-rc1`, que continua separada em outra placa/cartao.
+
+A proxima frente de desenvolvimento e produto/UX/onboarding: status/splash
+Dadooh, setup sem terminal, manutencao local, ativacao segura, rotacao e
+telemetria do appliance.
+
 ## Composicao do Candidato A
 
 - Armbian Build v25.11.
@@ -47,6 +58,9 @@ Ainda nao ha homologacao para producao. A camada OS continua saudavel: `systemct
 - Midias e transicoes manuais testadas sem evidencia de corrupcao de arquivo ou falha basica de DRM/KMS.
 - Matriz de flags MPV isolou a menor alteracao candidata atual: saida explicita `--vo=gpu --gpu-context=drm --ao=null`.
 - Observer de 300s do app real aprovado com commit `c71318a`, `mpv_query_uses_fresh_ipc=true`, `mpv_vo=gpu`, `mpv_gpu_context=drm`, `mpv_ao=null` e `low_resource_mode=false`: timeouts, falhas de ping, restarts e falhas de load ficaram em 0; todos os 5 aliases avancaram `time-pos` e frame.
+- `systemd` start/stop aprovado na placa de desenvolvimento com HDMI conectado.
+- Autoboot aprovado na placa de desenvolvimento em dois reboots controlados com HDMI conectado.
+- Launcher de HDMI ausente aprovado na placa de desenvolvimento: `display_missing` sem app/MPV no boot sem HDMI e inicio automatico apos reconexao.
 
 ## Rodadas recentes do kiosky-player
 
@@ -68,6 +82,9 @@ Ainda nao ha homologacao para producao. A camada OS continua saudavel: `systemct
 - `low_resource_mode=false`: removeu as flags low-resource fortes do app, mas nao resolveu o problema visual; os mesmos 4 aliases continuaram sem avancar no app real.
 - Remaining flags matrix: remover isoladamente `--loop-file=inf`, `--keep-open=yes`, `--image-display-duration=inf` ou adicionar `--no-config` nao resolveu; V5, adicionando `--vo=gpu --gpu-context=drm --ao=null`, fez os aliases problematicos avancarem e preservou o alias que ja funcionava.
 - Observer do app real com saida MPV explicita e commit `c71318a`: a configuracao candidata passou por 300s com `MPV IPC command timeout=0`, `MPV IPC ping failed=0`, `Restarting MPV=0`, `MPV process started=1`, `Failed to load media=0` e todos os 5 aliases avancando `time-pos`/frame. Sem `systemd`, sem escrita em `/opt`, sem processo remanescente real e com OS limpa.
+- Systemd dev smoke: unit simples com launcher aprovada para `systemctl start/stop` na placa de desenvolvimento, com HDMI conectado, sem escrita em `/opt` e sem processo remanescente apos stop.
+- Systemd dev autoboot: servico habilitado e aprovado em dois reboots controlados com HDMI conectado; observers curtos mantiveram IPC timeout 0, ping failed 0, restart 0 e 5/5 aliases avancando.
+- Systemd dev HDMI missing: boot sem HDMI manteve o servico `active`, escreveu `display_missing`, nao iniciou `kiosk.py`/MPV e iniciou automaticamente apos reconexao HDMI.
 
 ## O que foi alterado na placa
 
@@ -87,8 +104,9 @@ Ainda nao ha homologacao para producao. A camada OS continua saudavel: `systemct
 - Criados/preservados arquivos de estado em `/data/state/kiosky-player`.
 - Criado/copiado status temporario em `/tmp/kiosky-status.json` durante os probes.
 - Criados logs temporarios do MPV em `/tmp/kiosky` durante as rodadas instrumentadas.
+- Na placa de desenvolvimento, instalada unit `kiosky-player.service` e launcher `kiosky_service_launcher.sh` para validacao controlada de `systemd`, autoboot e HDMI ausente.
 
-Nenhum servico systemd da aplicacao foi instalado, habilitado ou iniciado. Nenhum comando `apt` foi executado nas rodadas recentes de app. A auditoria dos probes nao encontrou escrita em `/opt/totem/kiosky-player` apos o inicio do app.
+Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A auditoria dos probes nao encontrou escrita em `/opt/totem/kiosky-player` apos o inicio do app. A placa de homologacao continua tratada separadamente.
 
 ## O que ainda esta pendente
 
@@ -98,8 +116,9 @@ Nenhum servico systemd da aplicacao foi instalado, habilitado ou iniciado. Nenhu
 - Xorg, Wayland, compositor e Chromium continuam fora desta fase; nao ha indicacao atual para instala-los apos o teste MPV via DRM/KMS.
 - Homologar a configuracao `v0.1-rc1` em uma segunda placa/cartao.
 - Repetir observer de 300s na segunda placa/cartao com a config candidata aprovada.
-- Fazer teste manual observado de 30 a 60 minutos antes de liberar qualquer teste de `systemd`.
-- Unit systemd da aplicacao ainda nao instalada/habilitada na placa.
+- Fazer teste manual observado de 30 a 60 minutos na homologacao.
+- Repetir validacao de `systemd`/autoboot/HDMI ausente na placa de homologacao antes de qualquer producao.
+- Desenvolver a frente produto/UX/onboarding sem misturar com os criterios da RC1.
 - Teste longo do app ainda nao liberado.
 - Root read-only ainda nao validado.
 - Corte seco ainda nao validado.
@@ -107,8 +126,8 @@ Nenhum servico systemd da aplicacao foi instalado, habilitado ou iniciado. Nenhu
 ## Proximos 3 passos tecnicos
 
 1. Homologar `v0.1-rc1` em segunda placa/cartao com a imagem base e o `kiosky-player` no commit `c71318a`.
-2. Rodar teste manual observado de 30 a 60 minutos com a mesma configuracao candidata.
-3. Depois disso, preparar validacao controlada da unit `systemd` da aplicacao, ainda sem root read-only e sem corte seco.
+2. Rodar teste manual observado de 30 a 60 minutos com a mesma configuracao candidata e, depois, repetir a validacao de `systemd`/autoboot/HDMI ausente na placa de homologacao.
+3. Iniciar a frente produto/UX/onboarding em paralelo, com status/splash Dadooh e manutencao local como primeiros passos, sem root read-only e sem corte seco ainda.
 
 ## Regras que continuam proibidas
 
