@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-05-01T12:04:00Z",
+  "state": "app_exited",
+  "display_connected": true,
+  "last_app_exit_code": 1,
+  "launcher_pid": 1000
+}

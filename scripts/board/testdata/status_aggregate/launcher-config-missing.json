@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-05-01T12:01:00Z",
+  "state": "config_missing",
+  "display_connected": true,
+  "last_app_exit_code": null,
+  "launcher_pid": 1000
+}

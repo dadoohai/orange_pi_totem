@@ -98,6 +98,12 @@ A Fase A usa o contrato definido em
 `docs/product/STATUS_CONTRACT_V0.md`. O contrato publico representa um estado
 agregado do appliance, nao um dump do launcher ou do player.
 
+A implementacao local A1.1 fica em
+`scripts/board/totem_status_aggregate.py` e esta documentada em
+`docs/product/04_STATUS_AGGREGATOR_A1.md`. Ela gera
+`/tmp/dadooh-status/status.json` e `/tmp/dadooh-status/status.svg`, ainda sem
+exibir nada na tela e sem integracao com o launcher.
+
 Campos esperados:
 
 - `schema_version`;
