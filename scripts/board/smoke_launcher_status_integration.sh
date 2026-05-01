@@ -15,12 +15,14 @@ rm -rf "$OUT_DIR"
 export KIOSKY_LAUNCHER_SOURCE_ONLY=1
 export KIOSKY_LAUNCHER_STATUS_FILE="$TMP_DIR/state/launcher-status.json"
 export KIOSKY_LAUNCHER_FALLBACK_STATUS_FILE="$TMP_DIR/fallback/launcher-status.json"
+export KIOSKY_CONFIG_PATH="$TMP_DIR/missing-config.json"
 export TOTEM_STATUS_AGGREGATOR="$SCRIPT_DIR/totem_status_aggregate.py"
 export TOTEM_STATUS_OUT_DIR="$OUT_DIR"
 export TOTEM_PLAYER_STATUS_FILE="$TMP_DIR/kiosky-status.json"
 export TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC=1
 export TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC=1
 export TOTEM_STATUS_REFRESH_SEC=1
+export KIOSKY_CONFIG_RETRY_SEC=1
 
 if "$TOTEM_STATUS_AGGREGATOR" \
   --launcher-status "$SCRIPT_DIR/testdata/status_aggregate/launcher-display-missing.json" \
@@ -48,6 +50,31 @@ assert status["schema_version"] == "totem-status.v0"
 assert status["state"] == "display_missing"
 assert status["display_connected"] is False
 assert status["error_code"] == "DISPLAY_MISSING"
+PY
+
+app_called="$TMP_DIR/app-called"
+APP_CMD=(/bin/sh -c "touch '$app_called'")
+
+handle_connected_display >/dev/null
+
+if [ -e "$app_called" ]; then
+  printf 'expected missing config to prevent app start\n' >&2
+  exit 1
+fi
+
+python3 - "$TOTEM_STATUS_OUT_DIR/status.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    status = json.load(handle)
+
+assert status["schema_version"] == "totem-status.v0"
+assert status["state"] == "config_missing"
+assert status["display_connected"] is True
+assert status["config_state"] == "missing"
+assert status["player_state"] == "not_started"
+assert status["error_code"] == "CONFIG_MISSING"
 PY
 
 TOTEM_STATUS_AGGREGATOR="$TMP_DIR/missing-aggregator"

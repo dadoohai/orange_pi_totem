@@ -3,7 +3,8 @@ set -u
 
 umask 077
 
-APP_CMD=(/usr/bin/python3 /opt/totem/kiosky-player/kiosk.py --config /data/config/config.json)
+CONFIG_PATH="${KIOSKY_CONFIG_PATH:-/data/config/config.json}"
+APP_CMD=(/usr/bin/python3 /opt/totem/kiosky-player/kiosk.py --config "$CONFIG_PATH")
 RUNTIME_DIR="${KIOSKY_RUNTIME_DIR:-/tmp/kiosky}"
 STATE_DIR="${KIOSKY_LAUNCHER_STATE_DIR:-/data/state/kiosky-player}"
 STATUS_FILE="${KIOSKY_LAUNCHER_STATUS_FILE:-$STATE_DIR/launcher-status.json}"
@@ -14,6 +15,7 @@ TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
 TOTEM_STATUS_REFRESH_SEC="${TOTEM_STATUS_REFRESH_SEC:-5}"
 DISPLAY_RETRY_SEC="${KIOSKY_DISPLAY_RETRY_SEC:-5}"
+CONFIG_RETRY_SEC="${KIOSKY_CONFIG_RETRY_SEC:-5}"
 APP_RESTART_SEC="${KIOSKY_APP_RESTART_SEC:-5}"
 DISPLAY_LOG_INTERVAL_SEC="${KIOSKY_DISPLAY_LOG_INTERVAL_SEC:-60}"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="${TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC:-60}"
@@ -24,6 +26,7 @@ STATUS_REFRESH_PID=""
 LAST_STATUS_FILE=""
 STOP_REQUESTED=0
 LAST_DISPLAY_LOG_EPOCH=0
+LAST_CONFIG_LOG_EPOCH=0
 LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
 
 stamp() {
@@ -49,6 +52,7 @@ positive_integer_or_default() {
 }
 
 DISPLAY_RETRY_SEC="$(positive_integer_or_default "$DISPLAY_RETRY_SEC" 5)"
+CONFIG_RETRY_SEC="$(positive_integer_or_default "$CONFIG_RETRY_SEC" 5)"
 APP_RESTART_SEC="$(positive_integer_or_default "$APP_RESTART_SEC" 5)"
 DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_SEC" 60)"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" 2)"
@@ -210,6 +214,58 @@ display_connected() {
   return 1
 }
 
+config_valid() {
+  [ -f "$CONFIG_PATH" ] || return 1
+  [ -r "$CONFIG_PATH" ] || return 1
+
+  python3 - "$CONFIG_PATH" >/dev/null 2>&1 <<'PY'
+import json
+import sys
+
+required_non_empty_strings = (
+    "api_url",
+    "api_key",
+    "environment_id",
+    "cache_dir",
+    "state_dir",
+    "status_file",
+    "ipc_path",
+)
+
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as handle:
+        config = json.load(handle)
+except Exception:
+    sys.exit(1)
+
+if not isinstance(config, dict):
+    sys.exit(1)
+
+for key in required_non_empty_strings:
+    value = config.get(key)
+    if not isinstance(value, str) or not value.strip():
+        sys.exit(1)
+PY
+}
+
+handle_connected_display() {
+  local now_epoch
+
+  if config_valid; then
+    run_app_once
+    return 0
+  fi
+
+  now_epoch="$(date +%s)"
+  if [ $((now_epoch - LAST_CONFIG_LOG_EPOCH)) -ge "$DISPLAY_LOG_INTERVAL_SEC" ]; then
+    log "config_missing retry_sec=$CONFIG_RETRY_SEC"
+    LAST_CONFIG_LOG_EPOCH="$now_epoch"
+  fi
+
+  write_status "config_missing" "true"
+  sleep_interruptible "$CONFIG_RETRY_SEC"
+}
+
 ensure_runtime_dir() {
   if ! mkdir -p "$RUNTIME_DIR" 2>/dev/null; then
     log "runtime_dir_unavailable"
@@ -286,7 +342,7 @@ main() {
     fi
 
     if display_connected; then
-      run_app_once
+      handle_connected_display
       continue
     fi
 

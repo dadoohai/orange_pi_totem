@@ -1,4 +1,4 @@
-# Launcher status integration A1.2/A1.2.1
+# Launcher status integration A1.2/A1.2.1/A1.3
 
 Status: implementacao incremental para revisao. Nao altera systemd, player ou
 renderer visual.
@@ -22,6 +22,11 @@ HDMI, o launcher escreveu `running` antes de `/tmp/kiosky-status.json`
 convergir para `playing`; sem refresh posterior, o estado agregado ficou em
 `starting_player` mesmo com app e MPV rodando.
 
+A1.3 adiciona deteccao segura de `config_missing` antes de iniciar o player.
+Quando ha display conectado, mas a config nao existe, nao e JSON valido ou nao
+contem campos essenciais, o launcher publica `config_missing`, nao inicia
+`kiosk.py`, nao inicia MPV e permanece ativo tentando novamente.
+
 ## Pontos de chamada
 
 O launcher chama `totem_status_aggregate.py` dentro de `write_status`, depois
@@ -31,6 +36,7 @@ Com isso, o agregador roda nos estados ja cobertos por `write_status`:
 
 - `starting`;
 - `display_missing`;
+- `config_missing`;
 - `running`;
 - `app_exited`;
 - `stopped`.
@@ -41,6 +47,11 @@ chama o agregador no intervalo configurado por `TOTEM_STATUS_REFRESH_SEC`.
 
 Quando o app sai, ou quando o launcher recebe `SIGTERM`/`SIGINT`, o loop de
 refresh e encerrado. O fluxo `display_missing` nao inicia esse loop.
+
+Em A1.3, quando o display esta conectado, o launcher valida a config antes de
+chamar `run_app_once`. Se a config falhar na validacao basica, o launcher chama
+`write_status "config_missing" "true"` e dorme por `KIOSKY_CONFIG_RETRY_SEC`.
+O conteudo da config e seus valores nunca sao impressos.
 
 ## Arquivos gerados
 
@@ -64,6 +75,9 @@ o mesmo diretorio de binarios.
 
 Variaveis de ambiente aceitas pelo launcher:
 
+- `KIOSKY_CONFIG_PATH`: caminho da config, padrao `/data/config/config.json`;
+- `KIOSKY_CONFIG_RETRY_SEC`: intervalo de nova tentativa quando a config esta
+  ausente ou invalida, padrao 5 segundos;
 - `TOTEM_STATUS_AGGREGATOR`: caminho do agregador;
 - `TOTEM_STATUS_OUT_DIR`: diretorio de saida, padrao `/tmp/dadooh-status`;
 - `TOTEM_PLAYER_STATUS_FILE`: status do player, padrao `/tmp/kiosky-status.json`;
@@ -89,6 +103,24 @@ Warnings previstos:
 
 Esses warnings nao incluem config, URL, identificador privado, SSID, IP publico,
 payload ou path de midia.
+
+## Config ausente ou invalida
+
+A validacao A1.3 e deliberadamente minima e local. Ela confirma que:
+
+- o arquivo de config existe;
+- o arquivo e legivel pelo usuario do launcher;
+- o conteudo e JSON valido;
+- a raiz do JSON e um objeto;
+- campos essenciais estao presentes e nao vazios.
+
+O launcher nao registra os valores desses campos, nao imprime o JSON e nao
+copia payloads para status. O status publico gerado pelo agregador e
+`config_missing`, com `config_state=missing`, `player_state=not_started` e
+`service_state=active`.
+
+O servico permanece `active`: isso evita restart loop agressivo e permite que
+uma etapa futura de onboarding/manutencao corrija a config em `/data`.
 
 ## Escopo negativo
 
@@ -122,6 +154,10 @@ smoke tambem exercita um child fake e confirma que o refresh periodico agrega
 o estado `running` mais de uma vez enquanto o child esta vivo, e para depois
 que o child termina.
 
+Em A1.3, o smoke usa um caminho de config inexistente, chama o fluxo de display
+conectado, confirma que o agregado fica em `config_missing` e confirma que o
+app fake nao e chamado.
+
 ## Proximos passos
 
 Depois de revisao humana, a proxima etapa recomendada e deploy controlado
@@ -131,6 +167,8 @@ apenas na placa de desenvolvimento para confirmar que:
   `running`, `app_exited` e `stopped`;
 - apos reconexao HDMI, o status agregado converge de `starting_player` para
   `player_running` quando `/tmp/kiosky-status.json` passa a indicar playback;
+- com config ausente/invalida e HDMI conectado, o status agregado converge para
+  `config_missing` sem iniciar `kiosk.py` ou MPV;
 - o comportamento HDMI ausente/reconexao continua igual ao validado;
 - nenhum processo novo de renderer ou MPV aparece;
 - `/tmp/dadooh-status` nao contem dado sensivel.
