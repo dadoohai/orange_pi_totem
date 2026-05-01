@@ -1,7 +1,7 @@
-# Launcher status integration A1.2/A1.2.1/A1.3
+# Launcher status integration A1.2/A1.2.1/A1.3/A1.4
 
-Status: implementacao incremental para revisao. Nao altera systemd, player ou
-renderer visual.
+Status: implementacao incremental para revisao. Nao altera systemd nem player.
+A1.4 adiciona renderer visual experimental controlado pelo launcher.
 
 Data: 2026-05-01
 
@@ -26,6 +26,11 @@ A1.3 adiciona deteccao segura de `config_missing` antes de iniciar o player.
 Quando ha display conectado, mas a config nao existe, nao e JSON valido ou nao
 contem campos essenciais, o launcher publica `config_missing`, nao inicia
 `kiosk.py`, nao inicia MPV e permanece ativo tentando novamente.
+
+A1.4 adiciona um renderer MPV separado para exibir
+`/tmp/dadooh-status/status.svg` apenas quando o player nao deve rodar,
+inicialmente em `config_missing`. O launcher para esse renderer antes de
+iniciar `kiosk.py`; se nao conseguir parar, nao inicia o player.
 
 ## Pontos de chamada
 
@@ -52,6 +57,13 @@ Em A1.3, quando o display esta conectado, o launcher valida a config antes de
 chamar `run_app_once`. Se a config falhar na validacao basica, o launcher chama
 `write_status "config_missing" "true"` e dorme por `KIOSKY_CONFIG_RETRY_SEC`.
 O conteudo da config e seus valores nunca sao impressos.
+
+Em A1.4, apos escrever `config_missing`, o launcher tenta iniciar o renderer de
+status. O start e best-effort: renderer ausente, SVG ausente ou falha de start
+geram warning simples e nao derrubam o servico. Em `display_missing`, o
+launcher garante que o renderer esteja parado. Antes de `run_app_once`, o
+launcher chama `stop_status_renderer` e so inicia o app se o renderer tiver
+encerrado.
 
 ## Arquivos gerados
 
@@ -85,6 +97,14 @@ Variaveis de ambiente aceitas pelo launcher:
 - `TOTEM_STATUS_REFRESH_SEC`: intervalo do refresh periodico enquanto o player
   estiver vivo, padrao 5 segundos;
 - `TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC`: intervalo minimo de warning.
+- `TOTEM_STATUS_RENDERER`: caminho do renderer visual, padrao
+  `/opt/totem/bin/totem_status_renderer.sh`;
+- `TOTEM_STATUS_SVG`: SVG publico exibido pelo renderer, padrao
+  `/tmp/dadooh-status/status.svg`;
+- `TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC`: tempo para aguardar parada antes
+  de enviar `KILL`, padrao 3 segundos;
+- `TOTEM_STATUS_RENDERER_WARN_INTERVAL_SEC`: intervalo minimo de warning do
+  renderer.
 
 ## Falha do agregador
 
@@ -122,25 +142,52 @@ copia payloads para status. O status publico gerado pelo agregador e
 O servico permanece `active`: isso evita restart loop agressivo e permite que
 uma etapa futura de onboarding/manutencao corrija a config em `/data`.
 
+Em A1.4, esse mesmo estado pode manter o renderer visual ativo enquanto o
+launcher segue tentando a config periodicamente. Se a config passar a ser
+valida, o renderer e parado antes do player.
+
+## Renderer visual A1.4
+
+O renderer fica em `scripts/board/totem_status_renderer.sh` e, no appliance, em
+`/opt/totem/bin/totem_status_renderer.sh`. Ele recebe o caminho do SVG como
+argumento ou usa `/tmp/dadooh-status/status.svg`.
+
+O renderer executa MPV com saida explicita:
+
+```sh
+--vo=gpu
+--gpu-context=drm
+--ao=null
+```
+
+Ele tambem usa flags de imagem/status como `--no-config`, tela cheia,
+`--image-display-duration=inf`, `--loop-file=inf`, `--no-osc`,
+`--osd-level=0` e entrada desabilitada. O processo nao acessa internet, nao le
+config privada e nao inicia `kiosk.py`.
+
+Regra critica: o renderer nunca deve permanecer ativo junto com o MPV principal
+do player.
+
 ## Escopo negativo
 
-Esta subfase nao faz:
+Mesmo com A1.4, esta frente nao faz:
 
-- exibicao na tela;
-- renderer;
-- MPV extra;
-- acesso a `/dev/dri`;
 - mudanca em systemd;
 - mudanca no `kiosky-player`;
 - Wi-Fi setup;
 - onboarding;
 - QR code.
 
+Observacao: A1.4 passa a fazer exibicao visual experimental por MPV separado em
+`config_missing`, com acesso DRM/KMS indireto pelo MPV do renderer, mas ainda
+nao adiciona setup, portal, onboarding ou manutencao.
+
 ## Validacao local
 
 Validacoes locais previstas:
 
 - `bash -n scripts/board/kiosky_service_launcher.sh`;
+- `bash -n scripts/board/totem_status_renderer.sh`;
 - `bash scripts/board/smoke_launcher_status_integration.sh`;
 - `python3 -m py_compile scripts/board/totem_status_aggregate.py`;
 - `python3 -m py_compile scripts/board/totem_status_render_preview.py`;
@@ -157,6 +204,16 @@ que o child termina.
 Em A1.3, o smoke usa um caminho de config inexistente, chama o fluxo de display
 conectado, confirma que o agregado fica em `config_missing` e confirma que o
 app fake nao e chamado.
+
+Em A1.4, o smoke tambem usa renderer fake para confirmar que:
+
+- o renderer inicia em `config_missing`;
+- o renderer nao inicia em `display_missing`;
+- o renderer nao duplica;
+- o renderer e parado antes do app fake iniciar;
+- falha de parada do renderer impede app fake;
+- renderer ausente nao derruba o launcher;
+- config valida continua chamando app fake.
 
 ## Proximos passos
 

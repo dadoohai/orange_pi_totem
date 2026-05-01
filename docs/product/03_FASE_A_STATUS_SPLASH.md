@@ -109,6 +109,12 @@ status bruto gravado, conforme `docs/product/05_LAUNCHER_STATUS_INTEGRATION_A1.m
 Ela continua sem renderer, sem tela, sem MPV adicional e sem acesso a
 `/dev/dri`.
 
+A integracao experimental A1.4 adiciona um renderer visual controlado pelo
+launcher para o estado `config_missing`, conforme
+`docs/product/07_STATUS_RENDERER_A1.md`. O renderer usa MPV separado apenas
+para exibir o SVG publico e deve ser encerrado antes do MPV principal do player
+assumir DRM/KMS.
+
 Campos esperados:
 
 - `schema_version`;
@@ -251,6 +257,15 @@ Para A1:
 - sem escrita em `/opt/totem/kiosky-player`;
 - sem secrets, URLs privadas, IDs privados, SSID, IP publico ou paths reais na
   tela/status publico.
+
+Para A1.4:
+
+- `config_missing` com HDMI conectado exibe o SVG publico por renderer MPV
+  separado;
+- `display_missing` nao tenta renderizar;
+- renderer para antes de `kiosk.py` iniciar;
+- se o renderer nao parar, o launcher nao inicia o player;
+- `player_running` nao mantem renderer ativo.
 
 Para A2:
 

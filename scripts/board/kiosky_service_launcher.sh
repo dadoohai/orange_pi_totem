@@ -12,22 +12,28 @@ FALLBACK_STATUS_FILE="${KIOSKY_LAUNCHER_FALLBACK_STATUS_FILE:-/tmp/kiosky-launch
 TOTEM_STATUS_AGGREGATOR="${TOTEM_STATUS_AGGREGATOR:-/opt/totem/bin/totem_status_aggregate.py}"
 TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
 TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
+TOTEM_STATUS_RENDERER="${TOTEM_STATUS_RENDERER:-/opt/totem/bin/totem_status_renderer.sh}"
+TOTEM_STATUS_SVG="${TOTEM_STATUS_SVG:-/tmp/dadooh-status/status.svg}"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
 TOTEM_STATUS_REFRESH_SEC="${TOTEM_STATUS_REFRESH_SEC:-5}"
+TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="${TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC:-3}"
 DISPLAY_RETRY_SEC="${KIOSKY_DISPLAY_RETRY_SEC:-5}"
 CONFIG_RETRY_SEC="${KIOSKY_CONFIG_RETRY_SEC:-5}"
 APP_RESTART_SEC="${KIOSKY_APP_RESTART_SEC:-5}"
 DISPLAY_LOG_INTERVAL_SEC="${KIOSKY_DISPLAY_LOG_INTERVAL_SEC:-60}"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="${TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC:-60}"
+STATUS_RENDERER_WARN_INTERVAL_SEC="${TOTEM_STATUS_RENDERER_WARN_INTERVAL_SEC:-60}"
 
 CHILD_PID=""
 SLEEP_PID=""
 STATUS_REFRESH_PID=""
+STATUS_RENDERER_PID=""
 LAST_STATUS_FILE=""
 STOP_REQUESTED=0
 LAST_DISPLAY_LOG_EPOCH=0
 LAST_CONFIG_LOG_EPOCH=0
 LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
+LAST_STATUS_RENDERER_WARN_EPOCH=0
 
 stamp() {
   date '+%Y-%m-%dT%H:%M:%S%z'
@@ -57,7 +63,9 @@ APP_RESTART_SEC="$(positive_integer_or_default "$APP_RESTART_SEC" 5)"
 DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_SEC" 60)"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" 2)"
 TOTEM_STATUS_REFRESH_SEC="$(positive_integer_or_default "$TOTEM_STATUS_REFRESH_SEC" 5)"
+TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC" 3)"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" 60)"
+STATUS_RENDERER_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_RENDERER_WARN_INTERVAL_SEC" 60)"
 
 warn_status_aggregator() {
   local message="$1"
@@ -68,6 +76,34 @@ warn_status_aggregator() {
     log "$message"
     LAST_STATUS_AGGREGATOR_WARN_EPOCH="$now_epoch"
   fi
+}
+
+warn_status_renderer() {
+  local message="$1"
+  local now_epoch
+
+  now_epoch="$(date +%s)"
+  if [ $((now_epoch - LAST_STATUS_RENDERER_WARN_EPOCH)) -ge "$STATUS_RENDERER_WARN_INTERVAL_SEC" ]; then
+    log "$message"
+    LAST_STATUS_RENDERER_WARN_EPOCH="$now_epoch"
+  fi
+}
+
+process_alive() {
+  local pid="$1"
+  local state=""
+
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+
+  if [ -r "/proc/$pid/stat" ]; then
+    state="$(sed -n 's/^[^)]*) \([^ ]\).*/\1/p' "/proc/$pid/stat" 2>/dev/null || true)"
+    if [ "$state" = "Z" ]; then
+      return 1
+    fi
+  fi
+
+  return 0
 }
 
 run_status_aggregator() {
@@ -199,6 +235,75 @@ start_status_refresh() {
   STATUS_REFRESH_PID="$!"
 }
 
+stop_status_renderer() {
+  local pid="$STATUS_RENDERER_PID"
+  local waited=0
+
+  if [ -z "$pid" ]; then
+    return 0
+  fi
+
+  if ! process_alive "$pid"; then
+    wait "$pid" 2>/dev/null || true
+    STATUS_RENDERER_PID=""
+    return 0
+  fi
+
+  kill -TERM "$pid" >/dev/null 2>&1 || true
+
+  while process_alive "$pid" && [ "$waited" -lt "$TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC" ]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  if process_alive "$pid"; then
+    warn_status_renderer "status_renderer_kill pid=$pid"
+    kill -KILL "$pid" >/dev/null 2>&1 || true
+    sleep 1
+  fi
+
+  if process_alive "$pid"; then
+    warn_status_renderer "status_renderer_stop_failed pid=$pid"
+    return 1
+  fi
+
+  wait "$pid" 2>/dev/null || true
+  STATUS_RENDERER_PID=""
+  return 0
+}
+
+start_status_renderer() {
+  if ! display_connected; then
+    return 0
+  fi
+
+  if process_alive "$CHILD_PID"; then
+    return 0
+  fi
+
+  if [ -n "$STATUS_RENDERER_PID" ]; then
+    if process_alive "$STATUS_RENDERER_PID"; then
+      return 0
+    fi
+    wait "$STATUS_RENDERER_PID" 2>/dev/null || true
+    STATUS_RENDERER_PID=""
+  fi
+
+  if [ ! -r "$TOTEM_STATUS_SVG" ] || [ ! -f "$TOTEM_STATUS_SVG" ]; then
+    return 0
+  fi
+
+  if [ ! -x "$TOTEM_STATUS_RENDERER" ]; then
+    warn_status_renderer "status_renderer_unavailable"
+    return 0
+  fi
+
+  "$TOTEM_STATUS_RENDERER" "$TOTEM_STATUS_SVG" >/dev/null 2>&1 &
+  STATUS_RENDERER_PID="$!"
+  log "status_renderer_started pid=$STATUS_RENDERER_PID"
+  return 0
+}
+
 display_connected() {
   local drm_status
   local value
@@ -263,6 +368,7 @@ handle_connected_display() {
   fi
 
   write_status "config_missing" "true"
+  start_status_renderer
   sleep_interruptible "$CONFIG_RETRY_SEC"
 }
 
@@ -290,6 +396,7 @@ request_stop() {
   log "shutdown_requested"
 
   stop_status_refresh
+  stop_status_renderer || true
 
   if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" >/dev/null 2>&1; then
     kill -TERM "$CHILD_PID" >/dev/null 2>&1 || true
@@ -302,6 +409,13 @@ request_stop() {
 
 run_app_once() {
   local rc=0
+
+  if ! stop_status_renderer; then
+    log "status_renderer_stop_failed refusing_start_app"
+    write_status "app_exited" "true" "125"
+    sleep_interruptible "$APP_RESTART_SEC"
+    return 0
+  fi
 
   ensure_runtime_dir || true
   write_status "starting" "true"
@@ -344,6 +458,10 @@ main() {
     if display_connected; then
       handle_connected_display
       continue
+    fi
+
+    if ! stop_status_renderer; then
+      warn_status_renderer "status_renderer_stop_failed display_missing"
     fi
 
     now_epoch="$(date +%s)"
