@@ -294,6 +294,8 @@ def require_tmp_dir(raw_path: str) -> pathlib.Path:
         resolved.relative_to(tmp_root)
     except ValueError as exc:
         raise ValueError("out-dir must be under /tmp") from exc
+    if resolved == tmp_root:
+        raise ValueError("out-dir must be a subdirectory under /tmp")
     return resolved
 
 

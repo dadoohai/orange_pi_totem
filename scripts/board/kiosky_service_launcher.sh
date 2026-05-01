@@ -11,6 +11,7 @@ FALLBACK_STATUS_FILE="${KIOSKY_LAUNCHER_FALLBACK_STATUS_FILE:-/tmp/kiosky-launch
 TOTEM_STATUS_AGGREGATOR="${TOTEM_STATUS_AGGREGATOR:-/opt/totem/bin/totem_status_aggregate.py}"
 TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
 TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
+TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
 DISPLAY_RETRY_SEC="${KIOSKY_DISPLAY_RETRY_SEC:-5}"
 APP_RESTART_SEC="${KIOSKY_APP_RESTART_SEC:-5}"
 DISPLAY_LOG_INTERVAL_SEC="${KIOSKY_DISPLAY_LOG_INTERVAL_SEC:-60}"
@@ -47,6 +48,7 @@ positive_integer_or_default() {
 DISPLAY_RETRY_SEC="$(positive_integer_or_default "$DISPLAY_RETRY_SEC" 5)"
 APP_RESTART_SEC="$(positive_integer_or_default "$APP_RESTART_SEC" 5)"
 DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_SEC" 60)"
+TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" 2)"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" 60)"
 
 warn_status_aggregator() {
@@ -69,13 +71,20 @@ run_status_aggregator() {
     return 0
   fi
 
-  "$TOTEM_STATUS_AGGREGATOR" \
+  if ! command -v timeout >/dev/null 2>&1; then
+    warn_status_aggregator "status_aggregator_timeout_unavailable"
+    return 0
+  fi
+
+  timeout "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" "$TOTEM_STATUS_AGGREGATOR" \
     --launcher-status "$launcher_status" \
     --player-status "$TOTEM_PLAYER_STATUS_FILE" \
     --out-dir "$TOTEM_STATUS_OUT_DIR" >/dev/null 2>&1
   rc="$?"
 
-  if [ "$rc" -ne 0 ]; then
+  if [ "$rc" -eq 124 ]; then
+    warn_status_aggregator "status_aggregator_timeout"
+  elif [ "$rc" -ne 0 ]; then
     warn_status_aggregator "status_aggregator_failed rc=$rc"
   fi
 

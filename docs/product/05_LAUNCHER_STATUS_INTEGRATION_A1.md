@@ -34,6 +34,10 @@ O agregador recebe o caminho do status bruto recem gravado e escreve:
 - `/tmp/dadooh-status/status.json`;
 - `/tmp/dadooh-status/status.svg`.
 
+O diretorio de saida deve ser um subdiretorio de `/tmp`. O proprio `/tmp`
+e proibido como `--out-dir`, inclusive quando informado como `/tmp/.`, para
+evitar mudanca de permissao no diretorio global de temporarios.
+
 O caminho padrao do agregador no appliance e:
 
 - `/opt/totem/bin/totem_status_aggregate.py`.
@@ -48,17 +52,21 @@ Variaveis de ambiente aceitas pelo launcher:
 - `TOTEM_STATUS_AGGREGATOR`: caminho do agregador;
 - `TOTEM_STATUS_OUT_DIR`: diretorio de saida, padrao `/tmp/dadooh-status`;
 - `TOTEM_PLAYER_STATUS_FILE`: status do player, padrao `/tmp/kiosky-status.json`;
+- `TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC`: timeout defensivo, padrao 2 segundos;
 - `TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC`: intervalo minimo de warning.
 
 ## Falha do agregador
 
-Falha do agregador nao falha o launcher. Se o arquivo nao estiver executavel ou
-se o processo sair com erro, o launcher registra warning simples e segue o fluxo
-principal.
+O agregador e best-effort. Falha do agregador nao falha o launcher. Se o
+arquivo nao estiver executavel, se `timeout` nao estiver disponivel, se o
+processo sair com erro ou se exceder o timeout defensivo, o launcher registra
+warning simples e segue o fluxo principal.
 
 Warnings previstos:
 
 - `status_aggregator_unavailable`;
+- `status_aggregator_timeout_unavailable`;
+- `status_aggregator_timeout`;
 - `status_aggregator_failed rc=<codigo>`.
 
 Esses warnings nao incluem config, URL, identificador privado, SSID, IP publico,
@@ -88,10 +96,10 @@ Validacoes locais previstas:
 - `python3 -m py_compile scripts/board/totem_status_render_preview.py`;
 - `git diff --check`.
 
-O smoke local usa diretorio temporario em `/tmp`, importa as funcoes do
-launcher sem entrar no loop principal, confirma geracao de `status.json` e
-`status.svg`, e confirma que agregador ausente gera warning sem interromper
-`write_status`.
+O smoke local usa `/tmp/dadooh-status-test`, importa as funcoes do launcher sem
+entrar no loop principal, confirma geracao de `status.json` e `status.svg`,
+confirma que `/tmp` e rejeitado como `--out-dir`, e confirma que agregador
+ausente ou lento gera warning sem interromper `write_status`.
 
 ## Proximos passos
 
