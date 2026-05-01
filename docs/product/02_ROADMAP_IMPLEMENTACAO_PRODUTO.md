@@ -19,10 +19,25 @@ Objetivo:
 - ainda sem onboarding;
 - nao quebrar o player.
 
+Subfases:
+
+- A0 - contrato/status/render preview: documentar o contrato sanitizado,
+  detalhar estados publicos e criar preview local nao integrado;
+- A1 - integracao launcher sem tocar player: orquestrar status/splash pelo
+  launcher, garantindo que o renderer pare antes do MPV do player tomar
+  DRM/KMS;
+- A2 - teste HDMI/config_missing: validar HDMI ausente/reconexao e config
+  ausente sem iniciar app/MPV indevidamente;
+- A3 - refinamento visual: melhorar legibilidade e identidade visual sem
+  alterar contrato nem ordem de processos.
+
 Arquivos provaveis:
 
+- `docs/product/03_FASE_A_STATUS_SPLASH.md`;
+- `docs/product/STATUS_CONTRACT_V0.md`;
 - `scripts/board/kiosky_service_launcher.sh`;
 - `scripts/board/kiosky-player.service`;
+- `scripts/board/totem_status_render_preview.py`;
 - novo componente `totem-status-splash`;
 - assets locais em `/opt/totem/assets`;
 - contrato de status em `/tmp` e `/data/state`.
