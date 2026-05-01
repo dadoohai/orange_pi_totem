@@ -1,6 +1,6 @@
 # Status Atual
 
-Data: 2026-04-30
+Data: 2026-05-01
 
 ## Resumo executivo
 
@@ -17,9 +17,20 @@ launcher registra `display_missing` e nao inicia app/MPV; ao reconectar HDMI, o
 app inicia automaticamente. Essa validacao nao muda o escopo da homologacao
 `v0.1-rc1`, que continua separada em outra placa/cartao.
 
-A proxima frente de desenvolvimento e produto/UX/onboarding: status/splash
-Dadooh, setup sem terminal, manutencao local, ativacao segura, rotacao e
-telemetria do appliance.
+A Fase A de produto/UX foi concluida em desenvolvimento. O agregador de status
+gera `/tmp/dadooh-status/status.json` e `status.svg`; o launcher publica
+`display_missing`, `config_missing` e `player_running`; e o renderer visual
+experimental A1.4 exibiu a primeira tela Dadooh para `config_missing`. Na
+rodada A1.4, `config_missing` mostrou a tela de configuracao pendente sem
+iniciar `kiosk.py` nem o MPV principal. Ao restaurar a config valida, o renderer
+parou antes do player, o app voltou a `playing`, o observer curto teve
+`180/180` IPC success, `0` timeout e `5/5` aliases avancando.
+
+A proxima frente de produto/UX e a Fase B: status visual e manutencao minima.
+Ela deve melhorar a tela `config_missing`, padronizar mensagens/codigos
+publicos Dadooh e preparar manutencao minima. Wi-Fi, hotspot, portal local e
+ativacao backend continuam fora da proxima implementacao imediata. A
+homologacao `v0.1-rc1` permanece separada.
 
 ## Composicao do Candidato A
 
@@ -61,6 +72,15 @@ telemetria do appliance.
 - `systemd` start/stop aprovado na placa de desenvolvimento com HDMI conectado.
 - Autoboot aprovado na placa de desenvolvimento em dois reboots controlados com HDMI conectado.
 - Launcher de HDMI ausente aprovado na placa de desenvolvimento: `display_missing` sem app/MPV no boot sem HDMI e inicio automatico apos reconexao.
+- Agregador de status A1 aprovado em desenvolvimento: status publico
+  sanitizado em `/tmp/dadooh-status/status.json` e SVG publico em
+  `/tmp/dadooh-status/status.svg`.
+- `config_missing` aprovado em desenvolvimento: config ausente/invalida nao
+  inicia `kiosk.py` nem MPV principal e mantem o servico `active`.
+- Renderer visual A1.4 aprovado em desenvolvimento para `config_missing`:
+  tela Dadooh/configuracao pendente observada, renderer e MPV principal nao
+  rodaram juntos, restauracao voltou para `player_running`, observer de 180s
+  teve `180/180` IPC success, `0` timeout e `5/5` aliases avancando.
 
 ## Rodadas recentes do kiosky-player
 
@@ -85,6 +105,18 @@ telemetria do appliance.
 - Systemd dev smoke: unit simples com launcher aprovada para `systemctl start/stop` na placa de desenvolvimento, com HDMI conectado, sem escrita em `/opt` e sem processo remanescente apos stop.
 - Systemd dev autoboot: servico habilitado e aprovado em dois reboots controlados com HDMI conectado; observers curtos mantiveram IPC timeout 0, ping failed 0, restart 0 e 5/5 aliases avancando.
 - Systemd dev HDMI missing: boot sem HDMI manteve o servico `active`, escreveu `display_missing`, nao iniciou `kiosk.py`/MPV e iniciou automaticamente apos reconexao HDMI.
+- Status aggregator A1: status publico sanitizado gerado a partir do launcher e
+  player, com refresh periodico enquanto o player esta vivo para convergir para
+  `player_running`.
+- Config missing A1.3: override temporario de config inexistente na placa de
+  desenvolvimento resultou em `config_missing`, servico `active`,
+  `kiosk.py=0`, MPV principal `0`, `status.json` e `status.svg` gerados e
+  sanitizacao OK.
+- Status renderer A1.4: renderer MPV separado exibiu o SVG publico em
+  `config_missing`; durante esse estado, `kiosk.py=0`, MPV principal `0`,
+  renderer script `1` e MPV do renderer `1`. Apos remover o override
+  temporario, renderer `0`, `kiosk.py=1`, MPV principal `1`, app `playing`,
+  `systemctl --failed=0` e filtro critico de kernel `0`.
 
 ## O que foi alterado na placa
 
@@ -105,6 +137,8 @@ telemetria do appliance.
 - Criado/copiado status temporario em `/tmp/kiosky-status.json` durante os probes.
 - Criados logs temporarios do MPV em `/tmp/kiosky` durante as rodadas instrumentadas.
 - Na placa de desenvolvimento, instalada unit `kiosky-player.service` e launcher `kiosky_service_launcher.sh` para validacao controlada de `systemd`, autoboot e HDMI ausente.
+- Na placa de desenvolvimento, deployado o agregador de status e o renderer
+  visual experimental em `/opt/totem/bin` para validacao A1.4.
 
 Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A auditoria dos probes nao encontrou escrita em `/opt/totem/kiosky-player` apos o inicio do app. A placa de homologacao continua tratada separadamente.
 
@@ -119,15 +153,20 @@ Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A audito
 - Fazer teste manual observado de 30 a 60 minutos na homologacao.
 - Repetir validacao de `systemd`/autoboot/HDMI ausente na placa de homologacao antes de qualquer producao.
 - Desenvolver a frente produto/UX/onboarding sem misturar com os criterios da RC1.
+- Implementar Fase B de produto/UX: refinamento visual de status e manutencao
+  minima, ainda sem Wi-Fi/hotspot/portal.
 - Teste longo do app ainda nao liberado.
 - Root read-only ainda nao validado.
 - Corte seco ainda nao validado.
 
 ## Proximos 3 passos tecnicos
 
-1. Homologar `v0.1-rc1` em segunda placa/cartao com a imagem base e o `kiosky-player` no commit `c71318a`.
-2. Rodar teste manual observado de 30 a 60 minutos com a mesma configuracao candidata e, depois, repetir a validacao de `systemd`/autoboot/HDMI ausente na placa de homologacao.
-3. Iniciar a frente produto/UX/onboarding em paralelo, com status/splash Dadooh e manutencao local como primeiros passos, sem root read-only e sem corte seco ainda.
+1. Manter a homologacao `v0.1-rc1` separada em segunda placa/cartao com a
+   imagem base e o `kiosky-player` no commit `c71318a`.
+2. Implementar a Fase B de produto/UX: melhorar `config_missing`, padronizar
+   codigos publicos e especificar manutencao minima sem Wi-Fi/hotspot/portal.
+3. Depois da Fase B, planejar Wi-Fi/setup por celular como fase propria, sem
+   misturar com a homologacao RC1.
 
 ## Regras que continuam proibidas
 

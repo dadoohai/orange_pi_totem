@@ -2,7 +2,7 @@
 
 Status: proposta incremental. Nao implementa mudancas.
 
-Data: 2026-04-30
+Data: 2026-05-01
 
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
@@ -10,6 +10,9 @@ fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
 player atual recuperavel.
 
 ## Fase A - status/splash local minimo
+
+Status: concluida em desenvolvimento. Ver
+`docs/product/08_FASE_A_CONCLUSAO.md`.
 
 Objetivo:
 
@@ -19,37 +22,47 @@ Objetivo:
 - ainda sem onboarding;
 - nao quebrar o player.
 
-Subfases:
+Subfases concluidas em desenvolvimento:
 
 - A0 - contrato/status/render preview: documentar o contrato sanitizado,
   detalhar estados publicos e criar preview local nao integrado;
-- A1 - integracao launcher sem tocar player: orquestrar status/splash pelo
-  launcher, garantindo que o renderer pare antes do MPV do player tomar
-  DRM/KMS;
-- A2 - teste HDMI/config_missing: validar HDMI ausente/reconexao e config
-  ausente sem iniciar app/MPV indevidamente;
-- A3 - refinamento visual: melhorar legibilidade e identidade visual sem
-  alterar contrato nem ordem de processos.
+- A1.1 - agregador de status: gerar `status.json` e `status.svg` publicos em
+  `/tmp/dadooh-status`;
+- A1.2 - integracao launcher: chamar agregador apos status bruto do launcher;
+- A1.2.1 - refresh periodico: convergir `starting_player` para
+  `player_running` enquanto o player esta vivo;
+- A1.3 - `config_missing`: bloquear app/MPV quando a config minima nao existe
+  ou nao e valida;
+- A1.4 - renderer visual: exibir SVG publico em `config_missing` e parar antes
+  do MPV principal do player.
 
-Arquivos provaveis:
+Arquivos principais:
 
 - `docs/product/03_FASE_A_STATUS_SPLASH.md`;
 - `docs/product/STATUS_CONTRACT_V0.md`;
+- `docs/product/04_STATUS_AGGREGATOR_A1.md`;
+- `docs/product/05_LAUNCHER_STATUS_INTEGRATION_A1.md`;
+- `docs/product/06_CONFIG_MISSING_A1.md`;
+- `docs/product/07_STATUS_RENDERER_A1.md`;
+- `docs/product/08_FASE_A_CONCLUSAO.md`;
 - `scripts/board/kiosky_service_launcher.sh`;
 - `scripts/board/kiosky-player.service`;
 - `scripts/board/totem_status_render_preview.py`;
-- novo componente `totem-status-splash`;
-- assets locais em `/opt/totem/assets`;
-- contrato de status em `/tmp` e `/data/state`.
+- `scripts/board/totem_status_aggregate.py`;
+- `scripts/board/totem_status_renderer.sh`.
 
-Validacao minima:
+Validacao consolidada em desenvolvimento:
 
-- boot com HDMI conectado mostra splash/status antes do player;
-- player entra em `playing` como hoje;
+- `config_missing` mostra tela Dadooh/configuracao pendente;
+- `kiosk.py=0` e MPV principal `0` enquanto renderer esta ativo;
+- renderer e MPV principal nao rodam juntos;
+- ao restaurar config valida, renderer para e player volta a `playing`;
+- observer curto apos restauracao com IPC success, timeout `0` e `5/5`
+  aliases avancando;
 - boot sem HDMI continua em `display_missing` sem iniciar app/MPV;
 - reconectar HDMI inicia app automaticamente;
 - `systemctl --failed=0`;
-- sem escrita em `/opt/totem/kiosky-player`.
+- status publico sanitizado.
 
 Riscos:
 
@@ -57,60 +70,90 @@ Riscos:
 - splash atrasar ou bloquear o player;
 - status mostrar dados privados.
 
-Criterios de aceite:
+Criterios de nao regressao:
 
-- identidade Dadooh visivel nos estados nao-player;
-- terminal/logs nao aparecem como UX normal;
-- metricas do player permanecem iguais as rodadas aprovadas;
-- status local sanitizado.
+- `display_missing` nao inicia app, MPV principal ou renderer;
+- `config_missing` nao inicia app ou MPV principal;
+- `player_running` nao mantem renderer ativo;
+- renderer sempre para antes do player tomar DRM/KMS;
+- status publico e SVG continuam sem dados sensiveis;
+- metricas do player permanecem iguais as rodadas aprovadas.
 
 Criterio de rollback:
 
 - desabilitar o servico/componente de splash e voltar ao launcher atual que
   inicia apenas o player quando ha HDMI.
 
-## Fase B - manutencao local basica
+## Fase B - status visual e manutencao minima
+
+Status: proxima fase planejada. Ver
+`docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md`.
 
 Objetivo:
 
-- reiniciar player;
-- reiniciar placa;
-- baixar diagnostico;
-- ver estado agregado;
-- executar reset leve.
+- transformar a tela tecnica de `config_missing` em uma experiencia visual
+  mais clara;
+- padronizar mensagens e codigos publicos Dadooh;
+- preparar area visual para QR code futuro, sem QR funcional ainda;
+- definir manutencao minima antes de implementar comandos reais;
+- manter a regra DRM/KMS validada na Fase A.
+
+Escopo:
+
+- melhorar `config_missing`;
+- desenhar estados `player_error` e `maintenance_placeholder`;
+- definir codigos publicos como `CONFIG_MISSING`, `DISPLAY_MISSING` e
+  `PLAYER_EXITED`;
+- especificar manutencao minima: ver estado publico, identificar erro e
+  preparar reinicio de player/diagnostico sanitizado para fase posterior.
+
+Fora de escopo:
+
+- hotspot Wi-Fi;
+- portal local completo;
+- ativacao backend;
+- factory reset real;
+- reset leve operacional;
+- telemetria.
 
 Arquivos provaveis:
 
-- novo servico `totem-maintenance`;
-- nova unit `totem-maintenance.service`;
-- wrapper de diagnostico sanitizado baseado em `collect_diag.sh`;
-- endpoint local restrito;
-- arquivos de estado em `/data/state/totem`.
+- `docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md`;
+- extensao do preview SVG;
+- possivel tabela de mensagens/codigos publicos;
+- ajustes futuros no agregador apenas se o contrato publico precisar de novos
+  campos allowlisted;
+- ajustes futuros no renderer/launcher somente apos revisao de processo
+  DRM/KMS.
 
 Validacao minima:
 
-- interface local mostra estado do launcher, player, rede, disco e versoes;
-- reiniciar player para e sobe `kiosky-player.service`;
-- baixar diagnostico nao inclui secrets, URLs privadas, IDs privados, payloads
-  privados ou paths reais de midia;
-- reset leve preserva config essencial e limpa apenas estados/cache definidos.
+- previews locais para `config_missing`, `player_error` e
+  `maintenance_placeholder`;
+- sanitizacao de SVG e JSON;
+- renderer nao roda em `player_running`;
+- renderer para antes de `kiosk.py`;
+- restauracao para player com observer curto sem timeout;
+- `systemctl --failed=0`.
 
 Riscos:
 
-- comandos amplos virarem shell remoto;
-- diagnostico vazar dados privados;
-- reset leve apagar midia/config necessaria para recovery.
+- refinamento visual quebrar legibilidade;
+- adicionar campo publico que vaze dado privado;
+- habilitar `player_error` sem testar retry e ordem de processos;
+- introduzir manutencao que pareca pronta antes de haver comandos seguros.
 
 Criterios de aceite:
 
-- operador consegue executar manutencao sem terminal;
-- todas as acoes sao limitadas e auditaveis;
-- diagnostico e sanitizado por padrao.
+- operador entende que a configuracao esta pendente sem terminal;
+- codigos publicos estao documentados;
+- area de QR code futuro existe sem acionar setup real;
+- nenhuma acao de manutencao executa shell arbitrario;
+- Fase A nao regride.
 
 Criterio de rollback:
 
-- parar/desabilitar `totem-maintenance.service`; manter `kiosky-player.service`
-  operando.
+- voltar ao layout A1.4 de `config_missing` e manter o launcher atual.
 
 ## Fase C - Wi-Fi/setup
 
