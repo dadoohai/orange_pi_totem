@@ -104,6 +104,11 @@ A implementacao local A1.1 fica em
 `/tmp/dadooh-status/status.json` e `/tmp/dadooh-status/status.svg`, ainda sem
 exibir nada na tela e sem integracao com o launcher.
 
+A integracao local A1.2 chama esse agregador a partir do launcher apos cada
+status bruto gravado, conforme `docs/product/05_LAUNCHER_STATUS_INTEGRATION_A1.md`.
+Ela continua sem renderer, sem tela, sem MPV adicional e sem acesso a
+`/dev/dri`.
+
 Campos esperados:
 
 - `schema_version`;

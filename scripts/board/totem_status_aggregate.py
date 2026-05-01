@@ -212,6 +212,13 @@ def infer_state(
     launcher_display = bool_or_none(launcher_status.get("display_connected") if launcher_status else None)
     launcher_exit_code = launcher_status.get("last_app_exit_code") if launcher_status else None
 
+    if launcher_state == "starting":
+        if launcher_display is True:
+            return "starting_player"
+        return "booting"
+    if launcher_state == "stopped":
+        return "maintenance_placeholder"
+
     if launcher_state == "display_missing" or launcher_display is False:
         return "display_missing"
 
@@ -234,10 +241,6 @@ def infer_state(
 
     if launcher_state == "running":
         return "starting_player"
-    if launcher_state == "starting":
-        if launcher_display is True:
-            return "starting_player"
-        return "booting"
 
     return "booting"
 

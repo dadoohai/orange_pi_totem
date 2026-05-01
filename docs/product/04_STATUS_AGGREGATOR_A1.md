@@ -117,8 +117,8 @@ python3 scripts/board/totem_status_aggregate.py \
 
 ## Integracao futura com launcher
 
-Na proxima subfase, o launcher pode chamar o agregador antes de qualquer
-renderer de tela. A ordem proposta e:
+Na subfase A1.2, o launcher chama o agregador antes de qualquer renderer de
+tela. A ordem proposta e:
 
 1. launcher atualiza seu status bruto;
 2. agregador escreve `/tmp/dadooh-status/status.json` e `status.svg`;

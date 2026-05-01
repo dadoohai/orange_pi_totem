@@ -8,14 +8,19 @@ RUNTIME_DIR="${KIOSKY_RUNTIME_DIR:-/tmp/kiosky}"
 STATE_DIR="${KIOSKY_LAUNCHER_STATE_DIR:-/data/state/kiosky-player}"
 STATUS_FILE="${KIOSKY_LAUNCHER_STATUS_FILE:-$STATE_DIR/launcher-status.json}"
 FALLBACK_STATUS_FILE="${KIOSKY_LAUNCHER_FALLBACK_STATUS_FILE:-/tmp/kiosky-launcher-status.json}"
+TOTEM_STATUS_AGGREGATOR="${TOTEM_STATUS_AGGREGATOR:-/opt/totem/bin/totem_status_aggregate.py}"
+TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
+TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 DISPLAY_RETRY_SEC="${KIOSKY_DISPLAY_RETRY_SEC:-5}"
 APP_RESTART_SEC="${KIOSKY_APP_RESTART_SEC:-5}"
 DISPLAY_LOG_INTERVAL_SEC="${KIOSKY_DISPLAY_LOG_INTERVAL_SEC:-60}"
+STATUS_AGGREGATOR_WARN_INTERVAL_SEC="${TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC:-60}"
 
 CHILD_PID=""
 SLEEP_PID=""
 STOP_REQUESTED=0
 LAST_DISPLAY_LOG_EPOCH=0
+LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
 
 stamp() {
   date '+%Y-%m-%dT%H:%M:%S%z'
@@ -42,6 +47,40 @@ positive_integer_or_default() {
 DISPLAY_RETRY_SEC="$(positive_integer_or_default "$DISPLAY_RETRY_SEC" 5)"
 APP_RESTART_SEC="$(positive_integer_or_default "$APP_RESTART_SEC" 5)"
 DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_SEC" 60)"
+STATUS_AGGREGATOR_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" 60)"
+
+warn_status_aggregator() {
+  local message="$1"
+  local now_epoch
+
+  now_epoch="$(date +%s)"
+  if [ $((now_epoch - LAST_STATUS_AGGREGATOR_WARN_EPOCH)) -ge "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" ]; then
+    log "$message"
+    LAST_STATUS_AGGREGATOR_WARN_EPOCH="$now_epoch"
+  fi
+}
+
+run_status_aggregator() {
+  local launcher_status="$1"
+  local rc=0
+
+  if [ ! -x "$TOTEM_STATUS_AGGREGATOR" ]; then
+    warn_status_aggregator "status_aggregator_unavailable"
+    return 0
+  fi
+
+  "$TOTEM_STATUS_AGGREGATOR" \
+    --launcher-status "$launcher_status" \
+    --player-status "$TOTEM_PLAYER_STATUS_FILE" \
+    --out-dir "$TOTEM_STATUS_OUT_DIR" >/dev/null 2>&1
+  rc="$?"
+
+  if [ "$rc" -ne 0 ]; then
+    warn_status_aggregator "status_aggregator_failed rc=$rc"
+  fi
+
+  return 0
+}
 
 status_target() {
   local dir
@@ -92,7 +131,11 @@ write_status() {
   } >"$tmp"
 
   chmod 0600 "$tmp" 2>/dev/null || true
-  mv "$tmp" "$target" 2>/dev/null || rm -f "$tmp"
+  if mv "$tmp" "$target" 2>/dev/null; then
+    run_status_aggregator "$target"
+  else
+    rm -f "$tmp"
+  fi
 }
 
 display_connected() {
@@ -167,28 +210,36 @@ run_app_once() {
   sleep_interruptible "$APP_RESTART_SEC"
 }
 
-trap request_stop TERM INT
+main() {
+  local now_epoch
 
-log "launcher_started uid=$(id -u) user=$(id -un 2>/dev/null || printf unknown)"
-write_status "starting" "false"
+  trap request_stop TERM INT
 
-while true; do
-  if [ "$STOP_REQUESTED" -ne 0 ]; then
-    write_status "stopped" "false"
-    exit 0
-  fi
+  log "launcher_started uid=$(id -u) user=$(id -un 2>/dev/null || printf unknown)"
+  write_status "starting" "false"
 
-  if display_connected; then
-    run_app_once
-    continue
-  fi
+  while true; do
+    if [ "$STOP_REQUESTED" -ne 0 ]; then
+      write_status "stopped" "false"
+      exit 0
+    fi
 
-  now_epoch="$(date +%s)"
-  if [ $((now_epoch - LAST_DISPLAY_LOG_EPOCH)) -ge "$DISPLAY_LOG_INTERVAL_SEC" ]; then
-    log "display_missing retry_sec=$DISPLAY_RETRY_SEC"
-    LAST_DISPLAY_LOG_EPOCH="$now_epoch"
-  fi
+    if display_connected; then
+      run_app_once
+      continue
+    fi
 
-  write_status "display_missing" "false"
-  sleep_interruptible "$DISPLAY_RETRY_SEC"
-done
+    now_epoch="$(date +%s)"
+    if [ $((now_epoch - LAST_DISPLAY_LOG_EPOCH)) -ge "$DISPLAY_LOG_INTERVAL_SEC" ]; then
+      log "display_missing retry_sec=$DISPLAY_RETRY_SEC"
+      LAST_DISPLAY_LOG_EPOCH="$now_epoch"
+    fi
+
+    write_status "display_missing" "false"
+    sleep_interruptible "$DISPLAY_RETRY_SEC"
+  done
+}
+
+if [ "${KIOSKY_LAUNCHER_SOURCE_ONLY:-0}" != "1" ]; then
+  main "$@"
+fi
