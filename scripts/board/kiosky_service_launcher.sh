@@ -12,6 +12,7 @@ TOTEM_STATUS_AGGREGATOR="${TOTEM_STATUS_AGGREGATOR:-/opt/totem/bin/totem_status_
 TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
 TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
+TOTEM_STATUS_REFRESH_SEC="${TOTEM_STATUS_REFRESH_SEC:-5}"
 DISPLAY_RETRY_SEC="${KIOSKY_DISPLAY_RETRY_SEC:-5}"
 APP_RESTART_SEC="${KIOSKY_APP_RESTART_SEC:-5}"
 DISPLAY_LOG_INTERVAL_SEC="${KIOSKY_DISPLAY_LOG_INTERVAL_SEC:-60}"
@@ -19,6 +20,8 @@ STATUS_AGGREGATOR_WARN_INTERVAL_SEC="${TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC
 
 CHILD_PID=""
 SLEEP_PID=""
+STATUS_REFRESH_PID=""
+LAST_STATUS_FILE=""
 STOP_REQUESTED=0
 LAST_DISPLAY_LOG_EPOCH=0
 LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
@@ -49,6 +52,7 @@ DISPLAY_RETRY_SEC="$(positive_integer_or_default "$DISPLAY_RETRY_SEC" 5)"
 APP_RESTART_SEC="$(positive_integer_or_default "$APP_RESTART_SEC" 5)"
 DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_SEC" 60)"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" 2)"
+TOTEM_STATUS_REFRESH_SEC="$(positive_integer_or_default "$TOTEM_STATUS_REFRESH_SEC" 5)"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" 60)"
 
 warn_status_aggregator() {
@@ -141,10 +145,54 @@ write_status() {
 
   chmod 0600 "$tmp" 2>/dev/null || true
   if mv "$tmp" "$target" 2>/dev/null; then
+    LAST_STATUS_FILE="$target"
     run_status_aggregator "$target"
   else
     rm -f "$tmp"
   fi
+}
+
+status_refresh_loop() {
+  local launcher_status="$1"
+  local child_pid="$2"
+  local refresh_sleep_pid=""
+
+  trap 'if [ -n "$refresh_sleep_pid" ] && kill -0 "$refresh_sleep_pid" >/dev/null 2>&1; then kill -TERM "$refresh_sleep_pid" >/dev/null 2>&1 || true; fi; exit 0' TERM INT
+
+  while true; do
+    sleep "$TOTEM_STATUS_REFRESH_SEC" &
+    refresh_sleep_pid="$!"
+    wait "$refresh_sleep_pid" 2>/dev/null || exit 0
+    refresh_sleep_pid=""
+
+    if ! kill -0 "$child_pid" >/dev/null 2>&1; then
+      exit 0
+    fi
+
+    run_status_aggregator "$launcher_status"
+  done
+}
+
+stop_status_refresh() {
+  if [ -n "$STATUS_REFRESH_PID" ] && kill -0 "$STATUS_REFRESH_PID" >/dev/null 2>&1; then
+    kill -TERM "$STATUS_REFRESH_PID" >/dev/null 2>&1 || true
+    wait "$STATUS_REFRESH_PID" 2>/dev/null || true
+  fi
+
+  STATUS_REFRESH_PID=""
+}
+
+start_status_refresh() {
+  local launcher_status="$1"
+
+  stop_status_refresh
+
+  if [ -z "$launcher_status" ]; then
+    return 0
+  fi
+
+  status_refresh_loop "$launcher_status" "$CHILD_PID" &
+  STATUS_REFRESH_PID="$!"
 }
 
 display_connected() {
@@ -185,6 +233,8 @@ request_stop() {
   STOP_REQUESTED=1
   log "shutdown_requested"
 
+  stop_status_refresh
+
   if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" >/dev/null 2>&1; then
     kill -TERM "$CHILD_PID" >/dev/null 2>&1 || true
   fi
@@ -204,9 +254,11 @@ run_app_once() {
   "${APP_CMD[@]}" &
   CHILD_PID="$!"
   write_status "running" "true"
+  start_status_refresh "$LAST_STATUS_FILE"
 
   wait "$CHILD_PID"
   rc="$?"
+  stop_status_refresh
   CHILD_PID=""
 
   if [ "$STOP_REQUESTED" -ne 0 ]; then

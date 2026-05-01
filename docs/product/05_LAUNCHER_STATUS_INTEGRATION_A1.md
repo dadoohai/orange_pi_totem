@@ -1,6 +1,7 @@
-# Launcher status integration A1.2
+# Launcher status integration A1.2/A1.2.1
 
-Status: implementacao local para revisao. Nao altera systemd, player ou placa.
+Status: implementacao incremental para revisao. Nao altera systemd, player ou
+renderer visual.
 
 Data: 2026-05-01
 
@@ -14,6 +15,13 @@ O comportamento operacional esperado do launcher permanece o mesmo: detectar
 HDMI, iniciar o `kiosky-player` quando houver display e manter
 `display_missing` sem app/MPV quando nao houver display.
 
+A1.2.1 adiciona refresh periodico best-effort do agregador enquanto o processo
+do player estiver vivo. Essa correcao existe porque a validacao
+`20260501-123806-status-aggregator-hdmi-missing` mostrou que, apos reconexao
+HDMI, o launcher escreveu `running` antes de `/tmp/kiosky-status.json`
+convergir para `playing`; sem refresh posterior, o estado agregado ficou em
+`starting_player` mesmo com app e MPV rodando.
+
 ## Pontos de chamada
 
 O launcher chama `totem_status_aggregate.py` dentro de `write_status`, depois
@@ -26,6 +34,13 @@ Com isso, o agregador roda nos estados ja cobertos por `write_status`:
 - `running`;
 - `app_exited`;
 - `stopped`.
+
+Em A1.2.1, depois que o launcher inicia o child app e grava `running`, ele
+inicia um loop auxiliar de refresh. Enquanto o child estiver vivo, esse loop
+chama o agregador no intervalo configurado por `TOTEM_STATUS_REFRESH_SEC`.
+
+Quando o app sai, ou quando o launcher recebe `SIGTERM`/`SIGINT`, o loop de
+refresh e encerrado. O fluxo `display_missing` nao inicia esse loop.
 
 ## Arquivos gerados
 
@@ -53,12 +68,15 @@ Variaveis de ambiente aceitas pelo launcher:
 - `TOTEM_STATUS_OUT_DIR`: diretorio de saida, padrao `/tmp/dadooh-status`;
 - `TOTEM_PLAYER_STATUS_FILE`: status do player, padrao `/tmp/kiosky-status.json`;
 - `TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC`: timeout defensivo, padrao 2 segundos;
+- `TOTEM_STATUS_REFRESH_SEC`: intervalo do refresh periodico enquanto o player
+  estiver vivo, padrao 5 segundos;
 - `TOTEM_STATUS_AGGREGATOR_WARN_INTERVAL_SEC`: intervalo minimo de warning.
 
 ## Falha do agregador
 
-O agregador e best-effort. Falha do agregador nao falha o launcher. Se o
-arquivo nao estiver executavel, se `timeout` nao estiver disponivel, se o
+O agregador e best-effort, tanto nas chamadas imediatas de `write_status`
+quanto no refresh periodico de A1.2.1. Falha do agregador nao falha o launcher.
+Se o arquivo nao estiver executavel, se `timeout` nao estiver disponivel, se o
 processo sair com erro ou se exceder o timeout defensivo, o launcher registra
 warning simples e segue o fluxo principal.
 
@@ -99,7 +117,10 @@ Validacoes locais previstas:
 O smoke local usa `/tmp/dadooh-status-test`, importa as funcoes do launcher sem
 entrar no loop principal, confirma geracao de `status.json` e `status.svg`,
 confirma que `/tmp` e rejeitado como `--out-dir`, e confirma que agregador
-ausente ou lento gera warning sem interromper `write_status`.
+ausente ou lento gera warning sem interromper `write_status`. Em A1.2.1, o
+smoke tambem exercita um child fake e confirma que o refresh periodico agrega
+o estado `running` mais de uma vez enquanto o child esta vivo, e para depois
+que o child termina.
 
 ## Proximos passos
 
@@ -108,6 +129,8 @@ apenas na placa de desenvolvimento para confirmar que:
 
 - o status sanitizado e atualizado durante `starting`, `display_missing`,
   `running`, `app_exited` e `stopped`;
+- apos reconexao HDMI, o status agregado converge de `starting_player` para
+  `player_running` quando `/tmp/kiosky-status.json` passa a indicar playback;
 - o comportamento HDMI ausente/reconexao continua igual ao validado;
 - nenhum processo novo de renderer ou MPV aparece;
 - `/tmp/dadooh-status` nao contem dado sensivel.
