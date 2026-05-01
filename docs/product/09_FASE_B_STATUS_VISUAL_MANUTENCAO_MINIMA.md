@@ -1,6 +1,6 @@
 # Fase B - status visual e manutencao minima
 
-Status: planejamento. Nao implementa mudancas.
+Status: B1 em implementacao local. Ainda nao e homologacao de producao.
 
 Data: 2026-05-01
 
@@ -12,6 +12,24 @@ implementar Wi-Fi, hotspot ou portal completo.
 
 A Fase B deve manter a regra operacional validada: qualquer renderer visual
 precisa sair antes do MPV principal do player assumir DRM/KMS.
+
+## Implementacao B1
+
+B1 e a primeira implementacao da Fase B. O foco e exclusivamente o refinamento
+visual da tela publica `config_missing`, documentado em
+`docs/product/10_FASE_B1_VISUAL_CONFIG_MISSING.md`.
+
+B1 inclui:
+
+- layout SVG mais claro e com cara de produto;
+- marca textual Dadooh mais visivel;
+- titulo, mensagem, acao, codigo publico e estado seguro do player;
+- area lateral reservada para configuracao assistida futura;
+- previews locais para estados publicos principais.
+
+B1 nao altera o contrato v0, nao muda a regra DRM/KMS e nao habilita setup,
+Wi-Fi, hotspot, portal, QR funcional, ativacao backend, manutencao operacional
+ou `player_error` operacional.
 
 ## Escopo
 
@@ -49,6 +67,11 @@ limitado para:
 - telemetria;
 - instalacao de pacotes;
 - Chromium, desktop, Xorg, Wayland ou compositor.
+
+Wi-Fi, hotspot e portal local permanecem explicitamente fora do escopo da B1.
+Esses fluxos continuam reservados para fases posteriores, porque exigem
+seguranca de credenciais, rede local, persistencia de configuracao e validacao
+de campo separadas.
 
 ## Estados visuais
 
@@ -162,8 +185,8 @@ Diretrizes:
 
 Validacao local:
 
-- gerar previews SVG para `config_missing`, `player_error` e
-  `maintenance_placeholder`;
+- gerar previews SVG para `config_missing`, `display_missing`, `player_error`,
+  `maintenance_placeholder` e `player_running`;
 - checar sanitizacao de SVG e JSON;
 - manter smoke do launcher cobrindo renderer fake;
 - `git diff --check`.
