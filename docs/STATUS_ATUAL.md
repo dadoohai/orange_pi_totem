@@ -2,6 +2,41 @@
 
 Data: 2026-05-01
 
+## Estado consolidado atual
+
+### Homologacao v0.1-rc1
+
+A homologacao `v0.1-rc1` permanece uma frente propria, separada do
+desenvolvimento posterior. Ela congela a configuracao candidata validada no app
+real por 300s com `mpv_query_uses_fresh_ipc=true`, `mpv_vo=gpu`,
+`mpv_gpu_context=drm`, `mpv_ao=null` e `low_resource_mode=false`.
+
+Essa homologacao ainda deve ser reproduzida em segunda placa/cartao e nao
+inclui automaticamente os avancos posteriores de `systemd`, launcher,
+status/splash ou B1 visual.
+
+### Desenvolvimento pos-RC1
+
+Na placa de desenvolvimento, depois da definicao da RC1, foram validados
+`systemd` start/stop, boot automatico, HDMI ausente/reconexao, status aggregator
+com refresh periodico, `config_missing`, renderer visual Dadooh e a tela B1
+"Configuracao pendente" por observacao humana. Player e renderer nao rodam
+juntos no caminho validado; ao restaurar config valida, o sistema volta para
+`player_running`.
+
+Esses resultados sao marco de desenvolvimento, nao homologacao e nao producao.
+Consolidacao: `docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md`.
+
+### Producao futura
+
+Producao continua bloqueada. Ainda faltam homologacao completa, teste longo,
+revisao do ruido amplo de kernel da rodada B1, validacao visual de
+`player_error`, onboarding Wi-Fi/configuracao, hotspot, portal local, ativacao
+backend, root read-only, corte seco, monitoramento, update e rollback.
+
+Proxima fase recomendada: C0, planejamento do onboarding Wi-Fi/configuracao,
+sem implementar hotspot, portal ou ativacao backend ainda.
+
 ## Resumo executivo
 
 O Candidato A avancou da validacao de base para uma versao de homologacao `v0.1-rc1`, ainda nao producao. A placa passou por boot inicial, reboots curtos, rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, layout `/data`, Wi-Fi cliente 5 GHz e desativacao dos servicos Bluetooth conhecidos sem regressao observada. O Wi-Fi cliente 5 GHz permaneceu funcional apos as desativacoes de Bluetooth/AW859A. Tambem foi feita a preparacao inicial de usuario/diretorios para o `kiosky-player`, a instalacao controlada do runtime minimo `mpv`, `ffmpeg` e `python3-requests`, a garantia de `/tmp/kiosky`, a aprovacao do `check_app_prereqs.sh` e o teste manual de MPV via DRM/KMS com confirmacao visual HDMI.
@@ -20,17 +55,15 @@ app inicia automaticamente. Essa validacao nao muda o escopo da homologacao
 A Fase A de produto/UX foi concluida em desenvolvimento. O agregador de status
 gera `/tmp/dadooh-status/status.json` e `status.svg`; o launcher publica
 `display_missing`, `config_missing` e `player_running`; e o renderer visual
-experimental A1.4 exibiu a primeira tela Dadooh para `config_missing`. Na
-rodada A1.4, `config_missing` mostrou a tela de configuracao pendente sem
-iniciar `kiosk.py` nem o MPV principal. Ao restaurar a config valida, o renderer
-parou antes do player, o app voltou a `playing`, o observer curto teve
-`180/180` IPC success, `0` timeout e `5/5` aliases avancando.
+experimental A1.4 exibiu a primeira tela Dadooh para `config_missing`. Depois,
+B1 refinou a tela publica para "Configuracao pendente" e foi validada por
+observacao humana na placa de desenvolvimento. Ao restaurar a config valida, o
+renderer parou antes do player, o app voltou a `playing`, o observer curto teve
+IPC success, `0` timeout e `5/5` aliases avancando.
 
-A proxima frente de produto/UX e a Fase B: status visual e manutencao minima.
-Ela deve melhorar a tela `config_missing`, padronizar mensagens/codigos
-publicos Dadooh e preparar manutencao minima. Wi-Fi, hotspot, portal local e
-ativacao backend continuam fora da proxima implementacao imediata. A
-homologacao `v0.1-rc1` permanece separada.
+A proxima frente recomendada e C0: planejamento do onboarding
+Wi-Fi/configuracao. Wi-Fi setup, hotspot, portal local e ativacao backend
+continuam nao implementados. A homologacao `v0.1-rc1` permanece separada.
 
 ## Composicao do Candidato A
 
@@ -81,6 +114,9 @@ homologacao `v0.1-rc1` permanece separada.
   tela Dadooh/configuracao pendente observada, renderer e MPV principal nao
   rodaram juntos, restauracao voltou para `player_running`, observer de 180s
   teve `180/180` IPC success, `0` timeout e `5/5` aliases avancando.
+- B1 visual aprovado em desenvolvimento: tela publica "Configuracao pendente"
+  observada por humano, sem QR funcional, sem onboarding, sem hotspot, sem
+  portal, sem ativacao backend e sem mudanca no `kiosky-player`.
 
 ## Rodadas recentes do kiosky-player
 
@@ -117,6 +153,13 @@ homologacao `v0.1-rc1` permanece separada.
   renderer script `1` e MPV do renderer `1`. Apos remover o override
   temporario, renderer `0`, `kiosk.py=1`, MPV principal `1`, app `playing`,
   `systemctl --failed=0` e filtro critico de kernel `0`.
+- Status renderer visual B1: tela publica Dadooh "Configuracao pendente"
+  validada por observacao humana. Em `config_missing`, `kiosk.py=0`, MPV
+  principal `0`, renderer MPV `1`; apos restaurar config valida, renderer `0`,
+  `kiosk.py=1`, MPV principal `1`, `systemctl --failed=0` e observer curto com
+  `180/180` IPC success, `0` timeout e `5/5` aliases avancando. O filtro amplo
+  de kernel da rodada teve ruido nao bloqueante e precisa de revisao antes de
+  qualquer decisao de producao.
 
 ## O que foi alterado na placa
 
@@ -153,8 +196,12 @@ Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A audito
 - Fazer teste manual observado de 30 a 60 minutos na homologacao.
 - Repetir validacao de `systemd`/autoboot/HDMI ausente na placa de homologacao antes de qualquer producao.
 - Desenvolver a frente produto/UX/onboarding sem misturar com os criterios da RC1.
-- Implementar Fase B de produto/UX: refinamento visual de status e manutencao
-  minima, ainda sem Wi-Fi/hotspot/portal.
+- Planejar C0 de produto/UX: onboarding Wi-Fi/configuracao, ainda sem
+  implementar Wi-Fi setup, hotspot, portal local ou ativacao backend.
+- Revisar ruido amplo de kernel da rodada B1 antes de qualquer decisao de
+  producao.
+- `player_error` visual ainda nao validado operacionalmente.
+- Monitoramento, update e rollback ainda pendentes.
 - Teste longo do app ainda nao liberado.
 - Root read-only ainda nao validado.
 - Corte seco ainda nao validado.
@@ -163,10 +210,10 @@ Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A audito
 
 1. Manter a homologacao `v0.1-rc1` separada em segunda placa/cartao com a
    imagem base e o `kiosky-player` no commit `c71318a`.
-2. Implementar a Fase B de produto/UX: melhorar `config_missing`, padronizar
-   codigos publicos e especificar manutencao minima sem Wi-Fi/hotspot/portal.
-3. Depois da Fase B, planejar Wi-Fi/setup por celular como fase propria, sem
-   misturar com a homologacao RC1.
+2. Planejar C0: onboarding Wi-Fi/configuracao, cobrindo fluxo, seguranca,
+   estados publicos, rollback e testes antes de qualquer implementacao.
+3. Revisar a rodada B1 e preparar validacoes futuras separadas: `player_error`,
+   teste longo, root read-only, corte seco, monitoramento, update e rollback.
 
 ## Regras que continuam proibidas
 

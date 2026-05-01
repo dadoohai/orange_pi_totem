@@ -56,6 +56,15 @@ Nao executar atualizacao ampla em campo. Kernel, DTB, U-Boot e BSP permanecem co
 | App com `low_resource_mode=false` | 2026-04-30 | IPC continuou estavel, mas 4 aliases seguiram sem avancar; remover low-resource isoladamente nao resolveu | [Rodada 20260430-122532-kiosky-playback-observer-low-resource-off](runs/20260430-122532-kiosky-playback-observer-low-resource-off/README.md) |
 | Remaining flags matrix | 2026-04-30 | V5, com `--vo=gpu --gpu-context=drm --ao=null`, fez aliases problematicos avancarem e preservou o alias bom | [Rodada 20260430-125237-mpv-remaining-flags-matrix](runs/20260430-125237-mpv-remaining-flags-matrix/README.md) |
 | Observer com saida MPV explicita | 2026-04-30 | Config candidata aprovada no app real por 300s: IPC/loadfile estaveis, 0 restarts e todos os 5 aliases avancando `time-pos`/frame | [Rodada 20260430-133130-kiosky-playback-observer-explicit-mpv-output](runs/20260430-133130-kiosky-playback-observer-explicit-mpv-output/README.md) |
+| Systemd dev smoke | 2026-04-30 | Aprovado em desenvolvimento; `systemctl start/stop` com HDMI conectado, sem escrita em `/opt` e sem processo remanescente apos stop | [Rodada 20260430-174718-systemd-dev-smoke](runs/20260430-174718-systemd-dev-smoke/README.md) |
+| Systemd dev autoboot | 2026-04-30 | Aprovado em desenvolvimento; servico habilitado e validado em dois reboots controlados com HDMI conectado | [Rodada 20260430-185824-systemd-dev-autoboot](runs/20260430-185824-systemd-dev-autoboot/README.md) |
+| Systemd dev HDMI missing | 2026-04-30 | Aprovado em desenvolvimento; boot sem HDMI publicou `display_missing`, nao iniciou app/MPV e recuperou apos reconexao | [Rodada 20260430-194110-systemd-dev-hdmi-missing](runs/20260430-194110-systemd-dev-hdmi-missing/README.md) |
+| Status aggregator dev service | 2026-05-01 | Aprovado em desenvolvimento; gerou `status.json` e `status.svg` publicos, sanitizados, sem renderer visual | [Rodada 20260501-121221-status-aggregator-dev-service](runs/20260501-121221-status-aggregator-dev-service/README.md) |
+| Status aggregator HDMI missing/reconnection | 2026-05-01 | HDMI ausente/reconexao funcionou, mas revelou falta de convergencia do status para `player_running` apos reconexao | [Rodada 20260501-123806-status-aggregator-hdmi-missing](runs/20260501-123806-status-aggregator-hdmi-missing/README.md) |
+| Status aggregator refresh HDMI | 2026-05-01 | Aprovado em desenvolvimento; refresh periodico convergiu o status agregado para `player_running` apos reconexao | [Rodada 20260501-132142-status-aggregator-refresh-hdmi](runs/20260501-132142-status-aggregator-refresh-hdmi/README.md) |
+| Status aggregator config_missing | 2026-05-01 | Aprovado em desenvolvimento; config ausente/invalida gerou `config_missing`, manteve servico ativo e nao iniciou app/MPV | [Rodada 20260501-141332-status-aggregator-config-missing](runs/20260501-141332-status-aggregator-config-missing/README.md) |
+| Status renderer config_missing | 2026-05-01 | Aprovado em desenvolvimento; renderer Dadooh exibiu `config_missing`, sem rodar junto com o MPV principal | [Rodada 20260501-145916-status-renderer-config-missing](runs/20260501-145916-status-renderer-config-missing/README.md) |
+| Status renderer visual B1 | 2026-05-01 | Aprovado em desenvolvimento; tela "Configuracao pendente" observada por humano e restauracao para `player_running` validada | [Rodada 20260501-190932-status-renderer-visual-b1](runs/20260501-190932-status-renderer-visual-b1/README.md) |
 
 Resumo: o Wi-Fi cliente 5 GHz foi aprovado e permaneceu funcional nas validacoes posteriores a desativacao de `bluetooth.service` e `aw859a-bluetooth.service`.
 O MPV manual tambem foi aprovado via DRM/KMS direto, inclusive como usuario `totem`, sem indicacao atual para instalar Xorg, Wayland ou compositor. O app ja foi deployado e rodou manualmente; a camada OS permanece saudavel, mas o Candidato A ainda nao esta homologado para producao. O bloqueio app-MPV curto foi resolvido para a candidata atual: IPC/watchdog/loadfile foi estabilizado por `mpv_query_uses_fresh_ipc=true`, a saida MPV explicita foi aprovada, e todos os 5 aliases avancaram no app real. O proximo passo e homologacao `v0.1-rc1` em segunda placa/cartao e teste manual mais longo.
@@ -71,6 +80,24 @@ Evolucao sanitizada das metricas do MPV:
 - Playback observer: com IPC estavel, 4 aliases ficaram sem progressao real de `time-pos`/frame, apesar de `pause=false`, `idle-active=false` e `eof-reached=false`.
 - Remaining flags matrix: adicionar `--vo=gpu --gpu-context=drm --ao=null` ao perfil do app fez os aliases problematicos avancarem no MPV isolado.
 - Observer com saida MPV explicita: `MPV IPC command timeout=0`, `MPV IPC ping failed=0`, `Restarting MPV=0`, `MPV process started=1`, `Failed to load media=0` e todos os 5 aliases avancando `time-pos`/frame no app real.
+
+## Resumo atual pos-RC1
+
+A homologacao `v0.1-rc1` continua separada e usa a configuracao candidata
+validada em `20260430-133130`: `mpv_query_uses_fresh_ipc=true`, `mpv_vo=gpu`,
+`mpv_gpu_context=drm`, `mpv_ao=null` e `low_resource_mode=false`, ainda como
+frente de homologacao, nao producao.
+
+Depois da RC1, na placa de desenvolvimento, foram aprovados `systemd`
+start/stop, autoboot, HDMI ausente/reconexao, status aggregator com refresh,
+`config_missing`, renderer visual Dadooh e B1 "Configuracao pendente". Esses
+resultados sao desenvolvimento pos-RC1; nao reclassificam retroativamente a
+homologacao.
+
+Pendencias antes de qualquer decisao de producao: revisar o ruido amplo de
+kernel da rodada B1, executar teste longo em homologacao 2, validar
+`player_error` visual, planejar e implementar onboarding Wi-Fi/configuracao,
+validar root read-only e corte seco, e definir monitoramento/update/rollback.
 
 ## Coletas padronizadas
 

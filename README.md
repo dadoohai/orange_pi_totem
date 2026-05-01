@@ -10,10 +10,10 @@ Status: aprovado em boot inicial, reboots curtos, baseline de rede cabeada/Netwo
 
 O Candidato A ainda não está homologado para produção. A base do sistema operacional permanece saudável, com `systemctl --failed` em `0 loaded units listed` nas rodadas recentes e sem `Oops`, `panic`, erro EXT4, remount read-only ou `mmc timeout/reset`. A fase app-MPV avançou: `mpv_query_uses_fresh_ipc=true` estabilizou IPC/watchdog/loadfile, e a saída MPV explícita `--vo=gpu --gpu-context=drm --ao=null` foi aprovada no app real por 300s na rodada `20260430-133130`, com todos os 5 aliases avançando `time-pos` e `estimated-frame-number`. Na placa de desenvolvimento, `systemd` start/stop, autoboot com HDMI conectado e launcher para HDMI ausente/reconexão também foram aprovados. Xorg, Wayland, compositor, Chromium, `pip` e venv continuam fora desta fase.
 
-Na frente produto/UX, a Fase A foi concluida em desenvolvimento: o status
-publico sanitizado e a primeira tela Dadooh para `config_missing` foram
-validados na placa de desenvolvimento. Wi-Fi setup, hotspot, QR code, portal
-local e onboarding ainda nao foram implementados.
+Na frente produto/UX, a Fase A foi concluida em desenvolvimento e B1 refinou a
+tela publica Dadooh para `config_missing`: "Configuracao pendente" foi validada
+por observacao humana na placa de desenvolvimento. Wi-Fi setup, hotspot, QR
+code, portal local e onboarding ainda nao foram implementados.
 
 Pendências atuais antes de produção:
 
@@ -28,9 +28,24 @@ Pendências atuais antes de produção:
 
 Próximo passo técnico: manter duas frentes separadas. A homologação `v0.1-rc1` segue em segunda placa/cartão; a evolução de produto/UX segue sem alterar a configuração candidata da RC1.
 
+## Marco atual de desenvolvimento
+
+O marco atual de desenvolvimento e status/splash B1, documentado em
+[docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md](docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md).
+Ele consolida `systemd`, launcher, status aggregator, `config_missing` e a tela
+Dadooh B1 como desenvolvimento pos-RC1.
+
+A RC1 continua sendo homologacao separada:
+[docs/releases/v0.1-rc1-homologacao/README.md](docs/releases/v0.1-rc1-homologacao/README.md).
+Status/splash B1 nao libera producao; producao permanece bloqueada ate novas
+validacoes.
+
 ## Próxima fase: produto/UX
 
-A próxima frente de desenvolvimento é transformar a base técnica em produto operável por pessoas não técnicas. O foco imediato é a Fase B: refinar a experiência visual de status Dadooh e planejar manutenção mínima antes de Wi-Fi/hotspot, ativação segura, rotação e telemetria do appliance.
+A próxima frente de desenvolvimento é C0: planejamento do onboarding
+Wi-Fi/configuração. O objetivo é especificar fluxo, segurança, estados públicos,
+rollback e plano de teste antes de implementar hotspot, portal local, ativação
+backend ou escrita real de config por operador.
 
 Estratégia: [docs/product/01_ESTRATEGIA_PRODUTO_UX.md](docs/product/01_ESTRATEGIA_PRODUTO_UX.md)
 
@@ -55,11 +70,13 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Roadmap implementação produto/UX](docs/product/02_ROADMAP_IMPLEMENTACAO_PRODUTO.md)
 - [Conclusão da Fase A status/splash](docs/product/08_FASE_A_CONCLUSAO.md)
 - [Planejamento Fase B status visual e manutenção mínima](docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md)
+- [Marco desenvolvimento status/splash](docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md)
 - [Homologação v0.1-rc1](docs/releases/v0.1-rc1-homologacao/README.md)
 - [Template de evidências do Candidato A](docs/evidence/candidate-a/README.md)
 - [Evolução MPV IPC/watchdog](docs/app-integration/04_EVOLUCAO_MPV_IPC_WATCHDOG.md)
 - [Estado atual do player MPV](docs/app-integration/05_ESTADO_ATUAL_PLAYER_MPV.md)
 - [ADR-0004 runtime MPV do kiosky-player](docs/DECISIONS/ADR-0004-kiosky-player-mpv-runtime.md)
+- [ADR-0007 launcher, status agregado e splash Dadooh](docs/DECISIONS/ADR-0007-status-splash-launcher.md)
 - [Documentação consolidada](docs/DOCUMENTACAO_COMPLETA_TOTEM_ORANGEPI_ZERO3.md)
 
 ## Scripts de bancada

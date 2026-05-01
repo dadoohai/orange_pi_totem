@@ -86,8 +86,9 @@ Criterio de rollback:
 
 ## Fase B - status visual e manutencao minima
 
-Status: proxima fase planejada. Ver
-`docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md`.
+Status: B1 concluida em desenvolvimento. O restante da manutencao minima segue
+planejado. Ver `docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md` e
+`docs/product/10_FASE_B1_VISUAL_CONFIG_MISSING.md`.
 
 Objetivo:
 
@@ -106,6 +107,17 @@ Escopo:
   `PLAYER_EXITED`;
 - especificar manutencao minima: ver estado publico, identificar erro e
   preparar reinicio de player/diagnostico sanitizado para fase posterior.
+
+B1 concluida em desenvolvimento:
+
+- tela publica Dadooh "Configuracao pendente" validada por observacao humana;
+- codigo publico `CONFIG_MISSING` visivel;
+- area de configuracao assistida marcada como futura, sem QR funcional;
+- renderer ativo apenas em `config_missing`;
+- `kiosk.py=0` e MPV principal `0` enquanto renderer esta ativo;
+- restauracao para `player_running` com renderer parado e observer curto limpo;
+- sem Wi-Fi setup, hotspot, portal, ativacao backend, reset real, telemetria ou
+  mudanca no `kiosky-player`.
 
 Fora de escopo:
 
@@ -155,7 +167,53 @@ Criterio de rollback:
 
 - voltar ao layout A1.4 de `config_missing` e manter o launcher atual.
 
+## Fase C0 - planejamento de onboarding Wi-Fi/configuracao
+
+Status: proxima fase recomendada. Nao implementa mudancas.
+
+Objetivo:
+
+- especificar o fluxo de onboarding antes de qualquer implementacao de rede;
+- separar primeiro boot, Wi-Fi, ativacao e manutencao minima;
+- definir estados publicos e mensagens sem dados privados;
+- definir limites de seguranca para credenciais, config e diagnostico;
+- desenhar rollback antes de alterar NetworkManager ou `/data/config`.
+
+Escopo de planejamento:
+
+- jornadas de operador e suporte;
+- contrato publico de estados para setup;
+- decisao entre hotspot, rede existente e fallback de bancada;
+- politica para credenciais Wi-Fi sem logs sensiveis;
+- fluxo de ativacao backend por codigo, ainda sem endpoint implementado;
+- escrita atomica futura de config em `/data/config`;
+- criterios de teste e bloqueio para placa de desenvolvimento e homologacao;
+- criterios de rollback para voltar ao player/status atual.
+
+Fora de escopo em C0:
+
+- implementar Wi-Fi setup;
+- criar hotspot;
+- criar portal local;
+- integrar ativacao backend;
+- escrever config real por operador;
+- implementar reset real;
+- implementar telemetria;
+- instalar pacotes.
+
+Criterios de aceite:
+
+- documento de arquitetura do onboarding aprovado;
+- ameacas principais de privacidade e credenciais listadas;
+- estados publicos e mensagens definidos;
+- plano de teste inclui senha incorreta, rede ausente, reboot, Ethernet
+  presente e ausencia de internet;
+- plano preserva a separacao entre homologacao `v0.1-rc1`, desenvolvimento
+  pos-RC1 e producao futura.
+
 ## Fase C - Wi-Fi/setup
+
+Status: nao implementada. Depende de C0.
 
 Objetivo:
 
