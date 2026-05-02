@@ -108,7 +108,7 @@ comando.
 A execucao C4.1 via Codex remoto nao deve carregar credencial. Qualquer acao
 com credencial acontece fora do agente.
 
-O modelo recomendado passa a ser hibrido:
+O modelo recomendado passa a ser C4.2 hibrido/local:
 
 1. Codex roda C3 antes.
 2. Humano executa conexao Wi-Fi localmente no console da placa ou em ambiente
@@ -121,6 +121,10 @@ O modelo recomendado passa a ser hibrido:
 Nao versionar outputs brutos. Nao publicar SSID real, senha, IP, gateway,
 hostname, MAC, BSSID, DNS real, nome real de conexao, URLs, secrets, payloads
 ou paths privados.
+
+O roteiro operacional recomendado esta documentado em
+`docs/product/23_C4_2_WIFI_HIBRIDO_LOCAL_ROTEIRO.md`. A execucao real de
+conexao Wi-Fi so deve ocorrer depois do checklist C4.2 aprovado.
 
 ### Permitidos somente em C4.1 com aprovacao
 

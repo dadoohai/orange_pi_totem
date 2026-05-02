@@ -348,8 +348,8 @@ Validacao:
 
 Status: C4.0 aprovado/documentado como plano de bancada; C4.1-preflight
 documentado; primeira rodada C4.1 abortada com seguranca antes de inserir
-senha; postmortem C4.1 documenta que a proxima tentativa deve ser hibrida ou
-local, com credencial fora do agente.
+senha; C4.1-postmortem concluido; C4.2 hibrido/local e o proximo caminho
+recomendado, com credencial fora do agente.
 
 Objetivo:
 
@@ -365,10 +365,13 @@ Validacao:
   sucesso/aborto e evidencia esperada;
 - C4.1-preflight documenta decisoes humanas finais, regra de senha sem registro
   e roteiro comando a comando sem execucao;
+- C4.1 teve tentativa abortada com seguranca antes de inserir senha;
+- C4.1-postmortem registrou que Codex/SSH/chat nao devem receber credencial;
 - C4.1 nao deve passar senha por Codex, SSH remoto gerenciado pelo agente, chat,
   historico, script ou evidencia;
-- a proxima C4.1 deve executar a acao com credencial fora do agente e usar C3
-  antes/depois para evidencia agregada;
+- C4.2 define o roteiro hibrido/local com Codex rodando C3 antes/depois/final e
+  humano executando a etapa sensivel fora do agente;
+- execucao real de conexao Wi-Fi so deve ocorrer apos checklist C4.2 aprovado;
 - senha errada ou falha de conexao recupera sem vazar credencial;
 - Ethernet nao e derrubada indevidamente;
 - rollback remove somente perfil de teste;

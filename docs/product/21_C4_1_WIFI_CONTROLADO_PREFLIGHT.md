@@ -16,6 +16,15 @@ C4.1-preflight nao usa SSH, nao toca nas placas, nao executa `nmcli`, `ip`,
 `iw` ou qualquer comando remoto, nao altera NetworkManager e nao cria perfil
 real.
 
+## Nota pos-postmortem C4.1
+
+A tentativa C4.1 remota foi abortada com seguranca antes de inserir senha. Apos
+o postmortem, qualquer tentativa futura com credencial deve seguir C4.2
+hibrido/local.
+
+Codex nao executa etapa que possa solicitar senha Wi-Fi. A acao com credencial
+acontece fora do agente, com retorno ao Codex apenas por resultado sanitizado.
+
 ## Decisoes humanas obrigatorias antes de execucao
 
 Checklist ainda nao preenchido:
