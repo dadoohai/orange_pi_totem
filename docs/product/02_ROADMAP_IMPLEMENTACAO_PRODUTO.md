@@ -319,20 +319,30 @@ Validacao:
 
 ### C3 - diagnostico Wi-Fi read-only
 
-Status: planejada.
+Status: diagnostico Wi-Fi read-only em implementacao/preparado. Sem alteracao
+de rede.
 
 Objetivo:
 
-- mostrar estado de rede de forma apenas leitura;
-- diferenciar Wi-Fi associado, IP obtido, internet basica e backend futuro;
+- criar base local sanitizada para observar estado de rede de forma apenas
+  leitura;
+- diferenciar Wi-Fi device presente, Wi-Fi conectado, IP local, rota default,
+  DNS planejado, internet basica futura e backend futuro;
 - nao derrubar Ethernet, Wi-Fi ou SSH de bancada;
-- nao publicar SSID real, senha, IP publico ou hostname.
+- nao publicar SSID real, senha, IP local/publico, gateway, hostname, MAC,
+  BSSID ou nome de conexao NetworkManager;
+- nao executar teste externo de internet/backend por enquanto, salvo decisao
+  posterior.
 
 Validacao:
 
 - prova de que nenhum comando altera conexoes;
-- diagnostico sanitizado;
-- falhas aparecem como codigos publicos.
+- diagnostico sanitizado em `/tmp`, com permissoes restritas;
+- comandos allowlisted e comandos proibidos testados por self-test;
+- falhas aparecem como codigos publicos;
+- Ethernet nao e desconectada ou modificada;
+- nenhum artefato publica SSID, IP, senha, hostname, gateway ou nome de
+  conexao.
 
 ### C4 - Wi-Fi real controlado em bancada
 
