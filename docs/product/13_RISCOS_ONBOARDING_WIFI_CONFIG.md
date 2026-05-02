@@ -1,6 +1,6 @@
 # Riscos - onboarding Wi-Fi/configuracao
 
-Status: planejamento C0/C1. Nao implementa mudancas.
+Status: planejamento C0-C2. Nao implementa mudancas.
 
 Data: 2026-05-01
 
@@ -21,6 +21,9 @@ writer.
 | `api_key` mal provisionada por env/mock/provisionamento | Operador completa a UI, mas player nao consegue operar ou falha em loop. | Preflight deve bloquear salvamento/inicio se `api_key` externa estiver ausente, publicar erro seguro e manter checklist de provisionamento separado da UI. | C1, C5, C6 |
 | Config parcial ou substituicao sem validacao | Player inicia com config incompleta, falha em loop ou vaza erro interno. | Config writer atomico, validacao de schema e campos externos antes de substituir, preservar ultima config valida e publicar erro publico. | C5, C6 |
 | C1 confundida com producao ou ativacao definitiva | Escopo documental minimo pode ser tratado como release de campo ou substituir indevidamente ativacao por codigo. | Marcar C1 como proposta/documentacao, preservar separacao RC1/desenvolvimento/producao e manter ADR-0008 como visao futura. | C1-C2 |
+| Mock C2 parecer funcional em campo | Operador ou suporte pode acreditar que rede/config foram alteradas de verdade. | Rotular telas/evidencias como mock, nao usar em campo, nao ligar botoes a acoes reais e documentar que nao altera rede nem config. | C2 |
+| Mock pedir senha real | Credencial real pode aparecer em tela, screenshot, journal ou evidencia. | Usar apenas senha ficticia, texto explicito "nao sera salva", nao persistir entrada e nao usar dados reais em validacao. | C2 |
+| `environment_id` real aparecer em screenshot/log | Identificador operacional pode vazar em evidencia ou status publico. | Usar placeholders, nao registrar valores digitados, sanitizar screenshots/README e nao copiar entrada para status publico. | C2, C5 |
 | Reset apagar dados uteis | Perda de evidencias, logs de suporte, config valida ou cache necessario. | Separar reset leve e factory reset, confirmacao forte, opcao de preservar diagnostico sanitizado e documentar escopo de limpeza. | C8 |
 | Dependencia backend | Ativacao bloqueada se backend estiver indisponivel. | Estados publicos de retry, timeout curto, mensagens recuperaveis, suporte a Ethernet/retry e nao gravar config parcial. | C7 |
 | Suporte remoto sem conectividade | Operador nao consegue ativar ou enviar diagnostico quando internet falha. | Tela local clara, diagnostico local sanitizado futuro, codigos publicos, fluxo de troca de rede e recuperacao por Ethernet em bancada. | C3, C4, C8 |
@@ -42,13 +45,15 @@ writer.
   provisionada.
 - Qualquer fluxo que trate `environment_id` manual como ativacao definitiva sem
   validacao e revisao de escopo.
+- Qualquer mock que peca senha real ou use `environment_id` real em evidencia.
 - Qualquer portal local que exponha shell, path arbitrario ou stack trace.
 
 ## Evidencias esperadas por fase
 
 - C1: escopo, fluxo e maquina de estados documentados, sem implementacao
   operacional.
-- C2: mock visual/formulario sem rede real e sem secrets.
+- C2: mock visual/formulario rotulado como mock, sem rede real, sem senha real,
+  sem persistencia e sem valores reais em evidencia.
 - C3: diagnostico Wi-Fi read-only com prova de que nao altera conexoes.
 - C4: Wi-Fi configurado em bancada com Ethernet preservada e rollback testado.
 - C5: config writer minimo/mock com erro de `api_key` externa ausente.

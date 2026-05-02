@@ -6,21 +6,31 @@ Data: 2026-05-01
 
 ## Refinamento posterior - C1
 
-Depois de C0, o escopo inicial foi refinado em C1 para um onboarding minimo e
-provisorio: Wi-Fi, sinal claro de conexao funcionando e `environment_id`
-manual.
+Este documento registra a visao original e ampla de onboarding desenhada em C0.
+Depois dele, o escopo vigente para a proxima evolucao incremental foi refinado
+em C1/ADR-0009 para um onboarding minimo e provisorio: Wi-Fi, sinal claro de
+conexao funcionando e `environment_id` manual.
 
 A ativacao por codigo continua como alternativa e visao futura, conforme
 ADR-0008, mas nao faz parte desta fase atual. Nesta C1, `api_key` fica fora da
 UI e deve vir futuramente de variavel de ambiente, mock ou provisionamento
 separado.
 
+Trechos abaixo que falam em codigo curto, operador nao manipular
+`environment_id`, backend de ativacao, hotspot ou portal local devem ser lidos
+como visao C0/futura, nao como implementacao imediata. A fase atual trabalha
+com `environment_id` manual e `api_key` fora da UI.
+
+C1 e C2 nao implementam Wi-Fi real, NetworkManager, hotspot, portal funcional,
+ativacao backend ou escrita real de `/data/config/config.json`.
+
 Referencias do refinamento:
 
 - `docs/product/14_C1_CONFIG_MISSING_MINIMAL_ONBOARDING.md`;
 - `docs/product/15_C1_MINIMAL_USER_FLOW.md`;
 - `docs/product/16_C1_MINIMAL_STATE_MACHINE.md`;
-- `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
+- `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`;
+- `docs/product/17_C2_MOCK_VISUAL_FORMULARIO.md`.
 
 ## Objetivo
 

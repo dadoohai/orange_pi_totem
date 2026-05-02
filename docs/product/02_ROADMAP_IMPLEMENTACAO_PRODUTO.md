@@ -167,9 +167,9 @@ Criterio de rollback:
 
 - voltar ao layout A1.4 de `config_missing` e manter o launcher atual.
 
-## Fase C0/C1 - planejamento e refinamento minimo de onboarding
+## Fase C0-C2 - planejamento e refinamento minimo de onboarding
 
-Status: C0 documentado e C1 em refinamento documental. Nao implementa
+Status: C0 e C1 documentados; C1.1/C2 em preparacao documental. Nao implementa
 mudancas operacionais.
 
 Documentos:
@@ -180,6 +180,7 @@ Documentos:
 - `docs/product/14_C1_CONFIG_MISSING_MINIMAL_ONBOARDING.md`;
 - `docs/product/15_C1_MINIMAL_USER_FLOW.md`;
 - `docs/product/16_C1_MINIMAL_STATE_MACHINE.md`;
+- `docs/product/17_C2_MOCK_VISUAL_FORMULARIO.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
@@ -201,7 +202,7 @@ Escopo de planejamento:
 - criterios de teste e bloqueio para placa de desenvolvimento e homologacao;
 - criterios de rollback para voltar ao player/status atual.
 
-Fora de escopo em C0/C1:
+Fora de escopo em C0-C2:
 
 - implementar Wi-Fi setup;
 - criar hotspot;
@@ -226,11 +227,12 @@ Refinamento C1:
 Sequencia incremental refinada:
 
 - C1 - escopo e fluxo minimo Wi-Fi + `environment_id` documentado;
+- C1.1 - coerencia documental C0/C1 e preparacao de C2;
 - C2 - mock visual/formulario sem alterar rede;
 - C3 - diagnostico Wi-Fi read-only;
-- C4 - Wi-Fi controlado em bancada com Ethernet preservada;
+- C4 - Wi-Fi real controlado em bancada com Ethernet preservada;
 - C5 - config writer minimo/mock;
-- C6 - salvar config minima real com validacao e rollback;
+- C6 - config real com validacao e rollback;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
 
@@ -244,16 +246,19 @@ Criterios de aceite:
 - plano preserva a separacao entre homologacao `v0.1-rc1`, desenvolvimento
   pos-RC1 e producao futura.
 - Wi-Fi setup real, hotspot, portal local, ativacao backend e escrita real de
-  config seguem nao implementados ao final de C1.
+  config seguem nao implementados ao final de C2.
 
 ## Fases C1-C8 - onboarding minimo refinado
 
-Status: C1 documental; C2-C8 planejadas. Nao implementadas.
+Status: C1 documentada; C1.1 documental em preparacao; C2-C8 planejadas. Nao
+implementadas operacionalmente.
 
 Estas fases substituem a sequencia anterior mais ampla para evitar que hotspot,
 ativacao backend, writer real, rotacao e manutencao avancem juntos.
 
 ### C1 - escopo e fluxo minimo documentado
+
+Status: concluida/documentada.
 
 Objetivo:
 
@@ -269,13 +274,34 @@ Aceite:
 - nenhum script, systemd, NetworkManager ou `kiosky-player` alterado;
 - C1 marcada como desenvolvimento/proposta, sem liberar producao.
 
+### C1.1 - coerencia documental C0/C1
+
+Status: documental.
+
+Objetivo:
+
+- consolidar que C0/ADR-0008 sao visao original e futura;
+- deixar C1/ADR-0009 como recorte vigente atual;
+- preparar C2 sem apagar historico;
+- explicitar que codigo curto, login, lista de ambientes e ativacao backend
+  ficam para C7 ou fase posterior.
+
+Aceite:
+
+- C0 tem nota de leitura para trechos historicos;
+- roadmap aponta para C2 como mock visual sem rede real;
+- riscos cobrem o mock parecer funcional ou capturar dados reais.
+
 ### C2 - mock visual/formulario sem alterar rede
+
+Status: planejada.
 
 Objetivo:
 
 - criar mock de tela/formulario para Wi-Fi e `environment_id`;
 - nao listar redes reais;
-- nao pedir senha real persistida;
+- nao pedir senha real;
+- nao persistir senha mock;
 - nao alterar NetworkManager;
 - nao escrever config real.
 
@@ -286,6 +312,8 @@ Validacao:
 - renderer/setup continua separado do player.
 
 ### C3 - diagnostico Wi-Fi read-only
+
+Status: planejada.
 
 Objetivo:
 
@@ -300,7 +328,9 @@ Validacao:
 - diagnostico sanitizado;
 - falhas aparecem como codigos publicos.
 
-### C4 - Wi-Fi controlado em bancada com Ethernet preservada
+### C4 - Wi-Fi real controlado em bancada
+
+Status: planejada.
 
 Objetivo:
 
@@ -318,6 +348,8 @@ Validacao:
 
 ### C5 - config writer minimo/mock
 
+Status: planejada.
+
 Objetivo:
 
 - criar caminho de validacao de config minima sem substituir config ativa real;
@@ -331,7 +363,9 @@ Validacao:
 - erros sao publicos e sanitizados;
 - writer mock nao imprime secrets.
 
-### C6 - salvar config minima real com validacao e rollback
+### C6 - config real com validacao e rollback
+
+Status: planejada.
 
 Objetivo:
 
@@ -350,6 +384,8 @@ Validacao:
 
 ### C7 - ativacao por codigo, login ou lista de ambientes
 
+Status: planejada.
+
 Objetivo:
 
 - reavaliar alternativas mais completas depois do minimo funcionar;
@@ -365,6 +401,8 @@ Validacao:
 - fluxo nao regride C6.
 
 ### C8 - rotacao, troca de ambiente, manutencao e reset
+
+Status: planejada.
 
 Objetivo:
 
