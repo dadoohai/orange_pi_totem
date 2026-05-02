@@ -159,21 +159,12 @@ def normalize_candidate_path(raw_path: str) -> pathlib.Path:
     return strict_resolved
 
 
-def find_repository_roots() -> tuple[pathlib.Path, ...]:
-    roots: list[pathlib.Path] = []
-    for start in (pathlib.Path(__file__).resolve(strict=False), pathlib.Path.cwd().resolve(strict=False)):
-        current = start if start.is_dir() else start.parent
-        for candidate in (current, *current.parents):
-            if (candidate / ".git").exists():
-                resolved = candidate.resolve(strict=False)
-                if resolved not in roots:
-                    roots.append(resolved)
-                break
-    return tuple(roots)
-
-
 def path_is_in_repository(path: pathlib.Path) -> bool:
-    return any(path_is_under(path, root) for root in find_repository_roots())
+    current = path if path.is_dir() else path.parent
+    for candidate in (current, *current.parents):
+        if (candidate / ".git").exists():
+            return True
+    return False
 
 
 def normalize_real_candidate_path(raw_path: str) -> pathlib.Path:
@@ -941,9 +932,13 @@ def run_self_test() -> None:
             ),
             "real backup-dir outside approved path should fail",
         )
+        fake_repo = root / "fake-repo"
+        (fake_repo / ".git").mkdir(parents=True)
+        repo_candidate = fake_repo / "candidate.real.json"
+        write_self_test_candidate(repo_candidate, synthetic)
         assert_raises_writer_error(
             lambda: validate_writer_paths(
-                candidate_raw=str(pathlib.Path(__file__).resolve(strict=False)),
+                candidate_raw=str(repo_candidate),
                 dest_raw="/data/config/config.json",
                 backup_dir_raw="/data/config/backups",
                 out_dir_raw=str(root / "out-real-repo-candidate"),
@@ -1090,7 +1085,7 @@ def run_self_test() -> None:
         rollback_summary = (root / "out-rollback" / SUMMARY_FILENAME).read_text(encoding="utf-8")
         assert_true(rollback_candidate["api_key"] not in rollback_summary, "rollback summary leaked api_key")
 
-        generated_paths = [candidate, mock_candidate, replacement_candidate, rollback_candidate_path, dest]
+        generated_paths = [candidate, repo_candidate, mock_candidate, replacement_candidate, rollback_candidate_path, dest]
         generated_paths.extend(root.rglob(STATUS_FILENAME))
         generated_paths.extend(root.rglob(SUMMARY_FILENAME))
         generated_paths.extend(backup_dir.glob("*.bak"))

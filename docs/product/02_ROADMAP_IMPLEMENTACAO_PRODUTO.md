@@ -476,8 +476,11 @@ Validacao:
 Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2
 writer real simulado em `/tmp` concluido localmente; C6.2.1 smoke na placa de
 desenvolvimento em `/tmp` concluido; C6.2.2 guardrails de modo real concluidos;
-C6.3-preflight read-only na placa concluido; C6.3.0 plano de execucao com
-servico parado concluido; C6.3A execucao real futura.
+C6.3A tentativa abortada por self-test do writer na placa; C6.2.3 correcao de
+compatibilidade do self-test concluida; C6.3-preflight read-only na placa
+concluido; C6.3.0 plano de execucao com servico parado concluido; C6.3A
+execucao real concluida na placa de desenvolvimento com servico parado, backup
+restrito e player mantido parado.
 
 Objetivo:
 
@@ -628,6 +631,30 @@ Validacao:
 - modo simulado em `/tmp` continua passando;
 - C6.3A continua sendo a primeira escrita real autorizada.
 
+#### C6.2.3 - compatibilidade do self-test na placa
+
+Status: concluido. Sem escrita real em `/data`.
+
+Objetivo:
+
+- diagnosticar falha do self-test do writer copiado para `/tmp` na placa;
+- corrigir compatibilidade sem relaxar guardrails;
+- revalidar localmente e na placa;
+- manter C6.3A bloqueada ate nova revisao humana.
+
+Validacao:
+
+- causa identificada: teste de candidata em repo dependia do script estar
+  dentro do checkout Git;
+- correcao: detectar repo pelos pais da candidata e criar repo fake temporario
+  em `/tmp` no self-test;
+- self-test local do writer passou;
+- self-test do writer na placa passou;
+- escrita simulada em `/tmp` passou localmente e na placa;
+- nada foi escrito em `/data`;
+- servico nao foi parado, iniciado ou reiniciado;
+- C6.2.3 permitiu repetir C6.3A desde a Fase 0 apos revisao humana.
+
 #### C6.3-preflight - inspecao read-only da placa
 
 Status: preflight read-only concluido na placa de desenvolvimento. Sem escrita
@@ -652,7 +679,7 @@ Validacao:
   quando a config e valida;
 - recomendacao para C6.3A: executar com o servico parado ou bloqueio equivalente
   aprovado;
-- C6.3A execucao real continua pendente.
+- C6.3A foi executada posteriormente com o servico parado.
 
 #### C6.3.0 - plano de execucao com servico parado
 
@@ -675,11 +702,11 @@ Validacao:
 - sequencia futura documentada: preflight final, parada do servico, backup,
   candidata real privada, escrita atomica, pos-validacao, decisao de servico e
   evidencia sanitizada;
-- C6.3A execucao real continua pendente.
+- C6.3A foi executada posteriormente com o servico parado.
 
 #### C6.3A - primeira escrita real em placa de desenvolvimento
 
-Status: futura. Nao executada.
+Status: concluida na placa de desenvolvimento. Player mantido parado ao final.
 
 Objetivo:
 
@@ -697,8 +724,13 @@ Validacao:
 - execucao autorizada por humano apos C6.1-preflight, C6.2, C6.2.1, C6.2.2,
   C6.3-preflight e C6.3.0;
 - `/data/config/config.json` escrito somente pelo writer real aprovado;
-- falha parcial nao vira config ativa;
-- player inicia somente apos config real valida e decisao humana explicita;
+- `real-dry-run` e pos-validacao passaram;
+- backup restrito foi criado em `/data/config/backups`;
+- config ativa observada com owner/group `root:totem` e mode `0640`;
+- usuario `totem` consegue ler e nao consegue gravar a config;
+- rollback nao foi necessario;
+- servico permaneceu parado ao final;
+- player nao foi iniciado;
 - evidencia sanitizada sem `api_key`, URL privada, IDs reais ou payload.
 
 ### C7 - ativacao por codigo, login ou lista de ambientes

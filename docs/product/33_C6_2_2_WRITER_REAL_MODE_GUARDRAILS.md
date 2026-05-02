@@ -190,3 +190,22 @@ Mitigacoes:
 - self-test de guardrails;
 - C6.3A separada, com verificacao real do servico parado;
 - status/summary sanitizados com estados agregados.
+
+## Nota C6.2.3 - compatibilidade do self-test na placa
+
+C6.2.3 corrigiu a compatibilidade do self-test do writer quando o script e
+copiado para `/tmp` na placa de desenvolvimento.
+
+A falha vinha do teste de candidata em repositorio: o self-test usava o proprio
+arquivo do script como candidata esperada dentro do repo. Localmente isso
+funcionava porque o script estava no checkout Git; na placa, o script roda em
+`/tmp`, fora de qualquer `.git`, e o teste falhava.
+
+Correcao:
+
+- a deteccao de repositorio passou a inspecionar os pais do path da candidata;
+- o self-test cria um repo fake temporario em `/tmp` para testar o guardrail;
+- guardrails permanecem inalterados;
+- self-test continua sem escrever em `/data`;
+- modo real continua fora do self-test;
+- C6.3A continua sendo a primeira escrita real autorizada.
