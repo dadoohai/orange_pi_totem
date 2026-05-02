@@ -10,6 +10,9 @@ C4.2 prepara uma nova tentativa C4 sem senha pelo Codex. O objetivo e separar
 responsabilidades entre Codex e humano para validar Wi-Fi real de teste sem
 expor credencial, preservando Ethernet, privacidade e rollback.
 
+Nota posterior: C4.2 foi seguido por C4.5 para registrar a remocao local do
+perfil/configuracao de teste que havia sido mantido por decisao humana.
+
 C4.2 define o modelo recomendado apos o postmortem C4.1:
 
 - Codex roda diagnostico C3 antes/depois/final;

@@ -350,7 +350,9 @@ Status: C4.0 aprovado/documentado como plano de bancada; C4.1-preflight
 documentado; primeira rodada C4.1 abortada com seguranca antes de inserir
 senha; C4.1-postmortem concluido; C4.2 hibrido/local abortado com seguranca
 antes da acao local; C4.3 define canal seguro de credencial como proximo
-passo de processo; canal humano/local escolhido como SSH proprio fora do Codex.
+passo de processo; canal humano/local escolhido como SSH proprio fora do Codex;
+C4 hibrido validou conexao Wi-Fi de teste por humano fora do Codex; C4.5
+registrou remocao local da configuracao de teste.
 
 Objetivo:
 
@@ -376,8 +378,12 @@ Validacao:
   em execucao, Ethernet preservada e nada escrito em `/data`;
 - C4.3 definiu canal humano/local seguro para inserir credencial: SSH proprio
   do humano fora do Codex;
-- proxima execucao real de conexao Wi-Fi deve usar esse canal para a etapa
-  sensivel e manter Codex restrito a C3/evidencia sanitizada;
+- C4 hibrido validou conexao Wi-Fi de teste usando esse canal, mantendo Codex
+  restrito a C3/evidencia sanitizada;
+- C4.5 removeu o perfil/configuracao de teste por acao humana local e C3 final
+  permaneceu saudavel;
+- internet/backend continuam nao testados;
+- proximo gate deve ser decidido: reboot/reconexao, C5 writer mock ou UX;
 - senha errada ou falha de conexao recupera sem vazar credencial;
 - Ethernet nao e derrubada indevidamente;
 - rollback remove somente perfil de teste;
