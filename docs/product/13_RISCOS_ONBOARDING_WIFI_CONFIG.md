@@ -32,7 +32,11 @@ writer.
 | Placeholder virar producao durante C6 | Mesmo com C5/C5.1, uma config candidata pode ser promovida manualmente com valores mock ou `.invalid`. | C6.1-preflight exige `--real-dry-run` limpo antes de C6.3, bloqueio de placeholders, revisao humana e evidencia sem copiar config. | C6 |
 | Dados reais passarem pelo chat | `api_key`, URL privada, IDs reais ou payload podem ficar registrados em transcript, issue, PR, README ou resumo. | C6.1-preflight exige canal local privado para dados reais, proibe envio pelo chat e aborta se a execucao depender de publicar valor real. | C6.1-preflight, C6.3 |
 | Config real ser versionada | `/data/config/config.json` ou candidata real pode entrar no Git e expor secrets. | Config real e candidata real ficam fora do Git; evidencia publica apenas estados agregados; revisar `git status --short --untracked-files=all` antes de encerrar. | C6.1-preflight, C6.2, C6.3 |
-| Writer real aceitar destino fora de `/tmp` antes da hora | C6.2 poderia alterar config real, criar diretorios indevidos ou mascarar risco antes da placa autorizada. | C6.2 recusa `--dest` e `--backup-dir` fora de `/tmp`, recusa candidata em `/data` ou `/opt`, cobre esses casos em self-test e deixa `/data` real somente para C6.3. | C6.2 |
+| Writer real aceitar destino fora de `/tmp` antes da hora | C6.2 poderia alterar config real, criar diretorios indevidos ou mascarar risco antes da placa autorizada. | C6.2 recusa `--dest` e `--backup-dir` fora de `/tmp`, recusa candidata em `/data` ou `/opt`, cobre esses casos em self-test e deixa `/data` real somente para C6.3A. | C6.2 |
+| Flag real usada acidentalmente | Operador pode habilitar modo real antes da fase autorizada e tentar escrever config persistente. | C6.2.2 exige tres flags explicitas, mantem modo padrao em `/tmp` e deixa C6.3A como primeira execucao real aprovada. | C6.2.2, C6.3A |
+| Path real amplo demais | Um writer permissivo poderia aceitar outro arquivo em `/data`, `/home`, `/opt` ou repositorio. | C6.2.2 permite somente `/data/config/config.json`, recusa path relativo e valida symlink no fluxo real. | C6.2.2 |
+| Backup real com secret em local errado | Backup pode copiar `api_key`, URL privada e IDs reais para local legivel ou versionavel. | C6.2.2 restringe backup real a `/data/config/backups`, documenta secret, exige permissao restrita e proibe evidencia com conteudo. | C6.2.2, C6.3A |
+| Candidata real no repositorio | Config real pode entrar no Git e expor token ou endpoint privado. | Modo real recusa candidata em repositorio quando detectavel, `/data`, `/opt` e `/home`; candidata deve ficar privada sob `/tmp`. | C6.2.2, C6.3A |
 | `api_key` aparecer em status do writer real | Um writer correto em escrita ainda pode vazar token em `writer-status.json`, `summary.txt`, stdout ou evidencia. | Status e summary registram apenas `api_key_present` e `placeholder_detected`; self-test verifica que a `api_key` sintetica nao aparece nos artefatos sanitizados. | C6.2, C6.3 |
 | Backup simulado virar evidencia | Backup contem config completa e pode carregar token no futuro, mesmo quando a rodada for apenas local. | Backup fica em `/tmp` com mode restrito, nao e copiado para output/evidencia e o README registra apenas existencia, permissao e resultado agregado. | C6.2, C6.3 |
 | Rollback nao cobrir falha pos-escrita | A escrita atomica pode concluir, mas a revalidacao falhar e deixar config ruim ativa. | C6.2 simula falha pos-escrita no self-test, restaura backup quando existe, remove config invalida sem backup quando possivel e mantem C6.3 como fase separada para rollback real aprovado. | C6.2, C6.3 |
@@ -93,7 +97,12 @@ writer.
 - Qualquer hotspot sem criterio de desligamento e recuperacao.
 - Qualquer config writer que possa deixar JSON parcial como config ativa.
 - Qualquer writer mock que escreva fora de `/tmp` ou toque em `/data`.
-- Qualquer C6.2 que aceite `--dest`, `--backup-dir` ou output fora de `/tmp`.
+- Qualquer C6.2/C6.2.2 que aceite destino fora de `/tmp` sem todas as flags
+  reais explicitas.
+- Qualquer C6.2.2 que aceite destino real diferente de
+  `/data/config/config.json`.
+- Qualquer C6.2.2 que aceite backup real fora de `/data/config/backups`.
+- Qualquer candidata real dentro do repositorio, `/data`, `/opt` ou `/home`.
 - Qualquer dado real de C6 que precise passar por chat, issue, PR, README,
   log, diff ou resumo.
 - Qualquer config real, candidata real ou backup real versionado.
@@ -137,6 +146,9 @@ writer.
 - C6.2: writer real simulado em `/tmp`, com `--real-dry-run`, backup,
   rollback, self-test de guardrails, saida sanitizada, sem escrita real e sem
   secrets em logs ou artefatos versionados.
+- C6.2.2: guardrails de modo real com flags explicitas, destino real exato,
+  backup-dir restrito, candidata privada sob `/tmp` e self-test sem escrita em
+  `/data`.
 - C6.3-preflight: inspecao read-only na placa de desenvolvimento, sem ler
   conteudo de config real, com estado sanitizado de `/data/config`, usuario,
   grupo e servico.

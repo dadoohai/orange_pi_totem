@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C6.2 simulated real config writer.
+"""C6.2/C6.2.2 guarded real config writer.
 
 This is the first reusable writer shape for the real config flow, but C6.2 is
 deliberately constrained to /tmp. It validates a local candidate with the C5.1
@@ -7,8 +7,12 @@ real-dry-run contract, writes the active config atomically to a simulated
 destination, creates a restricted backup when replacing an existing config, and
 rolls back on critical post-write failure.
 
-It never reads or writes /data, never touches /opt, never accesses the network,
-and never prints the api_key/token value.
+C6.2.2 adds guarded support for a future real destination. Real writes require
+multiple explicit flags and only allow /data/config/config.json with a restricted
+backup directory. The self-test still writes only under /tmp.
+
+It never accesses the network, never calls systemctl/nmcli/MPV, and never prints
+the api_key/token value.
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ import shutil
 import stat
 import sys
 import tempfile
+from dataclasses import dataclass
 from typing import Any
 
 sys.dont_write_bytecode = True
@@ -30,22 +35,41 @@ sys.dont_write_bytecode = True
 import totem_config_contract_validate as contract
 
 
-SCHEMA_VERSION = "dadooh-c6.2-config-writer-real-sim.v1"
+SCHEMA_VERSION = "dadooh-c6.2.2-config-writer-real-guardrails.v1"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c6-config-writer-real-sim"
 
 STATUS_FILENAME = "writer-status.json"
 SUMMARY_FILENAME = "summary.txt"
 
 ACTIVE_CONFIG_MODE = 0o600
+REAL_ACTIVE_CONFIG_MODE = 0o640
 PRIVATE_FILE_MODE = 0o600
 PRIVATE_DIR_MODE = 0o700
 
 FORBIDDEN_CANDIDATE_ROOTS = (pathlib.Path("/data"), pathlib.Path("/opt"))
+FORBIDDEN_REAL_CANDIDATE_ROOTS = (
+    pathlib.Path("/data"),
+    pathlib.Path("/opt"),
+    pathlib.Path("/home"),
+)
 TMP_ROOT = pathlib.Path("/tmp").resolve()
+REAL_DEST_PATH = pathlib.Path("/data/config/config.json")
+REAL_BACKUP_DIR = pathlib.Path("/data/config/backups")
+REAL_FILE_OWNER = "root"
+REAL_FILE_GROUP = "totem"
 
 
 class WriterError(ValueError):
     """Raised for expected C6.2 writer failures."""
+
+
+@dataclass(frozen=True)
+class WriterPaths:
+    candidate: pathlib.Path
+    dest: pathlib.Path
+    backup_dir: pathlib.Path
+    out_dir: pathlib.Path
+    real_write_enabled: bool
 
 
 def utc_timestamp() -> str:
@@ -64,11 +88,15 @@ def path_is_under(path: pathlib.Path, root: pathlib.Path) -> bool:
     return True
 
 
+def absolute_no_resolve(raw_path: str) -> pathlib.Path:
+    return pathlib.Path(os.path.abspath(str(pathlib.Path(raw_path).expanduser())))
+
+
 def reject_raw_forbidden_path(raw_path: str, label: str) -> None:
     raw = pathlib.Path(raw_path).expanduser()
     if not raw.is_absolute():
         return
-    absolute = pathlib.Path(os.path.abspath(str(raw)))
+    absolute = absolute_no_resolve(raw_path)
     for root in FORBIDDEN_CANDIDATE_ROOTS:
         if path_is_under(absolute, root):
             raise WriterError(f"refusing {label} under {root}")
@@ -76,6 +104,10 @@ def reject_raw_forbidden_path(raw_path: str, label: str) -> None:
 
 def require_tmp_dir(raw_path: str, label: str) -> pathlib.Path:
     path = pathlib.Path(raw_path).expanduser()
+    raw_absolute = absolute_no_resolve(raw_path)
+    if not path_is_under(raw_absolute, TMP_ROOT):
+        raise WriterError(f"{label} must be under /tmp")
+
     resolved = path.resolve(strict=False)
 
     if not path_is_under(resolved, TMP_ROOT):
@@ -89,6 +121,10 @@ def require_tmp_dir(raw_path: str, label: str) -> pathlib.Path:
 
 def require_tmp_file(raw_path: str, label: str) -> pathlib.Path:
     path = pathlib.Path(raw_path).expanduser()
+    raw_absolute = absolute_no_resolve(raw_path)
+    if not path_is_under(raw_absolute, TMP_ROOT):
+        raise WriterError(f"{label} must be under /tmp")
+
     resolved = path.resolve(strict=False)
 
     if not path_is_under(resolved, TMP_ROOT):
@@ -123,10 +159,184 @@ def normalize_candidate_path(raw_path: str) -> pathlib.Path:
     return strict_resolved
 
 
+def find_repository_roots() -> tuple[pathlib.Path, ...]:
+    roots: list[pathlib.Path] = []
+    for start in (pathlib.Path(__file__).resolve(strict=False), pathlib.Path.cwd().resolve(strict=False)):
+        current = start if start.is_dir() else start.parent
+        for candidate in (current, *current.parents):
+            if (candidate / ".git").exists():
+                resolved = candidate.resolve(strict=False)
+                if resolved not in roots:
+                    roots.append(resolved)
+                break
+    return tuple(roots)
+
+
+def path_is_in_repository(path: pathlib.Path) -> bool:
+    return any(path_is_under(path, root) for root in find_repository_roots())
+
+
+def normalize_real_candidate_path(raw_path: str) -> pathlib.Path:
+    path = pathlib.Path(raw_path).expanduser()
+    if not path.is_absolute():
+        raise WriterError("real candidate path must be absolute")
+
+    raw_absolute = absolute_no_resolve(raw_path)
+    for root in FORBIDDEN_REAL_CANDIDATE_ROOTS:
+        if path_is_under(raw_absolute, root):
+            raise WriterError(f"refusing real candidate under {root}")
+    if not path_is_under(raw_absolute, TMP_ROOT):
+        raise WriterError("real candidate must be under /tmp")
+
+    try:
+        strict_resolved = path.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise WriterError("candidate file not found") from exc
+
+    for root in FORBIDDEN_REAL_CANDIDATE_ROOTS:
+        if path_is_under(strict_resolved, root):
+            raise WriterError(f"refusing real candidate under {root}")
+    if not path_is_under(strict_resolved, TMP_ROOT):
+        raise WriterError("real candidate must resolve under /tmp")
+    if path_is_in_repository(strict_resolved):
+        raise WriterError("refusing real candidate inside repository")
+    if not strict_resolved.is_file():
+        raise WriterError("candidate must be a file")
+    return strict_resolved
+
+
+def normalize_exact_real_path(
+    raw_path: str,
+    expected: pathlib.Path,
+    label: str,
+    *,
+    check_symlinks: bool,
+) -> pathlib.Path:
+    path = pathlib.Path(raw_path).expanduser()
+    if not path.is_absolute():
+        raise WriterError(f"{label} must be an absolute path")
+
+    raw_absolute = pathlib.Path(os.path.normpath(os.path.abspath(str(path))))
+    if raw_absolute != expected:
+        raise WriterError(f"{label} must be {expected}")
+
+    if check_symlinks:
+        resolved = path.resolve(strict=False)
+        if resolved != expected:
+            raise WriterError(f"{label} symlink escapes approved path")
+
+    return expected
+
+
+def real_flags_complete(
+    *,
+    enable_real_write: bool,
+    confirm_service_stopped: bool,
+    confirm_human_approved_real_write: bool,
+) -> bool:
+    return enable_real_write and confirm_service_stopped and confirm_human_approved_real_write
+
+
+def validate_writer_paths(
+    *,
+    candidate_raw: str,
+    dest_raw: str,
+    backup_dir_raw: str | None,
+    out_dir_raw: str,
+    enable_real_write: bool = False,
+    confirm_service_stopped: bool = False,
+    confirm_human_approved_real_write: bool = False,
+    check_real_symlinks: bool = True,
+) -> WriterPaths:
+    out_dir = require_tmp_dir(out_dir_raw, "out-dir")
+    real_flag_values = (enable_real_write, confirm_service_stopped, confirm_human_approved_real_write)
+    any_real_flag = any(real_flag_values)
+    real_write = real_flags_complete(
+        enable_real_write=enable_real_write,
+        confirm_service_stopped=confirm_service_stopped,
+        confirm_human_approved_real_write=confirm_human_approved_real_write,
+    )
+
+    if any_real_flag and not real_write:
+        raise WriterError(
+            "real write requires --enable-real-write, --confirm-service-stopped, "
+            "and --confirm-human-approved-real-write"
+        )
+
+    if real_write:
+        candidate_path = normalize_real_candidate_path(candidate_raw)
+        dest = normalize_exact_real_path(dest_raw, REAL_DEST_PATH, "dest", check_symlinks=check_real_symlinks)
+        backup_dir = normalize_exact_real_path(
+            backup_dir_raw or str(REAL_BACKUP_DIR),
+            REAL_BACKUP_DIR,
+            "backup-dir",
+            check_symlinks=check_real_symlinks,
+        )
+        return WriterPaths(
+            candidate=candidate_path,
+            dest=dest,
+            backup_dir=backup_dir,
+            out_dir=out_dir,
+            real_write_enabled=True,
+        )
+
+    candidate_path = normalize_candidate_path(candidate_raw)
+    dest = require_tmp_file(dest_raw, "dest")
+    backup_dir = require_tmp_dir(backup_dir_raw, "backup-dir") if backup_dir_raw else require_tmp_dir(
+        str(dest.parent / "backups"),
+        "backup-dir",
+    )
+    return WriterPaths(
+        candidate=candidate_path,
+        dest=dest,
+        backup_dir=backup_dir,
+        out_dir=out_dir,
+        real_write_enabled=False,
+    )
+
+
 def prepare_private_dir(path: pathlib.Path) -> None:
     path.mkdir(mode=PRIVATE_DIR_MODE, parents=True, exist_ok=True)
     if stat.S_IMODE(path.stat().st_mode) != PRIVATE_DIR_MODE:
         path.chmod(PRIVATE_DIR_MODE)
+
+
+def apply_real_ownership(path: pathlib.Path) -> None:
+    try:
+        shutil.chown(path, user=REAL_FILE_OWNER, group=REAL_FILE_GROUP)
+    except (LookupError, OSError) as exc:
+        raise WriterError("could not apply real owner/group root:totem") from exc
+
+
+def apply_mode_and_owner(path: pathlib.Path, mode: int, *, real_write_enabled: bool) -> None:
+    if real_write_enabled:
+        apply_real_ownership(path)
+    path.chmod(mode)
+
+
+def prepare_active_parent(dest: pathlib.Path, *, real_write_enabled: bool) -> None:
+    if not real_write_enabled:
+        prepare_private_dir(dest.parent)
+        return
+
+    if not dest.parent.exists():
+        raise WriterError("real dest parent must already exist")
+    if not dest.parent.is_dir():
+        raise WriterError("real dest parent is not a directory")
+    if dest.parent.is_symlink():
+        raise WriterError("real dest parent must not be a symlink")
+
+
+def prepare_backup_dir(path: pathlib.Path, *, real_write_enabled: bool) -> None:
+    if not real_write_enabled:
+        prepare_private_dir(path)
+        return
+
+    if path.exists() and not path.is_dir():
+        raise WriterError("real backup-dir exists and is not a directory")
+    path.mkdir(mode=PRIVATE_DIR_MODE, parents=False, exist_ok=True)
+    apply_mode_and_owner(path, PRIVATE_DIR_MODE, real_write_enabled=True)
+    fsync_directory(path.parent)
 
 
 def fsync_directory(path: pathlib.Path) -> None:
@@ -205,14 +415,21 @@ def config_payload(config: dict[str, Any]) -> bytes:
     return (json.dumps(config, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
-def atomic_write_active_config(dest: pathlib.Path, config: dict[str, Any]) -> None:
-    prepare_private_dir(dest.parent)
+def atomic_write_active_config(
+    dest: pathlib.Path,
+    config: dict[str, Any],
+    *,
+    mode: int,
+    real_write_enabled: bool,
+) -> None:
     payload = config_payload(config)
     tmp_name: str | None = None
     fd: int | None = None
     try:
         fd, tmp_name = tempfile.mkstemp(prefix=f".{dest.name}.", suffix=".tmp", dir=str(dest.parent))
-        os.fchmod(fd, ACTIVE_CONFIG_MODE)
+        os.fchmod(fd, mode)
+        if real_write_enabled:
+            apply_real_ownership(pathlib.Path(tmp_name))
         with os.fdopen(fd, "wb") as handle:
             fd = None
             handle.write(payload)
@@ -220,7 +437,7 @@ def atomic_write_active_config(dest: pathlib.Path, config: dict[str, Any]) -> No
             os.fsync(handle.fileno())
         os.replace(tmp_name, dest)
         tmp_name = None
-        dest.chmod(ACTIVE_CONFIG_MODE)
+        apply_mode_and_owner(dest, mode, real_write_enabled=real_write_enabled)
         fsync_directory(dest.parent)
     finally:
         if fd is not None:
@@ -232,13 +449,20 @@ def atomic_write_active_config(dest: pathlib.Path, config: dict[str, Any]) -> No
                 pass
 
 
-def copy_file_private_atomic(src: pathlib.Path, dst: pathlib.Path, mode: int) -> None:
-    prepare_private_dir(dst.parent)
+def copy_file_private_atomic(
+    src: pathlib.Path,
+    dst: pathlib.Path,
+    mode: int,
+    *,
+    real_write_enabled: bool,
+) -> None:
     tmp_name: str | None = None
     fd: int | None = None
     try:
         fd, tmp_name = tempfile.mkstemp(prefix=f".{dst.name}.", suffix=".tmp", dir=str(dst.parent))
         os.fchmod(fd, mode)
+        if real_write_enabled:
+            apply_real_ownership(pathlib.Path(tmp_name))
         with src.open("rb") as source, os.fdopen(fd, "wb") as target:
             fd = None
             shutil.copyfileobj(source, target)
@@ -246,7 +470,7 @@ def copy_file_private_atomic(src: pathlib.Path, dst: pathlib.Path, mode: int) ->
             os.fsync(target.fileno())
         os.replace(tmp_name, dst)
         tmp_name = None
-        dst.chmod(mode)
+        apply_mode_and_owner(dst, mode, real_write_enabled=real_write_enabled)
         fsync_directory(dst.parent)
     finally:
         if fd is not None:
@@ -258,14 +482,20 @@ def copy_file_private_atomic(src: pathlib.Path, dst: pathlib.Path, mode: int) ->
                 pass
 
 
-def create_backup(dest: pathlib.Path, backup_dir: pathlib.Path) -> pathlib.Path:
+def create_backup(dest: pathlib.Path, backup_dir: pathlib.Path, *, real_write_enabled: bool) -> pathlib.Path:
     backup_name = f"{dest.name}.{backup_timestamp()}.{os.getpid()}.bak"
     backup_path = backup_dir / backup_name
-    copy_file_private_atomic(dest, backup_path, PRIVATE_FILE_MODE)
+    copy_file_private_atomic(dest, backup_path, PRIVATE_FILE_MODE, real_write_enabled=real_write_enabled)
     return backup_path
 
 
-def restore_backup(backup_path: pathlib.Path, dest: pathlib.Path) -> dict[str, Any]:
+def restore_backup(
+    backup_path: pathlib.Path,
+    dest: pathlib.Path,
+    *,
+    mode: int,
+    real_write_enabled: bool,
+) -> dict[str, Any]:
     result: dict[str, Any] = {
         "attempted": True,
         "backup_available": backup_path.exists(),
@@ -276,7 +506,7 @@ def restore_backup(backup_path: pathlib.Path, dest: pathlib.Path) -> dict[str, A
         result["reason"] = "backup_missing"
         return result
 
-    copy_file_private_atomic(backup_path, dest, ACTIVE_CONFIG_MODE)
+    copy_file_private_atomic(backup_path, dest, mode, real_write_enabled=real_write_enabled)
     restored_config = load_json_file(dest, label="restored config")
     restored_status = validate_real_dry_run(restored_config)
     result["restored"] = True
@@ -304,7 +534,7 @@ def build_base_status(generated_at: str) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": generated_at,
-        "mode": "c6.2-real-writer-simulated",
+        "mode": "c6.2.2-real-writer-simulated",
         "result": "failed",
         "phase": "not_started",
         "validation": {
@@ -337,6 +567,18 @@ def build_base_status(generated_at: str) -> dict[str, Any]:
             "restored_valid": False,
             "active_removed_without_backup": False,
         },
+        "real_write": {
+            "enabled": False,
+            "service_stop_confirmed_by_operator": False,
+            "human_approved_real_write": False,
+            "dest_exact_match": False,
+            "backup_dir_exact_match": False,
+            "candidate_private_tmp": False,
+            "expected_owner": None,
+            "expected_group": None,
+            "expected_active_config_mode": None,
+            "backup_dir_approved": False,
+        },
         "privacy": {
             "api_key_value_written_to_status": False,
             "api_key_value_written_to_summary": False,
@@ -349,7 +591,9 @@ def build_base_status(generated_at: str) -> dict[str, Any]:
             "backup_dir_under_tmp": False,
             "out_dir_under_tmp": True,
             "candidate_from_data_or_opt_refused": True,
+            "candidate_from_home_or_repo_refused_in_real_mode": True,
             "real_config_read": False,
+            "post_write_active_config_read": False,
             "data_written": False,
             "network_access": False,
             "systemctl_called": False,
@@ -377,7 +621,7 @@ def apply_validation_to_status(status: dict[str, Any], validation: dict[str, Any
 def build_summary(status: dict[str, Any]) -> str:
     return "\n".join(
         [
-            "Dadooh C6.2 config writer real simulated",
+            "Dadooh C6.2.2 config writer real guarded",
             "",
             f"schema_version: {status['schema_version']}",
             f"mode: {status['mode']}",
@@ -401,12 +645,21 @@ def build_summary(status: dict[str, Any]) -> str:
             f"rollback_attempted: {str(status['rollback']['attempted']).lower()}",
             f"rollback_restored: {str(status['rollback']['restored']).lower()}",
             f"rollback_restored_valid: {str(status['rollback']['restored_valid']).lower()}",
+            f"real_write_enabled: {str(status['real_write']['enabled']).lower()}",
+            "service_stop_confirmed_by_operator: "
+            f"{str(status['real_write']['service_stop_confirmed_by_operator']).lower()}",
+            f"human_approved_real_write: {str(status['real_write']['human_approved_real_write']).lower()}",
+            f"real_dest_exact_match: {str(status['real_write']['dest_exact_match']).lower()}",
+            f"real_backup_dir_exact_match: {str(status['real_write']['backup_dir_exact_match']).lower()}",
+            f"real_candidate_private_tmp: {str(status['real_write']['candidate_private_tmp']).lower()}",
+            f"expected_active_config_mode: {status['real_write']['expected_active_config_mode']}",
             "api_key_value_written_to_status: false",
             "api_key_value_written_to_summary: false",
             "candidate_config_copied_to_output: false",
             "backup_content_copied_to_output: false",
             "real_config_read: false",
-            "data_written: false",
+            f"post_write_active_config_read: {str(status['guardrails']['post_write_active_config_read']).lower()}",
+            f"data_written: {str(status['guardrails']['data_written']).lower()}",
             "network_access: false",
             "systemctl_called: false",
             "nmcli_called: false",
@@ -427,6 +680,9 @@ def run_writer(
     dest_raw: str,
     backup_dir_raw: str | None,
     out_dir_raw: str,
+    enable_real_write: bool = False,
+    confirm_service_stopped: bool = False,
+    confirm_human_approved_real_write: bool = False,
     simulate_post_write_failure: bool = False,
 ) -> dict[str, Any]:
     generated_at = utc_timestamp()
@@ -438,14 +694,44 @@ def run_writer(
     dest: pathlib.Path | None = None
     try:
         status["phase"] = "argument_validation"
-        candidate_path = normalize_candidate_path(candidate_raw)
-        dest = require_tmp_file(dest_raw, "dest")
-        backup_dir = require_tmp_dir(backup_dir_raw, "backup-dir") if backup_dir_raw else require_tmp_dir(
-            str(dest.parent / "backups"),
-            "backup-dir",
+        paths = validate_writer_paths(
+            candidate_raw=candidate_raw,
+            dest_raw=dest_raw,
+            backup_dir_raw=backup_dir_raw,
+            out_dir_raw=out_dir_raw,
+            enable_real_write=enable_real_write,
+            confirm_service_stopped=confirm_service_stopped,
+            confirm_human_approved_real_write=confirm_human_approved_real_write,
         )
-        status["guardrails"]["dest_under_tmp"] = True
-        status["guardrails"]["backup_dir_under_tmp"] = True
+        candidate_path = paths.candidate
+        dest = paths.dest
+        backup_dir = paths.backup_dir
+        out_dir = paths.out_dir
+        active_config_mode = REAL_ACTIVE_CONFIG_MODE if paths.real_write_enabled else ACTIVE_CONFIG_MODE
+
+        if paths.real_write_enabled:
+            status["mode"] = "c6.2.2-real-write-guarded"
+            status["real_write"].update(
+                {
+                    "enabled": True,
+                    "service_stop_confirmed_by_operator": True,
+                    "human_approved_real_write": True,
+                    "dest_exact_match": dest == REAL_DEST_PATH,
+                    "backup_dir_exact_match": backup_dir == REAL_BACKUP_DIR,
+                    "candidate_private_tmp": path_is_under(candidate_path, TMP_ROOT),
+                    "expected_owner": REAL_FILE_OWNER,
+                    "expected_group": REAL_FILE_GROUP,
+                    "expected_active_config_mode": f"{REAL_ACTIVE_CONFIG_MODE:03o}",
+                    "backup_dir_approved": backup_dir == REAL_BACKUP_DIR,
+                }
+            )
+            status["guardrails"]["writes_only_under_tmp"] = False
+            status["guardrails"]["dest_under_tmp"] = False
+            status["guardrails"]["backup_dir_under_tmp"] = False
+        else:
+            status["guardrails"]["dest_under_tmp"] = True
+            status["guardrails"]["backup_dir_under_tmp"] = True
+            status["real_write"]["expected_active_config_mode"] = f"{ACTIVE_CONFIG_MODE:03o}"
 
         status["phase"] = "candidate_load"
         candidate = load_json_file(candidate_path, label="candidate")
@@ -459,27 +745,34 @@ def run_writer(
             raise WriterError("candidate failed real-dry-run validation")
 
         status["phase"] = "prepare_destination"
-        prepare_private_dir(dest.parent)
-        prepare_private_dir(backup_dir)
+        prepare_active_parent(dest, real_write_enabled=paths.real_write_enabled)
+        prepare_backup_dir(backup_dir, real_write_enabled=paths.real_write_enabled)
 
         status["backup"]["previous_config_existed"] = dest.exists()
         if dest.exists():
             status["phase"] = "backup"
-            backup_path = create_backup(dest, backup_dir)
+            backup_path = create_backup(dest, backup_dir, real_write_enabled=paths.real_write_enabled)
             status["backup"]["created"] = True
             status["backup"]["mode"] = file_mode_string(backup_path)
 
         status["phase"] = "atomic_write"
         status["write"]["attempted"] = True
-        atomic_write_active_config(dest, candidate)
+        atomic_write_active_config(
+            dest,
+            candidate,
+            mode=active_config_mode,
+            real_write_enabled=paths.real_write_enabled,
+        )
         status["write"]["active_config_written"] = True
         status["write"]["atomic_rename_completed"] = True
         status["write"]["fsync_file_completed"] = True
         status["write"]["fsync_directory_completed"] = True
         status["write"]["active_config_mode"] = file_mode_string(dest)
+        status["guardrails"]["data_written"] = paths.real_write_enabled
 
         status["phase"] = "post_write_validation"
         written_candidate = load_json_file(dest, label="active simulated config")
+        status["guardrails"]["post_write_active_config_read"] = True
         post_status = validate_real_dry_run(written_candidate)
         if simulate_post_write_failure:
             post_status = dict(post_status)
@@ -488,7 +781,12 @@ def run_writer(
         if not post_status["valid"]:
             status["phase"] = "rollback"
             if backup_path is not None:
-                rollback = restore_backup(backup_path, dest)
+                rollback = restore_backup(
+                    backup_path,
+                    dest,
+                    mode=active_config_mode,
+                    real_write_enabled=paths.real_write_enabled,
+                )
                 status["rollback"].update(rollback)
                 status["write"]["active_config_mode"] = file_mode_string(dest)
             else:
@@ -577,6 +875,111 @@ def run_self_test() -> None:
 
         candidate = root / "candidate" / "config.synthetic.json"
         write_self_test_candidate(candidate, synthetic)
+
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw=str(candidate),
+                dest_raw="/data/config/config.json",
+                backup_dir_raw="/data/config/backups",
+                out_dir_raw=str(root / "out-real-no-flags"),
+                check_real_symlinks=False,
+            ),
+            "real dest without --enable-real-write should fail",
+        )
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw=str(candidate),
+                dest_raw="/data/config/config.json",
+                backup_dir_raw="/data/config/backups",
+                out_dir_raw=str(root / "out-real-incomplete-flags"),
+                enable_real_write=True,
+                confirm_service_stopped=True,
+                confirm_human_approved_real_write=False,
+                check_real_symlinks=False,
+            ),
+            "real dest with incomplete flags should fail",
+        )
+        real_guardrail_paths = validate_writer_paths(
+            candidate_raw=str(candidate),
+            dest_raw="/data/config/config.json",
+            backup_dir_raw="/data/config/backups",
+            out_dir_raw=str(root / "out-real-path-guardrail"),
+            enable_real_write=True,
+            confirm_service_stopped=True,
+            confirm_human_approved_real_write=True,
+            check_real_symlinks=False,
+        )
+        assert_true(real_guardrail_paths.real_write_enabled, "complete flags should enable real guardrail mode")
+        assert_true(real_guardrail_paths.dest == REAL_DEST_PATH, "real guardrail should accept only exact dest")
+        assert_true(
+            real_guardrail_paths.backup_dir == REAL_BACKUP_DIR,
+            "real guardrail should accept only approved backup-dir",
+        )
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw=str(candidate),
+                dest_raw="/data/config/other.json",
+                backup_dir_raw="/data/config/backups",
+                out_dir_raw=str(root / "out-real-wrong-dest"),
+                enable_real_write=True,
+                confirm_service_stopped=True,
+                confirm_human_approved_real_write=True,
+                check_real_symlinks=False,
+            ),
+            "real dest different from /data/config/config.json should fail",
+        )
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw=str(candidate),
+                dest_raw="/data/config/config.json",
+                backup_dir_raw="/data/backups",
+                out_dir_raw=str(root / "out-real-wrong-backup"),
+                enable_real_write=True,
+                confirm_service_stopped=True,
+                confirm_human_approved_real_write=True,
+                check_real_symlinks=False,
+            ),
+            "real backup-dir outside approved path should fail",
+        )
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw=str(pathlib.Path(__file__).resolve(strict=False)),
+                dest_raw="/data/config/config.json",
+                backup_dir_raw="/data/config/backups",
+                out_dir_raw=str(root / "out-real-repo-candidate"),
+                enable_real_write=True,
+                confirm_service_stopped=True,
+                confirm_human_approved_real_write=True,
+                check_real_symlinks=False,
+            ),
+            "real candidate in repository should fail",
+        )
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw="/data/config/candidate.real.json",
+                dest_raw="/data/config/config.json",
+                backup_dir_raw="/data/config/backups",
+                out_dir_raw=str(root / "out-real-data-candidate"),
+                enable_real_write=True,
+                confirm_service_stopped=True,
+                confirm_human_approved_real_write=True,
+                check_real_symlinks=False,
+            ),
+            "real candidate under /data should fail",
+        )
+        assert_raises_writer_error(
+            lambda: validate_writer_paths(
+                candidate_raw="/opt/dadooh/candidate.real.json",
+                dest_raw="/data/config/config.json",
+                backup_dir_raw="/data/config/backups",
+                out_dir_raw=str(root / "out-real-opt-candidate"),
+                enable_real_write=True,
+                confirm_service_stopped=True,
+                confirm_human_approved_real_write=True,
+                check_real_symlinks=False,
+            ),
+            "real candidate under /opt should fail",
+        )
 
         assert_raises_writer_error(
             lambda: run_writer(
@@ -699,18 +1102,48 @@ def run_self_test() -> None:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="C6.2 simulated real config writer. C6.2 only writes under /tmp.",
+        description=(
+            "C6.2/C6.2.2 guarded config writer. Default mode writes only under /tmp; "
+            "future real writes require explicit confirmation flags."
+        ),
         allow_abbrev=False,
     )
     parser.add_argument("--candidate", help="Candidate JSON file. Refuses /data and /opt.")
-    parser.add_argument("--dest", help="Simulated active config destination. Must be under /tmp in C6.2.")
-    parser.add_argument("--backup-dir", help="Optional simulated backup directory. Must be under /tmp in C6.2.")
+    parser.add_argument(
+        "--dest",
+        help=(
+            "Active config destination. Default mode requires /tmp. Real mode allows only "
+            "/data/config/config.json."
+        ),
+    )
+    parser.add_argument(
+        "--backup-dir",
+        help=(
+            "Optional backup directory. Default mode requires /tmp. Real mode allows only "
+            "/data/config/backups."
+        ),
+    )
     parser.add_argument(
         "--out-dir",
         default=DEFAULT_OUT_DIR,
         help=f"Status output directory under /tmp. Default: {DEFAULT_OUT_DIR}",
     )
-    parser.add_argument("--self-test", action="store_true", help="Run local C6.2 self-tests under /tmp and exit.")
+    parser.add_argument(
+        "--enable-real-write",
+        action="store_true",
+        help="Enable future real-write guardrails. Requires both confirmation flags.",
+    )
+    parser.add_argument(
+        "--confirm-service-stopped",
+        action="store_true",
+        help="Operator confirmation that kiosky-player.service is stopped. Does not call systemctl.",
+    )
+    parser.add_argument(
+        "--confirm-human-approved-real-write",
+        action="store_true",
+        help="Operator confirmation that a human approved the real write.",
+    )
+    parser.add_argument("--self-test", action="store_true", help="Run local C6.2.2 self-tests under /tmp and exit.")
     return parser.parse_args(argv)
 
 
@@ -732,6 +1165,9 @@ def main(argv: list[str]) -> int:
             dest_raw=args.dest,
             backup_dir_raw=args.backup_dir,
             out_dir_raw=args.out_dir,
+            enable_real_write=args.enable_real_write,
+            confirm_service_stopped=args.confirm_service_stopped,
+            confirm_human_approved_real_write=args.confirm_human_approved_real_write,
         )
     except WriterError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -743,7 +1179,7 @@ def main(argv: list[str]) -> int:
         print("error: failed to write simulated config artifacts", file=sys.stderr)
         return 1
 
-    print(f"C6.2 simulated writer artifacts generated under {args.out_dir}")
+    print(f"C6.2.2 guarded writer artifacts generated under {args.out_dir}")
     print(STATUS_FILENAME)
     print(SUMMARY_FILENAME)
     print(f"write: {'passed' if status['result'] == 'passed' else 'failed'}")

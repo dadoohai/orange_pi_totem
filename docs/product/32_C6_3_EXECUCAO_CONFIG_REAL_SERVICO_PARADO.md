@@ -12,7 +12,7 @@ executa-la nesta fase.
 Objetivos:
 
 - planejar primeira escrita real de `/data/config/config.json`;
-- executar a C6.3 futura com `kiosky-player.service` parado ou bloqueado;
+- executar a C6.3A futura com `kiosky-player.service` parado ou bloqueado;
 - preservar backup e rollback;
 - validar pos-escrita;
 - so iniciar player se decisao humana permitir.
@@ -33,11 +33,11 @@ O C6.3-preflight read-only na placa de desenvolvimento confirmou que:
   `run_app_once`.
 
 Escrever uma config valida com o servico ativo pode iniciar o player antes de
-completar revalidacao, evidencia e rollback. C6.3 deve impedir esse inicio
+completar revalidacao, evidencia e rollback. C6.3A deve impedir esse inicio
 prematuro mantendo o servico parado ou usando bloqueio operacional equivalente
-aprovado antes da escrita real.
+aprovado antes da escrita real em C6.3A.
 
-## 3. Escopo de C6.3 futura
+## 3. Escopo de C6.3A futura
 
 Inclui:
 
@@ -64,7 +64,7 @@ Fora de escopo:
 
 ## 4. Pre-condicoes obrigatorias
 
-Checklist antes de abrir a execucao real C6.3:
+Checklist antes de abrir a execucao real C6.3A:
 
 - [ ] placa de desenvolvimento confirmada;
 - [ ] acesso fisico disponivel;
@@ -82,9 +82,9 @@ Checklist antes de abrir a execucao real C6.3:
 
 Se qualquer item exigir publicar `api_key`, token, `api_url` real,
 `environment_id` real, `station_id` real, payload, backup ou conteudo de config,
-C6.3 deve abortar.
+C6.3A deve abortar.
 
-## 5. Sequencia planejada para C6.3
+## 5. Sequencia planejada para C6.3A
 
 Esta sequencia descreve passos futuros. Nada abaixo foi executado em C6.3.0.
 
@@ -165,12 +165,12 @@ Procedimento planejado:
 6. confirmar que o servico permanece parado;
 7. registrar em evidencia apenas estado agregado do rollback.
 
-Se o backup nao existir, estiver invalido ou o rollback ficar incerto, C6.3 deve
+Se o backup nao existir, estiver invalido ou o rollback ficar incerto, C6.3A deve
 abortar com o servico parado e registrar falha sanitizada sem iniciar player.
 
 ## 7. Evidencia sanitizada esperada
 
-O README da C6.3 deve conter:
+O README da C6.3A deve conter:
 
 - objetivo;
 - placa desenvolvimento;
@@ -223,9 +223,9 @@ Ao abortar:
 
 ## 9. Decisoes humanas antes da execucao
 
-Decisoes pendentes antes de executar C6.3 real:
+Decisoes pendentes antes de executar C6.3A real:
 
-- executar C6.3 com servico parado: `sim/nao`;
+- executar C6.3A com servico parado: `sim/nao`;
 - ao final, manter servico parado ou iniciar;
 - se iniciar, qual observer minimo;
 - quem fornece candidata real;
@@ -233,6 +233,6 @@ Decisoes pendentes antes de executar C6.3 real:
 - quem remove candidata real temporaria;
 - rollback automatico ou manual.
 
-Recomendacao: executar C6.3 com `kiosky-player.service` parado, manter o player
+Recomendacao: executar C6.3A com `kiosky-player.service` parado, manter o player
 parado ate a evidencia pos-escrita ser aprovada e so iniciar o servico em etapa
 controlada separada, se houver decisao humana explicita.

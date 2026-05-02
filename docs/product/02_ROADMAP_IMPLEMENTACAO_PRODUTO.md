@@ -246,9 +246,10 @@ Sequencia incremental refinada:
 - C6.1-preflight - checklist e decisoes antes de implementacao real;
 - C6.2 - writer real simulado em `/tmp`, sem tocar `/data`;
 - C6.2.1 - smoke na placa de desenvolvimento, ainda somente em `/tmp`;
+- C6.2.2 - guardrails para modo real do writer;
 - C6.3-preflight - inspecao read-only da placa antes da escrita real;
 - C6.3.0 - plano de execucao real com servico parado;
-- C6.3 - execucao futura em placa de desenvolvimento;
+- C6.3A - primeira escrita real com servico parado;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
 
@@ -474,9 +475,9 @@ Validacao:
 
 Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2
 writer real simulado em `/tmp` concluido localmente; C6.2.1 smoke na placa de
-desenvolvimento em `/tmp` concluido; C6.3-preflight read-only na placa
-concluido; C6.3.0 plano de execucao com servico parado concluido; C6.3
-execucao real futura.
+desenvolvimento em `/tmp` concluido; C6.2.2 guardrails de modo real concluidos;
+C6.3-preflight read-only na placa concluido; C6.3.0 plano de execucao com
+servico parado concluido; C6.3A execucao real futura.
 
 Objetivo:
 
@@ -515,7 +516,7 @@ Validacao:
 
 - plano revisado antes de qualquer escrita em `/data`;
 - rollback documentado;
-- placa de desenvolvimento prevista no preflight e autorizada antes de C6.3;
+- placa de desenvolvimento prevista no preflight e autorizada antes de C6.3A;
 - evidencia esperada definida sem secrets;
 - nenhuma config real lida, escrita ou alterada em C6.0.
 
@@ -526,7 +527,7 @@ Status: checklist documental criado em
 
 Objetivo:
 
-- consolidar decisoes humanas obrigatorias antes de C6.2/C6.3;
+- consolidar decisoes humanas obrigatorias antes de C6.2/C6.3A;
 - definir politica de secrets para `api_key`/token, `api_url`, IDs reais,
   backup e evidencia;
 - definir checklist tecnico antes de escrita real;
@@ -541,7 +542,7 @@ Validacao:
 - nenhuma placa acessada;
 - launcher, renderer, `systemd`, NetworkManager e `kiosky-player` fora do
   escopo;
-- decisoes pendentes explicitadas antes de C6.2/C6.3.
+- decisoes pendentes explicitadas antes de C6.2/C6.3A.
 
 #### C6.2 - writer real simulado em /tmp
 
@@ -558,7 +559,7 @@ Objetivo:
 - bloquear placeholders e ausencia de `api_key`;
 - implementar escrita atomica, permissoes restritivas, backup e rollback
   simulados;
-- preparar C6.3 sem tocar `/data/config/config.json`.
+- preparar C6.3A sem tocar `/data/config/config.json`.
 
 Validacao:
 
@@ -573,7 +574,7 @@ Validacao:
 - nenhum secret em stdout, log, summary, status ou evidencia;
 - candidata sintetica, config ativa simulada, backup e status JSON de `/tmp`
   nao versionados;
-- escrita real em `/data/config/config.json` continua bloqueada ate C6.3.
+- escrita real em `/data/config/config.json` continua bloqueada ate C6.3A.
 
 #### C6.2.1 - smoke do writer simulado na placa
 
@@ -587,7 +588,7 @@ Objetivo:
 - criar candidata sintetica nao-secret na placa;
 - executar self-tests na placa;
 - executar writer com destino, backup-dir e out-dir sob `/tmp`;
-- manter C6.3 separada para a escrita real em `/data`.
+- manter C6.3A separada para a escrita real em `/data`.
 
 Validacao:
 
@@ -599,6 +600,33 @@ Validacao:
 - nada foi escrito em `/data`;
 - launcher, renderer, `systemd`, NetworkManager e `kiosky-player`
   permaneceram fora do escopo.
+
+#### C6.2.2 - guardrails para modo real
+
+Status: implementado localmente em
+`docs/product/33_C6_2_2_WRITER_REAL_MODE_GUARDRAILS.md` e
+`scripts/board/totem_config_writer_real.py`. Sem escrita real em `/data`.
+
+Objetivo:
+
+- manter modo padrao restrito a `/tmp`;
+- adicionar flags explicitas para modo real futuro;
+- permitir somente `/data/config/config.json` como destino real;
+- restringir backup real a `/data/config/backups`;
+- exigir candidata privada sob `/tmp` e fora do Git;
+- testar guardrails sem executar escrita real.
+
+Validacao:
+
+- sem flags reais, destino `/data/config/config.json` falha;
+- flags incompletas falham;
+- com flags completas, path real aprovado passa apenas na validacao interna de
+  guardrail durante self-test;
+- destino real diferente falha;
+- backup-dir real diferente falha;
+- candidata em repositorio, `/data` ou `/opt` falha;
+- modo simulado em `/tmp` continua passando;
+- C6.3A continua sendo a primeira escrita real autorizada.
 
 #### C6.3-preflight - inspecao read-only da placa
 
@@ -622,9 +650,9 @@ Validacao:
 - servico esta `enabled` e `active/running`;
 - launcher usa `/data/config/config.json` por padrao e chama `run_app_once`
   quando a config e valida;
-- recomendacao para C6.3: executar com o servico parado ou bloqueio equivalente
+- recomendacao para C6.3A: executar com o servico parado ou bloqueio equivalente
   aprovado;
-- C6.3 execucao real continua pendente.
+- C6.3A execucao real continua pendente.
 
 #### C6.3.0 - plano de execucao com servico parado
 
@@ -635,7 +663,7 @@ em `/data` e sem tocar a placa.
 Objetivo:
 
 - transformar a recomendacao do preflight em plano de execucao real;
-- exigir C6.3 com `kiosky-player.service` parado ou bloqueio equivalente;
+- exigir C6.3A com `kiosky-player.service` parado ou bloqueio equivalente;
 - preservar backup e rollback antes da primeira escrita real;
 - validar pos-escrita antes de qualquer decisao de iniciar player;
 - manter decisao humana explicita para start do servico.
@@ -647,9 +675,9 @@ Validacao:
 - sequencia futura documentada: preflight final, parada do servico, backup,
   candidata real privada, escrita atomica, pos-validacao, decisao de servico e
   evidencia sanitizada;
-- C6.3 execucao real continua pendente.
+- C6.3A execucao real continua pendente.
 
-#### C6.3 - execucao futura em placa de desenvolvimento
+#### C6.3A - primeira escrita real em placa de desenvolvimento
 
 Status: futura. Nao executada.
 
@@ -659,13 +687,14 @@ Objetivo:
 - executar com `/data/config/config.json` real somente em fase separada;
 - executar com `kiosky-player.service` parado ou bloqueio operacional
   equivalente aprovado;
+- usar as flags reais de C6.2.2;
 - validar escrita atomica, permissao e rollback;
 - preservar ultima config valida quando existir;
 - manter player bloqueado se a config falhar.
 
 Validacao:
 
-- execucao autorizada por humano apos C6.1-preflight, C6.2, C6.2.1,
+- execucao autorizada por humano apos C6.1-preflight, C6.2, C6.2.1, C6.2.2,
   C6.3-preflight e C6.3.0;
 - `/data/config/config.json` escrito somente pelo writer real aprovado;
 - falha parcial nao vira config ativa;

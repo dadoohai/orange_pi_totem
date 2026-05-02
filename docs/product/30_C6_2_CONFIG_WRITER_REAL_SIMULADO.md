@@ -14,14 +14,14 @@ Objetivos:
 - implementar writer real reutilizavel;
 - testar validacao, backup, escrita atomica e rollback;
 - executar somente em `/tmp`;
-- preparar C6.3;
+- preparar C6.3A;
 - nao escrever em `/data`.
 
 C6.2 nao toca placa, nao usa token real, nao cria `/data/config`, nao escreve
 `/data/config/config.json` e nao altera launcher, renderer, `systemd`,
 NetworkManager ou `kiosky-player`.
 
-## Diferenca entre C6.2 e C6.3
+## Diferenca entre C6.2 e C6.3A
 
 ### C6.2
 
@@ -32,7 +32,7 @@ NetworkManager ou `kiosky-player`.
 - Sem token real.
 - Sem `/data`.
 
-### C6.3
+### C6.3A
 
 - Execucao futura na placa de desenvolvimento.
 - Podera escrever `/data/config/config.json` somente depois de aprovacao humana
@@ -99,7 +99,7 @@ Fluxo implementado em C6.2:
 14. Gerar `writer-status.json` e `summary.txt` sanitizados.
 
 Em C6.2, a config ativa simulada usa mode `0600`. A alternativa `0640` fica
-para C6.3, depois de owner/group reais serem definidos e validados na placa.
+para C6.3A, depois de owner/group reais serem definidos e validados na placa.
 `chown` real nao e aplicado em C6.2 porque nao ha owner/group alvo definido
 para o ambiente simulado.
 
@@ -142,11 +142,41 @@ mantendo as mesmas restricoes de seguranca:
 - nenhum token real;
 - config real nao e lida nem alterada.
 
-C6.2.1 nao e C6.3. C6.3 continua pendente como fase separada para escrita real
-em `/data/config/config.json`, somente depois de aprovacao humana e decisoes de
-owner/group/mode, servico/launcher, rollback real e evidencia sanitizada.
+C6.2.1 nao e C6.3A. C6.3A continua pendente como fase separada para escrita
+real em `/data/config/config.json`, somente depois de aprovacao humana e
+decisoes de owner/group/mode, servico/launcher, rollback real e evidencia
+sanitizada.
 
-## Bloqueios antes de C6.3
+## C6.2.2 - suporte futuro a escrita real com flag explicita
+
+C6.2.2 adiciona suporte de codigo para destino real
+`/data/config/config.json`, mas nao executa escrita real nesta fase.
+
+Regras:
+
+- modo real so pode ser usado com flags explicitas:
+  `--enable-real-write`, `--confirm-service-stopped` e
+  `--confirm-human-approved-real-write`;
+- sem todas as flags, o writer continua recusando qualquer destino fora de
+  `/tmp`;
+- com as flags completas, o unico destino real permitido e
+  `/data/config/config.json`;
+- backup real fica restrito a `/data/config/backups`;
+- candidata real deve ser privada, absoluta, sob `/tmp`, fora do repositorio,
+  fora de `/data`, fora de `/opt` e fora de `/home`;
+- o writer nao chama `systemctl`; ele apenas registra
+  `service_stop_confirmed_by_operator=true` quando a flag correspondente e
+  fornecida;
+- self-tests continuam rodando somente em `/tmp` e testam o modo real apenas em
+  nivel de guardrail de path;
+- C6.3A sera a primeira execucao autorizada em `/data`.
+
+Em modo simulado, a config ativa continua com mode `0600`. Em modo real, o
+writer esta preparado para aplicar mode `0640` e owner/group `root:totem`.
+Testes de `chown`/`chgrp` reais ficam para C6.3A, na placa de desenvolvimento,
+com o servico parado.
+
+## Bloqueios antes de C6.3A
 
 - dados reais por canal local privado;
 - owner/group/mode reais definidos;
