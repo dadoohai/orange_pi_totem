@@ -184,6 +184,7 @@ Documentos:
 - `docs/product/18_C2_PREVIEW_VISUAL_EVIDENCE.md`;
 - `docs/product/25_C5_CONFIG_WRITER_MOCK.md`;
 - `docs/product/26_C5_1_CONFIG_CONTRACT_VALIDATOR.md`;
+- `docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
@@ -407,7 +408,7 @@ Validacao:
 
 ### C5 - config writer mock
 
-Status: base mock local criada. Sem escrita real de config.
+Status: base mock local concluida. Sem escrita real de config.
 
 Objetivo:
 
@@ -434,7 +435,8 @@ Validacao:
 
 ### C5.1 - contrato de config minima e validador dry-run
 
-Status: contrato e validador dry-run local. Sem escrita real de config.
+Status: contrato e validador dry-run local concluido. Sem escrita real de
+config.
 
 Objetivo:
 
@@ -480,22 +482,30 @@ Validacao:
 
 #### C6.0 - plano futuro de writer real
 
+Status: plano documental criado em
+`docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`. Sem escrita real.
+
 Objetivo:
 
 - planejar escrita real de `/data/config/config.json`;
 - definir origem real da `api_key`;
 - definir ownership, permissoes, backup, rollback e criterio de falha;
 - definir como queda de energia sera testada;
-- definir criterio para launcher iniciar player somente com config valida.
+- definir criterio para launcher iniciar player somente com config valida;
+- manter C6.1 bloqueada ate decisao humana sobre secrets, permissoes,
+  rollback, queda de energia e evidencia.
 
 Validacao:
 
 - plano revisado antes de qualquer escrita em `/data`;
 - rollback documentado;
-- placa de desenvolvimento escolhida;
-- evidencia esperada definida sem secrets.
+- placa de desenvolvimento definida antes de C6.1;
+- evidencia esperada definida sem secrets;
+- nenhuma config real lida, escrita ou alterada em C6.0.
 
 #### C6.1 - execucao futura em placa de desenvolvimento
+
+Status: futura. Nao executada.
 
 Objetivo:
 

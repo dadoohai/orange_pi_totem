@@ -26,6 +26,11 @@ writer.
 | Validador imprimir `api_key` em relatorio | Um dry-run pode proteger a escrita real, mas ainda vazar segredo em `summary.txt`, status, stdout ou evidencia. | C5.1 registra apenas presenca e placeholder detectado, nunca valor de `api_key`, nao copia config candidata para output e revisa ausencia de secrets. | C5.1, C6 |
 | Validar apenas schema e esquecer paths | Config com campos presentes, mas paths fora do perfil appliance, pode quebrar runtime, gravar em local errado ou mascarar problema de permissao. | C5.1 valida regras de path como strings antes de C6: cache sob `/data/media`, estado sob `/data/state`, status/IPC/runtime sob `/tmp` e logs nos destinos permitidos. | C5.1, C6 |
 | Placeholder C5 passar em real-dry-run | C6 pode receber `api_url`, `api_key`, `environment_id` ou `station_id` mock e parecer configurado sem estar pronto para producao. | C5.1 tem modo `--real-dry-run` que bloqueia placeholders conhecidos, dominios `.invalid`, valores vazios e rotulos de mock/test/example/placeholder. | C5.1, C6 |
+| Placeholder virar producao durante C6 | Mesmo com C5/C5.1, uma config candidata pode ser promovida manualmente com valores mock ou `.invalid`. | C6.0 exige `--real-dry-run` limpo antes de C6.1, bloqueio de placeholders, revisao humana e evidencia sem copiar config. | C6 |
+| `api_key` vazar em backup ou evidencia | Backup da config real e README de rodada podem conter segredo ou facilitar copia indevida. | Backup deve ter permissoes restritas e nunca ser publicado; evidencia registra apenas existencia/resultado, sem conteudo da config ou backup. | C6 |
+| Permissoes incorretas na config real | Player pode nao ler a config ou usuarios indevidos podem ler secrets. | C6.0 planeja owner/grupo, mode restrito, validacao na placa e bloqueio de inicio do player se a config nao for legivel pelo usuario/grupo esperado. | C6 |
+| Config parcial por queda de energia | Queda durante temporario, backup ou rename pode deixar config truncada, backup parcial ou estado ambiguo. | C6.0 exige escrita atomica no mesmo diretorio, fsync de arquivo e diretorio, backup validado, deteccao de temporario/parcial no boot e rollback. | C6 |
+| Launcher iniciar player antes da validacao | Player pode iniciar com config incompleta, placeholder ou permissao errada e falhar em loop. | Launcher deve iniciar player somente apos JSON valido, contrato minimo valido, paths validos, `api_key` presente, placeholders bloqueados e renderer/setup parado. | C6 |
 | C1 confundida com producao ou ativacao definitiva | Escopo documental minimo pode ser tratado como release de campo ou substituir indevidamente ativacao por codigo. | Marcar C1 como proposta/documentacao, preservar separacao RC1/desenvolvimento/producao e manter ADR-0008 como visao futura. | C1-C2 |
 | Mock C2 parecer funcional em campo | Operador ou suporte pode acreditar que rede/config foram alteradas de verdade. | Rotular telas/evidencias como mock, nao usar em campo, nao ligar botoes a acoes reais e documentar que nao altera rede nem config. | C2 |
 | Mock pedir senha real | Credencial real pode aparecer em tela, screenshot, journal ou evidencia. | Usar apenas senha ficticia, texto explicito "nao sera salva", nao persistir entrada e nao usar dados reais em validacao. | C2 |
@@ -69,8 +74,12 @@ writer.
 - Qualquer hotspot sem criterio de desligamento e recuperacao.
 - Qualquer config writer que possa deixar JSON parcial como config ativa.
 - Qualquer writer mock que escreva fora de `/tmp` ou toque em `/data`.
+- Qualquer C6.1 sem `--real-dry-run` limpo, backup/rollback definido e
+  evidencia sanitizada.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
   provisionada.
+- Qualquer backup de config publicado ou com permissao ampla.
+- Qualquer launcher iniciando player antes da validacao completa da config.
 - Qualquer fluxo que trate `environment_id` manual como ativacao definitiva sem
   validacao e revisao de escopo.
 - Qualquer mock que peca senha real ou use `environment_id` real em evidencia.
@@ -86,8 +95,12 @@ writer.
 - C4: Wi-Fi configurado em bancada com Ethernet preservada e rollback testado.
 - C5: config writer mock em `/tmp`, placeholders, self-test, validacao de
   `environment_id`, evidencia sanitizada e nenhuma config real alterada.
-- C6: config writer real atomico com config invalida, queda simulada e
-  rollback.
+- C5.1: contrato e validador dry-run com placeholders bloqueados em
+  `--real-dry-run`, sem imprimir `api_key` e sem escrever em `/data`.
+- C6.0: plano de escrita real com pre-condicoes, permissoes, backup, rollback,
+  queda de energia, criterio de inicio do player e evidencia sanitizada.
+- C6.1: config writer real atomico em placa de desenvolvimento, com config
+  invalida, queda simulada e rollback.
 - C7: ativacao por codigo, login ou lista de ambientes com erros publicos e sem
   secrets na UI/logs.
 - C8: rotacao, troca de ambiente, manutencao/reset com confirmacao forte e
