@@ -9,6 +9,30 @@ Wi-Fi/configuracao. Ele deve ser usado antes de qualquer implementacao de
 hotspot, portal local, NetworkManager adapter, ativacao backend ou config
 writer.
 
+## Atualizacao C6.5 - riscos de leitura documental
+
+C6.3A e C6.4 provaram config real escrita, start controlado e `player_running`
+em desenvolvimento, com smoke curto. Isso nao prova homologacao, estabilidade
+longa ou producao.
+
+Riscos reforcados nesta atualizacao:
+
+- interpretar smoke curto como estabilidade de producao;
+- esquecer observer prolongado, reboot/autoboot, segunda placa/cartao, root
+  read-only, corte seco e rollback real;
+- confundir config real ativa na placa de desenvolvimento com homologacao;
+- documentos de topo defasados induzirem nova sessao a tratar C0 como proxima
+  fase ou C6.4 como liberacao;
+- misturar evidencias de desenvolvimento com criterios da `v0.1-rc1`.
+
+Mitigacoes:
+
+- marco C6.5 em `docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`;
+- fila de homologacao em
+  `docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`;
+- atualizacao de README, `STATUS_ATUAL.md`, indice estrategico e roadmap;
+- producao permanece bloqueada ate homologacao propria.
+
 | Risco | Impacto | Mitigacao | Fase de teste |
 | --- | --- | --- | --- |
 | Derrubar SSH/bancada ao mexer em rede | Perda de acesso remoto, teste interrompido e risco de placa presa em estado ruim. | Comecar read-only, preservar Ethernet, snapshot antes/depois, prompt humano antes de alterar conexao ativa e rollback documentado. | C3, C4 |
@@ -54,6 +78,10 @@ writer.
 | Evidencia C6.3 publicar estado sensivel | Mesmo sem conteudo da config, outputs brutos podem revelar endpoint, IDs, payload, paths privados ou detalhes operacionais. | Evidencia C6.3 deve ser README sanitizado, sem logs/journal brutos, sem candidata, sem config, sem backup e sem valores reais. | C6.3.0, C6.3 |
 | Preflight ler ou publicar config real | Um preflight descuidado pode vazar `api_key`, URL privada, ambiente ou station antes mesmo da escrita real. | C6.3-preflight usa apenas `stat`, `test`, `id`, `getent` e `systemctl` read-only, nao usa `cat`/`jq`/`grep` no conteudo e registra apenas estado agregado. | C6.3-preflight |
 | Evidencia publicar `api_url`, `environment_id` ou `station_id` reais | Mesmo sem `api_key`, evidencia pode revelar ambiente, cliente, endpoint privado ou identificador operacional. | README de C6.3 deve ser sanitizado, com apenas passou/falhou, presenca de `api_key`, backup, permissoes e conclusao; valores reais ficam fora de chat/log/evidencia. | C6.1-preflight, C6.3 |
+| Smoke C6.4 ser interpretado como estabilidade de producao | Um observer de 120s pode ser promovido indevidamente a evidencia de campo. | C6.5 registra C6.4 como smoke curto de desenvolvimento; testes 30-60 min, varias horas e reboot/autoboot ficam na fila de homologacao. | C6.5, homologacao |
+| Testes longos serem esquecidos apos `player_running` | O sistema pode parecer pronto porque a config real iniciou o player, deixando lacunas de duracao, rede, API, root read-only e corte seco. | Manter fila de homologacao com itens obrigatorios antes de producao e revisar essa fila antes de qualquer decisao de campo. | Homologacao |
+| Config real ativa em desenvolvimento ser confundida com homologacao | A placa de desenvolvimento pode ser tratada como prova equivalente a segunda placa/cartao. | STATUS/README/C6.5 reforcam que C6 vale para desenvolvimento; `v0.1-rc1` e segunda placa/cartao continuam separadas. | C6.5, RC1 |
+| Documentos de topo defasados induzirem nova sessao ao erro | Proximos agentes podem escolher C0 como proxima fase ou ignorar C6. | README, STATUS, indice e roadmap apontam para o marco C6.5, fila de homologacao e roadmap atual sem apagar o historico. | Documentacao |
 | C1 confundida com producao ou ativacao definitiva | Escopo documental minimo pode ser tratado como release de campo ou substituir indevidamente ativacao por codigo. | Marcar C1 como proposta/documentacao, preservar separacao RC1/desenvolvimento/producao e manter ADR-0008 como visao futura. | C1-C2 |
 | Mock C2 parecer funcional em campo | Operador ou suporte pode acreditar que rede/config foram alteradas de verdade. | Rotular telas/evidencias como mock, nao usar em campo, nao ligar botoes a acoes reais e documentar que nao altera rede nem config. | C2 |
 | Mock pedir senha real | Credencial real pode aparecer em tela, screenshot, journal ou evidencia. | Usar apenas senha ficticia, texto explicito "nao sera salva", nao persistir entrada e nao usar dados reais em validacao. | C2 |
@@ -112,6 +140,10 @@ writer.
   controlado e evidencia sanitizada.
 - Qualquer C6.3 real que escreva config valida com `kiosky-player.service`
   ativo/running, salvo bloqueio operacional equivalente aprovado.
+- Qualquer uso de C6.4 como prova de estabilidade longa, reboot/autoboot,
+  segunda placa/cartao ou producao.
+- Qualquer decisao de producao sem revisar a fila de homologacao de testes
+  longos.
 - Qualquer parada de servico sem decisao humana previa sobre manter parado,
   iniciar controladamente ou executar rollback.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
@@ -157,6 +189,10 @@ writer.
 - C6.3: execucao futura em placa de desenvolvimento, com `--real-dry-run`
   limpo, backup/rollback, servico controlado, config escrita somente se
   autorizado e evidencia sanitizada.
+- C6.4: start controlado com config real, observer curto, `player_running`,
+  playback `playing`, MPV ativo, `NRestarts=0` e evidencia sanitizada.
+- C6.5: consolidacao documental separando desenvolvimento, homologacao e
+  producao, com testes longos movidos para fila propria.
 - C7: ativacao por codigo, login ou lista de ambientes com erros publicos e sem
   secrets na UI/logs.
 - C8: rotacao, troca de ambiente, manutencao/reset com confirmacao forte e

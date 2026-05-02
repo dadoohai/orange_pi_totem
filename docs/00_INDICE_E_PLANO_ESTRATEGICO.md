@@ -19,6 +19,23 @@ Esta não é ainda uma homologação final do produto. É a documentação da **
 
 ---
 
+## Atualização posterior
+
+Este documento preserva a fundação técnica inicial. O desenvolvimento posterior
+avançou até C6 config real + `player_running` na placa de desenvolvimento.
+
+Para estado atual, consultar:
+
+- `docs/STATUS_ATUAL.md`;
+- `docs/product/02_ROADMAP_IMPLEMENTACAO_PRODUTO.md`;
+- `docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`;
+- `docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`.
+
+Esta atualização não substitui a leitura histórica original e não transforma
+desenvolvimento em homologação ou produção.
+
+---
+
 ## 2. Documentos gerados
 
 ### 00 — Índice e plano estratégico

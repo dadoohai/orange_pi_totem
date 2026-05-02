@@ -15,6 +15,14 @@ tela publica Dadooh para `config_missing`: "Configuracao pendente" foi validada
 por observacao humana na placa de desenvolvimento. Wi-Fi setup, hotspot, QR
 code, portal local e onboarding ainda nao foram implementados.
 
+Atualizacao de desenvolvimento: alem do marco status/splash B1, a frente C6
+validou config real + `player_running` na placa de desenvolvimento. C6.3A
+escreveu `/data/config/config.json` com servico parado, backup restrito e
+permissoes `root:totem` `0640`; C6.4 iniciou o servico controladamente e passou
+em observer curto de 120s com `player_running`, playback `playing`, MPV ativo e
+`NRestarts=0`. Testes longos e homologacao continuam pendentes, e producao
+permanece bloqueada.
+
 Pendências atuais antes de produção:
 
 - `pip` ausente e `/opt/totem/venv` ainda sem Python/pip executáveis, por decisão desta fase.
@@ -30,23 +38,30 @@ Próximo passo técnico: manter duas frentes separadas. A homologação `v0.1-rc
 
 ## Marco atual de desenvolvimento
 
-O marco atual de desenvolvimento e status/splash B1, documentado em
+O marco status/splash B1 esta documentado em
 [docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md](docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md).
 Ele consolida `systemd`, launcher, status aggregator, `config_missing` e a tela
 Dadooh B1 como desenvolvimento pos-RC1.
 
+O marco C6 config real + `player_running` esta documentado em
+[docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md](docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md).
+Ele consolida C6.3A/C6.4 como desenvolvimento, nao homologacao e nao producao.
+
 A RC1 continua sendo homologacao separada:
 [docs/releases/v0.1-rc1-homologacao/README.md](docs/releases/v0.1-rc1-homologacao/README.md).
-Status/splash B1 nao libera producao; producao permanece bloqueada ate novas
-validacoes.
+Status/splash B1 e C6 config real + `player_running` nao liberam producao;
+producao permanece bloqueada ate novas validacoes.
 
 ## Próxima fase: produto/UX
 
-A próxima frente de desenvolvimento é C0: planejamento do onboarding
-Wi-Fi/configuração. O objetivo é especificar fluxo, segurança, estados públicos,
-rollback e plano de teste antes de implementar hotspot, portal local, ativação
-backend ou escrita real de config por operador. A ordem é documentação primeiro:
-sem implementação de Wi-Fi, hotspot, portal ou QR funcional nesta etapa.
+C0/C1/C2/C3/C4/C5/C6 evoluiram como frente produto/UX depois da RC1. C0 fica
+preservado como planejamento historico, mas nao deve ser lido isoladamente como
+a proxima fase atual. Proximos desenvolvimentos devem ser escolhidos a partir
+do roadmap produto/UX atual, do status consolidado e do marco C6.5, sem misturar
+desenvolvimento com homologacao.
+
+Testes longos ficam em fila de homologacao separada:
+[docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md](docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md).
 
 Estratégia: [docs/product/01_ESTRATEGIA_PRODUTO_UX.md](docs/product/01_ESTRATEGIA_PRODUTO_UX.md)
 
@@ -74,6 +89,8 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Conclusão da Fase A status/splash](docs/product/08_FASE_A_CONCLUSAO.md)
 - [Planejamento Fase B status visual e manutenção mínima](docs/product/09_FASE_B_STATUS_VISUAL_MANUTENCAO_MINIMA.md)
 - [Marco desenvolvimento status/splash](docs/product/11_MARCO_DESENVOLVIMENTO_STATUS_SPLASH.md)
+- [Marco C6 config real + player_running](docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md)
+- [Fila de homologação e testes longos](docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md)
 - [Planejamento C0 onboarding Wi-Fi/configuração](docs/product/12_C0_ONBOARDING_WIFI_CONFIG.md)
 - [Riscos onboarding Wi-Fi/configuração](docs/product/13_RISCOS_ONBOARDING_WIFI_CONFIG.md)
 - [Homologação v0.1-rc1](docs/releases/v0.1-rc1-homologacao/README.md)

@@ -2,7 +2,30 @@
 
 Data: 2026-05-01
 
+Atualizacao C6.5: 2026-05-02.
+
 ## Estado consolidado atual
+
+### Atualizacao de desenvolvimento - C6 config real + player_running
+
+C6 avancou em desenvolvimento depois da documentacao de status/splash B1. A
+rodada C6.3A escreveu a config real em `/data/config/config.json` com
+`kiosky-player.service` parado, backup restrito, validacao `real-dry-run` e
+permissoes observadas `root:totem` `0640`. O usuario `totem` le a config e nao
+grava nela. Nenhum conteudo da config real, token, `api_url` real, IDs reais ou
+payload foi publicado.
+
+C6.4 iniciou o servico controladamente com a config real ja escrita e passou em
+smoke curto de desenvolvimento: observer de 120s, estado publico
+`player_running`, playback `playing`, MPV ativo, `kiosk.py` ativo e
+`NRestarts=0`. Renderer junto com player nao foi observado na checagem final.
+
+Testes longos foram movidos para fila de homologacao separada:
+`docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`. Producao continua
+bloqueada. A homologacao `v0.1-rc1` continua frente separada e nao e
+substituida por C6.3A/C6.4.
+
+Consolidacao: `docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`.
 
 ### Homologacao v0.1-rc1
 
@@ -34,8 +57,10 @@ revisao do ruido amplo de kernel da rodada B1, validacao visual de
 `player_error`, onboarding Wi-Fi/configuracao, hotspot, portal local, ativacao
 backend, root read-only, corte seco, monitoramento, update e rollback.
 
-Proxima fase recomendada: C0, planejamento do onboarding Wi-Fi/configuracao,
-sem implementar hotspot, portal ou ativacao backend ainda.
+Nota posterior: C0 foi o proximo passo historico naquele momento, mas a frente
+produto/UX ja avancou por C1/C2/C3/C4/C5/C6. Novas sessoes devem escolher a
+proxima frente a partir do roadmap produto/UX atual, do marco C6.5 e da fila de
+homologacao, sem assumir automaticamente C0 como proxima fase.
 
 Nota C0: a frente de onboarding deve comecar por documentacao e arquitetura.
 Wi-Fi setup, hotspot, portal local, QR funcional, ativacao backend e escrita
@@ -66,9 +91,10 @@ observacao humana na placa de desenvolvimento. Ao restaurar a config valida, o
 renderer parou antes do player, o app voltou a `playing`, o observer curto teve
 IPC success, `0` timeout e `5/5` aliases avancando.
 
-A proxima frente recomendada e C0: planejamento do onboarding
-Wi-Fi/configuracao. Wi-Fi setup, hotspot, portal local e ativacao backend
-continuam nao implementados. A homologacao `v0.1-rc1` permanece separada.
+A frente C0 foi recomendada como proximo passo historico apos B1; depois disso,
+C1-C6 avancaram como desenvolvimento produto/UX. Wi-Fi setup, hotspot, portal
+local e ativacao backend continuam nao implementados. A homologacao `v0.1-rc1`
+permanece separada.
 
 ## Composicao do Candidato A
 
@@ -201,8 +227,8 @@ Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A audito
 - Fazer teste manual observado de 30 a 60 minutos na homologacao.
 - Repetir validacao de `systemd`/autoboot/HDMI ausente na placa de homologacao antes de qualquer producao.
 - Desenvolver a frente produto/UX/onboarding sem misturar com os criterios da RC1.
-- Planejar C0 de produto/UX: onboarding Wi-Fi/configuracao, ainda sem
-  implementar Wi-Fi setup, hotspot, portal local ou ativacao backend.
+- Escolher proxima frente de produto/UX a partir do roadmap atual e do marco
+  C6.5, sem assumir C0 como proxima fase automatica.
 - Documentar riscos e ADR proposta de onboarding antes de qualquer alteracao de
   NetworkManager, portal local ou escrita de config.
 - Revisar ruido amplo de kernel da rodada B1 antes de qualquer decisao de
@@ -217,10 +243,11 @@ Nenhum comando `apt` foi executado nas rodadas recentes de app/systemd. A audito
 
 1. Manter a homologacao `v0.1-rc1` separada em segunda placa/cartao com a
    imagem base e o `kiosky-player` no commit `c71318a`.
-2. Planejar C0: onboarding Wi-Fi/configuracao, cobrindo fluxo, seguranca,
-   estados publicos, rollback e testes antes de qualquer implementacao.
-3. Revisar a rodada B1 e preparar validacoes futuras separadas: `player_error`,
-   teste longo, root read-only, corte seco, monitoramento, update e rollback.
+2. Escolher a proxima frente de desenvolvimento a partir do roadmap atual:
+   C7 diagnostico/status, C8 rollback/parada controlada, UX/setup/onboarding,
+   `player_error`, integracao writer/onboarding ou update/rollback.
+3. Tratar observer prolongado, reboot/autoboot, segunda placa/cartao, root
+   read-only, corte seco e rollback real na fila de homologacao separada.
 
 ## Regras que continuam proibidas
 

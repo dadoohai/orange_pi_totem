@@ -4,6 +4,10 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
+desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
+longos foram movidos para fila de homologacao separada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -187,6 +191,8 @@ Documentos:
 - `docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`;
 - `docs/product/29_C6_1_CONFIG_WRITER_REAL_PREFLIGHT.md`;
 - `docs/product/30_C6_2_CONFIG_WRITER_REAL_SIMULADO.md`;
+- `docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`;
+- `docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`;
 - `docs/DECISIONS/ADR-0010-api-token-provisioning.md`.
 
@@ -250,6 +256,8 @@ Sequencia incremental refinada:
 - C6.3-preflight - inspecao read-only da placa antes da escrita real;
 - C6.3.0 - plano de execucao real com servico parado;
 - C6.3A - primeira escrita real com servico parado;
+- C6.4 - start controlado com config real e smoke curto;
+- C6.5 - consolidacao documental do marco config real + `player_running`;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
 
@@ -261,14 +269,15 @@ Criterios de aceite:
 - plano de teste inclui senha incorreta, rede ausente, reboot, Ethernet
   presente e ausencia de internet;
 - plano preserva a separacao entre homologacao `v0.1-rc1`, desenvolvimento
-  pos-RC1 e producao futura.
+  pos-RC1 e producao futura;
 - Wi-Fi setup real, hotspot, portal local, ativacao backend e escrita real de
   config seguem nao implementados ao final de C2.
 
 ## Fases C1-C8 - onboarding minimo refinado
 
-Status: C1 documentada; C1.1 documental em preparacao; C2-C8 planejadas. Nao
-implementadas operacionalmente.
+Status: C1-C6 avancaram como desenvolvimento incremental; C6.5 consolida config
+real + `player_running`; C7/C8 continuam planejadas. Homologacao e producao
+seguem separadas.
 
 Estas fases substituem a sequencia anterior mais ampla para evitar que hotspot,
 ativacao backend, writer real, rotacao e manutencao avancem juntos.
@@ -480,7 +489,9 @@ C6.3A tentativa abortada por self-test do writer na placa; C6.2.3 correcao de
 compatibilidade do self-test concluida; C6.3-preflight read-only na placa
 concluido; C6.3.0 plano de execucao com servico parado concluido; C6.3A
 execucao real concluida na placa de desenvolvimento com servico parado, backup
-restrito e player mantido parado.
+restrito e player mantido parado; C6.4 start controlado com config real
+concluido como smoke curto de desenvolvimento; C6.5 consolidacao documental
+criada.
 
 Objetivo:
 
@@ -497,7 +508,11 @@ Validacao:
 - queda no meio nao deixa config parcial ativa;
 - `api_key` externa ausente bloqueia salvamento ou inicio do player;
 - renderer/setup para antes do player;
-- rollback restauravel e documentado.
+- rollback restauravel e documentado;
+- C6.3A e C6.4 estao concluidos em desenvolvimento, nao homologacao.
+- Observer prolongado, reboot/autoboot, segunda placa/cartao, root read-only,
+  corte seco e rollback real acionado por falha foram movidos para fila de
+  homologacao separada.
 
 #### C6.0 - plano de writer real
 
@@ -732,6 +747,60 @@ Validacao:
 - servico permaneceu parado ao final;
 - player nao foi iniciado;
 - evidencia sanitizada sem `api_key`, URL privada, IDs reais ou payload.
+
+#### C6.4 - start controlado com config real
+
+Status: concluido como smoke curto de desenvolvimento. Nao e homologacao e nao
+libera producao.
+
+Objetivo:
+
+- iniciar `kiosky-player.service` controladamente com a config real escrita em
+  C6.3A;
+- observar launcher/player por 120s;
+- confirmar `player_running` sem ler a config real;
+- manter evidencia sanitizada.
+
+Validacao:
+
+- servico iniciou e permaneceu `active/running`;
+- status publico chegou a `player_running`;
+- playback ficou `playing`;
+- MPV e `kiosk.py` ficaram ativos;
+- `NRestarts=0` no observer curto;
+- renderer junto com player nao foi observado na checagem final;
+- servico foi mantido rodando ao final da rodada;
+- nenhum secret, `api_url` real, ID real, payload, log bruto ou conteudo de
+  config foi publicado.
+
+Limite:
+
+- C6.4 nao provou estabilidade 30-60 min, varias horas, reboot/autoboot,
+  segunda placa/cartao, API indisponivel, rede oscilando, cache/offline longo,
+  root read-only, corte seco, rollback real acionado por falha ou producao.
+
+#### C6.5 - consolidacao do marco
+
+Status: documentado em
+`docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`.
+
+Objetivo:
+
+- consolidar C6 como marco de desenvolvimento;
+- registrar o que C6.3A/C6.4 provaram e o que nao provaram;
+- separar desenvolvimento, homologacao e producao;
+- mover testes longos para
+  `docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`.
+
+Proximos caminhos possiveis, sem decisao automatica:
+
+- C7 status/diagnostico de config real e appliance;
+- C8 rollback/parada controlada;
+- UX/setup/onboarding;
+- `player_error`;
+- integracao writer/onboarding;
+- update/rollback;
+- fila de homologacao.
 
 ### C7 - ativacao por codigo, login ou lista de ambientes
 
