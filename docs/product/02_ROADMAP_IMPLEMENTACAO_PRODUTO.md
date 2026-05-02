@@ -181,6 +181,7 @@ Documentos:
 - `docs/product/15_C1_MINIMAL_USER_FLOW.md`;
 - `docs/product/16_C1_MINIMAL_STATE_MACHINE.md`;
 - `docs/product/17_C2_MOCK_VISUAL_FORMULARIO.md`;
+- `docs/product/18_C2_PREVIEW_VISUAL_EVIDENCE.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
@@ -294,22 +295,27 @@ Aceite:
 
 ### C2 - mock visual/formulario sem alterar rede
 
-Status: planejada.
+Status: preview visual/mock local em implementacao. Sem integracao
+operacional.
 
 Objetivo:
 
-- criar mock de tela/formulario para Wi-Fi e `environment_id`;
+- criar preview visual/mock local para Wi-Fi e `environment_id`;
 - nao listar redes reais;
 - nao pedir senha real;
 - nao persistir senha mock;
 - nao alterar NetworkManager;
-- nao escrever config real.
+- nao escrever config real;
+- nao criar portal funcional, servidor HTTP, hotspot ou QR funcional.
 
 Validacao:
 
 - previews e/ou mock local sem secrets;
 - textos publicos claros para operador nao tecnico;
-- renderer/setup continua separado do player.
+- renderer/setup continua separado do player;
+- SVGs estaticos gerados localmente em `/tmp`;
+- nenhuma integracao com rede real, config real, launcher operacional,
+  renderer operacional ou `kiosky-player`.
 
 ### C3 - diagnostico Wi-Fi read-only
 
