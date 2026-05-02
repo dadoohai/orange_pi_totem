@@ -128,6 +128,24 @@ simulada invalida quando possivel e registra apenas estado agregado.
 - `api_key`/token nao aparece em summary/status/evidencia;
 - nada em `/data`.
 
+## C6.2.1 - smoke test na placa de desenvolvimento
+
+C6.2.1 executa o writer C6.2 na placa de desenvolvimento em modo smoke,
+mantendo as mesmas restricoes de seguranca:
+
+- scripts copiados somente para `/tmp` na placa;
+- self-tests executados na placa;
+- candidata sintetica nao-secret criada em `/tmp`;
+- writer roda na placa, mas ainda so escreve em `/tmp`;
+- config ativa simulada, backup-dir e out-dir ficam sob `/tmp`;
+- nada em `/data`;
+- nenhum token real;
+- config real nao e lida nem alterada.
+
+C6.2.1 nao e C6.3. C6.3 continua pendente como fase separada para escrita real
+em `/data/config/config.json`, somente depois de aprovacao humana e decisoes de
+owner/group/mode, servico/launcher, rollback real e evidencia sanitizada.
+
 ## Bloqueios antes de C6.3
 
 - dados reais por canal local privado;

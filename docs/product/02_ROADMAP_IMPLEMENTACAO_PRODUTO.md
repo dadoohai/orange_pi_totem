@@ -245,6 +245,7 @@ Sequencia incremental refinada:
 - C6.0 - plano de writer real concluido;
 - C6.1-preflight - checklist e decisoes antes de implementacao real;
 - C6.2 - writer real simulado em `/tmp`, sem tocar `/data`;
+- C6.2.1 - smoke na placa de desenvolvimento, ainda somente em `/tmp`;
 - C6.3 - execucao futura em placa de desenvolvimento;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
@@ -470,7 +471,8 @@ Validacao:
 ### C6 - config real com validacao e rollback
 
 Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2
-writer real simulado em `/tmp` concluido localmente; C6.3 futura.
+writer real simulado em `/tmp` concluido localmente; C6.2.1 smoke na placa de
+desenvolvimento em `/tmp` concluido; C6.3 futura.
 
 Objetivo:
 
@@ -568,6 +570,31 @@ Validacao:
 - candidata sintetica, config ativa simulada, backup e status JSON de `/tmp`
   nao versionados;
 - escrita real em `/data/config/config.json` continua bloqueada ate C6.3.
+
+#### C6.2.1 - smoke do writer simulado na placa
+
+Status: smoke test concluido na placa de desenvolvimento. Ainda sem escrita
+real em `/data`.
+
+Objetivo:
+
+- provar que o writer C6.2 roda no ambiente real da Orange Pi;
+- copiar scripts somente para `/tmp`;
+- criar candidata sintetica nao-secret na placa;
+- executar self-tests na placa;
+- executar writer com destino, backup-dir e out-dir sob `/tmp`;
+- manter C6.3 separada para a escrita real em `/data`.
+
+Validacao:
+
+- self-test do validador C5.1 passou na placa;
+- self-test do writer C6.2 passou na placa;
+- writer simulado passou na placa;
+- config ativa simulada foi criada em `/tmp` com permissao restritiva;
+- status e summary nao publicaram `api_key`/token;
+- nada foi escrito em `/data`;
+- launcher, renderer, `systemd`, NetworkManager e `kiosky-player`
+  permaneceram fora do escopo.
 
 #### C6.3 - execucao futura em placa de desenvolvimento
 
