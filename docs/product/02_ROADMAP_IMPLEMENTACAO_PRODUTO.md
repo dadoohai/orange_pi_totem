@@ -186,6 +186,7 @@ Documentos:
 - `docs/product/26_C5_1_CONFIG_CONTRACT_VALIDATOR.md`;
 - `docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`;
 - `docs/product/29_C6_1_CONFIG_WRITER_REAL_PREFLIGHT.md`;
+- `docs/product/30_C6_2_CONFIG_WRITER_REAL_SIMULADO.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`;
 - `docs/DECISIONS/ADR-0010-api-token-provisioning.md`.
 
@@ -243,7 +244,7 @@ Sequencia incremental refinada:
 - C5.1 - contrato de config minima e validador dry-run em `/tmp`;
 - C6.0 - plano de writer real concluido;
 - C6.1-preflight - checklist e decisoes antes de implementacao real;
-- C6.2 - implementacao futura do writer real;
+- C6.2 - writer real simulado em `/tmp`, sem tocar `/data`;
 - C6.3 - execucao futura em placa de desenvolvimento;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
@@ -468,8 +469,8 @@ Validacao:
 
 ### C6 - config real com validacao e rollback
 
-Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2 e C6.3
-futuras.
+Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2
+writer real simulado em `/tmp` concluido localmente; C6.3 futura.
 
 Objetivo:
 
@@ -536,26 +537,36 @@ Validacao:
   escopo;
 - decisoes pendentes explicitadas antes de C6.2/C6.3.
 
-#### C6.2 - implementacao futura do writer real
+#### C6.2 - writer real simulado em /tmp
 
-Status: futura. Nao implementada.
+Status: implementado localmente em
+`docs/product/30_C6_2_CONFIG_WRITER_REAL_SIMULADO.md` e
+`scripts/board/totem_config_writer_real.py`. Sem escrita real em `/data`.
 
 Objetivo:
 
-- implementar writer real em tarefa separada;
-- manter testes preferencialmente em `/tmp` antes de qualquer placa;
-- consumir candidata privada local quando houver dados reais, sem Codex ver
-  `api_key`/token;
+- implementar writer real reutilizavel em modo simulado;
+- manter testes e escrita somente em `/tmp` antes de qualquer placa;
+- consumir candidata local de teste sem Codex ver token real;
 - usar validador C5.1 em `--real-dry-run`;
 - bloquear placeholders e ausencia de `api_key`;
-- implementar escrita atomica, permissoes, backup e rollback conforme decisoes
-  C6.1-preflight.
+- implementar escrita atomica, permissoes restritivas, backup e rollback
+  simulados;
+- preparar C6.3 sem tocar `/data/config/config.json`.
 
 Validacao:
 
-- self-test/local dry-run sem tocar `/data`;
+- self-test local sem tocar `/data`;
+- candidata mock C5 falha em modo real;
+- candidata sintetica nao-secret passa;
+- destino fora de `/tmp` falha;
+- backup-dir fora de `/tmp` falha;
+- candidata sob `/data` ou `/opt` falha;
+- escrita atomica gera config ativa simulada em `/tmp`;
+- backup e rollback simulados cobertos pelo self-test;
 - nenhum secret em stdout, log, summary, status ou evidencia;
-- candidato real nao versionado;
+- candidata sintetica, config ativa simulada, backup e status JSON de `/tmp`
+  nao versionados;
 - escrita real em `/data/config/config.json` continua bloqueada ate C6.3.
 
 #### C6.3 - execucao futura em placa de desenvolvimento
@@ -565,6 +576,7 @@ Status: futura. Nao executada.
 Objetivo:
 
 - executar writer real aprovado apenas na placa de desenvolvimento;
+- executar com `/data/config/config.json` real somente em fase separada;
 - validar escrita atomica, permissao e rollback;
 - preservar ultima config valida quando existir;
 - manter player bloqueado se a config falhar.

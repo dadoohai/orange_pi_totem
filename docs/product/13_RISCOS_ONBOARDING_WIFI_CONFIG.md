@@ -32,6 +32,10 @@ writer.
 | Placeholder virar producao durante C6 | Mesmo com C5/C5.1, uma config candidata pode ser promovida manualmente com valores mock ou `.invalid`. | C6.1-preflight exige `--real-dry-run` limpo antes de C6.3, bloqueio de placeholders, revisao humana e evidencia sem copiar config. | C6 |
 | Dados reais passarem pelo chat | `api_key`, URL privada, IDs reais ou payload podem ficar registrados em transcript, issue, PR, README ou resumo. | C6.1-preflight exige canal local privado para dados reais, proibe envio pelo chat e aborta se a execucao depender de publicar valor real. | C6.1-preflight, C6.3 |
 | Config real ser versionada | `/data/config/config.json` ou candidata real pode entrar no Git e expor secrets. | Config real e candidata real ficam fora do Git; evidencia publica apenas estados agregados; revisar `git status --short --untracked-files=all` antes de encerrar. | C6.1-preflight, C6.2, C6.3 |
+| Writer real aceitar destino fora de `/tmp` antes da hora | C6.2 poderia alterar config real, criar diretorios indevidos ou mascarar risco antes da placa autorizada. | C6.2 recusa `--dest` e `--backup-dir` fora de `/tmp`, recusa candidata em `/data` ou `/opt`, cobre esses casos em self-test e deixa `/data` real somente para C6.3. | C6.2 |
+| `api_key` aparecer em status do writer real | Um writer correto em escrita ainda pode vazar token em `writer-status.json`, `summary.txt`, stdout ou evidencia. | Status e summary registram apenas `api_key_present` e `placeholder_detected`; self-test verifica que a `api_key` sintetica nao aparece nos artefatos sanitizados. | C6.2, C6.3 |
+| Backup simulado virar evidencia | Backup contem config completa e pode carregar token no futuro, mesmo quando a rodada for apenas local. | Backup fica em `/tmp` com mode restrito, nao e copiado para output/evidencia e o README registra apenas existencia, permissao e resultado agregado. | C6.2, C6.3 |
+| Rollback nao cobrir falha pos-escrita | A escrita atomica pode concluir, mas a revalidacao falhar e deixar config ruim ativa. | C6.2 simula falha pos-escrita no self-test, restaura backup quando existe, remove config invalida sem backup quando possivel e mantem C6.3 como fase separada para rollback real aprovado. | C6.2, C6.3 |
 | `api_key` vazar em backup ou evidencia | Backup da config real e README de rodada podem conter segredo ou facilitar copia indevida. | Backup deve ter permissoes restritas e nunca ser publicado; evidencia registra apenas existencia/resultado, sem conteudo da config ou backup. | C6 |
 | Backup conter secret com permissao ampla | Um backup correto em conteudo, mas legivel por usuario indevido, expande a superficie de vazamento da `api_key`. | Preflight define owner, group e mode esperados; writer real aplica permissao restrita ao backup; C6.3 registra apenas permissao observada, sem conteudo. | C6.1-preflight, C6.2, C6.3 |
 | Permissoes incorretas na config real | Player pode nao ler a config ou usuarios indevidos podem ler secrets. | C6.0 planeja owner/grupo, mode restrito, validacao na placa e bloqueio de inicio do player se a config nao for legivel pelo usuario/grupo esperado. | C6 |
@@ -82,6 +86,7 @@ writer.
 - Qualquer hotspot sem criterio de desligamento e recuperacao.
 - Qualquer config writer que possa deixar JSON parcial como config ativa.
 - Qualquer writer mock que escreva fora de `/tmp` ou toque em `/data`.
+- Qualquer C6.2 que aceite `--dest`, `--backup-dir` ou output fora de `/tmp`.
 - Qualquer dado real de C6 que precise passar por chat, issue, PR, README,
   log, diff ou resumo.
 - Qualquer config real, candidata real ou backup real versionado.
@@ -117,8 +122,9 @@ writer.
   queda de energia, criterio de inicio do player e evidencia sanitizada.
 - C6.1-preflight: checklist documental de decisoes humanas, politica de
   secrets, canal local de dados reais, pontos de abortar e evidencia esperada.
-- C6.2: implementacao futura do writer real, preferencialmente testada em
-  `/tmp`, sem escrita real e sem secrets em logs ou artefatos versionados.
+- C6.2: writer real simulado em `/tmp`, com `--real-dry-run`, backup,
+  rollback, self-test de guardrails, saida sanitizada, sem escrita real e sem
+  secrets em logs ou artefatos versionados.
 - C6.3: execucao futura em placa de desenvolvimento, com `--real-dry-run`
   limpo, backup/rollback, servico controlado, config escrita somente se
   autorizado e evidencia sanitizada.
