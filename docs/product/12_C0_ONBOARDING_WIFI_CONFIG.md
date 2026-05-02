@@ -4,6 +4,24 @@ Status: planejamento. Nao implementa mudancas operacionais.
 
 Data: 2026-05-01
 
+## Refinamento posterior - C1
+
+Depois de C0, o escopo inicial foi refinado em C1 para um onboarding minimo e
+provisorio: Wi-Fi, sinal claro de conexao funcionando e `environment_id`
+manual.
+
+A ativacao por codigo continua como alternativa e visao futura, conforme
+ADR-0008, mas nao faz parte desta fase atual. Nesta C1, `api_key` fica fora da
+UI e deve vir futuramente de variavel de ambiente, mock ou provisionamento
+separado.
+
+Referencias do refinamento:
+
+- `docs/product/14_C1_CONFIG_MISSING_MINIMAL_ONBOARDING.md`;
+- `docs/product/15_C1_MINIMAL_USER_FLOW.md`;
+- `docs/product/16_C1_MINIMAL_STATE_MACHINE.md`;
+- `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
+
 ## Objetivo
 
 C0 define a arquitetura de onboarding Wi-Fi/configuracao antes de qualquer

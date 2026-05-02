@@ -167,15 +167,20 @@ Criterio de rollback:
 
 - voltar ao layout A1.4 de `config_missing` e manter o launcher atual.
 
-## Fase C0 - planejamento de onboarding Wi-Fi/configuracao
+## Fase C0/C1 - planejamento e refinamento minimo de onboarding
 
-Status: proxima fase recomendada. Nao implementa mudancas.
+Status: C0 documentado e C1 em refinamento documental. Nao implementa
+mudancas operacionais.
 
 Documentos:
 
 - `docs/product/12_C0_ONBOARDING_WIFI_CONFIG.md`;
 - `docs/product/13_RISCOS_ONBOARDING_WIFI_CONFIG.md`;
-- `docs/DECISIONS/ADR-0008-onboarding-wifi-config.md`.
+- `docs/DECISIONS/ADR-0008-onboarding-wifi-config.md`;
+- `docs/product/14_C1_CONFIG_MISSING_MINIMAL_ONBOARDING.md`;
+- `docs/product/15_C1_MINIMAL_USER_FLOW.md`;
+- `docs/product/16_C1_MINIMAL_STATE_MACHINE.md`;
+- `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
 
@@ -196,7 +201,7 @@ Escopo de planejamento:
 - criterios de teste e bloqueio para placa de desenvolvimento e homologacao;
 - criterios de rollback para voltar ao player/status atual.
 
-Fora de escopo em C0:
+Fora de escopo em C0/C1:
 
 - implementar Wi-Fi setup;
 - criar hotspot;
@@ -207,17 +212,27 @@ Fora de escopo em C0:
 - implementar telemetria;
 - instalar pacotes.
 
-Sequencia incremental proposta apos C0:
+Refinamento C1:
 
-- C1 - QR placeholder e texto de setup na tela, sem QR funcional e sem rede;
-- C2 - portal local mock, sem alterar NetworkManager;
+- foco no caso `config_missing` com sistema/servico/launcher funcionando e HDMI
+  conectado;
+- operador informa apenas `environment_id`;
+- `api_key` fica fora da UI e deve vir de env, mock ou provisionamento separado;
+- ativacao por codigo, login e lista de ambientes ficam como alternativas
+  futuras;
+- primeira inicializacao completa de cartao Armbian virgem fica para fase
+  posterior.
+
+Sequencia incremental refinada:
+
+- C1 - escopo e fluxo minimo Wi-Fi + `environment_id` documentado;
+- C2 - mock visual/formulario sem alterar rede;
 - C3 - diagnostico Wi-Fi read-only;
-- C4 - configuracao Wi-Fi em bancada com Ethernet de recuperacao;
-- C5 - hotspot Dadooh Setup;
-- C6 - ativacao backend por codigo;
-- C7 - gravacao segura de config;
-- C8 - reset/reparo;
-- C9 - validacao de campo.
+- C4 - Wi-Fi controlado em bancada com Ethernet preservada;
+- C5 - config writer minimo/mock;
+- C6 - salvar config minima real com validacao e rollback;
+- C7 - ativacao por codigo, login ou lista de ambientes;
+- C8 - rotacao, troca de ambiente, manutencao e reset.
 
 Criterios de aceite:
 
@@ -228,139 +243,143 @@ Criterios de aceite:
   presente e ausencia de internet;
 - plano preserva a separacao entre homologacao `v0.1-rc1`, desenvolvimento
   pos-RC1 e producao futura.
-- Wi-Fi setup, hotspot, portal local, ativacao backend e escrita real de config
-  seguem nao implementados ao final de C0.
+- Wi-Fi setup real, hotspot, portal local, ativacao backend e escrita real de
+  config seguem nao implementados ao final de C1.
 
-## Fase C - Wi-Fi/setup
+## Fases C1-C8 - onboarding minimo refinado
 
-Status: nao implementada. Depende de C0 e dos incrementos preparatorios C1-C3.
+Status: C1 documental; C2-C8 planejadas. Nao implementadas.
 
-Objetivo:
+Estas fases substituem a sequencia anterior mais ampla para evitar que hotspot,
+ativacao backend, writer real, rotacao e manutencao avancem juntos.
 
-- criar hotspot Dadooh Setup;
-- exibir QR code;
-- permitir configuracao via celular;
-- salvar Wi-Fi;
-- testar conexao.
-
-Arquivos provaveis:
-
-- novo servico `totem-setup`;
-- perfis NetworkManager dedicados;
-- scripts/wrappers de NetworkManager;
-- status de setup em `/data/state/totem`;
-- pagina local de setup.
-
-Validacao minima:
-
-- sem rede/config, hotspot sobe com nome previsivel e nao sensivel;
-- celular acessa portal local via QR code;
-- operador seleciona rede, informa senha e testa conexao;
-- senha errada mostra erro recuperavel;
-- reboot preserva conexao salva;
-- Ethernet, se presente, nao e derrubada indevidamente.
-
-Riscos:
-
-- hotspot interferir em redes salvas;
-- senha Wi-Fi aparecer em logs/status;
-- captive portal falhar em celulares especificos;
-- NetworkManager entrar em estado ambiguo entre AP e cliente.
-
-Criterios de aceite:
-
-- configuracao Wi-Fi completa sem terminal;
-- nenhum segredo aparece em docs, logs compartilhaveis ou diagnostico
-  sanitizado;
-- queda e retorno de internet ficam legiveis para operador.
-
-Criterio de rollback:
-
-- remover/desabilitar perfis de hotspot/setup e voltar a conexoes
-  NetworkManager provisionadas manualmente.
-
-## Fase D - ativacao de ambiente
+### C1 - escopo e fluxo minimo documentado
 
 Objetivo:
 
-- ativar por codigo;
-- evitar digitacao manual de `api_key`;
-- backend troca codigo por config;
-- salvar config em `/data/config`.
+- documentar o caso `config_missing` com HDMI conectado;
+- definir fluxo minimo Wi-Fi + `environment_id`;
+- manter `api_key` fora da UI;
+- registrar a maquina de estados minima;
+- preservar C0/ADR-0008 como visao futura.
 
-Arquivos provaveis:
+Aceite:
 
-- endpoint/pagina de ativacao no `totem-setup`;
-- writer atomico de `/data/config/config.json`;
-- schema publico sem secrets;
-- estado de ativacao em `/data/state/totem`;
-- integracao backend para troca de codigo.
+- documentos C1 e ADR-0009 criados;
+- nenhum script, systemd, NetworkManager ou `kiosky-player` alterado;
+- C1 marcada como desenvolvimento/proposta, sem liberar producao.
 
-Validacao minima:
-
-- sem config, tela mostra codigo/QR e estado claro;
-- codigo valido baixa config e grava com permissao restrita;
-- codigo invalido/expirado mostra erro recuperavel;
-- player inicia depois da config valida;
-- nenhum segredo e impresso.
-
-Riscos:
-
-- backend indisponivel bloquear ativacao;
-- config parcial quebrar boot;
-- permissao fraca em `/data/config/config.json`;
-- operador digitar dados errados se houver fallback manual.
-
-Criterios de aceite:
-
-- operador nao manipula `api_key`;
-- config e validada antes de substituir a anterior;
-- rollback local preserva ultima config valida.
-
-Criterio de rollback:
-
-- restaurar ultima config valida de `/data/config` e desabilitar ativacao por
-  codigo ate corrigir backend/setup.
-
-## Fase E - rotacao/resolucao
+### C2 - mock visual/formulario sem alterar rede
 
 Objetivo:
 
-- suportar rotacao 0/90/180/270;
-- oferecer teste visual;
-- salvar preferencia;
-- reiniciar player quando necessario.
+- criar mock de tela/formulario para Wi-Fi e `environment_id`;
+- nao listar redes reais;
+- nao pedir senha real persistida;
+- nao alterar NetworkManager;
+- nao escrever config real.
 
-Arquivos provaveis:
+Validacao:
 
-- pagina de manutencao/setup;
-- config em `/data/config/config.json`;
-- status/splash para teste visual;
-- possivel config separada `/data/config/display.json`.
+- previews e/ou mock local sem secrets;
+- textos publicos claros para operador nao tecnico;
+- renderer/setup continua separado do player.
 
-Validacao minima:
+### C3 - diagnostico Wi-Fi read-only
 
-- operador escolhe 0, 90, 180 ou 270;
-- teste visual confirma orientacao;
-- valor persiste apos reboot;
-- MPV aplica `--video-rotate` ou propriedade equivalente;
-- erro de valor invalido cai para padrao seguro.
+Objetivo:
 
-Riscos:
+- mostrar estado de rede de forma apenas leitura;
+- diferenciar Wi-Fi associado, IP obtido, internet basica e backend futuro;
+- nao derrubar Ethernet, Wi-Fi ou SSH de bancada;
+- nao publicar SSID real, senha, IP publico ou hostname.
 
-- rotacao quebrar layout do splash/status;
-- resolucao/tela especifica exigir ajuste fora do MPV;
-- reinicio do player durante reproducao confundir operador.
+Validacao:
 
-Criterios de aceite:
+- prova de que nenhum comando altera conexoes;
+- diagnostico sanitizado;
+- falhas aparecem como codigos publicos.
 
-- rotacao muda sem terminal;
-- estado final e claro para operador;
-- player volta a `playing`.
+### C4 - Wi-Fi controlado em bancada com Ethernet preservada
 
-Criterio de rollback:
+Objetivo:
 
-- voltar `rotation_deg=0` ou ultima config valida e reiniciar player.
+- testar alteracao real de Wi-Fi apenas em bancada;
+- preservar Ethernet como recuperacao;
+- usar snapshots antes/depois;
+- documentar rollback de conexoes.
+
+Validacao:
+
+- senha errada recupera sem vazar credencial;
+- conexao sem internet mostra erro claro;
+- Ethernet nao e derrubada indevidamente;
+- reboot nao deixa NetworkManager em estado ambiguo.
+
+### C5 - config writer minimo/mock
+
+Objetivo:
+
+- criar caminho de validacao de config minima sem substituir config ativa real;
+- simular injecao de `api_key` por env, mock ou provisionamento separado;
+- validar `environment_id` por formato minimo;
+- exercitar erro de `api_key` ausente.
+
+Validacao:
+
+- nenhuma config parcial vira ativa;
+- erros sao publicos e sanitizados;
+- writer mock nao imprime secrets.
+
+### C6 - salvar config minima real com validacao e rollback
+
+Objetivo:
+
+- gravar config minima real somente depois de C5;
+- validar todos os campos obrigatorios antes de substituir;
+- usar escrita atomica;
+- preservar ultima config valida quando existir;
+- iniciar player apenas depois de config valida.
+
+Validacao:
+
+- queda no meio nao deixa config parcial ativa;
+- `api_key` externa ausente bloqueia salvamento ou inicio do player;
+- renderer/setup para antes do player;
+- rollback restauravel e documentado.
+
+### C7 - ativacao por codigo, login ou lista de ambientes
+
+Objetivo:
+
+- reavaliar alternativas mais completas depois do minimo funcionar;
+- decidir entre codigo curto, login/lista de ambientes ou outro mecanismo;
+- integrar backend apenas com seguranca e expiracao definidas;
+- remover necessidade de `environment_id` manual se a solucao escolhida
+  substituir esse fluxo.
+
+Validacao:
+
+- operador continua sem manipular `api_key`;
+- erros de backend nao vazam URL, payload ou regra interna;
+- fluxo nao regride C6.
+
+### C8 - rotacao, troca de ambiente, manutencao e reset
+
+Objetivo:
+
+- tratar funcoes fora do minimo C1;
+- planejar rotacao de tela;
+- planejar troca de ambiente apos player rodando;
+- planejar manutencao limitada;
+- planejar reset leve e factory reset com confirmacao forte.
+
+Validacao:
+
+- nenhuma acao executa shell arbitrario;
+- player nao e interrompido sem estado publico claro;
+- diagnostico segue sanitizado;
+- reset preserva ou apaga dados conforme escopo aprovado.
 
 ## Fase F - monitoramento/telemetria
 
