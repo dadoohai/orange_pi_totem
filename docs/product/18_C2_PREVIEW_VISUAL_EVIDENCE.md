@@ -14,6 +14,39 @@ launcher operacional ou placa.
 O preview e mock. Ele nao configura Wi-Fi, nao testa conectividade real, nao
 salva config e nao inicia player.
 
+## C2.1 - correcao objetiva do preview
+
+C2.1 corrige problemas visuais e de linguagem do preview estatico sem
+transformar a tela em design final.
+
+Corrigido:
+
+- selo superior de mock com largura e quebra de linha mais seguras;
+- reducao de risco de sobreposicao entre titulo, mensagem e acao;
+- titulos longos com quebra de linha controlada;
+- margens mais consistentes entre blocos;
+- rodape separado do conteudo principal;
+- estado/codigo publico movidos para area secundaria;
+- linguagem visivel menos tecnica para operador;
+- tela de senha mock com aviso direto: campo demonstrativo e sem senha real.
+
+Continua fora de escopo:
+
+- rede real;
+- senha real;
+- config real;
+- escrita em `/data`;
+- portal funcional;
+- hotspot;
+- QR funcional;
+- MPV;
+- `systemd`;
+- NetworkManager;
+- alteracao de launcher, renderer operacional ou `kiosky-player`.
+
+C2.1 ainda e preview/mock. Nao e UI final de produto e nao libera uso
+operacional em campo.
+
 ## Arquivos
 
 - Script local: `scripts/board/totem_c2_mock_preview.py`

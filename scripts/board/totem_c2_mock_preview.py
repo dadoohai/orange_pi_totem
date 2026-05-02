@@ -36,7 +36,7 @@ SENSITIVE_PATTERNS = (
     re.compile(r"\btoken\b", re.IGNORECASE),
     re.compile(r"\bsecret\b", re.IGNORECASE),
     re.compile(r"\bpassword\b", re.IGNORECASE),
-    re.compile(r"\bsenha\b", re.IGNORECASE),
+    re.compile(r"\bsenha\b\s*[:=]\s*\S+", re.IGNORECASE),
     re.compile(r"\benvironment_id\s*[:=]\s*(?!ENVIRONMENT_ID_MOCK\b)\S+", re.IGNORECASE),
     re.compile(r"\bstation[_-]?id\b(?:\s*[:=]\s*\S+)?", re.IGNORECASE),
     re.compile(r"/data/media\S*", re.IGNORECASE),
@@ -71,9 +71,9 @@ SCREENS: tuple[Screen, ...] = (
         step="Entrada do fluxo",
         panel_title="Estado seguro",
         panel_items=(
-            "Player principal parado",
-            "Renderer/setup visual pode aparecer",
-            "Nenhuma config real sera escrita",
+            "Exibicao principal parada",
+            "A tela de orientacao pode aparecer",
+            "Nenhum dado sera salvo",
         ),
     ),
     Screen(
@@ -87,7 +87,7 @@ SCREENS: tuple[Screen, ...] = (
         panel_title="Antes de comecar",
         panel_items=(
             "Nao usa rede real",
-            "Nao usa portal local",
+            "Nao abre portal",
             "Nao salva configuracao",
         ),
     ),
@@ -104,21 +104,21 @@ SCREENS: tuple[Screen, ...] = (
     ),
     Screen(
         state="wifi_password_mock",
-        title="Credencial da rede",
-        message="Simule a entrada de uma credencial de teste.",
-        action="Use somente valor ficticio. Nada sera persistido.",
-        code="WIFI_CREDENTIAL_MOCK",
+        title="Senha da rede",
+        message="Campo demonstrativo. Nao digite senha real.",
+        action="Use somente valor ficticio. Nada sera salvo.",
+        code="SENHA_REDE_MOCK",
         accent="#38bdf8",
         step="3 de 10",
-        panel_title="Entrada ficticia",
+        panel_title="Campo de exemplo",
         panel_items=(
             "Campo demonstrativo",
-            "Nao registrar valor digitado",
+            "Nao digite senha real",
             "Nao testar conexao real",
         ),
-        field_label="Valor de teste",
+        field_label="Senha de teste",
         field_value="••••••••",
-        field_note="Valor oculto e descartado no mock.",
+        field_note="Valor ficticio, oculto e descartado no mock.",
     ),
     Screen(
         state="wifi_testing_mock",
@@ -130,9 +130,9 @@ SCREENS: tuple[Screen, ...] = (
         step="4 de 10",
         panel_title="Checagens planejadas",
         panel_items=(
-            "Associacao Wi-Fi futura",
-            "IP local futuro",
-            "Internet basica futura",
+            "Conexao com a rede",
+            "Acesso local",
+            "Internet basica",
         ),
     ),
     Screen(
@@ -146,8 +146,8 @@ SCREENS: tuple[Screen, ...] = (
         panel_title="Resultado de exemplo",
         panel_items=(
             "Conexao simulada aprovada",
-            "Nenhum adaptador de rede alterado",
-            "Nenhum perfil salvo",
+            "Nenhuma rede foi alterada",
+            "Nada foi salvo",
         ),
     ),
     Screen(
@@ -177,9 +177,9 @@ SCREENS: tuple[Screen, ...] = (
         panel_items=(
             "3 a 128 caracteres",
             "Letras ASCII, numeros, ponto, dois-pontos, hifen e sublinhado",
-            "Sem validacao backend nesta fase",
+            "Sem confirmacao online nesta fase",
         ),
-        field_label="environment_id",
+        field_label="Codigo do ambiente",
         field_value="ENVIRONMENT_ID_MOCK",
         field_note="Placeholder explicito. Nao use valor real.",
     ),
@@ -195,9 +195,9 @@ SCREENS: tuple[Screen, ...] = (
         panel_items=(
             "Nao pode ficar vazio",
             "Nao pode conter espaco",
-            "Nao consulta backend",
+            "Nao faz confirmacao online",
         ),
-        field_label="environment_id",
+        field_label="Codigo do ambiente",
         field_value="INVALIDO MOCK",
         field_note="Exemplo ficticio recusado por conter espaco.",
     ),
@@ -213,22 +213,22 @@ SCREENS: tuple[Screen, ...] = (
         panel_items=(
             "Rede de exemplo selecionada",
             "Ambiente mock preenchido",
-            "Nenhuma config real substituida",
+            "Nenhum dado real salvo",
         ),
     ),
     Screen(
         state="starting_player_mock",
         title="Iniciando exibicao",
-        message="A transicao mostra onde o setup sairia antes do player.",
-        action="Em implementacao real, renderer/setup para primeiro.",
+        message="A tela mostra a etapa final antes da exibicao.",
+        action="Na versao real, esta tela sairia antes da exibicao.",
         code="STARTING_PLAYER_MOCK",
         accent="#22c55e",
         step="8 de 10",
         panel_title="Regra operacional",
         panel_items=(
-            "Setup visual encerrado antes do player",
-            "MPV principal nao disputa DRM/KMS",
-            "Estado real ainda nao implementado em C2",
+            "Tela de orientacao encerrada",
+            "Exibicao principal inicia depois",
+            "C2 ainda e apenas mock",
         ),
     ),
 )
@@ -287,10 +287,11 @@ def svg_text_lines(
     max_chars: int,
     line_gap: int,
     weight: int | None = None,
+    max_lines: int = 4,
 ) -> str:
     lines = textwrap.wrap(public_text(text), width=max_chars) or [""]
     tspans = []
-    for index, line in enumerate(lines[:4]):
+    for index, line in enumerate(lines[:max_lines]):
         dy = 0 if index == 0 else line_gap
         tspans.append(f'<tspan x="{x}" dy="{dy}">{html.escape(line)}</tspan>')
     weight_attr = f' font-weight="{weight}"' if weight is not None else ""
@@ -302,10 +303,15 @@ def svg_text_lines(
     )
 
 
+def wrapped_line_count(text: str, *, max_chars: int, max_lines: int) -> int:
+    lines = textwrap.wrap(public_text(text), width=max_chars) or [""]
+    return min(len(lines), max_lines)
+
+
 def pill(text: str, *, x: int, y: int, width: int, fill: str, stroke: str) -> str:
     return f"""
   <rect x="{x}" y="{y}" width="{width}" height="44" rx="8" fill="{fill}" stroke="{stroke}"/>
-  <text x="{x + 18}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">{html.escape(public_text(text, max_len=64))}</text>"""
+  <text x="{x + 18}" y="{y + 28}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">{html.escape(public_text(text, max_len=64))}</text>"""
 
 
 def field_box(label: str, value: str, note: str, *, x: int, y: int, width: int) -> str:
@@ -338,6 +344,11 @@ def build_svg(screen: Screen) -> str:
     notice = public_text(MOCK_NOTICE, max_len=96)
     state_label = public_text(screen.state.replace("_password_", "_credential_"), max_len=80)
     accent = screen.accent
+    title_lines = wrapped_line_count(title, max_chars=23, max_lines=2)
+    message_y = 306 + (title_lines - 1) * 50
+    message_lines = wrapped_line_count(message, max_chars=46, max_lines=2)
+    action_y = message_y + 50 + (message_lines - 1) * 34
+    field_y = max(438, action_y + 58)
 
     field = ""
     if screen.field_label and screen.field_value and screen.field_note:
@@ -346,7 +357,7 @@ def build_svg(screen: Screen) -> str:
             screen.field_value,
             screen.field_note,
             x=96,
-            y=432,
+            y=field_y,
             width=620,
         )
 
@@ -358,25 +369,27 @@ def build_svg(screen: Screen) -> str:
 
   <text x="72" y="76" font-family="Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="700" fill="#f8fafc">Dadooh</text>
   <text x="72" y="110" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#94a3b8">{html.escape(DEVICE_LABEL)}</text>
-  <rect x="826" y="55" width="356" height="48" rx="8" fill="#3a260c" stroke="#f59e0b"/>
-  <text x="846" y="86" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#fef3c7">{html.escape(notice)}</text>
+  <rect x="736" y="50" width="472" height="58" rx="8" fill="#3a260c" stroke="#f59e0b"/>
+  {svg_text_lines(notice, x=758, y=74, size=16, fill="#fef3c7", max_chars=52, line_gap=20, weight=700, max_lines=2)}
 
-  <rect x="72" y="138" width="700" height="454" rx="8" fill="#171b24" stroke="#2b3240"/>
-  <rect x="72" y="138" width="8" height="454" rx="4" fill="{accent}"/>
-  <text x="96" y="194" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{accent}">C2 MOCK VISUAL</text>
-  {svg_text_lines(title, x=96, y=270, size=52, fill="#f8fafc", max_chars=24, line_gap=58, weight=700)}
-  {svg_text_lines(message, x=96, y=342, size=27, fill="#d8dee9", max_chars=42, line_gap=36)}
-  {svg_text_lines(action, x=96, y=404, size=22, fill="#b6c2d2", max_chars=52, line_gap=30)}
+  <rect x="72" y="138" width="700" height="480" rx="8" fill="#171b24" stroke="#2b3240"/>
+  <rect x="72" y="138" width="8" height="480" rx="4" fill="{accent}"/>
+  <text x="96" y="190" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="{accent}">C2 MOCK VISUAL</text>
+  {svg_text_lines(title, x=96, y=256, size=44, fill="#f8fafc", max_chars=23, line_gap=50, weight=700, max_lines=2)}
+  {svg_text_lines(message, x=96, y=message_y, size=25, fill="#d8dee9", max_chars=46, line_gap=34, max_lines=2)}
+  {svg_text_lines(action, x=96, y=action_y, size=21, fill="#b6c2d2", max_chars=54, line_gap=28, max_lines=2)}
   {field}
-  {pill("Estado: " + state_label, x=96, y=612, width=330, fill="#111827", stroke="#374151")}
-  <text x="456" y="641" font-family="Arial, DejaVu Sans Mono, monospace" font-size="22" font-weight="700" fill="{accent}">{html.escape(code)}</text>
 
-  <rect x="824" y="138" width="384" height="454" rx="8" fill="#121620" stroke="#2b3240"/>
+  <rect x="824" y="138" width="384" height="480" rx="8" fill="#121620" stroke="#2b3240"/>
   <text x="858" y="190" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{accent}">{html.escape(step)}</text>
   <text x="858" y="236" font-family="Arial, DejaVu Sans, sans-serif" font-size="30" font-weight="700" fill="#f8fafc">{html.escape(panel_title)}</text>
   {render_panel_items(screen.panel_items, x=858, y=292, width=300)}
+  <line x1="858" y1="514" x2="1172" y2="514" stroke="#2b3240"/>
+  <text x="858" y="548" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#7d8796">REFERENCIA TECNICA</text>
+  {pill(state_label, x=858, y=562, width=250, fill="#111827", stroke="#374151")}
+  <text x="858" y="638" font-family="Arial, DejaVu Sans Mono, monospace" font-size="17" font-weight="700" fill="{accent}">{html.escape(code)}</text>
 
-  <text x="72" y="682" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#7d8796">Preview local estatico. Sem rede, sem MPV, sem systemd, sem config real.</text>
+  <text x="72" y="690" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#7d8796">Preview local estatico. Nao altera rede nem salva configuracao.</text>
 </svg>
 """
 
@@ -392,7 +405,7 @@ def rendered_text_values(screen: Screen) -> tuple[str, ...]:
         screen.step,
         screen.panel_title,
         screen.state.replace("_password_", "_credential_"),
-        "Preview local estatico. Sem rede, sem MPV, sem systemd, sem config real.",
+        "Preview local estatico. Nao altera rede nem salva configuracao.",
     ]
     values.extend(screen.panel_items)
     if screen.field_label:
