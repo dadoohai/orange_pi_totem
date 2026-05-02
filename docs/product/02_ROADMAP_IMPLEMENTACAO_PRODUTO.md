@@ -183,6 +183,7 @@ Documentos:
 - `docs/product/17_C2_MOCK_VISUAL_FORMULARIO.md`;
 - `docs/product/18_C2_PREVIEW_VISUAL_EVIDENCE.md`;
 - `docs/product/25_C5_CONFIG_WRITER_MOCK.md`;
+- `docs/product/26_C5_1_CONFIG_CONTRACT_VALIDATOR.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
@@ -235,7 +236,9 @@ Sequencia incremental refinada:
 - C4 - Wi-Fi real controlado em bancada com Ethernet preservada;
 - C5 - config writer mock em `/tmp`, sem secrets, sem config real e preparando
   C6;
-- C6 - config real com validacao e rollback;
+- C5.1 - contrato de config minima e validador dry-run em `/tmp`;
+- C6.0 - plano futuro de writer real;
+- C6.1 - execucao futura em placa de desenvolvimento;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
 
@@ -429,6 +432,33 @@ Validacao:
   fora do escopo;
 - writer mock nao imprime secrets.
 
+### C5.1 - contrato de config minima e validador dry-run
+
+Status: contrato e validador dry-run local. Sem escrita real de config.
+
+Objetivo:
+
+- definir contrato minimo da config candidata;
+- validar config candidata em dry-run;
+- preparar C6 com bloqueio explicito de placeholders;
+- impedir que config mock C5 vire config real;
+- escrever apenas relatorio/status em `/tmp`;
+- nao escrever, ler ou alterar `/data/config/config.json`.
+
+Validacao:
+
+- config mock C5 passa em `--allow-mock`;
+- config mock C5 falha em `--real-dry-run` por placeholders;
+- `--out-dir` fora de `/tmp` falha;
+- campo obrigatorio ausente falha;
+- path fora do contrato falha;
+- `api_key` placeholder falha em `--real-dry-run`;
+- status e summary nao imprimem valor de `api_key`;
+- nada e escrito em `/data`;
+- config real nao e lida;
+- launcher, renderer, `systemd`, NetworkManager e `kiosky-player` permanecem
+  fora do escopo.
+
 ### C6 - config real com validacao e rollback
 
 Status: planejada.
@@ -447,6 +477,40 @@ Validacao:
 - `api_key` externa ausente bloqueia salvamento ou inicio do player;
 - renderer/setup para antes do player;
 - rollback restauravel e documentado.
+
+#### C6.0 - plano futuro de writer real
+
+Objetivo:
+
+- planejar escrita real de `/data/config/config.json`;
+- definir origem real da `api_key`;
+- definir ownership, permissoes, backup, rollback e criterio de falha;
+- definir como queda de energia sera testada;
+- definir criterio para launcher iniciar player somente com config valida.
+
+Validacao:
+
+- plano revisado antes de qualquer escrita em `/data`;
+- rollback documentado;
+- placa de desenvolvimento escolhida;
+- evidencia esperada definida sem secrets.
+
+#### C6.1 - execucao futura em placa de desenvolvimento
+
+Objetivo:
+
+- executar writer real apenas na placa de desenvolvimento;
+- validar escrita atomica, permissao e rollback;
+- preservar ultima config valida quando existir;
+- manter player bloqueado se a config falhar.
+
+Validacao:
+
+- execucao autorizada por humano;
+- `/data/config/config.json` escrito somente pelo writer real aprovado;
+- falha parcial nao vira config ativa;
+- player inicia somente apos config real valida;
+- evidencia sanitizada sem `api_key`, URL privada, IDs reais ou payload.
 
 ### C7 - ativacao por codigo, login ou lista de ambientes
 
