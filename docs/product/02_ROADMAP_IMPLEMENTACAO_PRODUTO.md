@@ -246,6 +246,7 @@ Sequencia incremental refinada:
 - C6.1-preflight - checklist e decisoes antes de implementacao real;
 - C6.2 - writer real simulado em `/tmp`, sem tocar `/data`;
 - C6.2.1 - smoke na placa de desenvolvimento, ainda somente em `/tmp`;
+- C6.3-preflight - inspecao read-only da placa antes da escrita real;
 - C6.3 - execucao futura em placa de desenvolvimento;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
@@ -472,7 +473,8 @@ Validacao:
 
 Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2
 writer real simulado em `/tmp` concluido localmente; C6.2.1 smoke na placa de
-desenvolvimento em `/tmp` concluido; C6.3 futura.
+desenvolvimento em `/tmp` concluido; C6.3-preflight read-only na placa
+concluido; C6.3 execucao real futura.
 
 Objetivo:
 
@@ -595,6 +597,32 @@ Validacao:
 - nada foi escrito em `/data`;
 - launcher, renderer, `systemd`, NetworkManager e `kiosky-player`
   permaneceram fora do escopo.
+
+#### C6.3-preflight - inspecao read-only da placa
+
+Status: preflight read-only concluido na placa de desenvolvimento. Sem escrita
+real em `/data`.
+
+Objetivo:
+
+- inspecionar usuario/grupo `totem` sem publicar arquivos completos do sistema;
+- inspecionar existencia, tipo, mode e owner/group agregado de `/data`,
+  `/data/config` e `/data/config/config.json`;
+- confirmar legibilidade/escrita da config para `totem` sem ler conteudo;
+- consultar estado do servico com comandos read-only;
+- revisar a logica versionada do launcher;
+- definir controle necessario antes da escrita real.
+
+Validacao:
+
+- `/data/config/config.json` existe e nao teve conteudo lido;
+- config real nao foi escrita nem copiada;
+- servico esta `enabled` e `active/running`;
+- launcher usa `/data/config/config.json` por padrao e chama `run_app_once`
+  quando a config e valida;
+- recomendacao para C6.3: executar com o servico parado ou bloqueio equivalente
+  aprovado;
+- C6.3 execucao real continua pendente.
 
 #### C6.3 - execucao futura em placa de desenvolvimento
 

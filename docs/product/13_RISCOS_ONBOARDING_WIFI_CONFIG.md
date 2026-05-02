@@ -42,6 +42,9 @@ writer.
 | Config parcial por queda de energia | Queda durante temporario, backup ou rename pode deixar config truncada, backup parcial ou estado ambiguo. | C6.0 exige escrita atomica no mesmo diretorio, fsync de arquivo e diretorio, backup validado, deteccao de temporario/parcial no boot e rollback. | C6 |
 | Launcher iniciar player antes da validacao | Player pode iniciar com config incompleta, placeholder ou permissao errada e falhar em loop. | Launcher deve iniciar player somente apos JSON valido, contrato minimo valido, paths validos, `api_key` presente, placeholders bloqueados e renderer/setup parado. | C6 |
 | Player iniciar automaticamente durante escrita | Servico ativo pode perceber arquivo parcial, temporario ou config ainda nao revalidada e iniciar o player cedo demais. | C6.1-preflight exige decisao sobre servico parado, config path temporario, bloqueio do launcher ou override temporario; C6.3 aborta se esse controle nao estiver claro. | C6.1-preflight, C6.3 |
+| Escrever config valida com servico ativo | O launcher pode observar `/data/config/config.json`, considerar a config valida e iniciar o player antes da evidencia, revalidacao ou rollback estarem completos. | C6.3-preflight inspeciona estado do servico sem alterar nada; C6.3 deve ocorrer com servico parado ou bloqueio operacional equivalente aprovado. | C6.3-preflight, C6.3 |
+| Player iniciar antes de evidencia/rollback | Se o player iniciar logo apos o rename, falhas de backend, DRM ou config podem ocorrer antes da coleta de permissao, backup e rollback. | Separar preflight read-only, escrita real e verificacao; manter rollback pronto; religar/iniciar player somente quando aprovado. | C6.3 |
+| Preflight ler ou publicar config real | Um preflight descuidado pode vazar `api_key`, URL privada, ambiente ou station antes mesmo da escrita real. | C6.3-preflight usa apenas `stat`, `test`, `id`, `getent` e `systemctl` read-only, nao usa `cat`/`jq`/`grep` no conteudo e registra apenas estado agregado. | C6.3-preflight |
 | Evidencia publicar `api_url`, `environment_id` ou `station_id` reais | Mesmo sem `api_key`, evidencia pode revelar ambiente, cliente, endpoint privado ou identificador operacional. | README de C6.3 deve ser sanitizado, com apenas passou/falhou, presenca de `api_key`, backup, permissoes e conclusao; valores reais ficam fora de chat/log/evidencia. | C6.1-preflight, C6.3 |
 | C1 confundida com producao ou ativacao definitiva | Escopo documental minimo pode ser tratado como release de campo ou substituir indevidamente ativacao por codigo. | Marcar C1 como proposta/documentacao, preservar separacao RC1/desenvolvimento/producao e manter ADR-0008 como visao futura. | C1-C2 |
 | Mock C2 parecer funcional em campo | Operador ou suporte pode acreditar que rede/config foram alteradas de verdade. | Rotular telas/evidencias como mock, nao usar em campo, nao ligar botoes a acoes reais e documentar que nao altera rede nem config. | C2 |
@@ -91,6 +94,7 @@ writer.
   log, diff ou resumo.
 - Qualquer config real, candidata real ou backup real versionado.
 - Qualquer C6.2 sem C6.1-preflight revisado.
+- Qualquer C6.3-preflight que leia ou publique conteudo de config real.
 - Qualquer C6.3 sem `--real-dry-run` limpo, backup/rollback definido, servico
   controlado e evidencia sanitizada.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
@@ -125,6 +129,9 @@ writer.
 - C6.2: writer real simulado em `/tmp`, com `--real-dry-run`, backup,
   rollback, self-test de guardrails, saida sanitizada, sem escrita real e sem
   secrets em logs ou artefatos versionados.
+- C6.3-preflight: inspecao read-only na placa de desenvolvimento, sem ler
+  conteudo de config real, com estado sanitizado de `/data/config`, usuario,
+  grupo e servico.
 - C6.3: execucao futura em placa de desenvolvimento, com `--real-dry-run`
   limpo, backup/rollback, servico controlado, config escrita somente se
   autorizado e evidencia sanitizada.
