@@ -66,6 +66,20 @@ Placeholders permitidos:
 - `WIFI_TEST_CONNECTION_NAME`;
 - senha: fornecida interativamente pelo humano, nao registrada.
 
+## Regra forte: Codex nao executa comando que solicite senha Wi-Fi
+
+Codex nao deve executar `nmcli --ask connection up` se o comando puder
+solicitar senha Wi-Fi. Qualquer acao com credencial acontece fora do agente.
+
+Qualquer etapa que envolva senha deve ser feita localmente por humano, fora de
+chat, log, transcript, terminal remoto gerenciado pelo Codex, historico, script
+ou arquivo versionavel. "Nao colocar senha inline" nao e suficiente se a senha
+ainda for digitada em uma sessao controlada pelo agente.
+
+Codex pode preparar comandos com placeholders e pode registrar resultado
+sanitizado depois. Se a proxima tentativa exigir senha via sessao Codex/SSH,
+abortar antes do comando.
+
 Exemplos a revisar:
 
 ```sh

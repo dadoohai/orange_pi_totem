@@ -347,8 +347,9 @@ Validacao:
 ### C4 - Wi-Fi real controlado em bancada
 
 Status: C4.0 aprovado/documentado como plano de bancada; C4.1-preflight
-documentado; C4.1 sera execucao futura controlada somente apos
-aprovacao humana explicita.
+documentado; primeira rodada C4.1 abortada com seguranca antes de inserir
+senha; postmortem C4.1 documenta que a proxima tentativa deve ser hibrida ou
+local, com credencial fora do agente.
 
 Objetivo:
 
@@ -364,8 +365,10 @@ Validacao:
   sucesso/aborto e evidencia esperada;
 - C4.1-preflight documenta decisoes humanas finais, regra de senha sem registro
   e roteiro comando a comando sem execucao;
-- C4.1 so executa comandos mutaveis em placa de desenvolvimento, com rede de
-  teste, operador humano e acesso fisico;
+- C4.1 nao deve passar senha por Codex, SSH remoto gerenciado pelo agente, chat,
+  historico, script ou evidencia;
+- a proxima C4.1 deve executar a acao com credencial fora do agente e usar C3
+  antes/depois para evidencia agregada;
 - senha errada ou falha de conexao recupera sem vazar credencial;
 - Ethernet nao e derrubada indevidamente;
 - rollback remove somente perfil de teste;

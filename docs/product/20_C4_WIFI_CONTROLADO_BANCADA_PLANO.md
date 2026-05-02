@@ -103,6 +103,25 @@ Qualquer saida que ecoe senha, SSID real ou nome de conexao real vira artefato
 bruto proibido. Se houver duvida sobre exposicao da senha, abortar antes do
 comando.
 
+## Modelo recomendado pos-abort C4.1
+
+A execucao C4.1 via Codex remoto nao deve carregar credencial. Qualquer acao
+com credencial acontece fora do agente.
+
+O modelo recomendado passa a ser hibrido:
+
+1. Codex roda C3 antes.
+2. Humano executa conexao Wi-Fi localmente no console da placa ou em ambiente
+   fisico sem registro no Codex.
+3. Codex roda C3 depois.
+4. Humano remove o perfil de teste localmente, ou autoriza remocao remota sem
+   segredo.
+5. Codex registra evidencia sanitizada.
+
+Nao versionar outputs brutos. Nao publicar SSID real, senha, IP, gateway,
+hostname, MAC, BSSID, DNS real, nome real de conexao, URLs, secrets, payloads
+ou paths privados.
+
 ### Permitidos somente em C4.1 com aprovacao
 
 Usar placeholders em documentacao, revisao e evidencia:

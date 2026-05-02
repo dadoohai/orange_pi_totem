@@ -180,6 +180,10 @@ C4.1 nao concluiu teste de conexao Wi-Fi porque foi abortada corretamente antes
 de qualquer insercao de credencial. A parte executada passou pelo rollback
 esperado: o perfil descartavel foi removido e a Ethernet permaneceu preservada.
 
+Conclusao de processo: nao repetir C4.1 com senha via Codex/SSH remoto
+gerenciado pelo agente. A proxima tentativa deve usar metodo de credencial fora
+do agente, com registro posterior apenas sanitizado.
+
 ## Bloqueios remanescentes
 
 - Definir um metodo seguro de insercao de senha que nao registre valor em
