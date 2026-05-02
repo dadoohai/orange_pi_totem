@@ -182,6 +182,7 @@ Documentos:
 - `docs/product/16_C1_MINIMAL_STATE_MACHINE.md`;
 - `docs/product/17_C2_MOCK_VISUAL_FORMULARIO.md`;
 - `docs/product/18_C2_PREVIEW_VISUAL_EVIDENCE.md`;
+- `docs/product/25_C5_CONFIG_WRITER_MOCK.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
@@ -232,7 +233,8 @@ Sequencia incremental refinada:
 - C2 - mock visual/formulario sem alterar rede;
 - C3 - diagnostico Wi-Fi read-only;
 - C4 - Wi-Fi real controlado em bancada com Ethernet preservada;
-- C5 - config writer minimo/mock;
+- C5 - config writer mock em `/tmp`, sem secrets, sem config real e preparando
+  C6;
 - C6 - config real com validacao e rollback;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
@@ -392,21 +394,31 @@ Validacao:
 - nenhum hotspot, portal, config writer, `/data/config/config.json` ou player
   e alterado em C4.
 
-### C5 - config writer minimo/mock
+### C5 - config writer mock
 
-Status: planejada.
+Status: base mock local criada. Sem escrita real de config.
 
 Objetivo:
 
 - criar caminho de validacao de config minima sem substituir config ativa real;
-- simular injecao de `api_key` por env, mock ou provisionamento separado;
+- montar config candidata mock somente em `/tmp`;
+- simular `api_key` fora da UI usando placeholder;
+- manter `api_url`, `environment_id` e `station_id` como mock/placeholders;
 - validar `environment_id` por formato minimo;
-- exercitar erro de `api_key` ausente.
+- preparar C6, mas sem executar C6.
 
 Validacao:
 
+- `--self-test` cobre `environment_id` valido/invalido, URL, path,
+  token/secret, `--out-dir` fora de `/tmp` e escrita atomica;
+- artefatos mock gerados em `/tmp/dadooh-c5-config-writer-mock`;
+- diretorio com permissao `700` e arquivos com permissao `600`;
 - nenhuma config parcial vira ativa;
-- erros sao publicos e sanitizados;
+- nenhuma escrita em `/data` ou `/data/config/config.json`;
+- nenhum secret real, `api_url` privada, `environment_id` real ou payload de
+  backend;
+- launcher, renderer, `systemd`, NetworkManager e `kiosky-player` permanecem
+  fora do escopo;
 - writer mock nao imprime secrets.
 
 ### C6 - config real com validacao e rollback

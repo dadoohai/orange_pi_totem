@@ -20,10 +20,13 @@ writer.
 | `environment_id` digitado errado | Totem pode apontar para ambiente incorreto ou ficar sem conteudo esperado. | Validar formato minimo, pedir confirmacao antes de salvar, nao publicar o valor em status/diagnostico e deixar validacao backend para fase futura. | C1, C5, C6 |
 | `api_key` mal provisionada por env/mock/provisionamento | Operador completa a UI, mas player nao consegue operar ou falha em loop. | Preflight deve bloquear salvamento/inicio se `api_key` externa estiver ausente, publicar erro seguro e manter checklist de provisionamento separado da UI. | C1, C5, C6 |
 | Config parcial ou substituicao sem validacao | Player inicia com config incompleta, falha em loop ou vaza erro interno. | Config writer atomico, validacao de schema e campos externos antes de substituir, preservar ultima config valida e publicar erro publico. | C5, C6 |
+| Mock C5 ser confundido com config real | Operador, suporte ou desenvolvimento pode tratar `config.candidate.mock.json` como configuracao ativa ou pronta para campo. | Nomear arquivos como mock, gravar somente em `/tmp`, documentar que C5 nao altera config real e exigir C6 separado para `/data/config/config.json`. | C5 |
+| `api_key` mock virar producao | Placeholder pode ser copiado para config real e mascarar erro de provisionamento. | Usar `API_KEY_MOCK_NOT_FOR_PRODUCTION`, bloquear secrets reais em evidencia, revisar antes de C6 e exigir origem real aprovada fora da UI. | C5, C6 |
+| Escrita acidental em `/data` durante C5 | Mock pode alterar config real ou deixar artefato parcial em path persistente. | Recusar `--out-dir` fora de `/tmp`, self-test de guardrails, escrita atomica apenas no out-dir e evidencia confirmando nada em `/data`. | C5 |
 | C1 confundida com producao ou ativacao definitiva | Escopo documental minimo pode ser tratado como release de campo ou substituir indevidamente ativacao por codigo. | Marcar C1 como proposta/documentacao, preservar separacao RC1/desenvolvimento/producao e manter ADR-0008 como visao futura. | C1-C2 |
 | Mock C2 parecer funcional em campo | Operador ou suporte pode acreditar que rede/config foram alteradas de verdade. | Rotular telas/evidencias como mock, nao usar em campo, nao ligar botoes a acoes reais e documentar que nao altera rede nem config. | C2 |
 | Mock pedir senha real | Credencial real pode aparecer em tela, screenshot, journal ou evidencia. | Usar apenas senha ficticia, texto explicito "nao sera salva", nao persistir entrada e nao usar dados reais em validacao. | C2 |
-| `environment_id` real aparecer em screenshot/log | Identificador operacional pode vazar em evidencia ou status publico. | Usar placeholders, nao registrar valores digitados, sanitizar screenshots/README e nao copiar entrada para status publico. | C2, C5 |
+| `environment_id` real aparecer em screenshot/log/evidencia C5 | Identificador operacional pode vazar em README, status mock, summary ou chat. | Usar `ENVIRONMENT_ID_MOCK`, redigir valores nao mock em textos auxiliares, nao versionar artefatos brutos de `/tmp` e manter evidencia sanitizada. | C2, C5 |
 | Reset apagar dados uteis | Perda de evidencias, logs de suporte, config valida ou cache necessario. | Separar reset leve e factory reset, confirmacao forte, opcao de preservar diagnostico sanitizado e documentar escopo de limpeza. | C8 |
 | Dependencia backend | Ativacao bloqueada se backend estiver indisponivel. | Estados publicos de retry, timeout curto, mensagens recuperaveis, suporte a Ethernet/retry e nao gravar config parcial. | C7 |
 | Suporte remoto sem conectividade | Operador nao consegue ativar ou enviar diagnostico quando internet falha. | Tela local clara, diagnostico local sanitizado futuro, codigos publicos, fluxo de troca de rede e recuperacao por Ethernet em bancada. | C3, C4, C8 |
@@ -60,6 +63,7 @@ writer.
 - Qualquer fluxo que derrube Ethernet de bancada sem confirmacao e rollback.
 - Qualquer hotspot sem criterio de desligamento e recuperacao.
 - Qualquer config writer que possa deixar JSON parcial como config ativa.
+- Qualquer writer mock que escreva fora de `/tmp` ou toque em `/data`.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
   provisionada.
 - Qualquer fluxo que trate `environment_id` manual como ativacao definitiva sem
@@ -75,7 +79,8 @@ writer.
   sem persistencia e sem valores reais em evidencia.
 - C3: diagnostico Wi-Fi read-only com prova de que nao altera conexoes.
 - C4: Wi-Fi configurado em bancada com Ethernet preservada e rollback testado.
-- C5: config writer minimo/mock com erro de `api_key` externa ausente.
+- C5: config writer mock em `/tmp`, placeholders, self-test, validacao de
+  `environment_id`, evidencia sanitizada e nenhuma config real alterada.
 - C6: config writer real atomico com config invalida, queda simulada e
   rollback.
 - C7: ativacao por codigo, login ou lista de ambientes com erros publicos e sem
