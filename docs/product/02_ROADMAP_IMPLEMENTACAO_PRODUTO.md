@@ -185,6 +185,7 @@ Documentos:
 - `docs/product/25_C5_CONFIG_WRITER_MOCK.md`;
 - `docs/product/26_C5_1_CONFIG_CONTRACT_VALIDATOR.md`;
 - `docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`;
+- `docs/product/29_C6_1_CONFIG_WRITER_REAL_PREFLIGHT.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
 
 Objetivo:
@@ -238,8 +239,10 @@ Sequencia incremental refinada:
 - C5 - config writer mock em `/tmp`, sem secrets, sem config real e preparando
   C6;
 - C5.1 - contrato de config minima e validador dry-run em `/tmp`;
-- C6.0 - plano futuro de writer real;
-- C6.1 - execucao futura em placa de desenvolvimento;
+- C6.0 - plano de writer real concluido;
+- C6.1-preflight - checklist e decisoes antes de implementacao real;
+- C6.2 - implementacao futura do writer real;
+- C6.3 - execucao futura em placa de desenvolvimento;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
 
@@ -463,7 +466,8 @@ Validacao:
 
 ### C6 - config real com validacao e rollback
 
-Status: planejada.
+Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2 e C6.3
+futuras.
 
 Objetivo:
 
@@ -480,7 +484,7 @@ Validacao:
 - renderer/setup para antes do player;
 - rollback restauravel e documentado.
 
-#### C6.0 - plano futuro de writer real
+#### C6.0 - plano de writer real
 
 Status: plano documental criado em
 `docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`. Sem escrita real.
@@ -492,31 +496,75 @@ Objetivo:
 - definir ownership, permissoes, backup, rollback e criterio de falha;
 - definir como queda de energia sera testada;
 - definir criterio para launcher iniciar player somente com config valida;
-- manter C6.1 bloqueada ate decisao humana sobre secrets, permissoes,
-  rollback, queda de energia e evidencia.
+- manter implementacao e execucao bloqueadas ate decisao humana sobre secrets,
+  permissoes, rollback, queda de energia e evidencia.
 
 Validacao:
 
 - plano revisado antes de qualquer escrita em `/data`;
 - rollback documentado;
-- placa de desenvolvimento definida antes de C6.1;
+- placa de desenvolvimento prevista no preflight e autorizada antes de C6.3;
 - evidencia esperada definida sem secrets;
 - nenhuma config real lida, escrita ou alterada em C6.0.
 
-#### C6.1 - execucao futura em placa de desenvolvimento
+#### C6.1-preflight - checklist e decisoes antes do writer real
+
+Status: checklist documental criado em
+`docs/product/29_C6_1_CONFIG_WRITER_REAL_PREFLIGHT.md`. Sem escrita real.
+
+Objetivo:
+
+- consolidar decisoes humanas obrigatorias antes de C6.2/C6.3;
+- definir politica de secrets para `api_key`, `api_url`, IDs reais, backup e
+  evidencia;
+- definir checklist tecnico antes de escrita real;
+- separar implementacao futura do writer real de execucao futura em placa;
+- definir pontos de abortar e estrategia para evitar inicio prematuro do
+  player.
+
+Validacao:
+
+- nenhuma config real lida, escrita ou alterada;
+- nenhum writer real implementado;
+- nenhuma placa acessada;
+- launcher, renderer, `systemd`, NetworkManager e `kiosky-player` fora do
+  escopo;
+- decisoes pendentes explicitadas antes de C6.2/C6.3.
+
+#### C6.2 - implementacao futura do writer real
+
+Status: futura. Nao implementada.
+
+Objetivo:
+
+- implementar writer real em tarefa separada;
+- manter testes preferencialmente em `/tmp` antes de qualquer placa;
+- usar validador C5.1 em `--real-dry-run`;
+- bloquear placeholders e ausencia de `api_key`;
+- implementar escrita atomica, permissoes, backup e rollback conforme decisoes
+  C6.1-preflight.
+
+Validacao:
+
+- self-test/local dry-run sem tocar `/data`;
+- nenhum secret em stdout, log, summary, status ou evidencia;
+- candidato real nao versionado;
+- escrita real em `/data/config/config.json` continua bloqueada ate C6.3.
+
+#### C6.3 - execucao futura em placa de desenvolvimento
 
 Status: futura. Nao executada.
 
 Objetivo:
 
-- executar writer real apenas na placa de desenvolvimento;
+- executar writer real aprovado apenas na placa de desenvolvimento;
 - validar escrita atomica, permissao e rollback;
 - preservar ultima config valida quando existir;
 - manter player bloqueado se a config falhar.
 
 Validacao:
 
-- execucao autorizada por humano;
+- execucao autorizada por humano apos C6.1-preflight e C6.2;
 - `/data/config/config.json` escrito somente pelo writer real aprovado;
 - falha parcial nao vira config ativa;
 - player inicia somente apos config real valida;
