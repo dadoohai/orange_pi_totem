@@ -186,7 +186,8 @@ Documentos:
 - `docs/product/26_C5_1_CONFIG_CONTRACT_VALIDATOR.md`;
 - `docs/product/28_C6_0_CONFIG_WRITER_REAL_PLANO.md`;
 - `docs/product/29_C6_1_CONFIG_WRITER_REAL_PREFLIGHT.md`;
-- `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`.
+- `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`;
+- `docs/DECISIONS/ADR-0010-api-token-provisioning.md`.
 
 Objetivo:
 
@@ -223,7 +224,8 @@ Refinamento C1:
 - foco no caso `config_missing` com sistema/servico/launcher funcionando e HDMI
   conectado;
 - operador informa apenas `environment_id`;
-- `api_key` fica fora da UI e deve vir de env, mock ou provisionamento separado;
+- `api_key`/token fica fora da UI e, conforme ADR-0010, pode vir de
+  provisionamento local privado em C6;
 - ativacao por codigo, login e lista de ambientes ficam como alternativas
   futuras;
 - primeira inicializacao completa de cartao Armbian virgem fica para fase
@@ -472,6 +474,8 @@ futuras.
 Objetivo:
 
 - gravar config minima real somente depois de C5;
+- usar provisionamento local privado de `api_key`/token como caminho de
+  desenvolvimento conforme ADR-0010;
 - validar todos os campos obrigatorios antes de substituir;
 - usar escrita atomica;
 - preservar ultima config valida quando existir;
@@ -492,7 +496,8 @@ Status: plano documental criado em
 Objetivo:
 
 - planejar escrita real de `/data/config/config.json`;
-- definir origem real da `api_key`;
+- definir origem real da `api_key`/token por provisionamento local privado em
+  desenvolvimento;
 - definir ownership, permissoes, backup, rollback e criterio de falha;
 - definir como queda de energia sera testada;
 - definir criterio para launcher iniciar player somente com config valida;
@@ -515,8 +520,8 @@ Status: checklist documental criado em
 Objetivo:
 
 - consolidar decisoes humanas obrigatorias antes de C6.2/C6.3;
-- definir politica de secrets para `api_key`, `api_url`, IDs reais, backup e
-  evidencia;
+- definir politica de secrets para `api_key`/token, `api_url`, IDs reais,
+  backup e evidencia;
 - definir checklist tecnico antes de escrita real;
 - separar implementacao futura do writer real de execucao futura em placa;
 - definir pontos de abortar e estrategia para evitar inicio prematuro do
@@ -539,6 +544,8 @@ Objetivo:
 
 - implementar writer real em tarefa separada;
 - manter testes preferencialmente em `/tmp` antes de qualquer placa;
+- consumir candidata privada local quando houver dados reais, sem Codex ver
+  `api_key`/token;
 - usar validador C5.1 em `--real-dry-run`;
 - bloquear placeholders e ausencia de `api_key`;
 - implementar escrita atomica, permissoes, backup e rollback conforme decisoes
@@ -578,6 +585,8 @@ Objetivo:
 
 - reavaliar alternativas mais completas depois do minimo funcionar;
 - decidir entre codigo curto, login/lista de ambientes ou outro mecanismo;
+- implementar, em fase futura, emissao de token de dispositivo/station pelo
+  backend quando essa direcao for aprovada;
 - integrar backend apenas com seguranca e expiracao definidas;
 - remover necessidade de `environment_id` manual se a solucao escolhida
   substituir esse fluxo.
@@ -585,6 +594,9 @@ Objetivo:
 Validacao:
 
 - operador continua sem manipular `api_key`;
+- runtime do totem nao depende de token permanente de usuario humano;
+- token de dispositivo/station e escopado, revogavel, rotacionavel e
+  auditavel antes de producao/campo;
 - erros de backend nao vazam URL, payload ou regra interna;
 - fluxo nao regride C6.
 

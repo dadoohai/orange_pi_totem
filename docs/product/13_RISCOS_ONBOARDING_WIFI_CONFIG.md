@@ -19,6 +19,9 @@ writer.
 | Usuario configurar rede errada | Totem fica sem internet ou associado a rede inadequada. | Confirmacao visual, teste de conectividade, possibilidade de voltar/trocar rede e nao apagar conexao anterior valida antes da nova passar. | C4 |
 | `environment_id` digitado errado | Totem pode apontar para ambiente incorreto ou ficar sem conteudo esperado. | Validar formato minimo, pedir confirmacao antes de salvar, nao publicar o valor em status/diagnostico e deixar validacao backend para fase futura. | C1, C5, C6 |
 | `api_key` mal provisionada por env/mock/provisionamento | Operador completa a UI, mas player nao consegue operar ou falha em loop. | Preflight deve bloquear salvamento/inicio se `api_key` externa estiver ausente, publicar erro seguro e manter checklist de provisionamento separado da UI. | C1, C5, C6 |
+| Token de runtime virar token global | Uma credencial compartilhada por muitos totens aumenta blast radius e dificulta auditoria. | ADR-0010 rejeita token global para producao; futuro deve usar token por dispositivo/station, escopado, revogavel, rotacionavel e auditavel. | C6, C7 |
+| Token de usuario humano usado no runtime | Compromete conta humana, mistura autorizacao de provisionamento com operacao do aparelho e dificulta revogacao segura. | ADR-0010 define token de runtime do totem, nao token permanente de usuario humano; login futuro deve apenas autorizar emissao de token do dispositivo. | C6, C7 |
+| Ausencia de revogacao/rotacao de token | Token vazado ou antigo continua valido indefinidamente. | Planejar emissao, revogacao e rotacao pelo backend antes de producao/campo; manter C6 como provisionamento local de desenvolvimento. | C6, C7 |
 | Config parcial ou substituicao sem validacao | Player inicia com config incompleta, falha em loop ou vaza erro interno. | Config writer atomico, validador dry-run antes de C6, validacao de schema e paths antes de substituir, preservar ultima config valida e publicar erro publico. | C5, C5.1, C6 |
 | Mock C5 ser confundido com config real | Operador, suporte ou desenvolvimento pode tratar `config.candidate.mock.json` como configuracao ativa ou pronta para campo. | Nomear arquivos como mock, gravar somente em `/tmp`, documentar que C5 nao altera config real, validar em C5.1 e exigir C6 separado para `/data/config/config.json`. | C5, C5.1 |
 | `api_key` mock virar producao | Placeholder pode ser copiado para config real e mascarar erro de provisionamento. | Usar `API_KEY_MOCK_NOT_FOR_PRODUCTION`, bloquear placeholders em `--real-dry-run`, bloquear secrets reais em evidencia, revisar antes de C6 e exigir origem real aprovada fora da UI. | C5, C5.1, C6 |
@@ -87,6 +90,10 @@ writer.
   controlado e evidencia sanitizada.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
   provisionada.
+- Qualquer uso de token global compartilhado como desenho de producao.
+- Qualquer runtime dependente de token permanente de usuario humano.
+- Qualquer token de campo sem plano de revogacao, rotacao, escopo minimo e
+  auditoria.
 - Qualquer backup de config publicado ou com permissao ampla.
 - Qualquer launcher iniciando player antes da validacao completa da config.
 - Qualquer fluxo que trate `environment_id` manual como ativacao definitiva sem

@@ -103,6 +103,22 @@ O validador e o writer futuro devem registrar apenas estados agregados, como
 `api_key_present=true/false`, `placeholder_detected=true/false`, validacao
 passou/falhou e permissoes observadas, sem imprimir valores sensiveis.
 
+## Decisao ADR-0010 - token de runtime e provisionamento local
+
+ADR-0010 define que, para C6, a origem inicial da `api_key`/token sera
+provisionamento local privado fora do Codex. O token e credencial de runtime do
+totem, nao token de usuario humano.
+
+Regras para C6.2/C6.3:
+
+- dados reais chegam por canal local privado, fora do Git, chat, README e
+  evidencia;
+- operador nao digita token na UI;
+- Codex nao ve token;
+- evidencia registra apenas `api_key_present=true/false` e
+  `placeholder_detected=true/false`;
+- ativacao, login, lista de ambientes e codigo curto ficam para fase futura.
+
 ## Estrategia de entrada de dados reais
 
 Alternativas aceitas para avaliacao:

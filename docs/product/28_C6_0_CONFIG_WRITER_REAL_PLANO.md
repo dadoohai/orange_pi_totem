@@ -54,6 +54,13 @@ nao substitui a execucao controlada futura C6.1.
 - Deve usar candidato validado em `--real-dry-run`.
 - Deve produzir evidencia sanitizada e rollback testado.
 
+Nota posterior: apos C6.1-preflight, a sequencia foi refinada para
+C6.1-preflight documental, C6.2 implementacao futura do writer real e C6.3
+execucao futura em placa de desenvolvimento. Com ADR-0010, C6.1/C6.2/C6.3
+podem avancar usando token provisionado localmente em canal privado, sem
+publicar valores reais. Producao futura deve migrar para emissao, revogacao e
+rotacao de token pelo backend.
+
 ## Bloqueios obrigatorios antes de C6.1
 
 C6.1 nao deve iniciar enquanto qualquer item abaixo estiver pendente:
@@ -78,8 +85,13 @@ secret.
 
 ## Origem da api_key
 
-A origem real da `api_key` nao deve ser decidida automaticamente por C6.0. As
-alternativas a avaliar sao:
+ADR-0010 define a decisao proposta para destravar C6: manter o modelo API +
+token e tratar `api_key`/token como credencial de runtime do totem, nao como
+token de usuario humano. Para C6.1-preflight, C6.2 e C6.3, a origem inicial
+aceita e provisionamento local privado da config real, fora do Git, fora do
+Codex e fora de README/evidencia.
+
+Alternativas historicas avaliadas em C6.0:
 
 - variavel de ambiente;
 - arquivo provisionado separado;
@@ -94,8 +106,11 @@ Regras:
 - backup nao deve ser publicado;
 - writer real deve bloquear salvamento se a origem aprovada da `api_key` nao
   estiver disponivel;
-- se a origem for arquivo provisionado separado, ownership, permissoes e ciclo
-  de vida desse arquivo precisam de plano proprio antes de C6.1.
+- se a origem for arquivo provisionado separado ou candidata privada local,
+  ownership, permissoes e ciclo de vida desse arquivo precisam de plano proprio
+  antes de C6.3;
+- producao futura deve migrar para emissao, revogacao e rotacao de token por
+  backend, preferencialmente por dispositivo/station e com escopo minimo.
 
 ## Regras para api_url
 
