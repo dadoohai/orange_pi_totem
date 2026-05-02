@@ -89,19 +89,33 @@ Mesmo quando C4.1 for autorizado, continuam proibidos:
 Os comandos abaixo sao apenas candidatos para revisao humana em C4.1. Nao foram
 executados em C4.0.
 
+## Regra de senha e secrets na execucao C4.1
+
+Senha Wi-Fi nunca deve aparecer em linha de comando registrada. A senha tambem
+nao deve aparecer em README, chat, terminal copiado, historico, script, arquivo
+temporario versionavel ou evidencia.
+
+Se senha for necessaria, ela deve ser digitada interativamente por humano ou
+usada em rede de teste descartavel conforme procedimento aprovado. Comandos em
+documentos devem usar placeholders e nunca devem conter valor real de senha.
+
+Qualquer saida que ecoe senha, SSID real ou nome de conexao real vira artefato
+bruto proibido. Se houver duvida sobre exposicao da senha, abortar antes do
+comando.
+
 ### Permitidos somente em C4.1 com aprovacao
 
 Usar placeholders em documentacao, revisao e evidencia:
 
 - `WIFI_TEST_SSID`;
-- `WIFI_TEST_PASSWORD`;
-- `WIFI_TEST_CONNECTION_NAME`.
+- `WIFI_TEST_CONNECTION_NAME`;
+- senha: fornecida interativamente pelo humano, nao registrada.
 
 Candidatos a revisar:
 
 ```sh
 nmcli connection add type wifi ifname "*" con-name WIFI_TEST_CONNECTION_NAME ssid WIFI_TEST_SSID
-nmcli connection modify WIFI_TEST_CONNECTION_NAME wifi-sec.key-mgmt wpa-psk wifi-sec.psk WIFI_TEST_PASSWORD
+# inserir segredo somente por metodo seguro aprovado; nao registrar senha inline
 nmcli connection up WIFI_TEST_CONNECTION_NAME
 nmcli -t -f DEVICE,TYPE,STATE device status
 nmcli -t -f NAME,TYPE,DEVICE connection show --active
@@ -117,8 +131,8 @@ Observacoes:
   manter a publicacao sanitizada;
 - qualquer comando que mostre SSID, senha, IP, gateway ou nome real deve ter
   saida tratada como artefato bruto nao versionavel;
-- a senha de teste nao deve aparecer em README, issue, PR, commit, chat ou
-  arquivo persistente do repositorio.
+- a senha de teste nao deve aparecer em linha de comando, README, issue, PR,
+  commit, chat, historico, script ou arquivo persistente do repositorio.
 
 ### Proibidos mesmo em C4.1
 
@@ -189,16 +203,18 @@ Sequencia futura, sem execucao em C4.0:
 4. Rodar C3 snapshot antes.
 5. Confirmar no agregado que Ethernet esta preservada.
 6. Criar perfil Wi-Fi de teste com `WIFI_TEST_CONNECTION_NAME`.
-7. Tentar conectar usando `WIFI_TEST_SSID` e `WIFI_TEST_PASSWORD`.
-8. Verificar estado por C3 ou leitura local tratada como artefato bruto.
-9. Registrar sucesso ou erro sanitizado.
-10. Desconectar e remover somente o perfil de teste, se necessario para
+7. Inserir senha por metodo seguro aprovado, sem registro em comando ou
+   evidencia.
+8. Tentar conectar usando `WIFI_TEST_SSID` e `WIFI_TEST_CONNECTION_NAME`.
+9. Verificar estado por C3 ou leitura local tratada como artefato bruto.
+10. Registrar sucesso ou erro sanitizado.
+11. Desconectar e remover somente o perfil de teste, se necessario para
     rollback ou encerramento.
-11. Rodar C3 snapshot depois.
-12. Comparar estados agregados antes/depois.
-13. Confirmar Ethernet preservada.
-14. Registrar evidencia README sanitizada.
-15. Nao versionar artefatos brutos.
+12. Rodar C3 snapshot depois.
+13. Comparar estados agregados antes/depois.
+14. Confirmar Ethernet preservada.
+15. Registrar evidencia README sanitizada.
+16. Nao versionar artefatos brutos.
 
 ## Criterios de sucesso
 

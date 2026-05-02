@@ -346,8 +346,9 @@ Validacao:
 
 ### C4 - Wi-Fi real controlado em bancada
 
-Status: C4.0 em planejamento de bancada; C4.1 sera execucao futura controlada
-somente apos aprovacao humana explicita.
+Status: C4.0 aprovado/documentado como plano de bancada; C4.1-preflight
+documentado; C4.1 sera execucao futura controlada somente apos
+aprovacao humana explicita.
 
 Objetivo:
 
@@ -361,6 +362,8 @@ Validacao:
 
 - C4.0 documenta pre-condicoes, comandos candidatos, rollback, criterios de
   sucesso/aborto e evidencia esperada;
+- C4.1-preflight documenta decisoes humanas finais, regra de senha sem registro
+  e roteiro comando a comando sem execucao;
 - C4.1 so executa comandos mutaveis em placa de desenvolvimento, com rede de
   teste, operador humano e acesso fisico;
 - senha errada ou falha de conexao recupera sem vazar credencial;
