@@ -12,6 +12,10 @@ seguro para inserir credencial fora do Codex. Nenhuma tentativa de Wi-Fi foi
 feita. Codex rodou apenas diagnosticos C3 read-only e registrou evidencia
 sanitizada.
 
+Nota de processo: C4.2 tambem revelou bloqueio operacional. Sem terminal local
+ou SSH humano fora do Codex, nao ha canal seguro para inserir credencial
+enquanto o player esta rodando na tela.
+
 ## Escopo
 
 - Placa: desenvolvimento.

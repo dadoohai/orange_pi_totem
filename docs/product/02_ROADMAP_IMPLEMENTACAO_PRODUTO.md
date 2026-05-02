@@ -348,8 +348,9 @@ Validacao:
 
 Status: C4.0 aprovado/documentado como plano de bancada; C4.1-preflight
 documentado; primeira rodada C4.1 abortada com seguranca antes de inserir
-senha; C4.1-postmortem concluido; C4.2 hibrido/local e o proximo caminho
-recomendado, com credencial fora do agente.
+senha; C4.1-postmortem concluido; C4.2 hibrido/local abortado com seguranca
+antes da acao local; C4.3 define canal seguro de credencial como proximo
+passo de processo; canal humano/local escolhido como SSH proprio fora do Codex.
 
 Objetivo:
 
@@ -371,7 +372,12 @@ Validacao:
   historico, script ou evidencia;
 - C4.2 define o roteiro hibrido/local com Codex rodando C3 antes/depois/final e
   humano executando a etapa sensivel fora do agente;
-- execucao real de conexao Wi-Fi so deve ocorrer apos checklist C4.2 aprovado;
+- C4.2 validou o processo de abort seguro sem tentativa Wi-Fi, com player ainda
+  em execucao, Ethernet preservada e nada escrito em `/data`;
+- C4.3 definiu canal humano/local seguro para inserir credencial: SSH proprio
+  do humano fora do Codex;
+- proxima execucao real de conexao Wi-Fi deve usar esse canal para a etapa
+  sensivel e manter Codex restrito a C3/evidencia sanitizada;
 - senha errada ou falha de conexao recupera sem vazar credencial;
 - Ethernet nao e derrubada indevidamente;
 - rollback remove somente perfil de teste;
