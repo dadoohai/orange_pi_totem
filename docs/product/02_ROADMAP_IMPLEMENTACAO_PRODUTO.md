@@ -346,21 +346,30 @@ Validacao:
 
 ### C4 - Wi-Fi real controlado em bancada
 
-Status: planejada.
+Status: C4.0 em planejamento de bancada; C4.1 sera execucao futura controlada
+somente apos aprovacao humana explicita.
 
 Objetivo:
 
-- testar alteracao real de Wi-Fi apenas em bancada;
+- planejar e depois testar alteracao real de Wi-Fi apenas em bancada;
 - preservar Ethernet como recuperacao;
-- usar snapshots antes/depois;
-- documentar rollback de conexoes.
+- usar C3 sanitizado antes/depois;
+- documentar rollback de NetworkManager antes de executar;
+- manter C4 fora de hotspot, portal local, config writer e producao.
 
 Validacao:
 
-- senha errada recupera sem vazar credencial;
-- conexao sem internet mostra erro claro;
+- C4.0 documenta pre-condicoes, comandos candidatos, rollback, criterios de
+  sucesso/aborto e evidencia esperada;
+- C4.1 so executa comandos mutaveis em placa de desenvolvimento, com rede de
+  teste, operador humano e acesso fisico;
+- senha errada ou falha de conexao recupera sem vazar credencial;
 - Ethernet nao e derrubada indevidamente;
-- reboot nao deixa NetworkManager em estado ambiguo.
+- rollback remove somente perfil de teste;
+- reboot nao e criterio obrigatorio e NetworkManager nao pode ficar em estado
+  ambiguo;
+- nenhum hotspot, portal, config writer, `/data/config/config.json` ou player
+  e alterado em C4.
 
 ### C5 - config writer minimo/mock
 
