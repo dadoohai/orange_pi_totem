@@ -44,6 +44,10 @@ writer.
 | Player iniciar automaticamente durante escrita | Servico ativo pode perceber arquivo parcial, temporario ou config ainda nao revalidada e iniciar o player cedo demais. | C6.1-preflight exige decisao sobre servico parado, config path temporario, bloqueio do launcher ou override temporario; C6.3 aborta se esse controle nao estiver claro. | C6.1-preflight, C6.3 |
 | Escrever config valida com servico ativo | O launcher pode observar `/data/config/config.json`, considerar a config valida e iniciar o player antes da evidencia, revalidacao ou rollback estarem completos. | C6.3-preflight inspeciona estado do servico sem alterar nada; C6.3 deve ocorrer com servico parado ou bloqueio operacional equivalente aprovado. | C6.3-preflight, C6.3 |
 | Player iniciar antes de evidencia/rollback | Se o player iniciar logo apos o rename, falhas de backend, DRM ou config podem ocorrer antes da coleta de permissao, backup e rollback. | Separar preflight read-only, escrita real e verificacao; manter rollback pronto; religar/iniciar player somente quando aprovado. | C6.3 |
+| Parar servico sem plano de retomada | A placa pode ficar sem player/renderer esperado ou sem observacao clara apos a escrita real. | C6.3.0 exige decisao humana previa sobre manter parado ou iniciar, observer minimo e criterio de retorno. | C6.3.0, C6.3 |
+| Backup real conter secret | Backup da config atual pode carregar `api_key`, URL privada e IDs reais, mesmo quando a evidencia estiver sanitizada. | Backup real deve ter permissao restrita, nao ser versionado, nao ser copiado para evidencia e aparecer apenas como estado agregado. | C6.3 |
+| Rollback com servico ativo | Restaurar backup enquanto o servico observa a config pode iniciar player com estado antigo ou parcialmente restaurado. | C6.3.0 define rollback com `kiosky-player.service` parado e confirmacao de que permanece parado antes/depois da restauracao. | C6.3.0, C6.3 |
+| Evidencia C6.3 publicar estado sensivel | Mesmo sem conteudo da config, outputs brutos podem revelar endpoint, IDs, payload, paths privados ou detalhes operacionais. | Evidencia C6.3 deve ser README sanitizado, sem logs/journal brutos, sem candidata, sem config, sem backup e sem valores reais. | C6.3.0, C6.3 |
 | Preflight ler ou publicar config real | Um preflight descuidado pode vazar `api_key`, URL privada, ambiente ou station antes mesmo da escrita real. | C6.3-preflight usa apenas `stat`, `test`, `id`, `getent` e `systemctl` read-only, nao usa `cat`/`jq`/`grep` no conteudo e registra apenas estado agregado. | C6.3-preflight |
 | Evidencia publicar `api_url`, `environment_id` ou `station_id` reais | Mesmo sem `api_key`, evidencia pode revelar ambiente, cliente, endpoint privado ou identificador operacional. | README de C6.3 deve ser sanitizado, com apenas passou/falhou, presenca de `api_key`, backup, permissoes e conclusao; valores reais ficam fora de chat/log/evidencia. | C6.1-preflight, C6.3 |
 | C1 confundida com producao ou ativacao definitiva | Escopo documental minimo pode ser tratado como release de campo ou substituir indevidamente ativacao por codigo. | Marcar C1 como proposta/documentacao, preservar separacao RC1/desenvolvimento/producao e manter ADR-0008 como visao futura. | C1-C2 |
@@ -97,6 +101,10 @@ writer.
 - Qualquer C6.3-preflight que leia ou publique conteudo de config real.
 - Qualquer C6.3 sem `--real-dry-run` limpo, backup/rollback definido, servico
   controlado e evidencia sanitizada.
+- Qualquer C6.3 real que escreva config valida com `kiosky-player.service`
+  ativo/running, salvo bloqueio operacional equivalente aprovado.
+- Qualquer parada de servico sem decisao humana previa sobre manter parado,
+  iniciar controladamente ou executar rollback.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
   provisionada.
 - Qualquer uso de token global compartilhado como desenho de producao.
@@ -132,6 +140,8 @@ writer.
 - C6.3-preflight: inspecao read-only na placa de desenvolvimento, sem ler
   conteudo de config real, com estado sanitizado de `/data/config`, usuario,
   grupo e servico.
+- C6.3.0: plano documental de execucao real com servico parado ou bloqueio
+  equivalente, criterios de abortar, rollback e decisao humana para start.
 - C6.3: execucao futura em placa de desenvolvimento, com `--real-dry-run`
   limpo, backup/rollback, servico controlado, config escrita somente se
   autorizado e evidencia sanitizada.

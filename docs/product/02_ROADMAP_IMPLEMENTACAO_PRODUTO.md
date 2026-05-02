@@ -247,6 +247,7 @@ Sequencia incremental refinada:
 - C6.2 - writer real simulado em `/tmp`, sem tocar `/data`;
 - C6.2.1 - smoke na placa de desenvolvimento, ainda somente em `/tmp`;
 - C6.3-preflight - inspecao read-only da placa antes da escrita real;
+- C6.3.0 - plano de execucao real com servico parado;
 - C6.3 - execucao futura em placa de desenvolvimento;
 - C7 - ativacao por codigo, login ou lista de ambientes;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
@@ -474,7 +475,8 @@ Validacao:
 Status: C6.0 plano concluido; C6.1-preflight documental concluido; C6.2
 writer real simulado em `/tmp` concluido localmente; C6.2.1 smoke na placa de
 desenvolvimento em `/tmp` concluido; C6.3-preflight read-only na placa
-concluido; C6.3 execucao real futura.
+concluido; C6.3.0 plano de execucao com servico parado concluido; C6.3
+execucao real futura.
 
 Objetivo:
 
@@ -624,6 +626,29 @@ Validacao:
   aprovado;
 - C6.3 execucao real continua pendente.
 
+#### C6.3.0 - plano de execucao com servico parado
+
+Status: plano documental criado em
+`docs/product/32_C6_3_EXECUCAO_CONFIG_REAL_SERVICO_PARADO.md`. Sem escrita real
+em `/data` e sem tocar a placa.
+
+Objetivo:
+
+- transformar a recomendacao do preflight em plano de execucao real;
+- exigir C6.3 com `kiosky-player.service` parado ou bloqueio equivalente;
+- preservar backup e rollback antes da primeira escrita real;
+- validar pos-escrita antes de qualquer decisao de iniciar player;
+- manter decisao humana explicita para start do servico.
+
+Validacao:
+
+- C6.3-preflight read-only concluido e servico ativo/running detectado;
+- escrita com servico ativo considerada bloqueada;
+- sequencia futura documentada: preflight final, parada do servico, backup,
+  candidata real privada, escrita atomica, pos-validacao, decisao de servico e
+  evidencia sanitizada;
+- C6.3 execucao real continua pendente.
+
 #### C6.3 - execucao futura em placa de desenvolvimento
 
 Status: futura. Nao executada.
@@ -632,16 +657,19 @@ Objetivo:
 
 - executar writer real aprovado apenas na placa de desenvolvimento;
 - executar com `/data/config/config.json` real somente em fase separada;
+- executar com `kiosky-player.service` parado ou bloqueio operacional
+  equivalente aprovado;
 - validar escrita atomica, permissao e rollback;
 - preservar ultima config valida quando existir;
 - manter player bloqueado se a config falhar.
 
 Validacao:
 
-- execucao autorizada por humano apos C6.1-preflight e C6.2;
+- execucao autorizada por humano apos C6.1-preflight, C6.2, C6.2.1,
+  C6.3-preflight e C6.3.0;
 - `/data/config/config.json` escrito somente pelo writer real aprovado;
 - falha parcial nao vira config ativa;
-- player inicia somente apos config real valida;
+- player inicia somente apos config real valida e decisao humana explicita;
 - evidencia sanitizada sem `api_key`, URL privada, IDs reais ou payload.
 
 ### C7 - ativacao por codigo, login ou lista de ambientes
