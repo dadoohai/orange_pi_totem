@@ -350,11 +350,13 @@ Validacao:
 
 Status: C4.0 aprovado/documentado como plano de bancada; C4.1-preflight
 documentado; primeira rodada C4.1 abortada com seguranca antes de inserir
-senha; C4.1-postmortem concluido; C4.2 hibrido/local abortado com seguranca
-antes da acao local; C4.3 define canal seguro de credencial como proximo
-passo de processo; canal humano/local escolhido como SSH proprio fora do Codex;
-C4 hibrido validou conexao Wi-Fi de teste por humano fora do Codex; C4.5
-registrou remocao local da configuracao de teste.
+senha; C4.1-postmortem concluido; C4.2 hibrido/local consolidou o modelo
+humano fora do Codex, com C3 antes/depois/final e retorno humano sanitizado;
+C4.3 define canal seguro de credencial como proximo passo de processo; canal
+humano/local escolhido como SSH proprio fora do Codex; C4 hibrido validou
+conexao Wi-Fi de teste por humano fora do Codex; C4.5 registrou remocao local
+da configuracao de teste. C4 esta pausado/fechado temporariamente apos C4.5,
+com backlog explicito em `docs/product/27_C4_WIFI_BACKLOG_E_GATES.md`.
 
 Objetivo:
 
@@ -376,8 +378,8 @@ Validacao:
   historico, script ou evidencia;
 - C4.2 define o roteiro hibrido/local com Codex rodando C3 antes/depois/final e
   humano executando a etapa sensivel fora do agente;
-- C4.2 validou o processo de abort seguro sem tentativa Wi-Fi, com player ainda
-  em execucao, Ethernet preservada e nada escrito em `/data`;
+- C4.2 consolidou o modelo hibrido/local, mantendo Codex fora da credencial e
+  restrito a C3/evidencia sanitizada;
 - C4.3 definiu canal humano/local seguro para inserir credencial: SSH proprio
   do humano fora do Codex;
 - C4 hibrido validou conexao Wi-Fi de teste usando esse canal, mantendo Codex
@@ -385,7 +387,13 @@ Validacao:
 - C4.5 removeu o perfil/configuracao de teste por acao humana local e C3 final
   permaneceu saudavel;
 - internet/backend continuam nao testados;
-- proximo gate deve ser decidido: reboot/reconexao, C5 writer mock ou UX;
+- Wi-Fi ainda nao e produto final;
+- backlog futuro de Wi-Fi esta documentado em
+  `docs/product/27_C4_WIFI_BACKLOG_E_GATES.md`;
+- o avanco atual pode seguir por C5/C5.1/C6 sem assumir Wi-Fi como producao;
+- antes de produto/campo, voltar aos gates C4 de reboot/reconexao, falhas
+  controladas, adapter seguro, politica de credenciais, ciclo de vida de
+  perfis e contrato de estados;
 - senha errada ou falha de conexao recupera sem vazar credencial;
 - Ethernet nao e derrubada indevidamente;
 - rollback remove somente perfil de teste;
