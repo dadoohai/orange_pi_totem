@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dadooh - C8.4.0 manutencao minima</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar" aria-label="Contexto">
+        <div class="brand">Dadooh</div>
+        <p>Configure o totem para iniciar a exibicao.</p>
+        <ol class="step-list" aria-label="Fluxo">
+          <li>Configuracao pendente</li>
+          <li>Selecionar ambiente</li>
+          <li>Orientacao da tela</li>
+          <li>Configuracao de teste pronta</li>
+          <li class="secondary-step">Manutencao</li>
+        </ol>
+      </aside>
+
+      <section class="workspace" aria-live="polite">
+        <article class="screen" data-screen="pending">
+          <span class="tag">config_missing</span>
+          <h1>Configuracao pendente</h1>
+          <p>O totem precisa de uma configuracao antes de iniciar a exibicao.</p>
+          <div class="actions">
+            <button class="primary" type="button">Iniciar configuracao</button>
+            <button class="secondary" type="button" data-next="maintenance">Suporte / manutenção</button>
+          </div>
+        </article>
+
+        <article class="screen hidden" data-screen="maintenance">
+          <span class="tag">MODO DE TESTE</span>
+          <h1>Manutenção</h1>
+          <p>Ações de teste para suporte. Nesta etapa, nada real será reiniciado, apagado ou alterado.</p>
+          <div class="maintenance-list">
+            <section class="maintenance-item">
+              <div>
+                <strong>Reiniciar exibição</strong>
+                <p>Ação futura de suporte. Nesta etapa, nenhum player será reiniciado.</p>
+              </div>
+              <button class="secondary" type="button" data-maintenance-result="restart">Registrar ação de teste</button>
+            </section>
+
+            <section class="maintenance-item">
+              <div>
+                <strong>Limpar configuração de teste</strong>
+                <p>Simula a volta para configuração pendente. Nesta etapa, nenhuma configuração real será apagada.</p>
+              </div>
+              <label class="confirm-row">
+                <input id="reset-confirmation" type="checkbox" />
+                <span>Entendo que esta é uma simulação e não apaga dados reais.</span>
+              </label>
+              <button class="secondary" type="button" data-maintenance-result="reset" disabled>Registrar ação de teste</button>
+            </section>
+          </div>
+          <div class="actions">
+            <button class="secondary" type="button" data-next="pending">Voltar</button>
+          </div>
+        </article>
+
+        <article class="screen hidden" data-screen="result">
+          <span class="tag">maintenance_result</span>
+          <h1 id="result-title">Simulacao registrada</h1>
+          <p class="success">Simulação registrada em /tmp. Nenhuma ação real foi executada.</p>
+          <div class="result-box">
+            <strong id="result-message">Registro mock/local gerado com status e resumo sanitizados.</strong>
+            <p>Artefatos: maintenance-action-status.json e maintenance-summary.txt.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" type="button" data-next="maintenance">Voltar para manutenção</button>
+            <button class="secondary" type="button" data-next="pending">Voltar</button>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

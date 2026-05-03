@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""C8.3 minimal local setup server without real Wi-Fi.
+"""C8.4.0 minimal local setup and maintenance server without real actions.
 
 This tool is intentionally narrow. It serves a local HTTP UI, validates the
-operator input, and writes a mock/local config candidate under /tmp only. It
-does not access external network, does not call shell commands, does not read
-the real config, and does not write /data or /opt.
+operator input, writes a mock/local config candidate under /tmp only, and
+records mock maintenance actions under /tmp only. It does not access external
+network, does not call shell commands, does not read the real config, and does
+not write /data or /opt.
 """
 
 from __future__ import annotations
@@ -29,7 +30,8 @@ sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
 
-SCHEMA_VERSION = "dadooh-c8.3-setup-rotation-mock-local.v1"
+SCHEMA_VERSION = "dadooh-c8.4.0-setup-maintenance-mock-local.v1"
+MAINTENANCE_SCHEMA_VERSION = "dadooh-c8.4.0-maintenance-action-mock-local.v1"
 DEFAULT_BIND = "127.0.0.1"
 DEFAULT_PORT = 8766
 DEFAULT_OUT_DIR = "/tmp/dadooh-c8-1-setup-minimo"
@@ -37,6 +39,8 @@ DEFAULT_OUT_DIR = "/tmp/dadooh-c8-1-setup-minimo"
 CANDIDATE_FILENAME = "candidate-config.json"
 STATUS_FILENAME = "status.json"
 SUMMARY_FILENAME = "summary.txt"
+MAINTENANCE_STATUS_FILENAME = "maintenance-action-status.json"
+MAINTENANCE_SUMMARY_FILENAME = "maintenance-summary.txt"
 
 TMP_ROOT = pathlib.Path("/tmp").resolve()
 PRIVATE_DIR_MODE = 0o700
@@ -48,6 +52,7 @@ SAFE_PLACEHOLDER_API_KEY = contract.MOCK_API_KEY
 SAFE_PLACEHOLDER_STATION_ID = contract.MOCK_STATION_ID
 
 ALLOWED_ROTATIONS = {0, 90, 180, 270}
+RESET_CONFIRMATION_TEXT = "Entendo que esta é uma simulação e não apaga dados reais."
 
 ROTATION_OPTIONS: tuple[dict[str, str | int], ...] = (
     {
@@ -107,6 +112,29 @@ MOCK_ENVIRONMENTS: tuple[dict[str, str], ...] = (
 MOCK_ENVIRONMENT_BY_KEY = {item["key"]: item for item in MOCK_ENVIRONMENTS}
 SELECTION_MODE_MOCK = "mock_list"
 SELECTION_MODE_MANUAL = "manual_advanced"
+
+MAINTENANCE_ACTIONS: tuple[dict[str, str | bool], ...] = (
+    {
+        "id": "restart_player_mock",
+        "label": "Reiniciar exibição",
+        "description": "Ação futura de suporte. Nesta etapa, nenhum player será reiniciado.",
+        "result_title": "Reinicio de exibicao simulado",
+        "result_message": "Nenhum player, MPV ou servico foi reiniciado.",
+        "simulated_effect": "display_restart_would_be_requested",
+        "requires_confirmation": False,
+    },
+    {
+        "id": "reset_config_mock",
+        "label": "Limpar configuração de teste",
+        "description": "Simula a volta para configuração pendente. Nesta etapa, nenhuma configuração real será apagada.",
+        "result_title": "Limpeza de configuracao simulada",
+        "result_message": "Nenhuma configuracao real foi apagada.",
+        "simulated_effect": "setup_pending_would_be_requested",
+        "requires_confirmation": True,
+    },
+)
+
+MAINTENANCE_ACTION_BY_ID = {str(item["id"]): item for item in MAINTENANCE_ACTIONS}
 
 
 class SetupError(ValueError):
@@ -299,6 +327,21 @@ def public_rotation_options() -> list[dict[str, str | int]]:
     ]
 
 
+def public_maintenance_actions() -> list[dict[str, str | bool]]:
+    return [
+        {
+            "id": str(item["id"]),
+            "label": str(item["label"]),
+            "description": str(item["description"]),
+            "result_title": str(item["result_title"]),
+            "result_message": str(item["result_message"]),
+            "requires_confirmation": bool(item["requires_confirmation"]),
+            "confirmation_text": RESET_CONFIRMATION_TEXT if item["requires_confirmation"] else "",
+        }
+        for item in MAINTENANCE_ACTIONS
+    ]
+
+
 def resolve_rotation_selection(payload: dict[str, Any]) -> dict[str, str | int]:
     raw_key = payload.get("rotation_key")
     if raw_key is not None:
@@ -341,7 +384,7 @@ def build_candidate_config(environment_id: str, rotation: int, selection_mode: s
         "rotation_deg": rotation,
         "runtime_dir": "/tmp/kiosky",
         "setup_environment_source": selection_mode,
-        "setup_source": "c8.3-rotation-mock-local-no-wifi",
+        "setup_source": "c8.4.0-setup-maintenance-mock-local-no-wifi",
         "state_dir": "/data/state/kiosky-player",
         "station_id": SAFE_PLACEHOLDER_STATION_ID,
         "status_file": "/tmp/kiosky-status.json",
@@ -442,7 +485,7 @@ def build_status(
 def build_summary(status: dict[str, Any]) -> str:
     return "\n".join(
         [
-            "Dadooh C8.3 rotacao mock/local",
+            "Dadooh C8.4.0 setup e manutencao mock/local",
             "",
             f"schema_version: {status['schema_version']}",
             f"generated_at_utc: {status['generated_at_utc']}",
@@ -499,6 +542,177 @@ def assert_sanitized_outputs(out_dir: pathlib.Path, environment_id: str) -> None
     for value in (SAFE_PLACEHOLDER_API_KEY, SAFE_PLACEHOLDER_API_URL):
         if value in text:
             raise SetupError("privacy scan blocked credential or URL in status/summary")
+
+
+def maintenance_output_text(out_dir: pathlib.Path) -> str:
+    parts = []
+    for name in (MAINTENANCE_STATUS_FILENAME, MAINTENANCE_SUMMARY_FILENAME):
+        path = out_dir / name
+        if path.exists():
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
+
+def forbidden_text_variants(value: str) -> tuple[str, str]:
+    escaped = json.dumps(value, ensure_ascii=True)[1:-1]
+    return (value, escaped)
+
+
+def assert_sanitized_maintenance_outputs(out_dir: pathlib.Path) -> None:
+    text = maintenance_output_text(out_dir)
+    forbidden_values = (
+        SAFE_PLACEHOLDER_API_KEY,
+        SAFE_PLACEHOLDER_API_URL,
+        RESET_CONFIRMATION_TEXT,
+        "ENV-MOCK-LOJA-A",
+        "ENV-MOCK-RECEPCAO",
+        "ENV-MOCK-VITRINE",
+        "ENV-MOCK-MANUAL-BANCADA",
+    )
+    for value in forbidden_values:
+        for variant in forbidden_text_variants(value):
+            if variant and variant in text:
+                raise SetupError("privacy scan blocked sensitive maintenance output")
+    for marker in (
+        "api_key",
+        "token",
+        "secret",
+        "password",
+        "senha",
+        "ssid",
+        "hostname",
+        "gateway",
+        "raw_payload",
+    ):
+        if marker in text.lower():
+            raise SetupError("privacy scan blocked sensitive maintenance marker")
+
+
+def validate_maintenance_action(payload: dict[str, Any]) -> dict[str, str | bool]:
+    raw_action = payload.get("action")
+    if not isinstance(raw_action, str) or not raw_action.strip():
+        raise SetupError("maintenance action is required")
+
+    action_id = raw_action.strip()
+    action = MAINTENANCE_ACTION_BY_ID.get(action_id)
+    if action is None:
+        raise SetupError("unknown maintenance action")
+
+    if bool(action["requires_confirmation"]):
+        confirmation = payload.get("confirmation")
+        if confirmation != RESET_CONFIRMATION_TEXT:
+            raise SetupError("reset_config_mock requires explicit simulation confirmation")
+
+    return action
+
+
+def build_maintenance_status(generated_at: str, action: dict[str, str | bool]) -> dict[str, Any]:
+    requires_confirmation = bool(action["requires_confirmation"])
+    return {
+        "schema_version": MAINTENANCE_SCHEMA_VERSION,
+        "generated_at_utc": generated_at,
+        "state": "maintenance_action_mock_recorded",
+        "flow": "maintenance_mock_local_no_real_action",
+        "files": {
+            "maintenance_status": MAINTENANCE_STATUS_FILENAME,
+            "maintenance_summary": MAINTENANCE_SUMMARY_FILENAME,
+        },
+        "action": {
+            "id": action["id"],
+            "label": action["label"],
+            "result": "mock_success",
+            "requires_confirmation": requires_confirmation,
+            "confirmation_received": requires_confirmation,
+            "confirmation_text_written_to_status": False,
+            "simulated_effect": action["simulated_effect"],
+            "real_effect": "none",
+        },
+        "guardrails": {
+            "writes_only_under_tmp": True,
+            "real_config_read": False,
+            "real_config_written": False,
+            "data_written": False,
+            "opt_written": False,
+            "network_external_access": False,
+            "commands_executed": False,
+            "systemctl_called": False,
+            "service_changed": False,
+            "player_process_changed": False,
+            "player_restarted": False,
+            "mpv_called": False,
+            "backend_called": False,
+            "nmcli_called": False,
+            "network_changed": False,
+            "reset_real_executed": False,
+            "cache_deleted": False,
+        },
+        "privacy": {
+            "confirmation_text_written_to_status": False,
+            "confirmation_text_written_to_summary": False,
+            "operator_payload_written_to_status": False,
+            "operator_payload_written_to_summary": False,
+            "environment_id_raw_written_to_status": False,
+            "environment_id_raw_written_to_summary": False,
+            "credential_value_written_to_status": False,
+            "credential_value_written_to_summary": False,
+            "private_url_written_to_status": False,
+            "private_url_written_to_summary": False,
+        },
+    }
+
+
+def build_maintenance_summary(status: dict[str, Any]) -> str:
+    action = status["action"]
+    return "\n".join(
+        [
+            "Dadooh C8.4.0 manutencao mock/local",
+            "",
+            f"schema_version: {status['schema_version']}",
+            f"generated_at_utc: {status['generated_at_utc']}",
+            f"state: {status['state']}",
+            f"flow: {status['flow']}",
+            f"action_id: {action['id']}",
+            f"action_result: {action['result']}",
+            f"simulated_effect: {action['simulated_effect']}",
+            "real_effect: none",
+            "confirmation_required: " + str(action["requires_confirmation"]).lower(),
+            "confirmation_text_written_to_summary: false",
+            "maintenance_status: maintenance-action-status.json",
+            "maintenance_summary: maintenance-summary.txt",
+            "",
+            "Guardrails:",
+            "writes_only_under_tmp: true",
+            "real_config_read: false",
+            "real_config_written: false",
+            "data_written: false",
+            "opt_written: false",
+            "commands_executed: false",
+            "systemctl_called: false",
+            "service_changed: false",
+            "player_process_changed: false",
+            "player_restarted: false",
+            "mpv_called: false",
+            "nmcli_called: false",
+            "network_changed: false",
+            "reset_real_executed: false",
+            "cache_deleted: false",
+            "",
+            "Privacy:",
+            "operator_payload_written_to_summary: false",
+            "environment_id_raw_written_to_summary: false",
+            "credential_value_written_to_summary: false",
+            "private_url_written_to_summary: false",
+        ]
+    )
+
+
+def write_maintenance_artifacts(out_dir: pathlib.Path, action: dict[str, str | bool]) -> dict[str, Any]:
+    prepare_out_dir(out_dir)
+    status = build_maintenance_status(utc_timestamp(), action)
+    atomic_write_private_json(out_dir / MAINTENANCE_STATUS_FILENAME, status, out_dir)
+    atomic_write_private_text(out_dir / MAINTENANCE_SUMMARY_FILENAME, build_maintenance_summary(status), out_dir)
+    assert_sanitized_maintenance_outputs(out_dir)
+    return status
 
 
 def write_setup_artifacts(
@@ -630,6 +844,11 @@ HTML_PAGE = """<!doctype html>
         font-size: 13px;
         font-weight: 750;
       }
+      .steps span.secondary-step {
+        color: var(--muted);
+        background: #fafbfc;
+        border: 1px solid var(--line);
+      }
       .workspace {
         display: flex;
         align-items: center;
@@ -710,6 +929,10 @@ HTML_PAGE = """<!doctype html>
       }
       button.secondary {
         color: var(--muted);
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.52;
       }
       button.choice {
         min-width: 86px;
@@ -867,6 +1090,48 @@ HTML_PAGE = """<!doctype html>
         color: var(--muted);
         font-size: 14px;
       }
+      .maintenance-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .maintenance-item {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+      }
+      .maintenance-item strong {
+        display: block;
+        font-size: 18px;
+      }
+      .maintenance-item p {
+        font-size: 15px;
+      }
+      .confirm-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        color: var(--ink);
+        font-weight: 760;
+      }
+      .confirm-row input {
+        width: 18px;
+        min-height: 18px;
+        margin-top: 3px;
+      }
+      .maintenance-result {
+        display: grid;
+        gap: 10px;
+        margin-top: 24px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #f8fafc;
+      }
       .review {
         display: grid;
         gap: 10px;
@@ -926,6 +1191,7 @@ HTML_PAGE = """<!doctype html>
           <span>Orientacao da tela</span>
           <span>Revisao</span>
           <span>Configuracao de teste pronta</span>
+          <span class="secondary-step">Manutencao</span>
         </div>
       </aside>
       <section class="workspace">
@@ -938,12 +1204,15 @@ HTML_PAGE = """<!doctype html>
     <script>
       const environments = __ENVIRONMENTS_JSON__;
       const rotations = __ROTATIONS_JSON__;
+      const maintenanceActions = __MAINTENANCE_ACTIONS_JSON__;
       const state = {
         step: "pending",
         environmentMode: "mock",
         environmentKey: environments[0].key,
         manualEnvironmentId: "ENV-MOCK-MANUAL-BANCADA",
-        rotationKey: rotations[0].key
+        rotationKey: rotations[0].key,
+        resetSimulationConfirmed: false,
+        maintenanceResult: null
       };
       const screen = document.querySelector("#screen");
       const errorBox = document.querySelector("#error");
@@ -1002,6 +1271,32 @@ HTML_PAGE = """<!doctype html>
         `).join("");
       }
 
+      function maintenanceActionById(actionId) {
+        return maintenanceActions.find((item) => item.id === actionId);
+      }
+
+      function renderMaintenanceActions() {
+        return maintenanceActions.map((item) => {
+          const confirmation = item.requires_confirmation ? `
+            <label class="confirm-row">
+              <input type="checkbox" id="reset-confirmation" ${state.resetSimulationConfirmed ? "checked" : ""} />
+              <span>${escapeText(item.confirmation_text)}</span>
+            </label>
+          ` : "";
+          const disabled = item.requires_confirmation && !state.resetSimulationConfirmed ? "disabled" : "";
+          return `
+            <div class="maintenance-item">
+              <div>
+                <strong>${escapeText(item.label)}</strong>
+                <p>${escapeText(item.description)}</p>
+              </div>
+              ${confirmation}
+              <button class="secondary" type="button" data-maintenance-action="${escapeText(item.id)}" ${disabled}>Registrar ação de teste</button>
+            </div>
+          `;
+        }).join("");
+      }
+
       function render() {
         setError("");
         if (state.step === "pending") {
@@ -1009,7 +1304,10 @@ HTML_PAGE = """<!doctype html>
             <span class="tag">config_missing</span>
             <h1>Configuracao pendente</h1>
             <p>O totem precisa de uma configuracao antes de iniciar a exibicao.</p>
-            <div class="actions"><button class="primary" data-action="start">Iniciar configuracao</button></div>
+            <div class="actions">
+              <button class="primary" data-action="start">Iniciar configuracao</button>
+              <button class="secondary" data-action="maintenance">Suporte / manutenção</button>
+            </div>
           `;
         } else if (state.step === "start") {
           screen.innerHTML = `
@@ -1078,6 +1376,38 @@ HTML_PAGE = """<!doctype html>
               <button class="secondary" data-action="rotation">Voltar</button>
             </div>
           `;
+        } else if (state.step === "maintenance") {
+          screen.innerHTML = `
+            <span class="tag">MODO DE TESTE</span>
+            <h1>Manutenção</h1>
+            <p>Ações de teste para suporte. Nesta etapa, nada real será reiniciado, apagado ou alterado.</p>
+            <div class="maintenance-list">
+              ${renderMaintenanceActions()}
+            </div>
+            <div class="actions">
+              <button class="secondary" data-action="pending">Voltar</button>
+            </div>
+          `;
+        } else if (state.step === "maintenance_result") {
+          const result = state.maintenanceResult || {
+            title: "Simulacao registrada",
+            message: "Nenhuma acao real foi executada.",
+            actionId: "maintenance_mock"
+          };
+          screen.innerHTML = `
+            <span class="tag">maintenance_result</span>
+            <h1>${escapeText(result.title)}</h1>
+            <p class="ok">Simulação registrada em /tmp. Nenhuma ação real foi executada.</p>
+            <div class="maintenance-result">
+              <strong>${escapeText(result.message)}</strong>
+              <p>Registro mock/local gerado com status e resumo sanitizados.</p>
+              <p class="technical">action: ${escapeText(result.actionId)}</p>
+            </div>
+            <div class="actions">
+              <button class="secondary" data-action="maintenance">Voltar para manutenção</button>
+              <button class="secondary" data-action="pending">Voltar</button>
+            </div>
+          `;
         } else {
           const environment = selectedEnvironment();
           const rotation = selectedRotation();
@@ -1114,6 +1444,44 @@ HTML_PAGE = """<!doctype html>
         render();
       }
 
+      async function runMaintenanceAction(actionId) {
+        const action = maintenanceActionById(actionId);
+        if (!action) {
+          throw new Error("Acao de manutencao desconhecida.");
+        }
+        if (action.requires_confirmation && !state.resetSimulationConfirmed) {
+          throw new Error("Confirme que esta acao e uma simulacao antes de continuar.");
+        }
+        const payload = { action: action.id };
+        if (action.requires_confirmation) {
+          payload.confirmation = action.confirmation_text;
+        }
+        const response = await fetch("/api/maintenance-action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Nao foi possivel registrar a simulacao.");
+        }
+        state.maintenanceResult = {
+          title: action.result_title,
+          message: action.result_message,
+          actionId: action.id
+        };
+        state.resetSimulationConfirmed = false;
+        state.step = "maintenance_result";
+        render();
+      }
+
+      document.addEventListener("change", (event) => {
+        if (event.target && event.target.id === "reset-confirmation") {
+          state.resetSimulationConfirmed = event.target.checked;
+          render();
+        }
+      });
+
       document.addEventListener("click", async (event) => {
         const environmentButton = event.target.closest("[data-environment-key]");
         if (environmentButton) {
@@ -1126,6 +1494,15 @@ HTML_PAGE = """<!doctype html>
         if (rotationButton) {
           state.rotationKey = rotationButton.dataset.rotationKey;
           render();
+          return;
+        }
+        const maintenanceButton = event.target.closest("[data-maintenance-action]");
+        if (maintenanceButton) {
+          try {
+            await runMaintenanceAction(maintenanceButton.dataset.maintenanceAction);
+          } catch (err) {
+            setError(err.message);
+          }
           return;
         }
         const button = event.target.closest("[data-action]");
@@ -1164,11 +1541,16 @@ HTML_PAGE = """<!doctype html>
 def render_html_page() -> str:
     catalog_json = json.dumps(public_environment_catalog(), ensure_ascii=True, sort_keys=True)
     rotations_json = json.dumps(public_rotation_options(), ensure_ascii=True, sort_keys=True)
-    return HTML_PAGE.replace("__ENVIRONMENTS_JSON__", catalog_json).replace("__ROTATIONS_JSON__", rotations_json)
+    maintenance_json = json.dumps(public_maintenance_actions(), ensure_ascii=True, sort_keys=True)
+    return (
+        HTML_PAGE.replace("__ENVIRONMENTS_JSON__", catalog_json)
+        .replace("__ROTATIONS_JSON__", rotations_json)
+        .replace("__MAINTENANCE_ACTIONS_JSON__", maintenance_json)
+    )
 
 
 class SetupRequestHandler(BaseHTTPRequestHandler):
-    server_version = "DadoohC83Setup/1.0"
+    server_version = "DadoohC840Setup/1.0"
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return
@@ -1187,6 +1569,9 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
         if self.path == "/api/rotations":
             json_response(self, HTTPStatus.OK, {"ok": True, "rotations": public_rotation_options()})
             return
+        if self.path == "/api/maintenance-actions":
+            json_response(self, HTTPStatus.OK, {"ok": True, "actions": public_maintenance_actions()})
+            return
         if self.path == "/api/status":
             status_path = self.out_dir / STATUS_FILENAME
             if not status_path.exists():
@@ -1203,46 +1588,76 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
         json_response(self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
 
     def do_POST(self) -> None:
-        if self.path != "/api/candidate":
-            json_response(self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
-            return
-        try:
-            payload = parse_payload(self)
-            selection = resolve_environment_selection(payload)
-            rotation_selection = resolve_rotation_selection(payload)
-            rotation = int(rotation_selection["rotation_deg"])
-            status = write_setup_artifacts(self.out_dir, selection, rotation_selection)
-        except SetupError as exc:
-            json_response(self, HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
-            return
-        except OSError:
-            json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "failed to write artifacts"})
+        if self.path == "/api/candidate":
+            try:
+                payload = parse_payload(self)
+                selection = resolve_environment_selection(payload)
+                rotation_selection = resolve_rotation_selection(payload)
+                rotation = int(rotation_selection["rotation_deg"])
+                status = write_setup_artifacts(self.out_dir, selection, rotation_selection)
+            except SetupError as exc:
+                json_response(self, HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+                return
+            except OSError:
+                json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "failed to write artifacts"})
+                return
+
+            json_response(
+                self,
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "state": status["state"],
+                    "environment_mode": selection["mode"],
+                    "environment_name": selection["public_name"],
+                    "rotation_degrees": rotation,
+                    "rotation_label": rotation_selection["label"],
+                    "files": {
+                        "candidate_config": CANDIDATE_FILENAME,
+                        "status": STATUS_FILENAME,
+                        "summary": SUMMARY_FILENAME,
+                    },
+                },
+            )
             return
 
-        json_response(
-            self,
-            HTTPStatus.OK,
-            {
-                "ok": True,
-                "state": status["state"],
-                "environment_mode": selection["mode"],
-                "environment_name": selection["public_name"],
-                "rotation_degrees": rotation,
-                "rotation_label": rotation_selection["label"],
-                "files": {
-                    "candidate_config": CANDIDATE_FILENAME,
-                    "status": STATUS_FILENAME,
-                    "summary": SUMMARY_FILENAME,
+        if self.path == "/api/maintenance-action":
+            try:
+                payload = parse_payload(self)
+                action = validate_maintenance_action(payload)
+                status = write_maintenance_artifacts(self.out_dir, action)
+            except SetupError as exc:
+                json_response(self, HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+                return
+            except OSError:
+                json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "failed to write artifacts"})
+                return
+
+            json_response(
+                self,
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "state": status["state"],
+                    "action": status["action"]["id"],
+                    "result": status["action"]["result"],
+                    "mock_only": True,
+                    "files": {
+                        "maintenance_status": MAINTENANCE_STATUS_FILENAME,
+                        "maintenance_summary": MAINTENANCE_SUMMARY_FILENAME,
+                    },
                 },
-            },
-        )
+            )
+            return
+
+        json_response(self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
 
 
 def run_server(bind: str, port: int, out_dir: pathlib.Path) -> int:
     prepare_out_dir(out_dir)
     server = ThreadingHTTPServer((bind, port), SetupRequestHandler)
     server.out_dir = out_dir  # type: ignore[attr-defined]
-    print(f"C8.3 setup minimal server listening on http://{bind}:{port}", flush=True)
+    print(f"C8.4.0 setup and maintenance mock server listening on http://{bind}:{port}", flush=True)
     print(f"artifacts directory: {out_dir}", flush=True)
     try:
         server.serve_forever()
@@ -1325,6 +1740,20 @@ def run_self_test() -> None:
         "unknown rotation_key should fail",
     )
     assert_raises(lambda: require_tmp_dir("/var/tmp/dadooh-c8-1"), "out-dir outside /tmp should fail")
+    restart_action = validate_maintenance_action({"action": "restart_player_mock"})
+    assert_true(restart_action["id"] == "restart_player_mock", "restart_player_mock should be accepted")
+    reset_action = validate_maintenance_action(
+        {"action": "reset_config_mock", "confirmation": RESET_CONFIRMATION_TEXT}
+    )
+    assert_true(reset_action["id"] == "reset_config_mock", "reset_config_mock with confirmation should be accepted")
+    assert_raises(
+        lambda: validate_maintenance_action({"action": "reset_config_mock"}),
+        "reset_config_mock without confirmation should fail",
+    )
+    assert_raises(
+        lambda: validate_maintenance_action({"action": "factory_reset_real"}),
+        "unknown maintenance action should fail",
+    )
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c8-1-self-test-", dir="/tmp"))
     try:
@@ -1385,6 +1814,82 @@ def run_self_test() -> None:
         assert_true(status["guardrails"]["nmcli_called"] is False, "status should mark nmcli false")
         assert_true(status["guardrails"]["mpv_called"] is False, "status should mark mpv false")
 
+        restart_status = write_maintenance_artifacts(out_dir, restart_action)
+        assert_true(
+            restart_status["state"] == "maintenance_action_mock_recorded",
+            "restart maintenance status should be recorded",
+        )
+        assert_true(
+            restart_status["action"]["id"] == "restart_player_mock",
+            "restart maintenance status should record action",
+        )
+        assert_true(
+            restart_status["guardrails"]["commands_executed"] is False,
+            "maintenance status should mark commands false",
+        )
+        assert_true(
+            restart_status["guardrails"]["systemctl_called"] is False,
+            "maintenance status should mark systemctl false",
+        )
+        assert_true(
+            restart_status["guardrails"]["player_restarted"] is False,
+            "maintenance status should mark player restarted false",
+        )
+        assert_true(
+            restart_status["guardrails"]["mpv_called"] is False,
+            "maintenance status should mark mpv false",
+        )
+        assert_true(
+            restart_status["guardrails"]["data_written"] is False,
+            "maintenance status should mark data_written false",
+        )
+        assert_true(
+            restart_status["guardrails"]["opt_written"] is False,
+            "maintenance status should mark opt_written false",
+        )
+
+        maintenance_paths = [
+            out_dir / MAINTENANCE_STATUS_FILENAME,
+            out_dir / MAINTENANCE_SUMMARY_FILENAME,
+        ]
+        for path in maintenance_paths:
+            assert_true(path.exists(), f"{path.name} should exist")
+            assert_true(file_mode(path) == PRIVATE_FILE_MODE, f"{path.name} mode should be 600")
+            resolved = path.resolve(strict=True)
+            assert_true(path_is_under(resolved, TMP_ROOT), f"{path.name} should be under /tmp")
+            assert_true(not path_is_under(resolved, pathlib.Path("/data")), f"{path.name} wrote under /data")
+            assert_true(not path_is_under(resolved, pathlib.Path("/opt")), f"{path.name} wrote under /opt")
+
+        maintenance_text = maintenance_output_text(out_dir)
+        assert_true(SAFE_PLACEHOLDER_API_KEY not in maintenance_text, "maintenance output leaked credential")
+        assert_true(SAFE_PLACEHOLDER_API_URL not in maintenance_text, "maintenance output leaked URL")
+        assert_true("api_key" not in maintenance_text.lower(), "maintenance output should not include api_key label")
+        assert_true("token" not in maintenance_text.lower(), "maintenance output should not include token label")
+        for variant in forbidden_text_variants(RESET_CONFIRMATION_TEXT):
+            assert_true(variant not in maintenance_text, "maintenance output leaked confirmation text")
+
+        reset_out_dir = require_tmp_dir(str(root / "reset-out"))
+        reset_status = write_maintenance_artifacts(reset_out_dir, reset_action)
+        assert_true(
+            reset_status["action"]["id"] == "reset_config_mock",
+            "reset maintenance status should record action",
+        )
+        assert_true(
+            reset_status["action"]["confirmation_received"] is True,
+            "reset maintenance status should record confirmation boolean",
+        )
+        assert_true(
+            reset_status["action"]["confirmation_text_written_to_status"] is False,
+            "reset maintenance status should not copy confirmation text",
+        )
+        assert_true(file_mode(reset_out_dir) == PRIVATE_DIR_MODE, "reset out-dir mode should be 700")
+        for path in (reset_out_dir / MAINTENANCE_STATUS_FILENAME, reset_out_dir / MAINTENANCE_SUMMARY_FILENAME):
+            assert_true(file_mode(path) == PRIVATE_FILE_MODE, f"{path.name} mode should be 600")
+            assert_true(path_is_under(path.resolve(strict=True), TMP_ROOT), f"{path.name} should be under /tmp")
+        reset_text = maintenance_output_text(reset_out_dir)
+        for variant in forbidden_text_variants(RESET_CONFIRMATION_TEXT):
+            assert_true(variant not in reset_text, "reset output leaked confirmation text")
+
         manual_out_dir = require_tmp_dir(str(root / "manual-out"))
         manual_status = write_setup_artifacts(
             manual_out_dir,
@@ -1421,13 +1926,13 @@ def run_self_test() -> None:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Serve the C8.3 minimal local setup UI without real Wi-Fi.",
+        description="Serve the C8.4.0 minimal local setup and maintenance UI without real actions.",
         allow_abbrev=False,
     )
     parser.add_argument("--bind", default=DEFAULT_BIND, help=f"Bind address. Default: {DEFAULT_BIND}")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"TCP port. Default: {DEFAULT_PORT}")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help=f"Output directory under /tmp. Default: {DEFAULT_OUT_DIR}")
-    parser.add_argument("--self-test", action="store_true", help="Run local C8.3 self-tests under /tmp and exit.")
+    parser.add_argument("--self-test", action="store_true", help="Run local C8.4.0 self-tests under /tmp and exit.")
     return parser.parse_args(argv)
 
 

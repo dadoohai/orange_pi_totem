@@ -26,7 +26,7 @@ ssh "$HOST" "umask 077 && mkdir -p '$REMOTE_DIR' && chmod 700 '$REMOTE_DIR'"
 echo "Copying C8 setup server and C5.1 validator to $HOST:$REMOTE_DIR"
 scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$HOST:$REMOTE_DIR/"
 
-echo "Running C8.3 self-test and smoke test on the board"
+echo "Running C8.4.0 self-test and smoke test on the board"
 ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
 set -euo pipefail
 
@@ -69,6 +69,7 @@ import os
 import pathlib
 import stat
 import time
+import urllib.error
 import urllib.request
 
 port = os.environ["REMOTE_PORT"]
@@ -89,6 +90,8 @@ for _ in range(40):
             "Retrato - giro para direita",
             "Paisagem invertida",
             "Retrato - giro para esquerda",
+            "Manutenção",
+            "Ações de teste para suporte",
         )
         if any(text not in html for text in expected_text):
             raise AssertionError("HTML did not contain expected public text")
@@ -100,6 +103,35 @@ else:
     raise AssertionError(f"server did not become ready: {last_error}")
 
 expected = {"candidate-config.json", "status.json", "summary.txt"}
+maintenance_expected = {"maintenance-action-status.json", "maintenance-summary.txt"}
+
+maintenance_catalog = json.loads(
+    urllib.request.urlopen(base + "/api/maintenance-actions", timeout=5).read().decode("utf-8")
+)
+if maintenance_catalog.get("ok") is not True:
+    raise AssertionError("maintenance actions catalog failed")
+action_labels = {item["label"] for item in maintenance_catalog["actions"]}
+if {"Reiniciar exibição", "Limpar configuração de teste"} - action_labels:
+    raise AssertionError("maintenance catalog did not expose expected actions")
+
+def player_process_snapshot():
+    snapshot = []
+    for proc in pathlib.Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            cmdline = (proc / "cmdline").read_bytes().replace(b"\x00", b" ").decode("utf-8", "ignore")
+            comm = (proc / "comm").read_text(encoding="utf-8", errors="ignore").strip()
+        except OSError:
+            continue
+        lower = f"{comm} {cmdline}".lower()
+        if "mpv" in lower:
+            snapshot.append((int(proc.name), "mpv"))
+        elif "kiosk.py" in lower or "kiosky-player" in lower:
+            snapshot.append((int(proc.name), "kiosky-player"))
+    return sorted(snapshot)
+
+player_processes_before = player_process_snapshot()
 
 def submit_and_verify(payload_dict, expected_environment_id, expected_rotation, expected_mode, forbidden_names):
     payload = json.dumps(payload_dict).encode("utf-8")
@@ -191,6 +223,136 @@ submit_and_verify(
     ("Ambiente manual - TESTE",),
 )
 
+def post_json(path, payload_dict):
+    payload = json.dumps(payload_dict).encode("utf-8")
+    request = urllib.request.Request(
+        base + path,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    return json.loads(urllib.request.urlopen(request, timeout=5).read().decode("utf-8"))
+
+def expect_bad_request(path, payload_dict, expected_error):
+    payload = json.dumps(payload_dict).encode("utf-8")
+    request = urllib.request.Request(
+        base + path,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(request, timeout=5)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 400:
+            raise AssertionError(f"expected HTTP 400, got {exc.code}") from exc
+        body = json.loads(exc.read().decode("utf-8"))
+        if body.get("ok") is not False:
+            raise AssertionError(f"bad request response did not fail: {body}")
+        if expected_error not in body.get("error", ""):
+            raise AssertionError(f"unexpected bad request error: {body}")
+        return
+    raise AssertionError("request unexpectedly succeeded")
+
+def forbidden_variants(value):
+    return {value, json.dumps(value, ensure_ascii=True)[1:-1]}
+
+def submit_maintenance(payload_dict, expected_action, confirmation_expected):
+    response = post_json("/api/maintenance-action", payload_dict)
+    if response.get("ok") is not True:
+        raise AssertionError(f"maintenance request failed: {response}")
+    if response.get("action") != expected_action:
+        raise AssertionError("maintenance response action mismatch")
+    if response.get("mock_only") is not True:
+        raise AssertionError("maintenance response did not mark mock_only")
+
+    actual = {path.name for path in out_dir.iterdir() if path.is_file()}
+    if maintenance_expected - actual:
+        raise AssertionError(f"missing maintenance artifacts: {sorted(maintenance_expected - actual)}")
+    if stat.S_IMODE(out_dir.stat().st_mode) != 0o700:
+        raise AssertionError("out-dir mode is not 0700 after maintenance action")
+
+    for name in maintenance_expected:
+        path = out_dir / name
+        if stat.S_IMODE(path.stat().st_mode) != 0o600:
+            raise AssertionError(f"{name} mode is not 0600")
+        resolved = path.resolve(strict=True)
+        if not str(resolved).startswith("/tmp/"):
+            raise AssertionError(f"{name} escaped /tmp")
+        if str(resolved).startswith("/data/") or str(resolved).startswith("/opt/"):
+            raise AssertionError(f"{name} was written outside /tmp")
+
+    status = json.loads((out_dir / "maintenance-action-status.json").read_text(encoding="utf-8"))
+    if status["schema_version"] != "dadooh-c8.4.0-maintenance-action-mock-local.v1":
+        raise AssertionError("maintenance status schema mismatch")
+    if status["state"] != "maintenance_action_mock_recorded":
+        raise AssertionError("maintenance status state mismatch")
+    if status["action"]["id"] != expected_action:
+        raise AssertionError("maintenance status action mismatch")
+    if status["action"]["confirmation_received"] is not confirmation_expected:
+        raise AssertionError("maintenance confirmation flag mismatch")
+    if status["action"]["real_effect"] != "none":
+        raise AssertionError("maintenance status did not keep real_effect none")
+
+    guardrails = status["guardrails"]
+    for key in (
+        "real_config_read",
+        "real_config_written",
+        "data_written",
+        "opt_written",
+        "commands_executed",
+        "systemctl_called",
+        "service_changed",
+        "player_process_changed",
+        "player_restarted",
+        "mpv_called",
+        "backend_called",
+        "nmcli_called",
+        "network_changed",
+        "reset_real_executed",
+        "cache_deleted",
+    ):
+        if guardrails[key] is not False:
+            raise AssertionError(f"maintenance guardrail {key} was not false")
+
+    combined = (out_dir / "maintenance-action-status.json").read_text(encoding="utf-8") + "\n" + (
+        out_dir / "maintenance-summary.txt"
+    ).read_text(encoding="utf-8")
+    for forbidden in (
+        "API_KEY_MOCK_NOT_FOR_PRODUCTION",
+        "https://api.example.invalid/search",
+        "api_key",
+        "token",
+        "secret",
+        "password",
+        "ssid",
+        "hostname",
+        "gateway",
+        mock_environment_id,
+        manual_environment_id,
+    ):
+        if forbidden.lower() in combined.lower():
+            raise AssertionError(f"maintenance status/summary leaked forbidden text: {forbidden}")
+    for variant in forbidden_variants("Entendo que esta é uma simulação e não apaga dados reais."):
+        if variant in combined:
+            raise AssertionError("maintenance status/summary leaked confirmation text")
+
+submit_maintenance({"action": "restart_player_mock"}, "restart_player_mock", False)
+submit_maintenance(
+    {
+        "action": "reset_config_mock",
+        "confirmation": "Entendo que esta é uma simulação e não apaga dados reais.",
+    },
+    "reset_config_mock",
+    True,
+)
+expect_bad_request("/api/maintenance-action", {"action": "reset_config_mock"}, "requires explicit simulation confirmation")
+expect_bad_request("/api/maintenance-action", {"action": "factory_reset_real"}, "unknown maintenance action")
+
+player_processes_after = player_process_snapshot()
+if player_processes_after != player_processes_before:
+    raise AssertionError("player or MPV process snapshot changed during mock maintenance smoke")
+
 print("remote smoke: ok")
 PY
 
@@ -203,7 +365,7 @@ if python3 "$CONTRACT" \
   --candidate "$REMOTE_OUT_DIR/candidate-config.json" \
   --real-dry-run \
   --out-dir "$REMOTE_DIR/contract-real-dry-run"; then
-  echo "error: C8.3 candidate unexpectedly passed real-dry-run" >&2
+  echo "error: C8.4.0 candidate unexpectedly passed real-dry-run" >&2
   exit 1
 fi
 
