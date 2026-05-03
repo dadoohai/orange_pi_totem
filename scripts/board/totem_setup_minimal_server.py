@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C8.2 minimal local setup server without real Wi-Fi.
+"""C8.3 minimal local setup server without real Wi-Fi.
 
 This tool is intentionally narrow. It serves a local HTTP UI, validates the
 operator input, and writes a mock/local config candidate under /tmp only. It
@@ -29,7 +29,7 @@ sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
 
-SCHEMA_VERSION = "dadooh-c8.2-setup-environment-mock-local.v1"
+SCHEMA_VERSION = "dadooh-c8.3-setup-rotation-mock-local.v1"
 DEFAULT_BIND = "127.0.0.1"
 DEFAULT_PORT = 8766
 DEFAULT_OUT_DIR = "/tmp/dadooh-c8-1-setup-minimo"
@@ -48,6 +48,40 @@ SAFE_PLACEHOLDER_API_KEY = contract.MOCK_API_KEY
 SAFE_PLACEHOLDER_STATION_ID = contract.MOCK_STATION_ID
 
 ALLOWED_ROTATIONS = {0, 90, 180, 270}
+
+ROTATION_OPTIONS: tuple[dict[str, str | int], ...] = (
+    {
+        "key": "landscape",
+        "label": "Paisagem",
+        "description": "Tela deitada na posicao normal.",
+        "rotation_deg": 0,
+        "preview_class": "landscape",
+    },
+    {
+        "key": "portrait_right",
+        "label": "Retrato - giro para direita",
+        "description": "Tela em pe com topo virado para a direita.",
+        "rotation_deg": 90,
+        "preview_class": "portrait-right",
+    },
+    {
+        "key": "landscape_inverted",
+        "label": "Paisagem invertida",
+        "description": "Tela deitada invertida.",
+        "rotation_deg": 180,
+        "preview_class": "landscape-inverted",
+    },
+    {
+        "key": "portrait_left",
+        "label": "Retrato - giro para esquerda",
+        "description": "Tela em pe com topo virado para a esquerda.",
+        "rotation_deg": 270,
+        "preview_class": "portrait-left",
+    },
+)
+
+ROTATION_OPTION_BY_KEY = {str(item["key"]): item for item in ROTATION_OPTIONS}
+ROTATION_OPTION_BY_DEG = {int(item["rotation_deg"]): item for item in ROTATION_OPTIONS}
 
 MOCK_ENVIRONMENTS: tuple[dict[str, str], ...] = (
     {
@@ -252,6 +286,46 @@ def validate_rotation(raw_value: Any) -> int:
     return value
 
 
+def public_rotation_options() -> list[dict[str, str | int]]:
+    return [
+        {
+            "key": str(item["key"]),
+            "label": str(item["label"]),
+            "description": str(item["description"]),
+            "rotation_deg": int(item["rotation_deg"]),
+            "preview_class": str(item["preview_class"]),
+        }
+        for item in ROTATION_OPTIONS
+    ]
+
+
+def resolve_rotation_selection(payload: dict[str, Any]) -> dict[str, str | int]:
+    raw_key = payload.get("rotation_key")
+    if raw_key is not None:
+        if not isinstance(raw_key, str) or not raw_key.strip():
+            raise SetupError("rotation_key must be one of the supported orientation options")
+        option = ROTATION_OPTION_BY_KEY.get(raw_key.strip())
+        if option is None:
+            raise SetupError("unknown orientation option")
+        return {
+            "key": str(option["key"]),
+            "label": str(option["label"]),
+            "description": str(option["description"]),
+            "rotation_deg": int(option["rotation_deg"]),
+            "preview_class": str(option["preview_class"]),
+        }
+
+    rotation = validate_rotation(payload.get("rotation"))
+    option = ROTATION_OPTION_BY_DEG[rotation]
+    return {
+        "key": str(option["key"]),
+        "label": str(option["label"]),
+        "description": str(option["description"]),
+        "rotation_deg": int(option["rotation_deg"]),
+        "preview_class": str(option["preview_class"]),
+    }
+
+
 def build_candidate_config(environment_id: str, rotation: int, selection_mode: str) -> dict[str, Any]:
     return {
         "api_key": SAFE_PLACEHOLDER_API_KEY,
@@ -267,7 +341,7 @@ def build_candidate_config(environment_id: str, rotation: int, selection_mode: s
         "rotation_deg": rotation,
         "runtime_dir": "/tmp/kiosky",
         "setup_environment_source": selection_mode,
-        "setup_source": "c8.2-environment-mock-local-no-wifi",
+        "setup_source": "c8.3-rotation-mock-local-no-wifi",
         "state_dir": "/data/state/kiosky-player",
         "station_id": SAFE_PLACEHOLDER_STATION_ID,
         "status_file": "/tmp/kiosky-status.json",
@@ -306,7 +380,7 @@ def validate_candidate_handoff(candidate: dict[str, Any]) -> dict[str, Any]:
 
 def build_status(
     generated_at: str,
-    rotation: int,
+    rotation: dict[str, str | int],
     selection: dict[str, str],
     contract_validation: dict[str, Any],
 ) -> dict[str, Any]:
@@ -330,7 +404,8 @@ def build_status(
         "validation": {
             "environment_id": "format_validated_only",
             "rotation": "validated",
-            "rotation_degrees": rotation,
+            "rotation_degrees": int(rotation["rotation_deg"]),
+            "rotation_label_written_to_status": False,
             "backend_validation": "not_checked",
             "wifi_validation": "not_configured",
         },
@@ -367,7 +442,7 @@ def build_status(
 def build_summary(status: dict[str, Any]) -> str:
     return "\n".join(
         [
-            "Dadooh C8.2 selecao de ambiente mock/local",
+            "Dadooh C8.3 rotacao mock/local",
             "",
             f"schema_version: {status['schema_version']}",
             f"generated_at_utc: {status['generated_at_utc']}",
@@ -426,10 +501,14 @@ def assert_sanitized_outputs(out_dir: pathlib.Path, environment_id: str) -> None
             raise SetupError("privacy scan blocked credential or URL in status/summary")
 
 
-def write_setup_artifacts(out_dir: pathlib.Path, selection: dict[str, str], rotation: int) -> dict[str, Any]:
+def write_setup_artifacts(
+    out_dir: pathlib.Path,
+    selection: dict[str, str],
+    rotation: dict[str, str | int],
+) -> dict[str, Any]:
     prepare_out_dir(out_dir)
     generated_at = utc_timestamp()
-    candidate = build_candidate_config(selection["environment_id"], rotation, selection["mode"])
+    candidate = build_candidate_config(selection["environment_id"], int(rotation["rotation_deg"]), selection["mode"])
     contract_validation = validate_candidate_handoff(candidate)
     status = build_status(generated_at, rotation, selection, contract_validation)
 
@@ -640,6 +719,101 @@ HTML_PAGE = """<!doctype html>
         background: var(--blue-soft);
         color: var(--blue);
       }
+      .rotation-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(190px, 0.85fr);
+        gap: 18px;
+        align-items: stretch;
+        margin-top: 24px;
+      }
+      .rotation-list {
+        display: grid;
+        gap: 10px;
+      }
+      .rotation-option {
+        width: 100%;
+        min-height: 78px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        text-align: left;
+      }
+      .rotation-option strong,
+      .rotation-option span {
+        display: block;
+      }
+      .rotation-option span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .rotation-option[aria-pressed="true"] {
+        border-color: var(--blue);
+        background: var(--blue-soft);
+      }
+      .rotation-option[aria-pressed="true"]::after {
+        content: "Selecionado";
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .orientation-preview {
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 20px;
+        background: #f8fafc;
+      }
+      .preview-frame {
+        position: relative;
+        display: grid;
+        place-items: center;
+        border: 3px solid var(--ink);
+        border-radius: 6px;
+        background: #fff;
+        box-shadow: 0 10px 25px rgba(23, 33, 47, 0.12);
+      }
+      .preview-frame.landscape,
+      .preview-frame.landscape-inverted {
+        width: 172px;
+        height: 98px;
+      }
+      .preview-frame.portrait-right,
+      .preview-frame.portrait-left {
+        width: 98px;
+        height: 172px;
+      }
+      .preview-frame::before {
+        content: "Dadooh";
+        color: var(--brand);
+        font-size: 18px;
+        font-weight: 900;
+      }
+      .preview-frame::after {
+        content: "";
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        width: 36px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--blue);
+        transform: translateX(-50%);
+      }
+      .preview-frame.landscape-inverted {
+        transform: rotate(180deg);
+      }
+      .preview-frame.portrait-right {
+        transform: rotate(90deg);
+      }
+      .preview-frame.portrait-left {
+        transform: rotate(-90deg);
+      }
       .environment-list {
         display: grid;
         gap: 10px;
@@ -737,6 +911,7 @@ HTML_PAGE = """<!doctype html>
         .workspace { padding: 18px; }
         .panel { min-height: 500px; }
         .review div { grid-template-columns: 1fr; }
+        .rotation-layout { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -750,7 +925,7 @@ HTML_PAGE = """<!doctype html>
           <span>Selecionar ambiente</span>
           <span>Orientacao da tela</span>
           <span>Revisao</span>
-          <span>Candidata pronta</span>
+          <span>Configuracao de teste pronta</span>
         </div>
       </aside>
       <section class="workspace">
@@ -762,12 +937,13 @@ HTML_PAGE = """<!doctype html>
     </main>
     <script>
       const environments = __ENVIRONMENTS_JSON__;
+      const rotations = __ROTATIONS_JSON__;
       const state = {
         step: "pending",
         environmentMode: "mock",
         environmentKey: environments[0].key,
         manualEnvironmentId: "ENV-MOCK-MANUAL-BANCADA",
-        rotation: 0
+        rotationKey: rotations[0].key
       };
       const screen = document.querySelector("#screen");
       const errorBox = document.querySelector("#error");
@@ -800,11 +976,26 @@ HTML_PAGE = """<!doctype html>
         };
       }
 
+      function selectedRotation() {
+        return rotations.find((item) => item.key === state.rotationKey) || rotations[0];
+      }
+
       function renderEnvironmentOptions() {
         return environments.map((item) => `
           <button class="environment-option" type="button" data-environment-key="${escapeText(item.key)}" aria-pressed="${state.environmentMode === "mock" && state.environmentKey === item.key}">
             <span>
               <strong>${escapeText(item.name)}</strong>
+              <span>${escapeText(item.description)}</span>
+            </span>
+          </button>
+        `).join("");
+      }
+
+      function renderRotationOptions() {
+        return rotations.map((item) => `
+          <button class="rotation-option" type="button" data-rotation-key="${escapeText(item.key)}" aria-pressed="${state.rotationKey === item.key}">
+            <span>
+              <strong>${escapeText(item.label)}</strong>
               <span>${escapeText(item.description)}</span>
             </span>
           </button>
@@ -852,12 +1043,18 @@ HTML_PAGE = """<!doctype html>
             </div>
           `;
         } else if (state.step === "rotation") {
+          const rotation = selectedRotation();
           screen.innerHTML = `
             <span class="tag">rotation_select</span>
             <h1>Orientacao da tela</h1>
-            <p>Escolha a orientacao que combina com a instalacao fisica do display.</p>
-            <div class="rotation-row">
-              ${[0, 90, 180, 270].map((value) => `<button class="choice" data-rotation="${value}" aria-pressed="${state.rotation === value}">${value}</button>`).join("")}
+            <p>Escolha como a imagem deve aparecer na tela instalada.</p>
+            <div class="rotation-layout">
+              <div class="rotation-list" role="group" aria-label="Orientacoes da tela">
+                ${renderRotationOptions()}
+              </div>
+              <div class="orientation-preview" aria-label="Previa da orientacao">
+                <div class="preview-frame ${escapeText(rotation.preview_class)}"></div>
+              </div>
             </div>
             <div class="actions">
               <button class="primary" data-action="review">Revisar</button>
@@ -866,13 +1063,14 @@ HTML_PAGE = """<!doctype html>
           `;
         } else if (state.step === "review") {
           const environment = selectedEnvironment();
+          const rotation = selectedRotation();
           screen.innerHTML = `
             <span class="tag">review</span>
             <h1>Revisar configuracao</h1>
             <p>Confira a selecao antes de gerar a configuracao de teste.</p>
             <div class="review">
               <div><span>Ambiente</span><strong>${escapeText(environment.name)}<span class="technical">ID tecnico de teste: ${escapeText(environment.environmentId)}</span></strong></div>
-              <div><span>Rotacao</span><strong>${state.rotation} graus</strong></div>
+              <div><span>Orientacao</span><strong>${escapeText(rotation.label)}<span class="technical">rotation_deg: ${rotation.rotation_deg}</span></strong></div>
               <div><span>Conexao</span><strong>Nao configurada nesta etapa</strong></div>
             </div>
             <div class="actions">
@@ -882,13 +1080,14 @@ HTML_PAGE = """<!doctype html>
           `;
         } else {
           const environment = selectedEnvironment();
+          const rotation = selectedRotation();
           screen.innerHTML = `
             <span class="tag">candidate_ready</span>
             <h1>Configuracao de teste pronta</h1>
             <p class="ok">A configuracao de teste foi gerada com status e resumo sanitizados.</p>
             <div class="review">
               <div><span>Ambiente</span><strong>${escapeText(environment.name)}<span class="technical">ID tecnico de teste: ${escapeText(environment.environmentId)}</span></strong></div>
-              <div><span>Rotacao</span><strong>${state.rotation} graus</strong></div>
+              <div><span>Orientacao</span><strong>${escapeText(rotation.label)}<span class="technical">rotation_deg: ${rotation.rotation_deg}</span></strong></div>
               <div><span>Validacao</span><strong>Validacao concluida</strong></div>
             </div>
             <div class="actions"><button class="secondary" data-action="pending">Novo teste</button></div>
@@ -898,9 +1097,10 @@ HTML_PAGE = """<!doctype html>
 
       async function saveCandidate() {
         const environment = selectedEnvironment();
+        const rotation = selectedRotation();
         const payload = environment.mode === "manual"
-          ? { environment_mode: "manual", environment_id: state.manualEnvironmentId, rotation: state.rotation }
-          : { environment_mode: "mock", environment_key: state.environmentKey, rotation: state.rotation };
+          ? { environment_mode: "manual", environment_id: state.manualEnvironmentId, rotation_key: rotation.key }
+          : { environment_mode: "mock", environment_key: state.environmentKey, rotation_key: rotation.key };
         const response = await fetch("/api/candidate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -922,9 +1122,9 @@ HTML_PAGE = """<!doctype html>
           render();
           return;
         }
-        const rotation = event.target.closest("[data-rotation]");
-        if (rotation) {
-          state.rotation = Number(rotation.dataset.rotation);
+        const rotationButton = event.target.closest("[data-rotation-key]");
+        if (rotationButton) {
+          state.rotationKey = rotationButton.dataset.rotationKey;
           render();
           return;
         }
@@ -963,11 +1163,12 @@ HTML_PAGE = """<!doctype html>
 
 def render_html_page() -> str:
     catalog_json = json.dumps(public_environment_catalog(), ensure_ascii=True, sort_keys=True)
-    return HTML_PAGE.replace("__ENVIRONMENTS_JSON__", catalog_json)
+    rotations_json = json.dumps(public_rotation_options(), ensure_ascii=True, sort_keys=True)
+    return HTML_PAGE.replace("__ENVIRONMENTS_JSON__", catalog_json).replace("__ROTATIONS_JSON__", rotations_json)
 
 
 class SetupRequestHandler(BaseHTTPRequestHandler):
-    server_version = "DadoohC82Setup/1.0"
+    server_version = "DadoohC83Setup/1.0"
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return
@@ -982,6 +1183,9 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/api/environments":
             json_response(self, HTTPStatus.OK, {"ok": True, "environments": public_environment_catalog()})
+            return
+        if self.path == "/api/rotations":
+            json_response(self, HTTPStatus.OK, {"ok": True, "rotations": public_rotation_options()})
             return
         if self.path == "/api/status":
             status_path = self.out_dir / STATUS_FILENAME
@@ -1005,8 +1209,9 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
         try:
             payload = parse_payload(self)
             selection = resolve_environment_selection(payload)
-            rotation = validate_rotation(payload.get("rotation"))
-            status = write_setup_artifacts(self.out_dir, selection, rotation)
+            rotation_selection = resolve_rotation_selection(payload)
+            rotation = int(rotation_selection["rotation_deg"])
+            status = write_setup_artifacts(self.out_dir, selection, rotation_selection)
         except SetupError as exc:
             json_response(self, HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
             return
@@ -1023,6 +1228,7 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
                 "environment_mode": selection["mode"],
                 "environment_name": selection["public_name"],
                 "rotation_degrees": rotation,
+                "rotation_label": rotation_selection["label"],
                 "files": {
                     "candidate_config": CANDIDATE_FILENAME,
                     "status": STATUS_FILENAME,
@@ -1036,7 +1242,7 @@ def run_server(bind: str, port: int, out_dir: pathlib.Path) -> int:
     prepare_out_dir(out_dir)
     server = ThreadingHTTPServer((bind, port), SetupRequestHandler)
     server.out_dir = out_dir  # type: ignore[attr-defined]
-    print(f"C8.2 setup minimal server listening on http://{bind}:{port}", flush=True)
+    print(f"C8.3 setup minimal server listening on http://{bind}:{port}", flush=True)
     print(f"artifacts directory: {out_dir}", flush=True)
     try:
         server.serve_forever()
@@ -1094,12 +1300,36 @@ def run_self_test() -> None:
     assert_true(validate_rotation("180") == 180, "rotation 180 rejected")
     assert_true(validate_rotation("270") == 270, "rotation 270 rejected")
     assert_raises(lambda: validate_rotation("45"), "invalid rotation should fail")
+    assert_true(
+        resolve_rotation_selection({"rotation_key": "landscape"})["rotation_deg"] == 0,
+        "landscape should map to rotation 0",
+    )
+    assert_true(
+        resolve_rotation_selection({"rotation_key": "portrait_right"})["rotation_deg"] == 90,
+        "portrait_right should map to rotation 90",
+    )
+    assert_true(
+        resolve_rotation_selection({"rotation_key": "landscape_inverted"})["rotation_deg"] == 180,
+        "landscape_inverted should map to rotation 180",
+    )
+    assert_true(
+        resolve_rotation_selection({"rotation_key": "portrait_left"})["rotation_deg"] == 270,
+        "portrait_left should map to rotation 270",
+    )
+    assert_true(
+        resolve_rotation_selection({"rotation": "270"})["key"] == "portrait_left",
+        "numeric rotation should remain accepted for compatibility",
+    )
+    assert_raises(
+        lambda: resolve_rotation_selection({"rotation_key": "upsideways"}),
+        "unknown rotation_key should fail",
+    )
     assert_raises(lambda: require_tmp_dir("/var/tmp/dadooh-c8-1"), "out-dir outside /tmp should fail")
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c8-1-self-test-", dir="/tmp"))
     try:
         out_dir = require_tmp_dir(str(root / "out"))
-        status = write_setup_artifacts(out_dir, mock_selection, 90)
+        status = write_setup_artifacts(out_dir, mock_selection, resolve_rotation_selection({"rotation_key": "portrait_right"}))
         assert_true(status["state"] == "candidate_ready", "status should be candidate_ready")
         assert_true(
             status["environment_selection"]["mode"] == SELECTION_MODE_MOCK,
@@ -1134,8 +1364,8 @@ def run_self_test() -> None:
         )
         allow_mock = contract.validate_candidate_config(candidate, "allow-mock")
         real_dry_run = contract.validate_candidate_config(candidate, "real-dry-run")
-        assert_true(allow_mock["valid"], "C8.2 candidate should pass C5.1 allow-mock")
-        assert_true(not real_dry_run["valid"], "C8.2 candidate should fail C5.1 real-dry-run with placeholders")
+        assert_true(allow_mock["valid"], "C8.3 candidate should pass C5.1 allow-mock")
+        assert_true(not real_dry_run["valid"], "C8.3 candidate should fail C5.1 real-dry-run with placeholders")
         assert_true(status["contract_validation"]["allow_mock"]["valid"], "status should record allow-mock pass")
         assert_true(
             status["contract_validation"]["real_dry_run_expected_failure"],
@@ -1156,7 +1386,11 @@ def run_self_test() -> None:
         assert_true(status["guardrails"]["mpv_called"] is False, "status should mark mpv false")
 
         manual_out_dir = require_tmp_dir(str(root / "manual-out"))
-        manual_status = write_setup_artifacts(manual_out_dir, manual_selection, 270)
+        manual_status = write_setup_artifacts(
+            manual_out_dir,
+            manual_selection,
+            resolve_rotation_selection({"rotation_key": "portrait_left"}),
+        )
         assert_true(
             manual_status["environment_selection"]["mode"] == SELECTION_MODE_MANUAL,
             "manual artifact should record manual selection mode",
@@ -1170,11 +1404,11 @@ def run_self_test() -> None:
         assert_true(manual_candidate["rotation_deg"] == 270, "manual candidate should keep rotation")
         assert_true(
             contract.validate_candidate_config(manual_candidate, "allow-mock")["valid"],
-            "manual C8.2 candidate should pass C5.1 allow-mock",
+            "manual C8.3 candidate should pass C5.1 allow-mock",
         )
         assert_true(
             not contract.validate_candidate_config(manual_candidate, "real-dry-run")["valid"],
-            "manual C8.2 candidate should fail real-dry-run with placeholders",
+            "manual C8.3 candidate should fail real-dry-run with placeholders",
         )
         manual_text = output_text(manual_out_dir)
         assert_true(
@@ -1187,13 +1421,13 @@ def run_self_test() -> None:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Serve the C8.2 minimal local setup UI without real Wi-Fi.",
+        description="Serve the C8.3 minimal local setup UI without real Wi-Fi.",
         allow_abbrev=False,
     )
     parser.add_argument("--bind", default=DEFAULT_BIND, help=f"Bind address. Default: {DEFAULT_BIND}")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"TCP port. Default: {DEFAULT_PORT}")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help=f"Output directory under /tmp. Default: {DEFAULT_OUT_DIR}")
-    parser.add_argument("--self-test", action="store_true", help="Run local C8.2 self-tests under /tmp and exit.")
+    parser.add_argument("--self-test", action="store_true", help="Run local C8.3 self-tests under /tmp and exit.")
     return parser.parse_args(argv)
 
 
