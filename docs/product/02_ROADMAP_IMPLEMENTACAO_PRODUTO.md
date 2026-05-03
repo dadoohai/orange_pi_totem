@@ -52,6 +52,12 @@ relatorio sanitizado de lacunas para futura config real. Nao chama writer em
 modo real, nao usa secrets, nao toca `/data` ou `/opt` e nao altera servico,
 player, MPV, rede ou backend.
 
+Atualizacao C8.5.1: 2026-05-03. C8.5.1 define a origem futura aprovada de
+valores privados e gera uma candidata real-sintetica somente em `/tmp`, com
+valores nao reais gerados localmente. A candidata real-sintetica passa C5.1
+`real-dry-run`, mas writer real continua bloqueado; nao usa secrets reais, nao
+toca `/data` ou `/opt` e nao altera servico, player, MPV, rede ou backend.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -318,6 +324,7 @@ Sequencia incremental refinada:
 - C8.4.0 - manutencao minima mock/local e contrato de acoes;
 - C8.4 - reset leve e reiniciar player, ainda pendente de acao real aprovada;
 - C8.5.0 - preflight setup -> writer/config, local/offline em `/tmp`;
+- C8.5.1 - origem de valores privados e candidata real-sintetica em `/tmp`;
 - C8.5 - integracao com writer/config;
 - C8.6 - setup funcional em placa;
 - C9 - Wi-Fi/portal/hotspot;
@@ -910,9 +917,9 @@ Limite:
 
 ### C8 - Produto V1: operacao, onboarding e recuperacao
 
-Status: visao documental criada; C8.1/C8.1.1/C8.2/C8.3/C8.4.0/C8.5.0
-funcional/mock local ou preflight local concluidos sem Wi-Fi real, sem config
-real e sem acao real de manutencao.
+Status: visao documental criada; C8.1/C8.1.1/C8.2/C8.3/C8.4.0/C8.5.0/C8.5.1
+funcional/mock local, preflight local ou sintetico local concluidos sem Wi-Fi
+real, sem config real e sem acao real de manutencao.
 
 Documentos:
 
@@ -926,6 +933,7 @@ Documentos:
 - `docs/product/44_C8_3_ROTACAO_MOCK_LOCAL.md`;
 - `docs/product/45_C8_4_0_MANUTENCAO_MINIMA_MOCK_LOCAL.md`;
 - `docs/product/46_C8_5_0_PREFLIGHT_SETUP_WRITER_CONFIG.md`;
+- `docs/product/47_C8_5_1_ORIGEM_VALORES_PRIVADOS_CANDIDATA_REAL_SINTETICA.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -951,6 +959,7 @@ Subfases propostas:
 - C8.4.0 - manutencao minima mock/local e contrato de acoes;
 - C8.4 - reset leve e reiniciar player, ainda pendente de acao real aprovada;
 - C8.5.0 - preflight setup -> writer/config, local/offline em `/tmp`;
+- C8.5.1 - origem de valores privados e candidata real-sintetica em `/tmp`;
 - C8.5 - integracao com writer/config;
 - C8.6 - setup funcional em placa, em tarefa propria e com roteiro aprovado.
 
