@@ -58,7 +58,8 @@ Configuracao pendente
 
 ## 5. O que funciona agora
 
-- Servidor HTTP local em Python usando somente biblioteca padrao.
+- Servidor HTTP local em Python, sem dependencia externa, usando biblioteca
+  padrao e import local do validador C5.1.
 - Bind padrao em `127.0.0.1`.
 - Porta padrao `8766`.
 - Flags `--bind`, `--port` e `--out-dir`.
@@ -72,8 +73,8 @@ Configuracao pendente
 - Self-test local com guardrails de validacao, privacidade e paths.
 - Prototipo estatico versionado em
   `docs/product/prototypes/c8-1-setup-minimo/`.
-- Script remoto opcional para executar self-test e smoke na placa usando apenas
-  `/tmp`.
+- Script remoto opcional para executar self-test, validacao C5.1 e smoke na
+  placa usando apenas `/tmp`.
 
 ## 6. O que e mock
 
@@ -150,7 +151,9 @@ A rotacao aceita somente:
 - `180`;
 - `270`.
 
-C8.1 grava a escolha na candidata como `display_rotation_degrees`. Nenhuma
+C8.1.1 consolidou o handoff com o contrato de config e passou a gravar a
+escolha na candidata como `rotation_deg`, campo alinhado ao config
+appliance/player. Nenhuma
 rotacao real e aplicada ao display, renderer, MPV, sistema ou player nesta
 fase.
 
@@ -261,9 +264,9 @@ Artefatos esperados:
 
 ## 15. Como testar na placa em /tmp
 
-O script remoto opcional copia apenas o servidor C8.1 para `/tmp`, executa
-self-test, sobe o servidor em `127.0.0.1`, faz requisicoes locais com Python
-stdlib, valida permissoes e encerra o processo.
+O script remoto opcional copia o servidor C8.1 e o validador C5.1 para `/tmp`,
+executa self-test, sobe o servidor em `127.0.0.1`, faz requisicoes locais com
+Python stdlib, valida contrato/permissoes e encerra o processo.
 
 ```bash
 scripts/remote/run_c8_1_setup_tmp_on_dev_board.sh root@192.168.18.115

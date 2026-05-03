@@ -9,23 +9,29 @@ REMOTE_PORT="${C8_1_REMOTE_PORT:-8766}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOCAL_SERVER="$REPO_ROOT/scripts/board/totem_setup_minimal_server.py"
+LOCAL_CONTRACT="$REPO_ROOT/scripts/board/totem_config_contract_validate.py"
 
 if [ ! -f "$LOCAL_SERVER" ]; then
   echo "error: missing $LOCAL_SERVER" >&2
+  exit 1
+fi
+if [ ! -f "$LOCAL_CONTRACT" ]; then
+  echo "error: missing $LOCAL_CONTRACT" >&2
   exit 1
 fi
 
 echo "Preparing $REMOTE_DIR on $HOST"
 ssh "$HOST" "umask 077 && mkdir -p '$REMOTE_DIR' && chmod 700 '$REMOTE_DIR'"
 
-echo "Copying C8.1 server to $HOST:$REMOTE_DIR"
-scp "$LOCAL_SERVER" "$HOST:$REMOTE_DIR/totem_setup_minimal_server.py"
+echo "Copying C8.1 server and C5.1 validator to $HOST:$REMOTE_DIR"
+scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$HOST:$REMOTE_DIR/"
 
 echo "Running C8.1 self-test and smoke test on the board"
 ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
 set -euo pipefail
 
 SERVER="$REMOTE_DIR/totem_setup_minimal_server.py"
+CONTRACT="$REMOTE_DIR/totem_config_contract_validate.py"
 STDOUT_FILE="$REMOTE_DIR/server.stdout"
 STDERR_FILE="$REMOTE_DIR/server.stderr"
 PID_FILE="$REMOTE_DIR/server.pid"
@@ -47,6 +53,7 @@ mkdir -p "$REMOTE_DIR"
 chmod 700 "$REMOTE_DIR"
 rm -rf "$REMOTE_OUT_DIR"
 
+python3 "$CONTRACT" --self-test
 python3 "$SERVER" --self-test
 
 python3 "$SERVER" \
@@ -122,7 +129,7 @@ combined = (out_dir / "status.json").read_text(encoding="utf-8") + "\n" + (
 if environment_id in combined:
     raise AssertionError("status/summary leaked raw environment_id")
 for forbidden in (
-    "API_KEY_PLACEHOLDER_C8_1_NOT_FOR_PRODUCTION",
+    "API_KEY_MOCK_NOT_FOR_PRODUCTION",
     "https://api.example.invalid/search",
 ):
     if forbidden in combined:
@@ -141,8 +148,27 @@ if guardrails["nmcli_called"] is not False:
 if guardrails["mpv_called"] is not False:
     raise AssertionError("status did not keep mpv_called=false")
 
+candidate = json.loads((out_dir / "candidate-config.json").read_text(encoding="utf-8"))
+if candidate.get("rotation_deg") != 90:
+    raise AssertionError("candidate did not use rotation_deg=90")
+if "display_rotation_degrees" in candidate:
+    raise AssertionError("candidate kept legacy rotation field")
+
 print("remote smoke: ok")
 PY
+
+python3 "$CONTRACT" \
+  --candidate "$REMOTE_OUT_DIR/candidate-config.json" \
+  --allow-mock \
+  --out-dir "$REMOTE_DIR/contract-allow-mock"
+
+if python3 "$CONTRACT" \
+  --candidate "$REMOTE_OUT_DIR/candidate-config.json" \
+  --real-dry-run \
+  --out-dir "$REMOTE_DIR/contract-real-dry-run"; then
+  echo "error: C8.1 candidate unexpectedly passed real-dry-run" >&2
+  exit 1
+fi
 
 cleanup
 if kill -0 "$server_pid" >/dev/null 2>&1; then

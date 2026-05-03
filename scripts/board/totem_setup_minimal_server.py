@@ -27,6 +27,8 @@ from urllib.parse import parse_qs
 
 sys.dont_write_bytecode = True
 
+import totem_config_contract_validate as contract
+
 SCHEMA_VERSION = "dadooh-c8.1-setup-minimal-no-wifi.v1"
 DEFAULT_BIND = "127.0.0.1"
 DEFAULT_PORT = 8766
@@ -41,21 +43,10 @@ PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 MAX_REQUEST_BYTES = 16 * 1024
 
-SAFE_PLACEHOLDER_API_URL = "https://api.example.invalid/search"
-SAFE_PLACEHOLDER_API_KEY = "API_KEY_PLACEHOLDER_C8_1_NOT_FOR_PRODUCTION"
-SAFE_PLACEHOLDER_STATION_ID = "STATION_ID_PLACEHOLDER_C8_1"
+SAFE_PLACEHOLDER_API_URL = contract.MOCK_API_URL
+SAFE_PLACEHOLDER_API_KEY = contract.MOCK_API_KEY
+SAFE_PLACEHOLDER_STATION_ID = contract.MOCK_STATION_ID
 
-ENVIRONMENT_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
-URL_PATTERN_RE = re.compile(r"(?:https?://|www\.)", re.IGNORECASE)
-PROHIBITED_ENVIRONMENT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("url", URL_PATTERN_RE),
-    ("api_key", re.compile(r"api[_-]?key", re.IGNORECASE)),
-    ("token", re.compile(r"token", re.IGNORECASE)),
-    ("secret", re.compile(r"secret", re.IGNORECASE)),
-    ("password", re.compile(r"password", re.IGNORECASE)),
-    ("senha", re.compile(r"senha", re.IGNORECASE)),
-    ("slash", re.compile(r"[\\/]")),
-)
 ALLOWED_ROTATIONS = {0, 90, 180, 270}
 
 
@@ -164,21 +155,10 @@ def validate_environment_id(raw_value: Any) -> str:
         raise SetupError("environment_id must not contain whitespace")
 
     value = raw_value.strip()
-    if not value:
-        raise SetupError("environment_id must not be empty")
-    if len(value) < 3:
-        raise SetupError("environment_id must have at least 3 characters")
-    if len(value) > 128:
-        raise SetupError("environment_id must have at most 128 characters")
-    if re.search(r"\s", value):
-        raise SetupError("environment_id must not contain whitespace")
-
-    for label, pattern in PROHIBITED_ENVIRONMENT_PATTERNS:
-        if pattern.search(value):
-            raise SetupError(f"environment_id must not contain {label}")
-
-    if not ENVIRONMENT_ID_RE.fullmatch(value):
-        raise SetupError("environment_id contains characters outside the allowlist")
+    _status, invalid = contract.validate_environment_like_id(value, "environment_id")
+    if invalid is not None:
+        reason = invalid.get("reason", "invalid")
+        raise SetupError(f"environment_id invalid: {reason}")
     return value
 
 
@@ -202,7 +182,6 @@ def build_candidate_config(environment_id: str, rotation: int) -> dict[str, Any]
         "api_key": SAFE_PLACEHOLDER_API_KEY,
         "api_url": SAFE_PLACEHOLDER_API_URL,
         "cache_dir": "/data/media/kiosky-player",
-        "display_rotation_degrees": rotation,
         "environment_id": environment_id,
         "ipc_path": "/tmp/kiosky/mpv.sock",
         "low_resource_mode": False,
@@ -210,6 +189,7 @@ def build_candidate_config(environment_id: str, rotation: int) -> dict[str, Any]
         "mpv_gpu_context": "drm",
         "mpv_query_uses_fresh_ipc": True,
         "mpv_vo": "gpu",
+        "rotation_deg": rotation,
         "runtime_dir": "/tmp/kiosky",
         "setup_source": "c8.1-minimal-local-no-wifi",
         "state_dir": "/data/state/kiosky-player",
@@ -219,7 +199,36 @@ def build_candidate_config(environment_id: str, rotation: int) -> dict[str, Any]
     }
 
 
-def build_status(generated_at: str, rotation: int) -> dict[str, Any]:
+def summarize_contract_status(status: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "valid": bool(status["valid"]),
+        "missing_fields_count": len(status["missing_fields"]),
+        "invalid_fields_count": len(status["invalid_fields"]),
+        "placeholder_findings_count": len(status["placeholder_findings"]),
+        "environment_id_valid": bool(status["environment_id_status"]["valid"]),
+        "station_id_valid": bool(status["station_id_status"]["valid"]),
+    }
+
+
+def validate_candidate_handoff(candidate: dict[str, Any]) -> dict[str, Any]:
+    allow_mock = contract.validate_candidate_config(candidate, "allow-mock")
+    real_dry_run = contract.validate_candidate_config(candidate, "real-dry-run")
+
+    if not allow_mock["valid"]:
+        raise SetupError("candidate failed C5.1 allow-mock validation")
+    if real_dry_run["valid"]:
+        raise SetupError("candidate unexpectedly passed C5.1 real-dry-run with placeholders")
+
+    return {
+        "validator": "totem_config_contract_validate.py",
+        "contract": "C5.1",
+        "allow_mock": summarize_contract_status(allow_mock),
+        "real_dry_run": summarize_contract_status(real_dry_run),
+        "real_dry_run_expected_failure": True,
+    }
+
+
+def build_status(generated_at: str, rotation: int, contract_validation: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": generated_at,
@@ -237,6 +246,7 @@ def build_status(generated_at: str, rotation: int) -> dict[str, Any]:
             "backend_validation": "not_checked",
             "wifi_validation": "not_configured",
         },
+        "contract_validation": contract_validation,
         "guardrails": {
             "bind_default": DEFAULT_BIND,
             "writes_only_under_tmp": True,
@@ -261,6 +271,7 @@ def build_status(generated_at: str, rotation: int) -> dict[str, Any]:
             "private_url_written_to_summary": False,
             "status_contains_raw_payload": False,
             "summary_contains_raw_payload": False,
+            "contract_validator_raw_output_copied": False,
         },
     }
 
@@ -276,6 +287,10 @@ def build_summary(status: dict[str, Any]) -> str:
             f"flow: {status['flow']}",
             "environment_id: format_validated_only",
             f"rotation_degrees: {status['validation']['rotation_degrees']}",
+            "rotation_field: rotation_deg",
+            "contract_validator: C5.1 allow-mock",
+            f"contract_allow_mock_valid: {str(status['contract_validation']['allow_mock']['valid']).lower()}",
+            "contract_real_dry_run_expected_failure: true",
             "candidate_config: candidate-config.json",
             "summary: summary.txt",
             "status: status.json",
@@ -325,7 +340,8 @@ def write_setup_artifacts(out_dir: pathlib.Path, environment_id: str, rotation: 
     prepare_out_dir(out_dir)
     generated_at = utc_timestamp()
     candidate = build_candidate_config(environment_id, rotation)
-    status = build_status(generated_at, rotation)
+    contract_validation = validate_candidate_handoff(candidate)
+    status = build_status(generated_at, rotation, contract_validation)
 
     atomic_write_private_json(out_dir / CANDIDATE_FILENAME, candidate, out_dir)
     atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
@@ -858,8 +874,18 @@ def run_self_test() -> None:
         with (out_dir / CANDIDATE_FILENAME).open("r", encoding="utf-8") as handle:
             candidate = json.load(handle)
         assert_true(candidate["environment_id"] == environment_id, "candidate should include environment_id")
-        assert_true(candidate["display_rotation_degrees"] == 90, "candidate should include rotation")
+        assert_true(candidate["rotation_deg"] == 90, "candidate should include player-compatible rotation")
+        assert_true("display_rotation_degrees" not in candidate, "candidate should not keep legacy rotation field")
         assert_true(candidate["api_key"] == SAFE_PLACEHOLDER_API_KEY, "candidate should use safe placeholder")
+        allow_mock = contract.validate_candidate_config(candidate, "allow-mock")
+        real_dry_run = contract.validate_candidate_config(candidate, "real-dry-run")
+        assert_true(allow_mock["valid"], "C8.1 candidate should pass C5.1 allow-mock")
+        assert_true(not real_dry_run["valid"], "C8.1 candidate should fail C5.1 real-dry-run with placeholders")
+        assert_true(status["contract_validation"]["allow_mock"]["valid"], "status should record allow-mock pass")
+        assert_true(
+            status["contract_validation"]["real_dry_run_expected_failure"],
+            "status should record expected real-dry-run failure",
+        )
 
         text = output_text(out_dir)
         assert_true(environment_id not in text, "summary/status leaked raw environment_id")

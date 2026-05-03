@@ -24,6 +24,11 @@ sem Wi-Fi real, com servidor HTTP local, prototipo estatico, candidata em
 somente `/tmp`. Nao escreve config real, nao altera rede, nao chama backend,
 nao inicia player e nao substitui homologacao.
 
+Atualizacao C8.1.1: 2026-05-03. C8.1.1 consolida o handoff entre setup minimo
+e contrato C5.1: candidata passa em `allow-mock`, falha em `real-dry-run`
+enquanto usa placeholders e grava rotacao em `rotation_deg`. Continua somente
+em `/tmp`, sem writer real, sem rede e sem player.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -889,7 +894,8 @@ Documentos:
 - `docs/product/39_INVENTARIO_TELAS_ACOES_PRODUTO_V1.md`;
 - `docs/product/40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md`;
 - `docs/product/41_C8_1_SETUP_MINIMO_FUNCIONAL_SEM_WIFI_REAL.md`;
-- `docs/product/prototypes/v1-operacao-recuperacao/index.html`.
+- `docs/product/42_C8_1_1_HANDOFF_SETUP_CONTRATO_CONFIG.md`;
+- `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`.
 
 Objetivo:
@@ -905,6 +911,7 @@ Objetivo:
 Subfases propostas:
 
 - C8.1 - setup minimo funcional sem Wi-Fi real, mock/local em `/tmp`;
+- C8.1.1 - handoff setup minimo -> contrato C5.1;
 - C8.2 - selecao de ambiente mock/local;
 - C8.3 - rotacao mock/local;
 - C8.4 - reset leve e reiniciar player;
