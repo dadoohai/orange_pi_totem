@@ -754,6 +754,121 @@ for forbidden in (
         raise AssertionError(f"private handoff status/summary leaked forbidden marker: {forbidden}")
 PY
 
+python3 "$PRIVATE_HANDOFF" \
+  --private-values "$REMOTE_PRIVATE_VALUES_DIR/private-values.json" \
+  --out-dir "$REMOTE_PRIVATE_HANDOFF_OUT_DIR" \
+  --cleanup-private-artifacts \
+  --confirm-cleanup-private-artifacts
+
+python3 - <<'PY'
+import json
+import os
+import pathlib
+import stat
+
+out_dir = pathlib.Path(os.environ["REMOTE_PRIVATE_HANDOFF_OUT_DIR"])
+setup_out_dir = pathlib.Path(os.environ["REMOTE_OUT_DIR"])
+private_values_dir = pathlib.Path(os.environ["REMOTE_PRIVATE_VALUES_DIR"])
+private_values_path = private_values_dir / "private-values.json"
+private_candidate_path = out_dir / "candidate-private.json"
+expected_remaining = {"handoff-preflight-status.json", "summary.txt"}
+
+if private_candidate_path.exists():
+    raise AssertionError("private candidate remained after cleanup")
+if private_values_path.exists():
+    raise AssertionError("private values remained after cleanup")
+if stat.S_IMODE(out_dir.stat().st_mode) != 0o700:
+    raise AssertionError("private handoff out-dir mode changed after cleanup")
+
+actual = {path.name for path in out_dir.iterdir() if path.is_file()}
+if actual != expected_remaining:
+    raise AssertionError(f"unexpected files after cleanup: {sorted(actual)}")
+
+for name in expected_remaining:
+    path = out_dir / name
+    if stat.S_IMODE(path.stat().st_mode) != 0o600:
+        raise AssertionError(f"{name} mode is not 0600 after cleanup")
+    resolved = path.resolve(strict=True)
+    if not str(resolved).startswith("/tmp/"):
+        raise AssertionError(f"{name} escaped /tmp after cleanup")
+    if str(resolved).startswith("/data/") or str(resolved).startswith("/opt/"):
+        raise AssertionError(f"{name} was written outside /tmp after cleanup")
+
+status = json.loads((out_dir / "handoff-preflight-status.json").read_text(encoding="utf-8"))
+if status["schema_version"] != "dadooh-c8.6.1-private-handoff-cleanup.v1":
+    raise AssertionError("cleanup schema mismatch")
+if status["result"] != "passed":
+    raise AssertionError("cleanup status did not pass")
+if status["cleanup"]["executed"] is not True:
+    raise AssertionError("cleanup was not marked executed")
+if status["cleanup"]["private_candidate_removed"] is not True:
+    raise AssertionError("cleanup did not mark private candidate removed")
+if status["cleanup"]["private_input_removed"] is not True:
+    raise AssertionError("cleanup did not mark private input removed")
+if status["cleanup"]["private_files_remaining_count"] != 0:
+    raise AssertionError("cleanup did not mark zero private files remaining")
+if status["previous_preflight"]["private_real_dry_run_passed"] is not True:
+    raise AssertionError("cleanup did not preserve previous real-dry-run aggregate")
+if status["writer_handoff"]["writer_real_write_blocked"] is not True:
+    raise AssertionError("cleanup did not keep writer blocked")
+if status["writer_handoff"]["enable_real_write_used"] is not False:
+    raise AssertionError("cleanup used enable real write")
+
+for key in (
+    "real_config_read",
+    "real_config_written",
+    "data_written",
+    "opt_written",
+    "writer_real_mode_called",
+    "enable_real_write_used",
+    "systemctl_read_only_called",
+    "systemctl_state_change_called",
+    "service_changed",
+    "player_started",
+    "player_stopped",
+    "mpv_called",
+    "network_external_access",
+    "nmcli_called",
+    "backend_called",
+    "wifi_changed",
+):
+    if status["guardrails"][key] is not False:
+        raise AssertionError(f"cleanup guardrail {key} was not false")
+
+source = json.loads((setup_out_dir / "candidate-config.json").read_text(encoding="utf-8"))
+private_value_samples = (
+    "https://api.sandbox.localhost/search",
+    "B1C2D3E4F5061728394A5B6C7D8E9F01",
+    "ENV-APPROVED-REMOTE",
+)
+combined = (out_dir / "handoff-preflight-status.json").read_text(encoding="utf-8") + "\n" + (
+    out_dir / "summary.txt"
+).read_text(encoding="utf-8")
+for value in list(source.values()) + list(private_value_samples):
+    if not isinstance(value, str) or not value:
+        continue
+    if value in {source.get("setup_source"), source.get("setup_environment_source")}:
+        continue
+    variants = {value, json.dumps(value, ensure_ascii=True)[1:-1]}
+    if any(variant in combined for variant in variants):
+        raise AssertionError("cleanup status/summary leaked private value")
+
+for forbidden in (
+    "api_key",
+    "api_url",
+    "token",
+    "secret",
+    "password",
+    "senha",
+    "ssid",
+    "hostname",
+    "gateway",
+    "raw_payload",
+):
+    if forbidden.lower() in combined.lower():
+        raise AssertionError(f"cleanup status/summary leaked forbidden marker: {forbidden}")
+PY
+
 python3 "$CONTRACT" \
   --candidate "$REMOTE_OUT_DIR/candidate-config.json" \
   --allow-mock \

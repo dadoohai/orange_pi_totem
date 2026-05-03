@@ -216,8 +216,8 @@ O teste remoto deve provar:
 
 ## 13. Proximos passos
 
-- C8.6.1, se necessario: revisar linguagem operacional e limpeza segura da
-  candidata privada temporaria.
+- C8.6.1: executar limpeza segura da candidata privada temporaria e do arquivo
+  de valores privados, preservando apenas status/summary sanitizados.
 - C8.7/C6 gate futuro: somente depois de aprovacao humana para escrita real,
   servico/player bloqueado, writer C6 revalidando, backup e rollback
   confirmados.

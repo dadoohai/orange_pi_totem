@@ -29,6 +29,7 @@ import totem_config_contract_validate as contract
 
 
 SCHEMA_VERSION = "dadooh-c8.6-private-handoff-preflight.v1"
+CLEANUP_SCHEMA_VERSION = "dadooh-c8.6.1-private-handoff-cleanup.v1"
 DEFAULT_SOURCE_CANDIDATE = "/tmp/dadooh-c8-1-setup-minimo/candidate-config.json"
 DEFAULT_PRIVATE_VALUES = "/tmp/dadooh-c8-6-private/private-values.json"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c8-6-handoff-preflight"
@@ -571,6 +572,33 @@ def output_text(out_dir: pathlib.Path) -> str:
     return "\n".join(parts)
 
 
+def load_previous_sanitized_status(out_dir: pathlib.Path) -> dict[str, Any]:
+    path = out_dir / STATUS_FILENAME
+    if not path.exists():
+        return {
+            "status_present_before_cleanup": False,
+            "private_real_dry_run_passed": False,
+            "writer_real_write_blocked": False,
+        }
+
+    try:
+        status = load_json_object(path, "previous status")
+    except PrivateHandoffError:
+        return {
+            "status_present_before_cleanup": True,
+            "private_real_dry_run_passed": False,
+            "writer_real_write_blocked": False,
+        }
+
+    return {
+        "status_present_before_cleanup": True,
+        "private_real_dry_run_passed": bool(
+            status.get("contract_validation", {}).get("private_real_dry_run", {}).get("valid")
+        ),
+        "writer_real_write_blocked": bool(status.get("writer_handoff", {}).get("writer_real_write_blocked")),
+    }
+
+
 def forbidden_text_variants(value: str) -> tuple[str, str]:
     escaped = json.dumps(value, ensure_ascii=True)[1:-1]
     return (value, escaped)
@@ -610,6 +638,221 @@ def write_outputs(
     atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
     atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_summary(status), out_dir)
     assert_sanitized_outputs(out_dir, source_candidate, private_values, private_candidate)
+
+
+def normalize_cleanup_target(raw_path: str, label: str, *, reject_repo: bool) -> pathlib.Path:
+    path = pathlib.Path(raw_path).expanduser()
+    raw_absolute = absolute_no_resolve(raw_path)
+    if not path_is_under(raw_absolute, TMP_ROOT):
+        raise PrivateHandoffError(f"{label} cleanup target must be under /tmp")
+
+    if not path.exists() and not path.is_symlink():
+        return path.resolve(strict=False)
+
+    resolved = path.resolve(strict=True)
+    if not path_is_under(resolved, TMP_ROOT):
+        raise PrivateHandoffError(f"{label} cleanup target must resolve under /tmp")
+    for forbidden in (pathlib.Path("/data"), pathlib.Path("/opt"), pathlib.Path("/home")):
+        if path_is_under(resolved, forbidden):
+            raise PrivateHandoffError(f"refusing cleanup target under {forbidden}")
+    if reject_repo and path_is_in_repository(resolved):
+        raise PrivateHandoffError(f"{label} cleanup target must not be inside a repository")
+    if resolved.is_dir():
+        raise PrivateHandoffError(f"{label} cleanup target must be a file")
+    return resolved
+
+
+def cleanup_private_file(raw_path: str, label: str, *, reject_repo: bool) -> dict[str, Any]:
+    path = pathlib.Path(raw_path).expanduser()
+    normalize_cleanup_target(raw_path, label, reject_repo=reject_repo)
+    existed_before = path.exists() or path.is_symlink()
+    removed = False
+    if existed_before:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        else:
+            removed = True
+    exists_after = path.exists() or path.is_symlink()
+    return {
+        "target": label,
+        "existed_before": existed_before,
+        "removed": removed,
+        "exists_after": exists_after,
+        "value_read": False,
+        "raw_path_written": False,
+    }
+
+
+def build_cleanup_status(
+    *,
+    generated_at: str,
+    previous_status: dict[str, Any],
+    private_candidate_cleanup: dict[str, Any],
+    private_input_cleanup: dict[str, Any],
+) -> dict[str, Any]:
+    private_files_remaining_count = sum(
+        1
+        for item in (private_candidate_cleanup, private_input_cleanup)
+        if bool(item["exists_after"])
+    )
+    return {
+        "schema_version": CLEANUP_SCHEMA_VERSION,
+        "generated_at_utc": generated_at,
+        "result": "passed",
+        "phase": "private_artifacts_cleanup_completed",
+        "previous_preflight": previous_status,
+        "cleanup": {
+            "executed": True,
+            "explicit_confirmation_received": True,
+            "private_candidate_removed": bool(private_candidate_cleanup["removed"]),
+            "private_input_removed": bool(private_input_cleanup["removed"]),
+            "private_files_remaining_count": private_files_remaining_count,
+            "private_candidate": private_candidate_cleanup,
+            "private_input": private_input_cleanup,
+            "status_summary_preserved": True,
+        },
+        "writer_handoff": {
+            "writer_real_mode_called": False,
+            "writer_simulated_write_called": False,
+            "writer_real_write_blocked": True,
+            "enable_real_write_used": False,
+            "handoff_decision": "cleanup_completed_abort_before_writer",
+        },
+        "guardrails": {
+            "writes_only_under_tmp": True,
+            "real_config_read": False,
+            "real_config_written": False,
+            "data_written": False,
+            "opt_written": False,
+            "writer_real_mode_called": False,
+            "enable_real_write_used": False,
+            "systemctl_read_only_called": False,
+            "systemctl_state_change_called": False,
+            "service_changed": False,
+            "player_started": False,
+            "player_stopped": False,
+            "mpv_called": False,
+            "network_external_access": False,
+            "nmcli_called": False,
+            "backend_called": False,
+            "wifi_changed": False,
+        },
+        "privacy": {
+            "private_values_read_during_cleanup": False,
+            "private_candidate_read_during_cleanup": False,
+            "private_values_copied_to_status": False,
+            "private_values_copied_to_summary": False,
+            "private_candidate_copied_to_status": False,
+            "private_candidate_copied_to_summary": False,
+            "credential_value_written_to_status": False,
+            "credential_value_written_to_summary": False,
+            "endpoint_value_written_to_status": False,
+            "endpoint_value_written_to_summary": False,
+            "environment_identifier_raw_written_to_status": False,
+            "environment_identifier_raw_written_to_summary": False,
+            "paths_written_to_status": False,
+            "paths_written_to_summary": False,
+        },
+        "artifacts": {
+            "status": STATUS_FILENAME,
+            "summary": SUMMARY_FILENAME,
+            "private_candidate_remaining": False,
+            "private_input_remaining": False,
+        },
+    }
+
+
+def build_cleanup_summary(status: dict[str, Any]) -> str:
+    cleanup = status["cleanup"]
+    previous = status["previous_preflight"]
+    return "\n".join(
+        [
+            "Dadooh C8.6.1 private handoff cleanup",
+            "",
+            f"schema_version: {status['schema_version']}",
+            f"generated_at_utc: {status['generated_at_utc']}",
+            f"result: {status['result']}",
+            f"phase: {status['phase']}",
+            "cleanup_executed: true",
+            "explicit_confirmation_received: true",
+            f"previous_status_present: {str(previous['status_present_before_cleanup']).lower()}",
+            f"previous_private_real_dry_run_passed: {str(previous['private_real_dry_run_passed']).lower()}",
+            f"previous_writer_real_write_blocked: {str(previous['writer_real_write_blocked']).lower()}",
+            f"private_candidate_removed: {str(cleanup['private_candidate_removed']).lower()}",
+            f"private_input_removed: {str(cleanup['private_input_removed']).lower()}",
+            f"private_files_remaining_count: {cleanup['private_files_remaining_count']}",
+            "status_summary_preserved: true",
+            "writer_real_write_blocked: true",
+            "writer_real_mode_called: false",
+            "enable_real_write_used: false",
+            "",
+            "Guardrails:",
+            "writes_only_under_tmp: true",
+            "real_config_read: false",
+            "real_config_written: false",
+            "data_written: false",
+            "opt_written: false",
+            "systemctl_read_only_called: false",
+            "systemctl_state_change_called: false",
+            "service_changed: false",
+            "player_started: false",
+            "player_stopped: false",
+            "mpv_called: false",
+            "network_external_access: false",
+            "nmcli_called: false",
+            "backend_called: false",
+            "wifi_changed: false",
+            "",
+            "Privacy:",
+            "private_values_read_during_cleanup: false",
+            "private_candidate_read_during_cleanup: false",
+            "private_values_copied_to_output: false",
+            "private_candidate_copied_to_output: false",
+            "credential_value_written_to_output: false",
+            "endpoint_value_written_to_output: false",
+            "environment_identifier_raw_written_to_output: false",
+            "paths_written_to_output: false",
+        ]
+    )
+
+
+def write_cleanup_outputs(out_dir: pathlib.Path, status: dict[str, Any]) -> None:
+    prepare_private_dir(out_dir)
+    atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
+    atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_cleanup_summary(status), out_dir)
+
+
+def run_cleanup(
+    private_values_raw: str,
+    out_dir_raw: str,
+    *,
+    confirm_cleanup_private_artifacts: bool,
+) -> dict[str, Any]:
+    if not confirm_cleanup_private_artifacts:
+        raise PrivateHandoffError("cleanup requires explicit confirmation")
+
+    out_dir = require_tmp_dir(out_dir_raw)
+    previous_status = load_previous_sanitized_status(out_dir)
+    private_candidate_cleanup = cleanup_private_file(
+        str(out_dir / PRIVATE_CANDIDATE_FILENAME),
+        "private_candidate",
+        reject_repo=False,
+    )
+    private_input_cleanup = cleanup_private_file(
+        private_values_raw,
+        "private_input",
+        reject_repo=True,
+    )
+    status = build_cleanup_status(
+        generated_at=utc_timestamp(),
+        previous_status=previous_status,
+        private_candidate_cleanup=private_candidate_cleanup,
+        private_input_cleanup=private_input_cleanup,
+    )
+    write_cleanup_outputs(out_dir, status)
+    return status
 
 
 def run_preflight(
@@ -778,6 +1021,62 @@ def run_self_test() -> None:
         ):
             assert_true(status["guardrails"][key] is False, f"guardrail {key} should be false")
 
+        cleanup_status = run_cleanup(
+            str(private_values_path),
+            str(out_dir),
+            confirm_cleanup_private_artifacts=True,
+        )
+        assert_true(cleanup_status["result"] == "passed", "cleanup should pass")
+        assert_true(cleanup_status["cleanup"]["executed"], "cleanup should be marked executed")
+        assert_true(
+            cleanup_status["cleanup"]["private_candidate_removed"],
+            "cleanup should remove private candidate",
+        )
+        assert_true(cleanup_status["cleanup"]["private_input_removed"], "cleanup should remove private values")
+        assert_true(
+            cleanup_status["cleanup"]["private_files_remaining_count"] == 0,
+            "cleanup should leave no private files",
+        )
+        assert_true(not private_candidate_path.exists(), "private candidate should be removed")
+        assert_true(not private_values_path.exists(), "private values should be removed")
+        remaining_files = {path.name for path in out_dir.iterdir() if path.is_file()}
+        assert_true(
+            remaining_files == {STATUS_FILENAME, SUMMARY_FILENAME},
+            "cleanup should preserve only status and summary",
+        )
+        cleanup_text = output_text(out_dir)
+        for candidate in (source, private_values, private_candidate):
+            for field, value in candidate.items():
+                if field in NON_PRIVATE_METADATA_FIELDS:
+                    continue
+                if isinstance(value, str) and value:
+                    for variant in forbidden_text_variants(value):
+                        assert_true(variant not in cleanup_text, "cleanup output leaked private value")
+        for marker in SENSITIVE_OUTPUT_MARKERS:
+            assert_true(marker not in cleanup_text.lower(), f"cleanup output leaked marker {marker}")
+        for name in (STATUS_FILENAME, SUMMARY_FILENAME):
+            path = out_dir / name
+            assert_true(path.exists(), f"{name} should remain after cleanup")
+            assert_true(file_mode(path) == PRIVATE_FILE_MODE, f"{name} mode should be 600 after cleanup")
+
+        write_private_json(private_values_path, private_values)
+        rerun_status = run_preflight(
+            str(source_path),
+            str(private_values_path),
+            str(out_dir),
+            confirm_private_values_approved=True,
+        )
+        assert_true(rerun_status["result"] == "passed", "private handoff should pass after cleanup rerun")
+
+        assert_raises_private_handoff(
+            lambda: run_cleanup(
+                str(private_values_path),
+                str(out_dir),
+                confirm_cleanup_private_artifacts=False,
+            ),
+            "cleanup without confirmation should fail",
+        )
+
         assert_raises_private_handoff(
             lambda: run_preflight(
                 str(source_path),
@@ -871,7 +1170,17 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Confirm human approval to read private values for this preflight only.",
     )
-    parser.add_argument("--self-test", action="store_true", help="Run local C8.6 self-tests under /tmp and exit.")
+    parser.add_argument(
+        "--cleanup-private-artifacts",
+        action="store_true",
+        help="Remove candidate-private.json and private-values.json, preserving sanitized status/summary.",
+    )
+    parser.add_argument(
+        "--confirm-cleanup-private-artifacts",
+        action="store_true",
+        help="Confirm removal of private temporary artifacts under /tmp.",
+    )
+    parser.add_argument("--self-test", action="store_true", help="Run local C8.6/C8.6.1 self-tests under /tmp and exit.")
     return parser.parse_args(argv)
 
 
@@ -883,12 +1192,19 @@ def main(argv: list[str]) -> int:
             print("self-test: ok")
             return 0
 
-        status = run_preflight(
-            args.source_candidate,
-            args.private_values,
-            args.out_dir,
-            confirm_private_values_approved=args.confirm_private_values_approved,
-        )
+        if args.cleanup_private_artifacts:
+            status = run_cleanup(
+                args.private_values,
+                args.out_dir,
+                confirm_cleanup_private_artifacts=args.confirm_cleanup_private_artifacts,
+            )
+        else:
+            status = run_preflight(
+                args.source_candidate,
+                args.private_values,
+                args.out_dir,
+                confirm_private_values_approved=args.confirm_private_values_approved,
+            )
     except PrivateHandoffError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -899,11 +1215,15 @@ def main(argv: list[str]) -> int:
         print("error: failed to write C8.6 artifacts", file=sys.stderr)
         return 1
 
-    print(f"C8.6 private handoff preflight artifacts generated under {args.out_dir}")
-    print(PRIVATE_CANDIDATE_FILENAME)
+    print(f"C8.6 private handoff artifacts generated under {args.out_dir}")
+    if not args.cleanup_private_artifacts:
+        print(PRIVATE_CANDIDATE_FILENAME)
     print(STATUS_FILENAME)
     print(SUMMARY_FILENAME)
-    print(f"real-dry-run: {'passed' if status['contract_validation']['private_real_dry_run']['valid'] else 'failed'}")
+    if args.cleanup_private_artifacts:
+        print("cleanup: completed")
+    else:
+        print(f"real-dry-run: {'passed' if status['contract_validation']['private_real_dry_run']['valid'] else 'failed'}")
     print("writer-real: blocked")
     return 0
 

@@ -72,6 +72,12 @@ pre-condicoes de servico/player sem alterar estado e registra pontos de aborto.
 Writer real continua bloqueado, `--enable-real-write` nao e usado, `/data` e
 `/opt` nao sao tocados e nenhum valor privado e publicado.
 
+Atualizacao C8.6.1: 2026-05-03. C8.6.1 adiciona limpeza explicita dos arquivos
+privados temporarios do preflight: remove `candidate-private.json` e
+`private-values.json`, preserva apenas status/summary sanitizados, registra
+cleanup executado e mantem writer real bloqueado. Continua somente em `/tmp`,
+sem `/data`, `/opt`, servico, player, MPV, rede ou backend.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
