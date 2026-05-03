@@ -13,6 +13,11 @@ sanitizado do appliance, com contrato e snapshot local/offline. C7.0 nao toca
 placa, nao le config real, nao executa comandos operacionais e nao substitui
 homologacao longa.
 
+Atualizacao C8 produto V1: 2026-05-03. C8 passa a organizar a visao Produto V1
+de operacao, onboarding e recuperacao para operador nao tecnico. Esta
+atualizacao e documental: nao implementa operacao real, nao toca placa, nao
+altera rede/config/player e nao substitui homologacao.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -199,6 +204,11 @@ Documentos:
 - `docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`;
 - `docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`;
 - `docs/product/36_C7_DIAGNOSTICO_STATUS_APPLIANCE.md`;
+- `docs/product/37_PRODUTO_V1_OPERACAO_ONBOARDING_RECUPERACAO.md`;
+- `docs/product/38_FLUXO_PRODUTO_V1_ONBOARDING_MANUTENCAO_RECUPERACAO.md`;
+- `docs/product/39_INVENTARIO_TELAS_ACOES_PRODUTO_V1.md`;
+- `docs/product/40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md`;
+- `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`;
 - `docs/DECISIONS/ADR-0010-api-token-provisioning.md`.
 
@@ -266,7 +276,15 @@ Sequencia incremental refinada:
 - C6.5 - consolidacao documental do marco config real + `player_running`;
 - C7.0 - contrato + snapshot local/offline de diagnostico/status sanitizado;
 - C7.1 - futura validacao em placa read-only, se aprovada;
-- C8 - rotacao, troca de ambiente, manutencao e reset.
+- C8 - Produto V1: operacao, onboarding e recuperacao;
+- C8.1 - setup minimo funcional sem Wi-Fi real;
+- C8.2 - selecao de ambiente mock/local;
+- C8.3 - rotacao mock/local;
+- C8.4 - reset leve e reiniciar player;
+- C8.5 - integracao com writer/config;
+- C8.6 - setup funcional em placa;
+- C9 - Wi-Fi/portal/hotspot;
+- C10 - manutencao/reset avancado.
 
 Criterios de aceite:
 
@@ -853,17 +871,36 @@ Limite:
 - a antiga frente de ativacao por codigo, login ou lista de ambientes fica para
   fase futura de UX/setup/onboarding, nao para este C7.
 
-### C8 - rotacao, troca de ambiente, manutencao e reset
+### C8 - Produto V1: operacao, onboarding e recuperacao
 
-Status: planejada.
+Status: visao documental criada. Nao implementa operacao real.
+
+Documentos:
+
+- `docs/product/37_PRODUTO_V1_OPERACAO_ONBOARDING_RECUPERACAO.md`;
+- `docs/product/38_FLUXO_PRODUTO_V1_ONBOARDING_MANUTENCAO_RECUPERACAO.md`;
+- `docs/product/39_INVENTARIO_TELAS_ACOES_PRODUTO_V1.md`;
+- `docs/product/40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md`;
+- `docs/product/prototypes/v1-operacao-recuperacao/index.html`.
 
 Objetivo:
 
-- tratar funcoes fora do minimo C1;
-- planejar rotacao de tela;
-- planejar troca de ambiente apos player rodando;
-- planejar manutencao limitada;
-- planejar reset leve e factory reset com confirmacao forte.
+- consolidar a visao holistica de produto para operador nao tecnico;
+- cobrir onboarding, operacao, manutencao, reset e recuperacao em campo;
+- tratar rotacao, troca de ambiente e setup como jornada de produto, nao como
+  comandos de bancada;
+- separar camadas de recuperacao: automatica, operador, reset local fisico e
+  restauracao de sistema;
+- orientar MVP funcional e V1 final sem substituir homologacao.
+
+Subfases propostas:
+
+- C8.1 - setup minimo funcional sem Wi-Fi real;
+- C8.2 - selecao de ambiente mock/local;
+- C8.3 - rotacao mock/local;
+- C8.4 - reset leve e reiniciar player;
+- C8.5 - integracao com writer/config;
+- C8.6 - setup funcional em placa, em tarefa propria e com roteiro aprovado.
 
 Validacao:
 
@@ -871,6 +908,57 @@ Validacao:
 - player nao e interrompido sem estado publico claro;
 - diagnostico segue sanitizado;
 - reset preserva ou apaga dados conforme escopo aprovado.
+
+Limites:
+
+- C8 documental nao altera NetworkManager, hotspot, portal, launcher,
+  renderer, `systemd` ou `kiosky-player`;
+- C8 documental nao escreve config real;
+- C8 documental nao executa reset real;
+- C8 documental nao toca placa.
+
+### C9 - Wi-Fi/portal/hotspot
+
+Status: planejada.
+
+Objetivo:
+
+- retomar os gates C4 de Wi-Fi antes de transformar conectividade em produto;
+- implementar Wi-Fi setup, portal local e/ou hotspot somente depois de adapter
+  seguro, politica de credenciais, rollback e evidencia sanitizada;
+- manter credenciais fora do Codex, logs, status publico e diagnostico;
+- separar Wi-Fi local, internet e backend nas mensagens ao operador.
+
+Validacao:
+
+- falhas controladas de senha, rede ausente, timeout e conexao limitada;
+- rede anterior preservada ate nova conexao passar, quando aplicavel;
+- Ethernet preservada em bancada;
+- nenhum SSID, senha, IP, hostname, MAC, BSSID, gateway ou DNS real em
+  evidencia.
+
+### C10 - manutencao/reset avancado
+
+Status: planejada.
+
+Objetivo:
+
+- implementar manutencao protegida, factory reset, hard reset local, rollback
+  de app e restauracao avancada;
+- escolher metodo fisico de hard reset;
+- impedir que reset vire shell;
+- preservar ou exportar diagnostico sanitizado antes de apagamentos
+  destrutivos, conforme politica;
+- integrar com update/rollback e recovery image quando essas fases estiverem
+  prontas.
+
+Validacao:
+
+- matriz de reset aprovada antes de implementacao;
+- confirmacao forte em reset destrutivo;
+- factory reset retorna para setup sem expor segredo;
+- hard reset local e acionavel em campo e dificil de disparar por acidente;
+- rollback/restauracao tem healthcheck publico e caminho de retorno.
 
 ## Fase F - monitoramento/telemetria
 

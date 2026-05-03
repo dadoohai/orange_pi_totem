@@ -63,6 +63,36 @@ Mitigacoes:
 - C7 documentado como observabilidade curta, sem substituir a fila de
   homologacao.
 
+## Atualizacao C8 - riscos de Produto V1 e recuperacao
+
+C8 amplia o foco para operacao, onboarding, manutencao e recuperacao por
+operador nao tecnico. O risco principal deixa de ser apenas "nao quebrar o
+runtime" e passa a incluir "o produto precisa ser recuperavel sem suporte
+tecnico presente em toda falha simples".
+
+Riscos reforcados nesta atualizacao:
+
+- produto depender de suporte tecnico para recuperacao simples;
+- nao haver hard reset local quando UI, rede ou backend falharem;
+- reset apagar dados errados, como config valida, cache util ou diagnostico;
+- reset virar shell perigoso ou comando livre disfarcado;
+- UX ignorar robustez e prometer acao que ainda nao e segura;
+- robustez bloquear a UX indefinidamente, sem retry, cancelamento ou estado
+  publico claro;
+- suporte pedir diagnostico bruto para compensar falta de fluxo de produto.
+
+Mitigacoes:
+
+- matriz de reset e recuperacao em
+  `docs/product/40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md`;
+- visao V1 em
+  `docs/product/37_PRODUTO_V1_OPERACAO_ONBOARDING_RECUPERACAO.md`;
+- fluxos detalhados e inventario de telas antes de qualquer implementacao;
+- hard reset local planejado como decisao aberta e bloqueante antes de campo;
+- confirmacao forte para acoes destrutivas;
+- fases incrementais C8.1-C8.6, C9 e C10;
+- diagnostico sempre sanitizado e sem dados brutos.
+
 | Risco | Impacto | Mitigacao | Fase de teste |
 | --- | --- | --- | --- |
 | Derrubar SSH/bancada ao mexer em rede | Perda de acesso remoto, teste interrompido e risco de placa presa em estado ruim. | Comecar read-only, preservar Ethernet, snapshot antes/depois, prompt humano antes de alterar conexao ativa e rollback documentado. | C3, C4 |
@@ -150,6 +180,13 @@ Mitigacoes:
 | NetworkManager em estado ambiguo | Conexao cliente e AP competem; reboot nao recupera rede. | Adapter estreito, snapshots, perfis dedicados, rollback e testes com reboot. | C4, fase futura |
 | Queda de energia durante setup | Config ou perfil de rede ficam parcialmente gravados. | Escrita atomica, estados de setup recuperaveis, validacao no boot e rollback para ultima config/perfil valido. | C4, C6, C8 |
 | Manutencao virar shell remoto | Superficie de ataque e risco operacional alto. | Comandos limitados e nomeados, sem shell, confirmacao forte e logs sanitizados. | C8 |
+| Produto depender de suporte tecnico para recuperacao simples | Totem fica parado em campo por problemas que operador poderia resolver, como retry, rede, ambiente ou reinicio de exibicao. | Fluxos V1 para tentar novamente, reiniciar exibicao, trocar rede/ambiente, diagnostico e reset leve sem terminal. | C8.1-C8.6 |
+| Nao haver hard reset local | Quando UI, portal, rede ou backend falham, nao ha caminho pratico de recuperacao presencial. | Escolher metodo fisico de hard reset antes de campo e documentar acionamento seguro. | C10 |
+| Reset apagar dados errados | Perda de config valida, cache necessario, diagnostico ou estado util para suporte. | Matriz de reset com dados apagados/preservados por tipo, confirmacao forte e evidencia esperada. | C8, C10 |
+| Reset virar shell perigoso | Modo manutencao amplia superficie de ataque e permite comando arbitrario. | Acoes nomeadas, sem shell, sem path arbitrario, sem comando livre e com autorizacao por papel. | C8, C10 |
+| UX ignorar robustez | Tela bonita pode prometer salvamento, rede, reset ou recuperacao sem rollback real. | Separar MVP/V1 final, prototipo marcado como conceitual e gates tecnicos antes de cada acao operacional. | C8 |
+| Robustez bloquear UX indefinidamente | Sistema fica tentando recuperar sem explicar estado ou oferecer acao segura ao operador. | Limite de retry, estados publicos claros, acoes de operador e camadas de recuperacao. | C8-C10 |
+| Diagnostico bruto usado como atalho de suporte | Para resolver campo, suporte pede logs, config, SSID, IP ou output bruto e vaza dados. | Diagnostico sanitizado, codigos publicos e pacote seguro allowlisted antes de suporte remoto. | C7, C8 |
 
 ## Riscos bloqueantes antes de producao
 
@@ -200,6 +237,14 @@ Mitigacoes:
   validacao e revisao de escopo.
 - Qualquer mock que peca senha real ou use `environment_id` real em evidencia.
 - Qualquer portal local que exponha shell, path arbitrario ou stack trace.
+- Qualquer produto V1 sem caminho de recuperacao simples para operador nao
+  tecnico.
+- Qualquer hard reset local ausente ou nao decidido antes de campo.
+- Qualquer reset sem matriz aprovada de dados apagados/preservados.
+- Qualquer reset destrutivo sem confirmacao forte.
+- Qualquer modo manutencao que permita shell, comando livre ou path arbitrario.
+- Qualquer UX que mantenha retry infinito sem estado publico e acao de
+  recuperacao.
 
 ## Evidencias esperadas por fase
 
@@ -241,5 +286,11 @@ Mitigacoes:
   `/tmp` e evidencia README sanitizada.
 - C7.1: futura validacao em placa read-only, se aprovada, sem journal bruto,
   sem ler config real e sem publicar dados privados.
-- C8: rotacao, troca de ambiente, manutencao/reset com confirmacao forte e
-  preservacao de evidencias quando definido.
+- C8: visao Produto V1, fluxos, inventario de telas, matriz de reset,
+  prototipo estatico conceitual, setup minimo sem Wi-Fi real em fase futura,
+  reset leve/reiniciar exibicao e integracao com writer/config em passos
+  separados.
+- C9: Wi-Fi/portal/hotspot somente depois dos gates de credencial, adapter
+  seguro, rollback e evidencia sanitizada.
+- C10: manutencao/reset avancado, factory reset, hard reset local, rollback de
+  app e restauracao com confirmacao forte e sem shell.

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dadooh Totem - Prototipo V1 Operacao e Recuperacao</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Prototipo conceitual estatico</p>
+        <h1>Dadooh Totem V1</h1>
+        <p class="subtitle">
+          Operacao, onboarding, manutencao e recuperacao para operador nao
+          tecnico. Sem backend, sem rede, sem JS operacional e sem dados reais.
+        </p>
+      </div>
+      <nav aria-label="Fluxo do prototipo">
+        <a href="#boot">Inicio</a>
+        <a href="#setup">Setup</a>
+        <a href="#player">Player</a>
+        <a href="#maintenance">Manutencao</a>
+        <a href="#recovery">Reset</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="flow-map" aria-labelledby="flow-title">
+        <h2 id="flow-title">Sequencia principal</h2>
+        <ol>
+          <li>Inicializacao</li>
+          <li>Configuracao pendente</li>
+          <li>Conexao</li>
+          <li>Ativacao</li>
+          <li>Ambiente</li>
+          <li>Rotacao</li>
+          <li>Revisao</li>
+          <li>Player</li>
+          <li>Manutencao</li>
+          <li>Recuperacao</li>
+        </ol>
+      </section>
+
+      <section class="screen-grid" id="boot" aria-label="Inicio">
+        <article class="screen screen-dark">
+          <span class="screen-tag">booting</span>
+          <div class="brand">Dadooh</div>
+          <h2>Inicializando</h2>
+          <p>Preparando o totem para exibicao.</p>
+          <div class="progress" aria-hidden="true"><span></span></div>
+          <p class="hint">Nenhuma acao necessaria.</p>
+        </article>
+
+        <article class="screen screen-warn">
+          <span class="screen-tag">config_missing</span>
+          <div class="brand">Dadooh</div>
+          <h2>Configuracao pendente</h2>
+          <p>O player esta bloqueado ate a configuracao ser concluida.</p>
+          <a class="primary-action" href="#setup">Iniciar configuracao</a>
+          <a class="secondary-action" href="#maintenance">Manutencao</a>
+        </article>
+      </section>
+
+      <section class="screen-grid" id="setup" aria-label="Setup guiado">
+        <article class="screen">
+          <span class="screen-tag">network_setup</span>
+          <h2>Conexao</h2>
+          <p>Escolha como o totem deve se conectar.</p>
+          <div class="option-list">
+            <button type="button">Wi-Fi de exemplo</button>
+            <button type="button">Cabo conectado</button>
+            <button type="button">Tentar depois</button>
+          </div>
+          <p class="hint">Dados ficticios. Nenhuma rede real e consultada.</p>
+        </article>
+
+        <article class="screen">
+          <span class="screen-tag">activation_pending</span>
+          <h2>Ativacao</h2>
+          <p>Autorize este totem usando um codigo ou login futuro.</p>
+          <div class="code-box">CODIGO-DEMO</div>
+          <a class="primary-action" href="#environment">Continuar</a>
+          <p class="hint">Nenhuma credencial ou endpoint aparece nesta tela.</p>
+        </article>
+
+        <article class="screen" id="environment">
+          <span class="screen-tag">environment_select</span>
+          <h2>Selecao de ambiente</h2>
+          <p>Escolha um ambiente autorizado para exibicao.</p>
+          <div class="choice-row">
+            <button type="button" class="selected">Loja Exemplo A</button>
+            <button type="button">Lobby Exemplo</button>
+          </div>
+          <a class="primary-action" href="#rotation">Confirmar ambiente</a>
+        </article>
+
+        <article class="screen" id="rotation">
+          <span class="screen-tag">rotation_select</span>
+          <h2>Rotacao de tela</h2>
+          <p>Confirme a orientacao fisica do display.</p>
+          <div class="rotation-picker" aria-hidden="true">
+            <span class="orientation selected">0</span>
+            <span class="orientation">90</span>
+            <span class="orientation">180</span>
+            <span class="orientation">270</span>
+          </div>
+          <a class="primary-action" href="#review">Usar orientacao</a>
+        </article>
+
+        <article class="screen screen-review" id="review">
+          <span class="screen-tag">review</span>
+          <h2>Revisao</h2>
+          <dl>
+            <div><dt>Conexao</dt><dd>Aprovada no prototipo</dd></div>
+            <div><dt>Ambiente</dt><dd>Loja Exemplo A</dd></div>
+            <div><dt>Orientacao</dt><dd>Paisagem</dd></div>
+          </dl>
+          <a class="primary-action" href="#player">Salvar e iniciar</a>
+          <p class="hint">Resumo sem segredo, sem JSON e sem dados reais.</p>
+        </article>
+      </section>
+
+      <section class="screen-grid" id="player" aria-label="Player">
+        <article class="screen screen-player">
+          <span class="screen-tag">player_running</span>
+          <div class="media-placeholder">
+            <div class="play-mark" aria-hidden="true"></div>
+            <p>Exibicao em andamento</p>
+          </div>
+          <a class="secondary-action" href="#maintenance">Abrir manutencao</a>
+        </article>
+
+        <article class="screen screen-error" id="error">
+          <span class="screen-tag">player_error</span>
+          <h2>Exibicao temporariamente indisponivel</h2>
+          <p>O sistema tentara reiniciar automaticamente.</p>
+          <a class="primary-action" href="#player">Tentar novamente</a>
+          <a class="secondary-action" href="#diagnostics">Ver diagnostico</a>
+        </article>
+      </section>
+
+      <section class="screen-grid" id="maintenance" aria-label="Manutencao">
+        <article class="screen">
+          <span class="screen-tag">maintenance</span>
+          <h2>Manutencao</h2>
+          <div class="action-stack">
+            <a href="#diagnostics">Diagnostico</a>
+            <a href="#player">Reiniciar exibicao</a>
+            <a href="#setup">Trocar rede</a>
+            <a href="#environment">Trocar ambiente</a>
+            <a href="#recovery">Reset e recuperacao</a>
+          </div>
+          <p class="hint">Acoes limitadas. Sem shell e sem comandos livres.</p>
+        </article>
+
+        <article class="screen" id="diagnostics">
+          <span class="screen-tag">diagnostics</span>
+          <h2>Diagnostico</h2>
+          <ul class="status-list">
+            <li><span>Estado</span><strong>PLAYER_RUNNING</strong></li>
+            <li><span>Tela</span><strong>Conectada</strong></li>
+            <li><span>Rede</span><strong>Agregada</strong></li>
+            <li><span>Privacidade</span><strong>OK</strong></li>
+          </ul>
+          <p class="hint">Snapshot ficticio e sanitizado.</p>
+        </article>
+      </section>
+
+      <section class="screen-grid" id="recovery" aria-label="Reset e recuperacao">
+        <article class="screen screen-warn">
+          <span class="screen-tag">config_reset_confirm</span>
+          <h2>Reset leve</h2>
+          <p>Remove a configuracao operacional e volta para setup.</p>
+          <div class="impact">
+            <span>Apaga: configuracao operacional</span>
+            <span>Preserva: sistema e app</span>
+          </div>
+          <a class="primary-action" href="#setup">Confirmar reset leve</a>
+          <a class="secondary-action" href="#maintenance">Cancelar</a>
+        </article>
+
+        <article class="screen screen-danger">
+          <span class="screen-tag">factory_reset_confirm</span>
+          <h2>Factory reset</h2>
+          <p>Volta o aparelho para configuracao inicial de produto.</p>
+          <div class="impact">
+            <span>Apaga: configuracao, rede e cache</span>
+            <span>Preserva: imagem base do produto</span>
+          </div>
+          <a class="primary-action" href="#setup">Confirmar factory reset</a>
+          <a class="secondary-action" href="#maintenance">Cancelar</a>
+        </article>
+
+        <article class="screen screen-recovery">
+          <span class="screen-tag">hard_reset_local</span>
+          <h2>Hard reset local</h2>
+          <p>Metodo fisico ainda a decidir para recuperar sem portal ou rede.</p>
+          <div class="method-grid">
+            <span>Botao</span>
+            <span>Teclado USB</span>
+            <span>Pendrive</span>
+            <span>Arquivo de reset</span>
+          </div>
+          <p class="hint">Conceito de recuperacao. Nada e executado.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Prototipo estatico sob docs/product/prototypes. Usa apenas dados
+        ficticios e nao configura rede, backend, player ou sistema.
+      </p>
+    </footer>
+  </body>
+</html>
