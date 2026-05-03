@@ -8,6 +8,7 @@ REMOTE_PREFLIGHT_OUT_DIR="/tmp/dadooh-c8-5-preflight"
 REMOTE_REAL_SYNTHETIC_OUT_DIR="/tmp/dadooh-c8-5-1-real-synthetic"
 REMOTE_PRIVATE_VALUES_DIR="/tmp/dadooh-c8-6-private"
 REMOTE_PRIVATE_HANDOFF_OUT_DIR="/tmp/dadooh-c8-6-handoff-preflight"
+REMOTE_OPERATIONAL_GATE_OUT_DIR="/tmp/dadooh-c8-7-operational-gate"
 REMOTE_PORT="${C8_REMOTE_PORT:-${C8_1_REMOTE_PORT:-8766}}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +18,8 @@ LOCAL_CONTRACT="$REPO_ROOT/scripts/board/totem_config_contract_validate.py"
 LOCAL_PREFLIGHT="$REPO_ROOT/scripts/board/totem_setup_writer_preflight.py"
 LOCAL_REAL_SYNTHETIC="$REPO_ROOT/scripts/board/totem_setup_real_synthetic_candidate.py"
 LOCAL_PRIVATE_HANDOFF="$REPO_ROOT/scripts/board/totem_setup_private_handoff_preflight.py"
+LOCAL_WRITER="$REPO_ROOT/scripts/board/totem_config_writer_real.py"
+LOCAL_OPERATIONAL_GATE="$REPO_ROOT/scripts/board/totem_c8_7_operational_gate.py"
 
 if [ ! -f "$LOCAL_SERVER" ]; then
   echo "error: missing $LOCAL_SERVER" >&2
@@ -38,15 +41,23 @@ if [ ! -f "$LOCAL_PRIVATE_HANDOFF" ]; then
   echo "error: missing $LOCAL_PRIVATE_HANDOFF" >&2
   exit 1
 fi
+if [ ! -f "$LOCAL_WRITER" ]; then
+  echo "error: missing $LOCAL_WRITER" >&2
+  exit 1
+fi
+if [ ! -f "$LOCAL_OPERATIONAL_GATE" ]; then
+  echo "error: missing $LOCAL_OPERATIONAL_GATE" >&2
+  exit 1
+fi
 
 echo "Preparing $REMOTE_DIR on $HOST"
 ssh "$HOST" "umask 077 && mkdir -p '$REMOTE_DIR' && chmod 700 '$REMOTE_DIR'"
 
-echo "Copying C8 setup server, C5.1 validator and C8.5/C8.6 scripts to $HOST:$REMOTE_DIR"
-scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$LOCAL_PREFLIGHT" "$LOCAL_REAL_SYNTHETIC" "$LOCAL_PRIVATE_HANDOFF" "$HOST:$REMOTE_DIR/"
+echo "Copying C8 setup server, C5.1 validator and C8.5/C8.6/C8.7 scripts to $HOST:$REMOTE_DIR"
+scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$LOCAL_PREFLIGHT" "$LOCAL_REAL_SYNTHETIC" "$LOCAL_PRIVATE_HANDOFF" "$LOCAL_WRITER" "$LOCAL_OPERATIONAL_GATE" "$HOST:$REMOTE_DIR/"
 
-echo "Running C8.6 self-test and smoke test on the board"
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PREFLIGHT_OUT_DIR='$REMOTE_PREFLIGHT_OUT_DIR' REMOTE_REAL_SYNTHETIC_OUT_DIR='$REMOTE_REAL_SYNTHETIC_OUT_DIR' REMOTE_PRIVATE_VALUES_DIR='$REMOTE_PRIVATE_VALUES_DIR' REMOTE_PRIVATE_HANDOFF_OUT_DIR='$REMOTE_PRIVATE_HANDOFF_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
+echo "Running C8.7 self-test and smoke test on the board"
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PREFLIGHT_OUT_DIR='$REMOTE_PREFLIGHT_OUT_DIR' REMOTE_REAL_SYNTHETIC_OUT_DIR='$REMOTE_REAL_SYNTHETIC_OUT_DIR' REMOTE_PRIVATE_VALUES_DIR='$REMOTE_PRIVATE_VALUES_DIR' REMOTE_PRIVATE_HANDOFF_OUT_DIR='$REMOTE_PRIVATE_HANDOFF_OUT_DIR' REMOTE_OPERATIONAL_GATE_OUT_DIR='$REMOTE_OPERATIONAL_GATE_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
 set -euo pipefail
 
 SERVER="$REMOTE_DIR/totem_setup_minimal_server.py"
@@ -54,6 +65,8 @@ CONTRACT="$REMOTE_DIR/totem_config_contract_validate.py"
 PREFLIGHT="$REMOTE_DIR/totem_setup_writer_preflight.py"
 REAL_SYNTHETIC="$REMOTE_DIR/totem_setup_real_synthetic_candidate.py"
 PRIVATE_HANDOFF="$REMOTE_DIR/totem_setup_private_handoff_preflight.py"
+WRITER="$REMOTE_DIR/totem_config_writer_real.py"
+OPERATIONAL_GATE="$REMOTE_DIR/totem_c8_7_operational_gate.py"
 STDOUT_FILE="$REMOTE_DIR/server.stdout"
 STDERR_FILE="$REMOTE_DIR/server.stderr"
 PID_FILE="$REMOTE_DIR/server.pid"
@@ -78,12 +91,15 @@ rm -rf "$REMOTE_PREFLIGHT_OUT_DIR"
 rm -rf "$REMOTE_REAL_SYNTHETIC_OUT_DIR"
 rm -rf "$REMOTE_PRIVATE_VALUES_DIR"
 rm -rf "$REMOTE_PRIVATE_HANDOFF_OUT_DIR"
+rm -rf "$REMOTE_OPERATIONAL_GATE_OUT_DIR"
 
 python3 "$CONTRACT" --self-test
 python3 "$SERVER" --self-test
 python3 "$PREFLIGHT" --self-test
 python3 "$REAL_SYNTHETIC" --self-test
 python3 "$PRIVATE_HANDOFF" --self-test
+python3 "$WRITER" --self-test
+python3 "$OPERATIONAL_GATE" --self-test
 
 python3 "$SERVER" \
   --bind 127.0.0.1 \
@@ -869,6 +885,118 @@ for forbidden in (
         raise AssertionError(f"cleanup status/summary leaked forbidden marker: {forbidden}")
 PY
 
+service_state_before_gate="$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
+
+python3 "$OPERATIONAL_GATE" \
+  --c8-handoff-out-dir "$REMOTE_PRIVATE_HANDOFF_OUT_DIR" \
+  --private-values "$REMOTE_PRIVATE_VALUES_DIR/private-values.json" \
+  --writer-script "$WRITER" \
+  --writer-self-test-status passed \
+  --out-dir "$REMOTE_OPERATIONAL_GATE_OUT_DIR"
+
+service_state_after_gate="$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
+if [ "$service_state_after_gate" != "$service_state_before_gate" ]; then
+  echo "error: service state changed during C8.7 operational gate" >&2
+  exit 1
+fi
+
+python3 - <<'PY'
+import json
+import os
+import pathlib
+import stat
+
+out_dir = pathlib.Path(os.environ["REMOTE_OPERATIONAL_GATE_OUT_DIR"])
+expected = {"operational-gate-status.json", "summary.txt"}
+
+if stat.S_IMODE(out_dir.stat().st_mode) != 0o700:
+    raise AssertionError("operational gate out-dir mode is not 0700")
+
+actual = {path.name for path in out_dir.iterdir() if path.is_file()}
+if actual != expected:
+    raise AssertionError(f"unexpected operational gate artifacts: {sorted(actual)}")
+
+for name in expected:
+    path = out_dir / name
+    if stat.S_IMODE(path.stat().st_mode) != 0o600:
+        raise AssertionError(f"{name} mode is not 0600")
+    resolved = path.resolve(strict=True)
+    if not str(resolved).startswith("/tmp/"):
+        raise AssertionError(f"{name} escaped /tmp")
+    if str(resolved).startswith("/data/") or str(resolved).startswith("/opt/"):
+        raise AssertionError(f"{name} was written outside /tmp")
+
+status_path = out_dir / "operational-gate-status.json"
+summary_path = out_dir / "summary.txt"
+status = json.loads(status_path.read_text(encoding="utf-8"))
+if status["schema_version"] != "dadooh-c8.7-operational-gate.v1":
+    raise AssertionError("operational gate schema mismatch")
+if status["result"] != "passed":
+    raise AssertionError("operational gate did not pass")
+if status["writer_readiness"]["ready"] is not True:
+    raise AssertionError("operational gate did not confirm writer readiness")
+if status["writer_readiness"]["self_test_status"] != "passed":
+    raise AssertionError("operational gate did not record writer self-test pass")
+if status["c8_private_handoff"]["cleanup_executed"] is not True:
+    raise AssertionError("operational gate did not observe C8.6.1 cleanup")
+if status["c8_private_handoff"]["private_real_dry_run_passed_before_cleanup"] is not True:
+    raise AssertionError("operational gate did not observe prior private real-dry-run")
+if status["c8_private_handoff"]["writer_real_write_blocked"] is not True:
+    raise AssertionError("operational gate did not observe writer blocked")
+if status["c8_private_handoff"]["private_files_remaining_count"] != 0:
+    raise AssertionError("operational gate found remaining private files")
+if status["go_no_go"]["immediate_real_write_allowed_now"] is not False:
+    raise AssertionError("operational gate allowed immediate real write")
+if status["go_no_go"]["real_write_executed"] is not False:
+    raise AssertionError("operational gate recorded a real write")
+if "next_round_can_be_first_real_write_attempt" not in status["go_no_go"]:
+    raise AssertionError("operational gate did not produce next-round decision")
+
+for key in (
+    "real_config_content_read",
+    "backup_content_read",
+    "data_written",
+    "opt_written",
+    "writer_real_mode_called",
+    "enable_real_write_used",
+    "systemctl_state_change_called",
+    "service_changed",
+    "player_started",
+    "player_stopped",
+    "mpv_called",
+    "network_external_access",
+    "nmcli_called",
+    "backend_called",
+    "wifi_changed",
+):
+    if status["guardrails"][key] is not False:
+        raise AssertionError(f"operational gate guardrail {key} was not false")
+
+combined = status_path.read_text(encoding="utf-8") + "\n" + summary_path.read_text(encoding="utf-8")
+for private_value in (
+    "https://api.sandbox.localhost/search",
+    "B1C2D3E4F5061728394A5B6C7D8E9F01",
+    "ENV-APPROVED-REMOTE",
+):
+    if private_value in combined:
+        raise AssertionError("operational gate status/summary leaked private value")
+
+for forbidden in (
+    "api_key",
+    "api_url",
+    "token",
+    "secret",
+    "password",
+    "senha",
+    "ssid",
+    "hostname",
+    "gateway",
+    "raw_payload",
+):
+    if forbidden.lower() in combined.lower():
+        raise AssertionError(f"operational gate status/summary leaked forbidden marker: {forbidden}")
+PY
+
 python3 "$CONTRACT" \
   --candidate "$REMOTE_OUT_DIR/candidate-config.json" \
   --allow-mock \
@@ -891,4 +1019,5 @@ fi
 echo "remote artifacts:"
 echo "$REMOTE_DIR"
 echo "$REMOTE_OUT_DIR"
+echo "$REMOTE_OPERATIONAL_GATE_OUT_DIR"
 REMOTE_SH

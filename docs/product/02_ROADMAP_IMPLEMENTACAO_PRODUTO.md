@@ -78,6 +78,13 @@ privados temporarios do preflight: remove `candidate-private.json` e
 cleanup executado e mantem writer real bloqueado. Continua somente em `/tmp`,
 sem `/data`, `/opt`, servico, player, MPV, rede ou backend.
 
+Atualizacao C8.7: 2026-05-03. C8.7 cria o gate operacional final antes da
+primeira escrita real integrada: inspeciona a placa em modo read-only, confirma
+guardrails do writer C6, verifica o fluxo C8.6/C8.6.1, gera checklist go/no-go
+e documenta o roteiro exato da rodada real futura. Ainda nao usa
+`--enable-real-write`, nao escreve em `/data` ou `/opt`, nao para/inicia
+servico, nao inicia player e nao publica valores privados.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -346,7 +353,9 @@ Sequencia incremental refinada:
 - C8.5.0 - preflight setup -> writer/config, local/offline em `/tmp`;
 - C8.5.1 - origem de valores privados e candidata real-sintetica em `/tmp`;
 - C8.5 - integracao com writer/config;
-- C8.6 - setup funcional em placa;
+- C8.6 - handoff real controlado, ainda sem escrita real;
+- C8.6.1 - limpeza segura da candidata privada temporaria;
+- C8.7 - gate operacional final antes da escrita real;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -956,6 +965,10 @@ Documentos:
 - `docs/product/45_C8_4_0_MANUTENCAO_MINIMA_MOCK_LOCAL.md`;
 - `docs/product/46_C8_5_0_PREFLIGHT_SETUP_WRITER_CONFIG.md`;
 - `docs/product/47_C8_5_1_ORIGEM_VALORES_PRIVADOS_CANDIDATA_REAL_SINTETICA.md`;
+- `docs/product/48_C8_5_2_STATION_ID_OPCIONAL_CONTRATO_MINIMO.md`;
+- `docs/product/49_C8_6_PREFLIGHT_HANDOFF_REAL_CONTROLADO.md`;
+- `docs/product/50_C8_6_1_LIMPEZA_CANDIDATA_PRIVADA_TEMPORARIA.md`;
+- `docs/product/51_C8_7_GATE_OPERACIONAL_FINAL_PRE_ESCRITA_REAL.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -982,8 +995,11 @@ Subfases propostas:
 - C8.4 - reset leve e reiniciar player, ainda pendente de acao real aprovada;
 - C8.5.0 - preflight setup -> writer/config, local/offline em `/tmp`;
 - C8.5.1 - origem de valores privados e candidata real-sintetica em `/tmp`;
+- C8.5.2 - `station_id` opcional e fora do caminho critico;
 - C8.5 - integracao com writer/config;
-- C8.6 - setup funcional em placa, em tarefa propria e com roteiro aprovado.
+- C8.6 - handoff real controlado, ainda sem escrita real;
+- C8.6.1 - limpeza segura da candidata privada temporaria;
+- C8.7 - gate operacional final antes da escrita real.
 
 Validacao:
 
