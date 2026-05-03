@@ -183,7 +183,7 @@ O teste remoto deve provar:
 
 ## 9. Proximos passos
 
-- C8.6 pode preparar o proximo gate de integracao sem reabrir `station_id` como
-  requisito bloqueante.
+- C8.6-preflight prepara o proximo gate de integracao sem reabrir `station_id`
+  como requisito bloqueante.
 - Uma fase futura de telemetria/inventario pode definir `station_id` por canal
   aprovado, com sanitizacao propria, sem bloquear playback minimo.

@@ -233,8 +233,8 @@ C8.5.1 e aceito quando:
 
 ## 13. Proximos passos
 
-- C8.5.2 ou C8.6-preflight: definir o roteiro de entrada privada real, sem
-  registrar valores, ainda com escrita bloqueada.
+- C8.6-preflight: definir o roteiro de entrada privada real, sem registrar
+  valores, ainda com escrita bloqueada.
 - Fase real futura: somente depois de canal privado aprovado, revisao humana,
   servico/player bloqueado, writer C6 revalidando `real-dry-run`, backup e
   rollback confirmados.

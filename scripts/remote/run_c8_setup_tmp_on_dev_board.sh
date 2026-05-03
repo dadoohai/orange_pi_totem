@@ -6,6 +6,8 @@ REMOTE_DIR="/tmp/dadooh-c8"
 REMOTE_OUT_DIR="/tmp/dadooh-c8-setup-minimo"
 REMOTE_PREFLIGHT_OUT_DIR="/tmp/dadooh-c8-5-preflight"
 REMOTE_REAL_SYNTHETIC_OUT_DIR="/tmp/dadooh-c8-5-1-real-synthetic"
+REMOTE_PRIVATE_VALUES_DIR="/tmp/dadooh-c8-6-private"
+REMOTE_PRIVATE_HANDOFF_OUT_DIR="/tmp/dadooh-c8-6-handoff-preflight"
 REMOTE_PORT="${C8_REMOTE_PORT:-${C8_1_REMOTE_PORT:-8766}}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,6 +16,7 @@ LOCAL_SERVER="$REPO_ROOT/scripts/board/totem_setup_minimal_server.py"
 LOCAL_CONTRACT="$REPO_ROOT/scripts/board/totem_config_contract_validate.py"
 LOCAL_PREFLIGHT="$REPO_ROOT/scripts/board/totem_setup_writer_preflight.py"
 LOCAL_REAL_SYNTHETIC="$REPO_ROOT/scripts/board/totem_setup_real_synthetic_candidate.py"
+LOCAL_PRIVATE_HANDOFF="$REPO_ROOT/scripts/board/totem_setup_private_handoff_preflight.py"
 
 if [ ! -f "$LOCAL_SERVER" ]; then
   echo "error: missing $LOCAL_SERVER" >&2
@@ -31,21 +34,26 @@ if [ ! -f "$LOCAL_REAL_SYNTHETIC" ]; then
   echo "error: missing $LOCAL_REAL_SYNTHETIC" >&2
   exit 1
 fi
+if [ ! -f "$LOCAL_PRIVATE_HANDOFF" ]; then
+  echo "error: missing $LOCAL_PRIVATE_HANDOFF" >&2
+  exit 1
+fi
 
 echo "Preparing $REMOTE_DIR on $HOST"
 ssh "$HOST" "umask 077 && mkdir -p '$REMOTE_DIR' && chmod 700 '$REMOTE_DIR'"
 
-echo "Copying C8 setup server, C5.1 validator and C8.5 scripts to $HOST:$REMOTE_DIR"
-scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$LOCAL_PREFLIGHT" "$LOCAL_REAL_SYNTHETIC" "$HOST:$REMOTE_DIR/"
+echo "Copying C8 setup server, C5.1 validator and C8.5/C8.6 scripts to $HOST:$REMOTE_DIR"
+scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$LOCAL_PREFLIGHT" "$LOCAL_REAL_SYNTHETIC" "$LOCAL_PRIVATE_HANDOFF" "$HOST:$REMOTE_DIR/"
 
-echo "Running C8.5.2 self-test and smoke test on the board"
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PREFLIGHT_OUT_DIR='$REMOTE_PREFLIGHT_OUT_DIR' REMOTE_REAL_SYNTHETIC_OUT_DIR='$REMOTE_REAL_SYNTHETIC_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
+echo "Running C8.6 self-test and smoke test on the board"
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PREFLIGHT_OUT_DIR='$REMOTE_PREFLIGHT_OUT_DIR' REMOTE_REAL_SYNTHETIC_OUT_DIR='$REMOTE_REAL_SYNTHETIC_OUT_DIR' REMOTE_PRIVATE_VALUES_DIR='$REMOTE_PRIVATE_VALUES_DIR' REMOTE_PRIVATE_HANDOFF_OUT_DIR='$REMOTE_PRIVATE_HANDOFF_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
 set -euo pipefail
 
 SERVER="$REMOTE_DIR/totem_setup_minimal_server.py"
 CONTRACT="$REMOTE_DIR/totem_config_contract_validate.py"
 PREFLIGHT="$REMOTE_DIR/totem_setup_writer_preflight.py"
 REAL_SYNTHETIC="$REMOTE_DIR/totem_setup_real_synthetic_candidate.py"
+PRIVATE_HANDOFF="$REMOTE_DIR/totem_setup_private_handoff_preflight.py"
 STDOUT_FILE="$REMOTE_DIR/server.stdout"
 STDERR_FILE="$REMOTE_DIR/server.stderr"
 PID_FILE="$REMOTE_DIR/server.pid"
@@ -68,11 +76,14 @@ chmod 700 "$REMOTE_DIR"
 rm -rf "$REMOTE_OUT_DIR"
 rm -rf "$REMOTE_PREFLIGHT_OUT_DIR"
 rm -rf "$REMOTE_REAL_SYNTHETIC_OUT_DIR"
+rm -rf "$REMOTE_PRIVATE_VALUES_DIR"
+rm -rf "$REMOTE_PRIVATE_HANDOFF_OUT_DIR"
 
 python3 "$CONTRACT" --self-test
 python3 "$SERVER" --self-test
 python3 "$PREFLIGHT" --self-test
 python3 "$REAL_SYNTHETIC" --self-test
+python3 "$PRIVATE_HANDOFF" --self-test
 
 python3 "$SERVER" \
   --bind 127.0.0.1 \
@@ -584,6 +595,163 @@ for forbidden in (
 ):
     if forbidden.lower() in combined.lower():
         raise AssertionError(f"real-synthetic status/summary leaked forbidden marker: {forbidden}")
+PY
+
+mkdir -p "$REMOTE_PRIVATE_VALUES_DIR"
+chmod 700 "$REMOTE_PRIVATE_VALUES_DIR"
+python3 - <<'PY'
+import json
+import os
+import pathlib
+import stat
+
+private_dir = pathlib.Path(os.environ["REMOTE_PRIVATE_VALUES_DIR"])
+path = private_dir / "private-values.json"
+payload = {
+    "api_url": "https://api.sandbox.localhost/search",
+    "api_key": "B1C2D3E4F5061728394A5B6C7D8E9F01",
+    "environment_id": "ENV-APPROVED-REMOTE",
+}
+with path.open("w", encoding="utf-8") as handle:
+    json.dump(payload, handle, ensure_ascii=True, indent=2, sort_keys=True)
+    handle.write("\n")
+path.chmod(0o600)
+if stat.S_IMODE(private_dir.stat().st_mode) != 0o700:
+    raise AssertionError("private values dir mode is not 0700")
+if stat.S_IMODE(path.stat().st_mode) != 0o600:
+    raise AssertionError("private values file mode is not 0600")
+PY
+
+service_state_before="$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
+
+python3 "$PRIVATE_HANDOFF" \
+  --source-candidate "$REMOTE_OUT_DIR/candidate-config.json" \
+  --private-values "$REMOTE_PRIVATE_VALUES_DIR/private-values.json" \
+  --out-dir "$REMOTE_PRIVATE_HANDOFF_OUT_DIR" \
+  --confirm-private-values-approved
+
+python3 "$CONTRACT" \
+  --candidate "$REMOTE_PRIVATE_HANDOFF_OUT_DIR/candidate-private.json" \
+  --real-dry-run \
+  --out-dir "$REMOTE_DIR/contract-private-handoff-real-dry-run"
+
+service_state_after="$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
+if [ "$service_state_after" != "$service_state_before" ]; then
+  echo "error: service state changed during C8.6 preflight" >&2
+  exit 1
+fi
+
+python3 - <<'PY'
+import json
+import os
+import pathlib
+import stat
+
+out_dir = pathlib.Path(os.environ["REMOTE_PRIVATE_HANDOFF_OUT_DIR"])
+setup_out_dir = pathlib.Path(os.environ["REMOTE_OUT_DIR"])
+private_values_path = pathlib.Path(os.environ["REMOTE_PRIVATE_VALUES_DIR"]) / "private-values.json"
+expected = {"candidate-private.json", "handoff-preflight-status.json", "summary.txt"}
+
+if stat.S_IMODE(out_dir.stat().st_mode) != 0o700:
+    raise AssertionError("private handoff out-dir mode is not 0700")
+
+actual = {path.name for path in out_dir.iterdir() if path.is_file()}
+if expected - actual:
+    raise AssertionError(f"missing private handoff artifacts: {sorted(expected - actual)}")
+
+for name in expected:
+    path = out_dir / name
+    if stat.S_IMODE(path.stat().st_mode) != 0o600:
+        raise AssertionError(f"{name} mode is not 0600")
+    resolved = path.resolve(strict=True)
+    if not str(resolved).startswith("/tmp/"):
+        raise AssertionError(f"{name} escaped /tmp")
+    if str(resolved).startswith("/data/") or str(resolved).startswith("/opt/"):
+        raise AssertionError(f"{name} was written outside /tmp")
+
+source = json.loads((setup_out_dir / "candidate-config.json").read_text(encoding="utf-8"))
+private_values = json.loads(private_values_path.read_text(encoding="utf-8"))
+candidate = json.loads((out_dir / "candidate-private.json").read_text(encoding="utf-8"))
+status = json.loads((out_dir / "handoff-preflight-status.json").read_text(encoding="utf-8"))
+
+if status["schema_version"] != "dadooh-c8.6-private-handoff-preflight.v1":
+    raise AssertionError("private handoff schema mismatch")
+if status["result"] != "passed":
+    raise AssertionError("private handoff status did not pass")
+if status["authorization"]["private_values_source_approved_by_human"] is not True:
+    raise AssertionError("private handoff did not record preflight approval")
+if status["authorization"]["real_write_approved"] is not False:
+    raise AssertionError("private handoff should not approve real write")
+if status["contract_validation"]["private_real_dry_run"]["valid"] is not True:
+    raise AssertionError("private handoff status did not record real-dry-run pass")
+if status["contract_validation"]["placeholder_findings_cleared"] is not True:
+    raise AssertionError("private handoff did not clear placeholders")
+if status["writer_handoff"]["writer_real_write_blocked"] is not True:
+    raise AssertionError("private handoff did not block real writer")
+if status["writer_handoff"]["writer_real_mode_called"] is not False:
+    raise AssertionError("private handoff called real writer mode")
+if status["writer_handoff"]["enable_real_write_used"] is not False:
+    raise AssertionError("private handoff used enable real write")
+if candidate.get("rotation_deg") != source.get("rotation_deg"):
+    raise AssertionError("private candidate did not preserve rotation_deg")
+for field in ("api_url", "api_key", "environment_id"):
+    if candidate.get(field) != private_values.get(field):
+        raise AssertionError(f"private candidate did not apply {field}")
+if candidate.get("station_id") != source.get("station_id"):
+    raise AssertionError("private candidate should preserve optional station_id")
+
+for key in (
+    "real_config_read",
+    "real_config_written",
+    "data_written",
+    "opt_written",
+    "writer_real_mode_called",
+    "enable_real_write_used",
+    "systemctl_state_change_called",
+    "service_changed",
+    "player_started",
+    "player_stopped",
+    "mpv_called",
+    "network_external_access",
+    "nmcli_called",
+    "backend_called",
+    "wifi_changed",
+):
+    if status["guardrails"][key] is not False:
+        raise AssertionError(f"private handoff guardrail {key} was not false")
+
+combined = (out_dir / "handoff-preflight-status.json").read_text(encoding="utf-8") + "\n" + (
+    out_dir / "summary.txt"
+).read_text(encoding="utf-8")
+for value in list(source.values()) + list(private_values.values()) + list(candidate.values()):
+    if not isinstance(value, str) or not value:
+        continue
+    if value in {
+        source.get("setup_source"),
+        source.get("setup_environment_source"),
+        candidate.get("setup_source"),
+        candidate.get("setup_environment_source"),
+        candidate.get("setup_private_values_source"),
+    }:
+        continue
+    variants = {value, json.dumps(value, ensure_ascii=True)[1:-1]}
+    if any(variant in combined for variant in variants):
+        raise AssertionError("private handoff status/summary leaked private value")
+
+for forbidden in (
+    "api_key",
+    "api_url",
+    "token",
+    "secret",
+    "password",
+    "senha",
+    "ssid",
+    "hostname",
+    "gateway",
+    "raw_payload",
+):
+    if forbidden.lower() in combined.lower():
+        raise AssertionError(f"private handoff status/summary leaked forbidden marker: {forbidden}")
 PY
 
 python3 "$CONTRACT" \
