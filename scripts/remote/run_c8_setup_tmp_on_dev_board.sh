@@ -4,12 +4,14 @@ set -euo pipefail
 HOST="${1:-root@192.168.18.115}"
 REMOTE_DIR="/tmp/dadooh-c8"
 REMOTE_OUT_DIR="/tmp/dadooh-c8-setup-minimo"
+REMOTE_PREFLIGHT_OUT_DIR="/tmp/dadooh-c8-5-preflight"
 REMOTE_PORT="${C8_REMOTE_PORT:-${C8_1_REMOTE_PORT:-8766}}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOCAL_SERVER="$REPO_ROOT/scripts/board/totem_setup_minimal_server.py"
 LOCAL_CONTRACT="$REPO_ROOT/scripts/board/totem_config_contract_validate.py"
+LOCAL_PREFLIGHT="$REPO_ROOT/scripts/board/totem_setup_writer_preflight.py"
 
 if [ ! -f "$LOCAL_SERVER" ]; then
   echo "error: missing $LOCAL_SERVER" >&2
@@ -19,19 +21,24 @@ if [ ! -f "$LOCAL_CONTRACT" ]; then
   echo "error: missing $LOCAL_CONTRACT" >&2
   exit 1
 fi
+if [ ! -f "$LOCAL_PREFLIGHT" ]; then
+  echo "error: missing $LOCAL_PREFLIGHT" >&2
+  exit 1
+fi
 
 echo "Preparing $REMOTE_DIR on $HOST"
 ssh "$HOST" "umask 077 && mkdir -p '$REMOTE_DIR' && chmod 700 '$REMOTE_DIR'"
 
-echo "Copying C8 setup server and C5.1 validator to $HOST:$REMOTE_DIR"
-scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$HOST:$REMOTE_DIR/"
+echo "Copying C8 setup server, C5.1 validator and C8.5 preflight to $HOST:$REMOTE_DIR"
+scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$LOCAL_PREFLIGHT" "$HOST:$REMOTE_DIR/"
 
-echo "Running C8.4.0 self-test and smoke test on the board"
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
+echo "Running C8.5.0 self-test and smoke test on the board"
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PREFLIGHT_OUT_DIR='$REMOTE_PREFLIGHT_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
 set -euo pipefail
 
 SERVER="$REMOTE_DIR/totem_setup_minimal_server.py"
 CONTRACT="$REMOTE_DIR/totem_config_contract_validate.py"
+PREFLIGHT="$REMOTE_DIR/totem_setup_writer_preflight.py"
 STDOUT_FILE="$REMOTE_DIR/server.stdout"
 STDERR_FILE="$REMOTE_DIR/server.stderr"
 PID_FILE="$REMOTE_DIR/server.pid"
@@ -52,9 +59,11 @@ umask 077
 mkdir -p "$REMOTE_DIR"
 chmod 700 "$REMOTE_DIR"
 rm -rf "$REMOTE_OUT_DIR"
+rm -rf "$REMOTE_PREFLIGHT_OUT_DIR"
 
 python3 "$CONTRACT" --self-test
 python3 "$SERVER" --self-test
+python3 "$PREFLIGHT" --self-test
 
 python3 "$SERVER" \
   --bind 127.0.0.1 \
@@ -354,6 +363,102 @@ if player_processes_after != player_processes_before:
     raise AssertionError("player or MPV process snapshot changed during mock maintenance smoke")
 
 print("remote smoke: ok")
+PY
+
+python3 "$PREFLIGHT" \
+  --candidate "$REMOTE_OUT_DIR/candidate-config.json" \
+  --out-dir "$REMOTE_PREFLIGHT_OUT_DIR"
+
+python3 - <<'PY'
+import json
+import os
+import pathlib
+import stat
+
+out_dir = pathlib.Path(os.environ["REMOTE_PREFLIGHT_OUT_DIR"])
+setup_out_dir = pathlib.Path(os.environ["REMOTE_OUT_DIR"])
+expected = {"preflight-status.json", "summary.txt"}
+
+if stat.S_IMODE(out_dir.stat().st_mode) != 0o700:
+    raise AssertionError("preflight out-dir mode is not 0700")
+
+actual = {path.name for path in out_dir.iterdir() if path.is_file()}
+if expected - actual:
+    raise AssertionError(f"missing preflight artifacts: {sorted(expected - actual)}")
+
+for name in expected:
+    path = out_dir / name
+    if stat.S_IMODE(path.stat().st_mode) != 0o600:
+        raise AssertionError(f"{name} mode is not 0600")
+    resolved = path.resolve(strict=True)
+    if not str(resolved).startswith("/tmp/"):
+        raise AssertionError(f"{name} escaped /tmp")
+    if str(resolved).startswith("/data/") or str(resolved).startswith("/opt/"):
+        raise AssertionError(f"{name} was written outside /tmp")
+
+status = json.loads((out_dir / "preflight-status.json").read_text(encoding="utf-8"))
+if status["schema_version"] != "dadooh-c8.5.0-setup-writer-preflight.v1":
+    raise AssertionError("preflight schema mismatch")
+if status["result"] != "passed":
+    raise AssertionError("preflight did not pass")
+if status["contract_validation"]["allow_mock"]["valid"] is not True:
+    raise AssertionError("preflight did not record allow-mock pass")
+if status["contract_validation"]["real_dry_run"]["valid"] is not False:
+    raise AssertionError("preflight did not record real-dry-run expected failure")
+if status["contract_validation"]["real_dry_run_expected_failure"] is not True:
+    raise AssertionError("preflight did not mark expected real-dry-run failure")
+if status["writer_handoff"]["writer_real_write_blocked"] is not True:
+    raise AssertionError("preflight did not block real writer")
+if status["writer_handoff"]["writer_real_mode_called"] is not False:
+    raise AssertionError("preflight called real writer mode")
+if status["writer_handoff"]["writer_simulated_write_called"] is not False:
+    raise AssertionError("preflight called simulated writer")
+
+for key in (
+    "real_config_read",
+    "real_config_written",
+    "data_written",
+    "opt_written",
+    "commands_executed",
+    "systemctl_called",
+    "service_changed",
+    "player_started",
+    "player_stopped",
+    "mpv_called",
+    "network_external_access",
+    "nmcli_called",
+    "backend_called",
+    "wifi_changed",
+    "private_values_used",
+):
+    if status["guardrails"][key] is not False:
+        raise AssertionError(f"preflight guardrail {key} was not false")
+
+candidate = json.loads((setup_out_dir / "candidate-config.json").read_text(encoding="utf-8"))
+combined = (out_dir / "preflight-status.json").read_text(encoding="utf-8") + "\n" + (
+    out_dir / "summary.txt"
+).read_text(encoding="utf-8")
+for value in candidate.values():
+    if not isinstance(value, str) or not value:
+        continue
+    variants = {value, json.dumps(value, ensure_ascii=True)[1:-1]}
+    if any(variant in combined for variant in variants):
+        raise AssertionError("preflight status/summary leaked candidate value")
+
+for forbidden in (
+    "api_key",
+    "api_url",
+    "token",
+    "secret",
+    "password",
+    "senha",
+    "ssid",
+    "hostname",
+    "gateway",
+    "raw_payload",
+):
+    if forbidden.lower() in combined.lower():
+        raise AssertionError(f"preflight status/summary leaked forbidden marker: {forbidden}")
 PY
 
 python3 "$CONTRACT" \

@@ -45,6 +45,13 @@ como area secundaria do setup, com `restart_player_mock`,
 `/tmp`. Ainda nao executa reset real, nao chama `systemctl`, nao reinicia
 player/MPV, nao altera rede e nao toca `/data` ou `/opt`.
 
+Atualizacao C8.5.0: 2026-05-03. C8.5.0 cria o preflight local/offline de
+integracao setup -> writer/config: le a candidata C8 em `/tmp`, confirma
+C5.1 `allow-mock`, confirma `real-dry-run` falhando por placeholders e gera
+relatorio sanitizado de lacunas para futura config real. Nao chama writer em
+modo real, nao usa secrets, nao toca `/data` ou `/opt` e nao altera servico,
+player, MPV, rede ou backend.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -310,6 +317,7 @@ Sequencia incremental refinada:
 - C8.3 - rotacao mock/local, funcional/mock local;
 - C8.4.0 - manutencao minima mock/local e contrato de acoes;
 - C8.4 - reset leve e reiniciar player, ainda pendente de acao real aprovada;
+- C8.5.0 - preflight setup -> writer/config, local/offline em `/tmp`;
 - C8.5 - integracao com writer/config;
 - C8.6 - setup funcional em placa;
 - C9 - Wi-Fi/portal/hotspot;
@@ -902,9 +910,9 @@ Limite:
 
 ### C8 - Produto V1: operacao, onboarding e recuperacao
 
-Status: visao documental criada; C8.1/C8.1.1/C8.2/C8.3/C8.4.0
-funcional/mock local concluidas sem Wi-Fi real, sem config real e sem acao
-real de manutencao.
+Status: visao documental criada; C8.1/C8.1.1/C8.2/C8.3/C8.4.0/C8.5.0
+funcional/mock local ou preflight local concluidos sem Wi-Fi real, sem config
+real e sem acao real de manutencao.
 
 Documentos:
 
@@ -917,6 +925,7 @@ Documentos:
 - `docs/product/43_C8_2_SELECAO_AMBIENTE_MOCK_LOCAL.md`;
 - `docs/product/44_C8_3_ROTACAO_MOCK_LOCAL.md`;
 - `docs/product/45_C8_4_0_MANUTENCAO_MINIMA_MOCK_LOCAL.md`;
+- `docs/product/46_C8_5_0_PREFLIGHT_SETUP_WRITER_CONFIG.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -941,6 +950,7 @@ Subfases propostas:
 - C8.3 - rotacao mock/local, funcional/mock local;
 - C8.4.0 - manutencao minima mock/local e contrato de acoes;
 - C8.4 - reset leve e reiniciar player, ainda pendente de acao real aprovada;
+- C8.5.0 - preflight setup -> writer/config, local/offline em `/tmp`;
 - C8.5 - integracao com writer/config;
 - C8.6 - setup funcional em placa, em tarefa propria e com roteiro aprovado.
 
