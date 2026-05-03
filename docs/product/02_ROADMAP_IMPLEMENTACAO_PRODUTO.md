@@ -85,6 +85,14 @@ e documenta o roteiro exato da rodada real futura. Ainda nao usa
 `--enable-real-write`, nao escreve em `/data` ou `/opt`, nao para/inicia
 servico, nao inicia player e nao publica valores privados.
 
+Atualizacao C8.8: 2026-05-03. C8.8 executa a primeira escrita real integrada
+setup -> writer/config em desenvolvimento: gera candidata C8 em `/tmp`, aplica
+valores privados aprovados por arquivo restrito, valida C5.1 `real-dry-run`,
+para `kiosky-player.service`, escreve `/data/config/config.json` via writer C6
+com flags reais explicitas, cria backup, limpa temporarios privados e roda gate
+read-only final. O servico permanece parado ao final; player/MPV/rede/backend
+nao sao iniciados e producao continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -356,6 +364,7 @@ Sequencia incremental refinada:
 - C8.6 - handoff real controlado, ainda sem escrita real;
 - C8.6.1 - limpeza segura da candidata privada temporaria;
 - C8.7 - gate operacional final antes da escrita real;
+- C8.8 - primeira escrita real integrada, sem start do player;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -969,6 +978,7 @@ Documentos:
 - `docs/product/49_C8_6_PREFLIGHT_HANDOFF_REAL_CONTROLADO.md`;
 - `docs/product/50_C8_6_1_LIMPEZA_CANDIDATA_PRIVADA_TEMPORARIA.md`;
 - `docs/product/51_C8_7_GATE_OPERACIONAL_FINAL_PRE_ESCRITA_REAL.md`;
+- `docs/product/52_C8_8_PRIMEIRA_ESCRITA_REAL_INTEGRADA.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -999,7 +1009,8 @@ Subfases propostas:
 - C8.5 - integracao com writer/config;
 - C8.6 - handoff real controlado, ainda sem escrita real;
 - C8.6.1 - limpeza segura da candidata privada temporaria;
-- C8.7 - gate operacional final antes da escrita real.
+- C8.7 - gate operacional final antes da escrita real;
+- C8.8 - primeira escrita real integrada, sem start do player.
 
 Validacao:
 
