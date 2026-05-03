@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dadooh - C8.1 setup minimo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar" aria-label="Contexto">
+        <div class="brand">Dadooh</div>
+        <p>
+          Prototipo estatico do setup minimo C8.1. Sem Wi-Fi real, sem backend,
+          sem comandos operacionais e sem dados reais.
+        </p>
+        <ol class="step-list" aria-label="Fluxo">
+          <li>Configuracao pendente</li>
+          <li>Iniciar configuracao</li>
+          <li>Ambiente</li>
+          <li>Rotacao</li>
+          <li>Revisao</li>
+          <li>Candidata pronta</li>
+        </ol>
+      </aside>
+
+      <section class="workspace" aria-live="polite">
+        <article class="screen" data-screen="pending">
+          <span class="tag">config_missing</span>
+          <h1>Configuracao pendente</h1>
+          <p>O totem precisa de uma configuracao antes de iniciar a exibicao.</p>
+          <button class="primary" type="button" data-next="start">
+            Iniciar configuracao
+          </button>
+        </article>
+
+        <article class="screen hidden" data-screen="start">
+          <span class="tag">setup_start</span>
+          <h1>Iniciar configuracao</h1>
+          <p>
+            Esta etapa gera apenas uma candidata local. Wi-Fi, backend e escrita
+            real ficam fora deste teste.
+          </p>
+          <div class="actions">
+            <button class="secondary" type="button" data-next="pending">Voltar</button>
+            <button class="primary" type="button" data-next="environment">Continuar</button>
+          </div>
+        </article>
+
+        <article class="screen hidden" data-screen="environment">
+          <span class="tag">environment_input</span>
+          <h1>Informe o ambiente</h1>
+          <p>Use um identificador de teste para este prototipo.</p>
+          <label for="environment">environment_id</label>
+          <input id="environment" value="ENV-C8-1-PROTOTIPO-MOCK" />
+          <div class="actions">
+            <button class="secondary" type="button" data-next="start">Voltar</button>
+            <button class="primary" type="button" data-next="rotation">Continuar</button>
+          </div>
+        </article>
+
+        <article class="screen hidden" data-screen="rotation">
+          <span class="tag">rotation_select</span>
+          <h1>Orientacao da tela</h1>
+          <p>Escolha uma rotacao permitida para a candidata local.</p>
+          <div class="rotation-grid" role="group" aria-label="Rotacao">
+            <button class="choice selected" type="button" data-rotation="0">0</button>
+            <button class="choice" type="button" data-rotation="90">90</button>
+            <button class="choice" type="button" data-rotation="180">180</button>
+            <button class="choice" type="button" data-rotation="270">270</button>
+          </div>
+          <div class="actions">
+            <button class="secondary" type="button" data-next="environment">Voltar</button>
+            <button class="primary" type="button" data-next="review">Revisar</button>
+          </div>
+        </article>
+
+        <article class="screen hidden" data-screen="review">
+          <span class="tag">review</span>
+          <h1>Revisar configuracao</h1>
+          <p>Confira os dados desta sessao antes do salvamento simulado.</p>
+          <dl class="review">
+            <div>
+              <dt>Ambiente</dt>
+              <dd id="review-environment">ENV-C8-1-PROTOTIPO-MOCK</dd>
+            </div>
+            <div>
+              <dt>Rotacao</dt>
+              <dd><span id="review-rotation">0</span> graus</dd>
+            </div>
+            <div>
+              <dt>Conexao</dt>
+              <dd>Fora do escopo C8.1</dd>
+            </div>
+          </dl>
+          <div class="actions">
+            <button class="secondary" type="button" data-next="rotation">Voltar</button>
+            <button class="primary" type="button" data-next="ready">Salvar simulado</button>
+          </div>
+        </article>
+
+        <article class="screen hidden" data-screen="ready">
+          <span class="tag">candidate_ready</span>
+          <h1>Configuracao candidata pronta</h1>
+          <p class="success">
+            A candidata local foi gerada em /tmp com status e resumo
+            sanitizados.
+          </p>
+          <dl class="review">
+            <div>
+              <dt>Arquivos</dt>
+              <dd>candidate-config.json, status.json, summary.txt</dd>
+            </div>
+            <div>
+              <dt>Wi-Fi</dt>
+              <dd>Nao configurado nesta fase</dd>
+            </div>
+            <div>
+              <dt>Player</dt>
+              <dd>Nao iniciado</dd>
+            </div>
+          </dl>
+          <button class="secondary" type="button" data-next="pending">Novo teste</button>
+        </article>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

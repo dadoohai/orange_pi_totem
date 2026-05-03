@@ -18,6 +18,12 @@ de operacao, onboarding e recuperacao para operador nao tecnico. Esta
 atualizacao e documental: nao implementa operacao real, nao toca placa, nao
 altera rede/config/player e nao substitui homologacao.
 
+Atualizacao C8.1: 2026-05-03. C8.1 entrega setup minimo funcional/mock local
+sem Wi-Fi real, com servidor HTTP local, prototipo estatico, candidata em
+`/tmp`, status/summary sanitizados e smoke seguro opcional na placa usando
+somente `/tmp`. Nao escreve config real, nao altera rede, nao chama backend,
+nao inicia player e nao substitui homologacao.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -873,7 +879,8 @@ Limite:
 
 ### C8 - Produto V1: operacao, onboarding e recuperacao
 
-Status: visao documental criada. Nao implementa operacao real.
+Status: visao documental criada; C8.1 funcional/mock local concluida sem
+Wi-Fi real e sem config real.
 
 Documentos:
 
@@ -881,7 +888,9 @@ Documentos:
 - `docs/product/38_FLUXO_PRODUTO_V1_ONBOARDING_MANUTENCAO_RECUPERACAO.md`;
 - `docs/product/39_INVENTARIO_TELAS_ACOES_PRODUTO_V1.md`;
 - `docs/product/40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md`;
+- `docs/product/41_C8_1_SETUP_MINIMO_FUNCIONAL_SEM_WIFI_REAL.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`.
+- `docs/product/prototypes/c8-1-setup-minimo/index.html`.
 
 Objetivo:
 
@@ -895,7 +904,7 @@ Objetivo:
 
 Subfases propostas:
 
-- C8.1 - setup minimo funcional sem Wi-Fi real;
+- C8.1 - setup minimo funcional sem Wi-Fi real, mock/local em `/tmp`;
 - C8.2 - selecao de ambiente mock/local;
 - C8.3 - rotacao mock/local;
 - C8.4 - reset leve e reiniciar player;
@@ -915,7 +924,8 @@ Limites:
   renderer, `systemd` ou `kiosky-player`;
 - C8 documental nao escreve config real;
 - C8 documental nao executa reset real;
-- C8 documental nao toca placa.
+- C8.1 pode ser validada na placa somente por smoke seguro em `/tmp`, sem
+  servicos, sem rede operacional e sem player.
 
 ### C9 - Wi-Fi/portal/hotspot
 
