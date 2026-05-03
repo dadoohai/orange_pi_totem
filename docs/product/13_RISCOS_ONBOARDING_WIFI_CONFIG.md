@@ -9,6 +9,11 @@ Wi-Fi/configuracao. Ele deve ser usado antes de qualquer implementacao de
 hotspot, portal local, NetworkManager adapter, ativacao backend ou config
 writer.
 
+Nota de escopo: o arquivo nasceu para riscos de onboarding Wi-Fi/configuracao,
+mas tambem registra riscos ligados ao avanco produto/UX de config writer,
+token/API e config real enquanto esses temas continuarem acoplados ao fluxo de
+onboarding.
+
 ## Atualizacao C6.5 - riscos de leitura documental
 
 C6.3A e C6.4 provaram config real escrita, start controlado e `player_running`

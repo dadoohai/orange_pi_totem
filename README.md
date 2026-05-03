@@ -100,6 +100,8 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [ADR-0004 runtime MPV do kiosky-player](docs/DECISIONS/ADR-0004-kiosky-player-mpv-runtime.md)
 - [ADR-0007 launcher, status agregado e splash Dadooh](docs/DECISIONS/ADR-0007-status-splash-launcher.md)
 - [ADR-0008 onboarding Wi-Fi/configuração](docs/DECISIONS/ADR-0008-onboarding-wifi-config.md)
+- [ADR-0009 configuração mínima por environment_id](docs/DECISIONS/ADR-0009-minimal-config-environment-id.md)
+- [ADR-0010 provisionamento de token/API](docs/DECISIONS/ADR-0010-api-token-provisioning.md)
 - [Documentação consolidada](docs/DOCUMENTACAO_COMPLETA_TOTEM_ORANGEPI_ZERO3.md)
 
 ## Scripts de bancada

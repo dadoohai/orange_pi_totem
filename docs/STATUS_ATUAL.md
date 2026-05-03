@@ -64,8 +64,10 @@ homologacao, sem assumir automaticamente C0 como proxima fase.
 
 Nota C0: a frente de onboarding deve comecar por documentacao e arquitetura.
 Wi-Fi setup, hotspot, portal local, QR funcional, ativacao backend e escrita
-real de config continuam nao implementados. A homologacao `v0.1-rc1` segue
-separada.
+de config pelo fluxo de onboarding/operador continuam nao implementados. A
+escrita tecnica controlada de config real ja foi validada em C6.3A/C6.4 como
+marco de desenvolvimento, nao homologacao e nao producao. A homologacao
+`v0.1-rc1` segue separada.
 
 ## Resumo executivo
 

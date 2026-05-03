@@ -148,6 +148,9 @@ A base só deve ir para campo depois de testes prolongados com vídeo real, rede
 
 ## 5. Estado atual do projeto
 
+A seção abaixo preserva o estado original da fundação em 2026-04-29; para
+estado atual, consultar os documentos indicados na atualização posterior.
+
 ### Concluído
 
 - H2testw no cartão: aprovado sem erros.
