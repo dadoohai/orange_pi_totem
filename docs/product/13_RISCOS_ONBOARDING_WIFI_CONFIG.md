@@ -1,6 +1,6 @@
 # Riscos - onboarding Wi-Fi/configuracao
 
-Status: planejamento C0-C6. Nao implementa mudancas.
+Status: planejamento C0-C7. Nao implementa mudancas operacionais.
 
 Data: 2026-05-01
 
@@ -38,11 +38,40 @@ Mitigacoes:
 - atualizacao de README, `STATUS_ATUAL.md`, indice estrategico e roadmap;
 - producao permanece bloqueada ate homologacao propria.
 
+## Atualizacao C7.0 - riscos de diagnostico/status
+
+C7.0 inicia diagnostico/status sanitizado do appliance como etapa
+local/offline. Ela existe para ajudar suporte, UX, homologacao e automacoes
+futuras sem ler config real e sem publicar dados privados.
+
+Riscos reforcados nesta atualizacao:
+
+- diagnostico copiar status bruto do player com dados privados;
+- diagnostico ler o conteudo da config real por engano;
+- evidencia publicar URL privada, path privado, payload, ID real ou valor de
+  campo operacional;
+- campo allowlisted receber valor suspeito e ser copiado sem redacao;
+- snapshot local parecer homologacao ou teste prolongado.
+
+Mitigacoes:
+
+- allowlist fechada para status publico e status bruto do player;
+- metadados de config via `stat`/metadata, com `config_file_content_read=false`;
+- self-test com fixtures contendo dados privados em campos desconhecidos;
+- `privacy_scan` para bloquear/redigir valores allowlisted suspeitos;
+- outputs restritos em `/tmp` e evidencia README sanitizada;
+- C7 documentado como observabilidade curta, sem substituir a fila de
+  homologacao.
+
 | Risco | Impacto | Mitigacao | Fase de teste |
 | --- | --- | --- | --- |
 | Derrubar SSH/bancada ao mexer em rede | Perda de acesso remoto, teste interrompido e risco de placa presa em estado ruim. | Comecar read-only, preservar Ethernet, snapshot antes/depois, prompt humano antes de alterar conexao ativa e rollback documentado. | C3, C4 |
 | Salvar senha Wi-Fi em logs | Vazamento de credencial do cliente em journal, status, diagnostico ou README. | Nunca imprimir senha, mascarar entradas, revisar journal, sanitizar diagnostico e testar busca por termos sensiveis. | C2, C4 |
 | Vazar `api_key` ou config privada | Comprometimento de backend e ambiente do cliente. | `api_key` fora da UI, fonte externa validada antes do player, status publico allowlisted e config privada nunca exibida. | C1, C5, C6, C7 |
+| Diagnostico C7 copiar status bruto do player | O arquivo bruto pode carregar URL, payload, path, identificador ou detalhe operacional que nao pertence ao suporte/tela/evidencia. | Ler somente campos allowlisted, nunca copiar o JSON completo, ignorar campos desconhecidos e validar fixtures com dados privados. | C7.0, C7.1 |
+| Diagnostico C7 ler config real | Conteudo de config, credencial e IDs reais podem vazar antes mesmo de uma acao operacional. | Observar apenas metadados do arquivo, manter `config_file_content_read=false`, testar fixture com conteudo privado e revisar evidencia. | C7.0, C7.1 |
+| Diagnostico C7 publicar URL/path/payload | Um resumo ou README pode revelar endpoint, payload, nome de midia ou path privado mesmo sem publicar a config completa. | Privacy scan, redacao de valores allowlisted suspeitos, outputs restritos em `/tmp` e evidencia manualmente sanitizada. | C7.0, C7.1 |
+| Campo allowlisted receber valor suspeito | Um campo normalmente seguro pode receber URL, credencial, IP ou path por bug de origem e vazar no snapshot. | Validar padroes proibidos em valores allowlisted, redigir ou marcar `privacy_scan=failed`, e bloquear output final inseguro. | C7.0 |
 | Portal local inseguro | Execucao indevida de comandos, exposicao de arquivos ou controle nao autorizado. | API pequena e allowlisted, sem shell, sem path arbitrario, sessoes com expiracao, CSRF/token local quando aplicavel. | C2, C7, C8 |
 | Hotspot interferir em rede existente | Totem desconecta rede valida ou entra em estado ambiguo AP/cliente. | Hotspot em fase propria, regras claras de prioridade, nao desligar Ethernet, rollback de perfis NetworkManager. | Fase futura |
 | Usuario configurar rede errada | Totem fica sem internet ou associado a rede inadequada. | Confirmacao visual, teste de conectividade, possibilidade de voltar/trocar rede e nao apagar conexao anterior valida antes da nova passar. | C4 |
@@ -149,6 +178,14 @@ Mitigacoes:
   segunda placa/cartao ou producao.
 - Qualquer decisao de producao sem revisar a fila de homologacao de testes
   longos.
+- Qualquer diagnostico C7 que copie status bruto completo do player.
+- Qualquer diagnostico C7 que leia conteudo de config real ou backup.
+- Qualquer evidencia C7 com URL privada, path privado, payload, ID real, SSID,
+  IP, hostname, MAC, BSSID, gateway, DNS, log bruto ou valor operacional
+  privado.
+- Qualquer snapshot C7 que escreva fora de `/tmp` ou aceite out-dir fora de
+  `/tmp`.
+- Qualquer validacao em placa C7.1 sem roteiro read-only aprovado.
 - Qualquer parada de servico sem decisao humana previa sobre manter parado,
   iniciar controladamente ou executar rollback.
 - Qualquer fluxo que inicie player com `api_key` externa ausente ou mal
@@ -198,7 +235,11 @@ Mitigacoes:
   playback `playing`, MPV ativo, `NRestarts=0` e evidencia sanitizada.
 - C6.5: consolidacao documental separando desenvolvimento, homologacao e
   producao, com testes longos movidos para fila propria.
-- C7: ativacao por codigo, login ou lista de ambientes com erros publicos e sem
-  secrets na UI/logs.
+- C7.0: contrato e snapshot local/offline de diagnostico/status sanitizado,
+  self-test com fixtures contendo dados privados, allowlist rigida,
+  `privacy_scan`, `config_file_content_read=false`, outputs restritos em
+  `/tmp` e evidencia README sanitizada.
+- C7.1: futura validacao em placa read-only, se aprovada, sem journal bruto,
+  sem ler config real e sem publicar dados privados.
 - C8: rotacao, troca de ambiente, manutencao/reset com confirmacao forte e
   preservacao de evidencias quando definido.

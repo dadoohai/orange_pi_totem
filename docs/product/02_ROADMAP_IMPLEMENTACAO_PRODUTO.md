@@ -8,6 +8,11 @@ Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
 
+Atualizacao C7.0: 2026-05-02. C7 passa a iniciar por diagnostico/status
+sanitizado do appliance, com contrato e snapshot local/offline. C7.0 nao toca
+placa, nao le config real, nao executa comandos operacionais e nao substitui
+homologacao longa.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -193,6 +198,7 @@ Documentos:
 - `docs/product/30_C6_2_CONFIG_WRITER_REAL_SIMULADO.md`;
 - `docs/product/34_C6_5_MARCO_CONFIG_REAL_PLAYER_RUNNING.md`;
 - `docs/product/35_FILA_HOMOLOGACAO_TESTES_LONGOS.md`;
+- `docs/product/36_C7_DIAGNOSTICO_STATUS_APPLIANCE.md`;
 - `docs/DECISIONS/ADR-0009-minimal-config-environment-id.md`;
 - `docs/DECISIONS/ADR-0010-api-token-provisioning.md`.
 
@@ -258,7 +264,8 @@ Sequencia incremental refinada:
 - C6.3A - primeira escrita real com servico parado;
 - C6.4 - start controlado com config real e smoke curto;
 - C6.5 - consolidacao documental do marco config real + `player_running`;
-- C7 - ativacao por codigo, login ou lista de ambientes;
+- C7.0 - contrato + snapshot local/offline de diagnostico/status sanitizado;
+- C7.1 - futura validacao em placa read-only, se aprovada;
 - C8 - rotacao, troca de ambiente, manutencao e reset.
 
 Criterios de aceite:
@@ -276,8 +283,9 @@ Criterios de aceite:
 ## Fases C1-C8 - onboarding minimo refinado
 
 Status: C1-C6 avancaram como desenvolvimento incremental; C6.5 consolida config
-real + `player_running`; C7/C8 continuam planejadas. Homologacao e producao
-seguem separadas.
+real + `player_running`; C7.0 inicia diagnostico/status sanitizado
+local/offline; C7.1 e C8 continuam planejadas. Homologacao e producao seguem
+separadas.
 
 Estas fases substituem a sequencia anterior mais ampla para evitar que hotspot,
 ativacao backend, writer real, rotacao e manutencao avancem juntos.
@@ -802,28 +810,48 @@ Proximos caminhos possiveis, sem decisao automatica:
 - update/rollback;
 - fila de homologacao.
 
-### C7 - ativacao por codigo, login ou lista de ambientes
+### C7 - diagnostico/status sanitizado do appliance
 
-Status: planejada.
+Status: C7.0 contrato + snapshot local/offline criado em
+`docs/product/36_C7_DIAGNOSTICO_STATUS_APPLIANCE.md`. C7.1 permanece futura.
 
 Objetivo:
 
-- reavaliar alternativas mais completas depois do minimo funcionar;
-- decidir entre codigo curto, login/lista de ambientes ou outro mecanismo;
-- implementar, em fase futura, emissao de token de dispositivo/station pelo
-  backend quando essa direcao for aprovada;
-- integrar backend apenas com seguranca e expiracao definidas;
-- remover necessidade de `environment_id` manual se a solucao escolhida
-  substituir esse fluxo.
+- criar contrato de diagnostico/status sanitizado do appliance;
+- permitir entender estado publico de config, servico, launcher, player, MPV,
+  renderer e privacidade sem ler conteudo de config real;
+- tratar `/tmp/kiosky-status.json` como status bruto do player, lendo apenas
+  campos allowlisted;
+- observar `/data/config/config.json` somente por metadados, sem abrir o
+  arquivo;
+- gerar snapshot e resumo restritos em `/tmp`;
+- preparar futura validacao read-only em placa.
 
-Validacao:
+Subfases:
 
-- operador continua sem manipular `api_key`;
-- runtime do totem nao depende de token permanente de usuario humano;
-- token de dispositivo/station e escopado, revogavel, rotacionavel e
-  auditavel antes de producao/campo;
-- erros de backend nao vazam URL, payload ou regra interna;
-- fluxo nao regride C6.
+- C7.0 - contrato + script local/offline
+  `scripts/board/totem_appliance_status_snapshot.py`, com self-test por
+  fixtures sinteticas em `/tmp`;
+- C7.1 - futura validacao em placa read-only, se aprovada por roteiro proprio,
+  sem journal bruto e sem publicar dados privados.
+
+Validacao C7.0:
+
+- self-test com fixtures contendo dados privados em campos desconhecidos;
+- campo allowlisted suspeito redigido ou marcado com `privacy_scan=failed`;
+- conteudo de config nao lido e `config_file_content_read=false`;
+- out-dir fora de `/tmp` recusado;
+- fontes ausentes viram `unavailable`/`unknown`;
+- nenhum JSON bruto, log bruto, URL privada, payload, path privado, ID real,
+  SSID, IP, hostname ou credencial e publicado.
+
+Limite:
+
+- C7 nao substitui observer prolongado, reboot/autoboot, segunda placa/cartao,
+  root read-only, corte seco, rollback real ou homologacao;
+- processos e `systemd` continuam fora de C7.0;
+- a antiga frente de ativacao por codigo, login ou lista de ambientes fica para
+  fase futura de UX/setup/onboarding, nao para este C7.
 
 ### C8 - rotacao, troca de ambiente, manutencao e reset
 
