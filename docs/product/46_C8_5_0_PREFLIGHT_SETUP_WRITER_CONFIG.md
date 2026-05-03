@@ -113,7 +113,6 @@ A candidata C8 preserva o contrato minimo C5.1:
 - `api_url`;
 - `api_key`;
 - `environment_id`;
-- `station_id`;
 - `cache_dir`;
 - `state_dir`;
 - `status_file`;
@@ -125,6 +124,15 @@ A candidata C8 preserva o contrato minimo C5.1:
 - `mpv_gpu_context`;
 - `mpv_ao`;
 - `low_resource_mode`.
+
+Campo opcional/futuro preservado quando existir:
+
+- `station_id`.
+
+Em C8.5.2, `station_id` foi reclassificado como nao operacional para o
+contrato minimo. Ele nao e necessario para playback/setup e nao bloqueia
+`real-dry-run`; quando aparecer, segue apenas validacao de formato para evitar
+URL, path ou segredo por engano.
 
 Campos extras de handoff do setup:
 
@@ -142,7 +150,6 @@ Em C8.5.0, as lacunas sao publicadas por categoria, nao por valor bruto:
 
 - credencial de runtime privada;
 - endpoint/backend privado;
-- identidade local da estacao;
 - ambiente ainda vindo de catalogo mock/local, quando aplicavel.
 
 Os valores reais correspondentes devem entrar futuramente por canal seguro,
@@ -154,12 +161,11 @@ A candidata C8 usa placeholders seguros para desenvolvimento:
 
 - endpoint mock;
 - credencial mock;
-- identificador de estacao mock;
 - ambiente escolhido de lista mock/local.
 
-O validador C5.1 bloqueia pelo menos endpoint/credencial/estacao em
-`real-dry-run`. O preflight tambem marca o ambiente mock/local como lacuna de
-produto, mesmo que o contrato C5.1 atual valide apenas formato.
+O validador C5.1 bloqueia endpoint/credencial em `real-dry-run`. O preflight
+tambem marca o ambiente mock/local como lacuna de produto, mesmo que o contrato
+C5.1 atual valide apenas formato.
 
 Essa falha impede que uma candidata de UI/prototipo vire config real por engano.
 
@@ -169,8 +175,9 @@ Antes de uma etapa real, sera necessario:
 
 - receber endpoint real por canal privado aprovado;
 - receber credencial de runtime por canal privado aprovado;
-- receber ou derivar `station_id` real;
 - trocar a selecao mock/local de ambiente por origem aprovada;
+- manter `station_id` ausente, mock ou real apenas como valor opcional/futuro,
+  sem bloquear config minima;
 - preservar `rotation_deg`;
 - validar a candidata completa com C5.1 `real-dry-run`;
 - garantir que setup/render esteja parado ou bloqueado antes do player;

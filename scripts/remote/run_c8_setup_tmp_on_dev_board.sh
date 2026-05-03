@@ -38,7 +38,7 @@ ssh "$HOST" "umask 077 && mkdir -p '$REMOTE_DIR' && chmod 700 '$REMOTE_DIR'"
 echo "Copying C8 setup server, C5.1 validator and C8.5 scripts to $HOST:$REMOTE_DIR"
 scp "$LOCAL_SERVER" "$LOCAL_CONTRACT" "$LOCAL_PREFLIGHT" "$LOCAL_REAL_SYNTHETIC" "$HOST:$REMOTE_DIR/"
 
-echo "Running C8.5.1 self-test and smoke test on the board"
+echo "Running C8.5.2 self-test and smoke test on the board"
 ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_PREFLIGHT_OUT_DIR='$REMOTE_PREFLIGHT_OUT_DIR' REMOTE_REAL_SYNTHETIC_OUT_DIR='$REMOTE_REAL_SYNTHETIC_OUT_DIR' REMOTE_PORT='$REMOTE_PORT' bash -s" <<'REMOTE_SH'
 set -euo pipefail
 
@@ -526,9 +526,11 @@ if status["writer_handoff"]["writer_simulated_write_called"] is not False:
     raise AssertionError("real-synthetic called simulated writer")
 if candidate.get("rotation_deg") != source.get("rotation_deg"):
     raise AssertionError("real-synthetic candidate did not preserve rotation_deg")
-for field in ("api_url", "api_key", "station_id", "environment_id"):
+for field in ("api_url", "api_key", "environment_id"):
     if candidate.get(field) == source.get(field):
         raise AssertionError(f"real-synthetic candidate did not replace {field}")
+if candidate.get("station_id") != source.get("station_id"):
+    raise AssertionError("real-synthetic candidate should preserve optional station_id")
 
 for key in (
     "real_config_read",

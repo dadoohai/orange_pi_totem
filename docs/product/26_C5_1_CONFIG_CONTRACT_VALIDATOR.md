@@ -59,7 +59,6 @@ A config candidata minima deve conter:
 - `api_url`;
 - `api_key`;
 - `environment_id`;
-- `station_id`;
 - `cache_dir`;
 - `state_dir`;
 - `status_file`;
@@ -71,6 +70,16 @@ A config candidata minima deve conter:
 - `mpv_gpu_context`;
 - `mpv_ao`;
 - `low_resource_mode`.
+
+Campo opcional/futuro:
+
+- `station_id`.
+
+`station_id` nao e requisito bloqueante da config minima nesta etapa. Quando
+presente, ele deve seguir a allowlist de identificadores para nao carregar URL,
+path ou segredo por engano. Quando ausente, vazio ou mock, nao bloqueia
+`real-dry-run`. O uso esperado fica ligado a telemetria/inventario futuro, nao
+ao playback minimo.
 
 ## Regras de paths
 
@@ -103,12 +112,12 @@ Em modo `--real-dry-run`, o validador deve bloquear:
 - `API_KEY_MOCK_NOT_FOR_PRODUCTION`;
 - `https://api.example.invalid/search`;
 - `ENVIRONMENT_ID_MOCK`;
-- `STATION_ID_MOCK`;
 - dominios `.invalid`;
 - valores vazios;
 - `api_key` com rotulo de mock, test, example ou placeholder;
 - `environment_id` que pareca URL, path ou secret;
-- `station_id` que pareca URL, path ou secret.
+- `station_id` que pareca URL, path ou secret, quando o campo opcional estiver
+  presente.
 
 O modo `--real-dry-run` ainda nao prova que a `api_key` e correta, que o
 backend aceita a config ou que o ambiente existe. Ele apenas bloqueia sinais
@@ -162,7 +171,7 @@ Regras de saida:
 - nunca salvar valor de `api_key` em `summary.txt`;
 - status registra apenas campos agregados, campos ausentes, campos invalidos,
   achados de placeholder, achados de path, presenca de `api_key`, flags de
-  privacidade e estados de `environment_id`/`station_id`.
+  privacidade, estado de `environment_id` e estado opcional de `station_id`.
 
 ## Criterios de aceite
 

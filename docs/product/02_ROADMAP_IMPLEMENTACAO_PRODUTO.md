@@ -58,6 +58,13 @@ valores nao reais gerados localmente. A candidata real-sintetica passa C5.1
 `real-dry-run`, mas writer real continua bloqueado; nao usa secrets reais, nao
 toca `/data` ou `/opt` e nao altera servico, player, MPV, rede ou backend.
 
+Atualizacao C8.5.2: 2026-05-03. C8.5.2 revisa o contrato minimo e reclassifica
+`station_id` como opcional, nao operacional e futuro. `api_url` e `api_key`
+continuam valores privados importantes, `environment_id` continua necessario,
+e `station_id` deixa de bloquear C5.1 `real-dry-run`. A alteracao permanece em
+`/tmp`, sem writer real, sem config real, sem `/data`, sem `/opt`, sem player e
+sem rede.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -504,7 +511,9 @@ Objetivo:
 - criar caminho de validacao de config minima sem substituir config ativa real;
 - montar config candidata mock somente em `/tmp`;
 - simular `api_key` fora da UI usando placeholder;
-- manter `api_url`, `environment_id` e `station_id` como mock/placeholders;
+- manter `api_url` e `environment_id` como mock/placeholders;
+- manter `station_id` apenas como mock opcional/futuro, sem bloquear a config
+  minima;
 - validar `environment_id` por formato minimo;
 - preparar C6, mas sem executar C6.
 

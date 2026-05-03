@@ -131,7 +131,6 @@ A candidata C8.2 preserva o shape minimo aceito por C5.1:
 - `api_url`;
 - `api_key`;
 - `environment_id`;
-- `station_id`;
 - `cache_dir`;
 - `state_dir`;
 - `status_file`;
@@ -143,6 +142,9 @@ A candidata C8.2 preserva o shape minimo aceito por C5.1:
 - `mpv_gpu_context`;
 - `mpv_ao`;
 - `low_resource_mode`.
+
+`station_id` pode existir como campo opcional/futuro, mas nao e requisito
+bloqueante para a config minima a partir de C8.5.2.
 
 Campos extras de handoff:
 

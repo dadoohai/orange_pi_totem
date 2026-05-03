@@ -204,7 +204,6 @@ def build_real_synthetic_candidate(source: dict[str, Any]) -> dict[str, Any]:
             "api_url": SYNTHETIC_BACKEND_ENDPOINT,
             "api_key": generated_runtime_credential(),
             "environment_id": generated_identifier("ENV-APPROVED-SYNTH"),
-            "station_id": generated_identifier("STATION-SYNTH"),
             "setup_environment_source": "approved_synthetic_local",
             "setup_private_values_source": "local_generated_synthetic",
             "setup_source": "c8.5.1-real-synthetic-candidate",
@@ -223,7 +222,7 @@ def summarize_validation(status: dict[str, Any]) -> dict[str, Any]:
         "credential_value_present": bool(status["api_key_present"]),
         "credential_placeholder_detected": bool(status["api_key_placeholder_detected"]),
         "environment_identifier_format_valid": bool(status["environment_id_status"]["valid"]),
-        "station_identifier_format_valid": bool(status["station_id_status"]["valid"]),
+        "station_identifier_optional_format_valid": bool(status["station_id_status"]["valid"]),
     }
 
 
@@ -243,8 +242,9 @@ def build_status(
         for field in ("rotation_deg", "setup_source", "setup_environment_source", "setup_private_values_source")
         if field in real_candidate
     )
-    source_extra_fields_count = len(set(source_candidate) - set(contract.REQUIRED_CONFIG_FIELDS))
-    real_extra_fields_count = len(set(real_candidate) - set(contract.REQUIRED_CONFIG_FIELDS))
+    known_contract_fields = set(contract.REQUIRED_CONFIG_FIELDS) | set(contract.OPTIONAL_CONFIG_FIELDS)
+    source_extra_fields_count = len(set(source_candidate) - known_contract_fields)
+    real_extra_fields_count = len(set(real_candidate) - known_contract_fields)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -540,8 +540,18 @@ def run_self_test() -> None:
         assert_true(real_candidate["rotation_deg"] == source["rotation_deg"], "rotation_deg should be preserved")
         assert_true(real_candidate["api_key"] != source["api_key"], "runtime credential should be replaced")
         assert_true(real_candidate["api_url"] != source["api_url"], "backend endpoint should be replaced")
-        assert_true(real_candidate["station_id"] != source["station_id"], "station identity should be replaced")
+        assert_true(real_candidate["station_id"] == source["station_id"], "optional station_id should be preserved")
         assert_true(real_candidate["environment_id"] != source["environment_id"], "environment should be replaced")
+
+        source_without_station = dict(source)
+        del source_without_station["station_id"]
+        source_without_station_path = root / "source" / "candidate-without-station.json"
+        write_private_json(source_without_station_path, source_without_station)
+        status_without_station = run_real_synthetic(str(source_without_station_path), str(root / "out-no-station"))
+        assert_true(
+            status_without_station["contract_validation"]["real_synthetic_real_dry_run"]["valid"],
+            "real-synthetic candidate without station_id should pass real-dry-run",
+        )
 
         for name in (STATUS_FILENAME, SUMMARY_FILENAME):
             path = out_dir / name

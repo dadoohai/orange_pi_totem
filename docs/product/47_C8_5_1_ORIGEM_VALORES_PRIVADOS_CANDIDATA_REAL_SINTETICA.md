@@ -23,8 +23,8 @@ C8.5.1 avanca um passo sem operar o appliance: troca placeholders por valores
 real-sinteticos gerados localmente e valida que o contrato C5.1 aceitaria o
 shape resultante em `real-dry-run`.
 
-Isso prova o caminho tecnico sem usar valor real de cliente, backend, token,
-ambiente ou estacao.
+Isso prova o caminho tecnico sem usar valor real de cliente, backend, token ou
+ambiente.
 
 ## 3. Origem aprovada de valores privados
 
@@ -37,8 +37,12 @@ Valores que precisam de origem privada:
 | --- | --- | --- |
 | `api_url` | Provisionamento local privado ou arquivo restrito fora do repo. | Endpoint sintetico local. |
 | `api_key` | Provisionamento local privado, digitacao interativa segura ou arquivo restrito fora do repo. | Credencial aleatoria sintetica. |
-| `station_id` | Inventario/provisionamento local aprovado. | Identidade sintetica gerada localmente. |
 | `environment_id` | Seleção aprovada por backend/provisionamento ou lista confiavel. | Ambiente sintetico aprovado localmente. |
+
+`station_id` foi reclassificado em C8.5.2 como campo opcional, nao operacional
+e futuro. Ele pode vir de inventario/provisionamento se telemetria ou
+rastreabilidade exigirem, mas nao e valor privado obrigatorio para a config
+minima e nao bloqueia `real-dry-run`.
 
 Se uma fase futura precisar de valor sensivel real, o valor deve ser solicitado
 ao humano em canal interativo seguro e nao deve aparecer em comando, script,
@@ -81,8 +85,11 @@ A candidata real-sintetica preserva o shape C8/C5.1 e substitui:
 
 - endpoint placeholder por endpoint sintetico;
 - credencial placeholder por credencial aleatoria sintetica;
-- `station_id` mock por identidade sintetica;
 - ambiente mock por ambiente sintetico aprovado localmente.
+
+`station_id`, quando existe na candidata fonte, e preservado como campo
+opcional/futuro. Ele pode continuar mock nesta prova sem impedir
+`real-dry-run`, desde que nao carregue URL, path ou segredo.
 
 Ela preserva campos de handoff como `rotation_deg` e registra a origem como
 local/sintetica. Esses valores continuam sendo dados de teste, nao dados reais.
@@ -109,7 +116,6 @@ o contrato minimo aceitaria uma candidata sem placeholders.
 - valor de credencial;
 - endpoint;
 - `environment_id`;
-- `station_id`;
 - paths da candidata;
 - payload bruto;
 - logs brutos.

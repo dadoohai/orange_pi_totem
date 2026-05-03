@@ -192,7 +192,7 @@ def summarize_validation(status: dict[str, Any]) -> dict[str, Any]:
         "credential_value_present": bool(status["api_key_present"]),
         "credential_placeholder_detected": bool(status["api_key_placeholder_detected"]),
         "environment_identifier_format_valid": bool(status["environment_id_status"]["valid"]),
-        "station_identifier_format_valid": bool(status["station_id_status"]["valid"]),
+        "station_identifier_optional_format_valid": bool(status["station_id_status"]["valid"]),
     }
 
 
@@ -202,8 +202,6 @@ def category_for_placeholder(finding: dict[str, str]) -> str:
         return "runtime_credential_private_value_required"
     if field == "api_url":
         return "backend_endpoint_private_value_required"
-    if field == "station_id":
-        return "station_identity_private_value_required"
     if field == "environment_id":
         return "environment_identity_private_value_required"
     return "other_private_value_required"
@@ -226,7 +224,7 @@ def build_gap_report(candidate: dict[str, Any], real_status: dict[str, Any]) -> 
         "private_value_categories_count": len(categories),
         "credential_private_value_required": "runtime_credential_private_value_required" in categories,
         "backend_endpoint_private_value_required": "backend_endpoint_private_value_required" in categories,
-        "station_identity_private_value_required": "station_identity_private_value_required" in categories,
+        "station_identity_optional_future": True,
         "environment_selection_still_mock": "environment_selection_mock_catalog" in categories,
         "writer_preconditions_missing": {
             "real_dry_run_valid": False,
@@ -249,7 +247,8 @@ def build_status(
     required_count = len(contract.REQUIRED_CONFIG_FIELDS)
     present_required_count = sum(1 for field in contract.REQUIRED_CONFIG_FIELDS if field in candidate)
     handoff_present_count = sum(1 for field in SETUP_HANDOFF_FIELDS if field in candidate)
-    extra_fields_count = len(set(candidate) - set(contract.REQUIRED_CONFIG_FIELDS))
+    known_contract_fields = set(contract.REQUIRED_CONFIG_FIELDS) | set(contract.OPTIONAL_CONFIG_FIELDS)
+    extra_fields_count = len(set(candidate) - known_contract_fields)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -352,8 +351,8 @@ def build_summary(status: dict[str, Any]) -> str:
             f"{str(status['gap_report']['credential_private_value_required']).lower()}",
             "backend_endpoint_private_value_required: "
             f"{str(status['gap_report']['backend_endpoint_private_value_required']).lower()}",
-            "station_identity_private_value_required: "
-            f"{str(status['gap_report']['station_identity_private_value_required']).lower()}",
+            "station_identity_optional_future: "
+            f"{str(status['gap_report']['station_identity_optional_future']).lower()}",
             "environment_selection_still_mock: "
             f"{str(status['gap_report']['environment_selection_still_mock']).lower()}",
             "writer_real_write_blocked: true",

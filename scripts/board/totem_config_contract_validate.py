@@ -37,7 +37,6 @@ REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "api_url": str,
     "api_key": str,
     "environment_id": str,
-    "station_id": str,
     "cache_dir": str,
     "state_dir": str,
     "status_file": str,
@@ -49,6 +48,10 @@ REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "mpv_gpu_context": str,
     "mpv_ao": str,
     "low_resource_mode": bool,
+}
+
+OPTIONAL_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
+    "station_id": str,
 }
 
 PATH_RULES: dict[str, tuple[str, ...]] = {
@@ -292,6 +295,30 @@ def validate_environment_like_id(raw_value: Any, field: str) -> tuple[dict[str, 
     return status, None
 
 
+def validate_optional_station_id(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str] | None]:
+    if "station_id" not in config:
+        return {
+            "present": False,
+            "valid": True,
+            "placeholder_detected": False,
+            "reason": "optional_not_present",
+        }, None
+
+    raw_value = config.get("station_id")
+    if isinstance(raw_value, str) and not raw_value.strip():
+        return {
+            "present": False,
+            "valid": True,
+            "placeholder_detected": False,
+            "reason": "optional_empty",
+        }, None
+
+    status, invalid = validate_environment_like_id(raw_value, "station_id")
+    if invalid is None and status["placeholder_detected"]:
+        status["reason"] = "optional_future_mock"
+    return status, invalid
+
+
 def api_url_uses_invalid_domain(raw_value: str) -> bool:
     parsed = urlparse(raw_value)
     hostname = parsed.hostname or ""
@@ -414,7 +441,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
         config.get("environment_id"),
         "environment_id",
     )
-    station_status, station_invalid = validate_environment_like_id(config.get("station_id"), "station_id")
+    station_status, station_invalid = validate_optional_station_id(config)
     status["environment_id_status"] = environment_status
     status["station_id_status"] = station_status
     if environment_invalid is not None:
@@ -430,15 +457,6 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
                 "action": "allowed" if mode == "allow-mock" else "blocked",
             }
         )
-    if station_status["placeholder_detected"]:
-        placeholder_findings.append(
-            {
-                "field": "station_id",
-                "reason": "known_mock_identifier",
-                "action": "allowed" if mode == "allow-mock" else "blocked",
-            }
-        )
-
     if mode == "real-dry-run":
         if not api_key_present:
             append_invalid(invalid_fields, "api_key", "required in real-dry-run")
@@ -451,8 +469,6 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
                 append_invalid(invalid_fields, "api_url", ".invalid domain blocked in real-dry-run")
         if config.get("environment_id") == MOCK_ENVIRONMENT_ID:
             append_invalid(invalid_fields, "environment_id", "known mock identifier blocked in real-dry-run")
-        if config.get("station_id") == MOCK_STATION_ID:
-            append_invalid(invalid_fields, "station_id", "known mock identifier blocked in real-dry-run")
 
     status["missing_fields"] = missing_fields
     status["invalid_fields"] = invalid_fields
@@ -569,6 +585,31 @@ def run_self_test() -> None:
         invalid_url["environment_id"] = "ENVIRONMENT_ID_REALISH"
         invalid_url["station_id"] = "STATION_ID_REALISH"
         assert_invalid(invalid_url, "real-dry-run", ".invalid api_url should fail real-dry-run")
+
+        station_absent = dict(mock_candidate)
+        station_absent["api_url"] = "https://api.sandbox.localhost/search"
+        station_absent["api_key"] = "REALISHVALUEABC1234567890"
+        station_absent["environment_id"] = "ENVIRONMENT_ID_REALISH"
+        del station_absent["station_id"]
+        station_absent_status = validate_candidate_config(station_absent, "real-dry-run")
+        assert_true(station_absent_status["valid"], "station_id absence should not block real-dry-run")
+        assert_true(
+            station_absent_status["station_id_status"]["reason"] == "optional_not_present",
+            "station_id absence should be recorded as optional",
+        )
+
+        station_mock_optional = dict(station_absent)
+        station_mock_optional["station_id"] = MOCK_STATION_ID
+        station_mock_optional_status = validate_candidate_config(station_mock_optional, "real-dry-run")
+        assert_true(station_mock_optional_status["valid"], "mock station_id should not block real-dry-run")
+        assert_true(
+            not station_mock_optional_status["placeholder_findings"],
+            "optional station_id should not create blocking placeholder findings",
+        )
+
+        invalid_station = dict(station_absent)
+        invalid_station["station_id"] = "https://station.example"
+        assert_invalid(invalid_station, "real-dry-run", "invalid optional station_id should fail when present")
 
         invalid_environment = dict(mock_candidate)
         invalid_environment["environment_id"] = "bad environment"

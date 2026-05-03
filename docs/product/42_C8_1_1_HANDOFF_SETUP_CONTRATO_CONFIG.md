@@ -54,8 +54,8 @@ do fluxo e registra validacao de contrato no status sanitizado.
 ## 4. Relacao com C5.1
 
 C5.1 e o contrato minimo de config candidata. Ele define campos obrigatorios,
-regras de paths, regra de `environment_id`/`station_id` e comportamento de
-placeholders.
+regras de paths, regra de `environment_id`, regra opcional de `station_id` e
+comportamento de placeholders.
 
 C8.1.1 passa a usar o validador C5.1 como fonte de verdade para:
 
@@ -89,6 +89,9 @@ O handoff correto para C6 futuro e:
   - `https://api.example.invalid/search`;
   - `API_KEY_MOCK_NOT_FOR_PRODUCTION`;
   - `STATION_ID_MOCK`.
+- A partir de C8.5.2, `STATION_ID_MOCK` permanece permitido como valor
+  opcional/futuro e nao bloqueia `real-dry-run`; a falha esperada vem de
+  `api_url`, `api_key` e ambiente mock quando aplicavel.
 - Validar `environment_id` com `validate_environment_like_id()` do C5.1,
   mantendo a recusa de espaco no inicio/fim no setup.
 - Trocar o campo de rotacao para `rotation_deg`.
@@ -104,7 +107,6 @@ A candidata C8.1.1 contem o shape minimo aceito pelo contrato C5.1:
 - `api_url`;
 - `api_key`;
 - `environment_id`;
-- `station_id`;
 - `cache_dir`;
 - `state_dir`;
 - `status_file`;
@@ -116,6 +118,10 @@ A candidata C8.1.1 contem o shape minimo aceito pelo contrato C5.1:
 - `mpv_gpu_context`;
 - `mpv_ao`;
 - `low_resource_mode`.
+
+O setup ainda pode carregar `station_id` como campo opcional/futuro para
+compatibilidade e telemetria/inventario futuro, mas ele nao e requisito
+bloqueante para a config minima.
 
 Tambem contem campos de handoff do setup:
 
@@ -145,7 +151,8 @@ A candidata C8.1.1 deve passar em C5.1 `allow-mock` porque:
 
 - todos os campos obrigatorios existem;
 - os paths de appliance sao strings sob raizes permitidas;
-- `environment_id` e `station_id` seguem a allowlist;
+- `environment_id` segue a allowlist;
+- `station_id`, quando presente, segue a allowlist opcional;
 - placeholders sao permitidos nesse modo.
 
 O servidor executa essa validacao em memoria antes de escrever os artefatos do
@@ -161,7 +168,8 @@ Hoje a falha vem de:
 
 - `api_url` com dominio `.invalid`;
 - `api_key` placeholder;
-- `station_id` mock conhecido.
+- ambiente mock/local, quando a fase de produto ainda nao trouxe origem
+  aprovada.
 
 Uma fase futura so deve esperar `real-dry-run` passando depois de receber dados
 privados por canal local aprovado, fora do Git, docs, chat e evidencias

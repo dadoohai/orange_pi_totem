@@ -82,8 +82,9 @@ Configuracao pendente
 - Backend nao e chamado.
 - Ativacao/login/codigo nao existem.
 - Lista de ambientes nao e buscada.
-- `api_url`, credencial de runtime e `station_id` na candidata usam
-  placeholders seguros.
+- `api_url` e credencial de runtime na candidata usam placeholders seguros.
+- `station_id` pode aparecer como placeholder opcional/futuro, sem bloquear a
+  config minima a partir de C8.5.2.
 - A rotacao e salva como campo de candidata, mas ainda nao e aplicada ao
   renderer, MPV, sistema ou player.
 - A candidata nao vira config ativa.
