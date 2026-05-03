@@ -29,6 +29,11 @@ e contrato C5.1: candidata passa em `allow-mock`, falha em `real-dry-run`
 enquanto usa placeholders e grava rotacao em `rotation_deg`. Continua somente
 em `/tmp`, sem writer real, sem rede e sem player.
 
+Atualizacao C8.2: 2026-05-03. C8.2 troca o caminho principal de ambiente para
+uma lista mock/local com nomes publicos e mantem o campo manual como modo
+avancado/de bancada. A candidata continua validada por C5.1, somente em `/tmp`,
+sem backend, sem rede real, sem writer real e sem player.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -289,7 +294,8 @@ Sequencia incremental refinada:
 - C7.1 - futura validacao em placa read-only, se aprovada;
 - C8 - Produto V1: operacao, onboarding e recuperacao;
 - C8.1 - setup minimo funcional sem Wi-Fi real;
-- C8.2 - selecao de ambiente mock/local;
+- C8.1.1 - handoff setup minimo -> contrato C5.1;
+- C8.2 - selecao de ambiente mock/local, funcional/mock local;
 - C8.3 - rotacao mock/local;
 - C8.4 - reset leve e reiniciar player;
 - C8.5 - integracao com writer/config;
@@ -884,8 +890,8 @@ Limite:
 
 ### C8 - Produto V1: operacao, onboarding e recuperacao
 
-Status: visao documental criada; C8.1 funcional/mock local concluida sem
-Wi-Fi real e sem config real.
+Status: visao documental criada; C8.1/C8.1.1/C8.2 funcional/mock local
+concluidas sem Wi-Fi real e sem config real.
 
 Documentos:
 
@@ -895,8 +901,10 @@ Documentos:
 - `docs/product/40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md`;
 - `docs/product/41_C8_1_SETUP_MINIMO_FUNCIONAL_SEM_WIFI_REAL.md`;
 - `docs/product/42_C8_1_1_HANDOFF_SETUP_CONTRATO_CONFIG.md`;
+- `docs/product/43_C8_2_SELECAO_AMBIENTE_MOCK_LOCAL.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
-- `docs/product/prototypes/c8-1-setup-minimo/index.html`.
+- `docs/product/prototypes/c8-1-setup-minimo/index.html`;
+- `docs/product/prototypes/c8-2-selecao-ambiente/index.html`.
 
 Objetivo:
 

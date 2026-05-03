@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C8.1 minimal local setup server without real Wi-Fi.
+"""C8.2 minimal local setup server without real Wi-Fi.
 
 This tool is intentionally narrow. It serves a local HTTP UI, validates the
 operator input, and writes a mock/local config candidate under /tmp only. It
@@ -29,7 +29,7 @@ sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
 
-SCHEMA_VERSION = "dadooh-c8.1-setup-minimal-no-wifi.v1"
+SCHEMA_VERSION = "dadooh-c8.2-setup-environment-mock-local.v1"
 DEFAULT_BIND = "127.0.0.1"
 DEFAULT_PORT = 8766
 DEFAULT_OUT_DIR = "/tmp/dadooh-c8-1-setup-minimo"
@@ -49,9 +49,34 @@ SAFE_PLACEHOLDER_STATION_ID = contract.MOCK_STATION_ID
 
 ALLOWED_ROTATIONS = {0, 90, 180, 270}
 
+MOCK_ENVIRONMENTS: tuple[dict[str, str], ...] = (
+    {
+        "key": "loja-a",
+        "name": "Ambiente Loja A - TESTE",
+        "environment_id": "ENV-MOCK-LOJA-A",
+        "description": "Ambiente de teste para fluxo de loja.",
+    },
+    {
+        "key": "recepcao",
+        "name": "Ambiente Recepcao - TESTE",
+        "environment_id": "ENV-MOCK-RECEPCAO",
+        "description": "Ambiente de teste para recepcao.",
+    },
+    {
+        "key": "vitrine",
+        "name": "Ambiente Vitrine - TESTE",
+        "environment_id": "ENV-MOCK-VITRINE",
+        "description": "Ambiente de teste para vitrine.",
+    },
+)
+
+MOCK_ENVIRONMENT_BY_KEY = {item["key"]: item for item in MOCK_ENVIRONMENTS}
+SELECTION_MODE_MOCK = "mock_list"
+SELECTION_MODE_MANUAL = "manual_advanced"
+
 
 class SetupError(ValueError):
-    """Raised for expected C8.1 setup failures."""
+    """Raised for expected setup failures."""
 
 
 def utc_timestamp() -> str:
@@ -162,6 +187,56 @@ def validate_environment_id(raw_value: Any) -> str:
     return value
 
 
+def public_environment_catalog() -> list[dict[str, str]]:
+    return [
+        {
+            "key": item["key"],
+            "name": item["name"],
+            "description": item["description"],
+            "environment_id": item["environment_id"],
+        }
+        for item in MOCK_ENVIRONMENTS
+    ]
+
+
+def resolve_environment_selection(payload: dict[str, Any]) -> dict[str, str]:
+    raw_mode = payload.get("environment_mode")
+    if raw_mode is None and "environment_key" in payload:
+        raw_mode = "mock"
+    if raw_mode is None:
+        raw_mode = "manual"
+    if not isinstance(raw_mode, str):
+        raise SetupError("environment_mode must be a string")
+
+    mode = raw_mode.strip().lower()
+    if mode in {"mock", "mock_list", "catalog", "list"}:
+        raw_key = payload.get("environment_key")
+        if not isinstance(raw_key, str) or not raw_key.strip():
+            raise SetupError("environment_key is required for mock selection")
+        key = raw_key.strip()
+        item = MOCK_ENVIRONMENT_BY_KEY.get(key)
+        if item is None:
+            raise SetupError("unknown mock environment")
+        environment_id = validate_environment_id(item["environment_id"])
+        return {
+            "mode": SELECTION_MODE_MOCK,
+            "key": item["key"],
+            "public_name": item["name"],
+            "environment_id": environment_id,
+        }
+
+    if mode in {"manual", "manual_advanced", "advanced", "bench"}:
+        environment_id = validate_environment_id(payload.get("environment_id"))
+        return {
+            "mode": SELECTION_MODE_MANUAL,
+            "key": "",
+            "public_name": "Ambiente manual - TESTE",
+            "environment_id": environment_id,
+        }
+
+    raise SetupError("environment_mode must be mock or manual")
+
+
 def validate_rotation(raw_value: Any) -> int:
     if isinstance(raw_value, bool):
         raise SetupError("rotation must be one of 0, 90, 180 or 270")
@@ -177,7 +252,7 @@ def validate_rotation(raw_value: Any) -> int:
     return value
 
 
-def build_candidate_config(environment_id: str, rotation: int) -> dict[str, Any]:
+def build_candidate_config(environment_id: str, rotation: int, selection_mode: str) -> dict[str, Any]:
     return {
         "api_key": SAFE_PLACEHOLDER_API_KEY,
         "api_url": SAFE_PLACEHOLDER_API_URL,
@@ -191,7 +266,8 @@ def build_candidate_config(environment_id: str, rotation: int) -> dict[str, Any]
         "mpv_vo": "gpu",
         "rotation_deg": rotation,
         "runtime_dir": "/tmp/kiosky",
-        "setup_source": "c8.1-minimal-local-no-wifi",
+        "setup_environment_source": selection_mode,
+        "setup_source": "c8.2-environment-mock-local-no-wifi",
         "state_dir": "/data/state/kiosky-player",
         "station_id": SAFE_PLACEHOLDER_STATION_ID,
         "status_file": "/tmp/kiosky-status.json",
@@ -228,16 +304,28 @@ def validate_candidate_handoff(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_status(generated_at: str, rotation: int, contract_validation: dict[str, Any]) -> dict[str, Any]:
+def build_status(
+    generated_at: str,
+    rotation: int,
+    selection: dict[str, str],
+    contract_validation: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": generated_at,
         "state": "candidate_ready",
-        "flow": "setup_minimal_no_wifi_real",
+        "flow": "setup_environment_mock_local_no_wifi_real",
         "files": {
             "candidate_config": CANDIDATE_FILENAME,
             "summary": SUMMARY_FILENAME,
             "status": STATUS_FILENAME,
+        },
+        "environment_selection": {
+            "mode": selection["mode"],
+            "catalog": "local_mock" if selection["mode"] == SELECTION_MODE_MOCK else "manual_advanced",
+            "mock_environment_selected": selection["mode"] == SELECTION_MODE_MOCK,
+            "public_name_written_to_status": False,
+            "environment_id_raw_written_to_status": False,
         },
         "validation": {
             "environment_id": "format_validated_only",
@@ -279,12 +367,14 @@ def build_status(generated_at: str, rotation: int, contract_validation: dict[str
 def build_summary(status: dict[str, Any]) -> str:
     return "\n".join(
         [
-            "Dadooh C8.1 setup minimo sem Wi-Fi real",
+            "Dadooh C8.2 selecao de ambiente mock/local",
             "",
             f"schema_version: {status['schema_version']}",
             f"generated_at_utc: {status['generated_at_utc']}",
             f"state: {status['state']}",
             f"flow: {status['flow']}",
+            f"environment_selection_mode: {status['environment_selection']['mode']}",
+            "environment_catalog: local_mock",
             "environment_id: format_validated_only",
             f"rotation_degrees: {status['validation']['rotation_degrees']}",
             "rotation_field: rotation_deg",
@@ -336,17 +426,17 @@ def assert_sanitized_outputs(out_dir: pathlib.Path, environment_id: str) -> None
             raise SetupError("privacy scan blocked credential or URL in status/summary")
 
 
-def write_setup_artifacts(out_dir: pathlib.Path, environment_id: str, rotation: int) -> dict[str, Any]:
+def write_setup_artifacts(out_dir: pathlib.Path, selection: dict[str, str], rotation: int) -> dict[str, Any]:
     prepare_out_dir(out_dir)
     generated_at = utc_timestamp()
-    candidate = build_candidate_config(environment_id, rotation)
+    candidate = build_candidate_config(selection["environment_id"], rotation, selection["mode"])
     contract_validation = validate_candidate_handoff(candidate)
-    status = build_status(generated_at, rotation, contract_validation)
+    status = build_status(generated_at, rotation, selection, contract_validation)
 
     atomic_write_private_json(out_dir / CANDIDATE_FILENAME, candidate, out_dir)
     atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
     atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_summary(status), out_dir)
-    assert_sanitized_outputs(out_dir, environment_id)
+    assert_sanitized_outputs(out_dir, selection["environment_id"])
     return status
 
 
@@ -403,7 +493,7 @@ HTML_PAGE = """<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dadooh - Setup minimo</title>
+    <title>Dadooh - Setup local</title>
     <style>
       :root {
         color-scheme: light;
@@ -413,10 +503,10 @@ HTML_PAGE = """<!doctype html>
         --paper: #f7f8fb;
         --panel: #ffffff;
         --brand: #e8324a;
-        --brand-dark: #68172f;
         --green: #1f7a5a;
         --blue: #0e5f8e;
-        --amber: #b45e12;
+        --blue-soft: #eaf5fb;
+        --red-soft: #fff0f3;
         --radius: 8px;
       }
       * { box-sizing: border-box; }
@@ -431,12 +521,13 @@ HTML_PAGE = """<!doctype html>
       main {
         min-height: 100vh;
         display: grid;
-        grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+        grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
       }
       aside {
         padding: 32px;
-        color: #fff;
-        background: linear-gradient(160deg, var(--brand), var(--brand-dark));
+        color: var(--ink);
+        background: #fff;
+        border-right: 1px solid var(--line);
       }
       .brand {
         font-size: 34px;
@@ -446,7 +537,7 @@ HTML_PAGE = """<!doctype html>
       .aside-text {
         max-width: 280px;
         margin-top: 18px;
-        color: #fff5f6;
+        color: var(--muted);
       }
       .steps {
         display: grid;
@@ -456,7 +547,7 @@ HTML_PAGE = """<!doctype html>
       .steps span {
         padding: 10px 12px;
         border-radius: var(--radius);
-        background: rgba(255, 255, 255, 0.14);
+        background: #f0f4f8;
         font-size: 13px;
         font-weight: 750;
       }
@@ -546,8 +637,61 @@ HTML_PAGE = """<!doctype html>
       }
       button.choice[aria-pressed="true"] {
         border-color: var(--blue);
-        background: #eaf5fb;
+        background: var(--blue-soft);
         color: var(--blue);
+      }
+      .environment-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 26px;
+      }
+      .environment-option {
+        width: 100%;
+        min-height: 78px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        text-align: left;
+      }
+      .environment-option strong,
+      .environment-option span {
+        display: block;
+      }
+      .environment-option span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .environment-option[aria-pressed="true"] {
+        border-color: var(--blue);
+        background: var(--blue-soft);
+      }
+      .environment-option[aria-pressed="true"]::after {
+        content: "Selecionado";
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .advanced {
+        margin-top: 18px;
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+      }
+      .advanced-toggle {
+        border-color: var(--line);
+        color: var(--blue);
+        background: #fff;
+      }
+      .manual-box {
+        margin-top: 14px;
+      }
+      .hint {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
       }
       .review {
         display: grid;
@@ -567,6 +711,13 @@ HTML_PAGE = """<!doctype html>
       }
       .review strong {
         overflow-wrap: anywhere;
+      }
+      .technical {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
       }
       .ok {
         color: var(--green);
@@ -593,11 +744,11 @@ HTML_PAGE = """<!doctype html>
     <main>
       <aside>
         <div class="brand">Dadooh</div>
-        <p class="aside-text">Setup local minimo para liberar uma candidata de configuracao. Sem Wi-Fi real, sem backend e sem comandos operacionais.</p>
+        <p class="aside-text">Configure o totem para iniciar a exibicao.</p>
         <div class="steps" aria-label="Etapas">
           <span>Configuracao pendente</span>
-          <span>Ambiente</span>
-          <span>Rotacao</span>
+          <span>Selecionar ambiente</span>
+          <span>Orientacao da tela</span>
           <span>Revisao</span>
           <span>Candidata pronta</span>
         </div>
@@ -610,7 +761,14 @@ HTML_PAGE = """<!doctype html>
       </section>
     </main>
     <script>
-      const state = { step: "pending", environmentId: "", rotation: 0 };
+      const environments = __ENVIRONMENTS_JSON__;
+      const state = {
+        step: "pending",
+        environmentMode: "mock",
+        environmentKey: environments[0].key,
+        manualEnvironmentId: "ENV-MOCK-MANUAL-BANCADA",
+        rotation: 0
+      };
       const screen = document.querySelector("#screen");
       const errorBox = document.querySelector("#error");
 
@@ -622,6 +780,35 @@ HTML_PAGE = """<!doctype html>
         return String(value).replace(/[&<>"']/g, (char) => ({
           "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
         })[char]);
+      }
+
+      function selectedEnvironment() {
+        if (state.environmentMode === "manual") {
+          return {
+            name: "Ambiente manual - TESTE",
+            environmentId: state.manualEnvironmentId,
+            key: "",
+            mode: "manual"
+          };
+        }
+        const selected = environments.find((item) => item.key === state.environmentKey) || environments[0];
+        return {
+          name: selected.name,
+          environmentId: selected.environment_id,
+          key: selected.key,
+          mode: "mock"
+        };
+      }
+
+      function renderEnvironmentOptions() {
+        return environments.map((item) => `
+          <button class="environment-option" type="button" data-environment-key="${escapeText(item.key)}" aria-pressed="${state.environmentMode === "mock" && state.environmentKey === item.key}">
+            <span>
+              <strong>${escapeText(item.name)}</strong>
+              <span>${escapeText(item.description)}</span>
+            </span>
+          </button>
+        `).join("");
       }
 
       function render() {
@@ -637,7 +824,7 @@ HTML_PAGE = """<!doctype html>
           screen.innerHTML = `
             <span class="tag">setup_start</span>
             <h1>Iniciar configuracao</h1>
-            <p>Esta etapa cria apenas uma candidata local em /tmp. Wi-Fi, backend e escrita real ficam fora deste teste.</p>
+            <p>O proximo passo e escolher o ambiente de teste para continuar.</p>
             <div class="actions">
               <button class="primary" data-action="environment">Continuar</button>
               <button class="secondary" data-action="pending">Voltar</button>
@@ -645,12 +832,19 @@ HTML_PAGE = """<!doctype html>
           `;
         } else if (state.step === "environment") {
           screen.innerHTML = `
-            <span class="tag">environment_input</span>
-            <h1>Informe o ambiente</h1>
-            <p>Use um identificador de teste. Nao use dado real neste prototipo.</p>
-            <div class="actions" style="display:block">
-              <label for="environment">environment_id</label>
-              <input id="environment" autocomplete="off" autocapitalize="off" spellcheck="false" value="${escapeText(state.environmentId)}" />
+            <span class="tag">environment_select</span>
+            <h1>Selecionar ambiente</h1>
+            <p>Escolha um ambiente de teste da lista. A insercao manual deve ser usada somente com orientacao do suporte.</p>
+            <div class="environment-list" role="group" aria-label="Ambientes de teste">
+              ${renderEnvironmentOptions()}
+            </div>
+            <div class="advanced">
+              <button class="advanced-toggle" type="button" data-action="toggle-manual">${state.environmentMode === "manual" ? "Usar lista de ambientes" : "Inserir codigo manualmente (avancado)"}</button>
+              <div class="manual-box ${state.environmentMode === "manual" ? "" : "hidden"}">
+                <label for="environment">Codigo do ambiente</label>
+                <input id="environment" autocomplete="off" autocapitalize="off" spellcheck="false" value="${escapeText(state.manualEnvironmentId)}" />
+                <div class="hint">Use somente com orientacao do suporte.</div>
+              </div>
             </div>
             <div class="actions">
               <button class="primary" data-action="rotation">Continuar</button>
@@ -661,7 +855,7 @@ HTML_PAGE = """<!doctype html>
           screen.innerHTML = `
             <span class="tag">rotation_select</span>
             <h1>Orientacao da tela</h1>
-            <p>Escolha a rotacao que combina com a instalacao fisica do display.</p>
+            <p>Escolha a orientacao que combina com a instalacao fisica do display.</p>
             <div class="rotation-row">
               ${[0, 90, 180, 270].map((value) => `<button class="choice" data-rotation="${value}" aria-pressed="${state.rotation === value}">${value}</button>`).join("")}
             </div>
@@ -671,29 +865,31 @@ HTML_PAGE = """<!doctype html>
             </div>
           `;
         } else if (state.step === "review") {
+          const environment = selectedEnvironment();
           screen.innerHTML = `
             <span class="tag">review</span>
             <h1>Revisar configuracao</h1>
-            <p>Confira os dados digitados nesta sessao antes de gerar a candidata local.</p>
+            <p>Confira a selecao antes de gerar a configuracao de teste.</p>
             <div class="review">
-              <div><span>Ambiente</span><strong>${escapeText(state.environmentId)}</strong></div>
+              <div><span>Ambiente</span><strong>${escapeText(environment.name)}<span class="technical">ID tecnico de teste: ${escapeText(environment.environmentId)}</span></strong></div>
               <div><span>Rotacao</span><strong>${state.rotation} graus</strong></div>
-              <div><span>Conexao</span><strong>Fora do escopo C8.1</strong></div>
+              <div><span>Conexao</span><strong>Nao configurada nesta etapa</strong></div>
             </div>
             <div class="actions">
-              <button class="primary" data-action="save">Salvar simulado</button>
+              <button class="primary" data-action="save">Salvar configuracao de teste</button>
               <button class="secondary" data-action="rotation">Voltar</button>
             </div>
           `;
         } else {
+          const environment = selectedEnvironment();
           screen.innerHTML = `
             <span class="tag">candidate_ready</span>
-            <h1>Configuracao candidata pronta</h1>
-            <p class="ok">A candidata local foi gerada em /tmp com status e resumo sanitizados.</p>
+            <h1>Configuracao de teste pronta</h1>
+            <p class="ok">A configuracao de teste foi gerada com status e resumo sanitizados.</p>
             <div class="review">
-              <div><span>Ambiente nesta sessao</span><strong>${escapeText(state.environmentId)}</strong></div>
+              <div><span>Ambiente</span><strong>${escapeText(environment.name)}<span class="technical">ID tecnico de teste: ${escapeText(environment.environmentId)}</span></strong></div>
               <div><span>Rotacao</span><strong>${state.rotation} graus</strong></div>
-              <div><span>Arquivos</span><strong>candidate-config.json, status.json, summary.txt</strong></div>
+              <div><span>Validacao</span><strong>Validacao concluida</strong></div>
             </div>
             <div class="actions"><button class="secondary" data-action="pending">Novo teste</button></div>
           `;
@@ -701,20 +897,31 @@ HTML_PAGE = """<!doctype html>
       }
 
       async function saveCandidate() {
+        const environment = selectedEnvironment();
+        const payload = environment.mode === "manual"
+          ? { environment_mode: "manual", environment_id: state.manualEnvironmentId, rotation: state.rotation }
+          : { environment_mode: "mock", environment_key: state.environmentKey, rotation: state.rotation };
         const response = await fetch("/api/candidate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ environment_id: state.environmentId, rotation: state.rotation })
+          body: JSON.stringify(payload)
         });
         const data = await response.json();
         if (!response.ok || !data.ok) {
-          throw new Error(data.error || "Nao foi possivel salvar a candidata.");
+          throw new Error(data.error || "Nao foi possivel salvar a configuracao de teste.");
         }
         state.step = "ready";
         render();
       }
 
       document.addEventListener("click", async (event) => {
+        const environmentButton = event.target.closest("[data-environment-key]");
+        if (environmentButton) {
+          state.environmentMode = "mock";
+          state.environmentKey = environmentButton.dataset.environmentKey;
+          render();
+          return;
+        }
         const rotation = event.target.closest("[data-rotation]");
         if (rotation) {
           state.rotation = Number(rotation.dataset.rotation);
@@ -724,9 +931,16 @@ HTML_PAGE = """<!doctype html>
         const button = event.target.closest("[data-action]");
         if (!button) return;
         const action = button.dataset.action;
+        if (action === "toggle-manual") {
+          const input = document.querySelector("#environment");
+          if (input) state.manualEnvironmentId = input.value;
+          state.environmentMode = state.environmentMode === "manual" ? "mock" : "manual";
+          render();
+          return;
+        }
         if (action === "rotation") {
           const input = document.querySelector("#environment");
-          if (input) state.environmentId = input.value;
+          if (input) state.manualEnvironmentId = input.value;
         }
         if (action === "save") {
           try {
@@ -747,8 +961,13 @@ HTML_PAGE = """<!doctype html>
 """
 
 
+def render_html_page() -> str:
+    catalog_json = json.dumps(public_environment_catalog(), ensure_ascii=True, sort_keys=True)
+    return HTML_PAGE.replace("__ENVIRONMENTS_JSON__", catalog_json)
+
+
 class SetupRequestHandler(BaseHTTPRequestHandler):
-    server_version = "DadoohC81Setup/1.0"
+    server_version = "DadoohC82Setup/1.0"
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return
@@ -759,7 +978,10 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path in {"/", "/index.html"}:
-            text_response(self, HTTPStatus.OK, "text/html; charset=utf-8", HTML_PAGE)
+            text_response(self, HTTPStatus.OK, "text/html; charset=utf-8", render_html_page())
+            return
+        if self.path == "/api/environments":
+            json_response(self, HTTPStatus.OK, {"ok": True, "environments": public_environment_catalog()})
             return
         if self.path == "/api/status":
             status_path = self.out_dir / STATUS_FILENAME
@@ -782,9 +1004,9 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
             return
         try:
             payload = parse_payload(self)
-            environment_id = validate_environment_id(payload.get("environment_id"))
+            selection = resolve_environment_selection(payload)
             rotation = validate_rotation(payload.get("rotation"))
-            status = write_setup_artifacts(self.out_dir, environment_id, rotation)
+            status = write_setup_artifacts(self.out_dir, selection, rotation)
         except SetupError as exc:
             json_response(self, HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
             return
@@ -798,6 +1020,8 @@ class SetupRequestHandler(BaseHTTPRequestHandler):
             {
                 "ok": True,
                 "state": status["state"],
+                "environment_mode": selection["mode"],
+                "environment_name": selection["public_name"],
                 "rotation_degrees": rotation,
                 "files": {
                     "candidate_config": CANDIDATE_FILENAME,
@@ -812,7 +1036,7 @@ def run_server(bind: str, port: int, out_dir: pathlib.Path) -> int:
     prepare_out_dir(out_dir)
     server = ThreadingHTTPServer((bind, port), SetupRequestHandler)
     server.out_dir = out_dir  # type: ignore[attr-defined]
-    print(f"C8.1 setup minimal server listening on http://{bind}:{port}", flush=True)
+    print(f"C8.2 setup minimal server listening on http://{bind}:{port}", flush=True)
     print(f"artifacts directory: {out_dir}", flush=True)
     try:
         server.serve_forever()
@@ -844,6 +1068,27 @@ def run_self_test() -> None:
     assert_raises(lambda: validate_environment_id("ENV/C8"), "environment_id with slash should fail")
     assert_raises(lambda: validate_environment_id("token-C8"), "environment_id with token should fail")
     assert_raises(lambda: validate_environment_id("secret-C8"), "environment_id with secret should fail")
+
+    mock_selection = resolve_environment_selection({"environment_mode": "mock", "environment_key": "loja-a"})
+    assert_true(mock_selection["environment_id"] == "ENV-MOCK-LOJA-A", "mock selection should derive environment_id")
+    mock_id_status, mock_id_invalid = contract.validate_environment_like_id(
+        mock_selection["environment_id"],
+        "environment_id",
+    )
+    assert_true(mock_id_status["valid"] and mock_id_invalid is None, "mock environment_id should pass C5.1")
+    manual_selection = resolve_environment_selection(
+        {"environment_mode": "manual", "environment_id": "ENV-MOCK-MANUAL-BANCADA"}
+    )
+    assert_true(manual_selection["mode"] == SELECTION_MODE_MANUAL, "manual mode should be accepted")
+    assert_raises(
+        lambda: resolve_environment_selection({"environment_mode": "manual", "environment_id": "ENV MANUAL"}),
+        "invalid manual environment_id should fail",
+    )
+    assert_raises(
+        lambda: resolve_environment_selection({"environment_mode": "mock", "environment_key": "unknown"}),
+        "unknown mock environment should fail",
+    )
+
     assert_true(validate_rotation("0") == 0, "rotation 0 rejected")
     assert_true(validate_rotation(90) == 90, "rotation 90 rejected")
     assert_true(validate_rotation("180") == 180, "rotation 180 rejected")
@@ -852,11 +1097,14 @@ def run_self_test() -> None:
     assert_raises(lambda: require_tmp_dir("/var/tmp/dadooh-c8-1"), "out-dir outside /tmp should fail")
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c8-1-self-test-", dir="/tmp"))
-    environment_id = "ENV-C8-1-SELFTEST:LOCAL.MOCK"
     try:
         out_dir = require_tmp_dir(str(root / "out"))
-        status = write_setup_artifacts(out_dir, environment_id, 90)
+        status = write_setup_artifacts(out_dir, mock_selection, 90)
         assert_true(status["state"] == "candidate_ready", "status should be candidate_ready")
+        assert_true(
+            status["environment_selection"]["mode"] == SELECTION_MODE_MOCK,
+            "status should record mock selection mode",
+        )
         assert_true(file_mode(out_dir) == PRIVATE_DIR_MODE, "out-dir mode should be 700")
         generated_paths = [
             out_dir / CANDIDATE_FILENAME,
@@ -873,14 +1121,21 @@ def run_self_test() -> None:
 
         with (out_dir / CANDIDATE_FILENAME).open("r", encoding="utf-8") as handle:
             candidate = json.load(handle)
-        assert_true(candidate["environment_id"] == environment_id, "candidate should include environment_id")
+        assert_true(
+            candidate["environment_id"] == mock_selection["environment_id"],
+            "candidate should include selected environment_id",
+        )
         assert_true(candidate["rotation_deg"] == 90, "candidate should include player-compatible rotation")
         assert_true("display_rotation_degrees" not in candidate, "candidate should not keep legacy rotation field")
         assert_true(candidate["api_key"] == SAFE_PLACEHOLDER_API_KEY, "candidate should use safe placeholder")
+        assert_true(
+            candidate["setup_environment_source"] == SELECTION_MODE_MOCK,
+            "candidate should record mock selection source",
+        )
         allow_mock = contract.validate_candidate_config(candidate, "allow-mock")
         real_dry_run = contract.validate_candidate_config(candidate, "real-dry-run")
-        assert_true(allow_mock["valid"], "C8.1 candidate should pass C5.1 allow-mock")
-        assert_true(not real_dry_run["valid"], "C8.1 candidate should fail C5.1 real-dry-run with placeholders")
+        assert_true(allow_mock["valid"], "C8.2 candidate should pass C5.1 allow-mock")
+        assert_true(not real_dry_run["valid"], "C8.2 candidate should fail C5.1 real-dry-run with placeholders")
         assert_true(status["contract_validation"]["allow_mock"]["valid"], "status should record allow-mock pass")
         assert_true(
             status["contract_validation"]["real_dry_run_expected_failure"],
@@ -888,7 +1143,8 @@ def run_self_test() -> None:
         )
 
         text = output_text(out_dir)
-        assert_true(environment_id not in text, "summary/status leaked raw environment_id")
+        assert_true(mock_selection["environment_id"] not in text, "summary/status leaked raw environment_id")
+        assert_true(mock_selection["public_name"] not in text, "summary/status leaked public environment name")
         assert_true(SAFE_PLACEHOLDER_API_KEY not in text, "summary/status leaked credential placeholder")
         assert_true(SAFE_PLACEHOLDER_API_URL not in text, "summary/status leaked URL placeholder")
         assert_true("api_key" not in text.lower(), "summary/status should not include api_key label")
@@ -898,19 +1154,46 @@ def run_self_test() -> None:
         assert_true(status["guardrails"]["systemctl_called"] is False, "status should mark systemctl false")
         assert_true(status["guardrails"]["nmcli_called"] is False, "status should mark nmcli false")
         assert_true(status["guardrails"]["mpv_called"] is False, "status should mark mpv false")
+
+        manual_out_dir = require_tmp_dir(str(root / "manual-out"))
+        manual_status = write_setup_artifacts(manual_out_dir, manual_selection, 270)
+        assert_true(
+            manual_status["environment_selection"]["mode"] == SELECTION_MODE_MANUAL,
+            "manual artifact should record manual selection mode",
+        )
+        with (manual_out_dir / CANDIDATE_FILENAME).open("r", encoding="utf-8") as handle:
+            manual_candidate = json.load(handle)
+        assert_true(
+            manual_candidate["environment_id"] == manual_selection["environment_id"],
+            "manual candidate should include manual environment_id",
+        )
+        assert_true(manual_candidate["rotation_deg"] == 270, "manual candidate should keep rotation")
+        assert_true(
+            contract.validate_candidate_config(manual_candidate, "allow-mock")["valid"],
+            "manual C8.2 candidate should pass C5.1 allow-mock",
+        )
+        assert_true(
+            not contract.validate_candidate_config(manual_candidate, "real-dry-run")["valid"],
+            "manual C8.2 candidate should fail real-dry-run with placeholders",
+        )
+        manual_text = output_text(manual_out_dir)
+        assert_true(
+            manual_selection["environment_id"] not in manual_text,
+            "manual summary/status leaked raw environment_id",
+        )
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Serve the C8.1 minimal local setup UI without real Wi-Fi.",
+        description="Serve the C8.2 minimal local setup UI without real Wi-Fi.",
         allow_abbrev=False,
     )
     parser.add_argument("--bind", default=DEFAULT_BIND, help=f"Bind address. Default: {DEFAULT_BIND}")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"TCP port. Default: {DEFAULT_PORT}")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help=f"Output directory under /tmp. Default: {DEFAULT_OUT_DIR}")
-    parser.add_argument("--self-test", action="store_true", help="Run local C8.1 self-tests under /tmp and exit.")
+    parser.add_argument("--self-test", action="store_true", help="Run local C8.2 self-tests under /tmp and exit.")
     return parser.parse_args(argv)
 
 
