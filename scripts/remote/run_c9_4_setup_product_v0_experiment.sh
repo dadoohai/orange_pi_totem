@@ -11,7 +11,7 @@ REQUIRED_AUTH="Autorizo C9.4: parar temporariamente o serviço, executar launche
 usage() {
   cat <<'USAGE'
 Usage:
-  run_c9_4_setup_product_v0_experiment.sh [host] [--prepare-only|--run-cancel|--run-complete] [--tty N] [--timeout-sec N]
+  run_c9_4_setup_product_v0_experiment.sh [host] [--prepare-only|--run-cancel|--run-complete|--run-complete-scripted] [--tty N] [--timeout-sec N]
 
 Modes:
   --prepare-only
@@ -27,6 +27,11 @@ Modes:
   --run-complete
       Same operational guardrails as --run-cancel, but expects the operator to
       complete setup and generate /tmp/dadooh-c9-4-setup-product-v0/config.candidate.json.
+
+  --run-complete-scripted
+      Same service/launcher guardrails as --run-complete, but replaces the
+      interactive wizard with its --scripted mode to validate candidate handoff
+      without requiring keyboard input on HDMI.
 USAGE
 }
 
@@ -40,6 +45,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --run-complete)
       MODE="run-complete"
+      ;;
+    --run-complete-scripted)
+      MODE="run-complete-scripted"
       ;;
     --tty)
       shift
@@ -166,17 +174,23 @@ if [ "$AUTH_TEXT" != "$REQUIRED_AUTH" ]; then
 fi
 
 EXPECTED_WIZARD_RESULT="cancelled"
+SCRIPTED_COMPLETION="false"
 if [ "$MODE" = "run-complete" ]; then
   EXPECTED_WIZARD_RESULT="candidate_ready"
 fi
+if [ "$MODE" = "run-complete-scripted" ]; then
+  EXPECTED_WIZARD_RESULT="candidate_ready"
+  SCRIPTED_COMPLETION="true"
+fi
 
 echo "Running authorized C9.4 setup product V0 experiment"
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_WIZARD_OUT_DIR='$REMOTE_WIZARD_OUT_DIR' REMOTE_CANDIDATE='$REMOTE_CANDIDATE' REMOTE_TTY='$REMOTE_TTY' RUN_TIMEOUT_SEC='$RUN_TIMEOUT_SEC' EXPECTED_WIZARD_RESULT='$EXPECTED_WIZARD_RESULT' bash -s" <<'REMOTE_RUN'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_WIZARD_OUT_DIR='$REMOTE_WIZARD_OUT_DIR' REMOTE_CANDIDATE='$REMOTE_CANDIDATE' REMOTE_TTY='$REMOTE_TTY' RUN_TIMEOUT_SEC='$RUN_TIMEOUT_SEC' EXPECTED_WIZARD_RESULT='$EXPECTED_WIZARD_RESULT' SCRIPTED_COMPLETION='$SCRIPTED_COMPLETION' bash -s" <<'REMOTE_RUN'
 set -euo pipefail
 
 LAUNCHER="$REMOTE_DIR/kiosky_service_launcher.sh"
 WIZARD="$REMOTE_DIR/totem_setup_local_wizard.py"
 CONTRACT="$REMOTE_DIR/totem_config_contract_validate.py"
+SCRIPTED_WIZARD="$REMOTE_DIR/totem_setup_local_wizard_scripted_wrapper.sh"
 FAKE_RENDERER="$REMOTE_DIR/fake_status_renderer.sh"
 FAKE_AGGREGATOR="$REMOTE_DIR/fake_status_aggregate.sh"
 STATUS_SVG="$REMOTE_OUT_DIR/status.svg"
@@ -543,6 +557,32 @@ exit 0
 SH
 chmod 700 "$FAKE_AGGREGATOR"
 
+SETUP_WIZARD="$WIZARD"
+if [ "$SCRIPTED_COMPLETION" = "true" ]; then
+  cat >"$SCRIPTED_WIZARD" <<'SH'
+#!/usr/bin/env python3
+import os
+import runpy
+import sys
+
+real_wizard = os.environ["C9_4_REAL_WIZARD"]
+sys.argv = [
+    real_wizard,
+    "--scripted",
+    "--environment-id",
+    "ENV-C9-4-SCRIPTED",
+    "--rotation-key",
+    "portrait_right",
+    "--network-step",
+    "mock",
+    *sys.argv[1:],
+]
+runpy.run_path(real_wizard, run_name="__main__")
+SH
+  chmod 700 "$SCRIPTED_WIZARD"
+  SETUP_WIZARD="$SCRIPTED_WIZARD"
+fi
+
 if [ "$(service_active)" != "active" ]; then
   RESULT="blocked"
   ABORT_REASON="service_not_active_before_experiment"
@@ -591,7 +631,8 @@ TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC=3 \
 TOTEM_SETUP_LOCAL_ENABLED=1 \
 TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING=0 \
 TOTEM_SETUP_LOCAL_TRIGGER_FILE="$TRIGGER_FILE" \
-TOTEM_SETUP_LOCAL_WIZARD="$WIZARD" \
+C9_4_REAL_WIZARD="$WIZARD" \
+TOTEM_SETUP_LOCAL_WIZARD="$SETUP_WIZARD" \
 TOTEM_SETUP_LOCAL_OUT_DIR="$REMOTE_WIZARD_OUT_DIR" \
 TOTEM_SETUP_LOCAL_CANDIDATE_FILE="config.candidate.json" \
 TOTEM_SETUP_LOCAL_TTY="$REMOTE_TTY" \
@@ -624,6 +665,8 @@ SETUP_TRIGGER_CREATED="true"
 echo "C9.4: setup should appear on HDMI TTY $REMOTE_TTY."
 if [ "$EXPECTED_WIZARD_RESULT" = "cancelled" ]; then
   echo "Use USB keyboard and press q/Esc to cancel."
+elif [ "$SCRIPTED_COMPLETION" = "true" ]; then
+  echo "Scripted completion mode is active; no keyboard input is required."
 else
   echo "Use USB keyboard to choose connection, type environment_id, choose display, and complete."
 fi

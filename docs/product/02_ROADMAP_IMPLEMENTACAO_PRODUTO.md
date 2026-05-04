@@ -221,6 +221,16 @@ display real e repo `kiosky-player` nao sao alterados; producao continua
 bloqueada. Proxima frente recomendada: C9.5 Wi-Fi real controlado com adapter
 estreito, rollback, Ethernet preservada, timeout e diagnostico sanitizado.
 
+Atualizacao C9.4.1/C9.5 plano: 2026-05-04. C9.4.1 validou em placa o
+cancelamento com humano no HDMI/teclado e a conclusao `--run-complete-scripted`
+com candidata em `/tmp`, C5.1 `allow-mock` passando e `real-dry-run` falhando
+como esperado. O servico final ficou `active/enabled`, `NRestarts=0`, player
+`playing`, MPV ativo e renderer/setup ausentes. A rodada tambem registrou que
+o TTY/openvt precisa de UI ASCII e marcador sanitizado para cancelamento
+confiavel. C9.5 foi aberto apenas como plano de Wi-Fi real controlado com
+adapter NetworkManager estreito; `--apply` real, hotspot, portal, backend,
+writer e config real seguem bloqueados.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -504,6 +514,8 @@ Sequencia incremental refinada:
 - C9.2.1 - simulacao da decisao launcher/setup local;
 - C9.3 - integracao experimental launcher/wizard em `config_missing`;
 - C9.4 - Setup Produto Local V0;
+- C9.4.1 - validacao HDMI humana e conclusao scripted;
+- C9.5 - Wi-Fi real controlado com adapter estreito, plano inicial;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 

@@ -409,6 +409,10 @@ setup_local_candidate_ready() {
   [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/candidate-config.json" ]
 }
 
+setup_local_cancelled() {
+  [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/setup-cancelled.json" ]
+}
+
 run_setup_local_once() {
   local rc=0
 
@@ -457,7 +461,7 @@ run_setup_local_once() {
     return 0
   fi
 
-  if [ "$rc" -eq 130 ]; then
+  if [ "$rc" -eq 130 ] || setup_local_cancelled; then
     log "setup_local_cancelled"
     write_status "setup_local_cancelled" "true" "130"
     return 0

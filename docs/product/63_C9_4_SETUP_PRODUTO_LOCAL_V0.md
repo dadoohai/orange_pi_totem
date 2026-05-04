@@ -123,12 +123,37 @@ Runner remoto:
 scripts/remote/run_c9_4_setup_product_v0_experiment.sh root@192.168.18.115 --prepare-only
 scripts/remote/run_c9_4_setup_product_v0_experiment.sh root@192.168.18.115 --run-cancel
 scripts/remote/run_c9_4_setup_product_v0_experiment.sh root@192.168.18.115 --run-complete
+scripts/remote/run_c9_4_setup_product_v0_experiment.sh root@192.168.18.115 --run-complete-scripted
 ```
 
-Os modos `--run-cancel` e `--run-complete` exigem autorizacao humana textual
-antes de parar/iniciar o servico real.
+Os modos `--run-cancel`, `--run-complete` e `--run-complete-scripted` exigem
+autorizacao humana textual antes de parar/iniciar o servico real.
 
-## 7. O que nao foi alterado
+## 7. C9.4.1 - validacao HDMI
+
+C9.4.1 validou o caminho de cancelamento com humano no HDMI/teclado e o caminho
+de conclusao por `--run-complete-scripted`.
+
+Resultado:
+
+- cancelamento: passou apos marcador sanitizado de cancelamento em `/tmp`;
+- conclusao scripted: passou, gerando candidata e artefatos C9.4 em `/tmp`;
+- C5.1 `allow-mock`: passou;
+- C5.1 `real-dry-run`: falhou como esperado por placeholders;
+- servico final: `active/enabled`;
+- `NRestarts=0`;
+- player final `playing`, MPV ativo, renderer/setup ausentes;
+- rede, config real, writer, display real e `kiosky-player` nao foram
+  alterados.
+
+Nao foi testado nesta etapa:
+
+- preenchimento manual completo por teclado ate Concluir;
+- Wi-Fi real;
+- display/rotacao real;
+- writer/config real.
+
+## 8. O que nao foi alterado
 
 - config real;
 - writer real;
@@ -141,16 +166,16 @@ antes de parar/iniciar o servico real.
 - repo `dadoohai/kiosky-player`;
 - setup automatico por padrao.
 
-## 8. Risco de display
+## 9. Risco de display
 
 C9.1.2 e C9.1.3 registraram risco visual de proporcao/escala na placa:
 framebuffer/DRM/MPV e modo da tela podem nao preservar proporcao ideal. C9.4
 nao tenta corrigir isso. Aplicacao real de display, resolucao e rotacao deve
 vir em frente separada, com contrato visual proprio.
 
-## 9. Proximos passos
+## 10. Proximos passos
 
-- executar `--prepare-only` na placa;
-- executar `--run-cancel` e `--run-complete` somente com autorizacao humana;
-- se C9.4 passar, abrir C9.5 para Wi-Fi real controlado com adapter estreito,
-  rollback, preservacao de Ethernet, timeout e diagnostico sanitizado.
+- abrir C9.5 para Wi-Fi real controlado com adapter estreito, rollback,
+  preservacao de Ethernet, timeout e diagnostico sanitizado;
+- manter hotspot, portal, backend, writer/config real e producao fora de C9.5
+  inicial.

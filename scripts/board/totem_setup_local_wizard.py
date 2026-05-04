@@ -29,26 +29,27 @@ SCHEMA_VERSION = "dadooh-c9.4-setup-product-local-v0.v1"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c9-4-setup-product-v0"
 
 BRAND = "Dadooh"
-TITLE = "Configuração do Totem"
+TITLE = "Configuracao do Totem"
 INTERFACE_MODE = "local_hdmi_keyboard_controlled"
 SETUP_SOURCE = "c9.4-setup-product-local-v0"
 
 CANDIDATE_FILENAME = "config.candidate.json"
 STATUS_FILENAME = "setup-status.json"
 SUMMARY_FILENAME = "summary.txt"
+CANCELLED_FILENAME = "setup-cancelled.json"
 
-STEPS = ("Conexão", "Ambiente", "Tela", "Revisão", "Concluir")
+STEPS = ("Conexao", "Ambiente", "Tela", "Revisao", "Concluir")
 
 NETWORK_OPTIONS: tuple[dict[str, str], ...] = (
     {
         "key": "existing_connection",
-        "label": "Usar conexão atual",
+        "label": "Usar conexao atual",
         "description": "Apenas verifica um estado agregado, sem alterar rede.",
     },
     {
         "key": "wifi_future",
         "label": "Configurar Wi-Fi - em breve",
-        "description": "Reserva o passo para a próxima etapa do produto.",
+        "description": "Reserva o passo para a proxima etapa do produto.",
     },
     {
         "key": "mock",
@@ -61,7 +62,7 @@ DISPLAY_OPTIONS: tuple[dict[str, str | int], ...] = (
     {
         "key": "landscape",
         "label": "Paisagem",
-        "description": "Tela na posição normal.",
+        "description": "Tela na posicao normal.",
         "rotation_deg": 0,
     },
     {
@@ -79,7 +80,7 @@ DISPLAY_OPTIONS: tuple[dict[str, str | int], ...] = (
     {
         "key": "landscape_inverted",
         "label": "Invertido",
-        "description": "Imagem de cabeça para baixo.",
+        "description": "Imagem de cabeca para baixo.",
         "rotation_deg": 180,
     },
 )
@@ -321,6 +322,35 @@ def write_local_wizard_artifacts(
     return status
 
 
+def write_cancelled_artifact(out_dir: pathlib.Path) -> None:
+    setup.prepare_out_dir(out_dir)
+    status = {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at_utc": setup.utc_timestamp(),
+        "state": "setup_cancelled",
+        "candidate_generated": False,
+        "guardrails": {
+            "writes_only_under_tmp": True,
+            "real_config_read": False,
+            "real_config_written": False,
+            "writer_called": False,
+            "network_changed": False,
+            "wifi_changed": False,
+            "display_changed": False,
+            "player_started": False,
+            "mpv_called": False,
+            "nmcli_called": False,
+        },
+        "privacy": {
+            "candidate_payload_copied": False,
+            "environment_identifier_raw_written": False,
+            "credential_value_written": False,
+            "network_metadata_written": False,
+        },
+    }
+    setup.atomic_write_private_json(out_dir / CANCELLED_FILENAME, status, out_dir)
+
+
 def resolve_display_selection(rotation_key: str) -> dict[str, str | int]:
     option = DISPLAY_OPTION_BY_KEY.get(rotation_key)
     if option is None:
@@ -402,7 +432,7 @@ def resolve_network_selection(network_key: str) -> dict[str, Any]:
         detected = detect_current_connection()
         return {
             "network_step": "existing_connection",
-            "label": "Usar conexão atual",
+            "label": "Usar conexao atual",
             **detected,
         }
     if network_key == "mock":
@@ -534,7 +564,7 @@ def validate_environment_entry(raw_value: str) -> tuple[str, str]:
     try:
         return setup.validate_environment_id(raw_value), ""
     except setup.SetupError:
-        return "", "Use 3 a 128 caracteres: letras, números, _, -, . ou :."
+        return "", "Use 3 a 128 caracteres: letras, numeros, _, -, . ou :."
 
 
 def read_environment_id(stdscr: Any) -> str | None:
@@ -549,8 +579,8 @@ def read_environment_id(stdscr: Any) -> str | None:
                 heading="Ambiente",
                 body=[
                     "Digite o identificador fornecido pela Dadooh.",
-                    "O valor será usado apenas na candidata temporária.",
-                    "Ele não aparece no resumo público.",
+                    "O valor sera usado apenas na candidata temporaria.",
+                    "Ele nao aparece no resumo publico.",
                 ],
                 input_value=value,
                 error_message=error_message,
@@ -591,14 +621,14 @@ def review_and_confirm(
         draw_product_screen(
             stdscr,
             active_step=3,
-            heading="Revisão",
+            heading="Revisao",
             body=[
-                f"Conexão: {network['label']}",
-                f"Ambiente informado: {'sim' if environment_id else 'não'}",
+                f"Conexao: {network['label']}",
+                f"Ambiente informado: {'sim' if environment_id else 'nao'}",
                 f"Tela: {rotation['label']}",
                 "",
-                "Será gerada uma candidata temporária.",
-                "Rede, Wi-Fi, player, MPV e configuração real não serão alterados.",
+                "Sera gerada uma candidata temporaria.",
+                "Rede, Wi-Fi, player, MPV e configuracao real nao serao alterados.",
             ],
             footer="Enter conclui | b volta | Esc cancela",
         )
@@ -617,7 +647,7 @@ def show_result(stdscr: Any, out_dir: pathlib.Path, status: dict[str, Any]) -> N
         active_step=4,
         heading="Concluir",
         body=[
-            "Candidata temporária gerada.",
+            "Candidata temporaria gerada.",
             f"Estado: {status['state']}",
             f"Arquivo: {CANDIDATE_FILENAME}",
             f"Status: {STATUS_FILENAME}",
@@ -644,10 +674,10 @@ def run_curses_wizard(out_dir: pathlib.Path) -> dict[str, Any]:
             selected_network = choose_option(
                 stdscr,
                 active_step=0,
-                heading="Conexão",
+                heading="Conexao",
                 body=[
                     "Escolha como seguir agora.",
-                    "Esta etapa não muda nenhuma conexão.",
+                    "Esta etapa nao muda nenhuma conexao.",
                 ],
                 options=[dict(item) for item in NETWORK_OPTIONS],
             )
@@ -665,8 +695,8 @@ def run_curses_wizard(out_dir: pathlib.Path) -> dict[str, Any]:
                     active_step=2,
                     heading="Tela",
                     body=[
-                        "Escolha a orientação desejada.",
-                        "A rotação real não será aplicada nesta etapa.",
+                        "Escolha a orientacao desejada.",
+                        "A rotacao real nao sera aplicada nesta etapa.",
                     ],
                     options=[dict(item) for item in DISPLAY_OPTIONS],
                     allow_back=True,
@@ -812,6 +842,15 @@ def run_self_test() -> None:
         assert_true(second_status["validation"]["rotation_degrees"] == 0, "landscape should map to 0")
         assert_true(second_status["network"]["network_step"] == "skipped", "wifi future should map to skipped")
         assert_artifact_permissions(second_out)
+
+        cancel_out = setup.require_tmp_dir(str(root / "cancel-out"))
+        write_cancelled_artifact(cancel_out)
+        cancel_path = cancel_out / CANCELLED_FILENAME
+        assert_true(cancel_path.exists(), "cancel marker should exist")
+        assert_true(file_mode(cancel_path) == setup.PRIVATE_FILE_MODE, "cancel marker mode should be 0600")
+        cancel_status = json.loads(cancel_path.read_text(encoding="utf-8"))
+        assert_true(cancel_status["state"] == "setup_cancelled", "cancel marker should record cancellation")
+        assert_true(cancel_status["candidate_generated"] is False, "cancel marker should not generate candidate")
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
@@ -869,6 +908,10 @@ def main(argv: list[str]) -> int:
         run_curses_wizard(out_dir)
         return 0
     except WizardAbort as exc:
+        try:
+            write_cancelled_artifact(setup.require_tmp_dir(args.out_dir))
+        except Exception:
+            pass
         print(f"aborted: {exc}", file=sys.stderr)
         return 130
     except setup.SetupError as exc:
@@ -884,7 +927,7 @@ def main(argv: list[str]) -> int:
         print(f"error: terminal UI unavailable: {exc}", file=sys.stderr)
         return 1
     except Exception:
-        print("error: setup local indisponível no momento", file=sys.stderr)
+        print("error: setup local indisponivel no momento", file=sys.stderr)
         return 1
 
 
