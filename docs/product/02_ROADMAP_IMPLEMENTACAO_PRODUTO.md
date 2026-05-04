@@ -331,6 +331,23 @@ ativos e renderer/setup ausentes. Hotspot, portal, writer, config real,
 backend/login, reboot e alteracao do `kiosky-player` continuam fora. Proxima
 frente: C10 para writer/config real controlado.
 
+Atualizacao C9.9.1: 2026-05-04. C9.9.1 diagnosticou o atraso visual do wizard
+com probe sintetico e runner dedicado. A causa provavel ficou classificada como
+`mpv_ipc_load_not_presenting_immediately` no caminho `gpu+drm` para SVG
+estatico. MPV reiniciado por tela respondeu no primeiro input, mas piscava para
+TTY/shell; MPV via IPC evitava o flash, mas seguia um input atrasado. A solucao
+aceita foi `framebuffer_svg`, renderizando diretamente em `/dev/fb0` com fonte
+PSF instalada, sem desktop/browser/compositor e mantendo os SVGs privados em
+`/tmp` como artefatos. Tambem foi corrigido o tratamento de sequencias de
+teclado: `Esc` sozinho cancela, mas `PgUp`/`PgDn` nao cancelam acidentalmente.
+Validacao humana confirmou caracteres visiveis, Enter no primeiro input e
+ausencia de flash para shell durante digitacao. C9.9 `--run-cancel` e
+`--run-complete-existing-wifi` passaram, candidata foi gerada, C5.1
+`allow-mock` passou e `real-dry-run` falhou como esperado. Estado final:
+servico `active/enabled`, `NRestarts=0`, `public_state=player_running`,
+playback `playing`, player/MPV ativos e setup ausente. C10.0 fica liberado
+para writer/config real controlado.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

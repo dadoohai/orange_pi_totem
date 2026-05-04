@@ -4,6 +4,11 @@ Status: implementado e validado em bancada com HDMI/teclado.
 
 Data: 2026-05-04
 
+Nota C9.9.1: a camada visual interativa foi ajustada depois deste marco para
+usar `framebuffer_svg` como renderer padrao, evitando atraso de input e flash
+para TTY/shell. O MPV/DRM ficou como caminho diagnostico/fallback, nao como o
+renderer interativo aceito.
+
 ## Objetivo
 
 Trocar a experiencia TTY/ASCII validada em C9.8 por uma camada visual local de

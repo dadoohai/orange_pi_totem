@@ -10,15 +10,19 @@ the writer.
 from __future__ import annotations
 
 import argparse
+import gzip
 import html
 import json
+import mmap
 import os
 import pathlib
+import re
 import select
 import shutil
 import signal
 import socket
 import stat
+import struct
 import subprocess
 import sys
 import termios
@@ -48,6 +52,10 @@ WIFI_PERSISTENT_PROFILE_NAME = wifi_adapter.DEFAULT_PERSISTENT_PROFILE_NAME
 ADAPTER_SCRIPT = pathlib.Path(__file__).with_name("totem_wifi_nm_adapter.py")
 PRESENT_SETTLE_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PRESENT_SETTLE_SEC", "0.18"))
 RESTART_MPV_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_RESTART_MPV_PER_SCREEN", "1") != "0"
+MPV_VIDEO_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_MPV_VIDEO_MODE", "drm").strip().lower()
+DOUBLE_LOAD_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_DOUBLE_LOAD_PER_SCREEN", "1") != "0"
+RENDERER_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_RENDERER", "framebuffer").strip().lower()
+PSF_FONT_PATH = os.environ.get("TOTEM_VISUAL_WIZARD_PSF_FONT", "/usr/share/consolefonts/Lat15-Fixed18.psf.gz")
 
 CANVAS_WIDTH = 1280
 CANVAS_HEIGHT = 720
@@ -78,6 +86,11 @@ SENSITIVE_MARKERS = (
     setup.SAFE_PLACEHOLDER_API_KEY,
     setup.SAFE_PLACEHOLDER_API_URL,
 )
+
+ATTR_RE = re.compile(r'([a-zA-Z_:][\w:.-]*)="([^"]*)"')
+RECT_RE = re.compile(r"<rect\b([^>]*)/?>", re.IGNORECASE)
+TEXT_RE = re.compile(r"<text\b([^>]*)>(.*?)</text>", re.IGNORECASE | re.DOTALL)
+TSPAN_RE = re.compile(r"<tspan\b([^>]*)>(.*?)</tspan>", re.IGNORECASE | re.DOTALL)
 
 
 class VisualWizardAbort(RuntimeError):
@@ -168,6 +181,28 @@ def atomic_write_private_json(path: pathlib.Path, value: dict[str, Any], out_dir
 
 def escape_text(value: Any) -> str:
     return html.escape(str(value), quote=True)
+
+
+def parse_attrs(raw_attrs: str) -> dict[str, str]:
+    return {key: value for key, value in ATTR_RE.findall(raw_attrs)}
+
+
+def parse_float(value: str | None, default: float = 0.0) -> float:
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+
+def parse_color(value: str | None) -> tuple[int, int, int] | None:
+    if not value or not value.startswith("#") or len(value) != 7:
+        return None
+    try:
+        return (int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16))
+    except ValueError:
+        return None
 
 
 def wrap_text(value: str, width: int, max_lines: int) -> list[str]:
@@ -323,6 +358,168 @@ def build_screen_svg(
 """
 
 
+def visual_renderer_name() -> str:
+    return "framebuffer_svg" if RENDERER_MODE == "framebuffer" else "mpv_drm_svg"
+
+
+def visual_renderer_uses_mpv() -> bool:
+    return RENDERER_MODE != "framebuffer"
+
+
+class PSFFont:
+    def __init__(self, path: str) -> None:
+        font_path = pathlib.Path(path)
+        if not font_path.exists():
+            raise VisualWizardError("fonte visual indisponivel")
+        raw = gzip.open(font_path, "rb").read() if font_path.suffix == ".gz" else font_path.read_bytes()
+        if len(raw) >= 4 and raw[:2] == b"\x36\x04":
+            mode = raw[2]
+            char_size = raw[3]
+            glyph_count = 512 if mode & 0x01 else 256
+            self.width = 8
+            self.height = char_size
+            self.glyphs = raw[4 : 4 + glyph_count * char_size]
+            self.glyph_count = glyph_count
+            return
+        if len(raw) >= 32 and struct.unpack_from("<I", raw, 0)[0] == 0x864AB572:
+            _, _, header_size, _, glyph_count, char_size, height, width = struct.unpack_from("<IIIIIIII", raw, 0)
+            self.width = int(width)
+            self.height = int(height)
+            self.glyphs = raw[header_size : header_size + glyph_count * char_size]
+            self.glyph_count = int(glyph_count)
+            return
+        raise VisualWizardError("fonte visual invalida")
+
+    def glyph(self, char: str) -> bytes:
+        code = ord(char)
+        if code >= self.glyph_count:
+            code = ord("?")
+        start = code * self.height
+        end = start + self.height
+        return self.glyphs[start:end]
+
+
+class FramebufferSVGRenderer:
+    def __init__(self, font_path: str = PSF_FONT_PATH) -> None:
+        self.fb_path = pathlib.Path("/dev/fb0")
+        if not self.fb_path.exists():
+            raise VisualWizardError("framebuffer indisponivel")
+        self.width, self.height = self.read_virtual_size()
+        self.bpp = self.read_int("/sys/class/graphics/fb0/bits_per_pixel")
+        self.stride = self.read_int("/sys/class/graphics/fb0/stride")
+        if self.bpp != 32 or self.width <= 0 or self.height <= 0 or self.stride <= 0:
+            raise VisualWizardError("framebuffer visual incompativel")
+        self.font = PSFFont(font_path)
+        self.fb_file = self.fb_path.open("r+b", buffering=0)
+        self.fb = mmap.mmap(self.fb_file.fileno(), self.stride * self.height, access=mmap.ACCESS_WRITE)
+        self.scale_x = self.width / CANVAS_WIDTH
+        self.scale_y = self.height / CANVAS_HEIGHT
+
+    def close(self) -> None:
+        try:
+            self.fb.flush()
+            self.fb.close()
+        finally:
+            self.fb_file.close()
+
+    @staticmethod
+    def read_int(path: str) -> int:
+        return int(pathlib.Path(path).read_text(encoding="utf-8").strip())
+
+    @staticmethod
+    def read_virtual_size() -> tuple[int, int]:
+        raw = pathlib.Path("/sys/class/graphics/fb0/virtual_size").read_text(encoding="utf-8").strip()
+        left, right = raw.split(",", 1)
+        return int(left), int(right)
+
+    def sx(self, value: float) -> int:
+        return max(0, int(round(value * self.scale_x)))
+
+    def sy(self, value: float) -> int:
+        return max(0, int(round(value * self.scale_y)))
+
+    @staticmethod
+    def pixel_bytes(color: tuple[int, int, int]) -> bytes:
+        red, green, blue = color
+        return bytes((blue, green, red, 0))
+
+    def draw_rect(self, x: float, y: float, width: float, height: float, color: tuple[int, int, int]) -> None:
+        x0 = min(self.width, self.sx(x))
+        y0 = min(self.height, self.sy(y))
+        x1 = min(self.width, self.sx(x + width))
+        y1 = min(self.height, self.sy(y + height))
+        if x1 <= x0 or y1 <= y0:
+            return
+        row = self.pixel_bytes(color) * (x1 - x0)
+        for py in range(y0, y1):
+            offset = py * self.stride + x0 * 4
+            self.fb[offset : offset + len(row)] = row
+
+    def draw_text(self, x: float, y: float, text: str, font_size: float, color: tuple[int, int, int]) -> None:
+        clean = html.unescape(re.sub(r"<[^>]+>", "", text))
+        if not clean:
+            return
+        scale = max(1, int(round((font_size * self.scale_y) / max(1, self.font.height))))
+        cursor_x = self.sx(x)
+        baseline_y = self.sy(y)
+        top_y = max(0, baseline_y - self.font.height * scale)
+        pixel = self.pixel_bytes(color)
+        for char in clean:
+            if char == "\n":
+                cursor_x = self.sx(x)
+                top_y += (self.font.height + 2) * scale
+                continue
+            glyph = self.font.glyph(char)
+            for gy, row in enumerate(glyph):
+                for gx in range(self.font.width):
+                    if not (row & (0x80 >> gx)):
+                        continue
+                    px0 = cursor_x + gx * scale
+                    py0 = top_y + gy * scale
+                    for yy in range(scale):
+                        py = py0 + yy
+                        if py < 0 or py >= self.height:
+                            continue
+                        for xx in range(scale):
+                            px = px0 + xx
+                            if px < 0 or px >= self.width:
+                                continue
+                            offset = py * self.stride + px * 4
+                            self.fb[offset : offset + 4] = pixel
+            cursor_x += (self.font.width + 1) * scale
+
+    def render(self, svg: str) -> None:
+        for match in RECT_RE.finditer(svg):
+            attrs = parse_attrs(match.group(1))
+            color = parse_color(attrs.get("fill"))
+            if color is None:
+                continue
+            self.draw_rect(
+                parse_float(attrs.get("x")),
+                parse_float(attrs.get("y")),
+                parse_float(attrs.get("width")),
+                parse_float(attrs.get("height")),
+                color,
+            )
+        for match in TEXT_RE.finditer(svg):
+            attrs = parse_attrs(match.group(1))
+            color = parse_color(attrs.get("fill")) or (255, 255, 255)
+            font_size = parse_float(attrs.get("font-size"), 20.0)
+            x = parse_float(attrs.get("x"))
+            y = parse_float(attrs.get("y"))
+            body = match.group(2)
+            tspans = TSPAN_RE.findall(body)
+            if tspans:
+                current_y = y
+                for tspan_attrs_raw, tspan_text in tspans:
+                    tspan_attrs = parse_attrs(tspan_attrs_raw)
+                    current_y += parse_float(tspan_attrs.get("dy"), 0.0)
+                    self.draw_text(parse_float(tspan_attrs.get("x"), x), current_y, tspan_text, font_size, color)
+            else:
+                self.draw_text(x, y, body, font_size, color)
+        self.fb.flush()
+
+
 class VisualDisplay:
     def __init__(self, out_dir: pathlib.Path, *, mpv_bin: str = "mpv", enabled: bool = True) -> None:
         self.out_dir = out_dir
@@ -333,7 +530,17 @@ class VisualDisplay:
         self.process: subprocess.Popen[bytes] | None = None
         self.sequence = 0
         self.request_id = 0
+        self.framebuffer: FramebufferSVGRenderer | None = None
         prepare_private_dir(self.screens_dir)
+        if enabled and RENDERER_MODE == "framebuffer":
+            self.framebuffer = FramebufferSVGRenderer()
+
+    def mpv_video_args(self) -> list[str]:
+        if MPV_VIDEO_MODE == "drm":
+            return ["--vo=drm", "--profile=sw-fast"]
+        if MPV_VIDEO_MODE == "gpu_drm":
+            return ["--vo=gpu", "--gpu-context=drm"]
+        raise VisualWizardError("modo visual indisponivel")
 
     def write_svg(self, screen_id: str, svg: str) -> pathlib.Path:
         safe_name = "".join(char if char.isalnum() or char in "._-" else "_" for char in screen_id)
@@ -356,7 +563,6 @@ class VisualDisplay:
             "--no-config",
             "--fs",
             "--force-window=yes",
-            "--loop-file=inf",
             "--image-display-duration=inf",
             "--keep-open=yes",
             "--no-terminal",
@@ -366,10 +572,9 @@ class VisualDisplay:
             "--input-default-bindings=no",
             "--input-vo-keyboard=no",
             "--cursor-autohide=always",
-            "--vo=gpu",
-            "--gpu-context=drm",
             "--ao=null",
             f"--input-ipc-server={self.ipc_path}",
+            *self.mpv_video_args(),
             "--",
             str(initial_svg),
         ]
@@ -439,6 +644,9 @@ class VisualDisplay:
         path = self.write_svg(screen_id, svg)
         if not self.enabled:
             return path
+        if self.framebuffer is not None:
+            self.framebuffer.render(svg)
+            return path
         if RESTART_MPV_PER_SCREEN:
             self.stop()
             self.ensure_started(path)
@@ -447,9 +655,13 @@ class VisualDisplay:
             return path
         if self.process is None:
             self.ensure_started(path)
-        elif not self.send_command(["loadfile", str(path), "replace"]):
-            self.stop()
-            self.ensure_started(path)
+        else:
+            if not self.send_command(["loadfile", str(path), "replace"]):
+                self.stop()
+                self.ensure_started(path)
+            elif DOUBLE_LOAD_PER_SCREEN:
+                self.wait_for_loaded_path(path)
+                self.send_command(["loadfile", str(path), "replace"])
         self.wait_for_loaded_path(path)
         if PRESENT_SETTLE_SEC > 0:
             time.sleep(PRESENT_SETTLE_SEC)
@@ -469,6 +681,9 @@ class VisualDisplay:
             self.ipc_path.unlink()
         except FileNotFoundError:
             pass
+        if self.framebuffer is not None:
+            self.framebuffer.close()
+            self.framebuffer = None
 
 
 class RawKeyboard:
@@ -512,11 +727,15 @@ def read_key() -> str:
             return "right"
         if rest == b"[D":
             return "left"
+        if rest in {b"[5~", b"[H", b"OH"}:
+            return "up"
+        if rest in {b"[6~", b"[F", b"OF"}:
+            return "down"
         if rest in {b"[3~", b"[P"}:
             return "backspace"
         if rest in {b"OQ", b"[12~"}:
             return "back"
-        return "escape"
+        return "unknown"
     try:
         char = data.decode("utf-8")
     except UnicodeDecodeError:
@@ -981,7 +1200,8 @@ def build_visual_status(
             "xorg_used": False,
             "wayland_used": False,
             "compositor_used": False,
-            "visual_renderer": "mpv_drm_svg",
+            "visual_renderer": visual_renderer_name(),
+            "mpv_video_mode": MPV_VIDEO_MODE,
             "screens_generated": True,
         },
         "files": {
@@ -1049,7 +1269,7 @@ def build_visual_status(
             "player_started": False,
             "player_stopped": False,
             "main_player_mpv_called": False,
-            "visual_renderer_mpv_called": True,
+            "visual_renderer_mpv_called": visual_renderer_uses_mpv(),
             "backend_called": False,
             "nmcli_called": network["nmcli_called"],
         },
@@ -1090,7 +1310,8 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             "xorg_used: false",
             "wayland_used: false",
             "compositor_used: false",
-            "visual_renderer: mpv_drm_svg",
+            f"visual_renderer: {status['interface']['visual_renderer']}",
+            f"mpv_video_mode: {status['interface']['mpv_video_mode']}",
             f"network_step: {status['network']['network_step']}",
             f"connectivity: {status['network']['connectivity']}",
             f"connection_type: {status['network']['connection_type']}",
@@ -1119,7 +1340,7 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             "systemctl_called: false",
             "service_changed: false",
             "main_player_mpv_called: false",
-            "visual_renderer_mpv_called: true",
+            f"visual_renderer_mpv_called: {str(status['guardrails']['visual_renderer_mpv_called']).lower()}",
             f"nmcli_called: {str(status['guardrails']['nmcli_called']).lower()}",
             f"network_changed: {str(status['guardrails']['network_changed']).lower()}",
             "display_changed: false",
@@ -1181,7 +1402,7 @@ def write_visual_artifacts(
     candidate["setup_wifi_rollback_after_test"] = network["rollback_after_test"]
     candidate["setup_wifi_dedicated_profile_persistent"] = bool(network["dedicated_profile_persistent"])
     candidate["setup_display_source"] = "mock_candidate_only"
-    candidate["setup_visual_renderer"] = "mpv_drm_svg"
+    candidate["setup_visual_renderer"] = visual_renderer_name()
 
     contract_validation = setup.validate_candidate_handoff(candidate)
     status = build_visual_status(generated_at, rotation, environment_id, network, contract_validation)
@@ -1209,7 +1430,7 @@ def write_cancelled_artifact(out_dir: pathlib.Path) -> None:
             "display_changed": False,
             "player_started": False,
             "main_player_mpv_called": False,
-            "visual_renderer_mpv_called": True,
+            "visual_renderer_mpv_called": visual_renderer_uses_mpv(),
             "nmcli_called": False,
         },
         "privacy": {
@@ -1571,7 +1792,8 @@ def run_self_test() -> None:
         assert_true(status["interface"]["linux_prompt_visible"] is False, "linux prompt should be false")
         assert_true(status["interface"]["chromium_used"] is False, "chromium should be false")
         assert_true(status["interface"]["desktop_used"] is False, "desktop should be false")
-        assert_true(status["interface"]["visual_renderer"] == "mpv_drm_svg", "visual renderer should be recorded")
+        assert_true(status["interface"]["visual_renderer"] == visual_renderer_name(), "visual renderer should be recorded")
+        assert_true(status["interface"]["mpv_video_mode"] == MPV_VIDEO_MODE, "MPV video mode should be recorded")
         assert_true(status["network"]["network_step"] == "existing_configured_wifi", "network step should use configured Wi-Fi")
         assert_true(status["network"]["dedicated_profile_persistent"] is True, "configured Wi-Fi should be persistent")
         assert_true(status["environment"]["environment_id_present"] is True, "environment should be present")
@@ -1579,7 +1801,10 @@ def run_self_test() -> None:
         assert_true(status["guardrails"]["real_config_written"] is False, "real config should not be written")
         assert_true(status["guardrails"]["writer_called"] is False, "writer should not be called")
         assert_true(status["guardrails"]["main_player_mpv_called"] is False, "main player MPV should be false")
-        assert_true(status["guardrails"]["visual_renderer_mpv_called"] is True, "visual renderer should be true")
+        assert_true(
+            status["guardrails"]["visual_renderer_mpv_called"] is visual_renderer_uses_mpv(),
+            "visual renderer MPV flag should match renderer",
+        )
         assert_true(status["guardrails"]["hotspot_created"] is False, "hotspot should be false")
         assert_true(status["guardrails"]["portal_created"] is False, "portal should be false")
         assert_artifact_permissions(out_dir)
