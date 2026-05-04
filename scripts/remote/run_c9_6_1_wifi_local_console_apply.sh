@@ -311,7 +311,7 @@ if diagnosis_path.exists():
 public_state = "unknown"
 try:
     status_data = json.loads(pathlib.Path("/tmp/dadooh-status/status.json").read_text(encoding="utf-8"))
-    value = status_data.get("public_state")
+    value = status_data.get("public_state") or status_data.get("state")
     if isinstance(value, str):
         public_state = value
 except Exception:
@@ -535,7 +535,7 @@ if diagnosis_path.exists():
 public_state = "unknown"
 try:
     status_data = json.loads(pathlib.Path("/tmp/dadooh-status/status.json").read_text(encoding="utf-8"))
-    value = status_data.get("public_state")
+    value = status_data.get("public_state") or status_data.get("state")
     if isinstance(value, str):
         public_state = value
 except Exception:

@@ -289,6 +289,20 @@ rollback-after-test efetivo, perfil dedicado ausente ao fim, servico
 integrar esse resultado ao Setup Produto Local V0, ainda sem hotspot/portal e
 sem writer/config real.
 
+Atualizacao C9.7: 2026-05-04. C9.7 integra o apply Wi-Fi real controlado ao
+wizard local na etapa Conexao, com opcao `Testar Wi-Fi agora`. O fluxo coleta
+credenciais apenas na HDMI/teclado do totem, usa secrets temporario sob `/tmp`,
+perfil dedicado permitido e rollback-after-test por padrao. A candidata e o
+status registram somente resultado agregado; SSID, senha, IP, MAC, DNS,
+gateway, hostname, BSSID, UUID, nome real de conexao e logs brutos seguem
+proibidos. `--prepare-only` e smoke scripted remoto passaram; validacao HDMI
+com humano tambem passou: cancelamento, Wi-Fi real integrado com activation
+`success`, rollback-after-test `success`, candidata gerada, C5.1 allow-mock
+passou, real-dry-run falhou como esperado, servico final `active/enabled`,
+`NRestarts=0`, `public_state=player_running`, playback `playing`, player/MPV
+ativos, renderer/setup ausentes e perfil dedicado ausente. C9.8 deve tratar
+perfil Wi-Fi persistente dedicado sem writer/config real.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

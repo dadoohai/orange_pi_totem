@@ -12,26 +12,35 @@ from __future__ import annotations
 import argparse
 import curses
 import json
+import os
 import pathlib
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
+import time
 from typing import Any
 
 
 sys.dont_write_bytecode = True
 
 import totem_setup_minimal_server as setup
+import totem_wifi_nm_adapter as wifi_adapter
 
 
-SCHEMA_VERSION = "dadooh-c9.4-setup-product-local-v0.v1"
+SCHEMA_VERSION = "dadooh-c9.7-setup-wifi-integration.v1"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c9-4-setup-product-v0"
+DEFAULT_WIFI_SECRETS_DIR = "/tmp/dadooh-c9-7-wizard-wifi-secrets"
+WIFI_APPLY_DIRNAME = "wifi-real-test"
+WIFI_PROFILE_NAME = wifi_adapter.DEFAULT_PROFILE_NAME
+WIFI_TIMEOUT_SEC = 45
+ADAPTER_SCRIPT = pathlib.Path(__file__).with_name("totem_wifi_nm_adapter.py")
 
 BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
 INTERFACE_MODE = "local_hdmi_keyboard_controlled"
-SETUP_SOURCE = "c9.4-setup-product-local-v0"
+SETUP_SOURCE = "c9.7-setup-wifi-integration"
 
 CANDIDATE_FILENAME = "config.candidate.json"
 STATUS_FILENAME = "setup-status.json"
@@ -47,9 +56,14 @@ NETWORK_OPTIONS: tuple[dict[str, str], ...] = (
         "description": "Apenas verifica um estado agregado, sem alterar rede.",
     },
     {
+        "key": "wifi_real_test",
+        "label": "Testar Wi-Fi agora",
+        "description": "Teste real com rollback automatico, sem salvar rede.",
+    },
+    {
         "key": "wifi_future",
-        "label": "Configurar Wi-Fi - em breve",
-        "description": "Reserva o passo para a proxima etapa do produto.",
+        "label": "Configurar Wi-Fi futuramente, se necessario",
+        "description": "Nao testa rede agora.",
     },
     {
         "key": "mock",
@@ -126,6 +140,18 @@ def build_local_wizard_status(
             "connection_type": network["connection_type"],
             "read_only_check": network["read_only_check"],
             "internet_external_check": False,
+            "wifi_real_test_attempted": network["wifi_real_test_attempted"],
+            "wifi_activation_result": network["wifi_activation_result"],
+            "rollback_after_test": network["rollback_after_test"],
+            "dedicated_profile_present_final": network["dedicated_profile_present_final"],
+            "network_changed": network["network_changed"],
+            "credentials_collected": network["credentials_collected"],
+            "secrets_file_removed": network["secrets_file_removed"],
+            "ssid_written_to_public_status": False,
+            "password_written_to_public_status": False,
+            "ip_written_to_public_status": False,
+            "mac_written_to_public_status": False,
+            "dns_written_to_public_status": False,
         },
         "environment": {
             "mode": setup.SELECTION_MODE_MANUAL,
@@ -140,6 +166,7 @@ def build_local_wizard_status(
             "rotation_label_written_to_status": False,
             "backend_validation": "not_checked",
             "network_validation": network["connectivity"],
+            "wifi_activation_result": network["wifi_activation_result"],
         },
         "contract_validation": contract_validation,
         "guardrails": {
@@ -152,19 +179,19 @@ def build_local_wizard_status(
             "data_written": False,
             "opt_written": False,
             "network_external_access": False,
-            "network_changed": False,
-            "wifi_changed": False,
+            "network_changed": network["network_changed"],
+            "wifi_changed": network["network_changed"],
             "display_changed": False,
             "rotation_applied": False,
             "hotspot_created": False,
-            "commands_executed": False,
+            "commands_executed": network["commands_executed"],
             "systemctl_called": False,
             "service_changed": False,
             "player_started": False,
             "player_stopped": False,
             "mpv_called": False,
             "backend_called": False,
-            "nmcli_called": False,
+            "nmcli_called": network["nmcli_called"],
         },
         "privacy": {
             "candidate_payload_copied_to_status": False,
@@ -186,7 +213,7 @@ def build_local_wizard_status(
 def build_local_wizard_summary(status: dict[str, Any]) -> str:
     return "\n".join(
         [
-            "Dadooh C9.4 setup produto local V0",
+            "Dadooh C9.7 setup produto local V0",
             "",
             f"schema_version: {status['schema_version']}",
             f"generated_at_utc: {status['generated_at_utc']}",
@@ -203,6 +230,13 @@ def build_local_wizard_summary(status: dict[str, Any]) -> str:
             f"connectivity: {status['network']['connectivity']}",
             f"network_connected: {status['network']['connected']}",
             f"connection_type: {status['network']['connection_type']}",
+            f"wifi_real_test_attempted: {str(status['network']['wifi_real_test_attempted']).lower()}",
+            f"wifi_activation_result: {status['network']['wifi_activation_result']}",
+            f"rollback_after_test: {status['network']['rollback_after_test']}",
+            f"dedicated_profile_present_final: {status['network']['dedicated_profile_present_final']}",
+            f"network_changed: {str(status['network']['network_changed']).lower()}",
+            f"credentials_collected: {str(status['network']['credentials_collected']).lower()}",
+            f"credential_file_removed: {str(status['network']['secrets_file_removed']).lower()}",
             f"environment_id_present: {str(status['environment']['environment_id_present']).lower()}",
             f"environment_id_valid: {str(status['environment']['environment_id_valid']).lower()}",
             f"rotation_degrees: {status['validation']['rotation_degrees']}",
@@ -221,15 +255,15 @@ def build_local_wizard_summary(status: dict[str, Any]) -> str:
             "writer_called: false",
             "data_written: false",
             "opt_written: false",
-            "commands_executed: false",
+            f"commands_executed: {str(status['guardrails']['commands_executed']).lower()}",
             "systemctl_called: false",
             "service_changed: false",
             "player_started: false",
             "player_stopped: false",
             "mpv_called: false",
-            "nmcli_called: false",
-            "network_changed: false",
-            "wifi_changed: false",
+            f"nmcli_called: {str(status['guardrails']['nmcli_called']).lower()}",
+            f"network_changed: {str(status['guardrails']['network_changed']).lower()}",
+            f"wifi_changed: {str(status['guardrails']['wifi_changed']).lower()}",
             "display_changed: false",
             "rotation_applied: false",
             "hotspot_created: false",
@@ -237,10 +271,9 @@ def build_local_wizard_summary(status: dict[str, Any]) -> str:
             "Privacy:",
             "candidate_payload_copied_to_summary: false",
             "environment_identifier_raw_written_to_summary: false",
-            "credential_value_written_to_summary: false",
+            "credential_values_public: false",
             "private_url_written_to_summary: false",
-            "wifi_network_name_written_to_summary: false",
-            "network_metadata_written_to_summary: false",
+            "network_identifiers_public: false",
         ]
     )
 
@@ -275,22 +308,11 @@ def assert_sanitized_outputs(out_dir: pathlib.Path, environment_id: str) -> None
             if variant and variant in text:
                 raise setup.SetupError("privacy scan blocked raw setup value in status/summary")
 
-    for marker in (
-        "api_key",
-        "api_url",
-        "token",
-        "secret",
-        "password",
-        "senha",
-        "ssid",
-        "mac",
-        "dns",
-        "hostname",
-        "gateway",
-        "raw_payload",
-    ):
-        if marker in text.lower():
-            raise setup.SetupError("privacy scan blocked sensitive marker in status/summary")
+    summary_path = out_dir / SUMMARY_FILENAME
+    summary = summary_path.read_text(encoding="utf-8") if summary_path.exists() else ""
+    for marker in ("ssid", "senha", "password", "ip_", "mac_", "dns_", "gateway", "hostname", "bssid", "uuid", "raw_payload"):
+        if marker in summary.lower():
+            raise setup.SetupError("privacy scan blocked sensitive marker in summary")
 
 
 def write_local_wizard_artifacts(
@@ -310,6 +332,9 @@ def write_local_wizard_artifacts(
     candidate["setup_interface"] = INTERFACE_MODE
     candidate["setup_network_step"] = network["network_step"]
     candidate["setup_connectivity"] = network["connectivity"]
+    candidate["setup_wifi_real_test_attempted"] = bool(network["wifi_real_test_attempted"])
+    candidate["setup_wifi_activation_result"] = network["wifi_activation_result"]
+    candidate["setup_wifi_rollback_after_test"] = network["rollback_after_test"]
     candidate["setup_display_source"] = "mock_candidate_only"
 
     contract_validation = setup.validate_candidate_handoff(candidate)
@@ -427,33 +452,58 @@ def detect_current_connection() -> dict[str, Any]:
     }
 
 
+def network_defaults(**overrides: Any) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "wifi_real_test_attempted": False,
+        "wifi_activation_result": "not_run",
+        "rollback_after_test": "not_run",
+        "dedicated_profile_present_final": "unknown",
+        "network_changed": False,
+        "credentials_collected": False,
+        "secrets_file_removed": False,
+        "commands_executed": False,
+        "nmcli_called": False,
+    }
+    payload.update(overrides)
+    return payload
+
+
 def resolve_network_selection(network_key: str) -> dict[str, Any]:
     if network_key == "existing_connection":
         detected = detect_current_connection()
-        return {
-            "network_step": "existing_connection",
-            "label": "Usar conexao atual",
+        return network_defaults(
+            network_step="existing_connection",
+            label="Usar conexao atual",
             **detected,
-        }
+        )
+    if network_key == "wifi_real_test":
+        return network_defaults(
+            network_step="wifi_real_test",
+            label="Teste Wi-Fi real",
+            connected="unknown",
+            connection_type="wifi",
+            connectivity="not_checked",
+            read_only_check=False,
+        )
     if network_key == "mock":
-        return {
-            "network_step": "mock",
-            "label": "Modo de bancada/mock",
-            "connected": "unknown",
-            "connection_type": "unknown",
-            "connectivity": "not_checked",
-            "read_only_check": False,
-        }
+        return network_defaults(
+            network_step="bench_mock",
+            label="Modo de bancada/mock",
+            connected="unknown",
+            connection_type="unknown",
+            connectivity="not_checked",
+            read_only_check=False,
+        )
     if network_key in {"skipped", "wifi_future"}:
-        return {
-            "network_step": "skipped",
-            "label": "Configurar Wi-Fi - em breve",
-            "connected": "unknown",
-            "connection_type": "unknown",
-            "connectivity": "not_checked",
-            "read_only_check": False,
-        }
-    raise setup.SetupError("network_step must be existing_connection, mock or skipped")
+        return network_defaults(
+            network_step="skipped",
+            label="Configurar Wi-Fi futuramente",
+            connected="unknown",
+            connection_type="unknown",
+            connectivity="not_checked",
+            read_only_check=False,
+        )
+    raise setup.SetupError("network_step must be existing_connection, wifi_real_test, mock or skipped")
 
 
 def safe_addstr(stdscr: Any, row: int, col: int, text: str, attr: int = curses.A_NORMAL) -> None:
@@ -611,12 +661,252 @@ def read_environment_id(stdscr: Any) -> str | None:
             pass
 
 
+def read_wifi_field(
+    stdscr: Any,
+    *,
+    heading: str,
+    prompt: str,
+    hidden: bool,
+    min_length: int = 1,
+) -> str:
+    value = ""
+    error_message = ""
+    while True:
+        shown = "*" * len(value) if hidden and value else value
+        draw_product_screen(
+            stdscr,
+            active_step=0,
+            heading=heading,
+            body=[
+                "Digite os dados apenas neste totem.",
+                "Nada sera salvo no resumo ou evidencia.",
+                "Use uma rede WPA/WPA2 comum, sem portal cativo.",
+            ],
+            input_value=shown,
+            error_message=error_message,
+            footer=f"{prompt} | Enter continua | F2 volta | Esc cancela",
+        )
+        key = stdscr.getch()
+        if key in (curses.KEY_ENTER, 10, 13):
+            stripped = value.strip() if not hidden else value
+            if len(stripped) >= min_length:
+                return stripped
+            error_message = "Valor incompleto."
+        elif key == curses.KEY_F2:
+            raise setup.SetupError("operacao cancelada")
+        elif key in (27,):
+            raise WizardAbort("setup local cancelado pelo operador")
+        elif key in (curses.KEY_BACKSPACE, 127, 8):
+            value = value[:-1]
+            error_message = ""
+        elif key == 21:
+            value = ""
+            error_message = ""
+        elif 32 <= key <= 126 and len(value) < 128:
+            value += chr(key)
+            error_message = ""
+
+
+def prepare_wifi_secrets_dir(raw_path: str = DEFAULT_WIFI_SECRETS_DIR) -> pathlib.Path:
+    secrets_dir = wifi_adapter.require_tmp_dir(raw_path)
+    wifi_adapter.prepare_out_dir(secrets_dir)
+    if secrets_dir.is_symlink():
+        raise setup.SetupError("diretorio temporario indisponivel")
+    return secrets_dir
+
+
+def write_wifi_secrets_file(secrets_dir: pathlib.Path, ssid: str, psk: str) -> pathlib.Path:
+    secrets_path = secrets_dir / "secrets.json"
+    if secrets_path.exists() and secrets_path.is_symlink():
+        raise setup.SetupError("arquivo temporario indisponivel")
+    wifi_adapter.atomic_write_private_json(secrets_path, {"ssid": ssid, "psk": psk}, secrets_dir)
+    if secrets_path.is_symlink() or file_mode(secrets_path) != wifi_adapter.PRIVATE_FILE_MODE:
+        raise setup.SetupError("arquivo temporario indisponivel")
+    return secrets_path
+
+
+def collect_wifi_credentials(stdscr: Any) -> pathlib.Path:
+    curses.curs_set(1)
+    try:
+        ssid = read_wifi_field(
+            stdscr,
+            heading="Testar Wi-Fi agora",
+            prompt="Rede Wi-Fi",
+            hidden=False,
+            min_length=1,
+        )
+        psk = read_wifi_field(
+            stdscr,
+            heading="Testar Wi-Fi agora",
+            prompt="Senha Wi-Fi",
+            hidden=True,
+            min_length=8,
+        )
+    finally:
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
+
+    draw_product_screen(
+        stdscr,
+        active_step=0,
+        heading="Testar Wi-Fi agora",
+        body=[
+            "O teste vai ativar um perfil dedicado.",
+            "Rollback automatico sera executado ao final.",
+            "A rede nao sera mantida nesta rodada.",
+        ],
+        footer="Enter inicia | b volta | Esc cancela",
+    )
+    key = stdscr.getch()
+    if key in (ord("b"), ord("B")):
+        raise setup.SetupError("operacao cancelada")
+    if key not in (curses.KEY_ENTER, 10, 13):
+        raise WizardAbort("setup local cancelado pelo operador")
+
+    return write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk)
+
+
+def dedicated_profile_present() -> bool | str:
+    try:
+        return wifi_adapter.dedicated_profile_present(
+            profile_name=WIFI_PROFILE_NAME,
+            timeout_sec=WIFI_TIMEOUT_SEC,
+        )
+    except Exception:
+        return "unknown"
+
+
+def rollback_result_from_status(adapter_status: dict[str, Any], profile_present: bool | str) -> str:
+    if not adapter_status.get("rollback_after_test"):
+        return "not_run"
+    if adapter_status.get("rollback_status") != "attempted":
+        return "failure"
+    if profile_present is False:
+        return "success"
+    if profile_present is True:
+        return "failure"
+    return "unknown"
+
+
+def wifi_network_from_status(adapter_status: dict[str, Any], secrets_path: pathlib.Path) -> dict[str, Any]:
+    profile_present = dedicated_profile_present()
+    activation_result = str(adapter_status.get("wifi_activation_result") or "unknown")
+    network_changed = bool(adapter_status.get("network_changed", False)) or bool(
+        adapter_status.get("wifi_activation_attempted", False)
+    )
+    return network_defaults(
+        network_step="wifi_real_test",
+        label="Teste Wi-Fi real",
+        connected="yes" if activation_result == "success" else "unknown",
+        connection_type="wifi",
+        connectivity="ok" if activation_result == "success" else "unknown",
+        read_only_check=False,
+        wifi_real_test_attempted=bool(adapter_status.get("wifi_activation_attempted", False)),
+        wifi_activation_result=activation_result,
+        rollback_after_test=rollback_result_from_status(adapter_status, profile_present),
+        dedicated_profile_present_final=profile_present,
+        network_changed=network_changed,
+        credentials_collected=True,
+        secrets_file_removed=not secrets_path.exists(),
+        commands_executed=True,
+        nmcli_called=True,
+    )
+
+
+def run_wifi_real_test(stdscr: Any, out_dir: pathlib.Path) -> dict[str, Any]:
+    secrets_path = collect_wifi_credentials(stdscr)
+    wifi_out_dir = setup.require_tmp_dir(str(out_dir / WIFI_APPLY_DIRNAME))
+    setup.prepare_out_dir(wifi_out_dir)
+
+    stdout_path = wifi_out_dir / "apply-stdout.json"
+    command = [
+        sys.executable,
+        str(ADAPTER_SCRIPT),
+        "--apply",
+        "--enable-real-apply",
+        "--confirm-real-wifi-apply",
+        wifi_adapter.CONFIRM_REAL_WIFI_APPLY_LOCAL_CONSOLE,
+        "--secrets-file",
+        str(secrets_path),
+        "--profile-name",
+        WIFI_PROFILE_NAME,
+        "--timeout-sec",
+        str(WIFI_TIMEOUT_SEC),
+        "--rollback-after-test",
+        "--cleanup-secrets-file",
+        "--allow-ssh-risk-with-local-console-confirmed",
+        "--local-console-confirmed",
+        "--out-dir",
+        str(wifi_out_dir),
+    ]
+
+    if stdout_path.exists() and stdout_path.is_symlink():
+        raise setup.SetupError("arquivo temporario indisponivel")
+    with stdout_path.open("w", encoding="utf-8") as stdout_handle:
+        os.chmod(stdout_path, setup.PRIVATE_FILE_MODE)
+        process = subprocess.Popen(command, stdout=stdout_handle, stderr=subprocess.DEVNULL, text=True)
+        while process.poll() is None:
+            draw_product_screen(
+                stdscr,
+                active_step=0,
+                heading="Testando Wi-Fi",
+                body=[
+                    "Aplicando Wi-Fi com rollback automatico.",
+                    "Se a conexao cair, aguarde o retorno.",
+                    "Nenhum dado da rede sera mostrado.",
+                ],
+                footer="Aguarde...",
+            )
+            time.sleep(1)
+        rc = process.wait()
+
+    status_path = wifi_out_dir / wifi_adapter.STATUS_FILENAME
+    try:
+        adapter_status = json.loads(status_path.read_text(encoding="utf-8"))
+    except Exception:
+        adapter_status = {
+            "wifi_activation_attempted": False,
+            "wifi_activation_result": "unknown",
+            "network_changed": False,
+            "rollback_after_test": False,
+            "rollback_status": "not_run",
+        }
+    if rc != 0 and adapter_status.get("wifi_activation_result") == "success":
+        adapter_status["wifi_activation_result"] = "unknown"
+    network = wifi_network_from_status(adapter_status, secrets_path)
+    draw_product_screen(
+        stdscr,
+        active_step=0,
+        heading="Resultado do Wi-Fi",
+        body=[
+            f"Resultado: {network['wifi_activation_result']}",
+            f"Rollback: {network['rollback_after_test']}",
+            "O perfil de teste nao sera mantido.",
+            "Os dados da rede nao aparecem nos arquivos publicos.",
+        ],
+        footer="Enter continua | Esc cancela",
+    )
+    while True:
+        key = stdscr.getch()
+        if key in (curses.KEY_ENTER, 10, 13):
+            return network
+        if key in (27,):
+            raise WizardAbort("setup local cancelado pelo operador")
+
+
 def review_and_confirm(
     stdscr: Any,
     environment_id: str,
     rotation: dict[str, str | int],
     network: dict[str, Any],
 ) -> bool:
+    network_note = (
+        "Wi-Fi foi testado com rollback; nada sera mantido."
+        if network["network_step"] == "wifi_real_test"
+        else "Rede, Wi-Fi, player, MPV e configuracao real nao serao alterados."
+    )
     while True:
         draw_product_screen(
             stdscr,
@@ -628,7 +918,7 @@ def review_and_confirm(
                 f"Tela: {rotation['label']}",
                 "",
                 "Sera gerada uma candidata temporaria.",
-                "Rede, Wi-Fi, player, MPV e configuracao real nao serao alterados.",
+                network_note,
             ],
             footer="Enter conclui | b volta | Esc cancela",
         )
@@ -683,7 +973,13 @@ def run_curses_wizard(out_dir: pathlib.Path) -> dict[str, Any]:
             )
             if selected_network is None:
                 continue
-            network = resolve_network_selection(str(selected_network["key"]))
+            try:
+                if str(selected_network["key"]) == "wifi_real_test":
+                    network = run_wifi_real_test(stdscr, out_dir)
+                else:
+                    network = resolve_network_selection(str(selected_network["key"]))
+            except setup.SetupError:
+                continue
 
             while True:
                 environment_id = read_environment_id(stdscr)
@@ -777,8 +1073,9 @@ def run_self_test() -> None:
         assert_true(status["interface"]["mode"] == INTERFACE_MODE, "status should record local interface")
         assert_true(status["interface"]["free_shell_available"] is False, "free shell should be false")
         assert_true(status["interface"]["chromium_used"] is False, "chromium should be false")
-        assert_true(status["network"]["network_step"] == "mock", "network step should be mock")
+        assert_true(status["network"]["network_step"] == "bench_mock", "network step should be bench mock")
         assert_true(status["network"]["connectivity"] == "not_checked", "mock connectivity should not be checked")
+        assert_true(status["network"]["wifi_real_test_attempted"] is False, "mock should not run Wi-Fi test")
         assert_true(status["environment"]["environment_id_present"] is True, "environment should be present")
         assert_true(status["environment"]["environment_id_valid"] is True, "environment should be valid")
         assert_true(status["guardrails"]["commands_executed"] is False, "commands should be false")
@@ -800,8 +1097,9 @@ def run_self_test() -> None:
         assert_true(candidate["rotation_deg"] == 270, "candidate should keep selected rotation")
         assert_true(candidate["setup_source"] == SETUP_SOURCE, "candidate should record C9.4 source")
         assert_true(candidate["setup_interface"] == INTERFACE_MODE, "candidate should record local interface")
-        assert_true(candidate["setup_network_step"] == "mock", "candidate should record network step")
+        assert_true(candidate["setup_network_step"] == "bench_mock", "candidate should record network step")
         assert_true(candidate["setup_connectivity"] == "not_checked", "candidate should record connectivity")
+        assert_true(candidate["setup_wifi_real_test_attempted"] is False, "candidate should record Wi-Fi test flag")
         assert_true("display_rotation_degrees" not in candidate, "candidate should not use legacy rotation field")
 
         allow_mock = setup.contract.validate_candidate_config(candidate, "allow-mock")
@@ -823,9 +1121,6 @@ def run_self_test() -> None:
             "api_key",
             "api_url",
             "token",
-            "secret",
-            "password",
-            "ssid",
             "hostname",
             "gateway",
             "raw_payload",
@@ -842,6 +1137,18 @@ def run_self_test() -> None:
         assert_true(second_status["validation"]["rotation_degrees"] == 0, "landscape should map to 0")
         assert_true(second_status["network"]["network_step"] == "skipped", "wifi future should map to skipped")
         assert_artifact_permissions(second_out)
+
+        wifi_out = setup.require_tmp_dir(str(root / "wifi-out"))
+        wifi_environment, wifi_rotation, wifi_network = resolve_scripted_inputs(
+            "ENV-PRODUTO-LOCAL-03",
+            "landscape",
+            "wifi_real_test",
+        )
+        wifi_status = write_local_wizard_artifacts(wifi_out, wifi_environment, wifi_rotation, wifi_network)
+        assert_true(wifi_status["network"]["network_step"] == "wifi_real_test", "Wi-Fi step should be represented")
+        assert_true(wifi_status["network"]["wifi_activation_result"] == "not_run", "scripted Wi-Fi should not apply")
+        assert_true(wifi_status["guardrails"]["nmcli_called"] is False, "scripted Wi-Fi should not call nmcli")
+        assert_artifact_permissions(wifi_out)
 
         cancel_out = setup.require_tmp_dir(str(root / "cancel-out"))
         write_cancelled_artifact(cancel_out)
@@ -874,7 +1181,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--network-step",
-        choices=("existing_connection", "mock", "skipped"),
+        choices=("existing_connection", "wifi_real_test", "mock", "skipped"),
         default="mock",
         help="Safe connection step for --scripted. Default: mock.",
     )
