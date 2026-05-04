@@ -171,6 +171,17 @@ real, writer, flags MPV, launcher, rede, NetworkManager, `/data`, `/opt` ou
 repo do player. Producao continua bloqueada; a frente futura de
 seletor/resolucao/tipo de tela deve ser aberta sem travar C9 indefinidamente.
 
+Atualizacao C9.2: 2026-05-04. C9.2 documenta o contrato futuro de chamada do
+setup local pelo launcher no estado `config_missing`, sem alterar o launcher
+operacional. O contrato define que o setup local continua obrigatorio no proprio
+totem e QR/navegador seguem auxiliares; o wizard deve entrar somente com display
+conectado, config invalida/ausente, gatilho local controlado, renderer parado e
+player ausente. A TTY futura deve ser reservada, preferencialmente `tty2`, com
+exec direto do wizard e sem shell livre. O handoff permanece em `/tmp`, com
+candidata/status/summary `0700`/`0600`, e writer/config real ficam para etapa
+futura. O problema de display/EDID fica registrado como risco e frente separada,
+sem bloquear C9.2. Producao continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
