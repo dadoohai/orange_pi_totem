@@ -93,6 +93,13 @@ com flags reais explicitas, cria backup, limpa temporarios privados e roda gate
 read-only final. O servico permanece parado ao final; player/MPV/rede/backend
 nao sao iniciados e producao continua bloqueada.
 
+Atualizacao C8.9: 2026-05-03. C8.9 executa o start controlado pos-escrita real:
+inicia `kiosky-player.service` sem alterar config e sem rodar writer, observa
+status publico e processos por categorias, confirma `player_running`, playback
+`playing`, `kiosk.py` e MPV ativos, renderer ausente junto do player e
+`NRestarts=0` em smoke curto de 120 segundos. Evidencia permanece sanitizada em
+`/tmp`; producao continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -365,6 +372,7 @@ Sequencia incremental refinada:
 - C8.6.1 - limpeza segura da candidata privada temporaria;
 - C8.7 - gate operacional final antes da escrita real;
 - C8.8 - primeira escrita real integrada, sem start do player;
+- C8.9 - start controlado pos-escrita real, smoke curto;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -979,6 +987,7 @@ Documentos:
 - `docs/product/50_C8_6_1_LIMPEZA_CANDIDATA_PRIVADA_TEMPORARIA.md`;
 - `docs/product/51_C8_7_GATE_OPERACIONAL_FINAL_PRE_ESCRITA_REAL.md`;
 - `docs/product/52_C8_8_PRIMEIRA_ESCRITA_REAL_INTEGRADA.md`;
+- `docs/product/53_C8_9_START_CONTROLADO_POS_ESCRITA_REAL.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -1010,7 +1019,8 @@ Subfases propostas:
 - C8.6 - handoff real controlado, ainda sem escrita real;
 - C8.6.1 - limpeza segura da candidata privada temporaria;
 - C8.7 - gate operacional final antes da escrita real;
-- C8.8 - primeira escrita real integrada, sem start do player.
+- C8.8 - primeira escrita real integrada, sem start do player;
+- C8.9 - start controlado pos-escrita real, smoke curto.
 
 Validacao:
 
