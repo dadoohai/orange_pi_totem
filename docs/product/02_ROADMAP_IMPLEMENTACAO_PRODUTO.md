@@ -109,6 +109,20 @@ SSH voltar, observa servico/status/player/MPV/renderer e confirma retorno para
 Config, backups, writer, rede/Wi-Fi e repo do player nao foram alterados;
 producao continua bloqueada.
 
+Correcao pos-C8.10: observacao de 30-60 minutos com config real pertence a fila
+de homologacao paralela, nao a uma etapa C8.11 de desenvolvimento. A proxima
+frente de desenvolvimento passa a ser C9.0: acesso temporario ao setup pela
+rede local existente, sem Wi-Fi real, hotspot, portal definitivo, writer ou
+alteracao da config real.
+
+Atualizacao C9.0: 2026-05-03. C9.0 executa o acesso temporario ao setup C8 pela
+rede local de bancada existente: sobe o servidor em `/tmp`, expoe porta
+temporaria para navegador, gera candidata de teste apenas em `/tmp`, coleta
+evidencia sanitizada e encerra o servidor ao final. Nao implementa Wi-Fi real,
+hotspot, portal definitivo, NetworkManager, `nmcli`, writer, config real ou
+alteracao do player; `kiosky-player.service` permanece ativo e producao
+continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -383,6 +397,7 @@ Sequencia incremental refinada:
 - C8.8 - primeira escrita real integrada, sem start do player;
 - C8.9 - start controlado pos-escrita real, smoke curto;
 - C8.10 - reboot/autoboot controlado com config real;
+- C9.0 - acesso temporario ao setup pela rede local existente;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -999,6 +1014,7 @@ Documentos:
 - `docs/product/52_C8_8_PRIMEIRA_ESCRITA_REAL_INTEGRADA.md`;
 - `docs/product/53_C8_9_START_CONTROLADO_POS_ESCRITA_REAL.md`;
 - `docs/product/54_C8_10_REBOOT_AUTOBOOT_CONFIG_REAL.md`;
+- `docs/product/55_C9_0_ACESSO_TEMPORARIO_SETUP_REDE_LOCAL.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -1032,7 +1048,8 @@ Subfases propostas:
 - C8.7 - gate operacional final antes da escrita real;
 - C8.8 - primeira escrita real integrada, sem start do player;
 - C8.9 - start controlado pos-escrita real, smoke curto;
-- C8.10 - reboot/autoboot controlado com config real.
+- C8.10 - reboot/autoboot controlado com config real;
+- C9.0 - acesso temporario ao setup pela rede local existente.
 
 Validacao:
 
@@ -1049,6 +1066,32 @@ Limites:
 - C8 documental nao executa reset real;
 - C8.1 pode ser validada na placa somente por smoke seguro em `/tmp`, sem
   servicos, sem rede operacional e sem player.
+
+### C9.0 - acesso temporario ao setup pela rede local existente
+
+Status: proxima etapa de desenvolvimento. Nao e servico permanente.
+
+Objetivos:
+
+- rodar o setup C8 temporariamente na placa;
+- expor o setup em uma porta definida na rede local de bancada existente;
+- permitir validacao humana da UX pelo navegador, fora do terminal;
+- gerar candidata apenas em `/tmp`;
+- encerrar o servidor ao final;
+- preservar evidencia sanitizada.
+
+Fora de escopo:
+
+- Wi-Fi real;
+- hotspot;
+- portal definitivo;
+- NetworkManager ou `nmcli`;
+- writer/config real;
+- `/data/config/config.json`;
+- backups;
+- parada/start de `kiosky-player.service`;
+- alteracao do repo `kiosky-player`;
+- producao.
 
 ### C9 - Wi-Fi/portal/hotspot
 

@@ -139,9 +139,15 @@ Criterios atendidos:
 - Ainda falta criterio operacional de rollback real em falha futura.
 - Producao continua bloqueada.
 
-## 11. Proximo passo
+## 11. Proximos passos
 
-Proximo passo recomendado:
+Observacao ampliada de 30-60 minutos com config real e autoboot comprovado
+pertence a fila de homologacao paralela, nao a uma nova etapa C8.11 de
+desenvolvimento. Essa validacao continua obrigatoria antes de producao, mas nao
+deve bloquear a sequencia incremental de produto/setup.
 
-- C8.11 - observacao ampliada de 30-60 minutos com config real e autoboot ja
-  comprovado, mantendo evidencia sanitizada e producao bloqueada.
+Proximo passo de desenvolvimento:
+
+- C9.0 - acesso temporario ao setup pela rede local existente, sem Wi-Fi real,
+  sem hotspot, sem portal definitivo, sem alterar config real e sem transformar
+  o servidor em servico permanente.
