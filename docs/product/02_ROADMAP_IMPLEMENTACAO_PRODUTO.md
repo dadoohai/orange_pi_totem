@@ -156,6 +156,21 @@ hipotese mais forte passa a ser adequacao de modo/resolucao por tela
 fisica/EDID/framebuffer/MPV, nao regressao direta do wizard. Proxima frente
 deve considerar contrato visual/seletor por tipo de tela antes de UX final.
 
+Atualizacao C9.1.3: 2026-05-04. C9.1.3 cria e executa o contrato visual curto
+de display/orientacao: gera um SVG local em `/tmp` com borda, grid, circulo,
+quadrado, cruz central e setas de topo; coleta snapshots sanitizados de
+servico/processos/TTY/framebuffer/DRM/MPV; e fornece runner remoto com
+`--prepare-only` seguro e `--display` bloqueado por confirmacao humana textual
+explicita. Na execucao autorizada, o player foi parado temporariamente, o
+padrao apareceu via MPV/DRM por 90s, e o player foi restaurado para
+`active/enabled`, `NRestarts=0`, player=1, MPV=1 e renderer=0. O humano
+corrigiu a validacao: circulo parece oval, quadrado parece retangulo, a margem
+amarela nao esta cortada, mas o padrao nao ocupa/alinha igualmente os dois
+eixos da tela; a midia restaurada continua esticada. A etapa nao altera config
+real, writer, flags MPV, launcher, rede, NetworkManager, `/data`, `/opt` ou
+repo do player. Producao continua bloqueada; a frente futura de
+seletor/resolucao/tipo de tela deve ser aberta sem travar C9 indefinidamente.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
