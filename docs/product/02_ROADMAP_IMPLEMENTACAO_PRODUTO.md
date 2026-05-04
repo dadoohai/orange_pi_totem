@@ -145,6 +145,17 @@ restauracao. Nao integra launcher, nao chama automaticamente em
 `config_missing`, nao roda writer e nao altera config real, `/data`, `/opt`,
 rede ou Wi-Fi.
 
+Atualizacao C9.1.2: 2026-05-04. C9.1.2 diagnostica a proporcao visual
+pos-restauracao observada em C9.1.1. A Fase A read-only confirmou que a midia
+ja parecia esticada antes de qualquer stop/start da etapa; a Fase B, autorizada
+explicitamente, executou stop/start controlado e a imagem continuou exatamente
+igual. O servico terminou `active/enabled`, `NRestarts=0`, player=1, MPV=1 e
+renderer=0. A placa observou HDMI `connected/enabled`, framebuffer `1360x768`,
+MPV OSD `1024x768` e modos HDMI anunciados sem `1920x1080`; por isso, a
+hipotese mais forte passa a ser adequacao de modo/resolucao por tela
+fisica/EDID/framebuffer/MPV, nao regressao direta do wizard. Proxima frente
+deve considerar contrato visual/seletor por tipo de tela antes de UX final.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -422,6 +433,7 @@ Sequencia incremental refinada:
 - C9.0 - acesso temporario ao setup pela rede local existente;
 - C9.1 - setup local na propria plaquinha;
 - C9.1.1 - validacao humana do wizard local HDMI;
+- C9.1.2 - diagnostico de proporcao visual pos-restauracao;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -1041,6 +1053,7 @@ Documentos:
 - `docs/product/55_C9_0_ACESSO_TEMPORARIO_SETUP_REDE_LOCAL.md`;
 - `docs/product/56_C9_1_SETUP_LOCAL_PROPRIA_PLAQUINHA.md`;
 - `docs/product/57_C9_1_1_VALIDACAO_HUMANA_WIZARD_LOCAL_HDMI.md`;
+- `docs/product/58_C9_1_2_DIAGNOSTICO_PROPORCAO_VISUAL_POS_RESTAURACAO.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -1078,6 +1091,7 @@ Subfases propostas:
 - C9.0 - acesso temporario ao setup pela rede local existente.
 - C9.1 - setup local na propria plaquinha, tela HDMI + teclado USB.
 - C9.1.1 - validacao humana do wizard local HDMI com teclado USB.
+- C9.1.2 - diagnostico de proporcao visual pos-restauracao.
 
 Validacao:
 
@@ -1172,6 +1186,37 @@ Fora de escopo:
 - NetworkManager, `nmcli`, Wi-Fi real, hotspot ou QR;
 - backend;
 - producao.
+
+### C9.1.2 - diagnostico de proporcao visual pos-restauracao
+
+Status: concluido como diagnostico controlado. Nao e producao.
+
+Objetivos:
+
+- separar stop/start do servico, wizard/openvt e modo de video como causas
+  possiveis da percepcao de midia esticada;
+- coletar snapshots sanitizados de servico, processos, TTY, framebuffer, DRM e
+  propriedades MPV allowlisted;
+- manter config real, writer, player repo, rede e Wi-Fi intocados.
+
+Resultado:
+
+- Fase A read-only mostrou que a midia ja parecia esticada;
+- Fase B stop/start controlado nao mudou a percepcao;
+- servico terminou `active/enabled`, `NRestarts=0`, player=1, MPV=1,
+  renderer=0;
+- modos HDMI observados nao incluiam Full HD;
+- permanece recomendada uma frente futura de contrato visual/seletor por tipo
+  de tela.
+
+Fora de escopo:
+
+- mudar resolucao;
+- alterar flags MPV;
+- alterar config real;
+- rodar writer;
+- repetir wizard/openvt sem nova autorizacao;
+- liberar producao.
 
 ### C9 - Wi-Fi/portal/hotspot
 
