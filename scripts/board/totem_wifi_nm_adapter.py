@@ -40,8 +40,11 @@ PRIVATE_FILE_MODE = 0o600
 UNKNOWN = "unknown"
 CONFIRM_REAL_WIFI_APPLY = "CONFIRMO APPLY WIFI REAL C9.6 EM BANCADA"
 CONFIRM_REAL_WIFI_APPLY_LOCAL_CONSOLE = "CONFIRMO APPLY WIFI REAL C9.6 COM CONSOLE LOCAL"
+CONFIRM_KEEP_DEDICATED_PROFILE = "CONFIRMO MANTER WIFI DEDICADO C9.8"
 DEFAULT_PROFILE_NAME = "dadooh-c9-6-wifi-test"
-ALLOWED_PROFILE_PREFIXES = ("dadooh-c9-6-", "dadooh-product-wifi-")
+DEFAULT_PERSISTENT_PROFILE_NAME = "dadooh-c9-8-wifi-persistent"
+ALLOWED_PROFILE_PREFIXES = ("dadooh-c9-6-", "dadooh-c9-8-", "dadooh-product-wifi-")
+PERSISTENT_PROFILE_PREFIXES = ("dadooh-c9-8-", "dadooh-product-wifi-")
 
 ALLOWED_READ_ONLY_COMMANDS = {
     ("nmcli", "-t", "-f", "RUNNING", "general"),
@@ -228,6 +231,17 @@ def require_allowed_profile_name(profile_name: str) -> str:
     cleaned = profile_name.strip()
     if not profile_name_allowed(cleaned):
         raise AdapterError("profile-name not allowed")
+    return cleaned
+
+
+def persistent_profile_name_allowed(profile_name: str) -> bool:
+    return profile_name_allowed(profile_name) and profile_name.startswith(PERSISTENT_PROFILE_PREFIXES)
+
+
+def require_persistent_profile_name(profile_name: str) -> str:
+    cleaned = require_allowed_profile_name(profile_name)
+    if not persistent_profile_name_allowed(cleaned):
+        raise AdapterError("persistent profile-name not allowed")
     return cleaned
 
 
@@ -701,6 +715,9 @@ def validate_apply_gates(
     confirmation: str | None,
     secrets_file: str | None,
     profile_name: str,
+    keep_dedicated_profile: bool = False,
+    persistent_product_wifi: bool = False,
+    confirm_keep_dedicated_profile: str | None = None,
     allow_ssh_risk_with_local_console_confirmed: bool = False,
     local_console_confirmed: bool = False,
 ) -> str:
@@ -713,6 +730,12 @@ def validate_apply_gates(
         raise AdapterError("real wifi apply confirmation mismatch")
     if allow_ssh_risk_with_local_console_confirmed and not local_console_confirmed:
         raise AdapterError("local console confirmation required")
+    if persistent_product_wifi and not keep_dedicated_profile:
+        raise AdapterError("persistent product wifi requires --keep-dedicated-profile")
+    if keep_dedicated_profile:
+        if confirm_keep_dedicated_profile != CONFIRM_KEEP_DEDICATED_PROFILE:
+            raise AdapterError("keep dedicated profile confirmation mismatch")
+        require_persistent_profile_name(profile_name)
     if not secrets_file:
         raise AdapterError("secrets-file required")
     return require_allowed_profile_name(profile_name)
@@ -770,14 +793,14 @@ def keyfile_value(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "").replace("\r", "")
 
 
-def nmconnection_text(profile_name: str, secrets: dict[str, str]) -> str:
+def nmconnection_text(profile_name: str, secrets: dict[str, str], *, autoconnect: bool = False) -> str:
     return "\n".join(
         [
             "[connection]",
             f"id={profile_name}",
             f"uuid={deterministic_profile_uuid(profile_name)}",
             "type=wifi",
-            "autoconnect=false",
+            f"autoconnect={'true' if autoconnect else 'false'}",
             "",
             "[wifi]",
             "mode=infrastructure",
@@ -797,7 +820,13 @@ def nmconnection_text(profile_name: str, secrets: dict[str, str]) -> str:
     )
 
 
-def write_private_nmconnection(path: pathlib.Path, profile_name: str, secrets: dict[str, str]) -> pathlib.Path:
+def write_private_nmconnection(
+    path: pathlib.Path,
+    profile_name: str,
+    secrets: dict[str, str],
+    *,
+    autoconnect: bool = False,
+) -> pathlib.Path:
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
     if parent.is_symlink() or path.is_symlink():
@@ -806,7 +835,7 @@ def write_private_nmconnection(path: pathlib.Path, profile_name: str, secrets: d
     tmp_path = pathlib.Path(tmp_name)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(nmconnection_text(profile_name, secrets))
+            handle.write(nmconnection_text(profile_name, secrets, autoconnect=autoconnect))
         os.chmod(tmp_path, PRIVATE_FILE_MODE)
         os.replace(tmp_path, path)
         os.chmod(path, PRIVATE_FILE_MODE)
@@ -827,9 +856,16 @@ def write_system_nmconnection(
     system_connection_dir: pathlib.Path,
     profile_name: str,
     secrets: dict[str, str],
+    *,
+    autoconnect: bool = False,
 ) -> pathlib.Path:
     profile_name = require_allowed_profile_name(profile_name)
-    return write_private_nmconnection(system_connection_dir / dedicated_profile_filename(profile_name), profile_name, secrets)
+    return write_private_nmconnection(
+        system_connection_dir / dedicated_profile_filename(profile_name),
+        profile_name,
+        secrets,
+        autoconnect=autoconnect,
+    )
 
 
 def ip_acquired_for_profile(
@@ -904,11 +940,12 @@ def create_or_update_dedicated_profile(
     secrets: dict[str, str],
     out_dir: pathlib.Path,
     timeout_sec: int,
+    autoconnect: bool = False,
     system_connection_dir: pathlib.Path = SYSTEM_CONNECTION_DIR,
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
 ) -> tuple[str, bool, pathlib.Path | None]:
     profile_name = require_allowed_profile_name(profile_name)
-    keyfile_path = write_system_nmconnection(system_connection_dir, profile_name, secrets)
+    keyfile_path = write_system_nmconnection(system_connection_dir, profile_name, secrets, autoconnect=autoconnect)
     replaced_existing = False
     try:
         existing = dedicated_profile_present(
@@ -1004,6 +1041,8 @@ def build_apply_status(
     profile_retained: bool,
     secrets_file_cleanup: bool,
     profile_source_retained_during_activation: bool,
+    persistent_product_wifi: bool,
+    autoconnect_enabled: bool,
 ) -> dict[str, Any]:
     network_changed = activation_result in {"success", "failure", "timeout"}
     privacy = public_privacy_flags()
@@ -1030,6 +1069,9 @@ def build_apply_status(
         "rollback_after_test": rollback is not None,
         "rollback_status": rollback["rollback_status"] if rollback else "not_attempted",
         "profile_retained": profile_retained,
+        "persistent_product_wifi": persistent_product_wifi,
+        "dedicated_profile_persistent": bool(profile_retained and persistent_product_wifi),
+        "autoconnect_enabled": bool(profile_retained and autoconnect_enabled),
         "profile_source_retained_during_activation": profile_source_retained_during_activation,
         "secrets_file_cleanup": secrets_file_cleanup,
         "network_changed": network_changed,
@@ -1056,6 +1098,8 @@ def apply_wifi_controlled(
     profile_name: str,
     rollback_after_test: bool,
     keep_dedicated_profile: bool,
+    persistent_product_wifi: bool,
+    confirm_keep_dedicated_profile: str | None,
     cleanup_secrets_file: bool,
     allow_ssh_risk_with_local_console_confirmed: bool,
     local_console_confirmed: bool = False,
@@ -1069,6 +1113,9 @@ def apply_wifi_controlled(
         confirmation=confirmation,
         secrets_file=secrets_file,
         profile_name=profile_name,
+        keep_dedicated_profile=keep_dedicated_profile,
+        persistent_product_wifi=persistent_product_wifi,
+        confirm_keep_dedicated_profile=confirm_keep_dedicated_profile,
         allow_ssh_risk_with_local_console_confirmed=allow_ssh_risk_with_local_console_confirmed,
         local_console_confirmed=local_console_confirmed,
     )
@@ -1114,6 +1161,8 @@ def apply_wifi_controlled(
             profile_retained=False,
             secrets_file_cleanup=False,
             profile_source_retained_during_activation=False,
+            persistent_product_wifi=persistent_product_wifi,
+            autoconnect_enabled=False,
         )
         write_apply_artifacts(out_dir, status, preflight, rollback)
         raise AdapterError("preflight blocked real wifi apply")
@@ -1129,6 +1178,7 @@ def apply_wifi_controlled(
     profile_source_path: pathlib.Path | None = None
     ip_acquired: bool | str = UNKNOWN
     default_route_present: bool | str = preflight["default_route_present"]
+    autoconnect_enabled = bool(persistent_product_wifi and keep_dedicated_profile)
 
     try:
         profile_create_result, profile_replaced, profile_source_path = create_or_update_dedicated_profile(
@@ -1136,6 +1186,7 @@ def apply_wifi_controlled(
             secrets=secrets,
             out_dir=out_dir,
             timeout_sec=timeout_sec,
+            autoconnect=autoconnect_enabled,
             system_connection_dir=system_connection_dir,
             command_runner=command_runner,
         )
@@ -1169,7 +1220,7 @@ def apply_wifi_controlled(
         else:
             profile_retained = True
     finally:
-        if profile_source_path is not None:
+        if profile_source_path is not None and not (profile_retained and persistent_product_wifi):
             try:
                 profile_source_path.unlink()
             except FileNotFoundError:
@@ -1198,6 +1249,8 @@ def apply_wifi_controlled(
         profile_retained=profile_retained,
         secrets_file_cleanup=cleanup_done,
         profile_source_retained_during_activation=profile_source_path is not None,
+        persistent_product_wifi=persistent_product_wifi,
+        autoconnect_enabled=autoconnect_enabled,
     )
     write_apply_artifacts(out_dir, status, preflight, rollback)
     return status
@@ -1361,6 +1414,9 @@ def build_apply_summary(status: dict[str, Any]) -> str:
         f"connectivity_check: {status['connectivity_check']}",
         f"rollback_status: {status['rollback_status']}",
         f"profile_retained: {str(status['profile_retained']).lower()}",
+        f"persistent_product_wifi: {str(status['persistent_product_wifi']).lower()}",
+        f"dedicated_profile_persistent: {str(status['dedicated_profile_persistent']).lower()}",
+        f"autoconnect_enabled: {str(status['autoconnect_enabled']).lower()}",
         f"profile_source_retained_during_activation: {str(status['profile_source_retained_during_activation']).lower()}",
         f"secrets_file_cleanup: {str(status['secrets_file_cleanup']).lower()}",
         "",
@@ -1606,6 +1662,38 @@ def run_self_test() -> None:
         ),
         "ssh risk exception should require local console confirmation",
     )
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file="/tmp/x/secrets.json",
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            keep_dedicated_profile=True,
+            confirm_keep_dedicated_profile="",
+        ),
+        "persistent profile should require explicit keep confirmation",
+    )
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file="/tmp/x/secrets.json",
+            profile_name=DEFAULT_PROFILE_NAME,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+        ),
+        "persistent product wifi should require a C9.8/product profile prefix",
+    )
+    validate_apply_gates(
+        enable_real_apply=True,
+        confirmation=CONFIRM_REAL_WIFI_APPLY,
+        secrets_file="/tmp/x/secrets.json",
+        profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+        keep_dedicated_profile=True,
+        persistent_product_wifi=True,
+        confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+    )
 
     for command in (
         ["nmcli", "connection", "up", "Fake product wifi"],
@@ -1658,7 +1746,7 @@ def run_self_test() -> None:
     assert_true(detect_default_route_from_text(route_fixture) is True, "default route should be aggregated")
     assert_true(detect_dns_from_text(resolver_fixture) is True, "resolver should be aggregated")
 
-    fake_nm_state = {"profile_loaded": False}
+    fake_nm_state = {"profiles_loaded": set()}
 
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
         if args == ["nmcli", "-t", "-f", "RUNNING", "general"]:
@@ -1669,19 +1757,25 @@ def run_self_test() -> None:
             return CommandResult("ok", active_fixture)
         if args == ["ip", "-o", "route", "get", "192.0.2.10"]:
             return CommandResult("ok", "192.0.2.10 dev eth0 src 192.0.2.44 uid 0\n")
-        if args == ["nmcli", "-t", "-f", "connection.id", "connection", "show", DEFAULT_PROFILE_NAME]:
-            return CommandResult("ok", DEFAULT_PROFILE_NAME + "\n") if fake_nm_state["profile_loaded"] else CommandResult("failed")
-        if args == ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show", DEFAULT_PROFILE_NAME]:
+        if len(args) == 7 and args[:6] == ["nmcli", "-t", "-f", "connection.id", "connection", "show"]:
+            profile = args[6]
+            return CommandResult("ok", profile + "\n") if profile in fake_nm_state["profiles_loaded"] else CommandResult("failed")
+        if len(args) == 7 and args[:6] == ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show"]:
             return CommandResult("ok", "IP4.ADDRESS[1]:192.0.2.44/24\n")
         if args == ["nmcli", "connection", "load", args[-1]]:
-            fake_nm_state["profile_loaded"] = True
+            loaded_profile = pathlib.Path(args[-1]).name.removesuffix(".nmconnection")
+            if loaded_profile == dedicated_profile_filename(DEFAULT_PROFILE_NAME).removesuffix(".nmconnection"):
+                loaded_profile = DEFAULT_PROFILE_NAME
+            if loaded_profile == dedicated_profile_filename(DEFAULT_PERSISTENT_PROFILE_NAME).removesuffix(".nmconnection"):
+                loaded_profile = DEFAULT_PERSISTENT_PROFILE_NAME
+            fake_nm_state["profiles_loaded"].add(loaded_profile)
             return CommandResult("ok", "loaded Fake product wifi\n")
-        if args == ["nmcli", "--wait", "1", "connection", "up", "id", DEFAULT_PROFILE_NAME]:
+        if len(args) == 7 and args[:6] == ["nmcli", "--wait", "1", "connection", "up", "id"]:
             return CommandResult("ok", "successfully activated fake-token-value\n")
-        if args == ["nmcli", "connection", "down", "id", DEFAULT_PROFILE_NAME]:
+        if len(args) == 5 and args[:4] == ["nmcli", "connection", "down", "id"]:
             return CommandResult("ok", "down fake-uuid-value\n")
-        if args == ["nmcli", "connection", "delete", "id", DEFAULT_PROFILE_NAME]:
-            fake_nm_state["profile_loaded"] = False
+        if len(args) == 5 and args[:4] == ["nmcli", "connection", "delete", "id"]:
+            fake_nm_state["profiles_loaded"].discard(args[4])
             return CommandResult("ok", "deleted Fake product wifi\n")
         return CommandResult("failed")
 
@@ -1858,6 +1952,8 @@ def run_self_test() -> None:
             profile_name=DEFAULT_PROFILE_NAME,
             rollback_after_test=True,
             keep_dedicated_profile=False,
+            persistent_product_wifi=False,
+            confirm_keep_dedicated_profile=None,
             cleanup_secrets_file=False,
             allow_ssh_risk_with_local_console_confirmed=False,
             local_console_confirmed=False,
@@ -1877,6 +1973,43 @@ def run_self_test() -> None:
         apply_text += (apply_out / ROLLBACK_FILENAME).read_text(encoding="utf-8")
         apply_text += (apply_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
         assert_no_forbidden_values(apply_text)
+
+        persistent_out = require_tmp_dir(str(root / "persistent-apply"))
+        persistent_status = apply_wifi_controlled(
+            out_dir=persistent_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(safe_secret),
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            rollback_after_test=False,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
+            system_connection_dir=root / "system-connections",
+            command_runner=fake_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(persistent_status["wifi_activation_result"] == "success", "persistent fixture apply should succeed")
+        assert_true(persistent_status["rollback_after_test"] is False, "persistent apply should not rollback after success")
+        assert_true(persistent_status["profile_retained"] is True, "persistent apply should retain profile")
+        assert_true(
+            persistent_status["dedicated_profile_persistent"] is True,
+            "persistent apply should record dedicated persistence",
+        )
+        assert_true(persistent_status["autoconnect_enabled"] is True, "persistent apply should enable autoconnect")
+        persistent_source = root / "system-connections" / dedicated_profile_filename(DEFAULT_PERSISTENT_PROFILE_NAME)
+        assert_true(persistent_source.exists(), "persistent apply should retain dedicated profile source")
+        assert_true(file_mode(persistent_source) == PRIVATE_FILE_MODE, "persistent profile source should be 0600")
+        assert_artifact_permissions(persistent_out, (STATUS_FILENAME, PREFLIGHT_FILENAME, SUMMARY_FILENAME))
+        persistent_text = (persistent_out / STATUS_FILENAME).read_text(encoding="utf-8")
+        persistent_text += (persistent_out / PREFLIGHT_FILENAME).read_text(encoding="utf-8")
+        persistent_text += (persistent_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
+        assert_no_forbidden_values(persistent_text)
 
         failure_out = require_tmp_dir(str(root / "failure"))
         prepare_out_dir(failure_out)
@@ -1936,6 +2069,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--secrets-file", help="Restricted JSON file under /tmp with Wi-Fi credentials for --apply.")
     parser.add_argument("--rollback-after-test", action="store_true", help="Rollback dedicated profile after apply test.")
     parser.add_argument("--keep-dedicated-profile", action="store_true", help="Keep the dedicated profile after successful apply.")
+    parser.add_argument(
+        "--persistent-product-wifi",
+        action="store_true",
+        help="Enable C9.8 persistent product Wi-Fi mode with an explicitly confirmed dedicated profile.",
+    )
+    parser.add_argument(
+        "--confirm-keep-dedicated-profile",
+        help="Exact C9.8 confirmation phrase required before keeping a dedicated profile.",
+    )
     parser.add_argument("--cleanup-secrets-file", action="store_true", help="Remove the temporary secrets file after apply.")
     parser.add_argument(
         "--allow-ssh-risk-with-local-console-confirmed",
@@ -2015,7 +2157,10 @@ def main(argv: list[str]) -> int:
             print(json.dumps(diagnosis, indent=2, sort_keys=True))
             return 0
 
-        effective_rollback_after_test = args.rollback_after_test or not args.keep_dedicated_profile
+        effective_keep_dedicated_profile = args.keep_dedicated_profile or args.persistent_product_wifi
+        if args.persistent_product_wifi and args.rollback_after_test:
+            raise AdapterError("persistent product wifi cannot use rollback-after-test")
+        effective_rollback_after_test = args.rollback_after_test or not effective_keep_dedicated_profile
         apply_status = apply_wifi_controlled(
             out_dir=out_dir,
             timeout_sec=args.timeout_sec,
@@ -2024,7 +2169,9 @@ def main(argv: list[str]) -> int:
             secrets_file=args.secrets_file,
             profile_name=profile_name,
             rollback_after_test=effective_rollback_after_test,
-            keep_dedicated_profile=args.keep_dedicated_profile,
+            keep_dedicated_profile=effective_keep_dedicated_profile,
+            persistent_product_wifi=args.persistent_product_wifi,
+            confirm_keep_dedicated_profile=args.confirm_keep_dedicated_profile,
             cleanup_secrets_file=args.cleanup_secrets_file,
             allow_ssh_risk_with_local_console_confirmed=args.allow_ssh_risk_with_local_console_confirmed,
             local_console_confirmed=args.local_console_confirmed,

@@ -303,6 +303,20 @@ passou, real-dry-run falhou como esperado, servico final `active/enabled`,
 ativos, renderer/setup ausentes e perfil dedicado ausente. C9.8 deve tratar
 perfil Wi-Fi persistente dedicado sem writer/config real.
 
+Atualizacao C9.8: 2026-05-04. C9.8 implementa e valida Wi-Fi dedicado persistente no
+Setup Produto Local V0. O adapter passa a exigir gate explicito para manter o
+perfil (`--persistent-product-wifi`, `--keep-dedicated-profile` e frase de
+confirmacao C9.8), limita nomes aos prefixos dedicados e continua removendo
+secrets temporarios. O wizard separa teste com rollback de configuracao Wi-Fi
+deste totem; o runner C9.8 pausa/restaura o player apenas durante o fluxo local.
+A validacao em bancada passou com activation `success`, perfil dedicado final
+presente, candidata gerada, C5.1 `allow-mock` passando, `real-dry-run` falhando
+como esperado, servico final `active/enabled`, `NRestarts=0`,
+`public_state=player_running`, playback `playing`, player/MPV ativos e
+renderer/setup ausentes. Hotspot, portal, writer, config real, reboot e
+alteracao do `kiosky-player` seguem fora. Proxima frente: C10 para
+writer/config real controlado.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
