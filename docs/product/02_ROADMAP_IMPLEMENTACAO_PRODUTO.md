@@ -100,6 +100,15 @@ status publico e processos por categorias, confirma `player_running`, playback
 `NRestarts=0` em smoke curto de 120 segundos. Evidencia permanece sanitizada em
 `/tmp`; producao continua bloqueada.
 
+Atualizacao C8.10: 2026-05-03. C8.10 executa reboot/autoboot controlado com a
+config real escrita pelo fluxo C8: confirma pre-check `player_running`, pede
+autorizacao humana explicita, reinicia a placa por reboot controlado, aguarda
+SSH voltar, observa servico/status/player/MPV/renderer e confirma retorno para
+`player_running` com playback `playing`, MPV ativo, renderer inativo e
+`NRestarts=0`. Validacao visual humana confirmou midia visivel apos boot.
+Config, backups, writer, rede/Wi-Fi e repo do player nao foram alterados;
+producao continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -373,6 +382,7 @@ Sequencia incremental refinada:
 - C8.7 - gate operacional final antes da escrita real;
 - C8.8 - primeira escrita real integrada, sem start do player;
 - C8.9 - start controlado pos-escrita real, smoke curto;
+- C8.10 - reboot/autoboot controlado com config real;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -988,6 +998,7 @@ Documentos:
 - `docs/product/51_C8_7_GATE_OPERACIONAL_FINAL_PRE_ESCRITA_REAL.md`;
 - `docs/product/52_C8_8_PRIMEIRA_ESCRITA_REAL_INTEGRADA.md`;
 - `docs/product/53_C8_9_START_CONTROLADO_POS_ESCRITA_REAL.md`;
+- `docs/product/54_C8_10_REBOOT_AUTOBOOT_CONFIG_REAL.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -1020,7 +1031,8 @@ Subfases propostas:
 - C8.6.1 - limpeza segura da candidata privada temporaria;
 - C8.7 - gate operacional final antes da escrita real;
 - C8.8 - primeira escrita real integrada, sem start do player;
-- C8.9 - start controlado pos-escrita real, smoke curto.
+- C8.9 - start controlado pos-escrita real, smoke curto;
+- C8.10 - reboot/autoboot controlado com config real.
 
 Validacao:
 
