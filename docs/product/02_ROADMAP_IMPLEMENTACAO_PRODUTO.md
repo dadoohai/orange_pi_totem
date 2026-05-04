@@ -380,6 +380,23 @@ corte seco. O `wizard_rc=8` visto em C10.0 fica classificado como retorno bruto
 de wrapper TTY nao bloqueante para boot/autoboot, com hardening opcional
 posterior. C10.2 fica reservado para fluxo `config_missing` real controlado.
 
+Atualizacao C10.2: 2026-05-04. C10.2 valida o fluxo real de recuperacao de
+produto `config_missing` -> wizard visual local -> handoff privado -> writer
+real -> config real -> start player. O `config_missing` foi provocado por uma
+copia temporaria do launcher com `KIOSKY_CONFIG_PATH` apontando para arquivo
+ausente sob `/tmp`, sem mover ou apagar `/data/config/config.json` e sem
+alterar a unit systemd. O dry-run passou sem escrita real. A execucao real,
+autorizada pela frase `CONFIRMO CONFIG_MISSING REAL C10.2 COM WRITER`, gerou
+candidata visual, passou handoff/C5.1 `real-dry-run`, chamou o writer guardado,
+criou backup, escreveu a config real e restaurou o player. Estado final:
+servico `active/enabled`, `NRestarts=0`, `public_state=player_running`,
+playback `playing`, player/MPV ativos, renderer/setup ausentes, perfil Wi-Fi
+dedicado presente e config `root:totem` `0640` com usuario `totem` lendo e sem
+escrita. A config ativa foi lida somente como fonte privada autorizada, sem
+publicar conteudo. Wi-Fi/NetworkManager, hotspot, portal, reboot, root
+read-only, corte seco e repo `kiosky-player` seguem fora. C10.3 fica reservado
+para observacao curta 30-60 min.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
