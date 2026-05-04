@@ -348,6 +348,24 @@ servico `active/enabled`, `NRestarts=0`, `public_state=player_running`,
 playback `playing`, player/MPV ativos e setup ausente. C10.0 fica liberado
 para writer/config real controlado.
 
+Atualizacao C10.0: 2026-05-04. C10.0 conecta e valida em bancada o wizard
+visual local com o writer real C6 por um handoff privado temporario em `/tmp`.
+O novo handoff injeta
+endpoint/credencial aprovados de arquivo restrito, preserva `environment_id` e
+`rotation_deg` vindos do wizard, valida C5.1 `real-dry-run` e entrega uma
+candidata privada para o writer. O runner C10.0 prepara, faz preflight, roda
+dry-run sem tocar `/data` e tem modo de escrita real/start bloqueado por frase
+humana explicita. O fluxo real para o servico, chama o writer somente para
+`/data/config/config.json`, cria backup, aplica `root:totem` `0640`, limpa
+temporarios privados e restaura o player. Se necessario, a config ativa pode
+ser usada como fonte privada somente com confirmacao adicional explicita, sem
+publicar conteudo. A execucao real passou com writer `passed`, backup criado,
+usuario `totem` lendo e sem permissao de escrita, servico final
+`active/enabled`, `NRestarts=0`, `public_state=player_running`, playback
+`playing`, player/MPV ativos e setup/renderer ausentes. Wi-Fi, hotspot, portal,
+backend/login, reboot e repo `kiosky-player` seguem fora. C10.1 fica reservado
+para reboot/autoboot controlado.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
