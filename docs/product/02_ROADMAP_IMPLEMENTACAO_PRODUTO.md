@@ -192,6 +192,22 @@ A regra `renderer xor wizard xor player` e validada em fixtures, com TTY futura
 etapa futura. Nao altera launcher, `/data`, `/opt`, rede, display ou
 `kiosky-player`; producao continua bloqueada.
 
+Atualizacao C9.3: 2026-05-04. C9.3 implementa uma integracao experimental do
+launcher com o wizard local em `config_missing`, desligada por padrao e atras
+de `TOTEM_SETUP_LOCAL_ENABLED=1` mais autorun/gatilho explicito em `/tmp`. O
+launcher passa a conseguir parar renderer, chamar o wizard via `openvt` em TTY
+reservada, registrar cancelamento/falha/candidata pronta e voltar para status
+sem chamar writer nem iniciar player enquanto a config segue invalida. O
+agregador de status passa a mapear estados experimentais `setup_local_*` para
+estado publico seguro `config_missing`. Foi criado runner remoto controlado que
+usa copia em `/tmp`, config override inexistente, renderer fake sem MPV e
+restauracao do servico real ao final. A execucao autorizada provou o caminho de
+cancelamento do wizard e depois o caminho de `candidate_ready` com candidata em
+`/tmp`; em ambos os casos restaurou `active/enabled`, `NRestarts=0`, player=1,
+MPV=1 e renderer=0, com status publico final `player_running`. Nao altera
+config real, `/data/config`, writer, rede, display/EDID, flags MPV ou
+`kiosky-player`; producao continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

@@ -33,6 +33,15 @@ PUBLIC_STATES = {
     "maintenance_placeholder",
 }
 
+SETUP_LAUNCHER_STATES = {
+    "setup_local_requested",
+    "setup_local_starting",
+    "setup_local_running",
+    "setup_local_cancelled",
+    "setup_local_failed",
+    "setup_candidate_ready",
+}
+
 STATE_MESSAGES = {
     "booting": {
         "message": "O totem está preparando a exibição.",
@@ -184,6 +193,8 @@ def infer_service_state(launcher_status: dict[str, Any] | None, state: str) -> s
     launcher_state = string_value(launcher_status, "state")
     if launcher_state in {"starting", "running", "display_missing", "app_exited", "config_missing"}:
         return "active"
+    if launcher_state in SETUP_LAUNCHER_STATES:
+        return "active"
     if launcher_state == "stopped":
         return "inactive"
     if state == "player_error":
@@ -223,6 +234,8 @@ def infer_state(
         return "display_missing"
 
     if launcher_state == "config_missing":
+        return "config_missing"
+    if launcher_state in SETUP_LAUNCHER_STATES:
         return "config_missing"
     if string_value(launcher_status, "config_state") == "missing":
         return "config_missing"

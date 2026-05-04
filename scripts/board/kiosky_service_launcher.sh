@@ -14,6 +14,13 @@ TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
 TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 TOTEM_STATUS_RENDERER="${TOTEM_STATUS_RENDERER:-/opt/totem/bin/totem_status_renderer.sh}"
 TOTEM_STATUS_SVG="${TOTEM_STATUS_SVG:-/tmp/dadooh-status/status.svg}"
+TOTEM_SETUP_LOCAL_ENABLED="${TOTEM_SETUP_LOCAL_ENABLED:-0}"
+TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING="${TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING:-0}"
+TOTEM_SETUP_LOCAL_TRIGGER_FILE="${TOTEM_SETUP_LOCAL_TRIGGER_FILE:-/tmp/dadooh-setup-local.request}"
+TOTEM_SETUP_LOCAL_WIZARD="${TOTEM_SETUP_LOCAL_WIZARD:-/opt/totem/bin/totem_setup_local_wizard.py}"
+TOTEM_SETUP_LOCAL_OUT_DIR="${TOTEM_SETUP_LOCAL_OUT_DIR:-/tmp/dadooh-c9-3-local-wizard}"
+TOTEM_SETUP_LOCAL_TTY="${TOTEM_SETUP_LOCAL_TTY:-2}"
+TOTEM_SETUP_LOCAL_MAX_RUNS="${TOTEM_SETUP_LOCAL_MAX_RUNS:-1}"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
 TOTEM_STATUS_REFRESH_SEC="${TOTEM_STATUS_REFRESH_SEC:-5}"
 TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="${TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC:-3}"
@@ -34,6 +41,7 @@ LAST_DISPLAY_LOG_EPOCH=0
 LAST_CONFIG_LOG_EPOCH=0
 LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
 LAST_STATUS_RENDERER_WARN_EPOCH=0
+SETUP_LOCAL_RUN_COUNT=0
 
 stamp() {
   date '+%Y-%m-%dT%H:%M:%S%z'
@@ -64,6 +72,8 @@ DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_S
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" 2)"
 TOTEM_STATUS_REFRESH_SEC="$(positive_integer_or_default "$TOTEM_STATUS_REFRESH_SEC" 5)"
 TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC" 3)"
+TOTEM_SETUP_LOCAL_TTY="$(positive_integer_or_default "$TOTEM_SETUP_LOCAL_TTY" 2)"
+TOTEM_SETUP_LOCAL_MAX_RUNS="$(positive_integer_or_default "$TOTEM_SETUP_LOCAL_MAX_RUNS" 1)"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" 60)"
 STATUS_RENDERER_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_RENDERER_WARN_INTERVAL_SEC" 60)"
 
@@ -353,6 +363,95 @@ for key in required_non_empty_strings:
 PY
 }
 
+setup_local_enabled() {
+  [ "$TOTEM_SETUP_LOCAL_ENABLED" = "1" ] || return 1
+  [ "$SETUP_LOCAL_RUN_COUNT" -lt "$TOTEM_SETUP_LOCAL_MAX_RUNS" ] || return 1
+  return 0
+}
+
+setup_local_requested() {
+  setup_local_enabled || return 1
+
+  if [ "$TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING" = "1" ]; then
+    return 0
+  fi
+
+  case "$TOTEM_SETUP_LOCAL_TRIGGER_FILE" in
+    /tmp/*)
+      [ -f "$TOTEM_SETUP_LOCAL_TRIGGER_FILE" ] && return 0
+      ;;
+  esac
+
+  return 1
+}
+
+consume_setup_local_trigger() {
+  case "$TOTEM_SETUP_LOCAL_TRIGGER_FILE" in
+    /tmp/*)
+      rm -f "$TOTEM_SETUP_LOCAL_TRIGGER_FILE" 2>/dev/null || true
+      ;;
+  esac
+}
+
+run_setup_local_once() {
+  local rc=0
+
+  SETUP_LOCAL_RUN_COUNT=$((SETUP_LOCAL_RUN_COUNT + 1))
+  consume_setup_local_trigger
+
+  write_status "setup_local_requested" "true"
+  log "setup_local_requested tty=$TOTEM_SETUP_LOCAL_TTY"
+
+  if ! stop_status_renderer; then
+    log "setup_local_failed reason=renderer_stop_failed"
+    write_status "setup_local_failed" "true" "126"
+    return 0
+  fi
+
+  if process_alive "$CHILD_PID"; then
+    log "setup_local_failed reason=player_conflict"
+    write_status "setup_local_failed" "true" "125"
+    return 0
+  fi
+
+  if [ ! -r "$TOTEM_SETUP_LOCAL_WIZARD" ]; then
+    log "setup_local_failed reason=wizard_unavailable"
+    write_status "setup_local_failed" "true" "127"
+    return 0
+  fi
+
+  if ! command -v openvt >/dev/null 2>&1; then
+    log "setup_local_failed reason=openvt_unavailable"
+    write_status "setup_local_failed" "true" "127"
+    return 0
+  fi
+
+  write_status "setup_local_starting" "true"
+  log "setup_local_starting"
+  write_status "setup_local_running" "true"
+
+  openvt -c "$TOTEM_SETUP_LOCAL_TTY" -s -f -w -- \
+    env TERM=linux /usr/bin/python3 "$TOTEM_SETUP_LOCAL_WIZARD" \
+      --out-dir "$TOTEM_SETUP_LOCAL_OUT_DIR"
+  rc="$?"
+
+  if [ "$rc" -eq 0 ] && [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/candidate-config.json" ]; then
+    log "setup_candidate_ready"
+    write_status "setup_candidate_ready" "true" "0"
+    return 0
+  fi
+
+  if [ "$rc" -eq 130 ]; then
+    log "setup_local_cancelled"
+    write_status "setup_local_cancelled" "true" "130"
+    return 0
+  fi
+
+  log "setup_local_failed rc=$rc"
+  write_status "setup_local_failed" "true" "$rc"
+  return 0
+}
+
 handle_connected_display() {
   local now_epoch
 
@@ -368,6 +467,18 @@ handle_connected_display() {
   fi
 
   write_status "config_missing" "true"
+
+  if setup_local_requested; then
+    run_setup_local_once
+    if config_valid; then
+      run_app_once
+      return 0
+    fi
+    start_status_renderer
+    sleep_interruptible "$CONFIG_RETRY_SEC"
+    return 0
+  fi
+
   start_status_renderer
   sleep_interruptible "$CONFIG_RETRY_SEC"
 }
