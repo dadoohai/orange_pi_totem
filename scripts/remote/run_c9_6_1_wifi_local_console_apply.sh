@@ -6,23 +6,26 @@ MODE="prepare-only"
 REMOTE_DIR="/tmp/dadooh-c9-6-1-wifi"
 REMOTE_OUT_DIR="/tmp/dadooh-c9-6-1-local-console-apply"
 REMOTE_SECRETS_DIR="/tmp/dadooh-c9-6-local-secrets"
+LAST_FAILURE_DIR="/tmp/dadooh-c9-6-1-local-console-apply/local-console-apply-with-player-pause"
 TIMEOUT_SEC="45"
 REMOTE_TTY="2"
 PROFILE_NAME="dadooh-c9-6-wifi-test"
 OPERATOR_WINDOW_SEC="900"
 CONFIRM_PHRASE="CONFIRMO APPLY WIFI REAL C9.6 COM CONSOLE LOCAL"
 PAUSE_CONFIRM_PHRASE="CONFIRMO PAUSAR PLAYER PARA APPLY WIFI C9.6.2"
+DIAGNOSE_RETRY_CONFIRM_PHRASE="CONFIRMO DIAGNOSTICO E RETENTATIVA WIFI C9.6.3"
 
 usage() {
   cat <<'USAGE'
 Usage:
-  run_c9_6_1_wifi_local_console_apply.sh [host] [--prepare-only|--local-console-preflight|--local-console-apply-rollback-after-test|--local-console-apply-with-player-pause] [options]
+  run_c9_6_1_wifi_local_console_apply.sh [host] [--prepare-only|--diagnose-last-failure|--local-console-preflight|--local-console-apply-rollback-after-test|--local-console-apply-with-player-pause|--local-console-diagnose-retry-with-player-pause] [options]
 
 Options:
   --timeout-sec N
   --tty N
   --profile-name NAME
   --operator-window-sec N
+  --last-failure-dir PATH
 
 Modes:
   --prepare-only
@@ -40,6 +43,14 @@ Modes:
       C9.6.2. Requires exact human confirmation. Pauses kiosky-player.service,
       verifies HDMI is free, opens the local TTY, runs real apply with
       rollback-after-test, and restores the service at the end.
+
+  --diagnose-last-failure
+      C9.6.3. Classifies the last sanitized activation failure. Does not alter
+      network or service state.
+
+  --local-console-diagnose-retry-with-player-pause
+      C9.6.3. Shows the same local operator flow, retries once with player pause,
+      runs sanitized diagnosis, rolls back, and restores the service.
 USAGE
 }
 
@@ -47,6 +58,9 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --prepare-only)
       MODE="prepare-only"
+      ;;
+    --diagnose-last-failure)
+      MODE="diagnose-last-failure"
       ;;
     --operator-window-sec)
       shift
@@ -64,6 +78,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --local-console-apply-with-player-pause)
       MODE="local-console-apply-with-player-pause"
+      ;;
+    --local-console-diagnose-retry-with-player-pause)
+      MODE="local-console-diagnose-retry-with-player-pause"
       ;;
     --timeout-sec)
       shift
@@ -89,6 +106,14 @@ while [ "$#" -gt 0 ]; do
       fi
       PROFILE_NAME="$1"
       ;;
+    --last-failure-dir)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "error: --last-failure-dir requires a path" >&2
+        exit 2
+      fi
+      LAST_FAILURE_DIR="$1"
+      ;;
     --help|-h)
       usage
       exit 0
@@ -101,7 +126,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$MODE" in
-  prepare-only|local-console-preflight|local-console-apply-rollback-after-test|local-console-apply-with-player-pause)
+  prepare-only|diagnose-last-failure|local-console-preflight|local-console-apply-rollback-after-test|local-console-apply-with-player-pause|local-console-diagnose-retry-with-player-pause)
     ;;
   *)
     echo "error: unsupported mode $MODE" >&2
@@ -201,8 +226,23 @@ if [ "$MODE" = "local-console-apply-with-player-pause" ]; then
   fi
 fi
 
+if [ "$MODE" = "local-console-diagnose-retry-with-player-pause" ]; then
+  echo
+  echo "HDMI/tela e teclado local devem estar conectados. O player sera pausado temporariamente."
+  echo "Confirme que a rede e senha foram testadas em outro dispositivo agora."
+  echo "Use uma rede WPA/WPA2 comum, sem portal cativo, com sinal forte perto do totem."
+  echo "Before diagnosis retry and player pause, type exactly:"
+  echo "$DIAGNOSE_RETRY_CONFIRM_PHRASE"
+  printf '> '
+  IFS= read -r AUTH_TEXT
+  if [ "$AUTH_TEXT" != "$DIAGNOSE_RETRY_CONFIRM_PHRASE" ]; then
+    echo "Authorization text did not match. Aborting before service pause." >&2
+    exit 20
+  fi
+fi
+
 echo "Running C9.6.1 $MODE on local console"
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_SECRETS_DIR='$REMOTE_SECRETS_DIR' TIMEOUT_SEC='$TIMEOUT_SEC' MODE='$MODE' REMOTE_TTY='$REMOTE_TTY' PROFILE_NAME='$PROFILE_NAME' OPERATOR_WINDOW_SEC='$OPERATOR_WINDOW_SEC' bash -s" <<'REMOTE_RUN'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_SECRETS_DIR='$REMOTE_SECRETS_DIR' LAST_FAILURE_DIR='$LAST_FAILURE_DIR' TIMEOUT_SEC='$TIMEOUT_SEC' MODE='$MODE' REMOTE_TTY='$REMOTE_TTY' PROFILE_NAME='$PROFILE_NAME' OPERATOR_WINDOW_SEC='$OPERATOR_WINDOW_SEC' bash -s" <<'REMOTE_RUN'
 set -euo pipefail
 
 ADAPTER="$REMOTE_DIR/totem_wifi_nm_adapter.py"
@@ -237,7 +277,6 @@ for proc in pathlib.Path("/proc").iterdir():
         parts = [part.decode("utf-8", "ignore") for part in (proc / "cmdline").read_bytes().split(b"\0") if part]
     except OSError:
         continue
-    lowered = [part.lower() for part in parts]
     basenames = [pathlib.Path(part).name.lower() for part in parts]
     if "totem_setup_local_wizard.py" in basenames or "totem_wifi_local_credentials_tty.py" in basenames:
         counts["setup"] += 1
@@ -259,8 +298,15 @@ if status_path.exists():
 service_active = os.popen("systemctl is-active kiosky-player.service 2>/dev/null").read().strip() or "unknown"
 service_enabled = os.popen("systemctl is-enabled kiosky-player.service 2>/dev/null").read().strip() or "unknown"
 nrestarts = os.popen("systemctl show kiosky-player.service -p NRestarts --value 2>/dev/null").read().strip() or "unknown"
-dedicated_profile_present = os.system("nmcli -t -f NAME connection show dadooh-c9-6-wifi-test >/dev/null 2>&1") == 0
-dedicated_profile_present = os.system("nmcli -t -f NAME connection show dadooh-c9-6-wifi-test >/dev/null 2>&1") == 0
+dedicated_profile_present = os.system("nmcli -t -f connection.id connection show dadooh-c9-6-wifi-test >/dev/null 2>&1") == 0
+
+diagnosis = {}
+diagnosis_path = run_out / "diagnose-status.json"
+if diagnosis_path.exists():
+    try:
+        diagnosis = json.loads(diagnosis_path.read_text(encoding="utf-8"))
+    except Exception:
+        diagnosis = {}
 
 public_state = "unknown"
 try:
@@ -295,6 +341,7 @@ payload = {
     "ssh_path_risk_acknowledged": bool(adapter_status.get("ssh_path_risk_acknowledged", False)),
     "local_console_confirmed": bool(adapter_status.get("local_console_confirmed", False)),
     "wifi_activation_result": adapter_status.get("wifi_activation_result", "not_applicable"),
+    "failure_category": diagnosis.get("failure_category", adapter_status.get("failure_category", "unknown")),
     "rollback_status": adapter_status.get("rollback_status", "not_applicable"),
     "dedicated_profile_present_after": dedicated_profile_present,
     "rollback_effective_result": (
@@ -356,6 +403,26 @@ print("apply_artifacts_present")
 PY
 }
 
+if [ "$MODE" = "diagnose-last-failure" ]; then
+  if [ ! -d "$LAST_FAILURE_DIR" ]; then
+    echo "last_failure_dir_missing" >&2
+    exit 34
+  fi
+  /usr/bin/python3 "$ADAPTER" \
+    --diagnose-last-failure \
+    --out-dir "$LAST_FAILURE_DIR" \
+    --profile-name "$PROFILE_NAME" \
+    --secrets-file "$REMOTE_SECRETS_DIR/secrets.json" \
+    --timeout-sec "$TIMEOUT_SEC" >"$RUN_OUT/diagnose-stdout.json"
+  chmod 600 "$RUN_OUT/diagnose-stdout.json"
+  cp "$LAST_FAILURE_DIR/diagnose-status.json" "$RUN_OUT/diagnose-status.json"
+  cp "$LAST_FAILURE_DIR/diagnose-summary.txt" "$RUN_OUT/diagnose-summary.txt"
+  chmod 600 "$RUN_OUT/diagnose-status.json" "$RUN_OUT/diagnose-summary.txt"
+  cat "$RUN_OUT/diagnose-status.json"
+  echo "remote C9.6.3 diagnose-last-failure: ok"
+  exit 0
+fi
+
 if [ "$MODE" = "local-console-preflight" ]; then
   set +e
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
@@ -379,7 +446,7 @@ if [ "$MODE" = "local-console-preflight" ]; then
   exit 0
 fi
 
-if [ "$MODE" = "local-console-apply-with-player-pause" ]; then
+if [ "$MODE" = "local-console-apply-with-player-pause" ] || [ "$MODE" = "local-console-diagnose-retry-with-player-pause" ]; then
   WRAPPER="$RUN_OUT/c9-6-2-player-pause-wrapper.sh"
   WRAPPER_DONE="$RUN_OUT/wrapper.done"
   cat >"$WRAPPER" <<'WRAPPER_SH'
@@ -455,6 +522,15 @@ if status_path.exists():
 service_active = os.popen("systemctl is-active kiosky-player.service 2>/dev/null").read().strip() or "unknown"
 service_enabled = os.popen("systemctl is-enabled kiosky-player.service 2>/dev/null").read().strip() or "unknown"
 nrestarts = os.popen("systemctl show kiosky-player.service -p NRestarts --value 2>/dev/null").read().strip() or "unknown"
+dedicated_profile_present = os.system("nmcli -t -f connection.id connection show dadooh-c9-6-wifi-test >/dev/null 2>&1") == 0
+
+diagnosis = {}
+diagnosis_path = run_out / "diagnose-status.json"
+if diagnosis_path.exists():
+    try:
+        diagnosis = json.loads(diagnosis_path.read_text(encoding="utf-8"))
+    except Exception:
+        diagnosis = {}
 
 public_state = "unknown"
 try:
@@ -498,6 +574,7 @@ payload = {
     "ssh_path_risk_acknowledged": bool(adapter_status.get("ssh_path_risk_acknowledged", False)),
     "local_console_confirmed": bool(adapter_status.get("local_console_confirmed", False)),
     "wifi_activation_result": adapter_status.get("wifi_activation_result", "not_applicable"),
+    "failure_category": diagnosis.get("failure_category", adapter_status.get("failure_category", "unknown")),
     "rollback_status": adapter_status.get("rollback_status", "not_applicable"),
     "dedicated_profile_present_after": dedicated_profile_present,
     "rollback_effective_result": (
@@ -642,6 +719,13 @@ else
 fi
 set -e
 
+/usr/bin/python3 "$ADAPTER" \
+  --diagnose-last-failure \
+  --out-dir "$RUN_OUT" \
+  --profile-name "$PROFILE_NAME" \
+  --secrets-file "$REMOTE_SECRETS_DIR/secrets.json" \
+  --timeout-sec "$TIMEOUT_SEC" >/dev/null 2>&1 || true
+
 snapshot "$POST_APPLY_STATUS" "post_apply" "$OPENVT_RC"
 
 /usr/bin/python3 - "$RUN_OUT" <<'PY'
@@ -715,7 +799,11 @@ WRAPPER_SH
     exit "$WRAPPER_RC"
   fi
   require_apply_artifacts >/dev/null
-  echo "remote C9.6.2 local-console-apply-with-player-pause: ok"
+  if [ "$MODE" = "local-console-diagnose-retry-with-player-pause" ]; then
+    echo "remote C9.6.3 local-console-diagnose-retry-with-player-pause: ok"
+  else
+    echo "remote C9.6.2 local-console-apply-with-player-pause: ok"
+  fi
   exit 0
 fi
 

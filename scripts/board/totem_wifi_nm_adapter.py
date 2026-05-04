@@ -31,7 +31,10 @@ PLAN_FILENAME = "plan.json"
 SUMMARY_FILENAME = "summary.txt"
 PREFLIGHT_FILENAME = "preflight.json"
 ROLLBACK_FILENAME = "rollback.json"
+DIAGNOSE_FILENAME = "diagnose-status.json"
+DIAGNOSE_SUMMARY_FILENAME = "diagnose-summary.txt"
 TMP_ROOT = pathlib.Path("/tmp").resolve()
+SYSTEM_CONNECTION_DIR = pathlib.Path("/etc/NetworkManager/system-connections")
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 UNKNOWN = "unknown"
@@ -68,9 +71,10 @@ class AdapterError(RuntimeError):
 
 
 class CommandResult:
-    def __init__(self, status: str, stdout: str = "", returncode: int | None = None) -> None:
+    def __init__(self, status: str, stdout: str = "", stderr: str = "", returncode: int | None = None) -> None:
         self.status = status
         self.stdout = stdout
+        self.stderr = stderr
         self.returncode = returncode
 
 
@@ -186,8 +190,8 @@ def run_read_only_command(args: list[str], timeout_sec: int) -> CommandResult:
         return CommandResult("failed")
 
     if completed.returncode == 0:
-        return CommandResult("ok", completed.stdout, completed.returncode)
-    return CommandResult("failed", returncode=completed.returncode)
+        return CommandResult("ok", completed.stdout, completed.stderr, completed.returncode)
+    return CommandResult("failed", completed.stdout, completed.stderr, completed.returncode)
 
 
 def run_internal_command(args: list[str], timeout_sec: int) -> CommandResult:
@@ -208,8 +212,8 @@ def run_internal_command(args: list[str], timeout_sec: int) -> CommandResult:
         return CommandResult("failed")
 
     if completed.returncode == 0:
-        return CommandResult("ok", completed.stdout, completed.returncode)
-    return CommandResult("failed", returncode=completed.returncode)
+        return CommandResult("ok", completed.stdout, completed.stderr, completed.returncode)
+    return CommandResult("failed", completed.stdout, completed.stderr, completed.returncode)
 
 
 def profile_name_allowed(profile_name: str) -> bool:
@@ -260,8 +264,8 @@ def assert_apply_command(args: list[str], profile_name: str, keyfile_path: pathl
             return
         raise AdapterError("apply command blocked")
 
-    if lowered[:5] == ["nmcli", "-t", "-f", "name", "connection"]:
-        if args == ["nmcli", "-t", "-f", "NAME", "connection", "show", profile_name]:
+    if lowered[:5] == ["nmcli", "-t", "-f", "connection.id", "connection"]:
+        if args == ["nmcli", "-t", "-f", "connection.id", "connection", "show", profile_name]:
             return
         raise AdapterError("apply command blocked")
 
@@ -613,7 +617,7 @@ def dedicated_profile_present(
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
 ) -> bool | str:
     profile_name = require_allowed_profile_name(profile_name)
-    args = ["nmcli", "-t", "-f", "NAME", "connection", "show", profile_name]
+    args = ["nmcli", "-t", "-f", "connection.id", "connection", "show", profile_name]
     assert_apply_command(args, profile_name)
     result = command_runner(args, timeout_sec)
     if result.status == "ok":
@@ -766,45 +770,66 @@ def keyfile_value(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "").replace("\r", "")
 
 
-def write_temp_nmconnection(out_dir: pathlib.Path, profile_name: str, secrets: dict[str, str]) -> pathlib.Path:
-    fd, tmp_name = tempfile.mkstemp(prefix=".wifi-profile.", suffix=".nmconnection", dir=str(out_dir), text=True)
-    path = pathlib.Path(tmp_name)
+def nmconnection_text(profile_name: str, secrets: dict[str, str]) -> str:
+    return "\n".join(
+        [
+            "[connection]",
+            f"id={profile_name}",
+            f"uuid={deterministic_profile_uuid(profile_name)}",
+            "type=wifi",
+            "autoconnect=false",
+            "",
+            "[wifi]",
+            "mode=infrastructure",
+            f"ssid={keyfile_value(secrets['ssid'])}",
+            "",
+            "[wifi-security]",
+            "key-mgmt=wpa-psk",
+            f"psk={keyfile_value(secrets['psk'])}",
+            "",
+            "[ipv4]",
+            "method=auto",
+            "",
+            "[ipv6]",
+            "method=auto",
+            "",
+        ]
+    )
+
+
+def write_private_nmconnection(path: pathlib.Path, profile_name: str, secrets: dict[str, str]) -> pathlib.Path:
+    parent = path.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    if parent.is_symlink() or path.is_symlink():
+        raise AdapterError("profile source path invalid")
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(parent), text=True)
+    tmp_path = pathlib.Path(tmp_name)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(
-                "\n".join(
-                    [
-                        "[connection]",
-                        f"id={profile_name}",
-                        f"uuid={deterministic_profile_uuid(profile_name)}",
-                        "type=wifi",
-                        "autoconnect=false",
-                        "",
-                        "[wifi]",
-                        "mode=infrastructure",
-                        f"ssid={keyfile_value(secrets['ssid'])}",
-                        "",
-                        "[wifi-security]",
-                        "key-mgmt=wpa-psk",
-                        f"psk={keyfile_value(secrets['psk'])}",
-                        "",
-                        "[ipv4]",
-                        "method=auto",
-                        "",
-                        "[ipv6]",
-                        "method=auto",
-                        "",
-                    ]
-                )
-            )
+            handle.write(nmconnection_text(profile_name, secrets))
+        os.chmod(tmp_path, PRIVATE_FILE_MODE)
+        os.replace(tmp_path, path)
         os.chmod(path, PRIVATE_FILE_MODE)
         return path
     except Exception:
         try:
-            path.unlink()
+            tmp_path.unlink()
         except FileNotFoundError:
             pass
         raise
+
+
+def dedicated_profile_filename(profile_name: str) -> str:
+    return "".join(char if char.isalnum() or char in "._-" else "_" for char in profile_name) + ".nmconnection"
+
+
+def write_system_nmconnection(
+    system_connection_dir: pathlib.Path,
+    profile_name: str,
+    secrets: dict[str, str],
+) -> pathlib.Path:
+    profile_name = require_allowed_profile_name(profile_name)
+    return write_private_nmconnection(system_connection_dir / dedicated_profile_filename(profile_name), profile_name, secrets)
 
 
 def ip_acquired_for_profile(
@@ -879,10 +904,11 @@ def create_or_update_dedicated_profile(
     secrets: dict[str, str],
     out_dir: pathlib.Path,
     timeout_sec: int,
+    system_connection_dir: pathlib.Path = SYSTEM_CONNECTION_DIR,
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, pathlib.Path | None]:
     profile_name = require_allowed_profile_name(profile_name)
-    keyfile_path = write_temp_nmconnection(out_dir, profile_name, secrets)
+    keyfile_path = write_system_nmconnection(system_connection_dir, profile_name, secrets)
     replaced_existing = False
     try:
         existing = dedicated_profile_present(
@@ -895,18 +921,74 @@ def create_or_update_dedicated_profile(
             assert_apply_command(delete_args, profile_name)
             delete_result = command_runner(delete_args, timeout_sec)
             if delete_result.status not in {"ok", "failed"}:
-                return delete_result.status, replaced_existing
+                return delete_result.status, replaced_existing, keyfile_path
             replaced_existing = delete_result.status == "ok"
 
         load_args = ["nmcli", "connection", "load", str(keyfile_path)]
         assert_apply_command(load_args, profile_name, keyfile_path)
         load_result = command_runner(load_args, timeout_sec)
-        return load_result.status, replaced_existing
-    finally:
+        if load_result.status == "ok":
+            loaded = dedicated_profile_present(
+                profile_name=profile_name,
+                timeout_sec=timeout_sec,
+                command_runner=command_runner,
+            )
+            if loaded is not True:
+                return "profile_not_present_after_load", replaced_existing, keyfile_path
+        return load_result.status, replaced_existing, keyfile_path
+    except Exception:
         try:
             keyfile_path.unlink()
         except FileNotFoundError:
             pass
+        raise
+
+
+def classify_failure_from_text(text: str) -> str:
+    lowered = text.lower()
+    if not lowered:
+        return UNKNOWN
+    if "timeout" in lowered or "timed out" in lowered:
+        return "timeout"
+    if any(marker in lowered for marker in ("secrets were required", "no agents were available", "password", "psk", "auth", "802.1x")):
+        return "auth_failed_suspected"
+    if any(marker in lowered for marker in ("ssid", "not found", "not available", "no network")):
+        return "network_not_found_suspected"
+    if any(marker in lowered for marker in ("association", "supplicant", "signal", "scan")):
+        return "signal_or_range_suspected"
+    if any(marker in lowered for marker in ("dhcp", "ip-config", "ip configuration")):
+        return "dhcp_timeout_suspected"
+    if any(marker in lowered for marker in ("no suitable device", "device", "unavailable", "not managed")):
+        return "device_unavailable"
+    return "nm_activation_failed_generic"
+
+
+def classify_activation_failure(
+    *,
+    activation_result: str,
+    preflight: dict[str, Any],
+    profile_create_result: str,
+    activation_command_result: CommandResult | None = None,
+) -> str:
+    if activation_result == "success":
+        return "none"
+    if activation_result == "timeout":
+        return "timeout"
+    if preflight.get("wifi_device_present") is not True:
+        return "device_unavailable"
+    if preflight.get("network_manager_available") is not True or preflight.get("nmcli_available") is not True:
+        return "device_unavailable"
+    if profile_create_result == "profile_not_present_after_load":
+        return "nm_profile_load_failed"
+    if profile_create_result not in {"ok", "not_attempted"} and activation_result == "not_attempted":
+        return "nm_activation_failed_generic"
+    if activation_command_result is not None:
+        category = classify_failure_from_text(f"{activation_command_result.stdout}\n{activation_command_result.stderr}")
+        if category != UNKNOWN:
+            return category
+    if activation_result == "failure":
+        return "nm_activation_failed_generic"
+    return UNKNOWN
 
 
 def build_apply_status(
@@ -915,11 +997,13 @@ def build_apply_status(
     profile_create_result: str,
     profile_replaced: bool,
     activation_result: str,
+    failure_category: str,
     ip_acquired: bool | str,
     default_route_present: bool | str,
     rollback: dict[str, Any] | None,
     profile_retained: bool,
     secrets_file_cleanup: bool,
+    profile_source_retained_during_activation: bool,
 ) -> dict[str, Any]:
     network_changed = activation_result in {"success", "failure", "timeout"}
     privacy = public_privacy_flags()
@@ -939,12 +1023,14 @@ def build_apply_status(
         "wifi_profile_replaced": profile_replaced,
         "wifi_activation_attempted": activation_result != "not_attempted",
         "wifi_activation_result": activation_result,
+        "failure_category": failure_category,
         "ip_acquired": bool_for_json(ip_acquired),
         "default_route_present": bool_for_json(default_route_present),
         "connectivity_check": "not_checked",
         "rollback_after_test": rollback is not None,
         "rollback_status": rollback["rollback_status"] if rollback else "not_attempted",
         "profile_retained": profile_retained,
+        "profile_source_retained_during_activation": profile_source_retained_during_activation,
         "secrets_file_cleanup": secrets_file_cleanup,
         "network_changed": network_changed,
         "real_config_read": False,
@@ -973,6 +1059,7 @@ def apply_wifi_controlled(
     cleanup_secrets_file: bool,
     allow_ssh_risk_with_local_console_confirmed: bool,
     local_console_confirmed: bool = False,
+    system_connection_dir: pathlib.Path = SYSTEM_CONNECTION_DIR,
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
     file_reader: Callable[[pathlib.Path], tuple[str, bool]] = read_text_if_present,
     nmcli_path: str | None = None,
@@ -1016,11 +1103,17 @@ def apply_wifi_controlled(
             profile_create_result="not_attempted",
             profile_replaced=False,
             activation_result="not_attempted",
+            failure_category=classify_activation_failure(
+                activation_result="not_attempted",
+                preflight=preflight,
+                profile_create_result="not_attempted",
+            ),
             ip_acquired=UNKNOWN,
             default_route_present=preflight["default_route_present"],
             rollback=rollback,
             profile_retained=False,
             secrets_file_cleanup=False,
+            profile_source_retained_during_activation=False,
         )
         write_apply_artifacts(out_dir, status, preflight, rollback)
         raise AdapterError("preflight blocked real wifi apply")
@@ -1032,24 +1125,27 @@ def apply_wifi_controlled(
     profile_create_result = "not_attempted"
     profile_replaced = False
     activation_result = "not_attempted"
+    activation_command_result: CommandResult | None = None
+    profile_source_path: pathlib.Path | None = None
     ip_acquired: bool | str = UNKNOWN
     default_route_present: bool | str = preflight["default_route_present"]
 
     try:
-        profile_create_result, profile_replaced = create_or_update_dedicated_profile(
+        profile_create_result, profile_replaced, profile_source_path = create_or_update_dedicated_profile(
             profile_name=profile_name,
             secrets=secrets,
             out_dir=out_dir,
             timeout_sec=timeout_sec,
+            system_connection_dir=system_connection_dir,
             command_runner=command_runner,
         )
         if profile_create_result == "ok":
             up_args = ["nmcli", "--wait", str(timeout_sec), "connection", "up", "id", profile_name]
             assert_apply_command(up_args, profile_name)
-            up_result = command_runner(up_args, timeout_sec + 2)
-            if up_result.status == "ok":
+            activation_command_result = command_runner(up_args, timeout_sec + 2)
+            if activation_command_result.status == "ok":
                 activation_result = "success"
-            elif up_result.status == "timeout":
+            elif activation_command_result.status == "timeout":
                 activation_result = "timeout"
             else:
                 activation_result = "failure"
@@ -1073,6 +1169,11 @@ def apply_wifi_controlled(
         else:
             profile_retained = True
     finally:
+        if profile_source_path is not None:
+            try:
+                profile_source_path.unlink()
+            except FileNotFoundError:
+                pass
         if cleanup_secrets_file and secrets_file:
             try:
                 pathlib.Path(secrets_file).unlink()
@@ -1085,11 +1186,18 @@ def apply_wifi_controlled(
         profile_create_result=profile_create_result,
         profile_replaced=profile_replaced,
         activation_result=activation_result,
+        failure_category=classify_activation_failure(
+            activation_result=activation_result,
+            preflight=preflight,
+            profile_create_result=profile_create_result,
+            activation_command_result=activation_command_result,
+        ),
         ip_acquired=ip_acquired,
         default_route_present=default_route_present,
         rollback=rollback,
         profile_retained=profile_retained,
         secrets_file_cleanup=cleanup_done,
+        profile_source_retained_during_activation=profile_source_path is not None,
     )
     write_apply_artifacts(out_dir, status, preflight, rollback)
     return status
@@ -1247,11 +1355,13 @@ def build_apply_summary(status: dict[str, Any]) -> str:
         f"wifi_profile_replaced: {str(status['wifi_profile_replaced']).lower()}",
         f"wifi_activation_attempted: {str(status['wifi_activation_attempted']).lower()}",
         f"wifi_activation_result: {status['wifi_activation_result']}",
+        f"failure_category: {status['failure_category']}",
         f"ip_acquired: {status['ip_acquired']}",
         f"default_route_present: {status['default_route_present']}",
         f"connectivity_check: {status['connectivity_check']}",
         f"rollback_status: {status['rollback_status']}",
         f"profile_retained: {str(status['profile_retained']).lower()}",
+        f"profile_source_retained_during_activation: {str(status['profile_source_retained_during_activation']).lower()}",
         f"secrets_file_cleanup: {str(status['secrets_file_cleanup']).lower()}",
         "",
         "Guardrails:",
@@ -1309,6 +1419,109 @@ def write_apply_artifacts(
     if rollback is not None:
         atomic_write_private_json(out_dir / ROLLBACK_FILENAME, rollback, out_dir)
     atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_apply_summary(status), out_dir)
+
+
+def read_private_json_if_present(path: pathlib.Path) -> dict[str, Any]:
+    if not path.exists() or path.is_symlink():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def build_diagnosis_summary(diagnosis: dict[str, Any]) -> str:
+    lines = [
+        "Dadooh C9.6.3 wifi failure diagnosis",
+        "",
+        f"schema_version: {diagnosis['schema_version']}",
+        f"generated_at_utc: {diagnosis['generated_at_utc']}",
+        "mode: diagnose-last-failure",
+        f"nm_available: {diagnosis['nm_available']}",
+        f"wifi_device_present: {diagnosis['wifi_device_present']}",
+        f"activation_attempted: {str(diagnosis['activation_attempted']).lower()}",
+        f"activation_result: {diagnosis['activation_result']}",
+        f"failure_category: {diagnosis['failure_category']}",
+        f"rollback_status: {diagnosis['rollback_status']}",
+        f"dedicated_profile_present_final: {diagnosis['dedicated_profile_present_final']}",
+        f"secrets_file_removed: {diagnosis['secrets_file_removed']}",
+        f"network_changed: {str(diagnosis['network_changed']).lower()}",
+        "",
+        "Guardrails:",
+        "real_config_read: false",
+        "real_config_written: false",
+        "writer_called: false",
+        "network_details_published: false",
+        "credential_values_published: false",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def diagnose_last_failure(
+    *,
+    out_dir: pathlib.Path,
+    profile_name: str,
+    timeout_sec: int,
+    secrets_file: str | None = None,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> dict[str, Any]:
+    prepare_out_dir(out_dir)
+    status = read_private_json_if_present(out_dir / STATUS_FILENAME)
+    preflight = read_private_json_if_present(out_dir / PREFLIGHT_FILENAME)
+    rollback = read_private_json_if_present(out_dir / ROLLBACK_FILENAME)
+
+    read_only = collect_read_only_status(timeout_sec=timeout_sec, command_runner=command_runner)
+    profile_present = (
+        dedicated_profile_present(profile_name=profile_name, timeout_sec=timeout_sec, command_runner=command_runner)
+        if read_only.get("nmcli_available") is True
+        else UNKNOWN
+    )
+
+    activation_result = status.get("wifi_activation_result", "unknown")
+    activation_attempted = bool(status.get("wifi_activation_attempted", False))
+    failure_category = status.get("failure_category")
+    if not isinstance(failure_category, str) or not failure_category:
+        failure_category = classify_activation_failure(
+            activation_result=activation_result if isinstance(activation_result, str) else UNKNOWN,
+            preflight=preflight or read_only,
+            profile_create_result="ok" if status.get("wifi_profile_created") else "not_attempted",
+        )
+
+    if secrets_file:
+        try:
+            secrets_cleanup: bool | str = not pathlib.Path(secrets_file).exists()
+        except OSError:
+            secrets_cleanup = UNKNOWN
+    else:
+        secrets_cleanup = status.get("secrets_file_cleanup", UNKNOWN)
+    privacy = public_privacy_flags()
+    privacy["network_changed"] = bool(status.get("network_changed", False))
+    diagnosis = {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at_utc": utc_timestamp(),
+        "mode": "diagnose-last-failure",
+        "nm_available": bool_for_json(read_only.get("network_manager_available", UNKNOWN)),
+        "nmcli_available": bool_for_json(read_only.get("nmcli_available", UNKNOWN)),
+        "wifi_device_present": bool_for_json(read_only.get("wifi_device_present", UNKNOWN)),
+        "activation_attempted": activation_attempted,
+        "activation_result": activation_result if isinstance(activation_result, str) else UNKNOWN,
+        "failure_category": failure_category,
+        "rollback_status": rollback.get("rollback_status", status.get("rollback_status", "unknown")),
+        "dedicated_profile_present_final": bool_for_json(profile_present),
+        "secrets_file_removed": bool_for_json(secrets_cleanup),
+        "network_changed": bool(status.get("network_changed", False)),
+        "real_config_read": False,
+        "real_config_written": False,
+        "writer_called": False,
+        "network_identifiers_published": False,
+        "credential_values_published": False,
+        "raw_logs_published": False,
+        "privacy_flags": privacy,
+    }
+    atomic_write_private_json(out_dir / DIAGNOSE_FILENAME, diagnosis, out_dir)
+    atomic_write_private_text(out_dir / DIAGNOSE_SUMMARY_FILENAME, build_diagnosis_summary(diagnosis), out_dir)
+    return diagnosis
 
 
 def assert_true(condition: bool, message: str) -> None:
@@ -1445,6 +1658,8 @@ def run_self_test() -> None:
     assert_true(detect_default_route_from_text(route_fixture) is True, "default route should be aggregated")
     assert_true(detect_dns_from_text(resolver_fixture) is True, "resolver should be aggregated")
 
+    fake_nm_state = {"profile_loaded": False}
+
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
         if args == ["nmcli", "-t", "-f", "RUNNING", "general"]:
             return CommandResult("ok", "running\n")
@@ -1454,17 +1669,19 @@ def run_self_test() -> None:
             return CommandResult("ok", active_fixture)
         if args == ["ip", "-o", "route", "get", "192.0.2.10"]:
             return CommandResult("ok", "192.0.2.10 dev eth0 src 192.0.2.44 uid 0\n")
-        if args == ["nmcli", "-t", "-f", "NAME", "connection", "show", DEFAULT_PROFILE_NAME]:
-            return CommandResult("failed")
+        if args == ["nmcli", "-t", "-f", "connection.id", "connection", "show", DEFAULT_PROFILE_NAME]:
+            return CommandResult("ok", DEFAULT_PROFILE_NAME + "\n") if fake_nm_state["profile_loaded"] else CommandResult("failed")
         if args == ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show", DEFAULT_PROFILE_NAME]:
             return CommandResult("ok", "IP4.ADDRESS[1]:192.0.2.44/24\n")
         if args == ["nmcli", "connection", "load", args[-1]]:
+            fake_nm_state["profile_loaded"] = True
             return CommandResult("ok", "loaded Fake product wifi\n")
         if args == ["nmcli", "--wait", "1", "connection", "up", "id", DEFAULT_PROFILE_NAME]:
             return CommandResult("ok", "successfully activated fake-token-value\n")
         if args == ["nmcli", "connection", "down", "id", DEFAULT_PROFILE_NAME]:
             return CommandResult("ok", "down fake-uuid-value\n")
         if args == ["nmcli", "connection", "delete", "id", DEFAULT_PROFILE_NAME]:
+            fake_nm_state["profile_loaded"] = False
             return CommandResult("ok", "deleted Fake product wifi\n")
         return CommandResult("failed")
 
@@ -1644,6 +1861,7 @@ def run_self_test() -> None:
             cleanup_secrets_file=False,
             allow_ssh_risk_with_local_console_confirmed=False,
             local_console_confirmed=False,
+            system_connection_dir=root / "system-connections",
             command_runner=fake_runner,
             file_reader=fake_reader,
             nmcli_path="/usr/bin/nmcli",
@@ -1659,6 +1877,47 @@ def run_self_test() -> None:
         apply_text += (apply_out / ROLLBACK_FILENAME).read_text(encoding="utf-8")
         apply_text += (apply_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
         assert_no_forbidden_values(apply_text)
+
+        failure_out = require_tmp_dir(str(root / "failure"))
+        prepare_out_dir(failure_out)
+        failure_status = dict(apply_status)
+        failure_status.update(
+            {
+                "wifi_activation_attempted": True,
+                "wifi_activation_result": "failure",
+                "failure_category": "auth_failed_suspected",
+                "network_changed": True,
+                "secrets_file_cleanup": True,
+            }
+        )
+        atomic_write_private_json(failure_out / STATUS_FILENAME, failure_status, failure_out)
+        atomic_write_private_json(failure_out / PREFLIGHT_FILENAME, apply_status, failure_out)
+        atomic_write_private_json(
+            failure_out / ROLLBACK_FILENAME,
+            build_rollback_status(
+                reason="activation_not_successful",
+                attempted=True,
+                down_result="failed",
+                delete_result="ok",
+            ),
+            failure_out,
+        )
+        diagnosis = diagnose_last_failure(
+            out_dir=failure_out,
+            profile_name=DEFAULT_PROFILE_NAME,
+            timeout_sec=1,
+            command_runner=fake_runner,
+        )
+        assert_true(diagnosis["failure_category"] == "auth_failed_suspected", "diagnosis should use public category")
+        assert_artifact_permissions(failure_out, (STATUS_FILENAME, PREFLIGHT_FILENAME, ROLLBACK_FILENAME, DIAGNOSE_FILENAME, DIAGNOSE_SUMMARY_FILENAME))
+        diagnosis_text = (failure_out / DIAGNOSE_FILENAME).read_text(encoding="utf-8")
+        diagnosis_text += (failure_out / DIAGNOSE_SUMMARY_FILENAME).read_text(encoding="utf-8")
+        assert_no_forbidden_values(diagnosis_text)
+
+        assert_true(
+            classify_failure_from_text("Secrets were required for fake-password") == "auth_failed_suspected",
+            "auth text should classify without publishing raw text",
+        )
     finally:
         os.environ.pop("SSH_CONNECTION", None)
         shutil.rmtree(root, ignore_errors=True)
@@ -1695,6 +1954,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     modes.add_argument("--preflight-apply", action="store_true", help="Run sanitized apply preflight without applying.")
     modes.add_argument("--apply", action="store_true", help="Run controlled real Wi-Fi apply only when all gates are present.")
     modes.add_argument("--rollback-last", action="store_true", help="Rollback only the dedicated C9.6 profile.")
+    modes.add_argument("--diagnose-last-failure", action="store_true", help="Classify the last sanitized activation failure.")
     return parser.parse_args(argv)
 
 
@@ -1743,6 +2003,16 @@ def main(argv: list[str]) -> int:
                 reason="manual_rollback_last",
             )
             print(json.dumps(rollback, indent=2, sort_keys=True))
+            return 0
+
+        if args.diagnose_last_failure:
+            diagnosis = diagnose_last_failure(
+                out_dir=out_dir,
+                profile_name=profile_name,
+                timeout_sec=args.timeout_sec,
+                secrets_file=args.secrets_file,
+            )
+            print(json.dumps(diagnosis, indent=2, sort_keys=True))
             return 0
 
         effective_rollback_after_test = args.rollback_after_test or not args.keep_dedicated_profile

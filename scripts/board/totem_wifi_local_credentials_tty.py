@@ -136,6 +136,11 @@ def write_secrets_file(secrets_dir: pathlib.Path, ssid: str, psk: str) -> pathli
 
 def collect_credentials(out_dir: pathlib.Path, secrets_dir: pathlib.Path) -> pathlib.Path:
     print_header("Teste Wi-Fi de Bancada")
+    print("Confirme que a rede e senha foram testadas")
+    print("em outro dispositivo agora.")
+    print("Use WPA/WPA2 comum, sem portal cativo,")
+    print("com sinal forte perto do totem.")
+    print()
     print("Digite a rede e senha neste totem.")
     print("Nada sera salvo em relatorio.")
     print()

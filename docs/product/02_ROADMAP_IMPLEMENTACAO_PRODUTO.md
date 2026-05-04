@@ -275,6 +275,20 @@ Validacao de bancada: TTY apareceu, apply real foi tentado, ativacao retornou
 `failure`, perfil dedicado ficou ausente ao fim, servico voltou `active/enabled`
 com `NRestarts=0` e playback `playing`.
 
+Atualizacao C9.6.3: 2026-05-04. C9.6.3 adiciona diagnostico sanitizado da
+falha de ativacao e uma unica retentativa controlada com pausa do player. A
+categoria publica da falha anterior e da retentativa ficou
+`nm_activation_failed_generic`; NetworkManager/nmcli e Wi-Fi device estavam
+presentes, apply foi tentado, rollback foi efetivo, o perfil dedicado ficou
+ausente ao fim, secrets-file foi removido, servico voltou `active/enabled` com
+`NRestarts=0` e playback `playing`. Uma correcao estreita posterior no adapter
+passou a validar o perfil dedicado por `connection.id` e manter a origem do
+perfil durante a ativacao; nova retentativa controlada retornou `success`,
+rollback-after-test efetivo, perfil dedicado ausente ao fim, servico
+`active/enabled`, `NRestarts=0`, playback `playing` e SSH acessivel. C9.7 pode
+integrar esse resultado ao Setup Produto Local V0, ainda sem hotspot/portal e
+sem writer/config real.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
