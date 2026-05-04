@@ -245,10 +245,35 @@ Atualizacao C9.6: 2026-05-04. C9.6 evolui o adapter para apply Wi-Fi real
 controlado em bancada, mas totalmente gateado: `--preflight-apply` decide de
 forma sanitizada, `--apply` exige flag real, frase exata, arquivo de credencial
 restrito em `/tmp`, perfil dedicado permitido, timeout e rollback limitado ao
-perfil do produto. O runner remoto usa `root@192.168.1.147`, nao para servico,
+perfil do produto. O runner remoto exige host informado, nao para servico,
 nao altera player/MPV, nao le/escreve config real e nao chama writer. Hotspot,
 portal e integracao ao wizard seguem fora; C9.7 deve consumir o resultado
 controlado no fluxo local depois de apply real validado em bancada.
+
+Atualizacao C9.6.1: 2026-05-04. C9.6.1 adiciona o caminho de apply real com
+console local quando Ethernet nao esta disponivel e o SSH atual depende de
+Wi-Fi. O operador digita credenciais apenas na HDMI/teclado do totem; o
+secrets-file temporario fica em `/tmp` com `0700/0600`; o apply exige nova
+frase textual, `--local-console-confirmed`, perfil dedicado, timeout e
+rollback-after-test. O runner abre o fluxo por `openvt` para continuar mesmo se
+SSH cair. Seguem bloqueados hotspot, portal, writer/config real, player/MPV e
+integracao ao wizard.
+
+Observacao C9.6.1: com o player/MPV exibindo midia, o TTY local pode nao ficar
+visivel sem alterar o player. O runner passa a falhar de forma segura quando
+nao ha credencial local coletada nem status do adapter, evitando falso positivo
+de apply. A proxima rodada deve decidir uma pausa operacional controlada do
+player ou outro caminho local de entrada antes de repetir apply real.
+
+Atualizacao C9.6.2: 2026-05-04. C9.6.2 adiciona um patch estreito de bancada:
+o runner pode pausar temporariamente `kiosky-player.service`, confirmar que
+player/MPV/renderer/setup sairam da HDMI, abrir TTY2 por `openvt`, coletar
+credenciais localmente e executar apply Wi-Fi com rollback-after-test. A pausa
+exige frase textual especifica e o servico e restaurado por `trap`. Config real,
+writer, hotspot, portal, wizard e alteracoes no `kiosky-player` continuam fora.
+Validacao de bancada: TTY apareceu, apply real foi tentado, ativacao retornou
+`failure`, perfil dedicado ficou ausente ao fim, servico voltou `active/enabled`
+com `NRestarts=0` e playback `playing`.
 
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As

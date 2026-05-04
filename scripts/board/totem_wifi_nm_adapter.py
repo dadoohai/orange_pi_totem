@@ -36,6 +36,7 @@ PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 UNKNOWN = "unknown"
 CONFIRM_REAL_WIFI_APPLY = "CONFIRMO APPLY WIFI REAL C9.6 EM BANCADA"
+CONFIRM_REAL_WIFI_APPLY_LOCAL_CONSOLE = "CONFIRMO APPLY WIFI REAL C9.6 COM CONSOLE LOCAL"
 DEFAULT_PROFILE_NAME = "dadooh-c9-6-wifi-test"
 ALLOWED_PROFILE_PREFIXES = ("dadooh-c9-6-", "dadooh-product-wifi-")
 
@@ -629,6 +630,7 @@ def build_preflight_apply(
     out_dir: pathlib.Path,
     timeout_sec: int,
     allow_ssh_risk_with_local_console_confirmed: bool = False,
+    local_console_confirmed: bool = False,
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
 ) -> dict[str, Any]:
     profile_allowed = profile_name_allowed(profile_name)
@@ -649,9 +651,10 @@ def build_preflight_apply(
         abort_reasons.append("wifi_device_not_detected")
     if not profile_allowed:
         abort_reasons.append("profile_not_allowed")
-    if ssh_path_category == "wifi" and not allow_ssh_risk_with_local_console_confirmed:
+    ssh_risk_acknowledged = allow_ssh_risk_with_local_console_confirmed and local_console_confirmed
+    if ssh_path_category == "wifi" and not ssh_risk_acknowledged:
         abort_reasons.append("ssh_path_wifi")
-    if ssh_path_category == UNKNOWN and not allow_ssh_risk_with_local_console_confirmed:
+    if ssh_path_category == UNKNOWN and not ssh_risk_acknowledged:
         abort_reasons.append("ssh_path_unknown")
 
     apply_allowed = not abort_reasons
@@ -673,6 +676,9 @@ def build_preflight_apply(
         "ssh_path_category": ssh_path_category,
         "can_drop_current_session": bool_for_json(can_drop_current_session),
         "allow_ssh_risk_with_local_console_confirmed": allow_ssh_risk_with_local_console_confirmed,
+        "ssh_path_risk_acknowledged": ssh_risk_acknowledged,
+        "local_console_confirmed": local_console_confirmed,
+        "apply_requires_local_recovery": ssh_path_category in {"wifi", UNKNOWN},
         "apply_allowed": apply_allowed,
         "would_touch_only_dedicated_profile": profile_allowed,
         "would_preserve_ethernet": True,
@@ -691,11 +697,18 @@ def validate_apply_gates(
     confirmation: str | None,
     secrets_file: str | None,
     profile_name: str,
+    allow_ssh_risk_with_local_console_confirmed: bool = False,
+    local_console_confirmed: bool = False,
 ) -> str:
     if not enable_real_apply:
         raise AdapterError("real wifi apply requires --enable-real-apply")
-    if confirmation != CONFIRM_REAL_WIFI_APPLY:
+    expected_confirmation = CONFIRM_REAL_WIFI_APPLY_LOCAL_CONSOLE if (
+        allow_ssh_risk_with_local_console_confirmed or local_console_confirmed
+    ) else CONFIRM_REAL_WIFI_APPLY
+    if confirmation != expected_confirmation:
         raise AdapterError("real wifi apply confirmation mismatch")
+    if allow_ssh_risk_with_local_console_confirmed and not local_console_confirmed:
+        raise AdapterError("local console confirmation required")
     if not secrets_file:
         raise AdapterError("secrets-file required")
     return require_allowed_profile_name(profile_name)
@@ -918,6 +931,10 @@ def build_apply_status(
         "generated_at_utc": utc_timestamp(),
         "mode": "apply",
         "preflight_apply_allowed": preflight["apply_allowed"],
+        "ssh_path_category": preflight.get("ssh_path_category", UNKNOWN),
+        "ssh_path_risk_acknowledged": preflight.get("ssh_path_risk_acknowledged", False),
+        "local_console_confirmed": preflight.get("local_console_confirmed", False),
+        "apply_requires_local_recovery": preflight.get("apply_requires_local_recovery", False),
         "wifi_profile_created": profile_create_result == "ok",
         "wifi_profile_replaced": profile_replaced,
         "wifi_activation_attempted": activation_result != "not_attempted",
@@ -955,6 +972,7 @@ def apply_wifi_controlled(
     keep_dedicated_profile: bool,
     cleanup_secrets_file: bool,
     allow_ssh_risk_with_local_console_confirmed: bool,
+    local_console_confirmed: bool = False,
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
     file_reader: Callable[[pathlib.Path], tuple[str, bool]] = read_text_if_present,
     nmcli_path: str | None = None,
@@ -964,6 +982,8 @@ def apply_wifi_controlled(
         confirmation=confirmation,
         secrets_file=secrets_file,
         profile_name=profile_name,
+        allow_ssh_risk_with_local_console_confirmed=allow_ssh_risk_with_local_console_confirmed,
+        local_console_confirmed=local_console_confirmed,
     )
     prepare_out_dir(out_dir)
 
@@ -979,6 +999,7 @@ def apply_wifi_controlled(
         out_dir=out_dir,
         timeout_sec=timeout_sec,
         allow_ssh_risk_with_local_console_confirmed=allow_ssh_risk_with_local_console_confirmed,
+        local_console_confirmed=local_console_confirmed,
         command_runner=command_runner,
     )
     write_preflight_artifacts(out_dir, preflight)
@@ -1187,6 +1208,9 @@ def build_preflight_summary(preflight: dict[str, Any]) -> str:
         f"resolver_configured: {preflight['dns_configured']}",
         f"ssh_path_category: {preflight['ssh_path_category']}",
         f"can_drop_current_session: {preflight['can_drop_current_session']}",
+        f"ssh_path_risk_acknowledged: {str(preflight['ssh_path_risk_acknowledged']).lower()}",
+        f"local_console_confirmed: {str(preflight['local_console_confirmed']).lower()}",
+        f"apply_requires_local_recovery: {str(preflight['apply_requires_local_recovery']).lower()}",
         f"profile_name_allowed: {str(preflight['profile_name_allowed']).lower()}",
         f"dedicated_profile_present: {preflight['dedicated_profile_present']}",
         f"rollback_marker_present: {str(preflight['rollback_marker_present']).lower()}",
@@ -1215,6 +1239,10 @@ def build_apply_summary(status: dict[str, Any]) -> str:
         f"generated_at_utc: {status['generated_at_utc']}",
         "mode: apply",
         f"preflight_apply_allowed: {str(status['preflight_apply_allowed']).lower()}",
+        f"ssh_path_category: {status['ssh_path_category']}",
+        f"ssh_path_risk_acknowledged: {str(status['ssh_path_risk_acknowledged']).lower()}",
+        f"local_console_confirmed: {str(status['local_console_confirmed']).lower()}",
+        f"apply_requires_local_recovery: {str(status['apply_requires_local_recovery']).lower()}",
         f"wifi_profile_created: {str(status['wifi_profile_created']).lower()}",
         f"wifi_profile_replaced: {str(status['wifi_profile_replaced']).lower()}",
         f"wifi_activation_attempted: {str(status['wifi_activation_attempted']).lower()}",
@@ -1342,6 +1370,28 @@ def run_self_test() -> None:
             profile_name="office-wifi",
         ),
         "non-dedicated profile should abort",
+    )
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file="/tmp/x/secrets.json",
+            profile_name=DEFAULT_PROFILE_NAME,
+            allow_ssh_risk_with_local_console_confirmed=True,
+            local_console_confirmed=True,
+        ),
+        "local console apply should require the local console phrase",
+    )
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY_LOCAL_CONSOLE,
+            secrets_file="/tmp/x/secrets.json",
+            profile_name=DEFAULT_PROFILE_NAME,
+            allow_ssh_risk_with_local_console_confirmed=True,
+            local_console_confirmed=False,
+        ),
+        "ssh risk exception should require local console confirmation",
     )
 
     for command in (
@@ -1528,6 +1578,25 @@ def run_self_test() -> None:
         )
         assert_true(blocked_preflight["apply_allowed"] is False, "wifi ssh path should block apply by default")
         assert_true("ssh_path_wifi" in blocked_preflight["abort_reasons"], "wifi ssh path should be explicit")
+        allowed_wifi_preflight = build_preflight_apply(
+            status,
+            profile_name=DEFAULT_PROFILE_NAME,
+            out_dir=preflight_out,
+            timeout_sec=1,
+            allow_ssh_risk_with_local_console_confirmed=True,
+            local_console_confirmed=True,
+            command_runner=wifi_route_runner,
+        )
+        assert_true(allowed_wifi_preflight["apply_allowed"] is True, "local console should allow wifi ssh risk")
+        assert_true(
+            allowed_wifi_preflight["ssh_path_risk_acknowledged"] is True,
+            "ssh risk should be acknowledged",
+        )
+        assert_true(allowed_wifi_preflight["local_console_confirmed"] is True, "local console should be recorded")
+        assert_true(
+            allowed_wifi_preflight["apply_requires_local_recovery"] is True,
+            "wifi ssh apply should require local recovery",
+        )
 
         secrets_parent = root / "secrets"
         secrets_parent.mkdir(mode=PRIVATE_DIR_MODE)
@@ -1574,6 +1643,7 @@ def run_self_test() -> None:
             keep_dedicated_profile=False,
             cleanup_secrets_file=False,
             allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
             command_runner=fake_runner,
             file_reader=fake_reader,
             nmcli_path="/usr/bin/nmcli",
@@ -1613,6 +1683,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Allow apply when SSH path is risky and local console is explicitly confirmed.",
     )
+    parser.add_argument(
+        "--local-console-confirmed",
+        action="store_true",
+        help="Confirm HDMI/local keyboard recovery is available for risky apply.",
+    )
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--self-test", action="store_true", help="Run local self-tests and exit.")
     modes.add_argument("--read-only", action="store_true", help="Collect sanitized aggregate network state.")
@@ -1626,8 +1701,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     try:
-        if args.timeout_sec <= 0 or args.timeout_sec > 30:
-            raise AdapterError("timeout-sec must be between 1 and 30")
+        if args.timeout_sec <= 0 or args.timeout_sec > 120:
+            raise AdapterError("timeout-sec must be between 1 and 120")
         if args.self_test:
             run_self_test()
             print("self-test: ok")
@@ -1654,6 +1729,7 @@ def main(argv: list[str]) -> int:
                 out_dir=out_dir,
                 timeout_sec=args.timeout_sec,
                 allow_ssh_risk_with_local_console_confirmed=args.allow_ssh_risk_with_local_console_confirmed,
+                local_console_confirmed=args.local_console_confirmed,
             )
             write_preflight_artifacts(out_dir, preflight)
             print(json.dumps(preflight, indent=2, sort_keys=True))
@@ -1681,6 +1757,7 @@ def main(argv: list[str]) -> int:
             keep_dedicated_profile=args.keep_dedicated_profile,
             cleanup_secrets_file=args.cleanup_secrets_file,
             allow_ssh_risk_with_local_console_confirmed=args.allow_ssh_risk_with_local_console_confirmed,
+            local_console_confirmed=args.local_console_confirmed,
         )
         print(json.dumps(apply_status, indent=2, sort_keys=True))
         return 0
