@@ -182,6 +182,16 @@ candidata/status/summary `0700`/`0600`, e writer/config real ficam para etapa
 futura. O problema de display/EDID fica registrado como risco e frente separada,
 sem bloquear C9.2. Producao continua bloqueada.
 
+Atualizacao C9.2.1: 2026-05-04. C9.2.1 cria uma simulacao source-only da
+decisao launcher/setup local, sem executar o launcher real, renderer, MPV,
+wizard HDMI, writer, servico ou acoes operacionais. A matriz cobre display
+ausente, config valida, config ausente sem setup, config ausente com setup,
+cancelamento do wizard, candidata pronta e config valida apos escrita futura.
+A regra `renderer xor wizard xor player` e validada em fixtures, com TTY futura
+`tty2`, handoff de candidata em `/tmp` e writer/config real reservados para
+etapa futura. Nao altera launcher, `/data`, `/opt`, rede, display ou
+`kiosky-player`; producao continua bloqueada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
