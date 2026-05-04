@@ -160,6 +160,8 @@ Criterios atendidos:
 - A validacao humana nao registrou uma revisao detalhada de copy/UX; apenas nao
   houve bloqueios reportados.
 - O acesso temporario ainda nao e portal definitivo.
+- O acesso por navegador externo e auxiliar. Ele nao substitui o setup local na
+  propria tela HDMI do totem.
 - Nao ha descoberta automatica, QR code, hotspot ou fluxo offline.
 - Candidata gerada em C9.0 e mock/local e nao deve ser aplicada ao writer.
 
@@ -167,6 +169,6 @@ Criterios atendidos:
 
 Proximo passo recomendado:
 
-- C9.1 - revisar UX do acesso temporario em navegador e definir o contrato
-  minimo para uma futura entrada local segura, ainda sem Wi-Fi real, hotspot ou
-  portal permanente.
+- C9.1 - implementar setup local minimo na propria plaquinha, operavel pela
+  tela HDMI com teclado USB, sem Chromium, desktop, compositor, Wi-Fi real,
+  hotspot, writer ou config real.

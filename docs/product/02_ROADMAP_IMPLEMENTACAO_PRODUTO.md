@@ -123,6 +123,14 @@ hotspot, portal definitivo, NetworkManager, `nmcli`, writer, config real ou
 alteracao do player; `kiosky-player.service` permanece ativo e producao
 continua bloqueada.
 
+Atualizacao C9.1: 2026-05-03. C9.1 corrige a premissa de produto: setup pela
+propria tela HDMI do totem e obrigatorio, enquanto rede local/QR/navegador sao
+caminhos auxiliares. A etapa cria um wizard local controlado por teclado USB,
+sem Chromium, desktop, compositor ou shell livre, que seleciona ambiente
+mock/local, orientacao, revisao e gera candidata apenas em `/tmp` validada por
+C5.1. Nao escreve config real, nao roda writer, nao toca `/data`, `/opt`,
+servico, player, MPV, rede ou Wi-Fi.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -398,6 +406,7 @@ Sequencia incremental refinada:
 - C8.9 - start controlado pos-escrita real, smoke curto;
 - C8.10 - reboot/autoboot controlado com config real;
 - C9.0 - acesso temporario ao setup pela rede local existente;
+- C9.1 - setup local na propria plaquinha;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -1015,6 +1024,7 @@ Documentos:
 - `docs/product/53_C8_9_START_CONTROLADO_POS_ESCRITA_REAL.md`;
 - `docs/product/54_C8_10_REBOOT_AUTOBOOT_CONFIG_REAL.md`;
 - `docs/product/55_C9_0_ACESSO_TEMPORARIO_SETUP_REDE_LOCAL.md`;
+- `docs/product/56_C9_1_SETUP_LOCAL_PROPRIA_PLAQUINHA.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -1050,6 +1060,7 @@ Subfases propostas:
 - C8.9 - start controlado pos-escrita real, smoke curto;
 - C8.10 - reboot/autoboot controlado com config real;
 - C9.0 - acesso temporario ao setup pela rede local existente.
+- C9.1 - setup local na propria plaquinha, tela HDMI + teclado USB.
 
 Validacao:
 
@@ -1069,7 +1080,7 @@ Limites:
 
 ### C9.0 - acesso temporario ao setup pela rede local existente
 
-Status: proxima etapa de desenvolvimento. Nao e servico permanente.
+Status: executado em desenvolvimento. Nao e servico permanente.
 
 Objetivos:
 
@@ -1091,6 +1102,33 @@ Fora de escopo:
 - backups;
 - parada/start de `kiosky-player.service`;
 - alteracao do repo `kiosky-player`;
+- producao.
+
+### C9.1 - setup local na propria plaquinha
+
+Status: implementado em desenvolvimento. Nao e producao.
+
+Objetivos:
+
+- provar o caminho obrigatorio de setup pela propria tela HDMI do totem;
+- operar com teclado USB, sem Chromium, desktop, compositor ou shell livre;
+- selecionar ambiente mock/local;
+- selecionar orientacao da tela;
+- revisar antes de gerar candidata;
+- gerar candidata apenas em `/tmp`;
+- validar C5.1 `allow-mock`;
+- confirmar falha esperada de C5.1 `real-dry-run` por placeholders;
+- preservar status/summary sanitizados.
+
+Fora de escopo:
+
+- writer/config real;
+- `/data/config/config.json`;
+- backups;
+- parada/start de `kiosky-player.service`;
+- player/MPV;
+- NetworkManager, `nmcli`, Wi-Fi real, hotspot ou QR;
+- backend;
 - producao.
 
 ### C9 - Wi-Fi/portal/hotspot
