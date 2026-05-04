@@ -314,8 +314,22 @@ presente, candidata gerada, C5.1 `allow-mock` passando, `real-dry-run` falhando
 como esperado, servico final `active/enabled`, `NRestarts=0`,
 `public_state=player_running`, playback `playing`, player/MPV ativos e
 renderer/setup ausentes. Hotspot, portal, writer, config real, reboot e
-alteracao do `kiosky-player` seguem fora. Proxima frente: C10 para
-writer/config real controlado.
+alteracao do `kiosky-player` seguem fora.
+
+Atualizacao C9.9: 2026-05-04. C9.9 adiciona um wizard visual local em
+`scripts/board/totem_setup_visual_wizard.py`, com telas SVG privadas em `/tmp`
+e exibicao via MPV/DRM, sem desktop, Chromium, Xorg, Wayland ou compositor. O
+fluxo visual cobre Boas-vindas, Conexao, Ambiente, Tela, Revisao e Concluir,
+usa teclado local e reaproveita o Wi-Fi persistente dedicado C9.8. O runner
+`scripts/remote/run_c9_9_visual_wizard.sh` prepara preview, cancelamento e
+conclusao usando Wi-Fi ja configurado, com pausa/restauracao controlada do
+player quando precisa tomar a HDMI. Validacao em bancada passou com preview
+visual, cancelamento, candidata gerada, C5.1 `allow-mock` passando,
+`real-dry-run` falhando como esperado, servico final `active/enabled`,
+`NRestarts=0`, `public_state=player_running`, playback `playing`, player/MPV
+ativos e renderer/setup ausentes. Hotspot, portal, writer, config real,
+backend/login, reboot e alteracao do `kiosky-player` continuam fora. Proxima
+frente: C10 para writer/config real controlado.
 
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
