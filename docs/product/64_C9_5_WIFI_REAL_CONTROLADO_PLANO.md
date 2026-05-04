@@ -1,119 +1,125 @@
 # C9.5 - Wi-Fi real controlado com NetworkManager adapter estreito
 
-Status: plano curto. Nao implementa apply real nesta etapa.
+Status: implementado somente `--read-only` e `--plan`. `--apply` real continua
+bloqueado e retorna erro claro em C9.5.
 
 Data: 2026-05-04
 
 ## Objetivo
 
 Preparar o proximo corte para configurar Wi-Fi real de forma controlada,
-preservando Ethernet e mantendo diagnostico/evidencia sanitizados.
+preservando Ethernet e mantendo diagnostico/evidencia sanitizados. C9.5 mede
+estado agregado e gera plano; nao aplica rede real.
 
 C9.5 nao implementa hotspot, portal, login, backend, writer, config real,
 factory reset, reboot ou producao.
 
-## Escopo
+## Implementado
 
-Criar um adapter estreito para NetworkManager com tres modos:
+- `scripts/board/totem_wifi_nm_adapter.py`;
+- `scripts/remote/run_c9_5_wifi_readonly_plan.sh`;
+- artefatos sanitizados em `/tmp/dadooh-c9-5-wifi-readonly`;
+- diretorios `0700` e arquivos `0600`;
+- self-test com fixtures contendo valores fake sensiveis para provar que a
+  saida publica nao copia valores brutos;
+- bloqueio de comandos modificadores e `--apply` com `apply disabled in C9.5`.
+
+Modos do adapter:
 
 ```text
+--self-test
 --read-only
 --plan
 --apply
 ```
 
-`--apply` deve exigir confirmacao humana textual explicita e deve ficar fora
-da rodada inicial ate revisao do plano.
+`--apply` existe apenas como bloqueio defensivo. Ele nao recebe credenciais,
+nao chama `nmcli` e nao altera rede.
 
-## Regras obrigatorias
+## O que `--read-only` mede
 
-- ler estado de rede apenas de forma agregada em `--read-only`;
-- nao publicar SSID, senha, IP, MAC, gateway, DNS, BSSID, hostname ou nome de
-  conexao NetworkManager;
-- preservar Ethernet como canal de recuperacao;
-- usar perfil Wi-Fi dedicado do produto;
-- nao apagar conexao antiga antes de a nova funcionar;
-- aplicar timeout curto e rollback;
-- nao logar senha;
-- nao passar senha por argumento de processo;
-- nao escrever senha em evidencia;
-- nunca chamar `nmcli connection up/down/delete/modify` sem confirmacao humana
-  explicita no modo `--apply`;
-- nao iniciar hotspot;
-- nao criar portal;
-- nao alterar `/data/config/config.json`;
-- nao ler `/data/config/config.json`;
-- nao chamar writer;
-- nao reiniciar player como parte do Wi-Fi;
+Saida publica permitida, sempre agregada:
+
+- NetworkManager disponivel: `true/false/unknown`;
+- `nmcli` disponivel: `true/false`;
+- dispositivo Wi-Fi presente: `true/false/unknown`;
+- Ethernet ativa: `true/false/unknown`;
+- Wi-Fi ativo: `true/false/unknown`;
+- rota default presente: `true/false/unknown`, sem gateway;
+- DNS configurado: `true/false/unknown`, sem servidor;
+- conectividade: `not_checked`.
+
+Nao ha chamada externa de conectividade por padrao.
+
+## O que `--plan` prepara
+
+O plano descreve sem executar:
+
+- preservar Ethernet se ativa;
+- criar perfil Wi-Fi dedicado do produto em rodada futura;
+- nunca apagar conexao antiga antes de sucesso;
+- testar nova conexao com timeout;
+- rollback para estado anterior se falhar;
+- nao logar credenciais;
+- coletar evidencia sanitizada;
+- exigir confirmacao humana explicita antes de qualquer apply;
+- manter writer, config real, player e MPV fora do fluxo de rede;
 - nao rebootar.
 
-## Estado read-only permitido
-
-Saida publica permitida:
+Valores privados ficam como:
 
 ```text
-network_device_present: true/false/unknown
-ethernet_connected: true/false/unknown
-wifi_device_present: true/false/unknown
-wifi_connected: true/false/unknown
-default_route_type: ethernet/wifi/unknown
-connectivity: ok/unknown/not_checked
+target_network: redacted
+credentials_source: not_collected_in_c9_5
+apply_enabled: false
 ```
 
-Saida proibida:
+## Dados proibidos
 
-```text
-SSID
-senha
-IP
-MAC
-gateway
-DNS
-BSSID
-hostname
-nome de conexao
-cmdline bruta
-logs brutos
+Status, summary, runner e evidencia nao devem publicar valores reais de:
+
+- nome de rede;
+- senha;
+- IP;
+- MAC/BSSID;
+- gateway;
+- DNS;
+- hostname;
+- nome real de conexao NetworkManager;
+- logs brutos;
+- cmdline sensivel.
+
+## Validacao
+
+Local:
+
+```bash
+bash -n scripts/remote/run_c9_5_wifi_readonly_plan.sh
+python3 scripts/board/totem_wifi_nm_adapter.py --self-test
+python3 scripts/board/totem_wifi_nm_adapter.py --read-only
+python3 scripts/board/totem_wifi_nm_adapter.py --plan
+python3 scripts/board/totem_wifi_nm_adapter.py --apply
 ```
 
-## Plano de apply futuro
+Remoto:
 
-O modo `--apply` futuro deve:
+```bash
+scripts/remote/run_c9_5_wifi_readonly_plan.sh root@192.168.18.115 --prepare-only
+scripts/remote/run_c9_5_wifi_readonly_plan.sh root@192.168.18.115 --read-only
+scripts/remote/run_c9_5_wifi_readonly_plan.sh root@192.168.18.115 --plan
+```
 
-- receber credencial por canal humano/local que nao passe por Codex/chat/log;
-- criar ou atualizar somente o perfil dedicado do produto;
-- testar conexao com timeout;
-- preservar Ethernet ativa;
-- se falhar, reverter para o estado anterior sem apagar perfis existentes;
-- gerar evidencia sanitizada em `/tmp`;
-- terminar com diagnostico read-only final;
-- exigir confirmacao humana textual antes de qualquer comando modificador.
+Resultado esperado:
 
-## Evidencia esperada
-
-Somente artefatos sanitizados sob `/tmp`, com:
-
-- modo executado;
-- comandos permitidos por categoria, sem cmdline sensivel;
-- estado agregado antes/depois;
-- timeout/rollback executado ou nao;
-- Ethernet preservada;
-- senha publicada: false;
-- SSID publicado: false;
-- IP/MAC/DNS publicados: false;
-- config real lida/escrita: false;
-- writer chamado: false.
-
-## Gates antes de implementar
-
-- revisar comandos exatos do adapter;
-- revisar forma segura de entrada da senha fora do Codex;
-- definir nome do perfil dedicado do produto;
-- definir rollback e timeout;
-- validar `--read-only` em placa antes de qualquer `--apply`;
-- confirmar que C9.4.1 permanece recuperavel com player final ativo.
+- self-tests passam;
+- `--read-only` e `--plan` geram artefatos sanitizados em `/tmp`;
+- `--apply` falha com `apply disabled in C9.5`;
+- nenhum comando modificador de rede e chamado;
+- `/data/config/config.json`, writer, player, MPV, hotspot, portal e reboot
+  continuam fora de escopo.
 
 ## Proximo passo
 
-Implementar apenas `--read-only` e `--plan` primeiro. `--apply` real fica para
-rodada separada com autorizacao humana explicita.
+C9.6 deve implementar apply real controlado em bancada, somente com
+confirmacao humana explicita, credencial fornecida por canal temporario seguro,
+Ethernet preservada, perfil dedicado, timeout, teste de conexao e rollback.

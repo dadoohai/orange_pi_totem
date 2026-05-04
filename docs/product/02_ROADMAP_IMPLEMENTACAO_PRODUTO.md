@@ -231,6 +231,16 @@ confiavel. C9.5 foi aberto apenas como plano de Wi-Fi real controlado com
 adapter NetworkManager estreito; `--apply` real, hotspot, portal, backend,
 writer e config real seguem bloqueados.
 
+Atualizacao C9.5 read-only/plan: 2026-05-04. C9.5 implementa o adapter
+`totem_wifi_nm_adapter.py` somente com `--read-only`, `--plan` e `--self-test`.
+A leitura de NetworkManager e agregada/sanitizada, usa timeout curto, tolera
+ausencia de `nmcli` e grava artefatos apenas em `/tmp`; `--apply` aborta com
+`apply disabled in C9.5`. Foi criado runner remoto que copia o adapter para
+`/tmp` e nao para servico, nao altera rede, nao coleta senha, nao le/escreve
+config real, nao chama writer e nao toca player/MPV. Apply real fica para C9.6,
+com confirmacao humana explicita, Ethernet preservada, perfil dedicado,
+timeout, teste de conexao e rollback; hotspot/portal continuam fora.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

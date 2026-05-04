@@ -413,11 +413,32 @@ setup_local_cancelled() {
   [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/setup-cancelled.json" ]
 }
 
+prepare_setup_local_outcome_dir() {
+  case "$TOTEM_SETUP_LOCAL_OUT_DIR" in
+    /tmp/*)
+      case "$TOTEM_SETUP_LOCAL_CANDIDATE_FILE" in
+        ''|*/*)
+          ;;
+        *)
+          rm -f "$TOTEM_SETUP_LOCAL_OUT_DIR/$TOTEM_SETUP_LOCAL_CANDIDATE_FILE" 2>/dev/null || true
+          ;;
+      esac
+      rm -f \
+        "$TOTEM_SETUP_LOCAL_OUT_DIR/candidate-config.json" \
+        "$TOTEM_SETUP_LOCAL_OUT_DIR/setup-cancelled.json" \
+        "$TOTEM_SETUP_LOCAL_OUT_DIR/setup-status.json" \
+        "$TOTEM_SETUP_LOCAL_OUT_DIR/summary.txt" \
+        2>/dev/null || true
+      ;;
+  esac
+}
+
 run_setup_local_once() {
   local rc=0
 
   SETUP_LOCAL_RUN_COUNT=$((SETUP_LOCAL_RUN_COUNT + 1))
   consume_setup_local_trigger
+  prepare_setup_local_outcome_dir
 
   write_status "setup_local_requested" "true"
   log "setup_local_requested tty=$TOTEM_SETUP_LOCAL_TTY"
