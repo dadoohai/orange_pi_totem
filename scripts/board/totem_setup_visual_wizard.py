@@ -46,6 +46,8 @@ WIFI_APPLY_DIRNAME = "wifi-persistent"
 WIFI_TIMEOUT_SEC = 45
 WIFI_PERSISTENT_PROFILE_NAME = wifi_adapter.DEFAULT_PERSISTENT_PROFILE_NAME
 ADAPTER_SCRIPT = pathlib.Path(__file__).with_name("totem_wifi_nm_adapter.py")
+PRESENT_SETTLE_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PRESENT_SETTLE_SEC", "0.18"))
+RESTART_MPV_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_RESTART_MPV_PER_SCREEN", "1") != "0"
 
 CANVAS_WIDTH = 1280
 CANVAS_HEIGHT = 720
@@ -330,6 +332,7 @@ class VisualDisplay:
         self.enabled = enabled
         self.process: subprocess.Popen[bytes] | None = None
         self.sequence = 0
+        self.request_id = 0
         prepare_private_dir(self.screens_dir)
 
     def write_svg(self, screen_id: str, svg: str) -> pathlib.Path:
@@ -381,28 +384,75 @@ class VisualDisplay:
         if self.process.poll() is not None:
             raise VisualWizardError("renderer visual encerrou antes da tela")
 
-    def send_command(self, command: list[Any]) -> bool:
+    def ipc_request(self, command: list[Any], *, timeout_sec: float = 1.0) -> dict[str, Any] | None:
         if not self.enabled or self.process is None or self.process.poll() is not None:
-            return False
-        payload = json.dumps({"command": command}).encode("utf-8") + b"\n"
+            return None
+        self.request_id += 1
+        request_id = self.request_id
+        payload = json.dumps({"command": command, "request_id": request_id}).encode("utf-8") + b"\n"
+        deadline = time.monotonic() + timeout_sec
+        buffer = b""
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-                client.settimeout(1.0)
+                client.settimeout(timeout_sec)
                 client.connect(str(self.ipc_path))
                 client.sendall(payload)
-            return True
+                while time.monotonic() < deadline:
+                    try:
+                        chunk = client.recv(4096)
+                    except socket.timeout:
+                        return None
+                    if not chunk:
+                        return None
+                    buffer += chunk
+                    while b"\n" in buffer:
+                        raw_line, buffer = buffer.split(b"\n", 1)
+                        if not raw_line.strip():
+                            continue
+                        try:
+                            response = json.loads(raw_line.decode("utf-8", "ignore"))
+                        except json.JSONDecodeError:
+                            continue
+                        if response.get("request_id") == request_id:
+                            return response if isinstance(response, dict) else None
         except OSError:
+            return None
+        return None
+
+    def send_command(self, command: list[Any]) -> bool:
+        response = self.ipc_request(command, timeout_sec=1.0)
+        return bool(response and response.get("error") == "success")
+
+    def wait_for_loaded_path(self, path: pathlib.Path) -> bool:
+        if not self.enabled or self.process is None or self.process.poll() is not None:
             return False
+        expected = str(path)
+        deadline = time.monotonic() + 1.5
+        while time.monotonic() < deadline:
+            response = self.ipc_request(["get_property", "path"], timeout_sec=0.5)
+            if response and response.get("error") == "success" and response.get("data") == expected:
+                return True
+            time.sleep(0.03)
+        return False
 
     def show(self, screen_id: str, svg: str) -> pathlib.Path:
         path = self.write_svg(screen_id, svg)
         if not self.enabled:
+            return path
+        if RESTART_MPV_PER_SCREEN:
+            self.stop()
+            self.ensure_started(path)
+            if PRESENT_SETTLE_SEC > 0:
+                time.sleep(PRESENT_SETTLE_SEC)
             return path
         if self.process is None:
             self.ensure_started(path)
         elif not self.send_command(["loadfile", str(path), "replace"]):
             self.stop()
             self.ensure_started(path)
+        self.wait_for_loaded_path(path)
+        if PRESENT_SETTLE_SEC > 0:
+            time.sleep(PRESENT_SETTLE_SEC)
         return path
 
     def stop(self) -> None:
