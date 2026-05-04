@@ -18,7 +18,8 @@ TOTEM_SETUP_LOCAL_ENABLED="${TOTEM_SETUP_LOCAL_ENABLED:-0}"
 TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING="${TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING:-0}"
 TOTEM_SETUP_LOCAL_TRIGGER_FILE="${TOTEM_SETUP_LOCAL_TRIGGER_FILE:-/tmp/dadooh-setup-local.request}"
 TOTEM_SETUP_LOCAL_WIZARD="${TOTEM_SETUP_LOCAL_WIZARD:-/opt/totem/bin/totem_setup_local_wizard.py}"
-TOTEM_SETUP_LOCAL_OUT_DIR="${TOTEM_SETUP_LOCAL_OUT_DIR:-/tmp/dadooh-c9-3-local-wizard}"
+TOTEM_SETUP_LOCAL_OUT_DIR="${TOTEM_SETUP_LOCAL_OUT_DIR:-/tmp/dadooh-c9-4-setup-product-v0}"
+TOTEM_SETUP_LOCAL_CANDIDATE_FILE="${TOTEM_SETUP_LOCAL_CANDIDATE_FILE:-config.candidate.json}"
 TOTEM_SETUP_LOCAL_TTY="${TOTEM_SETUP_LOCAL_TTY:-2}"
 TOTEM_SETUP_LOCAL_MAX_RUNS="${TOTEM_SETUP_LOCAL_MAX_RUNS:-1}"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
@@ -393,6 +394,21 @@ consume_setup_local_trigger() {
   esac
 }
 
+setup_local_candidate_ready() {
+  case "$TOTEM_SETUP_LOCAL_CANDIDATE_FILE" in
+    ''|*/*)
+      return 1
+      ;;
+  esac
+
+  if [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/$TOTEM_SETUP_LOCAL_CANDIDATE_FILE" ]; then
+    return 0
+  fi
+
+  # Compatibility with the experimental C9.3 wizard artifact name.
+  [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/candidate-config.json" ]
+}
+
 run_setup_local_once() {
   local rc=0
 
@@ -435,7 +451,7 @@ run_setup_local_once() {
       --out-dir "$TOTEM_SETUP_LOCAL_OUT_DIR"
   rc="$?"
 
-  if [ "$rc" -eq 0 ] && [ -f "$TOTEM_SETUP_LOCAL_OUT_DIR/candidate-config.json" ]; then
+  if [ "$rc" -eq 0 ] && setup_local_candidate_ready; then
     log "setup_candidate_ready"
     write_status "setup_candidate_ready" "true" "0"
     return 0

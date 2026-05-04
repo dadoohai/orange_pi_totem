@@ -208,6 +208,19 @@ MPV=1 e renderer=0, com status publico final `player_running`. Nao altera
 config real, `/data/config`, writer, rede, display/EDID, flags MPV ou
 `kiosky-player`; producao continua bloqueada.
 
+Atualizacao C9.4: 2026-05-04. C9.4 evolui o wizard local para Setup Produto
+Local V0, ainda em TTY/curses e atras das flags C9.3. O fluxo passa a exibir
+cabecalho Dadooh, titulo "Configuracao do Totem" e passos Conexao, Ambiente,
+Tela, Revisao e Concluir. A etapa de conexao e somente read-only agregada ou
+mock; ambiente recebe `environment_id` manual com validacao C5.1; tela grava
+apenas `rotation_deg` na candidata. A candidata C9.4 fica em
+`/tmp/dadooh-c9-4-setup-product-v0/config.candidate.json`, passa C5.1
+`allow-mock` e falha em `real-dry-run` como esperado por placeholders.
+NetworkManager, writer, config real, player, MPV principal, renderer real,
+display real e repo `kiosky-player` nao sao alterados; producao continua
+bloqueada. Proxima frente recomendada: C9.5 Wi-Fi real controlado com adapter
+estreito, rollback, Ethernet preservada, timeout e diagnostico sanitizado.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -486,6 +499,11 @@ Sequencia incremental refinada:
 - C9.1 - setup local na propria plaquinha;
 - C9.1.1 - validacao humana do wizard local HDMI;
 - C9.1.2 - diagnostico de proporcao visual pos-restauracao;
+- C9.1.3 - contrato visual curto de display/orientacao;
+- C9.2 - contrato de chamada do setup local pelo launcher;
+- C9.2.1 - simulacao da decisao launcher/setup local;
+- C9.3 - integracao experimental launcher/wizard em `config_missing`;
+- C9.4 - Setup Produto Local V0;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
