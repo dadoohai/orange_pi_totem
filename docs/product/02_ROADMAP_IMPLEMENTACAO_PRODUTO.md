@@ -241,6 +241,15 @@ config real, nao chama writer e nao toca player/MPV. Apply real fica para C9.6,
 com confirmacao humana explicita, Ethernet preservada, perfil dedicado,
 timeout, teste de conexao e rollback; hotspot/portal continuam fora.
 
+Atualizacao C9.6: 2026-05-04. C9.6 evolui o adapter para apply Wi-Fi real
+controlado em bancada, mas totalmente gateado: `--preflight-apply` decide de
+forma sanitizada, `--apply` exige flag real, frase exata, arquivo de credencial
+restrito em `/tmp`, perfil dedicado permitido, timeout e rollback limitado ao
+perfil do produto. O runner remoto usa `root@192.168.1.147`, nao para servico,
+nao altera player/MPV, nao le/escreve config real e nao chama writer. Hotspot,
+portal e integracao ao wizard seguem fora; C9.7 deve consumir o resultado
+controlado no fluxo local depois de apply real validado em bancada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

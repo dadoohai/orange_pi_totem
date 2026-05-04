@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""C9.5 read-only NetworkManager adapter and future apply plan.
+"""C9.6 controlled NetworkManager Wi-Fi adapter.
 
-This adapter intentionally implements only --read-only and --plan. It never
-collects Wi-Fi credentials, never changes NetworkManager state, and writes only
-sanitized artifacts under /tmp.
+Read-only and plan modes remain non-invasive. Real apply is available only with
+explicit gates, a restricted temporary secrets file, a dedicated product
+profile, timeout, rollback, and sanitized artifacts under /tmp.
 """
 
 from __future__ import annotations
@@ -17,27 +17,49 @@ import stat
 import subprocess
 import sys
 import tempfile
+import uuid
 from typing import Any, Callable
 
 
 sys.dont_write_bytecode = True
 
 
-SCHEMA_VERSION = "dadooh-c9.5-wifi-readonly-plan.v1"
-DEFAULT_OUT_DIR = "/tmp/dadooh-c9-5-wifi-readonly"
+SCHEMA_VERSION = "dadooh-c9.6-wifi-controlled-apply.v1"
+DEFAULT_OUT_DIR = "/tmp/dadooh-c9-6-wifi-apply"
 STATUS_FILENAME = "status.json"
 PLAN_FILENAME = "plan.json"
 SUMMARY_FILENAME = "summary.txt"
+PREFLIGHT_FILENAME = "preflight.json"
+ROLLBACK_FILENAME = "rollback.json"
 TMP_ROOT = pathlib.Path("/tmp").resolve()
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 UNKNOWN = "unknown"
+CONFIRM_REAL_WIFI_APPLY = "CONFIRMO APPLY WIFI REAL C9.6 EM BANCADA"
+DEFAULT_PROFILE_NAME = "dadooh-c9-6-wifi-test"
+ALLOWED_PROFILE_PREFIXES = ("dadooh-c9-6-", "dadooh-product-wifi-")
 
 ALLOWED_READ_ONLY_COMMANDS = {
     ("nmcli", "-t", "-f", "RUNNING", "general"),
     ("nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"),
     ("nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"),
 }
+
+SENSITIVE_MARKERS = (
+    "FAKE-STORE-WIFI",
+    "fake-password",
+    "fake-psk-value",
+    "192.0.2.44",
+    "192.0.2.1",
+    "203.0.113.53",
+    "aa:bb:cc:dd:ee:ff",
+    "11:22:33:44:55:66",
+    "fake-hostname",
+    "Fake product wifi",
+    "fake-uuid-value",
+    "fake-token-value",
+    "fake-api-key",
+)
 
 
 class AdapterError(RuntimeError):
@@ -165,6 +187,99 @@ def run_read_only_command(args: list[str], timeout_sec: int) -> CommandResult:
     if completed.returncode == 0:
         return CommandResult("ok", completed.stdout, completed.returncode)
     return CommandResult("failed", returncode=completed.returncode)
+
+
+def run_internal_command(args: list[str], timeout_sec: int) -> CommandResult:
+    try:
+        completed = subprocess.run(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout_sec,
+            check=False,
+        )
+    except FileNotFoundError:
+        return CommandResult("unavailable")
+    except subprocess.TimeoutExpired:
+        return CommandResult("timeout")
+    except OSError:
+        return CommandResult("failed")
+
+    if completed.returncode == 0:
+        return CommandResult("ok", completed.stdout, completed.returncode)
+    return CommandResult("failed", returncode=completed.returncode)
+
+
+def profile_name_allowed(profile_name: str) -> bool:
+    if not (1 <= len(profile_name) <= 80):
+        return False
+    if not profile_name.startswith(ALLOWED_PROFILE_PREFIXES):
+        return False
+    return all(char.isalnum() or char in "._:-" for char in profile_name)
+
+
+def require_allowed_profile_name(profile_name: str) -> str:
+    cleaned = profile_name.strip()
+    if not profile_name_allowed(cleaned):
+        raise AdapterError("profile-name not allowed")
+    return cleaned
+
+
+def deterministic_profile_uuid(profile_name: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"dadooh-wifi-profile:{profile_name}"))
+
+
+def command_targets_dedicated_profile(args: list[str], profile_name: str) -> bool:
+    return profile_name in args and profile_name_allowed(profile_name)
+
+
+def assert_apply_command(args: list[str], profile_name: str, keyfile_path: pathlib.Path | None = None) -> None:
+    if not args:
+        raise AdapterError("empty command blocked")
+    lowered = [part.lower() for part in args]
+
+    if lowered[:3] == ["nmcli", "connection", "load"]:
+        if keyfile_path is None or args != ["nmcli", "connection", "load", str(keyfile_path)]:
+            raise AdapterError("apply command blocked")
+        return
+
+    if lowered[:4] == ["nmcli", "connection", "delete", "id"]:
+        if args == ["nmcli", "connection", "delete", "id", profile_name]:
+            return
+        raise AdapterError("apply command blocked")
+
+    if lowered[:4] == ["nmcli", "connection", "down", "id"]:
+        if args == ["nmcli", "connection", "down", "id", profile_name]:
+            return
+        raise AdapterError("apply command blocked")
+
+    if len(args) >= 7 and lowered[:2] == ["nmcli", "--wait"] and lowered[3:6] == ["connection", "up", "id"]:
+        if args[6] == profile_name:
+            return
+        raise AdapterError("apply command blocked")
+
+    if lowered[:5] == ["nmcli", "-t", "-f", "name", "connection"]:
+        if args == ["nmcli", "-t", "-f", "NAME", "connection", "show", profile_name]:
+            return
+        raise AdapterError("apply command blocked")
+
+    if lowered[:5] == ["nmcli", "-t", "-f", "ip4.address", "connection"]:
+        if args == ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show", profile_name]:
+            return
+        raise AdapterError("apply command blocked")
+
+    raise AdapterError("apply command blocked")
+
+
+def run_apply_command(
+    args: list[str],
+    timeout_sec: int,
+    profile_name: str,
+    keyfile_path: pathlib.Path | None = None,
+) -> CommandResult:
+    assert_apply_command(args, profile_name, keyfile_path)
+    return run_internal_command(args, timeout_sec)
 
 
 def split_nmcli_terse(line: str) -> list[str]:
@@ -454,6 +569,511 @@ def collect_read_only_status(
     }
 
 
+def parse_route_device(stdout: str) -> str:
+    parts = stdout.replace("\n", " ").split()
+    for index, item in enumerate(parts):
+        if item == "dev" and index + 1 < len(parts):
+            return parts[index + 1]
+    return ""
+
+
+def classify_device_category(device_name: str) -> str:
+    lowered = device_name.strip().lower()
+    if lowered.startswith(("eth", "en")):
+        return "ethernet"
+    if lowered.startswith(("wl", "wlan")):
+        return "wifi"
+    return UNKNOWN
+
+
+def safe_route_target(value: str) -> bool:
+    return bool(value) and all(char.isalnum() or char in ".:%" for char in value)
+
+
+def detect_ssh_path_category(
+    *,
+    timeout_sec: int,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> str:
+    raw = os.environ.get("SSH_CONNECTION", "")
+    parts = raw.split()
+    if len(parts) < 4 or not safe_route_target(parts[0]):
+        return UNKNOWN
+    result = command_runner(["ip", "-o", "route", "get", parts[0]], timeout_sec)
+    if result.status != "ok":
+        return UNKNOWN
+    return classify_device_category(parse_route_device(result.stdout))
+
+
+def dedicated_profile_present(
+    *,
+    profile_name: str,
+    timeout_sec: int,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> bool | str:
+    profile_name = require_allowed_profile_name(profile_name)
+    args = ["nmcli", "-t", "-f", "NAME", "connection", "show", profile_name]
+    assert_apply_command(args, profile_name)
+    result = command_runner(args, timeout_sec)
+    if result.status == "ok":
+        return True
+    if result.status == "failed":
+        return False
+    return UNKNOWN
+
+
+def build_preflight_apply(
+    status: dict[str, Any],
+    *,
+    profile_name: str,
+    out_dir: pathlib.Path,
+    timeout_sec: int,
+    allow_ssh_risk_with_local_console_confirmed: bool = False,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> dict[str, Any]:
+    profile_allowed = profile_name_allowed(profile_name)
+    ssh_path_category = detect_ssh_path_category(timeout_sec=timeout_sec, command_runner=command_runner)
+    pending_profile = (
+        dedicated_profile_present(profile_name=profile_name, timeout_sec=timeout_sec, command_runner=command_runner)
+        if profile_allowed and status["nmcli_available"]
+        else UNKNOWN
+    )
+    rollback_marker_present = (out_dir / ROLLBACK_FILENAME).exists()
+    abort_reasons: list[str] = []
+
+    if status["nmcli_available"] is not True:
+        abort_reasons.append("nmcli_unavailable")
+    if status["network_manager_available"] is not True:
+        abort_reasons.append("network_manager_unavailable")
+    if status["wifi_device_present"] is not True:
+        abort_reasons.append("wifi_device_not_detected")
+    if not profile_allowed:
+        abort_reasons.append("profile_not_allowed")
+    if ssh_path_category == "wifi" and not allow_ssh_risk_with_local_console_confirmed:
+        abort_reasons.append("ssh_path_wifi")
+    if ssh_path_category == UNKNOWN and not allow_ssh_risk_with_local_console_confirmed:
+        abort_reasons.append("ssh_path_unknown")
+
+    apply_allowed = not abort_reasons
+    can_drop_current_session: bool | str
+    if ssh_path_category == "wifi":
+        can_drop_current_session = True
+    elif ssh_path_category == "ethernet":
+        can_drop_current_session = False
+    else:
+        can_drop_current_session = UNKNOWN
+
+    return {
+        **status,
+        "generated_at_utc": utc_timestamp(),
+        "mode": "preflight-apply",
+        "profile_name_allowed": profile_allowed,
+        "dedicated_profile_present": bool_for_json(pending_profile),
+        "rollback_marker_present": rollback_marker_present,
+        "ssh_path_category": ssh_path_category,
+        "can_drop_current_session": bool_for_json(can_drop_current_session),
+        "allow_ssh_risk_with_local_console_confirmed": allow_ssh_risk_with_local_console_confirmed,
+        "apply_allowed": apply_allowed,
+        "would_touch_only_dedicated_profile": profile_allowed,
+        "would_preserve_ethernet": True,
+        "would_read_real_config": False,
+        "would_write_real_config": False,
+        "would_call_writer": False,
+        "would_change_player": False,
+        "would_change_mpv": False,
+        "abort_reasons": abort_reasons,
+    }
+
+
+def validate_apply_gates(
+    *,
+    enable_real_apply: bool,
+    confirmation: str | None,
+    secrets_file: str | None,
+    profile_name: str,
+) -> str:
+    if not enable_real_apply:
+        raise AdapterError("real wifi apply requires --enable-real-apply")
+    if confirmation != CONFIRM_REAL_WIFI_APPLY:
+        raise AdapterError("real wifi apply confirmation mismatch")
+    if not secrets_file:
+        raise AdapterError("secrets-file required")
+    return require_allowed_profile_name(profile_name)
+
+
+def validate_secret_text(value: str, *, field: str) -> str:
+    if not isinstance(value, str):
+        raise AdapterError("secrets-file invalid")
+    cleaned = value.strip()
+    if not cleaned or len(cleaned) > 256:
+        raise AdapterError("secrets-file invalid")
+    if any(char in cleaned for char in ("\x00", "\n", "\r")):
+        raise AdapterError("secrets-file invalid")
+    if field == "psk" and len(cleaned) < 8:
+        raise AdapterError("secrets-file invalid")
+    return cleaned
+
+
+def load_wifi_secrets(secrets_file: str) -> dict[str, str]:
+    raw_path = pathlib.Path(secrets_file)
+    if not raw_path.is_absolute():
+        raise AdapterError("secrets-file must be under /tmp")
+    path = raw_path.resolve(strict=False)
+    if not path_is_under(path, TMP_ROOT):
+        raise AdapterError("secrets-file must be under /tmp")
+    if raw_path.is_symlink():
+        raise AdapterError("secrets-file must not be symlink")
+    try:
+        file_stat = raw_path.lstat()
+        parent_stat = raw_path.parent.lstat()
+    except OSError as exc:
+        raise AdapterError("secrets-file unavailable") from exc
+    if not stat.S_ISREG(file_stat.st_mode):
+        raise AdapterError("secrets-file unavailable")
+    if not stat.S_ISDIR(parent_stat.st_mode) or raw_path.parent.is_symlink():
+        raise AdapterError("secrets-file parent invalid")
+    if stat.S_IMODE(file_stat.st_mode) != PRIVATE_FILE_MODE:
+        raise AdapterError("secrets-file must be 0600")
+    if stat.S_IMODE(parent_stat.st_mode) != PRIVATE_DIR_MODE:
+        raise AdapterError("secrets-file parent must be 0700")
+
+    try:
+        payload = json.loads(raw_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise AdapterError("secrets-file invalid") from exc
+    if not isinstance(payload, dict):
+        raise AdapterError("secrets-file invalid")
+    return {
+        "ssid": validate_secret_text(payload.get("ssid"), field="ssid"),
+        "psk": validate_secret_text(payload.get("psk"), field="psk"),
+    }
+
+
+def keyfile_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("\n", "").replace("\r", "")
+
+
+def write_temp_nmconnection(out_dir: pathlib.Path, profile_name: str, secrets: dict[str, str]) -> pathlib.Path:
+    fd, tmp_name = tempfile.mkstemp(prefix=".wifi-profile.", suffix=".nmconnection", dir=str(out_dir), text=True)
+    path = pathlib.Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(
+                "\n".join(
+                    [
+                        "[connection]",
+                        f"id={profile_name}",
+                        f"uuid={deterministic_profile_uuid(profile_name)}",
+                        "type=wifi",
+                        "autoconnect=false",
+                        "",
+                        "[wifi]",
+                        "mode=infrastructure",
+                        f"ssid={keyfile_value(secrets['ssid'])}",
+                        "",
+                        "[wifi-security]",
+                        "key-mgmt=wpa-psk",
+                        f"psk={keyfile_value(secrets['psk'])}",
+                        "",
+                        "[ipv4]",
+                        "method=auto",
+                        "",
+                        "[ipv6]",
+                        "method=auto",
+                        "",
+                    ]
+                )
+            )
+        os.chmod(path, PRIVATE_FILE_MODE)
+        return path
+    except Exception:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def ip_acquired_for_profile(
+    *,
+    profile_name: str,
+    timeout_sec: int,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> bool | str:
+    profile_name = require_allowed_profile_name(profile_name)
+    args = ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show", profile_name]
+    assert_apply_command(args, profile_name)
+    result = command_runner(args, timeout_sec)
+    if result.status == "ok":
+        return bool(result.stdout.strip())
+    if result.status in {"timeout", "unavailable"}:
+        return UNKNOWN
+    return False
+
+
+def build_rollback_status(
+    *,
+    reason: str,
+    attempted: bool,
+    down_result: str,
+    delete_result: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at_utc": utc_timestamp(),
+        "mode": "rollback",
+        "rollback_scope": "dedicated_profile_only",
+        "rollback_reason": reason,
+        "rollback_attempted": attempted,
+        "dedicated_profile_down_result": down_result,
+        "dedicated_profile_delete_result": delete_result,
+        "rollback_status": "attempted" if attempted else "not_attempted_reason_safe_abort",
+        "ethernet_modified": False,
+        "old_profiles_modified": False,
+        "network_identifiers_published": False,
+        "privacy_flags": public_privacy_flags(),
+    }
+
+
+def rollback_dedicated_profile(
+    *,
+    profile_name: str,
+    out_dir: pathlib.Path,
+    timeout_sec: int,
+    reason: str,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> dict[str, Any]:
+    profile_name = require_allowed_profile_name(profile_name)
+    down_args = ["nmcli", "connection", "down", "id", profile_name]
+    delete_args = ["nmcli", "connection", "delete", "id", profile_name]
+    assert_apply_command(down_args, profile_name)
+    assert_apply_command(delete_args, profile_name)
+    down_result = command_runner(down_args, timeout_sec)
+    delete_result = command_runner(delete_args, timeout_sec)
+    rollback = build_rollback_status(
+        reason=reason,
+        attempted=True,
+        down_result=down_result.status,
+        delete_result=delete_result.status,
+    )
+    write_rollback_artifact(out_dir, rollback)
+    return rollback
+
+
+def create_or_update_dedicated_profile(
+    *,
+    profile_name: str,
+    secrets: dict[str, str],
+    out_dir: pathlib.Path,
+    timeout_sec: int,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> tuple[str, bool]:
+    profile_name = require_allowed_profile_name(profile_name)
+    keyfile_path = write_temp_nmconnection(out_dir, profile_name, secrets)
+    replaced_existing = False
+    try:
+        existing = dedicated_profile_present(
+            profile_name=profile_name,
+            timeout_sec=timeout_sec,
+            command_runner=command_runner,
+        )
+        if existing is True:
+            delete_args = ["nmcli", "connection", "delete", "id", profile_name]
+            assert_apply_command(delete_args, profile_name)
+            delete_result = command_runner(delete_args, timeout_sec)
+            if delete_result.status not in {"ok", "failed"}:
+                return delete_result.status, replaced_existing
+            replaced_existing = delete_result.status == "ok"
+
+        load_args = ["nmcli", "connection", "load", str(keyfile_path)]
+        assert_apply_command(load_args, profile_name, keyfile_path)
+        load_result = command_runner(load_args, timeout_sec)
+        return load_result.status, replaced_existing
+    finally:
+        try:
+            keyfile_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def build_apply_status(
+    *,
+    preflight: dict[str, Any],
+    profile_create_result: str,
+    profile_replaced: bool,
+    activation_result: str,
+    ip_acquired: bool | str,
+    default_route_present: bool | str,
+    rollback: dict[str, Any] | None,
+    profile_retained: bool,
+    secrets_file_cleanup: bool,
+) -> dict[str, Any]:
+    network_changed = activation_result in {"success", "failure", "timeout"}
+    privacy = public_privacy_flags()
+    privacy["network_changed"] = network_changed
+    privacy["credentials_collected"] = True
+    privacy["nmcli_modify_called"] = profile_create_result == "ok" or activation_result != "not_attempted"
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at_utc": utc_timestamp(),
+        "mode": "apply",
+        "preflight_apply_allowed": preflight["apply_allowed"],
+        "wifi_profile_created": profile_create_result == "ok",
+        "wifi_profile_replaced": profile_replaced,
+        "wifi_activation_attempted": activation_result != "not_attempted",
+        "wifi_activation_result": activation_result,
+        "ip_acquired": bool_for_json(ip_acquired),
+        "default_route_present": bool_for_json(default_route_present),
+        "connectivity_check": "not_checked",
+        "rollback_after_test": rollback is not None,
+        "rollback_status": rollback["rollback_status"] if rollback else "not_attempted",
+        "profile_retained": profile_retained,
+        "secrets_file_cleanup": secrets_file_cleanup,
+        "network_changed": network_changed,
+        "real_config_read": False,
+        "real_config_written": False,
+        "writer_called": False,
+        "service_changed": False,
+        "player_changed": False,
+        "mpv_changed": False,
+        "hotspot_created": False,
+        "portal_created": False,
+        "reboot_called": False,
+        "privacy_flags": privacy,
+    }
+
+
+def apply_wifi_controlled(
+    *,
+    out_dir: pathlib.Path,
+    timeout_sec: int,
+    enable_real_apply: bool,
+    confirmation: str | None,
+    secrets_file: str | None,
+    profile_name: str,
+    rollback_after_test: bool,
+    keep_dedicated_profile: bool,
+    cleanup_secrets_file: bool,
+    allow_ssh_risk_with_local_console_confirmed: bool,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+    file_reader: Callable[[pathlib.Path], tuple[str, bool]] = read_text_if_present,
+    nmcli_path: str | None = None,
+) -> dict[str, Any]:
+    profile_name = validate_apply_gates(
+        enable_real_apply=enable_real_apply,
+        confirmation=confirmation,
+        secrets_file=secrets_file,
+        profile_name=profile_name,
+    )
+    prepare_out_dir(out_dir)
+
+    read_only = collect_read_only_status(
+        timeout_sec=timeout_sec,
+        command_runner=command_runner,
+        file_reader=file_reader,
+        nmcli_path=nmcli_path,
+    )
+    preflight = build_preflight_apply(
+        read_only,
+        profile_name=profile_name,
+        out_dir=out_dir,
+        timeout_sec=timeout_sec,
+        allow_ssh_risk_with_local_console_confirmed=allow_ssh_risk_with_local_console_confirmed,
+        command_runner=command_runner,
+    )
+    write_preflight_artifacts(out_dir, preflight)
+    if not preflight["apply_allowed"]:
+        rollback = build_rollback_status(
+            reason="preflight_abort",
+            attempted=False,
+            down_result="not_attempted",
+            delete_result="not_attempted",
+        )
+        write_rollback_artifact(out_dir, rollback)
+        status = build_apply_status(
+            preflight=preflight,
+            profile_create_result="not_attempted",
+            profile_replaced=False,
+            activation_result="not_attempted",
+            ip_acquired=UNKNOWN,
+            default_route_present=preflight["default_route_present"],
+            rollback=rollback,
+            profile_retained=False,
+            secrets_file_cleanup=False,
+        )
+        write_apply_artifacts(out_dir, status, preflight, rollback)
+        raise AdapterError("preflight blocked real wifi apply")
+
+    secrets = load_wifi_secrets(secrets_file or "")
+    cleanup_done = False
+    rollback: dict[str, Any] | None = None
+    profile_retained = False
+    profile_create_result = "not_attempted"
+    profile_replaced = False
+    activation_result = "not_attempted"
+    ip_acquired: bool | str = UNKNOWN
+    default_route_present: bool | str = preflight["default_route_present"]
+
+    try:
+        profile_create_result, profile_replaced = create_or_update_dedicated_profile(
+            profile_name=profile_name,
+            secrets=secrets,
+            out_dir=out_dir,
+            timeout_sec=timeout_sec,
+            command_runner=command_runner,
+        )
+        if profile_create_result == "ok":
+            up_args = ["nmcli", "--wait", str(timeout_sec), "connection", "up", "id", profile_name]
+            assert_apply_command(up_args, profile_name)
+            up_result = command_runner(up_args, timeout_sec + 2)
+            if up_result.status == "ok":
+                activation_result = "success"
+            elif up_result.status == "timeout":
+                activation_result = "timeout"
+            else:
+                activation_result = "failure"
+            ip_acquired = ip_acquired_for_profile(
+                profile_name=profile_name,
+                timeout_sec=timeout_sec,
+                command_runner=command_runner,
+            )
+            route_text, route_available = file_reader(pathlib.Path("/proc/net/route"))
+            default_route_present = detect_default_route_from_text(route_text) if route_available else UNKNOWN
+
+        should_rollback = rollback_after_test or not keep_dedicated_profile or activation_result != "success"
+        if should_rollback:
+            rollback = rollback_dedicated_profile(
+                profile_name=profile_name,
+                out_dir=out_dir,
+                timeout_sec=timeout_sec,
+                reason="rollback_after_test" if activation_result == "success" else "activation_not_successful",
+                command_runner=command_runner,
+            )
+        else:
+            profile_retained = True
+    finally:
+        if cleanup_secrets_file and secrets_file:
+            try:
+                pathlib.Path(secrets_file).unlink()
+                cleanup_done = True
+            except OSError:
+                cleanup_done = False
+
+    status = build_apply_status(
+        preflight=preflight,
+        profile_create_result=profile_create_result,
+        profile_replaced=profile_replaced,
+        activation_result=activation_result,
+        ip_acquired=ip_acquired,
+        default_route_present=default_route_present,
+        rollback=rollback,
+        profile_retained=profile_retained,
+        secrets_file_cleanup=cleanup_done,
+    )
+    write_apply_artifacts(out_dir, status, preflight, rollback)
+    return status
+
+
 def build_plan(status: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -461,7 +1081,7 @@ def build_plan(status: dict[str, Any]) -> dict[str, Any]:
         "mode": "plan",
         "apply_enabled": False,
         "target_network": "redacted",
-        "credentials_source": "not_collected_in_c9_5",
+        "credentials_source": "not_collected_in_read_only_or_plan",
         "current_state_source": "sanitized_read_only_status",
         "read_only_status": {
             "network_manager_available": status["network_manager_available"],
@@ -506,7 +1126,7 @@ def build_plan(status: dict[str, Any]) -> dict[str, Any]:
 
 def build_summary(status: dict[str, Any], plan: dict[str, Any] | None = None) -> str:
     lines = [
-        "Dadooh C9.5 wifi readonly/plan",
+        "Dadooh C9.6 wifi controlled",
         "",
         f"schema_version: {status['schema_version']}",
         f"generated_at_utc: {status['generated_at_utc']}",
@@ -551,6 +1171,79 @@ def build_summary(status: dict[str, Any], plan: dict[str, Any] | None = None) ->
     return "\n".join(lines) + "\n"
 
 
+def build_preflight_summary(preflight: dict[str, Any]) -> str:
+    lines = [
+        "Dadooh C9.6 wifi preflight",
+        "",
+        f"schema_version: {preflight['schema_version']}",
+        f"generated_at_utc: {preflight['generated_at_utc']}",
+        "mode: preflight-apply",
+        f"network_manager_available: {preflight['network_manager_available']}",
+        f"nmcli_available: {preflight['nmcli_available']}",
+        f"wifi_device_present: {preflight['wifi_device_present']}",
+        f"ethernet_active: {preflight['ethernet_active']}",
+        f"wifi_active: {preflight['wifi_active']}",
+        f"default_route_present: {preflight['default_route_present']}",
+        f"resolver_configured: {preflight['dns_configured']}",
+        f"ssh_path_category: {preflight['ssh_path_category']}",
+        f"can_drop_current_session: {preflight['can_drop_current_session']}",
+        f"profile_name_allowed: {str(preflight['profile_name_allowed']).lower()}",
+        f"dedicated_profile_present: {preflight['dedicated_profile_present']}",
+        f"rollback_marker_present: {str(preflight['rollback_marker_present']).lower()}",
+        f"apply_allowed: {str(preflight['apply_allowed']).lower()}",
+        "",
+        "Guardrails:",
+        f"would_touch_only_dedicated_profile: {str(preflight['would_touch_only_dedicated_profile']).lower()}",
+        "would_preserve_ethernet: true",
+        "real_config_read: false",
+        "real_config_written: false",
+        "writer_called: false",
+        "player_changed: false",
+        "mpv_changed: false",
+        "hotspot_created: false",
+        "portal_created: false",
+        "reboot_called: false",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def build_apply_summary(status: dict[str, Any]) -> str:
+    lines = [
+        "Dadooh C9.6 wifi apply",
+        "",
+        f"schema_version: {status['schema_version']}",
+        f"generated_at_utc: {status['generated_at_utc']}",
+        "mode: apply",
+        f"preflight_apply_allowed: {str(status['preflight_apply_allowed']).lower()}",
+        f"wifi_profile_created: {str(status['wifi_profile_created']).lower()}",
+        f"wifi_profile_replaced: {str(status['wifi_profile_replaced']).lower()}",
+        f"wifi_activation_attempted: {str(status['wifi_activation_attempted']).lower()}",
+        f"wifi_activation_result: {status['wifi_activation_result']}",
+        f"ip_acquired: {status['ip_acquired']}",
+        f"default_route_present: {status['default_route_present']}",
+        f"connectivity_check: {status['connectivity_check']}",
+        f"rollback_status: {status['rollback_status']}",
+        f"profile_retained: {str(status['profile_retained']).lower()}",
+        f"secrets_file_cleanup: {str(status['secrets_file_cleanup']).lower()}",
+        "",
+        "Guardrails:",
+        f"network_changed: {str(status['network_changed']).lower()}",
+        "real_config_read: false",
+        "real_config_written: false",
+        "writer_called: false",
+        "service_changed: false",
+        "player_changed: false",
+        "mpv_changed: false",
+        "hotspot_created: false",
+        "portal_created: false",
+        "reboot_called: false",
+        "network_details_published: false",
+        "address_details_published: false",
+        "credential_values_published: false",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def write_read_only_artifacts(out_dir: pathlib.Path, status: dict[str, Any]) -> None:
     prepare_out_dir(out_dir)
     atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
@@ -564,8 +1257,30 @@ def write_plan_artifacts(out_dir: pathlib.Path, status: dict[str, Any], plan: di
     atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_summary(status, plan), out_dir)
 
 
-def abort_apply() -> None:
-    raise AdapterError("apply disabled in C9.5")
+def write_preflight_artifacts(out_dir: pathlib.Path, preflight: dict[str, Any]) -> None:
+    prepare_out_dir(out_dir)
+    atomic_write_private_json(out_dir / STATUS_FILENAME, preflight, out_dir)
+    atomic_write_private_json(out_dir / PREFLIGHT_FILENAME, preflight, out_dir)
+    atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_preflight_summary(preflight), out_dir)
+
+
+def write_rollback_artifact(out_dir: pathlib.Path, rollback: dict[str, Any]) -> None:
+    prepare_out_dir(out_dir)
+    atomic_write_private_json(out_dir / ROLLBACK_FILENAME, rollback, out_dir)
+
+
+def write_apply_artifacts(
+    out_dir: pathlib.Path,
+    status: dict[str, Any],
+    preflight: dict[str, Any],
+    rollback: dict[str, Any] | None,
+) -> None:
+    prepare_out_dir(out_dir)
+    atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
+    atomic_write_private_json(out_dir / PREFLIGHT_FILENAME, preflight, out_dir)
+    if rollback is not None:
+        atomic_write_private_json(out_dir / ROLLBACK_FILENAME, rollback, out_dir)
+    atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_apply_summary(status), out_dir)
 
 
 def assert_true(condition: bool, message: str) -> None:
@@ -591,29 +1306,43 @@ def assert_artifact_permissions(out_dir: pathlib.Path, names: tuple[str, ...]) -
 
 
 def assert_no_forbidden_values(text: str) -> None:
-    forbidden_values = (
-        "FAKE-STORE-WIFI",
-        "192.0.2.44",
-        "aa:bb:cc:dd:ee:ff",
-        "192.0.2.1",
-        "203.0.113.53",
-        "fake-hostname",
-        "Fake product wifi",
-        "fake-password",
-        "fake-token-value",
-        "fake-api-key",
-    )
     lowered = text.lower()
-    for value in forbidden_values:
+    for value in SENSITIVE_MARKERS:
         assert_true(value.lower() not in lowered, f"public output leaked {value}")
 
 
 def run_self_test() -> None:
     assert_raises(
-        lambda: require_tmp_dir("/var/tmp/dadooh-c9-5-wifi-readonly"),
+        lambda: require_tmp_dir("/var/tmp/dadooh-c9-6-wifi-apply"),
         "out-dir outside /tmp should fail",
     )
-    assert_raises(lambda: abort_apply(), "--apply should abort in C9.5")
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=False,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file="/tmp/x/secrets.json",
+            profile_name=DEFAULT_PROFILE_NAME,
+        ),
+        "apply without enable should abort",
+    )
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=True,
+            confirmation="CONFIRMO APPLY WIFI REAL C9.6",
+            secrets_file="/tmp/x/secrets.json",
+            profile_name=DEFAULT_PROFILE_NAME,
+        ),
+        "apply without exact confirmation should abort",
+    )
+    assert_raises(
+        lambda: validate_apply_gates(
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file="/tmp/x/secrets.json",
+            profile_name="office-wifi",
+        ),
+        "non-dedicated profile should abort",
+    )
 
     for command in (
         ["nmcli", "connection", "up", "Fake product wifi"],
@@ -667,13 +1396,26 @@ def run_self_test() -> None:
     assert_true(detect_dns_from_text(resolver_fixture) is True, "resolver should be aggregated")
 
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
-        assert_read_only_command(args)
         if args == ["nmcli", "-t", "-f", "RUNNING", "general"]:
             return CommandResult("ok", "running\n")
         if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
             return CommandResult("ok", device_fixture)
         if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
             return CommandResult("ok", active_fixture)
+        if args == ["ip", "-o", "route", "get", "192.0.2.10"]:
+            return CommandResult("ok", "192.0.2.10 dev eth0 src 192.0.2.44 uid 0\n")
+        if args == ["nmcli", "-t", "-f", "NAME", "connection", "show", DEFAULT_PROFILE_NAME]:
+            return CommandResult("failed")
+        if args == ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show", DEFAULT_PROFILE_NAME]:
+            return CommandResult("ok", "IP4.ADDRESS[1]:192.0.2.44/24\n")
+        if args == ["nmcli", "connection", "load", args[-1]]:
+            return CommandResult("ok", "loaded Fake product wifi\n")
+        if args == ["nmcli", "--wait", "1", "connection", "up", "id", DEFAULT_PROFILE_NAME]:
+            return CommandResult("ok", "successfully activated fake-token-value\n")
+        if args == ["nmcli", "connection", "down", "id", DEFAULT_PROFILE_NAME]:
+            return CommandResult("ok", "down fake-uuid-value\n")
+        if args == ["nmcli", "connection", "delete", "id", DEFAULT_PROFILE_NAME]:
+            return CommandResult("ok", "deleted Fake product wifi\n")
         return CommandResult("failed")
 
     def fake_reader(path: pathlib.Path) -> tuple[str, bool]:
@@ -683,8 +1425,9 @@ def run_self_test() -> None:
             return resolver_fixture, True
         return "", False
 
-    root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-5-wifi-readonly-self-test-", dir="/tmp"))
+    root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-6-wifi-apply-self-test-", dir="/tmp"))
     try:
+        os.environ["SSH_CONNECTION"] = "192.0.2.10 54321 192.0.2.44 22"
         status = collect_read_only_status(
             timeout_sec=1,
             command_runner=fake_runner,
@@ -728,7 +1471,10 @@ def run_self_test() -> None:
         plan = build_plan(status)
         assert_true(plan["apply_enabled"] is False, "plan should keep apply disabled")
         assert_true(plan["target_network"] == "redacted", "plan target should be redacted")
-        assert_true(plan["credentials_source"] == "not_collected_in_c9_5", "plan should not collect credentials")
+        assert_true(
+            plan["credentials_source"] == "not_collected_in_read_only_or_plan",
+            "plan should not collect credentials",
+        )
         plan_out = require_tmp_dir(str(root / "plan"))
         write_plan_artifacts(plan_out, status, plan)
         assert_artifact_permissions(plan_out, (STATUS_FILENAME, PLAN_FILENAME, SUMMARY_FILENAME))
@@ -748,22 +1494,132 @@ def run_self_test() -> None:
             no_nmcli_status["network_manager_available"] is False,
             "NetworkManager should be false when nmcli is absent",
         )
+
+        preflight_out = require_tmp_dir(str(root / "preflight"))
+        preflight = build_preflight_apply(
+            status,
+            profile_name=DEFAULT_PROFILE_NAME,
+            out_dir=preflight_out,
+            timeout_sec=1,
+            command_runner=fake_runner,
+        )
+        assert_true(preflight["ssh_path_category"] == "ethernet", "ssh path should be classified by category")
+        assert_true(preflight["apply_allowed"] is True, "preflight should allow controlled apply fixture")
+        write_preflight_artifacts(preflight_out, preflight)
+        assert_artifact_permissions(preflight_out, (STATUS_FILENAME, PREFLIGHT_FILENAME, SUMMARY_FILENAME))
+        preflight_text = (preflight_out / STATUS_FILENAME).read_text(encoding="utf-8")
+        preflight_text += (preflight_out / PREFLIGHT_FILENAME).read_text(encoding="utf-8")
+        preflight_text += (preflight_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
+        assert_no_forbidden_values(preflight_text)
+
+        os.environ["SSH_CONNECTION"] = "192.0.2.20 54321 192.0.2.44 22"
+
+        def wifi_route_runner(args: list[str], timeout_sec: int) -> CommandResult:
+            if args == ["ip", "-o", "route", "get", "192.0.2.20"]:
+                return CommandResult("ok", "192.0.2.20 dev wlan0 src 192.0.2.44 uid 0\n")
+            return fake_runner(args, timeout_sec)
+
+        blocked_preflight = build_preflight_apply(
+            status,
+            profile_name=DEFAULT_PROFILE_NAME,
+            out_dir=preflight_out,
+            timeout_sec=1,
+            command_runner=wifi_route_runner,
+        )
+        assert_true(blocked_preflight["apply_allowed"] is False, "wifi ssh path should block apply by default")
+        assert_true("ssh_path_wifi" in blocked_preflight["abort_reasons"], "wifi ssh path should be explicit")
+
+        secrets_parent = root / "secrets"
+        secrets_parent.mkdir(mode=PRIVATE_DIR_MODE)
+        safe_secret = secrets_parent / "wifi.json"
+        safe_secret.write_text(
+            json.dumps({"ssid": "FAKE-STORE-WIFI", "psk": "fake-password"}),
+            encoding="utf-8",
+        )
+        os.chmod(safe_secret, PRIVATE_FILE_MODE)
+        loaded = load_wifi_secrets(str(safe_secret))
+        assert_true(loaded["ssid"] == "FAKE-STORE-WIFI", "safe secrets should load internally")
+
+        insecure_secret = secrets_parent / "insecure.json"
+        insecure_secret.write_text(json.dumps({"ssid": "FAKE-STORE-WIFI", "psk": "fake-password"}), encoding="utf-8")
+        os.chmod(insecure_secret, 0o644)
+        assert_raises(lambda: load_wifi_secrets(str(insecure_secret)), "insecure secrets-file should abort")
+        assert_raises(lambda: load_wifi_secrets("/var/tmp/wifi.json"), "secrets-file outside /tmp should abort")
+        symlink_secret = secrets_parent / "link.json"
+        symlink_secret.symlink_to(safe_secret)
+        assert_raises(lambda: load_wifi_secrets(str(symlink_secret)), "symlink secrets-file should abort")
+
+        assert_raises(
+            lambda: assert_apply_command(["nmcli", "connection", "delete", "id", "home-wifi"], DEFAULT_PROFILE_NAME),
+            "rollback must not target non-dedicated profile",
+        )
+        assert_raises(
+            lambda: assert_apply_command(
+                ["nmcli", "device", "wifi", "connect", "FAKE-STORE-WIFI", "password", "fake-password"],
+                DEFAULT_PROFILE_NAME,
+            ),
+            "apply must not pass credentials on nmcli argv",
+        )
+
+        apply_out = require_tmp_dir(str(root / "apply"))
+        os.environ["SSH_CONNECTION"] = "192.0.2.10 54321 192.0.2.44 22"
+        apply_status = apply_wifi_controlled(
+            out_dir=apply_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(safe_secret),
+            profile_name=DEFAULT_PROFILE_NAME,
+            rollback_after_test=True,
+            keep_dedicated_profile=False,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            command_runner=fake_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(apply_status["wifi_activation_result"] == "success", "fixture apply should succeed")
+        assert_true(apply_status["rollback_status"] == "attempted", "rollback-after-test should run")
+        assert_artifact_permissions(
+            apply_out,
+            (STATUS_FILENAME, PREFLIGHT_FILENAME, SUMMARY_FILENAME, ROLLBACK_FILENAME),
+        )
+        apply_text = (apply_out / STATUS_FILENAME).read_text(encoding="utf-8")
+        apply_text += (apply_out / PREFLIGHT_FILENAME).read_text(encoding="utf-8")
+        apply_text += (apply_out / ROLLBACK_FILENAME).read_text(encoding="utf-8")
+        apply_text += (apply_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
+        assert_no_forbidden_values(apply_text)
     finally:
+        os.environ.pop("SSH_CONNECTION", None)
         shutil.rmtree(root, ignore_errors=True)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run C9.5 Wi-Fi read-only NetworkManager adapter or generate the future apply plan.",
+        description="Run C9.6 Wi-Fi read-only, preflight, controlled apply, or rollback.",
         allow_abbrev=False,
     )
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help=f"Output directory under /tmp. Default: {DEFAULT_OUT_DIR}")
     parser.add_argument("--timeout-sec", type=int, default=3, help="Per-command timeout for read-only checks.")
+    parser.add_argument("--profile-name", default=DEFAULT_PROFILE_NAME, help="Dedicated product profile name.")
+    parser.add_argument("--enable-real-apply", action="store_true", help="Required gate for --apply.")
+    parser.add_argument("--confirm-real-wifi-apply", help="Exact human confirmation phrase required for --apply.")
+    parser.add_argument("--secrets-file", help="Restricted JSON file under /tmp with Wi-Fi credentials for --apply.")
+    parser.add_argument("--rollback-after-test", action="store_true", help="Rollback dedicated profile after apply test.")
+    parser.add_argument("--keep-dedicated-profile", action="store_true", help="Keep the dedicated profile after successful apply.")
+    parser.add_argument("--cleanup-secrets-file", action="store_true", help="Remove the temporary secrets file after apply.")
+    parser.add_argument(
+        "--allow-ssh-risk-with-local-console-confirmed",
+        action="store_true",
+        help="Allow apply when SSH path is risky and local console is explicitly confirmed.",
+    )
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--self-test", action="store_true", help="Run local self-tests and exit.")
     modes.add_argument("--read-only", action="store_true", help="Collect sanitized aggregate network state.")
     modes.add_argument("--plan", action="store_true", help="Generate a sanitized future apply plan without applying it.")
-    modes.add_argument("--apply", action="store_true", help="Disabled in C9.5; exits with an error.")
+    modes.add_argument("--preflight-apply", action="store_true", help="Run sanitized apply preflight without applying.")
+    modes.add_argument("--apply", action="store_true", help="Run controlled real Wi-Fi apply only when all gates are present.")
+    modes.add_argument("--rollback-last", action="store_true", help="Rollback only the dedicated C9.6 profile.")
     return parser.parse_args(argv)
 
 
@@ -776,8 +1632,6 @@ def main(argv: list[str]) -> int:
             run_self_test()
             print("self-test: ok")
             return 0
-        if args.apply:
-            abort_apply()
 
         out_dir = require_tmp_dir(args.out_dir)
         status = collect_read_only_status(timeout_sec=args.timeout_sec)
@@ -786,9 +1640,49 @@ def main(argv: list[str]) -> int:
             print(json.dumps(status, indent=2, sort_keys=True))
             return 0
 
-        plan = build_plan(status)
-        write_plan_artifacts(out_dir, status, plan)
-        print(json.dumps(plan, indent=2, sort_keys=True))
+        if args.plan:
+            plan = build_plan(status)
+            write_plan_artifacts(out_dir, status, plan)
+            print(json.dumps(plan, indent=2, sort_keys=True))
+            return 0
+
+        profile_name = require_allowed_profile_name(args.profile_name)
+        if args.preflight_apply:
+            preflight = build_preflight_apply(
+                status,
+                profile_name=profile_name,
+                out_dir=out_dir,
+                timeout_sec=args.timeout_sec,
+                allow_ssh_risk_with_local_console_confirmed=args.allow_ssh_risk_with_local_console_confirmed,
+            )
+            write_preflight_artifacts(out_dir, preflight)
+            print(json.dumps(preflight, indent=2, sort_keys=True))
+            return 0
+
+        if args.rollback_last:
+            rollback = rollback_dedicated_profile(
+                profile_name=profile_name,
+                out_dir=out_dir,
+                timeout_sec=args.timeout_sec,
+                reason="manual_rollback_last",
+            )
+            print(json.dumps(rollback, indent=2, sort_keys=True))
+            return 0
+
+        effective_rollback_after_test = args.rollback_after_test or not args.keep_dedicated_profile
+        apply_status = apply_wifi_controlled(
+            out_dir=out_dir,
+            timeout_sec=args.timeout_sec,
+            enable_real_apply=args.enable_real_apply,
+            confirmation=args.confirm_real_wifi_apply,
+            secrets_file=args.secrets_file,
+            profile_name=profile_name,
+            rollback_after_test=effective_rollback_after_test,
+            keep_dedicated_profile=args.keep_dedicated_profile,
+            cleanup_secrets_file=args.cleanup_secrets_file,
+            allow_ssh_risk_with_local_console_confirmed=args.allow_ssh_risk_with_local_console_confirmed,
+        )
+        print(json.dumps(apply_status, indent=2, sort_keys=True))
         return 0
     except AdapterError as exc:
         print(f"error: {exc}", file=sys.stderr)
