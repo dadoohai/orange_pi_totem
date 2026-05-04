@@ -366,6 +366,20 @@ usuario `totem` lendo e sem permissao de escrita, servico final
 backend/login, reboot e repo `kiosky-player` seguem fora. C10.1 fica reservado
 para reboot/autoboot controlado.
 
+Atualizacao C10.1: 2026-05-04. C10.1 valida reboot/autoboot controlado com
+Wi-Fi persistente e config real ja escrita pelo C10.0. O novo runner prepara,
+faz preflight sanitizado e executa um reboot somente com a frase humana
+explicita `CONFIRMO REBOOT CONTROLADO C10.1`. A placa voltou por SSH em 46s e
+convergiu para servico `active/enabled`, `NRestarts=0`,
+`public_state=player_running`, playback `playing`, player/MPV ativos e
+renderer/setup ausentes. A config real permaneceu presente com `root:totem`
+`0640`, usuario `totem` lendo e sem permissao de escrita, e o perfil Wi-Fi
+dedicado permaneceu presente. C10.1 nao le/escreve config real, nao chama
+writer, nao altera Wi-Fi/NetworkManager, nao habilita root read-only e nao faz
+corte seco. O `wizard_rc=8` visto em C10.0 fica classificado como retorno bruto
+de wrapper TTY nao bloqueante para boot/autoboot, com hardening opcional
+posterior. C10.2 fica reservado para fluxo `config_missing` real controlado.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
