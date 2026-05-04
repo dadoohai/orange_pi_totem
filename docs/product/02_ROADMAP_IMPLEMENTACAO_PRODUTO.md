@@ -131,6 +131,20 @@ mock/local, orientacao, revisao e gera candidata apenas em `/tmp` validada por
 C5.1. Nao escreve config real, nao roda writer, nao toca `/data`, `/opt`,
 servico, player, MPV, rede ou Wi-Fi.
 
+Atualizacao C9.1.1: 2026-05-04. C9.1.1 executa a validacao humana do wizard
+local na propria placa, com HDMI e teclado USB. O runner remoto copia scripts
+para `/tmp`, roda self-tests, observa console/servico/processos por categorias,
+abre o wizard em TTY local com parada temporaria do player somente apos
+autorizacao humana explicita e restaura o estado ao final. Resultado: passou
+tecnicamente, gerou candidata em `/tmp`, C5.1 `allow-mock` passou,
+`real-dry-run` falhou como esperado e o servico voltou `active/enabled` com
+`NRestarts=0`, player=1, MPV=1 e renderer=0. Ressalvas: UX ainda parece
+terminal Linux/Python interativo, nao esta aprovada para operador final, e foi
+registrado warning visual de midia aparentemente mais esticada apos
+restauracao. Nao integra launcher, nao chama automaticamente em
+`config_missing`, nao roda writer e nao altera config real, `/data`, `/opt`,
+rede ou Wi-Fi.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
@@ -407,6 +421,7 @@ Sequencia incremental refinada:
 - C8.10 - reboot/autoboot controlado com config real;
 - C9.0 - acesso temporario ao setup pela rede local existente;
 - C9.1 - setup local na propria plaquinha;
+- C9.1.1 - validacao humana do wizard local HDMI;
 - C9 - Wi-Fi/portal/hotspot;
 - C10 - manutencao/reset avancado.
 
@@ -1025,6 +1040,7 @@ Documentos:
 - `docs/product/54_C8_10_REBOOT_AUTOBOOT_CONFIG_REAL.md`;
 - `docs/product/55_C9_0_ACESSO_TEMPORARIO_SETUP_REDE_LOCAL.md`;
 - `docs/product/56_C9_1_SETUP_LOCAL_PROPRIA_PLAQUINHA.md`;
+- `docs/product/57_C9_1_1_VALIDACAO_HUMANA_WIZARD_LOCAL_HDMI.md`;
 - `docs/product/prototypes/v1-operacao-recuperacao/index.html`;
 - `docs/product/prototypes/c8-1-setup-minimo/index.html`;
 - `docs/product/prototypes/c8-2-selecao-ambiente/index.html`;
@@ -1061,6 +1077,7 @@ Subfases propostas:
 - C8.10 - reboot/autoboot controlado com config real;
 - C9.0 - acesso temporario ao setup pela rede local existente.
 - C9.1 - setup local na propria plaquinha, tela HDMI + teclado USB.
+- C9.1.1 - validacao humana do wizard local HDMI com teclado USB.
 
 Validacao:
 
@@ -1127,6 +1144,31 @@ Fora de escopo:
 - backups;
 - parada/start de `kiosky-player.service`;
 - player/MPV;
+- NetworkManager, `nmcli`, Wi-Fi real, hotspot ou QR;
+- backend;
+- producao.
+
+### C9.1.1 - validacao humana do wizard local HDMI
+
+Status: passou tecnicamente com ressalvas de UX e warning visual
+pos-restauracao. Nao e producao.
+
+Objetivos:
+
+- rodar o wizard local na placa com HDMI e teclado USB;
+- validar legibilidade, navegacao e entendimento do fluxo por humano;
+- gerar candidata somente em `/tmp`;
+- preservar evidencia sanitizada;
+- restaurar estado combinado se houver parada temporaria autorizada do player.
+
+Fora de escopo:
+
+- integracao com launcher;
+- chamada automatica em `config_missing`;
+- writer/config real;
+- `/data/config/config.json`;
+- backups;
+- mudanca permanente de servico/player;
 - NetworkManager, `nmcli`, Wi-Fi real, hotspot ou QR;
 - backend;
 - producao.

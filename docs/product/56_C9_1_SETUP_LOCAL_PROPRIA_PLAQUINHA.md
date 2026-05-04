@@ -219,7 +219,7 @@ Criterios:
 
 Proximos passos recomendados:
 
-- validar visualmente o wizard local na tela HDMI com teclado USB;
+- C9.1.1 - validar visualmente o wizard local na tela HDMI com teclado USB;
 - definir como o setup local sera chamado em modo appliance sem expor shell
   livre;
 - manter rede local/QR/navegador como caminhos auxiliares, nao substitutos;
