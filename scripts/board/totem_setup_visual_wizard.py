@@ -833,12 +833,7 @@ def read_text_field(
     value = ""
     error = ""
     while True:
-        if hidden:
-            hint = "*" * len(value) if value else "Aguardando entrada"
-        elif show_plain_value:
-            hint = value or "Aguardando entrada"
-        else:
-            hint = f"{len(value)} caracteres digitados" if value else "Aguardando entrada"
+        hint = text_field_display_hint(value, hidden=hidden, show_plain_value=show_plain_value)
         note = error or "O valor digitado nao sera gravado nos SVGs publicos desta rodada."
         footer = "Digite no teclado | Enter confirma | Ctrl+U limpa | Esc cancela"
         if allow_back:
@@ -883,6 +878,14 @@ def read_text_field(
         elif len(key) == 1 and 32 <= ord(key) <= 126 and len(value) < max_length:
             value += key
             error = ""
+
+
+def text_field_display_hint(value: str, *, hidden: bool, show_plain_value: bool) -> str:
+    if hidden:
+        return "*" * len(value) if value else "Aguardando entrada"
+    if show_plain_value:
+        return value or "Aguardando entrada"
+    return f"{len(value)} caracteres digitados" if value else "Aguardando entrada"
 
 
 def validate_environment_id(value: str) -> str:
@@ -984,6 +987,7 @@ def collect_wifi_credentials(display: VisualDisplay) -> pathlib.Path | None:
             "Evite portal cativo nesta rodada.",
             "O perfil dedicado sera mantido.",
         ],
+        show_plain_value=True,
     )
     if ssid is None:
         return None
@@ -1770,6 +1774,21 @@ def run_self_test() -> None:
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-9-visual-wizard-self-test-", dir="/tmp"))
     try:
+        synthetic_ssid = "TEST_WIFI_SHOULD_NOT_LEAK"
+        synthetic_password = "TEST_PASSWORD_SHOULD_NOT_LEAK"
+        assert_true(
+            text_field_display_hint(synthetic_ssid, hidden=False, show_plain_value=True) == synthetic_ssid,
+            "Wi-Fi network field should show local typed value",
+        )
+        password_hint = text_field_display_hint(synthetic_password, hidden=True, show_plain_value=False)
+        assert_true(password_hint == "*" * len(synthetic_password), "Wi-Fi password should stay masked")
+        assert_true(synthetic_password not in password_hint, "Wi-Fi password hint should not leak value")
+        count_hint = text_field_display_hint(synthetic_ssid, hidden=False, show_plain_value=False)
+        assert_true(
+            synthetic_ssid not in count_hint and "caracteres digitados" in count_hint,
+            "count-only mode should not show raw value",
+        )
+
         preview_dir = require_tmp_dir(str(root / "preview"))
         prepare_private_dir(preview_dir)
         generate_preview_screens(preview_dir)
@@ -1820,6 +1839,9 @@ def run_self_test() -> None:
         assert_true(allow_mock["valid"], "C9.9 candidate should pass allow-mock")
         assert_true(not real_dry_run["valid"], "C9.9 candidate should fail real-dry-run with placeholders")
         assert_sanitized_outputs(out_dir, "ENV-PRODUTO-VISUAL-01")
+        public_text = output_text(out_dir)
+        for forbidden in (synthetic_ssid, synthetic_password):
+            assert_true(forbidden not in public_text, "Wi-Fi credentials should not be public artifacts")
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

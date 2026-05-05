@@ -4,6 +4,10 @@ Status: implementado e validado em bancada com confirmacao humana explicita.
 
 Data: 2026-05-04
 
+Atualizacao C10.2.1: o campo local "Rede Wi-Fi" passou a mostrar o valor
+digitado no HDMI para conferencia do operador. A senha continua oculta e os
+valores de rede seguem fora de status, summary, documentacao e evidencia.
+
 ## Objetivo
 
 Validar o fluxo real de recuperacao de produto:
