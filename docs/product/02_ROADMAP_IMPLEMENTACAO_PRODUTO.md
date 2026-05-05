@@ -419,6 +419,18 @@ Wi-Fi/NetworkManager apply, hotspot, portal, root read-only, corte seco e repo
 `kiosky-player` seguem fora por padrao. C10.4 fica reservado para Product
 Surface V0 + writer real.
 
+Atualizacao C10.4: 2026-05-05. C10.4 valida Product Surface V0 com writer real:
+wizard visual com orientacao primeiro, Wi-Fi dedicado existente, handoff
+privado, C5.1 `real-dry-run`, writer guardado, backup, permissoes
+`root:totem` `0640` e start controlado do player. O runner exige host
+explicito, nao hardcoda IP e manteve a escrita real bloqueada pela frase
+`CONFIRMO PRODUCT SURFACE WRITER REAL C10.4`. O fluxo real passou: writer
+retornou `passed`, backup foi criado, usuario `totem` le e nao escreve, servico
+final `active/enabled`, `NRestarts=0`, `public_state=player_running`, playback
+`playing`, player/MPV ativos e renderer/setup ausentes. Wi-Fi/NetworkManager,
+hotspot, portal, root read-only, corte seco, reboot e repo `kiosky-player`
+seguem fora.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
