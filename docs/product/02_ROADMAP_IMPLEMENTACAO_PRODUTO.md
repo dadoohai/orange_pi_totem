@@ -493,6 +493,19 @@ rollback. O reboot controlado voltou em 8s, estado final
 `systemctl --failed=0` e filtro critico de kernel `0`. Observacao humana: o
 texto tecnico early-boot sumiu.
 
+Atualizacao C10.6: 2026-05-05. C10.6 redefine a frente de acesso local como
+"Abrir Configuracoes do Totem com player rodando". A UI principal continua
+sendo o wizard visual do produto; menu de manutencao/suporte, terminal local,
+root e shell ficam fora desta etapa. O runner
+`scripts/remote/run_c10_6_open_settings_from_player.sh` usa host explicito,
+pausa o player de forma controlada, cobre a HDMI com splash/transicao, abre o
+wizard visual, restaura o player ao cancelar e oferece dry-run com handoff/C5.1
+sem chamar writer. A escrita real permanece protegida por confirmacao explicita
+e delegada ao fluxo C10.4 ja validado. Wi-Fi/NetworkManager, config real,
+hotspot, portal, root read-only, corte seco e repo `kiosky-player` seguem fora
+por padrao. C10.7 fica reservado para Suporte Local V0 separado: diagnostico,
+reiniciar exibicao, reboot/desligamento seguro e PIN/senha local.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
