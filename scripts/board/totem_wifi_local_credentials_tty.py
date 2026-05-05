@@ -89,6 +89,8 @@ def write_local_status(out_dir: pathlib.Path, payload: dict[str, Any]) -> None:
         "credentials_collected": False,
         "ssid_present": False,
         "psk_present": False,
+        "ssid_local_echo_visible": True,
+        "psk_local_echo_visible": False,
         "secrets_file_created": False,
         "secrets_file_cleanup": False,
         "ssh_path_risk_acknowledged": True,
@@ -142,6 +144,8 @@ def collect_credentials(out_dir: pathlib.Path, secrets_dir: pathlib.Path) -> pat
     print("com sinal forte perto do totem.")
     print()
     print("Digite a rede e senha neste totem.")
+    print("O nome da rede aparece apenas nesta tela local.")
+    print("A senha fica oculta.")
     print("Nada sera salvo em relatorio.")
     print()
     ssid = input("Rede Wi-Fi: ").strip()
@@ -337,6 +341,9 @@ def run_self_test() -> None:
         assert stat.S_IMODE((out_dir / LOCAL_STATUS_FILENAME).stat().st_mode) == adapter.PRIVATE_FILE_MODE
         status_text = (out_dir / LOCAL_STATUS_FILENAME).read_text(encoding="utf-8")
         assert_no_forbidden_values(status_text)
+        status = json.loads(status_text)
+        assert status["ssid_local_echo_visible"] is True
+        assert status["psk_local_echo_visible"] is False
         assert not secrets.is_symlink()
     finally:
         shutil.rmtree(root, ignore_errors=True)

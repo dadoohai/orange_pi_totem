@@ -84,6 +84,7 @@ Essa leitura foi confirmada explicitamente pelo humano.
 
 ## Proximo Passo
 
-C10.3 deve executar observacao curta de 30-60 minutos com config real, Wi-Fi
-persistente e fluxo integrado validado. C11.0 continua reservado para auditoria
-de readiness de root read-only antes de qualquer corte seco.
+C10.3 foi redirecionado para Superficie de Produto V0: orientacao como primeira
+etapa, lista Wi-Fi local e guardrails visuais reversiveis de boot. Observacao
+curta fica para depois dessa superficie ser validada. C11.0 continua reservado
+para auditoria de readiness de root read-only antes de qualquer corte seco.

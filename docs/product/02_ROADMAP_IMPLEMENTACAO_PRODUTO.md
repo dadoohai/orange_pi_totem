@@ -394,8 +394,30 @@ playback `playing`, player/MPV ativos, renderer/setup ausentes, perfil Wi-Fi
 dedicado presente e config `root:totem` `0640` com usuario `totem` lendo e sem
 escrita. A config ativa foi lida somente como fonte privada autorizada, sem
 publicar conteudo. Wi-Fi/NetworkManager, hotspot, portal, reboot, root
-read-only, corte seco e repo `kiosky-player` seguem fora. C10.3 fica reservado
-para observacao curta 30-60 min.
+read-only, corte seco e repo `kiosky-player` seguem fora.
+
+Atualizacao C10.3: 2026-05-05. C10.3 implementa e valida em bancada a
+Superficie de Produto V0
+antes de read-only/homologacao. O wizard visual passa a iniciar pela escolha de
+orientacao, registra `rotation_deg` na candidata e ajusta layout das telas
+seguintes conforme paisagem/retrato. A etapa Conexao troca digitacao manual de
+SSID por lista local read-only via NetworkManager, exibindo nomes de rede
+somente no HDMI do operador. Status, summary e candidata registram apenas
+contagem/categorias (`wifi_networks_found_count`, `selected_network_present`,
+`selected_network_signal_bucket`, `selected_network_security_present`); senha
+continua oculta e SSID/senha/IP/MAC/DNS/gateway/BSSID/hostname/UUID/logs brutos
+seguem proibidos em artefatos. O runner C10.3 adiciona preview/cancelamento,
+preview de lista Wi-Fi, conclusao com Wi-Fi existente e modos reversiveis para
+guardrails visuais de boot/getty com confirmacao explicita e rollback. A
+validacao humana passou com preview visual, preview de lista Wi-Fi, cancelamento
+e conclusao usando Wi-Fi dedicado existente; C5.1 `allow-mock` passou e
+`real-dry-run` falhou como esperado por placeholders. Guardrails de boot foram
+aplicados, SSH voltou apos reboot controlado e o estado final foi
+`active/enabled`, `NRestarts=0`, `public_state=player_running`, playback
+`playing`, player/MPV ativos e renderer/setup ausentes. Writer, config real,
+Wi-Fi/NetworkManager apply, hotspot, portal, root read-only, corte seco e repo
+`kiosky-player` seguem fora por padrao. C10.4 fica reservado para Product
+Surface V0 + writer real.
 
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As

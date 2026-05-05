@@ -50,6 +50,7 @@ ALLOWED_READ_ONLY_COMMANDS = {
     ("nmcli", "-t", "-f", "RUNNING", "general"),
     ("nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"),
     ("nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"),
+    ("nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"),
 }
 
 SENSITIVE_MARKERS = (
@@ -425,6 +426,104 @@ def parse_active_connections(stdout: str) -> dict[str, bool | str]:
     return {
         "ethernet_active": ethernet_active,
         "wifi_active": wifi_active,
+    }
+
+
+def signal_bucket(raw_signal: str | int | None) -> str:
+    try:
+        value = int(str(raw_signal or "").strip())
+    except ValueError:
+        return UNKNOWN
+    if value >= 70:
+        return "strong"
+    if value >= 40:
+        return "medium"
+    return "weak"
+
+
+def security_present(raw_security: str | None) -> bool | str:
+    cleaned = (raw_security or "").strip()
+    if not cleaned or cleaned in {"--", "none", "NONE"}:
+        return False
+    return True
+
+
+def parse_wifi_network_list(stdout: str, *, limit: int = 12) -> list[dict[str, Any]]:
+    """Parse nmcli Wi-Fi list for local UI use.
+
+    The returned dictionaries intentionally keep SSID only for the local HDMI UI.
+    Callers must not write these dictionaries to public status or evidence.
+    """
+
+    by_ssid: dict[str, dict[str, Any]] = {}
+    for raw_line in stdout.splitlines():
+        if not raw_line.strip():
+            continue
+        fields = split_nmcli_terse(raw_line)
+        if len(fields) < 3:
+            continue
+        ssid, signal, security = fields[:3]
+        ssid = ssid.strip()
+        if not ssid:
+            continue
+        bucket = signal_bucket(signal)
+        try:
+            signal_value = int(signal)
+        except ValueError:
+            signal_value = -1
+        item = {
+            "ssid": ssid,
+            "signal_bucket": bucket,
+            "security_present": security_present(security),
+            "_signal_value": signal_value,
+        }
+        previous = by_ssid.get(ssid)
+        if previous is None or signal_value > int(previous.get("_signal_value", -1)):
+            by_ssid[ssid] = item
+
+    networks = sorted(by_ssid.values(), key=lambda item: int(item.get("_signal_value", -1)), reverse=True)
+    public_safe: list[dict[str, Any]] = []
+    for item in networks[:limit]:
+        public_safe.append(
+            {
+                "ssid": str(item["ssid"]),
+                "signal_bucket": str(item["signal_bucket"]),
+                "security_present": item["security_present"],
+            }
+        )
+    return public_safe
+
+
+def list_wifi_networks_for_local_ui(
+    *,
+    timeout_sec: int = 8,
+    command_runner: Callable[[list[str], int], CommandResult] = run_read_only_command,
+    nmcli_path: str | None = None,
+) -> tuple[list[dict[str, Any]], str]:
+    """Return SSIDs for local operator display only.
+
+    This function never writes artifacts and uses only the read-only nmcli
+    allowlist. The caller is responsible for keeping SSIDs out of status,
+    summary, docs and evidence.
+    """
+
+    if nmcli_path is None:
+        nmcli_path = shutil.which("nmcli")
+    if not nmcli_path:
+        return [], "nmcli_unavailable"
+    command = ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"]
+    result = command_runner(command, timeout_sec)
+    if result.status != "ok":
+        return [], result.status
+    return parse_wifi_network_list(result.stdout), "ok"
+
+
+def wifi_selection_public_metadata(networks: list[dict[str, Any]], selected: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "wifi_networks_found_count": len(networks),
+        "selected_network_present": selected is not None,
+        "selected_network_signal_bucket": str(selected.get("signal_bucket", UNKNOWN)) if selected else UNKNOWN,
+        "selected_network_security_present": selected.get("security_present", UNKNOWN) if selected else UNKNOWN,
     }
 
 
@@ -1731,6 +1830,25 @@ def run_self_test() -> None:
     assert_true(parsed_active["ethernet_active"] is True, "active ethernet should be detected")
     assert_true(parsed_active["wifi_active"] is True, "active wifi should be detected")
 
+    wifi_list_fixture = "\n".join(
+        [
+            "FAKE-STORE-WIFI:82:WPA2",
+            "FAKE-STORE-WIFI:55:WPA2",
+            "Fake product wifi:35:",
+            "aa\\:bb\\:cc\\:dd\\:ee\\:ff:12:WPA1",
+        ]
+    )
+    parsed_wifi_list = parse_wifi_network_list(wifi_list_fixture)
+    assert_true(len(parsed_wifi_list) == 3, "wifi list should deduplicate SSIDs")
+    assert_true(parsed_wifi_list[0]["ssid"] == "FAKE-STORE-WIFI", "strongest SSID should sort first")
+    assert_true(parsed_wifi_list[0]["signal_bucket"] == "strong", "signal bucket should be strong")
+    public_wifi_meta = wifi_selection_public_metadata(parsed_wifi_list, parsed_wifi_list[0])
+    assert_true(public_wifi_meta["wifi_networks_found_count"] == 3, "wifi count should be public")
+    assert_true(public_wifi_meta["selected_network_present"] is True, "selection presence should be public")
+    assert_true(public_wifi_meta["selected_network_signal_bucket"] == "strong", "selected bucket should be public")
+    assert_true(public_wifi_meta["selected_network_security_present"] is True, "security presence should be public")
+    assert_no_forbidden_values(json.dumps(public_wifi_meta, sort_keys=True))
+
     route_fixture = "\n".join(
         [
             "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT",
@@ -1755,6 +1873,8 @@ def run_self_test() -> None:
             return CommandResult("ok", device_fixture)
         if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
             return CommandResult("ok", active_fixture)
+        if args == ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"]:
+            return CommandResult("ok", wifi_list_fixture)
         if args == ["ip", "-o", "route", "get", "192.0.2.10"]:
             return CommandResult("ok", "192.0.2.10 dev eth0 src 192.0.2.44 uid 0\n")
         if len(args) == 7 and args[:6] == ["nmcli", "-t", "-f", "connection.id", "connection", "show"]:
@@ -1803,6 +1923,13 @@ def run_self_test() -> None:
         assert_true(status["default_route_present"] is True, "default route should be true")
         assert_true(status["dns_configured"] is True, "resolver should be true")
         assert_true(status["connectivity"] == "not_checked", "connectivity should not be externally checked")
+        local_networks, local_list_status = list_wifi_networks_for_local_ui(
+            timeout_sec=1,
+            command_runner=fake_runner,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(local_list_status == "ok", "local Wi-Fi list should parse")
+        assert_true(local_networks[0]["ssid"] == "FAKE-STORE-WIFI", "local list may keep SSID for UI only")
         for key in (
             "network_changed",
             "credentials_collected",

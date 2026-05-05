@@ -61,7 +61,7 @@ CANVAS_WIDTH = 1280
 CANVAS_HEIGHT = 720
 BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
-STEPS = ("Inicio", "Conexao", "Ambiente", "Tela", "Revisao", "Concluir")
+STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
 
 CANDIDATE_FILENAME = "config.candidate.json"
 STATUS_FILENAME = "setup-status.json"
@@ -115,9 +115,9 @@ NETWORK_OPTIONS = (
         "Usa o perfil dedicado ja validado neste totem.",
     ),
     Option(
-        "wifi_persistent",
-        "Configurar Wi-Fi deste totem",
-        "Coleta rede e senha localmente e mantem perfil dedicado.",
+        "wifi_select",
+        "Selecionar rede Wi-Fi",
+        "Escolhe a rede em lista local e mantem perfil dedicado.",
     ),
     Option(
         "bench_mock",
@@ -244,7 +244,7 @@ def step_indicator(active_step: int) -> str:
         fill = "#ecfeff" if active else "#1f2937"
         stroke = "#0891b2" if active else "#334155"
         text_fill = "#0f172a" if active else "#cbd5e1"
-        width = 148 if index in {0, 5} else 154
+        width = 180 if index in {0, 4} else 176
         parts.append(
             f'<rect x="{x}" y="{y}" width="{width}" height="44" rx="8" fill="{fill}" stroke="{stroke}"/>'
             f'<text x="{x + 18}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" '
@@ -254,9 +254,14 @@ def step_indicator(active_step: int) -> str:
     return "\n  ".join(parts)
 
 
-def option_cards(options: list[Option], selected_index: int) -> str:
+def option_cards(options: list[Option], selected_index: int, *, layout_rotation_deg: int = 0) -> str:
     parts = []
     y = 262
+    portrait_layout = layout_rotation_deg in {90, 270}
+    card_width = 690 if portrait_layout else 760
+    card_height = 90 if portrait_layout else 82
+    label_width = 29 if portrait_layout else 34
+    description_width = 44 if portrait_layout else 54
     for index, option in enumerate(options[:5]):
         active = index == selected_index
         fill = "#f8fafc" if active else "#182130"
@@ -265,49 +270,54 @@ def option_cards(options: list[Option], selected_index: int) -> str:
         body_fill = "#334155" if active else "#cbd5e1"
         marker_fill = "#0891b2" if active else "#475569"
         parts.append(
-            f'<rect x="96" y="{y}" width="760" height="82" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
-            f'<circle cx="132" cy="{y + 41}" r="18" fill="{marker_fill}"/>'
-            f'<text x="126" y="{y + 48}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" '
+            f'<rect x="96" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
+            f'<circle cx="132" cy="{y + 42}" r="18" fill="{marker_fill}"/>'
+            f'<text x="126" y="{y + 49}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" '
             f'font-weight="700" fill="#ffffff">{index + 1}</text>'
-            f'<text x="168" y="{y + 34}" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" '
-            f'font-weight="700" fill="{title_fill}">{escape_text(option.label)}</text>'
-            f'<text x="168" y="{y + 62}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" '
-            f'fill="{body_fill}">{escape_text(option.description)}</text>'
+            f'{svg_lines(option.label, x=168, y=y + 34, size=23, fill=title_fill, width=label_width, line_gap=28, max_lines=1, weight=700)}'
+            f'{svg_lines(option.description, x=168, y=y + 63, size=17, fill=body_fill, width=description_width, line_gap=22, max_lines=1)}'
         )
-        y += 96
+        y += card_height + 14
     return "\n  ".join(parts)
 
 
-def info_panel(items: list[str], *, title: str = "Nesta etapa") -> str:
+def info_panel(items: list[str], *, title: str = "Nesta etapa", layout_rotation_deg: int = 0) -> str:
+    portrait_layout = layout_rotation_deg in {90, 270}
+    panel_x = 824 if portrait_layout else 888
+    panel_width = 364 if portrait_layout else 300
+    text_width = 36 if portrait_layout else 30
     y = 278
     bullet_parts = []
     for item in items[:5]:
         bullet_parts.append(
-            f'<circle cx="924" cy="{y - 6}" r="5" fill="#06b6d4"/>'
-            f'{svg_lines(item, x=944, y=y, size=17, fill="#cbd5e1", width=30, line_gap=24, max_lines=2)}'
+            f'<circle cx="{panel_x + 36}" cy="{y - 6}" r="5" fill="#06b6d4"/>'
+            f'{svg_lines(item, x=panel_x + 56, y=y, size=17, fill="#cbd5e1", width=text_width, line_gap=24, max_lines=2)}'
         )
         y += 66
     return f"""
-  <rect x="888" y="220" width="300" height="330" rx="8" fill="#111827" stroke="#334155"/>
-  <text x="920" y="260" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
+  <rect x="{panel_x}" y="220" width="{panel_width}" height="330" rx="8" fill="#111827" stroke="#334155"/>
+  <text x="{panel_x + 32}" y="260" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
   {' '.join(bullet_parts)}
 """
 
 
-def field_panel(label: str, value_hint: str, note: str) -> str:
+def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: int = 0) -> str:
+    portrait_layout = layout_rotation_deg in {90, 270}
+    panel_width = 690 if portrait_layout else 760
+    text_width = 36 if portrait_layout else 44
     value_svg = svg_lines(
         value_hint,
         x=132,
         y=392,
         size=26,
         fill="#111827",
-        width=44,
+        width=text_width,
         line_gap=34,
         max_lines=2,
         weight=700,
     )
     return f"""
-  <rect x="96" y="300" width="760" height="130" rx="8" fill="#f8fafc" stroke="#06b6d4" stroke-width="2"/>
+  <rect x="96" y="300" width="{panel_width}" height="130" rx="8" fill="#f8fafc" stroke="#06b6d4" stroke-width="2"/>
   <text x="132" y="346" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#0f172a">{escape_text(label)}</text>
   {value_svg}
   <text x="132" y="462" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">{escape_text(note)}</text>
@@ -336,10 +346,20 @@ def build_screen_svg(
     panel_title: str = "Nesta etapa",
     panel_items: list[str] | None = None,
     accent: str = "#06b6d4",
+    layout_rotation_deg: int = 0,
 ) -> str:
-    options_svg = option_cards(options, selected_index) if options else ""
-    field_svg = field_panel(field_label, field_value_hint, field_note) if field_label is not None else ""
-    panel_svg = info_panel(panel_items or [], title=panel_title)
+    options_svg = option_cards(options, selected_index, layout_rotation_deg=layout_rotation_deg) if options else ""
+    field_svg = (
+        field_panel(field_label, field_value_hint, field_note, layout_rotation_deg=layout_rotation_deg)
+        if field_label is not None
+        else ""
+    )
+    panel_svg = info_panel(panel_items or [], title=panel_title, layout_rotation_deg=layout_rotation_deg)
+    layout_note = {
+        90: "Layout retrato para direita",
+        270: "Layout retrato para esquerda",
+        180: "Layout invertido",
+    }.get(layout_rotation_deg, "Layout paisagem")
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{CANVAS_WIDTH}" height="{CANVAS_HEIGHT}" viewBox="0 0 {CANVAS_WIDTH} {CANVAS_HEIGHT}" role="img" aria-label="Dadooh setup visual wizard">
   <rect width="{CANVAS_WIDTH}" height="{CANVAS_HEIGHT}" fill="#0f172a"/>
@@ -347,6 +367,7 @@ def build_screen_svg(
   <rect x="0" y="12" width="{CANVAS_WIDTH}" height="132" fill="#111827"/>
   <text x="96" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">{BRAND}</text>
   <text x="250" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">{TITLE}</text>
+  <text x="1030" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">{escape_text(layout_note)}</text>
   {step_indicator(active_step)}
   <text x="96" y="200" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
   {svg_lines(subtitle, x=98, y=236, size=21, fill="#cbd5e1", width=62, line_gap=28, max_lines=2)}
@@ -783,6 +804,7 @@ def choose_option(
     options: list[Option],
     panel_items: list[str],
     allow_back: bool = False,
+    layout_rotation_deg: int = 0,
 ) -> Option | None:
     selected = 0
     while True:
@@ -799,6 +821,7 @@ def choose_option(
                 options=options,
                 selected_index=selected,
                 panel_items=panel_items,
+                layout_rotation_deg=layout_rotation_deg,
             ),
         )
         key = read_key()
@@ -829,6 +852,7 @@ def read_text_field(
     panel_items: list[str],
     allow_back: bool = True,
     show_plain_value: bool = False,
+    layout_rotation_deg: int = 0,
 ) -> str | None:
     value = ""
     error = ""
@@ -850,6 +874,7 @@ def read_text_field(
                 field_note=note,
                 panel_items=panel_items,
                 accent="#ef4444" if error else "#06b6d4",
+                layout_rotation_deg=layout_rotation_deg,
             ),
         )
         key = read_key()
@@ -922,6 +947,10 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
         "secrets_file_removed": False,
         "commands_executed": False,
         "nmcli_called": False,
+        "wifi_networks_found_count": "unknown",
+        "selected_network_present": False,
+        "selected_network_signal_bucket": "unknown",
+        "selected_network_security_present": "unknown",
     }
     payload.update(overrides)
     return payload
@@ -971,26 +1000,113 @@ def write_wifi_secrets_file(secrets_dir: pathlib.Path, ssid: str, psk: str) -> p
     return secrets_path
 
 
-def collect_wifi_credentials(display: VisualDisplay) -> pathlib.Path | None:
-    ssid = read_text_field(
+def local_display_value(value: str, *, max_chars: int = 36) -> str:
+    cleaned = " ".join(str(value).split())
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[: max(0, max_chars - 3)] + "..."
+
+
+def security_label(value: Any) -> str:
+    if value is True:
+        return "segura"
+    if value is False:
+        return "aberta"
+    return "seguranca desconhecida"
+
+
+def choose_wifi_network(
+    display: VisualDisplay,
+    *,
+    layout_rotation_deg: int,
+) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+    networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(timeout_sec=8)
+    if not networks:
+        display.show(
+            "02-wifi-list-empty",
+            build_screen_svg(
+                active_step=1,
+                title="Redes Wi-Fi",
+                subtitle="Nao foi possivel montar uma lista local de redes agora.",
+                footer="Enter volta | Esc cancela",
+                panel_title="Resultado publico",
+                panel_items=[
+                    f"Listagem: {list_status}",
+                    "Nenhuma rede sera alterada.",
+                    "Nenhum identificador sera publicado.",
+                ],
+                accent="#ef4444",
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        key = read_key()
+        if key == "enter":
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    options = [
+        Option(
+            f"wifi-{index}",
+            local_display_value(str(network["ssid"])),
+            f"Sinal {network['signal_bucket']} | {security_label(network.get('security_present'))}",
+        )
+        for index, network in enumerate(networks[:5])
+    ]
+    selected = choose_option(
         display,
-        screen_id="02-wifi-ssid",
+        screen_id="02-wifi-list",
         active_step=1,
-        title="Configurar Wi-Fi",
-        subtitle="Digite a rede neste totem. Ela nao sera publicada em status, resumo ou evidencia.",
-        label="Rede Wi-Fi",
-        hidden=False,
-        min_length=1,
-        max_length=128,
+        title="Redes Wi-Fi",
+        subtitle="Escolha a rede na lista local. O nome nao sera gravado em evidencia.",
+        options=options,
         panel_items=[
-            "Use uma rede WPA/WPA2 comum.",
-            "Evite portal cativo nesta rodada.",
-            "O perfil dedicado sera mantido.",
+            f"Redes encontradas: {len(networks)}",
+            "A lista e exibida somente aqui.",
+            "BSSID, MAC, IP e DNS nao aparecem.",
+            "A senha continua oculta.",
         ],
-        show_plain_value=True,
+        allow_back=True,
+        layout_rotation_deg=layout_rotation_deg,
     )
-    if ssid is None:
+    if selected is None:
         return None
+    index = int(selected.key.split("-", 1)[1])
+    return networks[index], networks
+
+
+def collect_wifi_credentials(
+    display: VisualDisplay,
+    *,
+    layout_rotation_deg: int,
+) -> tuple[pathlib.Path, dict[str, Any]] | None:
+    selected = choose_wifi_network(display, layout_rotation_deg=layout_rotation_deg)
+    if selected is None:
+        return None
+    selected_network, networks = selected
+    ssid = str(selected_network["ssid"])
+    display.show(
+        "02-wifi-selected",
+        build_screen_svg(
+            active_step=1,
+            title="Rede selecionada",
+            subtitle=local_display_value(ssid, max_chars=56),
+            footer="Enter continua | B volta | Esc cancela",
+            panel_title="Privacidade",
+            panel_items=[
+                "Nome aparece so nesta tela local.",
+                "Status e resumo gravam apenas categorias.",
+                "Senha sera digitada oculta.",
+            ],
+            layout_rotation_deg=layout_rotation_deg,
+        ),
+    )
+    key = read_key()
+    if key == "back":
+        return None
+    if key != "enter":
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    selection_metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected_network)
     psk = read_text_field(
         display,
         screen_id="02-wifi-psk",
@@ -1006,6 +1122,7 @@ def collect_wifi_credentials(display: VisualDisplay) -> pathlib.Path | None:
             "Senha nao vai para logs.",
             "Secrets temporario fica sob /tmp.",
         ],
+        layout_rotation_deg=layout_rotation_deg,
     )
     if psk is None:
         return None
@@ -1023,6 +1140,7 @@ def collect_wifi_credentials(display: VisualDisplay) -> pathlib.Path | None:
                 "Config real nao sera escrita.",
                 "Writer nao sera chamado.",
             ],
+            layout_rotation_deg=layout_rotation_deg,
         ),
     )
     key = read_key()
@@ -1030,10 +1148,14 @@ def collect_wifi_credentials(display: VisualDisplay) -> pathlib.Path | None:
         return None
     if key != "enter":
         raise VisualWizardAbort("setup visual cancelado pelo operador")
-    return write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk)
+    return write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk), selection_metadata
 
 
-def wifi_network_from_status(adapter_status: dict[str, Any], secrets_path: pathlib.Path) -> dict[str, Any]:
+def wifi_network_from_status(
+    adapter_status: dict[str, Any],
+    secrets_path: pathlib.Path,
+    selection_metadata: dict[str, Any],
+) -> dict[str, Any]:
     profile_present = dedicated_profile_present()
     activation_result = str(adapter_status.get("wifi_activation_result") or "unknown")
     network_changed = bool(adapter_status.get("network_changed", False)) or bool(
@@ -1056,13 +1178,20 @@ def wifi_network_from_status(adapter_status: dict[str, Any], secrets_path: pathl
         secrets_file_removed=not secrets_path.exists(),
         commands_executed=True,
         nmcli_called=True,
+        **selection_metadata,
     )
 
 
-def run_wifi_persistent(display: VisualDisplay, out_dir: pathlib.Path) -> dict[str, Any] | None:
-    secrets_path = collect_wifi_credentials(display)
-    if secrets_path is None:
+def run_wifi_persistent(
+    display: VisualDisplay,
+    out_dir: pathlib.Path,
+    *,
+    layout_rotation_deg: int,
+) -> dict[str, Any] | None:
+    collected = collect_wifi_credentials(display, layout_rotation_deg=layout_rotation_deg)
+    if collected is None:
         return None
+    secrets_path, selection_metadata = collected
     wifi_out_dir = require_tmp_dir(str(out_dir / WIFI_APPLY_DIRNAME))
     prepare_private_dir(wifi_out_dir)
     stdout_path = wifi_out_dir / "apply-stdout.json"
@@ -1108,6 +1237,7 @@ def run_wifi_persistent(display: VisualDisplay, out_dir: pathlib.Path) -> dict[s
                         "Timeout curto esta ativo.",
                         "Apenas perfil dedicado pode ser tocado.",
                     ],
+                    layout_rotation_deg=layout_rotation_deg,
                 ),
             )
             time.sleep(1)
@@ -1130,7 +1260,7 @@ def run_wifi_persistent(display: VisualDisplay, out_dir: pathlib.Path) -> dict[s
             pass
     if rc != 0 and adapter_status.get("wifi_activation_result") == "success":
         adapter_status["wifi_activation_result"] = "unknown"
-    network = wifi_network_from_status(adapter_status, secrets_path)
+    network = wifi_network_from_status(adapter_status, secrets_path, selection_metadata)
     display.show(
         "02-wifi-result",
         build_screen_svg(
@@ -1144,6 +1274,7 @@ def run_wifi_persistent(display: VisualDisplay, out_dir: pathlib.Path) -> dict[s
                 f"Persistente: {str(network['dedicated_profile_persistent']).lower()}",
                 f"Secrets removido: {str(network['secrets_file_removed']).lower()}",
             ],
+            layout_rotation_deg=layout_rotation_deg,
         ),
     )
     key = read_key()
@@ -1166,7 +1297,7 @@ def resolve_network_scripted(network_step: str) -> dict[str, Any]:
             dedicated_profile_present_final=True,
             dedicated_profile_persistent=True,
         )
-    if network_step in {"wifi_persistent", "persistent"}:
+    if network_step in {"wifi_persistent", "persistent", "wifi_select"}:
         return network_defaults(
             network_step="wifi_persistent",
             label="Wi-Fi configurado neste totem",
@@ -1175,6 +1306,10 @@ def resolve_network_scripted(network_step: str) -> dict[str, Any]:
             connectivity="not_checked",
             dedicated_profile_present_final="unknown",
             dedicated_profile_persistent=False,
+            wifi_networks_found_count=1,
+            selected_network_present=True,
+            selected_network_signal_bucket="strong",
+            selected_network_security_present=True,
         )
     if network_step in {"bench_mock", "mock"}:
         return network_defaults()
@@ -1229,6 +1364,10 @@ def build_visual_status(
             "network_changed": network["network_changed"],
             "credentials_collected": network["credentials_collected"],
             "secrets_file_removed": network["secrets_file_removed"],
+            "wifi_networks_found_count": network["wifi_networks_found_count"],
+            "selected_network_present": network["selected_network_present"],
+            "selected_network_signal_bucket": network["selected_network_signal_bucket"],
+            "selected_network_security_present": network["selected_network_security_present"],
             "ssid_written_to_public_status": False,
             "password_written_to_public_status": False,
             "ip_written_to_public_status": False,
@@ -1326,6 +1465,10 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             f"network_changed: {str(status['network']['network_changed']).lower()}",
             f"credentials_collected: {str(status['network']['credentials_collected']).lower()}",
             f"credential_file_removed: {str(status['network']['secrets_file_removed']).lower()}",
+            f"wifi_networks_found_count: {status['network']['wifi_networks_found_count']}",
+            f"selected_network_present: {str(status['network']['selected_network_present']).lower()}",
+            f"selected_network_signal_bucket: {status['network']['selected_network_signal_bucket']}",
+            f"selected_network_security_present: {status['network']['selected_network_security_present']}",
             f"environment_id_present: {str(status['environment']['environment_id_present']).lower()}",
             f"environment_id_valid: {str(status['environment']['environment_id_valid']).lower()}",
             f"rotation_degrees: {status['validation']['rotation_degrees']}",
@@ -1405,6 +1548,10 @@ def write_visual_artifacts(
     candidate["setup_wifi_activation_result"] = network["wifi_activation_result"]
     candidate["setup_wifi_rollback_after_test"] = network["rollback_after_test"]
     candidate["setup_wifi_dedicated_profile_persistent"] = bool(network["dedicated_profile_persistent"])
+    candidate["setup_wifi_networks_found_count"] = network["wifi_networks_found_count"]
+    candidate["setup_wifi_selected_network_present"] = bool(network["selected_network_present"])
+    candidate["setup_wifi_selected_network_signal_bucket"] = network["selected_network_signal_bucket"]
+    candidate["setup_wifi_selected_network_security_present"] = network["selected_network_security_present"]
     candidate["setup_display_source"] = "mock_candidate_only"
     candidate["setup_visual_renderer"] = visual_renderer_name()
 
@@ -1481,7 +1628,7 @@ def review_and_confirm(
     display.show(
         "05-review",
         build_screen_svg(
-            active_step=4,
+            active_step=3,
             title="Revisao",
             subtitle="Confirme a candidata temporaria. Dados sensiveis nao aparecem nesta tela.",
             footer="Enter conclui | B volta | Esc cancela",
@@ -1493,6 +1640,7 @@ def review_and_confirm(
                 "Writer real segue bloqueado.",
                 "Config real segue intocada.",
             ],
+            layout_rotation_deg=int(rotation["rotation_deg"]),
         ),
     )
     key = read_key()
@@ -1504,10 +1652,11 @@ def review_and_confirm(
 
 
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
+    rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
     display.show(
         "06-complete",
         build_screen_svg(
-            active_step=5,
+            active_step=4,
             title="Concluido",
             subtitle="Candidata temporaria gerada. A proxima etapa ainda precisa de writer controlado.",
             footer="Enter sai",
@@ -1519,6 +1668,7 @@ def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
                 "Nada foi escrito fora de /tmp.",
             ],
             accent="#22c55e",
+            layout_rotation_deg=rotation_deg,
         ),
     )
     wait_enter_or_cancel()
@@ -1528,8 +1678,23 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
     try:
         with RawKeyboard():
-            draw_welcome(display)
-            wait_enter_or_cancel()
+            selected_rotation = choose_option(
+                display,
+                screen_id="01-orientation",
+                active_step=0,
+                title="Orientacao da tela",
+                subtitle="Escolha primeiro como o totem esta instalado. As proximas telas seguem este layout.",
+                options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
+                panel_items=[
+                    "Ajusta somente o wizard nesta rodada.",
+                    "Rotacao final do player fica bloqueada.",
+                    "O valor entra na candidata.",
+                ],
+            )
+            if selected_rotation is None:
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
+            rotation = resolve_display_selection(selected_rotation.key)
+            layout_rotation_deg = int(rotation["rotation_deg"])
             while True:
                 selected_network = choose_option(
                     display,
@@ -1539,18 +1704,19 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
                     subtitle="Escolha como este totem deve seguir agora.",
                     options=list(NETWORK_OPTIONS),
                     panel_items=[
-                        "Wi-Fi persistente usa perfil dedicado.",
-                        "Credenciais ficam apenas em arquivo temporario.",
+                        "Redes aparecem em lista local.",
+                        "Senha fica oculta.",
                         "Sem hotspot e sem portal nesta rodada.",
                     ],
+                    layout_rotation_deg=layout_rotation_deg,
                 )
                 if selected_network is None:
                     continue
                 try:
                     if selected_network.key == "configured_wifi":
                         network = use_configured_wifi_network()
-                    elif selected_network.key == "wifi_persistent":
-                        maybe_network = run_wifi_persistent(display, out_dir)
+                    elif selected_network.key == "wifi_select":
+                        maybe_network = run_wifi_persistent(display, out_dir, layout_rotation_deg=layout_rotation_deg)
                         if maybe_network is None:
                             continue
                         network = maybe_network
@@ -1571,6 +1737,7 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
                                 "Tente outro caminho.",
                             ],
                             accent="#ef4444",
+                            layout_rotation_deg=layout_rotation_deg,
                         ),
                     )
                     key = read_key()
@@ -1596,29 +1763,10 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
                             "Valor nao aparece no resumo publico.",
                         ],
                         show_plain_value=True,
+                        layout_rotation_deg=layout_rotation_deg,
                     )
                     if environment_id is None:
                         break
-                    selected_rotation = choose_option(
-                        display,
-                        screen_id="04-display",
-                        active_step=3,
-                        title="Tela",
-                        subtitle="Escolha a orientacao desejada. A rotacao real ainda nao sera aplicada.",
-                        options=[
-                            Option(str(item["key"]), str(item["label"]), str(item["description"]))
-                            for item in DISPLAY_OPTIONS
-                        ],
-                        panel_items=[
-                            "Apenas candidata em /tmp.",
-                            "Sem EDID, framebuffer ou MPV flags.",
-                            "Aplicacao real fica para etapa futura.",
-                        ],
-                        allow_back=True,
-                    )
-                    if selected_rotation is None:
-                        continue
-                    rotation = resolve_display_selection(selected_rotation.key)
                     if not review_and_confirm(display, environment_id, rotation, network):
                         continue
                     status = write_visual_artifacts(out_dir, environment_id, rotation, network)
@@ -1631,13 +1779,15 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
 def generate_preview_screens(out_dir: pathlib.Path) -> None:
     display = VisualDisplay(out_dir, enabled=False)
     display.show(
-        "01-welcome",
+        "01-orientation",
         build_screen_svg(
             active_step=0,
-            title="Bem-vindo",
-            subtitle="Assistente visual local, sem desktop e sem navegador.",
-            footer="Enter inicia | Esc cancela",
-            panel_items=["SVG local", "MPV/DRM", "Teclado local"],
+            title="Orientacao da tela",
+            subtitle="Escolha primeiro como o totem esta instalado.",
+            footer="Setas movem | Enter confirma | Esc cancela",
+            options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
+            selected_index=0,
+            panel_items=["Primeira etapa", "Candidata em /tmp", "Sem rotacao real do player"],
         ),
     )
     display.show(
@@ -1645,11 +1795,26 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=1,
             title="Conexao",
-            subtitle="Escolha usar Wi-Fi ja configurado, configurar Wi-Fi ou seguir em bancada.",
+            subtitle="Escolha usar Wi-Fi ja configurado, selecionar rede ou seguir em bancada.",
             footer="Setas movem | Enter confirma | Esc cancela",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
-            panel_items=["Perfil dedicado", "Sem portal", "Sem dados publicos"],
+            panel_items=["Lista local", "Senha oculta", "Sem dados publicos"],
+        ),
+    )
+    display.show(
+        "02-wifi-list",
+        build_screen_svg(
+            active_step=1,
+            title="Redes Wi-Fi",
+            subtitle="Exemplo sintetico de lista local. SSIDs reais nao entram em evidencia.",
+            footer="Setas movem | Enter confirma | B volta",
+            options=[
+                Option("wifi-0", "REDE-DE-EXEMPLO-01", "Sinal strong | segura"),
+                Option("wifi-1", "REDE-DE-EXEMPLO-02", "Sinal medium | segura"),
+            ],
+            selected_index=0,
+            panel_items=["Aparece so no HDMI", "Sem BSSID/MAC", "Senha continua oculta"],
         ),
     )
     display.show(
@@ -1666,21 +1831,9 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         ),
     )
     display.show(
-        "04-display",
-        build_screen_svg(
-            active_step=3,
-            title="Tela",
-            subtitle="Selecao mock/candidata de orientacao.",
-            footer="Setas movem | Enter confirma | B volta",
-            options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
-            selected_index=0,
-            panel_items=["Nao aplica rotacao real", "Nao muda MPV", "Nao mexe em EDID"],
-        ),
-    )
-    display.show(
         "05-review",
         build_screen_svg(
-            active_step=4,
+            active_step=3,
             title="Revisao",
             subtitle="Resumo publico antes da candidata.",
             footer="Enter conclui | B volta | Esc cancela",
@@ -1690,7 +1843,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
     display.show(
         "06-complete",
         build_screen_svg(
-            active_step=5,
+            active_step=4,
             title="Concluido",
             subtitle="Candidata temporaria pronta para a proxima etapa.",
             footer="Enter sai",
@@ -1717,6 +1870,85 @@ def show_preview(out_dir: pathlib.Path, *, mpv_bin: str, auto_exit_sec: int) -> 
         display.stop()
 
 
+def show_wifi_list_preview(
+    out_dir: pathlib.Path,
+    *,
+    mpv_bin: str,
+    auto_exit_sec: int,
+    rotation_key: str,
+) -> dict[str, Any]:
+    prepare_private_dir(out_dir)
+    rotation = resolve_display_selection(rotation_key)
+    layout_rotation_deg = int(rotation["rotation_deg"])
+    networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(timeout_sec=8)
+    selected = networks[0] if networks else None
+    metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected)
+    display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
+    try:
+        if networks:
+            options = [
+                Option(
+                    f"wifi-{index}",
+                    local_display_value(str(network["ssid"])),
+                    f"Sinal {network['signal_bucket']} | {security_label(network.get('security_present'))}",
+                )
+                for index, network in enumerate(networks[:5])
+            ]
+            display.show(
+                "02-wifi-list-preview",
+                build_screen_svg(
+                    active_step=1,
+                    title="Redes Wi-Fi",
+                    subtitle="Preview read-only. Nomes aparecem somente nesta tela local.",
+                    footer="Preview automatico",
+                    options=options,
+                    selected_index=0,
+                    panel_items=[
+                        f"Redes encontradas: {len(networks)}",
+                        "Sem alteracao de rede.",
+                        "Sem SSID em status/resumo.",
+                    ],
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+        else:
+            display.show(
+                "02-wifi-list-preview-empty",
+                build_screen_svg(
+                    active_step=1,
+                    title="Redes Wi-Fi",
+                    subtitle="Preview read-only sem redes disponiveis agora.",
+                    footer="Preview automatico",
+                    panel_items=[
+                        f"Listagem: {list_status}",
+                        "Sem alteracao de rede.",
+                        "Sem identificadores publicados.",
+                    ],
+                    accent="#ef4444",
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+        time.sleep(max(1, auto_exit_sec))
+    finally:
+        display.stop()
+    status = {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at_utc": utc_timestamp(),
+        "mode": "wifi_list_preview",
+        "list_status": list_status,
+        "rotation_degrees": layout_rotation_deg,
+        **metadata,
+        "ssid_written_to_public_status": False,
+        "password_written_to_public_status": False,
+        "network_changed": False,
+        "real_config_read": False,
+        "real_config_written": False,
+        "writer_called": False,
+    }
+    atomic_write_private_json(out_dir / "wifi-list-preview-status.json", status, out_dir)
+    return status
+
+
 def run_scripted(out_dir: pathlib.Path, environment_id: str, rotation_key: str, network_step: str) -> dict[str, Any]:
     prepare_private_dir(out_dir)
     display = VisualDisplay(out_dir, enabled=False)
@@ -1728,12 +1960,13 @@ def run_scripted(out_dir: pathlib.Path, environment_id: str, rotation_key: str, 
     display.show(
         "06-complete-scripted",
         build_screen_svg(
-            active_step=5,
+            active_step=4,
             title="Concluido",
             subtitle="Candidata temporaria gerada por fluxo controlado.",
             footer="Fim do modo scripted",
             panel_items=["C5.1 allow-mock", "Sem writer", "Sem config real"],
             accent="#22c55e",
+            layout_rotation_deg=int(rotation["rotation_deg"]),
         ),
     )
     return status
@@ -1788,13 +2021,23 @@ def run_self_test() -> None:
             synthetic_ssid not in count_hint and "caracteres digitados" in count_hint,
             "count-only mode should not show raw value",
         )
+        local_wifi_options = wifi_adapter.parse_wifi_network_list(
+            "TEST_WIFI_SHOULD_NOT_LEAK:88:WPA2\nTEST_WIFI_WEAK:22:--\n",
+        )
+        assert_true(local_wifi_options[0]["ssid"] == synthetic_ssid, "local Wi-Fi list should keep SSID for HDMI")
+        local_metadata = wifi_adapter.wifi_selection_public_metadata(local_wifi_options, local_wifi_options[0])
+        assert_true(local_metadata["wifi_networks_found_count"] == 2, "Wi-Fi count should be public")
+        assert_true(local_metadata["selected_network_present"] is True, "selected network presence should be public")
+        assert_true(local_metadata["selected_network_signal_bucket"] == "strong", "signal bucket should be public")
+        assert_true(local_metadata["selected_network_security_present"] is True, "security presence should be public")
+        assert_true(synthetic_ssid not in json.dumps(local_metadata), "Wi-Fi metadata should not leak SSID")
 
         preview_dir = require_tmp_dir(str(root / "preview"))
         prepare_private_dir(preview_dir)
         generate_preview_screens(preview_dir)
         assert_true(
-            any((preview_dir / "screens").glob("*-01-welcome.svg")),
-            "preview should generate welcome",
+            any((preview_dir / "screens").glob("*-01-orientation.svg")),
+            "preview should generate orientation first",
         )
         assert_true(file_mode(preview_dir / "screens") == setup.PRIVATE_DIR_MODE, "preview screens should be 0700")
 
@@ -1858,6 +2101,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
     modes.add_argument("--preview-screens", action="store_true", help="Generate visual screens under /tmp and exit.")
+    modes.add_argument("--wifi-list-preview", action="store_true", help="Display local read-only Wi-Fi list preview.")
     modes.add_argument("--scripted", action="store_true", help="Generate a scripted candidate without MPV.")
     return parser.parse_args(argv)
 
@@ -1884,6 +2128,15 @@ def main(argv: list[str]) -> int:
             if args.show_preview:
                 show_preview(out_dir, mpv_bin=args.mpv_bin, auto_exit_sec=args.auto_exit_sec)
             print(out_dir / "screens")
+            return 0
+        if args.wifi_list_preview:
+            status = show_wifi_list_preview(
+                out_dir,
+                mpv_bin=args.mpv_bin,
+                auto_exit_sec=args.auto_exit_sec,
+                rotation_key=args.rotation_key,
+            )
+            print(json.dumps(status, indent=2, sort_keys=True))
             return 0
         if args.scripted:
             status = run_scripted(out_dir, args.environment_id, args.rotation_key, args.network_step)
