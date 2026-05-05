@@ -496,15 +496,22 @@ texto tecnico early-boot sumiu.
 Atualizacao C10.6: 2026-05-05. C10.6 redefine a frente de acesso local como
 "Abrir Configuracoes do Totem com player rodando". A UI principal continua
 sendo o wizard visual do produto; menu de manutencao/suporte, terminal local,
-root e shell ficam fora desta etapa. O runner
+root e shell ficam fora desta etapa. O acesso V0 adiciona gatilhos locais por
+teclado USB: `Ctrl+I` ou `F10` segurados por 5 segundos geram apenas uma
+solicitacao publica restrita em `/run/dadooh-settings/request.json`; o wizard
+visual de Configuracoes abre diretamente. `F12` segue como fallback tecnico
+quando disponivel, mas nao e o atalho principal por exigir `Fn` em alguns
+teclados. O runner
 `scripts/remote/run_c10_6_open_settings_from_player.sh` usa host explicito,
-pausa o player de forma controlada, cobre a HDMI com splash/transicao, abre o
-wizard visual, restaura o player ao cancelar e oferece dry-run com handoff/C5.1
-sem chamar writer. A escrita real permanece protegida por confirmacao explicita
-e delegada ao fluxo C10.4 ja validado. Wi-Fi/NetworkManager, config real,
-hotspot, portal, root read-only, corte seco e repo `kiosky-player` seguem fora
-por padrao. C10.7 fica reservado para Suporte Local V0 separado: diagnostico,
-reiniciar exibicao, reboot/desligamento seguro e PIN/senha local.
+instala/remove o trigger temporario em `/run/systemd/system`, pausa o player de
+forma controlada, cobre a HDMI com splash/transicao, abre o wizard visual,
+restaura o player ao cancelar e oferece dry-run com handoff/C5.1 sem chamar
+writer. A escrita real permanece protegida por confirmacao explicita e delegada
+ao fluxo C10.4 ja validado. Wi-Fi/NetworkManager, config real, hotspot, portal,
+root read-only, corte seco e repo `kiosky-player` seguem fora por padrao. C10.6.1
+fica reservado para PIN/senha local de Configuracoes; C10.7 fica reservado para
+Suporte Local V0 separado: diagnostico, reiniciar exibicao,
+reboot/desligamento seguro.
 
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As

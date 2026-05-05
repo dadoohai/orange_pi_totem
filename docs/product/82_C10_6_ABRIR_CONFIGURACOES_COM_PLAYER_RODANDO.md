@@ -14,7 +14,7 @@ login Linux ou modo root na UI do operador.
 O fluxo C10.6 e:
 
 1. player esta em exibicao;
-2. um gatilho controlado de bancada abre Configuracoes;
+2. um gatilho local V0 por teclado ou um runner de bancada abre Configuracoes;
 3. splash/transicao cobre a HDMI;
 4. `kiosky-player.service` e pausado temporariamente;
 5. o wizard visual assume a tela;
@@ -39,13 +39,30 @@ O fluxo C10.6 e:
 - nao habilita root read-only;
 - nao faz corte seco.
 
-## Acesso futuro
+## Acesso V0
 
-Nesta rodada, o acesso e de bancada via runner remoto autorizado. O contrato de
-produto fica separado:
+Nesta rodada, o acesso local V0 aceita dois gatilhos em teclado USB:
+
+- `Ctrl+I` segurado por 5 segundos;
+- `F10` segurado por 5 segundos.
+
+`F12` continua aceito como fallback tecnico quando disponivel, mas nao e o
+atalho principal porque alguns teclados exigem `Fn`. O trigger monitora
+`/dev/input` em modo read-only, detecta apenas esses gatilhos longos e grava
+uma solicitacao publica restrita em `/run/dadooh-settings/request.json`:
+
+- `schema_version`;
+- `requested_at`;
+- `trigger_type=keyboard_ctrl_i_hold` ou `keyboard_f10_hold`;
+- `action=open_settings`.
+
+Depois disso, o wizard visual de Configuracoes abre diretamente. Uma tela modal
+de confirmacao com contagem regressiva fica para C10.6.1 junto com PIN/senha.
+
+O contrato de produto fica separado:
 
 - operador acessa "Configuracoes do Totem" por gatilho local controlado;
-- PIN/senha local, tecla/combinacao ou botao fisico ficam para rodada futura;
+- PIN/senha local ou botao fisico ficam para rodada futura;
 - suporte tecnico, diagnostico, reboot/desligamento e terminal/root ficam fora
   da UI comum de configuracao.
 
@@ -58,11 +75,29 @@ scripts/remote/run_c10_6_open_settings_from_player.sh <host> --prepare-only
 scripts/remote/run_c10_6_open_settings_from_player.sh <host> --preview-open-settings
 scripts/remote/run_c10_6_open_settings_from_player.sh <host> --run-open-cancel
 scripts/remote/run_c10_6_open_settings_from_player.sh <host> --run-open-complete-dry-run
+scripts/remote/run_c10_6_open_settings_from_player.sh <host> --install-trigger-temporary
+scripts/remote/run_c10_6_open_settings_from_player.sh <host> --run-trigger-local-human
+scripts/remote/run_c10_6_open_settings_from_player.sh <host> --uninstall-trigger-temporary
 ```
 
 Modos que pausam o player exigem confirmacao humana explicita. O dry-run pode
 usar uma fonte privada sob `/tmp` ou a config ativa como fonte privada somente
 com confirmacao adicional, sem publicar valores.
+
+## Validacao
+
+Validado nesta frente:
+
+- self-test do trigger: F10 curto nao abre, F10 longo abre, Ctrl+I longo abre,
+  outras teclas nao abrem e caracteres nao sao registrados;
+- abertura do wizard visual a partir do player pelo runner;
+- cancelamento sem alterar config;
+- restauracao do player;
+- trigger temporario local com F10/Ctrl+I abrindo o wizard visual.
+
+O trigger temporario de systemd fica em `/run/systemd/system` e nao e habilitado
+de forma persistente. A instalacao e reversivel por
+`--uninstall-trigger-temporary`.
 
 ## Proximo passo
 
