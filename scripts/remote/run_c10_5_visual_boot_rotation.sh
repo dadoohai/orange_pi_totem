@@ -3,17 +3,17 @@ set -euo pipefail
 
 HOST=""
 MODE="prepare-only"
-REMOTE_TTY="2"
-RUN_TIMEOUT_SEC="1800"
-PREVIEW_SEC="14"
-REMOTE_DIR="/tmp/dadooh-c10-5"
-REMOTE_OUT_DIR="/tmp/dadooh-c10-5-visual-boot-rotation"
-REMOTE_WIZARD_OUT_DIR="/tmp/dadooh-c10-5-visual-wizard"
-PROFILE_NAME="dadooh-c9-8-wifi-persistent"
-PAUSE_CONFIRM_PHRASE="CONFIRMO C10.5 VISUAL BOOT ROTATION COM PAUSA DO PLAYER"
-BOOT_APPLY_CONFIRM_PHRASE="CONFIRMO APLICAR GUARDRAILS VISUAIS BOOT C10.5"
-BOOT_ROLLBACK_CONFIRM_PHRASE="CONFIRMO ROLLBACK GUARDRAILS VISUAIS BOOT C10.5"
-REBOOT_CONFIRM_PHRASE="CONFIRMO REBOOT VISUAL C10.5"
+REMOTE_TTY="${REMOTE_TTY:-2}"
+RUN_TIMEOUT_SEC="${RUN_TIMEOUT_SEC:-1800}"
+PREVIEW_SEC="${PREVIEW_SEC:-14}"
+REMOTE_DIR="${REMOTE_DIR:-/tmp/dadooh-c10-5}"
+REMOTE_OUT_DIR="${REMOTE_OUT_DIR:-/tmp/dadooh-c10-5-visual-boot-rotation}"
+REMOTE_WIZARD_OUT_DIR="${REMOTE_WIZARD_OUT_DIR:-/tmp/dadooh-c10-5-visual-wizard}"
+PROFILE_NAME="${PROFILE_NAME:-dadooh-c9-8-wifi-persistent}"
+PAUSE_CONFIRM_PHRASE="${PAUSE_CONFIRM_PHRASE:-CONFIRMO C10.5 VISUAL BOOT ROTATION COM PAUSA DO PLAYER}"
+BOOT_APPLY_CONFIRM_PHRASE="${BOOT_APPLY_CONFIRM_PHRASE:-CONFIRMO APLICAR GUARDRAILS VISUAIS BOOT C10.5}"
+BOOT_ROLLBACK_CONFIRM_PHRASE="${BOOT_ROLLBACK_CONFIRM_PHRASE:-CONFIRMO ROLLBACK GUARDRAILS VISUAIS BOOT C10.5}"
+REBOOT_CONFIRM_PHRASE="${REBOOT_CONFIRM_PHRASE:-CONFIRMO REBOOT VISUAL C10.5}"
 
 usage() {
   cat <<'USAGE'
@@ -393,6 +393,21 @@ restore_product_getty() {
 
 render_transition_splash() {
   local splash_mode="$1"
+  local splash_rotation_deg="0"
+  if [ -f "$WIZARD_OUT/setup-status.json" ]; then
+    splash_rotation_deg="$(python3 - "$WIZARD_OUT/setup-status.json" <<'PY'
+import json
+import pathlib
+import sys
+try:
+    data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+    value = data.get("validation", {}).get("rotation_degrees", 0)
+    print(value if value in (0, 90, 180, 270) else 0)
+except Exception:
+    print(0)
+PY
+)"
+  fi
   case "$splash_mode" in
     setup) clear_product_ttys "Abrindo configuracao" ;;
     player) clear_product_ttys "Iniciando player" ;;
@@ -404,6 +419,7 @@ render_transition_splash() {
     return 0
   fi
   env TERM=linux /usr/bin/python3 "$SPLASH" "$splash_mode" \
+    --rotation-deg "$splash_rotation_deg" \
     --status-out "$RUN_OUT/splash-$splash_mode-status.json" \
     <"/dev/tty$REMOTE_TTY" >"/dev/tty$REMOTE_TTY" 2>/dev/null || true
 }

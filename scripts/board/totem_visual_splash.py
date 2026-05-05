@@ -34,8 +34,34 @@ MESSAGES = {
     "preparing": ("Dadooh", "Preparando"),
     "player": ("Dadooh", "Iniciando player"),
     "setup": ("Dadooh", "Abrindo configuracao"),
+    "saving": ("Dadooh", "Salvando configuracao"),
     "shutdown": ("Dadooh", "Encerrando"),
 }
+
+ORIENTATIONS = {
+    "landscape": 0,
+    "portrait_right": 90,
+    "portrait_left": 270,
+    "inverted": 180,
+    "landscape_inverted": 180,
+}
+
+
+def normalize_rotation_deg(value: int | str) -> int:
+    try:
+        rotation = int(value) % 360
+    except (TypeError, ValueError):
+        rotation = 0
+    if rotation not in {0, 90, 180, 270}:
+        return 0
+    return rotation
+
+
+def source_size_for_rotation(rotation_deg: int) -> tuple[int, int, str]:
+    rotation = normalize_rotation_deg(rotation_deg)
+    if rotation in {90, 270}:
+        return 720, 1280, "portrait"
+    return 1280, 720, "landscape"
 
 
 class SplashError(RuntimeError):
@@ -116,11 +142,11 @@ class FramebufferSplash:
             offset = py * self.stride
             self.fb[offset : offset + len(row)] = row
 
-    def draw_rect(self, x: int, y: int, width: int, height: int, color: tuple[int, int, int]) -> None:
-        x0 = max(0, min(self.width, x))
-        y0 = max(0, min(self.height, y))
-        x1 = max(0, min(self.width, x + width))
-        y1 = max(0, min(self.height, y + height))
+    def draw_physical_rect(self, x: float, y: float, width: float, height: float, color: tuple[int, int, int]) -> None:
+        x0 = max(0, min(self.width, int(round(x))))
+        y0 = max(0, min(self.height, int(round(y))))
+        x1 = max(0, min(self.width, int(round(x + width))))
+        y1 = max(0, min(self.height, int(round(y + height))))
         if x1 <= x0 or y1 <= y0:
             return
         row = self.pixel_bytes(color) * (x1 - x0)
@@ -128,8 +154,82 @@ class FramebufferSplash:
             offset = py * self.stride + x0 * 4
             self.fb[offset : offset + len(row)] = row
 
-    def draw_text(self, x: int, y: int, text: str, scale: int, color: tuple[int, int, int]) -> None:
-        pixel = self.pixel_bytes(color)
+    def render_context(self, rotation_deg: int) -> dict[str, float | int]:
+        source_w, source_h, _ = source_size_for_rotation(rotation_deg)
+        rotation = normalize_rotation_deg(rotation_deg)
+        if rotation in {90, 270}:
+            rotated_w, rotated_h = source_h, source_w
+        else:
+            rotated_w, rotated_h = source_w, source_h
+        scale = min(self.width / rotated_w, self.height / rotated_h)
+        drawn_w = rotated_w * scale
+        drawn_h = rotated_h * scale
+        return {
+            "source_w": float(source_w),
+            "source_h": float(source_h),
+            "rotation": rotation,
+            "scale": scale,
+            "offset_x": max(0.0, (self.width - drawn_w) / 2),
+            "offset_y": max(0.0, (self.height - drawn_h) / 2),
+        }
+
+    @staticmethod
+    def transform_rect(
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        ctx: dict[str, float | int],
+    ) -> tuple[float, float, float, float]:
+        source_w = float(ctx["source_w"])
+        source_h = float(ctx["source_h"])
+        scale = float(ctx["scale"])
+        offset_x = float(ctx["offset_x"])
+        offset_y = float(ctx["offset_y"])
+        rotation = int(ctx["rotation"])
+        if rotation == 90:
+            return (
+                offset_x + (source_h - y - height) * scale,
+                offset_y + x * scale,
+                height * scale,
+                width * scale,
+            )
+        if rotation == 270:
+            return (
+                offset_x + y * scale,
+                offset_y + (source_w - x - width) * scale,
+                height * scale,
+                width * scale,
+            )
+        if rotation == 180:
+            return (
+                offset_x + (source_w - x - width) * scale,
+                offset_y + (source_h - y - height) * scale,
+                width * scale,
+                height * scale,
+            )
+        return (offset_x + x * scale, offset_y + y * scale, width * scale, height * scale)
+
+    def draw_logical_rect(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        color: tuple[int, int, int],
+        ctx: dict[str, float | int],
+    ) -> None:
+        self.draw_physical_rect(*self.transform_rect(x, y, width, height, ctx), color)
+
+    def draw_text(
+        self,
+        x: float,
+        y: float,
+        text: str,
+        scale: int,
+        color: tuple[int, int, int],
+        ctx: dict[str, float | int],
+    ) -> None:
         cursor_x = x
         top_y = y
         for char in text:
@@ -138,30 +238,31 @@ class FramebufferSplash:
                 for gx in range(self.font.width):
                     if not (row & (0x80 >> gx)):
                         continue
-                    px0 = cursor_x + gx * scale
-                    py0 = top_y + gy * scale
-                    for yy in range(scale):
-                        py = py0 + yy
-                        if py < 0 or py >= self.height:
-                            continue
-                        for xx in range(scale):
-                            px = px0 + xx
-                            if px < 0 or px >= self.width:
-                                continue
-                            offset = py * self.stride + px * 4
-                            self.fb[offset : offset + 4] = pixel
+                    self.draw_logical_rect(
+                        cursor_x + gx * scale,
+                        top_y + gy * scale,
+                        scale,
+                        scale,
+                        color,
+                        ctx,
+                    )
             cursor_x += (self.font.width + 1) * scale
 
-    def render(self, title: str, message: str) -> None:
+    def render(self, title: str, message: str, *, rotation_deg: int = 0) -> None:
+        ctx = self.render_context(rotation_deg)
+        source_w = int(ctx["source_w"])
+        source_h = int(ctx["source_h"])
         self.fill((15, 23, 42))
-        self.draw_rect(0, 0, self.width, max(10, self.height // 55), (6, 182, 212))
-        self.draw_rect(0, self.height - max(52, self.height // 12), self.width, max(52, self.height // 12), (11, 17, 32))
-        title_scale = max(3, min(7, self.width // 210))
-        message_scale = max(2, min(4, self.width // 330))
+        top_bar = max(10, source_h // 70)
+        footer_h = max(64, source_h // 13)
+        self.draw_logical_rect(0, 0, source_w, top_bar, (6, 182, 212), ctx)
+        self.draw_logical_rect(0, source_h - footer_h, source_w, footer_h, (11, 17, 32), ctx)
+        title_scale = max(3, min(7, source_w // 210))
+        message_scale = max(2, min(4, source_w // 330))
         title_width = len(title) * (self.font.width + 1) * title_scale
         message_width = len(message) * (self.font.width + 1) * message_scale
-        self.draw_text(max(32, (self.width - title_width) // 2), max(80, self.height // 2 - 86), title, title_scale, (248, 250, 252))
-        self.draw_text(max(32, (self.width - message_width) // 2), max(150, self.height // 2 + 18), message, message_scale, (203, 213, 225))
+        self.draw_text(max(32, (source_w - title_width) // 2), max(80, source_h // 2 - 86), title, title_scale, (248, 250, 252), ctx)
+        self.draw_text(max(32, (source_w - message_width) // 2), max(150, source_h // 2 + 18), message, message_scale, (203, 213, 225), ctx)
         self.fb.flush()
 
 
@@ -183,12 +284,17 @@ def atomic_write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     os.chmod(path, PRIVATE_FILE_MODE)
 
 
-def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None) -> dict[str, Any]:
+def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None, rotation_deg: int = 0) -> dict[str, Any]:
     title, message = MESSAGES[mode]
+    rotation = normalize_rotation_deg(rotation_deg)
+    _, _, layout_mode = source_size_for_rotation(rotation)
     payload: dict[str, Any] = {
-        "schema_version": "dadooh-c10.5-visual-splash.v1",
+        "schema_version": "dadooh-c10.5-visual-splash.v2",
         "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "mode": mode,
+        "rotation_deg": rotation,
+        "layout_mode": layout_mode,
+        "orientation_contract_supported": True,
         "rendered": False,
         "fallback_safe": False,
         "real_config_read": False,
@@ -201,7 +307,7 @@ def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None) -
     try:
         renderer = FramebufferSplash(font_path)
         try:
-            renderer.render(title, message)
+            renderer.render(title, message, rotation_deg=rotation)
         finally:
             renderer.close()
         payload["rendered"] = True
@@ -214,15 +320,18 @@ def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None) -
 
 def run_self_test() -> None:
     for mode in MESSAGES:
-        payload = render_mode(mode, font_path="/missing-font-for-self-test.psf", status_out=None)
+        payload = render_mode(mode, font_path="/missing-font-for-self-test.psf", status_out=None, rotation_deg=90)
         assert payload["mode"] == mode
+        assert payload["rotation_deg"] == 90
+        assert payload["layout_mode"] == "portrait"
+        assert payload["orientation_contract_supported"] is True
         assert payload["real_config_read"] is False
         assert payload["real_config_written"] is False
         assert payload["writer_called"] is False
         assert payload["wifi_changed"] is False
         assert payload["network_identifiers_published"] is False
     target = require_tmp_path("/tmp/dadooh-c10-5-splash-self-test/status.json")
-    payload = render_mode("boot", font_path="/missing-font-for-self-test.psf", status_out=target)
+    payload = render_mode("boot", font_path="/missing-font-for-self-test.psf", status_out=target, rotation_deg=270)
     assert target.exists()
     assert stat.S_IMODE(target.stat().st_mode) == PRIVATE_FILE_MODE
     text = target.read_text(encoding="utf-8")
@@ -236,6 +345,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("mode", nargs="?", default="boot", choices=sorted(MESSAGES), help="Splash mode to render.")
     parser.add_argument("--font", default=DEFAULT_FONT, help="PSF console font path.")
     parser.add_argument("--status-out", help="Optional sanitized status JSON path under /tmp.")
+    parser.add_argument("--rotation-deg", type=int, default=0, help="Display orientation rotation in degrees: 0, 90, 180 or 270.")
+    parser.add_argument("--orientation", choices=sorted(ORIENTATIONS), help="Named orientation alias.")
     parser.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
     return parser.parse_args(argv)
 
@@ -251,7 +362,8 @@ def main(argv: list[str]) -> int:
         print("self-test: ok")
         return 0
     status_out = require_tmp_path(args.status_out) if args.status_out else None
-    render_mode(args.mode, font_path=args.font, status_out=status_out)
+    rotation = ORIENTATIONS[args.orientation] if args.orientation else args.rotation_deg
+    render_mode(args.mode, font_path=args.font, status_out=status_out, rotation_deg=rotation)
     return 0
 
 

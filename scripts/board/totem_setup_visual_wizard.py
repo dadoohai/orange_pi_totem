@@ -57,8 +57,12 @@ DOUBLE_LOAD_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_DOUBLE_LOAD_PER_SCR
 RENDERER_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_RENDERER", "framebuffer").strip().lower()
 PSF_FONT_PATH = os.environ.get("TOTEM_VISUAL_WIZARD_PSF_FONT", "/usr/share/consolefonts/Lat15-Fixed18.psf.gz")
 
-CANVAS_WIDTH = 1280
-CANVAS_HEIGHT = 720
+LANDSCAPE_CANVAS_WIDTH = 1280
+LANDSCAPE_CANVAS_HEIGHT = 720
+PORTRAIT_CANVAS_WIDTH = 720
+PORTRAIT_CANVAS_HEIGHT = 1280
+CANVAS_WIDTH = LANDSCAPE_CANVAS_WIDTH
+CANVAS_HEIGHT = LANDSCAPE_CANVAS_HEIGHT
 BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
 STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
@@ -68,6 +72,7 @@ STATUS_FILENAME = "setup-status.json"
 SUMMARY_FILENAME = "summary.txt"
 CANCELLED_FILENAME = "setup-cancelled.json"
 FAILED_FILENAME = "setup-failed.json"
+ORIENTATION_FILENAME = "orientation.json"
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -91,6 +96,7 @@ ATTR_RE = re.compile(r'([a-zA-Z_:][\w:.-]*)="([^"]*)"')
 RECT_RE = re.compile(r"<rect\b([^>]*)/?>", re.IGNORECASE)
 TEXT_RE = re.compile(r"<text\b([^>]*)>(.*?)</text>", re.IGNORECASE | re.DOTALL)
 TSPAN_RE = re.compile(r"<tspan\b([^>]*)>(.*?)</tspan>", re.IGNORECASE | re.DOTALL)
+SVG_RE = re.compile(r"<svg\b([^>]*)>", re.IGNORECASE)
 
 
 class VisualWizardAbort(RuntimeError):
@@ -106,6 +112,39 @@ class Option:
     key: str
     label: str
     description: str
+
+
+@dataclass(frozen=True)
+class ScreenLayout:
+    rotation_deg: int
+    width: int
+    height: int
+    mode: str
+    note: str
+    margin_x: int
+
+    @property
+    def portrait(self) -> bool:
+        return self.mode == "portrait"
+
+
+def normalize_rotation_deg(value: int | str) -> int:
+    try:
+        rotation = int(value) % 360
+    except (TypeError, ValueError):
+        rotation = 0
+    if rotation not in {0, 90, 180, 270}:
+        return 0
+    return rotation
+
+
+def screen_layout(layout_rotation_deg: int = 0) -> ScreenLayout:
+    rotation = normalize_rotation_deg(layout_rotation_deg)
+    if rotation in {90, 270}:
+        note = "Layout retrato para direita" if rotation == 90 else "Layout retrato para esquerda"
+        return ScreenLayout(rotation, PORTRAIT_CANVAS_WIDTH, PORTRAIT_CANVAS_HEIGHT, "portrait", note, 56)
+    note = "Layout invertido" if rotation == 180 else "Layout paisagem"
+    return ScreenLayout(rotation, LANDSCAPE_CANVAS_WIDTH, LANDSCAPE_CANVAS_HEIGHT, "landscape", note, 96)
 
 
 NETWORK_OPTIONS = (
@@ -196,6 +235,15 @@ def parse_float(value: str | None, default: float = 0.0) -> float:
         return default
 
 
+def parse_int(value: str | None, default: int = 0) -> int:
+    if value is None:
+        return default
+    try:
+        return int(float(value))
+    except ValueError:
+        return default
+
+
 def parse_color(value: str | None) -> tuple[int, int, int] | None:
     if not value or not value.startswith("#") or len(value) != 7:
         return None
@@ -237,33 +285,35 @@ def svg_lines(
 
 def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
     parts = []
-    portrait_layout = layout_rotation_deg in {90, 270}
-    x = 70 if portrait_layout else 86
-    y = 92
+    layout = screen_layout(layout_rotation_deg)
+    x = 48 if layout.portrait else 86
+    y = 96
     for index, step in enumerate(STEPS):
         active = index == active_step
         fill = "#ecfeff" if active else "#1f2937"
         stroke = "#0891b2" if active else "#334155"
         text_fill = "#0f172a" if active else "#cbd5e1"
-        width = 128 if portrait_layout else (180 if index in {0, 4} else 176)
-        label = step if not portrait_layout else step[:8]
+        width = 116 if layout.portrait else (180 if index in {0, 4} else 176)
+        label = step if not layout.portrait else step[:7]
+        font_size = 14 if layout.portrait else 17
         parts.append(
             f'<rect x="{x}" y="{y}" width="{width}" height="44" rx="8" fill="{fill}" stroke="{stroke}"/>'
-            f'<text x="{x + 18}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" '
-            f'font-size="17" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(label)}</text>'
+            f'<text x="{x + 13}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" '
+            f'font-size="{font_size}" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(label)}</text>'
         )
-        x += width + 14
+        x += width + (8 if layout.portrait else 14)
     return "\n  ".join(parts)
 
 
 def option_cards(options: list[Option], selected_index: int, *, layout_rotation_deg: int = 0) -> str:
     parts = []
-    y = 262
-    portrait_layout = layout_rotation_deg in {90, 270}
-    card_width = 690 if portrait_layout else 760
-    card_height = 90 if portrait_layout else 82
-    label_width = 29 if portrait_layout else 34
-    description_width = 44 if portrait_layout else 54
+    layout = screen_layout(layout_rotation_deg)
+    x = layout.margin_x
+    y = 354 if layout.portrait else 262
+    card_width = layout.width - (layout.margin_x * 2) if layout.portrait else 760
+    card_height = 98 if layout.portrait else 82
+    label_width = 31 if layout.portrait else 34
+    description_width = 47 if layout.portrait else 54
     for index, option in enumerate(options[:5]):
         active = index == selected_index
         fill = "#f8fafc" if active else "#182130"
@@ -272,45 +322,57 @@ def option_cards(options: list[Option], selected_index: int, *, layout_rotation_
         body_fill = "#334155" if active else "#cbd5e1"
         marker_fill = "#0891b2" if active else "#475569"
         parts.append(
-            f'<rect x="96" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
-            f'<circle cx="132" cy="{y + 42}" r="18" fill="{marker_fill}"/>'
-            f'<text x="126" y="{y + 49}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" '
-            f'font-weight="700" fill="#ffffff">{index + 1}</text>'
-            f'{svg_lines(option.label, x=168, y=y + 34, size=23, fill=title_fill, width=label_width, line_gap=28, max_lines=1, weight=700)}'
-            f'{svg_lines(option.description, x=168, y=y + 63, size=17, fill=body_fill, width=description_width, line_gap=22, max_lines=1)}'
+            f'<rect x="{x}" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
+            f'<circle cx="{x + 36}" cy="{y + 48}" r="18" fill="{marker_fill}"/>'
+            f'<text x="{x + 30}" y="{y + 55}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" '
+            f'font-weight="700" fill="#ffffff">{escape_text(">" if active else "")}</text>'
+            f'{svg_lines(option.label, x=x + 72, y=y + 37, size=23, fill=title_fill, width=label_width, line_gap=28, max_lines=1, weight=700)}'
+            f'{svg_lines(option.description, x=x + 72, y=y + 68, size=17, fill=body_fill, width=description_width, line_gap=22, max_lines=1)}'
         )
         y += card_height + 14
     return "\n  ".join(parts)
 
 
-def info_panel(items: list[str], *, title: str = "Nesta etapa", layout_rotation_deg: int = 0) -> str:
-    portrait_layout = layout_rotation_deg in {90, 270}
-    panel_x = 824 if portrait_layout else 888
-    panel_width = 364 if portrait_layout else 300
-    text_width = 36 if portrait_layout else 30
-    y = 278
+def info_panel(
+    items: list[str],
+    *,
+    title: str = "Nesta etapa",
+    layout_rotation_deg: int = 0,
+    panel_y: int | None = None,
+) -> str:
+    if not items:
+        return ""
+    layout = screen_layout(layout_rotation_deg)
+    panel_x = layout.margin_x if layout.portrait else 888
+    panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 300
+    panel_y = panel_y if panel_y is not None else (920 if layout.portrait else 220)
+    panel_height = min(300 if layout.portrait else 330, max(190, layout.height - panel_y - 104))
+    text_width = 50 if layout.portrait else 30
+    y = panel_y + 58
     bullet_parts = []
     for item in items[:5]:
         bullet_parts.append(
             f'<circle cx="{panel_x + 36}" cy="{y - 6}" r="5" fill="#06b6d4"/>'
             f'{svg_lines(item, x=panel_x + 56, y=y, size=17, fill="#cbd5e1", width=text_width, line_gap=24, max_lines=2)}'
         )
-        y += 66
+        y += 54 if layout.portrait else 66
     return f"""
-  <rect x="{panel_x}" y="220" width="{panel_width}" height="330" rx="8" fill="#111827" stroke="#334155"/>
-  <text x="{panel_x + 32}" y="260" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
+  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" rx="8" fill="#111827" stroke="#334155"/>
+  <text x="{panel_x + 32}" y="{panel_y + 40}" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
   {' '.join(bullet_parts)}
 """
 
 
 def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: int = 0) -> str:
-    portrait_layout = layout_rotation_deg in {90, 270}
-    panel_width = 690 if portrait_layout else 760
-    text_width = 36 if portrait_layout else 44
+    layout = screen_layout(layout_rotation_deg)
+    panel_x = layout.margin_x
+    panel_y = 390 if layout.portrait else 300
+    panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 760
+    text_width = 40 if layout.portrait else 44
     value_svg = svg_lines(
         value_hint,
-        x=132,
-        y=392,
+        x=panel_x + 36,
+        y=panel_y + 92,
         size=26,
         fill="#111827",
         width=text_width,
@@ -319,17 +381,18 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
         weight=700,
     )
     return f"""
-  <rect x="96" y="300" width="{panel_width}" height="130" rx="8" fill="#f8fafc" stroke="#06b6d4" stroke-width="2"/>
-  <text x="132" y="346" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#0f172a">{escape_text(label)}</text>
+  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="142" rx="8" fill="#f8fafc" stroke="#06b6d4" stroke-width="2"/>
+  <text x="{panel_x + 36}" y="{panel_y + 46}" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#0f172a">{escape_text(label)}</text>
   {value_svg}
-  <text x="132" y="462" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">{escape_text(note)}</text>
+  <text x="{panel_x + 36}" y="{panel_y + 174}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">{escape_text(note)}</text>
 """
 
 
-def footer_text(text: str) -> str:
+def footer_text(text: str, *, layout_rotation_deg: int = 0) -> str:
+    layout = screen_layout(layout_rotation_deg)
     return (
-        f'<rect x="0" y="650" width="{CANVAS_WIDTH}" height="70" fill="#0b1120"/>'
-        f'<text x="96" y="692" font-family="Arial, DejaVu Sans, sans-serif" '
+        f'<rect x="0" y="{layout.height - 70}" width="{layout.width}" height="70" fill="#0b1120"/>'
+        f'<text x="{layout.margin_x}" y="{layout.height - 28}" font-family="Arial, DejaVu Sans, sans-serif" '
         f'font-size="20" fill="#dbeafe">{escape_text(text)}</text>'
     )
 
@@ -384,12 +447,23 @@ def block_word_marker(value: str, rotation_deg: int, *, x: int, y: int, scale: i
     return "\n    ".join(parts)
 
 
-def orientation_preview(rotation_key: str, *, x: int = 918, y: int = 300) -> str:
+def orientation_preview(
+    rotation_key: str,
+    *,
+    x: int | None = None,
+    y: int | None = None,
+    layout_rotation_deg: int = 0,
+) -> str:
     rotation = resolve_display_selection(rotation_key)
     rotation_deg = int(rotation["rotation_deg"])
+    layout = screen_layout(layout_rotation_deg)
     is_portrait = rotation_deg in {90, 270}
     outer_w = 116 if is_portrait else 176
     outer_h = 176 if is_portrait else 116
+    if x is None:
+        x = (layout.width - outer_w) // 2 if layout.portrait else 918
+    if y is None:
+        y = 690 if layout.portrait else 300
     inner_w = outer_w - 28
     inner_h = outer_h - 28
     marker = {
@@ -431,34 +505,54 @@ def build_screen_svg(
     accent: str = "#06b6d4",
     layout_rotation_deg: int = 0,
 ) -> str:
+    layout = screen_layout(layout_rotation_deg)
     options_svg = option_cards(options, selected_index, layout_rotation_deg=layout_rotation_deg) if options else ""
     field_svg = (
         field_panel(field_label, field_value_hint, field_note, layout_rotation_deg=layout_rotation_deg)
         if field_label is not None
         else ""
     )
-    panel_svg = info_panel(panel_items or [], title=panel_title, layout_rotation_deg=layout_rotation_deg)
-    layout_note = {
-        90: "Layout retrato para direita",
-        270: "Layout retrato para esquerda",
-        180: "Layout invertido",
-    }.get(layout_rotation_deg, "Layout paisagem")
+    if layout.portrait:
+        if field_label is not None:
+            panel_y = 610
+        elif extra_svg:
+            panel_y = 960
+        else:
+            panel_y = 930 if options and len(options) >= 5 else 740
+        title_y = 220
+        subtitle_y = 258
+        subtitle_width = 46
+        note_x = layout.margin_x
+        note_y = 162
+    else:
+        panel_y = 220
+        title_y = 200
+        subtitle_y = 236
+        subtitle_width = 62
+        note_x = 1030
+        note_y = 58
+    panel_svg = info_panel(
+        panel_items or [],
+        title=panel_title,
+        layout_rotation_deg=layout_rotation_deg,
+        panel_y=panel_y,
+    )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{CANVAS_WIDTH}" height="{CANVAS_HEIGHT}" viewBox="0 0 {CANVAS_WIDTH} {CANVAS_HEIGHT}" role="img" aria-label="Dadooh setup visual wizard">
-  <rect width="{CANVAS_WIDTH}" height="{CANVAS_HEIGHT}" fill="#0f172a"/>
-  <rect x="0" y="0" width="{CANVAS_WIDTH}" height="12" fill="{accent}"/>
-  <rect x="0" y="12" width="{CANVAS_WIDTH}" height="132" fill="#111827"/>
-  <text x="96" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">{BRAND}</text>
-  <text x="250" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">{TITLE}</text>
-  <text x="1030" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">{escape_text(layout_note)}</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="{layout.width}" height="{layout.height}" viewBox="0 0 {layout.width} {layout.height}" data-display-rotation-deg="{layout.rotation_deg}" data-layout-mode="{layout.mode}" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="{layout.width}" height="{layout.height}" fill="#0f172a"/>
+  <rect x="0" y="0" width="{layout.width}" height="12" fill="{accent}"/>
+  <rect x="0" y="12" width="{layout.width}" height="148" fill="#111827"/>
+  <text x="{layout.margin_x}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">{BRAND}</text>
+  <text x="{layout.margin_x + 154}" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">{TITLE}</text>
+  <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">{escape_text(layout.note)}</text>
   {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg)}
-  <text x="96" y="200" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
-  {svg_lines(subtitle, x=98, y=236, size=21, fill="#cbd5e1", width=62, line_gap=28, max_lines=2)}
+  <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
+  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=21, fill="#cbd5e1", width=subtitle_width, line_gap=28, max_lines=2)}
   {options_svg}
   {field_svg}
   {panel_svg}
   {extra_svg}
-  {footer_text(footer)}
+  {footer_text(footer, layout_rotation_deg=layout_rotation_deg)}
 </svg>
 """
 
@@ -517,8 +611,6 @@ class FramebufferSVGRenderer:
         self.font = PSFFont(font_path)
         self.fb_file = self.fb_path.open("r+b", buffering=0)
         self.fb = mmap.mmap(self.fb_file.fileno(), self.stride * self.height, access=mmap.ACCESS_WRITE)
-        self.scale_x = self.width / CANVAS_WIDTH
-        self.scale_y = self.height / CANVAS_HEIGHT
 
     def close(self) -> None:
         try:
@@ -537,22 +629,16 @@ class FramebufferSVGRenderer:
         left, right = raw.split(",", 1)
         return int(left), int(right)
 
-    def sx(self, value: float) -> int:
-        return max(0, int(round(value * self.scale_x)))
-
-    def sy(self, value: float) -> int:
-        return max(0, int(round(value * self.scale_y)))
-
     @staticmethod
     def pixel_bytes(color: tuple[int, int, int]) -> bytes:
         red, green, blue = color
         return bytes((blue, green, red, 0))
 
-    def draw_rect(self, x: float, y: float, width: float, height: float, color: tuple[int, int, int]) -> None:
-        x0 = min(self.width, self.sx(x))
-        y0 = min(self.height, self.sy(y))
-        x1 = min(self.width, self.sx(x + width))
-        y1 = min(self.height, self.sy(y + height))
+    def draw_physical_rect(self, x: float, y: float, width: float, height: float, color: tuple[int, int, int]) -> None:
+        x0 = max(0, min(self.width, int(round(x))))
+        y0 = max(0, min(self.height, int(round(y))))
+        x1 = max(0, min(self.width, int(round(x + width))))
+        y1 = max(0, min(self.height, int(round(y + height))))
         if x1 <= x0 or y1 <= y0:
             return
         row = self.pixel_bytes(color) * (x1 - x0)
@@ -560,18 +646,94 @@ class FramebufferSVGRenderer:
             offset = py * self.stride + x0 * 4
             self.fb[offset : offset + len(row)] = row
 
-    def draw_text(self, x: float, y: float, text: str, font_size: float, color: tuple[int, int, int]) -> None:
+    def render_context(self, svg: str) -> dict[str, float | int]:
+        match = SVG_RE.search(svg)
+        attrs = parse_attrs(match.group(1)) if match else {}
+        source_w = max(1.0, parse_float(attrs.get("width"), CANVAS_WIDTH))
+        source_h = max(1.0, parse_float(attrs.get("height"), CANVAS_HEIGHT))
+        rotation = normalize_rotation_deg(parse_int(attrs.get("data-display-rotation-deg"), 0))
+        if rotation in {90, 270}:
+            rotated_w, rotated_h = source_h, source_w
+        else:
+            rotated_w, rotated_h = source_w, source_h
+        scale = min(self.width / rotated_w, self.height / rotated_h)
+        drawn_w = rotated_w * scale
+        drawn_h = rotated_h * scale
+        return {
+            "source_w": source_w,
+            "source_h": source_h,
+            "rotation": rotation,
+            "scale": scale,
+            "offset_x": max(0.0, (self.width - drawn_w) / 2),
+            "offset_y": max(0.0, (self.height - drawn_h) / 2),
+        }
+
+    @staticmethod
+    def transform_rect(
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        ctx: dict[str, float | int],
+    ) -> tuple[float, float, float, float]:
+        source_w = float(ctx["source_w"])
+        source_h = float(ctx["source_h"])
+        scale = float(ctx["scale"])
+        offset_x = float(ctx["offset_x"])
+        offset_y = float(ctx["offset_y"])
+        rotation = int(ctx["rotation"])
+        if rotation == 90:
+            return (
+                offset_x + (source_h - y - height) * scale,
+                offset_y + x * scale,
+                height * scale,
+                width * scale,
+            )
+        if rotation == 270:
+            return (
+                offset_x + y * scale,
+                offset_y + (source_w - x - width) * scale,
+                height * scale,
+                width * scale,
+            )
+        if rotation == 180:
+            return (
+                offset_x + (source_w - x - width) * scale,
+                offset_y + (source_h - y - height) * scale,
+                width * scale,
+                height * scale,
+            )
+        return (offset_x + x * scale, offset_y + y * scale, width * scale, height * scale)
+
+    def draw_logical_rect(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        color: tuple[int, int, int],
+        ctx: dict[str, float | int],
+    ) -> None:
+        self.draw_physical_rect(*self.transform_rect(x, y, width, height, ctx), color)
+
+    def draw_text(
+        self,
+        x: float,
+        y: float,
+        text: str,
+        font_size: float,
+        color: tuple[int, int, int],
+        ctx: dict[str, float | int],
+    ) -> None:
         clean = html.unescape(re.sub(r"<[^>]+>", "", text))
         if not clean:
             return
-        scale = max(1, int(round((font_size * self.scale_y) / max(1, self.font.height))))
-        cursor_x = self.sx(x)
-        baseline_y = self.sy(y)
-        top_y = max(0, baseline_y - self.font.height * scale)
-        pixel = self.pixel_bytes(color)
+        scale = max(1, int(round(font_size / max(1, self.font.height))))
+        cursor_x = x
+        top_y = max(0.0, y - self.font.height * scale)
         for char in clean:
             if char == "\n":
-                cursor_x = self.sx(x)
+                cursor_x = x
                 top_y += (self.font.height + 2) * scale
                 continue
             glyph = self.font.glyph(char)
@@ -579,32 +741,31 @@ class FramebufferSVGRenderer:
                 for gx in range(self.font.width):
                     if not (row & (0x80 >> gx)):
                         continue
-                    px0 = cursor_x + gx * scale
-                    py0 = top_y + gy * scale
-                    for yy in range(scale):
-                        py = py0 + yy
-                        if py < 0 or py >= self.height:
-                            continue
-                        for xx in range(scale):
-                            px = px0 + xx
-                            if px < 0 or px >= self.width:
-                                continue
-                            offset = py * self.stride + px * 4
-                            self.fb[offset : offset + 4] = pixel
+                    self.draw_logical_rect(
+                        cursor_x + gx * scale,
+                        top_y + gy * scale,
+                        scale,
+                        scale,
+                        color,
+                        ctx,
+                    )
             cursor_x += (self.font.width + 1) * scale
 
     def render(self, svg: str) -> None:
+        ctx = self.render_context(svg)
+        self.draw_physical_rect(0, 0, self.width, self.height, (15, 23, 42))
         for match in RECT_RE.finditer(svg):
             attrs = parse_attrs(match.group(1))
             color = parse_color(attrs.get("fill"))
             if color is None:
                 continue
-            self.draw_rect(
+            self.draw_logical_rect(
                 parse_float(attrs.get("x")),
                 parse_float(attrs.get("y")),
                 parse_float(attrs.get("width")),
                 parse_float(attrs.get("height")),
                 color,
+                ctx,
             )
         for match in TEXT_RE.finditer(svg):
             attrs = parse_attrs(match.group(1))
@@ -619,9 +780,9 @@ class FramebufferSVGRenderer:
                 for tspan_attrs_raw, tspan_text in tspans:
                     tspan_attrs = parse_attrs(tspan_attrs_raw)
                     current_y += parse_float(tspan_attrs.get("dy"), 0.0)
-                    self.draw_text(parse_float(tspan_attrs.get("x"), x), current_y, tspan_text, font_size, color)
+                    self.draw_text(parse_float(tspan_attrs.get("x"), x), current_y, tspan_text, font_size, color, ctx)
             else:
-                self.draw_text(x, y, body, font_size, color)
+                self.draw_text(x, y, body, font_size, color, ctx)
         self.fb.flush()
 
 
@@ -933,13 +1094,17 @@ def choose_orientation(display: VisualDisplay) -> dict[str, str | int]:
                 "01-orientation",
                 build_screen_svg(
                     active_step=0,
-                    title="Orientacao",
-                    subtitle="Use 1-4 para escolher o sentido da tela.",
-                    footer="1-4 escolhe | Setas movem | Enter visualiza | Esc cancela",
+                    title="Orientacao da tela",
+                    subtitle="Use as setas para escolher como o totem esta instalado.",
+                    footer="Setas movem | Enter visualiza | Esc cancela",
                     options=options,
                     selected_index=selected,
                     panel_title="Como funciona",
-                    panel_items=[],
+                    panel_items=[
+                        "Primeira etapa da configuracao.",
+                        "A proxima tela confirma a escolha.",
+                        "As midias usam esta orientacao ao salvar.",
+                    ],
                     extra_svg=orientation_preview(str(selected_rotation["key"])),
                 ),
             )
@@ -964,26 +1129,45 @@ def choose_orientation(display: VisualDisplay) -> dict[str, str | int]:
 
         rotation = resolve_display_selection(options[selected].key)
         layout_rotation_deg = int(rotation["rotation_deg"])
-        display.show(
-            "01-orientation-confirm",
-            build_screen_svg(
-                active_step=0,
-                title="Esta correto?",
-                subtitle="Confirme somente se o preview combinar com a instalacao.",
-                footer="Enter confirma | B volta | Esc cancela",
-                panel_title="Confirmacao",
-                panel_items=[],
-                extra_svg=orientation_preview(str(rotation["key"])),
-                layout_rotation_deg=layout_rotation_deg,
-            ),
-        )
-        confirm_key = read_key()
-        if confirm_key == "enter":
-            return rotation
-        if confirm_key in {"b", "B", "back"}:
-            continue
-        if confirm_key in {"escape", "q", "Q"}:
-            raise VisualWizardAbort("setup visual cancelado pelo operador")
+        confirm_options = [
+            Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
+            Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
+        ]
+        confirm_selected = 0
+        while True:
+            display.show(
+                "01-orientation-confirm",
+                build_screen_svg(
+                    active_step=0,
+                    title="Usar esta orientacao?",
+                    subtitle="A configuracao continuara nesta orientacao. As midias tambem usarao este sentido depois de salvar.",
+                    footer="Setas movem | Enter confirma | B volta | Esc cancela",
+                    options=confirm_options,
+                    selected_index=confirm_selected,
+                    panel_title="Confirmacao",
+                    panel_items=[
+                        "Textos sao renderizados nativamente.",
+                        "Sem esticar ou deformar a imagem.",
+                        "rotation_deg entra na candidata.",
+                    ],
+                    extra_svg=orientation_preview(str(rotation["key"]), layout_rotation_deg=layout_rotation_deg),
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+            confirm_key = read_key()
+            if confirm_key in {"up", "left", "down", "right"}:
+                confirm_selected = 1 - confirm_selected
+                continue
+            if confirm_key == "enter":
+                if confirm_options[confirm_selected].key == "confirm":
+                    return rotation
+                needs_render = True
+                break
+            if confirm_key in {"b", "B", "back"}:
+                needs_render = True
+                break
+            if confirm_key in {"escape", "q", "Q"}:
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
 def read_text_field(
@@ -1497,6 +1681,16 @@ def build_visual_status(
             "summary": SUMMARY_FILENAME,
             "status": STATUS_FILENAME,
             "screens": "screens",
+            "orientation_contract": ORIENTATION_FILENAME,
+        },
+        "orientation": {
+            "rotation_deg": int(rotation["rotation_deg"]),
+            "orientation_label": str(rotation["key"]),
+            "contract_file": ORIENTATION_FILENAME,
+            "wizard_layout_mode": screen_layout(int(rotation["rotation_deg"])).mode,
+            "splash_rotation_supported": True,
+            "player_rotation_contract": "config.rotation_deg",
+            "media_rotation_contract": "config.rotation_deg",
         },
         "network": {
             "network_step": network["network_step"],
@@ -1604,6 +1798,8 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             "compositor_used: false",
             f"visual_renderer: {status['interface']['visual_renderer']}",
             f"mpv_video_mode: {status['interface']['mpv_video_mode']}",
+            f"orientation_contract: {status['files']['orientation_contract']}",
+            f"orientation_layout_mode: {status['orientation']['wizard_layout_mode']}",
             f"network_step: {status['network']['network_step']}",
             f"connectivity: {status['network']['connectivity']}",
             f"connection_type: {status['network']['connection_type']}",
@@ -1621,6 +1817,8 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             f"environment_id_present: {str(status['environment']['environment_id_present']).lower()}",
             f"environment_id_valid: {str(status['environment']['environment_id_valid']).lower()}",
             f"rotation_degrees: {status['validation']['rotation_degrees']}",
+            "splash_rotation_supported: true",
+            "player_rotation_contract: config.rotation_deg",
             "contract_validator: C5.1 allow-mock",
             f"contract_allow_mock_valid: {str(status['contract_validation']['allow_mock']['valid']).lower()}",
             "contract_real_dry_run_expected_failure: true",
@@ -1676,6 +1874,20 @@ def assert_sanitized_outputs(out_dir: pathlib.Path, environment_id: str) -> None
                 raise VisualWizardError("privacy scan blocked raw value in public artifacts")
 
 
+def orientation_contract_payload(generated_at: str, rotation: dict[str, str | int]) -> dict[str, Any]:
+    rotation_deg = int(rotation["rotation_deg"])
+    layout = screen_layout(rotation_deg)
+    return {
+        "schema_version": "dadooh-display-orientation.v1",
+        "updated_at": generated_at,
+        "rotation_deg": rotation_deg,
+        "orientation_label": str(rotation["key"]),
+        "layout_mode": layout.mode,
+        "public_allowlisted": True,
+        "contains_sensitive_data": False,
+    }
+
+
 def write_visual_artifacts(
     out_dir: pathlib.Path,
     environment_id: str,
@@ -1708,6 +1920,7 @@ def write_visual_artifacts(
     status = build_visual_status(generated_at, rotation, environment_id, network, contract_validation)
     atomic_write_private_json(out_dir / CANDIDATE_FILENAME, candidate, out_dir)
     atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
+    atomic_write_private_json(out_dir / ORIENTATION_FILENAME, orientation_contract_payload(generated_at, rotation), out_dir)
     atomic_write_private_text(out_dir / SUMMARY_FILENAME, build_visual_summary(status), out_dir)
     assert_sanitized_outputs(out_dir, environment_id)
     return status
@@ -1929,11 +2142,16 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "01-orientation-confirm-portrait",
         build_screen_svg(
             active_step=0,
-            title="Confirmar orientacao",
-            subtitle="Preview da experiencia em retrato antes de continuar.",
-            footer="Enter confirma | B volta | Esc cancela",
+            title="Usar esta orientacao?",
+            subtitle="A configuracao continuara nesta orientacao.",
+            footer="Setas movem | Enter confirma | B volta | Esc cancela",
+            options=[
+                Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
+                Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
+            ],
+            selected_index=0,
             panel_items=["Layout retrato", "Confirmacao local", "Sem alterar player global"],
-            extra_svg=orientation_preview("portrait_right"),
+            extra_svg=orientation_preview("portrait_right", layout_rotation_deg=90),
             layout_rotation_deg=90,
         ),
     )
@@ -1988,6 +2206,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             subtitle="Resumo publico antes da candidata.",
             footer="Enter conclui | B volta | Esc cancela",
             panel_items=["Conexao agregada", "Ambiente informado", "Tela escolhida"],
+            layout_rotation_deg=90,
         ),
     )
     display.show(
@@ -1999,6 +2218,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             footer="Enter sai",
             panel_items=["C5.1 allow-mock", "Writer bloqueado", "Config real intocada"],
             accent="#22c55e",
+            layout_rotation_deg=90,
         ),
     )
 
@@ -2137,7 +2357,7 @@ def assert_raises(func: Any, message: str) -> None:
 
 def assert_artifact_permissions(out_dir: pathlib.Path) -> None:
     assert_true(file_mode(out_dir) == setup.PRIVATE_DIR_MODE, "out-dir mode should be 0700")
-    for name in (CANDIDATE_FILENAME, STATUS_FILENAME, SUMMARY_FILENAME):
+    for name in (CANDIDATE_FILENAME, STATUS_FILENAME, SUMMARY_FILENAME, ORIENTATION_FILENAME):
         path = out_dir / name
         assert_true(path.exists(), f"{name} should exist")
         assert_true(file_mode(path) == setup.PRIVATE_FILE_MODE, f"{name} should be 0600")
@@ -2199,9 +2419,11 @@ def run_self_test() -> None:
             "orientation confirmation should keep visual preview",
         )
         portrait_connection = next((preview_dir / "screens").glob("*-02-connection.svg"))
+        portrait_connection_text = portrait_connection.read_text(encoding="utf-8")
+        assert_true('width="720" height="1280"' in portrait_connection_text, "portrait preview should use native portrait canvas")
         assert_true(
-            "Layout retrato para direita" in portrait_connection.read_text(encoding="utf-8"),
-            "portrait preview should use portrait layout",
+            'data-display-rotation-deg="90"' in portrait_connection_text,
+            "portrait preview should carry display rotation contract",
         )
         assert_true(file_mode(preview_dir / "screens") == setup.PRIVATE_DIR_MODE, "preview screens should be 0700")
 
@@ -2236,8 +2458,12 @@ def run_self_test() -> None:
         assert_artifact_permissions(out_dir)
 
         candidate = json.loads((out_dir / CANDIDATE_FILENAME).read_text(encoding="utf-8"))
+        orientation_contract = json.loads((out_dir / ORIENTATION_FILENAME).read_text(encoding="utf-8"))
         assert_true(candidate["environment_id"] == "ENV-PRODUTO-VISUAL-01", "candidate should keep environment")
         assert_true(candidate["rotation_deg"] == 270, "candidate should keep rotation")
+        assert_true(orientation_contract["rotation_deg"] == 270, "orientation contract should keep rotation")
+        assert_true(orientation_contract["layout_mode"] == "portrait", "orientation contract should expose layout mode")
+        assert_true(orientation_contract["contains_sensitive_data"] is False, "orientation contract should stay public-safe")
         assert_true(candidate["setup_source"] == SETUP_SOURCE, "candidate should record source")
         assert_true(candidate["setup_interface"] == INTERFACE_MODE, "candidate should record interface")
         assert_true(candidate["setup_network_step"] == "existing_configured_wifi", "candidate should record network")

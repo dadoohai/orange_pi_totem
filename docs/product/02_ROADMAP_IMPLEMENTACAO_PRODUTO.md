@@ -444,6 +444,20 @@ reversiveis de boot/getty/splash somente com confirmacao humana, backup e
 rollback. Writer, config real, Wi-Fi/NetworkManager, hotspot, portal, root
 read-only, corte seco e repo `kiosky-player` seguem fora por padrao.
 
+Atualizacao C10.5.1: 2026-05-05. C10.5.1 corrige o contrato de orientacao sem
+rotacionar bitmap pronto: a selecao passa a usar setas como UX principal,
+confirmacao/cancelamento usa lista, as telas seguintes sao geradas em canvas
+nativo de paisagem `1280x720` ou retrato `720x1280`, e o renderer de
+framebuffer mapeia esse canvas para a tela preservando proporcao de texto. O
+wizard grava `orientation.json` publico/sanitizado em `/tmp`, preserva
+`rotation_deg` na candidata e o splash aceita `--rotation-deg`. Writer, config
+real, Wi-Fi/NetworkManager, hotspot, portal, root read-only, corte seco e repo
+`kiosky-player` seguem fora. A validacao HDMI com o runner
+`run_c10_5_1_orientation_ux_contract.sh` passou para preview de orientacao,
+fluxo completo portrait, fluxo completo landscape e preview de splash nas
+quatro rotacoes, com estado final `active/enabled`, `NRestarts=0`,
+`public_state=player_running` e playback `playing`.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

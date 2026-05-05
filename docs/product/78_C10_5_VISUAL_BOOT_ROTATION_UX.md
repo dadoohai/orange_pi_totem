@@ -4,6 +4,18 @@ Status: validacao parcial em bancada.
 
 Data: 2026-05-05
 
+Atualizacao C10.5.1: a rotacao fisica de bitmap continua removida. A rodada
+seguinte implementa o contrato correto: navegacao por setas, confirmacao por
+lista, canvas nativo `1280x720`/`720x1280`, renderer de framebuffer com
+mapeamento proporcional de texto e splash aceitando `--rotation-deg`. Ver
+`docs/product/79_C10_5_1_ORIENTATION_UX_CONTRACT.md`.
+
+Validacao C10.5.1: os fluxos remotos `--preview-orientation-flow`,
+`--run-complete-portrait`, `--run-complete-landscape` e
+`--preview-splash-orientations` passaram em bancada com HDMI/teclado. O estado
+final voltou para `active/enabled`, `NRestarts=0`, `public_state=player_running`
+e playback `playing`.
+
 ## Objetivo
 
 Fechar a superficie visual antes de read-only: reduzir texto tecnico visivel no
@@ -86,7 +98,7 @@ scripts/remote/run_c10_5_visual_boot_rotation.sh <board-host> --run-complete-exi
 - validar reboot visual controlado com humano observando a tela, se os
   guardrails forem aplicados;
 - substituir o splash estatico por loading/animacao de produto em rodada futura;
-- implementar rotacao visual completa do wizard sem distorcer texto;
+- evoluir a qualidade visual fina da orientacao/splash em rodada futura;
 - manter root read-only e corte seco para rodadas futuras.
 
 ## Proximo Passo
