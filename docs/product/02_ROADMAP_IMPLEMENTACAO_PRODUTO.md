@@ -542,6 +542,38 @@ humana confirmou midias na orientacao escolhida e nenhum flash shell/login no
 fluxo F10 -> wizard -> salvar -> player. Proxima frente: C10.7 auditoria de
 reprodutibilidade placa -> repo para preparar imagem.
 
+Atualizacao C10.7/C10.7.2: 2026-05-05. C10.7 criou a auditoria de
+reprodutibilidade placa dev -> repo, com runner remoto read-only, matriz placa
+vs repo e evidencia sanitizada. C10.7.1 incorporou o delta pos-C10.6.2:
+scripts F10, units persistentes, writer/handoff, contrato `orientation.json`,
+guardrails de splash/transicao e evidencia C10.6.2. C10.7.2 encontrou uma
+sessao F10 stale, limpou somente estado temporario seguro em
+`/run/dadooh-settings`, restaurou o player, corrigiu limpeza/diagnostico de
+lock nos scripts de trigger/sessao e confirmou estado final limpo:
+`kiosky-player.service=active/enabled`,
+`totem-settings-trigger.service=active/enabled`,
+`totem-open-settings.service=inactive/static`, sem `session.lock`, sem
+`request.json`, sem setup remanescente, `public_state=player_running` e
+playback `playing`. Nao houve writer, config real, Wi-Fi, pacote, reboot,
+segunda placa, imagem, read-only ou alteracao de `kiosky-player`.
+
+Atualizacao C10.8: 2026-05-05. C10.8 cria a base do instalador idempotente do
+appliance. Foram adicionados manifest versionado, installer, verifier, runner
+remoto e unit standalone `dadooh-visual-splash.service`. O instalador cobre
+usuario/grupo `totem`, layout `/data`, `/opt/totem/bin`, scripts board, units
+systemd, guardrails visuais de boot, runtime minimo verificavel,
+`orientation.json` publico seguro e manifest instalado sanitizado. Ele nao
+embute config real, secrets, SSID/senha, IP/MAC/DNS/gateway, midias, logs,
+backups ou candidatos privados; nao chama writer e nao altera NetworkManager.
+Os modos seguros `--prepare-only`, `--dry-run-dev`, `--verify-dev` e
+`--idempotence-dev-dry-run` passaram na placa dev sem apply. O verify ainda
+lista diferencas claras: pin do `kiosky-player` ausente, drift de
+`kiosky_service_launcher.sh`, ausencia de `totem_wifi_local_credentials_tty.py`
+em `/opt/totem/bin`, ausencia de `/data/state/totem-appliance` e metadata de
+diretorios de estado divergente do manifest. Portanto, segunda placa/C10.9
+ainda nao deve iniciar ate definir o pin do `kiosky-player` e decidir/aplicar o
+refresh C10.8 na placa dev.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

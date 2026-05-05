@@ -1,0 +1,17 @@
+[Unit]
+Description=Dadooh visual boot splash
+DefaultDependencies=no
+After=local-fs.target
+Before=basic.target getty.target kiosky-player.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/dadooh-visual-splash.py boot
+ExecStop=/usr/local/sbin/dadooh-visual-splash.py shutdown
+TimeoutSec=8
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=sysinit.target

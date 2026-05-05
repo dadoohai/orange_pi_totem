@@ -1,0 +1,183 @@
+{
+  "schema_version": "dadooh-totem-appliance-manifest.v1",
+  "created_for": "C10.8",
+  "orange_pi_totem": {
+    "repository": "dadoohai/orange_pi_totem",
+    "branch": "foundation-v0.1",
+    "manifest_created_from_head": "b97b0a77074765f8fd1c978ff9b833c20b6b6b7b",
+    "install_commit_policy": "record git rev-parse HEAD from the repo copy used by the installer"
+  },
+  "runtime": {
+    "required_commands": [
+      "python3",
+      "mpv",
+      "ffmpeg",
+      "nmcli"
+    ],
+    "required_debian_packages": [
+      "mpv",
+      "ffmpeg",
+      "python3-requests",
+      "network-manager"
+    ],
+    "forbidden_packages": [
+      "xserver-xorg",
+      "chromium",
+      "chromium-browser",
+      "weston"
+    ],
+    "forbidden_commands": [
+      "Xorg",
+      "chromium",
+      "chromium-browser",
+      "weston"
+    ],
+    "install_requires_explicit_flag": true,
+    "apt_upgrade_allowed": false,
+    "apt_full_upgrade_allowed": false,
+    "armbian_upgrade_allowed": false
+  },
+  "users": {
+    "totem": {
+      "user": "totem",
+      "group": "totem",
+      "system": true,
+      "home": "/nonexistent",
+      "shell": "nologin",
+      "supplementary_groups_if_present": [
+        "audio",
+        "video",
+        "render"
+      ]
+    }
+  },
+  "paths": [
+    {"path": "/opt/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/opt/totem/bin", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/opt/totem/kiosky-player", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/config", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
+    {"path": "/data/media", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/media/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
+    {"path": "/data/state", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/state/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
+    {"path": "/data/state/totem-appliance", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/state/totem-display", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/state/totem-boot-visual", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/state/totem-settings", "type": "dir", "owner": "root", "group": "totem", "mode": "0750"},
+    {"path": "/data/spool", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/spool/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
+    {"path": "/data/logs", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/logs/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
+    {"path": "/tmp/kiosky", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
+    {"path": "/run/dadooh-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700"}
+  ],
+  "bin_scripts": [
+    {"source": "scripts/board/kiosky_service_launcher.sh", "target": "/opt/totem/bin/kiosky_service_launcher.sh", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_config_contract_validate.py", "target": "/opt/totem/bin/totem_config_contract_validate.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_config_writer_real.py", "target": "/opt/totem/bin/totem_config_writer_real.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_open_settings_session.sh", "target": "/opt/totem/bin/totem_open_settings_session.sh", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_settings_trigger.py", "target": "/opt/totem/bin/totem_settings_trigger.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_setup_local_wizard.py", "target": "/opt/totem/bin/totem_setup_local_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_setup_minimal_server.py", "target": "/opt/totem/bin/totem_setup_minimal_server.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_setup_visual_wizard.py", "target": "/opt/totem/bin/totem_setup_visual_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_status_aggregate.py", "target": "/opt/totem/bin/totem_status_aggregate.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_status_renderer.sh", "target": "/opt/totem/bin/totem_status_renderer.sh", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_visual_setup_writer_handoff.py", "target": "/opt/totem/bin/totem_visual_setup_writer_handoff.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_visual_splash.py", "target": "/opt/totem/bin/totem_visual_splash.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_wifi_local_credentials_tty.py", "target": "/opt/totem/bin/totem_wifi_local_credentials_tty.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_wifi_nm_adapter.py", "target": "/opt/totem/bin/totem_wifi_nm_adapter.py", "owner": "root", "group": "root", "mode": "0755"}
+  ],
+  "extra_files": [
+    {"source": "scripts/board/totem_visual_splash.py", "target": "/usr/local/sbin/dadooh-visual-splash.py", "owner": "root", "group": "root", "mode": "0755"}
+  ],
+  "systemd_units": [
+    {"source": "scripts/board/kiosky-player.service", "target": "/etc/systemd/system/kiosky-player.service", "enabled": true, "active_expected_on_dev": "active"},
+    {"source": "scripts/board/totem-settings-trigger.service", "target": "/etc/systemd/system/totem-settings-trigger.service", "enabled": true, "active_expected_on_dev": "active"},
+    {"source": "scripts/board/totem-open-settings.service", "target": "/etc/systemd/system/totem-open-settings.service", "enabled": false, "enabled_state": "static", "active_expected_on_dev": "inactive"},
+    {"source": "scripts/board/dadooh-visual-splash.service", "target": "/etc/systemd/system/dadooh-visual-splash.service", "enabled": true, "active_expected_on_dev": "active"}
+  ],
+  "boot_visual_guardrails": {
+    "armbian_env": "/boot/armbianEnv.txt",
+    "backup_state_dir": "/data/state/totem-boot-visual",
+    "set_keys": {
+      "console": "serial",
+      "verbosity": "0"
+    },
+    "required_extraargs_tokens": [
+      "quiet",
+      "loglevel=0",
+      "systemd.show_status=false",
+      "rd.systemd.show_status=false",
+      "logo.nologo",
+      "vt.global_cursor_default=0"
+    ],
+    "getty_units_disabled": [
+      "getty@tty1.service",
+      "getty@tty2.service"
+    ]
+  },
+  "public_orientation": {
+    "path": "/data/state/totem-display/orientation.json",
+    "schema_version": "dadooh-display-orientation.v1",
+    "owner": "root",
+    "group": "root",
+    "mode": "0644",
+    "allowed_fields": [
+      "schema_version",
+      "updated_at",
+      "rotation_deg",
+      "orientation_label"
+    ],
+    "allowed_rotation_deg": [
+      0,
+      90,
+      180,
+      270
+    ],
+    "default_if_missing": {
+      "rotation_deg": 0,
+      "orientation_label": "landscape"
+    },
+    "must_not_read_private_config": true
+  },
+  "kiosky_player": {
+    "install_path": "/opt/totem/kiosky-player",
+    "expected_git_metadata": true,
+    "expected_repo": "PIN_MISSING",
+    "expected_ref": "PIN_MISSING",
+    "expected_commit": "PIN_MISSING",
+    "historical_docs_commit_prefix": "c71318a",
+    "pin_status": "PIN_MISSING",
+    "action_required": "define source repository and exact commit/ref before second-board provisioning"
+  },
+  "private_or_field_provisioned_files": [
+    "/data/config/config.json",
+    "/data/config/*.bak",
+    "/data/media/**",
+    "/data/logs/**",
+    "/data/state/kiosky-player/**",
+    "/data/state/totem-settings/last-settings.json",
+    "/run/dadooh-settings/*.json",
+    "/run/dadooh-settings/session.lock",
+    "NetworkManager Wi-Fi profiles, SSID, passwords, IP, MAC, DNS and gateway"
+  ],
+  "never_embed": [
+    "api_key",
+    "api_url real",
+    "environment_id real",
+    "station_id",
+    "SSID",
+    "Wi-Fi password",
+    "IP",
+    "MAC",
+    "DNS",
+    "gateway",
+    "hostname",
+    "config real",
+    "backups",
+    "raw logs",
+    "media cache",
+    "private candidate files"
+  ]
+}

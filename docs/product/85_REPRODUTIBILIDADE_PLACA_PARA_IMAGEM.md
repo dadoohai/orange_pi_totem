@@ -20,6 +20,15 @@ publicar diagnostico sanitizado de lock possivelmente stale. Nao houve writer,
 alteracao de config real, alteracao de Wi-Fi, reboot, pacote novo, upgrade,
 alteracao de `kiosky-player`, uso de segunda placa ou imagem.
 
+Atualizacao C10.8: instalador idempotente criado em 2026-05-05. Foram
+adicionados manifest, installer, verifier, unit standalone do splash visual e
+runner remoto. Os modos seguros `--prepare-only`, `--dry-run-dev`,
+`--verify-dev` e `--idempotence-dev-dry-run` foram executados na placa dev sem
+apply, sem writer, sem Wi-Fi, sem pacote, sem reboot e sem segunda placa. O
+resultado ainda e `ready_for_second_board=false` porque o pin do
+`kiosky-player` segue `PIN_MISSING` e ha diferencas claras que exigem decisao
+ou apply refresh autorizado.
+
 ## Pergunta
 
 O estado atual validado na placa dev esta totalmente descrito/versionado no
@@ -28,9 +37,10 @@ repo?
 Resposta: nao.
 
 A placa dev esta operacional e a maior parte dos componentes de produto esta
-descrita no repo, mas ainda nao existe um instalador idempotente unico que
-reproduza a placa em outro cartao. A auditoria tambem encontrou drift entre
-placa, HEAD commitado e worktree local.
+descrita no repo. C10.8 passou a fornecer um instalador idempotente e um
+verificador, mas ainda nao esta liberado preparar outro cartao porque o
+`kiosky-player` nao tem pin/ref verificavel e o verify C10.8 ainda lista
+diferencas entre manifest e placa dev.
 
 ## Runner
 
@@ -137,12 +147,15 @@ Capacidades presentes:
 - runner de guardrails visuais
 - runner de early boot quiet
 - docs/evidencia C10.6.2 sanitizados
+- instalador idempotente C10.8
+- manifest C10.8
+- verificador C10.8
+- unit standalone versionada para `dadooh-visual-splash.service`
 
 Capacidades ausentes:
 
-- instalador idempotente unico do appliance
 - manifest/ref fixado do `kiosky-player`
-- unit standalone versionada para `dadooh-visual-splash.service`
+- apply refresh C10.8 autorizado na placa dev
 
 ## Drift Encontrado
 
@@ -156,14 +169,14 @@ C10.7.2 final:
   placa;
 - `/opt/totem/bin/totem_wifi_local_credentials_tty.py` existe no repo, mas nao
   foi encontrado em `/opt/totem/bin`;
-- `/etc/systemd/system/dadooh-visual-splash.service` existe e esta ativo na
-  placa, mas nao existe como `.service` standalone versionado.
+- `dadooh-visual-splash.service` agora esta versionado no repo por C10.8.
 
 No refresh C10.7.1, os arquivos C10.6.2 estavam commitados e o repo estava
 limpo. Persistiram dois pontos para C10.8:
 
 - `kiosky_service_launcher.sh` instalado na placa ainda diverge do HEAD;
-- `dadooh-visual-splash.service` segue sem unit standalone versionada.
+- `dadooh-visual-splash.service` seguia sem unit standalone versionada, lacuna
+  resolvida por C10.8.
 
 No C10.7.2, `totem_open_settings_session.sh` e `totem_settings_trigger.py`
 foram atualizados no repo e reinstalados na placa. O drift restante continua
@@ -289,14 +302,14 @@ existir.
 | --- | --- | --- | --- | --- | --- | --- |
 | Base OS Armbian/Debian minimal e kernel | sim | sim | nao | nao | FALTA_SCRIPT_INSTALACAO | C10.8 deve transformar a fundacao documentada em instalador/manifest verificavel. |
 | Runtime minimo mpv/ffmpeg/python3-requests/NetworkManager | sim | sim | nao | nao | FALTA_SCRIPT_INSTALACAO | Falta instalacao idempotente sem `apt upgrade`. |
-| Ausencia de desktop/Chromium/Xorg/Wayland/compositor | sim | sim | nao | nao | FALTA_SCRIPT_INSTALACAO | C10.8 deve validar ausencia e impedir instalacao de camada grafica. |
+| Ausencia de desktop/Chromium/Xorg/Wayland/compositor | sim | sim | sim | nao | OK_VERSIONADO | C10.8 valida ausencia e impede instalacao de camada grafica. |
 | Usuario e grupo totem | sim | sim | sim | nao | OK_VERSIONADO | Consolidar no instalador idempotente. |
 | Layout /data config/media/state/logs | sim | sim | sim | nao | OK_VERSIONADO | Consolidar permissoes finais no instalador. |
 | /opt/totem/bin scripts allowlisted | 13/14 | sim | nao | nao | POSSIVEL_DRIFT_PLACA | Resolver drift antes da segunda placa. |
 | Systemd kiosky-player.service | sim | sim | sim | nao | OK_VERSIONADO | Unit bate com HEAD. |
 | Systemd totem-settings-trigger.service | sim | sim | sim | nao | OK_VERSIONADO | Unit bate com HEAD. |
 | Systemd totem-open-settings.service | sim | sim | sim | nao | OK_VERSIONADO | Unit bate com HEAD; script de sessao C10.7.2 foi atualizado e reinstalado. |
-| Systemd dadooh-visual-splash.service | sim | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Versionar ou gerar deterministicamente no C10.8. |
+| Systemd dadooh-visual-splash.service | sim | sim | sim | nao | OK_VERSIONADO | Unit standalone versionada em C10.8; verify confirma hash. |
 | Trigger F10 persistente | sim | sim | sim | nao | OK_VERSIONADO | Incluir instalacao/habilitacao no C10.8. |
 | Runner C10.6.2 apply via F10 | n/a | sim | parcial | nao | OK_VERSIONADO | C10.8 deve instalar as dependencias e preservar o runner como validacao/procedimento, nao como segredo. |
 | Wizard visual atualizado C10.6.2 | sim | sim | sim | nao | OK_VERSIONADO | Instalar versao commitada em `/opt/totem/bin`. |
@@ -314,11 +327,11 @@ existir.
 | Midias/cache em `/data/media` | sim | sim | nao | sim | ESTADO_PRIVADO_NAO_IMAGEM | Nao clonar midias; sincronizar em runtime. |
 | Estado/logs runtime | sim | sim | nao | sim | ESTADO_TEMPORARIO | Criar diretorios; nao copiar conteudo runtime/logs. |
 | `kiosky-player` em `/opt/totem/kiosky-player` | sim | sim | nao | nao | FALTA_SCRIPT_INSTALACAO | Deploy existe, mas falta pin/manifest. |
-| Commit/ref fixado do `kiosky-player` | nao | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Registrar origem e ref exatos. |
+| Commit/ref fixado do `kiosky-player` | nao | sim | nao | nao | FALTA_SCRIPT_INSTALACAO | Manifest registra `PIN_MISSING`; falta definir origem e ref exatos. |
 | Player public_state/playback apos reboot | sim | sim | nao | nao | ESTADO_TEMPORARIO | Validar por smoke curto no C10.8; nao copiar status runtime. |
 | `/data/state/totem-display/orientation.json` | sim | sim | parcial | nao | OK_VERSIONADO | C10.8 deve criar/validar contrato publico seguro e preservar somente campos allowlisted. |
 | Read-only/root overlay e corte seco | nao | nao | nao | nao | NAO_DEVE_ENTRAR_IMAGEM | Fora desta rodada. |
-| Instalador idempotente unico do appliance | nao | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Escopo direto de C10.8. |
+| Instalador idempotente unico do appliance | n/a | sim | parcial | nao | PRECISA_DECISAO | Criado em C10.8; apply nao executado e pin do player ainda bloqueia segunda placa. |
 
 ## Respostas Diretas
 
@@ -331,9 +344,11 @@ registrar manifest.
 
 As units systemd instaladas existem no repo?
 
-Parcialmente. Tres units existem no repo. `totem-open-settings.service` bate
-com HEAD. `dadooh-visual-splash.service` esta na placa, mas nao existe como
-unit standalone versionada.
+Sim para as units de produto conhecidas apos C10.8:
+`kiosky-player.service`, `totem-settings-trigger.service`,
+`totem-open-settings.service` e `dadooh-visual-splash.service` existem no repo.
+O verify C10.8 confirmou hash das units instaladas, mas ainda lista outras
+diferencas de paths/scripts.
 
 Os guardrails de boot estao documentados e scriptaveis?
 
@@ -378,7 +393,17 @@ estados privados/temporarios e gerar manifest verificavel.
 
 C10.8 - Instalador idempotente do appliance.
 
-Escopo proposto:
+Status: implementado parcialmente e validado em modos seguros. Artefatos:
+
+- `scripts/board/totem_appliance_manifest.json`;
+- `scripts/board/install_totem_appliance.sh`;
+- `scripts/board/verify_totem_appliance.sh`;
+- `scripts/board/dadooh-visual-splash.service`;
+- `scripts/remote/run_c10_8_installer_idempotent.sh`;
+- `docs/product/86_C10_8_INSTALADOR_IDEMPOTENTE_APPLIANCE.md`;
+- `docs/evidence/candidate-a/runs/20260505T170238Z-c10-8-installer-idempotent/README.md`.
+
+Escopo coberto:
 
 - criar usuario/grupo `totem`;
 - garantir grupos `audio`, `video`, `render`;
@@ -415,7 +440,31 @@ Escopo proposto:
 - validar idempotencia rodando duas vezes;
 - rodar smoke curto read-only de servicos/status depois da instalacao.
 
-Validar na segunda placa/cartao, depois de C10.8:
+Resultado C10.8 na placa dev:
+
+- `--prepare-only`: passou;
+- `--dry-run-dev`: passou, `changed_count=0`, `action_count=7`;
+- `--verify-dev`: executou e listou diferencas claras;
+- `--idempotence-dev-dry-run`: passou, `stable=true`;
+- `systemctl_failed_count=0`;
+- runtime minimo ok;
+- usuario/grupo ok;
+- boot guardrails ok;
+- `orientation.json` ok;
+- config real presente, mas conteudo nao lido;
+- units versionadas ok;
+- `ready_for_second_board=false`.
+
+Diferencas restantes:
+
+- `kiosky_player_PIN_MISSING`;
+- `/data/state/totem-appliance` ainda ausente na placa dev;
+- metadata de `/data/state/totem-display`, `/data/state/totem-boot-visual` e
+  `/data/state/totem-settings` difere do manifest;
+- `/opt/totem/bin/kiosky_service_launcher.sh` diverge do repo;
+- `/opt/totem/bin/totem_wifi_local_credentials_tty.py` ausente na placa dev.
+
+Validar na segunda placa/cartao, depois de resolver o pin e alinhar a placa dev:
 
 - instalador idempotente roda duas vezes sem drift;
 - services finais `active/enabled` onde aplicavel;
