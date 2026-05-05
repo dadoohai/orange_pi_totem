@@ -190,17 +190,32 @@ placa limpa.
 
 ## Pronto para C11.0
 
-C10.9 ainda nao deve avancar para C11.0 read-only readiness audit sem uma
-rodada curta C10.9.1.
+C10.9 isoladamente nao deveria avancar para C11.0 read-only readiness audit sem
+uma rodada curta C10.9.1.
 
-Pendencias antes de C11.0:
+## Resolucao em C10.9.1
 
-- aplicar refresh do manifest/installer para instalar
-  `totem_status_render_preview.py`;
-- implementar/validar provisionamento controlado da config mock real na segunda
-  placa, com arquivo privado restrito em `/tmp` e sem publicar valores;
-- corrigir UX/status para nao manter "iniciando player" quando o fluxo ficou
-  apenas em `candidate-only`;
+C10.9.1 concluiu o follow-up:
+
+- refresh instalou `totem_status_render_preview.py`;
+- `config_missing` passou a gerar feedback visual `config_pending`;
+- `candidate-only` sem config ativa nao chama writer e nao fica em
+  "Iniciando player";
+- provisionamento real controlado usou arquivo privado restrito em `/tmp`;
+- C5.1 real-dry-run passou;
+- writer real escreveu `/data/config/config.json`;
+- permissoes ficaram `root:totem 0640`;
+- temporarios privados foram removidos;
+- player final ficou `public_state=player_running` e `playback=playing`;
+- reboot controlado pos-provisionamento passou com config presente,
+  `public_state=player_running`, `playback=playing`, `systemctl_failed_count=0`
+  e `kernel_critical_filter_count=0`;
+- `systemctl_failed_count=0`.
+
+Com C10.9.1, a segunda placa fica pronta para C11.0 read-only readiness audit.
+
+Pendencias que permanecem fora de C10.9/C10.9.1:
+
 - transformar o bootstrap tecnico inicial em experiencia final de imagem;
 - auditar read-only/root overlay;
 - gerar imagem final;

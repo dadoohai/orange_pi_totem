@@ -437,7 +437,11 @@ restore_service() {
     systemctl enable kiosky-player.service >/dev/null 2>&1 || true
   fi
   if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
-    show_transition player "$SELECTED_ROTATION_DEG" || true
+    if [ -f /data/config/config.json ]; then
+      show_transition player "$SELECTED_ROTATION_DEG" || true
+    else
+      show_transition config_pending "$SELECTED_ROTATION_DEG" || true
+    fi
     systemctl start kiosky-player.service >/dev/null 2>&1 || true
   fi
 }
@@ -673,6 +677,17 @@ cleanup_trigger_request() {
   esac
 }
 
+cleanup_session_lock() {
+  case "$LOCK_DIR" in
+    /run/*|/tmp/*)
+      rm -rf "$LOCK_DIR" || true
+      ;;
+    *)
+      rmdir "$LOCK_DIR" 2>/dev/null || true
+      ;;
+  esac
+}
+
 write_final_status() {
   wait_player_running || true
   python3 - "$FINAL_STATUS" "$OUT_DIR" "$WIZARD_OUT_DIR" "$MODE" "$EXPECTED_RESULT" "$WIZARD_RC" \
@@ -878,7 +893,7 @@ on_exit() {
   restore_service || true
   write_final_status || true
   restore_getty || true
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  cleanup_session_lock || true
   exit "$rc"
 }
 trap on_exit EXIT INT TERM HUP
@@ -1050,5 +1065,5 @@ write_final_status
 restore_getty || true
 cleanup_trigger_request || true
 trap - EXIT INT TERM HUP
-rmdir "$LOCK_DIR" 2>/dev/null || true
+cleanup_session_lock || true
 exit 0

@@ -614,6 +614,23 @@ appliance, mas C10.9.1 deve aplicar o refresh do manifest/status e definir
 provisionamento privado da config mock real antes de C11.0; imagem final,
 read-only e provisionamento real definitivo seguem fora desta rodada.
 
+Atualizacao C10.9.1: 2026-05-05. C10.9.1 aplicou refresh na segunda placa,
+instalando `totem_status_render_preview.py` e os scripts atualizados. O estado
+`config_missing` passou a publicar feedback visual `config_pending`, sem ficar
+preso em "Iniciando player". O fluxo `candidate-only` sem config ativa foi
+validado: candidata gerada, writer nao chamado, config real nao escrita e
+retorno para `config_missing`. O provisionamento real controlado usou arquivo
+privado restrito em `/tmp`, com `api_key` e `api_url` sem publicacao de valores;
+`environment_id` veio do wizard. C5.1 real-dry-run passou, o writer real
+escreveu `/data/config/config.json`, permissoes finais `root:totem 0640`,
+temporarios privados removidos, `public_state=player_running`,
+`playback=playing`, `NRestarts=0` e `systemctl_failed_count=0`. Reboot
+controlado pos-provisionamento passou com config presente,
+`public_state=player_running`, `playback=playing`,
+`kernel_critical_filter_count=0` e sem logs/secrets publicados. C10.9.1 deixa a
+segunda placa pronta para C11.0 read-only readiness audit; backend/login final,
+imagem final, root read-only e corte seco seguem fora.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

@@ -36,6 +36,7 @@ MESSAGES = {
     "player": ("Dadooh", "Iniciando player"),
     "setup": ("Dadooh", "Abrindo configuracao"),
     "saving": ("Dadooh", "Salvando configuracao"),
+    "config_pending": ("Dadooh", "Configuracao pendente"),
     "shutdown": ("Dadooh", "Encerrando"),
 }
 

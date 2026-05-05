@@ -36,8 +36,8 @@ SUMMARY_FILENAME = "summary.txt"
 TMP_ROOT = pathlib.Path("/tmp").resolve()
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
-REQUIRED_PRIVATE_FIELDS = ("api_url", "api_key")
-OPTIONAL_PRIVATE_FIELDS = ("station_id", "environment_id")
+REQUIRED_PRIVATE_FIELDS = ("api_key",)
+OPTIONAL_PRIVATE_FIELDS = ("api_url", "station_id", "environment_id")
 PRIVATE_METADATA_FIELDS = {
     "setup_source",
     "setup_interface",
@@ -242,7 +242,8 @@ def summarize_validation(status: dict[str, Any]) -> dict[str, Any]:
 
 def build_private_candidate(source: dict[str, Any], private_values: dict[str, str]) -> dict[str, Any]:
     candidate = dict(source)
-    candidate["api_url"] = private_values["api_url"]
+    if private_values.get("api_url"):
+        candidate["api_url"] = private_values["api_url"]
     candidate["api_key"] = private_values["api_key"]
     if private_values.get("station_id"):
         candidate["station_id"] = private_values["station_id"]

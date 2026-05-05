@@ -266,6 +266,31 @@ Observacao posterior a C10.9 detectou duas pendencias antes de C11.0:
   escreve config real sem um provisionamento privado explicito.
 
 Conclusao atualizada C10.9: instalacao limpa em segunda placa validada para a
-camada appliance, mas ainda nao pronta para C11.0 read-only readiness audit.
-C10.9 ainda nao gera imagem final, nao habilita root read-only e nao provisiona
-config real.
+camada appliance, mas ainda nao pronta para C11.0 read-only readiness audit sem
+C10.9.1.
+
+## Atualizacao C10.9.1
+
+C10.9.1 aplicou o refresh da segunda placa e concluiu o provisionamento real
+controlado:
+
+- `totem_status_render_preview.py` instalado pelo manifest;
+- feedback visual de `config_missing` validado como `config_pending`, sem ficar
+  preso em "Iniciando player";
+- fluxo `candidate-only` sem config ativa validado sem writer e sem config real;
+- arquivo privado temporario em `/tmp` validado com diretorio `0700`, arquivo
+  `0600`, sem symlink e sem imprimir valores;
+- `environment_id` veio do wizard visual;
+- C5.1 real-dry-run passou;
+- writer real escreveu `/data/config/config.json`;
+- permissoes finais `root:totem 0640`;
+- temporarios privados removidos;
+- player final `public_state=player_running`, `playback=playing`,
+  `NRestarts=0`, `systemctl_failed_count=0`.
+- reboot controlado pos-provisionamento manteve config presente,
+  `public_state=player_running`, `playback=playing`,
+  `systemctl_failed_count=0` e `kernel_critical_filter_count=0`.
+
+Com C10.9.1, a segunda placa fica pronta para C11.0 read-only readiness audit.
+C10.9.1 ainda nao gera imagem final, nao habilita root read-only e nao substitui
+o backend/login final de ativacao.
