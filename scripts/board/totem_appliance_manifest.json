@@ -1,10 +1,10 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8",
+  "created_for": "C10.8.1",
   "orange_pi_totem": {
     "repository": "dadoohai/orange_pi_totem",
     "branch": "foundation-v0.1",
-    "manifest_created_from_head": "b97b0a77074765f8fd1c978ff9b833c20b6b6b7b",
+    "manifest_created_from_head": "dynamic_at_install_time",
     "install_commit_policy": "record git rev-parse HEAD from the repo copy used by the installer"
   },
   "runtime": {
@@ -62,9 +62,9 @@
     {"path": "/data/state", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/state/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/data/state/totem-appliance", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/state/totem-display", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/state/totem-boot-visual", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/state/totem-settings", "type": "dir", "owner": "root", "group": "totem", "mode": "0750"},
+    {"path": "/data/state/totem-display", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "public_orientation_file_allowlisted_no_directory_hash"},
+    {"path": "/data/state/totem-boot-visual", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "rollback_state_no_directory_hash"},
+    {"path": "/data/state/totem-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "private_settings_context_no_content_read"},
     {"path": "/data/spool", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/spool/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/data/logs", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
@@ -143,13 +143,19 @@
   },
   "kiosky_player": {
     "install_path": "/opt/totem/kiosky-player",
-    "expected_git_metadata": true,
-    "expected_repo": "PIN_MISSING",
-    "expected_ref": "PIN_MISSING",
-    "expected_commit": "PIN_MISSING",
-    "historical_docs_commit_prefix": "c71318a",
-    "pin_status": "PIN_MISSING",
-    "action_required": "define source repository and exact commit/ref before second-board provisioning"
+    "repo_full_name": "dadoohai/kiosky-player",
+    "repository_url": "https://github.com/dadoohai/kiosky-player.git",
+    "expected_repo": "dadoohai/kiosky-player",
+    "expected_ref": "appliance-v0.1",
+    "expected_commit": "c71318a64c08e47b8426f1388b95f21364d57123",
+    "expected_commit_short": "c71318a",
+    "expected_commit_title": "Add configurable MPV output flags",
+    "pin_status": "PINNED",
+    "pin_source": "docs/releases/v0.1-rc1-homologacao/PROVISIONAMENTO_SEGUNDA_PLACA.md and local /home/builder/kiosky-player commit lookup",
+    "expected_git_metadata_on_dev": false,
+    "dev_tree_without_git_metadata_policy": "accepted_with_documented_pin; exact installed tree commit is not machine-verifiable without changing the app tree",
+    "second_board_install_policy": "deploy/export from expected_repo expected_ref expected_commit, excluding .git, private config, media cache and secrets",
+    "action_required": "C10.9 must deploy kiosky-player from this exact commit before final verify on the second board"
   },
   "private_or_field_provisioned_files": [
     "/data/config/config.json",

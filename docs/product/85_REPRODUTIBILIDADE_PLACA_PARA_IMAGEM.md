@@ -464,9 +464,33 @@ Diferencas restantes:
 - `/opt/totem/bin/kiosky_service_launcher.sh` diverge do repo;
 - `/opt/totem/bin/totem_wifi_local_credentials_tty.py` ausente na placa dev.
 
-Validar na segunda placa/cartao, depois de resolver o pin e alinhar a placa dev:
+Resultado C10.8.1:
+
+- `kiosky_player_PIN_MISSING` resolvido no manifest com repo
+  `dadoohai/kiosky-player`, ref `appliance-v0.1`, commit
+  `c71318a64c08e47b8426f1388b95f21364d57123`;
+- launcher classificado como `REPO_AHEAD_REFRESH_BOARD` e atualizado na placa;
+- `totem_wifi_local_credentials_tty.py` mantido no manifest como fallback local
+  seguro e instalado na placa;
+- `/data/state/totem-appliance` criado para manifest instalado sanitizado;
+- `/data/state/totem-display`, `/data/state/totem-boot-visual` e
+  `/data/state/totem-settings` reclassificados como `RUNTIME_STATE_OK`, com
+  checagem de estrutura/metadata e sem hash de conteudo, timestamp ou leitura de
+  dados privados;
+- `verify-dev` final: `overall_status=ok`;
+- `idempotence-dev-dry-run` final: `stable=true`, `action_count=0` na primeira
+  e segunda execucao;
+- `ready_for_second_board=true`.
+
+Aviso remanescente esperado: a arvore instalada de `/opt/totem/kiosky-player`
+na placa dev nao tem `.git`, entao o commit atual nao e verificavel por Git sem
+alterar o app. Para C10.9, a segunda placa deve instalar o `kiosky-player` a
+partir do pin fixado no manifest.
+
+Validar na segunda placa/cartao:
 
 - instalador idempotente roda duas vezes sem drift;
+- `kiosky-player` e instalado a partir do pin fixado;
 - services finais `active/enabled` onde aplicavel;
 - F10 abre Configuracoes e cancela sem shell;
 - dry-run F10 passa sem writer;

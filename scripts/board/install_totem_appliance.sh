@@ -359,6 +359,14 @@ def ensure_dir(item):
             changed.append(str(path))
 
 
+def manifest_path_item(path, fallback):
+    path_text = str(path)
+    for item in manifest["paths"]:
+        if item.get("path") == path_text:
+            return item
+    return fallback
+
+
 def copy_file(item):
     source = repo_root / item["source"]
     target = pathlib.Path(item["target"])
@@ -461,7 +469,7 @@ def apply_armbian_env(path, values, set_keys, tokens):
 def ensure_boot_guardrails():
     spec = manifest["boot_visual_guardrails"]
     state_dir = pathlib.Path(spec["backup_state_dir"])
-    ensure_dir({"path": str(state_dir), "type": "dir", "owner": "root", "group": "root", "mode": "0755"})
+    ensure_dir(manifest_path_item(state_dir, {"path": str(state_dir), "type": "dir", "owner": "root", "group": "root", "mode": "0700"}))
     env_path = pathlib.Path(spec["armbian_env"])
     lines, values = parse_armbian_env(env_path)
     key_changes = {key: value for key, value in spec["set_keys"].items() if values.get(key) != value}
@@ -500,7 +508,7 @@ def ensure_orientation():
     spec = manifest["public_orientation"]
     path = pathlib.Path(spec["path"])
     parent = path.parent
-    ensure_dir({"path": str(parent), "type": "dir", "owner": "root", "group": "root", "mode": "0755"})
+    ensure_dir(manifest_path_item(parent, {"path": str(parent), "type": "dir", "owner": "root", "group": "root", "mode": "0700"}))
     needs_write = False
     public_data = None
     if path.exists() and not path.is_symlink():
@@ -568,11 +576,16 @@ def check_kiosky_pin():
     spec = manifest["kiosky_player"]
     app = pathlib.Path(spec["install_path"])
     if not app.exists():
-        action("create_kiosky_player_placeholder_dir", str(app), "install path missing; app deployment is separate until pin is defined")
+        action("create_kiosky_player_placeholder_dir", str(app), "install path missing; app deployment is separate from appliance refresh")
+        warnings.append("kiosky_player_app_tree_missing_deploy_pinned_commit_before_operational_use")
     if spec.get("pin_status") == "PIN_MISSING" or spec.get("expected_commit") == "PIN_MISSING":
         blockers.append("kiosky_player_PIN_MISSING")
         return
+    git_required_on_dev = bool(spec.get("expected_git_metadata_on_dev", spec.get("expected_git_metadata", True)))
     if not (app / ".git").exists():
+        if not git_required_on_dev and app.exists():
+            warnings.append("kiosky_player_git_metadata_absent_pin_from_manifest_docs")
+            return
         blockers.append("kiosky_player_git_metadata_missing")
         return
     head = out(["git", "-C", str(app), "rev-parse", "HEAD"], 8)

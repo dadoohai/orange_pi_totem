@@ -112,10 +112,11 @@ scripts/remote/run_c10_8_installer_idempotent.sh <host> --apply-dev-refresh
 Frase exigida pelo runner:
 
 ```text
-CONFIRMO APPLY REFRESH INSTALLER C10.8 NA PLACA DEV
+CONFIRMO APPLY REFRESH INSTALLER C10.8.1 NA PLACA DEV
 ```
 
-Esse apply nao foi executado nesta rodada.
+Em C10.8 esse apply nao foi executado. Em C10.8.1 ele foi executado de forma
+controlada para alinhar apenas deltas de reprodutibilidade.
 
 ## Validacao C10.8
 
@@ -185,5 +186,48 @@ Antes disso:
 - metadata de diretorios de estado diverge do manifest desejado;
 - apply refresh C10.8 nao foi autorizado/executado.
 
-Conclusao: C10.8 criou a base do instalador idempotente, mas C10.9 com segunda
-placa ainda nao deve comecar.
+## Atualizacao C10.8.1
+
+C10.8.1 resolveu os deltas de reprodutibilidade deixados pelo C10.8:
+
+- pin do `kiosky-player` definido como repo `dadoohai/kiosky-player`, ref
+  `appliance-v0.1`, commit
+  `c71318a64c08e47b8426f1388b95f21364d57123`;
+- `/opt/totem/bin/kiosky_service_launcher.sh` classificado como
+  `REPO_AHEAD_REFRESH_BOARD` e atualizado na placa por apply refresh;
+- `/opt/totem/bin/totem_wifi_local_credentials_tty.py` mantido como fallback
+  seguro e instalado por apply refresh;
+- `/data/state/totem-appliance` criado para o manifest instalado sanitizado;
+- diretorios `/data/state/totem-display`, `/data/state/totem-boot-visual` e
+  `/data/state/totem-settings` reclassificados como runtime state, sem hash de
+  conteudo e com metadata restrita `0700 root:root`.
+
+Apply refresh C10.8.1 executado:
+
+- instalacao de pacotes: nao;
+- upgrade: nao;
+- reboot: nao;
+- writer: nao;
+- Wi-Fi/NetworkManager: nao;
+- config real: conteudo nao lido e nao alterado;
+- `kiosky-player`: nao alterado;
+- restart de servicos de produto: nao.
+
+Resultado final:
+
+- `verify-dev`: `overall_status=ok`;
+- `ready_for_second_board=true`;
+- `blockers: none`;
+- `idempotence-dev-dry-run`: `stable=true`;
+- primeira execucao dry-run pos-apply: `action_count=0`;
+- segunda execucao dry-run pos-apply: `action_count=0`;
+- estado operacional final: `player_running`, playback `playing`,
+  `NRestarts=0`, sem lock/request e sem processo de setup remanescente.
+
+Aviso esperado: a arvore instalada do `kiosky-player` na placa dev nao tem
+metadados Git, entao o commit atual da arvore nao e verificavel por Git sem
+alterar o app. Isso nao bloqueia C10.9 porque a segunda placa deve instalar o
+app a partir do pin fixado no manifest.
+
+Conclusao: C10.8.1 deixa o instalador/verificador acionavel para iniciar C10.9
+na segunda placa/cartao.

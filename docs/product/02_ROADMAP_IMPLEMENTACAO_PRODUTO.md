@@ -574,6 +574,22 @@ diretorios de estado divergente do manifest. Portanto, segunda placa/C10.9
 ainda nao deve iniciar ate definir o pin do `kiosky-player` e decidir/aplicar o
 refresh C10.8 na placa dev.
 
+Atualizacao C10.8.1: 2026-05-05. C10.8.1 resolveu os deltas de
+reprodutibilidade do C10.8. O manifest agora fixa o `kiosky-player` em
+`dadoohai/kiosky-player`, ref `appliance-v0.1`, commit
+`c71318a64c08e47b8426f1388b95f21364d57123`. O launcher divergente foi
+classificado como `REPO_AHEAD_REFRESH_BOARD`; o script
+`totem_wifi_local_credentials_tty.py` foi mantido como fallback local seguro; e
+os diretorios de runtime state foram reclassificados para checagem de
+estrutura/metadata sem hash de conteudo. Com confirmacao humana explicita, o
+apply refresh criou `/data/state/totem-appliance`, instalou os dois scripts
+versionados e escreveu manifest instalado sanitizado, sem pacote, upgrade,
+reboot, writer, Wi-Fi, config real, alteracao do `kiosky-player` ou restart de
+produto. O verify final ficou `overall_status=ok`, `ready_for_second_board=true`
+e a idempotencia final ficou `stable=true` com `action_count=0`. C10.9 pode
+iniciar na segunda placa/cartao, instalando o `kiosky-player` a partir do pin
+fixado e mantendo secrets/config real/Wi-Fi privados fora da imagem.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

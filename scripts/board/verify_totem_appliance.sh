@@ -259,7 +259,17 @@ def path_check(item):
         "owner_ok": meta.get("owner") == item.get("owner"),
         "group_ok": meta.get("group") == item.get("group"),
     }
-    return {"path": item["path"], "meta": meta, "checks": checks, "ok": all(checks.values())}
+    return {
+        "path": item["path"],
+        "runtime_state": bool(item.get("runtime_state")),
+        "content_policy": item.get("content_policy", "exact_metadata_only_no_content_hash"),
+        "content_hash_compared": False,
+        "timestamp_compared": False,
+        "raw_content_read": False,
+        "meta": meta,
+        "checks": checks,
+        "ok": all(checks.values()),
+    }
 
 
 def user_check():
@@ -360,17 +370,48 @@ def app_pin_check():
     has_git = (app / ".git").exists()
     head = out(["git", "-C", str(app), "rev-parse", "HEAD"], 8) if has_git else "unknown"
     branch = out(["git", "-C", str(app), "rev-parse", "--abbrev-ref", "HEAD"], 8) if has_git else "unknown"
+    remote = out(["git", "-C", str(app), "config", "--get", "remote.origin.url"], 8) if has_git else "unknown"
     expected = spec.get("expected_commit")
     pin_missing = spec.get("pin_status") == "PIN_MISSING" or expected == "PIN_MISSING"
+    git_required_on_dev = bool(spec.get("expected_git_metadata_on_dev", spec.get("expected_git_metadata", True)))
+    path_exists = app.exists()
+    if pin_missing:
+        pin_ok = False
+        blocker = "PIN_MISSING"
+        verification_level = "missing_pin"
+    elif not path_exists:
+        pin_ok = False
+        blocker = "APP_MISSING"
+        verification_level = "pinned_app_missing"
+    elif has_git:
+        pin_ok = head == expected
+        blocker = None if pin_ok else "PIN_MISMATCH"
+        verification_level = "git_head"
+    elif git_required_on_dev:
+        pin_ok = False
+        blocker = "GIT_METADATA_MISSING"
+        verification_level = "git_metadata_required_missing"
+    else:
+        pin_ok = True
+        blocker = None
+        verification_level = "documented_pin_installed_tree_without_git_metadata"
     return {
-        "path_exists": app.exists(),
+        "path_exists": path_exists,
         "git_metadata_present": has_git,
         "branch": branch,
+        "remote": remote,
         "head": head,
+        "repo_full_name": spec.get("repo_full_name") or spec.get("expected_repo"),
+        "expected_ref": spec.get("expected_ref"),
         "expected_commit": expected,
+        "expected_commit_short": spec.get("expected_commit_short"),
         "pin_status": spec.get("pin_status"),
-        "pin_ok": (not pin_missing and has_git and head == expected),
-        "blocker": "PIN_MISSING" if pin_missing else (None if has_git and head == expected else "PIN_MISMATCH"),
+        "pin_source": spec.get("pin_source"),
+        "git_metadata_required_on_dev": git_required_on_dev,
+        "verification_level": verification_level,
+        "pin_ok": pin_ok,
+        "blocker": blocker,
+        "warning": None if has_git or not path_exists else "installed_tree_commit_not_machine_verifiable_without_git_metadata",
     }
 
 
@@ -443,6 +484,8 @@ if config_result["present_on_dev"] and not config_result["owner_mode_ok_if_prese
     blockers.append("private_config_owner_mode")
 if pin_result["blocker"]:
     blockers.append(f"kiosky_player_{pin_result['blocker']}")
+if pin_result.get("warning"):
+    warnings.append(f"kiosky_player_{pin_result['warning']}")
 
 payload = {
     "schema_version": "dadooh-c10.8-appliance-verify.v1",
@@ -502,12 +545,16 @@ lines = [
     f"private_config_present_on_dev={str(config_result['present_on_dev']).lower()}",
     f"private_config_content_read=false",
     f"kiosky_player_pin_status={pin_result['pin_status']}",
+    f"kiosky_player_verification_level={pin_result['verification_level']}",
 ]
 if blockers:
     lines.append("blockers:")
     lines.extend(f"- {item}" for item in blockers)
 else:
     lines.append("blockers: none")
+if warnings:
+    lines.append("warnings:")
+    lines.extend(f"- {item}" for item in warnings)
 summary_out.write_text("\n".join(lines) + "\n", encoding="utf-8")
 os.chmod(summary_out, 0o600)
 print(f"verify_json={json_out}")
