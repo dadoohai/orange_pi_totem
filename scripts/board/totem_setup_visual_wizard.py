@@ -130,25 +130,25 @@ DISPLAY_OPTIONS = (
     {
         "key": "landscape",
         "label": "Paisagem",
-        "description": "Tela na posicao normal.",
+        "description": "Topo para cima.",
         "rotation_deg": 0,
     },
     {
         "key": "portrait_right",
         "label": "Retrato para direita",
-        "description": "Topo da imagem virado para a direita.",
+        "description": "Topo vira para a direita.",
         "rotation_deg": 90,
     },
     {
         "key": "portrait_left",
         "label": "Retrato para esquerda",
-        "description": "Topo da imagem virado para a esquerda.",
+        "description": "Topo vira para a esquerda.",
         "rotation_deg": 270,
     },
     {
         "key": "landscape_inverted",
         "label": "Invertido",
-        "description": "Imagem de cabeca para baixo.",
+        "description": "Topo fica embaixo.",
         "rotation_deg": 180,
     },
 )
@@ -235,20 +235,22 @@ def svg_lines(
     )
 
 
-def step_indicator(active_step: int) -> str:
+def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
     parts = []
-    x = 86
+    portrait_layout = layout_rotation_deg in {90, 270}
+    x = 70 if portrait_layout else 86
     y = 92
     for index, step in enumerate(STEPS):
         active = index == active_step
         fill = "#ecfeff" if active else "#1f2937"
         stroke = "#0891b2" if active else "#334155"
         text_fill = "#0f172a" if active else "#cbd5e1"
-        width = 180 if index in {0, 4} else 176
+        width = 128 if portrait_layout else (180 if index in {0, 4} else 176)
+        label = step if not portrait_layout else step[:8]
         parts.append(
             f'<rect x="{x}" y="{y}" width="{width}" height="44" rx="8" fill="{fill}" stroke="{stroke}"/>'
             f'<text x="{x + 18}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" '
-            f'font-size="17" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(step)}</text>'
+            f'font-size="17" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(label)}</text>'
         )
         x += width + 14
     return "\n  ".join(parts)
@@ -332,6 +334,86 @@ def footer_text(text: str) -> str:
     )
 
 
+def rect_svg(x: int, y: int, width: int, height: int, fill: str, *, rx: int = 0) -> str:
+    return f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="{rx}" fill="{fill}"/>'
+
+
+def rotate_rect(rect: tuple[int, int, int, int], rotation_deg: int, base_w: int, base_h: int) -> tuple[int, int, int, int]:
+    x, y, width, height = rect
+    if rotation_deg == 0:
+        return rect
+    if rotation_deg == 180:
+        return base_w - x - width, base_h - y - height, width, height
+    if rotation_deg == 90:
+        return base_h - y - height, x, height, width
+    if rotation_deg == 270:
+        return y, base_w - x - width, height, width
+    return rect
+
+
+BLOCK_FONT = {
+    "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "D": ("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
+    "H": ("10001", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "O": ("01110", "10001", "10001", "10001", "10001", "10001", "01110"),
+}
+
+
+def block_word_marker(value: str, rotation_deg: int, *, x: int, y: int, scale: int = 3) -> str:
+    letters = [char for char in value.upper() if char in BLOCK_FONT]
+    glyph_w = 5
+    glyph_h = 7
+    gap = 1
+    base_w = max(1, len(letters) * glyph_w + max(0, len(letters) - 1) * gap)
+    base_h = glyph_h
+    base_rects: list[tuple[int, int, int, int]] = []
+    cursor_x = 0
+    for char in letters:
+        for row_y, row in enumerate(BLOCK_FONT[char]):
+            for col_x, bit in enumerate(row):
+                if bit == "1":
+                    base_rects.append((cursor_x + col_x, row_y, 1, 1))
+        cursor_x += glyph_w + gap
+    rotated_w, rotated_h = (base_h, base_w) if rotation_deg in {90, 270} else (base_w, base_h)
+    origin_x = x - (rotated_w * scale) // 2
+    origin_y = y - (rotated_h * scale) // 2
+    parts = []
+    for rect in base_rects:
+        rx, ry, rw, rh = rotate_rect(rect, rotation_deg, base_w, base_h)
+        parts.append(rect_svg(origin_x + rx * scale, origin_y + ry * scale, rw * scale, rh * scale, "#f8fafc", rx=1))
+    return "\n    ".join(parts)
+
+
+def orientation_preview(rotation_key: str, *, x: int = 918, y: int = 300) -> str:
+    rotation = resolve_display_selection(rotation_key)
+    rotation_deg = int(rotation["rotation_deg"])
+    is_portrait = rotation_deg in {90, 270}
+    outer_w = 116 if is_portrait else 176
+    outer_h = 176 if is_portrait else 116
+    inner_w = outer_w - 28
+    inner_h = outer_h - 28
+    marker = {
+        0: (x + 14, y + 14, inner_w, 12),
+        90: (x + outer_w - 26, y + 14, 12, inner_h),
+        270: (x + 14, y + 14, 12, inner_h),
+        180: (x + 14, y + outer_h - 26, inner_w, 12),
+    }[rotation_deg]
+    label_y = y + outer_h + 42
+    word = block_word_marker("DADOOH", rotation_deg, x=x + outer_w // 2, y=y + outer_h // 2 + 8, scale=2)
+    marker_x, marker_y, marker_w, marker_h = marker
+    return f"""
+  <g id="orientation-preview">
+    <rect x="{x - 30}" y="{y - 54}" width="292" height="286" rx="8" fill="#111827" stroke="#334155"/>
+    <text x="{x}" y="{y - 20}" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Preview</text>
+    <rect x="{x}" y="{y}" width="{outer_w}" height="{outer_h}" rx="12" fill="#e0f2fe" stroke="#06b6d4" stroke-width="4"/>
+    <rect x="{x + 14}" y="{y + 14}" width="{inner_w}" height="{inner_h}" rx="8" fill="#0f172a"/>
+    <rect x="{marker_x}" y="{marker_y}" width="{marker_w}" height="{marker_h}" rx="4" fill="#22c55e"/>
+    {word}
+    <text x="{x}" y="{label_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#cbd5e1">{escape_text(rotation['label'])}</text>
+  </g>
+"""
+
+
 def build_screen_svg(
     *,
     active_step: int,
@@ -345,6 +427,7 @@ def build_screen_svg(
     field_note: str = "",
     panel_title: str = "Nesta etapa",
     panel_items: list[str] | None = None,
+    extra_svg: str = "",
     accent: str = "#06b6d4",
     layout_rotation_deg: int = 0,
 ) -> str:
@@ -368,12 +451,13 @@ def build_screen_svg(
   <text x="96" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">{BRAND}</text>
   <text x="250" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">{TITLE}</text>
   <text x="1030" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">{escape_text(layout_note)}</text>
-  {step_indicator(active_step)}
+  {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg)}
   <text x="96" y="200" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
   {svg_lines(subtitle, x=98, y=236, size=21, fill="#cbd5e1", width=62, line_gap=28, max_lines=2)}
   {options_svg}
   {field_svg}
   {panel_svg}
+  {extra_svg}
   {footer_text(footer)}
 </svg>
 """
@@ -711,11 +795,12 @@ class RawKeyboard:
     def __enter__(self) -> "RawKeyboard":
         self.fd = sys.stdin.fileno()
         self.previous = termios.tcgetattr(self.fd)
-        tty.setcbreak(self.fd)
+        tty.setraw(self.fd)
+        termios.tcflush(self.fd, termios.TCIFLUSH)
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
-        termios.tcsetattr(self.fd, termios.TCSADRAIN, self.previous)
+        termios.tcsetattr(self.fd, termios.TCSANOW, self.previous)
 
 
 def read_key() -> str:
@@ -731,7 +816,7 @@ def read_key() -> str:
     if data == b"\x1b":
         chunks = []
         while True:
-            ready, _, _ = select.select([sys.stdin], [], [], 0.03)
+            ready, _, _ = select.select([sys.stdin], [], [], 0.12)
             if not ready:
                 break
             chunks.append(os.read(sys.stdin.fileno(), 1))
@@ -834,6 +919,70 @@ def choose_option(
         elif allow_back and key in {"b", "B", "back"}:
             return None
         elif key in {"escape", "q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
+def choose_orientation(display: VisualDisplay) -> dict[str, str | int]:
+    options = [Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS]
+    selected = 0
+    needs_render = True
+    while True:
+        if needs_render:
+            selected_rotation = resolve_display_selection(options[selected].key)
+            display.show(
+                "01-orientation",
+                build_screen_svg(
+                    active_step=0,
+                    title="Orientacao",
+                    subtitle="Use 1-4 para escolher o sentido da tela.",
+                    footer="1-4 escolhe | Setas movem | Enter visualiza | Esc cancela",
+                    options=options,
+                    selected_index=selected,
+                    panel_title="Como funciona",
+                    panel_items=[],
+                    extra_svg=orientation_preview(str(selected_rotation["key"])),
+                ),
+            )
+            needs_render = False
+        key = read_key()
+        if key in {"up", "left"}:
+            selected = (selected - 1) % len(options)
+            needs_render = True
+            continue
+        if key in {"down", "right"}:
+            selected = (selected + 1) % len(options)
+            needs_render = True
+            continue
+        if key in {"1", "2", "3", "4"}:
+            selected = int(key) - 1
+            needs_render = True
+            continue
+        if key in {"escape", "q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+        if key != "enter":
+            continue
+
+        rotation = resolve_display_selection(options[selected].key)
+        layout_rotation_deg = int(rotation["rotation_deg"])
+        display.show(
+            "01-orientation-confirm",
+            build_screen_svg(
+                active_step=0,
+                title="Esta correto?",
+                subtitle="Confirme somente se o preview combinar com a instalacao.",
+                footer="Enter confirma | B volta | Esc cancela",
+                panel_title="Confirmacao",
+                panel_items=[],
+                extra_svg=orientation_preview(str(rotation["key"])),
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        confirm_key = read_key()
+        if confirm_key == "enter":
+            return rotation
+        if confirm_key in {"b", "B", "back"}:
+            continue
+        if confirm_key in {"escape", "q", "Q"}:
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
@@ -1678,22 +1827,7 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
     try:
         with RawKeyboard():
-            selected_rotation = choose_option(
-                display,
-                screen_id="01-orientation",
-                active_step=0,
-                title="Orientacao da tela",
-                subtitle="Escolha primeiro como o totem esta instalado. As proximas telas seguem este layout.",
-                options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
-                panel_items=[
-                    "Ajusta somente o wizard nesta rodada.",
-                    "Rotacao final do player fica bloqueada.",
-                    "O valor entra na candidata.",
-                ],
-            )
-            if selected_rotation is None:
-                raise VisualWizardAbort("setup visual cancelado pelo operador")
-            rotation = resolve_display_selection(selected_rotation.key)
+            rotation = choose_orientation(display)
             layout_rotation_deg = int(rotation["rotation_deg"])
             while True:
                 selected_network = choose_option(
@@ -1788,6 +1922,19 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
             selected_index=0,
             panel_items=["Primeira etapa", "Candidata em /tmp", "Sem rotacao real do player"],
+            extra_svg=orientation_preview("landscape"),
+        ),
+    )
+    display.show(
+        "01-orientation-confirm-portrait",
+        build_screen_svg(
+            active_step=0,
+            title="Confirmar orientacao",
+            subtitle="Preview da experiencia em retrato antes de continuar.",
+            footer="Enter confirma | B volta | Esc cancela",
+            panel_items=["Layout retrato", "Confirmacao local", "Sem alterar player global"],
+            extra_svg=orientation_preview("portrait_right"),
+            layout_rotation_deg=90,
         ),
     )
     display.show(
@@ -1800,6 +1947,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             options=list(NETWORK_OPTIONS),
             selected_index=0,
             panel_items=["Lista local", "Senha oculta", "Sem dados publicos"],
+            layout_rotation_deg=90,
         ),
     )
     display.show(
@@ -1815,6 +1963,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             ],
             selected_index=0,
             panel_items=["Aparece so no HDMI", "Sem BSSID/MAC", "Senha continua oculta"],
+            layout_rotation_deg=90,
         ),
     )
     display.show(
@@ -1828,6 +1977,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             field_value_hint="18 caracteres digitados",
             field_note="Valor real nao e gravado na tela de preview.",
             panel_items=["Formato C5.1", "Sem backend", "Sem publicacao do valor"],
+            layout_rotation_deg=90,
         ),
     )
     display.show(
@@ -2035,9 +2185,23 @@ def run_self_test() -> None:
         preview_dir = require_tmp_dir(str(root / "preview"))
         prepare_private_dir(preview_dir)
         generate_preview_screens(preview_dir)
+        orientation_preview_path = next((preview_dir / "screens").glob("*-01-orientation.svg"))
+        orientation_preview_text = orientation_preview_path.read_text(encoding="utf-8")
+        assert_true("orientation-preview" in orientation_preview_text, "orientation step should include visual preview")
+        assert_true("DADOOH" not in orientation_preview_text, "orientation marker should use vector blocks, not text")
         assert_true(
-            any((preview_dir / "screens").glob("*-01-orientation.svg")),
-            "preview should generate orientation first",
+            any((preview_dir / "screens").glob("*-01-orientation-confirm-portrait.svg")),
+            "preview should generate orientation confirmation screen",
+        )
+        portrait_confirm = next((preview_dir / "screens").glob("*-01-orientation-confirm-portrait.svg"))
+        assert_true(
+            "orientation-preview" in portrait_confirm.read_text(encoding="utf-8"),
+            "orientation confirmation should keep visual preview",
+        )
+        portrait_connection = next((preview_dir / "screens").glob("*-02-connection.svg"))
+        assert_true(
+            "Layout retrato para direita" in portrait_connection.read_text(encoding="utf-8"),
+            "portrait preview should use portrait layout",
         )
         assert_true(file_mode(preview_dir / "screens") == setup.PRIVATE_DIR_MODE, "preview screens should be 0700")
 

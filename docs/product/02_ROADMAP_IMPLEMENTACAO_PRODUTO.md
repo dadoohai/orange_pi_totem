@@ -431,6 +431,19 @@ final `active/enabled`, `NRestarts=0`, `public_state=player_running`, playback
 hotspot, portal, root read-only, corte seco, reboot e repo `kiosky-player`
 seguem fora.
 
+Atualizacao C10.5: 2026-05-05. C10.5 foca a superficie visual antes de
+read-only: adiciona preview e confirmacao da orientacao no wizard, mantem
+`rotation_deg` na candidata, usa layouts simples para paisagem/retrato e cria
+um splash leve de framebuffer para boot/transicoes. A validacao em HDMI mostrou
+que pausar temporariamente o getty da TTY de produto elimina disputa de login e
+volta a responder com uma unica tecla; o splash limpo reduz vazamento tecnico
+nas transicoes. A rotacao fisica da UI inteira no framebuffer foi descartada
+por distorcer texto e fica para uma camada de renderizacao futura. O runner
+`run_c10_5_visual_boot_rotation.sh` nao hardcoda IP e aplica guardrails
+reversiveis de boot/getty/splash somente com confirmacao humana, backup e
+rollback. Writer, config real, Wi-Fi/NetworkManager, hotspot, portal, root
+read-only, corte seco e repo `kiosky-player` seguem fora por padrao.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
