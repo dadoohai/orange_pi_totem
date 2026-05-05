@@ -4,6 +4,6 @@ After=kiosky-player.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/totem/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 1800 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --private-values /tmp/dadooh-c10-6-2-private/private-values.json --apply-policy-path /run/dadooh-settings/apply-policy.json
+ExecStart=/opt/totem/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 1800 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --private-values /tmp/dadooh-c10-6-2-private/private-values.json --apply-policy-path /run/dadooh-settings/apply-policy.json --apply-mode real-write --private-source active-config --confirm-active-config-private-source --confirm-local-operator-save --private-settings-context-path /data/state/totem-settings/last-settings.json
 StandardOutput=null
 StandardError=null

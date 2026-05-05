@@ -75,6 +75,9 @@ CANCELLED_FILENAME = "setup-cancelled.json"
 FAILED_FILENAME = "setup-failed.json"
 ORIENTATION_FILENAME = "orientation.json"
 PUBLIC_ORIENTATION_PATH = pathlib.Path("/data/state/totem-display/orientation.json")
+PRIVATE_SETTINGS_CONTEXT_PATH = pathlib.Path(
+    os.environ.get("TOTEM_VISUAL_WIZARD_PRIVATE_SETTINGS_CONTEXT", "/data/state/totem-settings/last-settings.json")
+)
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -1053,8 +1056,9 @@ def choose_option(
     panel_items: list[str],
     allow_back: bool = False,
     layout_rotation_deg: int = 0,
+    initial_selected_index: int = 0,
 ) -> Option | None:
-    selected = 0
+    selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
     while True:
         footer = "Setas movem | Enter confirma | Esc cancela"
         if allow_back:
@@ -1085,9 +1089,18 @@ def choose_option(
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
-def choose_orientation(display: VisualDisplay) -> dict[str, str | int]:
+def selected_orientation_index_for_rotation(rotation_deg: int) -> int:
+    normalized = normalize_rotation_deg(rotation_deg)
+    for index, item in enumerate(DISPLAY_OPTIONS):
+        if int(item["rotation_deg"]) == normalized:
+            return index
+    return 0
+
+
+def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0) -> dict[str, str | int]:
     options = [Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS]
-    selected = 0
+    selected = selected_orientation_index_for_rotation(initial_rotation_deg)
+    current_layout_rotation_deg = normalize_rotation_deg(initial_rotation_deg)
     needs_render = True
     while True:
         if needs_render:
@@ -1107,7 +1120,11 @@ def choose_orientation(display: VisualDisplay) -> dict[str, str | int]:
                         "A proxima tela confirma a escolha.",
                         "As midias usam esta orientacao ao salvar.",
                     ],
-                    extra_svg=orientation_preview(str(selected_rotation["key"])),
+                    extra_svg=orientation_preview(
+                        str(selected_rotation["key"]),
+                        layout_rotation_deg=current_layout_rotation_deg,
+                    ),
+                    layout_rotation_deg=current_layout_rotation_deg,
                 ),
             )
             needs_render = False
@@ -1188,8 +1205,9 @@ def read_text_field(
     allow_back: bool = True,
     show_plain_value: bool = False,
     layout_rotation_deg: int = 0,
+    initial_value: str = "",
 ) -> str | None:
-    value = ""
+    value = str(initial_value or "")[:max_length]
     error = ""
     while True:
         hint = text_field_display_hint(value, hidden=hidden, show_plain_value=show_plain_value)
@@ -1925,6 +1943,64 @@ def write_public_orientation_contract(path: pathlib.Path, generated_at: str, rot
     atomic_write_public_orientation(path, public_payload)
 
 
+def read_public_orientation_rotation(path: pathlib.Path = PUBLIC_ORIENTATION_PATH) -> int | None:
+    try:
+        if path.is_symlink() or not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        rotation = normalize_rotation_deg(data.get("rotation_deg", 0))
+        return rotation
+    except Exception:
+        return None
+
+
+def require_private_settings_context_path(raw_path: str) -> pathlib.Path:
+    path = pathlib.Path(raw_path)
+    if path.is_symlink():
+        raise VisualWizardError("contexto privado invalido")
+    allowed_data_root = pathlib.Path("/data/state/totem-settings")
+    resolved_parent = path.parent.resolve(strict=False)
+    if resolved_parent != allowed_data_root and setup.TMP_ROOT not in [resolved_parent, *resolved_parent.parents]:
+        raise VisualWizardError("contexto privado fora da allowlist")
+    if path.name != "last-settings.json":
+        raise VisualWizardError("contexto privado com nome invalido")
+    return path
+
+
+def load_private_settings_context(path: pathlib.Path) -> dict[str, Any]:
+    try:
+        if path.is_symlink() or path.parent.is_symlink() or not path.exists():
+            return {}
+        if file_mode(path) != setup.PRIVATE_FILE_MODE:
+            return {}
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    context: dict[str, Any] = {}
+    raw_environment = data.get("environment_id")
+    if isinstance(raw_environment, str) and raw_environment.strip():
+        try:
+            context["environment_id"] = validate_environment_id(raw_environment.strip())
+        except Exception:
+            pass
+    if "rotation_deg" in data:
+        context["rotation_deg"] = normalize_rotation_deg(data.get("rotation_deg", 0))
+    if data.get("network_step") == "existing_configured_wifi":
+        context["network_step"] = "existing_configured_wifi"
+    return context
+
+
+def initial_rotation_from_context(private_context: dict[str, Any], public_orientation_path: pathlib.Path = PUBLIC_ORIENTATION_PATH) -> int:
+    if "rotation_deg" in private_context:
+        return normalize_rotation_deg(private_context["rotation_deg"])
+    public_rotation = read_public_orientation_rotation(public_orientation_path)
+    if public_rotation is not None:
+        return public_rotation
+    return 0
+
+
 def write_visual_artifacts(
     out_dir: pathlib.Path,
     environment_id: str,
@@ -2084,20 +2160,39 @@ def review_and_confirm(
 
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
+    if APPLY_CONTEXT == "real-write":
+        subtitle = "Ao sair, as configuracoes serao validadas e salvas."
+        panel_items = [
+            "Validacao privada sera executada.",
+            "Config real sera atualizada pelo writer.",
+            "O player sera iniciado novamente.",
+            "Dados sensiveis nao aparecem nesta tela.",
+        ]
+    elif APPLY_CONTEXT == "dry-run":
+        subtitle = "Candidata gerada para validacao privada. Nada sera aplicado."
+        panel_items = [
+            "Real dry-run sera executado.",
+            "Writer real segue bloqueado.",
+            "Config real segue intocada.",
+            "Dados sensiveis nao aparecem nesta tela.",
+        ]
+    else:
+        subtitle = "Candidata temporaria gerada. Nada foi aplicado."
+        panel_items = [
+            f"Estado: {status['state']}",
+            "Writer real segue bloqueado.",
+            "Config real segue intocada.",
+            "Use Salvar para aplicar mudancas.",
+        ]
     display.show(
         "06-complete",
         build_screen_svg(
             active_step=4,
             title="Concluido",
-            subtitle="Candidata temporaria gerada. A proxima etapa ainda precisa de writer controlado.",
+            subtitle=subtitle,
             footer="Enter sai",
             panel_title="Resultado",
-            panel_items=[
-                f"Estado: {status['state']}",
-                "C5.1 allow-mock passou.",
-                "Real dry-run falhou como esperado.",
-                "Nada foi escrito fora de /tmp.",
-            ],
+            panel_items=panel_items,
             accent="#22c55e",
             layout_rotation_deg=rotation_deg,
         ),
@@ -2110,11 +2205,16 @@ def run_visual_wizard(
     *,
     mpv_bin: str,
     public_orientation_path: pathlib.Path | None = None,
+    private_settings_context_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
+    private_context = load_private_settings_context(private_settings_context_path) if private_settings_context_path else {}
+    initial_rotation_deg = initial_rotation_from_context(private_context)
+    initial_environment_id = str(private_context.get("environment_id", ""))
+    initial_network_index = 0 if private_context.get("network_step") == "existing_configured_wifi" else 0
     try:
         with RawKeyboard():
-            rotation = choose_orientation(display)
+            rotation = choose_orientation(display, initial_rotation_deg=initial_rotation_deg)
             layout_rotation_deg = int(rotation["rotation_deg"])
             while True:
                 selected_network = choose_option(
@@ -2130,6 +2230,7 @@ def run_visual_wizard(
                         "Sem hotspot e sem portal nesta rodada.",
                     ],
                     layout_rotation_deg=layout_rotation_deg,
+                    initial_selected_index=initial_network_index,
                 )
                 if selected_network is None:
                     continue
@@ -2181,10 +2282,12 @@ def run_visual_wizard(
                         panel_items=[
                             "3 a 128 caracteres.",
                             "Letras ASCII, numeros, _, -, . ou :",
+                            "Enter mantem o valor exibido.",
                             "Valor nao aparece no resumo publico.",
                         ],
                         show_plain_value=True,
                         layout_rotation_deg=layout_rotation_deg,
+                        initial_value=initial_environment_id,
                     )
                     if environment_id is None:
                         break
@@ -2484,6 +2587,45 @@ def run_self_test() -> None:
             synthetic_ssid not in count_hint and "caracteres digitados" in count_hint,
             "count-only mode should not show raw value",
         )
+        assert_true(
+            text_field_display_hint("ENV-LAST-SETTING", hidden=False, show_plain_value=True) == "ENV-LAST-SETTING",
+            "environment prefill should be visible only in the local field",
+        )
+        assert_true(selected_orientation_index_for_rotation(270) == 2, "portrait-left should be selected from saved rotation")
+        assert_true(selected_orientation_index_for_rotation(90) == 1, "portrait-right should be selected from saved rotation")
+        context_path = require_private_settings_context_path(str(root / "private-context" / "last-settings.json"))
+        context_path.parent.mkdir(parents=True, mode=setup.PRIVATE_DIR_MODE)
+        context_payload = {
+            "schema_version": "dadooh-private-settings-context.v1",
+            "environment_id": "ENV-LAST-SETTING",
+            "rotation_deg": 270,
+            "network_step": "existing_configured_wifi",
+        }
+        context_path.write_text(json.dumps(context_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        context_path.chmod(setup.PRIVATE_FILE_MODE)
+        loaded_context = load_private_settings_context(context_path)
+        assert_true(loaded_context["environment_id"] == "ENV-LAST-SETTING", "private context should load environment")
+        assert_true(loaded_context["rotation_deg"] == 270, "private context should load rotation")
+        assert_true(loaded_context["network_step"] == "existing_configured_wifi", "private context should load network step")
+        public_orientation_path = root / "public-orientation-priority" / "orientation.json"
+        public_orientation_path.parent.mkdir(parents=True, mode=setup.PRIVATE_DIR_MODE)
+        public_orientation_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "dadooh-display-orientation.v1",
+                    "rotation_deg": 0,
+                    "orientation_label": "landscape",
+                    "updated_at": "2026-05-05T00:00:00Z",
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        assert_true(
+            initial_rotation_from_context(loaded_context, public_orientation_path) == 270,
+            "private active-config context should win over stale public orientation",
+        )
         local_wifi_options = wifi_adapter.parse_wifi_network_list(
             "TEST_WIFI_SHOULD_NOT_LEAK:88:WPA2\nTEST_WIFI_WEAK:22:--\n",
         )
@@ -2566,7 +2708,7 @@ def run_self_test() -> None:
         assert_true(not real_dry_run["valid"], "C9.9 candidate should fail real-dry-run with placeholders")
         assert_sanitized_outputs(out_dir, "ENV-PRODUTO-VISUAL-01")
         public_text = output_text(out_dir)
-        for forbidden in (synthetic_ssid, synthetic_password):
+        for forbidden in (synthetic_ssid, synthetic_password, "ENV-LAST-SETTING"):
             assert_true(forbidden not in public_text, "Wi-Fi credentials should not be public artifacts")
 
         public_dir = require_tmp_dir(str(root / "public-orientation"))
@@ -2611,6 +2753,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=str(PUBLIC_ORIENTATION_PATH),
         help="Allowlisted public orientation path.",
     )
+    parser.add_argument(
+        "--private-settings-context-path",
+        default=str(PRIVATE_SETTINGS_CONTEXT_PATH),
+        help="Restricted private settings context path.",
+    )
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
     modes.add_argument("--preview-screens", action="store_true", help="Generate visual screens under /tmp and exit.")
@@ -2639,6 +2786,7 @@ def main(argv: list[str]) -> int:
         public_orientation_path = (
             require_public_orientation_path(args.public_orientation_path) if args.write_public_orientation else None
         )
+        private_settings_context_path = require_private_settings_context_path(args.private_settings_context_path)
         if args.preview_screens:
             generate_preview_screens(out_dir)
             if args.show_preview:
@@ -2664,7 +2812,12 @@ def main(argv: list[str]) -> int:
             )
             print(json.dumps(status, indent=2, sort_keys=True))
             return 0
-        run_visual_wizard(out_dir, mpv_bin=args.mpv_bin, public_orientation_path=public_orientation_path)
+        run_visual_wizard(
+            out_dir,
+            mpv_bin=args.mpv_bin,
+            public_orientation_path=public_orientation_path,
+            private_settings_context_path=private_settings_context_path,
+        )
         return 0
     except VisualWizardAbort:
         try:

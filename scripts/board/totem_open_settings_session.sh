@@ -13,6 +13,10 @@ WRITER_OUT_DIR="/tmp/dadooh-c10-6-2-writer"
 PRIVATE_VALUES="/tmp/dadooh-c10-6-2-private/private-values.json"
 APPLY_POLICY_PATH="/run/dadooh-settings/apply-policy.json"
 APPLY_MODE="policy"
+PRIVATE_SOURCE="none"
+ACTIVE_CONFIG_PRIVATE_SOURCE_CONFIRMED="false"
+LOCAL_OPERATOR_SAVE_CONFIRMED="false"
+PRIVATE_SETTINGS_CONTEXT_PATH="/data/state/totem-settings/last-settings.json"
 LOCK_DIR="/run/dadooh-settings/session.lock"
 
 usage() {
@@ -75,6 +79,20 @@ while [ "$#" -gt 0 ]; do
     --apply-mode)
       shift
       APPLY_MODE="${1:-}"
+      ;;
+    --private-source)
+      shift
+      PRIVATE_SOURCE="${1:-}"
+      ;;
+    --confirm-active-config-private-source)
+      ACTIVE_CONFIG_PRIVATE_SOURCE_CONFIRMED="true"
+      ;;
+    --confirm-local-operator-save)
+      LOCAL_OPERATOR_SAVE_CONFIRMED="true"
+      ;;
+    --private-settings-context-path)
+      shift
+      PRIVATE_SETTINGS_CONTEXT_PATH="${1:-}"
       ;;
     --lock-dir)
       shift
@@ -188,6 +206,30 @@ case "$APPLY_MODE" in
     exit 2
     ;;
 esac
+case "$PRIVATE_SOURCE" in
+  none|active-config)
+    ;;
+  *)
+    echo "error: unsupported --private-source $PRIVATE_SOURCE" >&2
+    exit 2
+    ;;
+esac
+if [ "$APPLY_MODE" = "real-write" ] && [ "$LOCAL_OPERATOR_SAVE_CONFIRMED" != "true" ]; then
+  echo "error: real-write requires --confirm-local-operator-save outside policy mode" >&2
+  exit 2
+fi
+if [ "$PRIVATE_SOURCE" = "active-config" ] && [ "$ACTIVE_CONFIG_PRIVATE_SOURCE_CONFIRMED" != "true" ]; then
+  echo "error: active-config private source requires explicit confirmation" >&2
+  exit 2
+fi
+case "$PRIVATE_SETTINGS_CONTEXT_PATH" in
+  /data/state/totem-settings/last-settings.json|/tmp/*)
+    ;;
+  *)
+    echo "error: --private-settings-context-path must be the approved /data/state path or under /tmp" >&2
+    exit 2
+    ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VISUAL="$SCRIPT_DIR/totem_setup_visual_wizard.py"
@@ -211,6 +253,8 @@ PRIVATE_SOURCE_TEMP_REMOVED="false"
 PRIVATE_CANDIDATE_REMOVED="false"
 SOURCE_CANDIDATE_REMOVED="false"
 ORIENTATION_JSON_UPDATED="false"
+PRIVATE_SETTINGS_CONTEXT_UPDATED="false"
+PRIVATE_SETTINGS_CONTEXT_SEEDED="false"
 SELECTED_ROTATION_DEG="unknown"
 POLICY_USED="false"
 POLICY_PRIVATE_SOURCE="none"
@@ -228,6 +272,52 @@ for path in "$VISUAL" "$SPLASH" "$AGGREGATE"; do
     exit 1
   fi
 done
+
+write_private_settings_context() {
+  local source_json="$1"
+  local context_source="$2"
+  python3 - "$source_json" "$PRIVATE_SETTINGS_CONTEXT_PATH" "$context_source" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+import time
+
+source = pathlib.Path(sys.argv[1])
+target = pathlib.Path(sys.argv[2])
+context_source = sys.argv[3]
+if target.is_symlink():
+    raise SystemExit("private_context_symlink")
+if str(target) != "/data/state/totem-settings/last-settings.json" and not str(target).startswith("/tmp/"):
+    raise SystemExit("private_context_path_invalid")
+data = json.loads(source.read_text(encoding="utf-8"))
+environment_id = data.get("environment_id")
+if not isinstance(environment_id, str) or not environment_id.strip():
+    raise SystemExit("private_context_missing_environment")
+rotation = int(data.get("rotation_deg", 0)) % 360
+if rotation not in {0, 90, 180, 270}:
+    raise SystemExit("private_context_invalid_rotation")
+orientation_label = {0: "landscape", 90: "portrait_right", 180: "inverted", 270: "portrait_left"}[rotation]
+target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+if stat.S_IMODE(target.parent.stat().st_mode) != 0o700:
+    target.parent.chmod(0o700)
+payload = {
+    "schema_version": "dadooh-private-settings-context.v1",
+    "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "source": context_source,
+    "environment_id": environment_id.strip(),
+    "rotation_deg": rotation,
+    "orientation_label": orientation_label,
+    "network_step": data.get("setup_network_step", "existing_configured_wifi"),
+}
+tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+os.chmod(tmp, 0o600)
+os.replace(tmp, target)
+os.chmod(target, 0o600)
+PY
+}
 
 umask 077
 mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")"
@@ -312,6 +402,8 @@ show_transition() {
   local rotation="${2:-}"
   command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
   printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
+  sleep 0.05
+  printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
   if [ -n "$rotation" ] && [ "$rotation" != "unknown" ]; then
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --rotation-deg "$rotation" --status-out "$OUT_DIR/splash-$mode-status.json" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
   else
@@ -381,6 +473,7 @@ PY
 
 load_apply_policy() {
   if [ "$APPLY_MODE" != "policy" ]; then
+    POLICY_PRIVATE_SOURCE="$PRIVATE_SOURCE"
     return 0
   fi
   if [ ! -f "$APPLY_POLICY_PATH" ]; then
@@ -573,7 +666,7 @@ write_final_status() {
     "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$APPLY_MODE" "$POLICY_USED" "$POLICY_PRIVATE_SOURCE" \
     "$HANDOFF_RC" "$WRITER_RC" "$WRITER_CALLED" "$REAL_CONFIG_READ" "$REAL_CONFIG_WRITTEN" \
     "$PRIVATE_SOURCE_TEMP_REMOVED" "$PRIVATE_CANDIDATE_REMOVED" "$ORIENTATION_JSON_UPDATED" "$SELECTED_ROTATION_DEG" \
-    "$APPLY_POLICY_REMOVED" <<'PY'
+    "$APPLY_POLICY_REMOVED" "$PRIVATE_SETTINGS_CONTEXT_SEEDED" "$PRIVATE_SETTINGS_CONTEXT_UPDATED" <<'PY'
 import json
 import os
 import pathlib
@@ -612,6 +705,8 @@ private_candidate_removed = sys.argv[27] == "true"
 orientation_json_updated = sys.argv[28] == "true"
 selected_rotation_raw = sys.argv[29]
 apply_policy_removed = sys.argv[30] == "true"
+private_settings_context_seeded = sys.argv[31] == "true"
+private_settings_context_updated = sys.argv[32] == "true"
 
 def load_json(path: pathlib.Path) -> dict:
     try:
@@ -712,6 +807,9 @@ payload = {
     "active_config_rotation_deg_public_check": active_config_rotation if isinstance(active_config_rotation, int) else "unknown",
     "orientation_json_updated": orientation_json_updated,
     "orientation_json_rotation_matches": orientation_matches,
+    "private_settings_context_seeded": private_settings_context_seeded,
+    "private_settings_context_updated": private_settings_context_updated,
+    "private_settings_context_values_published": False,
     "splash_orientation_source": "public_orientation_json",
     "linux_prompt_visible": bool(interface.get("linux_prompt_visible", False)),
     "service_initial_active": initial_active,
@@ -777,8 +875,18 @@ if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
     echo "error: missing writer dependency" >&2
     exit 1
   fi
+  if [ "$APPLY_MODE" = "real-write" ] && [ "$POLICY_USED" != "true" ] && [ "$LOCAL_OPERATOR_SAVE_CONFIRMED" != "true" ]; then
+    echo "real_write_not_confirmed" >&2
+    exit 2
+  fi
   prepare_private_values_from_active_config_if_requested
   validate_private_values_metadata
+  if [ "$POLICY_PRIVATE_SOURCE" = "active-config" ] && [ -f /data/config/config.json ]; then
+    write_private_settings_context /data/config/config.json active_config_prefill || true
+    if [ -f "$PRIVATE_SETTINGS_CONTEXT_PATH" ]; then
+      PRIVATE_SETTINGS_CONTEXT_SEEDED="true"
+    fi
+  fi
 fi
 
 for unit in "${GETTY_UNITS[@]}"; do
@@ -809,12 +917,13 @@ set +e
 if [ "$MODE" = "preview" ]; then
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" /usr/bin/python3 "$VISUAL" \
-      --out-dir "$WIZARD_OUT_DIR" --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
+      --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" \
+      --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" /usr/bin/python3 "$VISUAL" \
-      --out-dir "$WIZARD_OUT_DIR" >/dev/null 2>&1 &
+      --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   deadline=$(( $(date +%s) + RUN_TIMEOUT_SEC ))
   while kill -0 "$OPENVT_PID" 2>/dev/null && [ "$(date +%s)" -lt "$deadline" ]; do
@@ -901,6 +1010,8 @@ if [ "$APPLY_MODE" = "real-write" ]; then
   fi
   REAL_CONFIG_WRITTEN="true"
   write_public_orientation_from_candidate
+  write_private_settings_context "$WIZARD_OUT_DIR/config.candidate.json" visual_wizard_saved
+  PRIVATE_SETTINGS_CONTEXT_UPDATED="true"
   cleanup_private_artifacts || true
   cleanup_apply_policy || true
 fi
