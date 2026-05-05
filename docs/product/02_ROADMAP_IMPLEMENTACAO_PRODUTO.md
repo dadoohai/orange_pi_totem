@@ -590,6 +590,30 @@ e a idempotencia final ficou `stable=true` com `action_count=0`. C10.9 pode
 iniciar na segunda placa/cartao, instalando o `kiosky-player` a partir do pin
 fixado e mantendo secrets/config real/Wi-Fi privados fora da imagem.
 
+Atualizacao C10.9: 2026-05-05. C10.9 validou uma segunda placa/cartao por
+instalacao limpa, sem clonar estado da placa dev. O bootstrap manual previo
+ficou limitado a root password e rede/SSH de bancada. O runner
+`scripts/remote/run_c10_9_second_board_clean_install.sh` executou inspect,
+dry-run, apply com confirmacao humana, verify, idempotencia, config_missing,
+F10 assistido e reboot controlado. O apply instalou usuario/grupo `totem`,
+layout `/data`, scripts board, units systemd, guardrails de boot, runtime
+minimo (`mpv`, `ffmpeg`, `python3-requests`) sem upgrade amplo, e o
+`kiosky-player` do pin
+`c71318a64c08e47b8426f1388b95f21364d57123`. Nao copiou config real, secrets,
+SSID/senha, IP/MAC/DNS/gateway, midias/cache/logs/backups ou estado da placa
+dev; nao chamou writer e nao alterou Wi-Fi/NetworkManager. O reboot check
+ficou `overall_status=ok`, `systemctl_failed_count=0`, servicos esperados
+ativos/enabled, `config_missing_safe=true`, `public_state=config_missing`, F10
+passou apos correcao de fallback para placa sem config real, e a idempotencia
+final ficou `stable=true` com `action_count=0`. Observacao posterior mostrou
+que, em placa limpa, salvar Configuracoes sem config ativa permanece em
+`candidate-only` e nao chama writer; tambem faltava
+`totem_status_render_preview.py` em `/opt/totem/bin`, impedindo feedback visual
+publico de `config_missing`. C10.9 valida a instalacao limpa da camada
+appliance, mas C10.9.1 deve aplicar o refresh do manifest/status e definir
+provisionamento privado da config mock real antes de C11.0; imagem final,
+read-only e provisionamento real definitivo seguem fora desta rodada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

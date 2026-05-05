@@ -367,6 +367,7 @@ def config_private_check():
 def app_pin_check():
     spec = manifest["kiosky_player"]
     app = pathlib.Path(spec["install_path"])
+    marker = pathlib.Path("/data/state/totem-appliance/kiosky-player-installed.json")
     has_git = (app / ".git").exists()
     head = out(["git", "-C", str(app), "rev-parse", "HEAD"], 8) if has_git else "unknown"
     branch = out(["git", "-C", str(app), "rev-parse", "--abbrev-ref", "HEAD"], 8) if has_git else "unknown"
@@ -392,12 +393,26 @@ def app_pin_check():
         blocker = "GIT_METADATA_MISSING"
         verification_level = "git_metadata_required_missing"
     else:
+        marker_ok = False
+        if marker.exists() and not marker.is_symlink():
+            try:
+                raw_marker = json.loads(marker.read_text(encoding="utf-8"))
+                if isinstance(raw_marker, dict):
+                    marker_ok = (
+                        raw_marker.get("commit") == expected
+                        and raw_marker.get("ref") == spec.get("expected_ref")
+                        and raw_marker.get("repo_full_name") in {spec.get("repo_full_name"), spec.get("expected_repo")}
+                        and raw_marker.get("private_values_included") is False
+                    )
+            except Exception:
+                marker_ok = False
         pin_ok = True
         blocker = None
-        verification_level = "documented_pin_installed_tree_without_git_metadata"
+        verification_level = "installed_marker" if marker_ok else "documented_pin_installed_tree_without_git_metadata"
     return {
         "path_exists": path_exists,
         "git_metadata_present": has_git,
+        "installed_marker_present": marker.exists(),
         "branch": branch,
         "remote": remote,
         "head": head,
@@ -411,7 +426,7 @@ def app_pin_check():
         "verification_level": verification_level,
         "pin_ok": pin_ok,
         "blocker": blocker,
-        "warning": None if has_git or not path_exists else "installed_tree_commit_not_machine_verifiable_without_git_metadata",
+        "warning": None if has_git or not path_exists or verification_level == "installed_marker" else "installed_tree_commit_not_machine_verifiable_without_git_metadata",
     }
 
 

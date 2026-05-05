@@ -82,6 +82,7 @@
     {"source": "scripts/board/totem_setup_minimal_server.py", "target": "/opt/totem/bin/totem_setup_minimal_server.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_setup_visual_wizard.py", "target": "/opt/totem/bin/totem_setup_visual_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_status_aggregate.py", "target": "/opt/totem/bin/totem_status_aggregate.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_status_render_preview.py", "target": "/opt/totem/bin/totem_status_render_preview.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_status_renderer.sh", "target": "/opt/totem/bin/totem_status_renderer.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_visual_setup_writer_handoff.py", "target": "/opt/totem/bin/totem_visual_setup_writer_handoff.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_visual_splash.py", "target": "/opt/totem/bin/totem_visual_splash.py", "owner": "root", "group": "root", "mode": "0755"},

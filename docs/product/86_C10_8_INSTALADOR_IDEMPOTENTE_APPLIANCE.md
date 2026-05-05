@@ -231,3 +231,41 @@ app a partir do pin fixado no manifest.
 
 Conclusao: C10.8.1 deixa o instalador/verificador acionavel para iniciar C10.9
 na segunda placa/cartao.
+
+## Atualizacao C10.9
+
+C10.9 usou o instalador C10.8.1 em uma segunda placa/cartao com Armbian base
+limpo e validou a reproducao por script:
+
+- bootstrap manual previo restrito a senha root e rede/SSH de bancada;
+- `--prepare-only`, `--inspect-base` e `--install-dry-run` executados;
+- apply com confirmacao humana explicita;
+- runtime minimo instalado por `apt-get install --no-install-recommends` para
+  `mpv`, `ffmpeg` e `python3-requests`, sem upgrade amplo;
+- `kiosky-player` instalado do pin
+  `c71318a64c08e47b8426f1388b95f21364d57123`;
+- reboot controlado com confirmacao humana explicita;
+- verify pos-boot: `overall_status=ok`;
+- idempotencia final: `stable=true`, `first_action_count=0`,
+  `second_action_count=0`;
+- config real ausente, `public_state=config_missing`,
+  `config_missing_safe=true`;
+- F10 assistido abriu Configuracoes e cancelou limpo.
+
+Durante C10.9 foi corrigido um caso de placa limpa: quando nao existe
+`/data/config/config.json`, `totem_open_settings_session.sh` degrada o fluxo F10
+de `real-write` com fonte `active-config` para `candidate-only`, evitando falha
+antes de abrir a tela de Configuracoes. Essa correcao nao chama writer e nao le
+config privada.
+
+Observacao posterior a C10.9 detectou duas pendencias antes de C11.0:
+
+- o manifest/installer precisava incluir `totem_status_render_preview.py`, usado
+  por `totem_status_aggregate.py` para gerar o SVG publico de status;
+- placa limpa sem `/data/config/config.json` fica em `candidate-only` e nao
+  escreve config real sem um provisionamento privado explicito.
+
+Conclusao atualizada C10.9: instalacao limpa em segunda placa validada para a
+camada appliance, mas ainda nao pronta para C11.0 read-only readiness audit.
+C10.9 ainda nao gera imagem final, nao habilita root read-only e nao provisiona
+config real.

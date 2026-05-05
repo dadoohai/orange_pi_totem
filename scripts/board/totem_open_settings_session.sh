@@ -385,6 +385,10 @@ PY
 }
 
 wait_player_running() {
+  if [ ! -f /data/config/config.json ]; then
+    refresh_public_status
+    return 0
+  fi
   for _ in $(seq 1 90); do
     refresh_public_status
     state="$(read_json_value /tmp/dadooh-status/status.json public_state)"
@@ -530,6 +534,12 @@ PY
 
 prepare_private_values_from_active_config_if_requested() {
   if [ "$POLICY_PRIVATE_SOURCE" != "active-config" ]; then
+    return 0
+  fi
+  if [ ! -f /data/config/config.json ]; then
+    APPLY_MODE="candidate-only"
+    POLICY_PRIVATE_SOURCE="none"
+    REAL_CONFIG_READ="false"
     return 0
   fi
   REAL_CONFIG_READ="true"

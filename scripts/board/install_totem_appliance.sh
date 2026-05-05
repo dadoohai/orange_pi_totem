@@ -311,7 +311,7 @@ def check_runtime():
     runtime = manifest["runtime"]
     for command in runtime["required_commands"]:
         if shutil.which(command) is None:
-            action("runtime_command_missing", command, "required runtime command missing", apply_safe=False)
+            action("runtime_command_missing", command, "required runtime command missing", apply_safe=install_runtime)
     missing_packages = []
     for package in runtime["required_debian_packages"]:
         result = run(["dpkg-query", "-W", "-f=${Status}", package], 6)
@@ -329,7 +329,10 @@ def check_runtime():
             blockers.append("runtime_packages_missing")
     for command in runtime["required_commands"]:
         if shutil.which(command) is None:
-            blockers.append(f"runtime_command_missing:{command}")
+            if mode == "dry-run" and install_runtime:
+                warnings.append(f"runtime_command_missing_pending_explicit_runtime_install:{command}")
+            else:
+                blockers.append(f"runtime_command_missing:{command}")
     for command in runtime["forbidden_commands"]:
         if shutil.which(command) is not None:
             blockers.append(f"forbidden_command_present:{command}")
@@ -583,7 +586,7 @@ def check_kiosky_pin():
         return
     git_required_on_dev = bool(spec.get("expected_git_metadata_on_dev", spec.get("expected_git_metadata", True)))
     if not (app / ".git").exists():
-        if not git_required_on_dev and app.exists():
+        if not git_required_on_dev:
             warnings.append("kiosky_player_git_metadata_absent_pin_from_manifest_docs")
             return
         blockers.append("kiosky_player_git_metadata_missing")
