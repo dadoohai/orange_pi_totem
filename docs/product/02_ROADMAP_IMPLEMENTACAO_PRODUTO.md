@@ -525,6 +525,23 @@ root ou login Linux. Writer real, config real, Wi-Fi/NetworkManager, hotspot,
 portal, root read-only e corte seco seguem fora. PIN/senha local fica para
 C10.6.2; Suporte Local V0 continua separado para C10.7.
 
+Atualizacao C10.6.2: 2026-05-05. C10.6.2 fecha a aplicacao das Configuracoes
+abertas via `F10`. A sessao persistente continua segura por padrao, mas passa a
+aceitar uma politica temporaria restrita em `/run/dadooh-settings` para dry-run
+ou escrita real autorizada. No fluxo validado, o operador abriu Configuracoes
+com `F10`, concluiu o wizard visual, o handoff privado passou, o writer real
+escreveu `/data/config/config.json`, criou backup, preservou permissoes
+`root:totem 0640`, atualizou `orientation.json` publico seguro e reiniciou o
+player. A verificacao sanitizada confirmou `rotation_deg=270` na config ativa e
+no contrato publico, splash seguindo `orientation.json`, servico final
+`active/enabled`, `NRestarts=0`, `public_state=player_running`, playback
+`playing`, player/MPV ativos e renderer/setup ausentes. Wi-Fi/NetworkManager,
+hotspot, portal, root read-only, corte seco e repo `kiosky-player` nao foram
+alterados, e a politica temporaria de apply foi removida ao final. Observacao
+humana confirmou midias na orientacao escolhida e nenhum flash shell/login no
+fluxo F10 -> wizard -> salvar -> player. Proxima frente: C10.7 auditoria de
+reprodutibilidade placa -> repo para preparar imagem.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

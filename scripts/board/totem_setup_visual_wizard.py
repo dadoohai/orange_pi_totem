@@ -56,6 +56,7 @@ MPV_VIDEO_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_MPV_VIDEO_MODE", "drm").str
 DOUBLE_LOAD_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_DOUBLE_LOAD_PER_SCREEN", "1") != "0"
 RENDERER_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_RENDERER", "framebuffer").strip().lower()
 PSF_FONT_PATH = os.environ.get("TOTEM_VISUAL_WIZARD_PSF_FONT", "/usr/share/consolefonts/Lat15-Fixed18.psf.gz")
+APPLY_CONTEXT = os.environ.get("TOTEM_VISUAL_WIZARD_APPLY_CONTEXT", "candidate").strip().lower()
 
 LANDSCAPE_CANVAS_WIDTH = 1280
 LANDSCAPE_CANVAS_HEIGHT = 720
@@ -2035,20 +2036,40 @@ def review_and_confirm(
         "wifi_persistent": "Wi-Fi dedicado foi configurado para uso futuro.",
         "bench_mock": "Modo de bancada sem nova rede real.",
     }.get(network["network_step"], "Rede sem detalhe publico.")
+    if APPLY_CONTEXT == "real-write":
+        subtitle = "Salvar aplica as mudancas apos validacao privada."
+        footer = "Enter salva | B volta | Esc cancela"
+        apply_lines = [
+            "Salvar chama writer controlado.",
+            "Config real sera atualizada apos validacao.",
+        ]
+    elif APPLY_CONTEXT == "dry-run":
+        subtitle = "Concluir valida a candidata privada sem aplicar."
+        footer = "Enter valida | B volta | Esc cancela"
+        apply_lines = [
+            "Writer real segue bloqueado.",
+            "Config real segue intocada.",
+        ]
+    else:
+        subtitle = "Confirme a candidata temporaria. Dados sensiveis nao aparecem nesta tela."
+        footer = "Enter conclui | B volta | Esc cancela"
+        apply_lines = [
+            "Writer real segue bloqueado.",
+            "Config real segue intocada.",
+        ]
     display.show(
         "05-review",
         build_screen_svg(
             active_step=3,
             title="Revisao",
-            subtitle="Confirme a candidata temporaria. Dados sensiveis nao aparecem nesta tela.",
-            footer="Enter conclui | B volta | Esc cancela",
+            subtitle=subtitle,
+            footer=footer,
             panel_title="Resumo publico",
             panel_items=[
                 f"Conexao: {network_note}",
                 "Ambiente informado: sim",
                 f"Tela: {rotation['label']}",
-                "Writer real segue bloqueado.",
-                "Config real segue intocada.",
+                *apply_lines,
             ],
             layout_rotation_deg=int(rotation["rotation_deg"]),
         ),

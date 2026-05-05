@@ -65,5 +65,8 @@ CONFIRMO REBOOT C10.6.1 TRIGGER PERSISTENTE
 
 ## Proximo passo
 
-C10.6.2 deve adicionar PIN/senha local para Configuracoes. C10.7 fica separado
-para Suporte Local V0.
+C10.6.2 fecha a aplicacao das Configuracoes abertas por `F10`: dry-run privado,
+writer real controlado, atualizacao de `orientation.json` e reinicio do player.
+
+PIN/senha local fica para uma etapa posterior. C10.7 fica separado para Suporte
+Local V0.

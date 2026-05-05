@@ -8,16 +8,21 @@ RUN_TIMEOUT_SEC="1800"
 PREVIEW_SEC="12"
 OUT_DIR="/tmp/dadooh-c10-6-open-settings-session"
 WIZARD_OUT_DIR="/tmp/dadooh-c10-6-visual-wizard-session"
+HANDOFF_OUT_DIR="/tmp/dadooh-c10-6-2-handoff"
+WRITER_OUT_DIR="/tmp/dadooh-c10-6-2-writer"
+PRIVATE_VALUES="/tmp/dadooh-c10-6-2-private/private-values.json"
+APPLY_POLICY_PATH="/run/dadooh-settings/apply-policy.json"
+APPLY_MODE="policy"
 LOCK_DIR="/run/dadooh-settings/session.lock"
 
 usage() {
   cat <<'USAGE'
 Usage:
-  totem_open_settings_session.sh [--mode preview|interactive] [--expect preview|cancelled|candidate_ready|any] [--tty N] [--timeout-sec N] [--preview-sec N] [--out-dir /tmp/...]
+  totem_open_settings_session.sh [--mode preview|interactive] [--expect preview|cancelled|candidate_ready|any] [--tty N] [--timeout-sec N] [--preview-sec N] [--out-dir /tmp/...] [--apply-mode policy|candidate-only|dry-run|real-write]
 
 Opens the existing visual setup wizard as "Configuracoes do Totem" while the
-player is running. It does not call writer, does not write /data/config and
-does not alter Wi-Fi/NetworkManager.
+player is running. By default it does not call writer. Real write requires a
+restricted policy file created by an authorized runner.
 USAGE
 }
 
@@ -51,6 +56,26 @@ while [ "$#" -gt 0 ]; do
       shift
       WIZARD_OUT_DIR="${1:-}"
       ;;
+    --handoff-out-dir)
+      shift
+      HANDOFF_OUT_DIR="${1:-}"
+      ;;
+    --writer-out-dir)
+      shift
+      WRITER_OUT_DIR="${1:-}"
+      ;;
+    --private-values)
+      shift
+      PRIVATE_VALUES="${1:-}"
+      ;;
+    --apply-policy-path)
+      shift
+      APPLY_POLICY_PATH="${1:-}"
+      ;;
+    --apply-mode)
+      shift
+      APPLY_MODE="${1:-}"
+      ;;
     --lock-dir)
       shift
       LOCK_DIR="${1:-}"
@@ -77,7 +102,7 @@ case "$MODE" in
 esac
 
 case "$EXPECTED_RESULT" in
-  preview|cancelled|candidate_ready|any)
+  preview|cancelled|candidate_ready|dry_run_passed|real_write_passed|any)
     ;;
   *)
     echo "error: unsupported expected result $EXPECTED_RESULT" >&2
@@ -123,17 +148,75 @@ case "$WIZARD_OUT_DIR" in
     exit 2
     ;;
 esac
+case "$HANDOFF_OUT_DIR" in
+  /tmp/*|/run/*)
+    ;;
+  *)
+    echo "error: --handoff-out-dir must be under /tmp or /run" >&2
+    exit 2
+    ;;
+esac
+case "$WRITER_OUT_DIR" in
+  /tmp/*|/run/*)
+    ;;
+  *)
+    echo "error: --writer-out-dir must be under /tmp or /run" >&2
+    exit 2
+    ;;
+esac
+case "$PRIVATE_VALUES" in
+  /tmp/*)
+    ;;
+  *)
+    echo "error: --private-values must be under /tmp" >&2
+    exit 2
+    ;;
+esac
+case "$APPLY_POLICY_PATH" in
+  /tmp/*|/run/*)
+    ;;
+  *)
+    echo "error: --apply-policy-path must be under /tmp or /run" >&2
+    exit 2
+    ;;
+esac
+case "$APPLY_MODE" in
+  policy|candidate-only|dry-run|real-write)
+    ;;
+  *)
+    echo "error: unsupported apply mode $APPLY_MODE" >&2
+    exit 2
+    ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VISUAL="$SCRIPT_DIR/totem_setup_visual_wizard.py"
 SPLASH="$SCRIPT_DIR/totem_visual_splash.py"
 AGGREGATE="$SCRIPT_DIR/totem_status_aggregate.py"
+HANDOFF="$SCRIPT_DIR/totem_visual_setup_writer_handoff.py"
+WRITER="$SCRIPT_DIR/totem_config_writer_real.py"
+CONTRACT="$SCRIPT_DIR/totem_config_contract_validate.py"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 FINAL_STATUS="$OUT_DIR/session-status.json"
 GETTY_UNITS=("getty@tty1.service" "getty@tty${REMOTE_TTY}.service")
 WIZARD_RC="not_run"
+HANDOFF_RC="not_run"
+WRITER_RC="not_run"
 SERVICE_STOP_ATTEMPTED="false"
 SERVICE_RESTORE_ATTEMPTED="false"
+WRITER_CALLED="false"
+REAL_CONFIG_READ="false"
+REAL_CONFIG_WRITTEN="false"
+PRIVATE_SOURCE_TEMP_REMOVED="false"
+PRIVATE_CANDIDATE_REMOVED="false"
+SOURCE_CANDIDATE_REMOVED="false"
+ORIENTATION_JSON_UPDATED="false"
+SELECTED_ROTATION_DEG="unknown"
+POLICY_USED="false"
+POLICY_PRIVATE_SOURCE="none"
+POLICY_REAL_WRITE_CONFIRMED="false"
+POLICY_DRY_RUN_CONFIRMED="false"
+APPLY_POLICY_REMOVED="false"
 INITIAL_SERVICE_ACTIVE="$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
 INITIAL_SERVICE_ENABLED="$(systemctl is-enabled kiosky-player.service 2>/dev/null || true)"
 declare -A GETTY_ACTIVE
@@ -147,8 +230,8 @@ for path in "$VISUAL" "$SPLASH" "$AGGREGATE"; do
 done
 
 umask 077
-mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$(dirname "$LOCK_DIR")"
-chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$(dirname "$LOCK_DIR")" 2>/dev/null || true
+mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")"
+chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" 2>/dev/null || true
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "settings_session_already_running" >&2
   exit 23
@@ -226,9 +309,14 @@ wait_player_running() {
 
 show_transition() {
   local mode="$1"
+  local rotation="${2:-}"
   command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
   printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
-  env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --status-out "$OUT_DIR/splash-$mode-status.json" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
+  if [ -n "$rotation" ] && [ "$rotation" != "unknown" ]; then
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --rotation-deg "$rotation" --status-out "$OUT_DIR/splash-$mode-status.json" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
+  else
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --status-out "$OUT_DIR/splash-$mode-status.json" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
+  fi
 }
 
 restore_getty() {
@@ -252,7 +340,7 @@ restore_service() {
     systemctl enable kiosky-player.service >/dev/null 2>&1 || true
   fi
   if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
-    show_transition player || true
+    show_transition player "$SELECTED_ROTATION_DEG" || true
     systemctl start kiosky-player.service >/dev/null 2>&1 || true
   fi
 }
@@ -291,6 +379,188 @@ for pid in pids:
 PY
 }
 
+load_apply_policy() {
+  if [ "$APPLY_MODE" != "policy" ]; then
+    return 0
+  fi
+  if [ ! -f "$APPLY_POLICY_PATH" ]; then
+    APPLY_MODE="candidate-only"
+    return 0
+  fi
+  POLICY_USED="true"
+  eval "$(
+    python3 - "$APPLY_POLICY_PATH" "$PRIVATE_VALUES" <<'PY'
+import json
+import os
+import pathlib
+import shlex
+import stat
+import sys
+
+path = pathlib.Path(sys.argv[1])
+default_private = sys.argv[2]
+if path.is_symlink():
+    raise SystemExit("apply_policy_symlink")
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit("apply_policy_invalid")
+if not isinstance(data, dict):
+    raise SystemExit("apply_policy_invalid")
+mode = data.get("mode", "candidate-only")
+if mode not in {"candidate-only", "dry-run", "real-write"}:
+    raise SystemExit("apply_policy_mode_invalid")
+private_source = data.get("private_source", "none")
+if private_source not in {"none", "tmp-file", "active-config"}:
+    raise SystemExit("apply_policy_private_source_invalid")
+private_values = data.get("private_values_path") or default_private
+if not isinstance(private_values, str) or not private_values.startswith("/tmp/"):
+    raise SystemExit("apply_policy_private_values_invalid")
+real_confirmed = bool(data.get("real_write_confirmed", False))
+dry_confirmed = bool(data.get("dry_run_confirmed", False))
+source_confirmed = bool(data.get("active_config_private_source_confirmed", False))
+if mode == "real-write" and not real_confirmed:
+    raise SystemExit("apply_policy_real_write_not_confirmed")
+if mode == "dry-run" and not dry_confirmed:
+    raise SystemExit("apply_policy_dry_run_not_confirmed")
+if private_source == "active-config" and not source_confirmed:
+    raise SystemExit("apply_policy_active_config_not_confirmed")
+print(f"APPLY_MODE={shlex.quote(mode)}")
+print(f"POLICY_PRIVATE_SOURCE={shlex.quote(private_source)}")
+print(f"PRIVATE_VALUES={shlex.quote(private_values)}")
+print(f"POLICY_REAL_WRITE_CONFIRMED={str(real_confirmed).lower()}")
+print(f"POLICY_DRY_RUN_CONFIRMED={str(dry_confirmed).lower()}")
+PY
+  )"
+}
+
+prepare_private_values_from_active_config_if_requested() {
+  if [ "$POLICY_PRIVATE_SOURCE" != "active-config" ]; then
+    return 0
+  fi
+  REAL_CONFIG_READ="true"
+  python3 - "$PRIVATE_VALUES" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+target = pathlib.Path(sys.argv[1])
+active = pathlib.Path("/data/config/config.json")
+if not str(target).startswith("/tmp/"):
+    raise SystemExit("private_values_target_not_tmp")
+if target.is_symlink():
+    raise SystemExit("private_values_target_symlink")
+target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+if stat.S_IMODE(target.parent.stat().st_mode) != 0o700:
+    target.parent.chmod(0o700)
+with active.open("r", encoding="utf-8") as handle:
+    config = json.load(handle)
+payload = {}
+for field in ("api_url", "api_key", "station_id"):
+    value = config.get(field)
+    if isinstance(value, str) and value.strip():
+        payload[field] = value.strip()
+if "api_url" not in payload or "api_key" not in payload:
+    raise SystemExit("active_config_missing_private_categories")
+tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+os.chmod(tmp, 0o600)
+os.replace(tmp, target)
+os.chmod(target, 0o600)
+PY
+}
+
+validate_private_values_metadata() {
+  if [ "$POLICY_PRIVATE_SOURCE" = "none" ]; then
+    return 0
+  fi
+  python3 - "$PRIVATE_VALUES" <<'PY'
+import pathlib
+import stat
+import sys
+path = pathlib.Path(sys.argv[1])
+if not str(path).startswith("/tmp/") or path.is_symlink() or not path.exists():
+    raise SystemExit("private_values_not_ready")
+if path.parent.is_symlink():
+    raise SystemExit("private_values_parent_symlink")
+if stat.S_IMODE(path.parent.stat().st_mode) != 0o700:
+    raise SystemExit("private_values_parent_not_0700")
+if stat.S_IMODE(path.stat().st_mode) != 0o600:
+    raise SystemExit("private_values_file_not_0600")
+PY
+}
+
+selected_rotation_from_candidate() {
+  python3 - "$WIZARD_OUT_DIR/config.candidate.json" <<'PY'
+import json
+import pathlib
+import sys
+try:
+    data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+    value = int(data.get("rotation_deg", 0)) % 360
+    if value not in {0, 90, 180, 270}:
+        value = 0
+    print(value)
+except Exception:
+    print("unknown")
+PY
+}
+
+write_public_orientation_from_candidate() {
+  python3 - "$WIZARD_OUT_DIR/config.candidate.json" <<'PY'
+import json
+import os
+import pathlib
+import time
+import sys
+candidate = pathlib.Path(sys.argv[1])
+data = json.loads(candidate.read_text(encoding="utf-8"))
+rotation = int(data.get("rotation_deg", 0)) % 360
+if rotation not in {0, 90, 180, 270}:
+    raise SystemExit("rotation_invalid")
+label = {0: "landscape", 90: "portrait_right", 180: "inverted", 270: "portrait_left"}[rotation]
+target = pathlib.Path("/data/state/totem-display/orientation.json")
+target.parent.mkdir(parents=True, exist_ok=True)
+payload = {
+    "schema_version": "dadooh-display-orientation.v1",
+    "rotation_deg": rotation,
+    "orientation_label": label,
+    "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+}
+tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+os.chmod(tmp, 0o644)
+os.replace(tmp, target)
+os.chmod(target, 0o644)
+PY
+  ORIENTATION_JSON_UPDATED="true"
+}
+
+cleanup_private_artifacts() {
+  if [ -f "$HANDOFF_OUT_DIR/config.candidate.private.json" ]; then
+    rm -f "$HANDOFF_OUT_DIR/config.candidate.private.json" || true
+  fi
+  if [ ! -e "$HANDOFF_OUT_DIR/config.candidate.private.json" ]; then
+    PRIVATE_CANDIDATE_REMOVED="true"
+  fi
+  if [ "$POLICY_PRIVATE_SOURCE" = "active-config" ]; then
+    rm -rf "$(dirname "$PRIVATE_VALUES")" || true
+    if [ ! -e "$PRIVATE_VALUES" ]; then
+      PRIVATE_SOURCE_TEMP_REMOVED="true"
+    fi
+  fi
+}
+
+cleanup_apply_policy() {
+  if [ "$POLICY_USED" = "true" ] && [ -f "$APPLY_POLICY_PATH" ]; then
+    rm -f "$APPLY_POLICY_PATH" || true
+  fi
+  if [ ! -e "$APPLY_POLICY_PATH" ]; then
+    APPLY_POLICY_REMOVED="true"
+  fi
+}
+
 write_final_status() {
   wait_player_running || true
   python3 - "$FINAL_STATUS" "$OUT_DIR" "$WIZARD_OUT_DIR" "$MODE" "$EXPECTED_RESULT" "$WIZARD_RC" \
@@ -299,10 +569,16 @@ write_final_status() {
     "$(systemctl is-enabled kiosky-player.service 2>/dev/null || true)" \
     "$(systemctl show kiosky-player.service -p NRestarts --value 2>/dev/null || true)" \
     "$(read_json_value /tmp/dadooh-status/status.json public_state)" \
-    "$(read_json_value /tmp/kiosky-status.json playback_state)" <<'PY'
+    "$(read_json_value /tmp/kiosky-status.json playback_state)" \
+    "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$APPLY_MODE" "$POLICY_USED" "$POLICY_PRIVATE_SOURCE" \
+    "$HANDOFF_RC" "$WRITER_RC" "$WRITER_CALLED" "$REAL_CONFIG_READ" "$REAL_CONFIG_WRITTEN" \
+    "$PRIVATE_SOURCE_TEMP_REMOVED" "$PRIVATE_CANDIDATE_REMOVED" "$ORIENTATION_JSON_UPDATED" "$SELECTED_ROTATION_DEG" \
+    "$APPLY_POLICY_REMOVED" <<'PY'
 import json
 import os
 import pathlib
+import pwd
+import grp
 import stat
 import sys
 
@@ -321,6 +597,21 @@ service_enabled = sys.argv[12] or "unknown"
 nrestarts = sys.argv[13] or "unknown"
 public_state = sys.argv[14] or "unknown"
 playback = sys.argv[15] or "unknown"
+handoff_out = pathlib.Path(sys.argv[16])
+writer_out = pathlib.Path(sys.argv[17])
+apply_mode = sys.argv[18]
+policy_used = sys.argv[19] == "true"
+policy_private_source = sys.argv[20]
+handoff_rc = sys.argv[21]
+writer_rc = sys.argv[22]
+writer_called = sys.argv[23] == "true"
+real_config_read = sys.argv[24] == "true"
+real_config_written = sys.argv[25] == "true"
+private_source_temp_removed = sys.argv[26] == "true"
+private_candidate_removed = sys.argv[27] == "true"
+orientation_json_updated = sys.argv[28] == "true"
+selected_rotation_raw = sys.argv[29]
+apply_policy_removed = sys.argv[30] == "true"
 
 def load_json(path: pathlib.Path) -> dict:
     try:
@@ -330,6 +621,8 @@ def load_json(path: pathlib.Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 setup_status = load_json(wizard_out / "setup-status.json")
+handoff_status = load_json(handoff_out / "setup-status.json")
+writer_status = load_json(writer_out / "writer-status.json")
 network = setup_status.get("network") if isinstance(setup_status.get("network"), dict) else {}
 validation = setup_status.get("validation") if isinstance(setup_status.get("validation"), dict) else {}
 interface = setup_status.get("interface") if isinstance(setup_status.get("interface"), dict) else {}
@@ -351,13 +644,54 @@ for proc in pathlib.Path("/proc").iterdir():
         counts["mpv"] += 1
     if "kiosk.py" in names:
         counts["player"] += 1
+selected_rotation = validation.get("rotation_degrees", "unknown")
+if selected_rotation == "unknown" and selected_rotation_raw != "unknown":
+    try:
+        selected_rotation = int(selected_rotation_raw)
+    except ValueError:
+        selected_rotation = "unknown"
+orientation_json = load_json(pathlib.Path("/data/state/totem-display/orientation.json"))
+orientation_rotation = orientation_json.get("rotation_deg", "unknown")
+orientation_matches = (
+    isinstance(selected_rotation, int)
+    and isinstance(orientation_rotation, int)
+    and selected_rotation == orientation_rotation
+)
+active_config_rotation = "unknown"
+active_config_rotation_matches = "unknown"
+active_config = pathlib.Path("/data/config/config.json")
+config_meta = {"exists": active_config.exists(), "mode": None, "owner_root": False, "group_totem": False}
+if active_config.exists():
+    st = active_config.stat()
+    config_meta["mode"] = f"{stat.S_IMODE(st.st_mode):04o}"[-4:]
+    try:
+        config_meta["owner_root"] = pwd.getpwuid(st.st_uid).pw_name == "root"
+    except KeyError:
+        pass
+    try:
+        config_meta["group_totem"] = grp.getgrgid(st.st_gid).gr_name == "totem"
+    except KeyError:
+        pass
+if writer_called and active_config.exists() and selected_rotation != "unknown":
+    try:
+        active_config_rotation = int(load_json(active_config).get("rotation_deg", -1))
+        active_config_rotation_matches = active_config_rotation == selected_rotation
+    except Exception:
+        active_config_rotation = "unknown"
+        active_config_rotation_matches = False
 
 payload = {
-    "schema_version": "dadooh-c10.6-open-settings-session.v1",
+    "schema_version": "dadooh-c10.6.2-open-settings-session.v1",
     "mode": mode,
+    "apply_mode": apply_mode,
+    "policy_used": policy_used,
+    "apply_policy_removed": apply_policy_removed,
+    "policy_private_source": policy_private_source,
     "expected_result": expected_result,
     "trigger_opens_wizard_directly": True,
     "wizard_rc": wizard_rc,
+    "handoff_rc": handoff_rc,
+    "writer_rc": writer_rc,
     "visual_wizard_opened": (wizard_out / "screens").exists() or bool(setup_status) or (wizard_out / "setup-cancelled.json").exists(),
     "visual_candidate_generated": (wizard_out / "config.candidate.json").exists(),
     "setup_cancelled": (wizard_out / "setup-cancelled.json").exists(),
@@ -365,7 +699,20 @@ payload = {
         validation.get("rotation_degrees"), "unknown"
     ),
     "rotation_degrees": validation.get("rotation_degrees", "unknown"),
+    "selected_rotation_deg": selected_rotation,
     "network_step": network.get("network_step", "unknown"),
+    "private_candidate_real_dry_run_passed": bool(
+        handoff_status.get("contract_validation", {}).get("private_real_dry_run", {}).get("valid")
+    ),
+    "writer_result": writer_status.get("result", "not_available"),
+    "backup_created": bool(writer_status.get("backup", {}).get("created", False)),
+    "permissions_ok": bool(config_meta["exists"] and config_meta["mode"] == "0640" and config_meta["owner_root"] and config_meta["group_totem"]),
+    "active_config_rotation_deg_matches": active_config_rotation_matches,
+    "expected_rotation_deg": selected_rotation,
+    "active_config_rotation_deg_public_check": active_config_rotation if isinstance(active_config_rotation, int) else "unknown",
+    "orientation_json_updated": orientation_json_updated,
+    "orientation_json_rotation_matches": orientation_matches,
+    "splash_orientation_source": "public_orientation_json",
     "linux_prompt_visible": bool(interface.get("linux_prompt_visible", False)),
     "service_initial_active": initial_active,
     "service_initial_enabled": initial_enabled,
@@ -377,9 +724,12 @@ payload = {
     "public_state": public_state,
     "playback": playback,
     "process_counts": counts,
-    "writer_called": False,
-    "real_config_read": False,
-    "real_config_written": False,
+    "writer_called": writer_called,
+    "real_config_read": real_config_read,
+    "real_config_read_authorized_for_private_source": real_config_read,
+    "real_config_written": real_config_written,
+    "private_source_temp_removed": private_source_temp_removed,
+    "private_candidate_removed": private_candidate_removed,
     "wifi_changed": False,
     "networkmanager_changed": False,
     "hotspot_created": False,
@@ -406,6 +756,7 @@ on_exit() {
   rc="$?"
   trap - EXIT INT TERM HUP
   kill_visual_if_running || true
+  cleanup_apply_policy || true
   restore_service || true
   write_final_status || true
   restore_getty || true
@@ -413,6 +764,22 @@ on_exit() {
   exit "$rc"
 }
 trap on_exit EXIT INT TERM HUP
+
+load_apply_policy
+if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
+  for path in "$HANDOFF" "$CONTRACT"; do
+    if [ ! -f "$path" ]; then
+      echo "error: missing handoff dependency" >&2
+      exit 1
+    fi
+  done
+  if [ "$APPLY_MODE" = "real-write" ] && [ ! -f "$WRITER" ]; then
+    echo "error: missing writer dependency" >&2
+    exit 1
+  fi
+  prepare_private_values_from_active_config_if_requested
+  validate_private_values_metadata
+fi
 
 for unit in "${GETTY_UNITS[@]}"; do
   systemctl stop "$unit" >/dev/null 2>&1 || true
@@ -441,12 +808,12 @@ fi
 set +e
 if [ "$MODE" = "preview" ]; then
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" /usr/bin/python3 "$VISUAL" \
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" /usr/bin/python3 "$VISUAL" \
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   deadline=$(( $(date +%s) + RUN_TIMEOUT_SEC ))
@@ -477,6 +844,73 @@ fi
 if [ "$EXPECTED_RESULT" = "candidate_ready" ] && [ ! -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
   echo "candidate_not_generated" >&2
   exit 44
+fi
+if [ -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
+  SELECTED_ROTATION_DEG="$(selected_rotation_from_candidate)"
+fi
+
+if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
+  if [ ! -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
+    echo "candidate_not_generated" >&2
+    exit 44
+  fi
+  set +e
+  python3 "$HANDOFF" \
+    --source-candidate "$WIZARD_OUT_DIR/config.candidate.json" \
+    --private-values "$PRIVATE_VALUES" \
+    --out-dir "$HANDOFF_OUT_DIR" \
+    --confirm-private-values-approved >/dev/null
+  HANDOFF_RC="$?"
+  set -e
+  if [ "$HANDOFF_RC" != "0" ]; then
+    echo "private_handoff_failed" >&2
+    exit 45
+  fi
+  if [ ! -f "$HANDOFF_OUT_DIR/config.candidate.private.json" ]; then
+    echo "private_candidate_not_generated" >&2
+    exit 46
+  fi
+fi
+
+if [ "$APPLY_MODE" = "dry-run" ]; then
+  python3 "$CONTRACT" \
+    --candidate "$HANDOFF_OUT_DIR/config.candidate.private.json" \
+    --real-dry-run \
+    --out-dir "$OUT_DIR/validate-real" >/dev/null
+  cleanup_private_artifacts || true
+  cleanup_apply_policy || true
+fi
+
+if [ "$APPLY_MODE" = "real-write" ]; then
+  show_transition saving "$SELECTED_ROTATION_DEG" || true
+  WRITER_CALLED="true"
+  set +e
+  python3 "$WRITER" \
+    --candidate "$HANDOFF_OUT_DIR/config.candidate.private.json" \
+    --dest /data/config/config.json \
+    --backup-dir /data/config/backups \
+    --out-dir "$WRITER_OUT_DIR" \
+    --enable-real-write \
+    --confirm-service-stopped \
+    --confirm-human-approved-real-write >/dev/null
+  WRITER_RC="$?"
+  set -e
+  if [ "$WRITER_RC" != "0" ]; then
+    echo "writer_failed" >&2
+    exit 47
+  fi
+  REAL_CONFIG_WRITTEN="true"
+  write_public_orientation_from_candidate
+  cleanup_private_artifacts || true
+  cleanup_apply_policy || true
+fi
+if [ "$EXPECTED_RESULT" = "dry_run_passed" ] && [ "$APPLY_MODE" != "dry-run" ]; then
+  echo "expected_dry_run_not_observed" >&2
+  exit 48
+fi
+if [ "$EXPECTED_RESULT" = "real_write_passed" ] && [ "$REAL_CONFIG_WRITTEN" != "true" ]; then
+  echo "expected_real_write_not_observed" >&2
+  exit 49
 fi
 
 restore_service || true
