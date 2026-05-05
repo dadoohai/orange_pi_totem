@@ -14,6 +14,8 @@ PAUSE_CONFIRM_PHRASE="${PAUSE_CONFIRM_PHRASE:-CONFIRMO C10.5 VISUAL BOOT ROTATIO
 BOOT_APPLY_CONFIRM_PHRASE="${BOOT_APPLY_CONFIRM_PHRASE:-CONFIRMO APLICAR GUARDRAILS VISUAIS BOOT C10.5}"
 BOOT_ROLLBACK_CONFIRM_PHRASE="${BOOT_ROLLBACK_CONFIRM_PHRASE:-CONFIRMO ROLLBACK GUARDRAILS VISUAIS BOOT C10.5}"
 REBOOT_CONFIRM_PHRASE="${REBOOT_CONFIRM_PHRASE:-CONFIRMO REBOOT VISUAL C10.5}"
+WRITE_PUBLIC_ORIENTATION="${WRITE_PUBLIC_ORIENTATION:-0}"
+PUBLIC_ORIENTATION_PATH="${PUBLIC_ORIENTATION_PATH:-/data/state/totem-display/orientation.json}"
 
 usage() {
   cat <<'USAGE'
@@ -231,7 +233,7 @@ run_visual_mode() {
   local expected_network_step="$2"
   local visual_mode="$3"
   confirm_exact "$PAUSE_CONFIRM_PHRASE" "HDMI/tela e teclado local devem estar conectados. O player sera pausado temporariamente."
-  ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_WIZARD_OUT_DIR='$REMOTE_WIZARD_OUT_DIR' REMOTE_TTY='$REMOTE_TTY' RUN_TIMEOUT_SEC='$RUN_TIMEOUT_SEC' PREVIEW_SEC='$PREVIEW_SEC' EXPECTED_RESULT='$expected_result' EXPECTED_NETWORK_STEP='$expected_network_step' MODE='$visual_mode' PROFILE_NAME='$PROFILE_NAME' bash -s" <<'REMOTE_RUN'
+  ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' REMOTE_WIZARD_OUT_DIR='$REMOTE_WIZARD_OUT_DIR' REMOTE_TTY='$REMOTE_TTY' RUN_TIMEOUT_SEC='$RUN_TIMEOUT_SEC' PREVIEW_SEC='$PREVIEW_SEC' EXPECTED_RESULT='$expected_result' EXPECTED_NETWORK_STEP='$expected_network_step' MODE='$visual_mode' PROFILE_NAME='$PROFILE_NAME' WRITE_PUBLIC_ORIENTATION='$WRITE_PUBLIC_ORIENTATION' PUBLIC_ORIENTATION_PATH='$PUBLIC_ORIENTATION_PATH' bash -s" <<'REMOTE_RUN'
 set -euo pipefail
 
 VISUAL="$REMOTE_DIR/totem_setup_visual_wizard.py"
@@ -394,7 +396,9 @@ restore_product_getty() {
 render_transition_splash() {
   local splash_mode="$1"
   local splash_rotation_deg="0"
+  local splash_has_explicit_rotation="false"
   if [ -f "$WIZARD_OUT/setup-status.json" ]; then
+    splash_has_explicit_rotation="true"
     splash_rotation_deg="$(python3 - "$WIZARD_OUT/setup-status.json" <<'PY'
 import json
 import pathlib
@@ -418,11 +422,22 @@ PY
   if [ ! -f "$SPLASH" ]; then
     return 0
   fi
-  env TERM=linux /usr/bin/python3 "$SPLASH" "$splash_mode" \
-    --rotation-deg "$splash_rotation_deg" \
-    --status-out "$RUN_OUT/splash-$splash_mode-status.json" \
-    <"/dev/tty$REMOTE_TTY" >"/dev/tty$REMOTE_TTY" 2>/dev/null || true
+  if [ "$splash_has_explicit_rotation" = "true" ]; then
+    env TERM=linux /usr/bin/python3 "$SPLASH" "$splash_mode" \
+      --rotation-deg "$splash_rotation_deg" \
+      --status-out "$RUN_OUT/splash-$splash_mode-status.json" \
+      <"/dev/tty$REMOTE_TTY" >"/dev/tty$REMOTE_TTY" 2>/dev/null || true
+  else
+    env TERM=linux /usr/bin/python3 "$SPLASH" "$splash_mode" \
+      --status-out "$RUN_OUT/splash-$splash_mode-status.json" \
+      <"/dev/tty$REMOTE_TTY" >"/dev/tty$REMOTE_TTY" 2>/dev/null || true
+  fi
 }
+
+visual_orientation_args=()
+if [ "${WRITE_PUBLIC_ORIENTATION:-0}" = "1" ]; then
+  visual_orientation_args=(--write-public-orientation --public-orientation-path "${PUBLIC_ORIENTATION_PATH:-/data/state/totem-display/orientation.json}")
+fi
 
 write_final_status() {
   wait_public_state || true
@@ -678,15 +693,15 @@ fi
 set +e
 if [ "$MODE" = "preview-wizard" ] || [ "$MODE" = "preview-orientation-flow" ]; then
   run_on_product_tty env TERM=linux PYTHONPATH="$REMOTE_DIR" /usr/bin/python3 "$VISUAL" \
-    --out-dir "$WIZARD_OUT" --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC"
+    --out-dir "$WIZARD_OUT" --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" "${visual_orientation_args[@]}"
   WIZARD_RC="$?"
 elif [ "$MODE" = "run-wifi-list-preview" ]; then
   run_on_product_tty env TERM=linux PYTHONPATH="$REMOTE_DIR" /usr/bin/python3 "$VISUAL" \
-    --out-dir "$WIZARD_OUT" --wifi-list-preview --auto-exit-sec "$PREVIEW_SEC"
+    --out-dir "$WIZARD_OUT" --wifi-list-preview --auto-exit-sec "$PREVIEW_SEC" "${visual_orientation_args[@]}"
   WIZARD_RC="$?"
 else
   run_on_product_tty env TERM=linux PYTHONPATH="$REMOTE_DIR" /usr/bin/python3 "$VISUAL" \
-    --out-dir "$WIZARD_OUT" &
+    --out-dir "$WIZARD_OUT" "${visual_orientation_args[@]}" &
   OPENVT_PID="$!"
   deadline=$(( $(date +%s) + RUN_TIMEOUT_SEC ))
   while kill -0 "$OPENVT_PID" 2>/dev/null && [ "$(date +%s)" -lt "$deadline" ]; do
@@ -1023,7 +1038,9 @@ PY
   done
   local returned
   returned="$(date +%s)"
-  ssh "$HOST" "REMOTE_OUT_DIR='$REMOTE_OUT_DIR' SSH_RETURN_SEC='$((returned - started))' bash -s" <<'REMOTE_REBOOT_STATUS'
+  local collect_rc=1
+  for _ in $(seq 1 30); do
+    if ssh "$HOST" "REMOTE_OUT_DIR='$REMOTE_OUT_DIR' SSH_RETURN_SEC='$((returned - started))' bash -s" <<'REMOTE_REBOOT_STATUS'
 set -euo pipefail
 RUN_OUT="$REMOTE_OUT_DIR/reboot-visual-check"
 STATUS_FILE="$RUN_OUT/status.json"
@@ -1110,6 +1127,16 @@ os.chmod(target, 0o600)
 print(json.dumps(payload, indent=2, sort_keys=True))
 PY
 REMOTE_REBOOT_STATUS
+    then
+      collect_rc=0
+      break
+    fi
+    sleep 5
+  done
+  if [ "$collect_rc" -ne 0 ]; then
+    echo "reboot_visual_status_collection_failed" >&2
+    exit 1
+  fi
 }
 
 prepare_remote

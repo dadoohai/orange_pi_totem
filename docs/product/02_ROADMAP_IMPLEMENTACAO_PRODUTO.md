@@ -458,6 +458,25 @@ fluxo completo portrait, fluxo completo landscape e preview de splash nas
 quatro rotacoes, com estado final `active/enabled`, `NRestarts=0`,
 `public_state=player_running` e playback `playing`.
 
+Atualizacao C10.5.2: 2026-05-05. C10.5.2 consolida guardrails visuais de
+boot/shutdown/transicao. O splash passa a ler a orientacao publica allowlisted
+em `/data/state/totem-display/orientation.json`, contendo apenas
+`schema_version`, `updated_at`, `rotation_deg` e `orientation_label`; o wizard
+pode gravar esse contrato quando autorizado, sem tocar `/data/config`. O novo
+runner `run_c10_5_2_visual_guard_boot_shutdown.sh` adiciona inspecao
+sanitizada, preview de splash, stress curto de transicoes,
+aplicacao/rollback reversivel de guardrails persistentes e reboot visual
+controlado. A validacao tecnica passou: guardrails aplicados, SSH voltou apos
+reboot, servico final `active/enabled`, `NRestarts=0`,
+`public_state=player_running`, playback `playing`, player/MPV ativos,
+renderer/setup ausentes e `systemctl --failed=0`. O runner herdado foi
+ajustado para tolerar reset temporario de SSH na coleta pos-reboot. Writer,
+config real, Wi-Fi/NetworkManager, hotspot, portal, root read-only, corte seco
+e repo `kiosky-player` seguem fora. Observacao humana: ainda aparece
+rapidamente texto tecnico tipo Armbian/fsck com `files`/`blocks` antes do splash
+Dadooh inicial. Essa janela early-boot fica documentada para a trilha de imagem,
+initramfs/read-only e nao foi mascarada desabilitando fsck nesta rodada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

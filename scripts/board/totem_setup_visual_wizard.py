@@ -73,6 +73,7 @@ SUMMARY_FILENAME = "summary.txt"
 CANCELLED_FILENAME = "setup-cancelled.json"
 FAILED_FILENAME = "setup-failed.json"
 ORIENTATION_FILENAME = "orientation.json"
+PUBLIC_ORIENTATION_PATH = pathlib.Path("/data/state/totem-display/orientation.json")
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -1824,11 +1825,12 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             "contract_real_dry_run_expected_failure: true",
             "",
             "Guardrails:",
-            "writes_only_under_tmp: true",
+            f"writes_only_under_tmp: {str(status['guardrails']['writes_only_under_tmp']).lower()}",
             "real_config_read: false",
             "real_config_written: false",
             "writer_called: false",
-            "data_written: false",
+            f"allowlisted_data_state_written: {str(status['guardrails'].get('allowlisted_data_state_written', False)).lower()}",
+            f"data_written: {str(status['guardrails']['data_written']).lower()}",
             "opt_written: false",
             f"commands_executed: {str(status['guardrails']['commands_executed']).lower()}",
             "systemctl_called: false",
@@ -1888,11 +1890,47 @@ def orientation_contract_payload(generated_at: str, rotation: dict[str, str | in
     }
 
 
+def require_public_orientation_path(raw_path: str) -> pathlib.Path:
+    path = pathlib.Path(raw_path)
+    if path.is_symlink():
+        raise VisualWizardError("orientation public path invalido")
+    allowed_data_root = pathlib.Path("/data/state/totem-display")
+    resolved_parent = path.parent.resolve(strict=False)
+    if resolved_parent != allowed_data_root and setup.TMP_ROOT not in [resolved_parent, *resolved_parent.parents]:
+        raise VisualWizardError("orientation public path fora da allowlist")
+    if path.name != ORIENTATION_FILENAME:
+        raise VisualWizardError("orientation public filename invalido")
+    return path
+
+
+def atomic_write_public_orientation(path: pathlib.Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o755)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+    os.chmod(path, 0o644)
+
+
+def write_public_orientation_contract(path: pathlib.Path, generated_at: str, rotation: dict[str, str | int]) -> None:
+    payload = orientation_contract_payload(generated_at, rotation)
+    public_payload = {
+        "schema_version": payload["schema_version"],
+        "updated_at": payload["updated_at"],
+        "rotation_deg": payload["rotation_deg"],
+        "orientation_label": payload["orientation_label"],
+    }
+    atomic_write_public_orientation(path, public_payload)
+
+
 def write_visual_artifacts(
     out_dir: pathlib.Path,
     environment_id: str,
     rotation: dict[str, str | int],
     network: dict[str, Any],
+    *,
+    public_orientation_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     prepare_private_dir(out_dir)
     generated_at = utc_timestamp()
@@ -1917,7 +1955,17 @@ def write_visual_artifacts(
     candidate["setup_visual_renderer"] = visual_renderer_name()
 
     contract_validation = setup.validate_candidate_handoff(candidate)
+    public_orientation_written = False
+    if public_orientation_path is not None:
+        write_public_orientation_contract(public_orientation_path, generated_at, rotation)
+        public_orientation_written = True
+
     status = build_visual_status(generated_at, rotation, environment_id, network, contract_validation)
+    status["orientation"]["public_orientation_contract_written"] = public_orientation_written
+    status["orientation"]["public_orientation_path_allowlisted"] = public_orientation_written
+    status["guardrails"]["writes_only_under_tmp"] = not public_orientation_written
+    status["guardrails"]["allowlisted_data_state_written"] = public_orientation_written
+    status["guardrails"]["data_written"] = public_orientation_written
     atomic_write_private_json(out_dir / CANDIDATE_FILENAME, candidate, out_dir)
     atomic_write_private_json(out_dir / STATUS_FILENAME, status, out_dir)
     atomic_write_private_json(out_dir / ORIENTATION_FILENAME, orientation_contract_payload(generated_at, rotation), out_dir)
@@ -2036,7 +2084,12 @@ def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     wait_enter_or_cancel()
 
 
-def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
+def run_visual_wizard(
+    out_dir: pathlib.Path,
+    *,
+    mpv_bin: str,
+    public_orientation_path: pathlib.Path | None = None,
+) -> dict[str, Any]:
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
     try:
         with RawKeyboard():
@@ -2116,7 +2169,13 @@ def run_visual_wizard(out_dir: pathlib.Path, *, mpv_bin: str) -> dict[str, Any]:
                         break
                     if not review_and_confirm(display, environment_id, rotation, network):
                         continue
-                    status = write_visual_artifacts(out_dir, environment_id, rotation, network)
+                    status = write_visual_artifacts(
+                        out_dir,
+                        environment_id,
+                        rotation,
+                        network,
+                        public_orientation_path=public_orientation_path,
+                    )
                     show_complete(display, status)
                     return status
     finally:
@@ -2319,14 +2378,27 @@ def show_wifi_list_preview(
     return status
 
 
-def run_scripted(out_dir: pathlib.Path, environment_id: str, rotation_key: str, network_step: str) -> dict[str, Any]:
+def run_scripted(
+    out_dir: pathlib.Path,
+    environment_id: str,
+    rotation_key: str,
+    network_step: str,
+    *,
+    public_orientation_path: pathlib.Path | None = None,
+) -> dict[str, Any]:
     prepare_private_dir(out_dir)
     display = VisualDisplay(out_dir, enabled=False)
     generate_preview_screens(out_dir)
     environment = validate_environment_id(environment_id)
     rotation = resolve_display_selection(rotation_key)
     network = resolve_network_scripted(network_step)
-    status = write_visual_artifacts(out_dir, environment, rotation, network)
+    status = write_visual_artifacts(
+        out_dir,
+        environment,
+        rotation,
+        network,
+        public_orientation_path=public_orientation_path,
+    )
     display.show(
         "06-complete-scripted",
         build_screen_svg(
@@ -2475,6 +2547,26 @@ def run_self_test() -> None:
         public_text = output_text(out_dir)
         for forbidden in (synthetic_ssid, synthetic_password):
             assert_true(forbidden not in public_text, "Wi-Fi credentials should not be public artifacts")
+
+        public_dir = require_tmp_dir(str(root / "public-orientation"))
+        public_path = require_public_orientation_path(str(public_dir / ORIENTATION_FILENAME))
+        public_out_dir = require_tmp_dir(str(root / "out-public"))
+        public_status = run_scripted(
+            public_out_dir,
+            environment_id="ENV-PRODUTO-VISUAL-02",
+            rotation_key="landscape_inverted",
+            network_step="bench_mock",
+            public_orientation_path=public_path,
+        )
+        public_contract = json.loads(public_path.read_text(encoding="utf-8"))
+        assert_true(file_mode(public_path) == 0o644, "public orientation file should be 0644")
+        assert_true(public_contract["rotation_deg"] == 180, "public orientation should keep rotation")
+        assert_true(set(public_contract) == {"schema_version", "updated_at", "rotation_deg", "orientation_label"}, "public orientation should be allowlisted")
+        assert_true(public_status["orientation"]["public_orientation_contract_written"] is True, "public orientation should be recorded")
+        assert_true(public_status["guardrails"]["allowlisted_data_state_written"] is True, "allowlisted /data write should be recorded")
+        public_text = output_text(public_out_dir) + public_path.read_text(encoding="utf-8")
+        for forbidden in (synthetic_ssid, synthetic_password, "ENV-PRODUTO-VISUAL-02", "api_key"):
+            assert_true(forbidden not in public_text, "public orientation/status should stay sanitized")
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
@@ -2488,6 +2580,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--network-step", default="configured_wifi", help="Scripted network step.")
     parser.add_argument("--auto-exit-sec", type=int, default=12, help="Preview display duration.")
     parser.add_argument("--show-preview", action="store_true", help="Display preview screens with MPV/DRM.")
+    parser.add_argument(
+        "--write-public-orientation",
+        action="store_true",
+        help="Write allowlisted orientation contract outside /tmp.",
+    )
+    parser.add_argument(
+        "--public-orientation-path",
+        default=str(PUBLIC_ORIENTATION_PATH),
+        help="Allowlisted public orientation path.",
+    )
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
     modes.add_argument("--preview-screens", action="store_true", help="Generate visual screens under /tmp and exit.")
@@ -2513,6 +2615,9 @@ def main(argv: list[str]) -> int:
     try:
         out_dir = require_tmp_dir(args.out_dir)
         prepare_private_dir(out_dir)
+        public_orientation_path = (
+            require_public_orientation_path(args.public_orientation_path) if args.write_public_orientation else None
+        )
         if args.preview_screens:
             generate_preview_screens(out_dir)
             if args.show_preview:
@@ -2529,10 +2634,16 @@ def main(argv: list[str]) -> int:
             print(json.dumps(status, indent=2, sort_keys=True))
             return 0
         if args.scripted:
-            status = run_scripted(out_dir, args.environment_id, args.rotation_key, args.network_step)
+            status = run_scripted(
+                out_dir,
+                args.environment_id,
+                args.rotation_key,
+                args.network_step,
+                public_orientation_path=public_orientation_path,
+            )
             print(json.dumps(status, indent=2, sort_keys=True))
             return 0
-        run_visual_wizard(out_dir, mpv_bin=args.mpv_bin)
+        run_visual_wizard(out_dir, mpv_bin=args.mpv_bin, public_orientation_path=public_orientation_path)
         return 0
     except VisualWizardAbort:
         try:

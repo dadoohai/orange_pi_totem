@@ -16,6 +16,14 @@ Validacao C10.5.1: os fluxos remotos `--preview-orientation-flow`,
 final voltou para `active/enabled`, `NRestarts=0`, `public_state=player_running`
 e playback `playing`.
 
+Atualizacao C10.5.2: o contrato de orientacao passa a ter caminho publico
+allowlisted em `/data/state/totem-display/orientation.json`, usado por splash e
+transicoes quando nenhum `--rotation-deg` explicito e informado. O runner
+`run_c10_5_2_visual_guard_boot_shutdown.sh` adiciona inspecao sanitizada,
+preview de splash de transicao, stress curto, aplicacao/rollback de guardrails
+persistentes e reboot visual controlado. Ver
+`docs/product/80_C10_5_2_VISUAL_GUARD_BOOT_SHUTDOWN.md`.
+
 ## Objetivo
 
 Fechar a superficie visual antes de read-only: reduzir texto tecnico visivel no

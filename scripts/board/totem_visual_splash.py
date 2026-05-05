@@ -25,6 +25,7 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 DEFAULT_FONT = "/usr/share/consolefonts/Lat15-Fixed18.psf.gz"
+PUBLIC_ORIENTATION_PATH = pathlib.Path("/data/state/totem-display/orientation.json")
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 TMP_ROOT = pathlib.Path("/tmp")
@@ -55,6 +56,17 @@ def normalize_rotation_deg(value: int | str) -> int:
     if rotation not in {0, 90, 180, 270}:
         return 0
     return rotation
+
+
+def read_public_orientation_rotation(path: pathlib.Path = PUBLIC_ORIENTATION_PATH) -> tuple[int, str]:
+    try:
+        if path.is_symlink() or not path.exists():
+            return 0, "default"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        rotation = normalize_rotation_deg(data.get("rotation_deg", 0))
+        return rotation, "public_orientation"
+    except Exception:
+        return 0, "default"
 
 
 def source_size_for_rotation(rotation_deg: int) -> tuple[int, int, str]:
@@ -284,7 +296,14 @@ def atomic_write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     os.chmod(path, PRIVATE_FILE_MODE)
 
 
-def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None, rotation_deg: int = 0) -> dict[str, Any]:
+def render_mode(
+    mode: str,
+    *,
+    font_path: str,
+    status_out: pathlib.Path | None,
+    rotation_deg: int = 0,
+    orientation_source: str = "argument",
+) -> dict[str, Any]:
     title, message = MESSAGES[mode]
     rotation = normalize_rotation_deg(rotation_deg)
     _, _, layout_mode = source_size_for_rotation(rotation)
@@ -294,7 +313,9 @@ def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None, r
         "mode": mode,
         "rotation_deg": rotation,
         "layout_mode": layout_mode,
+        "orientation_source": orientation_source,
         "orientation_contract_supported": True,
+        "public_orientation_path_supported": True,
         "rendered": False,
         "fallback_safe": False,
         "real_config_read": False,
@@ -320,18 +341,32 @@ def render_mode(mode: str, *, font_path: str, status_out: pathlib.Path | None, r
 
 def run_self_test() -> None:
     for mode in MESSAGES:
-        payload = render_mode(mode, font_path="/missing-font-for-self-test.psf", status_out=None, rotation_deg=90)
+        payload = render_mode(
+            mode,
+            font_path="/missing-font-for-self-test.psf",
+            status_out=None,
+            rotation_deg=90,
+            orientation_source="argument",
+        )
         assert payload["mode"] == mode
         assert payload["rotation_deg"] == 90
         assert payload["layout_mode"] == "portrait"
+        assert payload["orientation_source"] == "argument"
         assert payload["orientation_contract_supported"] is True
+        assert payload["public_orientation_path_supported"] is True
         assert payload["real_config_read"] is False
         assert payload["real_config_written"] is False
         assert payload["writer_called"] is False
         assert payload["wifi_changed"] is False
         assert payload["network_identifiers_published"] is False
     target = require_tmp_path("/tmp/dadooh-c10-5-splash-self-test/status.json")
-    payload = render_mode("boot", font_path="/missing-font-for-self-test.psf", status_out=target, rotation_deg=270)
+    payload = render_mode(
+        "boot",
+        font_path="/missing-font-for-self-test.psf",
+        status_out=target,
+        rotation_deg=270,
+        orientation_source="argument",
+    )
     assert target.exists()
     assert stat.S_IMODE(target.stat().st_mode) == PRIVATE_FILE_MODE
     text = target.read_text(encoding="utf-8")
@@ -345,7 +380,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("mode", nargs="?", default="boot", choices=sorted(MESSAGES), help="Splash mode to render.")
     parser.add_argument("--font", default=DEFAULT_FONT, help="PSF console font path.")
     parser.add_argument("--status-out", help="Optional sanitized status JSON path under /tmp.")
-    parser.add_argument("--rotation-deg", type=int, default=0, help="Display orientation rotation in degrees: 0, 90, 180 or 270.")
+    parser.add_argument("--rotation-deg", type=int, help="Display orientation rotation in degrees: 0, 90, 180 or 270.")
     parser.add_argument("--orientation", choices=sorted(ORIENTATIONS), help="Named orientation alias.")
     parser.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
     return parser.parse_args(argv)
@@ -362,8 +397,15 @@ def main(argv: list[str]) -> int:
         print("self-test: ok")
         return 0
     status_out = require_tmp_path(args.status_out) if args.status_out else None
-    rotation = ORIENTATIONS[args.orientation] if args.orientation else args.rotation_deg
-    render_mode(args.mode, font_path=args.font, status_out=status_out, rotation_deg=rotation)
+    if args.orientation:
+        rotation = ORIENTATIONS[args.orientation]
+        source = "argument"
+    elif args.rotation_deg is not None:
+        rotation = args.rotation_deg
+        source = "argument"
+    else:
+        rotation, source = read_public_orientation_rotation()
+    render_mode(args.mode, font_path=args.font, status_out=status_out, rotation_deg=rotation, orientation_source=source)
     return 0
 
 
