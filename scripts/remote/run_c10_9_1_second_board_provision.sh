@@ -30,6 +30,7 @@ Modes:
   --verify-config-missing-visual
   --run-f10-candidate-only-check
   --prepare-private-template
+  --validate-private-values
   --provision-real-config
   --verify-player
   --reboot-check
@@ -39,7 +40,8 @@ Options:
       Restricted private values file on the second board. The preferred
       product path is api_key-only when a real api_url source exists; for this
       development round, include api_url too if no versioned real default
-      exists. Values are never printed or copied.
+      exists. Values are validated by totem_private_values_prepare.py and are
+      never printed or copied.
 
   --local-out-dir /tmp/...
 
@@ -62,6 +64,7 @@ while [ "$#" -gt 0 ]; do
     --verify-config-missing-visual) MODE="verify-config-missing-visual" ;;
     --run-f10-candidate-only-check) MODE="run-f10-candidate-only-check" ;;
     --prepare-private-template) MODE="prepare-private-template" ;;
+    --validate-private-values) MODE="validate-private-values" ;;
     --provision-real-config) MODE="provision-real-config" ;;
     --verify-player) MODE="verify-player" ;;
     --reboot-check) MODE="reboot-check" ;;
@@ -85,7 +88,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$MODE" in
-  prepare-only|refresh-install|verify-config-missing-visual|run-f10-candidate-only-check|prepare-private-template|provision-real-config|verify-player|reboot-check) ;;
+  prepare-only|refresh-install|verify-config-missing-visual|run-f10-candidate-only-check|prepare-private-template|validate-private-values|provision-real-config|verify-player|reboot-check) ;;
   *) echo "error: unsupported mode $MODE" >&2; exit 2 ;;
 esac
 
@@ -156,6 +159,7 @@ prepare_local() {
   bash -n "$REPO_ROOT/scripts/board/verify_totem_appliance.sh"
   bash -n "$REPO_ROOT/scripts/board/totem_open_settings_session.sh"
   python3 -m json.tool "$REPO_ROOT/scripts/board/totem_appliance_manifest.json" >/dev/null
+  python3 "$REPO_ROOT/scripts/board/totem_private_values_prepare.py" --self-test >/dev/null
   python3 "$REPO_ROOT/scripts/board/totem_setup_visual_wizard.py" --self-test >/dev/null
   python3 "$REPO_ROOT/scripts/board/totem_visual_splash.py" --self-test >/dev/null
   python3 "$REPO_ROOT/scripts/board/totem_visual_setup_writer_handoff.py" --self-test >/dev/null
@@ -443,164 +447,22 @@ run_verify_config_missing_visual() {
 create_private_template_if_missing() {
   ssh_board "PRIVATE_VALUES='$PRIVATE_VALUES' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' bash -s" <<'REMOTE'
 set -euo pipefail
-mkdir -p "$REMOTE_OUT_DIR/private-template"
-chmod 700 "$REMOTE_OUT_DIR/private-template"
-python3 - "$PRIVATE_VALUES" "$REMOTE_OUT_DIR/private-template/template.json" "$REMOTE_OUT_DIR/private-template/summary.txt" <<'PY'
-import json
-import os
-import pathlib
-import stat
-import sys
-
-private_path = pathlib.Path(sys.argv[1])
-json_out = pathlib.Path(sys.argv[2])
-summary_out = pathlib.Path(sys.argv[3])
-created = False
-refused = None
-if not str(private_path).startswith("/tmp/"):
-    refused = "private_values_path_not_under_tmp"
-elif private_path.exists():
-    created = False
-else:
-    private_path.parent.mkdir(parents=True, exist_ok=True)
-    private_path.parent.chmod(0o700)
-    payload = {
-        "api_url": "PREENCHER_LOCALMENTE_SEM_PUBLICAR",
-        "api_key": "PREENCHER_LOCALMENTE_SEM_PUBLICAR",
-    }
-    tmp = private_path.with_name(f".{private_path.name}.{os.getpid()}.tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.chmod(0o600)
-    os.replace(tmp, private_path)
-    private_path.chmod(0o600)
-    created = True
-secure = False
-if refused is None and private_path.exists() and not private_path.is_symlink() and not private_path.parent.is_symlink():
-    secure = stat.S_IMODE(private_path.parent.stat().st_mode) == 0o700 and stat.S_IMODE(private_path.stat().st_mode) == 0o600
-payload = {
-    "schema_version": "dadooh-c10.9.1-private-template.v1",
-    "private_values_path": "<tmp-private-values>",
-    "created": created,
-    "refused": refused,
-    "private_values_file_secure": secure,
-    "values_printed": False,
-}
-json_out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-json_out.chmod(0o600)
-summary_out.write_text(
-    "\n".join([
-        "C10.9.1 private values template summary",
-        f"created={str(created).lower()}",
-        f"refused={refused or 'none'}",
-        f"private_values_file_secure={str(secure).lower()}",
-        "values_printed=false",
-    ]) + "\n",
-    encoding="utf-8",
-)
-summary_out.chmod(0o600)
-print(f"private_template_created={str(created).lower()}")
-print(f"private_values_file_secure={str(secure).lower()}")
-PY
+python3 "$REMOTE_REPO/scripts/board/totem_private_values_prepare.py" \
+  --write-template \
+  --path "$PRIVATE_VALUES" \
+  --out-dir "$REMOTE_OUT_DIR/private-template" \
+  --require-api-url
 REMOTE
 }
 
 remote_validate_private_values() {
   ssh_board "PRIVATE_VALUES='$PRIVATE_VALUES' REMOTE_OUT_DIR='$REMOTE_OUT_DIR' bash -s" <<'REMOTE'
 set -euo pipefail
-mkdir -p "$REMOTE_OUT_DIR/private-values-check"
-chmod 700 "$REMOTE_OUT_DIR/private-values-check"
-python3 - "$PRIVATE_VALUES" "$REMOTE_OUT_DIR/private-values-check/private-values.json" "$REMOTE_OUT_DIR/private-values-check/summary.txt" <<'PY'
-import json
-import pathlib
-import re
-import stat
-import sys
-
-private_path = pathlib.Path(sys.argv[1])
-json_out = pathlib.Path(sys.argv[2])
-summary_out = pathlib.Path(sys.argv[3])
-placeholder_re = re.compile(r"(preencher|placeholder|replace|example|mock|test)", re.IGNORECASE)
-api_key_present = False
-api_key_placeholder = True
-api_url_present = False
-api_url_placeholder = False
-secure = False
-parse_ok = False
-reason = None
-if not str(private_path).startswith("/tmp/"):
-    reason = "path_not_under_tmp"
-elif private_path.is_symlink() or private_path.parent.is_symlink():
-    reason = "symlink_refused"
-elif not private_path.exists():
-    reason = "missing"
-else:
-    parent_mode = stat.S_IMODE(private_path.parent.stat().st_mode)
-    file_mode = stat.S_IMODE(private_path.stat().st_mode)
-    secure = parent_mode == 0o700 and file_mode == 0o600
-    if not secure:
-        reason = "insecure_permissions"
-    else:
-        try:
-            data = json.loads(private_path.read_text(encoding="utf-8"))
-            parse_ok = isinstance(data, dict)
-        except Exception:
-            data = {}
-            reason = "invalid_json"
-        if parse_ok:
-            api_key = data.get("api_key")
-            api_url = data.get("api_url")
-            api_key_present = isinstance(api_key, str) and bool(api_key.strip())
-            api_key_placeholder = (not api_key_present) or bool(placeholder_re.search(api_key or ""))
-            api_url_present = isinstance(api_url, str) and bool(api_url.strip())
-            api_url_placeholder = bool(api_url_present and placeholder_re.search(api_url or ""))
-            if not api_key_present:
-                reason = "api_key_missing"
-            elif api_key_placeholder:
-                reason = "api_key_placeholder"
-            elif api_url_present and api_url_placeholder:
-                reason = "api_url_placeholder"
-            elif not api_url_present:
-                reason = "api_url_missing_no_versioned_default"
-            else:
-                reason = "ok"
-valid = secure and parse_ok and api_key_present and not api_key_placeholder and api_url_present and not api_url_placeholder
-payload = {
-    "schema_version": "dadooh-c10.9.1-private-values-check.v1",
-    "private_values_path": "<tmp-private-values>",
-    "private_values_file_secure": secure,
-    "parse_ok": parse_ok,
-    "api_key_present": api_key_present,
-    "api_key_placeholder": api_key_placeholder,
-    "api_url_present": api_url_present,
-    "api_url_placeholder": api_url_placeholder,
-    "environment_id_required_in_file": False,
-    "environment_id_source": "wizard",
-    "valid_for_c10_9_1": valid,
-    "reason": reason,
-    "values_printed": False,
-}
-json_out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-json_out.chmod(0o600)
-summary_out.write_text(
-    "\n".join([
-        "C10.9.1 private values check summary",
-        f"private_values_file_secure={str(secure).lower()}",
-        f"api_key_present={str(api_key_present).lower()}",
-        f"api_key_placeholder={str(api_key_placeholder).lower()}",
-        f"api_url_present={str(api_url_present).lower()}",
-        "environment_id_source=wizard",
-        f"valid_for_c10_9_1={str(valid).lower()}",
-        f"reason={reason}",
-        "values_printed=false",
-    ]) + "\n",
-    encoding="utf-8",
-)
-summary_out.chmod(0o600)
-print(f"private_values_valid={str(valid).lower()}")
-print(f"reason={reason}")
-if not valid:
-    raise SystemExit(24)
-PY
+python3 "$REMOTE_REPO/scripts/board/totem_private_values_prepare.py" \
+  --validate \
+  --path "$PRIVATE_VALUES" \
+  --out-dir "$REMOTE_OUT_DIR/private-values-check" \
+  --require-api-url
 REMOTE
 }
 
@@ -842,6 +704,22 @@ run_prepare_private_template() {
   exit 0
 }
 
+run_validate_private_values() {
+  prepare_remote_workspace
+  set +e
+  remote_validate_private_values
+  validate_rc="$?"
+  set -e
+  pull_remote_artifacts
+  if [ "$validate_rc" -eq 0 ]; then
+    write_runner_summary "private-values-valid"
+  else
+    write_runner_summary "private-values-invalid"
+  fi
+  printf 'artifacts=%s\n' "$LOCAL_OUT_DIR"
+  exit "$validate_rc"
+}
+
 run_verify_player() {
   prepare_remote_workspace
   remote_sanitize_session_status
@@ -885,6 +763,7 @@ case "$MODE" in
   verify-config-missing-visual) run_verify_config_missing_visual ;;
   run-f10-candidate-only-check) run_f10_candidate_only_check ;;
   prepare-private-template) run_prepare_private_template ;;
+  validate-private-values) run_validate_private_values ;;
   provision-real-config) run_provision_real_config ;;
   verify-player) run_verify_player ;;
   reboot-check) run_reboot_check ;;

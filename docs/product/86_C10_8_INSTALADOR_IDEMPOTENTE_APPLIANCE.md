@@ -294,3 +294,18 @@ controlado:
 Com C10.9.1, a segunda placa fica pronta para C11.0 read-only readiness audit.
 C10.9.1 ainda nao gera imagem final, nao habilita root read-only e nao substitui
 o backend/login final de ativacao.
+
+## Atualizacao C10.10
+
+C10.10 empacota o instalador/verificador como RC de bancada instalavel:
+
+- runbook unico: `docs/product/90_PACOTE_INSTALAVEL_RC_BANCADA.md`;
+- manifest RC: `releases/installable-rc/manifest.md`;
+- helper seguro de private-values:
+  `scripts/board/totem_private_values_prepare.py`;
+- runner C10.9.1 atualizado com `--validate-private-values`.
+
+O instalador C10.8 continua sendo a base operacional. O pacote C10.10 nao muda
+player, writer, Wi-Fi, config real, read-only ou imagem final; apenas consolida
+o caminho reproduzivel e reduz erro humano no provisionamento privado de
+bancada.

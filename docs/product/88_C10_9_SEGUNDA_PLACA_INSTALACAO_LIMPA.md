@@ -221,3 +221,18 @@ Pendencias que permanecem fora de C10.9/C10.9.1:
 - gerar imagem final;
 - validar estrategia de artefato local/offline para `kiosky-player` se a
   producao nao puder depender de checkout local ou rede.
+
+## Atualizacao C10.10
+
+C10.10 transforma o processo validado em C10.9/C10.9.1 em um pacote/runbook RC
+de bancada:
+
+- `docs/product/90_PACOTE_INSTALAVEL_RC_BANCADA.md` descreve bootstrap tecnico,
+  instalacao reproduzivel, verify, provisionamento privado, player e reboot;
+- `releases/installable-rc/manifest.md` fixa o status
+  `installable_bench_rc=true` e documenta que ainda nao e imagem final;
+- `scripts/board/totem_private_values_prepare.py` reduz o risco da etapa manual
+  de private-values sem imprimir secrets.
+
+A instalacao limpa permanece valida, mas o bootstrap tecnico manual do Armbian
+continua fora do produto final e deve ser eliminado em C12.0.

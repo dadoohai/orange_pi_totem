@@ -183,3 +183,17 @@ Ainda fora deste escopo:
 - corte seco;
 - estrategia de artefato offline/produtivo para `kiosky-player`;
 - remocao do bootstrap tecnico manual da imagem final.
+
+## Atualizacao C10.10
+
+C10.10 consolidou o provisionamento privado de bancada em ferramenta e runbook:
+
+- helper: `scripts/board/totem_private_values_prepare.py`;
+- runner C10.9.1: modo `--validate-private-values`;
+- runbook: `docs/product/90_PACOTE_INSTALAVEL_RC_BANCADA.md`;
+- manifest RC: `releases/installable-rc/manifest.md`.
+
+O helper cria template, valida permissoes `0700/0600`, recusa symlink e publica
+somente booleans sanitizados. Ele nao imprime `api_key`, nao despeja `api_url`
+literal e mantem `environment_id` como dado do wizard. C10.10 nao reprovisiona
+a placa e nao altera config real.

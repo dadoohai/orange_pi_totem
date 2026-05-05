@@ -631,6 +631,18 @@ controlado pos-provisionamento passou com config presente,
 segunda placa pronta para C11.0 read-only readiness audit; backend/login final,
 imagem final, root read-only e corte seco seguem fora.
 
+Atualizacao C10.10: 2026-05-05. C10.10 consolida C10.8/C10.9/C10.9.1 em um
+pacote instalavel RC de bancada. Foram adicionados o runbook unico
+`docs/product/90_PACOTE_INSTALAVEL_RC_BANCADA.md`, o helper seguro
+`scripts/board/totem_private_values_prepare.py` e o manifest
+`releases/installable-rc/manifest.md`. O runner C10.9.1 passou a validar
+private-values por esse helper, mantendo apenas summaries sanitizados e sem
+imprimir `api_key`, `api_url` literal ou `environment_id`. O status do RC fica:
+`installable_bench_rc=true`, `final_image=false`, `read_only=false`,
+`power_cut_tested=false` e `long_test=false`. C11.0 e o proximo passo para
+read-only readiness audit; C12.0 deve tratar imagem customizada e eliminar o
+bootstrap tecnico manual do Armbian.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
