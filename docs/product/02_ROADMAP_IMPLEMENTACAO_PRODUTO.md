@@ -477,6 +477,22 @@ rapidamente texto tecnico tipo Armbian/fsck com `files`/`blocks` antes do splash
 Dadooh inicial. Essa janela early-boot fica documentada para a trilha de imagem,
 initramfs/read-only e nao foi mascarada desabilitando fsck nesta rodada.
 
+Atualizacao C10.5.3: 2026-05-05. C10.5.3 adiciona auditoria especifica para
+vazamento visual early-boot antes dos servicos de produto assumirem a HDMI. O
+runner `run_c10_5_3_early_boot_visual_audit.sh` inspeciona categorias
+sanitizadas de `/boot/armbianEnv.txt`, cmdline atual, gettys e servicos visuais,
+gera plano sem aplicar nada e oferece apply/rollback reversiveis para reduzir
+verbosity/console/status/loglevel quando o arquivo Armbian for reconhecido com
+seguranca. Nao desabilita fsck, nao altera initramfs, nao habilita read-only,
+nao faz corte seco e nao toca config real, writer, Wi-Fi/NetworkManager ou
+`kiosky-player`. A validacao aplicou `verbosity=0`, `console=serial`,
+`loglevel=0`, `rd.systemd.show_status=false` e `logo.nologo`, com backup e
+rollback. O reboot controlado voltou em 8s, estado final
+`active/enabled`, `NRestarts=0`, `public_state=player_running`, playback
+`playing`, player/MPV ativos, renderer/setup ausentes,
+`systemctl --failed=0` e filtro critico de kernel `0`. Observacao humana: o
+texto tecnico early-boot sumiu.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
