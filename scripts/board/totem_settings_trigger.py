@@ -35,6 +35,7 @@ STATUS_FILENAME = "trigger-status.json"
 SUMMARY_FILENAME = "summary.txt"
 DIR_MODE = 0o700
 FILE_MODE = 0o600
+LOCK_STALE_WARN_SEC = 1800
 EV_KEY = 0x01
 KEY_F10 = 68
 KEY_F12 = 88
@@ -235,6 +236,9 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
         "open_service_start_attempted": bool(status.get("open_service_start_attempted", False)),
         "open_service_start_result": status.get("open_service_start_result", "not_requested"),
         "session_lock_active": bool(status.get("session_lock_active", False)),
+        "session_lock_age_bucket": status.get("session_lock_age_bucket", "unknown"),
+        "open_service_active_state": status.get("open_service_active_state", "unknown"),
+        "stale_lock_suspected": bool(status.get("stale_lock_suspected", False)),
         "cooldown_active": bool(status.get("cooldown_active", False)),
         "raw_key_values_logged": False,
         "characters_logged": False,
@@ -252,6 +256,9 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
             f"request_written: {str(payload['request_written']).lower()}",
             f"open_service_start_result: {payload['open_service_start_result']}",
             f"session_lock_active: {str(payload['session_lock_active']).lower()}",
+            f"session_lock_age_bucket: {payload['session_lock_age_bucket']}",
+            f"open_service_active_state: {payload['open_service_active_state']}",
+            f"stale_lock_suspected: {str(payload['stale_lock_suspected']).lower()}",
             f"cooldown_active: {str(payload['cooldown_active']).lower()}",
             "raw_key_values_logged: false",
             "characters_logged: false",
@@ -440,6 +447,48 @@ def trigger_service_start(open_service: str) -> str:
     return "started" if completed.returncode == 0 else "failed"
 
 
+def service_active_state(unit_name: str) -> str:
+    if not unit_name:
+        return "not_configured"
+    try:
+        completed = subprocess.run(
+            ["systemctl", "is-active", unit_name],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        )
+    except Exception:
+        return "unknown"
+    value = (completed.stdout or "").strip()
+    return value if value else "unknown"
+
+
+def session_lock_age_bucket(session_lock: pathlib.Path) -> str:
+    try:
+        age = max(0.0, time.time() - session_lock.stat().st_mtime)
+    except OSError:
+        return "unknown"
+    if age < 60:
+        return "lt_1m"
+    if age < 300:
+        return "1_5m"
+    if age < LOCK_STALE_WARN_SEC:
+        return "5_30m"
+    return "gt_30m"
+
+
+def session_lock_diagnostic(session_lock: pathlib.Path, open_service: str) -> dict[str, Any]:
+    age_bucket = session_lock_age_bucket(session_lock)
+    active_state = service_active_state(open_service)
+    return {
+        "session_lock_age_bucket": age_bucket,
+        "open_service_active_state": active_state,
+        "stale_lock_suspected": age_bucket == "gt_30m" and active_state not in {"active", "activating"},
+    }
+
+
 def daemon_wait_timeout(hold_sec: float) -> float:
     return max(float(hold_sec) + 2.0, 8.0)
 
@@ -492,6 +541,7 @@ def daemon_loop(
                 continue
             if session_lock.exists():
                 clear_request(request_dir)
+                diagnostic = session_lock_diagnostic(session_lock, open_service)
                 write_status(
                     request_dir,
                     {
@@ -501,6 +551,7 @@ def daemon_loop(
                         "request_written": False,
                         "session_lock_active": True,
                         "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
+                        **diagnostic,
                     },
                 )
                 time.sleep(1.0)
@@ -605,6 +656,7 @@ def self_test() -> None:
         forbidden = ["TEST_PASSWORD_SHOULD_NOT_LEAK", "TEST_WIFI_SHOULD_NOT_LEAK", "typed-character"]
         for marker in forbidden:
             assert marker not in combined
+        assert "stale_lock_suspected" in combined
         clear_request(request_dir)
         assert not (request_dir / REQUEST_FILENAME).exists()
     print("self-test: ok")

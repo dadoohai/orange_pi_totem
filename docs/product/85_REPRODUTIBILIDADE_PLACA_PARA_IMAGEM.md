@@ -12,6 +12,14 @@ O repo estava limpo em `1089f8253c5ed1854f0d997bf05f73c87e75dbcf`, contendo
 C10.6.2 na matriz de reprodutibilidade, sem rodar writer, sem alterar config
 real, sem alterar Wi-Fi, sem rebootar e sem tocar na segunda placa.
 
+Atualizacao C10.7.2: refresh operacional pos-C10.6.2 executado em 2026-05-05.
+Foi encontrada uma sessao F10 ainda aberta/pendurada e a placa foi devolvida a
+estado operacional limpo. Tambem foram corrigidos e reinstalados apenas os
+scripts de trigger/sessao F10 para limpar `request.json` no fechamento e
+publicar diagnostico sanitizado de lock possivelmente stale. Nao houve writer,
+alteracao de config real, alteracao de Wi-Fi, reboot, pacote novo, upgrade,
+alteracao de `kiosky-player`, uso de segunda placa ou imagem.
+
 ## Pergunta
 
 O estado atual validado na placa dev esta totalmente descrito/versionado no
@@ -50,12 +58,19 @@ Artefatos sanitizados:
 ```text
 /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z/
 /tmp/dadooh-c10-7-reproducibility-audit/20260505T153241Z-c10-7-1-refresh/
+/tmp/dadooh-c10-7-reproducibility-audit/20260505T160644Z-c10-7-2-reproducibility-clean-state/
 ```
 
 Evidencia C10.7.1:
 
 ```text
 docs/evidence/candidate-a/runs/20260505T153241Z-c10-7-1-reproducibility-refresh/README.md
+```
+
+Evidencia C10.7.2:
+
+```text
+docs/evidence/candidate-a/runs/20260505T160644Z-c10-7-2-reproducibility-clean-state/README.md
 ```
 
 ## Snapshot da Placa
@@ -79,10 +94,13 @@ docs/evidence/candidate-a/runs/20260505T153241Z-c10-7-1-reproducibility-refresh/
 - config real: presente, `root:totem` `0640`, usuario `totem` le e nao escreve
 - boot quiet guardrails: aplicados
 - gettys de produto observados: `tty1` e `tty2` inativos/desabilitados
+- `/data/state/totem-display/orientation.json`: presente, publico, `0644`,
+  schema `dadooh-display-orientation.v1`, `rotation_deg=270`,
+  `orientation_label=portrait_left`
 
-Observacao: `/data/state/totem-display` nao existia no snapshot. C10.8 deve
-decidir se cria um `orientation.json` publico padrao ou se ausencia segue como
-estado valido ate o primeiro fluxo de configuracao.
+Observacao: o snapshot C10.7 original ainda nao tinha `orientation.json`
+publico. C10.6.2 criou esse contrato, e C10.7.2 confirmou que ele esta presente
+sem publicar config privada.
 
 ## Snapshot do Repo
 
@@ -90,7 +108,13 @@ estado valido ate o primeiro fluxo de configuracao.
 branch: foundation-v0.1
 HEAD C10.7 original: ae6c658550c12bfa4684b9319091878c00f3e7b0
 HEAD C10.7.1 refresh: 1089f8253c5ed1854f0d997bf05f73c87e75dbcf
+HEAD C10.7.2 clean-state: c87c9a0a3a9434a8b58ba945cfdbee963e4da7e2
 ```
+
+No runner C10.7.2 final, o repo tinha duas entradas dirty correspondentes aos
+ajustes de limpeza/diagnostico C10.7.2 em `totem_open_settings_session.sh` e
+`totem_settings_trigger.py`. A documentacao desta rodada foi atualizada depois
+desse runner.
 
 Inventario versionado:
 
@@ -122,17 +146,17 @@ Capacidades ausentes:
 
 ## Drift Encontrado
 
-- `/opt/totem/bin/kiosky_service_launcher.sh`: difere do HEAD e tambem do
-  worktree local; possivel drift real da placa.
-- `/opt/totem/bin/totem_open_settings_session.sh`: bate com worktree sujo, mas
-  nao com HEAD.
-- `/opt/totem/bin/totem_setup_visual_wizard.py`: bate com worktree sujo, mas
-  nao com HEAD.
-- `/etc/systemd/system/totem-open-settings.service`: bate com worktree sujo,
-  mas nao com HEAD.
-- `/opt/totem/bin/totem_wifi_local_credentials_tty.py`: existe no repo, mas nao
-  foi encontrado em `/opt/totem/bin`.
-- `/etc/systemd/system/dadooh-visual-splash.service`: existe e esta ativo na
+Historico C10.7/C10.7.1 encontrou drift entre placa, HEAD e worktree. No estado
+C10.7.2 final:
+
+- `totem_open_settings_session.sh` e `totem_settings_trigger.py` foram
+  corrigidos no worktree e reinstalados na placa; precisam ser commitados antes
+  de C10.8 virar fonte unica;
+- `/opt/totem/bin/kiosky_service_launcher.sh` segue como possivel drift real da
+  placa;
+- `/opt/totem/bin/totem_wifi_local_credentials_tty.py` existe no repo, mas nao
+  foi encontrado em `/opt/totem/bin`;
+- `/etc/systemd/system/dadooh-visual-splash.service` existe e esta ativo na
   placa, mas nao existe como `.service` standalone versionado.
 
 No refresh C10.7.1, os arquivos C10.6.2 estavam commitados e o repo estava
@@ -140,6 +164,12 @@ limpo. Persistiram dois pontos para C10.8:
 
 - `kiosky_service_launcher.sh` instalado na placa ainda diverge do HEAD;
 - `dadooh-visual-splash.service` segue sem unit standalone versionada.
+
+No C10.7.2, `totem_open_settings_session.sh` e `totem_settings_trigger.py`
+foram atualizados no repo e reinstalados na placa. O drift restante continua
+concentrado em inventario/deploy de `/opt/totem/bin`, especialmente o pin do
+conteudo instalado e o script `totem_wifi_local_credentials_tty.py` ausente na
+placa.
 
 ## Delta pos-C10.6.2 incorporado
 
@@ -196,6 +226,63 @@ C10.8 na placa dev, fazer um preflight read-only curto para confirmar:
 
 Nao executar writer para esse preflight; apenas observar.
 
+## Delta C10.7.2 - estado operacional limpo
+
+Preflight inicial C10.7.2 encontrou:
+
+- `totem-open-settings.service=activating/static`;
+- `kiosky-player.service=inactive/enabled`;
+- processo de setup presente;
+- `session.lock=true`;
+- `request.json=true`;
+- `public_state=maintenance_placeholder`;
+- playback publico ainda `playing`;
+- `systemctl --failed=0`.
+
+Classificacao: `stale_session_suspected`.
+
+Limpeza segura executada:
+
+- parado apenas `totem-open-settings.service`;
+- removidos apenas arquivos temporarios/stale sob `/run/dadooh-settings`;
+- restaurado `kiosky-player.service`;
+- resetado estado failed residual da unit de open-settings apos o stop;
+- nenhum writer, config real, Wi-Fi, pacote, reboot ou `kiosky-player` foi
+  alterado.
+
+Correcoes versionadas e instaladas na placa:
+
+- `totem_open_settings_session.sh` agora remove `request.json` tanto no
+  fechamento normal quanto no `trap`;
+- `totem_settings_trigger.py` agora registra diagnostico sanitizado de lock:
+  `session_lock_age_bucket`, `open_service_active_state` e
+  `stale_lock_suspected`;
+- uma nova sessao continua bloqueada enquanto `session.lock` existir.
+
+Estado final C10.7.2:
+
+- `clean_operational_state=true`;
+- `session_lock_present=false`;
+- `request_file_present=false`;
+- `open_settings_service_state=inactive/static`;
+- `player_service_state=active/enabled`;
+- `trigger_service_state=active/enabled`;
+- `systemctl_failed_count=0`;
+- `setup_process_count=0`;
+- `public_state=player_running`;
+- `playback=playing`;
+- `mpv_running=true`;
+- `orientation_json_present=true`;
+- `ready_for_c10_8_installer=true`;
+- `second_board_ready_by_script_today=false`.
+
+Nao foi executado F10 cancel/dry-run nesta rodada depois da limpeza. Motivo:
+isso abriria nova sessao interativa local na placa logo apos estabilizar o
+estado, e a correcao aplicada foi validada por self-test do trigger, sintaxe do
+script de sessao, preflight sanitizado e runner C10.7 completo. C10.8 deve
+incluir smoke curto de F10 cancel/dry-run depois que o instalador idempotente
+existir.
+
 ## Tabela Placa vs Repo
 
 | Item | Presente na placa | Presente no repo | Reproduzivel por script hoje | Privado/nao entra na imagem | Classificacao | Acao necessaria |
@@ -208,7 +295,7 @@ Nao executar writer para esse preflight; apenas observar.
 | /opt/totem/bin scripts allowlisted | 13/14 | sim | nao | nao | POSSIVEL_DRIFT_PLACA | Resolver drift antes da segunda placa. |
 | Systemd kiosky-player.service | sim | sim | sim | nao | OK_VERSIONADO | Unit bate com HEAD. |
 | Systemd totem-settings-trigger.service | sim | sim | sim | nao | OK_VERSIONADO | Unit bate com HEAD. |
-| Systemd totem-open-settings.service | sim | sim | nao | nao | POSSIVEL_DRIFT_PLACA | Bate com worktree sujo, nao com HEAD. |
+| Systemd totem-open-settings.service | sim | sim | sim | nao | OK_VERSIONADO | Unit bate com HEAD; script de sessao C10.7.2 foi atualizado e reinstalado. |
 | Systemd dadooh-visual-splash.service | sim | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Versionar ou gerar deterministicamente no C10.8. |
 | Trigger F10 persistente | sim | sim | sim | nao | OK_VERSIONADO | Incluir instalacao/habilitacao no C10.8. |
 | Runner C10.6.2 apply via F10 | n/a | sim | parcial | nao | OK_VERSIONADO | C10.8 deve instalar as dependencias e preservar o runner como validacao/procedimento, nao como segredo. |
@@ -229,7 +316,7 @@ Nao executar writer para esse preflight; apenas observar.
 | `kiosky-player` em `/opt/totem/kiosky-player` | sim | sim | nao | nao | FALTA_SCRIPT_INSTALACAO | Deploy existe, mas falta pin/manifest. |
 | Commit/ref fixado do `kiosky-player` | nao | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Registrar origem e ref exatos. |
 | Player public_state/playback apos reboot | sim | sim | nao | nao | ESTADO_TEMPORARIO | Validar por smoke curto no C10.8; nao copiar status runtime. |
-| `/data/state/totem-display/orientation.json` | nao | sim | parcial | nao | PRECISA_DECISAO | Definir default publico ou aceitar ausencia ate configuracao. |
+| `/data/state/totem-display/orientation.json` | sim | sim | parcial | nao | OK_VERSIONADO | C10.8 deve criar/validar contrato publico seguro e preservar somente campos allowlisted. |
 | Read-only/root overlay e corte seco | nao | nao | nao | nao | NAO_DEVE_ENTRAR_IMAGEM | Fora desta rodada. |
 | Instalador idempotente unico do appliance | nao | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Escopo direto de C10.8. |
 
@@ -238,14 +325,15 @@ Nao executar writer para esse preflight; apenas observar.
 Os scripts em `/opt/totem/bin` vieram do repo?
 
 Parcialmente. A maioria bate com HEAD. `kiosky_service_launcher.sh` parece
-drift real da placa; `totem_open_settings_session.sh` e
-`totem_setup_visual_wizard.py` batem com worktree sujo, nao com commit.
+drift real da placa. C10.7.2 reinstalou os scripts F10 corrigidos, mas C10.8
+ainda precisa reinstalar todos os allowlisted a partir de um commit unico e
+registrar manifest.
 
 As units systemd instaladas existem no repo?
 
 Parcialmente. Tres units existem no repo. `totem-open-settings.service` bate
-com worktree sujo, nao com HEAD. `dadooh-visual-splash.service` esta na placa,
-mas nao existe como unit standalone versionada.
+com HEAD. `dadooh-visual-splash.service` esta na placa, mas nao existe como
+unit standalone versionada.
 
 Os guardrails de boot estao documentados e scriptaveis?
 
@@ -349,11 +437,20 @@ git rev-parse HEAD
 rg --files scripts/board
 rg --files scripts/remote
 bash -n scripts/remote/run_c10_7_reproducibility_audit.sh
-scripts/remote/run_c10_7_reproducibility_audit.sh root@192.168.1.147 --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
+scripts/remote/run_c10_7_reproducibility_audit.sh <host> --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
 scripts/remote/run_c10_7_reproducibility_audit.sh --audit-repo --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
 scripts/remote/run_c10_7_reproducibility_audit.sh --compare --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
-scripts/remote/run_c10_7_reproducibility_audit.sh root@192.168.1.147 --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T153241Z-c10-7-1-refresh
+scripts/remote/run_c10_7_reproducibility_audit.sh <host> --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T153241Z-c10-7-1-refresh
+ssh <host> '<preflight sanitizado C10.7.2>'
+scp scripts/board/totem_open_settings_session.sh scripts/board/totem_settings_trigger.py <host>:/tmp/dadooh-c10-7-2-script-refresh/
+ssh <host> '<instalar scripts F10 corrigidos e reiniciar apenas totem-settings-trigger.service>'
+bash -n scripts/board/totem_open_settings_session.sh
+python3 scripts/board/totem_settings_trigger.py --self-test
+scripts/remote/run_c10_7_reproducibility_audit.sh <host> --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T160644Z-c10-7-2-reproducibility-clean-state
 ```
 
-Nenhum comando de instalacao, upgrade, reboot, writer, alteracao de rede,
-alteracao de player, read-only ou corte seco foi executado.
+Nenhum comando de pacote/upgrade, reboot, writer, alteracao de rede, alteracao
+de config real, alteracao de `kiosky-player`, habilitacao de read-only ou corte
+seco foi executado. C10.7.2 instalou somente dois scripts board corrigidos
+(`totem_open_settings_session.sh` e `totem_settings_trigger.py`) e reiniciou
+apenas `totem-settings-trigger.service`.

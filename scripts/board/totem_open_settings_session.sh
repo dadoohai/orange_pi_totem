@@ -240,6 +240,7 @@ WRITER="$SCRIPT_DIR/totem_config_writer_real.py"
 CONTRACT="$SCRIPT_DIR/totem_config_contract_validate.py"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 FINAL_STATUS="$OUT_DIR/session-status.json"
+REQUEST_FILE="$(dirname "$LOCK_DIR")/request.json"
 GETTY_UNITS=("getty@tty1.service" "getty@tty${REMOTE_TTY}.service")
 WIZARD_RC="not_run"
 HANDOFF_RC="not_run"
@@ -654,6 +655,14 @@ cleanup_apply_policy() {
   fi
 }
 
+cleanup_trigger_request() {
+  case "$REQUEST_FILE" in
+    /run/*|/tmp/*)
+      rm -f "$REQUEST_FILE" || true
+      ;;
+  esac
+}
+
 write_final_status() {
   wait_player_running || true
   python3 - "$FINAL_STATUS" "$OUT_DIR" "$WIZARD_OUT_DIR" "$MODE" "$EXPECTED_RESULT" "$WIZARD_RC" \
@@ -855,6 +864,7 @@ on_exit() {
   trap - EXIT INT TERM HUP
   kill_visual_if_running || true
   cleanup_apply_policy || true
+  cleanup_trigger_request || true
   restore_service || true
   write_final_status || true
   restore_getty || true
@@ -1028,6 +1038,7 @@ restore_service || true
 wait_player_running || true
 write_final_status
 restore_getty || true
+cleanup_trigger_request || true
 trap - EXIT INT TERM HUP
 rmdir "$LOCK_DIR" 2>/dev/null || true
 exit 0
