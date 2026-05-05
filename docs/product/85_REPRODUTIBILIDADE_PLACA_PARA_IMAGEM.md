@@ -5,6 +5,13 @@ Data: 2026-05-05
 Status: auditoria read-only executada na placa dev. Nao e instalador, nao e
 imagem, nao toca segunda placa/cartao.
 
+Atualizacao C10.7.1: refresh read-only pos-C10.6.2 executado em 2026-05-05.
+O repo estava limpo em `1089f8253c5ed1854f0d997bf05f73c87e75dbcf`, contendo
+`ede0fbc Add C10.6.2 F10 settings apply flow` e
+`4d65f28 Add C10.7 reproducibility audit`. O refresh incorporou o delta
+C10.6.2 na matriz de reprodutibilidade, sem rodar writer, sem alterar config
+real, sem alterar Wi-Fi, sem rebootar e sem tocar na segunda placa.
+
 ## Pergunta
 
 O estado atual validado na placa dev esta totalmente descrito/versionado no
@@ -42,6 +49,13 @@ Artefatos sanitizados:
 
 ```text
 /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z/
+/tmp/dadooh-c10-7-reproducibility-audit/20260505T153241Z-c10-7-1-refresh/
+```
+
+Evidencia C10.7.1:
+
+```text
+docs/evidence/candidate-a/runs/20260505T153241Z-c10-7-1-reproducibility-refresh/README.md
 ```
 
 ## Snapshot da Placa
@@ -74,7 +88,8 @@ estado valido ate o primeiro fluxo de configuracao.
 
 ```text
 branch: foundation-v0.1
-HEAD: ae6c658550c12bfa4684b9319091878c00f3e7b0
+HEAD C10.7 original: ae6c658550c12bfa4684b9319091878c00f3e7b0
+HEAD C10.7.1 refresh: 1089f8253c5ed1854f0d997bf05f73c87e75dbcf
 ```
 
 Inventario versionado:
@@ -94,8 +109,10 @@ Capacidades presentes:
 - check de prerequisitos runtime
 - deploy do `kiosky-player`
 - runner de trigger persistente F10
+- runner C10.6.2 para apply via F10
 - runner de guardrails visuais
 - runner de early boot quiet
+- docs/evidencia C10.6.2 sanitizados
 
 Capacidades ausentes:
 
@@ -118,6 +135,67 @@ Capacidades ausentes:
 - `/etc/systemd/system/dadooh-visual-splash.service`: existe e esta ativo na
   placa, mas nao existe como `.service` standalone versionado.
 
+No refresh C10.7.1, os arquivos C10.6.2 estavam commitados e o repo estava
+limpo. Persistiram dois pontos para C10.8:
+
+- `kiosky_service_launcher.sh` instalado na placa ainda diverge do HEAD;
+- `dadooh-visual-splash.service` segue sem unit standalone versionada.
+
+## Delta pos-C10.6.2 incorporado
+
+C10.6.2 acrescenta ao escopo de reprodutibilidade:
+
+- `scripts/remote/run_c10_6_2_apply_settings_from_f10.sh`;
+- `scripts/board/totem_setup_visual_wizard.py` atualizado;
+- `scripts/board/totem_open_settings_session.sh` atualizado;
+- `scripts/board/totem-open-settings.service` atualizado;
+- contrato publico `/data/state/totem-display/orientation.json`;
+- `totem-settings-trigger.service`;
+- `totem-open-settings.service`;
+- fluxo persistente F10 -> wizard -> handoff -> writer;
+- handoff privado via `totem_visual_setup_writer_handoff.py`;
+- writer real via `totem_config_writer_real.py`;
+- splash/transicoes lendo `orientation.json`;
+- politica one-shot em `/run/dadooh-settings/apply-policy.json`;
+- limpeza de politica de apply apos consumo;
+- `docs/product/84_C10_6_2_APLICAR_CONFIGURACOES_VIA_F10.md`;
+- evidencia sanitizada em
+  `docs/evidence/candidate-a/runs/20260505T141539Z-c10-6-2-apply-settings-from-f10/README.md`.
+
+O refresh read-only confirmou na placa:
+
+- `orientation.json` publico existe;
+- `rotation_deg=270`;
+- `orientation_label=portrait_left`;
+- schema `dadooh-display-orientation.v1`;
+- arquivo `orientation.json` em modo `0644`, `root:root`;
+- scripts instalados esperados para wizard/session/handoff/writer/trigger/splash
+  estao presentes em `/opt/totem/bin`;
+- `totem-settings-trigger.service` esta `active/enabled`;
+- `dadooh-visual-splash.service` esta `active/enabled`;
+- `apply-policy.json` nao estava presente em `/run/dadooh-settings`.
+
+O refresh tambem observou uma condicao transitoria na placa:
+
+- `totem-open-settings.service=activating`;
+- `kiosky-player.service=inactive/enabled`;
+- processo de setup presente;
+- status publico em `maintenance_placeholder`;
+- playback publico ainda `playing` no arquivo do player.
+
+Portanto, C10.7.1 incorpora o delta C10.6.2 para C10.8, mas nao deve ser usado
+como prova de estado final `player_running` naquele minuto. Antes de iniciar
+C10.8 na placa dev, fazer um preflight read-only curto para confirmar:
+
+- `kiosky-player.service=active/enabled`;
+- `totem-open-settings.service=inactive/static`;
+- sem `session.lock` em `/run/dadooh-settings`;
+- sem processo de setup;
+- `public_state=player_running`;
+- playback `playing`.
+
+Nao executar writer para esse preflight; apenas observar.
+
 ## Tabela Placa vs Repo
 
 | Item | Presente na placa | Presente no repo | Reproduzivel por script hoje | Privado/nao entra na imagem | Classificacao | Acao necessaria |
@@ -133,6 +211,14 @@ Capacidades ausentes:
 | Systemd totem-open-settings.service | sim | sim | nao | nao | POSSIVEL_DRIFT_PLACA | Bate com worktree sujo, nao com HEAD. |
 | Systemd dadooh-visual-splash.service | sim | nao | nao | nao | FALTA_SCRIPT_INSTALACAO | Versionar ou gerar deterministicamente no C10.8. |
 | Trigger F10 persistente | sim | sim | sim | nao | OK_VERSIONADO | Incluir instalacao/habilitacao no C10.8. |
+| Runner C10.6.2 apply via F10 | n/a | sim | parcial | nao | OK_VERSIONADO | C10.8 deve instalar as dependencias e preservar o runner como validacao/procedimento, nao como segredo. |
+| Wizard visual atualizado C10.6.2 | sim | sim | sim | nao | OK_VERSIONADO | Instalar versao commitada em `/opt/totem/bin`. |
+| Sessao F10/open-settings atualizada | sim | sim | sim | nao | OK_VERSIONADO | Instalar script e unit commitados. |
+| Handoff privado setup -> writer | sim | sim | sim | nao | OK_VERSIONADO | Instalar script; nao persistir candidata privada. |
+| Writer real guardado | sim | sim | sim | nao | OK_VERSIONADO | Instalar script; C10.8 nao deve chamar writer nem escrever config privada. |
+| Contrato publico orientation.json | sim | sim | parcial | nao | OK_VERSIONADO | Criar/validar arquivo publico seguro ou preservar se ja existir; nao ler config real. |
+| Politica one-shot em `/run/dadooh-settings` | sim | sim | parcial | nao | OK_VERSIONADO | C10.8 deve garantir diretorio runtime e limpeza de politica/request temporarios. |
+| Evidencia sanitizada C10.6.2 | n/a | sim | n/a | nao | OK_VERSIONADO | Manter como evidencia; nao copiar artefatos privados. |
 | Guardrails visuais boot/shutdown/transicao | sim | sim | sim | nao | OK_VERSIONADO | Transformar runner reversivel em etapa idempotente. |
 | Early boot quiet em `/boot/armbianEnv.txt` | sim | sim | sim | nao | OK_VERSIONADO | Aplicar/validar flags allowlisted no instalador. |
 | Wi-Fi dedicado persistente | sim | sim | nao | sim | ESTADO_PRIVADO_NAO_IMAGEM | Provisionamento de campo/local; nao entra na imagem. |
@@ -213,8 +299,17 @@ Escopo proposto:
 - instalar scripts de `scripts/board` em `/opt/totem/bin`;
 - instalar services systemd versionados;
 - habilitar services necessarios;
+- instalar o fluxo F10 persistente e C10.6.2:
+  `totem_settings_trigger.py`, `totem_open_settings_session.sh`,
+  `totem_setup_visual_wizard.py`, `totem_visual_setup_writer_handoff.py`,
+  `totem_config_writer_real.py`, `totem_visual_splash.py` e
+  `totem_wifi_nm_adapter.py`;
 - aplicar guardrails visuais de boot/shutdown/transicao;
 - aplicar early boot quiet allowlisted em `/boot/armbianEnv.txt`;
+- criar/validar `/data/state/totem-display/orientation.json` como contrato
+  publico seguro, sem ler config real;
+- garantir `/run/dadooh-settings` como runtime temporario e limpar
+  `apply-policy.json`, requests e locks obsoletos antes/depois dos fluxos;
 - instalar runtime minimo sem `apt upgrade`, `full-upgrade`,
   `dist-upgrade` ou `armbian-upgrade`;
 - instalar ou atualizar `kiosky-player` em commit/ref fixado;
@@ -223,9 +318,25 @@ Escopo proposto:
 - nao instalar secrets;
 - nao escrever config real privada;
 - nao embutir SSID/senha;
+- nao embutir `api_url`, `api_key`, `environment_id` ou `station_id`;
+- nao embutir `orientation.json` privado; o arquivo e publico e deve conter
+  somente campos allowlisted;
 - nao copiar midias/cache/logs/estado runtime;
+- nao copiar backups de config;
+- nao chamar writer durante instalacao base;
 - validar idempotencia rodando duas vezes;
 - rodar smoke curto read-only de servicos/status depois da instalacao.
+
+Validar na segunda placa/cartao, depois de C10.8:
+
+- instalador idempotente roda duas vezes sem drift;
+- services finais `active/enabled` onde aplicavel;
+- F10 abre Configuracoes e cancela sem shell;
+- dry-run F10 passa sem writer;
+- escrita real so roda em etapa autorizada separada, nao no instalador base;
+- `orientation.json` propaga para splash/transicoes;
+- config real e Wi-Fi dedicado continuam provisionamento de campo;
+- secrets, SSID, midias, cache, logs e backups nao entram na imagem.
 
 ## Comandos Executados
 
@@ -241,6 +352,7 @@ bash -n scripts/remote/run_c10_7_reproducibility_audit.sh
 scripts/remote/run_c10_7_reproducibility_audit.sh root@192.168.1.147 --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
 scripts/remote/run_c10_7_reproducibility_audit.sh --audit-repo --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
 scripts/remote/run_c10_7_reproducibility_audit.sh --compare --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T140757Z
+scripts/remote/run_c10_7_reproducibility_audit.sh root@192.168.1.147 --summary --out-dir /tmp/dadooh-c10-7-reproducibility-audit/20260505T153241Z-c10-7-1-refresh
 ```
 
 Nenhum comando de instalacao, upgrade, reboot, writer, alteracao de rede,
