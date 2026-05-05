@@ -39,25 +39,27 @@ O fluxo C10.6 e:
 - nao habilita root read-only;
 - nao faz corte seco.
 
-## Acesso V0
+## Acesso V0 em C10.6
 
-Nesta rodada, o acesso local V0 aceita dois gatilhos em teclado USB:
+Nesta rodada, o acesso local V0 foi validado em bancada por runner e gatilho
+temporario. A rodada seguinte, C10.6.1, transforma o acesso em servico
+persistente.
 
-- `Ctrl+I` segurado por 5 segundos;
-- `F10` segurado por 5 segundos.
+O caminho de produto definido e `F10` segurado por 5 segundos. `Ctrl+I` e `F12`
+nao sao caminho principal; ficam apenas como alternativas tecnicas se flags de
+desenvolvimento forem habilitadas explicitamente.
 
-`F12` continua aceito como fallback tecnico quando disponivel, mas nao e o
-atalho principal porque alguns teclados exigem `Fn`. O trigger monitora
-`/dev/input` em modo read-only, detecta apenas esses gatilhos longos e grava
-uma solicitacao publica restrita em `/run/dadooh-settings/request.json`:
+O trigger monitora `/dev/input` em modo read-only, detecta apenas o gesto longo
+permitido e grava uma solicitacao publica restrita em
+`/run/dadooh-settings/request.json`:
 
 - `schema_version`;
 - `requested_at`;
-- `trigger_type=keyboard_ctrl_i_hold` ou `keyboard_f10_hold`;
+- `trigger_type=keyboard_f10_hold`;
 - `action=open_settings`.
 
-Depois disso, o wizard visual de Configuracoes abre diretamente. Uma tela modal
-de confirmacao com contagem regressiva fica para C10.6.1 junto com PIN/senha.
+Depois disso, o wizard visual de Configuracoes abre diretamente. PIN/senha local
+e confirmacao modal ficam para rodada posterior.
 
 O contrato de produto fica separado:
 
@@ -101,5 +103,6 @@ de forma persistente. A instalacao e reversivel por
 
 ## Proximo passo
 
-C10.7 deve tratar Suporte Local V0 como frente separada: diagnostico,
-reiniciar exibicao, reboot seguro, desligamento seguro e PIN/senha local.
+C10.6.1 instala o gatilho persistente por `F10` longo. C10.7 deve tratar
+Suporte Local V0 como frente separada: diagnostico, reiniciar exibicao, reboot
+seguro e desligamento seguro.

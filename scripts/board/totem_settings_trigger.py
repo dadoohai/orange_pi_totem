@@ -17,6 +17,7 @@ import pathlib
 import select
 import stat
 import struct
+import subprocess
 import sys
 import tempfile
 import time
@@ -27,6 +28,7 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 SCHEMA_VERSION = "dadooh-c10.6-settings-trigger.v1"
+REQUEST_SCHEMA_VERSION = 1
 DEFAULT_REQUEST_DIR = "/run/dadooh-settings"
 REQUEST_FILENAME = "request.json"
 STATUS_FILENAME = "trigger-status.json"
@@ -39,7 +41,7 @@ KEY_F12 = 88
 KEY_I = 23
 KEY_LEFTCTRL = 29
 KEY_RIGHTCTRL = 97
-TRIGGER_KEYS = {
+ALL_FUNCTION_TRIGGERS = {
     KEY_F10: "keyboard_f10_hold",
     KEY_F12: "keyboard_f12_hold",
 }
@@ -60,10 +62,18 @@ class KeyEvent:
 
 
 class FunctionHoldDetector:
-    def __init__(self, hold_sec: float = 5.0) -> None:
+    def __init__(
+        self,
+        hold_sec: float = 5.0,
+        *,
+        enabled_function_triggers: dict[int, str] | None = None,
+        enable_ctrl_i: bool = False,
+    ) -> None:
         if hold_sec <= 0:
             raise TriggerError("hold_sec_invalid")
         self.hold_sec = hold_sec
+        self.enabled_function_triggers = enabled_function_triggers or {KEY_F10: "keyboard_f10_hold"}
+        self.enable_ctrl_i = enable_ctrl_i
         self.down_since: dict[int, float] = {}
         self.ctrl_down_since: float | None = None
         self.i_down_since: float | None = None
@@ -76,7 +86,7 @@ class FunctionHoldDetector:
             return True
         if event.event_type != EV_KEY:
             return False
-        if event.code in CTRL_KEYS:
+        if self.enable_ctrl_i and event.code in CTRL_KEYS:
             if event.value in {1, 2}:
                 if self.ctrl_down_since is None:
                     self.ctrl_down_since = event.timestamp
@@ -86,7 +96,7 @@ class FunctionHoldDetector:
                 self.ctrl_down_since = None
                 self.ctrl_i_down_at = None
             return self.poll(event.timestamp)
-        if event.code == KEY_I:
+        if self.enable_ctrl_i and event.code == KEY_I:
             if event.value in {1, 2}:
                 if self.i_down_since is None:
                     self.i_down_since = event.timestamp
@@ -96,7 +106,7 @@ class FunctionHoldDetector:
                 self.i_down_since = None
                 self.ctrl_i_down_at = None
             return self.poll(event.timestamp)
-        if event.code not in TRIGGER_KEYS:
+        if event.code not in self.enabled_function_triggers:
             return False
         if event.value in {1, 2}:
             if event.code not in self.down_since:
@@ -116,9 +126,17 @@ class FunctionHoldDetector:
         for code, started_at in list(self.down_since.items()):
             if now - started_at >= self.hold_sec:
                 self.triggered = True
-                self.trigger_type = TRIGGER_KEYS.get(code, "unknown")
+                self.trigger_type = self.enabled_function_triggers.get(code, "unknown")
                 return True
         return False
+
+    def reset(self) -> None:
+        self.down_since.clear()
+        self.ctrl_down_since = None
+        self.i_down_since = None
+        self.ctrl_i_down_at = None
+        self.triggered = False
+        self.trigger_type = "unknown"
 
 
 def require_public_dir(raw_path: str) -> pathlib.Path:
@@ -182,7 +200,7 @@ def utc_timestamp() -> str:
 
 def build_request(trigger_type: str) -> dict[str, Any]:
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": REQUEST_SCHEMA_VERSION,
         "requested_at": utc_timestamp(),
         "trigger_type": trigger_type,
         "action": "open_settings",
@@ -191,8 +209,19 @@ def build_request(trigger_type: str) -> dict[str, Any]:
 
 def write_request(request_dir: pathlib.Path, trigger_type: str) -> pathlib.Path:
     target = request_dir / REQUEST_FILENAME
+    try:
+        target.unlink()
+    except FileNotFoundError:
+        pass
     atomic_write_json(target, build_request(trigger_type))
     return target
+
+
+def clear_request(request_dir: pathlib.Path) -> None:
+    try:
+        (request_dir / REQUEST_FILENAME).unlink()
+    except FileNotFoundError:
+        pass
 
 
 def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
@@ -203,6 +232,10 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
         "trigger_detected": bool(status.get("trigger_detected", False)),
         "request_written": bool(status.get("request_written", False)),
         "devices_opened_count": int(status.get("devices_opened_count", 0)),
+        "open_service_start_attempted": bool(status.get("open_service_start_attempted", False)),
+        "open_service_start_result": status.get("open_service_start_result", "not_requested"),
+        "session_lock_active": bool(status.get("session_lock_active", False)),
+        "cooldown_active": bool(status.get("cooldown_active", False)),
         "raw_key_values_logged": False,
         "characters_logged": False,
         "credentials_collected": False,
@@ -217,6 +250,9 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
             f"trigger_type: {payload['trigger_type']}",
             f"trigger_detected: {str(payload['trigger_detected']).lower()}",
             f"request_written: {str(payload['request_written']).lower()}",
+            f"open_service_start_result: {payload['open_service_start_result']}",
+            f"session_lock_active: {str(payload['session_lock_active']).lower()}",
+            f"cooldown_active: {str(payload['cooldown_active']).lower()}",
             "raw_key_values_logged: false",
             "characters_logged: false",
             "credentials_collected: false",
@@ -265,6 +301,8 @@ def wait_for_function_hold(
     hold_sec: float,
     timeout_sec: float,
     request_dir: pathlib.Path,
+    enabled_function_triggers: dict[int, str] | None = None,
+    enable_ctrl_i: bool = False,
 ) -> int:
     devices = discover_devices(device_patterns)
     if not devices:
@@ -299,7 +337,11 @@ def wait_for_function_hold(
         )
         return 4
 
-    detector = FunctionHoldDetector(hold_sec)
+    detector = FunctionHoldDetector(
+        hold_sec,
+        enabled_function_triggers=enabled_function_triggers,
+        enable_ctrl_i=enable_ctrl_i,
+    )
     deadline = time.monotonic() + timeout_sec if timeout_sec > 0 else None
     try:
         while True:
@@ -382,6 +424,107 @@ def wait_for_function_hold(
                 pass
 
 
+def trigger_service_start(open_service: str) -> str:
+    if not open_service:
+        return "not_requested"
+    try:
+        completed = subprocess.run(
+            ["systemctl", "start", open_service],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
+    except Exception:
+        return "failed"
+    return "started" if completed.returncode == 0 else "failed"
+
+
+def daemon_wait_timeout(hold_sec: float) -> float:
+    return max(float(hold_sec) + 2.0, 8.0)
+
+
+def daemon_loop(
+    *,
+    device_patterns: list[str],
+    hold_sec: float,
+    request_dir: pathlib.Path,
+    session_lock: pathlib.Path,
+    open_service: str,
+    cooldown_sec: float,
+    enabled_function_triggers: dict[int, str],
+    enable_ctrl_i: bool,
+) -> int:
+    if cooldown_sec < 0:
+        raise TriggerError("cooldown_sec_invalid")
+    next_allowed = 0.0
+    while True:
+        rc = wait_for_function_hold(
+            device_patterns=device_patterns,
+            hold_sec=hold_sec,
+            timeout_sec=daemon_wait_timeout(hold_sec),
+            request_dir=request_dir,
+            enabled_function_triggers=enabled_function_triggers,
+            enable_ctrl_i=enable_ctrl_i,
+        )
+        if rc == 0:
+            status = {}
+            try:
+                status = json.loads((request_dir / STATUS_FILENAME).read_text(encoding="utf-8"))
+            except Exception:
+                status = {}
+            trigger_type = str(status.get("trigger_type") or "keyboard_f10_hold")
+            now = time.monotonic()
+            if now < next_allowed:
+                clear_request(request_dir)
+                write_status(
+                    request_dir,
+                    {
+                        "status": "cooldown",
+                        "trigger_type": trigger_type,
+                        "trigger_detected": True,
+                        "request_written": False,
+                        "cooldown_active": True,
+                        "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
+                    },
+                )
+                time.sleep(min(1.0, max(0.0, next_allowed - now)))
+                continue
+            if session_lock.exists():
+                clear_request(request_dir)
+                write_status(
+                    request_dir,
+                    {
+                        "status": "session_lock_active",
+                        "trigger_type": trigger_type,
+                        "trigger_detected": True,
+                        "request_written": False,
+                        "session_lock_active": True,
+                        "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
+                    },
+                )
+                time.sleep(1.0)
+                continue
+            result = trigger_service_start(open_service)
+            write_status(
+                request_dir,
+                {
+                    "status": "open_service_requested" if result == "started" else "open_service_failed",
+                    "trigger_type": trigger_type,
+                    "trigger_detected": True,
+                    "request_written": True,
+                    "open_service_start_attempted": True,
+                    "open_service_start_result": result,
+                    "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
+                },
+            )
+            next_allowed = time.monotonic() + cooldown_sec
+        elif rc in {3, 4, 5, 124}:
+            time.sleep(1.0)
+        else:
+            time.sleep(1.0)
+
+
 def self_test() -> None:
     detector = FunctionHoldDetector(hold_sec=5.0)
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_F12, 1, 0.0))
@@ -391,8 +534,7 @@ def self_test() -> None:
 
     detector = FunctionHoldDetector(hold_sec=5.0)
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_F12, 1, 10.0))
-    assert detector.poll(15.0)
-    assert detector.trigger_type == "keyboard_f12_hold"
+    assert not detector.poll(15.0)
 
     detector = FunctionHoldDetector(hold_sec=5.0)
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_F10, 1, 20.0))
@@ -402,11 +544,29 @@ def self_test() -> None:
     detector = FunctionHoldDetector(hold_sec=5.0)
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_LEFTCTRL, 1, 30.0))
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_I, 1, 30.2))
+    assert not detector.poll(35.3)
+
+    detector = FunctionHoldDetector(hold_sec=5.0)
+    assert not detector.handle_event(KeyEvent(EV_KEY, KEY_F12, 1, 10.0))
+    assert detector.handle_event(KeyEvent(EV_KEY, KEY_F12, 2, 15.1)) is False
+    assert not detector.triggered
+
+    detector = FunctionHoldDetector(
+        hold_sec=5.0,
+        enabled_function_triggers={KEY_F10: "keyboard_f10_hold", KEY_F12: "keyboard_f12_hold"},
+    )
+    assert not detector.handle_event(KeyEvent(EV_KEY, KEY_F12, 1, 10.0))
+    assert detector.poll(15.0)
+    assert detector.trigger_type == "keyboard_f12_hold"
+
+    detector = FunctionHoldDetector(hold_sec=5.0, enable_ctrl_i=True)
+    assert not detector.handle_event(KeyEvent(EV_KEY, KEY_LEFTCTRL, 1, 30.0))
+    assert not detector.handle_event(KeyEvent(EV_KEY, KEY_I, 1, 30.2))
     assert not detector.poll(35.1)
     assert detector.poll(35.3)
     assert detector.trigger_type == "keyboard_ctrl_i_hold"
 
-    detector = FunctionHoldDetector(hold_sec=5.0)
+    detector = FunctionHoldDetector(hold_sec=5.0, enable_ctrl_i=True)
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_I, 1, 40.0))
     assert not detector.handle_event(KeyEvent(EV_KEY, KEY_LEFTCTRL, 1, 40.5))
     assert detector.poll(45.5)
@@ -415,6 +575,9 @@ def self_test() -> None:
     detector = FunctionHoldDetector(hold_sec=5.0)
     assert not detector.handle_event(KeyEvent(EV_KEY, 30, 1, 0.0))
     assert not detector.poll(10.0)
+
+    assert daemon_wait_timeout(5.0) > 5.0
+    assert daemon_wait_timeout(1.0) >= 8.0
 
     with tempfile.TemporaryDirectory(prefix="dadooh-trigger-self-test-") as raw:
         request_dir = require_public_dir(raw)
@@ -429,12 +592,21 @@ def self_test() -> None:
                 "devices_opened_count": 1,
             },
         )
+        request_payload = json.loads((request_dir / REQUEST_FILENAME).read_text(encoding="utf-8"))
+        assert request_payload == {
+            "schema_version": REQUEST_SCHEMA_VERSION,
+            "requested_at": request_payload["requested_at"],
+            "trigger_type": "keyboard_f10_hold",
+            "action": "open_settings",
+        }
         combined = (request_dir / REQUEST_FILENAME).read_text(encoding="utf-8")
         combined += (request_dir / STATUS_FILENAME).read_text(encoding="utf-8")
         combined += (request_dir / SUMMARY_FILENAME).read_text(encoding="utf-8")
         forbidden = ["TEST_PASSWORD_SHOULD_NOT_LEAK", "TEST_WIFI_SHOULD_NOT_LEAK", "typed-character"]
         for marker in forbidden:
             assert marker not in combined
+        clear_request(request_dir)
+        assert not (request_dir / REQUEST_FILENAME).exists()
     print("self-test: ok")
 
 
@@ -443,10 +615,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--request-dir", default=DEFAULT_REQUEST_DIR)
     parser.add_argument("--hold-sec", type=float, default=5.0)
     parser.add_argument("--timeout-sec", type=float, default=0.0)
+    parser.add_argument("--cooldown-sec", type=float, default=10.0)
+    parser.add_argument("--session-lock", default="/run/dadooh-settings/session.lock")
+    parser.add_argument("--open-service", default="")
     parser.add_argument("--device-glob", action="append", default=["/dev/input/event*"])
+    parser.add_argument("--enable-ctrl-i", action="store_true")
+    parser.add_argument("--enable-f12", action="store_true")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--wait-once", action="store_true")
+    mode.add_argument("--daemon", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -456,11 +634,27 @@ def main(argv: list[str]) -> int:
         self_test()
         return 0
     request_dir = require_public_dir(args.request_dir)
+    enabled_function_triggers = {KEY_F10: "keyboard_f10_hold"}
+    if args.enable_f12:
+        enabled_function_triggers[KEY_F12] = "keyboard_f12_hold"
+    if args.daemon:
+        return daemon_loop(
+            device_patterns=list(args.device_glob),
+            hold_sec=float(args.hold_sec),
+            request_dir=request_dir,
+            session_lock=pathlib.Path(args.session_lock),
+            open_service=str(args.open_service),
+            cooldown_sec=float(args.cooldown_sec),
+            enabled_function_triggers=enabled_function_triggers,
+            enable_ctrl_i=bool(args.enable_ctrl_i),
+        )
     return wait_for_function_hold(
         device_patterns=list(args.device_glob),
         hold_sec=float(args.hold_sec),
         timeout_sec=float(args.timeout_sec),
         request_dir=request_dir,
+        enabled_function_triggers=enabled_function_triggers,
+        enable_ctrl_i=bool(args.enable_ctrl_i),
     )
 
 

@@ -508,10 +508,22 @@ forma controlada, cobre a HDMI com splash/transicao, abre o wizard visual,
 restaura o player ao cancelar e oferece dry-run com handoff/C5.1 sem chamar
 writer. A escrita real permanece protegida por confirmacao explicita e delegada
 ao fluxo C10.4 ja validado. Wi-Fi/NetworkManager, config real, hotspot, portal,
-root read-only, corte seco e repo `kiosky-player` seguem fora por padrao. C10.6.1
+root read-only, corte seco e repo `kiosky-player` seguem fora por padrao. C10.6.2
 fica reservado para PIN/senha local de Configuracoes; C10.7 fica reservado para
 Suporte Local V0 separado: diagnostico, reiniciar exibicao,
 reboot/desligamento seguro.
+
+Atualizacao C10.6.1: 2026-05-05. C10.6.1 transforma o acesso local de
+Configuracoes em gatilho persistente de produto. O caminho principal passa a ser
+`F10` segurado por 5 segundos, monitorado pelo servico
+`totem-settings-trigger.service`, que cria apenas um request sanitizado em
+`/run/dadooh-settings` e aciona o oneshot `totem-open-settings.service` para
+abrir o wizard visual existente com o player rodando. `Ctrl+I` e `F12` deixam de
+ser caminho principal e ficam disponiveis apenas por flags explicitas de
+desenvolvimento. A UI continua sem menu de manutencao, suporte, terminal, shell,
+root ou login Linux. Writer real, config real, Wi-Fi/NetworkManager, hotspot,
+portal, root read-only e corte seco seguem fora. PIN/senha local fica para
+C10.6.2; Suporte Local V0 continua separado para C10.7.
 
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
