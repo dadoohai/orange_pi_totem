@@ -19,6 +19,7 @@ Status:
 - `c11_3_read_only_enablement=blocked_missing_overlayroot_package`
 - `c11_3_1_overlayroot_prereq=installed_on_dev_not_enabled`
 - `c11_3_2_read_only_enable_dev=blocked_overlayroot_not_activated`
+- `c11_3_3_overlayroot_mechanism_lab=blocked_initramfs_driver_lookup`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
 - `ready_for_c11_1_policy=false`
@@ -70,6 +71,7 @@ Status:
 - `scripts/remote/run_c11_3_read_only_enablement_dev.sh`
 - `scripts/remote/run_c11_3_1_overlayroot_prereq.sh`
 - `scripts/remote/run_c11_3_2_read_only_enable_dev.sh`
+- `scripts/remote/run_c11_3_3_overlayroot_mechanism_lab.sh`
 
 ## Units
 
@@ -199,6 +201,14 @@ mecanismo atual nao ativou read-only: `ssh_returned=true`,
 `read_only_enabled=false`, `overlay_active=false`, player final running e
 rollback executado. C11.4 permanece bloqueado; read-only deve migrar para uma
 nova estrategia em cartao separado ou imagem/base C12.
+
+
+C11.3.3 moveu a investigacao para a placa teste. O pacote `overlayroot` foi
+instalado na teste apos dry-run seguro e o enable/reboot de laboratorio voltou
+por SSH, mas o overlay nao ativou: `read_only_enabled=false`,
+`overlay_active=false`, causa sanitizada `initramfs_log_driver_lookup_failed`.
+Rollback executado na teste. C11.4 continua bloqueado e a dev nao deve receber
+novas tentativas diretas.
 
 ## Handoff
 

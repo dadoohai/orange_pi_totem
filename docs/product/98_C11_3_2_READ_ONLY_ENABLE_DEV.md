@@ -77,3 +77,14 @@ Read-only deve seguir por uma das rotas abaixo em rodada nova:
 
 A placa dev deve permanecer em modo normal (`overlayroot` desabilitado) ate nova
 decisao.
+
+## Follow-up C11.3.3
+
+C11.3.3 preservou a dev e levou a investigacao para a placa teste. O laboratorio
+reproduziu o comportamento: apos instalar `overlayroot`, configurar
+`overlayroot=tmpfs` e rebootar, o SSH voltou, mas `read_only_enabled=false` e
+`overlay_active=false`. A causa sanitizada foi
+`initramfs_log_driver_lookup_failed=true`.
+
+C11.4 segue bloqueado. Nao executar novo enable na dev ate uma estrategia passar
+em laboratorio.

@@ -70,3 +70,10 @@ O pacote `overlayroot` permaneceu como prerequisito identificado, mas o reteste
 C11.3.2 com fonte dedicada mostrou que o mecanismo atual nao ativou o overlay na
 placa dev. O pacote nao deve ser considerado suficiente para liberar C11.4 sem
 nova estrategia de enablement.
+
+## Resultado Posterior em C11.3.3
+
+A placa teste tambem recebeu o pacote `overlayroot` apos dry-run seguro. O pacote
+ficou instalado e o prerequisito ficou presente, mas o reboot de laboratorio nao
+ativou o overlay. Portanto, o prerequisito e necessario, mas nao suficiente para
+liberar read-only nesta imagem.

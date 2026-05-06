@@ -1991,3 +1991,12 @@ repetiu o enablement com fonte dedicada. O SSH voltou, o player permaneceu
 e `overlay_active=false`. Rollback final deixou a dev em modo normal. C11.4
 continua bloqueado; a proxima estrategia de read-only deve ser testada em cartao
 separado ou na imagem/base C12.
+
+Atualizacao C11.3.3: 2026-05-06. C11.3.3 preservou a dev e usou a placa teste
+como laboratorio de `overlayroot`. O prerequisito foi instalado na teste apos
+dry-run seguro (`would_upgrade_count=0`, `would_remove_count=0`, pacotes
+kernel/DTB/U-Boot/BSP intocados). O enable e reboot na teste voltaram por SSH,
+mas `read_only_enabled=false` e `overlay_active=false`; a causa sanitizada foi
+`initramfs_log_driver_lookup_failed=true`. Rollback executado. C11.4 permanece
+bloqueado; a proxima estrategia de read-only deve ser investigada em laboratorio
+ou em imagem/base C12, nao na dev funcional.
