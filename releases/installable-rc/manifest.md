@@ -18,12 +18,13 @@ Status:
 - `c11_2_read_only_mitigation=applied_on_dev_not_read_only`
 - `c11_3_read_only_enablement=blocked_missing_overlayroot_package`
 - `c11_3_1_overlayroot_prereq=installed_on_dev_not_enabled`
+- `c11_3_2_read_only_enable_dev=blocked_overlayroot_not_activated`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
 - `ready_for_c11_1_policy=false`
 - `ready_for_c11_2_enablement=true`
 - `ready_for_c11_3_enablement=true`
-- `ready_for_c11_3_2_enablement=true_on_dev`
+- `ready_for_c11_3_2_enablement=blocked_after_retest`
 - `ready_for_c11_4=false`
 - `ready_for_c12_image=false`
 
@@ -68,6 +69,7 @@ Status:
 - `scripts/remote/run_c11_2_read_only_mitigation_apply.sh`
 - `scripts/remote/run_c11_3_read_only_enablement_dev.sh`
 - `scripts/remote/run_c11_3_1_overlayroot_prereq.sh`
+- `scripts/remote/run_c11_3_2_read_only_enable_dev.sh`
 
 ## Units
 
@@ -189,6 +191,14 @@ dry-run previo foi seguro:
 kernel/DTB/U-Boot/BSP seria tocado. O instalador agora declara
 `--install-readonly-prereqs`; a imagem final C12 deve incluir esse pacote antes
 do enablement read-only.
+
+
+C11.3.2 executou reteste com fonte dedicada depois de recuperacao offline. A
+falha anterior ficou `POWER_SUPPLY_CONFOUNDED`, mas o reteste confirmou que o
+mecanismo atual nao ativou read-only: `ssh_returned=true`,
+`read_only_enabled=false`, `overlay_active=false`, player final running e
+rollback executado. C11.4 permanece bloqueado; read-only deve migrar para uma
+nova estrategia em cartao separado ou imagem/base C12.
 
 ## Handoff
 

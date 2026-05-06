@@ -63,3 +63,10 @@ dependa de rede/apt em campo.
 
 C11.3.2 pode repetir o enablement read-only controlado na dev usando o pacote
 ja instalado. C11.4 continua bloqueado ate o reboot read-only passar.
+
+## Resultado Posterior em C11.3.2
+
+O pacote `overlayroot` permaneceu como prerequisito identificado, mas o reteste
+C11.3.2 com fonte dedicada mostrou que o mecanismo atual nao ativou o overlay na
+placa dev. O pacote nao deve ser considerado suficiente para liberar C11.4 sem
+nova estrategia de enablement.

@@ -114,3 +114,26 @@ C11.3.1 validou o prerequisito oficial em vez de criar overlay proprio:
 
 C11.3.2 pode tentar habilitar root read-only novamente na dev, ainda com
 rollback e reboot controlado. A imagem base C12 deve incluir esse pacote.
+
+## Follow-up C11.3.2
+
+C11.3.2 repetiu o enablement depois de recuperar a placa dev offline e mover a
+alimentacao para fonte dedicada.
+
+A falha anterior foi classificada como `POWER_SUPPLY_CONFOUNDED`, pois a placa
+estava alimentada pela USB da TV e a TV desligou. No reteste com fonte dedicada,
+o SSH voltou e o player permaneceu operacional, mas `overlayroot` nao ativou:
+
+- `enable_executed=true`;
+- `reboot_executed=true`;
+- `ssh_returned=true`;
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `public_state=player_running`;
+- playback `playing`;
+- rollback final executado.
+
+Classificacao final da rodada: `OVERLAYROOT_ENABLE_DID_NOT_ACTIVATE`.
+
+C11.4 continua bloqueado. O proximo passo de read-only deve ocorrer em cartao
+separado ou na imagem/base C12, nao em nova tentativa direta na placa de produto.

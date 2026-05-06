@@ -1982,3 +1982,12 @@ Criterio de rollback:
 
 - voltar imagem para root gravavel de bancada e corrigir paths mutaveis antes de
   repetir corte seco.
+
+
+Atualizacao C11.3.2: 2026-05-06. C11.3.2 recuperou a dev offline depois de uma
+falha contaminada por alimentacao via USB da TV (`POWER_SUPPLY_CONFOUNDED`) e
+repetiu o enablement com fonte dedicada. O SSH voltou, o player permaneceu
+`player_running`/`playing`, mas `overlayroot` nao ativou: `read_only_enabled=false`
+e `overlay_active=false`. Rollback final deixou a dev em modo normal. C11.4
+continua bloqueado; a proxima estrategia de read-only deve ser testada em cartao
+separado ou na imagem/base C12.

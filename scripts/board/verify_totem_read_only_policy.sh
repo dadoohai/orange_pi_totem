@@ -381,6 +381,9 @@ if policy.get("networkmanager_policy", {}).get("c11_2_required") is not True:
 if policy.get("logs_policy", {}).get("c11_2_required") is not True:
     blockers_remaining.append("journald_c11_2_action_missing")
 
+root_mount = mount_info("/")
+root_persistent_write_blocked = bool(root_mount["read_only"] or root_mount["overlay_active"])
+
 payload = {
     "schema_version": "dadooh-c11.1-read-only-policy-verify.v1",
     "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -408,9 +411,9 @@ payload = {
     "process_counts": process_counts(),
     "systemctl_failed_count": failed_count(),
     "read_only_runtime": {
-        "root_mount": mount_info("/"),
-        "read_only_enabled": mount_info("/")["read_only"] or mount_info("/")["overlay_active"],
-        "overlay_active": mount_info("/")["overlay_active"] or command_available("overlayroot-chroot") and run(["overlayroot-chroot", "true"], 5) is not None and run(["overlayroot-chroot", "true"], 5).returncode == 0,
+        "root_mount": root_mount,
+        "read_only_enabled": root_mount["read_only"] or root_mount["overlay_active"],
+        "overlay_active": root_mount["overlay_active"] or command_available("overlayroot-chroot") and run(["overlayroot-chroot", "true"], 5) is not None and run(["overlayroot-chroot", "true"], 5).returncode == 0,
         "overlayroot_command_available": command_available("overlayroot"),
         "overlayroot_chroot_available": command_available("overlayroot-chroot"),
         "overlayroot_package_present": package_installed("overlayroot"),
@@ -420,6 +423,8 @@ payload = {
         "tmp_writable": safe_write_probe("/tmp/.dadooh-c11-policy-write-probe")["write_ok"],
         "run_writable": safe_write_probe("/run/.dadooh-c11-policy-write-probe")["write_ok"],
         "protected_root_write_blocked": safe_write_probe("/root/.dadooh-c11-policy-root-write-probe")["write_blocked"],
+        "root_persistent_write_blocked": root_persistent_write_blocked,
+        "merged_root_write_may_be_ephemeral_under_overlay": root_mount["overlay_active"],
     },
     "persistent_writable_paths": list_policy_rows("persistent_writable_paths"),
     "runtime_writable_paths": list_policy_rows("runtime_writable_paths"),
@@ -484,7 +489,7 @@ payload["root_read_only_ready"] = bool(
     and payload["read_only_runtime"]["data_writable"]
     and payload["read_only_runtime"]["tmp_writable"]
     and payload["read_only_runtime"]["run_writable"]
-    and payload["read_only_runtime"]["protected_root_write_blocked"]
+    and payload["read_only_runtime"]["root_persistent_write_blocked"]
 )
 payload["ready_for_read_only_enablement"] = payload["root_read_only_ready"]
 payload["ready_for_c11_4_read_only_reboot_validation"] = bool(
@@ -513,6 +518,7 @@ lines = [
     f"tmp_writable: {payload['read_only_runtime']['tmp_writable']}",
     f"run_writable: {payload['read_only_runtime']['run_writable']}",
     f"protected_root_write_blocked: {payload['read_only_runtime']['protected_root_write_blocked']}",
+    f"root_persistent_write_blocked: {payload['read_only_runtime']['root_persistent_write_blocked']}",
     f"networkmanager_policy: {payload['networkmanager']['classification']}",
     f"journald_policy: {payload['journald']['classification']}",
     f"journald_policy_applied: {payload['c11_2_mitigation']['journald_policy_applied']}",
