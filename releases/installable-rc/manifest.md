@@ -17,11 +17,13 @@ Status:
 - `c11_1_read_only_policy=policy_defined_not_applied`
 - `c11_2_read_only_mitigation=applied_on_dev_not_read_only`
 - `c11_3_read_only_enablement=blocked_missing_overlayroot_package`
+- `c11_3_1_overlayroot_prereq=installed_on_dev_not_enabled`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
 - `ready_for_c11_1_policy=false`
 - `ready_for_c11_2_enablement=true`
 - `ready_for_c11_3_enablement=true`
+- `ready_for_c11_3_2_enablement=true_on_dev`
 - `ready_for_c11_4=false`
 - `ready_for_c12_image=false`
 
@@ -65,6 +67,7 @@ Status:
 - `scripts/remote/run_c11_1_read_only_policy_probe.sh`
 - `scripts/remote/run_c11_2_read_only_mitigation_apply.sh`
 - `scripts/remote/run_c11_3_read_only_enablement_dev.sh`
+- `scripts/remote/run_c11_3_1_overlayroot_prereq.sh`
 
 ## Units
 
@@ -80,6 +83,14 @@ Status:
 - `ffmpeg`
 - `python3-requests`
 - `NetworkManager`
+
+Read-only prerequisite for C11/C12 image:
+
+- package: `overlayroot`;
+- command: `overlayroot-chroot`;
+- initramfs script: `/usr/share/initramfs-tools/scripts/init-bottom/overlayroot`;
+- install flag: `--install-readonly-prereqs`;
+- policy: exact package only, `--no-upgrade`, no broad upgrades.
 
 Runtime install policy:
 
@@ -170,6 +181,15 @@ bloqueado com seguranca:
 Proximo gate precisa decidir como aprovisionar o mecanismo oficial sem
 `apt upgrade`, ou mover esse requisito para a imagem base.
 
+C11.3.1 identificou `overlayroot` como pacote exato para o mecanismo oficial
+do Armbian. Na dev, a instalacao controlada foi executada apos confirmacao e
+disponibilizou `overlayroot-chroot` e o script de initramfs do pacote. O
+dry-run previo foi seguro:
+`would_upgrade_count=0`, `would_remove_count=0` e nenhum pacote
+kernel/DTB/U-Boot/BSP seria tocado. O instalador agora declara
+`--install-readonly-prereqs`; a imagem final C12 deve incluir esse pacote antes
+do enablement read-only.
+
 ## Handoff
 
 Runbook:
@@ -182,7 +202,7 @@ Evidence:
 
 Next gate:
 
-- C11.3.1 read-only mechanism provisioning decision.
+- C11.3.2 read-only enablement after overlayroot prereq is installed.
 
 Not next:
 

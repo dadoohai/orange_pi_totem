@@ -86,8 +86,8 @@ O runner suporta:
 - `--rollback-read-only`;
 - `--summary`.
 
-`--enable-read-only` aborta se `overlayroot`/`overlayroot-chroot` estiverem
-ausentes, mesmo com confirmacao.
+`--enable-read-only` aborta se o pacote `overlayroot`, `overlayroot-chroot` ou
+o script initramfs do pacote estiverem ausentes, mesmo com confirmacao.
 
 ## Proximo Passo
 
@@ -98,3 +98,19 @@ C11.3.1 deve ser uma decisao de mecanismo:
 - ou desenhar outro mecanismo read-only/overlay em uma rodada separada.
 
 Enquanto isso, C11.4 nao deve iniciar porque read-only nao foi habilitado.
+
+## Follow-up C11.3.1
+
+C11.3.1 validou o prerequisito oficial em vez de criar overlay proprio:
+
+- pacote exato: `overlayroot`;
+- dry-run seguro: `would_upgrade_count=0`, `would_remove_count=0`;
+- nenhum pacote kernel/DTB/U-Boot/BSP seria tocado;
+- pacote instalado na dev apos confirmacao humana separada;
+- `overlayroot-chroot` e o script initramfs do pacote ficaram disponiveis;
+- o pacote Debian nao fornece comando `overlayroot` no PATH, e a deteccao foi
+  ajustada para o artefato real;
+- instalador e manifest passam a declarar `--install-readonly-prereqs`.
+
+C11.3.2 pode tentar habilitar root read-only novamente na dev, ainda com
+rollback e reboot controlado. A imagem base C12 deve incluir esse pacote.

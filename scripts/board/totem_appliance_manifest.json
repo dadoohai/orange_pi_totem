@@ -37,6 +37,25 @@
     "apt_full_upgrade_allowed": false,
     "armbian_upgrade_allowed": false
   },
+  "read_only_prerequisites": {
+    "required_commands": [
+      "overlayroot-chroot"
+    ],
+    "required_files": [
+      "/usr/share/initramfs-tools/scripts/init-bottom/overlayroot"
+    ],
+    "required_debian_packages": [
+      "overlayroot"
+    ],
+    "install_requires_explicit_flag": true,
+    "install_flag": "--install-readonly-prereqs",
+    "apt_install_policy": "apt-get install --no-upgrade --no-install-recommends exact packages only",
+    "apt_upgrade_allowed": false,
+    "apt_full_upgrade_allowed": false,
+    "armbian_upgrade_allowed": false,
+    "enable_read_only_during_install": false,
+    "final_image_must_include": true
+  },
   "users": {
     "totem": {
       "user": "totem",

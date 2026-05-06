@@ -82,7 +82,7 @@ manifest = pathlib.Path(sys.argv[1])
 repo = pathlib.Path(sys.argv[2])
 data = json.loads(manifest.read_text(encoding="utf-8"))
 assert data["schema_version"] == "dadooh-totem-appliance-manifest.v1"
-for section in ("bin_scripts", "systemd_units", "paths", "runtime", "never_embed"):
+for section in ("bin_scripts", "systemd_units", "paths", "runtime", "never_embed", "read_only_prerequisites"):
     assert section in data
 for item in data["bin_scripts"] + data.get("extra_files", []) + data["systemd_units"]:
     src = repo / item["source"]
@@ -465,6 +465,20 @@ runtime = {
     "forbidden_packages_present": {name: pkg_present(name) for name in manifest["runtime"]["forbidden_packages"]},
 }
 runtime["ok"] = all(runtime["commands"].values()) and all(runtime["packages"].values()) and not any(runtime["forbidden_commands_present"].values()) and not any(runtime["forbidden_packages_present"].values())
+readonly_prereqs_manifest = manifest.get("read_only_prerequisites", {})
+read_only_prerequisites = {
+    "commands": {name: command_present(name) for name in readonly_prereqs_manifest.get("required_commands", [])},
+    "files": {name: pathlib.Path(name).exists() and not pathlib.Path(name).is_symlink() for name in readonly_prereqs_manifest.get("required_files", [])},
+    "packages": {name: pkg_present(name) for name in readonly_prereqs_manifest.get("required_debian_packages", [])},
+    "install_requires_explicit_flag": bool(readonly_prereqs_manifest.get("install_requires_explicit_flag")),
+    "install_flag": readonly_prereqs_manifest.get("install_flag", ""),
+    "final_image_must_include": bool(readonly_prereqs_manifest.get("final_image_must_include")),
+}
+read_only_prerequisites["ok"] = (
+    all(read_only_prerequisites["commands"].values())
+    and all(read_only_prerequisites["files"].values())
+    and all(read_only_prerequisites["packages"].values())
+)
 
 user_result = user_check()
 boot_result = boot_check()
@@ -525,6 +539,7 @@ payload = {
         "systemctl_failed_count": system_failed_count,
     },
     "runtime": runtime,
+    "read_only_prerequisites": read_only_prerequisites,
     "user": user_result,
     "paths": path_results,
     "bin_scripts": script_results,
@@ -554,6 +569,8 @@ lines = [
     f"ready_for_second_board={str(payload['ready_for_second_board']).lower()}",
     f"systemctl_failed_count={system_failed_count}",
     f"runtime_ok={str(runtime['ok']).lower()}",
+    f"read_only_prerequisites_ok={str(read_only_prerequisites['ok']).lower()}",
+    f"read_only_prerequisites_install_flag={read_only_prerequisites['install_flag']}",
     f"user_ok={str(user_result['ok']).lower()}",
     f"boot_guardrails_ok={str(boot_result['ok']).lower()}",
     f"orientation_ok={str(orientation_result['ok']).lower()}",

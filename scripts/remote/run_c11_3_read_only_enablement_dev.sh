@@ -226,6 +226,11 @@ def command_available(name):
     return bool(out(["sh", "-c", f"command -v {name}"], 4))
 
 
+def package_installed(name):
+    result = run(["dpkg-query", "-W", "-f=${Status}", name], 5)
+    return bool(result is not None and result.returncode == 0 and (result.stdout or "").strip() == "install ok installed")
+
+
 def first_json(paths):
     for raw in paths:
         path = pathlib.Path(raw)
@@ -297,6 +302,9 @@ def mechanism():
                 pass
     overlayroot_available = command_available("overlayroot")
     overlayroot_chroot_available = command_available("overlayroot-chroot")
+    overlayroot_package_present = package_installed("overlayroot")
+    overlayroot_initramfs_script_present = pathlib.Path("/usr/share/initramfs-tools/scripts/init-bottom/overlayroot").exists()
+    can_enable = overlayroot_chroot_available and overlayroot_package_present and overlayroot_initramfs_script_present
     return {
         "mechanism_detected": "armbian_config_module_overlayfs" if module_present else "unknown",
         "armbian_config_available": armbian_config_path != "missing",
@@ -304,10 +312,11 @@ def mechanism():
         "armbian_module_overlayfs_present": module_present,
         "overlayroot_available": overlayroot_available,
         "overlayroot_chroot_available": overlayroot_chroot_available,
-        "overlayroot_package_present": overlayroot_available or overlayroot_chroot_available,
-        "can_enable_without_package_install": overlayroot_available and overlayroot_chroot_available,
-        "package_install_required": module_present and not (overlayroot_available and overlayroot_chroot_available),
-        "risk_level": "blocked_missing_overlayroot_package" if module_present and not (overlayroot_available and overlayroot_chroot_available) else ("medium" if module_present else "high_unknown"),
+        "overlayroot_package_present": overlayroot_package_present,
+        "overlayroot_initramfs_script_present": overlayroot_initramfs_script_present,
+        "can_enable_without_package_install": can_enable,
+        "package_install_required": module_present and not can_enable,
+        "risk_level": "blocked_missing_overlayroot_package" if module_present and not can_enable else ("medium" if module_present else "high_unknown"),
     }
 
 

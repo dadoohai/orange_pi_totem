@@ -7,6 +7,7 @@ MANIFEST="$SCRIPT_DIR/totem_appliance_manifest.json"
 MODE=""
 OUT_DIR="${OUT_DIR:-/tmp/dadooh-c10-8-appliance-installer/$(date -u +%Y%m%dT%H%M%SZ)}"
 INSTALL_RUNTIME=0
+INSTALL_READONLY_PREREQS=0
 MANAGE_RUNNING_SERVICES=0
 
 usage() {
@@ -40,6 +41,12 @@ Options:
       for the minimal runtime packages. Never runs upgrade/full-upgrade/
       dist-upgrade/armbian-upgrade.
 
+  --install-readonly-prereqs
+      With --dry-run or --apply only, plan/apply the exact read-only
+      prerequisite package declared by the manifest. This never enables
+      read-only and never runs upgrade/full-upgrade/dist-upgrade/
+      armbian-upgrade.
+
   --manage-running-services
       With --apply only, allow stopping getty guardrail units. Product services
       are still not restarted by this installer.
@@ -71,6 +78,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --install-runtime)
       INSTALL_RUNTIME=1
+      ;;
+    --install-readonly-prereqs)
+      INSTALL_READONLY_PREREQS=1
       ;;
     --manage-running-services)
       MANAGE_RUNNING_SERVICES=1
@@ -122,6 +132,11 @@ if [ "$INSTALL_RUNTIME" -eq 1 ] && [ "$MODE" != "apply" ]; then
   exit 2
 fi
 
+if [ "$INSTALL_READONLY_PREREQS" -eq 1 ] && [ "$MODE" != "apply" ] && [ "$MODE" != "dry-run" ]; then
+  echo "error: --install-readonly-prereqs is only valid with --dry-run or --apply" >&2
+  exit 2
+fi
+
 if [ "$MANAGE_RUNNING_SERVICES" -eq 1 ] && [ "$MODE" != "apply" ]; then
   echo "error: --manage-running-services is only valid with --apply" >&2
   exit 2
@@ -131,7 +146,7 @@ run_planner() {
   local planner_mode="$1"
   local output_json="$2"
   local summary_txt="$3"
-  python3 - "$MANIFEST" "$REPO_ROOT" "$planner_mode" "$INSTALL_RUNTIME" "$MANAGE_RUNNING_SERVICES" "$output_json" "$summary_txt" <<'PY'
+  python3 - "$MANIFEST" "$REPO_ROOT" "$planner_mode" "$INSTALL_RUNTIME" "$INSTALL_READONLY_PREREQS" "$MANAGE_RUNNING_SERVICES" "$output_json" "$summary_txt" <<'PY'
 import grp
 import hashlib
 import json
@@ -148,9 +163,10 @@ manifest_path = pathlib.Path(sys.argv[1])
 repo_root = pathlib.Path(sys.argv[2])
 mode = sys.argv[3]
 install_runtime = sys.argv[4] == "1"
-manage_running_services = sys.argv[5] == "1"
-output_json = pathlib.Path(sys.argv[6])
-summary_txt = pathlib.Path(sys.argv[7])
+install_readonly_prereqs = sys.argv[5] == "1"
+manage_running_services = sys.argv[6] == "1"
+output_json = pathlib.Path(sys.argv[7])
+summary_txt = pathlib.Path(sys.argv[8])
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 actions = []
 blockers = []
@@ -341,6 +357,34 @@ def check_runtime():
         present = bool(result is not None and result.returncode == 0 and (result.stdout or "").strip() == "install ok installed")
         if present:
             blockers.append(f"forbidden_package_present:{package}")
+
+
+def check_readonly_prerequisites():
+    prereq = manifest.get("read_only_prerequisites", {})
+    if not prereq:
+        return
+    packages = list(prereq.get("required_debian_packages", []))
+    commands = list(prereq.get("required_commands", []))
+    missing_packages = []
+    for package in packages:
+        result = run(["dpkg-query", "-W", "-f=${Status}", package], 6)
+        present = bool(result is not None and result.returncode == 0 and (result.stdout or "").strip() == "install ok installed")
+        if not present:
+            missing_packages.append(package)
+    if missing_packages:
+        if install_readonly_prereqs:
+            action("apt_install_readonly_prereqs", ",".join(missing_packages), "explicit --install-readonly-prereqs provided")
+            if mode == "apply":
+                subprocess.run(["apt-get", "install", "-y", "--no-upgrade", "--no-install-recommends", *missing_packages], check=True)
+                changed.append("readonly-prereq-packages")
+        else:
+            action("readonly_prereq_packages_missing", ",".join(missing_packages), "missing read-only prerequisites; --install-readonly-prereqs not provided", apply_safe=False)
+    for command in commands:
+        if shutil.which(command) is None:
+            if install_readonly_prereqs:
+                warnings.append(f"readonly_prereq_command_missing_pending_explicit_install:{command}")
+            else:
+                warnings.append(f"readonly_prereq_command_missing:{command}")
 
 
 def ensure_dir(item):
@@ -598,6 +642,7 @@ def check_kiosky_pin():
 
 ensure_user()
 check_runtime()
+check_readonly_prerequisites()
 for item in manifest["paths"]:
     ensure_dir(item)
 ensure_files()
@@ -623,6 +668,7 @@ payload = {
         "wifi_credentials_embedded": False,
         "product_services_restarted_by_default": False,
         "runtime_install_requires_explicit_flag": True,
+        "readonly_prereq_install_requires_explicit_flag": True,
         "apt_upgrade_called": False,
         "apt_full_upgrade_called": False,
         "armbian_upgrade_called": False,
@@ -633,6 +679,7 @@ payload = {
         "dirty_entries": repo_dirty_entries(),
     },
     "install_runtime": install_runtime,
+    "install_readonly_prereqs": install_readonly_prereqs,
     "manage_running_services": manage_running_services,
     "actions": actions,
     "action_count": len(actions),
@@ -657,6 +704,7 @@ lines = [
     f"action_count={len(actions)}",
     f"changed_count={len(changed)}",
     f"install_runtime={str(install_runtime).lower()}",
+    f"install_readonly_prereqs={str(install_readonly_prereqs).lower()}",
     f"manage_running_services={str(manage_running_services).lower()}",
     f"ready_for_second_board={str(payload['ready_for_second_board']).lower()}",
 ]
@@ -725,7 +773,7 @@ second = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 out_json = pathlib.Path(sys.argv[3])
 summary = pathlib.Path(sys.argv[4])
 
-stable_keys = ["actions", "blockers", "warnings", "install_runtime", "manage_running_services", "ready_for_second_board"]
+stable_keys = ["actions", "blockers", "warnings", "install_runtime", "install_readonly_prereqs", "manage_running_services", "ready_for_second_board"]
 stable = all(first.get(key) == second.get(key) for key in stable_keys)
 payload = {
     "schema_version": "dadooh-c10.8-idempotence-dry-run.v1",

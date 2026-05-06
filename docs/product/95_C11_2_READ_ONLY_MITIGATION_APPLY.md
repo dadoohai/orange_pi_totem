@@ -133,3 +133,8 @@ com seguranca:
 As mitigacoes C11.2 continuam validas e aplicadas; o proximo corte deve decidir
 como aprovisionar o mecanismo read-only oficial ou levar isso para a imagem
 base.
+
+C11.3.1 decidiu e instalou o prerequisito na dev, sem habilitar read-only: o
+mecanismo oficial do Armbian requer o pacote `overlayroot`. O dry-run de
+instalacao foi seguro e sem upgrades/remocoes; a imagem base C12 deve incluir o
+mesmo pacote.

@@ -152,6 +152,22 @@
     "normal_runtime_write_allowed": false,
     "updates_require_backup_and_rollback": true
   },
+  "read_only_mechanism_policy": {
+    "selected_mechanism": "armbian_config_module_overlayfs",
+    "required_package": "overlayroot",
+    "required_commands": [
+      "overlayroot-chroot"
+    ],
+    "required_files": [
+      "/usr/share/initramfs-tools/scripts/init-bottom/overlayroot"
+    ],
+    "normal_runtime_install_allowed": false,
+    "install_requires_explicit_flag": true,
+    "install_flag": "--install-readonly-prereqs",
+    "enable_read_only_before_package_present": false,
+    "c11_3_1_required": true,
+    "c12_final_image_must_include_package": true
+  },
   "c11_2_enablement_preconditions": [
     "apply reversible journald volatile policy",
     "validate NetworkManager profile write window without exposing identifiers",

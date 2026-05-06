@@ -226,6 +226,11 @@ def command_available(name):
     return bool(out(["sh", "-c", f"command -v {name}"], 4))
 
 
+def package_installed(name):
+    result = run(["dpkg-query", "-W", "-f=${Status}", name], 5)
+    return bool(result is not None and result.returncode == 0 and (result.stdout or "").strip() == "install ok installed")
+
+
 def safe_write_probe(path_text):
     path = pathlib.Path(path_text)
     try:
@@ -408,6 +413,9 @@ payload = {
         "overlay_active": mount_info("/")["overlay_active"] or command_available("overlayroot-chroot") and run(["overlayroot-chroot", "true"], 5) is not None and run(["overlayroot-chroot", "true"], 5).returncode == 0,
         "overlayroot_command_available": command_available("overlayroot"),
         "overlayroot_chroot_available": command_available("overlayroot-chroot"),
+        "overlayroot_package_present": package_installed("overlayroot"),
+        "overlayroot_initramfs_script_present": pathlib.Path("/usr/share/initramfs-tools/scripts/init-bottom/overlayroot").exists(),
+        "overlayroot_prerequisite_ready": command_available("overlayroot-chroot") and package_installed("overlayroot") and pathlib.Path("/usr/share/initramfs-tools/scripts/init-bottom/overlayroot").exists(),
         "data_writable": safe_write_probe("/data/state/totem-read-only-mitigation/.verify-data-write-probe")["write_ok"],
         "tmp_writable": safe_write_probe("/tmp/.dadooh-c11-policy-write-probe")["write_ok"],
         "run_writable": safe_write_probe("/run/.dadooh-c11-policy-write-probe")["write_ok"],
@@ -500,6 +508,7 @@ lines = [
     f"blockers_remaining_count: {len(blockers_remaining)}",
     f"read_only_enabled: {payload['read_only_runtime']['read_only_enabled']}",
     f"overlay_active: {payload['read_only_runtime']['overlay_active']}",
+    f"overlayroot_prerequisite_ready: {payload['read_only_runtime']['overlayroot_prerequisite_ready']}",
     f"data_writable: {payload['read_only_runtime']['data_writable']}",
     f"tmp_writable: {payload['read_only_runtime']['tmp_writable']}",
     f"run_writable: {payload['read_only_runtime']['run_writable']}",

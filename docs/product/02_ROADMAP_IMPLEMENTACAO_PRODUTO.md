@@ -4,6 +4,14 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C11.3.1: 2026-05-06. C11.3.1 confirmou que o caminho read-only
+deve continuar usando o mecanismo oficial do Armbian e que o prerequisito exato
+e o pacote `overlayroot`. O dry-run de instalacao na placa dev foi seguro, sem
+upgrades/remocoes e sem tocar pacotes kernel/DTB/U-Boot/BSP; depois de
+confirmacao humana, o pacote foi instalado na dev sem habilitar read-only. O
+instalador passa a declarar `--install-readonly-prereqs` e a imagem final C12
+deve incluir esse pacote antes do enablement read-only.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
