@@ -14,9 +14,11 @@ Status:
 - `c10_10_2_shutdown_ux=passed_no_poweroff_executed`
 - `shutdown_ux_followup_required=false`
 - `c11_0_read_only_readiness_audit=needs_policy_before_enablement`
+- `c11_1_read_only_policy=policy_defined_not_applied`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
-- `ready_for_c11_1_policy=true`
+- `ready_for_c11_1_policy=false`
+- `ready_for_c11_2_enablement=true`
 - `ready_for_c12_image=false`
 
 ## Orange Pi Totem
@@ -51,9 +53,12 @@ Status:
 - `scripts/board/totem_status_render_preview.py`
 - `scripts/board/totem_config_contract_validate.py`
 - `scripts/board/totem_config_writer_real.py`
+- `scripts/board/totem_read_only_policy.json`
+- `scripts/board/verify_totem_read_only_policy.sh`
 - `scripts/remote/run_c10_9_second_board_clean_install.sh`
 - `scripts/remote/run_c10_9_1_second_board_provision.sh`
 - `scripts/remote/run_c11_0_read_only_readiness_audit.sh`
+- `scripts/remote/run_c11_1_read_only_policy_probe.sh`
 
 ## Units
 
@@ -117,8 +122,20 @@ C11.0 auditou a placa dev sem alterar estado e concluiu:
 - tambem precisam de politica: `/var/lib/systemd`,
   `/var/lib/NetworkManager`, `/etc/systemd/system` e `/boot/armbianEnv.txt`.
 
-C11.1 pode iniciar como rodada de politica/mitigacao. Nao habilitar read-only
-nem executar corte seco ainda.
+C11.1 definiu a politica concreta de mitigacao:
+
+- NetworkManager: manter perfis no caminho nativo e permitir escrita somente em
+  janela controlada de manutencao/configuracao;
+- journald: usar politica volatil na imagem de produto;
+- `/boot` e `/etc`: escrita somente por instalador/manutencao com backup e
+  rollback;
+- `/var`: validar estado runtime volatil/overlay em C11.2;
+- `/data`, `/tmp` e `/run`: paths normais de escrita do produto.
+
+O probe C11.1 rodou somente na placa dev e nao alterou estado operacional.
+`ready_for_c11_2_enablement=true`, mas `root_read_only_ready=false` e
+`ready_for_read_only_enablement=false` ate C11.2 aplicar as mitigacoes
+reversiveis. Nao habilitar read-only nem executar corte seco ainda.
 
 ## Handoff
 
@@ -132,7 +149,7 @@ Evidence:
 
 Next gate:
 
-- C11.1 read-only policy/mitigation plan.
+- C11.2 read-only reversible mitigation enablement.
 
 Not next:
 

@@ -689,6 +689,22 @@ Principais blockers: politica de NetworkManager para perfis em
 `/tmp` e `/run`; C11.1 pode iniciar como rodada de politica/mitigacao, ainda
 sem habilitar root read-only e sem corte seco.
 
+Atualizacao C11.1: 2026-05-06. C11.1 define a politica concreta para root
+read-only/overlay sem habilitar read-only e sem alterar a placa. Foram criados
+`scripts/board/totem_read_only_policy.json`,
+`scripts/board/verify_totem_read_only_policy.sh` e
+`scripts/remote/run_c11_1_read_only_policy_probe.sh`. A politica mantem estado
+persistente em `/data`, runtime em `/tmp`/`/run`, codigo em `/opt/totem`
+imutavel, NetworkManager no caminho nativo com janela controlada de manutencao
+para escrita de perfis, journald volatil na imagem de produto, `/boot` e
+`/etc` alteraveis apenas por instalador/manutencao com backup e rollback, e
+`/var` como estado runtime a validar. O probe rodou somente na placa dev, nao
+alterou estado, manteve `public_state=player_running`, playback `playing`,
+servicos ativos/enabled e `NRestarts=0`. Resultado:
+`ready_for_c11_2_enablement=true`, mas `root_read_only_ready=false` e
+`ready_for_read_only_enablement=false` ate C11.2 aplicar mitigacoes
+reversiveis. Placa teste nao foi tocada.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

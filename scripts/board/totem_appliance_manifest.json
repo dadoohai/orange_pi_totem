@@ -54,6 +54,7 @@
   "paths": [
     {"path": "/opt/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/opt/totem/bin", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/opt/totem/share", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/opt/totem/kiosky-player", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/config", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
@@ -87,10 +88,12 @@
     {"source": "scripts/board/totem_visual_setup_writer_handoff.py", "target": "/opt/totem/bin/totem_visual_setup_writer_handoff.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_visual_splash.py", "target": "/opt/totem/bin/totem_visual_splash.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_wifi_local_credentials_tty.py", "target": "/opt/totem/bin/totem_wifi_local_credentials_tty.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_wifi_nm_adapter.py", "target": "/opt/totem/bin/totem_wifi_nm_adapter.py", "owner": "root", "group": "root", "mode": "0755"}
+    {"source": "scripts/board/totem_wifi_nm_adapter.py", "target": "/opt/totem/bin/totem_wifi_nm_adapter.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/verify_totem_read_only_policy.sh", "target": "/opt/totem/bin/verify_totem_read_only_policy.sh", "owner": "root", "group": "root", "mode": "0755"}
   ],
   "extra_files": [
-    {"source": "scripts/board/totem_visual_splash.py", "target": "/usr/local/sbin/dadooh-visual-splash.py", "owner": "root", "group": "root", "mode": "0755"}
+    {"source": "scripts/board/totem_visual_splash.py", "target": "/usr/local/sbin/dadooh-visual-splash.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_read_only_policy.json", "target": "/opt/totem/share/totem_read_only_policy.json", "owner": "root", "group": "root", "mode": "0644"}
   ],
   "systemd_units": [
     {"source": "scripts/board/kiosky-player.service", "target": "/etc/systemd/system/kiosky-player.service", "enabled": true, "active_expected_on_dev": "active"},

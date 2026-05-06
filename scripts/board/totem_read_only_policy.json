@@ -1,0 +1,179 @@
+{
+  "schema_version": "dadooh-c11.1-read-only-policy.v1",
+  "created_for": "C11.1",
+  "root_read_only_enabled": false,
+  "power_cut_tested": false,
+  "final_image": false,
+  "policy_status": "policy_defined_not_applied",
+  "normal_runtime_policy": {
+    "root_filesystem": "read_only_after_c11_2_only",
+    "product_persistent_state": "data_partition",
+    "runtime_state": "tmpfs_tmp_or_run",
+    "system_mutations": "maintenance_window_only"
+  },
+  "persistent_writable_paths": [
+    {
+      "path": "/data/config",
+      "classification": "OK_FOR_READ_ONLY",
+      "purpose": "real product config and controlled backups",
+      "expected_owner": "totem",
+      "expected_group": "totem",
+      "expected_mode": "0750"
+    },
+    {
+      "path": "/data/state",
+      "classification": "OK_FOR_READ_ONLY",
+      "purpose": "product state, public orientation contract, installer state and sanitized diagnostics",
+      "expected_owner": "root",
+      "expected_group": "root",
+      "expected_mode": "0755"
+    },
+    {
+      "path": "/data/media",
+      "classification": "OK_FOR_READ_ONLY",
+      "purpose": "player media and cache roots",
+      "expected_owner": "root",
+      "expected_group": "root",
+      "expected_mode": "0755"
+    },
+    {
+      "path": "/data/logs",
+      "classification": "OK_FOR_READ_ONLY",
+      "purpose": "product logs when explicitly enabled; raw logs are not evidence",
+      "expected_owner": "root",
+      "expected_group": "root",
+      "expected_mode": "0755"
+    }
+  ],
+  "runtime_writable_paths": [
+    {
+      "path": "/tmp",
+      "classification": "OK_FOR_READ_ONLY",
+      "purpose": "temporary runtime files, IPC and disposable candidates"
+    },
+    {
+      "path": "/run",
+      "classification": "OK_FOR_READ_ONLY",
+      "purpose": "system runtime, F10 trigger requests and locks"
+    }
+  ],
+  "special_policy_paths": [
+    {
+      "path": "/etc/NetworkManager/system-connections",
+      "classification": "NEEDS_NETWORKMANAGER_POLICY",
+      "policy_id": "nm_profiles_maintenance_window",
+      "selected_policy": "Keep profiles in NetworkManager's native root-owned path. Normal runtime keeps root read-only. Wi-Fi changes require an explicit local configuration/maintenance window that temporarily permits root filesystem writes only for the NetworkManager apply step, then returns to read-only.",
+      "c11_2_action": "Validate a reversible remount-rw window around controlled NetworkManager profile writes; never publish profile names, SSID, BSSID, IP, MAC, DNS, gateway or passwords.",
+      "rollback": "Restore previous dedicated product profile from sanitized backup metadata only; never delete non-product profiles.",
+      "normal_runtime_write_allowed": false
+    },
+    {
+      "path": "/var/log/journal",
+      "classification": "NEEDS_LOG_POLICY",
+      "policy_id": "journald_volatile_product_logs_data",
+      "selected_policy": "Use volatile journald for the product image. Keep product logs and sanitized diagnostics under /data/logs or /data/state. Do not persist raw system journals by default.",
+      "c11_2_action": "Add a reversible journald configuration override for volatile storage and bounded runtime usage; do not delete existing logs in C11.1.",
+      "rollback": "Remove the journald override and restore previous storage behavior.",
+      "normal_runtime_write_allowed": false
+    },
+    {
+      "path": "/boot",
+      "classification": "NEEDS_ETC_EXCEPTION",
+      "policy_id": "boot_guardrails_maintenance_only",
+      "selected_policy": "Boot arguments are immutable during normal product runtime. Updates require explicit installer/maintenance action with backup and rollback.",
+      "c11_2_action": "Verify current boot visual guardrails are stable before enabling root read-only; do not modify /boot during normal operation.",
+      "rollback": "Restore /data/state/totem-boot-visual backup state.",
+      "normal_runtime_write_allowed": false
+    },
+    {
+      "path": "/etc",
+      "classification": "NEEDS_ETC_EXCEPTION",
+      "policy_id": "etc_installer_maintenance_only",
+      "selected_policy": "Systemd units and appliance files under /etc are immutable during normal runtime. Installer or maintenance refresh may open a controlled write window.",
+      "c11_2_action": "Document and verify the installer/update write window; keep operator configuration outside /etc except NetworkManager profile writes.",
+      "rollback": "Re-run installer rollback or restore unit backups where applicable.",
+      "normal_runtime_write_allowed": false
+    },
+    {
+      "path": "/var/lib/NetworkManager",
+      "classification": "NEEDS_VAR_POLICY",
+      "policy_id": "networkmanager_runtime_state_volatile",
+      "selected_policy": "Treat NetworkManager runtime state as volatile/system state. Persistent product network configuration remains only in NetworkManager profiles.",
+      "c11_2_action": "Validate NetworkManager can operate with root read-only plus volatile /var policy.",
+      "rollback": "Disable read-only policy if NetworkManager cannot recover with volatile state.",
+      "normal_runtime_write_allowed": true
+    },
+    {
+      "path": "/var/lib/systemd",
+      "classification": "NEEDS_VAR_POLICY",
+      "policy_id": "systemd_runtime_state_volatile",
+      "selected_policy": "Treat systemd runtime state as volatile. Product state must stay in /data.",
+      "c11_2_action": "Validate service state across reboot with the chosen overlay/tmpfs policy.",
+      "rollback": "Disable read-only policy if systemd state persistence is required.",
+      "normal_runtime_write_allowed": true
+    }
+  ],
+  "prohibited_runtime_write_paths": [
+    {
+      "path": "/opt/totem",
+      "classification": "PROHIBITED_RUNTIME_WRITE",
+      "reason": "appliance code is immutable during normal runtime"
+    },
+    {
+      "path": "/opt/totem/kiosky-player",
+      "classification": "PROHIBITED_RUNTIME_WRITE",
+      "reason": "player code is immutable during normal runtime"
+    },
+    {
+      "path": "/",
+      "classification": "PROHIBITED_RUNTIME_WRITE",
+      "reason": "generic root filesystem writes are forbidden outside explicit maintenance windows"
+    }
+  ],
+  "logs_policy": {
+    "journald": "volatile",
+    "product_logs_path": "/data/logs",
+    "sanitized_diagnostics_path": "/data/state",
+    "raw_logs_in_evidence": false,
+    "c11_2_required": true
+  },
+  "networkmanager_policy": {
+    "profile_path": "/etc/NetworkManager/system-connections",
+    "profile_path_moved_to_data": false,
+    "normal_runtime_profile_writes_allowed": false,
+    "wifi_changes_require_controlled_maintenance_window": true,
+    "preserve_non_product_profiles": true,
+    "publish_profile_names": false,
+    "publish_ssid_or_credentials": false,
+    "c11_2_required": true
+  },
+  "boot_policy": {
+    "boot_path": "/boot",
+    "normal_runtime_write_allowed": false,
+    "updates_require_backup_and_rollback": true
+  },
+  "c11_2_enablement_preconditions": [
+    "apply reversible journald volatile policy",
+    "validate NetworkManager profile write window without exposing identifiers",
+    "validate /var runtime policy",
+    "verify /data persistent paths and /tmp,/run runtime paths",
+    "verify rollback before any power-cut test"
+  ],
+  "must_not_publish": [
+    "config real",
+    "api_key",
+    "api_url real",
+    "environment_id real",
+    "station_id",
+    "SSID",
+    "Wi-Fi password",
+    "IP",
+    "MAC",
+    "DNS",
+    "gateway",
+    "hostname",
+    "NetworkManager profile names",
+    "raw logs",
+    "payloads"
+  ]
+}
