@@ -88,3 +88,13 @@ reproduziu o comportamento: apos instalar `overlayroot`, configurar
 
 C11.4 segue bloqueado. Nao executar novo enable na dev ate uma estrategia passar
 em laboratorio.
+
+## Follow-up C11.3.4
+
+C11.3.4 encerrou a decisao estrategica desta linha: nao repetir tentativa igual
+de `overlayroot` na dev. O laboratorio C11.3.3 e a inspecao C11.3.4 apontam que
+o pacote instalado nao basta; o hook initramfs existe, mas a fase initramfs
+falha com `initramfs_log_driver_lookup_failed=true`.
+
+O proximo passo permitido e C12.0-prep, com `overlayroot` integrado na imagem e
+initramfs/uInitrd gerados por codigo. C11.4 continua bloqueado.

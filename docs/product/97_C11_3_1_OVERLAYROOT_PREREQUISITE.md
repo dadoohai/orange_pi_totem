@@ -77,3 +77,10 @@ A placa teste tambem recebeu o pacote `overlayroot` apos dry-run seguro. O pacot
 ficou instalado e o prerequisito ficou presente, mas o reboot de laboratorio nao
 ativou o overlay. Portanto, o prerequisito e necessario, mas nao suficiente para
 liberar read-only nesta imagem.
+
+## Resultado Posterior em C11.3.4
+
+C11.3.4 formalizou a decisao: manter `overlayroot` como prerequisito de imagem,
+mas nao considerar a instalacao do pacote suficiente para habilitar read-only em
+placa ja provisionada. A validacao deve migrar para imagem/base C12, com
+initramfs/uInitrd gerados ja contendo o mecanismo.

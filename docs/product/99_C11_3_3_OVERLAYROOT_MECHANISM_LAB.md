@@ -95,3 +95,19 @@ mecanismo em laboratorio separado ou escolher outra abordagem de root read-only.
 - `kiosky-player` nao alterado;
 - corte seco e poweroff nao executados;
 - logs brutos e dados sensiveis nao publicados.
+
+## Follow-up C11.3.4
+
+C11.3.4 inspecionou a dev e a teste sem alterar estado. A causa provavel foi
+refinada para incompatibilidade/integracao incompleta entre `overlayroot`,
+initramfs/uInitrd e a base atual:
+
+- pacote instalado: `true`;
+- hook initramfs presente: `true`;
+- modulo `overlay` presente no initramfs: `true`;
+- runtime do kernel suporta `overlay`: `true`;
+- erro categorizado: `initramfs_log_driver_lookup_failed=true`.
+
+Decisao: C11.4 segue bloqueado. O proximo passo permitido e C12.0-prep para
+validar uma imagem/base com `overlayroot` integrado no build, nao nova tentativa
+direta na dev.

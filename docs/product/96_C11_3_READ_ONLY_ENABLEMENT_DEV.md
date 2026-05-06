@@ -137,3 +137,23 @@ Classificacao final da rodada: `OVERLAYROOT_ENABLE_DID_NOT_ACTIVATE`.
 
 C11.4 continua bloqueado. O proximo passo de read-only deve ocorrer em cartao
 separado ou na imagem/base C12, nao em nova tentativa direta na placa de produto.
+
+## Follow-up C11.3.4
+
+C11.3.4 nao executou nova tentativa de enable. A rodada consolidou a decisao de
+mecanismo:
+
+- o pacote `overlayroot` e necessario, mas nao suficiente nesta base instalada;
+- o hook initramfs existe e o modulo `overlay` esta presente, mas a fase
+  initramfs falha em resolver/carregar o driver;
+- `initramfs_log_driver_lookup_failed=true` permanece como categoria publica da
+  causa;
+- a dev deve permanecer preservada em modo normal;
+- C11.4 continua bloqueado.
+
+Decisao:
+
+```text
+root_read_only_mechanism_decision=c12_image_integrated_overlay_lab_required
+next_allowed_step=C12.0-prep
+```

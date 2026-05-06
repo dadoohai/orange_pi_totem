@@ -12,6 +12,14 @@ confirmacao humana, o pacote foi instalado na dev sem habilitar read-only. O
 instalador passa a declarar `--install-readonly-prereqs` e a imagem final C12
 deve incluir esse pacote antes do enablement read-only.
 
+Atualizacao C11.3.4: 2026-05-06. C11.3.4 decidiu o mecanismo read-only apos o
+laboratorio C11.3.3: `overlayroot` instalado nao e suficiente nesta base
+provisionada. A falha fica classificada como
+`initramfs_log_driver_lookup_failed=true`, com hook initramfs e modulo `overlay`
+presentes. C11.4 segue bloqueado. O proximo passo permitido e C12.0-prep para
+validar uma imagem/base com overlay integrado no build, nao nova tentativa direta
+na dev funcional.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
@@ -2000,3 +2008,8 @@ mas `read_only_enabled=false` e `overlay_active=false`; a causa sanitizada foi
 `initramfs_log_driver_lookup_failed=true`. Rollback executado. C11.4 permanece
 bloqueado; a proxima estrategia de read-only deve ser investigada em laboratorio
 ou em imagem/base C12, nao na dev funcional.
+
+Atualizacao C11.3.4: 2026-05-06. C11.3.4 nao alterou as placas e registrou a
+ADR-0011. A decisao e mover o proximo experimento para C12.0-prep:
+`root_read_only_mechanism_decision=c12_image_integrated_overlay_lab_required`.
+Read-only, C11.4 e corte seco continuam bloqueados.

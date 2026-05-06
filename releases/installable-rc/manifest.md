@@ -20,6 +20,9 @@ Status:
 - `c11_3_1_overlayroot_prereq=installed_on_dev_not_enabled`
 - `c11_3_2_read_only_enable_dev=blocked_overlayroot_not_activated`
 - `c11_3_3_overlayroot_mechanism_lab=blocked_initramfs_driver_lookup`
+- `c11_3_4_read_only_mechanism_decision=c12_image_integrated_overlay_lab_required`
+- `root_read_only_mechanism_decision=c12_image_integrated_overlay_lab_required`
+- `next_allowed_step=C12.0-prep`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
 - `ready_for_c11_1_policy=false`
@@ -209,6 +212,13 @@ por SSH, mas o overlay nao ativou: `read_only_enabled=false`,
 `overlay_active=false`, causa sanitizada `initramfs_log_driver_lookup_failed`.
 Rollback executado na teste. C11.4 continua bloqueado e a dev nao deve receber
 novas tentativas diretas.
+
+C11.3.4 consolidou a decisao de mecanismo sem alterar placas. A causa provavel
+nao e ausencia simples de pacote: o hook initramfs e o modulo `overlay` estao
+presentes, mas a fase initramfs falha na resolucao/carregamento do driver. O
+proximo experimento permitido e C12.0-prep, com `overlayroot` integrado no build
+da imagem/base e initramfs/uInitrd gerados por codigo. C11.4 e corte seco seguem
+bloqueados.
 
 ## Handoff
 
