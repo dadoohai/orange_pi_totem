@@ -13,6 +13,10 @@ Status:
 - `c10_10_1_power_state_audit=POWER_STATE_EXPECTED_BUT_UX_UNCLEAR`
 - `c10_10_2_shutdown_ux=passed_no_poweroff_executed`
 - `shutdown_ux_followup_required=false`
+- `c11_0_read_only_readiness_audit=needs_policy_before_enablement`
+- `root_read_only_ready=false`
+- `ready_for_read_only_enablement=false`
+- `ready_for_c11_1_policy=true`
 - `ready_for_c12_image=false`
 
 ## Orange Pi Totem
@@ -49,6 +53,7 @@ Status:
 - `scripts/board/totem_config_writer_real.py`
 - `scripts/remote/run_c10_9_second_board_clean_install.sh`
 - `scripts/remote/run_c10_9_1_second_board_provision.sh`
+- `scripts/remote/run_c11_0_read_only_readiness_audit.sh`
 
 ## Units
 
@@ -100,6 +105,21 @@ Runtime install policy:
 - private candidate files;
 - private-values files.
 
+## Read-only Readiness
+
+C11.0 auditou a placa dev sem alterar estado e concluiu:
+
+- root read-only ainda nao esta pronto para habilitacao;
+- paths mutaveis principais ja estao em `/data`, `/tmp` ou `/run`;
+- blockers atuais:
+  - `NetworkManager` em `/etc/NetworkManager/system-connections`;
+  - journald/log policy em `/var/log/journal`;
+- tambem precisam de politica: `/var/lib/systemd`,
+  `/var/lib/NetworkManager`, `/etc/systemd/system` e `/boot/armbianEnv.txt`.
+
+C11.1 pode iniciar como rodada de politica/mitigacao. Nao habilitar read-only
+nem executar corte seco ainda.
+
 ## Handoff
 
 Runbook:
@@ -112,7 +132,7 @@ Evidence:
 
 Next gate:
 
-- C11.0 read-only readiness audit.
+- C11.1 read-only policy/mitigation plan.
 
 Not next:
 

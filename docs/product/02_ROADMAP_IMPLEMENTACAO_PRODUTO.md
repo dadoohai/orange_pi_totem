@@ -674,6 +674,21 @@ confirmada, `poweroff_executed=false`, servico `active/enabled`,
 renderer/setup ausentes e `NRestarts=0`. O manifest passa a liberar C11.0 como
 auditoria de readiness, ainda sem habilitar read-only e sem imagem final.
 
+Atualizacao C11.0: 2026-05-06. C11.0 executa a auditoria de readiness para
+root read-only sem habilitar read-only, sem poweroff, sem corte seco, sem
+writer, sem config real, sem Wi-Fi/NetworkManager e sem pacotes. O runner
+`scripts/remote/run_c11_0_read_only_readiness_audit.sh` foi criado com
+`--prepare-only`, `--audit-dev`, `--audit-test-readonly` opcional e
+`--summary`. A auditoria rodou somente na placa dev e confirmou estado
+operacional saudavel (`public_state=player_running`, playback `playing`,
+servicos ativos/enabled e `NRestarts=0`), mas classificou
+`root_read_only_ready=false` e `ready_for_read_only_enablement=false`.
+Principais blockers: politica de NetworkManager para perfis em
+`/etc/NetworkManager/system-connections` e politica de logs/journald com
+`/var/log/journal` presente. Paths mutaveis principais ja estao em `/data`,
+`/tmp` e `/run`; C11.1 pode iniciar como rodada de politica/mitigacao, ainda
+sem habilitar root read-only e sem corte seco.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
