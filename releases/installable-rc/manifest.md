@@ -9,7 +9,9 @@ Status:
 - `read_only=false`
 - `power_cut_tested=false`
 - `long_test=false`
-- `ready_for_c11_readiness=true`
+- `ready_for_c11_readiness=false`
+- `c10_10_1_power_state_audit=POWER_STATE_EXPECTED_BUT_UX_UNCLEAR`
+- `shutdown_ux_followup_required=true`
 - `ready_for_c12_image=false`
 
 ## Orange Pi Totem
@@ -109,10 +111,11 @@ Evidence:
 
 Next gate:
 
-- C11.0 read-only readiness audit.
+- C10.10.2 Shutdown UX.
 
 Not next:
 
+- C11.0 read-only readiness audit before shutdown UX follow-up;
 - final image generation;
 - root read-only enablement;
 - power-cut testing;

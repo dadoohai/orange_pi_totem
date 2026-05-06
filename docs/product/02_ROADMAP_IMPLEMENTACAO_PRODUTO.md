@@ -643,6 +643,21 @@ imprimir `api_key`, `api_url` literal ou `environment_id`. O status do RC fica:
 read-only readiness audit; C12.0 deve tratar imagem customizada e eliminar o
 bootstrap tecnico manual do Armbian.
 
+Atualizacao C10.10.1: 2026-05-06. C10.10.1 auditou o incidente em que a
+segunda placa ficou com HDMI preto e sem SSH apos desligamento normal, voltando
+apos power cycle fisico. O runner
+`scripts/remote/run_c10_10_1_power_state_audit.sh` fez inspect atual e
+postmortem do boot anterior sem reboot/poweroff, sem writer, sem Wi-Fi, sem
+config real e sem logs brutos. Resultado: `previous_boot_end_category=clean_poweroff`,
+`previous_boot_had_kernel_panic=false`, `previous_boot_had_ext4_error=false`,
+`previous_boot_had_mmc_error=false`, `kernel_critical_filter_count=0` e estado
+atual `public_state=player_running`, servicos ativos/enabled e
+`systemctl_failed_count=0`. Classificacao:
+`POWER_STATE_EXPECTED_BUT_UX_UNCLEAR`. O installable bench RC continua valido
+com follow-up de UX, mas C11.0 fica bloqueado ate C10.10.2 Shutdown UX separar
+claramente `Reiniciar totem` de `Desligar com seguranca` e explicar power cycle
+fisico para religar.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

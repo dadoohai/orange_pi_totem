@@ -186,6 +186,19 @@ Nao fazer no RC de bancada:
 
 ## Etapa Futura
 
-C11.0 deve auditar readiness de root read-only sem ainda habilitar read-only em
-producao. C12.0 deve gerar a imagem/release customizada, eliminando o bootstrap
-tecnico manual do Armbian e mantendo secrets/config real fora da imagem.
+C10.10.1 auditou um incidente de tela preta/SSH indisponivel apos desligamento
+normal e classificou como `POWER_STATE_EXPECTED_BUT_UX_UNCLEAR`: o boot
+anterior terminou em desligamento limpo, sem pânico, erro EXT4 ou erro MMC, e o
+power cycle fisico restaurou o appliance.
+
+Antes de C11.0, executar C10.10.2 Shutdown UX:
+
+- proteger `Desligar com seguranca` com confirmacao forte;
+- avisar que F10/SSH nao funcionam apos poweroff;
+- avisar que sera necessario remover e reconectar energia para ligar de novo;
+- manter `Reiniciar totem` separado de `Desligar com seguranca`.
+
+C11.0 deve auditar readiness de root read-only somente depois desse follow-up,
+sem ainda habilitar read-only em producao. C12.0 deve gerar a imagem/release
+customizada, eliminando o bootstrap tecnico manual do Armbian e mantendo
+secrets/config real fora da imagem.
