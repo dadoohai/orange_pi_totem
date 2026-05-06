@@ -209,6 +209,41 @@ def dir_size_bucket(path_text):
     return size_bucket_kib(kib)
 
 
+def mount_info(target):
+    result = out(["findmnt", "-n", "-o", "TARGET,FSTYPE,OPTIONS", "--target", target], 8)
+    parts = result.split(None, 2)
+    options = parts[2].split(",") if len(parts) > 2 else []
+    return {
+        "target": target,
+        "mounted": bool(result),
+        "fstype_category": parts[1] if len(parts) > 1 else "unknown",
+        "read_only": "ro" in options,
+        "overlay_active": (parts[1] == "overlay") if len(parts) > 1 else False,
+    }
+
+
+def command_available(name):
+    return bool(out(["sh", "-c", f"command -v {name}"], 4))
+
+
+def safe_write_probe(path_text):
+    path = pathlib.Path(path_text)
+    try:
+        is_existing_dir = path.exists() and path.is_dir() and not path.is_symlink()
+    except Exception:
+        is_existing_dir = False
+    if is_existing_dir:
+        probe = path / ".dadooh-c11-policy-write-probe"
+    else:
+        probe = path
+    try:
+        probe.write_text("probe\n", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return {"path": path_text, "write_ok": True, "write_blocked": False}
+    except Exception:
+        return {"path": path_text, "write_ok": False, "write_blocked": True}
+
+
 def journald_storage():
     conf_paths = [pathlib.Path("/etc/systemd/journald.conf")]
     conf_dir = pathlib.Path("/etc/systemd/journald.conf.d")
@@ -367,6 +402,17 @@ payload = {
     "playback": playback,
     "process_counts": process_counts(),
     "systemctl_failed_count": failed_count(),
+    "read_only_runtime": {
+        "root_mount": mount_info("/"),
+        "read_only_enabled": mount_info("/")["read_only"] or mount_info("/")["overlay_active"],
+        "overlay_active": mount_info("/")["overlay_active"] or command_available("overlayroot-chroot") and run(["overlayroot-chroot", "true"], 5) is not None and run(["overlayroot-chroot", "true"], 5).returncode == 0,
+        "overlayroot_command_available": command_available("overlayroot"),
+        "overlayroot_chroot_available": command_available("overlayroot-chroot"),
+        "data_writable": safe_write_probe("/data/state/totem-read-only-mitigation/.verify-data-write-probe")["write_ok"],
+        "tmp_writable": safe_write_probe("/tmp/.dadooh-c11-policy-write-probe")["write_ok"],
+        "run_writable": safe_write_probe("/run/.dadooh-c11-policy-write-probe")["write_ok"],
+        "protected_root_write_blocked": safe_write_probe("/root/.dadooh-c11-policy-root-write-probe")["write_blocked"],
+    },
     "persistent_writable_paths": list_policy_rows("persistent_writable_paths"),
     "runtime_writable_paths": list_policy_rows("runtime_writable_paths"),
     "special_policy_paths": list_policy_rows("special_policy_paths"),
@@ -414,6 +460,7 @@ payload = {
     "ready_for_read_only_enablement": False,
     "ready_for_c11_3_enablement": False,
     "ready_for_c11_2_enablement": not blockers_remaining,
+    "ready_for_c11_4_read_only_reboot_validation": False,
     "recommendation": "C11.2 pode aplicar mitigacoes reversiveis se policy_completeness estiver completa; ainda nao habilitar read-only antes da rodada C11.2.",
 }
 payload["ready_for_c11_3_enablement"] = bool(
@@ -422,6 +469,21 @@ payload["ready_for_c11_3_enablement"] = bool(
     and payload["c11_2_mitigation"]["networkmanager_policy_state_present"]
     and payload["c11_2_mitigation"]["var_policy_state_present"]
     and payload["c11_2_mitigation"]["boot_etc_policy_state_present"]
+)
+payload["root_read_only_ready"] = bool(
+    payload["read_only_runtime"]["read_only_enabled"]
+    and payload["read_only_runtime"]["overlay_active"]
+    and payload["read_only_runtime"]["data_writable"]
+    and payload["read_only_runtime"]["tmp_writable"]
+    and payload["read_only_runtime"]["run_writable"]
+    and payload["read_only_runtime"]["protected_root_write_blocked"]
+)
+payload["ready_for_read_only_enablement"] = payload["root_read_only_ready"]
+payload["ready_for_c11_4_read_only_reboot_validation"] = bool(
+    payload["root_read_only_ready"]
+    and payload["public_state"] == "player_running"
+    and payload["playback"] == "playing"
+    and payload["systemctl_failed_count"] == 0
 )
 
 json_out.parent.mkdir(parents=True, exist_ok=True)
@@ -434,12 +496,18 @@ lines = [
     f"ready_for_read_only_enablement: {payload['ready_for_read_only_enablement']}",
     f"ready_for_c11_2_enablement: {payload['ready_for_c11_2_enablement']}",
     f"ready_for_c11_3_enablement: {payload['ready_for_c11_3_enablement']}",
+    f"ready_for_c11_4_read_only_reboot_validation: {payload['ready_for_c11_4_read_only_reboot_validation']}",
     f"blockers_remaining_count: {len(blockers_remaining)}",
+    f"read_only_enabled: {payload['read_only_runtime']['read_only_enabled']}",
+    f"overlay_active: {payload['read_only_runtime']['overlay_active']}",
+    f"data_writable: {payload['read_only_runtime']['data_writable']}",
+    f"tmp_writable: {payload['read_only_runtime']['tmp_writable']}",
+    f"run_writable: {payload['read_only_runtime']['run_writable']}",
+    f"protected_root_write_blocked: {payload['read_only_runtime']['protected_root_write_blocked']}",
     f"networkmanager_policy: {payload['networkmanager']['classification']}",
     f"journald_policy: {payload['journald']['classification']}",
     f"journald_policy_applied: {payload['c11_2_mitigation']['journald_policy_applied']}",
     f"rollback_state_present: {payload['c11_2_mitigation']['rollback_state_present']}",
-    "read_only_enabled: false",
     "poweroff_executed: false",
     "reboot_executed: false",
     "writer_called: false",

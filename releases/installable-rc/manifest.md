@@ -16,11 +16,13 @@ Status:
 - `c11_0_read_only_readiness_audit=needs_policy_before_enablement`
 - `c11_1_read_only_policy=policy_defined_not_applied`
 - `c11_2_read_only_mitigation=applied_on_dev_not_read_only`
+- `c11_3_read_only_enablement=blocked_missing_overlayroot_package`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
 - `ready_for_c11_1_policy=false`
 - `ready_for_c11_2_enablement=true`
 - `ready_for_c11_3_enablement=true`
+- `ready_for_c11_4=false`
 - `ready_for_c12_image=false`
 
 ## Orange Pi Totem
@@ -62,6 +64,7 @@ Status:
 - `scripts/remote/run_c11_0_read_only_readiness_audit.sh`
 - `scripts/remote/run_c11_1_read_only_policy_probe.sh`
 - `scripts/remote/run_c11_2_read_only_mitigation_apply.sh`
+- `scripts/remote/run_c11_3_read_only_enablement_dev.sh`
 
 ## Units
 
@@ -154,6 +157,19 @@ Resultado: `ready_for_c11_3_enablement=true`, com
 `root_read_only_ready=false` e `ready_for_read_only_enablement=false` ate o
 enablement real de root read-only/overlay.
 
+C11.3 inspecionou o enablement read-only na dev e detectou o mecanismo
+`armbian_config_module_overlayfs`, mas `overlayroot`/`overlayroot-chroot` nao
+estao presentes. Como a rodada proibe instalar pacotes, o enablement foi
+bloqueado com seguranca:
+
+- `enable_executed=false`;
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `ready_for_c11_4=false`.
+
+Proximo gate precisa decidir como aprovisionar o mecanismo oficial sem
+`apt upgrade`, ou mover esse requisito para a imagem base.
+
 ## Handoff
 
 Runbook:
@@ -166,7 +182,7 @@ Evidence:
 
 Next gate:
 
-- C11.3 root read-only/overlay enablement on dev.
+- C11.3.1 read-only mechanism provisioning decision.
 
 Not next:
 

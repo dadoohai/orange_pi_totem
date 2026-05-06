@@ -117,3 +117,19 @@ Riscos que ficam para C11.3:
 
 C11.3 pode iniciar como enablement controlado de root read-only/overlay na dev,
 com rollback e sem placa teste ate a dev passar.
+
+## Follow-up C11.3
+
+C11.3 inspecionou o mecanismo oficial do Armbian e encontrou
+`module_overlayfs`, mas `overlayroot`/`overlayroot-chroot` nao estao presentes.
+Como a rodada C11.3 proibe instalacao de pacotes, o enablement foi bloqueado
+com seguranca:
+
+- `enable_executed=false`;
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `ready_for_c11_4=false`.
+
+As mitigacoes C11.2 continuam validas e aplicadas; o proximo corte deve decidir
+como aprovisionar o mecanismo read-only oficial ou levar isso para a imagem
+base.

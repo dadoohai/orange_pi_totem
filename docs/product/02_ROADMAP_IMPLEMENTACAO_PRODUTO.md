@@ -720,6 +720,20 @@ poweroff, writer, config real, Wi-Fi/NetworkManager, pacotes, `kiosky-player`
 ou placa teste. `root_read_only_ready=false` e
 `ready_for_read_only_enablement=false` continuam ate C11.3.
 
+Atualizacao C11.3: 2026-05-06. C11.3 criou
+`scripts/remote/run_c11_3_read_only_enablement_dev.sh` para enablement
+controlado de root read-only/overlay na dev. `--inspect` e `--dry-run-enable`
+rodaram sem alterar a placa e detectaram o mecanismo oficial
+`armbian_config_module_overlayfs`, mas `overlayroot`/`overlayroot-chroot` nao
+estao presentes. Como C11.3 proibe instalacao de pacotes, o enablement foi
+bloqueado com seguranca: `enable_executed=false`, `read_only_enabled=false`,
+`overlay_active=false`, `ready_for_c11_4=false`. Estado final permaneceu
+saudavel (`public_state=player_running`, playback `playing`,
+`systemctl_failed_count=0`), sem writer, config real, Wi-Fi/NetworkManager,
+pacotes, reboot, poweroff, corte seco ou placa teste. Proximo corte deve
+decidir como aprovisionar `overlayroot` sem `apt upgrade` ou mover isso para a
+imagem base.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o
