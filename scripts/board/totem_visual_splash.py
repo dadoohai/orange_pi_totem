@@ -33,11 +33,20 @@ TMP_ROOT = pathlib.Path("/tmp")
 MESSAGES = {
     "boot": ("Dadooh", "Inicializando"),
     "preparing": ("Dadooh", "Preparando"),
+    "reboot": ("Dadooh", "Reiniciando totem"),
     "player": ("Dadooh", "Iniciando player"),
     "setup": ("Dadooh", "Abrindo configuracao"),
     "saving": ("Dadooh", "Salvando configuracao"),
     "config_pending": ("Dadooh", "Configuracao pendente"),
-    "shutdown": ("Dadooh", "Encerrando"),
+    "shutdown": (
+        "Desligamento seguro",
+        (
+            "Aguarde",
+            "Quando a tela apagar,",
+            "remova e reconecte a energia",
+            "para ligar novamente.",
+        ),
+    ),
 }
 
 ORIENTATIONS = {
@@ -261,7 +270,13 @@ class FramebufferSplash:
                     )
             cursor_x += (self.font.width + 1) * scale
 
-    def render(self, title: str, message: str, *, rotation_deg: int = 0) -> None:
+    @staticmethod
+    def normalized_lines(message: str | tuple[str, ...]) -> tuple[str, ...]:
+        if isinstance(message, tuple):
+            return tuple(str(line) for line in message if str(line).strip())
+        return (str(message),)
+
+    def render(self, title: str, message: str | tuple[str, ...], *, rotation_deg: int = 0) -> None:
         ctx = self.render_context(rotation_deg)
         source_w = int(ctx["source_w"])
         source_h = int(ctx["source_h"])
@@ -273,9 +288,22 @@ class FramebufferSplash:
         title_scale = max(3, min(7, source_w // 210))
         message_scale = max(2, min(4, source_w // 330))
         title_width = len(title) * (self.font.width + 1) * title_scale
-        message_width = len(message) * (self.font.width + 1) * message_scale
-        self.draw_text(max(32, (source_w - title_width) // 2), max(80, source_h // 2 - 86), title, title_scale, (248, 250, 252), ctx)
-        self.draw_text(max(32, (source_w - message_width) // 2), max(150, source_h // 2 + 18), message, message_scale, (203, 213, 225), ctx)
+        message_lines = self.normalized_lines(message)
+        line_height = (self.font.height + 8) * message_scale
+        message_block_h = max(line_height, len(message_lines) * line_height)
+        title_y = max(80, source_h // 2 - 110)
+        message_y = max(150, int(source_h // 2 + 8 - message_block_h / 2))
+        self.draw_text(max(32, (source_w - title_width) // 2), title_y, title, title_scale, (248, 250, 252), ctx)
+        for index, line in enumerate(message_lines):
+            line_width = len(line) * (self.font.width + 1) * message_scale
+            self.draw_text(
+                max(32, (source_w - line_width) // 2),
+                message_y + index * line_height,
+                line,
+                message_scale,
+                (203, 213, 225),
+                ctx,
+            )
         self.fb.flush()
 
 
@@ -360,6 +388,9 @@ def run_self_test() -> None:
         assert payload["writer_called"] is False
         assert payload["wifi_changed"] is False
         assert payload["network_identifiers_published"] is False
+    assert "reboot" in MESSAGES
+    assert "shutdown" in MESSAGES
+    assert "remova e reconecte" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["shutdown"][1]))
     target = require_tmp_path("/tmp/dadooh-c10-5-splash-self-test/status.json")
     payload = render_mode(
         "boot",

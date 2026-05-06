@@ -198,7 +198,12 @@ Antes de C11.0, executar C10.10.2 Shutdown UX:
 - avisar que sera necessario remover e reconectar energia para ligar de novo;
 - manter `Reiniciar totem` separado de `Desligar com seguranca`.
 
-C11.0 deve auditar readiness de root read-only somente depois desse follow-up,
-sem ainda habilitar read-only em producao. C12.0 deve gerar a imagem/release
-customizada, eliminando o bootstrap tecnico manual do Armbian e mantendo
-secrets/config real fora da imagem.
+C10.10.2 fechou esse follow-up de UX sem executar poweroff real: preview e
+simulacao passaram na placa dev e na segunda placa, com mensagem explicita de
+power cycle fisico, servico final `active/enabled`, `public_state=player_running`,
+playback `playing` e `NRestarts=0`.
+
+C11.0 pode auditar readiness de root read-only, ainda sem habilitar read-only
+em producao. C12.0 deve gerar a imagem/release customizada, eliminando o
+bootstrap tecnico manual do Armbian e mantendo secrets/config real fora da
+imagem.

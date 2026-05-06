@@ -658,6 +658,22 @@ com follow-up de UX, mas C11.0 fica bloqueado ate C10.10.2 Shutdown UX separar
 claramente `Reiniciar totem` de `Desligar com seguranca` e explicar power cycle
 fisico para religar.
 
+Atualizacao C10.10.2: 2026-05-06. C10.10.2 implementa e valida a UX de
+desligamento seguro. O splash visual passa a ter `Desligamento seguro` com
+mensagem explicita: quando a tela apagar, remover e reconectar energia para
+ligar novamente; e adiciona modo `reboot` separado para nao confundir
+reinicio com poweroff. O runner
+`scripts/remote/run_c10_10_2_shutdown_ux.sh` inclui inspect, preview,
+simulacao sem poweroff, refresh controlado dev/test e modo de poweroff real
+bloqueado por `CONFIRMO DESLIGAR TOTEM`. A validacao rodou primeiro na placa
+dev e depois na segunda placa, sem executar poweroff real, sem alterar config
+real, writer, Wi-Fi, pacotes, read-only, corte seco ou `kiosky-player`.
+Resultado final nas duas placas: tela renderizada, mensagem de power cycle
+confirmada, `poweroff_executed=false`, servico `active/enabled`,
+`public_state=player_running`, playback `playing`, player/MPV ativos,
+renderer/setup ausentes e `NRestarts=0`. O manifest passa a liberar C11.0 como
+auditoria de readiness, ainda sem habilitar read-only e sem imagem final.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

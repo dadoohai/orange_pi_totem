@@ -9,9 +9,10 @@ Status:
 - `read_only=false`
 - `power_cut_tested=false`
 - `long_test=false`
-- `ready_for_c11_readiness=false`
+- `ready_for_c11_readiness=true`
 - `c10_10_1_power_state_audit=POWER_STATE_EXPECTED_BUT_UX_UNCLEAR`
-- `shutdown_ux_followup_required=true`
+- `c10_10_2_shutdown_ux=passed_no_poweroff_executed`
+- `shutdown_ux_followup_required=false`
 - `ready_for_c12_image=false`
 
 ## Orange Pi Totem
@@ -19,9 +20,9 @@ Status:
 - repository: `dadoohai/orange_pi_totem`
 - branch: `foundation-v0.1`
 - validated_base_commit: `2b8c620eb7827bc286e08d6c8d4e9df63a593801`
-- c10_10_package_commit: `pending_until_committed`
-- release_policy: record the final C10.10 commit before using this manifest as
-  a frozen handoff artifact.
+- c10_10_package_commit: `72bdebac203de1596f7fbafb9213a6a55eb233d3`
+- release_policy: C10.10.2 closes the shutdown UX follow-up for the installable
+  bench RC. This is still not a final image.
 
 ## Kiosky-player Pin
 
@@ -111,11 +112,10 @@ Evidence:
 
 Next gate:
 
-- C10.10.2 Shutdown UX.
+- C11.0 read-only readiness audit.
 
 Not next:
 
-- C11.0 read-only readiness audit before shutdown UX follow-up;
 - final image generation;
 - root read-only enablement;
 - power-cut testing;

@@ -131,6 +131,9 @@ Escopo sugerido:
 - manter `Reiniciar totem` separado de `Desligar com seguranca`;
 - validar sem corte seco e sem habilitar read-only.
 
-C11.0 read-only readiness permanece bloqueado ate C10.10.2 fechar a UX de
-desligamento ou confirmar que nao existe acionador de poweroff exposto ao
-operador.
+C10.10.2 fechou a UX de desligamento com tela visual `Desligamento seguro`,
+mensagem explicita de power cycle fisico e runner que nao executa poweroff por
+padrao. A validacao passou em placa dev e segunda placa sem poweroff real.
+
+C11.0 read-only readiness pode iniciar como auditoria, ainda sem habilitar
+read-only, sem corte seco e sem gerar imagem final.
