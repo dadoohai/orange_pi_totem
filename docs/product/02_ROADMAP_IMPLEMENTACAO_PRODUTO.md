@@ -20,6 +20,13 @@ presentes. C11.4 segue bloqueado. O proximo passo permitido e C12.0-prep para
 validar uma imagem/base com overlay integrado no build, nao nova tentativa direta
 na dev funcional.
 
+Atualizacao C12.0-prep: 2026-05-06. C12.0-prep transformou a decisao ADR-0011
+em plano de imagem-lab: nenhuma placa foi tocada, nenhuma imagem foi gerada e
+nenhum cartao foi gravado. Foi criado `releases/image-lab-readonly/manifest.md`
+e um runner/checklist local para C12.1. A proxima acao correta e preparar o
+ambiente de build e recuperar/clonar Armbian Build v25.11; cartao de teste vem
+somente depois da imagem-lab e checksums.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
@@ -2013,3 +2020,9 @@ Atualizacao C11.3.4: 2026-05-06. C11.3.4 nao alterou as placas e registrou a
 ADR-0011. A decisao e mover o proximo experimento para C12.0-prep:
 `root_read_only_mechanism_decision=c12_image_integrated_overlay_lab_required`.
 Read-only, C11.4 e corte seco continuam bloqueados.
+
+Atualizacao C12.0-prep: 2026-05-06. C12.0-prep criou o plano de imagem-lab com
+read-only integrado ao build, em vez de enablement pos-instalacao. Status:
+`image_built=false`, `card_written=false`, `boards_touched=false`,
+`ready_for_c12_1_build=true`, `ready_for_c12_2_board_validation=false` e
+`ready_for_c11_4=false`.
