@@ -15,10 +15,12 @@ Status:
 - `shutdown_ux_followup_required=false`
 - `c11_0_read_only_readiness_audit=needs_policy_before_enablement`
 - `c11_1_read_only_policy=policy_defined_not_applied`
+- `c11_2_read_only_mitigation=applied_on_dev_not_read_only`
 - `root_read_only_ready=false`
 - `ready_for_read_only_enablement=false`
 - `ready_for_c11_1_policy=false`
 - `ready_for_c11_2_enablement=true`
+- `ready_for_c11_3_enablement=true`
 - `ready_for_c12_image=false`
 
 ## Orange Pi Totem
@@ -59,6 +61,7 @@ Status:
 - `scripts/remote/run_c10_9_1_second_board_provision.sh`
 - `scripts/remote/run_c11_0_read_only_readiness_audit.sh`
 - `scripts/remote/run_c11_1_read_only_policy_probe.sh`
+- `scripts/remote/run_c11_2_read_only_mitigation_apply.sh`
 
 ## Units
 
@@ -137,6 +140,20 @@ O probe C11.1 rodou somente na placa dev e nao alterou estado operacional.
 `ready_for_read_only_enablement=false` ate C11.2 aplicar as mitigacoes
 reversiveis. Nao habilitar read-only nem executar corte seco ainda.
 
+C11.2 aplicou mitigacoes reversiveis somente na placa dev:
+
+- journald volatil por drop-in;
+- rollback state em `/data/state/totem-read-only-mitigation`;
+- politica pratica registrada para NetworkManager, `/var`, `/boot` e `/etc`;
+- reboot controlado validado;
+- placa teste nao tocada;
+- Wi-Fi/NetworkManager, config real, writer, pacotes e `kiosky-player` nao
+  alterados.
+
+Resultado: `ready_for_c11_3_enablement=true`, com
+`root_read_only_ready=false` e `ready_for_read_only_enablement=false` ate o
+enablement real de root read-only/overlay.
+
 ## Handoff
 
 Runbook:
@@ -149,7 +166,7 @@ Evidence:
 
 Next gate:
 
-- C11.2 read-only reversible mitigation enablement.
+- C11.3 root read-only/overlay enablement on dev.
 
 Not next:
 

@@ -705,6 +705,21 @@ servicos ativos/enabled e `NRestarts=0`. Resultado:
 `ready_for_read_only_enablement=false` ate C11.2 aplicar mitigacoes
 reversiveis. Placa teste nao foi tocada.
 
+Atualizacao C11.2: 2026-05-06. C11.2 aplica mitigacoes reversiveis somente na
+placa dev, ainda sem habilitar root read-only e sem corte seco. O runner
+`scripts/remote/run_c11_2_read_only_mitigation_apply.sh` inclui `--inspect`,
+`--dry-run`, `--apply-dev`, `--verify`, `--rollback` e `--reboot-check`.
+Aplicado: drop-in reversivel de journald volatil, estados de politica para
+NetworkManager, `/var`, `/boot` e `/etc` sob
+`/data/state/totem-read-only-mitigation`, e rollback state. O reboot controlado
+pos-apply passou com `journald_storage_effective=volatile`,
+`rollback_state_present=true`, `ready_for_c11_3_enablement=true`,
+`public_state=player_running`, playback `playing`, servicos ativos/enabled,
+`NRestarts=0` e `systemctl_failed_count=0`. Nao houve read-only, corte seco,
+poweroff, writer, config real, Wi-Fi/NetworkManager, pacotes, `kiosky-player`
+ou placa teste. `root_read_only_ready=false` e
+`ready_for_read_only_enablement=false` continuam ate C11.3.
+
 Este roadmap separa a evolucao de produto/UX da homologacao `v0.1-rc1`. A RC1
 continua focada em reproduzir a base tecnica validada em outra placa/cartao. As
 fases abaixo devem ser implementadas em passos pequenos, sempre mantendo o

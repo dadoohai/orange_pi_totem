@@ -268,6 +268,15 @@ def nm_profile_policy():
     }
 
 
+def read_json_object(path_text):
+    path = pathlib.Path(path_text)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def first_json(paths):
     for raw in paths:
         path = pathlib.Path(raw)
@@ -381,6 +390,17 @@ payload = {
         "boot_env_present": pathlib.Path("/boot/armbianEnv.txt").exists(),
         "normal_runtime_write_allowed": policy["boot_policy"]["normal_runtime_write_allowed"],
     },
+    "c11_2_mitigation": {
+        "state_dir": path_meta("/data/state/totem-read-only-mitigation"),
+        "rollback_state_present": pathlib.Path("/data/state/totem-read-only-mitigation/rollback-state.json").exists(),
+        "journald_dropin_present": pathlib.Path("/etc/systemd/journald.conf.d/90-dadooh-volatile.conf").exists(),
+        "journald_storage_effective": journald_storage(),
+        "journald_policy_applied": journald_storage() == "volatile",
+        "networkmanager_policy_state_present": pathlib.Path("/data/state/totem-read-only-mitigation/networkmanager-policy.json").exists(),
+        "var_policy_state_present": pathlib.Path("/data/state/totem-read-only-mitigation/var-policy.json").exists(),
+        "boot_etc_policy_state_present": pathlib.Path("/data/state/totem-read-only-mitigation/boot-etc-policy.json").exists(),
+        "apply_state": read_json_object("/data/state/totem-read-only-mitigation/apply-state.json").get("status", "not_applied"),
+    },
     "policy_completeness": {
         "special_policy_count": special_policy_count,
         "special_without_policy_count": len(special_without_policy),
@@ -392,9 +412,17 @@ payload = {
     "blockers_remaining": blockers_remaining,
     "root_read_only_ready": False,
     "ready_for_read_only_enablement": False,
+    "ready_for_c11_3_enablement": False,
     "ready_for_c11_2_enablement": not blockers_remaining,
     "recommendation": "C11.2 pode aplicar mitigacoes reversiveis se policy_completeness estiver completa; ainda nao habilitar read-only antes da rodada C11.2.",
 }
+payload["ready_for_c11_3_enablement"] = bool(
+    payload["c11_2_mitigation"]["journald_policy_applied"]
+    and payload["c11_2_mitigation"]["rollback_state_present"]
+    and payload["c11_2_mitigation"]["networkmanager_policy_state_present"]
+    and payload["c11_2_mitigation"]["var_policy_state_present"]
+    and payload["c11_2_mitigation"]["boot_etc_policy_state_present"]
+)
 
 json_out.parent.mkdir(parents=True, exist_ok=True)
 json_out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -405,9 +433,12 @@ lines = [
     f"root_read_only_ready: {payload['root_read_only_ready']}",
     f"ready_for_read_only_enablement: {payload['ready_for_read_only_enablement']}",
     f"ready_for_c11_2_enablement: {payload['ready_for_c11_2_enablement']}",
+    f"ready_for_c11_3_enablement: {payload['ready_for_c11_3_enablement']}",
     f"blockers_remaining_count: {len(blockers_remaining)}",
     f"networkmanager_policy: {payload['networkmanager']['classification']}",
     f"journald_policy: {payload['journald']['classification']}",
+    f"journald_policy_applied: {payload['c11_2_mitigation']['journald_policy_applied']}",
+    f"rollback_state_present: {payload['c11_2_mitigation']['rollback_state_present']}",
     "read_only_enabled: false",
     "poweroff_executed: false",
     "reboot_executed: false",

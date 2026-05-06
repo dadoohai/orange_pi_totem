@@ -110,3 +110,17 @@ C11.2 pode iniciar para aplicar mitigacoes reversiveis:
 
 Ainda nao habilitar root read-only, nao fazer corte seco e nao gerar imagem
 final.
+
+## Follow-up C11.2
+
+C11.2 aplicou a primeira mitigacao reversivel na dev:
+
+- journald passou para politica volatil por drop-in;
+- estados de politica de NetworkManager, `/var`, `/boot` e `/etc` foram
+  registrados em `/data/state/totem-read-only-mitigation`;
+- rollback ficou disponivel;
+- reboot controlado passou.
+
+Mesmo apos C11.2, `root_read_only_ready=false` e
+`ready_for_read_only_enablement=false` seguem corretos. O novo gate e
+`ready_for_c11_3_enablement=true`.
