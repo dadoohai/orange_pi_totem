@@ -9,11 +9,11 @@ Status:
 - `image_built=true`
 - `image_version=c12.1.6`
 - `previous_image_superseded=true`
-- `card_written=false`
+- `card_written=true`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=false`
+- `boards_touched=true`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
@@ -51,6 +51,17 @@ Status:
 - `c12_1_6_lab_bootstrap_service_included=true`
 - `ready_for_c12_2_2_card_write=false`
 - `ready_for_c12_2_3_card_write=true`
+- `c12_3_4_status=blocked`
+- `c12_3_4_boot_success=true`
+- `c12_3_4_ssh_available=true`
+- `c12_3_4_firstboot_bootstrap=passed`
+- `c12_3_4_read_only_enabled=false`
+- `c12_3_4_overlay_active=false`
+- `c12_3_4_root_fstype=ext4_rw`
+- `c12_3_4_blocker=IMAGE_LAB_READ_ONLY_NOT_ACTIVE`
+- `c12_3_4_candidate_only=CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES`
+- `ready_for_c12_4=false`
+- `ready_for_c12_1_7=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -296,9 +307,51 @@ endurecendo a validacao para inspecionar o rootfs real da imagem.
 - lab_firstboot_bootstrap_service_enabled: `true`
 - lab_firstboot_bootstrap_service_ordered_before_gate: `true`
 - rootfs_ready_for_card_write: `true`
-- card_written: `false`
-- boards_touched: `false`
+- card_written: `true`
+- boards_touched: `true`
 - ready_for_c12_2_3_card_write: `true`
+
+## C12.3.4 Boot Validation C12.1.6
+
+A imagem C12.1.6 foi gravada e bootada em placa de teste. Resultado:
+
+- boot_success: `true`
+- ssh_available: `true`
+- firstboot_marker_present: `false`
+- lab_bootstrap_state: `complete`
+- public_state: `config_missing`
+- config_real_present: `false`
+- config_missing_visual_ok: `true`
+- f10_opened_settings_observed_by_human: `true`
+- visual_candidate_generated: `true`
+- writer_called: `false`
+- real_config_written: `false`
+- session_lock_present: `false`
+- systemctl_failed_count: `1`
+- failed_unit_category: `console_setup`
+
+Read-only/overlay:
+
+- overlayroot_config: `overlayroot=tmpfs`
+- overlayroot_hooks_present: `true`
+- overlay_active: `false`
+- read_only_enabled: `false`
+- root_fstype: `ext4`
+- root_write_blocked: `false`
+- data_tmp_run_writable: `true`
+
+Classificacao:
+
+```text
+IMAGE_LAB_READ_ONLY_NOT_ACTIVE
+CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES
+UX_AMBIGUOUS_CANDIDATE_ONLY
+```
+
+C12.4 provisionamento real nao deve comecar enquanto read-only/overlay estiver
+inativo. O proximo passo recomendado e C12.1.7 para diagnosticar por que a
+imagem contem configuracao/hook overlayroot, mas o boot ainda monta root como
+`ext4 rw`.
 
 ## C12.3.1 Reliability Gate
 

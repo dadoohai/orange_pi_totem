@@ -101,6 +101,16 @@ o arquivo privado existia no rootfs, porem faltava bootstrap autonomo antes do
 `rootfs_lab_bootstrap_proven=true` e `ready_for_card_write_by_rootfs=true`.
 Nenhuma placa foi tocada e nenhum cartao foi gravado durante a correcao.
 
+Atualizacao C12.3.4: 2026-05-07. A C12.1.6 bootou em placa, SSH ficou
+acessivel e o bootstrap lab concluiu. A imagem voltou corretamente para
+`config_missing` porque nao embute config real; o wizard gerou candidata em
+modo `candidate-only`, sem writer e sem escrita real. Porem o objetivo principal
+da image-lab nao passou: apesar de `overlayroot="tmpfs"` e hooks presentes, o
+root bootou como `ext4 rw`, com `overlay_active=false` e
+`read_only_enabled=false`. C12.4 fica bloqueado; o proximo passo recomendado e
+C12.1.7 para diagnosticar overlayroot configurado no rootfs, mas inativo no
+boot.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
