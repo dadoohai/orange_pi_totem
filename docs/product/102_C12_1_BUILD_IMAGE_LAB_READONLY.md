@@ -97,3 +97,22 @@ C12.1 nao valida boot em placa. O proximo passo e C12.2:
 5. validar player e F10 open/cancel.
 
 Corte seco e imagem final continuam bloqueados.
+
+## C12.1.2
+
+Em 2026-05-07, a imagem foi reconstruida como C12.1.2 apos o bloqueio C12.3.
+A nova imagem incorpora cleanup da sessao F10, gate de firstboot e assert
+explicito de read-only:
+
+```text
+/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-2_minimal.img
+```
+
+SHA256:
+
+```text
+a398399c139c3fee1b05860b216db7facfddd0ae1a57f681b229228390b7abd9
+```
+
+Esta nova imagem substitui a C12.1 para a proxima gravacao de cartao
+C12.2.1. A imagem antiga permanece apenas como historico/superseded.

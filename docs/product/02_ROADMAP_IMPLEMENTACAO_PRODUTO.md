@@ -65,6 +65,14 @@ Dadooh enquanto `/root/.not_logged_in_yet` existir, template privado de
 validacao. Proximos passos: rebuild C12.1.2, reflash C12.2.1 e revalidacao
 C12.3.2 antes de qualquer C12.4.
 
+Atualizacao C12.1.2: 2026-05-07. A imagem-lab foi reconstruida com os fixes
+C12.3.1 incorporados, sem tocar placas e sem gravar cartao. A nova imagem e
+`Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-2_minimal.img`,
+com SHA256 `a398399c139c3fee1b05860b216db7facfddd0ae1a57f681b229228390b7abd9`.
+O manifest marca a imagem C12.1 como superseded e libera C12.2.1 para gravacao
+em cartao novo/descartavel; C12.3.2 deve validar firstboot gate, F10 e
+read-only assertion.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
@@ -2077,3 +2085,10 @@ esperado com SHA256
 `1b6f5573262d501ae2df6bc3338b56432c8994d4444308caf00347829df08fe2`. O incidente
 fisico no cartao dev bloqueia uso da dev como alvo imediato; C12.2 deve preparar
 cartao de teste seguro e usar a placa teste.
+
+Atualizacao C12.1.2: 2026-05-07. A imagem-lab foi reconstruida com os fixes de
+sessao F10, firstboot gate e read-only assertion. A nova imagem e
+`Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-2_minimal.img`,
+SHA256 `a398399c139c3fee1b05860b216db7facfddd0ae1a57f681b229228390b7abd9`.
+Ela substitui a C12.1 para a proxima gravacao C12.2.1; nenhuma placa foi tocada
+e nenhum cartao foi gravado nesta rodada.

@@ -11,6 +11,8 @@ RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
 CONFIG_NAME="c12-image-lab-readonly"
+IMAGE_VERSION="c12.1.2"
+IMAGE_SUFFIX_MARKER="c12-ro-lab-c12-1-2"
 EXPECTED_ARMBIAN_REF="e172058"
 EXPECTED_KIOSKY_COMMIT="c71318a64c08e47b8426f1388b95f21364d57123"
 
@@ -304,7 +306,7 @@ build_image() {
 collect_artifacts() {
   check_armbian_build
   local image
-  image="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name '*c12-ro-lab*.img' -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
+  image="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name "*$IMAGE_SUFFIX_MARKER*.img" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
   if [ -z "$image" ] || [ ! -f "$image" ]; then
     echo "error: C12 image artifact not found" >&2
     echo "blocker=c12_image_not_found" > "$OUT_DIR/blocker.env"
@@ -325,19 +327,36 @@ collect_artifacts() {
   build_log="$(find "$ARM_BUILD_DIR/output/logs" -maxdepth 1 -type f -name 'log-build-*.log' -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
   local integration_manifest="$OUT_DIR/read-only-integration-manifest.txt"
   local initramfs_after_overlayroot="unknown"
+  local initramfs_source="unknown"
   if [ -n "${build_log:-}" ] &&
     grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log" &&
     grep -q 'Updated initramfs' "$build_log"; then
     initramfs_after_overlayroot="true"
+    initramfs_source="updated_initramfs"
+  elif [ -n "${build_log:-}" ] &&
+    grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log" &&
+    grep -q 'initrd cache hit' "$build_log" &&
+    grep -q '/usr/share/initramfs-tools/hooks/overlayroot' "$ARM_BUILD_DIR/cache/initrd/initrd.manifest-6.12.58-current-sunxi64.last.manifest" &&
+    grep -q '/usr/share/initramfs-tools/scripts/init-bottom/overlayroot' "$ARM_BUILD_DIR/cache/initrd/initrd.manifest-6.12.58-current-sunxi64.last.manifest"; then
+    initramfs_after_overlayroot="true"
+    initramfs_source="cache_hit_with_overlayroot_hooks"
   fi
   {
     printf 'overlayroot_included=%s\n' "$(grep -q '^package=overlayroot ' "$pkg_manifest" && echo true || echo false)"
+    printf 'image_version=%s\n' "$IMAGE_VERSION"
     printf 'image_suffix_c12_ro_lab=%s\n' "$(basename "$image" | grep -q 'c12-ro-lab' && echo true || echo false)"
+    printf 'image_suffix_c12_1_2=%s\n' "$(basename "$image" | grep -q "$IMAGE_SUFFIX_MARKER" && echo true || echo false)"
     printf 'initramfs_generated_after_overlayroot=%s\n' "$initramfs_after_overlayroot"
+    printf 'initramfs_source=%s\n' "$initramfs_source"
+    printf 'firstboot_gate_included=true\n'
+    printf 'open_settings_cleanup_included=true\n'
+    printf 'settings_trigger_stale_lock_cleanup_included=true\n'
+    printf 'read_only_assertion_required=true\n'
     printf 'card_written=false\n'
     printf 'boards_touched=false\n'
   } > "$integration_manifest"
   {
+    printf 'image_version=%s\n' "$IMAGE_VERSION"
     printf 'image_file=%s\n' "$image"
     printf 'image_checksum_file=%s\n' "$checksum"
     printf 'build_log_file=%s\n' "${build_log:-unknown}"

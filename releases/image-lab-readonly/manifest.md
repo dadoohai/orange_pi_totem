@@ -7,11 +7,13 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `card_written=true`
+- `image_version=c12.1.2`
+- `previous_image_superseded=true`
+- `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=true`
+- `boards_touched=false`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
@@ -25,7 +27,9 @@ Status:
 - `c12_3_1_session_reliability_patch=applied_pending_rebuild`
 - `c12_3_1_firstboot_policy=gate_or_private_lab_autoconfig`
 - `c12_3_1_read_only_assertion=required`
-- `ready_for_c12_1_2_rebuild=true`
+- `ready_for_c12_1_2_rebuild=false`
+- `c12_1_2_build_status=passed`
+- `ready_for_c12_2_1_card_write=true`
 - `ready_for_c12_3_2_revalidation=false`
 - `ready_for_c11_4=false`
 
@@ -41,6 +45,8 @@ provisioned board.
 - branch: `foundation-v0.1`
 - c12_0_prep_commit: `49778f6`
 - c12_1_build_commit: `f07ff65`
+- c12_1_2_build_commit: `pending_until_committed`
+- c12_1_2_source_head: `38eac477b6658c399eaa075e73d3f4af49af9193`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`
@@ -108,13 +114,41 @@ foundation candidate:
 - c12_3_1_firstboot_gate: `applied_pending_rebuild`
 - c12_3_1_private_firstboot_autoconfig_template: `available`
 - c12_3_1_read_only_assertion: `required`
-- ready_for_c12_1_2_rebuild: `true`
-- ready_for_c12_2_1_reflash: `false`
+- ready_for_c12_1_2_rebuild: `false`
+- ready_for_c12_2_1_reflash: `true`
 - ready_for_c12_3_2_revalidation: `false`
 
 The dev board/card incident is tracked as a physical media/hardware event until
 proven otherwise. C12.2 must not use the damaged dev card and must not depend on
 the dev board.
+
+## C12.1.2 Rebuild Artifacts
+
+The C12.1 image is superseded for future flashing. C12.1.2 incorporates the
+C12.3.1 fixes and is the only image-lab artifact allowed for C12.2.1.
+
+- image_version: `c12.1.2`
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-2_minimal.img`
+- image_checksum_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-2_minimal.img.sha256`
+- image_sha256:
+  `a398399c139c3fee1b05860b216db7facfddd0ae1a57f681b229228390b7abd9`
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-eef4830c-29a1-4a82-bd74-81ff23b65894.log`
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1-2.txt`
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-2.txt`
+- overlayroot_included: `true`
+- initramfs_generated_after_overlayroot: `true`
+- initramfs_source: `cache_hit_with_overlayroot_hooks`
+- firstboot_gate_included: `true`
+- open_settings_cleanup_included: `true`
+- read_only_assertion_required: `true`
+- card_written: `false`
+- boards_touched: `false`
+- ready_for_c12_2_1_card_write: `true`
 
 ## C12.3.1 Reliability Gate
 

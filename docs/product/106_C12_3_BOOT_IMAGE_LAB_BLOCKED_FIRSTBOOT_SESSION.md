@@ -61,3 +61,10 @@ C12.3.1 endurece a proxima imagem-lab:
 Rebuild da imagem-lab como C12.1.2, reflash como C12.2.1 e nova validacao como
 C12.3.2. Nao provisionar config real, nao chamar writer e nao avancar para
 C12.4 antes desses gates.
+
+## Atualizacao C12.1.2
+
+O rebuild C12.1.2 foi concluido em 2026-05-07. A nova imagem inclui os fixes de
+sessao/firstboot e passa a ser o artefato correto para C12.2.1. C12.3 segue
+bloqueado para a imagem antiga; a revalidacao deve acontecer como C12.3.2 apos
+reflash controlado.

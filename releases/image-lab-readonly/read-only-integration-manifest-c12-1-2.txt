@@ -1,0 +1,12 @@
+overlayroot_included=true
+image_version=c12.1.2
+image_suffix_c12_ro_lab=true
+image_suffix_c12_1_2=true
+initramfs_generated_after_overlayroot=true
+initramfs_source=cache_hit_with_overlayroot_hooks
+firstboot_gate_included=true
+open_settings_cleanup_included=true
+settings_trigger_stale_lock_cleanup_included=true
+read_only_assertion_required=true
+card_written=false
+boards_touched=false

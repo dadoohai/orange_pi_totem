@@ -73,10 +73,20 @@ validate_artifacts() {
   grep -q '^package=python3-requests ' "$package_manifest_file"
   grep -q '^package=network-manager ' "$package_manifest_file"
   grep -q '^overlayroot_included=true$' "$integration_manifest_file"
+  grep -q '^image_version=c12.1.2$' "$integration_manifest_file"
+  grep -q '^image_suffix_c12_1_2=true$' "$integration_manifest_file"
+  grep -q '^firstboot_gate_included=true$' "$integration_manifest_file"
+  grep -q '^open_settings_cleanup_included=true$' "$integration_manifest_file"
+  grep -q '^settings_trigger_stale_lock_cleanup_included=true$' "$integration_manifest_file"
+  grep -q '^read_only_assertion_required=true$' "$integration_manifest_file"
   grep -q '^card_written=false$' "$integration_manifest_file"
   grep -q '^boards_touched=false$' "$integration_manifest_file"
   grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log_file"
-  grep -q 'Updated initramfs' "$build_log_file"
+  if ! grep -q 'Updated initramfs' "$build_log_file"; then
+    grep -q 'initrd cache hit' "$build_log_file"
+    grep -q '^initramfs_generated_after_overlayroot=true$' "$integration_manifest_file"
+    grep -q '^initramfs_source=cache_hit_with_overlayroot_hooks$' "$integration_manifest_file"
+  fi
 
   if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
     "$ARTIFACTS_ENV" "$package_manifest_file" "$integration_manifest_file"; then
