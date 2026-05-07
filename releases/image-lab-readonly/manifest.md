@@ -62,6 +62,11 @@ Status:
 - `c12_3_4_candidate_only=CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES`
 - `ready_for_c12_4=false`
 - `ready_for_c12_1_7=true`
+- `c12_1_7_status=passed`
+- `c12_1_7_cause_category=UINITRD_NOT_UPDATED`
+- `c12_1_7_image_uinitrd_size_category=empty`
+- `c12_1_7_running_uinitrd_size_category=nonempty`
+- `ready_for_c12_1_8_rebuild=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -352,6 +357,32 @@ C12.4 provisionamento real nao deve comecar enquanto read-only/overlay estiver
 inativo. O proximo passo recomendado e C12.1.7 para diagnosticar por que a
 imagem contem configuracao/hook overlayroot, mas o boot ainda monta root como
 `ext4 rw`.
+
+## C12.1.7 Overlayroot Activation Diagnose
+
+C12.1.7 comparou a placa bootada com o artefato C12.1.6 sem alterar placa,
+config, Wi-Fi ou servicos. Resultado:
+
+- `/etc/overlayroot.conf` esta presente na imagem e no sistema bootado;
+- `overlayroot` esta efetivo como `tmpfs`;
+- `initrd.img` da imagem contem `scripts/init-bottom/overlayroot`;
+- o modulo `overlay` esta no `initrd.img`;
+- o boot script carrega `uInitrd`;
+- `uInitrd` no artefato da imagem esta vazio;
+- no sistema ja bootado, `uInitrd` aparece nao vazio, mas o boot atual ficou
+  `ext4 rw`;
+- `overlay_active=false`;
+- `read_only_enabled=false`.
+
+Classificacao:
+
+```text
+UINITRD_NOT_UPDATED
+```
+
+Decisao: C12.4 segue bloqueado. C12.1.8 deve reconstruir a imagem-lab
+garantindo `uInitrd` valido antes do primeiro boot, ou ajustar de forma
+controlada o boot para usar o initramfs correto.
 
 ## C12.3.1 Reliability Gate
 

@@ -123,3 +123,17 @@ Proximo passo recomendado:
 ```text
 C12.1.7 - diagnosticar overlayroot configurado no rootfs, mas inativo no boot
 ```
+
+## Atualizacao C12.1.7
+
+A rodada C12.1.7 confirmou que a configuracao `overlayroot="tmpfs"` estava no
+rootfs e que `initrd.img` continha o hook `scripts/init-bottom/overlayroot`.
+O problema provavel ficou classificado como:
+
+```text
+UINITRD_NOT_UPDATED
+```
+
+O boot script carrega `uInitrd`, mas o `uInitrd` no artefato C12.1.6 estava
+vazio. C12.4 continua bloqueado ate C12.1.8 reconstruir a imagem-lab com
+`uInitrd` valido ou boot ajustado para o initramfs correto.

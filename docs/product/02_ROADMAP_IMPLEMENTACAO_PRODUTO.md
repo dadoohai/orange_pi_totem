@@ -111,6 +111,14 @@ root bootou como `ext4 rw`, com `overlay_active=false` e
 C12.1.7 para diagnosticar overlayroot configurado no rootfs, mas inativo no
 boot.
 
+Atualizacao C12.1.7: 2026-05-07. O diagnostico comparou a placa C12.1.6
+bootada com o artefato offline sem alterar placa, config, Wi-Fi ou servicos. A
+causa provavel foi classificada como `UINITRD_NOT_UPDATED`: `initrd.img` contem
+o hook do overlayroot e o modulo `overlay`, mas o boot script carrega `uInitrd`
+e o `uInitrd` no artefato da imagem estava vazio. C12.4 segue bloqueado; C12.1.8
+deve reconstruir a imagem-lab garantindo `uInitrd` valido antes do primeiro boot
+ou ajustando o boot para usar o initramfs correto.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
