@@ -96,3 +96,24 @@ C12.4 continua bloqueado. O proximo passo correto e:
 ```text
 C12.1.8 - rebuild image-lab com uInitrd valido para overlayroot
 ```
+
+## Atualizacao C12.1.8
+
+C12.1.8 implementou o rebuild recomendado. A validacao offline foi endurecida
+para seguir o symlink `/boot/uInitrd`, extrair o payload U-Boot com
+`dumpimage`, comparar esse payload com `initrd.img` e verificar que ambos
+contem:
+
+- hook `scripts/init-bottom/overlayroot`;
+- modulo `overlay`;
+- marker seguro `etc/dadooh/c12-overlayroot-initramfs-marker`.
+
+Resultado do artefato C12.1.8:
+
+- `uinitrd_nonempty=true`;
+- `uinitrd_payload_matches_initrd_img=true`;
+- `uinitrd_generated_after_overlayroot=true`;
+- `uinitrd_generated_after_initrd_img=true`;
+- `effective_boot_initramfs_valid=true`.
+
+C12.4 segue bloqueado ate a nova imagem ser gravada e validada em placa.

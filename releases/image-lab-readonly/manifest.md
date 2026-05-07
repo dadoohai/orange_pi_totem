@@ -7,13 +7,13 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `image_version=c12.1.6`
+- `image_version=c12.1.8`
 - `previous_image_superseded=true`
-- `card_written=true`
+- `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=true`
+- `boards_touched=false`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
@@ -67,6 +67,11 @@ Status:
 - `c12_1_7_image_uinitrd_size_category=empty`
 - `c12_1_7_running_uinitrd_size_category=nonempty`
 - `ready_for_c12_1_8_rebuild=true`
+- `c12_1_8_status=passed`
+- `c12_1_8_image_built=true`
+- `c12_1_8_uinitrd_valid=true`
+- `c12_1_8_effective_boot_initramfs_valid=true`
+- `ready_for_c12_2_4_card_write=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -383,6 +388,47 @@ UINITRD_NOT_UPDATED
 Decisao: C12.4 segue bloqueado. C12.1.8 deve reconstruir a imagem-lab
 garantindo `uInitrd` valido antes do primeiro boot, ou ajustar de forma
 controlada o boot para usar o initramfs correto.
+
+## C12.1.8 Rebuild Artifacts
+
+C12.1.8 corrige a falha classificada como `UINITRD_NOT_UPDATED` endurecendo a
+geracao e validacao do initramfs efetivo usado pelo boot.
+
+- image_version: `c12.1.8`
+- c12_1_8_build_commit: `pending_until_committed`
+- c12_1_8_source_head: `7a78ea1`
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-8_minimal.img`
+- image_checksum_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-8_minimal.img.sha256`
+- image_sha256:
+  `7fbc9a0abc39d39b5fc0803d5f935baaf1795bddc6707e18dbf1d7c804ad830d`
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-2a197de8-ef86-4e09-8ec0-61bc0fa180b0.log`
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1-8.txt`
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-8.txt`
+- rootfs_validation_file:
+  `releases/image-lab-readonly/rootfs-validation-c12-1-8.env`
+- overlayroot_included: `true`
+- initrd_contains_overlayroot_hook: `true`
+- initrd_contains_overlay_module: `true`
+- initrd_contains_c12_overlayroot_marker: `true`
+- uinitrd_nonempty: `true`
+- uinitrd_payload_matches_initrd_img: `true`
+- uinitrd_generated_after_overlayroot: `true`
+- uinitrd_generated_after_initrd_img: `true`
+- boot_script_uses_uinitrd: `true`
+- effective_boot_initramfs_valid: `true`
+- firstboot_autoconfig_valid: `true`
+- card_written: `false`
+- boards_touched: `false`
+- ready_for_c12_2_4_card_write: `true`
+
+Observacao: o boot validation em placa ainda nao foi repetido. C12.4 continua
+bloqueado ate C12.2.4 gravar a imagem C12.1.8 e uma rodada C12.3.x validar
+`read_only_enabled=true`, `overlay_active=true` e `root_write_blocked=true`.
 
 ## C12.3.1 Reliability Gate
 

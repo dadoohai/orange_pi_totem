@@ -115,3 +115,15 @@ lab_firstboot_autoconfig_not_effective
 
 C12.1.5 deve corrigir build/validacao e gerar C12.1.6. A C12.1.4 nao deve ser
 reutilizada para nova boot validation.
+
+## Atualizacao C12.1.8
+
+C12.1.6 resolveu o bootstrap lab, mas C12.3.4 mostrou root ainda `ext4 rw`.
+C12.1.7 classificou a causa como `UINITRD_NOT_UPDATED`. C12.1.8 reconstruiu a
+imagem-lab com validacao do initramfs efetivo do boot:
+
+- `uinitrd_nonempty=true`;
+- `uinitrd_payload_matches_initrd_img=true`;
+- `effective_boot_initramfs_valid=true`.
+
+A imagem C12.1.8 substitui C12.1.6 para a proxima gravacao de cartao.

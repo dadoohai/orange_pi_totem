@@ -119,6 +119,17 @@ e o `uInitrd` no artefato da imagem estava vazio. C12.4 segue bloqueado; C12.1.8
 deve reconstruir a imagem-lab garantindo `uInitrd` valido antes do primeiro boot
 ou ajustando o boot para usar o initramfs correto.
 
+Atualizacao C12.1.8: 2026-05-07. A imagem-lab foi reconstruida com validacao
+do initramfs efetivo: o build instala um marker seguro no initramfs, gera
+`uInitrd` pelo fluxo Armbian e a inspecao offline segue o symlink, extrai o
+payload U-Boot e compara com `initrd.img`. A imagem
+`Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-8_minimal.img`
+tem SHA256 `7fbc9a0abc39d39b5fc0803d5f935baaf1795bddc6707e18dbf1d7c804ad830d`,
+`uinitrd_nonempty=true`, `uinitrd_payload_matches_initrd_img=true` e
+`effective_boot_initramfs_valid=true`. Nenhuma placa foi tocada e nenhum cartao
+foi gravado; C12.2.4 deve gravar essa imagem antes da proxima validacao em
+placa.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

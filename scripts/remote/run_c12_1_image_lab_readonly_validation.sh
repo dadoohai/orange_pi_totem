@@ -21,7 +21,7 @@ USAGE
 }
 
 ARTIFACTS_ENV="${C12_1_ARTIFACTS_ENV:-}"
-EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.6}"
+EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.8}"
 EXPECTED_IMAGE_SUFFIX="${C12_EXPECTED_IMAGE_SUFFIX:-c12-ro-lab-${EXPECTED_IMAGE_VERSION//./-}}"
 
 while [ "$#" -gt 0 ]; do
@@ -95,11 +95,26 @@ validate_artifacts() {
   grep -q '^card_written=false$' "$integration_manifest_file"
   grep -q '^boards_touched=false$' "$integration_manifest_file"
   grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log_file"
+  grep -q '^initramfs_generated_after_overlayroot=true$' "$integration_manifest_file"
   if ! grep -q 'Updated initramfs' "$build_log_file"; then
     grep -q 'initrd cache hit' "$build_log_file"
-    grep -q '^initramfs_generated_after_overlayroot=true$' "$integration_manifest_file"
     grep -q '^initramfs_source=cache_hit_with_overlayroot_hooks$' "$integration_manifest_file"
   fi
+  grep -q '^initrd_img_exists=true$' "$integration_manifest_file"
+  grep -q '^initrd_contains_overlayroot_hook=true$' "$integration_manifest_file"
+  grep -q '^initrd_contains_overlay_module=true$' "$integration_manifest_file"
+  grep -q '^initrd_contains_c12_overlayroot_marker=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_exists=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_nonempty=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_payload_extracted=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_payload_matches_initrd_img=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_contains_overlayroot_hook=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_contains_overlay_module=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_contains_c12_overlayroot_marker=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_generated_after_overlayroot=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_generated_after_initrd_img=true$' "$integration_manifest_file"
+  grep -q '^boot_script_uses_uinitrd=true$' "$integration_manifest_file"
+  grep -q '^effective_boot_initramfs_valid=true$' "$integration_manifest_file"
 
   if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
     "$ARTIFACTS_ENV" "$package_manifest_file" "$integration_manifest_file"; then
@@ -110,6 +125,11 @@ validate_artifacts() {
   grep -q '^rootfs_firstboot_autoconfig_proven=true$' "$rootfs_validation_file"
   grep -q '^rootfs_lab_bootstrap_proven=true$' "$rootfs_validation_file"
   grep -q '^ready_for_card_write_by_rootfs=true$' "$rootfs_validation_file"
+  grep -q '^effective_boot_initramfs_valid=true$' "$rootfs_validation_file"
+  grep -q '^uinitrd_nonempty=true$' "$rootfs_validation_file"
+  grep -q '^uinitrd_payload_matches_initrd_img=true$' "$rootfs_validation_file"
+  grep -q '^uinitrd_generated_after_overlayroot=true$' "$rootfs_validation_file"
+  grep -q '^uinitrd_generated_after_initrd_img=true$' "$rootfs_validation_file"
   grep -q '^private_values_published=false$' "$rootfs_validation_file"
 
   local rootfs_recheck
@@ -119,6 +139,7 @@ validate_artifacts() {
     --require-lab-bootstrap-service \
     --out "$rootfs_recheck"
   grep -q '^ready_for_card_write_by_rootfs=true$' "$rootfs_recheck"
+  grep -q '^effective_boot_initramfs_valid=true$' "$rootfs_recheck"
   rm -f "$rootfs_recheck"
 }
 

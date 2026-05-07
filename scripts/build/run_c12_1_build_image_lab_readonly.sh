@@ -12,7 +12,7 @@ RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
 CONFIG_NAME="c12-image-lab-readonly"
-IMAGE_VERSION="${C12_IMAGE_VERSION:-c12.1.6}"
+IMAGE_VERSION="${C12_IMAGE_VERSION:-c12.1.8}"
 IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-${IMAGE_VERSION//./-}}"
 EXPECTED_ARMBIAN_REF="e172058"
 EXPECTED_KIOSKY_COMMIT="c71318a64c08e47b8426f1388b95f21364d57123"
@@ -42,7 +42,7 @@ Environment:
   C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
       Refuse to build if C12_LAB_FIRSTBOOT_CONF is missing. Use this for
       C12.1.4+ board-validation images.
-  C12_IMAGE_VERSION=c12.1.4
+  C12_IMAGE_VERSION=c12.1.8
       Image-lab version marker used in artifact names and manifests.
 
 Rules:
@@ -335,6 +335,21 @@ prepare_userpatches() {
   check_kiosky_player
   install -m 0644 "$USERPATCHES_TEMPLATE/config-c12-image-lab-readonly.conf" \
     "$ARM_BUILD_DIR/userpatches/config-$CONFIG_NAME.conf"
+  python3 - "$ARM_BUILD_DIR/userpatches/config-$CONFIG_NAME.conf" "$IMAGE_SUFFIX_MARKER" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+suffix = sys.argv[2]
+text = path.read_text(encoding="utf-8")
+text = re.sub(
+    r'C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-[A-Za-z0-9_.-]+',
+    f'C12_IMAGE_SUFFIX_MARKER:-{suffix}',
+    text,
+)
+path.write_text(text, encoding="utf-8")
+PY
   install -m 0755 "$USERPATCHES_TEMPLATE/customize-image.sh" \
     "$ARM_BUILD_DIR/userpatches/customize-image.sh"
   prepare_lab_firstboot_conf
@@ -427,6 +442,21 @@ collect_artifacts() {
     printf 'image_suffix_version_marker=%s\n' "$(basename "$image" | grep -q "$IMAGE_SUFFIX_MARKER" && echo true || echo false)"
     printf 'initramfs_generated_after_overlayroot=%s\n' "$initramfs_after_overlayroot"
     printf 'initramfs_source=%s\n' "$initramfs_source"
+    printf 'initrd_img_exists=%s\n' "$initrd_img_exists"
+    printf 'initrd_contains_overlayroot_hook=%s\n' "$initrd_contains_overlayroot_hook"
+    printf 'initrd_contains_overlay_module=%s\n' "$initrd_contains_overlay_module"
+    printf 'initrd_contains_c12_overlayroot_marker=%s\n' "$initrd_contains_c12_overlayroot_marker"
+    printf 'uinitrd_exists=%s\n' "$uinitrd_exists"
+    printf 'uinitrd_nonempty=%s\n' "$uinitrd_nonempty"
+    printf 'uinitrd_payload_extracted=%s\n' "$uinitrd_payload_extracted"
+    printf 'uinitrd_payload_matches_initrd_img=%s\n' "$uinitrd_payload_matches_initrd_img"
+    printf 'uinitrd_contains_overlayroot_hook=%s\n' "$uinitrd_contains_overlayroot_hook"
+    printf 'uinitrd_contains_overlay_module=%s\n' "$uinitrd_contains_overlay_module"
+    printf 'uinitrd_contains_c12_overlayroot_marker=%s\n' "$uinitrd_contains_c12_overlayroot_marker"
+    printf 'uinitrd_generated_after_overlayroot=%s\n' "$uinitrd_generated_after_overlayroot"
+    printf 'uinitrd_generated_after_initrd_img=%s\n' "$uinitrd_generated_after_initrd_img"
+    printf 'boot_script_uses_uinitrd=%s\n' "$boot_script_uses_uinitrd"
+    printf 'effective_boot_initramfs_valid=%s\n' "$effective_boot_initramfs_valid"
     printf 'firstboot_gate_included=true\n'
     printf 'rootfs_firstboot_autoconfig_proven=%s\n' "$rootfs_firstboot_autoconfig_proven"
     printf 'lab_firstboot_bootstrap_service_included=%s\n' "$lab_bootstrap_script_present"

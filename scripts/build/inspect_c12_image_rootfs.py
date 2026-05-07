@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -108,14 +109,99 @@ class DebugFs:
         return "File not found" not in output and "Inode:" in output
 
     def dump(self, path: str, private: bool = False) -> str:
+        target = self.dump_file(path, private=private)
+        if target is None:
+            return ""
+        return target.read_text(encoding="utf-8", errors="replace")
+
+    def stat(self, path: str) -> str:
+        proc = self.run(f"stat {path}")
+        output = proc.stdout or ""
+        if "File not found" in output or "Inode:" not in output:
+            return ""
+        return output
+
+    def file_type(self, path: str) -> str:
+        stat = self.stat(path)
+        match = re.search(r"Type:\s+([a-zA-Z0-9_-]+)", stat)
+        return match.group(1) if match else "missing"
+
+    def file_size(self, path: str) -> int:
+        stat = self.stat(path)
+        match = re.search(r"\bSize:\s+(\d+)", stat)
+        return int(match.group(1)) if match else -1
+
+    def symlink_target(self, path: str) -> str:
+        stat = self.stat(path)
+        match = re.search(r'Fast link dest:\s+"([^"]+)"', stat)
+        return match.group(1) if match else ""
+
+    def resolve_path(self, path: str) -> str:
+        if self.file_type(path) != "symlink":
+            return path
+        target = self.symlink_target(path)
+        if not target:
+            return path
+        if target.startswith("/"):
+            return target
+        parent = str(Path(path).parent)
+        return str(Path(parent) / target)
+
+    def dump_file(self, path: str, private: bool = False) -> Path | None:
         safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", path.strip("/")) or "root"
         target = self.dump_dir / (safe + (".private" if private else ".dump"))
         proc = self.run(f"dump -p {path} {target}")
         output = proc.stdout or ""
         if "File not found" in output or not target.exists():
-            return ""
+            return None
         os.chmod(target, 0o600 if private else 0o644)
-        return target.read_text(encoding="utf-8", errors="replace")
+        return target
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def dump_uinitrd_payload(uinitrd: Path, target: Path) -> bool:
+    if not shutil.which("dumpimage"):
+        return False
+    proc = subprocess.run(
+        ["dumpimage", "-T", "ramdisk", "-p", "0", "-o", str(target), str(uinitrd)],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    return proc.returncode == 0 and target.exists() and target.stat().st_size > 0
+
+
+def gzip_cpio_contains(initrd: Path, names: tuple[str, ...]) -> dict[str, bool]:
+    result = {name: False for name in names}
+    if not shutil.which("gzip") or not shutil.which("cpio"):
+        return result
+    proc = subprocess.run(
+        f"gzip -cd {shlex_quote(str(initrd))} 2>/dev/null | cpio -t 2>/dev/null",
+        shell=True,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if proc.returncode not in (0, 2):
+        return result
+    entries = set(proc.stdout.splitlines())
+    normalized = {entry.lstrip("./") for entry in entries}
+    for name in names:
+        result[name] = name.lstrip("/") in normalized
+    return result
+
+
+def shlex_quote(value: str) -> str:
+    return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
 def parse_firstboot(text: str) -> dict[str, bool]:
@@ -193,6 +279,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         lab_unit = debug.dump("/etc/systemd/system/totem-lab-firstboot-autoconfig.service")
         integration_text = debug.dump("/data/state/totem-read-only-image-lab/integration.json")
         overlayroot_conf = debug.dump("/etc/overlayroot.conf")
+        boot_cmd = debug.dump("/boot/boot.cmd")
 
         payload["gate_expected_path_matches"] = (
             'MARKER="/root/.not_logged_in_yet"' in gate_script
@@ -204,6 +291,96 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         )
         payload["overlayroot_tmpfs_configured"] = 'overlayroot="tmpfs"' in overlayroot_conf
         payload["overlayroot_cfgdisk_disabled"] = 'overlayroot_cfgdisk="disabled"' in overlayroot_conf
+        payload["boot_script_uses_uinitrd"] = "uInitrd" in boot_cmd
+        payload["boot_script_uses_initrd_img"] = "initrd.img" in boot_cmd
+
+        kernel_version = ""
+        for candidate in (
+            "6.12.58-current-sunxi64",
+            "6.12.58-current-sunxi64",
+        ):
+            if debug.exists(f"/boot/initrd.img-{candidate}"):
+                kernel_version = candidate
+                break
+        if not kernel_version:
+            stat_paths = debug.run("ls -l /boot").stdout or ""
+            match = re.search(r"initrd\.img-([0-9][^\s]+)", stat_paths)
+            kernel_version = match.group(1) if match else ""
+        initrd_path = f"/boot/initrd.img-{kernel_version}" if kernel_version else "/boot/initrd.img"
+        uinitrd_path = "/boot/uInitrd"
+        effective_uinitrd_path = debug.resolve_path(uinitrd_path)
+        payload["initrd_kernel_version"] = kernel_version or "unknown"
+        payload["initrd_img_exists"] = debug.exists(initrd_path)
+        payload["uinitrd_exists"] = debug.exists(uinitrd_path)
+        payload["uinitrd_is_symlink"] = debug.file_type(uinitrd_path) == "symlink"
+        payload["uinitrd_effective_path_known"] = effective_uinitrd_path != uinitrd_path or debug.exists(uinitrd_path)
+        payload["uinitrd_effective_exists"] = debug.exists(effective_uinitrd_path)
+        payload["uinitrd_effective_size"] = debug.file_size(effective_uinitrd_path)
+        payload["uinitrd_nonempty"] = payload["uinitrd_effective_size"] > 1024 * 1024
+
+        initrd_file = debug.dump_file(initrd_path, private=True) if payload["initrd_img_exists"] else None
+        uinitrd_file = (
+            debug.dump_file(effective_uinitrd_path, private=True)
+            if payload["uinitrd_effective_exists"]
+            else None
+        )
+        uinitrd_payload = tempdir / "uinitrd.raw"
+        payload["uinitrd_payload_extracted"] = (
+            dump_uinitrd_payload(uinitrd_file, uinitrd_payload)
+            if uinitrd_file is not None
+            else False
+        )
+        payload["uinitrd_payload_matches_initrd_img"] = (
+            bool(initrd_file)
+            and payload["uinitrd_payload_extracted"]
+            and sha256(initrd_file) == sha256(uinitrd_payload)
+        )
+        initrd_scan = gzip_cpio_contains(
+            initrd_file,
+            (
+                "scripts/init-bottom/overlayroot",
+                "etc/dadooh/c12-overlayroot-initramfs-marker",
+                "usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko",
+            ),
+        ) if initrd_file else {}
+        uinitrd_scan = gzip_cpio_contains(
+            uinitrd_payload,
+            (
+                "scripts/init-bottom/overlayroot",
+                "etc/dadooh/c12-overlayroot-initramfs-marker",
+                "usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko",
+            ),
+        ) if payload["uinitrd_payload_extracted"] else {}
+        payload["initrd_contains_overlayroot_hook"] = bool(initrd_scan.get("scripts/init-bottom/overlayroot"))
+        payload["initrd_contains_c12_overlayroot_marker"] = bool(
+            initrd_scan.get("etc/dadooh/c12-overlayroot-initramfs-marker")
+        )
+        payload["initrd_contains_overlay_module"] = bool(
+            initrd_scan.get("usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko")
+        )
+        payload["uinitrd_contains_overlayroot_hook"] = bool(uinitrd_scan.get("scripts/init-bottom/overlayroot"))
+        payload["uinitrd_contains_c12_overlayroot_marker"] = bool(
+            uinitrd_scan.get("etc/dadooh/c12-overlayroot-initramfs-marker")
+        )
+        payload["uinitrd_contains_overlay_module"] = bool(
+            uinitrd_scan.get("usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko")
+        )
+        payload["uinitrd_generated_after_initrd_img"] = bool(
+            payload["uinitrd_payload_matches_initrd_img"]
+        )
+        payload["uinitrd_generated_after_overlayroot"] = bool(
+            payload["overlayroot_tmpfs_configured"]
+            and payload["uinitrd_contains_overlayroot_hook"]
+            and payload["uinitrd_contains_c12_overlayroot_marker"]
+        )
+        payload["effective_boot_initramfs_valid"] = bool(
+            payload["boot_script_uses_uinitrd"]
+            and payload["uinitrd_nonempty"]
+            and payload["uinitrd_payload_matches_initrd_img"]
+            and payload["uinitrd_contains_overlayroot_hook"]
+            and payload["uinitrd_contains_c12_overlayroot_marker"]
+            and payload["uinitrd_contains_overlay_module"]
+        )
 
         try:
             integration = json.loads(integration_text) if integration_text else {}
@@ -239,6 +416,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload.get("rootfs_lab_bootstrap_proven")
             and payload.get("gate_expected_path_matches")
             and payload.get("overlayroot_tmpfs_configured")
+            and payload.get("effective_boot_initramfs_valid")
         )
         if args.require_lab_bootstrap_service and not payload["ready_for_card_write_by_rootfs"]:
             payload["validation_error"] = "rootfs_lab_firstboot_autoconfig_not_proven"

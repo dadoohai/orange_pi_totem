@@ -104,6 +104,24 @@ path.write_text("\n".join(out) + "\n", encoding="utf-8")
 PY
   chmod 0644 /etc/overlayroot.conf
 
+  log "installing overlayroot initramfs validation marker"
+  install -d -m 0755 -o root -g root /etc/initramfs-tools/hooks
+  cat > /etc/initramfs-tools/hooks/dadooh-c12-overlayroot-marker <<'EOF'
+#!/bin/sh
+set -e
+
+case "$1" in
+  prereqs) echo ""; exit 0 ;;
+esac
+
+mkdir -p "${DESTDIR}/etc/dadooh"
+cat > "${DESTDIR}/etc/dadooh/c12-overlayroot-initramfs-marker" <<'MARKER'
+c12_overlayroot_initramfs_marker=present
+overlayroot_config_expected=tmpfs
+MARKER
+EOF
+  chmod 0755 /etc/initramfs-tools/hooks/dadooh-c12-overlayroot-marker
+
   log "recording lab firstboot bootstrap state"
   install -d -m 0755 -o root -g root /etc/dadooh
   rm -f "$lab_firstboot_marker"
