@@ -12,6 +12,7 @@ Modes:
   --prepare-only       Validate local repo prerequisites only.
   --checklist          Print the future image-lab validation checklist.
   --validate-manifest  Validate the C12 image-lab manifest exists.
+  --validate-artifacts Validate C12.1 local image artifacts.
 
 This runner is intentionally local-only in C12.0-prep. It must not SSH into
 boards, write cards, build final images, enable read-only, call writer, change
@@ -19,11 +20,18 @@ Wi-Fi/NetworkManager, install packages or publish secrets.
 USAGE
 }
 
+ARTIFACTS_ENV="${C12_1_ARTIFACTS_ENV:-}"
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --prepare-only) MODE="prepare-only" ;;
     --checklist) MODE="checklist" ;;
     --validate-manifest) MODE="validate-manifest" ;;
+    --validate-artifacts) MODE="validate-artifacts" ;;
+    --artifacts-env)
+      shift
+      ARTIFACTS_ENV="${1:-}"
+      ;;
     --help|-h) usage; exit 0 ;;
     *) echo "error: unsupported argument $1" >&2; usage; exit 2 ;;
   esac
@@ -37,9 +45,42 @@ IMAGE_LAB_MANIFEST="$REPO_ROOT/releases/image-lab-readonly/manifest.md"
 validate_manifest() {
   test -f "$IMAGE_LAB_MANIFEST"
   grep -q '`image_lab_readonly=true`' "$IMAGE_LAB_MANIFEST"
-  grep -q '`image_built=false`' "$IMAGE_LAB_MANIFEST"
   grep -q '`card_written=false`' "$IMAGE_LAB_MANIFEST"
-  grep -q '`ready_for_c12_1_build=true`' "$IMAGE_LAB_MANIFEST"
+  grep -Eq '`image_built=(true|false)`' "$IMAGE_LAB_MANIFEST"
+  grep -Eq '`ready_for_c12_2_(card_write|board_validation)=(true|false)`' "$IMAGE_LAB_MANIFEST"
+}
+
+validate_artifacts() {
+  if [ -z "$ARTIFACTS_ENV" ] || [ ! -f "$ARTIFACTS_ENV" ]; then
+    echo "error: missing --artifacts-env path" >&2
+    exit 2
+  fi
+  # shellcheck disable=SC1090
+  source "$ARTIFACTS_ENV"
+
+  test -f "${image_file:?}"
+  test -f "${image_checksum_file:?}"
+  test -f "${build_log_file:?}"
+  test -f "${package_manifest_file:?}"
+  test -f "${integration_manifest_file:?}"
+
+  sha256sum -c "$image_checksum_file" >/dev/null
+  grep -q '^package=overlayroot ' "$package_manifest_file"
+  grep -q '^package=mpv ' "$package_manifest_file"
+  grep -q '^package=ffmpeg ' "$package_manifest_file"
+  grep -q '^package=python3-requests ' "$package_manifest_file"
+  grep -q '^package=network-manager ' "$package_manifest_file"
+  grep -q '^overlayroot_included=true$' "$integration_manifest_file"
+  grep -q '^card_written=false$' "$integration_manifest_file"
+  grep -q '^boards_touched=false$' "$integration_manifest_file"
+  grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log_file"
+  grep -q 'Updated initramfs' "$build_log_file"
+
+  if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
+    "$ARTIFACTS_ENV" "$package_manifest_file" "$integration_manifest_file"; then
+    echo "error: textual artifact secret scan failed" >&2
+    exit 1
+  fi
 }
 
 case "$MODE" in
@@ -52,6 +93,10 @@ case "$MODE" in
   validate-manifest)
     validate_manifest
     printf 'c12_image_lab_manifest=ok\n'
+    ;;
+  validate-artifacts)
+    validate_artifacts
+    printf 'c12_1_image_lab_artifacts=ok\n'
     ;;
   checklist)
     cat <<'CHECKLIST'

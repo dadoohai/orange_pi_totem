@@ -27,6 +27,13 @@ e um runner/checklist local para C12.1. A proxima acao correta e preparar o
 ambiente de build e recuperar/clonar Armbian Build v25.11; cartao de teste vem
 somente depois da imagem-lab e checksums.
 
+Atualizacao C12.1: 2026-05-06. C12.1 gerou a primeira imagem-lab read-only
+integrada ao build, sem tocar placas e sem gravar cartao. A imagem inclui
+`overlayroot`, executa `update-initramfs` depois da instalacao do pacote e
+produziu checksum, build log, package manifest e integration manifest.
+`card_written=false`, `boards_touched=false`, `final_image=false` e
+`ready_for_c12_2_board_validation=true`.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
@@ -2026,3 +2033,10 @@ read-only integrado ao build, em vez de enablement pos-instalacao. Status:
 `image_built=false`, `card_written=false`, `boards_touched=false`,
 `ready_for_c12_1_build=true`, `ready_for_c12_2_board_validation=false` e
 `ready_for_c11_4=false`.
+
+Atualizacao C12.1: 2026-05-06. C12.1 preparou Armbian Build v25.11 em
+`e172058`, versionou userpatches C12 e gerou a imagem-lab
+`Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab_minimal.img`.
+O build confirmou `overlayroot_included=true` e
+`initramfs_generated_after_overlayroot=true`. O proximo passo permitido e C12.2:
+gravar cartao de teste e validar boot/read-only na placa teste.

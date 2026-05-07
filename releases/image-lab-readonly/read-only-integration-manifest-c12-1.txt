@@ -1,0 +1,5 @@
+overlayroot_included=true
+image_suffix_c12_ro_lab=true
+initramfs_generated_after_overlayroot=true
+card_written=false
+boards_touched=false

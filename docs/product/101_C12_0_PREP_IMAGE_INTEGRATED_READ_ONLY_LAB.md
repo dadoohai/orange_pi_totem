@@ -16,7 +16,7 @@ como parte da base/imagem gerada por codigo, em vez de tentar ativar
 O repo estava limpo e no HEAD:
 
 ```text
-3fe5df8 Document C11.3.4 read-only mechanism decision
+49778f6 Add C12.0 image read-only lab prep
 ```
 
 ## Por Que C11.3 Pos-instalacao Bloqueou
@@ -133,6 +133,30 @@ C12.1 deve preparar ambiente de build e produzir a primeira imagem-lab:
 8. gerar imagem e checksums;
 9. gerar log e manifest de pacotes;
 10. nao gravar cartao ainda sem gate separado.
+
+## Atualizacao C12.1
+
+C12.1 executou o plano de imagem-lab sem tocar placas e sem gravar cartao.
+
+Resultado:
+
+- Armbian Build v25.11 em `e172058`;
+- userpatches versionados em `scripts/build/userpatches-c12-image-lab/`;
+- imagem gerada com sufixo `c12-ro-lab`;
+- `overlayroot` incluido na imagem;
+- `update-initramfs` executado depois da instalacao de `overlayroot`;
+- checksum, build log, package manifest e integration manifest gerados;
+- `card_written=false`;
+- `boards_touched=false`;
+- `final_image=false`.
+
+O primeiro build encontrou pressao de memoria por rootfs em tmpfs. A solucao
+foi desabilitar ramdisk para esta imagem-lab (`FORCE_USE_RAMDISK=no`) e repetir
+o build em disco.
+
+O proximo passo passa a ser C12.2: preparar e gravar um cartao de teste com a
+imagem-lab para validar boot, overlay ativo, root protegido, `/data`, `/tmp` e
+`/run` gravaveis, player e F10.
 
 ## Resposta Operacional
 

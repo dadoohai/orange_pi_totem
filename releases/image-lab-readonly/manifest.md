@@ -6,14 +6,15 @@ Status:
 
 - `image_lab_readonly=true`
 - `final_image=false`
-- `image_built=false`
+- `image_built=true`
 - `card_written=false`
 - `boards_touched=false`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
-- `ready_for_c12_1_build=true`
-- `ready_for_c12_2_board_validation=false`
+- `ready_for_c12_1_build=false`
+- `ready_for_c12_2_card_write=true`
+- `ready_for_c12_2_board_validation=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -26,7 +27,9 @@ provisioned board.
 
 - repository: `dadoohai/orange_pi_totem`
 - branch: `foundation-v0.1`
-- c12_0_prep_commit: `pending_until_committed`
+- c12_0_prep_commit: `49778f6`
+- c12_1_build_commit: `pending_until_committed`
+- orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - previous_decision: `ADR-0011-root-read-only-overlay-mechanism`
 - root_read_only_mechanism_decision:
   `c12_image_integrated_overlay_lab_required`
@@ -46,6 +49,24 @@ foundation candidate:
 - build: minimal, no desktop
 - network stack: NetworkManager
 - critical packages: kernel/DTB/U-Boot/BSP frozen
+
+## C12.1 Build Artifacts
+
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab_minimal.img`
+- image_checksum_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab_minimal.img.sha256`
+- image_sha256:
+  `1b6f5573262d501ae2df6bc3338b56432c8994d4444308caf00347829df08fe2`
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-29bced66-eed1-4f2c-8d0e-d2ad34f794b5.log`
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1.txt`
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1.txt`
+- kiosky_player_pin: `c71318a64c08e47b8426f1388b95f21364d57123`
+- overlayroot_included: `true`
+- initramfs_generated_after_overlayroot: `true`
 
 ## Required Build-time Integration
 
