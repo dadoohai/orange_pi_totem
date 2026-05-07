@@ -1,6 +1,6 @@
 [Unit]
 Description=Kiosky Player
-After=network-online.target
+After=network-online.target totem-firstboot-gate.service
 Wants=network-online.target
 StartLimitIntervalSec=300
 StartLimitBurst=5

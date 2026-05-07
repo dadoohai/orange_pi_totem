@@ -1,0 +1,28 @@
+# C12 image-lab Armbian first-login autoconfig template.
+#
+# Copy this file outside the repository, replace placeholder values, and pass
+# it to the build with:
+#
+#   C12_LAB_FIRSTBOOT_CONF=/private/path/firstboot.conf \
+#     scripts/build/run_c12_1_build_image_lab_readonly.sh --build-image
+#
+# Do not commit the rendered private file. This template intentionally contains
+# no real password, key, SSID, API URL, API key or environment identifier.
+
+PRESET_NET_CHANGE_DEFAULTS=0
+PRESET_NET_ETHERNET_ENABLED=1
+PRESET_NET_WIFI_ENABLED=0
+PRESET_NET_USE_STATIC=0
+PRESET_NET_STATIC_IP=''
+PRESET_NET_STATIC_MASK='255.255.255.0'
+PRESET_NET_STATIC_GATEWAY=''
+PRESET_NET_STATIC_DNS=''
+PRESET_CONNECT_WIRELESS=n
+SET_LANG_BASED_ON_LOCATION=n
+PRESET_LOCALE=en_US.UTF-8
+PRESET_TIMEZONE=Etc/UTC
+PRESET_USER_SHELL=bash
+PRESET_ROOT_PASSWORD='REPLACE_WITH_PRIVATE_LAB_ROOT_PASSWORD'
+PRESET_USER_NAME=dadoohlab
+PRESET_USER_PASSWORD='REPLACE_WITH_PRIVATE_LAB_USER_PASSWORD'
+PRESET_DEFAULT_REALNAME='Dadooh Lab'

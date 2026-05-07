@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ARM_BUILD_DIR="${ARM_BUILD_DIR:-/home/builder/totem-os/armbian-build-v25.11}"
 KIOSKY_PLAYER_DIR="${KIOSKY_PLAYER_DIR:-/home/builder/kiosky-player}"
 USERPATCHES_TEMPLATE="$REPO_ROOT/scripts/build/userpatches-c12-image-lab"
+LAB_FIRSTBOOT_CONF="${C12_LAB_FIRSTBOOT_CONF:-}"
 RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
@@ -31,6 +32,11 @@ Environment:
   ARM_BUILD_DIR=/home/builder/totem-os/armbian-build-v25.11
   KIOSKY_PLAYER_DIR=/home/builder/kiosky-player
   C12_1_OUT_DIR=/tmp/...
+  C12_LAB_FIRSTBOOT_CONF=/private/path/firstboot.conf
+      Optional private Armbian first-login preset. Required for a C12.1.2+
+      image-lab that should not expose/compete with Armbian first-login during
+      product validation. The file must live outside this repo and must not be
+      committed.
 
 Rules:
   - local build only;
@@ -197,6 +203,69 @@ prepare_overlay_kiosky() {
   printf '%s\n' "$EXPECTED_KIOSKY_COMMIT" > "$target/.kiosky_player_commit"
 }
 
+prepare_lab_firstboot_conf() {
+  local target="$ARM_BUILD_DIR/userpatches/firstboot.conf"
+  rm -f "$target"
+  if [ -z "$LAB_FIRSTBOOT_CONF" ]; then
+    {
+      printf 'lab_firstboot_autoconfig=false\n'
+      printf 'lab_firstboot_conf_required_for_c12_3_2=true\n'
+      printf 'lab_firstboot_policy=product_services_gate_until_armbian_first_login_complete\n'
+    } > "$OUT_DIR/firstboot-policy.env"
+    return 0
+  fi
+  if [ ! -f "$LAB_FIRSTBOOT_CONF" ]; then
+    echo "error: C12_LAB_FIRSTBOOT_CONF does not exist" >&2
+    echo "blocker=lab_firstboot_conf_missing" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  case "$(realpath "$LAB_FIRSTBOOT_CONF")" in
+    "$REPO_ROOT"/*)
+      echo "error: C12_LAB_FIRSTBOOT_CONF must live outside the repo" >&2
+      echo "blocker=lab_firstboot_conf_inside_repo" > "$OUT_DIR/blocker.env"
+      exit 1
+      ;;
+  esac
+  python3 - "$LAB_FIRSTBOOT_CONF" <<'PY'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8", errors="replace")
+required = [
+    "PRESET_NET_CHANGE_DEFAULTS",
+    "PRESET_CONNECT_WIRELESS",
+    "SET_LANG_BASED_ON_LOCATION",
+    "PRESET_LOCALE",
+    "PRESET_TIMEZONE",
+    "PRESET_USER_SHELL",
+    "PRESET_ROOT_PASSWORD",
+    "PRESET_USER_NAME",
+    "PRESET_USER_PASSWORD",
+    "PRESET_DEFAULT_REALNAME",
+]
+missing = [key for key in required if not re.search(rf"^\s*{re.escape(key)}=", text, re.M)]
+if missing:
+    raise SystemExit("lab_firstboot_conf_missing_required_keys")
+for placeholder in (
+    "REPLACE_WITH_PRIVATE_LAB_ROOT_PASSWORD",
+    "REPLACE_WITH_PRIVATE_LAB_USER_PASSWORD",
+    "RootPassword",
+    "UserPassword",
+):
+    if placeholder in text:
+        raise SystemExit("lab_firstboot_conf_contains_placeholder")
+PY
+  install -m 0600 "$LAB_FIRSTBOOT_CONF" "$target"
+  {
+    printf 'lab_firstboot_autoconfig=true\n'
+    printf 'lab_firstboot_conf_copied_to_userpatches=true\n'
+    printf 'lab_firstboot_conf_source_private=true\n'
+    printf 'lab_firstboot_secret_values_published=false\n'
+  } > "$OUT_DIR/firstboot-policy.env"
+}
+
 prepare_userpatches() {
   check_armbian_build
   check_kiosky_player
@@ -204,12 +273,14 @@ prepare_userpatches() {
     "$ARM_BUILD_DIR/userpatches/config-$CONFIG_NAME.conf"
   install -m 0755 "$USERPATCHES_TEMPLATE/customize-image.sh" \
     "$ARM_BUILD_DIR/userpatches/customize-image.sh"
+  prepare_lab_firstboot_conf
   prepare_overlay_repo
   prepare_overlay_kiosky
   find "$ARM_BUILD_DIR/userpatches/overlay" -type f | sort > "$OUT_DIR/userpatches-files.txt"
   {
     printf 'config=%s\n' "$ARM_BUILD_DIR/userpatches/config-$CONFIG_NAME.conf"
     printf 'customize=%s\n' "$ARM_BUILD_DIR/userpatches/customize-image.sh"
+    printf 'firstboot_conf_present=%s\n' "$([ -f "$ARM_BUILD_DIR/userpatches/firstboot.conf" ] && echo true || echo false)"
     printf 'overlay_repo=%s\n' "$ARM_BUILD_DIR/userpatches/overlay/orange_pi_totem"
     printf 'overlay_kiosky=%s\n' "$ARM_BUILD_DIR/userpatches/overlay/kiosky-player"
   } > "$OUT_DIR/userpatches.env"
@@ -274,6 +345,9 @@ collect_artifacts() {
     printf 'integration_manifest_file=%s\n' "$integration_manifest"
     printf 'orange_pi_totem_commit=%s\n' "$(repo_head)"
     printf 'kiosky_player_pin=%s\n' "$EXPECTED_KIOSKY_COMMIT"
+    if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
+      cat "$OUT_DIR/firstboot-policy.env"
+    fi
   } > "$OUT_DIR/artifacts.env"
 }
 

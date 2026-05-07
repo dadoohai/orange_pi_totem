@@ -103,6 +103,8 @@ PY
   "arch": "$ARCH",
   "overlayroot_configured_in_image": true,
   "final_armbian_initramfs_expected_after_customize": true,
+  "armbian_firstboot_gate_installed": true,
+  "armbian_firstboot_autoconfig_present": $(test -s /root/.not_logged_in_yet && grep -q 'PRESET_ROOT_PASSWORD=' /root/.not_logged_in_yet && echo true || echo false),
   "secrets_embedded": false,
   "config_real_embedded": false,
   "card_written_by_build": false

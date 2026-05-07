@@ -18,6 +18,15 @@ Status:
 - `ready_for_c12_1_build=false`
 - `ready_for_c12_2_card_write=true`
 - `ready_for_c12_2_board_validation=false`
+- `c12_3_boot_attempted=true`
+- `c12_3_status=blocked`
+- `blocker=open_settings_session_stale_and_firstboot_interference`
+- `read_only_validated=false`
+- `c12_3_1_session_reliability_patch=applied_pending_rebuild`
+- `c12_3_1_firstboot_policy=gate_or_private_lab_autoconfig`
+- `c12_3_1_read_only_assertion=required`
+- `ready_for_c12_1_2_rebuild=true`
+- `ready_for_c12_3_2_revalidation=false`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -87,15 +96,40 @@ foundation candidate:
 - card_write_verified: `false`
 - ready_for_c12_3_board_boot: `false`
 - c12_3_boot_started: `true`
+- c12_3_boot_attempted: `true`
+- c12_3_status: `blocked`
 - c12_3_boot_state: `config_missing`
 - c12_3_first_login_technical_required: `true`
 - c12_3_freeze_classification: `open_settings_session_stale`
 - c12_3_secondary_classification: `firstboot_interference`
 - c12_3_ready_for_read_only_validation: `false`
+- c12_3_blocker: `open_settings_session_stale_and_firstboot_interference`
+- c12_3_1_session_cleanup: `applied_pending_rebuild`
+- c12_3_1_firstboot_gate: `applied_pending_rebuild`
+- c12_3_1_private_firstboot_autoconfig_template: `available`
+- c12_3_1_read_only_assertion: `required`
+- ready_for_c12_1_2_rebuild: `true`
+- ready_for_c12_2_1_reflash: `false`
+- ready_for_c12_3_2_revalidation: `false`
 
 The dev board/card incident is tracked as a physical media/hardware event until
 proven otherwise. C12.2 must not use the damaged dev card and must not depend on
 the dev board.
+
+## C12.3.1 Reliability Gate
+
+C12.3 boot validation is blocked. The first image-lab boot proved that Dadooh
+starts and reaches `config_missing`, but it did not validate read-only because
+root was observed as ext4 `rw` and the F10 settings session ended as stale
+state after `totem-open-settings.service` was killed.
+
+The next image-lab rebuild must include:
+
+- open-settings `ExecStopPost` cleanup;
+- stale lock cleanup in the trigger;
+- firstboot gate while `/root/.not_logged_in_yet` exists;
+- optional private `C12_LAB_FIRSTBOOT_CONF` outside Git for lab autoconfig;
+- explicit read-only assertion before any C12.3.x success claim.
 
 ## Required Build-time Integration
 

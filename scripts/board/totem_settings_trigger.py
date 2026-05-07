@@ -15,6 +15,7 @@ import json
 import os
 import pathlib
 import select
+import shutil
 import stat
 import struct
 import subprocess
@@ -239,6 +240,7 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
         "session_lock_age_bucket": status.get("session_lock_age_bucket", "unknown"),
         "open_service_active_state": status.get("open_service_active_state", "unknown"),
         "stale_lock_suspected": bool(status.get("stale_lock_suspected", False)),
+        "stale_lock_removed": bool(status.get("stale_lock_removed", False)),
         "cooldown_active": bool(status.get("cooldown_active", False)),
         "raw_key_values_logged": False,
         "characters_logged": False,
@@ -259,6 +261,7 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
             f"session_lock_age_bucket: {payload['session_lock_age_bucket']}",
             f"open_service_active_state: {payload['open_service_active_state']}",
             f"stale_lock_suspected: {str(payload['stale_lock_suspected']).lower()}",
+            f"stale_lock_removed: {str(payload['stale_lock_removed']).lower()}",
             f"cooldown_active: {str(payload['cooldown_active']).lower()}",
             "raw_key_values_logged: false",
             "characters_logged: false",
@@ -485,12 +488,28 @@ def session_lock_diagnostic(session_lock: pathlib.Path, open_service: str) -> di
     return {
         "session_lock_age_bucket": age_bucket,
         "open_service_active_state": active_state,
-        "stale_lock_suspected": age_bucket == "gt_30m" and active_state not in {"active", "activating"},
+        "stale_lock_suspected": active_state not in {"active", "activating"},
     }
 
 
 def daemon_wait_timeout(hold_sec: float) -> float:
     return max(float(hold_sec) + 2.0, 8.0)
+
+
+def remove_stale_session_lock(session_lock: pathlib.Path) -> bool:
+    resolved = session_lock.resolve(strict=False)
+    if not (str(resolved).startswith("/run/") or str(resolved).startswith("/tmp/")):
+        return False
+    if not resolved.exists():
+        return False
+    if resolved.is_dir() and not resolved.is_symlink():
+        shutil.rmtree(resolved, ignore_errors=True)
+    elif not resolved.is_symlink():
+        try:
+            resolved.unlink()
+        except FileNotFoundError:
+            pass
+    return not resolved.exists()
 
 
 def daemon_loop(
@@ -540,8 +559,31 @@ def daemon_loop(
                 time.sleep(min(1.0, max(0.0, next_allowed - now)))
                 continue
             if session_lock.exists():
-                clear_request(request_dir)
                 diagnostic = session_lock_diagnostic(session_lock, open_service)
+                if diagnostic["stale_lock_suspected"]:
+                    removed = remove_stale_session_lock(session_lock)
+                    if removed:
+                        result = trigger_service_start(open_service)
+                        write_status(
+                            request_dir,
+                            {
+                                "status": "open_service_requested_after_stale_lock_cleanup"
+                                if result == "started"
+                                else "open_service_failed_after_stale_lock_cleanup",
+                                "trigger_type": trigger_type,
+                                "trigger_detected": True,
+                                "request_written": True,
+                                "open_service_start_attempted": True,
+                                "open_service_start_result": result,
+                                "session_lock_active": False,
+                                "stale_lock_removed": True,
+                                "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
+                                **diagnostic,
+                            },
+                        )
+                        next_allowed = time.monotonic() + cooldown_sec
+                        continue
+                clear_request(request_dir)
                 write_status(
                     request_dir,
                     {
@@ -550,6 +592,7 @@ def daemon_loop(
                         "trigger_detected": True,
                         "request_written": False,
                         "session_lock_active": True,
+                        "stale_lock_removed": False,
                         "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
                         **diagnostic,
                     },
@@ -657,8 +700,13 @@ def self_test() -> None:
         for marker in forbidden:
             assert marker not in combined
         assert "stale_lock_suspected" in combined
+        assert "stale_lock_removed" in combined
         clear_request(request_dir)
         assert not (request_dir / REQUEST_FILENAME).exists()
+        lock = request_dir / "session.lock"
+        lock.mkdir()
+        assert remove_stale_session_lock(lock)
+        assert not lock.exists()
     print("self-test: ok")
 
 

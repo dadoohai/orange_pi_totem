@@ -32,6 +32,7 @@ TMP_ROOT = pathlib.Path("/tmp")
 
 MESSAGES = {
     "boot": ("Dadooh", "Inicializando"),
+    "firstboot": ("Dadooh", ("Preparando sistema", "Conclua o primeiro acesso tecnico")),
     "preparing": ("Dadooh", "Preparando"),
     "reboot": ("Dadooh", "Reiniciando totem"),
     "player": ("Dadooh", "Iniciando player"),

@@ -97,6 +97,8 @@
     {"source": "scripts/board/totem_config_contract_validate.py", "target": "/opt/totem/bin/totem_config_contract_validate.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_config_writer_real.py", "target": "/opt/totem/bin/totem_config_writer_real.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_open_settings_session.sh", "target": "/opt/totem/bin/totem_open_settings_session.sh", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_open_settings_cleanup.sh", "target": "/opt/totem/bin/totem_open_settings_cleanup.sh", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_firstboot_gate.sh", "target": "/opt/totem/bin/totem_firstboot_gate.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_settings_trigger.py", "target": "/opt/totem/bin/totem_settings_trigger.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_setup_local_wizard.py", "target": "/opt/totem/bin/totem_setup_local_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_setup_minimal_server.py", "target": "/opt/totem/bin/totem_setup_minimal_server.py", "owner": "root", "group": "root", "mode": "0755"},
@@ -116,6 +118,7 @@
   ],
   "systemd_units": [
     {"source": "scripts/board/kiosky-player.service", "target": "/etc/systemd/system/kiosky-player.service", "enabled": true, "active_expected_on_dev": "active"},
+    {"source": "scripts/board/totem-firstboot-gate.service", "target": "/etc/systemd/system/totem-firstboot-gate.service", "enabled": true, "active_expected_on_dev": "inactive"},
     {"source": "scripts/board/totem-settings-trigger.service", "target": "/etc/systemd/system/totem-settings-trigger.service", "enabled": true, "active_expected_on_dev": "active"},
     {"source": "scripts/board/totem-open-settings.service", "target": "/etc/systemd/system/totem-open-settings.service", "enabled": false, "enabled_state": "static", "active_expected_on_dev": "inactive"},
     {"source": "scripts/board/dadooh-visual-splash.service", "target": "/etc/systemd/system/dadooh-visual-splash.service", "enabled": true, "active_expected_on_dev": "active"}

@@ -56,6 +56,15 @@ falhando por sinal e `session.lock` residual; `framebuffer_render_freeze` nao
 foi comprovado. A imagem-lab ainda exige first-login tecnico Armbian, que passa
 a ser pendencia C12.x de autoconfig/firstrun, nao bug isolado do wizard.
 
+Atualizacao C12.3.1: 2026-05-07. C12.3 fica oficialmente bloqueado por
+`open_settings_session_stale` + `firstboot_interference`; nao houve validacao
+read-only. A rodada adiciona cleanup externo para `totem-open-settings.service`,
+limpeza de lock stale no trigger F10, gate de firstboot para segurar os servicos
+Dadooh enquanto `/root/.not_logged_in_yet` existir, template privado de
+`firstboot.conf` fora do Git e assert explicito de read-only para a proxima
+validacao. Proximos passos: rebuild C12.1.2, reflash C12.2.1 e revalidacao
+C12.3.2 antes de qualquer C12.4.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

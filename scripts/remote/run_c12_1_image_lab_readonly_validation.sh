@@ -45,9 +45,11 @@ IMAGE_LAB_MANIFEST="$REPO_ROOT/releases/image-lab-readonly/manifest.md"
 validate_manifest() {
   test -f "$IMAGE_LAB_MANIFEST"
   grep -q '`image_lab_readonly=true`' "$IMAGE_LAB_MANIFEST"
-  grep -q '`card_written=false`' "$IMAGE_LAB_MANIFEST"
+  grep -Eq '`card_written=(true|false)`' "$IMAGE_LAB_MANIFEST"
+  grep -Eq '`boards_touched=(true|false)`' "$IMAGE_LAB_MANIFEST"
   grep -Eq '`image_built=(true|false)`' "$IMAGE_LAB_MANIFEST"
   grep -Eq '`ready_for_c12_2_(card_write|board_validation)=(true|false)`' "$IMAGE_LAB_MANIFEST"
+  grep -Eq '`c12_3_status=(blocked|not_started|passed)`|`c12_3_boot_started=(true|false)`' "$IMAGE_LAB_MANIFEST"
 }
 
 validate_artifacts() {
@@ -116,12 +118,17 @@ C12.1 build checklist:
 C12.2 board validation checklist:
 - write only a test card after C12.1 artifacts pass;
 - boot on test board, not dev reference;
+- confirm Armbian first-login is complete or blocked from competing with Dadooh
+  by the image-lab firstboot gate before starting F10/wizard validation;
 - verify read_only_enabled=true;
 - verify overlay_active=true or equivalent;
 - verify root write blocked;
 - verify /data, /tmp and /run writable;
+- if root is ext4 rw, classify IMAGE_LAB_READ_ONLY_NOT_ACTIVE and stop before
+  treating read-only validation as successful;
 - verify player_running/playback;
 - verify F10 open/cancel;
+- verify stale /run/dadooh-settings/session.lock is absent after cancel/failure;
 - keep power cut blocked until read-only boot/reboot smoke passes.
 CHECKLIST
     ;;
