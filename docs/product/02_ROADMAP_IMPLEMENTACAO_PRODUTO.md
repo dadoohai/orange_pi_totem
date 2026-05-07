@@ -83,11 +83,13 @@ imagem-lab bootavel deve ser C12.1.4, construida com
 para auditoria, mas nao podem ser marcadas como prontas para boot validation.
 
 Atualizacao C12.1.4: 2026-05-07. O `firstboot.conf` privado foi validado sem
-publicar valores e passou nos criterios de seguranca/campos/rede. A geracao da
-imagem C12.1.4 nao ocorreu porque o ambiente atual esta sem Docker
-(`build_env_docker_missing`). Nenhuma placa foi tocada, nenhum cartao foi
-gravado e nenhum secret foi publicado. C12.2.2 segue bloqueado ate restaurar o
-ambiente de build e gerar a imagem C12.1.4 real.
+publicar valores e passou nos criterios de seguranca/campos/rede. Com Docker
+novamente disponivel, a imagem C12.1.4 foi gerada com autoconfig privado de
+laboratorio, `overlayroot`, firstboot gate, cleanup F10 e assert explicito de
+read-only. SHA256:
+`405d4891e62d018862008f3bfdf00e02123b551351655147ec7448b803ccca14`.
+Nenhuma placa foi tocada, nenhum cartao foi gravado e nenhum secret foi
+publicado. C12.2.2 pode gravar novo cartao de teste com esta imagem.
 
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes

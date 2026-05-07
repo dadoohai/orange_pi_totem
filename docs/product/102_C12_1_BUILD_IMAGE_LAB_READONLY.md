@@ -136,3 +136,20 @@ C12_LAB_FIRSTBOOT_CONF=/path/privado/firstboot.conf
 
 A partir dessa rodada, imagem sem autoconfig privado nao deve ser considerada
 pronta para boot validation em placa.
+
+## C12.1.4
+
+Em 2026-05-07, a imagem foi reconstruida com `firstboot.conf` privado fora do
+Git:
+
+```text
+/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-4_minimal.img
+```
+
+SHA256:
+
+```text
+405d4891e62d018862008f3bfdf00e02123b551351655147ec7448b803ccca14
+```
+
+Esta imagem e a proxima candidata para C12.2.2 card write.

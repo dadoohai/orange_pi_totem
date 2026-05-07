@@ -10,7 +10,7 @@ evitando o bloqueio de tela preta/console cru observado em C12.3.2.
 
 ## Resultado
 
-C12.1.4 ficou bloqueada antes da geracao da imagem.
+C12.1.4 passou como build de artefato local.
 
 O arquivo privado foi validado sem imprimir valores:
 
@@ -25,27 +25,52 @@ O arquivo privado foi validado sem imprimir valores:
 - `network_path_present=true`;
 - `can_build_with_lab_firstboot=true`.
 
-O build foi tentado com:
+O build foi executado com:
 
 ```text
 C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
 C12_LAB_FIRSTBOOT_CONF=/tmp/dadooh-c12-lab-firstboot/firstboot.conf
 ```
 
-Mas o ambiente atual nao tem Docker disponivel:
+O conteudo do arquivo privado nao foi impresso, copiado para o Git ou registrado
+em evidencia.
+
+## Artefatos
+
+Imagem C12.1.4:
 
 ```text
-blocker=docker_missing
+/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-4_minimal.img
 ```
 
-## Classificacao
+SHA256:
 
 ```text
-C12_1_4_BLOCKED_BUILD_ENV_DOCKER_MISSING
+405d4891e62d018862008f3bfdf00e02123b551351655147ec7448b803ccca14
 ```
 
-Nao e falha do `firstboot.conf` privado. Tambem nao e falha de placa, cartao,
-Wi-Fi, wizard, writer ou read-only em runtime.
+Artefatos relacionados:
+
+- checksum: imagem `.sha256`;
+- build log: `log-build-7f1e148a-583b-48af-b701-1fc2396d067b.log`;
+- package manifest: `releases/image-lab-readonly/package-manifest-c12-1-4.txt`;
+- integration manifest:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-4.txt`.
+
+## Integracao
+
+Validado nos artefatos:
+
+- `overlayroot_included=true`;
+- `initramfs_generated_after_overlayroot=true`;
+- `initramfs_source=cache_hit_with_overlayroot_hooks`;
+- `firstboot_gate_included=true`;
+- `lab_firstboot_autoconfig=true`;
+- `lab_firstboot_boot_validatable=true`;
+- `open_settings_cleanup_included=true`;
+- `read_only_assertion_required=true`;
+- `card_written=false`;
+- `boards_touched=false`.
 
 ## C12.1.2
 
@@ -65,19 +90,11 @@ Ela nao deve ser reutilizada para boot validation.
 - o conteudo do `firstboot.conf` privado nao foi impresso;
 - config real do player nao foi embutida;
 - writer nao foi chamado;
-- Wi-Fi/NetworkManager de placa nao foram alterados.
+- Wi-Fi/NetworkManager de placa nao foram alterados;
+- imagem final de producao continua bloqueada.
 
 ## Proximo Passo
 
-Antes de C12.1.4 gerar imagem, restaurar/preparar o ambiente de build com
-Docker disponivel, sem instalar pacotes nas placas e sem rodar upgrades amplos.
-
-Quando Docker estiver disponivel, repetir:
-
-```text
-C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
-C12_LAB_FIRSTBOOT_CONF=/tmp/dadooh-c12-lab-firstboot/firstboot.conf
-scripts/build/run_c12_1_build_image_lab_readonly.sh --build-image
-```
-
-Depois validar artefatos e atualizar o manifest com a imagem C12.1.4 real.
+C12.2.2 pode gravar esta imagem C12.1.4 em um cartao novo/descartavel. Depois,
+C12.3.3 deve validar boot, SSH/rede de laboratorio, Dadooh UI, F10 e read-only
+assertion.

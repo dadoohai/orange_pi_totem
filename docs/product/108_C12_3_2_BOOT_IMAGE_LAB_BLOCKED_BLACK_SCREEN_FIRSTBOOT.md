@@ -86,12 +86,12 @@ Git. Depois disso:
 
 ## Atualizacao C12.1.4
 
-O arquivo privado de firstboot foi validado corretamente, mas a imagem C12.1.4
-nao foi gerada porque o ambiente de build atual esta sem Docker:
+O arquivo privado de firstboot foi validado corretamente e a imagem C12.1.4 foi
+gerada com autoconfig de laboratorio:
 
 ```text
-blocker=build_env_docker_missing
+lab_firstboot_autoconfig=true
 ```
 
-O bloqueio C12.3.2 permanece. A proxima acao e restaurar/preparar o ambiente de
-build, nao gravar novo cartao.
+O bloqueio C12.3.2 permanece apenas para a imagem C12.1.2. A proxima acao e
+C12.2.2: gravar a imagem C12.1.4 em cartao novo/descartavel.

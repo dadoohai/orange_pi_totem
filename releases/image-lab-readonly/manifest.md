@@ -7,13 +7,13 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `image_version=c12.1.2`
+- `image_version=c12.1.4`
 - `previous_image_superseded=true`
-- `card_written=true`
+- `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=true`
+- `boards_touched=false`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
@@ -35,14 +35,14 @@ Status:
 - `c12_3_2_blocker=firstboot_bootstrap_missing_or_invalid`
 - `c12_3_2_ssh_available=false`
 - `c12_3_2_dadooh_ui_available=false`
-- `ready_for_next_card_write=false`
+- `ready_for_next_card_write=true`
 - `c12_1_3_strategy=lab_autoconfig_required`
-- `ready_for_c12_1_4_rebuild=true`
-- `c12_1_4_status=blocked`
-- `c12_1_4_blocker=build_env_docker_missing`
+- `ready_for_c12_1_4_rebuild=false`
+- `c12_1_4_status=passed`
+- `c12_1_4_blocker=none`
 - `c12_1_4_firstboot_conf_private_validated=true`
-- `c12_1_4_image_built=false`
-- `ready_for_c12_2_2_card_write=false`
+- `c12_1_4_image_built=true`
+- `ready_for_c12_2_2_card_write=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -195,20 +195,40 @@ como C12.1.4 com autoconfig privado de firstboot fora do Git.
 - ready_for_c12_1_4_rebuild: `true`
 - ready_for_next_card_write: `false`
 
-## C12.1.4 Build Attempt
+## C12.1.4 Rebuild Artifacts
 
-C12.1.4 validou o `firstboot.conf` privado fora do Git sem imprimir valores,
-mas nao gerou imagem porque o ambiente de build atual nao tem Docker disponivel.
+C12.1.4 validou o `firstboot.conf` privado fora do Git sem imprimir valores e
+gerou a nova imagem-lab bootavel em laboratorio.
 
+- c12_1_4_build_commit: `pending_until_committed`
+- c12_1_4_source_head: `9e3945c`
 - c12_1_4_firstboot_conf_private_validated: `true`
-- c12_1_4_build_success: `false`
-- c12_1_4_blocker: `build_env_docker_missing`
-- c12_1_4_image_file: `not_created`
-- c12_1_4_sha256: `not_created`
-- c12_1_4_lab_firstboot_autoconfig: `not_built`
+- c12_1_4_build_success: `true`
+- c12_1_4_blocker: `none`
+- image_version: `c12.1.4`
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-4_minimal.img`
+- image_checksum_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-4_minimal.img.sha256`
+- image_sha256:
+  `405d4891e62d018862008f3bfdf00e02123b551351655147ec7448b803ccca14`
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-7f1e148a-583b-48af-b701-1fc2396d067b.log`
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1-4.txt`
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-4.txt`
+- overlayroot_included: `true`
+- initramfs_generated_after_overlayroot: `true`
+- initramfs_source: `cache_hit_with_overlayroot_hooks`
+- firstboot_gate_included: `true`
+- lab_firstboot_autoconfig: `true`
+- lab_firstboot_boot_validatable: `true`
+- open_settings_cleanup_included: `true`
+- read_only_assertion_required: `true`
 - c12_1_4_card_written: `false`
 - c12_1_4_boards_touched: `false`
-- ready_for_c12_2_2_card_write: `false`
+- ready_for_c12_2_2_card_write: `true`
 
 ## C12.3.1 Reliability Gate
 
