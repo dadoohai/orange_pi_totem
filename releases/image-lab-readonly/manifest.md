@@ -38,6 +38,11 @@ Status:
 - `ready_for_next_card_write=false`
 - `c12_1_3_strategy=lab_autoconfig_required`
 - `ready_for_c12_1_4_rebuild=true`
+- `c12_1_4_status=blocked`
+- `c12_1_4_blocker=build_env_docker_missing`
+- `c12_1_4_firstboot_conf_private_validated=true`
+- `c12_1_4_image_built=false`
+- `ready_for_c12_2_2_card_write=false`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -189,6 +194,21 @@ como C12.1.4 com autoconfig privado de firstboot fora do Git.
 - firstboot_private_env: `C12_LAB_FIRSTBOOT_CONF=/path/privado/firstboot.conf`
 - ready_for_c12_1_4_rebuild: `true`
 - ready_for_next_card_write: `false`
+
+## C12.1.4 Build Attempt
+
+C12.1.4 validou o `firstboot.conf` privado fora do Git sem imprimir valores,
+mas nao gerou imagem porque o ambiente de build atual nao tem Docker disponivel.
+
+- c12_1_4_firstboot_conf_private_validated: `true`
+- c12_1_4_build_success: `false`
+- c12_1_4_blocker: `build_env_docker_missing`
+- c12_1_4_image_file: `not_created`
+- c12_1_4_sha256: `not_created`
+- c12_1_4_lab_firstboot_autoconfig: `not_built`
+- c12_1_4_card_written: `false`
+- c12_1_4_boards_touched: `false`
+- ready_for_c12_2_2_card_write: `false`
 
 ## C12.3.1 Reliability Gate
 

@@ -139,8 +139,16 @@ check_kiosky_player() {
 }
 
 check_build_env() {
-  command -v docker >/dev/null
-  docker info >/dev/null
+  if ! command -v docker >/dev/null; then
+    echo "error: docker command not found; Armbian Build image-lab build cannot run in this environment" >&2
+    echo "blocker=docker_missing" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  if ! docker info >/dev/null; then
+    echo "error: docker daemon unavailable; Armbian Build image-lab build cannot run in this environment" >&2
+    echo "blocker=docker_daemon_unavailable" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
   command -v git >/dev/null
   command -v rsync >/dev/null
   local free_kb

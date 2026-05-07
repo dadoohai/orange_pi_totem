@@ -83,3 +83,15 @@ Git. Depois disso:
 1. C12.2.2 grava um novo cartao;
 2. C12.3.3 valida boot com SSH/rede disponivel;
 3. somente entao read-only/overlay pode ser reavaliado.
+
+## Atualizacao C12.1.4
+
+O arquivo privado de firstboot foi validado corretamente, mas a imagem C12.1.4
+nao foi gerada porque o ambiente de build atual esta sem Docker:
+
+```text
+blocker=build_env_docker_missing
+```
+
+O bloqueio C12.3.2 permanece. A proxima acao e restaurar/preparar o ambiente de
+build, nao gravar novo cartao.

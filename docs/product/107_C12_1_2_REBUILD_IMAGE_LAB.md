@@ -78,3 +78,7 @@ C12_LAB_FIRSTBOOT_CONF=/path/privado/firstboot.conf
 ```
 
 Somente depois disso um novo cartao deve ser gravado.
+
+Atualizacao: C12.1.4 validou o arquivo privado, mas nao gerou imagem por
+`build_env_docker_missing`. C12.1.2 permanece bloqueada e nao deve ser
+reutilizada em placa.
