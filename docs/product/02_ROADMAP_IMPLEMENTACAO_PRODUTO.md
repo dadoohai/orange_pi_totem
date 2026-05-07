@@ -34,6 +34,13 @@ produziu checksum, build log, package manifest e integration manifest.
 `card_written=false`, `boards_touched=false`, `final_image=false` e
 `ready_for_c12_2_board_validation=true`.
 
+Atualizacao C12.1.1: 2026-05-07. C12.1.1 preservou e revalidou o artefato
+C12.1, registrando checksum ok e manifests presentes. O cartao da placa dev
+teve incidente fisico de fumaca/aquecimento e boot anormal por `/dev/mtdblock4`;
+fica tratado como midia/hardware nao confiavel, nao como bug de software ate
+prova contraria. C12.2 deve usar cartao novo/descartavel e placa teste, sem
+depender da dev.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
@@ -2040,3 +2047,9 @@ Atualizacao C12.1: 2026-05-06. C12.1 preparou Armbian Build v25.11 em
 O build confirmou `overlayroot_included=true` e
 `initramfs_generated_after_overlayroot=true`. O proximo passo permitido e C12.2:
 gravar cartao de teste e validar boot/read-only na placa teste.
+
+Atualizacao C12.1.1: 2026-05-07. O artefato C12.1 foi revalidado no caminho
+esperado com SHA256
+`1b6f5573262d501ae2df6bc3338b56432c8994d4444308caf00347829df08fe2`. O incidente
+fisico no cartao dev bloqueia uso da dev como alvo imediato; C12.2 deve preparar
+cartao de teste seguro e usar a placa teste.

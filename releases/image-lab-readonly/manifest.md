@@ -28,8 +28,10 @@ provisioned board.
 - repository: `dadoohai/orange_pi_totem`
 - branch: `foundation-v0.1`
 - c12_0_prep_commit: `49778f6`
-- c12_1_build_commit: `pending_until_committed`
+- c12_1_build_commit: `f07ff65`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
+- dev_board_status: `hardware_incident_pending_retest`
+- dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`
 - previous_decision: `ADR-0011-root-read-only-overlay-mechanism`
 - root_read_only_mechanism_decision:
   `c12_image_integrated_overlay_lab_required`
@@ -67,6 +69,20 @@ foundation candidate:
 - kiosky_player_pin: `c71318a64c08e47b8426f1388b95f21364d57123`
 - overlayroot_included: `true`
 - initramfs_generated_after_overlayroot: `true`
+
+## C12.1.1 Artifact Preservation
+
+- artifact_preserved_at_expected_path: `true`
+- checksum_revalidated: `true`
+- build_log_exists: `true`
+- package_manifest_exists: `true`
+- secret_scan_textual_artifacts: `pass`
+- dev_card_incident_recorded: `true`
+- ready_for_c12_2_card_write: `true`
+
+The dev board/card incident is tracked as a physical media/hardware event until
+proven otherwise. C12.2 must not use the damaged dev card and must not depend on
+the dev board.
 
 ## Required Build-time Integration
 
