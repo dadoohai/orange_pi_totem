@@ -41,6 +41,21 @@ fica tratado como midia/hardware nao confiavel, nao como bug de software ate
 prova contraria. C12.2 deve usar cartao novo/descartavel e placa teste, sem
 depender da dev.
 
+Atualizacao C12.2: 2026-05-07. C12.2 padroniza a gravacao da imagem-lab via
+Armbian Imager no Windows: o artefato C12.1 foi revalidado por SHA256, foi
+criado runner/checklist local para registrar flash manual e a documentacao
+separa gravacao de boot validation. Depois do boot inicial C12.3,
+`card_written=true`, `boards_touched=true` e a validacao read-only segue
+bloqueada por firstrun tecnico e sessao F10 stale.
+
+Atualizacao C12.3 diagnostico inicial: 2026-05-07. A image-lab bootou em
+`config_missing`, F10 abriu o wizard e o operador avancou por orientacao/Wi-Fi,
+mas o fluxo parou durante input de ambiente. A coleta sem reboot classificou o
+estado como `open_settings_session_stale`, com `totem-open-settings.service`
+falhando por sinal e `session.lock` residual; `framebuffer_render_freeze` nao
+foi comprovado. A imagem-lab ainda exige first-login tecnico Armbian, que passa
+a ser pendencia C12.x de autoconfig/firstrun, nao bug isolado do wizard.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

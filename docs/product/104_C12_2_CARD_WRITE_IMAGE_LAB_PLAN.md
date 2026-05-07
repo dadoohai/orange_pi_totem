@@ -4,9 +4,10 @@ Data: 2026-05-07
 
 ## Objetivo
 
-Gravar a imagem-lab C12.1 em um cartao seguro e validar boot/read-only na placa
-teste. C12.2 ainda nao e imagem final, nao e corte seco e nao provisiona secrets
-no primeiro boot.
+Gravar a imagem-lab C12.1 em um cartao seguro usando Armbian Imager no Windows.
+A validacao de boot/read-only fica para C12.3, salvo autorizacao explicita
+posterior. C12.2 ainda nao e imagem final, nao e corte seco e nao provisiona
+secrets no primeiro boot.
 
 ## Cartao
 
@@ -21,9 +22,28 @@ Nao usar:
 - cartao com historico desconhecido;
 - cartao contendo config real que precise ser preservada.
 
+## Ferramenta de Gravacao
+
+Ferramenta padrao:
+
+```text
+Armbian Imager Windows
+```
+
+Procedimento:
+
+1. selecionar imagem local/customizada;
+2. selecionar o cartao novo ou descartavel correto;
+3. aguardar flash;
+4. aguardar verificacao do imager;
+5. registrar apenas resultado sanitizado.
+
+Se a imagem for copiada para o Windows, validar SHA256 tambem no destino antes
+da gravacao.
+
 ## Alvo
 
-Alvo preferencial:
+Alvo preferencial futuro para C12.3:
 
 ```text
 placa teste
@@ -53,9 +73,9 @@ Antes de gravar:
 4. verificar checksum da imagem;
 5. pedir confirmacao humana explicita.
 
-## Validacao Inicial
+## Validacao Inicial C12.3
 
-Depois de gravar e bootar:
+Depois de gravar e, apenas em rodada posterior, bootar:
 
 - SSH volta;
 - `read_only_enabled=true`;

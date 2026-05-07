@@ -7,14 +7,17 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `card_written=false`
-- `boards_touched=false`
+- `card_written=true`
+- `card_write_tool=Armbian Imager Windows`
+- `card_write_verified=false`
+- `ready_for_c12_3_board_boot=false`
+- `boards_touched=true`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
 - `ready_for_c12_1_build=false`
 - `ready_for_c12_2_card_write=true`
-- `ready_for_c12_2_board_validation=true`
+- `ready_for_c12_2_board_validation=false`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -79,6 +82,16 @@ foundation candidate:
 - secret_scan_textual_artifacts: `pass`
 - dev_card_incident_recorded: `true`
 - ready_for_c12_2_card_write: `true`
+- c12_2_card_write_checklist_commit: `pending_until_committed`
+- card_write_tool: `Armbian Imager Windows`
+- card_write_verified: `false`
+- ready_for_c12_3_board_boot: `false`
+- c12_3_boot_started: `true`
+- c12_3_boot_state: `config_missing`
+- c12_3_first_login_technical_required: `true`
+- c12_3_freeze_classification: `open_settings_session_stale`
+- c12_3_secondary_classification: `firstboot_interference`
+- c12_3_ready_for_read_only_validation: `false`
 
 The dev board/card incident is tracked as a physical media/hardware event until
 proven otherwise. C12.2 must not use the damaged dev card and must not depend on
