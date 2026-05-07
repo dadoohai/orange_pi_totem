@@ -82,7 +82,7 @@ foundation candidate:
 - secret_scan_textual_artifacts: `pass`
 - dev_card_incident_recorded: `true`
 - ready_for_c12_2_card_write: `true`
-- c12_2_card_write_checklist_commit: `pending_until_committed`
+- c12_2_card_write_checklist_commit: `2a302cf`
 - card_write_tool: `Armbian Imager Windows`
 - card_write_verified: `false`
 - ready_for_c12_3_board_boot: `false`
