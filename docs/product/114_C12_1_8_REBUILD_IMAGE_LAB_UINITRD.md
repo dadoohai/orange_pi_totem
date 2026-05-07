@@ -106,3 +106,35 @@ e principalmente:
 - `/data`, `/tmp` e `/run` gravaveis.
 
 C12.4 continua bloqueado ate essa validacao em placa passar.
+
+## Resultado em Placa C12.3.5
+
+A imagem C12.1.8 foi bootada em bancada. O firstboot lab concluiu, SSH ficou
+acessivel e a UI voltou para `config_missing`, como esperado para imagem-lab sem
+config real.
+
+O objetivo de read-only, porem, ainda nao passou:
+
+- `overlayroot.conf` estava presente com `overlayroot=tmpfs`;
+- boot script em `/boot` referenciava `uInitrd`;
+- `initrd.img` continha hook `overlayroot`, modulo `overlayfs` e marker C12.1.8;
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `root_fstype=ext4`;
+- `root_write_blocked=false`.
+
+Classificacao:
+
+```text
+IMAGE_LAB_READ_ONLY_NOT_ACTIVE
+```
+
+O wizard gerou candidata, mas nao chamou writer nem escreveu config real:
+
+```text
+CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES
+UX_AMBIGUOUS_CANDIDATE_ONLY
+```
+
+C12.4 continua bloqueado. A proxima rodada deve investigar por que o
+initramfs/uInitrd valido nao ativa overlayroot no boot.

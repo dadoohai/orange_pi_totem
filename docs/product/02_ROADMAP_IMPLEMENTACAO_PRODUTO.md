@@ -130,6 +130,16 @@ tem SHA256 `7fbc9a0abc39d39b5fc0803d5f935baaf1795bddc6707e18dbf1d7c804ad830d`,
 foi gravado; C12.2.4 deve gravar essa imagem antes da proxima validacao em
 placa.
 
+Atualizacao C12.3.5: 2026-05-07. A C12.1.8 bootou em bancada, SSH ficou
+acessivel e o firstboot lab concluiu. O wizard gerou candidata, nao chamou
+writer e voltou para `config_missing`, classificado como
+`CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES`, com pendencia
+`UX_AMBIGUOUS_CANDIDATE_ONLY`. O read-only ainda nao ativou:
+`read_only_enabled=false`, `overlay_active=false`, `root_fstype=ext4` e
+`root_write_blocked=false`, apesar de o initrd conter hook overlayroot, modulo
+overlayfs e marker C12.1.8, e de o boot script em `/boot` referenciar
+`uInitrd`. C12.4 segue bloqueado.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

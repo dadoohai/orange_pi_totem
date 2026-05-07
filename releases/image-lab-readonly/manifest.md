@@ -9,11 +9,11 @@ Status:
 - `image_built=true`
 - `image_version=c12.1.8`
 - `previous_image_superseded=true`
-- `card_written=false`
+- `card_written=true`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=false`
+- `boards_touched=true`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
@@ -71,7 +71,18 @@ Status:
 - `c12_1_8_image_built=true`
 - `c12_1_8_uinitrd_valid=true`
 - `c12_1_8_effective_boot_initramfs_valid=true`
-- `ready_for_c12_2_4_card_write=true`
+- `ready_for_c12_2_4_card_write=false`
+- `c12_2_4_card_written=true`
+- `c12_2_4_board_booted=true`
+- `c12_3_5_status=blocked`
+- `c12_3_5_boot_success=true`
+- `c12_3_5_ssh_available=true`
+- `c12_3_5_read_only_enabled=false`
+- `c12_3_5_overlay_active=false`
+- `c12_3_5_root_write_blocked=false`
+- `c12_3_5_wizard_result=CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES`
+- `c12_3_5_ux=UX_AMBIGUOUS_CANDIDATE_ONLY`
+- `c12_3_5_blocker=IMAGE_LAB_READ_ONLY_NOT_ACTIVE`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -395,8 +406,8 @@ C12.1.8 corrige a falha classificada como `UINITRD_NOT_UPDATED` endurecendo a
 geracao e validacao do initramfs efetivo usado pelo boot.
 
 - image_version: `c12.1.8`
-- c12_1_8_build_commit: `pending_until_committed`
-- c12_1_8_source_head: `7a78ea1`
+- c12_1_8_build_commit: `55524e9`
+- c12_1_8_source_head: `55524e9`
 - image_file:
   `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-8_minimal.img`
 - image_checksum_file:
@@ -426,9 +437,41 @@ geracao e validacao do initramfs efetivo usado pelo boot.
 - boards_touched: `false`
 - ready_for_c12_2_4_card_write: `true`
 
-Observacao: o boot validation em placa ainda nao foi repetido. C12.4 continua
-bloqueado ate C12.2.4 gravar a imagem C12.1.8 e uma rodada C12.3.x validar
-`read_only_enabled=true`, `overlay_active=true` e `root_write_blocked=true`.
+## C12.3.5 Boot Read-only Wizard Classification
+
+A imagem C12.1.8 foi gravada e bootada em bancada. O firstboot lab concluiu, o
+SSH ficou acessivel e o produto chegou a `config_missing`, como esperado para
+imagem-lab sem config real. O wizard gerou candidata, mas nao chamou writer e
+nao escreveu config real.
+
+Classificacao do wizard:
+
+```text
+CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES
+UX_AMBIGUOUS_CANDIDATE_ONLY
+```
+
+O retorno para `config_missing` e esperado sem private-values, mas a UX deve
+ficar mais clara em rodada futura.
+
+Read-only ainda nao ativou:
+
+- `overlayroot.conf` presente com `overlayroot=tmpfs`;
+- boot script em `/boot` referencia `uInitrd`;
+- initrd contem hook overlayroot, modulo overlayfs e marker C12.1.8;
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `root_fstype=ext4`;
+- `root_write_blocked=false`.
+
+Classificacao:
+
+```text
+IMAGE_LAB_READ_ONLY_NOT_ACTIVE
+```
+
+C12.4 permanece bloqueado. O proximo passo deve diagnosticar por que o
+initramfs efetivo com overlayroot nao resulta em root overlay/read-only no boot.
 
 ## C12.3.1 Reliability Gate
 

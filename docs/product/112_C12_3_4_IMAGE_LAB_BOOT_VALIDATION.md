@@ -137,3 +137,32 @@ UINITRD_NOT_UPDATED
 O boot script carrega `uInitrd`, mas o `uInitrd` no artefato C12.1.6 estava
 vazio. C12.4 continua bloqueado ate C12.1.8 reconstruir a imagem-lab com
 `uInitrd` valido ou boot ajustado para o initramfs correto.
+
+## Atualizacao C12.3.5
+
+C12.1.8 corrigiu a validacao offline do `uInitrd`, mas a validacao em placa
+ainda mostrou root como `ext4 rw`:
+
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `root_write_blocked=false`;
+- `boot_script_uses_uinitrd=true`;
+- `initrd_marker_c12_1_8_visible=true`;
+- `initrd_overlayroot_hook_visible=true`;
+- `initrd_overlay_module_visible=true`.
+
+Classificacao:
+
+```text
+IMAGE_LAB_READ_ONLY_NOT_ACTIVE
+```
+
+O retorno do wizard para `config_missing` foi classificado como esperado para
+imagem-lab sem private-values:
+
+```text
+CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES
+UX_AMBIGUOUS_CANDIDATE_ONLY
+```
+
+C12.4 segue bloqueado.
