@@ -91,6 +91,16 @@ read-only. SHA256:
 Nenhuma placa foi tocada, nenhum cartao foi gravado e nenhum secret foi
 publicado. C12.2.2 pode gravar novo cartao de teste com esta imagem.
 
+Atualizacao C12.3.3/C12.1.5: 2026-05-07. A C12.1.4 foi bootada e mostrou o
+fallback Dadooh `Bootstrap tecnico pendente`, provando que a imagem nao ficou
+muda, mas que o autoconfig lab nao foi efetivo. A inspecao offline mostrou que
+o arquivo privado existia no rootfs, porem faltava bootstrap autonomo antes do
+`totem-firstboot-gate`. C12.1.5 adicionou inspecao real do rootfs e
+`totem-lab-firstboot-autoconfig.service`; C12.1.6 foi gerada com SHA256
+`b64808a7ce23d7c19422c816ca558605d39b495019ecac0bb480345bff711a67`,
+`rootfs_lab_bootstrap_proven=true` e `ready_for_card_write_by_rootfs=true`.
+Nenhuma placa foi tocada e nenhum cartao foi gravado durante a correcao.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

@@ -95,3 +95,17 @@ lab_firstboot_autoconfig=true
 
 O bloqueio C12.3.2 permanece apenas para a imagem C12.1.2. A proxima acao e
 C12.2.2: gravar a imagem C12.1.4 em cartao novo/descartavel.
+
+## Atualizacao C12.3.3
+
+A imagem C12.1.4 tambem ficou bloqueada como boot validation, mas por uma causa
+mais especifica:
+
+```text
+lab_firstboot_autoconfig_not_effective
+```
+
+O fallback visual Dadooh apareceu, entao a imagem nao ficou muda. Porem o
+autoconfig privado nao foi aplicado de forma autonoma antes do gate. A correcao
+segue para C12.1.5/C12.1.6 com inspecao real do rootfs e servico lab de
+bootstrap.

@@ -1,0 +1,19 @@
+[Unit]
+Description=Dadooh Image-Lab Firstboot Autoconfig
+Documentation=man:systemd.service(5)
+DefaultDependencies=no
+After=local-fs.target systemd-remount-fs.service NetworkManager.service
+Wants=NetworkManager.service
+Before=totem-firstboot-gate.service dadooh-visual-splash.service kiosky-player.service totem-settings-trigger.service
+ConditionPathExists=/etc/dadooh/image-lab-firstboot-autoconfig.present
+ConditionPathExists=/root/.not_logged_in_yet
+
+[Service]
+Type=oneshot
+TimeoutStartSec=90s
+ExecStart=/opt/totem/bin/totem_lab_firstboot_autoconfig.sh
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

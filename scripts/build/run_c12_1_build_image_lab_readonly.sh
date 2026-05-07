@@ -12,7 +12,7 @@ RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
 CONFIG_NAME="c12-image-lab-readonly"
-IMAGE_VERSION="${C12_IMAGE_VERSION:-c12.1.4}"
+IMAGE_VERSION="${C12_IMAGE_VERSION:-c12.1.6}"
 IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-${IMAGE_VERSION//./-}}"
 EXPECTED_ARMBIAN_REF="e172058"
 EXPECTED_KIOSKY_COMMIT="c71318a64c08e47b8426f1388b95f21364d57123"
@@ -218,6 +218,16 @@ prepare_overlay_kiosky() {
   printf '%s\n' "$EXPECTED_KIOSKY_COMMIT" > "$target/.kiosky_player_commit"
 }
 
+prepare_overlay_image_lab() {
+  local target="$ARM_BUILD_DIR/userpatches/overlay/c12-image-lab"
+  rm -rf "$target"
+  mkdir -p "$target"
+  cp -a "$USERPATCHES_TEMPLATE/lab-rootfs" "$target/rootfs"
+  find "$target/rootfs" -type d -exec chmod 0755 {} +
+  find "$target/rootfs" -type f -exec chmod 0644 {} +
+  find "$target/rootfs" -type f -name '*.sh' -exec chmod 0755 {} +
+}
+
 prepare_lab_firstboot_conf() {
   local target="$ARM_BUILD_DIR/userpatches/firstboot.conf"
   rm -f "$target"
@@ -330,6 +340,7 @@ prepare_userpatches() {
   prepare_lab_firstboot_conf
   prepare_overlay_repo
   prepare_overlay_kiosky
+  prepare_overlay_image_lab
   find "$ARM_BUILD_DIR/userpatches/overlay" -type f | sort > "$OUT_DIR/userpatches-files.txt"
   {
     printf 'config=%s\n' "$ARM_BUILD_DIR/userpatches/config-$CONFIG_NAME.conf"
@@ -379,6 +390,7 @@ collect_artifacts() {
   local build_log
   build_log="$(find "$ARM_BUILD_DIR/output/logs" -maxdepth 1 -type f -name 'log-build-*.log' -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
   local integration_manifest="$OUT_DIR/read-only-integration-manifest.txt"
+  local rootfs_validation="$OUT_DIR/rootfs-validation.env"
   local initramfs_after_overlayroot="unknown"
   local initramfs_source="unknown"
   local lab_firstboot_autoconfig="false"
@@ -389,6 +401,12 @@ collect_artifacts() {
     # shellcheck disable=SC1090
     source "$OUT_DIR/firstboot-policy.env"
   fi
+  python3 "$REPO_ROOT/scripts/build/inspect_c12_image_rootfs.py" \
+    "$image" \
+    --require-lab-bootstrap-service \
+    --out "$rootfs_validation"
+  # shellcheck disable=SC1090
+  source "$rootfs_validation"
   if [ -n "${build_log:-}" ] &&
     grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log" &&
     grep -q 'Updated initramfs' "$build_log"; then
@@ -410,13 +428,19 @@ collect_artifacts() {
     printf 'initramfs_generated_after_overlayroot=%s\n' "$initramfs_after_overlayroot"
     printf 'initramfs_source=%s\n' "$initramfs_source"
     printf 'firstboot_gate_included=true\n'
+    printf 'rootfs_firstboot_autoconfig_proven=%s\n' "$rootfs_firstboot_autoconfig_proven"
+    printf 'lab_firstboot_bootstrap_service_included=%s\n' "$lab_bootstrap_script_present"
+    printf 'lab_firstboot_bootstrap_service_enabled=%s\n' "$lab_bootstrap_enabled"
+    printf 'lab_firstboot_bootstrap_service_ordered_before_gate=%s\n' "$lab_bootstrap_runs_before_gate"
+    printf 'gate_expected_path_matches=%s\n' "$gate_expected_path_matches"
     printf 'open_settings_cleanup_included=true\n'
     printf 'settings_trigger_stale_lock_cleanup_included=true\n'
     printf 'read_only_assertion_required=true\n'
     printf 'lab_firstboot_autoconfig=%s\n' "$lab_firstboot_autoconfig"
     printf 'lab_firstboot_boot_validatable=%s\n' "$lab_firstboot_boot_validatable"
+    printf 'rootfs_ready_for_card_write=%s\n' "$ready_for_card_write_by_rootfs"
     printf 'lab_firstboot_policy=%s\n' "$lab_firstboot_policy"
-    printf 'ready_for_board_boot=%s\n' "$ready_for_board_boot"
+    printf 'ready_for_board_boot=%s\n' "$ready_for_card_write_by_rootfs"
     printf 'card_written=false\n'
     printf 'boards_touched=false\n'
   } > "$integration_manifest"
@@ -427,6 +451,7 @@ collect_artifacts() {
     printf 'build_log_file=%s\n' "${build_log:-unknown}"
     printf 'package_manifest_file=%s\n' "$pkg_manifest"
     printf 'integration_manifest_file=%s\n' "$integration_manifest"
+    printf 'rootfs_validation_file=%s\n' "$rootfs_validation"
     printf 'orange_pi_totem_commit=%s\n' "$(repo_head)"
     printf 'kiosky_player_pin=%s\n' "$EXPECTED_KIOSKY_COMMIT"
     if [ -f "$OUT_DIR/firstboot-policy.env" ]; then

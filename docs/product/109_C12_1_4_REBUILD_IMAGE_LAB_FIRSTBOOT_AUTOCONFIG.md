@@ -93,8 +93,25 @@ Ela nao deve ser reutilizada para boot validation.
 - Wi-Fi/NetworkManager de placa nao foram alterados;
 - imagem final de producao continua bloqueada.
 
+## Atualizacao C12.3.3
+
+A C12.1.4 foi gravada e bootada, mas mostrou o fallback:
+
+```text
+Bootstrap tecnico pendente
+```
+
+Isso reclassifica C12.1.4 como bloqueada para boot validation. A imagem continha
+o arquivo privado, mas nao tinha um bootstrap lab autonomo para aplica-lo antes
+do `totem-firstboot-gate`.
+
+Classificacao:
+
+```text
+lab_firstboot_autoconfig_not_effective
+```
+
 ## Proximo Passo
 
-C12.2.2 pode gravar esta imagem C12.1.4 em um cartao novo/descartavel. Depois,
-C12.3.3 deve validar boot, SSH/rede de laboratorio, Dadooh UI, F10 e read-only
-assertion.
+C12.1.5 deve corrigir build/validacao e gerar C12.1.6. A C12.1.4 nao deve ser
+reutilizada para nova boot validation.

@@ -21,7 +21,7 @@ USAGE
 }
 
 ARTIFACTS_ENV="${C12_1_ARTIFACTS_ENV:-}"
-EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.4}"
+EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.6}"
 EXPECTED_IMAGE_SUFFIX="${C12_EXPECTED_IMAGE_SUFFIX:-c12-ro-lab-${EXPECTED_IMAGE_VERSION//./-}}"
 
 while [ "$#" -gt 0 ]; do
@@ -67,6 +67,7 @@ validate_artifacts() {
   test -f "${build_log_file:?}"
   test -f "${package_manifest_file:?}"
   test -f "${integration_manifest_file:?}"
+  test -f "${rootfs_validation_file:?}"
 
   sha256sum -c "$image_checksum_file" >/dev/null
   grep -q '^package=overlayroot ' "$package_manifest_file"
@@ -79,11 +80,17 @@ validate_artifacts() {
   grep -q '^image_suffix_c12_ro_lab=true$' "$integration_manifest_file"
   basename "$image_file" | grep -q "$EXPECTED_IMAGE_SUFFIX"
   grep -q '^firstboot_gate_included=true$' "$integration_manifest_file"
+  grep -q '^rootfs_firstboot_autoconfig_proven=true$' "$integration_manifest_file"
+  grep -q '^lab_firstboot_bootstrap_service_included=true$' "$integration_manifest_file"
+  grep -q '^lab_firstboot_bootstrap_service_enabled=true$' "$integration_manifest_file"
+  grep -q '^lab_firstboot_bootstrap_service_ordered_before_gate=true$' "$integration_manifest_file"
+  grep -q '^gate_expected_path_matches=true$' "$integration_manifest_file"
   grep -q '^open_settings_cleanup_included=true$' "$integration_manifest_file"
   grep -q '^settings_trigger_stale_lock_cleanup_included=true$' "$integration_manifest_file"
   grep -q '^read_only_assertion_required=true$' "$integration_manifest_file"
   grep -q '^lab_firstboot_autoconfig=true$' "$integration_manifest_file"
   grep -q '^lab_firstboot_boot_validatable=true$' "$integration_manifest_file"
+  grep -q '^rootfs_ready_for_card_write=true$' "$integration_manifest_file"
   grep -q '^ready_for_board_boot=true$' "$integration_manifest_file"
   grep -q '^card_written=false$' "$integration_manifest_file"
   grep -q '^boards_touched=false$' "$integration_manifest_file"
@@ -99,6 +106,20 @@ validate_artifacts() {
     echo "error: textual artifact secret scan failed" >&2
     exit 1
   fi
+
+  grep -q '^rootfs_firstboot_autoconfig_proven=true$' "$rootfs_validation_file"
+  grep -q '^rootfs_lab_bootstrap_proven=true$' "$rootfs_validation_file"
+  grep -q '^ready_for_card_write_by_rootfs=true$' "$rootfs_validation_file"
+  grep -q '^private_values_published=false$' "$rootfs_validation_file"
+
+  local rootfs_recheck
+  rootfs_recheck="$(mktemp /tmp/dadooh-c12-rootfs-validation.XXXXXX.env)"
+  python3 "$REPO_ROOT/scripts/build/inspect_c12_image_rootfs.py" \
+    "$image_file" \
+    --require-lab-bootstrap-service \
+    --out "$rootfs_recheck"
+  grep -q '^ready_for_card_write_by_rootfs=true$' "$rootfs_recheck"
+  rm -f "$rootfs_recheck"
 }
 
 case "$MODE" in

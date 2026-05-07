@@ -7,7 +7,7 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `image_version=c12.1.4`
+- `image_version=c12.1.6`
 - `previous_image_superseded=true`
 - `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
@@ -38,11 +38,19 @@ Status:
 - `ready_for_next_card_write=true`
 - `c12_1_3_strategy=lab_autoconfig_required`
 - `ready_for_c12_1_4_rebuild=false`
-- `c12_1_4_status=passed`
-- `c12_1_4_blocker=none`
+- `c12_1_4_status=blocked`
+- `c12_1_4_blocker=lab_firstboot_autoconfig_not_effective`
 - `c12_1_4_firstboot_conf_private_validated=true`
 - `c12_1_4_image_built=true`
-- `ready_for_c12_2_2_card_write=true`
+- `c12_3_3_status=blocked`
+- `c12_3_3_blocker=lab_firstboot_autoconfig_not_effective`
+- `c12_1_5_status=passed`
+- `c12_1_5_rootfs_inspection_added=true`
+- `c12_1_6_status=passed`
+- `c12_1_6_rootfs_firstboot_autoconfig_proven=true`
+- `c12_1_6_lab_bootstrap_service_included=true`
+- `ready_for_c12_2_2_card_write=false`
+- `ready_for_c12_2_3_card_write=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -200,11 +208,11 @@ como C12.1.4 com autoconfig privado de firstboot fora do Git.
 C12.1.4 validou o `firstboot.conf` privado fora do Git sem imprimir valores e
 gerou a nova imagem-lab bootavel em laboratorio.
 
-- c12_1_4_build_commit: `pending_until_committed`
+- c12_1_4_build_commit: `7e74ebf`
 - c12_1_4_source_head: `9e3945c`
 - c12_1_4_firstboot_conf_private_validated: `true`
 - c12_1_4_build_success: `true`
-- c12_1_4_blocker: `none`
+- c12_1_4_blocker: `lab_firstboot_autoconfig_not_effective`
 - image_version: `c12.1.4`
 - image_file:
   `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-4_minimal.img`
@@ -228,7 +236,69 @@ gerou a nova imagem-lab bootavel em laboratorio.
 - read_only_assertion_required: `true`
 - c12_1_4_card_written: `false`
 - c12_1_4_boards_touched: `false`
-- ready_for_c12_2_2_card_write: `true`
+- ready_for_c12_2_2_card_write: `false`
+
+## C12.3.3 Firstboot Autoconfig Blocker
+
+C12.1.4 foi gravada e bootada. O fallback visual funcionou, mas mostrou:
+
+```text
+Bootstrap tecnico pendente
+```
+
+Isso provou que a imagem nao ficou muda, mas tambem provou que o autoconfig de
+laboratorio nao foi efetivo no boot. A imagem C12.1.4 nao deve ser reutilizada
+como artefato boot-validavel.
+
+Classificacao:
+
+```text
+lab_firstboot_autoconfig_not_effective
+```
+
+## C12.1.5 Rootfs Inspection
+
+C12.1.5 inspecionou offline a imagem C12.1.4 sem tocar placas ou cartoes. O
+resultado foi:
+
+- `rootfs_firstboot_autoconfig_proven=true`;
+- `rootfs_lab_bootstrap_proven=false`;
+- `ready_for_card_write_by_rootfs=false`.
+
+Causa: o arquivo privado foi incorporado como `/root/.not_logged_in_yet`, mas
+essa configuracao e consumida pelo `armbian-firstlogin`, que depende de login
+interativo. Nao havia servico lab autonomo para aplicar rede/senha/usuario antes
+do `totem-firstboot-gate`.
+
+## C12.1.6 Rebuild Artifacts
+
+C12.1.6 corrige C12.1.4 adicionando um servico lab autonomo de firstboot e
+endurecendo a validacao para inspecionar o rootfs real da imagem.
+
+- image_version: `c12.1.6`
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-6_minimal.img`
+- image_checksum_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-6_minimal.img.sha256`
+- image_sha256:
+  `b64808a7ce23d7c19422c816ca558605d39b495019ecac0bb480345bff711a67`
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-299de716-0d1f-451c-a145-0edd7fd955c6.log`
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1-6.txt`
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-6.txt`
+- overlayroot_included: `true`
+- initramfs_generated_after_overlayroot: `true`
+- initramfs_source: `cache_hit_with_overlayroot_hooks`
+- rootfs_firstboot_autoconfig_proven: `true`
+- lab_firstboot_bootstrap_service_included: `true`
+- lab_firstboot_bootstrap_service_enabled: `true`
+- lab_firstboot_bootstrap_service_ordered_before_gate: `true`
+- rootfs_ready_for_card_write: `true`
+- card_written: `false`
+- boards_touched: `false`
+- ready_for_c12_2_3_card_write: `true`
 
 ## C12.3.1 Reliability Gate
 

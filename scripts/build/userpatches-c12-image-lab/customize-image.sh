@@ -31,12 +31,15 @@ main() {
   local overlay_root="/tmp/overlay"
   local repo_root="$overlay_root/orange_pi_totem"
   local app_root="$overlay_root/kiosky-player"
+  local lab_root="$overlay_root/c12-image-lab/rootfs"
   local image_lab_state="/data/state/totem-read-only-image-lab"
   local lab_firstboot_marker="/etc/dadooh/image-lab-firstboot-autoconfig.present"
 
   require_file "$repo_root/scripts/board/install_totem_appliance.sh"
   require_file "$repo_root/scripts/board/totem_appliance_manifest.json"
   require_file "$app_root/kiosk.py"
+  require_file "$lab_root/opt/totem/bin/totem_lab_firstboot_autoconfig.sh"
+  require_file "$lab_root/etc/systemd/system/totem-lab-firstboot-autoconfig.service"
 
   log "applying appliance layer"
   "$repo_root/scripts/board/install_totem_appliance.sh" \
@@ -53,6 +56,15 @@ main() {
   find /opt/totem/kiosky-player -type f -exec chmod 0644 {} +
   find /opt/totem/kiosky-player -type f -name '*.sh' -exec chmod 0755 {} +
   chown -R root:root /opt/totem/kiosky-player
+
+  log "installing image-lab firstboot autoconfig service"
+  install -m 0755 -o root -g root \
+    "$lab_root/opt/totem/bin/totem_lab_firstboot_autoconfig.sh" \
+    /opt/totem/bin/totem_lab_firstboot_autoconfig.sh
+  install -m 0644 -o root -g root \
+    "$lab_root/etc/systemd/system/totem-lab-firstboot-autoconfig.service" \
+    /etc/systemd/system/totem-lab-firstboot-autoconfig.service
+  systemctl --no-reload enable totem-lab-firstboot-autoconfig.service
 
   log "configuring volatile journald policy"
   install -d -m 0755 -o root -g root /etc/systemd/journald.conf.d
@@ -120,6 +132,8 @@ EOF
   "final_armbian_initramfs_expected_after_customize": true,
   "armbian_firstboot_gate_installed": true,
   "armbian_firstboot_autoconfig_present": $(test -f "$lab_firstboot_marker" && echo true || echo false),
+  "lab_firstboot_bootstrap_service_present": true,
+  "lab_firstboot_bootstrap_service_enabled": true,
   "image_lab_boot_validatable_with_private_firstboot": $(test -f "$lab_firstboot_marker" && echo true || echo false),
   "secrets_embedded": false,
   "config_real_embedded": false,
