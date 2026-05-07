@@ -9,16 +9,16 @@ Status:
 - `image_built=true`
 - `image_version=c12.1.2`
 - `previous_image_superseded=true`
-- `card_written=false`
+- `card_written=true`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=false`
+- `boards_touched=true`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
 - `ready_for_c12_1_build=false`
-- `ready_for_c12_2_card_write=true`
+- `ready_for_c12_2_card_write=false`
 - `ready_for_c12_2_board_validation=false`
 - `c12_3_boot_attempted=true`
 - `c12_3_status=blocked`
@@ -29,8 +29,15 @@ Status:
 - `c12_3_1_read_only_assertion=required`
 - `ready_for_c12_1_2_rebuild=false`
 - `c12_1_2_build_status=passed`
-- `ready_for_c12_2_1_card_write=true`
+- `ready_for_c12_2_1_card_write=false`
 - `ready_for_c12_3_2_revalidation=false`
+- `c12_3_2_status=blocked`
+- `c12_3_2_blocker=firstboot_bootstrap_missing_or_invalid`
+- `c12_3_2_ssh_available=false`
+- `c12_3_2_dadooh_ui_available=false`
+- `ready_for_next_card_write=false`
+- `c12_1_3_strategy=lab_autoconfig_required`
+- `ready_for_c12_1_4_rebuild=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -45,8 +52,8 @@ provisioned board.
 - branch: `foundation-v0.1`
 - c12_0_prep_commit: `49778f6`
 - c12_1_build_commit: `f07ff65`
-- c12_1_2_build_commit: `pending_until_committed`
-- c12_1_2_source_head: `38eac477b6658c399eaa075e73d3f4af49af9193`
+- c12_1_2_build_commit: `aec03bc`
+- c12_1_2_source_head: `aec03bc`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`
@@ -146,9 +153,42 @@ C12.3.1 fixes and is the only image-lab artifact allowed for C12.2.1.
 - firstboot_gate_included: `true`
 - open_settings_cleanup_included: `true`
 - read_only_assertion_required: `true`
-- card_written: `false`
-- boards_touched: `false`
-- ready_for_c12_2_1_card_write: `true`
+- card_written: `true`
+- boards_touched: `true`
+- ready_for_c12_2_1_card_write: `false`
+- c12_3_2_status: `blocked`
+- c12_3_2_blocker: `firstboot_bootstrap_missing_or_invalid`
+- c12_3_2_ssh_available: `false`
+- c12_3_2_dadooh_ui_available: `false`
+- ready_for_next_card_write: `false`
+
+## C12.3.2 Black Screen Firstboot Blocker
+
+C12.1.2 foi gravada e bootada, mas ficou bloqueada antes de qualquer validacao
+read-only:
+
+- tela preta;
+- F10 apareceu como sequencia de escape no console cru;
+- wizard nao abriu;
+- sem Wi-Fi configurado;
+- sem SSH acessivel;
+- sem diagnostico remoto ou mount WSL do cartao.
+
+Classificacao:
+
+```text
+firstboot_bootstrap_missing_or_invalid
+```
+
+Decisao C12.1.3: a proxima imagem bootavel em laboratorio deve ser reconstruida
+como C12.1.4 com autoconfig privado de firstboot fora do Git.
+
+- c12_1_3_strategy: `lab_autoconfig_required`
+- c12_1_4_requires_private_firstboot_conf: `true`
+- build_flag_required: `C12_REQUIRE_LAB_FIRSTBOOT_CONF=1`
+- firstboot_private_env: `C12_LAB_FIRSTBOOT_CONF=/path/privado/firstboot.conf`
+- ready_for_c12_1_4_rebuild: `true`
+- ready_for_next_card_write: `false`
 
 ## C12.3.1 Reliability Gate
 

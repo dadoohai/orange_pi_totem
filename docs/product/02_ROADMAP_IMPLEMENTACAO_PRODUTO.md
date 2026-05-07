@@ -73,6 +73,15 @@ O manifest marca a imagem C12.1 como superseded e libera C12.2.1 para gravacao
 em cartao novo/descartavel; C12.3.2 deve validar firstboot gate, F10 e
 read-only assertion.
 
+Atualizacao C12.1.3: 2026-05-07. A tentativa C12.3.2 com a imagem C12.1.2
+ficou bloqueada por `firstboot_bootstrap_missing_or_invalid`: tela preta, F10
+aparecendo como escape sequence no console cru, sem Wi-Fi, sem SSH e sem UI
+Dadooh. A rodada escolhe a estrategia `lab_autoconfig_required`: a proxima
+imagem-lab bootavel deve ser C12.1.4, construida com
+`C12_LAB_FIRSTBOOT_CONF` privado fora do Git e
+`C12_REQUIRE_LAB_FIRSTBOOT_CONF=1`. Imagens sem esse autoconfig podem existir
+para auditoria, mas nao podem ser marcadas como prontas para boot validation.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

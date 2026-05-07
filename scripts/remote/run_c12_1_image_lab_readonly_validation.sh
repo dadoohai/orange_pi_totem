@@ -21,6 +21,8 @@ USAGE
 }
 
 ARTIFACTS_ENV="${C12_1_ARTIFACTS_ENV:-}"
+EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.4}"
+EXPECTED_IMAGE_SUFFIX="${C12_EXPECTED_IMAGE_SUFFIX:-c12-ro-lab-${EXPECTED_IMAGE_VERSION//./-}}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -73,12 +75,16 @@ validate_artifacts() {
   grep -q '^package=python3-requests ' "$package_manifest_file"
   grep -q '^package=network-manager ' "$package_manifest_file"
   grep -q '^overlayroot_included=true$' "$integration_manifest_file"
-  grep -q '^image_version=c12.1.2$' "$integration_manifest_file"
-  grep -q '^image_suffix_c12_1_2=true$' "$integration_manifest_file"
+  grep -q "^image_version=$EXPECTED_IMAGE_VERSION$" "$integration_manifest_file"
+  grep -q '^image_suffix_c12_ro_lab=true$' "$integration_manifest_file"
+  basename "$image_file" | grep -q "$EXPECTED_IMAGE_SUFFIX"
   grep -q '^firstboot_gate_included=true$' "$integration_manifest_file"
   grep -q '^open_settings_cleanup_included=true$' "$integration_manifest_file"
   grep -q '^settings_trigger_stale_lock_cleanup_included=true$' "$integration_manifest_file"
   grep -q '^read_only_assertion_required=true$' "$integration_manifest_file"
+  grep -q '^lab_firstboot_autoconfig=true$' "$integration_manifest_file"
+  grep -q '^lab_firstboot_boot_validatable=true$' "$integration_manifest_file"
+  grep -q '^ready_for_board_boot=true$' "$integration_manifest_file"
   grep -q '^card_written=false$' "$integration_manifest_file"
   grep -q '^boards_touched=false$' "$integration_manifest_file"
   grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log_file"
@@ -116,6 +122,9 @@ C12.1 build checklist:
 - recover or clone Armbian Build v25.11;
 - confirm build commit/base;
 - create userpatches for appliance/read-only;
+- provide private C12_LAB_FIRSTBOOT_CONF outside Git for every board-bootable
+  image-lab build;
+- build board-validation images with C12_REQUIRE_LAB_FIRSTBOOT_CONF=1;
 - include overlayroot in image build;
 - generate initramfs/uInitrd with overlayroot present;
 - include journald volatile policy;
@@ -128,8 +137,9 @@ C12.1 build checklist:
 C12.2 board validation checklist:
 - write only a test card after C12.1 artifacts pass;
 - boot on test board, not dev reference;
-- confirm Armbian first-login is complete or blocked from competing with Dadooh
-  by the image-lab firstboot gate before starting F10/wizard validation;
+- confirm the image was built with private lab firstboot autoconfig; an image
+  without it is not board-boot-validatable after the C12.3.2 black-screen
+  result;
 - verify read_only_enabled=true;
 - verify overlay_active=true or equivalent;
 - verify root write blocked;

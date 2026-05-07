@@ -7,12 +7,13 @@ ARM_BUILD_DIR="${ARM_BUILD_DIR:-/home/builder/totem-os/armbian-build-v25.11}"
 KIOSKY_PLAYER_DIR="${KIOSKY_PLAYER_DIR:-/home/builder/kiosky-player}"
 USERPATCHES_TEMPLATE="$REPO_ROOT/scripts/build/userpatches-c12-image-lab"
 LAB_FIRSTBOOT_CONF="${C12_LAB_FIRSTBOOT_CONF:-}"
+REQUIRE_LAB_FIRSTBOOT_CONF="${C12_REQUIRE_LAB_FIRSTBOOT_CONF:-0}"
 RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
 CONFIG_NAME="c12-image-lab-readonly"
-IMAGE_VERSION="c12.1.2"
-IMAGE_SUFFIX_MARKER="c12-ro-lab-c12-1-2"
+IMAGE_VERSION="${C12_IMAGE_VERSION:-c12.1.4}"
+IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-${IMAGE_VERSION//./-}}"
 EXPECTED_ARMBIAN_REF="e172058"
 EXPECTED_KIOSKY_COMMIT="c71318a64c08e47b8426f1388b95f21364d57123"
 
@@ -35,10 +36,14 @@ Environment:
   KIOSKY_PLAYER_DIR=/home/builder/kiosky-player
   C12_1_OUT_DIR=/tmp/...
   C12_LAB_FIRSTBOOT_CONF=/private/path/firstboot.conf
-      Optional private Armbian first-login preset. Required for a C12.1.2+
-      image-lab that should not expose/compete with Armbian first-login during
-      product validation. The file must live outside this repo and must not be
-      committed.
+      Private Armbian first-login preset for lab images. Required for the next
+      board-bootable image-lab because C12.3.2 proved that the firstboot gate
+      alone leaves no useful SSH/UI path on a fresh card.
+  C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
+      Refuse to build if C12_LAB_FIRSTBOOT_CONF is missing. Use this for
+      C12.1.4+ board-validation images.
+  C12_IMAGE_VERSION=c12.1.4
+      Image-lab version marker used in artifact names and manifests.
 
 Rules:
   - local build only;
@@ -208,11 +213,22 @@ prepare_overlay_kiosky() {
 prepare_lab_firstboot_conf() {
   local target="$ARM_BUILD_DIR/userpatches/firstboot.conf"
   rm -f "$target"
+  case "$REQUIRE_LAB_FIRSTBOOT_CONF" in
+    0|1) ;;
+    *) echo "error: C12_REQUIRE_LAB_FIRSTBOOT_CONF must be 0 or 1" >&2; exit 2 ;;
+  esac
   if [ -z "$LAB_FIRSTBOOT_CONF" ]; then
+    if [ "$REQUIRE_LAB_FIRSTBOOT_CONF" = "1" ]; then
+      echo "error: C12_LAB_FIRSTBOOT_CONF is required for board-bootable image-lab builds" >&2
+      echo "blocker=lab_firstboot_conf_missing_required" > "$OUT_DIR/blocker.env"
+      exit 1
+    fi
     {
       printf 'lab_firstboot_autoconfig=false\n'
-      printf 'lab_firstboot_conf_required_for_c12_3_2=true\n'
-      printf 'lab_firstboot_policy=product_services_gate_until_armbian_first_login_complete\n'
+      printf 'lab_firstboot_boot_validatable=false\n'
+      printf 'lab_firstboot_conf_required_for_board_boot=true\n'
+      printf 'lab_firstboot_policy=not_board_boot_validatable_without_private_autoconfig\n'
+      printf 'ready_for_board_boot=false\n'
     } > "$OUT_DIR/firstboot-policy.env"
     return 0
   fi
@@ -237,6 +253,8 @@ path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="replace")
 required = [
     "PRESET_NET_CHANGE_DEFAULTS",
+    "PRESET_NET_ETHERNET_ENABLED",
+    "PRESET_NET_WIFI_ENABLED",
     "PRESET_CONNECT_WIRELESS",
     "SET_LANG_BASED_ON_LOCATION",
     "PRESET_LOCALE",
@@ -250,21 +268,47 @@ required = [
 missing = [key for key in required if not re.search(rf"^\s*{re.escape(key)}=", text, re.M)]
 if missing:
     raise SystemExit("lab_firstboot_conf_missing_required_keys")
+
+values = {}
+for match in re.finditer(r"^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$", text, re.M):
+    raw = match.group(2).strip()
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in ("'", '"'):
+        raw = raw[1:-1]
+    values[match.group(1)] = raw
+
 for placeholder in (
     "REPLACE_WITH_PRIVATE_LAB_ROOT_PASSWORD",
     "REPLACE_WITH_PRIVATE_LAB_USER_PASSWORD",
+    "REPLACE_WITH_PRIVATE_LAB_WIFI_SSID",
+    "REPLACE_WITH_PRIVATE_LAB_WIFI_PASSWORD",
     "RootPassword",
     "UserPassword",
+    "MySSID",
+    "MyWiFiKEY",
 ):
     if placeholder in text:
         raise SystemExit("lab_firstboot_conf_contains_placeholder")
+
+if values.get("PRESET_NET_CHANGE_DEFAULTS") != "1":
+    raise SystemExit("lab_firstboot_conf_must_configure_network")
+ethernet_enabled = values.get("PRESET_NET_ETHERNET_ENABLED") == "1"
+wifi_enabled = values.get("PRESET_NET_WIFI_ENABLED") == "1"
+if not ethernet_enabled and not wifi_enabled:
+    raise SystemExit("lab_firstboot_conf_has_no_network_path")
+if wifi_enabled:
+    for key in ("PRESET_NET_WIFI_SSID", "PRESET_NET_WIFI_KEY", "PRESET_NET_WIFI_COUNTRYCODE"):
+        if not values.get(key):
+            raise SystemExit("lab_firstboot_conf_missing_wifi_value")
 PY
   install -m 0600 "$LAB_FIRSTBOOT_CONF" "$target"
   {
     printf 'lab_firstboot_autoconfig=true\n'
+    printf 'lab_firstboot_boot_validatable=true\n'
     printf 'lab_firstboot_conf_copied_to_userpatches=true\n'
     printf 'lab_firstboot_conf_source_private=true\n'
     printf 'lab_firstboot_secret_values_published=false\n'
+    printf 'lab_firstboot_policy=private_armbian_firstboot_autoconfig_required_for_lab_boot\n'
+    printf 'ready_for_board_boot=true\n'
   } > "$OUT_DIR/firstboot-policy.env"
 }
 
@@ -298,6 +342,7 @@ build_image() {
     export LANG=C.UTF-8
     export LC_ALL=C.UTF-8
     export TERM=xterm-256color
+    export C12_IMAGE_SUFFIX_MARKER="$IMAGE_SUFFIX_MARKER"
     ./compile.sh build "$CONFIG_NAME" PREFER_DOCKER=yes FORCE_USE_RAMDISK=no
   ) 2>&1 | tee "$OUT_DIR/build-wrapper.log"
   find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -printf '%T@ %p\n' 2>/dev/null | sort > "$after_file" || true
@@ -328,6 +373,14 @@ collect_artifacts() {
   local integration_manifest="$OUT_DIR/read-only-integration-manifest.txt"
   local initramfs_after_overlayroot="unknown"
   local initramfs_source="unknown"
+  local lab_firstboot_autoconfig="false"
+  local lab_firstboot_boot_validatable="false"
+  local lab_firstboot_policy="unknown"
+  local ready_for_board_boot="false"
+  if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
+    # shellcheck disable=SC1090
+    source "$OUT_DIR/firstboot-policy.env"
+  fi
   if [ -n "${build_log:-}" ] &&
     grep -q 'Installing AGGREGATED_PACKAGES_IMAGE packages.*overlayroot' "$build_log" &&
     grep -q 'Updated initramfs' "$build_log"; then
@@ -345,13 +398,17 @@ collect_artifacts() {
     printf 'overlayroot_included=%s\n' "$(grep -q '^package=overlayroot ' "$pkg_manifest" && echo true || echo false)"
     printf 'image_version=%s\n' "$IMAGE_VERSION"
     printf 'image_suffix_c12_ro_lab=%s\n' "$(basename "$image" | grep -q 'c12-ro-lab' && echo true || echo false)"
-    printf 'image_suffix_c12_1_2=%s\n' "$(basename "$image" | grep -q "$IMAGE_SUFFIX_MARKER" && echo true || echo false)"
+    printf 'image_suffix_version_marker=%s\n' "$(basename "$image" | grep -q "$IMAGE_SUFFIX_MARKER" && echo true || echo false)"
     printf 'initramfs_generated_after_overlayroot=%s\n' "$initramfs_after_overlayroot"
     printf 'initramfs_source=%s\n' "$initramfs_source"
     printf 'firstboot_gate_included=true\n'
     printf 'open_settings_cleanup_included=true\n'
     printf 'settings_trigger_stale_lock_cleanup_included=true\n'
     printf 'read_only_assertion_required=true\n'
+    printf 'lab_firstboot_autoconfig=%s\n' "$lab_firstboot_autoconfig"
+    printf 'lab_firstboot_boot_validatable=%s\n' "$lab_firstboot_boot_validatable"
+    printf 'lab_firstboot_policy=%s\n' "$lab_firstboot_policy"
+    printf 'ready_for_board_boot=%s\n' "$ready_for_board_boot"
     printf 'card_written=false\n'
     printf 'boards_touched=false\n'
   } > "$integration_manifest"

@@ -32,6 +32,7 @@ main() {
   local repo_root="$overlay_root/orange_pi_totem"
   local app_root="$overlay_root/kiosky-player"
   local image_lab_state="/data/state/totem-read-only-image-lab"
+  local lab_firstboot_marker="/etc/dadooh/image-lab-firstboot-autoconfig.present"
 
   require_file "$repo_root/scripts/board/install_totem_appliance.sh"
   require_file "$repo_root/scripts/board/totem_appliance_manifest.json"
@@ -91,6 +92,20 @@ path.write_text("\n".join(out) + "\n", encoding="utf-8")
 PY
   chmod 0644 /etc/overlayroot.conf
 
+  log "recording lab firstboot bootstrap state"
+  install -d -m 0755 -o root -g root /etc/dadooh
+  rm -f "$lab_firstboot_marker"
+  if test -s /root/.not_logged_in_yet &&
+    grep -q 'PRESET_ROOT_PASSWORD=' /root/.not_logged_in_yet &&
+    ! grep -q 'REPLACE_WITH_PRIVATE_LAB_' /root/.not_logged_in_yet; then
+    cat > "$lab_firstboot_marker" <<'EOF'
+lab_firstboot_autoconfig_present=true
+secrets_embedded=false
+secret_values_published=false
+EOF
+    chmod 0644 "$lab_firstboot_marker"
+  fi
+
   log "writing image-lab state"
   install -d -m 0700 -o root -g root "$image_lab_state"
   cat > "$image_lab_state/integration.json" <<EOF
@@ -104,7 +119,8 @@ PY
   "overlayroot_configured_in_image": true,
   "final_armbian_initramfs_expected_after_customize": true,
   "armbian_firstboot_gate_installed": true,
-  "armbian_firstboot_autoconfig_present": $(test -s /root/.not_logged_in_yet && grep -q 'PRESET_ROOT_PASSWORD=' /root/.not_logged_in_yet && echo true || echo false),
+  "armbian_firstboot_autoconfig_present": $(test -f "$lab_firstboot_marker" && echo true || echo false),
+  "image_lab_boot_validatable_with_private_firstboot": $(test -f "$lab_firstboot_marker" && echo true || echo false),
   "secrets_embedded": false,
   "config_real_embedded": false,
   "card_written_by_build": false

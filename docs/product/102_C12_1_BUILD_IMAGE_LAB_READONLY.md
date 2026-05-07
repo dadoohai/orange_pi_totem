@@ -116,3 +116,23 @@ a398399c139c3fee1b05860b216db7facfddd0ae1a57f681b229228390b7abd9
 
 Esta nova imagem substitui a C12.1 para a proxima gravacao de cartao
 C12.2.1. A imagem antiga permanece apenas como historico/superseded.
+
+## C12.1.3
+
+Em 2026-05-07, o boot C12.3.2 da C12.1.2 bloqueou antes da validacao:
+
+- tela preta;
+- F10 chegando ao console cru;
+- sem Wi-Fi/SSH;
+- UI Dadooh nao assumiu.
+
+A estrategia corrigida para a proxima imagem e exigir autoconfig privado de
+laboratorio:
+
+```text
+C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
+C12_LAB_FIRSTBOOT_CONF=/path/privado/firstboot.conf
+```
+
+A partir dessa rodada, imagem sem autoconfig privado nao deve ser considerada
+pronta para boot validation em placa.

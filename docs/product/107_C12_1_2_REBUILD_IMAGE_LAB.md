@@ -65,5 +65,16 @@ ser `IMAGE_LAB_READ_ONLY_NOT_ACTIVE`.
 
 ## Proximo Passo
 
-C12.2.1 pode gravar esta imagem em cartao novo/descartavel. Depois, C12.3.2
-deve revalidar boot, firstboot gate, F10 open/cancel e read-only assertion.
+C12.2.1 gravou esta imagem, mas C12.3.2 bloqueou em tela preta com F10 caindo
+no console cru, sem Wi-Fi/SSH/UI Dadooh. Esta imagem fica superseded para novas
+tentativas em placa.
+
+O proximo passo correto passa a ser C12.1.4: reconstruir a imagem-lab com
+autoconfig privado de firstboot fora do Git, usando:
+
+```text
+C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
+C12_LAB_FIRSTBOOT_CONF=/path/privado/firstboot.conf
+```
+
+Somente depois disso um novo cartao deve ser gravado.
