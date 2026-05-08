@@ -88,7 +88,15 @@ Status:
 - `c12_3_6_winning_hypothesis=none`
 - `c12_3_6_cause_category=OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`
 - `c12_3_6_rollback_available=true`
-- `ready_for_c12_1_9_rebuild=true`
+- `c12_3_7_status=blocked`
+- `c12_3_7_hypotheses_tested=H1_FORCE_MODULE,H2_FORCE_LOAD_HOOK`
+- `c12_3_7_winning_hypothesis=none`
+- `c12_3_7_overlay_module_in_initramfs=true`
+- `c12_3_7_force_overlay_hook_in_initramfs=true`
+- `c12_3_7_cause_category=OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`
+- `c12_3_7_read_only_mechanism_still_blocked=true`
+- `c12_3_7_next_decision_required=true`
+- `ready_for_c12_1_9_rebuild=false`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -499,6 +507,29 @@ Resultado:
 - rollback_available: `true`;
 - cause_category: `OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`;
 - next_step: `C12.1.9 rebuild with overlay driver available in initramfs`.
+
+## C12.3.7 Overlay Module Initramfs Lab
+
+A placa C12.1.8 foi mantida como laboratorio descartavel. Foram testadas as
+duas hipoteses permitidas:
+
+- `H1_FORCE_MODULE`: forcar `overlay` em `/etc/initramfs-tools/modules`;
+- `H2_FORCE_LOAD_HOOK`: adicionar hook `init-top` para executar
+  `modprobe overlay` antes do `overlayroot`.
+
+Ambas regeneraram `initramfs`/`uInitrd`, entraram nos artefatos e foram
+rebootadas com SSH voltando, mas o root continuou `ext4 rw`:
+
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- systemctl_failed_count: `0`;
+- rollback_available: `true`;
+- winning_hypothesis: `none`;
+- next_decision_required: `true`.
+
+C12.1.9 nao deve ser iniciado como rebuild simples com preload de modulo.
+C12.4 permanece bloqueado.
 
 ## C12.3.1 Reliability Gate
 

@@ -138,3 +138,19 @@ OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME
 O modulo `overlay` existe depois do boot normal, mas nao fica disponivel como
 filesystem no momento em que `overlayroot` roda dentro do initramfs. C12.4 segue
 bloqueado.
+
+## Atualizacao C12.3.7
+
+C12.3.7 testou duas hipoteses minimas na placa lab:
+
+- forcar `overlay` em `/etc/initramfs-tools/modules`;
+- adicionar hook `init-top` para executar `modprobe overlay` antes do
+  `overlayroot`.
+
+Ambas as hipoteses foram aplicadas com backup, regeneraram initramfs/uInitrd e
+rebootaram com SSH voltando. O root continuou `ext4 rw`, com
+`read_only_enabled=false`, `overlay_active=false` e `root_write_blocked=false`.
+
+O mecanismo segue bloqueado como
+`OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`. C12.4 segue bloqueado e
+C12.1.9 nao deve ser tratado como rebuild simples.

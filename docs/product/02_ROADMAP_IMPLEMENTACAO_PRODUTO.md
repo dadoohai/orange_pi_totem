@@ -151,6 +151,15 @@ continua `ext4 rw`. A causa ficou classificada como
 precarregar/registrar o driver `overlay` no initramfs e manter
 `overlayroot=tmpfs` no boot args. C12.4 segue bloqueado.
 
+Atualizacao C12.3.7: 2026-05-08. A correcao minima foi testada diretamente na
+placa lab antes de novo build. `H1_FORCE_MODULE` adicionou `overlay` a
+`/etc/initramfs-tools/modules`; `H2_FORCE_LOAD_HOOK` adicionou hook `init-top`
+para executar `modprobe overlay` antes do `overlayroot`. Ambas as hipoteses
+entraram no initramfs/uInitrd e rebootaram com SSH voltando, mas
+`read_only_enabled=false`, `overlay_active=false` e `root_write_blocked=false`
+persistem. O mecanismo segue bloqueado; C12.1.9 nao deve ser apenas rebuild com
+preload simples de modulo, e C12.4 segue bloqueado.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

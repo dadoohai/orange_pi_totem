@@ -71,3 +71,15 @@ C12.1.9 deve reconstruir a image-lab com dois ajustes:
   antes do `overlayroot` executar.
 
 C12.4 permanece bloqueado.
+
+## Atualizacao C12.3.7
+
+C12.3.7 testou a correcao minima antes de um rebuild. `H1_FORCE_MODULE`
+adicionou `overlay` a `/etc/initramfs-tools/modules`; `H2_FORCE_LOAD_HOOK`
+adicionou hook `init-top` para executar `modprobe overlay` antes do
+`overlayroot`. As duas hipoteses entraram no `initramfs`/`uInitrd` e rebootaram
+com SSH retornando, mas o root continuou `ext4 rw`.
+
+Conclusao: o problema nao foi resolvido por simples preload do modulo. O
+mecanismo read-only segue bloqueado e C12.1.9 precisa de nova decisao tecnica,
+nao apenas rebuild com esses dois ajustes.
