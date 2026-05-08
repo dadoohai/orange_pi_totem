@@ -192,6 +192,18 @@ resolvido, `modules.dep` coerente e
 placa foi tocada e nenhum cartao foi gravado. C12.2.5 pode gravar novo cartao;
 C12.4 segue bloqueado ate boot provar read-only ativo.
 
+Atualizacao C12.3.10: 2026-05-08. A C12.1.9 foi gravada e bootada na placa lab.
+O SHA real foi confirmado como
+`f581ffab591462b1daa60a648f0ed0f8c2831deff9004f9ff16cdaa46fd11e6c`, o SSH
+ficou disponivel, o firstboot lab concluiu e o produto ficou em
+`config_missing`, esperado sem config real. O read-only ainda nao ativou:
+`read_only_enabled=false`, `overlay_active=false`, `root_write_blocked=false` e
+`root_fstype=ext4`. A causa atual foi refinada para
+`INSMOD_FALLBACK_FAILED`: o caminho efetivo do modulo foi encontrado e o
+fallback `insmod` foi tentado, mas retornou nonzero no initramfs. C12.4 continua
+bloqueado; proximo passo recomendado: C12.3.11 diagnosticar a falha do `insmod`
+sem logs brutos.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

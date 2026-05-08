@@ -118,6 +118,15 @@ Status:
 - `c12_1_9_card_written=false`
 - `c12_1_9_boards_touched=false`
 - `ready_for_c12_2_5_card_write=true`
+- `c12_3_10_status=blocked`
+- `c12_3_10_image_version_confirmed=true`
+- `c12_3_10_sha256_confirmed=true`
+- `c12_3_10_read_only_enabled=false`
+- `c12_3_10_overlay_active=false`
+- `c12_3_10_root_write_blocked=false`
+- `c12_3_10_failure_category=INSMOD_FALLBACK_FAILED`
+- `c12_3_10_ready_for_c12_4=false`
+- `c12_3_10_next_step=C12.3.11_INITRAMFS_INSMOD_FAILURE_DIAGNOSTICS`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -649,6 +658,29 @@ validacao de caminho efetivo no initramfs usr-merged, onde `/lib` aponta para
 - card_written: `false`;
 - boards_touched: `false`;
 - ready_for_c12_2_5_card_write: `true`.
+
+## C12.3.10 Boot Validate C12.1.9
+
+A imagem C12.1.9 foi gravada e bootada na placa lab. O SHA real foi confirmado
+como:
+
+```text
+f581ffab591462b1daa60a648f0ed0f8c2831deff9004f9ff16cdaa46fd11e6c
+```
+
+Resultado:
+
+- image_version_confirmed: `true`;
+- ssh_available: `true`;
+- firstboot_lab_complete: `true`;
+- public_state: `config_missing`;
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- data_tmp_run_writable: `true`;
+- failure_category: `INSMOD_FALLBACK_FAILED`;
+- ready_for_c12_4: `false`;
+- next_step: `C12.3.11_INITRAMFS_INSMOD_FAILURE_DIAGNOSTICS`.
 
 ## C12.3.1 Reliability Gate
 

@@ -101,3 +101,31 @@ C12.4 continua bloqueado ate uma validacao em placa provar:
 - `root_write_blocked=true`;
 - `/data`, `/tmp` e `/run` gravaveis;
 - SSH e UI Dadooh funcionais.
+
+## Resultado em Placa C12.3.10
+
+A imagem C12.1.9 foi gravada e bootada na placa lab. O SHA real foi confirmado:
+
+```text
+f581ffab591462b1daa60a648f0ed0f8c2831deff9004f9ff16cdaa46fd11e6c
+```
+
+O boot passou, SSH ficou disponivel, o firstboot lab concluiu e o produto ficou
+em `config_missing`, esperado para image-lab sem config real. O read-only,
+porem, ainda nao ativou:
+
+- `read_only_enabled=false`;
+- `overlay_active=false`;
+- `root_write_blocked=false`;
+- `root_fstype=ext4`.
+
+C12.3.10 mostrou que a correcao de caminho entrou no boot: `overlayroot=tmpfs`
+chegou ao cmdline, o hook Dadooh foi executado, o caminho efetivo do modulo foi
+encontrado e o fallback `insmod` foi tentado. A nova classificacao e:
+
+```text
+INSMOD_FALLBACK_FAILED
+```
+
+C12.4 continua bloqueado. O proximo passo recomendado e C12.3.11 para
+diagnosticar a falha do `insmod` no initramfs por categoria, sem logs brutos.
