@@ -2325,3 +2325,13 @@ A validacao offline passou com `overlayroot_included=true`,
 de fallback/diagnostico ausentes. Nenhuma placa foi tocada e nenhum cartao foi
 gravado. C12.2.7 pode gravar cartao de teste; C12.4 continua bloqueado ate boot
 real provar a semantica read-only.
+
+Atualizacao C12.3.17: 2026-05-08. A imagem C12.1.12 foi gravada e bootada em
+placa lab, e o inspect remoto foi executado. O kernel em runtime confirma
+`CONFIG_OVERLAY_FS=y`, `overlay` aparece em `/proc/filesystems` e
+`overlayroot=tmpfs` chega ao cmdline/config. Mesmo assim, o root ainda monta
+como `ext4` em device fisico, com `overlay_active=false`. Por isso nenhum
+marcador de persistencia foi criado e nenhum reboot foi executado. C12.4
+continua bloqueado; o proximo passo e diagnosticar o fluxo
+`overlayroot`/initramfs/boot com overlayfs built-in, nao voltar para a linha de
+modulo `overlay.ko`.
