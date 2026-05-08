@@ -141,3 +141,18 @@ Resolver o blocker do ambiente de build antes de repetir C12.1.11. A repeticao
 deve reutilizar os pacotes de kernel ja compilados quando o Armbian Build
 permitir, e so liberar C12.2.7 depois de gerar imagem, checksum e validacao
 offline.
+
+## Atualizacao C12.1.12
+
+C12.1.12 repetiu o build preservando caches e reaproveitando o kernel ja
+compilado. O blocker de memoria do `apt-get update` no chroot nao se repetiu, e
+a imagem C12.1.12 foi gerada e validada offline.
+
+Status atualizado:
+
+- `kernel_reused=true`;
+- `kernel_rebuild_executed=false`;
+- `image_built=true`;
+- `sha256=1220aab2272b5e6fa3430b6aab1c180624441104ab6b4ab7a1a1932fc8373a81`;
+- `ready_for_c12_2_7_card_write=true`;
+- `c12_4_blocked=true`.

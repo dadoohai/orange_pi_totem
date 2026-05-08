@@ -2311,3 +2311,17 @@ memoria no `apt-get update` dentro do chroot da imagem
 final C12.1.11. Nenhuma placa foi tocada, nenhum cartao foi gravado e nenhum
 writer/config real foi usado. C12.2.7 e C12.4 continuam bloqueados ate repetir
 o build e obter artefato validado offline.
+
+Atualizacao C12.1.12: 2026-05-08. O retry preservou caches e reaproveitou os
+pacotes de kernel ja compilados com `CONFIG_OVERLAY_FS=y`; nao houve
+recompilacao longa do kernel. O blocker de `apt-get update` no chroot foi
+superado e a imagem C12.1.12 foi gerada:
+`Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-12_minimal.img`.
+SHA256:
+`1220aab2272b5e6fa3430b6aab1c180624441104ab6b4ab7a1a1932fc8373a81`.
+A validacao offline passou com `overlayroot_included=true`,
+`kernel_config_overlayfs_builtin=true`, `overlay_module_required=false`,
+`uinitrd_nonempty=true`, `effective_boot_initramfs_valid=true` e hooks antigos
+de fallback/diagnostico ausentes. Nenhuma placa foi tocada e nenhum cartao foi
+gravado. C12.2.7 pode gravar cartao de teste; C12.4 continua bloqueado ate boot
+real provar a semantica read-only.
