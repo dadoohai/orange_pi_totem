@@ -320,6 +320,16 @@ def parse_firstboot(text: str) -> dict[str, bool]:
     }
 
 
+def parse_simple_env(text: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for match in re.finditer(r"^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$", text, re.M):
+        value = match.group(2).strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        values[match.group(1)] = value
+    return values
+
+
 def inspect(args: argparse.Namespace) -> dict[str, object]:
     if not args.image.is_file():
         raise SystemExit("image_missing")
@@ -347,6 +357,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             "lab_bootstrap_script_present": "/opt/totem/bin/totem_lab_firstboot_autoconfig.sh",
             "lab_bootstrap_unit_present": "/etc/systemd/system/totem-lab-firstboot-autoconfig.service",
             "lab_bootstrap_enabled": "/etc/systemd/system/multi-user.target.wants/totem-lab-firstboot-autoconfig.service",
+            "lab_firstboot_mode_file_present": "/etc/dadooh/c12-lab-firstboot-mode",
             "armbian_firstrun_unit_present": "/lib/systemd/system/armbian-firstrun.service",
             "armbian_firstrun_enabled": "/etc/systemd/system/multi-user.target.wants/armbian-firstrun.service",
             "overlayroot_conf_present": "/etc/overlayroot.conf",
@@ -362,8 +373,24 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         gate_unit = debug.dump("/etc/systemd/system/totem-firstboot-gate.service")
         lab_unit = debug.dump("/etc/systemd/system/totem-lab-firstboot-autoconfig.service")
         integration_text = debug.dump("/data/state/totem-read-only-image-lab/integration.json")
+        lab_firstboot_mode_text = debug.dump("/etc/dadooh/c12-lab-firstboot-mode")
         overlayroot_conf = debug.dump("/etc/overlayroot.conf")
         boot_cmd = debug.dump("/boot/boot.cmd")
+        lab_firstboot_mode_env = parse_simple_env(lab_firstboot_mode_text)
+        payload["lab_firstboot_mode"] = lab_firstboot_mode_env.get("lab_firstboot_mode", "unknown")
+        payload["artifact_private"] = lab_firstboot_mode_env.get("artifact_private") == "true"
+        payload["final_image"] = lab_firstboot_mode_env.get("final_image") == "true"
+        payload["firstboot_conf_committed"] = lab_firstboot_mode_env.get("firstboot_conf_committed") == "true"
+        payload["firstboot_conf_contents_published"] = (
+            lab_firstboot_mode_env.get("firstboot_conf_contents_published") == "true"
+        )
+        payload["ready_for_c12_2_7_card_write_declared"] = (
+            lab_firstboot_mode_env.get("ready_for_c12_2_7_card_write") == "true"
+        )
+        payload["ready_for_c12_3_boot_ssh_validation_declared"] = (
+            lab_firstboot_mode_env.get("ready_for_c12_3_boot_ssh_validation") == "true"
+        )
+        payload["require_manual_firstboot"] = lab_firstboot_mode_env.get("require_manual_firstboot") == "true"
 
         payload["gate_expected_path_matches"] = (
             'MARKER="/root/.not_logged_in_yet"' in gate_script
@@ -567,6 +594,41 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
                 and "insmod" in overlay_load_hook_text
             )
         )
+        modular_hook_paths = (
+            "/etc/initramfs-tools/scripts/init-top/dadooh-force-overlay",
+            "/etc/initramfs-tools/hooks/dadooh-overlay-module",
+            "/etc/initramfs-tools/hooks/dadooh-overlay-module-explicit-copy",
+        )
+        diagnostic_hook_paths = (
+            "/etc/initramfs-tools/scripts/init-top/dadooh-overlay-diagnostic",
+            "/etc/initramfs-tools/scripts/init-top/dadooh-insmod-error-diagnostic",
+            "/etc/initramfs-tools/scripts/init-top/dadooh-c12-3-13-insmod-diagnostic",
+            "/etc/initramfs-tools/scripts/init-top/dadooh-c12-3-15-overlay-load-diagnostic",
+        )
+        modular_entries = (
+            "scripts/init-top/dadooh-force-overlay",
+            "etc/dadooh/c12-overlay-module-path-marker",
+        )
+        diagnostic_entries = (
+            "scripts/init-top/dadooh-overlay-diagnostic",
+            "scripts/init-top/dadooh-insmod-error-diagnostic",
+            "scripts/init-top/dadooh-c12-3-13-insmod-diagnostic",
+            "scripts/init-top/dadooh-c12-3-15-overlay-load-diagnostic",
+        )
+        payload["rootfs_modular_overlay_fallback_hooks_present"] = any(
+            debug.exists(path) for path in modular_hook_paths
+        )
+        payload["rootfs_diagnostic_initramfs_hooks_present"] = any(
+            debug.exists(path) for path in diagnostic_hook_paths
+        )
+        payload["modular_overlay_fallback_hooks_present"] = bool(
+            payload["rootfs_modular_overlay_fallback_hooks_present"]
+            or any(entry in effective_entries for entry in modular_entries)
+        )
+        payload["diagnostic_initramfs_hooks_present"] = bool(
+            payload["rootfs_diagnostic_initramfs_hooks_present"]
+            or any(entry in effective_entries for entry in diagnostic_entries)
+        )
         module_based_overlay_resolvable = bool(
             payload["overlay_module_discoverable_in_initramfs"]
             and payload["modules_dep_effective_path_present"]
@@ -605,6 +667,20 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         payload["integration_lab_firstboot_autoconfig_present"] = bool(
             integration.get("armbian_firstboot_autoconfig_present")
         )
+        payload["integration_lab_firstboot_mode"] = integration.get("lab_firstboot_mode", "unknown")
+        payload["integration_artifact_private"] = bool(integration.get("artifact_private"))
+        payload["integration_ready_for_c12_3_boot_ssh_validation"] = bool(
+            integration.get("ready_for_c12_3_boot_ssh_validation")
+        )
+        payload["integration_require_manual_firstboot"] = bool(
+            integration.get("require_manual_firstboot")
+        )
+        payload["integration_modular_overlay_fallback_hooks_present"] = bool(
+            integration.get("modular_overlay_fallback_hooks_present")
+        )
+        payload["integration_diagnostic_initramfs_hooks_present"] = bool(
+            integration.get("diagnostic_initramfs_hooks_present")
+        )
         payload["integration_lab_bootstrap_service_present"] = bool(
             integration.get("lab_firstboot_bootstrap_service_present")
         )
@@ -634,6 +710,20 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload.get("kernel_config_overlayfs_builtin")
             and payload.get("effective_boot_initramfs_valid")
             and payload.get("effective_boot_initramfs_overlay_resolvable")
+            and payload.get("ready_for_c12_2_7_card_write_declared")
+            and not payload.get("final_image")
+            and not payload.get("firstboot_conf_committed")
+            and not payload.get("firstboot_conf_contents_published")
+            and not payload.get("modular_overlay_fallback_hooks_present")
+            and not payload.get("diagnostic_initramfs_hooks_present")
+        )
+        payload["ready_for_c12_2_7_card_write_by_rootfs"] = payload["ready_for_card_write_by_rootfs"]
+        payload["ready_for_c12_3_boot_ssh_validation_by_rootfs"] = bool(
+            payload["ready_for_card_write_by_rootfs"]
+            and payload.get("lab_firstboot_mode") == "private_disposable_lab"
+            and payload.get("artifact_private")
+            and payload.get("ready_for_c12_3_boot_ssh_validation_declared")
+            and not payload.get("require_manual_firstboot")
         )
         if args.require_lab_bootstrap_service and not payload["ready_for_card_write_by_rootfs"]:
             payload["validation_error"] = "rootfs_lab_firstboot_autoconfig_not_proven"

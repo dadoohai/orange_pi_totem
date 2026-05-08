@@ -182,6 +182,25 @@ Status:
 - `c12_3_16_decision=overlayroot_with_overlayfs_builtin_next`
 - `c12_3_16_validation_criteria=overlayroot_persistence_semantics`
 - `ready_for_c12_1_11_build=true`
+- `c12_1_11_status=blocked`
+- `c12_1_11_failure_category=BUILD_HOST_CHROOT_APT_MEMORY_ERROR`
+- `c12_1_11_kernel_overlayfs_builtin_preflight=true`
+- `c12_1_11_kernel_built=true`
+- `c12_1_11_kernel_packaged=true`
+- `c12_1_11_image_built=false`
+- `c12_1_11_image_file=not_created`
+- `c12_1_11_sha256=not_created`
+- `c12_1_11_lab_firstboot_mode=private_disposable_lab`
+- `c12_1_11_artifact_private=true`
+- `c12_1_11_final_image=false`
+- `c12_1_11_firstboot_conf_committed=false`
+- `c12_1_11_firstboot_conf_contents_published=false`
+- `c12_1_11_card_written=false`
+- `c12_1_11_boards_touched=false`
+- `c12_1_11_ssh_used=false`
+- `c12_1_11_writer_called=false`
+- `c12_1_11_secrets_published=false`
+- `ready_for_c12_2_7_card_write=false`
 - `c12_4_blocked=true`
 - `ready_for_c11_4=false`
 

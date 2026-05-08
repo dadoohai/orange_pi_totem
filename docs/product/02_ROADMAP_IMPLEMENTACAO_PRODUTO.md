@@ -2300,3 +2300,14 @@ no initramfs e manter `overlayroot` com o proximo experimento em kernel
 aparente pode ser gravavel sob overlayroot, entao sucesso exige `overlay_active`
 e prova de persistencia correta: escrita fora de `/data` nao persiste apos
 reboot, enquanto escrita em `/data` persiste. C12.4 continua bloqueado.
+
+Atualizacao C12.1.11: 2026-05-08. O pre-flight do build com
+`CONFIG_OVERLAY_FS=y` passou, usando config completa `linux-sunxi64-current` e
+modo `private_disposable_lab` para permitir validacao SSH futura sem publicar o
+conteudo do firstboot privado. O kernel `6.12.58-sunxi64` compilou e foi
+empacotado, mas a geracao da imagem falhou na fase de rootfs/image por erro de
+memoria no `apt-get update` dentro do chroot da imagem
+(`BUILD_HOST_CHROOT_APT_MEMORY_ERROR`). Nao houve imagem, checksum ou manifest
+final C12.1.11. Nenhuma placa foi tocada, nenhum cartao foi gravado e nenhum
+writer/config real foi usado. C12.2.7 e C12.4 continuam bloqueados ate repetir
+o build e obter artefato validado offline.

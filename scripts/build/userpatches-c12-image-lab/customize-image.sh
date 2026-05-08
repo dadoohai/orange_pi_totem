@@ -34,6 +34,7 @@ main() {
   local lab_root="$overlay_root/c12-image-lab/rootfs"
   local image_lab_state="/data/state/totem-read-only-image-lab"
   local lab_firstboot_marker="/etc/dadooh/image-lab-firstboot-autoconfig.present"
+  local lab_firstboot_mode_file="$lab_root/etc/dadooh/c12-lab-firstboot-mode"
 
   require_file "$repo_root/scripts/board/install_totem_appliance.sh"
   require_file "$repo_root/scripts/board/totem_appliance_manifest.json"
@@ -58,6 +59,22 @@ main() {
   chown -R root:root /opt/totem/kiosky-player
 
   log "installing image-lab firstboot autoconfig service"
+  install -d -m 0755 -o root -g root /etc/dadooh
+  if [ -f "$lab_firstboot_mode_file" ]; then
+    install -m 0644 -o root -g root "$lab_firstboot_mode_file" /etc/dadooh/c12-lab-firstboot-mode
+  else
+    cat > /etc/dadooh/c12-lab-firstboot-mode <<'EOF'
+lab_firstboot_mode=unknown
+artifact_private=false
+final_image=false
+firstboot_conf_committed=false
+firstboot_conf_contents_published=false
+ready_for_c12_2_7_card_write=false
+ready_for_c12_3_boot_ssh_validation=false
+require_manual_firstboot=true
+EOF
+    chmod 0644 /etc/dadooh/c12-lab-firstboot-mode
+  fi
   install -m 0755 -o root -g root \
     "$lab_root/opt/totem/bin/totem_lab_firstboot_autoconfig.sh" \
     /opt/totem/bin/totem_lab_firstboot_autoconfig.sh
@@ -146,12 +163,13 @@ EOF
   chmod 0755 /etc/initramfs-tools/hooks/dadooh-c12-overlayroot-marker
 
   log "recording overlayfs built-in kernel expectation"
-  install -d -m 0755 -o root -g root /etc/dadooh
   cat > /etc/dadooh/c12-overlayfs-kernel-policy <<'EOF'
 kernel_overlayfs_builtin_required=true
 required_kernel_config=CONFIG_OVERLAY_FS=y
 overlayroot_module_initramfs_path_status=blocked
 module_loading_hooks_used=false
+modular_overlay_fallback_hooks_present=false
+diagnostic_initramfs_hooks_present=false
 EOF
   chmod 0644 /etc/dadooh/c12-overlayfs-kernel-policy
 
@@ -170,6 +188,17 @@ EOF
 
   log "writing image-lab state"
   install -d -m 0700 -o root -g root "$image_lab_state"
+  local lab_firstboot_mode artifact_private ready_for_ssh require_manual_firstboot ready_for_card_write
+  lab_firstboot_mode="$(awk -F= '$1=="lab_firstboot_mode" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
+  artifact_private="$(awk -F= '$1=="artifact_private" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
+  ready_for_ssh="$(awk -F= '$1=="ready_for_c12_3_boot_ssh_validation" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
+  require_manual_firstboot="$(awk -F= '$1=="require_manual_firstboot" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
+  ready_for_card_write="$(awk -F= '$1=="ready_for_c12_2_7_card_write" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
+  case "$lab_firstboot_mode" in synthetic_no_secret|private_disposable_lab) ;; *) lab_firstboot_mode="unknown" ;; esac
+  case "$artifact_private" in true|false) ;; *) artifact_private=false ;; esac
+  case "$ready_for_ssh" in true|false) ;; *) ready_for_ssh=false ;; esac
+  case "$require_manual_firstboot" in true|false) ;; *) require_manual_firstboot=true ;; esac
+  case "$ready_for_card_write" in true|false) ;; *) ready_for_card_write=false ;; esac
   cat > "$image_lab_state/integration.json" <<EOF
 {
   "schema_version": 1,
@@ -182,12 +211,22 @@ EOF
   "kernel_overlayfs_builtin_required": true,
   "overlayroot_module_initramfs_path_status": "blocked",
   "module_loading_hooks_used": false,
+  "modular_overlay_fallback_hooks_present": false,
+  "diagnostic_initramfs_hooks_present": false,
   "final_armbian_initramfs_expected_after_customize": true,
   "armbian_firstboot_gate_installed": true,
   "armbian_firstboot_autoconfig_present": $(test -f "$lab_firstboot_marker" && echo true || echo false),
+  "lab_firstboot_mode": "$lab_firstboot_mode",
+  "artifact_private": $artifact_private,
+  "final_image": false,
+  "firstboot_conf_committed": false,
+  "firstboot_conf_contents_published": false,
+  "ready_for_c12_3_boot_ssh_validation": $ready_for_ssh,
+  "require_manual_firstboot": $require_manual_firstboot,
+  "ready_for_c12_2_7_card_write": $ready_for_card_write,
   "lab_firstboot_bootstrap_service_present": true,
   "lab_firstboot_bootstrap_service_enabled": true,
-  "image_lab_boot_validatable_with_private_firstboot": $(test -f "$lab_firstboot_marker" && echo true || echo false),
+  "image_lab_boot_validatable_with_private_firstboot": $ready_for_ssh,
   "secrets_embedded": false,
   "config_real_embedded": false,
   "card_written_by_build": false

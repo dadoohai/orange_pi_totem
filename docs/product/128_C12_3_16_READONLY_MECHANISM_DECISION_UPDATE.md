@@ -106,3 +106,19 @@ Nao foi criado fragmento parcial de Kconfig.
 
 C12.1.11 pode comecar como build de nova image-lab com kernel overlayfs
 built-in. C12.4 segue bloqueado ate boot real validar a semantica read-only.
+
+## Atualizacao C12.1.11
+
+C12.1.11 iniciou o build com `CONFIG_OVERLAY_FS=y` e pre-flight aprovado. O
+kernel foi compilado e empacotado, mas a imagem nao foi gerada porque o Armbian
+Build falhou na fase de rootfs/image durante `apt-get update` dentro do chroot,
+com categoria sanitizada:
+
+```text
+BUILD_HOST_CHROOT_APT_MEMORY_ERROR
+```
+
+Essa falha nao altera a decisao tecnica da ADR-0012. O proximo passo continua
+sendo gerar uma image-lab com overlayfs built-in, mas o ambiente de build deve
+passar dessa etapa e produzir imagem, checksum e validacao offline antes de
+C12.2.7.

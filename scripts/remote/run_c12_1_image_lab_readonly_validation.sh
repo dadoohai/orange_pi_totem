@@ -89,7 +89,25 @@ validate_artifacts() {
   grep -q '^settings_trigger_stale_lock_cleanup_included=true$' "$integration_manifest_file"
   grep -q '^read_only_assertion_required=true$' "$integration_manifest_file"
   grep -q '^lab_firstboot_autoconfig=true$' "$integration_manifest_file"
-  grep -q '^lab_firstboot_boot_validatable=true$' "$integration_manifest_file"
+  grep -Eq '^lab_firstboot_mode=(synthetic_no_secret|private_disposable_lab)$' "$integration_manifest_file"
+  grep -Eq '^artifact_private=(true|false)$' "$integration_manifest_file"
+  grep -q '^final_image=false$' "$integration_manifest_file"
+  grep -q '^firstboot_conf_committed=false$' "$integration_manifest_file"
+  grep -q '^firstboot_conf_contents_published=false$' "$integration_manifest_file"
+  grep -q '^ready_for_c12_2_7_card_write=true$' "$integration_manifest_file"
+  grep -Eq '^ready_for_c12_3_boot_ssh_validation=(true|false)$' "$integration_manifest_file"
+  grep -Eq '^require_manual_firstboot=(true|false)$' "$integration_manifest_file"
+  if grep -q '^lab_firstboot_mode=synthetic_no_secret$' "$integration_manifest_file"; then
+    grep -q '^artifact_private=false$' "$integration_manifest_file"
+    grep -q '^ready_for_c12_3_boot_ssh_validation=false$' "$integration_manifest_file"
+    grep -q '^require_manual_firstboot=true$' "$integration_manifest_file"
+  else
+    grep -q '^lab_firstboot_mode=private_disposable_lab$' "$integration_manifest_file"
+    grep -q '^artifact_private=true$' "$integration_manifest_file"
+    grep -q '^ready_for_c12_3_boot_ssh_validation=true$' "$integration_manifest_file"
+    grep -q '^require_manual_firstboot=false$' "$integration_manifest_file"
+    grep -q '^lab_firstboot_boot_validatable=true$' "$integration_manifest_file"
+  fi
   grep -q '^rootfs_ready_for_card_write=true$' "$integration_manifest_file"
   grep -q '^ready_for_board_boot=true$' "$integration_manifest_file"
   grep -q '^card_written=false$' "$integration_manifest_file"
@@ -121,6 +139,14 @@ validate_artifacts() {
   grep -q '^overlayroot_module_initramfs_path_status=blocked$' "$integration_manifest_file"
   grep -q '^overlayroot_with_overlayfs_builtin_next=true$' "$integration_manifest_file"
   grep -q '^readonly_semantics_validation_required=true$' "$integration_manifest_file"
+  grep -q '^overlay_module_required=false$' "$integration_manifest_file"
+  grep -q '^overlayfs_builtin_expected=true$' "$integration_manifest_file"
+  grep -q '^root_write_blocked_not_required=true$' "$integration_manifest_file"
+  grep -q '^readonly_semantics_expected=overlayroot_tmpfs$' "$integration_manifest_file"
+  grep -q '^root_test_write_nonpersistent_required=true$' "$integration_manifest_file"
+  grep -q '^data_test_write_persistent_required=true$' "$integration_manifest_file"
+  grep -q '^modular_overlay_fallback_hooks_present=false$' "$integration_manifest_file"
+  grep -q '^diagnostic_initramfs_hooks_present=false$' "$integration_manifest_file"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$integration_manifest_file"
 
   if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
@@ -140,8 +166,21 @@ validate_artifacts() {
   grep -q '^kernel_config_overlayfs_builtin=true$' "$rootfs_validation_file"
   grep -q '^kernel_overlayfs_builtin_required=true$' "$rootfs_validation_file"
   grep -q '^overlayroot_module_initramfs_path_status=blocked$' "$rootfs_validation_file"
+  grep -q '^modular_overlay_fallback_hooks_present=false$' "$rootfs_validation_file"
+  grep -q '^diagnostic_initramfs_hooks_present=false$' "$rootfs_validation_file"
+  grep -q '^ready_for_c12_2_7_card_write_by_rootfs=true$' "$rootfs_validation_file"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_validation_file"
   grep -q '^private_values_published=false$' "$rootfs_validation_file"
+  if grep -q '^lab_firstboot_mode=synthetic_no_secret$' "$rootfs_validation_file"; then
+    grep -q '^artifact_private=false$' "$rootfs_validation_file"
+    grep -q '^ready_for_c12_3_boot_ssh_validation_by_rootfs=false$' "$rootfs_validation_file"
+    grep -q '^require_manual_firstboot=true$' "$rootfs_validation_file"
+  else
+    grep -q '^lab_firstboot_mode=private_disposable_lab$' "$rootfs_validation_file"
+    grep -q '^artifact_private=true$' "$rootfs_validation_file"
+    grep -q '^ready_for_c12_3_boot_ssh_validation_by_rootfs=true$' "$rootfs_validation_file"
+    grep -q '^require_manual_firstboot=false$' "$rootfs_validation_file"
+  fi
 
   local rootfs_recheck
   rootfs_recheck="$(mktemp /tmp/dadooh-c12-rootfs-validation.XXXXXX.env)"
@@ -153,6 +192,8 @@ validate_artifacts() {
   grep -q '^effective_boot_initramfs_valid=true$' "$rootfs_recheck"
   grep -q '^kernel_config_overlayfs_builtin=true$' "$rootfs_recheck"
   grep -q '^overlayroot_module_initramfs_path_status=blocked$' "$rootfs_recheck"
+  grep -q '^modular_overlay_fallback_hooks_present=false$' "$rootfs_recheck"
+  grep -q '^diagnostic_initramfs_hooks_present=false$' "$rootfs_recheck"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_recheck"
   rm -f "$rootfs_recheck"
 }
@@ -178,8 +219,12 @@ C12.1 build checklist:
 - recover or clone Armbian Build v25.11;
 - confirm build commit/base;
 - create userpatches for appliance/read-only;
-- provide private C12_LAB_FIRSTBOOT_CONF outside Git for every board-bootable
-  image-lab build;
+- choose and record one firstboot mode:
+  lab_firstboot_mode=synthetic_no_secret for a safe fixture image that can be
+  written to a card but requires manual firstboot and is not SSH-validated
+  automatically; or lab_firstboot_mode=private_disposable_lab for a disposable
+  image-lab artifact with private autoconfig outside Git and automatic SSH
+  validation;
 - build board-validation images with C12_REQUIRE_LAB_FIRSTBOOT_CONF=1;
 - include overlayroot in image build;
 - generate initramfs/uInitrd with overlayroot present;
@@ -191,14 +236,17 @@ C12.1 build checklist:
 - for C12.1.11, set C12_KERNEL_OVERLAYFS_BUILTIN=1 so the complete
   linux-sunxi64-current kernel config is copied as a userpatch with
   CONFIG_OVERLAY_FS=y;
+- confirm modular_overlay_fallback_hooks_present=false and
+  diagnostic_initramfs_hooks_present=false;
 - do not write card until a separate C12.2 gate.
 
 C12.2 board validation checklist:
 - write only a test card after C12.1 artifacts pass;
 - boot on test board, not dev reference;
-- confirm the image was built with private lab firstboot autoconfig; an image
-  without it is not board-boot-validatable after the C12.3.2 black-screen
-  result;
+- if lab_firstboot_mode=synthetic_no_secret, expect manual firstboot and do not
+  claim automatic SSH validation;
+- if lab_firstboot_mode=private_disposable_lab, treat the artifact as private
+  and disposable, never final, never distributed and never committed;
 - verify overlay_active=true and root_mount_type=overlay or equivalent;
 - verify overlay is listed in /proc/filesystems;
 - do not require common writes to / to fail; with overlayroot the merged root

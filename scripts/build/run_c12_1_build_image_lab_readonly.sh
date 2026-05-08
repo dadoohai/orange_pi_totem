@@ -7,6 +7,7 @@ ARM_BUILD_DIR="${ARM_BUILD_DIR:-/home/builder/totem-os/armbian-build-v25.11}"
 KIOSKY_PLAYER_DIR="${KIOSKY_PLAYER_DIR:-/home/builder/kiosky-player}"
 USERPATCHES_TEMPLATE="$REPO_ROOT/scripts/build/userpatches-c12-image-lab"
 LAB_FIRSTBOOT_CONF="${C12_LAB_FIRSTBOOT_CONF:-}"
+LAB_FIRSTBOOT_CONF_KIND="${C12_LAB_FIRSTBOOT_CONF_KIND:-private}"
 REQUIRE_LAB_FIRSTBOOT_CONF="${C12_REQUIRE_LAB_FIRSTBOOT_CONF:-0}"
 KERNEL_OVERLAYFS_BUILTIN="${C12_KERNEL_OVERLAYFS_BUILTIN:-0}"
 KERNEL_CONFIG_NAME="${C12_KERNEL_CONFIG_NAME:-linux-sunxi64-current}"
@@ -27,6 +28,26 @@ else
 fi
 EXPECTED_ARMBIAN_REF="e172058"
 EXPECTED_KIOSKY_COMMIT="c71318a64c08e47b8426f1388b95f21364d57123"
+
+lab_firstboot_mode() {
+  case "$LAB_FIRSTBOOT_CONF_KIND" in
+    synthetic) printf 'synthetic_no_secret\n' ;;
+    private) printf 'private_disposable_lab\n' ;;
+    *) printf 'unknown\n' ;;
+  esac
+}
+
+lab_firstboot_artifact_private() {
+  [ "$LAB_FIRSTBOOT_CONF_KIND" = "private" ] && printf 'true\n' || printf 'false\n'
+}
+
+lab_firstboot_requires_manual_firstboot() {
+  [ "$LAB_FIRSTBOOT_CONF_KIND" = "synthetic" ] && printf 'true\n' || printf 'false\n'
+}
+
+lab_firstboot_ready_for_ssh_validation() {
+  [ "$LAB_FIRSTBOOT_CONF_KIND" = "private" ] && printf 'true\n' || printf 'false\n'
+}
 
 usage() {
   cat <<'USAGE'
@@ -50,6 +71,10 @@ Environment:
       Private Armbian first-login preset for lab images. Required for the next
       board-bootable image-lab because C12.3.2 proved that the firstboot gate
       alone leaves no useful SSH/UI path on a fresh card.
+  C12_LAB_FIRSTBOOT_CONF_KIND=private|synthetic
+      Classify the provided firstboot.conf without printing values. Use
+      synthetic for non-secret fixtures created only to exercise image-lab
+      bootstrap behavior.
   C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
       Refuse to build if C12_LAB_FIRSTBOOT_CONF is missing. Use this for
       C12.1.4+ board-validation images.
@@ -163,6 +188,24 @@ check_kiosky_player() {
   fi
 }
 
+check_armbian_python_tools() {
+  local site_packages="$ARM_BUILD_DIR/cache/pip/base/lib/python3.12/site-packages"
+  if [ ! -d "$site_packages" ]; then
+    echo "error: Armbian Build pip cache missing at $site_packages" >&2
+    echo "blocker=armbian_python_tools_cache_missing" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  if ! PYTHONPATH="$site_packages" python3 - <<'PY'
+import pygments  # noqa: F401
+import rich.syntax  # noqa: F401
+PY
+  then
+    echo "error: Armbian Build Python tools cache is missing pygments/rich.syntax dependencies" >&2
+    echo "blocker=armbian_python_tools_missing_pygments" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+}
+
 require_explicit_image_tag() {
   if [ -z "$IMAGE_TAG" ]; then
     echo "error: C12_IMAGE_TAG is required for image builds, for example C12_IMAGE_TAG=c12-1-9" >&2
@@ -207,6 +250,7 @@ check_build_env() {
   fi
   command -v git >/dev/null
   command -v rsync >/dev/null
+  check_armbian_python_tools
   local free_kb
   free_kb="$(df -Pk "$ARM_BUILD_DIR" | awk 'NR==2 {print $4}')"
   if [ "${free_kb:-0}" -lt 52428800 ]; then
@@ -279,6 +323,22 @@ prepare_overlay_image_lab() {
   rm -rf "$target"
   mkdir -p "$target"
   cp -a "$USERPATCHES_TEMPLATE/lab-rootfs" "$target/rootfs"
+  install -d -m 0755 "$target/rootfs/etc/dadooh"
+  if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
+    grep -E '^(lab_firstboot_mode|artifact_private|final_image|firstboot_conf_committed|firstboot_conf_contents_published|ready_for_c12_2_7_card_write|ready_for_c12_3_boot_ssh_validation|require_manual_firstboot)=' \
+      "$OUT_DIR/firstboot-policy.env" > "$target/rootfs/etc/dadooh/c12-lab-firstboot-mode"
+  else
+    {
+      printf 'lab_firstboot_mode=unknown\n'
+      printf 'artifact_private=false\n'
+      printf 'final_image=false\n'
+      printf 'firstboot_conf_committed=false\n'
+      printf 'firstboot_conf_contents_published=false\n'
+      printf 'ready_for_c12_2_7_card_write=false\n'
+      printf 'ready_for_c12_3_boot_ssh_validation=false\n'
+      printf 'require_manual_firstboot=true\n'
+    } > "$target/rootfs/etc/dadooh/c12-lab-firstboot-mode"
+  fi
   find "$target/rootfs" -type d -exec chmod 0755 {} +
   find "$target/rootfs" -type f -exec chmod 0644 {} +
   find "$target/rootfs" -type f -name '*.sh' -exec chmod 0755 {} +
@@ -291,6 +351,10 @@ prepare_lab_firstboot_conf() {
     0|1) ;;
     *) echo "error: C12_REQUIRE_LAB_FIRSTBOOT_CONF must be 0 or 1" >&2; exit 2 ;;
   esac
+  case "$LAB_FIRSTBOOT_CONF_KIND" in
+    private|synthetic) ;;
+    *) echo "error: C12_LAB_FIRSTBOOT_CONF_KIND must be private or synthetic" >&2; exit 2 ;;
+  esac
   if [ -z "$LAB_FIRSTBOOT_CONF" ]; then
     if [ "$REQUIRE_LAB_FIRSTBOOT_CONF" = "1" ]; then
       echo "error: C12_LAB_FIRSTBOOT_CONF is required for board-bootable image-lab builds" >&2
@@ -299,9 +363,17 @@ prepare_lab_firstboot_conf() {
     fi
     {
       printf 'lab_firstboot_autoconfig=false\n'
+      printf 'lab_firstboot_mode=missing\n'
       printf 'lab_firstboot_boot_validatable=false\n'
       printf 'lab_firstboot_conf_required_for_board_boot=true\n'
       printf 'lab_firstboot_policy=not_board_boot_validatable_without_private_autoconfig\n'
+      printf 'artifact_private=false\n'
+      printf 'final_image=false\n'
+      printf 'firstboot_conf_committed=false\n'
+      printf 'firstboot_conf_contents_published=false\n'
+      printf 'ready_for_c12_2_7_card_write=false\n'
+      printf 'ready_for_c12_3_boot_ssh_validation=false\n'
+      printf 'require_manual_firstboot=true\n'
       printf 'ready_for_board_boot=false\n'
     } > "$OUT_DIR/firstboot-policy.env"
     return 0
@@ -377,11 +449,20 @@ PY
   install -m 0600 "$LAB_FIRSTBOOT_CONF" "$target"
   {
     printf 'lab_firstboot_autoconfig=true\n'
-    printf 'lab_firstboot_boot_validatable=true\n'
+    printf 'lab_firstboot_mode=%s\n' "$(lab_firstboot_mode)"
+    printf 'lab_firstboot_boot_validatable=%s\n' "$(lab_firstboot_ready_for_ssh_validation)"
     printf 'lab_firstboot_conf_copied_to_userpatches=true\n'
-    printf 'lab_firstboot_conf_source_private=true\n'
+    printf 'lab_firstboot_conf_source_private=%s\n' "$([ "$LAB_FIRSTBOOT_CONF_KIND" = "private" ] && echo true || echo false)"
+    printf 'lab_firstboot_conf_source_synthetic=%s\n' "$([ "$LAB_FIRSTBOOT_CONF_KIND" = "synthetic" ] && echo true || echo false)"
     printf 'lab_firstboot_secret_values_published=false\n'
-    printf 'lab_firstboot_policy=private_armbian_firstboot_autoconfig_required_for_lab_boot\n'
+    printf 'artifact_private=%s\n' "$(lab_firstboot_artifact_private)"
+    printf 'final_image=false\n'
+    printf 'firstboot_conf_committed=false\n'
+    printf 'firstboot_conf_contents_published=false\n'
+    printf 'ready_for_c12_2_7_card_write=true\n'
+    printf 'ready_for_c12_3_boot_ssh_validation=%s\n' "$(lab_firstboot_ready_for_ssh_validation)"
+    printf 'require_manual_firstboot=%s\n' "$(lab_firstboot_requires_manual_firstboot)"
+    printf 'lab_firstboot_policy=%s\n' "$([ "$LAB_FIRSTBOOT_CONF_KIND" = "synthetic" ] && echo synthetic_armbian_firstboot_autoconfig_for_lab_boot || echo private_armbian_firstboot_autoconfig_required_for_lab_boot)"
     printf 'ready_for_board_boot=true\n'
   } > "$OUT_DIR/firstboot-policy.env"
 }
@@ -543,8 +624,15 @@ collect_artifacts() {
   local initramfs_source="unknown"
   local lab_firstboot_autoconfig="false"
   local lab_firstboot_boot_validatable="false"
+  local lab_firstboot_mode="unknown"
   local lab_firstboot_policy="unknown"
   local ready_for_board_boot="false"
+  local ready_for_c12_2_7_card_write="false"
+  local ready_for_c12_3_boot_ssh_validation="false"
+  local require_manual_firstboot="true"
+  local artifact_private="false"
+  local firstboot_conf_committed="false"
+  local firstboot_conf_contents_published="false"
   if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
     # shellcheck disable=SC1090
     source "$OUT_DIR/firstboot-policy.env"
@@ -623,6 +711,14 @@ collect_artifacts() {
     printf 'rootfs_kernel_config_overlayfs_builtin=%s\n' "$kernel_config_overlayfs_builtin"
     printf 'overlayroot_module_initramfs_path_status=%s\n' "${overlayroot_module_initramfs_path_status:-blocked}"
     printf 'overlayroot_with_overlayfs_builtin_next=true\n'
+    printf 'overlay_module_required=false\n'
+    printf 'overlayfs_builtin_expected=true\n'
+    printf 'root_write_blocked_not_required=true\n'
+    printf 'readonly_semantics_expected=overlayroot_tmpfs\n'
+    printf 'root_test_write_nonpersistent_required=true\n'
+    printf 'data_test_write_persistent_required=true\n'
+    printf 'modular_overlay_fallback_hooks_present=%s\n' "$modular_overlay_fallback_hooks_present"
+    printf 'diagnostic_initramfs_hooks_present=%s\n' "$diagnostic_initramfs_hooks_present"
     printf 'readonly_semantics_validation_required=true\n'
     printf 'firstboot_gate_included=true\n'
     printf 'rootfs_firstboot_autoconfig_proven=%s\n' "$rootfs_firstboot_autoconfig_proven"
@@ -634,7 +730,15 @@ collect_artifacts() {
     printf 'settings_trigger_stale_lock_cleanup_included=true\n'
     printf 'read_only_assertion_required=true\n'
     printf 'lab_firstboot_autoconfig=%s\n' "$lab_firstboot_autoconfig"
+    printf 'lab_firstboot_mode=%s\n' "$lab_firstboot_mode"
     printf 'lab_firstboot_boot_validatable=%s\n' "$lab_firstboot_boot_validatable"
+    printf 'artifact_private=%s\n' "$artifact_private"
+    printf 'final_image=false\n'
+    printf 'firstboot_conf_committed=%s\n' "$firstboot_conf_committed"
+    printf 'firstboot_conf_contents_published=%s\n' "$firstboot_conf_contents_published"
+    printf 'ready_for_c12_2_7_card_write=%s\n' "$ready_for_c12_2_7_card_write"
+    printf 'ready_for_c12_3_boot_ssh_validation=%s\n' "$ready_for_c12_3_boot_ssh_validation"
+    printf 'require_manual_firstboot=%s\n' "$require_manual_firstboot"
     printf 'rootfs_ready_for_card_write=%s\n' "$ready_for_card_write_by_rootfs"
     printf 'lab_firstboot_policy=%s\n' "$lab_firstboot_policy"
     printf 'ready_for_board_boot=%s\n' "$ready_for_card_write_by_rootfs"
