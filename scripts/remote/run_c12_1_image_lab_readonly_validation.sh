@@ -21,7 +21,7 @@ USAGE
 }
 
 ARTIFACTS_ENV="${C12_1_ARTIFACTS_ENV:-}"
-EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.8}"
+EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.11}"
 EXPECTED_IMAGE_SUFFIX="${C12_EXPECTED_IMAGE_SUFFIX:-c12-ro-lab-${EXPECTED_IMAGE_VERSION//./-}}"
 
 while [ "$#" -gt 0 ]; do
@@ -102,35 +102,25 @@ validate_artifacts() {
   fi
   grep -q '^initrd_img_exists=true$' "$integration_manifest_file"
   grep -q '^initrd_contains_overlayroot_hook=true$' "$integration_manifest_file"
-  grep -q '^initrd_contains_overlay_module=true$' "$integration_manifest_file"
-  grep -q '^initrd_contains_overlay_module_effective_path=true$' "$integration_manifest_file"
-  grep -q '^initrd_contains_overlay_load_hook=true$' "$integration_manifest_file"
   grep -q '^initrd_contains_c12_overlayroot_marker=true$' "$integration_manifest_file"
-  grep -q '^initrd_contains_c12_overlay_module_path_marker=true$' "$integration_manifest_file"
   grep -q '^uinitrd_exists=true$' "$integration_manifest_file"
   grep -q '^uinitrd_nonempty=true$' "$integration_manifest_file"
   grep -q '^uinitrd_payload_extracted=true$' "$integration_manifest_file"
   grep -q '^uinitrd_payload_matches_initrd_img=true$' "$integration_manifest_file"
   grep -q '^uinitrd_contains_overlayroot_hook=true$' "$integration_manifest_file"
-  grep -q '^uinitrd_contains_overlay_module=true$' "$integration_manifest_file"
-  grep -q '^uinitrd_contains_overlay_module_effective_path=true$' "$integration_manifest_file"
-  grep -q '^uinitrd_contains_overlay_load_hook=true$' "$integration_manifest_file"
   grep -q '^uinitrd_contains_c12_overlayroot_marker=true$' "$integration_manifest_file"
-  grep -q '^uinitrd_contains_c12_overlay_module_path_marker=true$' "$integration_manifest_file"
   grep -q '^uinitrd_generated_after_overlayroot=true$' "$integration_manifest_file"
   grep -q '^uinitrd_generated_after_initrd_img=true$' "$integration_manifest_file"
   grep -q '^boot_script_uses_uinitrd=true$' "$integration_manifest_file"
   grep -q '^effective_boot_initramfs_valid=true$' "$integration_manifest_file"
-  grep -q '^overlay_module_effective_path_present=true$' "$integration_manifest_file"
-  grep -q '^modules_dep_effective_path_present=true$' "$integration_manifest_file"
-  grep -q '^modules_alias_effective_path_present=true$' "$integration_manifest_file"
-  grep -q '^modules_dep_references_overlay=true$' "$integration_manifest_file"
-  grep -q '^modprobe_present_in_initramfs=true$' "$integration_manifest_file"
-  grep -q '^insmod_present_in_initramfs=true$' "$integration_manifest_file"
-  grep -q '^overlay_module_discoverable_in_initramfs=true$' "$integration_manifest_file"
-  grep -Eq '^overlay_module_discovery_method=(find|modules_dep|static)$' "$integration_manifest_file"
-  grep -q '^fallback_hook_dynamic_path=true$' "$integration_manifest_file"
-  grep -q '^overlay_load_hook_uses_effective_path=true$' "$integration_manifest_file"
+  grep -q '^kernel_overlayfs_builtin_required=true$' "$integration_manifest_file"
+  grep -q '^kernel_overlayfs_builtin_requested=true$' "$integration_manifest_file"
+  grep -q '^kernel_config_userpatch_prepared=true$' "$integration_manifest_file"
+  grep -q '^kernel_config_overlayfs_builtin=true$' "$integration_manifest_file"
+  grep -q '^rootfs_kernel_config_overlayfs_builtin=true$' "$integration_manifest_file"
+  grep -q '^overlayroot_module_initramfs_path_status=blocked$' "$integration_manifest_file"
+  grep -q '^overlayroot_with_overlayfs_builtin_next=true$' "$integration_manifest_file"
+  grep -q '^readonly_semantics_validation_required=true$' "$integration_manifest_file"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$integration_manifest_file"
 
   if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
@@ -147,12 +137,9 @@ validate_artifacts() {
   grep -q '^uinitrd_payload_matches_initrd_img=true$' "$rootfs_validation_file"
   grep -q '^uinitrd_generated_after_overlayroot=true$' "$rootfs_validation_file"
   grep -q '^uinitrd_generated_after_initrd_img=true$' "$rootfs_validation_file"
-  grep -q '^overlay_module_effective_path_present=true$' "$rootfs_validation_file"
-  grep -q '^modules_dep_references_overlay=true$' "$rootfs_validation_file"
-  grep -q '^overlay_module_discoverable_in_initramfs=true$' "$rootfs_validation_file"
-  grep -Eq '^overlay_module_discovery_method=(find|modules_dep|static)$' "$rootfs_validation_file"
-  grep -q '^fallback_hook_dynamic_path=true$' "$rootfs_validation_file"
-  grep -q '^overlay_load_hook_uses_effective_path=true$' "$rootfs_validation_file"
+  grep -q '^kernel_config_overlayfs_builtin=true$' "$rootfs_validation_file"
+  grep -q '^kernel_overlayfs_builtin_required=true$' "$rootfs_validation_file"
+  grep -q '^overlayroot_module_initramfs_path_status=blocked$' "$rootfs_validation_file"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_validation_file"
   grep -q '^private_values_published=false$' "$rootfs_validation_file"
 
@@ -164,8 +151,8 @@ validate_artifacts() {
     --out "$rootfs_recheck"
   grep -q '^ready_for_card_write_by_rootfs=true$' "$rootfs_recheck"
   grep -q '^effective_boot_initramfs_valid=true$' "$rootfs_recheck"
-  grep -q '^overlay_module_discoverable_in_initramfs=true$' "$rootfs_recheck"
-  grep -q '^fallback_hook_dynamic_path=true$' "$rootfs_recheck"
+  grep -q '^kernel_config_overlayfs_builtin=true$' "$rootfs_recheck"
+  grep -q '^overlayroot_module_initramfs_path_status=blocked$' "$rootfs_recheck"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_recheck"
   rm -f "$rootfs_recheck"
 }
@@ -201,6 +188,9 @@ C12.1 build checklist:
 - exclude real config, secrets, Wi-Fi credentials, media cache and raw logs;
 - build image-lab only;
 - produce checksum, build log and package manifest;
+- for C12.1.11, set C12_KERNEL_OVERLAYFS_BUILTIN=1 so the complete
+  linux-sunxi64-current kernel config is copied as a userpatch with
+  CONFIG_OVERLAY_FS=y;
 - do not write card until a separate C12.2 gate.
 
 C12.2 board validation checklist:
@@ -209,10 +199,15 @@ C12.2 board validation checklist:
 - confirm the image was built with private lab firstboot autoconfig; an image
   without it is not board-boot-validatable after the C12.3.2 black-screen
   result;
-- verify read_only_enabled=true;
-- verify overlay_active=true or equivalent;
-- verify root write blocked;
+- verify overlay_active=true and root_mount_type=overlay or equivalent;
+- verify overlay is listed in /proc/filesystems;
+- do not require common writes to / to fail; with overlayroot the merged root
+  may appear writable while writes are volatile;
+- verify root_test_file_created=true and root_test_file_persisted_after_reboot=false;
+- verify data_test_file_persisted_after_reboot=true;
 - verify /data, /tmp and /run writable;
+- verify root physical lower layer is protected/read-only when detectable;
+- verify readonly_semantics_valid=true;
 - if root is ext4 rw, classify IMAGE_LAB_READ_ONLY_NOT_ACTIVE and stop before
   treating read-only validation as successful;
 - verify player_running/playback;

@@ -2290,3 +2290,13 @@ categorizavel. Root segue `ext4` gravavel e `systemctl_failed_count=0`.
 Classificacao: `INITRAMFS_MODULE_LOADING_UNSUPPORTED`. C12.4 e C12.1.11 ficam
 bloqueados; o proximo passo e reabrir a decisao do mecanismo read-only em ADR,
 avaliando kernel/base com overlay built-in ou mecanismo alternativo.
+
+Atualizacao C12.3.16: 2026-05-08. A decisao read-only foi atualizada pela
+ADR-0012: encerrar a linha `overlayroot` via `overlay.ko` carregado como modulo
+no initramfs e manter `overlayroot` com o proximo experimento em kernel
+`CONFIG_OVERLAY_FS=y` built-in. O build C12.1.11 deve gerar userpatch completo
+`linux-sunxi64-current.config` a partir da config Armbian e alterar
+`CONFIG_OVERLAY_FS` para `y`. Os criterios de validacao tambem mudam: o root
+aparente pode ser gravavel sob overlayroot, entao sucesso exige `overlay_active`
+e prova de persistencia correta: escrita fora de `/data` nao persiste apos
+reboot, enquanto escrita em `/data` persiste. C12.4 continua bloqueado.

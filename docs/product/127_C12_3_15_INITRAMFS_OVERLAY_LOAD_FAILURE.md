@@ -139,3 +139,18 @@ Opcoes a avaliar:
 - `read_only_overlayroot_path_blocked=true`;
 - `next_decision_required=true`.
 
+## Atualizacao C12.3.16
+
+A decisao posterior foi registrada na ADR-0012:
+
+- a linha `overlayroot` via `overlay.ko` carregado como modulo no initramfs esta
+  encerrada;
+- `overlayroot` continua sendo o mecanismo esperado;
+- o proximo experimento e imagem-lab com `CONFIG_OVERLAY_FS=y`, ou seja,
+  overlayfs built-in no kernel;
+- C12.4 continua bloqueado ate boot real provar a semantica read-only correta.
+
+Tambem foi corrigido o criterio de sucesso: com `overlayroot`, o root aparente
+pode ser gravavel por overlay volatil. O teste correto e provar root montado
+como overlay, escrita fora de `/data` nao persistente apos reboot, e escrita em
+`/data` persistente.

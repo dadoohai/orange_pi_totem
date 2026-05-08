@@ -391,9 +391,21 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             match = re.search(r"initrd\.img-([0-9][^\s]+)", stat_paths)
             kernel_version = match.group(1) if match else ""
         initrd_path = f"/boot/initrd.img-{kernel_version}" if kernel_version else "/boot/initrd.img"
+        kernel_config_path = f"/boot/config-{kernel_version}" if kernel_version else "/boot/config"
         uinitrd_path = "/boot/uInitrd"
         effective_uinitrd_path = debug.resolve_path(uinitrd_path)
         payload["initrd_kernel_version"] = kernel_version or "unknown"
+        payload["kernel_config_present"] = debug.exists(kernel_config_path)
+        kernel_config_text = debug.dump(kernel_config_path) if payload["kernel_config_present"] else ""
+        payload["kernel_config_overlayfs_builtin"] = bool(
+            re.search(r"^CONFIG_OVERLAY_FS=y$", kernel_config_text, re.M)
+        )
+        payload["kernel_config_overlayfs_module"] = bool(
+            re.search(r"^CONFIG_OVERLAY_FS=m$", kernel_config_text, re.M)
+        )
+        payload["kernel_overlayfs_builtin_required"] = True
+        payload["overlayroot_module_initramfs_path_status"] = "blocked"
+        payload["overlay_module_required_in_initramfs"] = not payload["kernel_config_overlayfs_builtin"]
         payload["initrd_img_exists"] = debug.exists(initrd_path)
         payload["uinitrd_exists"] = debug.exists(uinitrd_path)
         payload["uinitrd_is_symlink"] = debug.file_type(uinitrd_path) == "symlink"
@@ -547,6 +559,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and "find \"$root\"" in overlay_load_hook_text
             and "insmod \"$OVERLAY_MODULE_PATH\"" in overlay_load_hook_text
         )
+        payload["module_loading_hooks_used"] = bool(overlay_load_hook_text)
         payload["overlay_load_hook_uses_effective_path"] = (
             payload["fallback_hook_dynamic_path"]
             or (
@@ -554,7 +567,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
                 and "insmod" in overlay_load_hook_text
             )
         )
-        payload["effective_boot_initramfs_overlay_resolvable"] = bool(
+        module_based_overlay_resolvable = bool(
             payload["overlay_module_discoverable_in_initramfs"]
             and payload["modules_dep_effective_path_present"]
             and payload["modules_dep_references_overlay"]
@@ -562,6 +575,10 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload["insmod_present_in_initramfs"]
             and payload["uinitrd_contains_overlay_load_hook"]
             and payload["fallback_hook_dynamic_path"]
+        )
+        builtin_overlay_resolvable = bool(payload["kernel_config_overlayfs_builtin"])
+        payload["effective_boot_initramfs_overlay_resolvable"] = bool(
+            builtin_overlay_resolvable or module_based_overlay_resolvable
         )
         payload["uinitrd_generated_after_initrd_img"] = bool(
             payload["uinitrd_payload_matches_initrd_img"]
@@ -577,7 +594,6 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload["uinitrd_payload_matches_initrd_img"]
             and payload["uinitrd_contains_overlayroot_hook"]
             and payload["uinitrd_contains_c12_overlayroot_marker"]
-            and payload["uinitrd_contains_overlay_module"]
             and payload["effective_boot_initramfs_overlay_resolvable"]
         )
 
@@ -615,6 +631,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload.get("rootfs_lab_bootstrap_proven")
             and payload.get("gate_expected_path_matches")
             and payload.get("overlayroot_tmpfs_configured")
+            and payload.get("kernel_config_overlayfs_builtin")
             and payload.get("effective_boot_initramfs_valid")
             and payload.get("effective_boot_initramfs_overlay_resolvable")
         )

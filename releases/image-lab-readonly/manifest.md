@@ -175,6 +175,14 @@ Status:
 - `c12_3_13_next_step_readonly=C12.1.11_REBUILD_WITH_NONEMPTY_OVERLAY_MODULE_AND_COHERENT_MODULES_DEP`
 - `c12_3_13_next_step_visual=none_product_patch_required`
 - `c12_3_13_ready_for_c12_4=false`
+- `c12_3_15_cause_category=INITRAMFS_MODULE_LOADING_UNSUPPORTED`
+- `overlayroot_module_initramfs_path_status=blocked`
+- `next_experiment=kernel_overlayfs_builtin`
+- `required_kernel_config=CONFIG_OVERLAY_FS=y`
+- `c12_3_16_decision=overlayroot_with_overlayfs_builtin_next`
+- `c12_3_16_validation_criteria=overlayroot_persistence_semantics`
+- `ready_for_c12_1_11_build=true`
+- `c12_4_blocked=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -197,8 +205,10 @@ provisioned board.
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`
 - previous_decision: `ADR-0011-root-read-only-overlay-mechanism`
+- current_decision:
+  `ADR-0012-root-read-only-mechanism-after-overlayroot-module-failure`
 - root_read_only_mechanism_decision:
-  `c12_image_integrated_overlay_lab_required`
+  `overlayroot_with_kernel_overlayfs_builtin_image_lab_required`
 
 ## Base Image Target
 
@@ -919,6 +929,29 @@ Status:
 - read_only_overlayroot_path_blocked: `true`;
 - next_step: `ADR_UPDATE_READONLY_MECHANISM_DECISION`.
 
+## C12.3.16 Read-only Mechanism Decision Update
+
+C12.3.16 encerra a linha de `overlayroot` via carregamento de `overlay.ko` como
+modulo no initramfs. A pesquisa tecnica externa confirmou que o Armbian Read
+Only FS usa `overlayroot`, mas a falha investigada em C12.3.6-C12.3.15 esta na
+dependencia de `modprobe`/`insmod`/`modules.dep` no initramfs.
+
+Nova decisao:
+
+- manter `overlayroot`;
+- abandonar nova tentativa de modulo no initramfs;
+- proximo experimento: `CONFIG_OVERLAY_FS=y` built-in no kernel;
+- tratar como image-lab, nao imagem final;
+- manter C12.4 bloqueado.
+
+Campos:
+
+- overlayroot_module_initramfs_path_status: `blocked`;
+- next_experiment: `kernel_overlayfs_builtin`;
+- required_kernel_config: `CONFIG_OVERLAY_FS=y`;
+- ready_for_c12_1_11_build: `true`;
+- c12_4_blocked: `true`.
+
 ## C12.3.1 Reliability Gate
 
 C12.3 boot validation is blocked. The first image-lab boot proved that Dadooh
@@ -988,10 +1021,15 @@ C12.2 can write a test card only after C12.1 produces:
 
 Board validation must prove:
 
-- `read_only_enabled=true`;
-- `overlay_active=true` or equivalent mechanism active;
-- common root write is blocked;
+- `overlay_active=true`;
+- root mount type is `overlay` or equivalent mechanism active;
+- `overlay` is listed in `/proc/filesystems`;
+- common writes to the merged root may be allowed, but must be volatile;
+- a root test file outside `/data` does not persist after reboot;
+- a `/data` test file persists after reboot;
 - `/data`, `/tmp` and `/run` writable;
+- journald remains volatile;
+- `readonly_semantics_valid=true`;
 - player reaches `player_running`;
 - F10 open/cancel works;
 - rollback/offline recovery instructions exist.

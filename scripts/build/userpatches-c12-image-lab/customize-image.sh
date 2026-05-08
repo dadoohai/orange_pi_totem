@@ -145,163 +145,17 @@ MARKER
 EOF
   chmod 0755 /etc/initramfs-tools/hooks/dadooh-c12-overlayroot-marker
 
-  log "installing overlay module path fix for initramfs runtime"
-  cat > /etc/initramfs-tools/hooks/dadooh-c12-overlay-module-path <<'EOF'
-#!/bin/sh
-set -e
-
-case "$1" in
-  prereqs) echo ""; exit 0 ;;
-esac
-
-. /usr/share/initramfs-tools/hook-functions
-
-manual_add_modules overlay || true
-
-KERNEL="${version:-$(uname -r)}"
-SRC_BASE="/usr/lib/modules/$KERNEL"
-DEST_BASE="${DESTDIR}/lib/modules/$KERNEL"
-SRC_OVERLAY_DIR="$SRC_BASE/kernel/fs/overlayfs"
-DEST_OVERLAY_DIR="$DEST_BASE/kernel/fs/overlayfs"
-
-mkdir -p "$DEST_OVERLAY_DIR"
-copied=false
-for module in "$SRC_OVERLAY_DIR"/overlay.ko "$SRC_OVERLAY_DIR"/overlay.ko.*; do
-  [ -f "$module" ] || continue
-  cp -p "$module" "$DEST_OVERLAY_DIR/$(basename "$module")"
-  copied=true
-done
-
-mkdir -p "$DEST_BASE"
-for metadata in \
-  modules.dep modules.dep.bin modules.alias modules.alias.bin \
-  modules.builtin modules.builtin.bin modules.builtin.modinfo \
-  modules.order modules.symbols modules.symbols.bin modules.softdep; do
-  [ -f "$SRC_BASE/$metadata" ] || continue
-  cp -p "$SRC_BASE/$metadata" "$DEST_BASE/$metadata"
-done
-
-mkdir -p "${DESTDIR}/etc/dadooh"
-cat > "${DESTDIR}/etc/dadooh/c12-overlay-module-path-marker" <<MARKER
-c12_overlay_module_path_marker=present
-kernel=$KERNEL
-overlay_module_copied=$copied
-expected_path=/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko
-discovery_paths=/lib/modules/$KERNEL,/usr/lib/modules/$KERNEL,modules.dep,find
-MARKER
+  log "recording overlayfs built-in kernel expectation"
+  install -d -m 0755 -o root -g root /etc/dadooh
+  cat > /etc/dadooh/c12-overlayfs-kernel-policy <<'EOF'
+kernel_overlayfs_builtin_required=true
+required_kernel_config=CONFIG_OVERLAY_FS=y
+overlayroot_module_initramfs_path_status=blocked
+module_loading_hooks_used=false
 EOF
-  chmod 0755 /etc/initramfs-tools/hooks/dadooh-c12-overlay-module-path
-
-  log "installing overlay module load hook"
-  install -d -m 0755 -o root -g root /etc/initramfs-tools/scripts/init-top
-  cat > /etc/initramfs-tools/scripts/init-top/dadooh-force-overlay <<'EOF'
-#!/bin/sh
-PREREQ=""
-prereqs() { echo "$PREREQ"; }
-case "$1" in
-  prereqs) prereqs; exit 0 ;;
-esac
-
-OUT="/run/initramfs/dadooh-overlay-load.status"
-mkdir -p /run/initramfs
-
-contains_overlay() {
-  [ -r /proc/filesystems ] && grep -qw overlay /proc/filesystems 2>/dev/null
-}
-
-find_overlay_module() {
-  KERNEL="$(uname -r 2>/dev/null || echo unknown)"
-  OVERLAY_MODULE_PATH=""
-  OVERLAY_MODULE_PATH_SOURCE="unknown"
-
-  for module in \
-    "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" \
-    "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko."* \
-    "/usr/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" \
-    "/usr/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko."*; do
-    [ -f "$module" ] || continue
-    OVERLAY_MODULE_PATH="$module"
-    OVERLAY_MODULE_PATH_SOURCE="static_fallback"
-    return 0
-  done
-
-  for depfile in "/lib/modules/$KERNEL/modules.dep" "/usr/lib/modules/$KERNEL/modules.dep"; do
-    [ -r "$depfile" ] || continue
-    rel="$(grep -E '(^|/)overlay\.ko(\..*)?:' "$depfile" 2>/dev/null | head -n 1 | cut -d: -f1)"
-    [ -n "$rel" ] || continue
-    base="${depfile%/modules.dep}"
-    for module in "$base/$rel" "/lib/modules/$KERNEL/$rel" "/usr/lib/modules/$KERNEL/$rel"; do
-      [ -f "$module" ] || continue
-      OVERLAY_MODULE_PATH="$module"
-      OVERLAY_MODULE_PATH_SOURCE="modules_dep"
-      return 0
-    done
-  done
-
-  for root in "/usr/lib/modules/$KERNEL" "/lib/modules/$KERNEL"; do
-    [ -d "$root" ] || continue
-    module="$(find "$root" -type f \( -name 'overlay.ko' -o -name 'overlay.ko.*' \) 2>/dev/null | head -n 1)"
-    [ -n "$module" ] || continue
-    OVERLAY_MODULE_PATH="$module"
-    OVERLAY_MODULE_PATH_SOURCE="find"
-    return 0
-  done
-
-  return 1
-}
-
-status="not_attempted"
-modprobe_rc="missing"
-insmod_rc="missing"
-overlay_path_found=false
-overlay_path_source="unknown"
-
-if command -v modprobe >/dev/null 2>&1; then
-  modprobe overlay >/dev/null 2>&1
-  modprobe_rc="$?"
-fi
-
-if contains_overlay; then
-  status="loaded_by_modprobe"
-else
-  if find_overlay_module; then
-    overlay_path_found=true
-    overlay_path_source="$OVERLAY_MODULE_PATH_SOURCE"
-    if command -v insmod >/dev/null 2>&1; then
-      insmod "$OVERLAY_MODULE_PATH" >/dev/null 2>&1
-      insmod_rc="$?"
-    fi
-    if contains_overlay; then
-      status="loaded_by_insmod"
-    fi
-  fi
-fi
-
-if [ "$status" = "not_attempted" ]; then
-  if contains_overlay; then
-    status="already_available"
-  elif [ "$overlay_path_found" = false ]; then
-    status="overlay_path_missing"
-  else
-    status="load_failed"
-  fi
-fi
-
-cat > "$OUT" <<STATUS
-overlay_load_status=$status
-modprobe_rc=$modprobe_rc
-insmod_rc=$insmod_rc
-overlay_module_path_found=$overlay_path_found
-overlay_module_path_source=$overlay_path_source
-overlay_in_proc=$(contains_overlay && echo true || echo false)
-raw_logs_published=false
-STATUS
-exit 0
-EOF
-  chmod 0755 /etc/initramfs-tools/scripts/init-top/dadooh-force-overlay
+  chmod 0644 /etc/dadooh/c12-overlayfs-kernel-policy
 
   log "recording lab firstboot bootstrap state"
-  install -d -m 0755 -o root -g root /etc/dadooh
   rm -f "$lab_firstboot_marker"
   if test -s /root/.not_logged_in_yet &&
     grep -q 'PRESET_ROOT_PASSWORD=' /root/.not_logged_in_yet &&
@@ -325,6 +179,9 @@ EOF
   "linuxfamily": "$LINUXFAMILY",
   "arch": "$ARCH",
   "overlayroot_configured_in_image": true,
+  "kernel_overlayfs_builtin_required": true,
+  "overlayroot_module_initramfs_path_status": "blocked",
+  "module_loading_hooks_used": false,
   "final_armbian_initramfs_expected_after_customize": true,
   "armbian_firstboot_gate_installed": true,
   "armbian_firstboot_autoconfig_present": $(test -f "$lab_firstboot_marker" && echo true || echo false),

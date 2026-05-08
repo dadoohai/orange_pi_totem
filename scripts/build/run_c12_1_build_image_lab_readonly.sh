@@ -8,6 +8,9 @@ KIOSKY_PLAYER_DIR="${KIOSKY_PLAYER_DIR:-/home/builder/kiosky-player}"
 USERPATCHES_TEMPLATE="$REPO_ROOT/scripts/build/userpatches-c12-image-lab"
 LAB_FIRSTBOOT_CONF="${C12_LAB_FIRSTBOOT_CONF:-}"
 REQUIRE_LAB_FIRSTBOOT_CONF="${C12_REQUIRE_LAB_FIRSTBOOT_CONF:-0}"
+KERNEL_OVERLAYFS_BUILTIN="${C12_KERNEL_OVERLAYFS_BUILTIN:-0}"
+KERNEL_CONFIG_NAME="${C12_KERNEL_CONFIG_NAME:-linux-sunxi64-current}"
+KERNEL_CONFIG_SOURCE="${C12_KERNEL_CONFIG_SOURCE:-$ARM_BUILD_DIR/config/kernel/$KERNEL_CONFIG_NAME.config}"
 RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
@@ -15,7 +18,7 @@ CONFIG_NAME="c12-image-lab-readonly"
 IMAGE_TAG="${C12_IMAGE_TAG:-}"
 IMAGE_VERSION="${C12_IMAGE_VERSION:-${IMAGE_TAG//-/.}}"
 if [ -z "$IMAGE_VERSION" ]; then
-  IMAGE_VERSION="c12.1.8"
+  IMAGE_VERSION="c12.1.11"
 fi
 if [ -n "$IMAGE_TAG" ]; then
   IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-$IMAGE_TAG}"
@@ -50,12 +53,22 @@ Environment:
   C12_REQUIRE_LAB_FIRSTBOOT_CONF=1
       Refuse to build if C12_LAB_FIRSTBOOT_CONF is missing. Use this for
       C12.1.4+ board-validation images.
-  C12_IMAGE_VERSION=c12.1.8
+  C12_IMAGE_VERSION=c12.1.11
       Image-lab version marker used in artifact names and manifests.
   C12_IMAGE_TAG=c12-1-9
       Explicit artifact tag required for new builds. The script refuses to
       build when this is absent, and refuses to overwrite an existing image
       whose name already contains the resolved tag.
+  C12_KERNEL_OVERLAYFS_BUILTIN=1
+      Prepare a full Armbian kernel config userpatch with CONFIG_OVERLAY_FS=y.
+      This is the C12.1.11 image-lab experiment; it keeps overlayroot but
+      avoids loading overlay.ko as a module in initramfs.
+  C12_KERNEL_CONFIG_NAME=linux-sunxi64-current
+      Kernel config name expected by Armbian Build. The generated userpatch is
+      userpatches/$C12_KERNEL_CONFIG_NAME.config.
+  C12_KERNEL_CONFIG_SOURCE=/path/to/full/kernel/config
+      Optional source for the complete kernel config. Defaults to Armbian
+      Build's config/kernel/$C12_KERNEL_CONFIG_NAME.config.
 
 Rules:
   - local build only;
@@ -373,6 +386,74 @@ PY
   } > "$OUT_DIR/firstboot-policy.env"
 }
 
+prepare_kernel_overlayfs_builtin_config() {
+  case "$KERNEL_OVERLAYFS_BUILTIN" in
+    0|1) ;;
+    *) echo "error: C12_KERNEL_OVERLAYFS_BUILTIN must be 0 or 1" >&2; exit 2 ;;
+  esac
+
+  local target="$ARM_BUILD_DIR/userpatches/$KERNEL_CONFIG_NAME.config"
+  if [ "$KERNEL_OVERLAYFS_BUILTIN" != "1" ]; then
+    {
+      printf 'kernel_overlayfs_builtin_requested=false\n'
+      printf 'kernel_config_userpatch_prepared=false\n'
+      printf 'kernel_config_name=%s\n' "$KERNEL_CONFIG_NAME"
+      printf 'required_kernel_config=CONFIG_OVERLAY_FS=y\n'
+      printf 'ready_for_c12_1_11_build=false\n'
+    } > "$OUT_DIR/kernel-config-policy.env"
+    return 0
+  fi
+
+  if [ "$KERNEL_CONFIG_NAME" != "linux-sunxi64-current" ]; then
+    echo "error: unexpected C12_KERNEL_CONFIG_NAME=$KERNEL_CONFIG_NAME" >&2
+    echo "blocker=kernel_config_name_mismatch" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  if [ ! -f "$KERNEL_CONFIG_SOURCE" ]; then
+    echo "error: kernel config source missing: $KERNEL_CONFIG_SOURCE" >&2
+    echo "blocker=kernel_config_source_missing" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+
+  python3 - "$KERNEL_CONFIG_SOURCE" "$target" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1])
+target = Path(sys.argv[2])
+lines = source.read_text(encoding="utf-8", errors="replace").splitlines()
+out = []
+seen = False
+for line in lines:
+    if line.startswith("CONFIG_OVERLAY_FS=") or line.startswith("# CONFIG_OVERLAY_FS is not set"):
+        if not seen:
+            out.append("CONFIG_OVERLAY_FS=y")
+            seen = True
+        continue
+    out.append(line)
+if not seen:
+    out.append("CONFIG_OVERLAY_FS=y")
+text = "\n".join(out) + "\n"
+if "CONFIG_OVERLAY_FS=y\n" not in text:
+    raise SystemExit("kernel_config_overlayfs_builtin_not_set")
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_text(text, encoding="utf-8")
+target.chmod(0o644)
+PY
+
+  {
+    printf 'kernel_overlayfs_builtin_requested=true\n'
+    printf 'kernel_config_userpatch_prepared=true\n'
+    printf 'kernel_config_name=%s\n' "$KERNEL_CONFIG_NAME"
+    printf 'kernel_config_userpatch=%s\n' "$target"
+    printf 'kernel_config_source=armbian_build_config_kernel\n'
+    printf 'required_kernel_config=CONFIG_OVERLAY_FS=y\n'
+    printf 'kernel_config_overlayfs_builtin=true\n'
+    printf 'overlayroot_module_initramfs_path_status=blocked\n'
+    printf 'ready_for_c12_1_11_build=true\n'
+  } > "$OUT_DIR/kernel-config-policy.env"
+}
+
 prepare_userpatches() {
   require_explicit_image_tag
   check_armbian_build
@@ -397,6 +478,7 @@ PY
   install -m 0755 "$USERPATCHES_TEMPLATE/customize-image.sh" \
     "$ARM_BUILD_DIR/userpatches/customize-image.sh"
   prepare_lab_firstboot_conf
+  prepare_kernel_overlayfs_builtin_config
   prepare_overlay_repo
   prepare_overlay_kiosky
   prepare_overlay_image_lab
@@ -405,6 +487,9 @@ PY
     printf 'config=%s\n' "$ARM_BUILD_DIR/userpatches/config-$CONFIG_NAME.conf"
     printf 'customize=%s\n' "$ARM_BUILD_DIR/userpatches/customize-image.sh"
     printf 'firstboot_conf_present=%s\n' "$([ -f "$ARM_BUILD_DIR/userpatches/firstboot.conf" ] && echo true || echo false)"
+    printf 'kernel_overlayfs_builtin_requested=%s\n' "$KERNEL_OVERLAYFS_BUILTIN"
+    printf 'kernel_config_name=%s\n' "$KERNEL_CONFIG_NAME"
+    printf 'kernel_config_userpatch_present=%s\n' "$([ -f "$ARM_BUILD_DIR/userpatches/$KERNEL_CONFIG_NAME.config" ] && echo true || echo false)"
     printf 'overlay_repo=%s\n' "$ARM_BUILD_DIR/userpatches/overlay/orange_pi_totem"
     printf 'overlay_kiosky=%s\n' "$ARM_BUILD_DIR/userpatches/overlay/kiosky-player"
   } > "$OUT_DIR/userpatches.env"
@@ -431,6 +516,7 @@ collect_artifacts() {
   require_explicit_image_tag
   check_armbian_build
   prepare_lab_firstboot_conf
+  prepare_kernel_overlayfs_builtin_config
   local image
   image="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name "*$IMAGE_SUFFIX_MARKER*.img" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
   if [ -z "$image" ] || [ ! -f "$image" ]; then
@@ -462,6 +548,10 @@ collect_artifacts() {
   if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
     # shellcheck disable=SC1090
     source "$OUT_DIR/firstboot-policy.env"
+  fi
+  if [ -f "$OUT_DIR/kernel-config-policy.env" ]; then
+    # shellcheck disable=SC1090
+    source "$OUT_DIR/kernel-config-policy.env"
   fi
   python3 "$REPO_ROOT/scripts/build/inspect_c12_image_rootfs.py" \
     "$image" \
@@ -525,6 +615,15 @@ collect_artifacts() {
     printf 'fallback_hook_dynamic_path=%s\n' "$fallback_hook_dynamic_path"
     printf 'overlay_load_hook_uses_effective_path=%s\n' "$overlay_load_hook_uses_effective_path"
     printf 'effective_boot_initramfs_overlay_resolvable=%s\n' "$effective_boot_initramfs_overlay_resolvable"
+    printf 'kernel_overlayfs_builtin_required=true\n'
+    printf 'kernel_overlayfs_builtin_requested=%s\n' "${kernel_overlayfs_builtin_requested:-false}"
+    printf 'kernel_config_name=%s\n' "${kernel_config_name:-$KERNEL_CONFIG_NAME}"
+    printf 'kernel_config_userpatch_prepared=%s\n' "${kernel_config_userpatch_prepared:-false}"
+    printf 'kernel_config_overlayfs_builtin=%s\n' "${kernel_config_overlayfs_builtin:-false}"
+    printf 'rootfs_kernel_config_overlayfs_builtin=%s\n' "$kernel_config_overlayfs_builtin"
+    printf 'overlayroot_module_initramfs_path_status=%s\n' "${overlayroot_module_initramfs_path_status:-blocked}"
+    printf 'overlayroot_with_overlayfs_builtin_next=true\n'
+    printf 'readonly_semantics_validation_required=true\n'
     printf 'firstboot_gate_included=true\n'
     printf 'rootfs_firstboot_autoconfig_proven=%s\n' "$rootfs_firstboot_autoconfig_proven"
     printf 'lab_firstboot_bootstrap_service_included=%s\n' "$lab_bootstrap_script_present"
@@ -554,6 +653,9 @@ collect_artifacts() {
     printf 'kiosky_player_pin=%s\n' "$EXPECTED_KIOSKY_COMMIT"
     if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
       cat "$OUT_DIR/firstboot-policy.env"
+    fi
+    if [ -f "$OUT_DIR/kernel-config-policy.env" ]; then
+      cat "$OUT_DIR/kernel-config-policy.env"
     fi
   } > "$OUT_DIR/artifacts.env"
 }
