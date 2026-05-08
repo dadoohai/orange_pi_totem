@@ -160,6 +160,17 @@ entraram no initramfs/uInitrd e rebootaram com SSH voltando, mas
 persistem. O mecanismo segue bloqueado; C12.1.9 nao deve ser apenas rebuild com
 preload simples de modulo, e C12.4 segue bloqueado.
 
+Atualizacao C12.3.8: 2026-05-08. C12.3.8 foi apenas decision gate read-only,
+sem alterar placa ou repetir enable. A inspecao confirmou que `uInitrd` efetivo
+contem `overlayroot`, `overlay.ko`, `modules.dep`, `modules.alias`, `modprobe`
+e o hook C12.3.7; tambem confirmou que `overlayroot=tmpfs` chega ao boot e que
+o hook roda. A causa foi refinada para
+`OVERLAY_MODULE_PRESENT_BUT_NOT_REGISTERED_IN_INITRAMFS_RUNTIME`: o driver nao
+aparece em `/proc/filesystems` no runtime do initramfs, entao o mount overlay
+nem e tentado. Proximo passo permitido: C12.3.9 investigar carregamento/registro
+do driver ou compatibilidade kernel/initramfs. C12.1.9 e C12.4 seguem
+bloqueados.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

@@ -68,3 +68,26 @@ passo precisa ser uma decisao tecnica nova sobre o mecanismo:
 - ou substituir o mecanismo read-only antes de nova imagem.
 
 C12.4 permanece bloqueado.
+
+## Atualizacao C12.3.8
+
+C12.3.8 fez apenas diagnostico read-only, sem alterar a placa. A causa foi
+refinada: o initramfs efetivo contem `overlay.ko`, `modules.dep`, `modules.alias`,
+`modprobe`, o hook `overlayroot` e o hook C12.3.7. Mesmo assim, quando o
+`overlayroot` roda, `overlay` nao aparece em `/proc/filesystems` e o mount de
+overlay nao e tentado.
+
+Classificacao:
+
+```text
+OVERLAY_MODULE_PRESENT_BUT_NOT_REGISTERED_IN_INITRAMFS_RUNTIME
+```
+
+Proximo passo recomendado:
+
+```text
+C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY
+```
+
+C12.1.9 nao deve ser rebuild simples com modulo/hook. C12.4 permanece
+bloqueado.

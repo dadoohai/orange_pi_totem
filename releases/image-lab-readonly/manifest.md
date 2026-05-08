@@ -96,6 +96,11 @@ Status:
 - `c12_3_7_cause_category=OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`
 - `c12_3_7_read_only_mechanism_still_blocked=true`
 - `c12_3_7_next_decision_required=true`
+- `c12_3_8_status=blocked`
+- `c12_3_8_cause_category=OVERLAY_MODULE_PRESENT_BUT_NOT_REGISTERED_IN_INITRAMFS_RUNTIME`
+- `c12_3_8_decision=overlayroot_requires_deeper_initramfs_fix`
+- `c12_3_8_recommended_next_step=C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY`
+- `c12_3_8_no_operational_change=true`
 - `ready_for_c12_1_9_rebuild=false`
 - `ready_for_c11_4=false`
 
@@ -530,6 +535,33 @@ rebootadas com SSH voltando, mas o root continuou `ext4 rw`:
 
 C12.1.9 nao deve ser iniciado como rebuild simples com preload de modulo.
 C12.4 permanece bloqueado.
+
+## C12.3.8 Read-only Mechanism Decision
+
+C12.3.8 foi diagnostico read-only na placa lab, sem reboot, remount, writer,
+config real, Wi-Fi, pacotes ou logs brutos. A inspecao confirmou:
+
+- initramfs/uInitrd efetivo contem `overlayroot`;
+- initramfs/uInitrd efetivo contem `overlay.ko`;
+- `modules.dep`, `modules.alias` e `modprobe` estao presentes;
+- o hook C12.3.7 esta presente;
+- `overlayroot=tmpfs` chega ao boot;
+- `overlayroot` roda e le `tmpfs`;
+- o mount de overlay nao e tentado porque `overlay` nao registra em
+  `/proc/filesystems`.
+
+Status:
+
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- cause_category:
+  `OVERLAY_MODULE_PRESENT_BUT_NOT_REGISTERED_IN_INITRAMFS_RUNTIME`;
+- decision: `overlayroot_requires_deeper_initramfs_fix`;
+- recommended_next_step:
+  `C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY`;
+- c12_4_blocked: `true`;
+- ready_for_c12_1_9_rebuild: `false`.
 
 ## C12.3.1 Reliability Gate
 

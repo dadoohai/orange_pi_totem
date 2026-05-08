@@ -83,3 +83,24 @@ com SSH retornando, mas o root continuou `ext4 rw`.
 Conclusao: o problema nao foi resolvido por simples preload do modulo. O
 mecanismo read-only segue bloqueado e C12.1.9 precisa de nova decisao tecnica,
 nao apenas rebuild com esses dois ajustes.
+
+## Atualizacao C12.3.8
+
+C12.3.8 nao fez nova tentativa de enable. A inspecao do `initrd`/`uInitrd`
+efetivo mostrou que a falha nao e ausencia simples de artefatos:
+
+- `overlayroot` esta no initramfs;
+- `overlay.ko` esta no initramfs;
+- `modules.dep`, `modules.alias` e `modprobe` estao presentes;
+- o hook C12.3.7 tambem esta presente;
+- `overlayroot=tmpfs` chega ao boot.
+
+A causa passa a ser:
+
+```text
+OVERLAY_MODULE_PRESENT_BUT_NOT_REGISTERED_IN_INITRAMFS_RUNTIME
+```
+
+O proximo passo nao e rebuild C12.1.9 ainda. Antes disso, C12.3.9 deve decidir
+se o problema e carregamento/registro do driver no initramfs ou compatibilidade
+do mecanismo com o kernel/base atual.
