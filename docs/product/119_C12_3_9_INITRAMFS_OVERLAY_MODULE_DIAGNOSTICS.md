@@ -70,6 +70,28 @@ exponha `overlay.ko` no local esperado antes do `overlayroot` rodar. C12.4
 continua bloqueado ate uma imagem bootar com `read_only_enabled=true`,
 `overlay_active=true` e `root_write_blocked=true`.
 
+## Atualizacao C12.1.9
+
+C12.1.9 reconstruiu a imagem-lab com validacao do caminho efetivo resolvido por
+symlink no initramfs usr-merged:
+
+```text
+/lib -> usr/lib
+```
+
+A imagem agora inclui hook `init-top` para carregar `overlay` e fallback por
+`insmod` usando `/lib/modules/<kernel>/kernel/fs/overlayfs`. A validacao offline
+provou:
+
+- `overlay_module_effective_path_present=true`;
+- `modules_dep_effective_path_present=true`;
+- `modules_dep_references_overlay=true`;
+- `effective_boot_initramfs_overlay_resolvable=true`;
+- `effective_boot_initramfs_valid=true`.
+
+C12.2.5 pode gravar a imagem C12.1.9. C12.4 segue bloqueado ate a validacao em
+placa provar read-only real.
+
 ## Status
 
 - `diagnostic_hook_installed=true`

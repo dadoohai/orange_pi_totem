@@ -200,6 +200,65 @@ def gzip_cpio_contains(initrd: Path, names: tuple[str, ...]) -> dict[str, bool]:
     return result
 
 
+def gzip_cpio_listing(initrd: Path) -> list[str]:
+    if not shutil.which("gzip") or not shutil.which("cpio"):
+        return []
+    proc = subprocess.run(
+        f"gzip -cd {shlex_quote(str(initrd))} 2>/dev/null | cpio -t 2>/dev/null",
+        shell=True,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if proc.returncode not in (0, 2):
+        return []
+    return [entry.lstrip("./") for entry in proc.stdout.splitlines()]
+
+
+def gzip_cpio_verbose_listing(initrd: Path) -> list[str]:
+    if not shutil.which("gzip") or not shutil.which("cpio"):
+        return []
+    proc = subprocess.run(
+        f"gzip -cd {shlex_quote(str(initrd))} 2>/dev/null | cpio -tv 2>/dev/null",
+        shell=True,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if proc.returncode not in (0, 2):
+        return []
+    return proc.stdout.splitlines()
+
+
+def cpio_symlink_points_to(lines: list[str], name: str, target: str) -> bool:
+    suffix = f" {name.lstrip('./')} -> {target}"
+    return any(line.endswith(suffix) for line in lines)
+
+
+def gzip_cpio_read_text(initrd: Path, name: str) -> str:
+    if not shutil.which("gzip") or not shutil.which("cpio"):
+        return ""
+    normalized = name.lstrip("/")
+    proc = subprocess.run(
+        (
+            f"gzip -cd {shlex_quote(str(initrd))} 2>/dev/null | "
+            f"cpio -i --to-stdout {shlex_quote(normalized)} 2>/dev/null"
+        ),
+        shell=True,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    return proc.stdout if proc.returncode == 0 else ""
+
+
+def listing_contains_prefix(entries: list[str], prefix: str) -> bool:
+    return any(entry.startswith(prefix) for entry in entries)
+
+
 def shlex_quote(value: str) -> str:
     return "'" + value.replace("'", "'\"'\"'") + "'"
 
@@ -339,31 +398,130 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             initrd_file,
             (
                 "scripts/init-bottom/overlayroot",
+                "scripts/init-top/dadooh-force-overlay",
                 "etc/dadooh/c12-overlayroot-initramfs-marker",
-                "usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko",
+                "etc/dadooh/c12-overlay-module-path-marker",
+                f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko",
+                f"lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko",
+                f"lib/modules/{kernel_version}/modules.dep",
+                f"lib/modules/{kernel_version}/modules.alias",
+                "usr/sbin/modprobe",
+                "usr/bin/insmod",
             ),
         ) if initrd_file else {}
         uinitrd_scan = gzip_cpio_contains(
             uinitrd_payload,
             (
                 "scripts/init-bottom/overlayroot",
+                "scripts/init-top/dadooh-force-overlay",
                 "etc/dadooh/c12-overlayroot-initramfs-marker",
-                "usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko",
+                "etc/dadooh/c12-overlay-module-path-marker",
+                f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko",
+                f"lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko",
+                f"lib/modules/{kernel_version}/modules.dep",
+                f"lib/modules/{kernel_version}/modules.alias",
+                "usr/sbin/modprobe",
+                "usr/bin/insmod",
             ),
         ) if payload["uinitrd_payload_extracted"] else {}
+        initrd_entries = gzip_cpio_listing(initrd_file) if initrd_file else []
+        uinitrd_entries = gzip_cpio_listing(uinitrd_payload) if payload["uinitrd_payload_extracted"] else []
+        initrd_verbose_entries = gzip_cpio_verbose_listing(initrd_file) if initrd_file else []
+        uinitrd_verbose_entries = (
+            gzip_cpio_verbose_listing(uinitrd_payload) if payload["uinitrd_payload_extracted"] else []
+        )
+        effective_entries = uinitrd_entries or initrd_entries
+        effective_verbose_entries = uinitrd_verbose_entries or initrd_verbose_entries
+        overlay_effective_prefix = f"lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko"
+        usr_overlay_effective_prefix = f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko"
+        modules_dep_path = f"lib/modules/{kernel_version}/modules.dep"
+        usr_modules_dep_path = f"usr/lib/modules/{kernel_version}/modules.dep"
+        modules_alias_path = f"lib/modules/{kernel_version}/modules.alias"
+        usr_modules_alias_path = f"usr/lib/modules/{kernel_version}/modules.alias"
+        modules_dep_text = gzip_cpio_read_text(
+            uinitrd_payload if payload["uinitrd_payload_extracted"] else initrd_file,
+            modules_dep_path,
+        ) if (payload["uinitrd_payload_extracted"] or initrd_file) else ""
+        if not modules_dep_text:
+            modules_dep_text = gzip_cpio_read_text(
+                uinitrd_payload if payload["uinitrd_payload_extracted"] else initrd_file,
+                usr_modules_dep_path,
+            ) if (payload["uinitrd_payload_extracted"] or initrd_file) else ""
+        overlay_load_hook_text = gzip_cpio_read_text(
+            uinitrd_payload if payload["uinitrd_payload_extracted"] else initrd_file,
+            "scripts/init-top/dadooh-force-overlay",
+        ) if (payload["uinitrd_payload_extracted"] or initrd_file) else ""
+        initrd_lib_symlink = cpio_symlink_points_to(initrd_verbose_entries, "lib", "usr/lib")
+        uinitrd_lib_symlink = cpio_symlink_points_to(uinitrd_verbose_entries, "lib", "usr/lib")
+        effective_lib_symlink = cpio_symlink_points_to(effective_verbose_entries, "lib", "usr/lib")
         payload["initrd_contains_overlayroot_hook"] = bool(initrd_scan.get("scripts/init-bottom/overlayroot"))
+        payload["initrd_contains_overlay_load_hook"] = bool(initrd_scan.get("scripts/init-top/dadooh-force-overlay"))
         payload["initrd_contains_c12_overlayroot_marker"] = bool(
             initrd_scan.get("etc/dadooh/c12-overlayroot-initramfs-marker")
         )
+        payload["initrd_contains_c12_overlay_module_path_marker"] = bool(
+            initrd_scan.get("etc/dadooh/c12-overlay-module-path-marker")
+        )
         payload["initrd_contains_overlay_module"] = bool(
-            initrd_scan.get("usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko")
+            initrd_scan.get(f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko")
+        )
+        payload["initrd_contains_overlay_module_effective_path"] = bool(
+            initrd_scan.get(f"lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko")
+            or (
+                initrd_lib_symlink
+                and initrd_scan.get(f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko")
+            )
         )
         payload["uinitrd_contains_overlayroot_hook"] = bool(uinitrd_scan.get("scripts/init-bottom/overlayroot"))
+        payload["uinitrd_contains_overlay_load_hook"] = bool(uinitrd_scan.get("scripts/init-top/dadooh-force-overlay"))
         payload["uinitrd_contains_c12_overlayroot_marker"] = bool(
             uinitrd_scan.get("etc/dadooh/c12-overlayroot-initramfs-marker")
         )
+        payload["uinitrd_contains_c12_overlay_module_path_marker"] = bool(
+            uinitrd_scan.get("etc/dadooh/c12-overlay-module-path-marker")
+        )
         payload["uinitrd_contains_overlay_module"] = bool(
-            uinitrd_scan.get("usr/lib/modules/6.12.58-current-sunxi64/kernel/fs/overlayfs/overlay.ko")
+            uinitrd_scan.get(f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko")
+        )
+        payload["uinitrd_contains_overlay_module_effective_path"] = bool(
+            uinitrd_scan.get(f"lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko")
+            or (
+                uinitrd_lib_symlink
+                and uinitrd_scan.get(f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko")
+            )
+        )
+        payload["initrd_lib_symlink_to_usr_lib"] = initrd_lib_symlink
+        payload["uinitrd_lib_symlink_to_usr_lib"] = uinitrd_lib_symlink
+        payload["effective_initramfs_lib_symlink_to_usr_lib"] = effective_lib_symlink
+        payload["overlay_module_effective_path_present"] = listing_contains_prefix(
+            effective_entries, overlay_effective_prefix
+        ) or (
+            effective_lib_symlink and listing_contains_prefix(effective_entries, usr_overlay_effective_prefix)
+        )
+        payload["overlay_module_usr_path_present"] = listing_contains_prefix(
+            effective_entries, usr_overlay_effective_prefix
+        )
+        payload["modules_dep_effective_path_present"] = modules_dep_path in effective_entries or (
+            effective_lib_symlink and usr_modules_dep_path in effective_entries
+        )
+        payload["modules_alias_effective_path_present"] = modules_alias_path in effective_entries or (
+            effective_lib_symlink and usr_modules_alias_path in effective_entries
+        )
+        payload["modules_dep_references_overlay"] = "kernel/fs/overlayfs/overlay.ko" in modules_dep_text
+        payload["modprobe_present_in_initramfs"] = "usr/sbin/modprobe" in effective_entries
+        payload["insmod_present_in_initramfs"] = "usr/bin/insmod" in effective_entries
+        payload["overlay_load_hook_uses_effective_path"] = (
+            "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" in overlay_load_hook_text
+            and "insmod" in overlay_load_hook_text
+        )
+        payload["effective_boot_initramfs_overlay_resolvable"] = bool(
+            payload["overlay_module_effective_path_present"]
+            and payload["modules_dep_effective_path_present"]
+            and payload["modules_dep_references_overlay"]
+            and payload["modprobe_present_in_initramfs"]
+            and payload["insmod_present_in_initramfs"]
+            and payload["uinitrd_contains_overlay_load_hook"]
+            and payload["overlay_load_hook_uses_effective_path"]
         )
         payload["uinitrd_generated_after_initrd_img"] = bool(
             payload["uinitrd_payload_matches_initrd_img"]
@@ -380,6 +538,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload["uinitrd_contains_overlayroot_hook"]
             and payload["uinitrd_contains_c12_overlayroot_marker"]
             and payload["uinitrd_contains_overlay_module"]
+            and payload["effective_boot_initramfs_overlay_resolvable"]
         )
 
         try:
@@ -417,6 +576,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             and payload.get("gate_expected_path_matches")
             and payload.get("overlayroot_tmpfs_configured")
             and payload.get("effective_boot_initramfs_valid")
+            and payload.get("effective_boot_initramfs_overlay_resolvable")
         )
         if args.require_lab_bootstrap_service and not payload["ready_for_card_write_by_rootfs"]:
             payload["validation_error"] = "rootfs_lab_firstboot_autoconfig_not_proven"

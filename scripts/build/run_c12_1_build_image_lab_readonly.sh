@@ -430,6 +430,7 @@ build_image() {
 collect_artifacts() {
   require_explicit_image_tag
   check_armbian_build
+  prepare_lab_firstboot_conf
   local image
   image="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name "*$IMAGE_SUFFIX_MARKER*.img" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
   if [ -z "$image" ] || [ ! -f "$image" ]; then
@@ -491,18 +492,36 @@ collect_artifacts() {
     printf 'initrd_img_exists=%s\n' "$initrd_img_exists"
     printf 'initrd_contains_overlayroot_hook=%s\n' "$initrd_contains_overlayroot_hook"
     printf 'initrd_contains_overlay_module=%s\n' "$initrd_contains_overlay_module"
+    printf 'initrd_contains_overlay_module_effective_path=%s\n' "$initrd_contains_overlay_module_effective_path"
+    printf 'initrd_contains_overlay_load_hook=%s\n' "$initrd_contains_overlay_load_hook"
     printf 'initrd_contains_c12_overlayroot_marker=%s\n' "$initrd_contains_c12_overlayroot_marker"
+    printf 'initrd_contains_c12_overlay_module_path_marker=%s\n' "$initrd_contains_c12_overlay_module_path_marker"
     printf 'uinitrd_exists=%s\n' "$uinitrd_exists"
     printf 'uinitrd_nonempty=%s\n' "$uinitrd_nonempty"
     printf 'uinitrd_payload_extracted=%s\n' "$uinitrd_payload_extracted"
     printf 'uinitrd_payload_matches_initrd_img=%s\n' "$uinitrd_payload_matches_initrd_img"
     printf 'uinitrd_contains_overlayroot_hook=%s\n' "$uinitrd_contains_overlayroot_hook"
     printf 'uinitrd_contains_overlay_module=%s\n' "$uinitrd_contains_overlay_module"
+    printf 'uinitrd_contains_overlay_module_effective_path=%s\n' "$uinitrd_contains_overlay_module_effective_path"
+    printf 'uinitrd_contains_overlay_load_hook=%s\n' "$uinitrd_contains_overlay_load_hook"
     printf 'uinitrd_contains_c12_overlayroot_marker=%s\n' "$uinitrd_contains_c12_overlayroot_marker"
+    printf 'uinitrd_contains_c12_overlay_module_path_marker=%s\n' "$uinitrd_contains_c12_overlay_module_path_marker"
     printf 'uinitrd_generated_after_overlayroot=%s\n' "$uinitrd_generated_after_overlayroot"
     printf 'uinitrd_generated_after_initrd_img=%s\n' "$uinitrd_generated_after_initrd_img"
     printf 'boot_script_uses_uinitrd=%s\n' "$boot_script_uses_uinitrd"
     printf 'effective_boot_initramfs_valid=%s\n' "$effective_boot_initramfs_valid"
+    printf 'initrd_lib_symlink_to_usr_lib=%s\n' "$initrd_lib_symlink_to_usr_lib"
+    printf 'uinitrd_lib_symlink_to_usr_lib=%s\n' "$uinitrd_lib_symlink_to_usr_lib"
+    printf 'effective_initramfs_lib_symlink_to_usr_lib=%s\n' "$effective_initramfs_lib_symlink_to_usr_lib"
+    printf 'overlay_module_effective_path_present=%s\n' "$overlay_module_effective_path_present"
+    printf 'overlay_module_usr_path_present=%s\n' "$overlay_module_usr_path_present"
+    printf 'modules_dep_effective_path_present=%s\n' "$modules_dep_effective_path_present"
+    printf 'modules_alias_effective_path_present=%s\n' "$modules_alias_effective_path_present"
+    printf 'modules_dep_references_overlay=%s\n' "$modules_dep_references_overlay"
+    printf 'modprobe_present_in_initramfs=%s\n' "$modprobe_present_in_initramfs"
+    printf 'insmod_present_in_initramfs=%s\n' "$insmod_present_in_initramfs"
+    printf 'overlay_load_hook_uses_effective_path=%s\n' "$overlay_load_hook_uses_effective_path"
+    printf 'effective_boot_initramfs_overlay_resolvable=%s\n' "$effective_boot_initramfs_overlay_resolvable"
     printf 'firstboot_gate_included=true\n'
     printf 'rootfs_firstboot_autoconfig_proven=%s\n' "$rootfs_firstboot_autoconfig_proven"
     printf 'lab_firstboot_bootstrap_service_included=%s\n' "$lab_bootstrap_script_present"

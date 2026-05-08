@@ -103,18 +103,32 @@ validate_artifacts() {
   grep -q '^initrd_img_exists=true$' "$integration_manifest_file"
   grep -q '^initrd_contains_overlayroot_hook=true$' "$integration_manifest_file"
   grep -q '^initrd_contains_overlay_module=true$' "$integration_manifest_file"
+  grep -q '^initrd_contains_overlay_module_effective_path=true$' "$integration_manifest_file"
+  grep -q '^initrd_contains_overlay_load_hook=true$' "$integration_manifest_file"
   grep -q '^initrd_contains_c12_overlayroot_marker=true$' "$integration_manifest_file"
+  grep -q '^initrd_contains_c12_overlay_module_path_marker=true$' "$integration_manifest_file"
   grep -q '^uinitrd_exists=true$' "$integration_manifest_file"
   grep -q '^uinitrd_nonempty=true$' "$integration_manifest_file"
   grep -q '^uinitrd_payload_extracted=true$' "$integration_manifest_file"
   grep -q '^uinitrd_payload_matches_initrd_img=true$' "$integration_manifest_file"
   grep -q '^uinitrd_contains_overlayroot_hook=true$' "$integration_manifest_file"
   grep -q '^uinitrd_contains_overlay_module=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_contains_overlay_module_effective_path=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_contains_overlay_load_hook=true$' "$integration_manifest_file"
   grep -q '^uinitrd_contains_c12_overlayroot_marker=true$' "$integration_manifest_file"
+  grep -q '^uinitrd_contains_c12_overlay_module_path_marker=true$' "$integration_manifest_file"
   grep -q '^uinitrd_generated_after_overlayroot=true$' "$integration_manifest_file"
   grep -q '^uinitrd_generated_after_initrd_img=true$' "$integration_manifest_file"
   grep -q '^boot_script_uses_uinitrd=true$' "$integration_manifest_file"
   grep -q '^effective_boot_initramfs_valid=true$' "$integration_manifest_file"
+  grep -q '^overlay_module_effective_path_present=true$' "$integration_manifest_file"
+  grep -q '^modules_dep_effective_path_present=true$' "$integration_manifest_file"
+  grep -q '^modules_alias_effective_path_present=true$' "$integration_manifest_file"
+  grep -q '^modules_dep_references_overlay=true$' "$integration_manifest_file"
+  grep -q '^modprobe_present_in_initramfs=true$' "$integration_manifest_file"
+  grep -q '^insmod_present_in_initramfs=true$' "$integration_manifest_file"
+  grep -q '^overlay_load_hook_uses_effective_path=true$' "$integration_manifest_file"
+  grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$integration_manifest_file"
 
   if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
     "$ARTIFACTS_ENV" "$package_manifest_file" "$integration_manifest_file"; then
@@ -130,6 +144,10 @@ validate_artifacts() {
   grep -q '^uinitrd_payload_matches_initrd_img=true$' "$rootfs_validation_file"
   grep -q '^uinitrd_generated_after_overlayroot=true$' "$rootfs_validation_file"
   grep -q '^uinitrd_generated_after_initrd_img=true$' "$rootfs_validation_file"
+  grep -q '^overlay_module_effective_path_present=true$' "$rootfs_validation_file"
+  grep -q '^modules_dep_references_overlay=true$' "$rootfs_validation_file"
+  grep -q '^overlay_load_hook_uses_effective_path=true$' "$rootfs_validation_file"
+  grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_validation_file"
   grep -q '^private_values_published=false$' "$rootfs_validation_file"
 
   local rootfs_recheck
@@ -140,6 +158,7 @@ validate_artifacts() {
     --out "$rootfs_recheck"
   grep -q '^ready_for_card_write_by_rootfs=true$' "$rootfs_recheck"
   grep -q '^effective_boot_initramfs_valid=true$' "$rootfs_recheck"
+  grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_recheck"
   rm -f "$rootfs_recheck"
 }
 

@@ -181,6 +181,17 @@ causa passa a ser `OVERLAY_MODULE_PATH_INVALID`. C12.1.9 pode iniciar como
 rebuild focado em corrigir layout/caminho de modulos no initramfs efetivo; C12.4
 segue bloqueado ate read-only real ser validado.
 
+Atualizacao C12.1.9: 2026-05-08. A imagem-lab foi reconstruida com
+`overlayroot=tmpfs` nos boot args, hook `init-top` para carregar `overlay` e
+fallback por `insmod` usando o caminho efetivo
+`/lib/modules/<kernel>/kernel/fs/overlayfs`. Como o initramfs e usr-merged,
+`/lib` aponta para `usr/lib`; a validacao offline agora prova esse caminho
+resolvido, `modules.dep` coerente e
+`effective_boot_initramfs_overlay_resolvable=true`. A imagem C12.1.9 tem SHA256
+`f581ffab591462b1daa60a648f0ed0f8c2831deff9004f9ff16cdaa46fd11e6c`. Nenhuma
+placa foi tocada e nenhum cartao foi gravado. C12.2.5 pode gravar novo cartao;
+C12.4 segue bloqueado ate boot provar read-only ativo.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

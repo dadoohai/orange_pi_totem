@@ -7,13 +7,13 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `image_version=c12.1.8`
+- `image_version=c12.1.9`
 - `previous_image_superseded=true`
-- `card_written=true`
+- `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
 - `card_write_verified=false`
 - `ready_for_c12_3_board_boot=false`
-- `boards_touched=true`
+- `boards_touched=false`
 - `read_only_enabled_on_installed_board=false`
 - `power_cut_tested=false`
 - `long_test=false`
@@ -109,6 +109,15 @@ Status:
 - `c12_3_9_cause_category=OVERLAY_MODULE_PATH_INVALID`
 - `c12_3_9_recommended_next_step=C12.1.9_REBUILD_WITH_INITRAMFS_MODULE_PATH_FIX`
 - `ready_for_c12_1_9_rebuild=true`
+- `c12_1_9_status=passed`
+- `c12_1_9_image_built=true`
+- `c12_1_9_overlay_module_effective_path_present=true`
+- `c12_1_9_modules_dep_references_overlay=true`
+- `c12_1_9_effective_boot_initramfs_overlay_resolvable=true`
+- `c12_1_9_effective_boot_initramfs_valid=true`
+- `c12_1_9_card_written=false`
+- `c12_1_9_boards_touched=false`
+- `ready_for_c12_2_5_card_write=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -125,6 +134,7 @@ provisioned board.
 - c12_1_build_commit: `f07ff65`
 - c12_1_2_build_commit: `aec03bc`
 - c12_1_2_source_head: `aec03bc`
+- c12_1_9_build_commit: `pending_until_committed`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`
@@ -606,6 +616,39 @@ OVERLAY_MODULE_PATH_INVALID
 C12.1.9 pode ser um rebuild focado em corrigir o layout/caminho de modulos no
 initramfs efetivo para expor `overlay.ko` antes do `overlayroot`. C12.4 segue
 bloqueado ate read-only real ser validado em boot.
+
+## C12.1.9 Rebuild Overlay Module Path
+
+C12.1.9 foi gerada sem tocar placas e sem gravar cartao. Ela corrige a
+validacao de caminho efetivo no initramfs usr-merged, onde `/lib` aponta para
+`usr/lib`, e adiciona fallback `insmod` para carregar `overlay` antes do
+`overlayroot`.
+
+- image_version: `c12.1.9`;
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-9_minimal.img`;
+- image_sha256:
+  `f581ffab591462b1daa60a648f0ed0f8c2831deff9004f9ff16cdaa46fd11e6c`;
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-818fa15d-f012-40ea-bf17-0a66f10f15be.log`;
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1-9.txt`;
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-9.txt`;
+- rootfs_validation_file:
+  `releases/image-lab-readonly/rootfs-validation-c12-1-9.env`;
+- overlayroot_included: `true`;
+- boot_args_overlayroot_tmpfs: `true`;
+- uinitrd_nonempty: `true`;
+- uinitrd_payload_matches_initrd_img: `true`;
+- overlay_module_effective_path_present: `true`;
+- modules_dep_references_overlay: `true`;
+- effective_boot_initramfs_overlay_resolvable: `true`;
+- effective_boot_initramfs_valid: `true`;
+- lab_firstboot_autoconfig: `true`;
+- card_written: `false`;
+- boards_touched: `false`;
+- ready_for_c12_2_5_card_write: `true`.
 
 ## C12.3.1 Reliability Gate
 

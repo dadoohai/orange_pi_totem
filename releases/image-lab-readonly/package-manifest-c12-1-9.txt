@@ -1,0 +1,13 @@
+package=overlayroot source=userpatch-c12-image-lab
+package=mpv source=userpatch-c12-image-lab
+package=ffmpeg source=userpatch-c12-image-lab
+package=python3-requests source=userpatch-c12-image-lab
+package=network-manager source=userpatch-c12-image-lab-or-armbian-networking-stack
+debian_artifact=armbian-bsp-cli-orangepizero3-current_25.11.1_arm64__1-PC6386-V7289-Hc65c-Bb0b9-Rf36a.deb
+debian_artifact=armbian-bsp-cli-orangepizero3_25.11.1_arm64__1-PC6386-V7289-Hc65c-Bb0b9-Rf36a.deb
+debian_artifact=armbian-firmware_25.11.1_all__1-SA5d4d-B6c7f-R448a.deb
+debian_artifact=linux-dtb-current-sunxi64_25.11.1_arm64__6.12.58-S7475-Deeea-P4795-Cd434Hb74f-HK01ba-Vc222-B2135-R448a.deb
+debian_artifact=linux-headers-current-sunxi64_25.11.1_arm64__6.12.58-S7475-Deeea-P4795-Cd434Hb74f-HK01ba-Vc222-B2135-R448a.deb
+debian_artifact=linux-image-current-sunxi64_25.11.1_arm64__6.12.58-S7475-Deeea-P4795-Cd434Hb74f-HK01ba-Vc222-B2135-R448a.deb
+debian_artifact=linux-libc-dev-current-sunxi64_25.11.1_arm64__6.12.58-S7475-Deeea-P4795-Cd434Hb74f-HK01ba-Vc222-B2135-R448a.deb
+debian_artifact=linux-u-boot-orangepizero3-current_25.11.1_arm64__2025.04-S3482-Pf089-H8869-V1f74-Bbf55-R448a.deb

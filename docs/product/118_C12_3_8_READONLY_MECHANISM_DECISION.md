@@ -90,3 +90,17 @@ OVERLAY_MODULE_PATH_INVALID
 No runtime do initramfs, o arquivo `overlay.ko` nao foi encontrado no caminho de
 modulo esperado pelo hook. C12.1.9 pode comecar como rebuild focado em corrigir
 o layout/caminho de modulos no initramfs efetivo. C12.4 continua bloqueado.
+
+## Atualizacao C12.1.9
+
+C12.1.9 gerou nova imagem-lab com:
+
+- `overlayroot=tmpfs` nos boot args;
+- hook `init-top` para `modprobe overlay`;
+- fallback `insmod` por `/lib/modules/<kernel>/kernel/fs/overlayfs`;
+- validacao offline do caminho efetivo resolvido por `/lib -> usr/lib`;
+- `effective_boot_initramfs_overlay_resolvable=true`.
+
+Isso libera a gravacao C12.2.5, mas nao libera C12.4. A decisao de read-only
+so muda depois de boot em placa provar `overlay_active=true` e
+`root_write_blocked=true`.
