@@ -171,6 +171,16 @@ nem e tentado. Proximo passo permitido: C12.3.9 investigar carregamento/registro
 do driver ou compatibilidade kernel/initramfs. C12.1.9 e C12.4 seguem
 bloqueados.
 
+Atualizacao C12.3.9: 2026-05-08. C12.3.9 instalou hook temporario de
+diagnostico no initramfs com backup, reboot controlado e rollback. O SSH voltou
+e o hook foi removido depois da coleta. O diagnostico mostrou `/proc` montado,
+`modprobe`/`insmod` presentes, `modules.dep` presente e `modprobe overlay`
+retornando zero, mas `overlay.ko` nao foi encontrado no caminho esperado do
+runtime do initramfs e `overlay` continuou ausente em `/proc/filesystems`. A
+causa passa a ser `OVERLAY_MODULE_PATH_INVALID`. C12.1.9 pode iniciar como
+rebuild focado em corrigir layout/caminho de modulos no initramfs efetivo; C12.4
+segue bloqueado ate read-only real ser validado.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

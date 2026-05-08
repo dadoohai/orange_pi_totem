@@ -101,7 +101,14 @@ Status:
 - `c12_3_8_decision=overlayroot_requires_deeper_initramfs_fix`
 - `c12_3_8_recommended_next_step=C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY`
 - `c12_3_8_no_operational_change=true`
-- `ready_for_c12_1_9_rebuild=false`
+- `c12_3_9_status=passed`
+- `c12_3_9_diagnostic_hook_installed=true`
+- `c12_3_9_reboot_executed=true`
+- `c12_3_9_ssh_returned=true`
+- `c12_3_9_rollback_executed=true`
+- `c12_3_9_cause_category=OVERLAY_MODULE_PATH_INVALID`
+- `c12_3_9_recommended_next_step=C12.1.9_REBUILD_WITH_INITRAMFS_MODULE_PATH_FIX`
+- `ready_for_c12_1_9_rebuild=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -562,6 +569,43 @@ Status:
   `C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY`;
 - c12_4_blocked: `true`;
 - ready_for_c12_1_9_rebuild: `false`.
+
+## C12.3.9 Initramfs Overlay Module Diagnostics
+
+C12.3.9 instalou um hook temporario `init-top` apenas para diagnostico, com
+backup, rollback e reboot controlado. O hook gravou somente categorias/booleans
+em `/run/initramfs`; nenhum log bruto, secret, config real ou dado de rede foi
+publicado.
+
+Resultado:
+
+- proc_mounted: `true`;
+- overlay_in_proc_before: `false`;
+- modprobe_present: `true`;
+- insmod_present: `true`;
+- modules_dep_exists: `true`;
+- overlay_ko_exists: `false`;
+- module_path_match: `false`;
+- vermagic_match: `unknown`;
+- modprobe_overlay_result: `zero`;
+- overlay_in_proc_after_modprobe: `false`;
+- insmod_overlay_attempted: `false`;
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- systemctl_failed_count: `0`;
+- rollback_executed: `true`;
+- diagnostic_hook_present_after: `false`.
+
+Classificacao:
+
+```text
+OVERLAY_MODULE_PATH_INVALID
+```
+
+C12.1.9 pode ser um rebuild focado em corrigir o layout/caminho de modulos no
+initramfs efetivo para expor `overlay.ko` antes do `overlayroot`. C12.4 segue
+bloqueado ate read-only real ser validado em boot.
 
 ## C12.3.1 Reliability Gate
 

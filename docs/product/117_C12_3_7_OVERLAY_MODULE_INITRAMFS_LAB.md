@@ -91,3 +91,19 @@ C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY
 
 C12.1.9 nao deve ser rebuild simples com modulo/hook. C12.4 permanece
 bloqueado.
+
+## Atualizacao C12.3.9
+
+O diagnostico com hook temporario no initramfs refinou a causa para:
+
+```text
+OVERLAY_MODULE_PATH_INVALID
+```
+
+O hook confirmou `/proc` disponivel, `modprobe`/`insmod` presentes e
+`modprobe overlay` retornando zero, mas `overlay.ko` nao foi encontrado no
+caminho de modulo esperado no runtime do initramfs e `overlay` nao apareceu em
+`/proc/filesystems`. O hook foi removido por rollback.
+
+Com isso, C12.1.9 pode ser planejado como rebuild focado em corrigir layout ou
+caminho de modulos no initramfs efetivo. C12.4 permanece bloqueado.

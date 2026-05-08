@@ -72,3 +72,21 @@ Nao iniciar C12.1.9 como rebuild apenas com modulo/hook, e nao iniciar C12.4.
 - `c12_4_blocked=true`
 - `ready_for_c12_1_9_rebuild=false`
 - `next_step=C12.3.9_FIX_INITRAMFS_MODULE_LOADING_OR_KERNEL_OVERLAY_COMPATIBILITY`
+
+## Atualizacao C12.3.9
+
+C12.3.9 instalou um hook temporario de diagnostico no initramfs, com backup,
+reboot controlado e rollback. O hook mostrou que `/proc` estava disponivel,
+`modprobe` e `insmod` estavam presentes, `modules.dep` existia e
+`modprobe overlay` retornou zero. Mesmo assim, `overlay` continuou ausente em
+`/proc/filesystems`.
+
+A causa foi refinada para:
+
+```text
+OVERLAY_MODULE_PATH_INVALID
+```
+
+No runtime do initramfs, o arquivo `overlay.ko` nao foi encontrado no caminho de
+modulo esperado pelo hook. C12.1.9 pode comecar como rebuild focado em corrigir
+o layout/caminho de modulos no initramfs efetivo. C12.4 continua bloqueado.
