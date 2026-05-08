@@ -86,3 +86,15 @@ C12.4 continua bloqueado ate uma imagem bootar com:
 - `read_only_enabled=true`;
 - `overlay_active=true`;
 - `root_write_blocked=true`.
+
+## Atualizacao C12.1.10
+
+C12.1.10 reconciliou C12.3.10/C12.3.11 endurecendo o hook e a validacao:
+
+- o hook nao depende mais de um unico path hardcoded;
+- ele tenta `/lib/modules`, `/usr/lib/modules`, `modules.dep` e busca dinamica;
+- a validacao offline exige `fallback_hook_dynamic_path=true`;
+- a imagem C12.1.10 valida `overlay_module_discoverable_in_initramfs=true` e
+  `effective_boot_initramfs_overlay_resolvable=true`.
+
+C12.2.6 pode gravar a nova imagem. C12.4 segue bloqueado ate validacao em placa.

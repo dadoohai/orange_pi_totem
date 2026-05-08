@@ -259,6 +259,31 @@ def listing_contains_prefix(entries: list[str], prefix: str) -> bool:
     return any(entry.startswith(prefix) for entry in entries)
 
 
+def overlay_module_discovery(entries: list[str], kernel_version: str, modules_dep_text: str) -> tuple[bool, str]:
+    overlay_candidates = [
+        f"lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko",
+        f"usr/lib/modules/{kernel_version}/kernel/fs/overlayfs/overlay.ko",
+    ]
+    if any(listing_contains_prefix(entries, candidate) for candidate in overlay_candidates):
+        return True, "static"
+    dep_match = re.search(r"(^|\n)([^:\n]*overlay\.ko(?:\.[^:\n]*)?):", modules_dep_text)
+    if dep_match:
+        rel = dep_match.group(2).lstrip("./")
+        dep_candidates = [
+            f"lib/modules/{kernel_version}/{rel}",
+            f"usr/lib/modules/{kernel_version}/{rel}",
+        ]
+        if any(listing_contains_prefix(entries, candidate) for candidate in dep_candidates):
+            return True, "modules_dep"
+    if any(
+        entry.startswith(f"lib/modules/{kernel_version}/") or entry.startswith(f"usr/lib/modules/{kernel_version}/")
+        for entry in entries
+        if "/overlay.ko" in entry or "/overlay.ko." in entry
+    ):
+        return True, "find"
+    return False, "unknown"
+
+
 def shlex_quote(value: str) -> str:
     return "'" + value.replace("'", "'\"'\"'") + "'"
 
@@ -510,18 +535,33 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         payload["modules_dep_references_overlay"] = "kernel/fs/overlayfs/overlay.ko" in modules_dep_text
         payload["modprobe_present_in_initramfs"] = "usr/sbin/modprobe" in effective_entries
         payload["insmod_present_in_initramfs"] = "usr/bin/insmod" in effective_entries
+        (
+            payload["overlay_module_discoverable_in_initramfs"],
+            payload["overlay_module_discovery_method"],
+        ) = overlay_module_discovery(effective_entries, kernel_version, modules_dep_text)
+        payload["fallback_hook_dynamic_path"] = bool(
+            "find_overlay_module()" in overlay_load_hook_text
+            and "/usr/lib/modules/$KERNEL" in overlay_load_hook_text
+            and "overlay_module_path_source" in overlay_load_hook_text
+            and "modules.dep" in overlay_load_hook_text
+            and "find \"$root\"" in overlay_load_hook_text
+            and "insmod \"$OVERLAY_MODULE_PATH\"" in overlay_load_hook_text
+        )
         payload["overlay_load_hook_uses_effective_path"] = (
-            "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" in overlay_load_hook_text
-            and "insmod" in overlay_load_hook_text
+            payload["fallback_hook_dynamic_path"]
+            or (
+                "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" in overlay_load_hook_text
+                and "insmod" in overlay_load_hook_text
+            )
         )
         payload["effective_boot_initramfs_overlay_resolvable"] = bool(
-            payload["overlay_module_effective_path_present"]
+            payload["overlay_module_discoverable_in_initramfs"]
             and payload["modules_dep_effective_path_present"]
             and payload["modules_dep_references_overlay"]
             and payload["modprobe_present_in_initramfs"]
             and payload["insmod_present_in_initramfs"]
             and payload["uinitrd_contains_overlay_load_hook"]
-            and payload["overlay_load_hook_uses_effective_path"]
+            and payload["fallback_hook_dynamic_path"]
         )
         payload["uinitrd_generated_after_initrd_img"] = bool(
             payload["uinitrd_payload_matches_initrd_img"]

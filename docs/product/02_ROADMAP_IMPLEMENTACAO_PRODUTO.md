@@ -213,6 +213,30 @@ nesta coleta. C12.4 continua bloqueado; o proximo passo e
 C12.1.10 reconstruir a imagem com path efetivo de modulo corrigido para o
 layout usr-merged do initramfs.
 
+Atualizacao C12.1.10: 2026-05-08. A imagem-lab foi reconstruida com resolucao
+dinamica do caminho do modulo `overlay`: o hook tenta `/lib/modules`,
+`/usr/lib/modules`, deriva caminho por `modules.dep` e faz fallback por busca,
+sem publicar logs brutos. A validacao offline agora exige
+`overlay_module_discoverable_in_initramfs=true` e
+`fallback_hook_dynamic_path=true`, reconciliando a diferenca entre C12.3.10 e
+C12.3.11. A imagem C12.1.10 tem SHA256
+`c7e3e2af5e2cfa52db0a1cb73141b941a239471940020953d6debfbb0133e4b2`, nao tocou
+placas e nao gravou cartao. C12.2.6 pode gravar a nova imagem; C12.4 segue
+bloqueado ate boot validar read-only real.
+
+Atualizacao C12.3.12: 2026-05-08. A imagem C12.1.10 foi gravada e bootada na
+placa lab, com SSH disponivel e firstboot tecnico concluido. A observacao
+humana foi tela preta. O read-only ainda nao ativou:
+`read_only_enabled=false`, `overlay_active=false`, `root_write_blocked=false` e
+root `ext4`. A correcao dinamica de path entrou no boot:
+`overlay_module_path_found=true`, `overlay_module_path_source=static_fallback`,
+`modprobe_rc=0`, mas `insmod_rc=1`. A nova classificacao e
+`DYNAMIC_PATH_FOUND_INSMOD_FAILED`. Separadamente, a tela preta ficou
+classificada como `CONFIG_MISSING_VISUAL_BLACK_SCREEN_WITH_RENDERER_ACTIVE`,
+pois o SVG publico existe e renderer/MPV estao ativos. C12.4 continua
+bloqueado; proximo passo recomendado: C12.3.13 diagnosticar o erro do `insmod`
+com o path dinamico encontrado.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

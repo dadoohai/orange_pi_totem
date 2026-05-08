@@ -7,7 +7,7 @@ Status:
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `image_version=c12.1.9`
+- `image_version=c12.1.10`
 - `previous_image_superseded=true`
 - `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
@@ -135,6 +135,30 @@ Status:
 - `c12_3_11_cause_category=OVERLAY_MODULE_PATH_MISMATCH`
 - `c12_3_11_next_step=C12_1_10_REBUILD_WITH_EFFECTIVE_MODULE_PATH`
 - `c12_3_11_ready_for_c12_4=false`
+- `c12_1_10_status=passed`
+- `c12_1_10_image_built=true`
+- `c12_1_10_previous_image_c12_1_9_status=blocked_overlay_module_path_mismatch`
+- `c12_1_10_overlay_module_discoverable_in_initramfs=true`
+- `c12_1_10_overlay_module_discovery_method=static`
+- `c12_1_10_fallback_hook_dynamic_path=true`
+- `c12_1_10_modules_dep_references_overlay=true`
+- `c12_1_10_effective_boot_initramfs_overlay_resolvable=true`
+- `c12_1_10_effective_boot_initramfs_valid=true`
+- `c12_1_10_card_written=true`
+- `c12_1_10_boards_touched=true`
+- `ready_for_c12_2_6_card_write=true`
+- `c12_2_6_card_written=true`
+- `c12_2_6_board_booted=true`
+- `c12_3_12_status=blocked`
+- `c12_3_12_boot_success=true`
+- `c12_3_12_ssh_available=true`
+- `c12_3_12_read_only_enabled=false`
+- `c12_3_12_overlay_active=false`
+- `c12_3_12_root_write_blocked=false`
+- `c12_3_12_read_only_failure_category=DYNAMIC_PATH_FOUND_INSMOD_FAILED`
+- `c12_3_12_visual_classification=CONFIG_MISSING_VISUAL_BLACK_SCREEN_WITH_RENDERER_ACTIVE`
+- `c12_3_12_ready_for_c12_4=false`
+- `c12_3_12_next_step=C12.3.13_DYNAMIC_PATH_INSMOD_ERROR_DIAGNOSTICS`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -152,6 +176,7 @@ provisioned board.
 - c12_1_2_build_commit: `aec03bc`
 - c12_1_2_source_head: `aec03bc`
 - c12_1_9_build_commit: `e3bb015`
+- c12_1_10_build_commit: `pending_until_committed`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`
@@ -689,6 +714,74 @@ Resultado:
 - failure_category: `INSMOD_FALLBACK_FAILED`;
 - ready_for_c12_4: `false`;
 - next_step: `C12.3.11_INITRAMFS_INSMOD_FAILURE_DIAGNOSTICS`.
+
+## C12.1.10 Rebuild Overlay Dynamic Path
+
+C12.1.10 foi gerada sem tocar placas e sem gravar cartao. Ela corrige a
+interpretacao C12.3.11 `OVERLAY_MODULE_PATH_MISMATCH` usando resolucao dinamica
+do modulo `overlay` no hook `init-top`: caminhos estaticos em `/lib/modules` e
+`/usr/lib/modules`, derivacao por `modules.dep` e fallback por busca.
+
+- image_version: `c12.1.10`;
+- image_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c12-1-10_minimal.img`;
+- image_sha256:
+  `c7e3e2af5e2cfa52db0a1cb73141b941a239471940020953d6debfbb0133e4b2`;
+- build_log_file:
+  `/home/builder/totem-os/armbian-build-v25.11/output/logs/log-build-184d666e-e1a1-4586-a52b-7f9c54a1945e.log`;
+- package_manifest_file:
+  `releases/image-lab-readonly/package-manifest-c12-1-10.txt`;
+- read_only_integration_manifest_file:
+  `releases/image-lab-readonly/read-only-integration-manifest-c12-1-10.txt`;
+- rootfs_validation_file:
+  `releases/image-lab-readonly/rootfs-validation-c12-1-10.env`;
+- overlay_module_discoverable_in_initramfs: `true`;
+- overlay_module_discovery_method: `static`;
+- fallback_hook_dynamic_path: `true`;
+- modules_dep_references_overlay: `true`;
+- effective_boot_initramfs_overlay_resolvable: `true`;
+- effective_boot_initramfs_valid: `true`;
+- lab_firstboot_autoconfig: `true`;
+- card_written: `false`;
+- boards_touched: `false`;
+- ready_for_c12_2_6_card_write: `true`.
+
+## C12.3.12 Boot Validate C12.1.10
+
+A imagem C12.1.10 foi gravada e bootada na placa lab. A placa ficou acessivel
+por SSH, o firstboot tecnico nao ficou pendente e o produto entrou em
+`config_missing`, esperado sem config real. A observacao humana foi tela preta.
+
+Read-only ainda nao ativou:
+
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- root_fstype: `ext4`.
+
+O hook dinamico entrou no boot:
+
+- overlay_module_path_found: `true`;
+- overlay_module_path_source: `static_fallback`;
+- modprobe_rc: `0`;
+- insmod_rc: `1`;
+- overlay_in_proc_in_initramfs: `false`;
+- overlay_in_proc_after_boot: `true`.
+
+Classificacao read-only:
+
+```text
+DYNAMIC_PATH_FOUND_INSMOD_FAILED
+```
+
+Classificacao visual:
+
+```text
+CONFIG_MISSING_VISUAL_BLACK_SCREEN_WITH_RENDERER_ACTIVE
+```
+
+C12.4 continua bloqueado. O proximo passo recomendado e C12.3.13 para
+diagnosticar a categoria do erro do `insmod` usando o path dinamico encontrado.
 
 ## C12.3.1 Reliability Gate
 

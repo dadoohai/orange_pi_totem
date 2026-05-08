@@ -187,6 +187,7 @@ c12_overlay_module_path_marker=present
 kernel=$KERNEL
 overlay_module_copied=$copied
 expected_path=/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko
+discovery_paths=/lib/modules/$KERNEL,/usr/lib/modules/$KERNEL,modules.dep,find
 MARKER
 EOF
   chmod 0755 /etc/initramfs-tools/hooks/dadooh-c12-overlay-module-path
@@ -208,10 +209,52 @@ contains_overlay() {
   [ -r /proc/filesystems ] && grep -qw overlay /proc/filesystems 2>/dev/null
 }
 
+find_overlay_module() {
+  KERNEL="$(uname -r 2>/dev/null || echo unknown)"
+  OVERLAY_MODULE_PATH=""
+  OVERLAY_MODULE_PATH_SOURCE="unknown"
+
+  for module in \
+    "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" \
+    "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko."* \
+    "/usr/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" \
+    "/usr/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko."*; do
+    [ -f "$module" ] || continue
+    OVERLAY_MODULE_PATH="$module"
+    OVERLAY_MODULE_PATH_SOURCE="static_fallback"
+    return 0
+  done
+
+  for depfile in "/lib/modules/$KERNEL/modules.dep" "/usr/lib/modules/$KERNEL/modules.dep"; do
+    [ -r "$depfile" ] || continue
+    rel="$(grep -E '(^|/)overlay\.ko(\..*)?:' "$depfile" 2>/dev/null | head -n 1 | cut -d: -f1)"
+    [ -n "$rel" ] || continue
+    base="${depfile%/modules.dep}"
+    for module in "$base/$rel" "/lib/modules/$KERNEL/$rel" "/usr/lib/modules/$KERNEL/$rel"; do
+      [ -f "$module" ] || continue
+      OVERLAY_MODULE_PATH="$module"
+      OVERLAY_MODULE_PATH_SOURCE="modules_dep"
+      return 0
+    done
+  done
+
+  for root in "/usr/lib/modules/$KERNEL" "/lib/modules/$KERNEL"; do
+    [ -d "$root" ] || continue
+    module="$(find "$root" -type f \( -name 'overlay.ko' -o -name 'overlay.ko.*' \) 2>/dev/null | head -n 1)"
+    [ -n "$module" ] || continue
+    OVERLAY_MODULE_PATH="$module"
+    OVERLAY_MODULE_PATH_SOURCE="find"
+    return 0
+  done
+
+  return 1
+}
+
 status="not_attempted"
 modprobe_rc="missing"
 insmod_rc="missing"
 overlay_path_found=false
+overlay_path_source="unknown"
 
 if command -v modprobe >/dev/null 2>&1; then
   modprobe overlay >/dev/null 2>&1
@@ -221,19 +264,17 @@ fi
 if contains_overlay; then
   status="loaded_by_modprobe"
 else
-  KERNEL="$(uname -r 2>/dev/null || echo unknown)"
-  for module in "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko" "/lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko."*; do
-    [ -f "$module" ] || continue
+  if find_overlay_module; then
     overlay_path_found=true
+    overlay_path_source="$OVERLAY_MODULE_PATH_SOURCE"
     if command -v insmod >/dev/null 2>&1; then
-      insmod "$module" >/dev/null 2>&1
+      insmod "$OVERLAY_MODULE_PATH" >/dev/null 2>&1
       insmod_rc="$?"
     fi
     if contains_overlay; then
       status="loaded_by_insmod"
-      break
     fi
-  done
+  fi
 fi
 
 if [ "$status" = "not_attempted" ]; then
@@ -250,7 +291,8 @@ cat > "$OUT" <<STATUS
 overlay_load_status=$status
 modprobe_rc=$modprobe_rc
 insmod_rc=$insmod_rc
-overlay_path_found=$overlay_path_found
+overlay_module_path_found=$overlay_path_found
+overlay_module_path_source=$overlay_path_source
 overlay_in_proc=$(contains_overlay && echo true || echo false)
 raw_logs_published=false
 STATUS

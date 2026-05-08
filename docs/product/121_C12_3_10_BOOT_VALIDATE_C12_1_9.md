@@ -109,3 +109,11 @@ OVERLAY_MODULE_PATH_MISMATCH
 No runtime do initramfs, o hook nao conseguiu resolver `overlay.ko` no caminho
 efetivo, entao `insmod` nao chegou a executar nesta coleta. O proximo passo e
 `C12_1_10_REBUILD_WITH_EFFECTIVE_MODULE_PATH`. C12.4 continua bloqueado.
+
+## Atualizacao C12.1.10
+
+A inconsistencia entre C12.3.10 e C12.3.11 foi tratada como diferenca de
+observabilidade do hook. C12.3.10 classificou o fallback como tentado; C12.3.11
+provou que o path nao estava resolvivel na coleta refinada. C12.1.10 corrige
+isso exigindo resolucao dinamica do modulo antes do `insmod`, e a validacao
+offline passa a falhar se o hook nao provar `fallback_hook_dynamic_path=true`.

@@ -520,6 +520,9 @@ collect_artifacts() {
     printf 'modules_dep_references_overlay=%s\n' "$modules_dep_references_overlay"
     printf 'modprobe_present_in_initramfs=%s\n' "$modprobe_present_in_initramfs"
     printf 'insmod_present_in_initramfs=%s\n' "$insmod_present_in_initramfs"
+    printf 'overlay_module_discoverable_in_initramfs=%s\n' "$overlay_module_discoverable_in_initramfs"
+    printf 'overlay_module_discovery_method=%s\n' "$overlay_module_discovery_method"
+    printf 'fallback_hook_dynamic_path=%s\n' "$fallback_hook_dynamic_path"
     printf 'overlay_load_hook_uses_effective_path=%s\n' "$overlay_load_hook_uses_effective_path"
     printf 'effective_boot_initramfs_overlay_resolvable=%s\n' "$effective_boot_initramfs_overlay_resolvable"
     printf 'firstboot_gate_included=true\n'
