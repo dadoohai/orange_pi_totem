@@ -172,6 +172,18 @@ Esse diagnostico deve focar em por que `modprobe overlay` retorna zero e
 `insmod overlay.ko` retorna nonzero no initramfs, mesmo com modulo real e
 metadata coerente.
 
+Atualizacao C12.3.15: o hook temporario confirmou que o modulo esta presente e
+nao vazio no initramfs, mas `modprobe overlay` retorna zero sem registrar
+`overlay` em `/proc/filesystems`, e `insmod overlay.ko` retorna nonzero sem
+stderr/dmesg categorizavel. A classificacao atual e:
+
+```text
+INITRAMFS_MODULE_LOADING_UNSUPPORTED
+```
+
+Com isso, C12.1.11 nao deve ser iniciado como rebuild simples de empacotamento.
+O proximo passo e reabrir a decisao do mecanismo read-only.
+
 ## Status
 
 - `read_only_validated=false`;
@@ -179,4 +191,3 @@ metadata coerente.
 - `ready_for_c12_1_11_rebuild=false`;
 - `read_only_mechanism_still_blocked=true`;
 - `next_decision_required=true`.
-

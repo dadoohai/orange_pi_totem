@@ -861,6 +861,64 @@ Status:
 - read_only_mechanism_still_blocked: `true`;
 - next_step: `C12.3.15_INITRAMFS_LOAD_FAILURE_WITH_NONEMPTY_MODULE`.
 
+## C12.3.15 Initramfs Overlay Load Failure
+
+C12.3.15 instalou um hook temporario de diagnostico no initramfs, executou um
+reboot controlado, coletou apenas categorias sanitizadas e fez rollback.
+
+Inspect antes do hook:
+
+- overlay_ko_nonempty_uinitrd: `true`;
+- modules_dep_references_overlay_uinitrd: `true`;
+- modinfo_vermagic_match: `true`;
+- dependencies_present_in_uinitrd: `not_applicable`.
+
+Resultado no initramfs:
+
+- proc_mounted: `true`;
+- overlay_ko_exists: `true`;
+- overlay_ko_nonempty: `true`;
+- overlay_ko_file_type: `plain_ko`;
+- module_path_kernel_matches: `true`;
+- modprobe_result: `zero`;
+- overlay_in_proc_after_modprobe: `false`;
+- insmod_result: `nonzero`;
+- insmod_error_category: `unknown`;
+- dmesg_category: `no_message`;
+- overlay_in_proc_after_insmod: `false`;
+- mount_overlay_result: `not_attempted`.
+
+Estado apos reboot:
+
+- ssh_returned: `true`;
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- root_fstype: `ext4`;
+- public_state: `config_missing`;
+- systemctl_failed_count: `0`.
+
+Rollback:
+
+- rollback_executed: `true`;
+- diagnostic_hook_present_after: `false`;
+- update_initramfs_exit_code_bucket: `zero`;
+- uinitrd_regenerated: `true`.
+
+Classificacao:
+
+```text
+INITRAMFS_MODULE_LOADING_UNSUPPORTED
+```
+
+Status:
+
+- read_only_validated: `false`;
+- ready_for_c12_4: `false`;
+- ready_for_c12_1_11_rebuild: `false`;
+- read_only_overlayroot_path_blocked: `true`;
+- next_step: `ADR_UPDATE_READONLY_MECHANISM_DECISION`.
+
 ## C12.3.1 Reliability Gate
 
 C12.3 boot validation is blocked. The first image-lab boot proved that Dadooh

@@ -131,6 +131,16 @@ Portanto, nao basta gerar C12.1.11 apenas com correcao de empacotamento. O
 proximo passo recomendado e diagnosticar a falha de carregamento com modulo nao
 vazio.
 
+Atualizacao C12.3.15: o diagnostico com modulo nao vazio classificou a falha
+como:
+
+```text
+INITRAMFS_MODULE_LOADING_UNSUPPORTED
+```
+
+A linha `overlayroot` via modulo carregado no initramfs fica bloqueada ate nova
+decisao de mecanismo/kernel/base.
+
 Visual:
 
 ```text

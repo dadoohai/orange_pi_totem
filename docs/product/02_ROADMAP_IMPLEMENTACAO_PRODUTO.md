@@ -2280,3 +2280,13 @@ A classificacao atual e
 `OVERLAY_MODULE_PACKAGING_FIXED_BUT_LOAD_STILL_FAILS`. C12.4 segue bloqueado, e
 o proximo passo recomendado e diagnosticar a falha de carregamento com modulo
 nao vazio antes de qualquer rebuild C12.1.11.
+
+Atualizacao C12.3.15: 2026-05-08. O hook temporario confirmou que o modulo
+`overlay` real esta presente e nao vazio no initramfs, sem dependencias
+declaradas e com `vermagic` compativel no ambiente pos-boot. No runtime do
+initramfs, `modprobe overlay` retorna zero mas nao registra `overlay` em
+`/proc/filesystems`, e `insmod overlay.ko` retorna nonzero sem stderr/dmesg
+categorizavel. Root segue `ext4` gravavel e `systemctl_failed_count=0`.
+Classificacao: `INITRAMFS_MODULE_LOADING_UNSUPPORTED`. C12.4 e C12.1.11 ficam
+bloqueados; o proximo passo e reabrir a decisao do mecanismo read-only em ADR,
+avaliando kernel/base com overlay built-in ou mecanismo alternativo.
