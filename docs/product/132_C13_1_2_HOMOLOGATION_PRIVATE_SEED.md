@@ -127,6 +127,10 @@ ready_for_c13_1_2_private_image_build=true
 c12_4_blocked=true
 ```
 
+C13.1.3 gerou a imagem privada de homologacao com a seed embutida e validacao
+offline passada. A imagem e artefato privado descartavel, nao final e nao
+distribuivel.
+
 ## Revogacao
 
 Para revogar ou substituir a chave temporaria:

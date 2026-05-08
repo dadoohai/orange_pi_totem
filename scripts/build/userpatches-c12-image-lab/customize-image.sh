@@ -204,6 +204,38 @@ diagnostic_initramfs_hooks_present=false
 EOF
   chmod 0644 /etc/dadooh/c12-overlayfs-kernel-policy
 
+  log "disabling Debian backports apt suite for image-lab build stability"
+  if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+    python3 - <<'PY'
+from pathlib import Path
+
+path = Path("/etc/apt/sources.list.d/debian.sources")
+lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+out = []
+changed = False
+for line in lines:
+    if line.startswith("Suites:"):
+        head, values = line.split(":", 1)
+        suites = [suite for suite in values.split() if suite != "bookworm-backports"]
+        new_line = f"{head}: {' '.join(suites)}"
+        changed = changed or new_line != line
+        out.append(new_line)
+    else:
+        out.append(line)
+path.write_text("\n".join(out) + "\n", encoding="utf-8")
+marker = Path("/etc/dadooh/c13-homologation-build-apt-policy")
+marker.write_text(
+    "debian_backports_disabled_for_image_lab_build=true\n"
+    "reason=avoid_qemu_chroot_apt_memory_error\n"
+    "final_image=false\n",
+    encoding="utf-8",
+)
+marker.chmod(0o644)
+if not changed:
+    raise SystemExit("debian_backports_suite_not_found")
+PY
+  fi
+
   log "recording lab firstboot bootstrap state"
   rm -f "$lab_firstboot_marker"
   if test -s /root/.not_logged_in_yet &&

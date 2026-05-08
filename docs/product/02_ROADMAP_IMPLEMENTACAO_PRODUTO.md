@@ -2350,3 +2350,17 @@ fora do repo: `writer_called=true`, `real_config_written=true`,
 imagem privada de homologacao ainda nao foi gerada neste commit; status:
 `ready_for_c13_1_2_private_image_build=true`, `final_image=false`,
 `artifact_private=true`, `c12_4_blocked=true`.
+
+Atualizacao C13.1.3: 2026-05-08. Foi gerada a imagem privada de homologacao
+`Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c13-1-3-homolog-private_minimal.img`,
+com SHA256
+`3a76d51880d944fe5430782ad2cf84866573c219cdf6a719c004e38c5c2fe6eb`.
+A seed privada foi embutida somente no artefato privado, em
+`/data/state/totem-settings/private-values.seed.json`, com modo `0600`, sem
+publicar conteudo. `totem-open-settings.service` nao depende mais de arquivo
+manual em `/tmp` para homologacao; a policy runtime vem da seed aprovada. A
+validacao offline passou com `artifact_private=true`, `final_image=false`,
+`not_for_production=true`, `not_for_distribution=true`,
+`tmp_private_values_dependency=false`, `card_written=false`,
+`boards_touched=false` e `ready_for_multi_card_homologation=true`. C12
+read-only e C12.4 continuam bloqueados.

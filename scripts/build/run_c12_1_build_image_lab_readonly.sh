@@ -309,7 +309,7 @@ payload = {
     "artifact_private_from_homologation_seed": "true",
     "homologation_seed_source_outside_repo": "true",
     "homologation_seed_permissions_ok": "true",
-    "homologation_seed_required_categories_present": "api_key,api_url",
+    "homologation_seed_required_categories_present": "true",
     "homologation_seed_embedded_path": "/data/state/totem-settings/private-values.seed.json",
     "homologation_seed_content_published": "false",
     "final_image": "false",

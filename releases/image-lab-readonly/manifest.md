@@ -1,13 +1,13 @@
 # Image Lab Read-only Manifest
 
-Data: 2026-05-06
+Data: 2026-05-08
 
 Status:
 
 - `image_lab_readonly=true`
 - `final_image=false`
 - `image_built=true`
-- `image_version=c12.1.12`
+- `image_version=c13.1.3`
 - `previous_image_superseded=true`
 - `card_written=false`
 - `card_write_tool=Armbian Imager Windows`
@@ -281,6 +281,32 @@ Status:
 - `c13_1_2_power_cut_tested=false`
 - `c13_1_2_apt_upgrade_executed=false`
 - `c13_1_2_secrets_published=false`
+- `c13_1_3_status=passed`
+- `c13_1_3_image_built=true`
+- `c13_1_3_image_file=/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c13-1-3-homolog-private_minimal.img`
+- `c13_1_3_sha256=3a76d51880d944fe5430782ad2cf84866573c219cdf6a719c004e38c5c2fe6eb`
+- `c13_1_3_artifact_private=true`
+- `c13_1_3_final_image=false`
+- `c13_1_3_not_for_production=true`
+- `c13_1_3_not_for_distribution=true`
+- `c13_1_3_homologation_private_values_embedded=true`
+- `c13_1_3_seed_source_outside_repo=true`
+- `c13_1_3_seed_permissions_ok=true`
+- `c13_1_3_seed_content_published=false`
+- `c13_1_3_seed_embedded_path=/data/state/totem-settings/private-values.seed.json`
+- `c13_1_3_tmp_private_values_dependency=false`
+- `c13_1_3_lab_firstboot_mode=private_disposable_lab`
+- `c13_1_3_ready_for_multi_card_homologation=true`
+- `c13_1_3_card_written=false`
+- `c13_1_3_boards_touched=false`
+- `c13_1_3_ssh_used=false`
+- `c13_1_3_writer_called=false`
+- `c13_1_3_poweroff_executed=false`
+- `c13_1_3_power_cut_tested=false`
+- `c13_1_3_apt_upgrade_executed=false`
+- `c13_1_3_secrets_published=false`
+- `c13_1_3_private_artifact_distribution_allowed=false`
+- `c13_1_3_c12_readonly_blocked=true`
 - `ready_for_c11_4=false`
 
 ## Purpose

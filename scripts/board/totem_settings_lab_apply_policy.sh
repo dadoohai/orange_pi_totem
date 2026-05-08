@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MODE="status"
-PRIVATE_VALUES="/tmp/dadooh-c13-1-1-private/private-values.json"
+PRIVATE_VALUES="/tmp/dadooh-settings-private/private-values.json"
 HOMOLOGATION_SEED="/data/state/totem-settings/private-values.seed.json"
 REQUEST_DIR="/run/dadooh-settings"
 POLICY_PATH="/run/dadooh-settings/apply-policy.json"
@@ -142,7 +142,7 @@ for field in ("station_id", "environment_id"):
         raise SystemExit("private_values_optional_category_invalid")
 print("private_values_valid=true")
 print(f"private_values_context={context}")
-print(f"private_values_required_categories_present={','.join(required)}")
+print("private_values_required_categories_present=true")
 print("private_values_values_published=false")
 PY
 }
