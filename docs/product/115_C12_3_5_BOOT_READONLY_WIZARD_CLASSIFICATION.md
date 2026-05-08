@@ -122,3 +122,19 @@ ambigua.
 O blocker real continua sendo a nao ativacao do read-only/overlay. O proximo
 passo deve diagnosticar por que o initramfs valido com overlayroot e marker
 C12.1.8 ainda resulta em root `ext4 rw` no boot.
+
+## Atualizacao C12.3.6
+
+C12.3.6 usou a propria placa C12.1.8 como laboratorio runtime. `H1` mostrou que
+faltava `overlayroot=tmpfs` no cmdline/`extraargs`; apos isso o hook passou a
+rodar. `H2` regenerou `initramfs` e `uInitrd`, mas o root continuou `ext4 rw`.
+
+A causa ficou classificada como:
+
+```text
+OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME
+```
+
+O modulo `overlay` existe depois do boot normal, mas nao fica disponivel como
+filesystem no momento em que `overlayroot` roda dentro do initramfs. C12.4 segue
+bloqueado.

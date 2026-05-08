@@ -140,6 +140,17 @@ writer e voltou para `config_missing`, classificado como
 overlayfs e marker C12.1.8, e de o boot script em `/boot` referenciar
 `uInitrd`. C12.4 segue bloqueado.
 
+Atualizacao C12.3.6: 2026-05-08. A placa C12.1.8 foi usada como laboratorio
+runtime descartavel para evitar rebuild por hipotese. H1 adicionou
+`overlayroot=tmpfs` ao `extraargs` e provou que o hook passa a rodar quando o
+parametro chega ao cmdline. H2 regenerou `initramfs` e `uInitrd`, mas o root
+continua `ext4 rw`. A causa ficou classificada como
+`OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`: no initramfs, o script do
+`overlayroot` carrega o modulo, mas `overlay` nao aparece em
+`/proc/filesystems` naquele momento. C12.1.9 deve corrigir a imagem/base para
+precarregar/registrar o driver `overlay` no initramfs e manter
+`overlayroot=tmpfs` no boot args. C12.4 segue bloqueado.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.

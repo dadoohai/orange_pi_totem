@@ -83,6 +83,12 @@ Status:
 - `c12_3_5_wizard_result=CANDIDATE_ONLY_EXPECTED_WITHOUT_PRIVATE_VALUES`
 - `c12_3_5_ux=UX_AMBIGUOUS_CANDIDATE_ONLY`
 - `c12_3_5_blocker=IMAGE_LAB_READ_ONLY_NOT_ACTIVE`
+- `c12_3_6_status=blocked`
+- `c12_3_6_hypotheses_tested=H1,H2`
+- `c12_3_6_winning_hypothesis=none`
+- `c12_3_6_cause_category=OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`
+- `c12_3_6_rollback_available=true`
+- `ready_for_c12_1_9_rebuild=true`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -472,6 +478,27 @@ IMAGE_LAB_READ_ONLY_NOT_ACTIVE
 
 C12.4 permanece bloqueado. O proximo passo deve diagnosticar por que o
 initramfs efetivo com overlayroot nao resulta em root overlay/read-only no boot.
+
+## C12.3.6 Overlayroot Runtime Lab
+
+A placa com C12.1.8 foi usada como laboratorio descartavel de runtime/boot.
+Duas hipoteses foram testadas com backup e rollback:
+
+- `H1`: adicionar `overlayroot=tmpfs` ao `extraargs`;
+- `H2`: regenerar `initramfs` e `uInitrd` localmente.
+
+`H1` fez o parametro chegar ao cmdline e o hook `overlayroot` passou a rodar.
+`H2` executou `update-initramfs` com sucesso, mas nao ativou overlay.
+
+Resultado:
+
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- systemctl_failed_count: `0`;
+- rollback_available: `true`;
+- cause_category: `OVERLAY_DRIVER_UNAVAILABLE_IN_INITRAMFS_RUNTIME`;
+- next_step: `C12.1.9 rebuild with overlay driver available in initramfs`.
 
 ## C12.3.1 Reliability Gate
 

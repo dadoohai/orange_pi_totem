@@ -12,8 +12,16 @@ RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
 CONFIG_NAME="c12-image-lab-readonly"
-IMAGE_VERSION="${C12_IMAGE_VERSION:-c12.1.8}"
-IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-${IMAGE_VERSION//./-}}"
+IMAGE_TAG="${C12_IMAGE_TAG:-}"
+IMAGE_VERSION="${C12_IMAGE_VERSION:-${IMAGE_TAG//-/.}}"
+if [ -z "$IMAGE_VERSION" ]; then
+  IMAGE_VERSION="c12.1.8"
+fi
+if [ -n "$IMAGE_TAG" ]; then
+  IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-$IMAGE_TAG}"
+else
+  IMAGE_SUFFIX_MARKER="${C12_IMAGE_SUFFIX_MARKER:-c12-ro-lab-${IMAGE_VERSION//./-}}"
+fi
 EXPECTED_ARMBIAN_REF="e172058"
 EXPECTED_KIOSKY_COMMIT="c71318a64c08e47b8426f1388b95f21364d57123"
 
@@ -44,6 +52,10 @@ Environment:
       C12.1.4+ board-validation images.
   C12_IMAGE_VERSION=c12.1.8
       Image-lab version marker used in artifact names and manifests.
+  C12_IMAGE_TAG=c12-1-9
+      Explicit artifact tag required for new builds. The script refuses to
+      build when this is absent, and refuses to overwrite an existing image
+      whose name already contains the resolved tag.
 
 Rules:
   - local build only;
@@ -134,6 +146,37 @@ check_kiosky_player() {
   if [ -n "$status" ]; then
     echo "error: kiosky-player tree is dirty; refusing to embed it" >&2
     echo "blocker=kiosky_player_dirty" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+}
+
+require_explicit_image_tag() {
+  if [ -z "$IMAGE_TAG" ]; then
+    echo "error: C12_IMAGE_TAG is required for image builds, for example C12_IMAGE_TAG=c12-1-9" >&2
+    echo "blocker=c12_image_tag_missing" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  case "$IMAGE_TAG" in
+    *[!A-Za-z0-9._-]*)
+      echo "error: C12_IMAGE_TAG contains unsupported characters" >&2
+      echo "blocker=c12_image_tag_invalid" > "$OUT_DIR/blocker.env"
+      exit 1
+      ;;
+  esac
+}
+
+ensure_image_tag_available() {
+  require_explicit_image_tag
+  local existing
+  existing="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name "*$IMAGE_SUFFIX_MARKER*.img" -print -quit 2>/dev/null || true)"
+  if [ -n "$existing" ]; then
+    echo "error: image artifact already exists for tag $IMAGE_TAG" >&2
+    echo "blocker=c12_image_tag_already_exists" > "$OUT_DIR/blocker.env"
+    {
+      printf 'image_tag=%s\n' "$IMAGE_TAG"
+      printf 'image_suffix_marker=%s\n' "$IMAGE_SUFFIX_MARKER"
+      printf 'existing_image=%s\n' "$existing"
+    } > "$OUT_DIR/image-tag-conflict.env"
     exit 1
   fi
 }
@@ -331,6 +374,7 @@ PY
 }
 
 prepare_userpatches() {
+  require_explicit_image_tag
   check_armbian_build
   check_kiosky_player
   install -m 0644 "$USERPATCHES_TEMPLATE/config-c12-image-lab-readonly.conf" \
@@ -368,6 +412,7 @@ PY
 
 build_image() {
   prepare_userpatches
+  ensure_image_tag_available
   local before_file="$OUT_DIR/images-before.txt"
   local after_file="$OUT_DIR/images-after.txt"
   find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -printf '%T@ %p\n' 2>/dev/null | sort > "$before_file" || true
@@ -383,6 +428,7 @@ build_image() {
 }
 
 collect_artifacts() {
+  require_explicit_image_tag
   check_armbian_build
   local image
   image="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name "*$IMAGE_SUFFIX_MARKER*.img" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
