@@ -95,3 +95,17 @@ initramfs, sem logs brutos. Exemplos de categorias esperadas:
 - `read_only_validated=false`;
 - `c12_4_blocked=true`;
 - `next_step=C12.3.11_INITRAMFS_INSMOD_FAILURE_DIAGNOSTICS`.
+
+## Atualizacao C12.3.11
+
+C12.3.11 instalou hook temporario de diagnostico no initramfs com backup,
+reboot controlado e rollback. A classificacao foi refinada de
+`INSMOD_FALLBACK_FAILED` para:
+
+```text
+OVERLAY_MODULE_PATH_MISMATCH
+```
+
+No runtime do initramfs, o hook nao conseguiu resolver `overlay.ko` no caminho
+efetivo, entao `insmod` nao chegou a executar nesta coleta. O proximo passo e
+`C12_1_10_REBUILD_WITH_EFFECTIVE_MODULE_PATH`. C12.4 continua bloqueado.

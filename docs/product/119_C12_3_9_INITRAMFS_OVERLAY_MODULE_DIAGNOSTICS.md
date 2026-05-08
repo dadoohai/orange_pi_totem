@@ -92,6 +92,23 @@ provou:
 C12.2.5 pode gravar a imagem C12.1.9. C12.4 segue bloqueado ate a validacao em
 placa provar read-only real.
 
+## Atualizacao C12.3.11
+
+A C12.1.9 foi bootada e C12.3.10 mostrou que o fallback `insmod` nao ativou
+`overlay`. C12.3.11 refinou a causa: no runtime do initramfs, `overlay.ko` nao
+ficou resolvivel no caminho efetivo usado pelo hook, portanto `insmod` nao foi
+tentado nesta coleta.
+
+Classificacao atual:
+
+```text
+OVERLAY_MODULE_PATH_MISMATCH
+```
+
+O proximo rebuild deve corrigir explicitamente o path efetivo do modulo no
+initramfs, considerando o layout usr-merged (`/lib -> usr/lib`) e validando que
+o hook consegue resolver o arquivo antes do `overlayroot` rodar.
+
 ## Status
 
 - `diagnostic_hook_installed=true`

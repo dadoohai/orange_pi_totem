@@ -127,6 +127,14 @@ Status:
 - `c12_3_10_failure_category=INSMOD_FALLBACK_FAILED`
 - `c12_3_10_ready_for_c12_4=false`
 - `c12_3_10_next_step=C12.3.11_INITRAMFS_INSMOD_FAILURE_DIAGNOSTICS`
+- `c12_3_11_status=passed`
+- `c12_3_11_diagnostic_hook_installed=true`
+- `c12_3_11_reboot_executed=true`
+- `c12_3_11_ssh_returned=true`
+- `c12_3_11_rollback_executed=true`
+- `c12_3_11_cause_category=OVERLAY_MODULE_PATH_MISMATCH`
+- `c12_3_11_next_step=C12_1_10_REBUILD_WITH_EFFECTIVE_MODULE_PATH`
+- `c12_3_11_ready_for_c12_4=false`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -143,7 +151,7 @@ provisioned board.
 - c12_1_build_commit: `f07ff65`
 - c12_1_2_build_commit: `aec03bc`
 - c12_1_2_source_head: `aec03bc`
-- c12_1_9_build_commit: `pending_until_committed`
+- c12_1_9_build_commit: `e3bb015`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`

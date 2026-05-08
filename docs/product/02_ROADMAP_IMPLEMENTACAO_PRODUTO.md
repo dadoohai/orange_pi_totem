@@ -204,6 +204,15 @@ fallback `insmod` foi tentado, mas retornou nonzero no initramfs. C12.4 continua
 bloqueado; proximo passo recomendado: C12.3.11 diagnosticar a falha do `insmod`
 sem logs brutos.
 
+Atualizacao C12.3.11: 2026-05-08. C12.3.11 instalou hook temporario de
+diagnostico no initramfs com backup, reboot controlado e rollback. O SSH voltou
+e o hook foi removido ao final. A classificacao foi refinada para
+`OVERLAY_MODULE_PATH_MISMATCH`: no runtime do initramfs, `overlay.ko` nao ficou
+resolvivel no caminho efetivo usado pelo hook, entao o `insmod` nao foi tentado
+nesta coleta. C12.4 continua bloqueado; o proximo passo e
+C12.1.10 reconstruir a imagem com path efetivo de modulo corrigido para o
+layout usr-merged do initramfs.
+
 Atualizacao C6.5: 2026-05-02. C6.3A e C6.4 estao concluidos como
 desenvolvimento; C6.5 consolida o marco config real + `player_running`; testes
 longos foram movidos para fila de homologacao separada.
