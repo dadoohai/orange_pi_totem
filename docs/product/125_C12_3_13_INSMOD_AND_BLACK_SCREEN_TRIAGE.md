@@ -112,11 +112,24 @@ Depois da coleta:
 Read-only:
 
 ```text
-C12.1.11_REBUILD_WITH_NONEMPTY_OVERLAY_MODULE_AND_COHERENT_MODULES_DEP
+C12.3.14_OVERLAY_MODULE_PACKAGING_LAB
 ```
 
-O build deve provar offline que o `overlay.ko` efetivo no initramfs nao esta
-vazio e que `modules.dep` referencia `overlay` no mesmo layout que o boot usa.
+C12.3.14 foi escolhida antes de um novo build completo para validar a hipotese
+diretamente na placa image-lab descartavel.
+
+Atualizacao C12.3.14: H1 (`manual_add_modules overlay`) e H2 (copia explicita
+dinamica do modulo real e metadata) produziram `overlay.ko` nao vazio e
+`modules.dep` coerente no initramfs, mas o boot continuou sem read-only. A
+classificacao atual passa a ser:
+
+```text
+OVERLAY_MODULE_PACKAGING_FIXED_BUT_LOAD_STILL_FAILS
+```
+
+Portanto, nao basta gerar C12.1.11 apenas com correcao de empacotamento. O
+proximo passo recomendado e diagnosticar a falha de carregamento com modulo nao
+vazio.
 
 Visual:
 

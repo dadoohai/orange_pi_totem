@@ -799,6 +799,68 @@ CONFIG_MISSING_VISUAL_BLACK_SCREEN_WITH_RENDERER_ACTIVE
 C12.4 continua bloqueado. O proximo passo recomendado e C12.3.13 para
 diagnosticar a categoria do erro do `insmod` usando o path dinamico encontrado.
 
+## C12.3.13 Insmod And Black Screen Triage
+
+C12.3.13 instalou um hook temporario de diagnostico no initramfs, executou um
+reboot controlado e fez rollback. A tela preta foi depois reclassificada pelo
+operador como problema de hardware da tela, sem patch visual obrigatorio.
+
+Read-only continuou bloqueado:
+
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`.
+
+Classificacao C12.3.13:
+
+```text
+OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS
+```
+
+Proximo passo escolhido: C12.3.14 em laboratorio runtime, antes de um novo
+build completo.
+
+## C12.3.14 Overlay Module Packaging Lab
+
+C12.3.14 testou duas hipoteses na placa lab descartavel:
+
+- H1: `manual_add_modules overlay`;
+- H2: copia explicita dinamica do modulo real e metadata.
+
+Ambas passaram na validacao pre-boot:
+
+- overlay_module_nonempty_in_initramfs: `true`;
+- modules_dep_references_overlay: `true`;
+- uinitrd_regenerated: `true`;
+- preboot_validation_passed: `true`.
+
+Ambas falharam no runtime apos reboot:
+
+- ssh_returned: `true`;
+- public_state: `config_missing`;
+- systemctl_failed_count: `0`;
+- read_only_enabled: `false`;
+- overlay_active: `false`;
+- root_write_blocked: `false`;
+- root_fstype: `ext4`.
+
+Rollback foi executado depois de cada hipotese. Nao houve writer, config real,
+Wi-Fi, pacotes, poweroff ou corte seco.
+
+Classificacao atual:
+
+```text
+OVERLAY_MODULE_PACKAGING_FIXED_BUT_LOAD_STILL_FAILS
+```
+
+Status:
+
+- read_only_validated: `false`;
+- ready_for_c12_4: `false`;
+- ready_for_c12_1_11_rebuild: `false`;
+- read_only_mechanism_still_blocked: `true`;
+- next_step: `C12.3.15_INITRAMFS_LOAD_FAILURE_WITH_NONEMPTY_MODULE`.
+
 ## C12.3.1 Reliability Gate
 
 C12.3 boot validation is blocked. The first image-lab boot proved that Dadooh

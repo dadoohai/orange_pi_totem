@@ -2267,3 +2267,16 @@ referenciava `overlay`. A tela preta `config_missing` foi observada durante o
 diagnostico, mas depois foi identificada pelo operador como problema de hardware
 da tela e resolvida fora do software. C12.4 permanece bloqueado pelo read-only;
 o proximo passo e C12.1.11 para rebuild do modulo overlay no initramfs.
+
+Atualizacao C12.3.14: 2026-05-08. Antes de novo build completo, a placa lab
+descartavel foi usada para testar empacotamento real do modulo `overlay` no
+initramfs. H1 (`manual_add_modules overlay`) e H2 (copia explicita dinamica do
+modulo real e metadata) passaram na validacao pre-boot:
+`overlay_module_nonempty_in_initramfs=true`,
+`modules_dep_references_overlay=true` e `uinitrd_regenerated=true`. Ambas
+falharam apos reboot: `read_only_enabled=false`, `overlay_active=false`,
+`root_write_blocked=false`, root `ext4`. Rollback foi executado em cada ciclo.
+A classificacao atual e
+`OVERLAY_MODULE_PACKAGING_FIXED_BUT_LOAD_STILL_FAILS`. C12.4 segue bloqueado, e
+o proximo passo recomendado e diagnosticar a falha de carregamento com modulo
+nao vazio antes de qualquer rebuild C12.1.11.
