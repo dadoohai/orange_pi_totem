@@ -2335,3 +2335,18 @@ marcador de persistencia foi criado e nenhum reboot foi executado. C12.4
 continua bloqueado; o proximo passo e diagnosticar o fluxo
 `overlayroot`/initramfs/boot com overlayfs built-in, nao voltar para a linha de
 modulo `overlay.ko`.
+
+Atualizacao C13.1.2: 2026-05-08. Sem reabrir a frente read-only, foi adicionado
+suporte a seed privada de homologacao para imagem-lab privada. O build agora
+aceita `C13_EMBED_HOMOLOG_PRIVATE_VALUES=1`,
+`C13_HOMOLOG_PRIVATE_VALUES=<arquivo fora do repo>` e
+`C13_CONFIRM_PRIVATE_HOMOLOG_IMAGE=1`, validando permissao/categorias sem
+publicar valores e instalando a seed em
+`/data/state/totem-settings/private-values.seed.json` com modo `0600`. O F10
+passa a ativar automaticamente policy real-write quando a seed existe; sem seed,
+permanece candidate-only. O hotfix foi validado na placa lab com seed privada
+fora do repo: `writer_called=true`, `real_config_written=true`,
+`public_state=player_running` e `playback=playing`, sem publicar segredos. A
+imagem privada de homologacao ainda nao foi gerada neste commit; status:
+`ready_for_c13_1_2_private_image_build=true`, `final_image=false`,
+`artifact_private=true`, `c12_4_blocked=true`.

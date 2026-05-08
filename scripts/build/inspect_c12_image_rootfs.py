@@ -131,6 +131,14 @@ class DebugFs:
         match = re.search(r"\bSize:\s+(\d+)", stat)
         return int(match.group(1)) if match else -1
 
+    def file_mode_octal(self, path: str) -> str:
+        stat = self.stat(path)
+        match = re.search(r"\bMode:\s+([0-7]+)", stat)
+        if not match:
+            return "missing"
+        raw = match.group(1)
+        return raw[-4:].zfill(4)
+
     def symlink_target(self, path: str) -> str:
         stat = self.stat(path)
         match = re.search(r'Fast link dest:\s+"([^"]+)"', stat)
@@ -362,6 +370,9 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             "armbian_firstrun_enabled": "/etc/systemd/system/multi-user.target.wants/armbian-firstrun.service",
             "overlayroot_conf_present": "/etc/overlayroot.conf",
             "integration_json_present": "/data/state/totem-read-only-image-lab/integration.json",
+            "homologation_seed_present": "/data/state/totem-settings/private-values.seed.json",
+            "homologation_seed_marker_present": "/data/state/totem-settings/homologation-seed.enabled",
+            "homologation_seed_policy_file_present": "/etc/dadooh/c13-homologation-private-seed",
         }
         for key, path in paths.items():
             payload[key] = debug.exists(path)
@@ -374,6 +385,7 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         lab_unit = debug.dump("/etc/systemd/system/totem-lab-firstboot-autoconfig.service")
         integration_text = debug.dump("/data/state/totem-read-only-image-lab/integration.json")
         lab_firstboot_mode_text = debug.dump("/etc/dadooh/c12-lab-firstboot-mode")
+        homologation_seed_policy_text = debug.dump("/etc/dadooh/c13-homologation-private-seed")
         overlayroot_conf = debug.dump("/etc/overlayroot.conf")
         boot_cmd = debug.dump("/boot/boot.cmd")
         lab_firstboot_mode_env = parse_simple_env(lab_firstboot_mode_text)
@@ -391,6 +403,45 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
             lab_firstboot_mode_env.get("ready_for_c12_3_boot_ssh_validation") == "true"
         )
         payload["require_manual_firstboot"] = lab_firstboot_mode_env.get("require_manual_firstboot") == "true"
+
+        homologation_seed_env = parse_simple_env(homologation_seed_policy_text)
+        payload["homologation_private_values_embedded"] = bool(payload.get("homologation_seed_present"))
+        payload["homologation_private_seed_enabled"] = bool(
+            payload.get("homologation_seed_marker_present")
+            and homologation_seed_env.get("homologation_private_seed_enabled", "false") == "true"
+        )
+        payload["homologation_seed_embedded_path"] = "/data/state/totem-settings/private-values.seed.json"
+        payload["homologation_seed_mode"] = debug.file_mode_octal(
+            "/data/state/totem-settings/private-values.seed.json"
+        )
+        payload["homologation_seed_parent_mode"] = debug.file_mode_octal("/data/state/totem-settings")
+        payload["homologation_seed_mode_0600"] = payload["homologation_seed_mode"] == "0600"
+        payload["homologation_seed_parent_private"] = payload["homologation_seed_parent_mode"] == "0700"
+        payload["homologation_seed_content_published"] = False
+        payload["homologation_seed_source_outside_repo"] = (
+            homologation_seed_env.get("homologation_seed_source_outside_repo", "false") == "true"
+        )
+        payload["homologation_seed_permissions_ok"] = bool(
+            payload["homologation_seed_mode_0600"]
+            and payload["homologation_seed_parent_private"]
+            and homologation_seed_env.get("homologation_seed_permissions_ok", "false") == "true"
+        )
+        seed_text = (
+            debug.dump("/data/state/totem-settings/private-values.seed.json", private=True)
+            if payload.get("homologation_seed_present")
+            else ""
+        )
+        seed_required_categories_present = False
+        if seed_text:
+            try:
+                seed_data = json.loads(seed_text)
+                seed_required_categories_present = all(
+                    isinstance(seed_data.get(key), str) and bool(seed_data.get(key).strip())
+                    for key in ("api_key", "api_url")
+                )
+            except json.JSONDecodeError:
+                seed_required_categories_present = False
+        payload["homologation_seed_required_categories_present"] = seed_required_categories_present
 
         payload["gate_expected_path_matches"] = (
             'MARKER="/root/.not_logged_in_yet"' in gate_script
@@ -669,6 +720,14 @@ def inspect(args: argparse.Namespace) -> dict[str, object]:
         )
         payload["integration_lab_firstboot_mode"] = integration.get("lab_firstboot_mode", "unknown")
         payload["integration_artifact_private"] = bool(integration.get("artifact_private"))
+        payload["integration_homologation_private_values_embedded"] = bool(
+            integration.get("homologation_private_values_embedded")
+        )
+        payload["integration_homologation_seed_content_published"] = bool(
+            integration.get("homologation_seed_content_published")
+        )
+        payload["integration_not_for_production"] = bool(integration.get("not_for_production"))
+        payload["integration_not_for_distribution"] = bool(integration.get("not_for_distribution"))
         payload["integration_ready_for_c12_3_boot_ssh_validation"] = bool(
             integration.get("ready_for_c12_3_boot_ssh_validation")
         )

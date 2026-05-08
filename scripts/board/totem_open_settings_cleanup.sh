@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REQUEST_DIR="/run/dadooh-settings"
-LOCK_DIR="/run/dadooh-settings/session.lock"
+LOCK_DIR="/run/totem/settings-session.lock"
 OUT_DIR="/run/dadooh-settings"
 REMOTE_TTY="2"
 REASON="manual"
@@ -71,6 +71,7 @@ esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPLASH="$SCRIPT_DIR/totem_visual_splash.py"
+TTY_GUARD="$SCRIPT_DIR/totem_visual_tty_guard.sh"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 STATUS_OUT="$OUT_DIR/open-settings-cleanup-status.json"
 
@@ -142,6 +143,9 @@ show_transition() {
   local mode="$1"
   if [ -e "$TTY_DEVICE" ]; then
     command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
+    if [ -x "$TTY_GUARD" ]; then
+      "$TTY_GUARD" --clear --tty "$REMOTE_TTY" >/dev/null 2>&1 || true
+    fi
     printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
   fi
   if [ -f "$SPLASH" ]; then

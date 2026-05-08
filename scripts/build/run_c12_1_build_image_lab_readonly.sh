@@ -6,18 +6,21 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ARM_BUILD_DIR="${ARM_BUILD_DIR:-/home/builder/totem-os/armbian-build-v25.11}"
 KIOSKY_PLAYER_DIR="${KIOSKY_PLAYER_DIR:-/home/builder/kiosky-player}"
 USERPATCHES_TEMPLATE="$REPO_ROOT/scripts/build/userpatches-c12-image-lab"
-LAB_FIRSTBOOT_CONF="${C12_LAB_FIRSTBOOT_CONF:-}"
-LAB_FIRSTBOOT_CONF_KIND="${C12_LAB_FIRSTBOOT_CONF_KIND:-private}"
-REQUIRE_LAB_FIRSTBOOT_CONF="${C12_REQUIRE_LAB_FIRSTBOOT_CONF:-0}"
-KERNEL_OVERLAYFS_BUILTIN="${C12_KERNEL_OVERLAYFS_BUILTIN:-0}"
+LAB_FIRSTBOOT_CONF="${C12_LAB_FIRSTBOOT_CONF:-${C13_LAB_FIRSTBOOT_CONF:-}}"
+LAB_FIRSTBOOT_CONF_KIND="${C12_LAB_FIRSTBOOT_CONF_KIND:-${C13_LAB_FIRSTBOOT_CONF_KIND:-private}}"
+REQUIRE_LAB_FIRSTBOOT_CONF="${C12_REQUIRE_LAB_FIRSTBOOT_CONF:-${C13_REQUIRE_LAB_FIRSTBOOT_CONF:-0}}"
+KERNEL_OVERLAYFS_BUILTIN="${C12_KERNEL_OVERLAYFS_BUILTIN:-${C13_KERNEL_OVERLAYFS_BUILTIN:-0}}"
 KERNEL_CONFIG_NAME="${C12_KERNEL_CONFIG_NAME:-linux-sunxi64-current}"
 KERNEL_CONFIG_SOURCE="${C12_KERNEL_CONFIG_SOURCE:-$ARM_BUILD_DIR/config/kernel/$KERNEL_CONFIG_NAME.config}"
+C13_EMBED_HOMOLOG_PRIVATE_VALUES="${C13_EMBED_HOMOLOG_PRIVATE_VALUES:-0}"
+C13_HOMOLOG_PRIVATE_VALUES="${C13_HOMOLOG_PRIVATE_VALUES:-}"
+C13_CONFIRM_PRIVATE_HOMOLOG_IMAGE="${C13_CONFIRM_PRIVATE_HOMOLOG_IMAGE:-0}"
 RUN_ROOT="${C12_1_RUN_ROOT:-/tmp/dadooh-c12-1-image-lab-readonly}"
 TIMESTAMP="${C12_1_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${C12_1_OUT_DIR:-$RUN_ROOT/$TIMESTAMP-c12-1-build-image-lab-readonly}"
 CONFIG_NAME="c12-image-lab-readonly"
-IMAGE_TAG="${C12_IMAGE_TAG:-}"
-IMAGE_VERSION="${C12_IMAGE_VERSION:-${IMAGE_TAG//-/.}}"
+IMAGE_TAG="${C12_IMAGE_TAG:-${C13_IMAGE_TAG:-}}"
+IMAGE_VERSION="${C12_IMAGE_VERSION:-${C13_IMAGE_VERSION:-${IMAGE_TAG//-/.}}}"
 if [ -z "$IMAGE_VERSION" ]; then
   IMAGE_VERSION="c12.1.11"
 fi
@@ -94,6 +97,15 @@ Environment:
   C12_KERNEL_CONFIG_SOURCE=/path/to/full/kernel/config
       Optional source for the complete kernel config. Defaults to Armbian
       Build's config/kernel/$C12_KERNEL_CONFIG_NAME.config.
+  C13_EMBED_HOMOLOG_PRIVATE_VALUES=1
+      Embed a private homologation seed into the image-lab. This creates a
+      private, disposable homologation artifact only. It is never final and
+      must not be distributed.
+  C13_HOMOLOG_PRIVATE_VALUES=/private/path/private-values.json
+      Private JSON seed outside this repository. Values are never printed.
+      The file must contain api_key and api_url categories.
+  C13_CONFIRM_PRIVATE_HOMOLOG_IMAGE=1
+      Required confirmation for embedding the private homologation seed.
 
 Rules:
   - local build only;
@@ -208,7 +220,7 @@ PY
 
 require_explicit_image_tag() {
   if [ -z "$IMAGE_TAG" ]; then
-    echo "error: C12_IMAGE_TAG is required for image builds, for example C12_IMAGE_TAG=c12-1-9" >&2
+    echo "error: C12_IMAGE_TAG or C13_IMAGE_TAG is required for image builds" >&2
     echo "blocker=c12_image_tag_missing" > "$OUT_DIR/blocker.env"
     exit 1
   fi
@@ -219,6 +231,101 @@ require_explicit_image_tag() {
       exit 1
       ;;
   esac
+}
+
+validate_homologation_private_values() {
+  case "$C13_EMBED_HOMOLOG_PRIVATE_VALUES" in
+    0|1) ;;
+    *) echo "error: C13_EMBED_HOMOLOG_PRIVATE_VALUES must be 0 or 1" >&2; exit 2 ;;
+  esac
+  if [ "$C13_EMBED_HOMOLOG_PRIVATE_VALUES" != "1" ]; then
+    {
+      printf 'homologation_private_values_embedded=false\n'
+      printf 'homologation_private_seed_enabled=false\n'
+      printf 'artifact_private_from_homologation_seed=false\n'
+      printf 'homologation_seed_source_outside_repo=false\n'
+      printf 'homologation_seed_permissions_ok=false\n'
+      printf 'homologation_seed_content_published=false\n'
+      printf 'not_for_production=true\n'
+      printf 'not_for_distribution=true\n'
+      printf 'c12_readonly_blocked=true\n'
+      printf 'c12_4_blocked=true\n'
+    } > "$OUT_DIR/homologation-private-seed.env"
+    return 0
+  fi
+  if [ "$C13_CONFIRM_PRIVATE_HOMOLOG_IMAGE" != "1" ]; then
+    echo "error: C13_CONFIRM_PRIVATE_HOMOLOG_IMAGE=1 is required for private homologation image builds" >&2
+    echo "blocker=c13_homolog_private_image_not_confirmed" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  if [ -z "$C13_HOMOLOG_PRIVATE_VALUES" ] || [ ! -f "$C13_HOMOLOG_PRIVATE_VALUES" ]; then
+    echo "error: C13_HOMOLOG_PRIVATE_VALUES missing" >&2
+    echo "blocker=c13_homolog_private_values_missing" > "$OUT_DIR/blocker.env"
+    exit 1
+  fi
+  case "$(realpath "$C13_HOMOLOG_PRIVATE_VALUES")" in
+    "$REPO_ROOT"/*)
+      echo "error: C13_HOMOLOG_PRIVATE_VALUES must live outside the repo" >&2
+      echo "blocker=c13_homolog_private_values_inside_repo" > "$OUT_DIR/blocker.env"
+      exit 1
+      ;;
+  esac
+  python3 - "$C13_HOMOLOG_PRIVATE_VALUES" "$OUT_DIR/homologation-private-seed.env" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+
+source = pathlib.Path(sys.argv[1])
+out = pathlib.Path(sys.argv[2])
+if source.is_symlink():
+    raise SystemExit("c13_homolog_private_values_symlink")
+if source.parent.is_symlink():
+    raise SystemExit("c13_homolog_private_values_parent_symlink")
+parent_mode = stat.S_IMODE(source.parent.stat().st_mode)
+file_mode = stat.S_IMODE(source.stat().st_mode)
+if parent_mode & 0o077:
+    raise SystemExit("c13_homolog_private_values_parent_permissive")
+if file_mode & 0o077 or not (file_mode & 0o600):
+    raise SystemExit("c13_homolog_private_values_file_permissive")
+try:
+    data = json.loads(source.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit("c13_homolog_private_values_invalid_json") from exc
+if not isinstance(data, dict):
+    raise SystemExit("c13_homolog_private_values_not_object")
+for key in ("api_key", "api_url"):
+    value = data.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit("c13_homolog_private_values_required_category_missing")
+for key in ("environment_id", "station_id"):
+    value = data.get(key)
+    if value is not None and not isinstance(value, str):
+        raise SystemExit("c13_homolog_private_values_optional_category_invalid")
+payload = {
+    "homologation_private_values_embedded": "true",
+    "homologation_private_seed_enabled": "true",
+    "artifact_private_from_homologation_seed": "true",
+    "homologation_seed_source_outside_repo": "true",
+    "homologation_seed_permissions_ok": "true",
+    "homologation_seed_required_categories_present": "api_key,api_url",
+    "homologation_seed_embedded_path": "/data/state/totem-settings/private-values.seed.json",
+    "homologation_seed_content_published": "false",
+    "final_image": "false",
+    "artifact_private": "true",
+    "not_for_production": "true",
+    "not_for_distribution": "true",
+    "c12_readonly_blocked": "true",
+    "c12_4_blocked": "true",
+}
+out.parent.mkdir(parents=True, exist_ok=True)
+tmp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
+tmp.write_text("".join(f"{key}={value}\n" for key, value in payload.items()), encoding="utf-8")
+os.chmod(tmp, 0o600)
+os.replace(tmp, out)
+os.chmod(out, 0o600)
+PY
 }
 
 ensure_image_tag_available() {
@@ -342,6 +449,24 @@ prepare_overlay_image_lab() {
   find "$target/rootfs" -type d -exec chmod 0755 {} +
   find "$target/rootfs" -type f -exec chmod 0644 {} +
   find "$target/rootfs" -type f -name '*.sh' -exec chmod 0755 {} +
+  validate_homologation_private_values
+  if [ "$C13_EMBED_HOMOLOG_PRIVATE_VALUES" = "1" ]; then
+    install -d -m 0700 "$target/rootfs/data/state/totem-settings"
+    install -m 0600 "$C13_HOMOLOG_PRIVATE_VALUES" \
+      "$target/rootfs/data/state/totem-settings/private-values.seed.json"
+    cat > "$target/rootfs/data/state/totem-settings/homologation-seed.enabled" <<'EOF'
+homologation_private_seed_enabled=true
+final_image=false
+artifact_private=true
+not_for_production=true
+not_for_distribution=true
+seed_content_published=false
+EOF
+    chmod 0644 "$target/rootfs/data/state/totem-settings/homologation-seed.enabled"
+    grep -E '^(homologation_private_values_embedded|homologation_private_seed_enabled|artifact_private_from_homologation_seed|homologation_seed_source_outside_repo|homologation_seed_permissions_ok|homologation_seed_required_categories_present|homologation_seed_embedded_path|homologation_seed_content_published|artifact_private|final_image|not_for_production|not_for_distribution|c12_readonly_blocked|c12_4_blocked)=' \
+      "$OUT_DIR/homologation-private-seed.env" > "$target/rootfs/etc/dadooh/c13-homologation-private-seed"
+    chmod 0644 "$target/rootfs/etc/dadooh/c13-homologation-private-seed"
+  fi
 }
 
 prepare_lab_firstboot_conf() {
@@ -560,6 +685,7 @@ PY
     "$ARM_BUILD_DIR/userpatches/customize-image.sh"
   prepare_lab_firstboot_conf
   prepare_kernel_overlayfs_builtin_config
+  validate_homologation_private_values
   prepare_overlay_repo
   prepare_overlay_kiosky
   prepare_overlay_image_lab
@@ -598,6 +724,7 @@ collect_artifacts() {
   check_armbian_build
   prepare_lab_firstboot_conf
   prepare_kernel_overlayfs_builtin_config
+  validate_homologation_private_values
   local image
   image="$(find "$ARM_BUILD_DIR/output/images" -maxdepth 1 -type f -name "*$IMAGE_SUFFIX_MARKER*.img" -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {print $2}')"
   if [ -z "$image" ] || [ ! -f "$image" ]; then
@@ -633,6 +760,17 @@ collect_artifacts() {
   local artifact_private="false"
   local firstboot_conf_committed="false"
   local firstboot_conf_contents_published="false"
+  local homologation_private_values_embedded="false"
+  local homologation_private_seed_enabled="false"
+  local artifact_private_from_homologation_seed="false"
+  local homologation_seed_source_outside_repo="false"
+  local homologation_seed_permissions_ok="false"
+  local homologation_seed_content_published="false"
+  local homologation_seed_embedded_path="/data/state/totem-settings/private-values.seed.json"
+  local not_for_production="true"
+  local not_for_distribution="true"
+  local c12_readonly_blocked="true"
+  local c12_4_blocked="true"
   if [ -f "$OUT_DIR/firstboot-policy.env" ]; then
     # shellcheck disable=SC1090
     source "$OUT_DIR/firstboot-policy.env"
@@ -640,6 +778,13 @@ collect_artifacts() {
   if [ -f "$OUT_DIR/kernel-config-policy.env" ]; then
     # shellcheck disable=SC1090
     source "$OUT_DIR/kernel-config-policy.env"
+  fi
+  if [ -f "$OUT_DIR/homologation-private-seed.env" ]; then
+    # shellcheck disable=SC1090
+    source "$OUT_DIR/homologation-private-seed.env"
+  fi
+  if [ "$homologation_private_values_embedded" = "true" ]; then
+    artifact_private="true"
   fi
   python3 "$REPO_ROOT/scripts/build/inspect_c12_image_rootfs.py" \
     "$image" \
@@ -734,6 +879,19 @@ collect_artifacts() {
     printf 'lab_firstboot_boot_validatable=%s\n' "$lab_firstboot_boot_validatable"
     printf 'artifact_private=%s\n' "$artifact_private"
     printf 'final_image=false\n'
+    printf 'not_for_production=%s\n' "$not_for_production"
+    printf 'not_for_distribution=%s\n' "$not_for_distribution"
+    printf 'homologation_private_values_embedded=%s\n' "$homologation_private_values_embedded"
+    printf 'homologation_private_seed_enabled=%s\n' "$homologation_private_seed_enabled"
+    printf 'artifact_private_from_homologation_seed=%s\n' "$artifact_private_from_homologation_seed"
+    printf 'homologation_seed_source_outside_repo=%s\n' "$homologation_seed_source_outside_repo"
+    printf 'homologation_seed_permissions_ok=%s\n' "$homologation_seed_permissions_ok"
+    printf 'homologation_seed_embedded_path=%s\n' "$homologation_seed_embedded_path"
+    printf 'homologation_seed_content_published=%s\n' "$homologation_seed_content_published"
+    printf 'homologation_seed_present_in_rootfs=%s\n' "${homologation_seed_present:-false}"
+    printf 'homologation_seed_mode_0600=%s\n' "${homologation_seed_mode_0600:-false}"
+    printf 'homologation_seed_marker_present=%s\n' "${homologation_seed_marker_present:-false}"
+    printf 'homologation_seed_required_categories_present=%s\n' "${homologation_seed_required_categories_present:-false}"
     printf 'firstboot_conf_committed=%s\n' "$firstboot_conf_committed"
     printf 'firstboot_conf_contents_published=%s\n' "$firstboot_conf_contents_published"
     printf 'ready_for_c12_2_7_card_write=%s\n' "$ready_for_c12_2_7_card_write"
@@ -742,6 +900,8 @@ collect_artifacts() {
     printf 'rootfs_ready_for_card_write=%s\n' "$ready_for_card_write_by_rootfs"
     printf 'lab_firstboot_policy=%s\n' "$lab_firstboot_policy"
     printf 'ready_for_board_boot=%s\n' "$ready_for_card_write_by_rootfs"
+    printf 'c12_readonly_blocked=%s\n' "$c12_readonly_blocked"
+    printf 'c12_4_blocked=%s\n' "$c12_4_blocked"
     printf 'card_written=false\n'
     printf 'boards_touched=false\n'
   } > "$integration_manifest"
@@ -760,6 +920,9 @@ collect_artifacts() {
     fi
     if [ -f "$OUT_DIR/kernel-config-policy.env" ]; then
       cat "$OUT_DIR/kernel-config-policy.env"
+    fi
+    if [ -f "$OUT_DIR/homologation-private-seed.env" ]; then
+      cat "$OUT_DIR/homologation-private-seed.env"
     fi
   } > "$OUT_DIR/artifacts.env"
 }

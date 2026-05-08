@@ -90,7 +90,8 @@
     {"path": "/data/logs", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/logs/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/tmp/kiosky", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/run/dadooh-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700"}
+    {"path": "/run/dadooh-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700"},
+    {"path": "/run/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0700"}
   ],
   "bin_scripts": [
     {"source": "scripts/board/kiosky_service_launcher.sh", "target": "/opt/totem/bin/kiosky_service_launcher.sh", "owner": "root", "group": "root", "mode": "0755"},
@@ -100,6 +101,7 @@
     {"source": "scripts/board/totem_open_settings_cleanup.sh", "target": "/opt/totem/bin/totem_open_settings_cleanup.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_firstboot_gate.sh", "target": "/opt/totem/bin/totem_firstboot_gate.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_settings_trigger.py", "target": "/opt/totem/bin/totem_settings_trigger.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_settings_lab_apply_policy.sh", "target": "/opt/totem/bin/totem_settings_lab_apply_policy.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_setup_local_wizard.py", "target": "/opt/totem/bin/totem_setup_local_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_setup_minimal_server.py", "target": "/opt/totem/bin/totem_setup_minimal_server.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_setup_visual_wizard.py", "target": "/opt/totem/bin/totem_setup_visual_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
@@ -108,6 +110,7 @@
     {"source": "scripts/board/totem_status_renderer.sh", "target": "/opt/totem/bin/totem_status_renderer.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_visual_setup_writer_handoff.py", "target": "/opt/totem/bin/totem_visual_setup_writer_handoff.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_visual_splash.py", "target": "/opt/totem/bin/totem_visual_splash.py", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_visual_tty_guard.sh", "target": "/opt/totem/bin/totem_visual_tty_guard.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_wifi_local_credentials_tty.py", "target": "/opt/totem/bin/totem_wifi_local_credentials_tty.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_wifi_nm_adapter.py", "target": "/opt/totem/bin/totem_wifi_nm_adapter.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/verify_totem_read_only_policy.sh", "target": "/opt/totem/bin/verify_totem_read_only_policy.sh", "owner": "root", "group": "root", "mode": "0755"}

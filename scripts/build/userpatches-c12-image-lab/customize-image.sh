@@ -35,6 +35,9 @@ main() {
   local image_lab_state="/data/state/totem-read-only-image-lab"
   local lab_firstboot_marker="/etc/dadooh/image-lab-firstboot-autoconfig.present"
   local lab_firstboot_mode_file="$lab_root/etc/dadooh/c12-lab-firstboot-mode"
+  local homologation_seed_src="$lab_root/data/state/totem-settings/private-values.seed.json"
+  local homologation_seed_marker_src="$lab_root/data/state/totem-settings/homologation-seed.enabled"
+  local homologation_seed_policy_src="$lab_root/etc/dadooh/c13-homologation-private-seed"
 
   require_file "$repo_root/scripts/board/install_totem_appliance.sh"
   require_file "$repo_root/scripts/board/totem_appliance_manifest.json"
@@ -82,6 +85,34 @@ EOF
     "$lab_root/etc/systemd/system/totem-lab-firstboot-autoconfig.service" \
     /etc/systemd/system/totem-lab-firstboot-autoconfig.service
   systemctl --no-reload enable totem-lab-firstboot-autoconfig.service
+
+  if [ -f "$homologation_seed_src" ]; then
+    log "installing private homologation seed marker and seed"
+    install -d -m 0700 -o root -g root /data/state/totem-settings
+    install -m 0600 -o root -g root \
+      "$homologation_seed_src" \
+      /data/state/totem-settings/private-values.seed.json
+    if [ -f "$homologation_seed_marker_src" ]; then
+      install -m 0644 -o root -g root \
+        "$homologation_seed_marker_src" \
+        /data/state/totem-settings/homologation-seed.enabled
+    else
+      cat > /data/state/totem-settings/homologation-seed.enabled <<'EOF'
+homologation_private_seed_enabled=true
+final_image=false
+artifact_private=true
+not_for_production=true
+not_for_distribution=true
+seed_content_published=false
+EOF
+      chmod 0644 /data/state/totem-settings/homologation-seed.enabled
+    fi
+    if [ -f "$homologation_seed_policy_src" ]; then
+      install -m 0644 -o root -g root \
+        "$homologation_seed_policy_src" \
+        /etc/dadooh/c13-homologation-private-seed
+    fi
+  fi
 
   log "configuring volatile journald policy"
   install -d -m 0755 -o root -g root /etc/systemd/journald.conf.d
@@ -189,6 +220,7 @@ EOF
   log "writing image-lab state"
   install -d -m 0700 -o root -g root "$image_lab_state"
   local lab_firstboot_mode artifact_private ready_for_ssh require_manual_firstboot ready_for_card_write
+  local homologation_private_values_embedded seed_content_published not_for_production not_for_distribution
   lab_firstboot_mode="$(awk -F= '$1=="lab_firstboot_mode" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
   artifact_private="$(awk -F= '$1=="artifact_private" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
   ready_for_ssh="$(awk -F= '$1=="ready_for_c12_3_boot_ssh_validation" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
@@ -196,6 +228,13 @@ EOF
   ready_for_card_write="$(awk -F= '$1=="ready_for_c12_2_7_card_write" {print $2}' /etc/dadooh/c12-lab-firstboot-mode 2>/dev/null | tail -n1)"
   case "$lab_firstboot_mode" in synthetic_no_secret|private_disposable_lab) ;; *) lab_firstboot_mode="unknown" ;; esac
   case "$artifact_private" in true|false) ;; *) artifact_private=false ;; esac
+  homologation_private_values_embedded="$(test -f /data/state/totem-settings/private-values.seed.json && echo true || echo false)"
+  if [ "$homologation_private_values_embedded" = "true" ]; then
+    artifact_private=true
+  fi
+  seed_content_published=false
+  not_for_production=true
+  not_for_distribution=true
   case "$ready_for_ssh" in true|false) ;; *) ready_for_ssh=false ;; esac
   case "$require_manual_firstboot" in true|false) ;; *) require_manual_firstboot=true ;; esac
   case "$ready_for_card_write" in true|false) ;; *) ready_for_card_write=false ;; esac
@@ -219,6 +258,11 @@ EOF
   "lab_firstboot_mode": "$lab_firstboot_mode",
   "artifact_private": $artifact_private,
   "final_image": false,
+  "not_for_production": $not_for_production,
+  "not_for_distribution": $not_for_distribution,
+  "homologation_private_values_embedded": $homologation_private_values_embedded,
+  "homologation_seed_path": "/data/state/totem-settings/private-values.seed.json",
+  "homologation_seed_content_published": $seed_content_published,
   "firstboot_conf_committed": false,
   "firstboot_conf_contents_published": false,
   "ready_for_c12_3_boot_ssh_validation": $ready_for_ssh,
@@ -227,7 +271,8 @@ EOF
   "lab_firstboot_bootstrap_service_present": true,
   "lab_firstboot_bootstrap_service_enabled": true,
   "image_lab_boot_validatable_with_private_firstboot": $ready_for_ssh,
-  "secrets_embedded": false,
+  "secrets_embedded": $homologation_private_values_embedded,
+  "secrets_published": false,
   "config_real_embedded": false,
   "card_written_by_build": false
 }

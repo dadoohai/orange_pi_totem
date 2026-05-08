@@ -5,7 +5,7 @@ Wants=systemd-udevd.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /opt/totem/bin/totem_settings_trigger.py --daemon --request-dir /run/dadooh-settings --hold-sec 5 --cooldown-sec 10 --session-lock /run/dadooh-settings/session.lock --open-service totem-open-settings.service
+ExecStart=/usr/bin/python3 /opt/totem/bin/totem_settings_trigger.py --daemon --request-dir /run/dadooh-settings --hold-sec 5 --cooldown-sec 10 --session-lock /run/totem/settings-session.lock --open-service totem-open-settings.service --tty-guard /opt/totem/bin/totem_visual_tty_guard.sh --visual-tty 2
 Restart=always
 RestartSec=2
 StandardOutput=null

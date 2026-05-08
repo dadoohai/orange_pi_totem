@@ -36,8 +36,8 @@ SUMMARY_FILENAME = "summary.txt"
 TMP_ROOT = pathlib.Path("/tmp").resolve()
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
-REQUIRED_PRIVATE_FIELDS = ("api_key",)
-OPTIONAL_PRIVATE_FIELDS = ("api_url", "station_id", "environment_id")
+REQUIRED_PRIVATE_FIELDS = ("api_key", "api_url")
+OPTIONAL_PRIVATE_FIELDS = ("station_id", "environment_id")
 PRIVATE_METADATA_FIELDS = {
     "setup_source",
     "setup_interface",
@@ -73,6 +73,8 @@ def path_is_under(path: pathlib.Path, root: pathlib.Path) -> bool:
 def path_is_in_repository(path: pathlib.Path) -> bool:
     current = path if path.is_dir() else path.parent
     for candidate in (current, *current.parents):
+        if candidate == pathlib.Path("/tmp"):
+            continue
         if (candidate / ".git").exists():
             return True
     return False
@@ -99,9 +101,28 @@ def require_tmp_dir(raw_path: str, label: str) -> pathlib.Path:
     return resolved
 
 
-def normalize_tmp_file(raw_path: str, label: str, *, reject_repo: bool) -> pathlib.Path:
+def normalize_tmp_file(
+    raw_path: str,
+    label: str,
+    *,
+    reject_repo: bool,
+    allow_homologation_seed: bool = False,
+) -> pathlib.Path:
     path = pathlib.Path(raw_path).expanduser()
     raw_absolute = absolute_no_resolve(raw_path)
+    homologation_seed = pathlib.Path("/data/state/totem-settings/private-values.seed.json")
+    if allow_homologation_seed and label == "private values" and raw_absolute == homologation_seed:
+        if path.is_symlink():
+            raise HandoffError(f"{label} must not be a symlink")
+        try:
+            resolved_seed = path.resolve(strict=True)
+        except FileNotFoundError as exc:
+            raise HandoffError(f"{label} file not found") from exc
+        if resolved_seed != homologation_seed:
+            raise HandoffError("homologation private seed path mismatch")
+        if not resolved_seed.is_file():
+            raise HandoffError(f"{label} must be a file")
+        return resolved_seed
     if not path_is_under(raw_absolute, TMP_ROOT):
         raise HandoffError(f"{label} must be under /tmp")
     if path.is_symlink():
@@ -129,10 +150,10 @@ def validate_restricted_private_file(path: pathlib.Path) -> None:
         raise HandoffError("private values parent must not be a symlink")
     parent_mode = stat.S_IMODE(path.parent.stat().st_mode)
     file_mode = stat.S_IMODE(path.stat().st_mode)
-    if parent_mode != PRIVATE_DIR_MODE:
-        raise HandoffError("private values parent must be mode 0700")
-    if file_mode != PRIVATE_FILE_MODE:
-        raise HandoffError("private values file must be mode 0600")
+    if parent_mode & 0o077:
+        raise HandoffError("private values parent must not grant group/other access")
+    if file_mode & 0o077 or not (file_mode & 0o600):
+        raise HandoffError("private values file must be mode 0600 or stricter")
 
 
 def prepare_private_dir(path: pathlib.Path) -> None:
@@ -240,15 +261,19 @@ def summarize_validation(status: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_private_candidate(source: dict[str, Any], private_values: dict[str, str]) -> dict[str, Any]:
+def build_private_candidate(
+    source: dict[str, Any],
+    private_values: dict[str, str],
+    *,
+    private_values_source: str,
+) -> dict[str, Any]:
     candidate = dict(source)
-    if private_values.get("api_url"):
-        candidate["api_url"] = private_values["api_url"]
+    candidate["api_url"] = private_values["api_url"]
     candidate["api_key"] = private_values["api_key"]
     if private_values.get("station_id"):
         candidate["station_id"] = private_values["station_id"]
     candidate["setup_source"] = "c10.0-visual-setup-writer-handoff"
-    candidate["setup_private_values_source"] = "private_tmp_file"
+    candidate["setup_private_values_source"] = private_values_source
     candidate["setup_writer_handoff_source"] = "visual_setup_candidate"
     return candidate
 
@@ -456,18 +481,33 @@ def run_handoff(
     private_values_raw: str,
     out_dir_raw: str,
     confirm_private_values_approved: bool,
+    allow_homologation_seed: bool = False,
 ) -> dict[str, Any]:
     if not confirm_private_values_approved:
         raise HandoffError("private handoff requires explicit approval")
 
     out_dir = require_tmp_dir(out_dir_raw, "out-dir")
     source_path = normalize_tmp_file(source_candidate_raw, "source candidate", reject_repo=False)
-    private_values_path = normalize_tmp_file(private_values_raw, "private values", reject_repo=True)
+    private_values_path = normalize_tmp_file(
+        private_values_raw,
+        "private values",
+        reject_repo=True,
+        allow_homologation_seed=allow_homologation_seed,
+    )
     validate_restricted_private_file(private_values_path)
 
     source_candidate = load_json_object(source_path, "source candidate")
     private_values = validate_private_values(load_json_object(private_values_path, "private values"))
-    private_candidate = build_private_candidate(source_candidate, private_values)
+    private_source = (
+        "homologation_private_seed"
+        if str(private_values_path) == "/data/state/totem-settings/private-values.seed.json"
+        else "private_tmp_file"
+    )
+    private_candidate = build_private_candidate(
+        source_candidate,
+        private_values,
+        private_values_source=private_source,
+    )
 
     source_allow_status = contract.validate_candidate_config(source_candidate, "allow-mock")
     private_allow_status = contract.validate_candidate_config(private_candidate, "allow-mock")
@@ -601,6 +641,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--private-values", default="/tmp/dadooh-c10-private/private-values.json")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     parser.add_argument("--confirm-private-values-approved", action="store_true")
+    parser.add_argument("--allow-homologation-seed", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     return parser.parse_args(argv)
 
@@ -625,6 +666,7 @@ def main(argv: list[str]) -> int:
             private_values_raw=args.private_values,
             out_dir_raw=args.out_dir,
             confirm_private_values_approved=bool(args.confirm_private_values_approved),
+            allow_homologation_seed=bool(args.allow_homologation_seed),
         )
     except HandoffError as exc:
         print(f"error: {exc}", file=sys.stderr)

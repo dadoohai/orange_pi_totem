@@ -21,8 +21,8 @@ USAGE
 }
 
 ARTIFACTS_ENV="${C12_1_ARTIFACTS_ENV:-}"
-EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-c12.1.11}"
-EXPECTED_IMAGE_SUFFIX="${C12_EXPECTED_IMAGE_SUFFIX:-c12-ro-lab-${EXPECTED_IMAGE_VERSION//./-}}"
+EXPECTED_IMAGE_VERSION="${C12_EXPECTED_IMAGE_VERSION:-${C13_EXPECTED_IMAGE_VERSION:-c12.1.11}}"
+EXPECTED_IMAGE_SUFFIX="${C12_EXPECTED_IMAGE_SUFFIX:-${C13_EXPECTED_IMAGE_SUFFIX:-c12-ro-lab-${EXPECTED_IMAGE_VERSION//./-}}}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -92,6 +92,20 @@ validate_artifacts() {
   grep -Eq '^lab_firstboot_mode=(synthetic_no_secret|private_disposable_lab)$' "$integration_manifest_file"
   grep -Eq '^artifact_private=(true|false)$' "$integration_manifest_file"
   grep -q '^final_image=false$' "$integration_manifest_file"
+  grep -q '^not_for_production=true$' "$integration_manifest_file"
+  grep -q '^not_for_distribution=true$' "$integration_manifest_file"
+  grep -Eq '^homologation_private_values_embedded=(true|false)$' "$integration_manifest_file"
+  grep -Eq '^homologation_private_seed_enabled=(true|false)$' "$integration_manifest_file"
+  grep -q '^homologation_seed_content_published=false$' "$integration_manifest_file"
+  if grep -q '^homologation_private_values_embedded=true$' "$integration_manifest_file"; then
+    grep -q '^artifact_private=true$' "$integration_manifest_file"
+    grep -q '^homologation_seed_source_outside_repo=true$' "$integration_manifest_file"
+    grep -q '^homologation_seed_permissions_ok=true$' "$integration_manifest_file"
+    grep -q '^homologation_seed_present_in_rootfs=true$' "$integration_manifest_file"
+    grep -q '^homologation_seed_mode_0600=true$' "$integration_manifest_file"
+    grep -q '^homologation_seed_marker_present=true$' "$integration_manifest_file"
+    grep -q '^homologation_seed_required_categories_present=true$' "$integration_manifest_file"
+  fi
   grep -q '^firstboot_conf_committed=false$' "$integration_manifest_file"
   grep -q '^firstboot_conf_contents_published=false$' "$integration_manifest_file"
   grep -q '^ready_for_c12_2_7_card_write=true$' "$integration_manifest_file"
@@ -149,7 +163,7 @@ validate_artifacts() {
   grep -q '^diagnostic_initramfs_hooks_present=false$' "$integration_manifest_file"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$integration_manifest_file"
 
-  if grep -Eiq '(api_key|private-values|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
+  if grep -Eiq '(api_key|wifi password|ssid password|environment_id real|config\.candidate\.private)' \
     "$ARTIFACTS_ENV" "$package_manifest_file" "$integration_manifest_file"; then
     echo "error: textual artifact secret scan failed" >&2
     exit 1
@@ -171,6 +185,16 @@ validate_artifacts() {
   grep -q '^ready_for_c12_2_7_card_write_by_rootfs=true$' "$rootfs_validation_file"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_validation_file"
   grep -q '^private_values_published=false$' "$rootfs_validation_file"
+  grep -Eq '^homologation_private_values_embedded=(true|false)$' "$rootfs_validation_file"
+  grep -q '^homologation_seed_content_published=false$' "$rootfs_validation_file"
+  if grep -q '^homologation_private_values_embedded=true$' "$rootfs_validation_file"; then
+    grep -q '^homologation_seed_present=true$' "$rootfs_validation_file"
+    grep -q '^homologation_seed_marker_present=true$' "$rootfs_validation_file"
+    grep -q '^homologation_seed_mode_0600=true$' "$rootfs_validation_file"
+    grep -q '^homologation_seed_parent_private=true$' "$rootfs_validation_file"
+    grep -q '^homologation_seed_required_categories_present=true$' "$rootfs_validation_file"
+    grep -q '^homologation_seed_permissions_ok=true$' "$rootfs_validation_file"
+  fi
   if grep -q '^lab_firstboot_mode=synthetic_no_secret$' "$rootfs_validation_file"; then
     grep -q '^artifact_private=false$' "$rootfs_validation_file"
     grep -q '^ready_for_c12_3_boot_ssh_validation_by_rootfs=false$' "$rootfs_validation_file"
@@ -195,6 +219,11 @@ validate_artifacts() {
   grep -q '^modular_overlay_fallback_hooks_present=false$' "$rootfs_recheck"
   grep -q '^diagnostic_initramfs_hooks_present=false$' "$rootfs_recheck"
   grep -q '^effective_boot_initramfs_overlay_resolvable=true$' "$rootfs_recheck"
+  if grep -q '^homologation_private_values_embedded=true$' "$integration_manifest_file"; then
+    grep -q '^homologation_private_values_embedded=true$' "$rootfs_recheck"
+    grep -q '^homologation_seed_mode_0600=true$' "$rootfs_recheck"
+    grep -q '^homologation_seed_required_categories_present=true$' "$rootfs_recheck"
+  fi
   rm -f "$rootfs_recheck"
 }
 

@@ -12,17 +12,19 @@ HANDOFF_OUT_DIR="/tmp/dadooh-c10-6-2-handoff"
 WRITER_OUT_DIR="/tmp/dadooh-c10-6-2-writer"
 PRIVATE_VALUES="/tmp/dadooh-c10-6-2-private/private-values.json"
 APPLY_POLICY_PATH="/run/dadooh-settings/apply-policy.json"
+REQUEST_DIR="/run/dadooh-settings"
 APPLY_MODE="policy"
 PRIVATE_SOURCE="none"
 ACTIVE_CONFIG_PRIVATE_SOURCE_CONFIRMED="false"
 LOCAL_OPERATOR_SAVE_CONFIRMED="false"
 PRIVATE_SETTINGS_CONTEXT_PATH="/data/state/totem-settings/last-settings.json"
-LOCK_DIR="/run/dadooh-settings/session.lock"
+LOCK_DIR="/run/totem/settings-session.lock"
+RESTORE_GETTY_AFTER_SETTINGS="${TOTEM_RESTORE_GETTY_AFTER_SETTINGS:-0}"
 
 usage() {
   cat <<'USAGE'
 Usage:
-  totem_open_settings_session.sh [--mode preview|interactive] [--expect preview|cancelled|candidate_ready|any] [--tty N] [--timeout-sec N] [--preview-sec N] [--out-dir /tmp/...] [--apply-mode policy|candidate-only|dry-run|real-write]
+  totem_open_settings_session.sh [--mode preview|interactive] [--expect preview|cancelled|candidate_ready|any] [--tty N] [--timeout-sec N] [--preview-sec N] [--out-dir /tmp/...] [--apply-mode policy|candidate-only|dry-run|real-write] [--request-dir /run/...]
 
 Opens the existing visual setup wizard as "Configuracoes do Totem" while the
 player is running. By default it does not call writer. Real write requires a
@@ -75,6 +77,10 @@ while [ "$#" -gt 0 ]; do
     --apply-policy-path)
       shift
       APPLY_POLICY_PATH="${1:-}"
+      ;;
+    --request-dir)
+      shift
+      REQUEST_DIR="${1:-}"
       ;;
     --apply-mode)
       shift
@@ -198,6 +204,14 @@ case "$APPLY_POLICY_PATH" in
     exit 2
     ;;
 esac
+case "$REQUEST_DIR" in
+  /tmp/*|/run/*)
+    ;;
+  *)
+    echo "error: --request-dir must be under /tmp or /run" >&2
+    exit 2
+    ;;
+esac
 case "$APPLY_MODE" in
   policy|candidate-only|dry-run|real-write)
     ;;
@@ -234,13 +248,14 @@ esac
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VISUAL="$SCRIPT_DIR/totem_setup_visual_wizard.py"
 SPLASH="$SCRIPT_DIR/totem_visual_splash.py"
+TTY_GUARD="$SCRIPT_DIR/totem_visual_tty_guard.sh"
 AGGREGATE="$SCRIPT_DIR/totem_status_aggregate.py"
 HANDOFF="$SCRIPT_DIR/totem_visual_setup_writer_handoff.py"
 WRITER="$SCRIPT_DIR/totem_config_writer_real.py"
 CONTRACT="$SCRIPT_DIR/totem_config_contract_validate.py"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 FINAL_STATUS="$OUT_DIR/session-status.json"
-REQUEST_FILE="$(dirname "$LOCK_DIR")/request.json"
+REQUEST_FILE="$REQUEST_DIR/request.json"
 GETTY_UNITS=("getty@tty1.service" "getty@tty${REMOTE_TTY}.service")
 WIZARD_RC="not_run"
 HANDOFF_RC="not_run"
@@ -262,6 +277,7 @@ POLICY_PRIVATE_SOURCE="none"
 POLICY_REAL_WRITE_CONFIRMED="false"
 POLICY_DRY_RUN_CONFIRMED="false"
 APPLY_POLICY_REMOVED="false"
+HOMOLOGATION_SEED_MODE="false"
 INITIAL_SERVICE_ACTIVE="$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
 INITIAL_SERVICE_ENABLED="$(systemctl is-enabled kiosky-player.service 2>/dev/null || true)"
 declare -A GETTY_ACTIVE
@@ -321,8 +337,8 @@ PY
 }
 
 umask 077
-mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")"
-chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" 2>/dev/null || true
+mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" "$REQUEST_DIR"
+chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" "$REQUEST_DIR" 2>/dev/null || true
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "settings_session_already_running" >&2
   exit 23
@@ -406,6 +422,9 @@ show_transition() {
   local mode="$1"
   local rotation="${2:-}"
   command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
+  if [ -x "$TTY_GUARD" ]; then
+    "$TTY_GUARD" --clear --tty "$REMOTE_TTY" >/dev/null 2>&1 || true
+  fi
   printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
   sleep 0.05
   printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
@@ -417,6 +436,16 @@ show_transition() {
 }
 
 restore_getty() {
+  if [ "$RESTORE_GETTY_AFTER_SETTINGS" != "1" ]; then
+    for unit in "${GETTY_UNITS[@]}"; do
+      systemctl disable "$unit" >/dev/null 2>&1 || true
+      systemctl stop "$unit" >/dev/null 2>&1 || true
+    done
+    if [ -x "$TTY_GUARD" ]; then
+      "$TTY_GUARD" --quiet --tty 1 --tty "$REMOTE_TTY" >/dev/null 2>&1 || true
+    fi
+    return 0
+  fi
   for unit in "${GETTY_UNITS[@]}"; do
     if [ "${GETTY_ENABLED[$unit]}" = "enabled" ]; then
       systemctl enable "$unit" >/dev/null 2>&1 || true
@@ -513,14 +542,20 @@ mode = data.get("mode", "candidate-only")
 if mode not in {"candidate-only", "dry-run", "real-write"}:
     raise SystemExit("apply_policy_mode_invalid")
 private_source = data.get("private_source", "none")
-if private_source not in {"none", "tmp-file", "active-config"}:
+if private_source not in {"none", "tmp-file", "active-config", "homologation-seed"}:
     raise SystemExit("apply_policy_private_source_invalid")
 private_values = data.get("private_values_path") or default_private
-if not isinstance(private_values, str) or not private_values.startswith("/tmp/"):
+if private_source == "homologation-seed":
+    if private_values != "/data/state/totem-settings/private-values.seed.json":
+        raise SystemExit("apply_policy_private_values_invalid")
+    if not bool(data.get("homologation_seed", False)):
+        raise SystemExit("apply_policy_homologation_seed_not_marked")
+elif not isinstance(private_values, str) or not private_values.startswith("/tmp/"):
     raise SystemExit("apply_policy_private_values_invalid")
 real_confirmed = bool(data.get("real_write_confirmed", False))
 dry_confirmed = bool(data.get("dry_run_confirmed", False))
 source_confirmed = bool(data.get("active_config_private_source_confirmed", False))
+homologation_seed = bool(data.get("homologation_seed", False))
 if mode == "real-write" and not real_confirmed:
     raise SystemExit("apply_policy_real_write_not_confirmed")
 if mode == "dry-run" and not dry_confirmed:
@@ -532,6 +567,7 @@ print(f"POLICY_PRIVATE_SOURCE={shlex.quote(private_source)}")
 print(f"PRIVATE_VALUES={shlex.quote(private_values)}")
 print(f"POLICY_REAL_WRITE_CONFIRMED={str(real_confirmed).lower()}")
 print(f"POLICY_DRY_RUN_CONFIRMED={str(dry_confirmed).lower()}")
+print(f"HOMOLOGATION_SEED_MODE={str(homologation_seed).lower()}")
 PY
   )"
 }
@@ -588,14 +624,17 @@ import pathlib
 import stat
 import sys
 path = pathlib.Path(sys.argv[1])
-if not str(path).startswith("/tmp/") or path.is_symlink() or not path.exists():
+is_tmp = str(path).startswith("/tmp/")
+is_seed = str(path) == "/data/state/totem-settings/private-values.seed.json"
+if (not is_tmp and not is_seed) or path.is_symlink() or not path.exists():
     raise SystemExit("private_values_not_ready")
 if path.parent.is_symlink():
     raise SystemExit("private_values_parent_symlink")
-if stat.S_IMODE(path.parent.stat().st_mode) != 0o700:
-    raise SystemExit("private_values_parent_not_0700")
-if stat.S_IMODE(path.stat().st_mode) != 0o600:
-    raise SystemExit("private_values_file_not_0600")
+if stat.S_IMODE(path.parent.stat().st_mode) & 0o077:
+    raise SystemExit("private_values_parent_permissive")
+mode = stat.S_IMODE(path.stat().st_mode)
+if mode & 0o077 or not (mode & 0o600):
+    raise SystemExit("private_values_file_permissive")
 PY
 }
 
@@ -700,7 +739,8 @@ write_final_status() {
     "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$APPLY_MODE" "$POLICY_USED" "$POLICY_PRIVATE_SOURCE" \
     "$HANDOFF_RC" "$WRITER_RC" "$WRITER_CALLED" "$REAL_CONFIG_READ" "$REAL_CONFIG_WRITTEN" \
     "$PRIVATE_SOURCE_TEMP_REMOVED" "$PRIVATE_CANDIDATE_REMOVED" "$ORIENTATION_JSON_UPDATED" "$SELECTED_ROTATION_DEG" \
-    "$APPLY_POLICY_REMOVED" "$PRIVATE_SETTINGS_CONTEXT_SEEDED" "$PRIVATE_SETTINGS_CONTEXT_UPDATED" <<'PY'
+    "$APPLY_POLICY_REMOVED" "$PRIVATE_SETTINGS_CONTEXT_SEEDED" "$PRIVATE_SETTINGS_CONTEXT_UPDATED" \
+    "$HOMOLOGATION_SEED_MODE" <<'PY'
 import json
 import os
 import pathlib
@@ -741,6 +781,7 @@ selected_rotation_raw = sys.argv[29]
 apply_policy_removed = sys.argv[30] == "true"
 private_settings_context_seeded = sys.argv[31] == "true"
 private_settings_context_updated = sys.argv[32] == "true"
+homologation_seed_mode = sys.argv[33] == "true"
 
 def load_json(path: pathlib.Path) -> dict:
     try:
@@ -816,6 +857,7 @@ payload = {
     "policy_used": policy_used,
     "apply_policy_removed": apply_policy_removed,
     "policy_private_source": policy_private_source,
+    "homologation_seed_mode": homologation_seed_mode,
     "expected_result": expected_result,
     "trigger_opens_wizard_directly": True,
     "wizard_rc": wizard_rc,
@@ -951,13 +993,13 @@ fi
 set +e
 if [ "$MODE" = "preview" ]; then
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" /usr/bin/python3 "$VISUAL" \
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" \
       --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" /usr/bin/python3 "$VISUAL" \
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   deadline=$(( $(date +%s) + RUN_TIMEOUT_SEC ))
@@ -999,11 +1041,16 @@ if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
     exit 44
   fi
   set +e
-  python3 "$HANDOFF" \
-    --source-candidate "$WIZARD_OUT_DIR/config.candidate.json" \
-    --private-values "$PRIVATE_VALUES" \
-    --out-dir "$HANDOFF_OUT_DIR" \
-    --confirm-private-values-approved >/dev/null
+  handoff_args=(
+    --source-candidate "$WIZARD_OUT_DIR/config.candidate.json"
+    --private-values "$PRIVATE_VALUES"
+    --out-dir "$HANDOFF_OUT_DIR"
+    --confirm-private-values-approved
+  )
+  if [ "$HOMOLOGATION_SEED_MODE" = "true" ]; then
+    handoff_args+=(--allow-homologation-seed)
+  fi
+  python3 "$HANDOFF" "${handoff_args[@]}" >/dev/null
   HANDOFF_RC="$?"
   set -e
   if [ "$HANDOFF_RC" != "0" ]; then

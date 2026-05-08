@@ -15,6 +15,7 @@ Environment=XDG_RUNTIME_DIR=/tmp/kiosky
 Environment=KIOSKY_RUNTIME_DIR=/tmp/kiosky
 Environment=KIOSKY_LAUNCHER_STATUS_FILE=/data/state/kiosky-player/launcher-status.json
 ExecStartPre=+/usr/bin/install -d -o totem -g totem -m 0750 /tmp/kiosky /data/state/kiosky-player
+ExecStartPre=+/opt/totem/bin/totem_visual_tty_guard.sh --quiet --tty 1 --tty 2
 ExecStart=/usr/bin/env bash /opt/totem/bin/kiosky_service_launcher.sh
 Restart=always
 RestartSec=10s

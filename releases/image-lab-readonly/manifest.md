@@ -260,6 +260,27 @@ Status:
 - `c12_3_17_next_step=C12.3.18_OVERLAYROOT_BUILTIN_NOT_ACTIVE_DIAGNOSE`
 - `ready_for_c12_4=false`
 - `c12_4_blocked=true`
+- `c13_1_2_status=code_and_board_hotfix_passed_private_image_build_pending`
+- `c13_1_2_code_support=passed`
+- `c13_1_2_board_hotfix=passed`
+- `c13_1_2_artifact_private=true`
+- `c13_1_2_final_image=false`
+- `c13_1_2_homologation_private_values_supported=true`
+- `c13_1_2_homologation_private_values_embedded=false`
+- `c13_1_2_seed_source_outside_repo=true`
+- `c13_1_2_seed_permissions_ok=true`
+- `c13_1_2_seed_content_published=false`
+- `c13_1_2_wizard_auto_policy_enabled=true`
+- `c13_1_2_writer_called=true`
+- `c13_1_2_real_config_written=true`
+- `c13_1_2_public_state_after_apply=player_running`
+- `c13_1_2_playback_after_apply=playing`
+- `c13_1_2_private_image_built=false`
+- `ready_for_c13_1_2_private_image_build=true`
+- `c13_1_2_poweroff_executed=false`
+- `c13_1_2_power_cut_tested=false`
+- `c13_1_2_apt_upgrade_executed=false`
+- `c13_1_2_secrets_published=false`
 - `ready_for_c11_4=false`
 
 ## Purpose

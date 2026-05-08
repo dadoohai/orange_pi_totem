@@ -57,6 +57,11 @@ DOUBLE_LOAD_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_DOUBLE_LOAD_PER_SCR
 RENDERER_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_RENDERER", "framebuffer").strip().lower()
 PSF_FONT_PATH = os.environ.get("TOTEM_VISUAL_WIZARD_PSF_FONT", "/usr/share/consolefonts/Lat15-Fixed18.psf.gz")
 APPLY_CONTEXT = os.environ.get("TOTEM_VISUAL_WIZARD_APPLY_CONTEXT", "candidate").strip().lower()
+HOMOLOGATION_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 LANDSCAPE_CANVAS_WIDTH = 1280
 LANDSCAPE_CANVAS_HEIGHT = 720
@@ -2113,11 +2118,18 @@ def review_and_confirm(
         "bench_mock": "Modo de bancada sem nova rede real.",
     }.get(network["network_step"], "Rede sem detalhe publico.")
     if APPLY_CONTEXT == "real-write":
-        subtitle = "Salvar aplica as mudancas apos validacao privada."
+        if HOMOLOGATION_MODE:
+            subtitle = "Modo homologacao: configuracao sera aplicada com credenciais privadas da imagem."
+        else:
+            subtitle = "Salvar aplica as mudancas apos validacao privada."
         footer = "Enter salva | B volta | Esc cancela"
         apply_lines = [
             "Salvar chama writer controlado.",
-            "Config real sera atualizada apos validacao.",
+            (
+                "Credenciais privadas de homologacao ja estao presentes."
+                if HOMOLOGATION_MODE
+                else "Config real sera atualizada apos validacao."
+            ),
         ]
     elif APPLY_CONTEXT == "dry-run":
         subtitle = "Concluir valida a candidata privada sem aplicar."
@@ -2127,11 +2139,12 @@ def review_and_confirm(
             "Config real segue intocada.",
         ]
     else:
-        subtitle = "Confirme a candidata temporaria. Dados sensiveis nao aparecem nesta tela."
-        footer = "Enter conclui | B volta | Esc cancela"
+        subtitle = "Credenciais privadas ausentes. Esta etapa prepara a candidata, mas nao aplica."
+        footer = "Enter prepara candidata | B volta | Esc cancela"
         apply_lines = [
             "Writer real segue bloqueado.",
             "Config real segue intocada.",
+            "Para aplicar, ative a policy privada de bancada.",
         ]
     display.show(
         "05-review",
@@ -2161,7 +2174,11 @@ def review_and_confirm(
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
     if APPLY_CONTEXT == "real-write":
-        subtitle = "Ao sair, as configuracoes serao validadas e salvas."
+        subtitle = (
+            "Modo homologacao: ao sair, a configuracao sera salva nesta placa."
+            if HOMOLOGATION_MODE
+            else "Ao sair, as configuracoes serao validadas e salvas."
+        )
         panel_items = [
             "Validacao privada sera executada.",
             "Config real sera atualizada pelo writer.",
@@ -2182,13 +2199,13 @@ def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
             f"Estado: {status['state']}",
             "Writer real segue bloqueado.",
             "Config real segue intocada.",
-            "Use Salvar para aplicar mudancas.",
+            "Ative a policy privada de bancada para salvar.",
         ]
     display.show(
         "06-complete",
         build_screen_svg(
             active_step=4,
-            title="Concluido",
+            title="Concluido" if APPLY_CONTEXT in {"real-write", "dry-run"} else "Candidata preparada",
             subtitle=subtitle,
             footer="Enter sai",
             panel_title="Resultado",

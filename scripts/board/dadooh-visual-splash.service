@@ -7,6 +7,7 @@ Before=basic.target getty.target kiosky-player.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+ExecStartPre=/opt/totem/bin/totem_visual_tty_guard.sh --clear --tty 2
 ExecStart=/usr/local/sbin/dadooh-visual-splash.py boot
 ExecStop=/usr/local/sbin/dadooh-visual-splash.py shutdown
 TimeoutSec=8

@@ -434,9 +434,28 @@ def wait_for_function_hold(
                 pass
 
 
-def trigger_service_start(open_service: str) -> str:
+def run_tty_guard(tty_guard: str, visual_tty: int) -> None:
+    if not tty_guard:
+        return
+    guard_path = pathlib.Path(tty_guard)
+    if not guard_path.exists() or guard_path.is_symlink():
+        return
+    try:
+        subprocess.run(
+            [str(guard_path), "--clear", "--tty", str(visual_tty)],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        )
+    except Exception:
+        return
+
+
+def trigger_service_start(open_service: str, *, tty_guard: str = "", visual_tty: int = 2) -> str:
     if not open_service:
         return "not_requested"
+    run_tty_guard(tty_guard, visual_tty)
     try:
         completed = subprocess.run(
             ["systemctl", "start", open_service],
@@ -519,6 +538,8 @@ def daemon_loop(
     request_dir: pathlib.Path,
     session_lock: pathlib.Path,
     open_service: str,
+    tty_guard: str,
+    visual_tty: int,
     cooldown_sec: float,
     enabled_function_triggers: dict[int, str],
     enable_ctrl_i: bool,
@@ -563,7 +584,7 @@ def daemon_loop(
                 if diagnostic["stale_lock_suspected"]:
                     removed = remove_stale_session_lock(session_lock)
                     if removed:
-                        result = trigger_service_start(open_service)
+                        result = trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
                         write_status(
                             request_dir,
                             {
@@ -599,7 +620,7 @@ def daemon_loop(
                 )
                 time.sleep(1.0)
                 continue
-            result = trigger_service_start(open_service)
+            result = trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
             write_status(
                 request_dir,
                 {
@@ -716,8 +737,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--hold-sec", type=float, default=5.0)
     parser.add_argument("--timeout-sec", type=float, default=0.0)
     parser.add_argument("--cooldown-sec", type=float, default=10.0)
-    parser.add_argument("--session-lock", default="/run/dadooh-settings/session.lock")
+    parser.add_argument("--session-lock", default="/run/totem/settings-session.lock")
     parser.add_argument("--open-service", default="")
+    parser.add_argument("--tty-guard", default="/opt/totem/bin/totem_visual_tty_guard.sh")
+    parser.add_argument("--visual-tty", type=int, default=2)
     parser.add_argument("--device-glob", action="append", default=["/dev/input/event*"])
     parser.add_argument("--enable-ctrl-i", action="store_true")
     parser.add_argument("--enable-f12", action="store_true")
@@ -744,6 +767,8 @@ def main(argv: list[str]) -> int:
             request_dir=request_dir,
             session_lock=pathlib.Path(args.session_lock),
             open_service=str(args.open_service),
+            tty_guard=str(args.tty_guard),
+            visual_tty=int(args.visual_tty),
             cooldown_sec=float(args.cooldown_sec),
             enabled_function_triggers=enabled_function_triggers,
             enable_ctrl_i=bool(args.enable_ctrl_i),
