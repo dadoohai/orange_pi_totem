@@ -2256,3 +2256,14 @@ sessao F10, firstboot gate e read-only assertion. A nova imagem e
 SHA256 `a398399c139c3fee1b05860b216db7facfddd0ae1a57f681b229228390b7abd9`.
 Ela substitui a C12.1 para a proxima gravacao C12.2.1; nenhuma placa foi tocada
 e nenhum cartao foi gravado nesta rodada.
+
+Atualizacao C12.3.13: 2026-05-08. A imagem C12.1.10 foi diagnosticada na placa
+lab com um unico reboot de initramfs. O hook temporario foi removido por
+rollback. Read-only continua bloqueado: `read_only_enabled=false`,
+`overlay_active=false`, `root_write_blocked=false`. A causa foi refinada para
+`OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS`: o path dinamico encontrou um
+`overlay.ko`, mas o artefato no initramfs estava vazio e `modules.dep` nao
+referenciava `overlay`. A tela preta `config_missing` foi observada durante o
+diagnostico, mas depois foi identificada pelo operador como problema de hardware
+da tela e resolvida fora do software. C12.4 permanece bloqueado pelo read-only;
+o proximo passo e C12.1.11 para rebuild do modulo overlay no initramfs.

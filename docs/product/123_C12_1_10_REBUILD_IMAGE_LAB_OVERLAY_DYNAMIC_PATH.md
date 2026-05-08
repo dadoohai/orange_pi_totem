@@ -131,3 +131,32 @@ CONFIG_MISSING_VISUAL_BLACK_SCREEN_WITH_RENDERER_ACTIVE
 
 C12.4 continua bloqueado. O proximo passo recomendado e C12.3.13 para
 diagnosticar a categoria do erro do `insmod` usando o path dinamico encontrado.
+
+## Resultado C12.3.13
+
+C12.3.13 confirmou que o path dinamico e resolvido, mas classificou a falha de
+forma mais acionavel:
+
+```text
+OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS
+```
+
+O arquivo `overlay.ko` encontrado no runtime do initramfs aparece como
+`plain_ko`, porem com tamanho `empty`, e `modules.dep` nao referencia
+`overlay`. O `insmod` retorna nonzero sem mensagem sanitizavel de stderr/dmesg.
+
+Tambem foi refinada a tela preta de `config_missing`:
+
+```text
+SVG_VALID_BUT_NOT_PRESENTED_BY_MPV
+```
+
+Atualizacao humana posterior: a tela preta foi causada por problema de hardware
+da tela e foi resolvida fora do software. A frente visual deixa de ser blocker
+de produto nesta rodada.
+
+Proximos passos:
+
+- C12.1.11 para rebuild com `overlay.ko` nao vazio e `modules.dep` coerente;
+- nenhuma acao visual obrigatoria enquanto o hardware da tela permanecer
+  corrigido.

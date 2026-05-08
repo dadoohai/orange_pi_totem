@@ -98,3 +98,26 @@ C12.1.10 reconciliou C12.3.10/C12.3.11 endurecendo o hook e a validacao:
   `effective_boot_initramfs_overlay_resolvable=true`.
 
 C12.2.6 pode gravar a nova imagem. C12.4 segue bloqueado ate validacao em placa.
+
+## Atualizacao C12.3.13
+
+A imagem C12.1.10 provou que a resolucao dinamica do path passou a funcionar,
+mas o diagnostico seguinte ainda nao ativou `overlay`. A classificacao refinada
+e:
+
+```text
+OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS
+```
+
+Campos relevantes:
+
+- `overlay_ko_path_resolved=true`;
+- `overlay_ko_file_type=plain_ko`;
+- `overlay_ko_size_bucket=empty`;
+- `modules_dep_references_overlay=false`;
+- `insmod_overlay_attempted=true`;
+- `insmod_overlay_rc=nonzero`;
+- `dmesg_category=no_message`.
+
+O proximo passo e C12.1.11, garantindo modulo `overlay.ko` nao vazio e
+`modules.dep` coerente no initramfs efetivo.

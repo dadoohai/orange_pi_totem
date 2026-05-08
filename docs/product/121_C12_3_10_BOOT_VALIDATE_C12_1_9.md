@@ -117,3 +117,17 @@ observabilidade do hook. C12.3.10 classificou o fallback como tentado; C12.3.11
 provou que o path nao estava resolvivel na coleta refinada. C12.1.10 corrige
 isso exigindo resolucao dinamica do modulo antes do `insmod`, e a validacao
 offline passa a falhar se o hook nao provar `fallback_hook_dynamic_path=true`.
+
+## Atualizacao C12.3.13
+
+C12.3.13 testou a imagem C12.1.10 em placa lab e refinou a falha depois da
+resolucao dinamica de path:
+
+```text
+OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS
+```
+
+O path dinamico foi resolvido, mas o artefato `overlay.ko` visto no initramfs
+estava vazio e `modules.dep` nao referenciava `overlay`. O proximo passo deixa
+de ser apenas path dinamico e passa a ser C12.1.11: rebuild com modulo nao vazio
+e `modules.dep` coerente no initramfs efetivo.

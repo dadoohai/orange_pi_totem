@@ -159,6 +159,22 @@ Status:
 - `c12_3_12_visual_classification=CONFIG_MISSING_VISUAL_BLACK_SCREEN_WITH_RENDERER_ACTIVE`
 - `c12_3_12_ready_for_c12_4=false`
 - `c12_3_12_next_step=C12.3.13_DYNAMIC_PATH_INSMOD_ERROR_DIAGNOSTICS`
+- `c12_3_13_status=blocked`
+- `c12_3_13_diagnostic_hook_installed=true`
+- `c12_3_13_reboot_executed=true`
+- `c12_3_13_ssh_returned=true`
+- `c12_3_13_rollback_executed=true`
+- `c12_3_13_read_only_enabled=false`
+- `c12_3_13_overlay_active=false`
+- `c12_3_13_root_write_blocked=false`
+- `c12_3_13_insmod_error_category=unknown`
+- `c12_3_13_dmesg_category=no_message`
+- `c12_3_13_cause_category=OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS`
+- `c12_3_13_visual_classification=SVG_VALID_BUT_NOT_PRESENTED_BY_MPV`
+- `c12_3_13_visual_human_resolution=HARDWARE_DISPLAY_ISSUE_RESOLVED`
+- `c12_3_13_next_step_readonly=C12.1.11_REBUILD_WITH_NONEMPTY_OVERLAY_MODULE_AND_COHERENT_MODULES_DEP`
+- `c12_3_13_next_step_visual=none_product_patch_required`
+- `c12_3_13_ready_for_c12_4=false`
 - `ready_for_c11_4=false`
 
 ## Purpose
@@ -176,7 +192,7 @@ provisioned board.
 - c12_1_2_build_commit: `aec03bc`
 - c12_1_2_source_head: `aec03bc`
 - c12_1_9_build_commit: `e3bb015`
-- c12_1_10_build_commit: `pending_until_committed`
+- c12_1_10_build_commit: `f3f945c`
 - orange_pi_totem_build_head: `49778f61cb44d66d8ebccbad1b1a19d51d6c78ff`
 - dev_board_status: `hardware_incident_pending_retest`
 - dev_card_status: `lost_or_untrusted_after_smoke_heat_incident`

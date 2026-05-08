@@ -98,3 +98,25 @@ UI nesta rodada.
 - `read_only_validated=false`;
 - `c12_4_blocked=true`;
 - `next_step=C12.3.13_DYNAMIC_PATH_INSMOD_ERROR_DIAGNOSTICS`.
+
+## Atualizacao C12.3.13
+
+C12.3.13 refinou o bloqueio read-only para:
+
+```text
+OVERLAY_MODULE_EMPTY_OR_STUB_IN_INITRAMFS
+```
+
+O hook dinamico encontrou um `overlay.ko`, mas o artefato visto no initramfs
+estava vazio e `modules.dep` nao referenciava `overlay`. A tela preta tambem foi
+refinada para:
+
+```text
+SVG_VALID_BUT_NOT_PRESENTED_BY_MPV
+```
+
+Atualizacao humana posterior: a tela preta foi causada por problema de hardware
+da tela e foi resolvida fora do software. C12.4 continua bloqueado pelo
+read-only, nao pelo visual.
+
+Proximo passo: C12.1.11 para rebuild do modulo overlay no initramfs.
