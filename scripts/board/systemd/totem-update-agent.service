@@ -1,0 +1,34 @@
+[Unit]
+Description=Dadooh Totem Update Agent (pull-mode app updater)
+Documentation=https://github.com/dadoohai/orange_pi_totem
+After=network-online.target
+Wants=network-online.target
+
+# We do NOT update if kiosky-player isn't even loaded — this is the appliance
+# fail-safe.  We still run when kiosky-player is failed (e.g. config_missing)
+# because in some cases the update is what fixes the failure.
+ConditionPathExists=/opt/totem/bin/totem-updatectl
+
+[Service]
+Type=oneshot
+User=root
+# In-process update with auto-rollback on failed health check.
+ExecStart=/opt/totem/bin/totem-updatectl apply-github-latest --repo dadoohai/kiosky-player
+
+# Best-effort isolation; /data must remain writable so updater can stage payloads.
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Don't loop frantically if the network is down or GitHub is unreachable.
+TimeoutStartSec=600
+
+# Exit codes from totem-updatectl:
+#   0 success ; 10 auto-rolled-back (still treated as failure for restart logic)
+#   20 GitHub access blocked (private/forbidden) ; 21+ other errors
+# The timer will retry on the next OnUnitActiveSec window regardless.
+RestartPreventExitStatus=10 20
+
+[Install]
+WantedBy=multi-user.target

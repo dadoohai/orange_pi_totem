@@ -4,7 +4,8 @@ set -u
 umask 077
 
 CONFIG_PATH="${KIOSKY_CONFIG_PATH:-/data/config/config.json}"
-APP_CMD=(/usr/bin/python3 /opt/totem/kiosky-player/kiosk.py --config "$CONFIG_PATH")
+KIOSKY_APP_DIR="${KIOSKY_APP_DIR:-/opt/totem/kiosky-player}"
+APP_CMD=(/usr/bin/python3 "$KIOSKY_APP_DIR/kiosk.py" --config "$CONFIG_PATH")
 RUNTIME_DIR="${KIOSKY_RUNTIME_DIR:-/tmp/kiosky}"
 STATE_DIR="${KIOSKY_LAUNCHER_STATE_DIR:-/data/state/kiosky-player}"
 STATUS_FILE="${KIOSKY_LAUNCHER_STATUS_FILE:-$STATE_DIR/launcher-status.json}"

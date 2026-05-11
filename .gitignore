@@ -2,3 +2,10 @@
 docs/evidence/candidate-a/runs/**/*.tar.gz
 docs/evidence/candidate-a/runs/**/extracted/
 docs/evidence/candidate-a/runs/**/raw/
+
+# Builder-side ephemeral logs from deploy scripts (may contain device IPs).
+.cache/
+
+# App-update package outputs: keep manifest in git, but tarballs are large and
+# already authoritative on GitHub Releases.
+releases/app-updates/**/*.tar.gz

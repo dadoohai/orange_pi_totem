@@ -1,0 +1,16 @@
+[Unit]
+Description=Periodic dadooh totem app update check
+Documentation=https://github.com/dadoohai/orange_pi_totem
+
+[Timer]
+# First run 5 minutes after boot to let the player settle.
+OnBootSec=5min
+# Then every hour while the system is running.
+OnUnitActiveSec=1h
+# If the timer missed firings while the device was off, run once on next boot.
+Persistent=true
+Unit=totem-update-agent.service
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

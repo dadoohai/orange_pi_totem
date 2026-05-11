@@ -2364,3 +2364,16 @@ validacao offline passou com `artifact_private=true`, `final_image=false`,
 `tmp_private_values_dependency=false`, `card_written=false`,
 `boards_touched=false` e `ready_for_multi_card_homologation=true`. C12
 read-only e C12.4 continuam bloqueados.
+
+Atualizacao C14.1.1: 2026-05-11. C14.1.1 entregou o MVP de pull deploy via
+GitHub Releases para o app `kiosky-player`, sem `git pull` na placa e sem
+Mender/RAUC/SWUpdate. Builder gera `tar.gz` + manifest `dadooh.totem.update.v1`
+e publica como prerelease com `gh CLI`; placa baixa via HTTPS (Python stdlib),
+valida SHA256, extrai em `/data/apps/kiosky-player/releases/<v>/`, troca symlink
+`current` atomicamente, reinicia `kiosky-player.service` e faz health check com
+auto-rollback. Rollback manual testado fim-a-fim (apply v2, rollback para v1,
+servico `active`). `totem-update-agent.timer` instalado mas `disabled` por
+decisao. Nenhum `apt`/`pip`/kernel/u-boot/dtb/bsp/rootfs tocado. Status:
+`c14_1_1_status=passed`, `device_bootstrapped=true`, `rollback_tested=true`,
+`secrets_published=false`, `c12_readonly_blocked=true`, `c12_4_blocked=true`.
+Detalhes em `docs/product/135_C14_1_1_GITHUB_RELEASES_PULL_DEPLOY_MVP.md`.
