@@ -1170,3 +1170,79 @@ reboot and smoke tests.
 - no apt broad upgrade;
 - no desktop, Chromium, Xorg, Wayland or compositor;
 - no secrets or real config embedded in the image.
+
+## C14.2.1 Shipping Homologation Image (pull updater embedded)
+
+Builds on top of the C13.1.3 homologation private image with the C14.1.1
+pull updater pre-installed and `totem-update-agent.timer` enabled. The
+diff against C13.1.3 is exclusively the C14.1.1 binaries + drop-in + units
+listed in the appliance manifest, plus the `/data/apps` and `/data/updates`
+data dirs.
+
+Build flags recorded under the C14.2.1 evidence run
+(`docs/evidence/candidate-a/runs/<ts>-c14-2-1-shipping-homologation-image/`):
+
+- `c14_2_1_status=passed|blocked`;
+- `pull_updater_embedded=true` — `/opt/totem/bin/totem-updatectl` and
+  `totem-kiosky-launcher.sh` present 0755;
+- `pull_update_timer_enabled=true` — symlink at
+  `/etc/systemd/system/timers.target.wants/totem-update-agent.timer` present;
+- `update_timer_on_boot=10min`, `update_timer_interval=6h`,
+  `update_timer_randomized_delay=10min`;
+- `github_repo=dadoohai/kiosky-player`, `update_channel=homologation`;
+- `homologation_shipping_image=true`, `artifact_private=true`,
+  `final_image=false`, `not_for_production=true`,
+  `not_for_distribution=true`;
+- `kernel_recompiled=false` (cache reused),
+  `kernel_config_changed=false`;
+- `apt_upgrade_executed=false`, `pip_install_executed=false`,
+  `git_pull_used_on_device=false`;
+- `seed_present=true`, `seed_permissions_ok=true`,
+  `seed_content_published=false`;
+- `c12_readonly_blocked=true`, `c12_4_blocked=true`;
+- `rollback_previously_tested_in_c14_1_1=true`,
+  `rollback_retested_in_c14_2_1=false` (code path unchanged since C14.1.1
+  commit `30aaf36`).
+
+Image filename pattern:
+
+```
+Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c14-2-1-shipping-homolog_minimal.img
+```
+
+(The `c12-ro-lab-` prefix continues to mark that the rootfs still carries
+the overlayroot config baked-in, even though C12 read-only remains
+blocked at boot.)
+
+Offline validation gates against the built rootfs:
+
+- `/opt/totem/bin/totem-updatectl` present, executable, 0755;
+- `/opt/totem/bin/totem-kiosky-launcher.sh` present, executable, 0755;
+- `/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf`
+  present, 0644;
+- `/etc/systemd/system/totem-update-agent.{service,timer}` present, 0644;
+- `/etc/systemd/system/timers.target.wants/totem-update-agent.timer`
+  symlink present (proves enabled-on-image);
+- `OnBootSec=10min`, `OnUnitActiveSec=6h`, `RandomizedDelaySec=10min`
+  match in the timer file;
+- `/data/state/totem-settings/private-values.seed.json` present 0600
+  root:root;
+- `/data/apps/kiosky-player/releases/` and `/data/updates/incoming/`
+  exist as dirs.
+
+Single-card validation (after writing one SD card and booting):
+
+- `systemctl is-active kiosky-player.service` → `active`;
+- `systemctl is-enabled totem-update-agent.timer` → `enabled`;
+- `systemctl is-active  totem-update-agent.timer` → `active`;
+- `/opt/totem/bin/totem-updatectl self-test` → `self_test=true`;
+- `/opt/totem/bin/totem-updatectl apply-github-latest --repo
+  dadoohai/kiosky-player` → `apply_success`;
+- `readlink -f /data/apps/kiosky-player/current` resolves under
+  `/data/apps/kiosky-player/releases/<version>/`;
+- no `apt` / `pip` / `git pull` invoked by the timer.
+
+`ready_for_batch_flash=true` requires the single-card validation above to
+pass. `ready_for_dispatch=true` additionally requires the player to
+reach its run state (`kiosky_player_active=true`,
+`health_check_passed=true`).

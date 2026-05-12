@@ -3,14 +3,16 @@ Description=Periodic dadooh totem app update check
 Documentation=https://github.com/dadoohai/orange_pi_totem
 
 [Timer]
-# First run 5 minutes after boot to let the player settle.
-OnBootSec=5min
-# Then every hour while the system is running.
-OnUnitActiveSec=1h
+# Conservative cadence for shipping homologation lot (C14.2.1):
+#   - first run 10 minutes after boot so the player settles first;
+#   - then once every 6 hours while the device is running;
+#   - +/- 10 minutes of jitter so a lot of devices don't hit GitHub together.
+OnBootSec=10min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
 # If the timer missed firings while the device was off, run once on next boot.
 Persistent=true
 Unit=totem-update-agent.service
-RandomizedDelaySec=2min
 
 [Install]
 WantedBy=timers.target

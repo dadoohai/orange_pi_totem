@@ -1,6 +1,6 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1",
+  "created_for": "C10.8.1 (extended by C14.2.1)",
   "orange_pi_totem": {
     "repository": "dadoohai/orange_pi_totem",
     "branch": "foundation-v0.1",
@@ -91,7 +91,12 @@
     {"path": "/data/logs/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/tmp/kiosky", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/run/dadooh-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700"},
-    {"path": "/run/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0700"}
+    {"path": "/run/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0700"},
+    {"path": "/data/apps", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/apps/kiosky-player", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/apps/kiosky-player/releases", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/updates", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/updates/incoming", "type": "dir", "owner": "root", "group": "root", "mode": "0755"}
   ],
   "bin_scripts": [
     {"source": "scripts/board/kiosky_service_launcher.sh", "target": "/opt/totem/bin/kiosky_service_launcher.sh", "owner": "root", "group": "root", "mode": "0755"},
@@ -113,18 +118,23 @@
     {"source": "scripts/board/totem_visual_tty_guard.sh", "target": "/opt/totem/bin/totem_visual_tty_guard.sh", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_wifi_local_credentials_tty.py", "target": "/opt/totem/bin/totem_wifi_local_credentials_tty.py", "owner": "root", "group": "root", "mode": "0755"},
     {"source": "scripts/board/totem_wifi_nm_adapter.py", "target": "/opt/totem/bin/totem_wifi_nm_adapter.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/verify_totem_read_only_policy.sh", "target": "/opt/totem/bin/verify_totem_read_only_policy.sh", "owner": "root", "group": "root", "mode": "0755"}
+    {"source": "scripts/board/verify_totem_read_only_policy.sh", "target": "/opt/totem/bin/verify_totem_read_only_policy.sh", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem_updatectl.py", "target": "/opt/totem/bin/totem-updatectl", "owner": "root", "group": "root", "mode": "0755"},
+    {"source": "scripts/board/totem-kiosky-launcher.sh", "target": "/opt/totem/bin/totem-kiosky-launcher.sh", "owner": "root", "group": "root", "mode": "0755"}
   ],
   "extra_files": [
     {"source": "scripts/board/totem_visual_splash.py", "target": "/usr/local/sbin/dadooh-visual-splash.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_read_only_policy.json", "target": "/opt/totem/share/totem_read_only_policy.json", "owner": "root", "group": "root", "mode": "0644"}
+    {"source": "scripts/board/totem_read_only_policy.json", "target": "/opt/totem/share/totem_read_only_policy.json", "owner": "root", "group": "root", "mode": "0644"},
+    {"source": "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf", "target": "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf", "owner": "root", "group": "root", "mode": "0644"}
   ],
   "systemd_units": [
     {"source": "scripts/board/kiosky-player.service", "target": "/etc/systemd/system/kiosky-player.service", "enabled": true, "active_expected_on_dev": "active"},
     {"source": "scripts/board/totem-firstboot-gate.service", "target": "/etc/systemd/system/totem-firstboot-gate.service", "enabled": true, "active_expected_on_dev": "inactive"},
     {"source": "scripts/board/totem-settings-trigger.service", "target": "/etc/systemd/system/totem-settings-trigger.service", "enabled": true, "active_expected_on_dev": "active"},
     {"source": "scripts/board/totem-open-settings.service", "target": "/etc/systemd/system/totem-open-settings.service", "enabled": false, "enabled_state": "static", "active_expected_on_dev": "inactive"},
-    {"source": "scripts/board/dadooh-visual-splash.service", "target": "/etc/systemd/system/dadooh-visual-splash.service", "enabled": true, "active_expected_on_dev": "active"}
+    {"source": "scripts/board/dadooh-visual-splash.service", "target": "/etc/systemd/system/dadooh-visual-splash.service", "enabled": true, "active_expected_on_dev": "active"},
+    {"source": "scripts/board/systemd/totem-update-agent.service", "target": "/etc/systemd/system/totem-update-agent.service", "enabled": false, "enabled_state": "static", "active_expected_on_dev": "inactive"},
+    {"source": "scripts/board/systemd/totem-update-agent.timer", "target": "/etc/systemd/system/totem-update-agent.timer", "enabled": true, "active_expected_on_dev": "active"}
   ],
   "boot_visual_guardrails": {
     "armbian_env": "/boot/armbianEnv.txt",

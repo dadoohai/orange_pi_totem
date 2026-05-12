@@ -30,5 +30,6 @@ TimeoutStartSec=600
 # The timer will retry on the next OnUnitActiveSec window regardless.
 RestartPreventExitStatus=10 20
 
-[Install]
-WantedBy=multi-user.target
+# No [Install] section: this is a static oneshot driven exclusively by
+# totem-update-agent.timer (and by manual `systemctl start`). Enabling the
+# timer is what makes the unit run periodically.

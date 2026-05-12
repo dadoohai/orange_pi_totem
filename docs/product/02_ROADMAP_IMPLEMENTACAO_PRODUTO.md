@@ -2377,3 +2377,22 @@ decisao. Nenhum `apt`/`pip`/kernel/u-boot/dtb/bsp/rootfs tocado. Status:
 `c14_1_1_status=passed`, `device_bootstrapped=true`, `rollback_tested=true`,
 `secrets_published=false`, `c12_readonly_blocked=true`, `c12_4_blocked=true`.
 Detalhes em `docs/product/135_C14_1_1_GITHUB_RELEASES_PULL_DEPLOY_MVP.md`.
+
+Atualizacao C14.2.1: 2026-05-11. Imagem privada de homologacao de despacho
+que embute o updater C14.1.1 e habilita `totem-update-agent.timer` na propria
+imagem, para evitar bootstrap SSH por placa em gravacao de lote. Diff em
+relacao a C13.1.3 e exclusivamente adicao de
+`/opt/totem/bin/totem-updatectl`, `/opt/totem/bin/totem-kiosky-launcher.sh`,
+drop-in `kiosky-player.service.d/20-dadooh-launcher.conf`,
+`totem-update-agent.service` (static), `totem-update-agent.timer` (enabled,
+`OnBootSec=10min`/`OnUnitActiveSec=6h`/`RandomizedDelaySec=10min`) e dirs
+`/data/apps/kiosky-player/{releases,}` e `/data/updates/incoming/`.
+Sem mudanca em kernel/U-Boot/DTB/BSP/rootfs base. Build reaproveita cache
+do Armbian Build (sem recompilar kernel). Seed privada continua em
+`/data/state/totem-settings/private-values.seed.json` 0600 root:root.
+Rollback nao retestado (provado em C14.1.1). Status:
+`artifact_private=true`, `final_image=false`, `homologation_shipping_image=true`,
+`not_for_production=true`, `not_for_distribution=true`,
+`pull_updater_embedded=true`, `pull_update_timer_enabled=true`,
+`c12_readonly_blocked=true`, `c12_4_blocked=true`. Detalhes em
+`docs/product/136_C14_2_1_SHIPPING_HOMOLOGATION_IMAGE_WITH_PULL_UPDATER.md`.
