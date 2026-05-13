@@ -1,0 +1,30 @@
+{
+  "black_interval_duration_sec": 0,
+  "black_interval_observed": false,
+  "boot_id_changed": false,
+  "first_sample_uptime_sec": 2047,
+  "guardrails": {
+    "config_read": false,
+    "networkmanager_profiles_read": false,
+    "raw_logs_written": false,
+    "real_config_written": false,
+    "seed_read": false,
+    "writer_called": false
+  },
+  "kiosk_present_any": true,
+  "last_sample_uptime_sec": 2225,
+  "mpv_present_any": true,
+  "network_remained_connected": true,
+  "playback_started_after_black": false,
+  "playback_state_counts": {
+    "playing": 72
+  },
+  "player_active_all_samples": true,
+  "sample_count": 72,
+  "schema_version": "dadooh-c15.3.1-visual-transition-summary.v1",
+  "screen_counts": {
+    "player_playing": 72
+  },
+  "ssh_remained_active": true,
+  "status_observability": "partial"
+}

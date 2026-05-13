@@ -107,6 +107,9 @@ ready_for_c16_player_audit=true
 C16/player audit may now be opened separately. No C16 work was started in this
 card.
 
+Follow-up: C15.3.1 audited the user-perceived visual transition before C16 and
+recommended a C15.3.2 feedback fix for the transient pre-player black interval.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T210628Z-c15-2-4-clean-board-image-validation/`

@@ -2595,7 +2595,9 @@ sobreviveu a entrada de ambiente e o writer passou, mas apos concluir houve tela
 preta e perda de SSH; a recuperacao exigiu corte fisico. Portanto C15.2.1 e
 C15.2.2 ficam bloqueados para lote/despacho/C16:
 `ready_for_batch_flash=false`, `ready_for_dispatch=false`,
-`ready_for_c16_player_audit=false`, `power_cut_tested=true`,
+`ready_for_c16_player_audit=false`,
+`emergency_physical_power_cycle_recovery=true`,
+`planned_power_cut_tested=false`, `c12_4_power_cut_tested=false`,
 `c16_started=false`. Proximo passo: classificar a janela pos-wizard de tela
 preta/perda de rede antes de gerar nova imagem. Detalhes em
 `docs/product/143_C15_2_1_IMAGE_UI_UX_FIXES_CLEAN_BOARD_VALIDATION.md` e
@@ -2629,9 +2631,27 @@ placa limpa foi gravada manualmente e passou no primeiro F10/full setup:
 `real_config_written=true`, lock limpo, SSH e NetworkManager ativos, player
 restaurado e playback `playing`. Houve intervalo preto transitorio ao entrar no
 player apos o primeiro setup, sem queda de SSH e sem recuperacao; fica como
-follow-up de player/startup para C16. `console-setup.service` apareceu failed
+follow-up perceptivo antes de C16. `console-setup.service` apareceu failed
 com erro sanitizado de setupcon/tmpkbd, sem bloquear teclado, wizard, SSH,
 NetworkManager, player ou playback. C15.2.4 fica `passed`:
 `ready_for_batch_flash=true`, `ready_for_dispatch=true`,
 `ready_for_c16_player_audit=true`, `c16_started=false`. Detalhes em
 `docs/product/146_C15_2_4_CLEAN_BOARD_IMAGE_VALIDATION.md`.
+
+Atualizacao C15.3.1: 2026-05-13. Antes de abrir C16, foi feita uma auditoria
+perceptiva sem interacao manual, sem F10, sem writer, sem reboot e sem alterar
+Wi-Fi, NetworkManager, player ou config real. A jornada visual foi mapeada de
+power-on ate player normal, e foi criado
+`scripts/remote/c15_3_1_visual_transition_timeline.sh` para coletar timeline
+sanitizada em `/data/state/totem-debug/c15-3-1`. O monitor confirmou SSH,
+NetworkManager, player e playback saudaveis no estado atual, sem reproduzir
+tela preta persistente. A observabilidade fica `partial`: ha sinais publicos
+para splash/launcher/player/sessao, mas nao ha sinal publico explicito para
+espera de midia/cache/API ou primeiro frame. A causa precisa do intervalo preto
+transitorio de C15.2.4 permanece `unknown`, com hipoteses provaveis em
+`waiting_for_media_without_feedback`, `media_cache_download_wait`,
+`api_playlist_wait` ou `splash_to_mpv_handoff_gap`. Resultado:
+`p0_items_count=0`, `p1_items_count=3`,
+`ready_for_c15_3_2_feedback_fix=true`,
+`ready_for_c16_player_audit=false`, `c16_started=false`. Detalhes em
+`docs/product/147_C15_3_1_USER_PERCEIVED_VISUAL_TRANSITION_AUDIT.md`.

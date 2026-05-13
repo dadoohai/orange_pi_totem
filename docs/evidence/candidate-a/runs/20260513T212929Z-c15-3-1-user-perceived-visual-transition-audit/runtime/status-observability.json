@@ -1,0 +1,21 @@
+{
+  "config_read": false,
+  "networkmanager_profiles_read": false,
+  "raw_logs_written": false,
+  "schema_version": "dadooh-c15.3.1-status-observability.v1",
+  "seed_read": false,
+  "sources": {
+    "cache_media_api_public_status": false,
+    "debug_data_root": true,
+    "framebuffer_device": true,
+    "launcher_status_data": true,
+    "launcher_status_tmp": false,
+    "player_status": true,
+    "public_status": true,
+    "session_status": false,
+    "session_trace": true,
+    "splash_status_dir": true
+  },
+  "status_observability": "partial",
+  "writer_called": false
+}
