@@ -154,7 +154,12 @@
     "getty_units_disabled": [
       "getty@tty1.service",
       "getty@tty2.service"
-    ]
+    ],
+    "firstboot_gate": {
+      "reserved_tty": "tty2",
+      "raw_tty_output_allowed": false,
+      "renderer_failure_fallback": "clear_reserved_vt_without_text"
+    }
   },
   "public_orientation": {
     "path": "/data/state/totem-display/orientation.json",

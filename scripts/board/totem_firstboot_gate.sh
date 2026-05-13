@@ -112,26 +112,13 @@ show_firstboot_splash() {
   if [ -e "$TTY_DEVICE" ]; then
     command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
     printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
-    {
-      printf 'Dadooh\n\n'
-      printf 'Bootstrap tecnico pendente\n\n'
-      printf 'Esta imagem de laboratorio precisa concluir o primeiro acesso tecnico\n'
-      printf 'ou ser reconstruida com C12_LAB_FIRSTBOOT_CONF privado.\n\n'
-      printf 'F10 e Configuracoes ficam bloqueados ate o bootstrap terminar.\n'
-    } > "$TTY_DEVICE" 2>/dev/null || true
   fi
-  if [ -f "$SPLASH" ]; then
+  if [ -f "$SPLASH" ] && [ -e "$TTY_DEVICE" ]; then
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" firstboot \
       --status-out "$OUT_DIR/splash-status.json" \
       <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || {
         if [ -e "$TTY_DEVICE" ]; then
-          {
-            printf '\033c\033[2J\033[3J\033[H\033[?25l'
-            printf 'Dadooh\n\n'
-            printf 'Bootstrap tecnico pendente\n\n'
-            printf 'A tela visual nao assumiu. Reconstrua a image-lab com\n'
-            printf 'C12_LAB_FIRSTBOOT_CONF privado antes de validar em placa.\n'
-          } > "$TTY_DEVICE" 2>/dev/null || true
+          printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
         fi
       }
   fi

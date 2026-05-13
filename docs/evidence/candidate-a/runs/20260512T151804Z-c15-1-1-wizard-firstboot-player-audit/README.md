@@ -2,7 +2,7 @@
 
 Run identifier: `20260512T151804Z-c15-1-1-wizard-firstboot-player-audit`
 Card status: hotfix-deployed-and-instrumented; 1-of-2 on-device tests
-passed; second-test root cause **still unclassified**; closure pending a
+passed; first-test root cause **still unclassified**; closure pending a
 deliberate validation battery (recommended next: `C15.1.2`)
 Operator role: audit + minimal hotfix + diagnostic instrumentation +
 on-device validation

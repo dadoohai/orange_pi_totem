@@ -2451,3 +2451,33 @@ permitido: `C15.1.2 — wizard reliability battery on lab board` (5 F10
 consecutivos com intervalos mistos, criterio de fechamento 5/5 sem
 `code=killed` ou falha classificavel via trace). C16 (player) segue
 bloqueado ate C15.1.2 fechar — disciplina tematica entre cartoes.
+
+Atualizacao C15.1.2: 2026-05-13. Bateria fisica de 5 F10 executada na placa
+lab ja ligada, com intervalos mistos. O fluxo warm-runtime do wizard passou
+5/5 por trace:
+`openvt_exited`, `WIZARD_RC=8`, `writer_called=true`, `writer_rc=0`,
+`writer_result=passed`, `real_config_written=true`, `backup_created=true`,
+lock limpo e `kiosky-player.service` restaurado em todas as tentativas. O
+SIGTERM de C15.1.1 nao voltou, `config_missing` nao retomou durante o wizard e
+terminal/login nao apareceu.
+Foi removido o `printf` cru do `totem_firstboot_gate.sh` para `/dev/tty2` e o
+hotfix foi aplicado na placa sem reboot; cold boot nao foi validado nesta
+rodada. Porem C15.1.2 fica **bloqueado**, nao `passed`: o operador confirmou
+que pressionar F10 ainda mostra caracteres de teclado sobre o SVG antes do
+refresh limpar a tela. O operador tambem esclareceu que os sintomas originais
+de sair sozinho, aparecer login ou voltar para `config_missing` sao percebidos
+com mais frequencia imediatamente apos ligar a placa; esse contexto de cold
+boot/primeira tentativa nao foi exercitado nesta rodada. Classificacao:
+`keyboard_echo_persisted=true`, `cold_boot_context_tested=false`,
+`unclassified_failures=0`.
+Status:
+`c15_1_2_status=blocked`, `all_tests_passed=false`,
+`warm_runtime_f10_battery_passed=true`, `ready_for_image_rebuild=false`,
+`ready_for_c16_player_audit=false`,
+`c15_1_1_status=partial-validated`, `c16_started=false`,
+`player_code_changed=false`, `secrets_published=false`,
+`apt_update_executed=false`, `apt_upgrade_executed=false`,
+`pip_install_executed=false`, `poweroff_executed=false`,
+`power_cut_tested=false`, `c12_readonly_blocked=true`, `c12_4_blocked=true`.
+Detalhes em
+`docs/product/138_C15_1_2_WIZARD_RELIABILITY_BATTERY.md`.

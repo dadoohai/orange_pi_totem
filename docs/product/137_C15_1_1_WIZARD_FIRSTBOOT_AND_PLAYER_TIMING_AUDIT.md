@@ -285,6 +285,30 @@ validation battery in `C15.1.2` confirms the wizard is reliable.
   themes are distinct (C15 = wizard/firstboot/visual; C16 = player
   scheduler/sync). Rigour over speed.
 
+### C15.1.2 result (2026-05-13)
+
+C15.1.2 executed the five physical F10 attempts on the already-running board.
+The warm-runtime wizard flow passed 5/5 by trace (`openvt_exited`,
+`WIZARD_RC=8`, writer passed, lock cleaned, player restored), and the C15.1.1
+SIGTERM did not recur.
+
+However C15.1.2 is **blocked**, not passed: the operator confirmed that F10
+still echoes keyboard characters over the SVG before the screen refresh clears
+them. The failure is classified as `keyboard_echo_persisted`, with
+`unclassified_failures=0`.
+
+The operator also clarified that the earlier self-exit/login/config_missing
+symptoms are most often perceived immediately after power-on. C15.1.2 did not
+reboot or power-cycle by restriction, so that cold-boot/first-attempt context is
+recorded as not tested, not as passed.
+
+The firstboot gate raw `/dev/tty2` output was removed in
+`scripts/board/totem_firstboot_gate.sh` and hotfixed onto the board, but it was
+not cold-boot validated because this round did not reboot or power-cycle.
+
+Decision: C15.1.1 remains partial-validated; C15.1.3/C14.2.2 image rebuild is
+not released; C16/player remains blocked until C15.1.2 passes.
+
 ## What stays untouched
 
 - `C14.2.1` shipping homologation image still flashable; nothing about
