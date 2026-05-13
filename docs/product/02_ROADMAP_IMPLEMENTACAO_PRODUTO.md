@@ -2505,3 +2505,26 @@ o primeiro F10 fisico passou com 8 telas incluindo `06-complete`, writer
 `secrets_published=false`. C16/player fica liberado para abrir em cartao
 seguinte, mas nao foi iniciado nesta rodada. Detalhes em
 `docs/product/139_C15_1_3_F10_KEYBOARD_ECHO_AND_FIRST_REBOOT_VALIDATION.md`.
+
+Atualizacao C15.1.4: 2026-05-13. Antes do rebuild C15.2.1, a tela Wi-Fi do
+wizard visual recebeu uma melhoria focada de UX: lista paginada/navegavel,
+refresh automatico a cada 10s, refresh manual por `R`, ordenacao por sinal,
+agrupamento de SSID duplicado pelo melhor sinal, ocultacao de redes sem SSID,
+percentual numerico de sinal, barras e bucket textual. A senha Wi-Fi permanece
+oculta por padrao e agora pode ser alternada localmente por `F2` ou `V`; `V` foi
+mantido como fallback para consoles que nao entregam F2 consistentemente. O
+adapter recebeu apenas allowlist read-only para listagem Wi-Fi com rescan; ele
+nao conecta, desconecta, reinicia NetworkManager ou altera perfil por si so.
+Self-tests locais e na placa passaram, preview sintetico foi gerado e a evidencia
+publica permaneceu sanitizada. No teste fisico, o operador confirmou 10 redes em
+2 paginas, percentual de intensidade visivel e toggle de senha funcionando apos
+hotfix. O wizard foi concluido pelo fluxo normal, Wi-Fi real foi aplicado pelo
+wizard, writer `passed`, config real escrita, lock limpo e player restaurado,
+sem publicar SSID/senha. Status: `c15_1_4_status=passed`,
+`ready_for_image_rebuild=true`, `ready_for_c16_player_audit=true`,
+`c16_started=false`, `player_code_changed=false`, `apt_update_executed=false`,
+`apt_upgrade_executed=false`, `pip_install_executed=false`,
+`poweroff_executed=false`, `power_cut_tested=false`, `secrets_published=false`.
+Problemas legados observados mas nao misturados ao aceite: wizard poluido por
+texto e piscada por backlog ao segurar Backspace. Detalhes em
+`docs/product/140_C15_1_4_WIFI_SETUP_UX_REFRESH.md`.

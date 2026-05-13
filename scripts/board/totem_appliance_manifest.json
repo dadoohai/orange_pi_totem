@@ -199,6 +199,28 @@
     },
     "must_not_read_private_config": true
   },
+  "wifi_setup_ux": {
+    "visual_wizard": "/opt/totem/bin/totem_setup_visual_wizard.py",
+    "adapter": "/opt/totem/bin/totem_wifi_nm_adapter.py",
+    "paginated_wifi_list": true,
+    "auto_refresh_interval_sec": 10,
+    "manual_refresh_key": "R",
+    "sorted_by_signal_desc": true,
+    "duplicate_ssid_grouping": true,
+    "signal_percent_visible": true,
+    "signal_bars_visible": true,
+    "signal_bucket_visible": true,
+    "password_hidden_by_default": true,
+    "password_show_toggle_key": "F2/V",
+    "public_status_must_not_include": [
+      "ssid",
+      "wifi_password",
+      "bssid",
+      "mac",
+      "ip",
+      "dns"
+    ]
+  },
   "kiosky_player": {
     "install_path": "/opt/totem/kiosky-player",
     "repo_full_name": "dadoohai/kiosky-player",

@@ -48,6 +48,9 @@ DEFAULT_OUT_DIR = "/tmp/dadooh-c9-9-visual-wizard"
 DEFAULT_WIFI_SECRETS_DIR = "/tmp/dadooh-c9-9-visual-wifi-secrets"
 WIFI_APPLY_DIRNAME = "wifi-persistent"
 WIFI_TIMEOUT_SEC = 45
+WIFI_LIST_REFRESH_SEC = 10.0
+WIFI_LIST_TIMEOUT_SEC = 4
+WIFI_LIST_PAGE_SIZE = 5
 WIFI_PERSISTENT_PROFILE_NAME = wifi_adapter.DEFAULT_PERSISTENT_PROFILE_NAME
 ADAPTER_SCRIPT = pathlib.Path(__file__).with_name("totem_wifi_nm_adapter.py")
 PRESENT_SETTLE_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PRESENT_SETTLE_SEC", "0.18"))
@@ -974,7 +977,11 @@ class RawKeyboard:
         termios.tcsetattr(self.fd, termios.TCSANOW, self.previous)
 
 
-def read_key() -> str:
+def read_key(timeout_sec: float | None = None) -> str:
+    if timeout_sec is not None:
+        ready, _, _ = select.select([sys.stdin], [], [], max(0.0, timeout_sec))
+        if not ready:
+            return "timeout"
     data = os.read(sys.stdin.fileno(), 1)
     if data in {b"\r", b"\n"}:
         return "enter"
@@ -1004,14 +1011,18 @@ def read_key() -> str:
             return "right"
         if rest == b"[D":
             return "left"
-        if rest in {b"[5~", b"[H", b"OH"}:
+        if rest == b"[5~":
+            return "pageup"
+        if rest == b"[6~":
+            return "pagedown"
+        if rest in {b"[H", b"OH"}:
             return "up"
-        if rest in {b"[6~", b"[F", b"OF"}:
+        if rest in {b"[F", b"OF"}:
             return "down"
         if rest in {b"[3~", b"[P"}:
             return "backspace"
-        if rest in {b"OQ", b"[12~"}:
-            return "back"
+        if rest in {b"OQ", b"[[B", b"[12~"}:
+            return "f2"
         return "unknown"
     try:
         char = data.decode("utf-8")
@@ -1209,17 +1220,22 @@ def read_text_field(
     panel_items: list[str],
     allow_back: bool = True,
     show_plain_value: bool = False,
+    allow_hidden_toggle: bool = False,
     layout_rotation_deg: int = 0,
     initial_value: str = "",
 ) -> str | None:
     value = str(initial_value or "")[:max_length]
     error = ""
+    reveal_hidden_value = False
     while True:
-        hint = text_field_display_hint(value, hidden=hidden, show_plain_value=show_plain_value)
+        effective_show_plain_value = show_plain_value or bool(hidden and allow_hidden_toggle and reveal_hidden_value)
+        hint = text_field_display_hint(value, hidden=hidden, show_plain_value=effective_show_plain_value)
         note = error or "O valor digitado nao sera gravado nos SVGs publicos desta rodada."
-        footer = "Digite no teclado | Enter confirma | Ctrl+U limpa | Esc cancela"
+        footer = "Digite | Enter confirma | Ctrl+U limpa | Esc cancela"
         if allow_back:
-            footer = "Digite no teclado | Enter confirma | F2/Ctrl+B volta | Ctrl+U limpa | Esc cancela"
+            footer = "Digite | Enter confirma | Ctrl+B volta | Ctrl+U limpa | Esc cancela"
+        if hidden and allow_hidden_toggle:
+            footer = "Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc"
         display.show(
             screen_id,
             build_screen_svg(
@@ -1248,6 +1264,10 @@ def read_text_field(
                     error = "Formato invalido. Corrija e tente novamente."
                     continue
             return candidate
+        if hidden and allow_hidden_toggle and key in {"f2", "v", "V"}:
+            reveal_hidden_value = not reveal_hidden_value
+            error = ""
+            continue
         if allow_back and key == "back":
             return None
         if key in {"escape", "q", "Q"}:
@@ -1265,6 +1285,8 @@ def read_text_field(
 
 def text_field_display_hint(value: str, *, hidden: bool, show_plain_value: bool) -> str:
     if hidden:
+        if show_plain_value:
+            return value or "Aguardando entrada"
         return "*" * len(value) if value else "Aguardando entrada"
     if show_plain_value:
         return value or "Aguardando entrada"
@@ -1367,10 +1389,169 @@ def local_display_value(value: str, *, max_chars: int = 36) -> str:
 
 def security_label(value: Any) -> str:
     if value is True:
-        return "segura"
+        return "Protegida"
     if value is False:
-        return "aberta"
-    return "seguranca desconhecida"
+        return "Aberta"
+    return "Seguranca desconhecida"
+
+
+def signal_percent(network: dict[str, Any]) -> int:
+    try:
+        return max(0, min(100, int(network.get("signal_percent", 0))))
+    except (TypeError, ValueError):
+        return 0
+
+
+def signal_bars(percent: int) -> str:
+    if percent >= 90:
+        return "████"
+    if percent >= 70:
+        return "███"
+    if percent >= 40:
+        return "██"
+    return "█"
+
+
+def signal_label(percent: int) -> str:
+    if percent >= 90:
+        return "Forte"
+    if percent >= 70:
+        return "Bom"
+    if percent >= 40:
+        return "Medio"
+    return "Fraco"
+
+
+def wifi_option_for_network(index: int, network: dict[str, Any]) -> Option:
+    percent = signal_percent(network)
+    return Option(
+        f"wifi-{index}",
+        local_display_value(str(network["ssid"])),
+        f"{percent}% {signal_bars(percent)} {signal_label(percent)} | {security_label(network.get('security_present'))}",
+    )
+
+
+def page_bounds(total_count: int, selected_index: int, page_size: int) -> tuple[int, int, int, int]:
+    safe_total = max(0, int(total_count))
+    safe_page_size = max(1, int(page_size))
+    if safe_total == 0:
+        return 0, 0, 0, 0
+    safe_selected = max(0, min(safe_total - 1, int(selected_index)))
+    page_index = safe_selected // safe_page_size
+    start = page_index * safe_page_size
+    end = min(safe_total, start + safe_page_size)
+    return start, end, page_index, max(1, (safe_total + safe_page_size - 1) // safe_page_size)
+
+
+def page_items(items: list[dict[str, Any]], selected_index: int, page_size: int) -> tuple[list[dict[str, Any]], int, int, int, int]:
+    start, end, page_index, page_count = page_bounds(len(items), selected_index, page_size)
+    return items[start:end], start, end, page_index, page_count
+
+
+def refresh_selected_index(
+    previous_networks: list[dict[str, Any]],
+    refreshed_networks: list[dict[str, Any]],
+    previous_selected_index: int,
+) -> tuple[int, bool]:
+    if not refreshed_networks:
+        return 0, False
+    selected_ssid = ""
+    if previous_networks:
+        safe_previous = max(0, min(len(previous_networks) - 1, previous_selected_index))
+        selected_ssid = str(previous_networks[safe_previous].get("ssid", ""))
+    if selected_ssid:
+        for index, network in enumerate(refreshed_networks):
+            if str(network.get("ssid", "")) == selected_ssid:
+                return index, True
+    return max(0, min(len(refreshed_networks) - 1, previous_selected_index)), False
+
+
+def apply_wifi_refresh_result(
+    previous_networks: list[dict[str, Any]],
+    refreshed_networks: list[dict[str, Any]],
+    refreshed_status: str,
+    previous_selected_index: int,
+) -> tuple[list[dict[str, Any]], int, str]:
+    if refreshed_status == "ok":
+        if refreshed_networks:
+            selected_index, preserved = refresh_selected_index(
+                previous_networks,
+                refreshed_networks,
+                previous_selected_index,
+            )
+            return refreshed_networks, selected_index, "" if preserved else "Rede anterior saiu da lista."
+        return [], 0, "Nenhuma rede encontrada."
+    if previous_networks:
+        safe_index = max(0, min(len(previous_networks) - 1, previous_selected_index))
+        return previous_networks, safe_index, "Falha na atualizacao; lista anterior mantida."
+    return [], 0, "Falha na atualizacao."
+
+
+def wifi_list_screen_svg(
+    *,
+    networks: list[dict[str, Any]],
+    selected_index: int,
+    list_status: str,
+    updated_age_sec: int,
+    refresh_message: str,
+    layout_rotation_deg: int,
+    refreshing: bool = False,
+) -> str:
+    visible_networks, page_start, page_end, page_index, page_count = page_items(
+        networks,
+        selected_index,
+        WIFI_LIST_PAGE_SIZE,
+    )
+    options = [wifi_option_for_network(page_start + index, network) for index, network in enumerate(visible_networks)]
+    selected_on_page = max(0, selected_index - page_start) if options else 0
+    if networks:
+        position = f"Mostrando {page_start + 1}-{page_end} de {len(networks)}"
+        selected_line = f"Rede {selected_index + 1} de {len(networks)}"
+    else:
+        position = "Nenhuma rede encontrada"
+        selected_line = "Use R para atualizar"
+    updated_line = "Atualizando..." if refreshing else f"Atualizado ha {max(0, updated_age_sec)}s"
+    panel_items = [
+        position,
+        selected_line,
+        f"Pagina {page_index + 1} de {page_count}" if networks else "Pagina 0 de 0",
+        updated_line,
+        f"Listagem: {list_status}",
+    ]
+    if refresh_message:
+        panel_items.append(refresh_message)
+    return build_screen_svg(
+        active_step=1,
+        title="Redes Wi-Fi",
+        subtitle="Escolha a rede na lista local. O nome nao sera gravado em evidencia.",
+        footer="Setas rolam | PgUp/PgDn | R atualiza | Enter OK | B/Esc volta",
+        options=options,
+        selected_index=selected_on_page,
+        panel_title="Lista local",
+        panel_items=panel_items,
+        accent="#f59e0b" if refreshing else ("#ef4444" if not networks else "#06b6d4"),
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
+def synthetic_wifi_networks_for_preview() -> list[dict[str, Any]]:
+    fixture = "\n".join(
+        [
+            "TEST_WIFI_STRONG:96:WPA2",
+            "TEST_WIFI_STRONG:80:WPA2",
+            "TEST_WIFI_MEDIUM:58:WPA2",
+            "TEST_WIFI_WEAK:24:WPA2",
+            "TEST_WIFI_OPEN:72:",
+            "TEST_WIFI_BACKROOM:64:WPA2",
+            "TEST_WIFI_COUNTER:51:WPA2",
+            "TEST_WIFI_OFFICE:45:WPA2",
+            "TEST_WIFI_GUEST:38:",
+            "TEST_WIFI_STAGING:34:WPA2",
+            "TEST_WIFI_SERVICE:28:WPA2",
+            "TEST_WIFI_STORAGE:18:WPA2",
+        ]
+    )
+    return wifi_adapter.parse_wifi_network_list(fixture)
 
 
 def choose_wifi_network(
@@ -1378,58 +1559,139 @@ def choose_wifi_network(
     *,
     layout_rotation_deg: int,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
-    networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(timeout_sec=8)
-    if not networks:
-        display.show(
-            "02-wifi-list-empty",
-            build_screen_svg(
-                active_step=1,
-                title="Redes Wi-Fi",
-                subtitle="Nao foi possivel montar uma lista local de redes agora.",
-                footer="Enter volta | Esc cancela",
-                panel_title="Resultado publico",
-                panel_items=[
-                    f"Listagem: {list_status}",
-                    "Nenhuma rede sera alterada.",
-                    "Nenhum identificador sera publicado.",
-                ],
-                accent="#ef4444",
-                layout_rotation_deg=layout_rotation_deg,
-            ),
-        )
-        key = read_key()
-        if key == "enter":
-            return None
-        raise VisualWizardAbort("setup visual cancelado pelo operador")
-
-    options = [
-        Option(
-            f"wifi-{index}",
-            local_display_value(str(network["ssid"])),
-            f"Sinal {network['signal_bucket']} | {security_label(network.get('security_present'))}",
-        )
-        for index, network in enumerate(networks[:5])
-    ]
-    selected = choose_option(
-        display,
-        screen_id="02-wifi-list",
-        active_step=1,
-        title="Redes Wi-Fi",
-        subtitle="Escolha a rede na lista local. O nome nao sera gravado em evidencia.",
-        options=options,
-        panel_items=[
-            f"Redes encontradas: {len(networks)}",
-            "A lista e exibida somente aqui.",
-            "BSSID, MAC, IP e DNS nao aparecem.",
-            "A senha continua oculta.",
-        ],
-        allow_back=True,
-        layout_rotation_deg=layout_rotation_deg,
+    networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(
+        timeout_sec=WIFI_LIST_TIMEOUT_SEC,
+        rescan=True,
     )
-    if selected is None:
-        return None
-    index = int(selected.key.split("-", 1)[1])
-    return networks[index], networks
+    selected_index = 0
+    last_refresh = time.monotonic()
+    refresh_message = ""
+    needs_render = True
+    while True:
+        now = time.monotonic()
+        if needs_render:
+            display.show(
+                "02-wifi-list",
+                wifi_list_screen_svg(
+                    networks=networks,
+                    selected_index=selected_index,
+                    list_status=list_status,
+                    updated_age_sec=int(now - last_refresh),
+                    refresh_message=refresh_message,
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+            needs_render = False
+
+        wait_sec = max(0.0, WIFI_LIST_REFRESH_SEC - (time.monotonic() - last_refresh))
+        key = read_key(timeout_sec=wait_sec)
+        if key == "timeout":
+            display.show(
+                "02-wifi-list-refreshing",
+                wifi_list_screen_svg(
+                    networks=networks,
+                    selected_index=selected_index,
+                    list_status=list_status,
+                    updated_age_sec=int(time.monotonic() - last_refresh),
+                    refresh_message="Atualizacao automatica.",
+                    layout_rotation_deg=layout_rotation_deg,
+                    refreshing=True,
+                ),
+            )
+            refreshed, refreshed_status = wifi_adapter.list_wifi_networks_for_local_ui(
+                timeout_sec=WIFI_LIST_TIMEOUT_SEC,
+                rescan=True,
+            )
+            networks, selected_index, refresh_message = apply_wifi_refresh_result(
+                networks,
+                refreshed,
+                refreshed_status,
+                selected_index,
+            )
+            list_status = refreshed_status
+            last_refresh = time.monotonic()
+            needs_render = True
+            continue
+        if key in {"r", "R"}:
+            display.show(
+                "02-wifi-list-refreshing",
+                wifi_list_screen_svg(
+                    networks=networks,
+                    selected_index=selected_index,
+                    list_status=list_status,
+                    updated_age_sec=int(time.monotonic() - last_refresh),
+                    refresh_message="Atualizacao manual.",
+                    layout_rotation_deg=layout_rotation_deg,
+                    refreshing=True,
+                ),
+            )
+            refreshed, refreshed_status = wifi_adapter.list_wifi_networks_for_local_ui(
+                timeout_sec=WIFI_LIST_TIMEOUT_SEC,
+                rescan=True,
+            )
+            networks, selected_index, refresh_message = apply_wifi_refresh_result(
+                networks,
+                refreshed,
+                refreshed_status,
+                selected_index,
+            )
+            list_status = refreshed_status
+            last_refresh = time.monotonic()
+            needs_render = True
+            continue
+        if key in {"up", "left"} and networks:
+            selected_index = max(0, selected_index - 1)
+            refresh_message = ""
+            needs_render = True
+            continue
+        if key in {"down", "right"} and networks:
+            selected_index = min(len(networks) - 1, selected_index + 1)
+            refresh_message = ""
+            needs_render = True
+            continue
+        if key == "pageup" and networks:
+            selected_index = max(0, selected_index - WIFI_LIST_PAGE_SIZE)
+            refresh_message = ""
+            needs_render = True
+            continue
+        if key == "pagedown" and networks:
+            selected_index = min(len(networks) - 1, selected_index + WIFI_LIST_PAGE_SIZE)
+            refresh_message = ""
+            needs_render = True
+            continue
+        if key == "enter":
+            if networks:
+                return networks[selected_index], networks
+            display.show(
+                "02-wifi-list-refreshing",
+                wifi_list_screen_svg(
+                    networks=networks,
+                    selected_index=selected_index,
+                    list_status=list_status,
+                    updated_age_sec=int(time.monotonic() - last_refresh),
+                    refresh_message="Atualizacao manual.",
+                    layout_rotation_deg=layout_rotation_deg,
+                    refreshing=True,
+                ),
+            )
+            refreshed, refreshed_status = wifi_adapter.list_wifi_networks_for_local_ui(
+                timeout_sec=WIFI_LIST_TIMEOUT_SEC,
+                rescan=True,
+            )
+            networks, selected_index, refresh_message = apply_wifi_refresh_result(
+                networks,
+                refreshed,
+                refreshed_status,
+                selected_index,
+            )
+            list_status = refreshed_status
+            last_refresh = time.monotonic()
+            needs_render = True
+            continue
+        if key in {"b", "B", "back"}:
+            return None
+        if key in {"escape", "q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
 def collect_wifi_credentials(
@@ -1470,7 +1732,7 @@ def collect_wifi_credentials(
         screen_id="02-wifi-psk",
         active_step=1,
         title="Senha Wi-Fi",
-        subtitle="Digite a senha no teclado local. O campo fica oculto.",
+        subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
         label="Senha Wi-Fi",
         hidden=True,
         min_length=8,
@@ -1479,7 +1741,9 @@ def collect_wifi_credentials(
             "Senha nao vai para argv.",
             "Senha nao vai para logs.",
             "Secrets temporario fica sob /tmp.",
+            "F2 ou V mostra ou oculta localmente.",
         ],
+        allow_hidden_toggle=True,
         layout_rotation_deg=layout_rotation_deg,
     )
     if psk is None:
@@ -1490,7 +1754,7 @@ def collect_wifi_credentials(
             active_step=1,
             title="Aplicar Wi-Fi",
             subtitle="O teste vai manter apenas o perfil dedicado do produto.",
-            footer="Enter aplica | F2/Ctrl+B volta | Esc cancela",
+            footer="Enter aplica | Ctrl+B volta | Esc cancela",
             panel_title="Antes de aplicar",
             panel_items=[
                 "SSH pode oscilar se estiver na mesma rede.",
@@ -2368,19 +2632,77 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             layout_rotation_deg=90,
         ),
     )
+    preview_networks = synthetic_wifi_networks_for_preview()
     display.show(
-        "02-wifi-list",
+        "02-wifi-list-page-1",
+        wifi_list_screen_svg(
+            networks=preview_networks,
+            selected_index=0,
+            list_status="ok",
+            updated_age_sec=0,
+            refresh_message="Dados sinteticos de preview.",
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "02-wifi-list-page-2",
+        wifi_list_screen_svg(
+            networks=preview_networks,
+            selected_index=WIFI_LIST_PAGE_SIZE + 1,
+            list_status="ok",
+            updated_age_sec=8,
+            refresh_message="Setas continuam alem da area visivel.",
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "02-wifi-list-refreshing",
+        wifi_list_screen_svg(
+            networks=preview_networks,
+            selected_index=1,
+            list_status="ok",
+            updated_age_sec=10,
+            refresh_message="Atualizacao automatica.",
+            layout_rotation_deg=90,
+            refreshing=True,
+        ),
+    )
+    display.show(
+        "02-wifi-list-empty",
+        wifi_list_screen_svg(
+            networks=[],
+            selected_index=0,
+            list_status="ok",
+            updated_age_sec=0,
+            refresh_message="Nenhuma rede encontrada.",
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "02-wifi-psk-hidden",
         build_screen_svg(
             active_step=1,
-            title="Redes Wi-Fi",
-            subtitle="Exemplo sintetico de lista local. SSIDs reais nao entram em evidencia.",
-            footer="Setas movem | Enter confirma | B volta",
-            options=[
-                Option("wifi-0", "REDE-DE-EXEMPLO-01", "Sinal strong | segura"),
-                Option("wifi-1", "REDE-DE-EXEMPLO-02", "Sinal medium | segura"),
-            ],
-            selected_index=0,
-            panel_items=["Aparece so no HDMI", "Sem BSSID/MAC", "Senha continua oculta"],
+            title="Senha Wi-Fi",
+            subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
+            footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+            field_label="Senha Wi-Fi",
+            field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
+            field_note="Senha oculta por padrao.",
+            panel_items=["Senha nao vai para logs.", "Secrets temporario fica sob /tmp.", "F2 ou V alterna exibicao local."],
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "02-wifi-psk-visible",
+        build_screen_svg(
+            active_step=1,
+            title="Senha Wi-Fi",
+            subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
+            footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+            field_label="Senha Wi-Fi",
+            field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
+            field_note="Valor visivel apenas no HDMI local.",
+            panel_items=["Estado de preview sintetico.", "Nao gravar em evidencia.", "F2 ou V volta a ocultar."],
             layout_rotation_deg=90,
         ),
     )
@@ -2446,59 +2768,92 @@ def show_wifi_list_preview(
     mpv_bin: str,
     auto_exit_sec: int,
     rotation_key: str,
+    display_enabled: bool = False,
 ) -> dict[str, Any]:
     prepare_private_dir(out_dir)
     rotation = resolve_display_selection(rotation_key)
     layout_rotation_deg = int(rotation["rotation_deg"])
-    networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(timeout_sec=8)
+    networks = synthetic_wifi_networks_for_preview()
+    list_status = "synthetic"
     selected = networks[0] if networks else None
     metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected)
-    display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
+    display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=display_enabled)
     try:
-        if networks:
-            options = [
-                Option(
-                    f"wifi-{index}",
-                    local_display_value(str(network["ssid"])),
-                    f"Sinal {network['signal_bucket']} | {security_label(network.get('security_present'))}",
-                )
-                for index, network in enumerate(networks[:5])
-            ]
-            display.show(
-                "02-wifi-list-preview",
-                build_screen_svg(
-                    active_step=1,
-                    title="Redes Wi-Fi",
-                    subtitle="Preview read-only. Nomes aparecem somente nesta tela local.",
-                    footer="Preview automatico",
-                    options=options,
-                    selected_index=0,
-                    panel_items=[
-                        f"Redes encontradas: {len(networks)}",
-                        "Sem alteracao de rede.",
-                        "Sem SSID em status/resumo.",
-                    ],
-                    layout_rotation_deg=layout_rotation_deg,
-                ),
-            )
-        else:
-            display.show(
-                "02-wifi-list-preview-empty",
-                build_screen_svg(
-                    active_step=1,
-                    title="Redes Wi-Fi",
-                    subtitle="Preview read-only sem redes disponiveis agora.",
-                    footer="Preview automatico",
-                    panel_items=[
-                        f"Listagem: {list_status}",
-                        "Sem alteracao de rede.",
-                        "Sem identificadores publicados.",
-                    ],
-                    accent="#ef4444",
-                    layout_rotation_deg=layout_rotation_deg,
-                ),
-            )
-        time.sleep(max(1, auto_exit_sec))
+        display.show(
+            "02-wifi-list-preview-page-1",
+            wifi_list_screen_svg(
+                networks=networks,
+                selected_index=0,
+                list_status=list_status,
+                updated_age_sec=0,
+                refresh_message="Dados sinteticos de preview.",
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        display.show(
+            "02-wifi-list-preview-page-2",
+            wifi_list_screen_svg(
+                networks=networks,
+                selected_index=WIFI_LIST_PAGE_SIZE + 1,
+                list_status=list_status,
+                updated_age_sec=8,
+                refresh_message="Setas continuam alem da area visivel.",
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        display.show(
+            "02-wifi-list-preview-refreshing",
+            wifi_list_screen_svg(
+                networks=networks,
+                selected_index=1,
+                list_status=list_status,
+                updated_age_sec=10,
+                refresh_message="Atualizacao automatica.",
+                layout_rotation_deg=layout_rotation_deg,
+                refreshing=True,
+            ),
+        )
+        display.show(
+            "02-wifi-list-preview-empty",
+            wifi_list_screen_svg(
+                networks=[],
+                selected_index=0,
+                list_status="ok",
+                updated_age_sec=0,
+                refresh_message="Nenhuma rede encontrada.",
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        display.show(
+            "02-wifi-psk-preview-hidden",
+            build_screen_svg(
+                active_step=1,
+                title="Senha Wi-Fi",
+                subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
+                footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+                field_label="Senha Wi-Fi",
+                field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
+                field_note="Senha oculta por padrao.",
+                panel_items=["Senha nao vai para logs.", "Secrets temporario fica sob /tmp.", "F2 ou V alterna exibicao local."],
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        display.show(
+            "02-wifi-psk-preview-visible",
+            build_screen_svg(
+                active_step=1,
+                title="Senha Wi-Fi",
+                subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
+                footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+                field_label="Senha Wi-Fi",
+                field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
+                field_note="Valor visivel apenas no HDMI local.",
+                panel_items=["Estado de preview sintetico.", "Nao gravar em evidencia.", "F2 ou V volta a ocultar."],
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        if display_enabled:
+            time.sleep(max(1, auto_exit_sec))
     finally:
         display.stop()
     status = {
@@ -2506,6 +2861,13 @@ def show_wifi_list_preview(
         "generated_at_utc": utc_timestamp(),
         "mode": "wifi_list_preview",
         "list_status": list_status,
+        "preview_uses_synthetic_data": True,
+        "preview_screens_generated": 6,
+        "wifi_refresh_interval_sec": int(WIFI_LIST_REFRESH_SEC),
+        "paginated_wifi_list": True,
+        "password_hidden_by_default": True,
+        "password_show_toggle_available": True,
+        "password_show_toggle_key": "F2/V",
         "rotation_degrees": layout_rotation_deg,
         **metadata,
         "ssid_written_to_public_status": False,
@@ -2599,6 +2961,8 @@ def run_self_test() -> None:
         password_hint = text_field_display_hint(synthetic_password, hidden=True, show_plain_value=False)
         assert_true(password_hint == "*" * len(synthetic_password), "Wi-Fi password should stay masked")
         assert_true(synthetic_password not in password_hint, "Wi-Fi password hint should not leak value")
+        visible_password_hint = text_field_display_hint(synthetic_password, hidden=True, show_plain_value=True)
+        assert_true(visible_password_hint == synthetic_password, "F2/V password toggle should show value locally")
         count_hint = text_field_display_hint(synthetic_ssid, hidden=False, show_plain_value=False)
         assert_true(
             synthetic_ssid not in count_hint and "caracteres digitados" in count_hint,
@@ -2644,15 +3008,44 @@ def run_self_test() -> None:
             "private active-config context should win over stale public orientation",
         )
         local_wifi_options = wifi_adapter.parse_wifi_network_list(
-            "TEST_WIFI_SHOULD_NOT_LEAK:88:WPA2\nTEST_WIFI_WEAK:22:--\n",
+            "TEST_WIFI_SHOULD_NOT_LEAK:88:WPA2\nTEST_WIFI_WEAK:22:--\n:99:WPA2\n",
         )
         assert_true(local_wifi_options[0]["ssid"] == synthetic_ssid, "local Wi-Fi list should keep SSID for HDMI")
+        assert_true(local_wifi_options[0]["signal_percent"] == 88, "local Wi-Fi list should keep signal percent")
         local_metadata = wifi_adapter.wifi_selection_public_metadata(local_wifi_options, local_wifi_options[0])
         assert_true(local_metadata["wifi_networks_found_count"] == 2, "Wi-Fi count should be public")
         assert_true(local_metadata["selected_network_present"] is True, "selected network presence should be public")
         assert_true(local_metadata["selected_network_signal_bucket"] == "strong", "signal bucket should be public")
         assert_true(local_metadata["selected_network_security_present"] is True, "security presence should be public")
         assert_true(synthetic_ssid not in json.dumps(local_metadata), "Wi-Fi metadata should not leak SSID")
+        page_fixture = [
+            {"ssid": f"PAGE_TEST_{index:02d}", "signal_percent": 100 - index, "signal_bucket": "strong", "security_present": True}
+            for index in range(18)
+        ]
+        page_1, start_1, end_1, _, _ = page_items(page_fixture, 0, 8)
+        page_2, start_2, end_2, _, _ = page_items(page_fixture, 8, 8)
+        page_3, start_3, end_3, _, _ = page_items(page_fixture, 16, 8)
+        assert_true((start_1, end_1, len(page_1)) == (0, 8, 8), "pagination page 1 should show 1-8")
+        assert_true((start_2, end_2, len(page_2)) == (8, 16, 8), "pagination page 2 should show 9-16")
+        assert_true((start_3, end_3, len(page_3)) == (16, 18, 2), "pagination page 3 should show 17-18")
+        preserved_index, preserved = refresh_selected_index(page_fixture[:3], [page_fixture[2], page_fixture[1]], 1)
+        assert_true(preserved and preserved_index == 1, "refresh should preserve selected SSID")
+        disappeared_networks, disappeared_index, disappeared_message = apply_wifi_refresh_result(
+            page_fixture[:3],
+            [page_fixture[3], page_fixture[4]],
+            "ok",
+            2,
+        )
+        assert_true(len(disappeared_networks) == 2, "refresh should accept a valid changed list")
+        assert_true(disappeared_index == 1, "refresh should keep selection index close when SSID disappears")
+        assert_true("saiu da lista" in disappeared_message, "refresh should warn locally when selected SSID disappears")
+        failed_networks, failed_index, failed_message = apply_wifi_refresh_result(page_fixture[:3], [], "timeout", 1)
+        assert_true(failed_networks == page_fixture[:3], "failed refresh should keep last valid list")
+        assert_true(failed_index == 1 and "lista anterior" in failed_message, "failed refresh should keep safe selection")
+        assert_true(signal_bars(90) == "████" and signal_label(90) == "Forte", "90 signal should be four bars")
+        assert_true(signal_bars(70) == "███" and signal_label(70) in {"Forte", "Bom"}, "70 signal should be three bars")
+        assert_true(signal_bars(40) == "██" and signal_label(40) == "Medio", "40 signal should be two bars")
+        assert_true(signal_bars(20) == "█" and signal_label(20) == "Fraco", "20 signal should be one bar")
 
         preview_dir = require_tmp_dir(str(root / "preview"))
         prepare_private_dir(preview_dir)
@@ -2677,7 +3070,29 @@ def run_self_test() -> None:
             'data-display-rotation-deg="90"' in portrait_connection_text,
             "portrait preview should carry display rotation contract",
         )
+        wifi_preview_page = next((preview_dir / "screens").glob("*-02-wifi-list-page-1.svg"))
+        wifi_preview_text = wifi_preview_page.read_text(encoding="utf-8")
+        assert_true("TEST_WIFI_STRONG" in wifi_preview_text, "synthetic Wi-Fi preview should show local SSID")
+        assert_true("Mostrando 1-5 de" in wifi_preview_text, "Wi-Fi preview should show pagination position")
+        assert_true("96%" in wifi_preview_text and "████" in wifi_preview_text, "Wi-Fi preview should show signal clarity")
+        assert_true(any((preview_dir / "screens").glob("*-02-wifi-list-empty.svg")), "Wi-Fi preview should include empty state")
+        assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-hidden.svg")), "Wi-Fi preview should include hidden password")
+        assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-visible.svg")), "Wi-Fi preview should include visible password")
         assert_true(file_mode(preview_dir / "screens") == setup.PRIVATE_DIR_MODE, "preview screens should be 0700")
+
+        wifi_preview_dir = require_tmp_dir(str(root / "wifi-preview"))
+        wifi_preview_status = show_wifi_list_preview(
+            wifi_preview_dir,
+            mpv_bin="mpv",
+            auto_exit_sec=1,
+            rotation_key="landscape",
+            display_enabled=False,
+        )
+        wifi_preview_public_text = (wifi_preview_dir / "wifi-list-preview-status.json").read_text(encoding="utf-8")
+        assert_true(wifi_preview_status["paginated_wifi_list"] is True, "Wi-Fi list preview should be paginated")
+        assert_true(wifi_preview_status["password_show_toggle_key"] == "F2/V", "password toggle should use F2/V")
+        for forbidden in (synthetic_ssid, synthetic_password, "TEST_WIFI_STRONG", "preview-password"):
+            assert_true(forbidden not in wifi_preview_public_text, "Wi-Fi preview status should stay sanitized")
 
         out_dir = require_tmp_dir(str(root / "out"))
         status = run_scripted(
@@ -2816,6 +3231,7 @@ def main(argv: list[str]) -> int:
                 mpv_bin=args.mpv_bin,
                 auto_exit_sec=args.auto_exit_sec,
                 rotation_key=args.rotation_key,
+                display_enabled=args.show_preview,
             )
             print(json.dumps(status, indent=2, sort_keys=True))
             return 0

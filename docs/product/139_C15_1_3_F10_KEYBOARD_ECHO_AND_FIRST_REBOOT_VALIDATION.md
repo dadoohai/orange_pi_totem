@@ -100,6 +100,10 @@ player_code_changed=false
 C15 can now release the next image rebuild. C16/player audit is unblocked, but
 was not started in this card.
 
+Follow-up: C15.1.4 was opened before the image rebuild to refresh the Wi-Fi setup
+UX. It passed and kept C15.2.1 image rebuild readiness true. See
+`docs/product/140_C15_1_4_WIFI_SETUP_UX_REFRESH.md`.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T153230Z-c15-1-3-f10-keyboard-echo-and-first-reboot-validation/`
