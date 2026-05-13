@@ -28,6 +28,7 @@ PUBLIC_STATES = {
     "display_missing",
     "config_missing",
     "starting_player",
+    "loading_content",
     "player_running",
     "player_error",
     "maintenance_placeholder",
@@ -70,6 +71,13 @@ STATE_MESSAGES = {
         "error_code": None,
         "config_state": "valid",
         "player_state": "starting",
+    },
+    "loading_content": {
+        "message": "Carregando conteúdo.",
+        "hint": "Preparando mídias para exibição.",
+        "error_code": None,
+        "config_state": "valid",
+        "player_state": "loading",
     },
     "player_running": {
         "message": "O player está ativo.",
@@ -143,6 +151,31 @@ def player_reports_running(player_status: dict[str, Any] | None) -> bool:
     if player_state in {"running", "playing"}:
         return True
     return mpv_running is True and playback_state not in {"error", "failed", "stopped"}
+
+
+def player_reports_loading_content(player_status: dict[str, Any] | None) -> bool:
+    if not player_status:
+        return False
+
+    playback_state = string_value(player_status, "playback_state")
+    player_state = string_value(player_status, "player_state")
+    startup_phase = string_value(player_status, "startup_phase")
+    feedback_state = string_value(player_status, "startup_feedback_state")
+    content_state = string_value(player_status, "content_state")
+
+    loading_values = {
+        "player_starting",
+        "waiting_for_api",
+        "waiting_for_playlist",
+        "waiting_for_media_cache",
+        "waiting_for_media",
+        "waiting_for_content",
+        "preparing_first_frame",
+    }
+    return any(
+        value in loading_values
+        for value in (playback_state, player_state, startup_phase, feedback_state, content_state)
+    )
 
 
 def player_reports_error(player_status: dict[str, Any] | None) -> bool:
@@ -252,6 +285,9 @@ def infer_state(
     if player_reports_running(player_status):
         return "player_running"
 
+    if player_reports_loading_content(player_status):
+        return "loading_content"
+
     if launcher_state == "running":
         return "starting_player"
 
@@ -267,6 +303,8 @@ def build_status(
     state = infer_state(launcher_status, player_status, state_override)
     public = STATE_MESSAGES[state]
     config_state = infer_config_state(launcher_status, player_status, state)
+    playback_state = string_value(player_status, "playback_state") or "unknown"
+    startup_phase = string_value(player_status, "startup_phase") or "unknown"
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -276,6 +314,8 @@ def build_status(
         "network_state": "unknown",
         "config_state": config_state,
         "player_state": public["player_state"],
+        "playback_state": playback_state,
+        "player_startup_phase": startup_phase,
         "service_state": infer_service_state(launcher_status, state),
         "error_code": public["error_code"],
         "public_message": sanitize_public_text(public["message"]),

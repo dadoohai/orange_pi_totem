@@ -1,0 +1,1 @@
+{"config_read": false, "content_state": "playing", "failed_units_count": 1, "first_frame_ready": true, "kiosky_player_active": "active", "networkmanager_active": "active", "playback_state": "playing", "public_state": "player_running", "session_lock_present": false, "ssh_active": "active", "startup_feedback_visible": false, "startup_phase": "playing", "writer_called": false}

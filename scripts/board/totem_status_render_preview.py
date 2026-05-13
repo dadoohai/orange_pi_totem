@@ -50,6 +50,14 @@ STATE_PRESETS = {
         "code": "STARTING_PLAYER",
         "accent": "#22c55e",
     },
+    "loading_content": {
+        "title": "Carregando conteúdo",
+        "message": "Preparando mídias para exibição.",
+        "hint": "Aguarde alguns instantes.",
+        "status": "Conteúdo em preparação",
+        "code": "LOADING_CONTENT",
+        "accent": "#22c55e",
+    },
     "player_running": {
         "title": "Exibição em andamento",
         "message": "O player está ativo.",

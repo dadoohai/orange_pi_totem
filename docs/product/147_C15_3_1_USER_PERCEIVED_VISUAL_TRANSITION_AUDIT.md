@@ -185,6 +185,9 @@ small C15.3.2 feedback fix focused on the pre-first-frame wait and startup
 status visibility. C16/player timing/sync/looping should remain unopened until
 that perceived-feedback gap is handled or explicitly waived.
 
+Follow-up: C15.3.2 implemented a minimal player startup feedback bridge and
+re-enabled C16 audit readiness without starting C16.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T212929Z-c15-3-1-user-perceived-visual-transition-audit/`

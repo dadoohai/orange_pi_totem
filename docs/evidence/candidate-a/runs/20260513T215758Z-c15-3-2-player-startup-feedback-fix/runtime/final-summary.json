@@ -1,0 +1,36 @@
+{
+  "boot_id_changed": false,
+  "expected_user_visible_state_counts": {
+    "loading_content": 1,
+    "loading_content_status_only": 1,
+    "playing": 36
+  },
+  "first_sample_uptime_sec": 3537,
+  "guardrails": {
+    "config_read": false,
+    "networkmanager_profiles_read": false,
+    "raw_logs_written": false,
+    "real_config_written": false,
+    "seed_read": false,
+    "writer_called": false
+  },
+  "kiosk_present_any": true,
+  "last_sample_uptime_sec": 3655,
+  "loading_content_feedback_visible": true,
+  "loading_content_state_seen": true,
+  "mpv_present_any": true,
+  "network_remained_connected": true,
+  "playback_state_counts": {
+    "playing": 36,
+    "waiting_for_content": 2
+  },
+  "player_active_all_samples": true,
+  "playing_seen": true,
+  "sample_count": 38,
+  "schema_version": "dadooh-c15.3.2-player-startup-feedback-summary.v1",
+  "ssh_remained_active": true,
+  "startup_phase_counts": {
+    "playing": 36,
+    "waiting_for_api": 2
+  }
+}

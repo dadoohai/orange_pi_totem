@@ -2655,3 +2655,20 @@ transitorio de C15.2.4 permanece `unknown`, com hipoteses provaveis em
 `ready_for_c15_3_2_feedback_fix=true`,
 `ready_for_c16_player_audit=false`, `c16_started=false`. Detalhes em
 `docs/product/147_C15_3_1_USER_PERCEIVED_VISUAL_TRANSITION_AUDIT.md`.
+
+Atualizacao C15.3.2: 2026-05-13. Foi implementada uma ponte minima de feedback
+entre `Iniciando player` e o primeiro estado confiavel de conteudo/playback.
+A solucao e hibrida: o `kiosky-player` passou a publicar estados seguros de
+startup e a exibir um placeholder MPV estatico `Carregando conteudo`, enquanto
+o core reconhece/renderiza o estado publico `loading_content` e registra a
+timeline por `scripts/remote/c15_3_2_player_startup_feedback_monitor.sh`.
+Escopo do player: apenas status/feedback; `scheduler_changed=false`,
+`sync_changed=false`, `duration_changed=false`,
+`playlist_logic_changed=false`, `loop_logic_changed=false`. O hotfix foi
+validado na placa com restart apenas de `kiosky-player.service`: a timeline
+registrou `loading_content_state_seen=true`,
+`loading_content_feedback_visible=true`, depois `playback=playing`, com SSH e
+NetworkManager ativos e sem reboot, writer, poweroff ou corte seco. C15.3.2
+fica `passed`: `ready_for_image_rebuild=true`,
+`ready_for_c16_player_audit=true`, `c16_started=false`. Detalhes em
+`docs/product/148_C15_3_2_PLAYER_STARTUP_FEEDBACK_FIX.md`.

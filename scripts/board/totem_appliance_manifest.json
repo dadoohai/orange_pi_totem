@@ -237,6 +237,7 @@
     "startup_feedback_modes": [
       "boot",
       "player",
+      "loading_content",
       "setup",
       "saving",
       "config_pending"
@@ -283,15 +284,39 @@
     "post_wizard_monitor_enabled_by_default": false,
     "post_wizard_monitor_runs_only_when_called": true
   },
+  "player_startup_feedback_bridge": {
+    "status_contract": "kiosky-player-status.v2",
+    "core_public_state": "loading_content",
+    "loading_content_splash_mode": true,
+    "player_placeholder_feedback": true,
+    "player_code_change_scope": "status_and_placeholder_only",
+    "scheduler_changed": false,
+    "sync_changed": false,
+    "duration_changed": false,
+    "playlist_logic_changed": false,
+    "loop_logic_changed": false,
+    "public_status_must_not_include": [
+      "api_key",
+      "api_url real",
+      "environment_id real",
+      "ssid",
+      "wifi_password",
+      "bssid",
+      "mac",
+      "ip",
+      "dns",
+      "media_url real"
+    ]
+  },
   "kiosky_player": {
     "install_path": "/opt/totem/kiosky-player",
     "repo_full_name": "dadoohai/kiosky-player",
     "repository_url": "https://github.com/dadoohai/kiosky-player.git",
     "expected_repo": "dadoohai/kiosky-player",
     "expected_ref": "appliance-v0.1",
-    "expected_commit": "c71318a64c08e47b8426f1388b95f21364d57123",
-    "expected_commit_short": "c71318a",
-    "expected_commit_title": "Add configurable MPV output flags",
+    "expected_commit": "c25659aff200d9aac1720e60e60794c432c79393",
+    "expected_commit_short": "c25659a",
+    "expected_commit_title": "Add startup feedback status bridge",
     "pin_status": "PINNED",
     "pin_source": "docs/releases/v0.1-rc1-homologacao/PROVISIONAMENTO_SEGUNDA_PLACA.md and local /home/builder/kiosky-player commit lookup",
     "expected_git_metadata_on_dev": false,

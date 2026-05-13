@@ -37,6 +37,7 @@ MESSAGES = {
     "preparing": ("Dadooh", "Preparando sistema"),
     "reboot": ("Dadooh", "Reiniciando totem"),
     "player": ("Dadooh", "Iniciando player"),
+    "loading_content": ("Dadooh", "Carregando conteudo"),
     "setup": ("Dadooh", "Abrindo configuracao"),
     "saving": ("Dadooh", "Salvando configuracao"),
     "config_pending": ("Dadooh", ("Configuracao pendente", "Pressione F10")),
@@ -51,7 +52,7 @@ MESSAGES = {
     ),
 }
 
-PREVIEW_MODES = ("boot", "player", "config_pending", "setup", "saving")
+PREVIEW_MODES = ("boot", "player", "loading_content", "config_pending", "setup", "saving")
 
 ORIENTATIONS = {
     "landscape": 0,
@@ -467,7 +468,7 @@ def run_self_test() -> None:
         assert payload["network_identifiers_published"] is False
     assert "reboot" in MESSAGES
     assert "shutdown" in MESSAGES
-    for mode in ("boot", "player", "setup", "saving", "config_pending"):
+    for mode in ("boot", "player", "loading_content", "setup", "saving", "config_pending"):
         assert mode in MESSAGES
     assert "Pressione F10" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["config_pending"][1]))
     assert "remova e reconecte" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["shutdown"][1]))
