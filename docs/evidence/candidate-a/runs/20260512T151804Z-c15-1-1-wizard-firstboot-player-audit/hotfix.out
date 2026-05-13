@@ -1,0 +1,11 @@
+=== c15.1.1 hotfix begin 2026-05-12T15:17:07Z ===
+host=root@<LAB_BOARD_IP> target=/opt/totem/bin/totem_open_settings_session.sh
+--- baseline sha256 (before) ---
+ed2a48114edeca47464ae2d6b421bbbc0badc753208ab6b98ee97976686edd6a  /opt/totem/bin/totem_open_settings_session.sh
+--- copy new script to /tmp on board ---
+--- install in place (root tmpfs overlay, no reboot) ---
+bash_n_after=ok
+c4cb256cbd023f99aee1e85b11dcd07c2eba8e28a25174d78cfc85577b2619e3  /opt/totem/bin/totem_open_settings_session.sh
+active
+active
+=== c15.1.1 hotfix end 2026-05-12T15:17:08Z ===

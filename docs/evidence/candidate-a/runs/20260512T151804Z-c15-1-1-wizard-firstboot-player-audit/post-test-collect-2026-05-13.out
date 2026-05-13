@@ -1,0 +1,169 @@
+=== /tmp/c15-session.trace (full) ===
+2026-05-13T13:25:39.115227501 pid=56835 phase=session_sh_start argv=0 pid=56835 ppid=1
+2026-05-13T13:25:39.435035267 pid=56835 phase=before_getty_stop
+2026-05-13T13:25:39.564744878 pid=56835 phase=before_show_transition_1
+2026-05-13T13:25:40.142991365 pid=56835 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-05-13T13:25:40.147491211 pid=56835 phase=before_systemctl_stop_kiosky
+2026-05-13T13:25:40.546814990 pid=56835 phase=after_systemctl_stop_kiosky
+2026-05-13T13:25:40.709122318 pid=56835 phase=after_drain_wait counts=0,0,0,0
+2026-05-13T13:25:40.868476428 pid=56835 phase=before_show_transition_2
+2026-05-13T13:25:41.437514472 pid=56835 phase=after_show_transition_2
+2026-05-13T13:25:41.596789041 pid=56835 phase=before_openvt
+2026-05-13T13:25:41.601482638 pid=56835 phase=openvt_started pid=56910
+2026-05-13T13:25:49.647344518 pid=56835 phase=openvt_exited WIZARD_RC=8
+2026-05-13T13:25:49.656447043 pid=56835 phase=after_wizard WIZARD_RC=8
+
+=== wizard screens (names only) ===
+0001-01-orientation.svg
+0002-01-orientation-confirm.svg
+0003-02-connection.svg
+0004-03-environment.svg
+0005-05-review.svg
+0006-06-complete.svg
+
+=== wizard out-dir top-level files (names only) ===
+config.candidate.json
+orientation.json
+screens
+setup-status.json
+summary.txt
+
+=== session-status.json (sanitized) ===
+  active_config_rotation_deg_matches=True
+  active_config_rotation_deg_public_check=270
+  apply_mode=real-write
+  apply_policy_removed=True
+  backup_created=True
+  config_content_published=False
+  credential_values_published=False
+  environment_identifier_raw_published=False
+  expected_result=any
+  expected_rotation_deg=270
+  handoff_rc=0
+  homologation_seed_mode=True
+  hotspot_created=False
+  linux_prompt_visible=False
+  mode=interactive
+  network_identifiers_published=False
+  network_step=existing_configured_wifi
+  networkmanager_changed=False
+  nrestarts=0
+  orientation_category=portrait_left
+  orientation_json_rotation_matches=True
+  orientation_json_updated=True
+  permissions_ok=True
+  playback=playing
+  policy_private_source=homologation-seed
+  policy_used=True
+  portal_created=False
+  power_cut_tested=False
+  private_candidate_real_dry_run_passed=True
+  private_candidate_removed=True
+  private_settings_context_seeded=False
+  private_settings_context_updated=True
+  private_settings_context_values_published=False
+  private_source_temp_removed=False
+  process_counts=dict(keys=mpv,player,renderer,setup)
+  public_state=player_running
+  raw_logs_written=False
+  real_config_read=False
+  real_config_read_authorized_for_private_source=False
+  real_config_written=True
+  root_read_only_enabled=False
+  rotation_degrees=270
+  schema_version=dadooh-c10.6.2-open-settings-session.v1
+  selected_rotation_deg=270
+  service_active=active
+  service_enabled=enabled
+  service_initial_active=active
+  service_initial_enabled=enabled
+  service_restore_attempted=True
+  service_stop_attempted=True
+  setup_cancelled=False
+  splash_orientation_source=public_orientation_json
+  trigger_opens_wizard_directly=True
+  visual_candidate_generated=True
+  visual_wizard_opened=True
+  wifi_changed=False
+  wizard_rc=8
+  writer_called=True
+  writer_rc=0
+  writer_result=passed
+
+=== candidate / cancelled status (names only, no values) ===
+  config.candidate.json: setup_network_step=existing_configured_wifi
+  config.candidate.json: rotation_deg=270
+  config.candidate.json: total_keys=31
+  setup-cancelled.json: missing
+  screens-status.json: missing
+  setup-failed.json: missing
+
+=== journal: totem-open-settings (last 1h) ===
+May 13 10:03:47 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings...
+May 13 10:03:55 orangepizero3 systemd[1]: totem-open-settings.service: Main process exited, code=killed, status=15/TERM
+May 13 10:03:57 orangepizero3 systemd[1]: totem-open-settings.service: Failed with result 'signal'.
+May 13 10:03:57 orangepizero3 systemd[1]: Failed to start totem-open-settings.service - Dadooh Open Totem Settings.
+May 13 10:03:57 orangepizero3 systemd[1]: totem-open-settings.service: Consumed 4.938s CPU time.
+May 13 10:25:38 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings...
+May 13 10:26:07 orangepizero3 systemd[1]: totem-open-settings.service: Deactivated successfully.
+May 13 10:26:07 orangepizero3 systemd[1]: Finished totem-open-settings.service - Dadooh Open Totem Settings.
+May 13 10:26:07 orangepizero3 systemd[1]: totem-open-settings.service: Consumed 13.004s CPU time.
+
+=== journal: kiosky-player start/stop (last 1h) ===
+May 13 10:12:04 orangepizero3 env[55216]: 2026-05-13 10:12:04,534 WARNING Restarting MPV reason=media_load_failed:media-45a11c6c0e restart_count=1 generation=1 pid=55229 log_file=none
+May 13 10:12:04 orangepizero3 env[55216]: 2026-05-13 10:12:04,534 INFO MPV IPC close waiting for IPC critical section reason=media_load_failed:media-45a11c6c0e generation=1 pid=55229 log_file=none
+May 13 10:12:04 orangepizero3 env[55216]: 2026-05-13 10:12:04,534 INFO MPV IPC close entered IPC critical section reason=media_load_failed:media-45a11c6c0e generation=1 pid=55229 log_file=none
+May 13 10:12:05 orangepizero3 env[55216]: 2026-05-13 10:12:05,652 INFO MPV process started pid=55731 generation=2 log_file=none
+May 13 10:20:01 orangepizero3 env[55216]: 2026-05-13 10:20:01,785 WARNING MPV IPC command send failed command=playlist-remove alias=none generation=2 pid=55731 duration_sec=2.002 log_file=none error=timed out
+May 13 10:20:03 orangepizero3 env[55216]: 2026-05-13 10:20:03,788 WARNING MPV IPC command send failed command=loadfile alias=none generation=2 pid=55731 duration_sec=2.002 log_file=none error=timed out
+May 13 10:20:11 orangepizero3 env[55216]: 2026-05-13 10:20:11,038 WARNING MPV IPC command send failed command=playlist-next alias=none generation=2 pid=55731 duration_sec=2.002 log_file=none error=timed out
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,045 WARNING MPV IPC command send failed command=loadfile alias=media-907addee8b generation=2 pid=55731 duration_sec=2.003 log_file=none error=timed out
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,053 WARNING Failed to load media, restarting MPV: alias=media-907addee8b media_path=<media-path:c58db4e1cc> index=4 duration_ms=30800 mpv_generation=2 mpv_pid=55731
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,053 WARNING Restarting MPV reason=media_load_failed:media-907addee8b restart_count=2 generation=2 pid=55731 log_file=none
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,053 INFO MPV IPC close waiting for IPC critical section reason=media_load_failed:media-907addee8b generation=2 pid=55731 log_file=none
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,054 INFO MPV IPC close entered IPC critical section reason=media_load_failed:media-907addee8b generation=2 pid=55731 log_file=none
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,211 WARNING MPV IPC ping failed generation=2 pid=55731 duration_sec=0.126 timeout_sec=2.00 log_file=none
+May 13 10:20:13 orangepizero3 env[55216]: 2026-05-13 10:20:13,211 WARNING MPV IPC unresponsive, restarting reason=ipc_unresponsive consecutive_ping_failures=1 threshold=1 timeout_sec=2.00 generation=2 pid=55731 log_file=none
+May 13 10:20:14 orangepizero3 env[55216]: 2026-05-13 10:20:14,275 INFO MPV process started pid=56367 generation=3 log_file=none
+May 13 10:20:14 orangepizero3 env[55216]: 2026-05-13 10:20:14,983 WARNING Restarting MPV reason=ipc_unresponsive restart_count=3 generation=3 pid=56367 log_file=none
+May 13 10:20:16 orangepizero3 env[55216]: 2026-05-13 10:20:16,002 INFO MPV process started pid=56374 generation=4 log_file=none
+May 13 10:25:40 orangepizero3 systemd[1]: Stopping kiosky-player.service - Kiosky Player...
+May 13 10:25:40 orangepizero3 env[55216]: 2026-05-13 10:25:40,174 INFO Signal 15 received, stopping...
+May 13 10:25:40 orangepizero3 env[55171]: 2026-05-13T10:25:40-0300 kiosky_service_launcher[55171]: shutdown_requested
+May 13 10:25:40 orangepizero3 env[55216]: 2026-05-13 10:25:40,181 INFO Signal 15 received, stopping...
+May 13 10:25:40 orangepizero3 env[55216]: 2026-05-13 10:25:40,306 WARNING MPV IPC command send failed command=playlist-next alias=none generation=4 pid=56374 duration_sec=0.000 log_file=none error=[Errno 32] Broken pipe
+May 13 10:25:40 orangepizero3 systemd[1]: kiosky-player.service: Deactivated successfully.
+May 13 10:25:40 orangepizero3 systemd[1]: Stopped kiosky-player.service - Kiosky Player.
+May 13 10:25:40 orangepizero3 systemd[1]: kiosky-player.service: Consumed 37min 30.419s CPU time.
+May 13 10:25:52 orangepizero3 systemd[1]: Starting kiosky-player.service - Kiosky Player...
+May 13 10:25:52 orangepizero3 systemd[1]: Started kiosky-player.service - Kiosky Player.
+May 13 10:25:53 orangepizero3 env[56979]: 2026-05-13T10:25:53-0300 kiosky_service_launcher[56979]: launcher_started uid=999 user=totem
+May 13 10:25:53 orangepizero3 env[56979]: 2026-05-13T10:25:53-0300 kiosky_service_launcher[56979]: display_connected starting_app
+May 13 10:25:54 orangepizero3 env[57032]: 2026-05-13 10:25:54,664 INFO MPV process started pid=57045 generation=1 log_file=none
+
+=== /data/config/config.json (non-sensitive only) ===
+  rotation_deg=270
+  status_file=/tmp/kiosky-status.json
+  total_keys=33
+
+=== /data/state/totem-settings/last-settings.json (timestamp only) ===
+2026-05-13 10:25:51.513823469 -0300 600 305 bytes
+
+=== /data/config/backups recent ===
+total 12
+drwx------ 2 root  totem 4096 May 13 10:25 .
+drwxr-x--- 3 totem totem 4096 May 13 10:25 ..
+-rw------- 1 root  totem 1514 May 13 10:25 config.json.20260513T132551Z.56939.bak
+
+=== /run/totem locks ===
+total 0
+drwx------  2 root root  40 May 13 10:26 .
+drwxr-xr-x 27 root root 720 May 13 10:27 ..
+session_lock=absent
+
+=== current foreground VT ===
+2
+
+=== ps state ===
+  57045   57032 SLsl ?        mpv
+=== DONE ===

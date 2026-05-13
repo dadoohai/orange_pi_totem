@@ -926,9 +926,18 @@ print(json.dumps(payload, indent=2, sort_keys=True))
 PY
 }
 
+C15_TRACE_FILE="${C15_TRACE_FILE:-/tmp/c15-session.trace}"
+c15_trace() {
+  printf '%s pid=%d phase=%s\n' \
+    "$(date -u '+%Y-%m-%dT%H:%M:%S.%N')" "$$" "$*" \
+    >> "$C15_TRACE_FILE" 2>/dev/null || true
+}
+c15_trace "session_sh_start argv=$# pid=$$ ppid=$PPID"
+
 on_exit() {
   rc="$?"
   trap - EXIT INT TERM HUP
+  c15_trace "on_exit_begin rc=$rc"
   kill_visual_if_running || true
   cleanup_apply_policy || true
   cleanup_trigger_request || true
@@ -936,9 +945,16 @@ on_exit() {
   write_final_status || true
   restore_getty || true
   cleanup_session_lock || true
+  c15_trace "on_exit_done rc=$rc"
   exit "$rc"
 }
-trap on_exit EXIT INT TERM HUP
+on_term() { c15_trace "trap_signal=TERM rc=$?"; on_exit; }
+on_int()  { c15_trace "trap_signal=INT rc=$?";  on_exit; }
+on_hup()  { c15_trace "trap_signal=HUP rc=$?";  on_exit; }
+trap on_exit EXIT
+trap on_term TERM
+trap on_int  INT
+trap on_hup  HUP
 
 load_apply_policy
 if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
@@ -966,14 +982,19 @@ if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
   fi
 fi
 
+c15_trace "before_getty_stop"
 for unit in "${GETTY_UNITS[@]}"; do
   systemctl stop "$unit" >/dev/null 2>&1 || true
 done
 
+c15_trace "before_show_transition_1"
 show_transition setup || true
+c15_trace "after_show_transition_1 INITIAL_SERVICE_ACTIVE=$INITIAL_SERVICE_ACTIVE"
 if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
   SERVICE_STOP_ATTEMPTED="true"
+  c15_trace "before_systemctl_stop_kiosky"
   systemctl stop kiosky-player.service >/dev/null 2>&1 || true
+  c15_trace "after_systemctl_stop_kiosky"
   for _ in $(seq 1 30); do
     set -- $(process_counts)
     if [ "${1:-0}" -eq 0 ] && [ "${2:-0}" -eq 0 ] && [ "${3:-0}" -eq 0 ] && [ "${4:-0}" -eq 0 ]; then
@@ -981,14 +1002,37 @@ if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "e
     fi
     sleep 1
   done
+  c15_trace "after_drain_wait counts=${1:-?},${2:-?},${3:-?},${4:-?}"
+  set -- $(process_counts)
+  if [ "${1:-0}" -ne 0 ] || [ "${2:-0}" -ne 0 ] || [ "${3:-0}" -ne 0 ] || [ "${4:-0}" -ne 0 ]; then
+    c15_trace "drain_escalating_sigkill counts=${1:-?},${2:-?},${3:-?},${4:-?}"
+    systemctl kill --signal=SIGKILL kiosky-player.service >/dev/null 2>&1 || true
+    pkill -KILL -f '/opt/totem/kiosky-player/kiosk\.py'        >/dev/null 2>&1 || true
+    pkill -KILL -f '/data/apps/kiosky-player/.*/kiosk\.py'     >/dev/null 2>&1 || true
+    pkill -KILL -x mpv                                          >/dev/null 2>&1 || true
+    pkill -KILL -f '/opt/totem/bin/kiosky_service_launcher\.sh'>/dev/null 2>&1 || true
+    pkill -KILL -f '/opt/totem/bin/totem-kiosky-launcher\.sh'  >/dev/null 2>&1 || true
+    for _ in $(seq 1 5); do
+      set -- $(process_counts)
+      if [ "${1:-0}" -eq 0 ] && [ "${2:-0}" -eq 0 ] && [ "${3:-0}" -eq 0 ] && [ "${4:-0}" -eq 0 ]; then
+        break
+      fi
+      sleep 1
+    done
+    c15_trace "after_sigkill_drain counts=${1:-?},${2:-?},${3:-?},${4:-?}"
+  fi
 fi
+c15_trace "before_show_transition_2"
 show_transition setup || true
+c15_trace "after_show_transition_2"
 
 set -- $(process_counts)
 if [ "${1:-0}" -ne 0 ] || [ "${2:-0}" -ne 0 ] || [ "${3:-0}" -ne 0 ] || [ "${4:-0}" -ne 0 ]; then
+  c15_trace "abort_hdmi_not_free counts=${1:-?},${2:-?},${3:-?},${4:-?}"
   echo "hdmi_not_free_after_player_pause" >&2
   exit 42
 fi
+c15_trace "before_openvt"
 
 set +e
 if [ "$MODE" = "preview" ]; then
@@ -1002,11 +1046,13 @@ else
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
+  c15_trace "openvt_started pid=$OPENVT_PID"
   deadline=$(( $(date +%s) + RUN_TIMEOUT_SEC ))
   while kill -0 "$OPENVT_PID" 2>/dev/null && [ "$(date +%s)" -lt "$deadline" ]; do
     sleep 2
   done
   if kill -0 "$OPENVT_PID" 2>/dev/null; then
+    c15_trace "openvt_still_running_after_deadline TIMEOUT_SEC=$RUN_TIMEOUT_SEC"
     kill -TERM "-$OPENVT_PID" 2>/dev/null || kill -TERM "$OPENVT_PID" 2>/dev/null || true
     sleep 3
     kill -KILL "-$OPENVT_PID" 2>/dev/null || kill -KILL "$OPENVT_PID" 2>/dev/null || true
@@ -1015,9 +1061,11 @@ else
   else
     wait "$OPENVT_PID"
     WIZARD_RC="$?"
+    c15_trace "openvt_exited WIZARD_RC=$WIZARD_RC"
   fi
 fi
 set -e
+c15_trace "after_wizard WIZARD_RC=$WIZARD_RC"
 
 if [ "$EXPECTED_RESULT" = "preview" ] && [ ! -d "$WIZARD_OUT_DIR/screens" ]; then
   echo "preview_not_generated" >&2

@@ -1,0 +1,439 @@
+=== uptime ===
+ 12:12:28 up  1:14,  2 users,  load average: 1.30, 1.59, 1.76
+
+=== uname ===
+Linux orangepizero3 6.12.58-current-sunxi64 #1 SMP Thu Nov 13 20:34:41 UTC 2025 aarch64 GNU/Linux
+
+=== image identity ===
+lab_firstboot_mode=private_disposable_lab
+artifact_private=true
+final_image=false
+firstboot_conf_committed=false
+firstboot_conf_contents_published=false
+ready_for_c12_2_7_card_write=true
+ready_for_c12_3_boot_ssh_validation=true
+require_manual_firstboot=false
+homologation_private_values_embedded=true
+homologation_private_seed_enabled=true
+artifact_private_from_homologation_seed=true
+homologation_seed_source_outside_repo=true
+homologation_seed_permissions_ok=true
+homologation_seed_required_categories_present=true
+homologation_seed_embedded_path=/data/state/totem-settings/private-values.seed.json
+homologation_seed_content_published=false
+final_image=false
+artifact_private=true
+not_for_production=true
+not_for_distribution=true
+c12_readonly_blocked=true
+c12_4_blocked=true
+
+=== unit state (key services) ===
+kiosky-player.service                      active=active     enabled=enabled   
+totem-update-agent.timer                   active=active     enabled=enabled   
+totem-update-agent.service                 active=inactive
+unknown enabled=static    
+totem-settings-trigger.service             active=active     enabled=enabled   
+totem-open-settings.service                active=inactive
+unknown enabled=static    
+totem-firstboot-gate.service               active=inactive
+unknown enabled=enabled   
+dadooh-visual-splash.service               active=inactive
+unknown enabled=enabled   
+
+=== unit state (getty/serial) ===
+getty@tty1.service                         active=inactive
+unknown enabled=disabled
+unknown
+getty@tty2.service                         active=inactive
+unknown enabled=disabled
+unknown
+getty@tty3.service                         active=inactive
+unknown enabled=disabled
+unknown
+serial-getty@ttyS0.service                 active=active     enabled=enabled   
+serial-getty@ttyGS0.service                active=inactive
+unknown enabled=disabled
+unknown
+
+=== relevant systemd units list ===
+● console-setup.service                  loaded    failed   failed  Set console font and keymap
+  dadooh-visual-splash.service           loaded    inactive dead    Dadooh visual boot splash
+  getty-static.service                   loaded    inactive dead    getty on tty2-tty6 if dbus and logind are not available
+  keyboard-setup.service                 loaded    active   exited  Set the console keyboard layout
+  kiosky-player.service                  loaded    active   running Kiosky Player
+  serial-getty@ttyS0.service             loaded    active   running Serial Getty on ttyS0
+  systemd-tmpfiles-setup-dev.service     loaded    active   exited  Create Static Device Nodes in /dev
+  systemd-tmpfiles-setup.service         loaded    active   exited  Create System Files and Directories
+● systemd-vconsole-setup.service         not-found inactive dead    systemd-vconsole-setup.service
+  totem-firstboot-gate.service           loaded    inactive dead    Dadooh Image-Lab Firstboot Gate
+  totem-lab-firstboot-autoconfig.service loaded    inactive dead    Dadooh Image-Lab Firstboot Autoconfig
+  totem-settings-trigger.service         loaded    active   running Dadooh Totem Settings Trigger
+  totem-update-agent.service             loaded    inactive dead    Dadooh Totem Update Agent (pull-mode app updater)
+
+=== systemctl cat kiosky-player.service (+ drop-ins) ===
+# /etc/systemd/system/kiosky-player.service
+[Unit]
+Description=Kiosky Player
+After=network-online.target totem-firstboot-gate.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=totem
+Group=totem
+WorkingDirectory=/opt/totem/kiosky-player
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=XDG_RUNTIME_DIR=/tmp/kiosky
+Environment=KIOSKY_RUNTIME_DIR=/tmp/kiosky
+Environment=KIOSKY_LAUNCHER_STATUS_FILE=/data/state/kiosky-player/launcher-status.json
+ExecStartPre=+/usr/bin/install -d -o totem -g totem -m 0750 /tmp/kiosky /data/state/kiosky-player
+ExecStartPre=+/opt/totem/bin/totem_visual_tty_guard.sh --quiet --tty 1 --tty 2
+ExecStart=/usr/bin/env bash /opt/totem/bin/kiosky_service_launcher.sh
+Restart=always
+RestartSec=10s
+UMask=0077
+ReadOnlyPaths=/opt/totem
+ReadWritePaths=/data /tmp
+
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf
+# C14.1.1 — Redirect kiosky-player.service ExecStart through our wrapper.
+#
+# Why: the wrapper picks /data/apps/kiosky-player/current/kiosk.py if present,
+# falling back to /opt/totem/kiosky-player/kiosk.py otherwise.  The wrapper then
+# delegates to the original inner launcher (kiosky_service_launcher.sh) via
+# `exec`, so the watchdog/status writer/setup-trigger plumbing is preserved.
+#
+# Notes:
+#   - ExecStart is reset first because systemd drop-ins must clear list options
+#     before re-defining them.
+#   - We do NOT touch User, Group, WorkingDirectory, Environment, ReadOnlyPaths,
+#     ReadWritePaths, or any of the ExecStartPre lines from the base unit.
+#   - The wrapper at /opt/totem/bin/totem-kiosky-launcher.sh must be in place
+#     before this drop-in is loaded.  Bootstrap installs it.
+
+[Service]
+ExecStart=
+ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh
+
+=== systemctl cat totem-settings-trigger.service ===
+# /etc/systemd/system/totem-settings-trigger.service
+[Unit]
+Description=Dadooh Totem Settings Trigger
+After=systemd-udevd.service local-fs.target totem-firstboot-gate.service
+Wants=systemd-udevd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/totem/bin/totem_settings_trigger.py --daemon --request-dir /run/dadooh-settings --hold-sec 5 --cooldown-sec 10 --session-lock /run/totem/settings-session.lock --open-service totem-open-settings.service --tty-guard /opt/totem/bin/totem_visual_tty_guard.sh --visual-tty 2
+Restart=always
+RestartSec=2
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
+
+=== systemctl cat totem-open-settings.service ===
+# /etc/systemd/system/totem-open-settings.service
+[Unit]
+Description=Dadooh Open Totem Settings
+After=kiosky-player.service totem-settings-trigger.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+TimeoutStopSec=20s
+KillSignal=SIGTERM
+KillMode=control-group
+ExecStartPre=/opt/totem/bin/totem_visual_tty_guard.sh --clear --tty 2
+ExecStartPre=/opt/totem/bin/totem_settings_lab_apply_policy.sh --enable-from-homologation-seed-if-present --seed-path /data/state/totem-settings/private-values.seed.json --policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings
+ExecStart=/opt/totem/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+ExecStopPost=/opt/totem/bin/totem_open_settings_cleanup.sh --reason service-stop-post --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --tty 2
+StandardOutput=null
+StandardError=null
+
+=== systemctl cat dadooh-visual-splash.service ===
+# /etc/systemd/system/dadooh-visual-splash.service
+[Unit]
+Description=Dadooh visual boot splash
+DefaultDependencies=no
+After=local-fs.target
+Before=basic.target getty.target kiosky-player.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/opt/totem/bin/totem_visual_tty_guard.sh --clear --tty 2
+ExecStart=/usr/local/sbin/dadooh-visual-splash.py boot
+ExecStop=/usr/local/sbin/dadooh-visual-splash.py shutdown
+TimeoutSec=8
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=sysinit.target
+
+=== systemctl cat totem-firstboot-gate.service ===
+# /etc/systemd/system/totem-firstboot-gate.service
+[Unit]
+Description=Dadooh Image-Lab Firstboot Gate
+Documentation=man:systemd.service(5)
+DefaultDependencies=no
+After=local-fs.target systemd-remount-fs.service
+Before=dadooh-visual-splash.service kiosky-player.service totem-settings-trigger.service
+ConditionPathExists=/root/.not_logged_in_yet
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+ExecStart=/opt/totem/bin/totem_firstboot_gate.sh --wait --tty 2
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
+
+=== getty@tty1 unit ===
+# /lib/systemd/system/getty@.service
+#  SPDX-License-Identifier: LGPL-2.1-or-later
+#
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+
+[Unit]
+Description=Getty on %I
+Documentation=man:agetty(8) man:systemd-getty-generator(8)
+Documentation=https://0pointer.de/blog/projects/serial-console.html
+After=systemd-user-sessions.service plymouth-quit-wait.service getty-pre.target
+After=rc-local.service
+
+# If additional gettys are spawned during boot then we should make
+# sure that this is synchronized before getty.target, even though
+# getty.target didn't actually pull it in.
+Before=getty.target
+IgnoreOnIsolate=yes
+
+# IgnoreOnIsolate causes issues with sulogin, if someone isolates
+# rescue.target or starts rescue.service from multi-user.target or
+# graphical.target.
+Conflicts=rescue.service
+Before=rescue.service
+
+# On systems without virtual consoles, don't start any getty. Note
+# that serial gettys are covered by serial-getty@.service, not this
+# unit.
+ConditionPathExists=/dev/tty0
+
+[Service]
+# the VT is cleared by TTYVTDisallocate
+# The '-o' option value tells agetty to replace 'login' arguments with an
+# option to preserve environment (-p), followed by '--' for safety, and then
+# the entered username.
+ExecStart=-/sbin/agetty -o '-p -- \\u' --noclear - $TERM
+
+=== /proc/cmdline (sanitized) ===
+root=UUID=9a1b9474-56bd-4064-b25a-606174ec6a19 rootwait rootfstype=ext4 splash=verbose console=ttyS0,115200 consoleblank=0 loglevel=0 ubootpart=b023c9b3-01 usb-storage.quirks= quiet loglevel=0 systemd.show_status=false rd.systemd.show_status=false logo.nologo vt.global_cursor_default=0 overlayroot=tmpfs  cgroup_enable=memory
+
+=== /dev/tty[0-2] ===
+crw--w---- 1 root tty  4, 0 May 11 19:05 /dev/tty0
+crw--w---- 1 root tty  4, 1 May 12 11:17 /dev/tty1
+crw--w---- 1 root root 4, 2 May 12 11:17 /dev/tty2
+
+=== fgconsole / openvt? ===
+fgconsole=2
+openvt=present
+chvt=present
+setterm=present
+
+=== who/last (sanitized) ===
+root     ttyS0        2026-05-11 19:00
+root     pts/0        2026-05-12 11:06 (IP)
+
+=== ps relevant ===
+   1017       1 Ss   ?        systemd-logind  /lib/systemd/systemd-logind
+   1068       1 Ss   ttyS0    login           /bin/login -f
+   1708       1 Ss   ?        python3         /usr/bin/python3 /opt/totem/bin/totem_settings_trigger.py --daemon --request-dir /run/dadooh-settings --hold-sec 5 --cooldown-sec 10 --session-lock /run/totem/settings-session.lock --open-service totem-open-settings.service --tty-guard /opt/totem/bin/totem_visual_tty_guard.sh --visual-tty 2
+   5757       1 Ss   ?        bash            bash /opt/totem/bin/kiosky_service_launcher.sh
+   5803    5757 Sl   ?        python3         /usr/bin/python3 /opt/totem/kiosky-player/kiosk.py --config /data/config/config.json
+   5814    5757 S    ?        bash            bash /opt/totem/bin/kiosky_service_launcher.sh
+   8927    5803 SLsl ?        mpv             mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --no-osc --osd-level=0 --input-ipc-server=/tmp/kiosky/mpv.sock --vo=gpu --gpu-context=drm --ao=null --no-input-default-bindings --video-rotate=270 --input-conf=/tmp/kiosky/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto
+
+=== /data layout (no content) ===
+/data -> dir (mode=755)
+/data/apps -> dir (mode=755)
+/data/apps/kiosky-player -> dir (mode=755)
+/data/apps/kiosky-player/releases -> dir (mode=755)
+/data/updates -> dir (mode=755)
+/data/updates/incoming -> dir (mode=755)
+/data/logs -> dir (mode=755)
+/data/state -> dir (mode=755)
+/data/state/totem-settings -> dir (mode=700)
+/data/state/kiosky-player -> dir (mode=750)
+/data/config -> dir (mode=750)
+/data/config/backups -> dir (mode=700)
+
+=== /data/apps/kiosky-player/current ===
+/data/apps/kiosky-player/releases/homolog-20260511-202109-c71318a
+
+=== seed presence (no content) ===
+600 root:root /data/state/totem-settings/private-values.seed.json
+seed_marker=present
+
+=== /run lock state ===
+total 0
+drwx------  2 root root  40 May 12 11:06 .
+drwxr-xr-x 29 root root 780 May 12 12:12 ..
+---
+total 12
+drwx------  2 root root 100 May 12 12:12 .
+drwxr-xr-x 29 root root 780 May 12 12:12 ..
+-rw-------  1 root root 433 May 12 11:06 open-settings-cleanup-status.json
+-rw-------  1 root root 476 May 12 12:12 summary.txt
+-rw-------  1 root root 605 May 12 12:12 trigger-status.json
+---
+session_lock_dir_exists=false
+session_lock_dir_age_sec=na
+
+=== /run/dadooh-settings/trigger-status.json ===
+  schema_version=dadooh-c10.6-settings-trigger.v1
+  status=timeout
+  trigger_type=keyboard_function_hold
+  trigger_detected=False
+  request_written=False
+  devices_opened_count=3
+  open_service_start_attempted=False
+  open_service_start_result=not_requested
+  session_lock_active=False
+  session_lock_age_bucket=unknown
+  open_service_active_state=unknown
+  stale_lock_suspected=False
+  stale_lock_removed=False
+  cooldown_active=False
+  raw_key_values_logged=False
+  characters_logged=False
+  credentials_collected=False
+
+=== /tmp/dadooh-status/status.json (public_state only) ===
+  state=player_running
+  schema_version=totem-status.v0
+
+=== /tmp/kiosky-status.json (sanitized non-sensitive only) ===
+  playback_state=playing
+  current_index=5
+
+=== /data/config/config.json non-sensitive fields only ===
+  status_file=/tmp/kiosky-status.json
+  rotation_deg=270
+  config_keys_total=33
+  config_keys_redacted=31
+
+=== mpv log files (count, sizes only) ===
+total 32
+drwxr-x--- 2 totem totem 4096 May 12 12:12 .
+drwxr-xr-x 8 root  root  4096 May 11 19:14 ..
+-rw------- 1 totem totem 7918 May 12 12:12 cache_index.json
+-rw------- 1 totem totem   44 May 12 11:47 last_success.json
+-rw------- 1 totem totem  175 May 12 11:17 launcher-status.json
+-rw------- 1 totem totem 7152 May 12 11:06 playlist_last.json
+total 16
+drwxr-xr-x 3 root  root  4096 May 12 11:09 .
+drwxr-xr-x 9 root  root  4096 May 11 19:14 ..
+drwxr-x--- 2 totem totem 4096 May 11 19:14 kiosky-player
+-rw-r--r-- 1 root  root  2485 May 12 11:17 totem-update.log
+
+=== totem-updatectl status (sanitized) ===
+{
+  "component": "kiosky-player",
+  "current_symlink_target": "releases/homolog-20260511-202109-c71318a",
+  "data_root": "/data",
+  "previous_symlink_target": null,
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "kiosky-player",
+    "current": {
+      "applied_at_utc": "2026-05-12T14:17:36Z",
+      "path": "/data/apps/kiosky-player/releases/REDACTED",
+      "payload_sha256": "0e4c3bbd5a90fcb8dda3672149da9f1dca26e447a67bc32e311d76f6ec83aa5f",
+      "source": "github:dadoohai/kiosky-player:totem-app-homolog-20260511-202109-c71318a",
+      "source_branch": "appliance-v0.1",
+      "source_commit": "c71318a64c08e47b8426f1388b95f21364d57123",
+      "source_repo": "dadoohai/kiosky-player",
+      "version": "homolog-20260511-202109-c71318a"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-05-12T14:17:49Z",
+      "source": "github:dadoohai/kiosky-player:totem-app-homolog-20260511-202109-c71318a",
+      "started_at_utc": "2026-05-12T14:17:35Z",
+      "status": "success",
+      "type": "apply",
+      "version": "homolog-20260511-202109-c71318a"
+    },
+    "previous": {
+      "applied_at_utc": "2026-05-12T14:09:17Z",
+      "path": "/data/apps/kiosky-player/releases/REDACTED",
+      "payload_sha256": "0e4c3bbd5a90fcb8dda3672149da9f1dca26e447a67bc32e311d76f6ec83aa5f",
+      "source": "github:dadoohai/kiosky-player:totem-app-homolog-20260511-202109-c71318a",
+      "source_branch": "appliance-v0.1",
+      "source_commit": "c71318a64c08e47b8426f1388b95f21364d57123",
+      "source_repo": "dadoohai/kiosky-player",
+      "version": "homolog-20260511-202109-c71318a"
+    },
+    "schema": "dadooh.totem.update.state.v1"
+  },
+  "token_file_present": false
+
+=== F10/hotkey binding scan ===
+/opt/totem/kiosky-player/kiosk.py:    "hotkeys_enabled": True,
+/opt/totem/kiosky-player/kiosk.py:    "hotkey_open_key": "Ctrl+s",
+/opt/totem/kiosky-player/kiosk.py:def ensure_hotkey_conf(cfg: Dict) -> Optional[str]:
+/opt/totem/kiosky-player/kiosk.py:    if not cfg.get("hotkeys_enabled"):
+/opt/totem/kiosky-player/kiosk.py:    conf_path = os.path.join(runtime_dir, "hotkeys.conf")
+/opt/totem/kiosky-player/kiosk.py:    line = f"{cfg.get('hotkey_open_key', 'Ctrl+s')} run {quoted}\n"
+/opt/totem/kiosky-player/kiosk.py:        logging.warning("Failed to write hotkey conf: %s", exc)
+/opt/totem/kiosky-player/kiosk.py:    hotkey_conf = ensure_hotkey_conf(cfg)
+/opt/totem/kiosky-player/kiosk.py:    if hotkey_conf:
+/opt/totem/kiosky-player/kiosk.py:        args.append(f"--input-conf={hotkey_conf}")
+/opt/totem/bin/totem_settings_trigger.py:KEY_F10 = 68
+/opt/totem/bin/totem_settings_trigger.py:    KEY_F10: "keyboard_f10_hold",
+/opt/totem/bin/totem_settings_trigger.py:        self.enabled_function_triggers = enabled_function_triggers or {KEY_F10: "keyboard_f10_hold"}
+/opt/totem/bin/totem_settings_trigger.py:            trigger_type = str(status.get("trigger_type") or "keyboard_f10_hold")
+/opt/totem/bin/totem_settings_trigger.py:    assert not detector.handle_event(KeyEvent(EV_KEY, KEY_F10, 1, 20.0))
+/opt/totem/bin/totem_settings_trigger.py:    assert detector.trigger_type == "keyboard_f10_hold"
+/opt/totem/bin/totem_settings_trigger.py:        enabled_function_triggers={KEY_F10: "keyboard_f10_hold", KEY_F12: "keyboard_f12_hold"},
+/opt/totem/bin/totem_settings_trigger.py:        write_request(request_dir, "keyboard_f10_hold")
+/opt/totem/bin/totem_settings_trigger.py:                "trigger_type": "keyboard_f10_hold",
+/opt/totem/bin/totem_settings_trigger.py:            "trigger_type": "keyboard_f10_hold",
+
+=== journalctl tail (errors only, last 30 from totem-open-settings) ===
+-- No entries --
+---
+=== journalctl tail (errors only, last 30 from kiosky-player) ===
+-- No entries --
+---
+=== journalctl tail (totem-settings-trigger summary) ===
+-- No entries --
+
+=== systemd-coredump or service crashes (counts) ===
+May 12 11:04:04 orangepizero3 systemd[1]: Failed to start totem-open-settings.service - Dadooh Open Totem Settings.
+
+=== getty visibility / tty1 reset history ===
+-- No entries --
+
+=== mpv processes + ttys ===
+8927 mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --no-osc --osd-level=0 --input-ipc-server=/tmp/kiosky/mpv.sock --vo=gpu --gpu-context=drm --ao=null --no-input-default-bindings --video-rotate=270 --input-conf=/tmp/kiosky/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto
+
+=== current foreground VT ===
+fgconsole_now=2
+
+=== DONE ===

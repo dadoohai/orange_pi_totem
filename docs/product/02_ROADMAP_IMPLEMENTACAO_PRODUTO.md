@@ -2396,3 +2396,58 @@ Rollback nao retestado (provado em C14.1.1). Status:
 `pull_updater_embedded=true`, `pull_update_timer_enabled=true`,
 `c12_readonly_blocked=true`, `c12_4_blocked=true`. Detalhes em
 `docs/product/136_C14_2_1_SHIPPING_HOMOLOGATION_IMAGE_WITH_PULL_UPDATER.md`.
+
+Atualizacao C15.1.1: 2026-05-12. Estabilizacao minima e reversivel do
+wizard F10 + auditoria do player sem refatoracao. Causa-raiz do "wizard
+volta para config_missing" classificada como
+`service_race_with_config_missing`: o wait de 30s em
+`totem_open_settings_session.sh` por drenagem de `kiosk.py`/`mpv`/launcher
+falhava ocasionalmente nas primeiras tentativas, disparando
+`exit 42 hdmi_not_free_after_player_pause` antes do wizard renderizar.
+Hotfix: escalonar para SIGKILL apos o grace period antes do `exit 42`
+final. Causa do "terminal aparece" no primeiro boot classificada como
+`renderer_starts_too_late` (printf cru em `/dev/tty2` no
+`totem_firstboot_gate.sh` antes do splash python; janela curta apos
+`openvt` antes do `tty.setraw` do wizard). Hotfix aplicado em
+`/opt/totem/bin/totem_open_settings_session.sh` da placa lab (tmpfs
+overlay, sem reboot) com sha256 verificado. Player audit: classificacoes
+de `player_timing_suspect=default_duration_used,sync_resync_conflict,mpv_ipc_loadfile_failure`,
+sem alterar `kiosk.py` ou `/data/config/config.json`. Proxima rodada
+recomendada: C16.1.1 (player scheduler/sync). Nenhum
+`apt`/`pip`/kernel/u-boot/dtb/bsp/wifi alterado. Nenhum poweroff/corte
+seco. Nenhum secret publicado. Status: `c15_1_1_status=in-progress`
+(awaiting on-board F10 confirmation), `wizard_hotfix_deployed=true`,
+`image_rebuild_required=true` (para persistir alem de reboot),
+`player_code_changed=false`, `c12_readonly_blocked=true`,
+`c12_4_blocked=true`. Detalhes em
+`docs/product/137_C15_1_1_WIZARD_FIRSTBOOT_AND_PLAYER_TIMING_AUDIT.md`.
+
+Confirmacao C15.1.1: 2026-05-13. Teste fisico #1 (10:03Z) falhou com
+`Main process exited, code=killed, status=15/TERM` sem rastro suficiente
+para atribuir o SIGTERM a um subsistema especifico. Aplicado hotfix v2
+de instrumentacao em `totem_open_settings_session.sh` (helper `c15_trace`
+gravando em `/tmp/c15-session.trace`; traps separados `on_term`/`on_int`/
+`on_hup` para registrar qual sinal chegou). Sem mudanca de comportamento.
+Teste fisico #2 (10:25Z) passou fim-a-fim: 6 telas (orientation,
+orientation-confirm, 02-connection, 03-environment, 05-review,
+06-complete) renderizadas, `writer_called=true writer_rc=0
+writer_result=passed real_config_written=true backup_created=true`,
+`setup_cancelled=false`, `linux_prompt_visible=false`, player restaurado
+ao final. session.sh agora em sha256
+`8484338d9d5a9abbab7ab6e80ad92d1a00dff83d938908edfda04c1cbf93d3f8` na
+placa (tmpfs overlay) e no repo. **C15.1.1 NAO esta fechado**: 1 de 2
+testes passou, causa de SIGTERM do #1 segue nao classificada, hotfix v1
+(SIGKILL escalation) nao foi exercitado em nenhuma das duas execucoes
+(player drenou em 2s nas duas). Status real:
+`c15_1_1_status=partial-validated`, `c15_1_1_closure=pending_C15_1_2`,
+`wizard_hotfix_deployed=true`, `wizard_instrumentation_deployed=true`,
+`on_device_tests=1_of_2_passed`, `unclassified_failures=1`,
+`image_rebuild_required=true` (somente apos C15.1.2 fechar).
+`secrets_published=false`, `apt_update_executed=false`,
+`apt_upgrade_executed=false`, `pip_install_executed=false`,
+`poweroff_executed=false`, `power_cut_tested=false`,
+`c12_readonly_blocked=true`, `c12_4_blocked=true`. Proximo cartao
+permitido: `C15.1.2 — wizard reliability battery on lab board` (5 F10
+consecutivos com intervalos mistos, criterio de fechamento 5/5 sem
+`code=killed` ou falha classificavel via trace). C16 (player) segue
+bloqueado ate C15.1.2 fechar — disciplina tematica entre cartoes.
