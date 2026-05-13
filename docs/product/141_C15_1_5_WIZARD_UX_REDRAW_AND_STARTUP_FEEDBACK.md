@@ -102,6 +102,12 @@ unstarted in this card, but remains eligible for the next audit card. Broader
 wizard visual polish should be handled as a separate PDCA-style UX effort for
 the full wizard interface, not for the splash.
 
+C15.1.6 followed as that non-interactive PDCA foundation. It generated a
+synthetic UI/UX gallery, heuristic metrics, rubric, stress results, and a
+prioritized backlog without operator interaction. It found no P0 blocker and
+kept `ready_for_image_rebuild=true`; final perception still requires future
+HDMI capture or camera review.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T171852Z-c15-1-5-wizard-ux-redraw-startup-feedback/`

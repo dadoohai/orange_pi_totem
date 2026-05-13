@@ -2561,3 +2561,20 @@ Fica como follow-up separado um PDCA visual do wizard completo, orientado a
 validacao real de uso, nao do splash.
 Detalhes em
 `docs/product/141_C15_1_5_WIZARD_UX_REDRAW_AND_STARTUP_FEEDBACK.md`.
+
+Atualizacao C15.1.6: 2026-05-13. Antes do rebuild C15.2.1, C15.1.6 executou
+uma revisao UI/UX assistida por IA sem interacao manual: nao houve F10, HDMI,
+reboot, writer, alteracao de Wi-Fi, NetworkManager, player, read-only, kernel,
+apt, pip, poweroff ou corte seco. Foi criado
+`scripts/qa/generate_ui_ux_gallery.py`, que gera galeria sintetica de 27 telas
+com splashes e estados do wizard, inventario de telas/funcoes, metricas de
+texto/acoes/feedback, rubrica heuristica, stress automatico de input/paginacao
+e backlog P0/P1/P2/P3. A rodada nao afirma revisao visual por pixels:
+`ai_visual_review_performed=false`, `heuristic_review_performed=true`,
+`human_review_required=true` e
+`hdmi_capture_required_for_final_perception=true`. Resultado:
+`p0_items_count=0`, `major_ui_blockers_found=false`,
+`ready_for_image_rebuild=true`, `ready_for_c16_player_audit=true`,
+`c16_started=false`. PNG nao foi gerado porque o conversor disponivel nao
+rasterizou os SVGs sem instalar pacotes. Detalhes em
+`docs/product/142_C15_1_6_AI_ASSISTED_UI_UX_REVIEW.md`.

@@ -250,6 +250,24 @@
       "dns"
     ]
   },
+  "ai_ui_ux_review": {
+    "qa_generator": "scripts/qa/generate_ui_ux_gallery.py",
+    "manual_interaction_required": false,
+    "operator_keypress_required": false,
+    "gallery_uses_synthetic_data_only": true,
+    "ai_visual_review_performed": false,
+    "heuristic_review_performed": true,
+    "human_review_required": true,
+    "hdmi_capture_required_for_final_perception": true,
+    "public_status_must_not_include": [
+      "ssid",
+      "wifi_password",
+      "bssid",
+      "mac",
+      "ip",
+      "dns"
+    ]
+  },
   "kiosky_player": {
     "install_path": "/opt/totem/kiosky-player",
     "repo_full_name": "dadoohai/kiosky-player",
