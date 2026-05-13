@@ -100,6 +100,10 @@ image from this result. The next C15 action should address the F10 keyboard echo
 path deliberately, then rerun the reliability battery or a narrower acceptance
 test as appropriate.
 
+Follow-up: C15.1.3 fixed the F10 keyboard echo path and validated the first F10
+attempt after one controlled reboot. See
+`docs/product/139_C15_1_3_F10_KEYBOARD_ECHO_AND_FIRST_REBOOT_VALIDATION.md`.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T143957Z-c15-1-2-wizard-reliability-battery/`

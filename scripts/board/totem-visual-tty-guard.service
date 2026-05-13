@@ -1,0 +1,18 @@
+[Unit]
+Description=Dadooh Visual TTY Guard
+Documentation=man:systemd.service(5)
+DefaultDependencies=no
+After=local-fs.target systemd-remount-fs.service
+Before=basic.target getty.target kiosky-player.service totem-settings-trigger.service totem-open-settings.service
+ConditionPathExists=/opt/totem/bin/totem_visual_tty_guard.sh
+
+[Service]
+Type=simple
+ExecStart=/opt/totem/bin/totem_visual_tty_guard.sh --quiet --hold --tty 1 --tty 2
+Restart=always
+RestartSec=2
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

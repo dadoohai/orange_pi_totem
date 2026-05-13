@@ -2481,3 +2481,27 @@ Status:
 `power_cut_tested=false`, `c12_readonly_blocked=true`, `c12_4_blocked=true`.
 Detalhes em
 `docs/product/138_C15_1_2_WIZARD_RELIABILITY_BATTERY.md`.
+
+Atualizacao C15.1.3: 2026-05-13. Corrigido o eco de teclado do F10 e validada
+a primeira tentativa fisica apos um reboot controlado autorizado. A causa foi
+classificada como `tty_echo_enabled_before_f10_hold`: a VT visual estava ativa,
+mas com `echo` ligado antes do operador segurar F10. A correcao adiciona
+`totem-visual-tty-guard.service`, iniciado antes do player, trigger e
+open-settings, mantendo `tty1` e `tty2` abertos com `-echo -icanon` via
+`totem_visual_tty_guard.sh --hold`. Uma variante intermediaria que reaplicava o
+guard periodicamente foi rejeitada por causar piscada continua do SVG; a versao
+final nao reescreve estado de terminal enquanto o wizard esta dono da VT.
+Validacao warm pos-fix: sem caracteres, sem terminal/login, sem piscada
+continua, sem saida antes da tela final e sem retorno para `config_missing`;
+trace com `openvt_exited`, `WIZARD_RC=8`, writer `passed`, lock limpo e player
+restaurado. Foi executado exatamente um `systemctl reboot`; apos o SSH voltar,
+o primeiro F10 fisico passou com 8 telas incluindo `06-complete`, writer
+`passed`, lock limpo, player restaurado e confirmacao visual do operador
+(`funcionou`). Status: `c15_1_3_status=passed`,
+`ready_for_image_rebuild=true`, `ready_for_c16_player_audit=true`,
+`c16_started=false`, `player_code_changed=false`, `apt_update_executed=false`,
+`apt_upgrade_executed=false`, `pip_install_executed=false`,
+`poweroff_executed=false`, `power_cut_tested=false`,
+`secrets_published=false`. C16/player fica liberado para abrir em cartao
+seguinte, mas nao foi iniciado nesta rodada. Detalhes em
+`docs/product/139_C15_1_3_F10_KEYBOARD_ECHO_AND_FIRST_REBOOT_VALIDATION.md`.

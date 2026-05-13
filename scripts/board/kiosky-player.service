@@ -1,7 +1,7 @@
 [Unit]
 Description=Kiosky Player
-After=network-online.target totem-firstboot-gate.service
-Wants=network-online.target
+After=network-online.target totem-firstboot-gate.service totem-visual-tty-guard.service
+Wants=network-online.target totem-visual-tty-guard.service
 StartLimitIntervalSec=300
 StartLimitBurst=5
 

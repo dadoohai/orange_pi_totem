@@ -1,7 +1,7 @@
 [Unit]
 Description=Dadooh Totem Settings Trigger
-After=systemd-udevd.service local-fs.target totem-firstboot-gate.service
-Wants=systemd-udevd.service
+After=systemd-udevd.service local-fs.target totem-firstboot-gate.service totem-visual-tty-guard.service
+Wants=systemd-udevd.service totem-visual-tty-guard.service
 
 [Service]
 Type=simple

@@ -1,6 +1,7 @@
 [Unit]
 Description=Dadooh Open Totem Settings
-After=kiosky-player.service totem-settings-trigger.service
+After=kiosky-player.service totem-settings-trigger.service totem-visual-tty-guard.service
+Wants=totem-visual-tty-guard.service
 
 [Service]
 Type=oneshot

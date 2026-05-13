@@ -3,7 +3,7 @@
 Status: hotfix-deployed-and-instrumented; 1-of-2 on-device tests passed;
 test #1 root cause **not classified** (`code=killed status=15/TERM` from
 indeterminate source). Closure pending a deliberate validation battery
-in `C15.1.2`.
+in `C15.1.2` / `C15.1.3`.
 Date: 2026-05-12 (hotfix v1) + 2026-05-13 (hotfix v2 instrumentation,
 test #1 failure, test #2 success)
 Branch: `foundation-v0.1`
@@ -308,6 +308,25 @@ not cold-boot validated because this round did not reboot or power-cycle.
 
 Decision: C15.1.1 remains partial-validated; C15.1.3/C14.2.2 image rebuild is
 not released; C16/player remains blocked until C15.1.2 passes.
+
+### C15.1.3 result (2026-05-13)
+
+C15.1.3 fixed the F10 keyboard echo path by adding a persistent visual TTY
+guard that keeps `tty1` and `tty2` open with `-echo` before the operator holds
+F10. The final implementation does not periodically rewrite terminal state
+while the wizard owns the VT.
+
+The warm F10 validation after the final fix passed: no keyboard echo, no
+terminal/login, no continuous SVG blinking, no early return to player, no
+`config_missing` return, `openvt_exited`, `WIZARD_RC=8`, writer passed, lock
+cleaned and player restored.
+
+One controlled reboot was then executed. The first physical F10 after reboot
+passed with the same trace result and operator confirmation (`funcionou`).
+Terminal/login did not appear after the controlled reboot.
+
+Decision: C15.1.3 is passed; C15.1.3/C14.2.2 image rebuild is ready; C16/player
+audit is unblocked but was not started in C15.1.3.
 
 ## What stays untouched
 
