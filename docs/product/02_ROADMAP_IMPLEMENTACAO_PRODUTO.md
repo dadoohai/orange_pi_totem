@@ -2615,3 +2615,23 @@ proxima imagem passar em placa limpa:
 `ready_for_batch_flash=false`, `ready_for_dispatch=false`,
 `ready_for_c16_player_audit=false`, `c16_started=false`. Detalhes em
 `docs/product/145_C15_2_3_POST_WIZARD_BLACK_SCREEN_SSH_LOSS_CLASSIFICATION.md`.
+
+Atualizacao C15.2.4: 2026-05-13. A imagem privada
+`c15-2-4-homolog-clean-board-fixes` foi gerada a partir da C14.2.1 validada,
+reaproveitando kernel/U-Boot/DTB/BSP e substituindo apenas a camada appliance
+do manifest. SHA256:
+`e36b86004c75663fd4c3d14d8ed8b6186f102c8b644e7dbc4351ca734036dca9`.
+A validacao offline confirmou updater C14, TTY guard, Wi-Fi UX, debounce,
+splashes, timeout monotonic do `openvt`, correcao de senha `V/v`, seed privada
+sem publicacao de conteudo e ausencia de artefatos QA/evidencia na rootfs. Uma
+placa limpa foi gravada manualmente e passou no primeiro F10/full setup:
+`wizard_rc=8`, `writer_rc=0`, `writer_result=passed`,
+`real_config_written=true`, lock limpo, SSH e NetworkManager ativos, player
+restaurado e playback `playing`. Houve intervalo preto transitorio ao entrar no
+player apos o primeiro setup, sem queda de SSH e sem recuperacao; fica como
+follow-up de player/startup para C16. `console-setup.service` apareceu failed
+com erro sanitizado de setupcon/tmpkbd, sem bloquear teclado, wizard, SSH,
+NetworkManager, player ou playback. C15.2.4 fica `passed`:
+`ready_for_batch_flash=true`, `ready_for_dispatch=true`,
+`ready_for_c16_player_audit=true`, `c16_started=false`. Detalhes em
+`docs/product/146_C15_2_4_CLEAN_BOARD_IMAGE_VALIDATION.md`.

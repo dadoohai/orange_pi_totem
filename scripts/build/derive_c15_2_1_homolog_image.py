@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derive the C15.2.1 homologation image from the validated C14.2.1 image.
+"""Derive a C15.2.x homologation image from the validated C14.2.1 image.
 
 The normal Armbian Build runner still requires Docker.  This derivation path is
 intentionally narrower: copy the already validated private C14.2.1 image,
@@ -34,11 +34,12 @@ DEFAULT_BASE_IMAGE = Path(
 DEFAULT_OUTPUT_IMAGE = Path(
     "/home/builder/totem-os/armbian-build-v25.11/output/images/"
     "Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
-    "6.12.58-c12-ro-lab-c15-2-1-homolog-ui-ux-fixes_minimal.img"
+    "6.12.58-c12-ro-lab-c15-2-4-homolog-clean-board-fixes_minimal.img"
 )
-DEFAULT_TAG = "c15-2-1-homolog-ui-ux-fixes"
-DEFAULT_VERSION = "c15.2.1"
-MARKER_PATH = "/etc/dadooh/c15-2-1-image-ui-ux-fixes"
+DEFAULT_TAG = "c15-2-4-homolog-clean-board-fixes"
+DEFAULT_VERSION = "c15.2.4"
+MARKER_PATH = "/etc/dadooh/c15-2-4-clean-board-fixes"
+DEFAULT_EXPECTED_IMAGE_TOKEN = "c15-2-4"
 
 
 def run(args: list[str], *, text: bool = True, check: bool = False) -> subprocess.CompletedProcess[str]:
@@ -221,6 +222,9 @@ def build_marker(marker_file: Path, *, image_tag: str, image_version: str, repo_
                 "c15_1_4_embedded=true",
                 "c15_1_5_embedded=true",
                 "c15_1_6_qa_artifacts_not_installed=true",
+                "c15_2_2_embedded=true",
+                "c15_2_3_monitor_not_enabled_by_default=true",
+                "c15_2_3_post_wizard_classification_passed=true",
                 "c12_readonly_blocked=true",
                 "c12_4_blocked=true",
                 f"orange_pi_totem_commit={repo_head}",
@@ -294,7 +298,7 @@ def executable(rootfs: Path, path: str) -> bool:
 def validate_c15(rootfs: Path, image_name: str) -> dict[str, Any]:
     checks: dict[str, bool] = {}
 
-    checks["image_name_contains_c15_2_1"] = "c15-2-1" in image_name
+    checks["image_name_contains_c15_2_4"] = DEFAULT_EXPECTED_IMAGE_TOKEN in image_name
     checks["c15_marker_present"] = is_file(rootfs, MARKER_PATH)
 
     checks["visual_tty_guard_present"] = is_file(rootfs, "/opt/totem/bin/totem_visual_tty_guard.sh")
@@ -313,19 +317,32 @@ def validate_c15(rootfs: Path, image_name: str) -> dict[str, Any]:
     wizard = cat_file(rootfs, "/opt/totem/bin/totem_setup_visual_wizard.py") or ""
     wifi = cat_file(rootfs, "/opt/totem/bin/totem_wifi_nm_adapter.py") or ""
     splash = cat_file(rootfs, "/opt/totem/bin/totem_visual_splash.py") or ""
+    session = cat_file(rootfs, "/opt/totem/bin/totem_open_settings_session.sh") or ""
     checks["wizard_present"] = bool(wizard)
     checks["wifi_adapter_present"] = bool(wifi)
     checks["splash_present"] = bool(splash)
+    checks["open_settings_session_present"] = bool(session)
     checks["wifi_pagination_present"] = "WIFI_LIST_PAGE_SIZE" in wizard and "page_items(" in wizard
     checks["wifi_refresh_10s_present"] = "WIFI_LIST_REFRESH_SEC = 10.0" in wizard or "auto_refresh_interval_sec" in wizard
     checks["wifi_signal_present"] = "signal_bars" in wizard and "signal_bucket" in wizard
     checks["wifi_password_toggle_present"] = "show_plain_value" in wizard and "password_show_toggle_key\": \"F2" in wizard
+    checks["password_v_chars_allowed"] = 'text_field_apply_key("ab", "v"' in wizard and 'text_field_apply_key("ab", "V"' in wizard
+    checks["password_toggle_printable_v_removed"] = 'not is_secret_toggle_key("v")' in wizard and 'not is_secret_toggle_key("V")' in wizard
+    checks["password_show_toggle_f2_ctrlp"] = 'return key in {"f2", "toggle_secret"}' in wizard and 'data == b"\\x10"' in wizard
+    checks["openvt_timeout_monotonic"] = (
+        "monotonic_seconds()" in session
+        and "/proc/uptime" in session
+        and "openvt_timeout_clock=monotonic" in session
+        and "date +%s) + RUN_TIMEOUT_SEC" not in session
+    )
     checks["backspace_debounce_present"] = (
         "estimate_debounced_input_render_count" in wizard
         and "TEXT_INPUT_REPEAT_DRAIN_SEC" in wizard
         and "TEXT_INPUT_MIN_RENDER_INTERVAL_SEC" in wizard
     )
     checks["splash_feedback_present"] = all(mode in splash for mode in ("boot", "player", "setup", "saving", "config_pending"))
+    checks["splash_status_path_safe"] = "/tmp/dadooh-splash" in splash
+    checks["splash_does_not_chmod_tmp"] = "chmod('/tmp" not in splash and 'chmod("/tmp' not in splash
 
     checks["pull_updater_present"] = executable(rootfs, "/opt/totem/bin/totem-updatectl")
     checks["pull_launcher_present"] = executable(rootfs, "/opt/totem/bin/totem-kiosky-launcher.sh")
@@ -349,6 +366,8 @@ def validate_c15(rootfs: Path, image_name: str) -> dict[str, Any]:
         rootfs, "/opt/totem/bin/generate_ui_ux_gallery.py"
     )
     checks["docs_evidence_not_installed"] = not stat_file(rootfs, "/docs/evidence").get("present", False)
+    checks["c15_2_3_monitor_not_installed"] = not is_file(rootfs, "/opt/totem/bin/c15_2_3_post_wizard_monitor.sh")
+    checks["c15_2_3_monitor_not_enabled"] = not is_file(rootfs, "/etc/systemd/system/c15_2_3_post_wizard_monitor.service")
 
     checks["kiosky_player_service_present"] = is_file(rootfs, "/etc/systemd/system/kiosky-player.service")
     checks["kiosky_player_enabled"] = is_symlink(
@@ -365,7 +384,7 @@ def validate_c15(rootfs: Path, image_name: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build C15.2.1 by applying the current appliance manifest to C14.2.1.")
+    parser = argparse.ArgumentParser(description="Build C15.2.x by applying the current appliance manifest to C14.2.1.")
     parser.add_argument("--base-image", type=Path, default=DEFAULT_BASE_IMAGE)
     parser.add_argument("--output-image", type=Path, default=DEFAULT_OUTPUT_IMAGE)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -404,7 +423,7 @@ def main() -> int:
     summary["rootfs_offset"] = offset
     summary["rootfs_bytes"] = length
 
-    with tempfile.TemporaryDirectory(prefix="c15-2-1-image-") as td:
+    with tempfile.TemporaryDirectory(prefix="c15-2-4-image-") as td:
         work_dir = Path(td)
         rootfs = work_dir / "rootfs.ext4"
         copy_range(args.output_image, rootfs, offset=offset, length=length)
@@ -415,7 +434,7 @@ def main() -> int:
         validation = validate_c15(rootfs, args.output_image.name)
         summary["offline_validation"] = validation
         if not validation["ok"]:
-            (args.out_dir / "c15-2-1-offline-validation.json").write_text(
+            (args.out_dir / "c15-2-4-offline-validation.json").write_text(
                 json.dumps(summary, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
@@ -430,7 +449,7 @@ def main() -> int:
     summary["image_bytes"] = args.output_image.stat().st_size
     summary["ok"] = True
 
-    out_json = args.out_dir / "c15-2-1-offline-validation.json"
+    out_json = args.out_dir / "c15-2-4-offline-validation.json"
     out_json.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0

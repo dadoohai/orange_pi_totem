@@ -121,6 +121,12 @@ ready_for_c16_player_audit=false
 c16_started=false
 ```
 
+## C15.2.4 Follow-Up
+
+C15.2.4 rebuilt the private homologation image with the C15.2.2/C15.2.3 fixes
+embedded and passed clean-board validation. Batch flash/private dispatch and the
+next C16/player audit are now unblocked by C15.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T203036Z-c15-2-3-post-wizard-black-screen-ssh-loss-classification/`
