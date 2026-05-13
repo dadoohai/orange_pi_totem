@@ -15,6 +15,8 @@ TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
 TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 TOTEM_STATUS_RENDERER="${TOTEM_STATUS_RENDERER:-/opt/totem/bin/totem_status_renderer.sh}"
 TOTEM_STATUS_SVG="${TOTEM_STATUS_SVG:-/tmp/dadooh-status/status.svg}"
+TOTEM_VISUAL_SPLASH="${TOTEM_VISUAL_SPLASH:-/opt/totem/bin/totem_visual_splash.py}"
+TOTEM_PLAYER_SPLASH_SKIP_FILE="${TOTEM_PLAYER_SPLASH_SKIP_FILE:-/tmp/kiosky/player-splash-rendered}"
 TOTEM_SETUP_LOCAL_ENABLED="${TOTEM_SETUP_LOCAL_ENABLED:-0}"
 TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING="${TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING:-0}"
 TOTEM_SETUP_LOCAL_TRIGGER_FILE="${TOTEM_SETUP_LOCAL_TRIGGER_FILE:-/tmp/dadooh-setup-local.request}"
@@ -43,6 +45,7 @@ LAST_DISPLAY_LOG_EPOCH=0
 LAST_CONFIG_LOG_EPOCH=0
 LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
 LAST_STATUS_RENDERER_WARN_EPOCH=0
+LAST_SPLASH_MODE=""
 SETUP_LOCAL_RUN_COUNT=0
 
 stamp() {
@@ -316,6 +319,32 @@ start_status_renderer() {
   return 0
 }
 
+show_public_splash() {
+  local mode="$1"
+
+  if [ "$mode" = "player" ] && [ -f "$TOTEM_PLAYER_SPLASH_SKIP_FILE" ]; then
+    rm -f "$TOTEM_PLAYER_SPLASH_SKIP_FILE" 2>/dev/null || true
+    LAST_SPLASH_MODE="player"
+    return 0
+  fi
+
+  if [ "$LAST_SPLASH_MODE" = "$mode" ]; then
+    return 0
+  fi
+
+  if ! display_connected; then
+    return 0
+  fi
+
+  if [ ! -x "$TOTEM_VISUAL_SPLASH" ]; then
+    return 0
+  fi
+
+  "$TOTEM_VISUAL_SPLASH" "$mode" --status-out "/tmp/dadooh-splash/launcher-${mode}/status.json" >/dev/null 2>&1 || true
+  LAST_SPLASH_MODE="$mode"
+  return 0
+}
+
 display_connected() {
   local drm_status
   local value
@@ -509,6 +538,7 @@ handle_connected_display() {
   fi
 
   write_status "config_missing" "true"
+  show_public_splash "config_pending"
 
   if setup_local_requested; then
     run_setup_local_once
@@ -571,11 +601,13 @@ run_app_once() {
   fi
 
   ensure_runtime_dir || true
+  show_public_splash "player"
   write_status "starting" "true"
   log "display_connected starting_app"
 
   "${APP_CMD[@]}" &
   CHILD_PID="$!"
+  LAST_SPLASH_MODE="player_running"
   write_status "running" "true"
   start_status_refresh "$LAST_STATUS_FILE"
 

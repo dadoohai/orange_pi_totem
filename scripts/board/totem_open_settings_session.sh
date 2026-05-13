@@ -468,6 +468,8 @@ restore_service() {
   if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
     if [ -f /data/config/config.json ]; then
       show_transition player "$SELECTED_ROTATION_DEG" || true
+      install -d -o totem -g totem -m 0750 /tmp/kiosky >/dev/null 2>&1 || true
+      install -o totem -g totem -m 0600 /dev/null /tmp/kiosky/player-splash-rendered >/dev/null 2>&1 || true
     else
       show_transition config_pending "$SELECTED_ROTATION_DEG" || true
     fi

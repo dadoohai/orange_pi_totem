@@ -157,6 +157,9 @@ show_transition() {
 
 restore_product_state() {
   if systemctl is-enabled kiosky-player.service >/dev/null 2>&1; then
+    if systemctl is-active --quiet kiosky-player.service; then
+      return 0
+    fi
     if [ -f /data/config/config.json ]; then
       show_transition player || true
     else

@@ -221,6 +221,35 @@
       "dns"
     ]
   },
+  "wizard_ux_redraw_startup_feedback": {
+    "visual_wizard": "/opt/totem/bin/totem_setup_visual_wizard.py",
+    "visual_splash": "/opt/totem/bin/totem_visual_splash.py",
+    "wizard_text_panel_max_items": 3,
+    "wizard_subtitle_max_lines": 1,
+    "input_render_debounce_sec": 0.1,
+    "input_repeat_drain_sec": 0.035,
+    "input_max_render_rate_fps": 12,
+    "backspace_repeats_coalesced": true,
+    "password_hidden_by_default": true,
+    "password_show_toggle_key": "F2/V",
+    "startup_feedback_modes": [
+      "boot",
+      "player",
+      "setup",
+      "saving",
+      "config_pending"
+    ],
+    "player_start_splash": true,
+    "config_pending_splash": true,
+    "public_status_must_not_include": [
+      "ssid",
+      "wifi_password",
+      "bssid",
+      "mac",
+      "ip",
+      "dns"
+    ]
+  },
   "kiosky_player": {
     "install_path": "/opt/totem/kiosky-player",
     "repo_full_name": "dadoohai/kiosky-player",

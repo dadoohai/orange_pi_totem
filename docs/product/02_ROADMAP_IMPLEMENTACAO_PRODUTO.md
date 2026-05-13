@@ -2528,3 +2528,35 @@ sem publicar SSID/senha. Status: `c15_1_4_status=passed`,
 Problemas legados observados mas nao misturados ao aceite: wizard poluido por
 texto e piscada por backlog ao segurar Backspace. Detalhes em
 `docs/product/140_C15_1_4_WIFI_SETUP_UX_REFRESH.md`.
+
+Atualizacao C15.1.5: 2026-05-13. Antes do rebuild C15.2.1, C15.1.5 tratou os
+follow-ups de UX deixados por C15.1.4: textos do wizard foram encurtados,
+painel visual limitado a 3 itens, subtitulos limitados a uma linha e campos de
+texto passaram a coalescer repeticoes rapidas de Backspace/digitacao com
+debounce de render, mantendo `F2/V`, `Ctrl+B`, `Ctrl+U`, `Esc`, `Enter`, senha
+oculta e sanitizacao. O splash existente foi reaproveitado para feedback em
+`boot`, `player`, `setup`, `saving` e `config_pending`. Durante a validacao, uma
+regressao de hotfix foi encontrada e corrigida: status de splash escrito
+diretamente sob `/tmp` alterava a permissao do diretorio pai para privada,
+quebrando o runtime MPV do usuario `totem`; a correcao moveu status para
+`/tmp/dadooh-splash/...`, impediu chmod em `/tmp`, restaurou `/tmp` para `1777`
+e recuperou o player/MPV. Self-tests, previews e hotfix na placa passaram; o
+trace fisico teve `openvt_exited`, sem `trap_signal`, writer `passed`, lock
+limpo e player restaurado. O operador confirmou que Backspace melhorou e para
+imediatamente ao soltar; a interface ficou melhor, ainda que nao final. Durante
+o retorno ao player, foi observada uma regressao de orientacao no ultimo splash
+`Inicializando player`; ela foi corrigida no repo antes do commit removendo
+renders duplicados de player splash: a sessao F10 fica responsavel pelo splash
+com a rotacao selecionada, o unit do player nao desenha outro splash, o launcher
+pula uma vez quando a sessao ja renderizou e o cleanup nao desenha sobre player
+ja ativo. O patch final desta regressao nao foi reaplicado na placa nesta janela
+porque o SSH ficou sem rota apos o teste fisico; ele entra no proximo deploy ou
+rebuild. Status: `c15_1_5_status=passed`, `ready_for_image_rebuild=true`,
+`ready_for_c16_player_audit=true`, `c16_started=false`,
+`player_code_changed=false`, `apt_update_executed=false`,
+`apt_upgrade_executed=false`, `pip_install_executed=false`,
+`poweroff_executed=false`, `power_cut_tested=false`, `secrets_published=false`.
+Fica como follow-up separado um PDCA visual do wizard completo, orientado a
+validacao real de uso, nao do splash.
+Detalhes em
+`docs/product/141_C15_1_5_WIZARD_UX_REDRAW_AND_STARTUP_FEEDBACK.md`.

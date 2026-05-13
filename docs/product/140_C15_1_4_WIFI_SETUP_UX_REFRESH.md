@@ -117,6 +117,13 @@ separate card:
 They were not mixed into C15.1.4 because the Wi-Fi screen refresh, navigation,
 signal clarity, and password toggle acceptance criteria passed.
 
+C15.1.5 was opened next to handle these follow-ups before the C15.2.1 image
+rebuild. That card implemented the code-side simplification, input debounce, and
+startup feedback changes, and closed as a milestone after operator acceptance.
+The brief `Inicializando player` splash orientation mismatch found during the
+milestone was fixed in the C15.1.5 repo changes before commit. Remaining visual
+polish is tracked as a future PDCA effort for the full wizard interface.
+
 ## Decision
 
 ```text

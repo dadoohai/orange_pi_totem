@@ -51,6 +51,10 @@ WIFI_TIMEOUT_SEC = 45
 WIFI_LIST_REFRESH_SEC = 10.0
 WIFI_LIST_TIMEOUT_SEC = 4
 WIFI_LIST_PAGE_SIZE = 5
+MAX_PANEL_ITEMS = 3
+TEXT_INPUT_MIN_RENDER_INTERVAL_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_RENDER_INTERVAL_SEC", "0.10"))
+TEXT_INPUT_REPEAT_DRAIN_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_REPEAT_DRAIN_SEC", "0.035"))
+TEXT_INPUT_MAX_DRAIN_KEYS = int(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_MAX_DRAIN_KEYS", "80"))
 WIFI_PERSISTENT_PROFILE_NAME = wifi_adapter.DEFAULT_PERSISTENT_PROFILE_NAME
 ADAPTER_SCRIPT = pathlib.Path(__file__).with_name("totem_wifi_nm_adapter.py")
 PRESENT_SETTLE_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PRESENT_SETTLE_SEC", "0.18"))
@@ -164,17 +168,17 @@ NETWORK_OPTIONS = (
     Option(
         "configured_wifi",
         "Usar Wi-Fi ja configurado",
-        "Usa o perfil dedicado ja validado neste totem.",
+        "Mantem o perfil atual do produto.",
     ),
     Option(
         "wifi_select",
         "Selecionar rede Wi-Fi",
-        "Escolhe a rede em lista local e mantem perfil dedicado.",
+        "Escolhe uma rede na lista local.",
     ),
     Option(
         "bench_mock",
         "Continuar em modo de bancada",
-        "Segue sem nova alteracao de rede.",
+        "Segue sem alterar a rede.",
     ),
 )
 
@@ -363,7 +367,7 @@ def info_panel(
     text_width = 50 if layout.portrait else 30
     y = panel_y + 58
     bullet_parts = []
-    for item in items[:5]:
+    for item in items[:MAX_PANEL_ITEMS]:
         bullet_parts.append(
             f'<circle cx="{panel_x + 36}" cy="{y - 6}" r="5" fill="#06b6d4"/>'
             f'{svg_lines(item, x=panel_x + 56, y=y, size=17, fill="#cbd5e1", width=text_width, line_gap=24, max_lines=2)}'
@@ -560,7 +564,7 @@ def build_screen_svg(
   <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">{escape_text(layout.note)}</text>
   {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg)}
   <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
-  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=21, fill="#cbd5e1", width=subtitle_width, line_gap=28, max_lines=2)}
+  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=21, fill="#cbd5e1", width=subtitle_width, line_gap=28, max_lines=1)}
   {options_svg}
   {field_svg}
   {panel_svg}
@@ -1039,14 +1043,13 @@ def draw_welcome(display: VisualDisplay) -> None:
         build_screen_svg(
             active_step=0,
             title="Bem-vindo",
-            subtitle="Este assistente prepara rede, ambiente e tela sem abrir Linux ou shell para o operador.",
+            subtitle="Vamos ajustar tela, rede e ambiente.",
             footer="Enter inicia | Esc cancela",
-            panel_title="Garantias desta fase",
+            panel_title="Fluxo",
             panel_items=[
-                "Config real nao sera lida ou escrita.",
-                "Writer real nao sera chamado.",
-                "Hotspot e portal continuam fora.",
-                "Player volta ao final do runner.",
+                "Teclado local.",
+                "Sem shell na tela.",
+                "Player volta ao final.",
             ],
         ),
     )
@@ -1076,9 +1079,9 @@ def choose_option(
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
     while True:
-        footer = "Setas movem | Enter confirma | Esc cancela"
+        footer = "Setas movem | Enter OK | Esc cancela"
         if allow_back:
-            footer = "Setas movem | Enter confirma | B volta | Esc cancela"
+            footer = "Setas movem | Enter OK | B volta | Esc"
         display.show(
             screen_id,
             build_screen_svg(
@@ -1126,15 +1129,15 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                 build_screen_svg(
                     active_step=0,
                     title="Orientacao da tela",
-                    subtitle="Use as setas para escolher como o totem esta instalado.",
-                    footer="Setas movem | Enter visualiza | Esc cancela",
+                    subtitle="Escolha como o totem esta instalado.",
+                    footer="Setas movem | Enter visualiza | Esc",
                     options=options,
                     selected_index=selected,
-                    panel_title="Como funciona",
+                    panel_title="Tela",
                     panel_items=[
-                        "Primeira etapa da configuracao.",
-                        "A proxima tela confirma a escolha.",
-                        "As midias usam esta orientacao ao salvar.",
+                        "Escolha a posicao.",
+                        "Confira o preview.",
+                        "Salve ao final.",
                     ],
                     extra_svg=orientation_preview(
                         str(selected_rotation["key"]),
@@ -1175,15 +1178,15 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                 build_screen_svg(
                     active_step=0,
                     title="Usar esta orientacao?",
-                    subtitle="A configuracao continuara nesta orientacao. As midias tambem usarao este sentido depois de salvar.",
-                    footer="Setas movem | Enter confirma | B volta | Esc cancela",
+                    subtitle="Confira o sentido antes de continuar.",
+                    footer="Setas movem | Enter OK | B volta | Esc",
                     options=confirm_options,
                     selected_index=confirm_selected,
-                    panel_title="Confirmacao",
+                    panel_title="Confirmar",
                     panel_items=[
-                        "Textos sao renderizados nativamente.",
-                        "Sem esticar ou deformar a imagem.",
-                        "rotation_deg entra na candidata.",
+                        "Preview local.",
+                        "Sem alterar player agora.",
+                        "Pode voltar.",
                     ],
                     extra_svg=orientation_preview(str(rotation["key"]), layout_rotation_deg=layout_rotation_deg),
                     layout_rotation_deg=layout_rotation_deg,
@@ -1203,6 +1206,78 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                 break
             if confirm_key in {"escape", "q", "Q"}:
                 raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
+def is_printable_input_key(key: str) -> bool:
+    return len(key) == 1 and 32 <= ord(key) <= 126
+
+
+def is_text_mutation_key(key: str) -> bool:
+    return key in {"backspace", "clear"} or is_printable_input_key(key)
+
+
+def drain_key_repeats(initial_key: str) -> list[str]:
+    keys = [initial_key]
+    if not is_text_mutation_key(initial_key):
+        return keys
+    deadline = time.monotonic() + max(0.0, TEXT_INPUT_REPEAT_DRAIN_SEC)
+    while len(keys) < max(1, TEXT_INPUT_MAX_DRAIN_KEYS) and time.monotonic() < deadline:
+        key = read_key(timeout_sec=0.0)
+        if key == "timeout":
+            time.sleep(0.005)
+            continue
+        keys.append(key)
+        if not is_text_mutation_key(key):
+            break
+    return keys
+
+
+def text_field_apply_key(
+    value: str,
+    key: str,
+    *,
+    max_length: int,
+    error: str,
+) -> tuple[str, str, bool]:
+    next_value = value
+    next_error = error
+    if key == "backspace":
+        next_value = value[:-1]
+        next_error = ""
+    elif key == "clear":
+        next_value = ""
+        next_error = ""
+    elif is_printable_input_key(key) and len(value) < max_length:
+        next_value = value + key
+        next_error = ""
+    return next_value, next_error, (next_value != value or next_error != error)
+
+
+def estimate_debounced_input_render_count(
+    initial_value: str,
+    keys: list[str],
+    *,
+    event_interval_sec: float,
+    min_render_interval_sec: float = TEXT_INPUT_MIN_RENDER_INTERVAL_SEC,
+    max_length: int = 128,
+) -> int:
+    value = initial_value
+    error = ""
+    last_render_at = 0.0
+    renders = 1
+    dirty = False
+    now = 0.0
+    for key in keys:
+        now += max(0.0, event_interval_sec)
+        value, error, changed = text_field_apply_key(value, key, max_length=max_length, error=error)
+        dirty = dirty or changed
+        if dirty and now - last_render_at >= min_render_interval_sec:
+            renders += 1
+            last_render_at = now
+            dirty = False
+    if dirty:
+        renders += 1
+    return renders
 
 
 def read_text_field(
@@ -1227,60 +1302,126 @@ def read_text_field(
     value = str(initial_value or "")[:max_length]
     error = ""
     reveal_hidden_value = False
+    needs_render = True
+    force_render = True
+    last_render_at = 0.0
+    last_visual_state: tuple[str, str, bool] | None = None
     while True:
-        effective_show_plain_value = show_plain_value or bool(hidden and allow_hidden_toggle and reveal_hidden_value)
-        hint = text_field_display_hint(value, hidden=hidden, show_plain_value=effective_show_plain_value)
-        note = error or "O valor digitado nao sera gravado nos SVGs publicos desta rodada."
-        footer = "Digite | Enter confirma | Ctrl+U limpa | Esc cancela"
-        if allow_back:
-            footer = "Digite | Enter confirma | Ctrl+B volta | Ctrl+U limpa | Esc cancela"
-        if hidden and allow_hidden_toggle:
-            footer = "Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc"
-        display.show(
-            screen_id,
-            build_screen_svg(
-                active_step=active_step,
-                title=title,
-                subtitle=subtitle,
-                footer=footer,
-                field_label=label,
-                field_value_hint=hint,
-                field_note=note,
-                panel_items=panel_items,
-                accent="#ef4444" if error else "#06b6d4",
-                layout_rotation_deg=layout_rotation_deg,
-            ),
-        )
-        key = read_key()
-        if key == "enter":
-            candidate = value.strip() if not hidden else value
-            if len(candidate) < min_length:
-                error = "Entrada incompleta."
-                continue
-            if validator is not None:
-                try:
-                    return validator(candidate)
-                except Exception:
-                    error = "Formato invalido. Corrija e tente novamente."
+        if needs_render:
+            now = time.monotonic()
+            if (
+                not force_render
+                and last_render_at > 0
+                and now - last_render_at < TEXT_INPUT_MIN_RENDER_INTERVAL_SEC
+            ):
+                key = read_key(timeout_sec=TEXT_INPUT_MIN_RENDER_INTERVAL_SEC - (now - last_render_at))
+                if key != "timeout":
+                    for drained_key in drain_key_repeats(key):
+                        if drained_key == "enter":
+                            candidate = value.strip() if not hidden else value
+                            if len(candidate) < min_length:
+                                error = "Entrada incompleta."
+                                needs_render = True
+                                force_render = True
+                                break
+                            if validator is not None:
+                                try:
+                                    return validator(candidate)
+                                except Exception:
+                                    error = "Formato invalido."
+                                    needs_render = True
+                                    force_render = True
+                                    break
+                            return candidate
+                        if hidden and allow_hidden_toggle and drained_key in {"f2", "v", "V"}:
+                            reveal_hidden_value = not reveal_hidden_value
+                            if error:
+                                error = ""
+                            needs_render = True
+                            force_render = True
+                            break
+                        if allow_back and drained_key == "back":
+                            return None
+                        if drained_key in {"escape", "q", "Q"}:
+                            raise VisualWizardAbort("setup visual cancelado pelo operador")
+                        previous_value = value
+                        previous_error = error
+                        value, error, changed = text_field_apply_key(
+                            value,
+                            drained_key,
+                            max_length=max_length,
+                            error=error,
+                        )
+                        needs_render = needs_render or changed or value != previous_value or error != previous_error
                     continue
-            return candidate
-        if hidden and allow_hidden_toggle and key in {"f2", "v", "V"}:
-            reveal_hidden_value = not reveal_hidden_value
-            error = ""
-            continue
-        if allow_back and key == "back":
-            return None
-        if key in {"escape", "q", "Q"}:
-            raise VisualWizardAbort("setup visual cancelado pelo operador")
-        if key == "backspace":
-            value = value[:-1]
-            error = ""
-        elif key == "clear":
-            value = ""
-            error = ""
-        elif len(key) == 1 and 32 <= ord(key) <= 126 and len(value) < max_length:
-            value += key
-            error = ""
+                continue
+
+            effective_show_plain_value = show_plain_value or bool(hidden and allow_hidden_toggle and reveal_hidden_value)
+            hint = text_field_display_hint(value, hidden=hidden, show_plain_value=effective_show_plain_value)
+            note = error or ("Senha oculta." if hidden and not effective_show_plain_value else "Entrada local.")
+            footer = "Enter OK | Ctrl+U limpa | Esc cancela"
+            if allow_back:
+                footer = "Enter OK | Ctrl+B volta | Ctrl+U limpa | Esc"
+            if hidden and allow_hidden_toggle:
+                toggle_label = "oculta" if reveal_hidden_value else "mostra"
+                footer = f"Enter OK | F2/V {toggle_label} | Ctrl+B volta | Ctrl+U limpa"
+            visual_state = (hint, note, reveal_hidden_value)
+            if visual_state != last_visual_state:
+                display.show(
+                    screen_id,
+                    build_screen_svg(
+                        active_step=active_step,
+                        title=title,
+                        subtitle=subtitle,
+                        footer=footer,
+                        field_label=label,
+                        field_value_hint=hint,
+                        field_note=note,
+                        panel_items=panel_items,
+                        accent="#ef4444" if error else "#06b6d4",
+                        layout_rotation_deg=layout_rotation_deg,
+                    ),
+                )
+                last_render_at = time.monotonic()
+                last_visual_state = visual_state
+            needs_render = False
+            force_render = False
+
+        key = read_key()
+        for drained_key in drain_key_repeats(key):
+            if drained_key == "enter":
+                candidate = value.strip() if not hidden else value
+                if len(candidate) < min_length:
+                    error = "Entrada incompleta."
+                    needs_render = True
+                    force_render = True
+                    break
+                if validator is not None:
+                    try:
+                        return validator(candidate)
+                    except Exception:
+                        error = "Formato invalido."
+                        needs_render = True
+                        force_render = True
+                        break
+                return candidate
+            if hidden and allow_hidden_toggle and drained_key in {"f2", "v", "V"}:
+                reveal_hidden_value = not reveal_hidden_value
+                error = ""
+                needs_render = True
+                force_render = True
+                break
+            if allow_back and drained_key == "back":
+                return None
+            if drained_key in {"escape", "q", "Q"}:
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
+            value, error, changed = text_field_apply_key(
+                value,
+                drained_key,
+                max_length=max_length,
+                error=error,
+            )
+            needs_render = needs_render or changed
 
 
 def text_field_display_hint(value: str, *, hidden: bool, show_plain_value: bool) -> str:
@@ -1514,17 +1655,13 @@ def wifi_list_screen_svg(
     panel_items = [
         position,
         selected_line,
-        f"Pagina {page_index + 1} de {page_count}" if networks else "Pagina 0 de 0",
-        updated_line,
-        f"Listagem: {list_status}",
+        refresh_message or (f"Pagina {page_index + 1} de {page_count}" if networks else "Pagina 0 de 0"),
     ]
-    if refresh_message:
-        panel_items.append(refresh_message)
     return build_screen_svg(
         active_step=1,
-        title="Redes Wi-Fi",
-        subtitle="Escolha a rede na lista local. O nome nao sera gravado em evidencia.",
-        footer="Setas rolam | PgUp/PgDn | R atualiza | Enter OK | B/Esc volta",
+        title="Selecionar Wi-Fi",
+        subtitle=f"{updated_line}. Sinal em percentual e barras.",
+        footer="Setas rolam | R atualiza | Enter OK | B/Esc volta",
         options=options,
         selected_index=selected_on_page,
         panel_title="Lista local",
@@ -1710,12 +1847,12 @@ def collect_wifi_credentials(
             active_step=1,
             title="Rede selecionada",
             subtitle=local_display_value(ssid, max_chars=56),
-            footer="Enter continua | B volta | Esc cancela",
-            panel_title="Privacidade",
+            footer="Enter continua | B volta | Esc",
+            panel_title="Proximo",
             panel_items=[
-                "Nome aparece so nesta tela local.",
-                "Status e resumo gravam apenas categorias.",
-                "Senha sera digitada oculta.",
+                "Digite a senha.",
+                "Ela inicia oculta.",
+                "Pode voltar.",
             ],
             layout_rotation_deg=layout_rotation_deg,
         ),
@@ -1732,16 +1869,15 @@ def collect_wifi_credentials(
         screen_id="02-wifi-psk",
         active_step=1,
         title="Senha Wi-Fi",
-        subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
+        subtitle="Digite a senha da rede.",
         label="Senha Wi-Fi",
         hidden=True,
         min_length=8,
         max_length=128,
         panel_items=[
-            "Senha nao vai para argv.",
-            "Senha nao vai para logs.",
-            "Secrets temporario fica sob /tmp.",
-            "F2 ou V mostra ou oculta localmente.",
+            "Oculta por padrao.",
+            "F2 ou V mostra.",
+            "Nao aparece em logs.",
         ],
         allow_hidden_toggle=True,
         layout_rotation_deg=layout_rotation_deg,
@@ -1753,14 +1889,13 @@ def collect_wifi_credentials(
         build_screen_svg(
             active_step=1,
             title="Aplicar Wi-Fi",
-            subtitle="O teste vai manter apenas o perfil dedicado do produto.",
-            footer="Enter aplica | Ctrl+B volta | Esc cancela",
-            panel_title="Antes de aplicar",
+            subtitle="Vamos testar o perfil dedicado.",
+            footer="Enter aplica | Ctrl+B volta | Esc",
+            panel_title="Atenção",
             panel_items=[
-                "SSH pode oscilar se estiver na mesma rede.",
-                "Console local permanece disponivel.",
-                "Config real nao sera escrita.",
-                "Writer nao sera chamado.",
+                "SSH pode oscilar.",
+                "Console local fica ativo.",
+                "Pode voltar.",
             ],
             layout_rotation_deg=layout_rotation_deg,
         ),
@@ -1850,14 +1985,14 @@ def run_wifi_persistent(
                 "02-wifi-applying",
                 build_screen_svg(
                     active_step=1,
-                    title="Aplicando Wi-Fi",
-                    subtitle="Aguarde. O perfil dedicado esta sendo testado e mantido se funcionar.",
+                    title="Salvando Wi-Fi",
+                    subtitle="Testando o perfil dedicado.",
                     footer="Aguarde...",
                     panel_title="Em andamento",
                     panel_items=[
-                        "Nenhum dado da rede sera exibido.",
-                        "Timeout curto esta ativo.",
-                        "Apenas perfil dedicado pode ser tocado.",
+                        "Sem dados na tela.",
+                        "Timeout curto ativo.",
+                        "Perfil dedicado.",
                     ],
                     layout_rotation_deg=layout_rotation_deg,
                 ),
@@ -1888,13 +2023,13 @@ def run_wifi_persistent(
         build_screen_svg(
             active_step=1,
             title="Resultado do Wi-Fi",
-            subtitle=f"Resultado publico: {network['wifi_activation_result']}. Nenhum identificador de rede sera publicado.",
-            footer="Enter continua | B volta | Esc cancela",
+            subtitle=f"Resultado: {network['wifi_activation_result']}.",
+            footer="Enter continua | B volta | Esc",
             panel_title="Resultado",
             panel_items=[
-                f"Perfil dedicado presente: {network['dedicated_profile_present_final']}",
+                f"Perfil presente: {network['dedicated_profile_present_final']}",
                 f"Persistente: {str(network['dedicated_profile_persistent']).lower()}",
-                f"Secrets removido: {str(network['secrets_file_removed']).lower()}",
+                f"Senha temporaria removida: {str(network['secrets_file_removed']).lower()}",
             ],
             layout_rotation_deg=layout_rotation_deg,
         ),
@@ -2377,39 +2512,22 @@ def review_and_confirm(
     network: dict[str, Any],
 ) -> bool:
     network_note = {
-        "existing_configured_wifi": "Wi-Fi dedicado ja configurado sera usado.",
-        "wifi_persistent": "Wi-Fi dedicado foi configurado para uso futuro.",
-        "bench_mock": "Modo de bancada sem nova rede real.",
-    }.get(network["network_step"], "Rede sem detalhe publico.")
+        "existing_configured_wifi": "Wi-Fi atual",
+        "wifi_persistent": "Wi-Fi dedicado",
+        "bench_mock": "Bancada",
+    }.get(network["network_step"], "Rede")
     if APPLY_CONTEXT == "real-write":
         if HOMOLOGATION_MODE:
-            subtitle = "Modo homologacao: configuracao sera aplicada com credenciais privadas da imagem."
+            subtitle = "Salvar aplica a configuracao nesta placa."
         else:
-            subtitle = "Salvar aplica as mudancas apos validacao privada."
+            subtitle = "Salvar aplica as mudancas."
         footer = "Enter salva | B volta | Esc cancela"
-        apply_lines = [
-            "Salvar chama writer controlado.",
-            (
-                "Credenciais privadas de homologacao ja estao presentes."
-                if HOMOLOGATION_MODE
-                else "Config real sera atualizada apos validacao."
-            ),
-        ]
     elif APPLY_CONTEXT == "dry-run":
-        subtitle = "Concluir valida a candidata privada sem aplicar."
+        subtitle = "Concluir valida sem aplicar."
         footer = "Enter valida | B volta | Esc cancela"
-        apply_lines = [
-            "Writer real segue bloqueado.",
-            "Config real segue intocada.",
-        ]
     else:
-        subtitle = "Credenciais privadas ausentes. Esta etapa prepara a candidata, mas nao aplica."
+        subtitle = "Concluir prepara a candidata."
         footer = "Enter prepara candidata | B volta | Esc cancela"
-        apply_lines = [
-            "Writer real segue bloqueado.",
-            "Config real segue intocada.",
-            "Para aplicar, ative a policy privada de bancada.",
-        ]
     display.show(
         "05-review",
         build_screen_svg(
@@ -2422,7 +2540,6 @@ def review_and_confirm(
                 f"Conexao: {network_note}",
                 "Ambiente informado: sim",
                 f"Tela: {rotation['label']}",
-                *apply_lines,
             ],
             layout_rotation_deg=int(rotation["rotation_deg"]),
         ),
@@ -2438,32 +2555,25 @@ def review_and_confirm(
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
     if APPLY_CONTEXT == "real-write":
-        subtitle = (
-            "Modo homologacao: ao sair, a configuracao sera salva nesta placa."
-            if HOMOLOGATION_MODE
-            else "Ao sair, as configuracoes serao validadas e salvas."
-        )
+        subtitle = "Ao sair, a configuracao sera salva."
         panel_items = [
-            "Validacao privada sera executada.",
-            "Config real sera atualizada pelo writer.",
-            "O player sera iniciado novamente.",
-            "Dados sensiveis nao aparecem nesta tela.",
+            "Validacao privada.",
+            "Writer controlado.",
+            "Player volta ao final.",
         ]
     elif APPLY_CONTEXT == "dry-run":
-        subtitle = "Candidata gerada para validacao privada. Nada sera aplicado."
+        subtitle = "Candidata gerada para validacao."
         panel_items = [
-            "Real dry-run sera executado.",
-            "Writer real segue bloqueado.",
-            "Config real segue intocada.",
-            "Dados sensiveis nao aparecem nesta tela.",
+            "Dry-run privado.",
+            "Writer bloqueado.",
+            "Nada aplicado.",
         ]
     else:
-        subtitle = "Candidata temporaria gerada. Nada foi aplicado."
+        subtitle = "Candidata temporaria pronta."
         panel_items = [
             f"Estado: {status['state']}",
-            "Writer real segue bloqueado.",
-            "Config real segue intocada.",
-            "Ative a policy privada de bancada para salvar.",
+            "Writer bloqueado.",
+            "Nada aplicado.",
         ]
     display.show(
         "06-complete",
@@ -2503,12 +2613,12 @@ def run_visual_wizard(
                     screen_id="02-connection",
                     active_step=1,
                     title="Conexao",
-                    subtitle="Escolha como este totem deve seguir agora.",
+                    subtitle="Escolha a conexao.",
                     options=list(NETWORK_OPTIONS),
                     panel_items=[
-                        "Redes aparecem em lista local.",
-                        "Senha fica oculta.",
-                        "Sem hotspot e sem portal nesta rodada.",
+                        "Lista local.",
+                        "Senha oculta.",
+                        "Sem portal.",
                     ],
                     layout_rotation_deg=layout_rotation_deg,
                     initial_selected_index=initial_network_index,
@@ -2532,12 +2642,12 @@ def run_visual_wizard(
                             active_step=1,
                             title="Conexao nao confirmada",
                             subtitle=str(exc),
-                            footer="Enter volta | Esc cancela",
-                            panel_title="Mensagem publica",
+                            footer="Enter volta | Esc",
+                            panel_title="Tente de novo",
                             panel_items=[
-                                "Nenhum identificador foi exibido.",
-                                "Nenhuma config real foi tocada.",
-                                "Tente outro caminho.",
+                                "Nada foi salvo.",
+                                "Escolha outro caminho.",
+                                "Pode cancelar.",
                             ],
                             accent="#ef4444",
                             layout_rotation_deg=layout_rotation_deg,
@@ -2554,7 +2664,7 @@ def run_visual_wizard(
                         screen_id="03-environment",
                         active_step=2,
                         title="Ambiente",
-                        subtitle="Digite o identificador fornecido pela Dadooh.",
+                        subtitle="Digite o identificador.",
                         label="Identificador do ambiente",
                         hidden=False,
                         min_length=3,
@@ -2562,9 +2672,8 @@ def run_visual_wizard(
                         validator=validate_environment_id,
                         panel_items=[
                             "3 a 128 caracteres.",
-                            "Letras ASCII, numeros, _, -, . ou :",
-                            "Enter mantem o valor exibido.",
-                            "Valor nao aparece no resumo publico.",
+                            "Use letras, numeros e _ - . :",
+                            "Enter confirma.",
                         ],
                         show_plain_value=True,
                         layout_rotation_deg=layout_rotation_deg,
@@ -2594,11 +2703,11 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=0,
             title="Orientacao da tela",
-            subtitle="Escolha primeiro como o totem esta instalado.",
-            footer="Setas movem | Enter confirma | Esc cancela",
+            subtitle="Escolha como o totem esta instalado.",
+            footer="Setas movem | Enter OK | Esc",
             options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
             selected_index=0,
-            panel_items=["Primeira etapa", "Candidata em /tmp", "Sem rotacao real do player"],
+            panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
             extra_svg=orientation_preview("landscape"),
         ),
     )
@@ -2607,14 +2716,14 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=0,
             title="Usar esta orientacao?",
-            subtitle="A configuracao continuara nesta orientacao.",
-            footer="Setas movem | Enter confirma | B volta | Esc cancela",
+            subtitle="Confira o sentido antes de continuar.",
+            footer="Setas movem | Enter OK | B volta | Esc",
             options=[
                 Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
             ],
             selected_index=0,
-            panel_items=["Layout retrato", "Confirmacao local", "Sem alterar player global"],
+            panel_items=["Preview local.", "Sem alterar player agora.", "Pode voltar."],
             extra_svg=orientation_preview("portrait_right", layout_rotation_deg=90),
             layout_rotation_deg=90,
         ),
@@ -2624,11 +2733,11 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=1,
             title="Conexao",
-            subtitle="Escolha usar Wi-Fi ja configurado, selecionar rede ou seguir em bancada.",
-            footer="Setas movem | Enter confirma | Esc cancela",
+            subtitle="Escolha a conexao.",
+            footer="Setas movem | Enter OK | Esc",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
-            panel_items=["Lista local", "Senha oculta", "Sem dados publicos"],
+            panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
             layout_rotation_deg=90,
         ),
     )
@@ -2683,12 +2792,12 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=1,
             title="Senha Wi-Fi",
-            subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
-            footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+            subtitle="Digite a senha da rede.",
+            footer="Enter OK | F2/V mostra | Ctrl+B volta | Ctrl+U limpa",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
             field_note="Senha oculta por padrao.",
-            panel_items=["Senha nao vai para logs.", "Secrets temporario fica sob /tmp.", "F2 ou V alterna exibicao local."],
+            panel_items=["Oculta por padrao.", "F2 ou V mostra.", "Nao aparece em logs."],
             layout_rotation_deg=90,
         ),
     )
@@ -2697,12 +2806,12 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=1,
             title="Senha Wi-Fi",
-            subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
-            footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+            subtitle="Digite a senha da rede.",
+            footer="Enter OK | F2/V oculta | Ctrl+B volta | Ctrl+U limpa",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
             field_note="Valor visivel apenas no HDMI local.",
-            panel_items=["Estado de preview sintetico.", "Nao gravar em evidencia.", "F2 ou V volta a ocultar."],
+            panel_items=["Visivel so localmente.", "F2 ou V oculta.", "Nao aparece em logs."],
             layout_rotation_deg=90,
         ),
     )
@@ -2711,12 +2820,12 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=2,
             title="Ambiente",
-            subtitle="Entrada manual validada localmente.",
+            subtitle="Digite o identificador.",
             footer="Digite no teclado | Enter confirma",
             field_label="Identificador do ambiente",
             field_value_hint="18 caracteres digitados",
-            field_note="Valor real nao e gravado na tela de preview.",
-            panel_items=["Formato C5.1", "Sem backend", "Sem publicacao do valor"],
+            field_note="Entrada local.",
+            panel_items=["3 a 128 caracteres.", "Use letras e numeros.", "Enter confirma."],
             layout_rotation_deg=90,
         ),
     )
@@ -2725,9 +2834,9 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=3,
             title="Revisao",
-            subtitle="Resumo publico antes da candidata.",
+            subtitle="Confira antes de concluir.",
             footer="Enter conclui | B volta | Esc cancela",
-            panel_items=["Conexao agregada", "Ambiente informado", "Tela escolhida"],
+            panel_items=["Conexao definida.", "Ambiente informado.", "Tela escolhida."],
             layout_rotation_deg=90,
         ),
     )
@@ -2736,9 +2845,9 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=4,
             title="Concluido",
-            subtitle="Candidata temporaria pronta para a proxima etapa.",
+            subtitle="Configuracao pronta.",
             footer="Enter sai",
-            panel_items=["C5.1 allow-mock", "Writer bloqueado", "Config real intocada"],
+            panel_items=["Fluxo concluido.", "Player volta ao final.", "Sem dados privados."],
             accent="#22c55e",
             layout_rotation_deg=90,
         ),
@@ -2829,12 +2938,12 @@ def show_wifi_list_preview(
             build_screen_svg(
                 active_step=1,
                 title="Senha Wi-Fi",
-                subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
-                footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+                subtitle="Digite a senha da rede.",
+                footer="Enter OK | F2/V mostra | Ctrl+B volta | Ctrl+U limpa",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
                 field_note="Senha oculta por padrao.",
-                panel_items=["Senha nao vai para logs.", "Secrets temporario fica sob /tmp.", "F2 ou V alterna exibicao local."],
+                panel_items=["Oculta por padrao.", "F2 ou V mostra.", "Nao aparece em logs."],
                 layout_rotation_deg=layout_rotation_deg,
             ),
         )
@@ -2843,12 +2952,12 @@ def show_wifi_list_preview(
             build_screen_svg(
                 active_step=1,
                 title="Senha Wi-Fi",
-                subtitle="Digite a senha no teclado local. F2 ou V alterna visualizacao somente nesta tela.",
-                footer="Enter OK | F2/V mostra/oculta | Ctrl+B volta | Ctrl+U limpa | Esc",
+                subtitle="Digite a senha da rede.",
+                footer="Enter OK | F2/V oculta | Ctrl+B volta | Ctrl+U limpa",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
                 field_note="Valor visivel apenas no HDMI local.",
-                panel_items=["Estado de preview sintetico.", "Nao gravar em evidencia.", "F2 ou V volta a ocultar."],
+                panel_items=["Visivel so localmente.", "F2 ou V oculta.", "Nao aparece em logs."],
                 layout_rotation_deg=layout_rotation_deg,
             ),
         )
@@ -2907,9 +3016,9 @@ def run_scripted(
         build_screen_svg(
             active_step=4,
             title="Concluido",
-            subtitle="Candidata temporaria gerada por fluxo controlado.",
+            subtitle="Configuracao pronta.",
             footer="Fim do modo scripted",
-            panel_items=["C5.1 allow-mock", "Sem writer", "Sem config real"],
+            panel_items=["Fluxo concluido.", "Sem writer.", "Sem config real."],
             accent="#22c55e",
             layout_rotation_deg=int(rotation["rotation_deg"]),
         ),
@@ -2971,6 +3080,37 @@ def run_self_test() -> None:
         assert_true(
             text_field_display_hint("ENV-LAST-SETTING", hidden=False, show_plain_value=True) == "ENV-LAST-SETTING",
             "environment prefill should be visible only in the local field",
+        )
+        assert_true(MAX_PANEL_ITEMS == 3, "operator panels should stay limited to three items")
+        panel_limit_svg = info_panel(["one", "two", "three", "four"])
+        assert_true("four" not in panel_limit_svg, "operator panel should not render more than three items")
+        assert_true(
+            len(wrap_text("one two three four five six seven", width=8, max_lines=1)) == 1,
+            "wizard subtitles should be constrained to one visual line",
+        )
+        assert_true(
+            text_field_apply_key("abcdef", "backspace", max_length=128, error="")[0] == "abcde",
+            "Backspace should remove one character semantically",
+        )
+        assert_true(
+            text_field_apply_key("abcdef", "clear", max_length=128, error="")[0] == "",
+            "Ctrl+U clear should keep working",
+        )
+        backspace_render_count = estimate_debounced_input_render_count(
+            "x" * 20,
+            ["backspace"] * 20,
+            event_interval_sec=0.005,
+        )
+        assert_true(backspace_render_count <= 3, "20 rapid Backspaces should not render per key")
+        sustained_render_count = estimate_debounced_input_render_count(
+            "x" * 100,
+            ["backspace"] * 100,
+            event_interval_sec=0.005,
+        )
+        sustained_duration = 100 * 0.005
+        assert_true(
+            sustained_render_count / sustained_duration <= 12,
+            "debounced text input should stay at or below 12 fps",
         )
         assert_true(selected_orientation_index_for_rotation(270) == 2, "portrait-left should be selected from saved rotation")
         assert_true(selected_orientation_index_for_rotation(90) == 1, "portrait-right should be selected from saved rotation")

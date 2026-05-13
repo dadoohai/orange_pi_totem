@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import html
 import json
 import mmap
 import os
@@ -33,12 +34,12 @@ TMP_ROOT = pathlib.Path("/tmp")
 MESSAGES = {
     "boot": ("Dadooh", "Inicializando"),
     "firstboot": ("Dadooh", ("Preparando sistema", "Conclua o primeiro acesso tecnico")),
-    "preparing": ("Dadooh", "Preparando"),
+    "preparing": ("Dadooh", "Preparando sistema"),
     "reboot": ("Dadooh", "Reiniciando totem"),
     "player": ("Dadooh", "Iniciando player"),
     "setup": ("Dadooh", "Abrindo configuracao"),
     "saving": ("Dadooh", "Salvando configuracao"),
-    "config_pending": ("Dadooh", "Configuracao pendente"),
+    "config_pending": ("Dadooh", ("Configuracao pendente", "Pressione F10")),
     "shutdown": (
         "Desligamento seguro",
         (
@@ -49,6 +50,8 @@ MESSAGES = {
         ),
     ),
 }
+
+PREVIEW_MODES = ("boot", "player", "config_pending", "setup", "saving")
 
 ORIENTATIONS = {
     "landscape": 0,
@@ -316,14 +319,87 @@ def require_tmp_path(raw_path: str) -> pathlib.Path:
     return path
 
 
+def require_tmp_dir(raw_path: str) -> pathlib.Path:
+    path = pathlib.Path(raw_path)
+    resolved = path.resolve(strict=False)
+    if TMP_ROOT not in [resolved, *resolved.parents]:
+        raise SplashError("preview_dir_outside_tmp")
+    return path
+
+
 def atomic_write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    os.chmod(path.parent, PRIVATE_DIR_MODE)
+    if path.parent.resolve(strict=False) != TMP_ROOT:
+        os.chmod(path.parent, PRIVATE_DIR_MODE)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.chmod(tmp, PRIVATE_FILE_MODE)
     os.replace(tmp, path)
     os.chmod(path, PRIVATE_FILE_MODE)
+
+
+def atomic_write_text(path: pathlib.Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.parent.resolve(strict=False) != TMP_ROOT:
+        os.chmod(path.parent, PRIVATE_DIR_MODE)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(content, encoding="utf-8")
+    os.chmod(tmp, PRIVATE_FILE_MODE)
+    os.replace(tmp, path)
+    os.chmod(path, PRIVATE_FILE_MODE)
+
+
+def escape_text(value: Any) -> str:
+    return html.escape(str(value), quote=True)
+
+
+def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
+    title, message = MESSAGES[mode]
+    rotation = normalize_rotation_deg(rotation_deg)
+    source_w, source_h, layout_mode = source_size_for_rotation(rotation)
+    message_lines = FramebufferSplash.normalized_lines(message)
+    line_y = source_h // 2 + 24
+    line_parts = []
+    for index, line in enumerate(message_lines[:3]):
+        line_parts.append(
+            f'<text x="{source_w // 2}" y="{line_y + index * 44}" '
+            'font-family="Arial, DejaVu Sans, sans-serif" font-size="30" '
+            f'text-anchor="middle" fill="#cbd5e1">{escape_text(line)}</text>'
+        )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{source_w}" height="{source_h}" viewBox="0 0 {source_w} {source_h}" data-display-rotation-deg="{rotation}" data-layout-mode="{layout_mode}" role="img" aria-label="Dadooh splash preview {escape_text(mode)}">
+  <rect width="{source_w}" height="{source_h}" fill="#0f172a"/>
+  <rect x="0" y="0" width="{source_w}" height="12" fill="#06b6d4"/>
+  <rect x="0" y="{source_h - 72}" width="{source_w}" height="72" fill="#0b1120"/>
+  <text x="{source_w // 2}" y="{source_h // 2 - 58}" font-family="Arial, DejaVu Sans, sans-serif" font-size="52" font-weight="700" text-anchor="middle" fill="#f8fafc">{escape_text(title)}</text>
+  {' '.join(line_parts)}
+</svg>
+"""
+
+
+def write_preview_screens(out_dir: pathlib.Path, *, rotation_deg: int = 0) -> dict[str, Any]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(out_dir, PRIVATE_DIR_MODE)
+    screens_dir = out_dir / "screens"
+    screens_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(screens_dir, PRIVATE_DIR_MODE)
+    for index, mode in enumerate(PREVIEW_MODES, start=1):
+        atomic_write_text(screens_dir / f"{index:02d}-{mode}.svg", build_preview_svg(mode, rotation_deg=rotation_deg))
+    payload = {
+        "schema_version": "dadooh-c10.5-visual-splash-preview.v1",
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "preview_modes": list(PREVIEW_MODES),
+        "preview_screens_generated": len(PREVIEW_MODES),
+        "rotation_deg": normalize_rotation_deg(rotation_deg),
+        "real_config_read": False,
+        "real_config_written": False,
+        "writer_called": False,
+        "wifi_changed": False,
+        "network_identifiers_published": False,
+        "raw_logs_written": False,
+    }
+    atomic_write_json(out_dir / "splash-preview-status.json", payload)
+    return payload
 
 
 def render_mode(
@@ -391,7 +467,18 @@ def run_self_test() -> None:
         assert payload["network_identifiers_published"] is False
     assert "reboot" in MESSAGES
     assert "shutdown" in MESSAGES
+    for mode in ("boot", "player", "setup", "saving", "config_pending"):
+        assert mode in MESSAGES
+    assert "Pressione F10" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["config_pending"][1]))
     assert "remova e reconecte" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["shutdown"][1]))
+    preview_dir = require_tmp_dir("/tmp/dadooh-c10-5-splash-self-test/preview")
+    preview_payload = write_preview_screens(preview_dir, rotation_deg=90)
+    assert preview_payload["preview_screens_generated"] == len(PREVIEW_MODES)
+    assert (preview_dir / "screens" / "01-boot.svg").exists()
+    assert (preview_dir / "screens" / "03-config_pending.svg").exists()
+    preview_text = (preview_dir / "splash-preview-status.json").read_text(encoding="utf-8")
+    for forbidden in ("api_key", "SSID", "password", "192.0.2.1", "aa:bb:cc:dd:ee:ff"):
+        assert forbidden not in preview_text
     target = require_tmp_path("/tmp/dadooh-c10-5-splash-self-test/status.json")
     payload = render_mode(
         "boot",
@@ -406,6 +493,16 @@ def run_self_test() -> None:
     for forbidden in ("api_key", "SSID", "password", "192.0.2.1", "aa:bb:cc:dd:ee:ff"):
         assert forbidden not in text
     target.unlink(missing_ok=True)
+    root_target = require_tmp_path("/tmp/dadooh-splash-root-status-self-test.json")
+    render_mode(
+        "player",
+        font_path="/missing-font-for-self-test.psf",
+        status_out=root_target,
+        rotation_deg=0,
+        orientation_source="argument",
+    )
+    assert stat.S_IMODE(TMP_ROOT.stat().st_mode) in {0o777, 0o1777}
+    root_target.unlink(missing_ok=True)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -415,6 +512,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--status-out", help="Optional sanitized status JSON path under /tmp.")
     parser.add_argument("--rotation-deg", type=int, help="Display orientation rotation in degrees: 0, 90, 180 or 270.")
     parser.add_argument("--orientation", choices=sorted(ORIENTATIONS), help="Named orientation alias.")
+    parser.add_argument("--out-dir", default="/tmp/dadooh-splash-preview", help="Preview output directory under /tmp.")
+    parser.add_argument("--preview-screens", action="store_true", help="Generate offline SVG preview screens and exit.")
     parser.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
     return parser.parse_args(argv)
 
@@ -438,6 +537,11 @@ def main(argv: list[str]) -> int:
         source = "argument"
     else:
         rotation, source = read_public_orientation_rotation()
+    if args.preview_screens:
+        out_dir = require_tmp_dir(args.out_dir)
+        payload = write_preview_screens(out_dir, rotation_deg=rotation)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
     render_mode(args.mode, font_path=args.font, status_out=status_out, rotation_deg=rotation, orientation_source=source)
     return 0
 
