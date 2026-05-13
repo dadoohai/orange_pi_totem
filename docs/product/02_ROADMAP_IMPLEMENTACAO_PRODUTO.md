@@ -2600,3 +2600,18 @@ C15.2.2 ficam bloqueados para lote/despacho/C16:
 preta/perda de rede antes de gerar nova imagem. Detalhes em
 `docs/product/143_C15_2_1_IMAGE_UI_UX_FIXES_CLEAN_BOARD_VALIDATION.md` e
 `docs/product/144_C15_2_2_CLEAN_BOARD_WIZARD_SETUP_INTERRUPTION_FIX.md`.
+
+Atualizacao C15.2.3: 2026-05-13. A janela pos-wizard de tela preta/perda de SSH
+foi retestada com monitor persistente em `/data/state/totem-debug/c15-2-3`,
+mais fases sanitizadas no wrapper de sessao e no wizard. O reteste F10 com
+writer ativo nao reproduziu a falha: `writer_rc=0`, `writer_result=passed`,
+`player_restore_done=true`, `post_restore_t+30s` mostrou player ativo e
+`playing`, `session_done=true`, SSH e NetworkManager permaneceram ativos,
+`failed_units_count=0`, sem reboot espontaneo, OOM ou kernel panic detectado.
+A causa fica classificada como `not_reproduced_in_monitored_retest`. C15.2.3
+fica `passed` para classificacao e libera nova tentativa de rebuild de imagem:
+`ready_for_image_rebuild=true`. Lote/despacho/C16 continuam bloqueados ate a
+proxima imagem passar em placa limpa:
+`ready_for_batch_flash=false`, `ready_for_dispatch=false`,
+`ready_for_c16_player_audit=false`, `c16_started=false`. Detalhes em
+`docs/product/145_C15_2_3_POST_WIZARD_BLACK_SCREEN_SSH_LOSS_CLASSIFICATION.md`.

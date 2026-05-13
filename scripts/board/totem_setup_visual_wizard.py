@@ -1039,6 +1039,57 @@ def read_key(timeout_sec: float | None = None) -> str:
     return "unknown"
 
 
+C1523_DEBUG_ROOT = pathlib.Path("/data/state/totem-debug/c15-2-3")
+
+
+def c1523_monitor_dir() -> pathlib.Path | None:
+    raw = os.environ.get("TOTEM_C15_2_3_MONITOR_DIR", "").strip()
+    if not raw:
+        marker = C1523_DEBUG_ROOT / "current-run-dir"
+        try:
+            if marker.exists() and not marker.is_symlink():
+                raw = marker.read_text(encoding="utf-8").splitlines()[0].strip()
+        except Exception:
+            raw = ""
+    if not raw:
+        return None
+    path = pathlib.Path(raw)
+    try:
+        resolved = path.resolve(strict=False)
+        root = C1523_DEBUG_ROOT.resolve(strict=False)
+    except Exception:
+        return None
+    if root not in [resolved, *resolved.parents] or not path.is_dir():
+        return None
+    return path
+
+
+def c1523_phase(phase: str, **fields: object) -> None:
+    run_dir = c1523_monitor_dir()
+    if run_dir is None:
+        return
+    safe_fields = []
+    for key, value in sorted(fields.items()):
+        safe_key = "".join(ch for ch in str(key) if ch.isalnum() or ch in "_-")[:40]
+        safe_value = "".join(ch for ch in str(value) if ch.isalnum() or ch in "._:-")[:80]
+        if safe_key and safe_value:
+            safe_fields.append(f"{safe_key}={safe_value}")
+    line = (
+        f"{utc_timestamp()} uptime={time.monotonic():.3f} pid={os.getpid()} "
+        f"phase={phase}"
+    )
+    if safe_fields:
+        line += " " + " ".join(safe_fields)
+    try:
+        path = run_dir / "phases.log"
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+    except Exception:
+        return
+
+
 def draw_welcome(display: VisualDisplay) -> None:
     display.show(
         "01-welcome",
@@ -1951,6 +2002,7 @@ def run_wifi_persistent(
     *,
     layout_rotation_deg: int,
 ) -> dict[str, Any] | None:
+    c1523_phase("wifi_step_entered", mode="persistent")
     collected = collect_wifi_credentials(display, layout_rotation_deg=layout_rotation_deg)
     if collected is None:
         return None
@@ -2605,6 +2657,7 @@ def run_visual_wizard(
     private_settings_context_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
+    c1523_phase("wizard_started")
     private_context = load_private_settings_context(private_settings_context_path) if private_settings_context_path else {}
     initial_rotation_deg = initial_rotation_from_context(private_context)
     initial_environment_id = str(private_context.get("environment_id", ""))
@@ -2614,6 +2667,7 @@ def run_visual_wizard(
             rotation = choose_orientation(display, initial_rotation_deg=initial_rotation_deg)
             layout_rotation_deg = int(rotation["rotation_deg"])
             while True:
+                c1523_phase("wifi_step_entered", mode="selection")
                 selected_network = choose_option(
                     display,
                     screen_id="02-connection",
@@ -2634,13 +2688,20 @@ def run_visual_wizard(
                 try:
                     if selected_network.key == "configured_wifi":
                         network = use_configured_wifi_network()
+                        c1523_phase("wifi_step_done", network_step="existing_configured_wifi")
                     elif selected_network.key == "wifi_select":
                         maybe_network = run_wifi_persistent(display, out_dir, layout_rotation_deg=layout_rotation_deg)
                         if maybe_network is None:
                             continue
                         network = maybe_network
+                        c1523_phase(
+                            "wifi_step_done",
+                            network_step=network["network_step"],
+                            wifi_activation_result=network["wifi_activation_result"],
+                        )
                     else:
                         network = network_defaults()
+                        c1523_phase("wifi_step_done", network_step=network["network_step"])
                 except VisualWizardError as exc:
                     display.show(
                         "02-connection-error",
@@ -2665,6 +2726,7 @@ def run_visual_wizard(
                     raise VisualWizardAbort("setup visual cancelado pelo operador")
 
                 while True:
+                    c1523_phase("environment_input_entered", network_step=network["network_step"])
                     environment_id = read_text_field(
                         display,
                         screen_id="03-environment",

@@ -470,6 +470,7 @@ restore_service() {
     systemctl enable kiosky-player.service >/dev/null 2>&1 || true
   fi
   if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
+    c1523_phase "player_restore_start"
     if [ -f /data/config/config.json ]; then
       show_transition player "$SELECTED_ROTATION_DEG" || true
       install -d -o totem -g totem -m 0750 /tmp/kiosky >/dev/null 2>&1 || true
@@ -478,6 +479,7 @@ restore_service() {
       show_transition config_pending "$SELECTED_ROTATION_DEG" || true
     fi
     systemctl start kiosky-player.service >/dev/null 2>&1 || true
+    c1523_phase "player_restore_done active=$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
   fi
 }
 
@@ -938,12 +940,41 @@ c15_trace() {
     "$(date -u '+%Y-%m-%dT%H:%M:%S.%N')" "$$" "$*" \
     >> "$C15_TRACE_FILE" 2>/dev/null || true
 }
+
+C1523_DEBUG_ROOT="/data/state/totem-debug/c15-2-3"
+c1523_monitor_dir() {
+  if [ -n "${TOTEM_C15_2_3_MONITOR_DIR:-}" ]; then
+    printf '%s\n' "$TOTEM_C15_2_3_MONITOR_DIR"
+    return 0
+  fi
+  if [ -f "$C1523_DEBUG_ROOT/current-run-dir" ] && [ ! -L "$C1523_DEBUG_ROOT/current-run-dir" ]; then
+    head -n 1 "$C1523_DEBUG_ROOT/current-run-dir" 2>/dev/null || true
+  fi
+}
+
+c1523_phase() {
+  phase="$1"
+  dir="$(c1523_monitor_dir)"
+  case "$dir" in
+    "$C1523_DEBUG_ROOT"/*)
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+  [ -d "$dir" ] || return 0
+  printf '%s uptime=%s pid=%d phase=%s\n' \
+    "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$(monotonic_seconds)" "$$" "$phase" \
+    >> "$dir/phases.log" 2>/dev/null || true
+  sync "$dir/phases.log" >/dev/null 2>&1 || true
+}
 c15_trace "session_sh_start argv=$# pid=$$ ppid=$PPID"
 
 on_exit() {
   rc="$?"
   trap - EXIT INT TERM HUP
   c15_trace "on_exit_begin rc=$rc"
+  c1523_phase "session_cleanup_start rc=$rc"
   kill_visual_if_running || true
   cleanup_apply_policy || true
   cleanup_trigger_request || true
@@ -951,6 +982,7 @@ on_exit() {
   write_final_status || true
   restore_getty || true
   cleanup_session_lock || true
+  c1523_phase "session_done rc=$rc"
   c15_trace "on_exit_done rc=$rc"
   exit "$rc"
 }
@@ -1039,6 +1071,7 @@ if [ "${1:-0}" -ne 0 ] || [ "${2:-0}" -ne 0 ] || [ "${3:-0}" -ne 0 ] || [ "${4:-
   exit 42
 fi
 c15_trace "before_openvt"
+c1523_phase "wizard_started"
 
 set +e
 if [ "$MODE" = "preview" ]; then
@@ -1131,6 +1164,7 @@ fi
 if [ "$APPLY_MODE" = "real-write" ]; then
   show_transition saving "$SELECTED_ROTATION_DEG" || true
   WRITER_CALLED="true"
+  c1523_phase "writer_start"
   set +e
   python3 "$WRITER" \
     --candidate "$HANDOFF_OUT_DIR/config.candidate.private.json" \
@@ -1142,6 +1176,8 @@ if [ "$APPLY_MODE" = "real-write" ]; then
     --confirm-human-approved-real-write >/dev/null
   WRITER_RC="$?"
   set -e
+  c1523_phase "writer_done writer_rc=$WRITER_RC"
+  c1523_phase "writer_result writer_rc=$WRITER_RC"
   if [ "$WRITER_RC" != "0" ]; then
     echo "writer_failed" >&2
     exit 47
@@ -1162,11 +1198,22 @@ if [ "$EXPECTED_RESULT" = "real_write_passed" ] && [ "$REAL_CONFIG_WRITTEN" != "
   exit 49
 fi
 
+c1523_phase "session_cleanup_start rc=0"
 restore_service || true
 wait_player_running || true
+c1523_phase "post_restore_t+0s active=$(systemctl is-active kiosky-player.service 2>/dev/null || true) playback=$(read_json_value /tmp/kiosky-status.json playback_state)"
+if [ -n "$(c1523_monitor_dir)" ]; then
+  sleep 5
+  c1523_phase "post_restore_t+5s active=$(systemctl is-active kiosky-player.service 2>/dev/null || true) playback=$(read_json_value /tmp/kiosky-status.json playback_state)"
+  sleep 10
+  c1523_phase "post_restore_t+15s active=$(systemctl is-active kiosky-player.service 2>/dev/null || true) playback=$(read_json_value /tmp/kiosky-status.json playback_state)"
+  sleep 15
+  c1523_phase "post_restore_t+30s active=$(systemctl is-active kiosky-player.service 2>/dev/null || true) playback=$(read_json_value /tmp/kiosky-status.json playback_state)"
+fi
 write_final_status
 restore_getty || true
 cleanup_trigger_request || true
 trap - EXIT INT TERM HUP
 cleanup_session_lock || true
+c1523_phase "session_done rc=0"
 exit 0

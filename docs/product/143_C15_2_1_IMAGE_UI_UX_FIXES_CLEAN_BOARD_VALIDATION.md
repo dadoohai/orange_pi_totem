@@ -91,3 +91,9 @@ passes without a forced recovery path.
 C15.2.2 fixes the wizard timeout and password toggle issues, but remains blocked
 because a later post-wizard black-screen/SSH-loss window required a physical
 power cycle.
+
+C15.2.3 classifies that remaining window with persistent monitoring. The issue
+did not reproduce in the monitored retest, and the board stayed reachable with
+NetworkManager, SSH, player, MPV, and playback healthy through post-restore
+checkpoints. A new image rebuild attempt is allowed, while batch flash, dispatch,
+and C16 remain blocked until clean-board validation passes.

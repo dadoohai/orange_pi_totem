@@ -37,7 +37,9 @@ session_lock_cleanup_ok=true
 player_restore_ok=true
 post_wizard_black_screen_observed=true
 ssh_lost_after_retest=true
-forced_power_cycle_required=true
+emergency_physical_power_cycle_recovery=true
+planned_power_cut_tested=false
+c12_4_power_cut_tested=false
 post_power_cycle_player_playing=true
 
 ready_for_image_rebuild=false
@@ -54,7 +56,6 @@ apt_update_executed=false
 apt_upgrade_executed=false
 pip_install_executed=false
 poweroff_executed=false
-power_cut_tested=true
 read_only_touched=false
 kernel_touched=false
 wifi_real_changed_only_by_existing_wizard_state=true
@@ -152,9 +153,10 @@ config_real_present=true
 
 However, immediately after the operator completed the wizard, HDMI showed a
 black screen and SSH became unreachable. The operator recovered with a physical
-power cycle. Because the round required no power cut and the black-screen/network
-loss window could not be collected before recovery, C15.2.2 remains blocked even
-though the original wizard interruption and password-toggle bugs were fixed.
+power cycle. This was an emergency recovery action, not a planned C12.4 power-cut
+test. Because the black-screen/network loss window could not be collected before
+recovery, C15.2.2 remains blocked even though the original wizard interruption
+and password-toggle bugs were fixed.
 
 ## Decision
 

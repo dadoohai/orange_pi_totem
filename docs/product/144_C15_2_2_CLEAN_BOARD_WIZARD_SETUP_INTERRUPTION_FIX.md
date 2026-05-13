@@ -105,8 +105,9 @@ the card stays blocked:
 ```text
 post_wizard_black_screen_observed=true
 ssh_lost_after_retest=true
-forced_power_cycle_required=true
-power_cut_tested=true
+emergency_physical_power_cycle_recovery=true
+planned_power_cut_tested=false
+c12_4_power_cut_tested=false
 c15_2_2_status=blocked
 ```
 
@@ -115,6 +116,15 @@ c15_2_2_status=blocked
 The wizard interruption and password-toggle bugs are fixed, but a new
 post-wizard black-screen/SSH-loss blocker must be classified before generating a
 new image. C16/player remains blocked.
+
+## C15.2.3 Follow-Up
+
+C15.2.3 added persistent post-wizard monitoring and repeated the F10/writer flow.
+The black-screen/SSH-loss window did not reproduce: SSH, NetworkManager, player,
+MPV, playback, and session cleanup stayed healthy through `post_restore_t+30s`
+and `session_done`. C15.2.3 therefore releases a new image rebuild attempt, but
+batch flash, dispatch, and C16 remain blocked until the rebuilt image passes
+clean-board validation.
 
 ## Evidence
 
