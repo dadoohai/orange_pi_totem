@@ -2578,3 +2578,25 @@ e backlog P0/P1/P2/P3. A rodada nao afirma revisao visual por pixels:
 `c16_started=false`. PNG nao foi gerado porque o conversor disponivel nao
 rasterizou os SVGs sem instalar pacotes. Detalhes em
 `docs/product/142_C15_1_6_AI_ASSISTED_UI_UX_REVIEW.md`.
+
+Atualizacao C15.2.1/C15.2.2: 2026-05-13. A imagem privada C15.2.1 foi gerada
+como derivacao offline da C14.2.1 validada, consolidando os fixes C15.1.3,
+C15.1.4 e C15.1.5, preservando o pull updater C14.2.1 e mantendo os artefatos
+de QA C15.1.6 fora do appliance. SHA256:
+`ed6b74a37dd4213143ff456959a3a9ddb47d9a66046768131872932930dbf053`.
+A validacao offline passou, mas a placa limpa bloqueou durante o primeiro
+wizard: depois de conectar Wi-Fi, a entrada de ambiente foi interrompida e a
+tela voltou para `config_missing`. A causa foi classificada em C15.2.2 como
+`service_timeout` por uso de relogio de parede no deadline do `openvt`; a
+correcao passou a usar uptime monotonic de `/proc/uptime`. C15.2.2 tambem
+removeu `V/v` como atalho de mostrar senha, mantendo `v` e `V` digitaveis e F2
+como toggle anunciado, com Ctrl+P como fallback nao imprimivel. O reteste F10
+sobreviveu a entrada de ambiente e o writer passou, mas apos concluir houve tela
+preta e perda de SSH; a recuperacao exigiu corte fisico. Portanto C15.2.1 e
+C15.2.2 ficam bloqueados para lote/despacho/C16:
+`ready_for_batch_flash=false`, `ready_for_dispatch=false`,
+`ready_for_c16_player_audit=false`, `power_cut_tested=true`,
+`c16_started=false`. Proximo passo: classificar a janela pos-wizard de tela
+preta/perda de rede antes de gerar nova imagem. Detalhes em
+`docs/product/143_C15_2_1_IMAGE_UI_UX_FIXES_CLEAN_BOARD_VALIDATION.md` e
+`docs/product/144_C15_2_2_CLEAN_BOARD_WIZARD_SETUP_INTERRUPTION_FIX.md`.

@@ -211,7 +211,8 @@
     "signal_bars_visible": true,
     "signal_bucket_visible": true,
     "password_hidden_by_default": true,
-    "password_show_toggle_key": "F2/V",
+    "password_show_toggle_key": "F2",
+    "password_show_toggle_fallback_key": "Ctrl+P",
     "public_status_must_not_include": [
       "ssid",
       "wifi_password",
@@ -231,7 +232,8 @@
     "input_max_render_rate_fps": 12,
     "backspace_repeats_coalesced": true,
     "password_hidden_by_default": true,
-    "password_show_toggle_key": "F2/V",
+    "password_show_toggle_key": "F2",
+    "password_show_toggle_fallback_key": "Ctrl+P",
     "startup_feedback_modes": [
       "boot",
       "player",

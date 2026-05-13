@@ -102,6 +102,16 @@ c16_started=false
 C15.2.1 image rebuild remains released from the UI/UX side. C16/player audit
 remains unstarted in this card and can be opened separately.
 
+## Later Clean-Board Result
+
+C15.2.1 proved that this heuristic review was not a substitute for real
+clean-board setup validation. The image built and passed offline validation, but
+the first clean-board wizard flow exposed a latent setup bug after Wi-Fi/NTP
+time correction. C15.2.2 fixed that wizard timeout bug and removed printable
+`V`/`v` as a password visibility shortcut, but a later post-wizard black-screen
+and SSH-loss window required a physical power cycle. Batch flash, dispatch, and
+C16 remain blocked until that window is classified.
+
 ## Evidence
 
 `docs/evidence/candidate-a/runs/20260513T182524Z-c15-1-6-ai-ui-ux-review/`

@@ -993,6 +993,8 @@ def read_key(timeout_sec: float | None = None) -> str:
         return "backspace"
     if data == b"\x02":
         return "back"
+    if data == b"\x10":
+        return "toggle_secret"
     if data == b"\x15":
         return "clear"
     if data == b"\x1b":
@@ -1216,6 +1218,10 @@ def is_text_mutation_key(key: str) -> bool:
     return key in {"backspace", "clear"} or is_printable_input_key(key)
 
 
+def is_secret_toggle_key(key: str) -> bool:
+    return key in {"f2", "toggle_secret"}
+
+
 def drain_key_repeats(initial_key: str) -> list[str]:
     keys = [initial_key]
     if not is_text_mutation_key(initial_key):
@@ -1333,7 +1339,7 @@ def read_text_field(
                                     force_render = True
                                     break
                             return candidate
-                        if hidden and allow_hidden_toggle and drained_key in {"f2", "v", "V"}:
+                        if hidden and allow_hidden_toggle and is_secret_toggle_key(drained_key):
                             reveal_hidden_value = not reveal_hidden_value
                             if error:
                                 error = ""
@@ -1364,7 +1370,7 @@ def read_text_field(
                 footer = "Enter OK | Ctrl+B volta | Ctrl+U limpa | Esc"
             if hidden and allow_hidden_toggle:
                 toggle_label = "oculta" if reveal_hidden_value else "mostra"
-                footer = f"Enter OK | F2/V {toggle_label} | Ctrl+B volta | Ctrl+U limpa"
+                footer = f"Enter OK | F2 {toggle_label} | Ctrl+B volta | Ctrl+U limpa"
             visual_state = (hint, note, reveal_hidden_value)
             if visual_state != last_visual_state:
                 display.show(
@@ -1405,7 +1411,7 @@ def read_text_field(
                         force_render = True
                         break
                 return candidate
-            if hidden and allow_hidden_toggle and drained_key in {"f2", "v", "V"}:
+            if hidden and allow_hidden_toggle and is_secret_toggle_key(drained_key):
                 reveal_hidden_value = not reveal_hidden_value
                 error = ""
                 needs_render = True
@@ -1876,7 +1882,7 @@ def collect_wifi_credentials(
         max_length=128,
         panel_items=[
             "Oculta por padrao.",
-            "F2 ou V mostra.",
+            "F2 mostra.",
             "Nao aparece em logs.",
         ],
         allow_hidden_toggle=True,
@@ -2793,11 +2799,11 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Senha Wi-Fi",
             subtitle="Digite a senha da rede.",
-            footer="Enter OK | F2/V mostra | Ctrl+B volta | Ctrl+U limpa",
+            footer="Enter OK | F2 mostra | Ctrl+B volta | Ctrl+U limpa",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
             field_note="Senha oculta por padrao.",
-            panel_items=["Oculta por padrao.", "F2 ou V mostra.", "Nao aparece em logs."],
+            panel_items=["Oculta por padrao.", "F2 mostra.", "Nao aparece em logs."],
             layout_rotation_deg=90,
         ),
     )
@@ -2807,11 +2813,11 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Senha Wi-Fi",
             subtitle="Digite a senha da rede.",
-            footer="Enter OK | F2/V oculta | Ctrl+B volta | Ctrl+U limpa",
+            footer="Enter OK | F2 oculta | Ctrl+B volta | Ctrl+U limpa",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
             field_note="Valor visivel apenas no HDMI local.",
-            panel_items=["Visivel so localmente.", "F2 ou V oculta.", "Nao aparece em logs."],
+            panel_items=["Visivel so localmente.", "F2 oculta.", "Nao aparece em logs."],
             layout_rotation_deg=90,
         ),
     )
@@ -2939,11 +2945,11 @@ def show_wifi_list_preview(
                 active_step=1,
                 title="Senha Wi-Fi",
                 subtitle="Digite a senha da rede.",
-                footer="Enter OK | F2/V mostra | Ctrl+B volta | Ctrl+U limpa",
+                footer="Enter OK | F2 mostra | Ctrl+B volta | Ctrl+U limpa",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
                 field_note="Senha oculta por padrao.",
-                panel_items=["Oculta por padrao.", "F2 ou V mostra.", "Nao aparece em logs."],
+                panel_items=["Oculta por padrao.", "F2 mostra.", "Nao aparece em logs."],
                 layout_rotation_deg=layout_rotation_deg,
             ),
         )
@@ -2953,11 +2959,11 @@ def show_wifi_list_preview(
                 active_step=1,
                 title="Senha Wi-Fi",
                 subtitle="Digite a senha da rede.",
-                footer="Enter OK | F2/V oculta | Ctrl+B volta | Ctrl+U limpa",
+                footer="Enter OK | F2 oculta | Ctrl+B volta | Ctrl+U limpa",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
                 field_note="Valor visivel apenas no HDMI local.",
-                panel_items=["Visivel so localmente.", "F2 ou V oculta.", "Nao aparece em logs."],
+                panel_items=["Visivel so localmente.", "F2 oculta.", "Nao aparece em logs."],
                 layout_rotation_deg=layout_rotation_deg,
             ),
         )
@@ -2976,7 +2982,8 @@ def show_wifi_list_preview(
         "paginated_wifi_list": True,
         "password_hidden_by_default": True,
         "password_show_toggle_available": True,
-        "password_show_toggle_key": "F2/V",
+        "password_show_toggle_key": "F2",
+        "password_show_toggle_fallback_key": "Ctrl+P",
         "rotation_degrees": layout_rotation_deg,
         **metadata,
         "ssid_written_to_public_status": False,
@@ -3071,7 +3078,7 @@ def run_self_test() -> None:
         assert_true(password_hint == "*" * len(synthetic_password), "Wi-Fi password should stay masked")
         assert_true(synthetic_password not in password_hint, "Wi-Fi password hint should not leak value")
         visible_password_hint = text_field_display_hint(synthetic_password, hidden=True, show_plain_value=True)
-        assert_true(visible_password_hint == synthetic_password, "F2/V password toggle should show value locally")
+        assert_true(visible_password_hint == synthetic_password, "F2 password toggle should show value locally")
         count_hint = text_field_display_hint(synthetic_ssid, hidden=False, show_plain_value=False)
         assert_true(
             synthetic_ssid not in count_hint and "caracteres digitados" in count_hint,
@@ -3096,6 +3103,16 @@ def run_self_test() -> None:
             text_field_apply_key("abcdef", "clear", max_length=128, error="")[0] == "",
             "Ctrl+U clear should keep working",
         )
+        assert_true(
+            text_field_apply_key("ab", "v", max_length=128, error="")[0] == "abv",
+            "lowercase v should remain a printable password character",
+        )
+        assert_true(
+            text_field_apply_key("ab", "V", max_length=128, error="")[0] == "abV",
+            "uppercase V should remain a printable password character",
+        )
+        assert_true(not is_secret_toggle_key("v") and not is_secret_toggle_key("V"), "printable V/v must not toggle password display")
+        assert_true(is_secret_toggle_key("f2") and is_secret_toggle_key("toggle_secret"), "F2 and Ctrl+P should toggle password display")
         backspace_render_count = estimate_debounced_input_render_count(
             "x" * 20,
             ["backspace"] * 20,
@@ -3230,7 +3247,8 @@ def run_self_test() -> None:
         )
         wifi_preview_public_text = (wifi_preview_dir / "wifi-list-preview-status.json").read_text(encoding="utf-8")
         assert_true(wifi_preview_status["paginated_wifi_list"] is True, "Wi-Fi list preview should be paginated")
-        assert_true(wifi_preview_status["password_show_toggle_key"] == "F2/V", "password toggle should use F2/V")
+        assert_true(wifi_preview_status["password_show_toggle_key"] == "F2", "password toggle should use F2")
+        assert_true(wifi_preview_status["password_show_toggle_fallback_key"] == "Ctrl+P", "password fallback should use Ctrl+P")
         for forbidden in (synthetic_ssid, synthetic_password, "TEST_WIFI_STRONG", "preview-password"):
             assert_true(forbidden not in wifi_preview_public_text, "Wi-Fi preview status should stay sanitized")
 

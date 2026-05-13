@@ -375,6 +375,10 @@ print(f"{counts['player']} {counts['mpv']} {counts['renderer']} {counts['setup']
 PY
 }
 
+monotonic_seconds() {
+  awk '{print int($1)}' /proc/uptime 2>/dev/null
+}
+
 refresh_public_status() {
   if [ -f /opt/totem/bin/totem_status_aggregate.py ]; then
     PYTHONPATH=/opt/totem/bin python3 /opt/totem/bin/totem_status_aggregate.py >/dev/null 2>&1 || true
@@ -1049,8 +1053,10 @@ else
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   c15_trace "openvt_started pid=$OPENVT_PID"
-  deadline=$(( $(date +%s) + RUN_TIMEOUT_SEC ))
-  while kill -0 "$OPENVT_PID" 2>/dev/null && [ "$(date +%s)" -lt "$deadline" ]; do
+  start_monotonic="$(monotonic_seconds)"
+  deadline=$(( start_monotonic + RUN_TIMEOUT_SEC ))
+  c15_trace "openvt_timeout_clock=monotonic start=$start_monotonic deadline=$deadline"
+  while kill -0 "$OPENVT_PID" 2>/dev/null && [ "$(monotonic_seconds)" -lt "$deadline" ]; do
     sleep 2
   done
   if kill -0 "$OPENVT_PID" 2>/dev/null; then
