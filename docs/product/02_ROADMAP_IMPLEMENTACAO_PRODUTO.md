@@ -2549,9 +2549,10 @@ o retorno ao player, foi observada uma regressao de orientacao no ultimo splash
 renders duplicados de player splash: a sessao F10 fica responsavel pelo splash
 com a rotacao selecionada, o unit do player nao desenha outro splash, o launcher
 pula uma vez quando a sessao ja renderizou e o cleanup nao desenha sobre player
-ja ativo. O patch final desta regressao nao foi reaplicado na placa nesta janela
-porque o SSH ficou sem rota apos o teste fisico; ele entra no proximo deploy ou
-rebuild. Status: `c15_1_5_status=passed`, `ready_for_image_rebuild=true`,
+ja ativo. Depois que o SSH voltou, o patch final tambem foi aplicado na placa;
+sanity runtime confirmou unit efetivo sem `totem_visual_splash.py player` em
+`ExecStartPre`, player ativo, MPV presente, `/tmp=1777` e lock ausente. Status:
+`c15_1_5_status=passed`, `ready_for_image_rebuild=true`,
 `ready_for_c16_player_audit=true`, `c16_started=false`,
 `player_code_changed=false`, `apt_update_executed=false`,
 `apt_upgrade_executed=false`, `pip_install_executed=false`,

@@ -83,9 +83,12 @@ rotation; the player unit no longer draws a second player splash; the launcher
 skips its own player splash once when the F10 session already rendered it; and
 cleanup no longer draws over an already-active player.
 
-The final splash-orientation patch was not reapplied to the running lab board in
-this window because SSH became unreachable after the physical test. It is
-included in the committed tree for the next deploy/image rebuild.
+After SSH returned, the final splash-orientation patch was applied to the
+running lab board as well. Runtime sanity confirmed the effective player unit no
+longer has a `totem_visual_splash.py player` `ExecStartPre`, and the board stayed
+with player active, MPV present, `/tmp` at `1777`, and no settings-session lock.
+The next physical F10 pass should still observe the transition visually, but the
+duplicate render source has been removed both in the repo and on-device.
 
 ## Decision
 

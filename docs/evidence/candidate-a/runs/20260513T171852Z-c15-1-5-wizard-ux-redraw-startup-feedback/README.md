@@ -54,8 +54,8 @@ controlled_reboot_executed=false
 startup_feedback_after_reboot_tested=false
 splash_player_orientation_changed=true
 splash_player_orientation_fix_in_repo=true
-splash_player_orientation_hotfix_applied=false
-splash_player_orientation_retest=not_run_board_ssh_unreachable
+splash_player_orientation_hotfix_applied=true
+splash_player_orientation_retest=runtime_sanity_passed_physical_retest_pending
 wizard_visual_pdca_followup=true
 ```
 
@@ -139,10 +139,12 @@ the player unit no longer draws a second `player` splash, the launcher skips its
 own player splash when the F10 session already rendered one with the selected
 rotation, and cleanup no longer draws over an already-active player.
 
-This final splash-orientation patch was not applied to the already-running lab
-board in this window because SSH became unreachable with `No route to host`
-after the physical test. The fix is therefore included for the next deploy/image
-rebuild, while the board retains the earlier C15.1.5 hotfix until access returns.
+This final splash-orientation patch was applied to the already-running lab board
+after SSH returned. Runtime sanity after the final hotfix confirmed that the
+effective `kiosky-player.service` no longer has a `totem_visual_splash.py player`
+`ExecStartPre`, the player remains active, MPV is present, `/tmp` is `1777`, and
+the session lock is absent. The next physical F10 pass should still observe the
+transition visually, but the duplicate render source was removed on-device.
 
 The remaining visual PDCA follow-up is for the whole wizard interface: layout,
 copy, visual hierarchy, and real-use inspection cycles. It is not a splash
