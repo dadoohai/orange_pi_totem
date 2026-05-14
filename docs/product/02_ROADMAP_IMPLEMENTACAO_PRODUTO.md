@@ -2782,3 +2782,20 @@ foram executados; portanto `c17_4_status=blocked`,
 `ready_for_batch_flash=false`, `ready_for_dispatch=false` e
 `ready_for_c18_player_audit=false`. C18 segue fechado ate C17.4 passar em
 placa limpa.
+
+Atualizacao C17.4 runtime: 2026-05-14. A imagem C17.4 foi gravada manualmente
+com Armbian Imager e bootada em cartao limpo. O primeiro boot corrigiu os
+bloqueios de C17.3: houve feedback visual antes de configuracao, F10 respondeu
+na primeira tentativa, o wizard abriu e manteve ownership visual, e o splash
+inicial nao apresentou sobreposicao de texto. O SVG laranja antigo de
+`config_missing` ainda apareceu depois do splash inicial, mas nao bloqueou o
+fluxo e foi classificado como P2
+`CONFIG_MISSING_STYLE_CONSISTENCY`. Apos o wizard, o writer passou e a config
+real foi criada, mas o cleanup/restore ficou travado: o lock de sessao
+continuou presente, `totem-open-settings.service` ficou em `activating` e
+`kiosky-player.service` foi pulado pela propria condicao que impede start
+enquanto o lock existe. C17.4 permanece `blocked` por
+`SETTINGS_SESSION_LOCK_HELD_DURING_PLAYER_RESTORE`;
+`ready_for_batch_flash=false`, `ready_for_dispatch=false` e
+`ready_for_c18_player_audit=false`. Isto nao e C18/player timing; o proximo
+passo deve corrigir a ordem de limpeza do lock e restore pos-writer.

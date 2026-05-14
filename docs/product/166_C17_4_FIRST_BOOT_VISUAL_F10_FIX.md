@@ -1,6 +1,6 @@
 # 166 - C17.4 - First Boot Visual/F10 Fix
 
-Status: blocked pending clean-board validation
+Status: blocked by post-writer restore cleanup after clean-board runtime
 
 C17.4 addresses the C17.3 blocker in the first energization / first
 configuration journey. C17.3 failed before normal player operation: first boot
@@ -38,6 +38,19 @@ Splash formatting cause:
 
 The framebuffer splash used a panel that was too short for the C17.2 typography
 scale, allowing title/message overlap in `config_pending`.
+
+Confirmed C17.4 runtime blocker:
+
+- `SETTINGS_SESSION_LOCK_HELD_DURING_PLAYER_RESTORE`
+
+The manually flashed C17.4 clean card fixed the C17.3 first-boot symptoms:
+pre-config HDMI was visible, the initial splash did not overlap text, F10
+responded on first boot, and the wizard opened with exclusive visual ownership.
+After the wizard completed, the writer passed and a real config was created,
+but the settings-session lock remained present. `totem-open-settings.service`
+stayed `activating`, and `kiosky-player.service` was skipped because its own
+`ConditionPathExists=!/run/totem/settings-session.lock` check was unmet. This
+blocks player restore after the writer.
 
 ## Ownership Rules
 
@@ -97,13 +110,27 @@ Passed offline:
 - rootfs checks for session-lock ownership rules;
 - splash layout preview with separated title/message lines.
 
-Pending:
+Passed on the clean board:
 
 - manual card write via Armbian Imager;
-- clean-board first boot without config;
-- first F10 response on first boot;
-- HDMI confirmation that wizard remains visually exclusive;
-- writer/player restore after completing the wizard.
+- first boot without config showed visible pre-config feedback;
+- first F10 response opened the wizard;
+- initial splash text overlap was fixed;
+- wizard visual ownership held while the settings session was active;
+- status renderer, MPV and public config-missing surface did not draw over the
+  wizard;
+- writer passed and created the real config.
+
+Blocked on the clean board:
+
+- settings-session lock cleanup after writer;
+- player restore after writer.
+
+Minor visual backlog:
+
+- old orange `config_missing` style still appears after the initial C17.4
+  splash. It did not block the flow and remains P2:
+  `CONFIG_MISSING_STYLE_CONSISTENCY`.
 
 ## Decision
 
@@ -114,4 +141,8 @@ Pending:
 `ready_for_c18_player_audit=false`
 
 C17.4 must continue with a manually flashed clean card. C18 remains closed until
-the first-boot pre-config journey passes on HDMI.
+post-writer cleanup and player restore pass on HDMI.
+
+Next step:
+
+`C17_4_1_SETTINGS_LOCK_RESTORE_FIX`
