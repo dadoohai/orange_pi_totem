@@ -492,6 +492,12 @@ restore_getty() {
 
 restore_service() {
   SERVICE_RESTORE_ATTEMPTED="true"
+  if [ -e "$LOCK_DIR" ]; then
+    c15_trace "restore_service_blocked_session_lock_present"
+    c1523_phase "player_restore_blocked_by_session_lock"
+    c17_4_trace "restore_service_blocked_session_lock_present"
+    return 1
+  fi
   if [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
     systemctl enable kiosky-player.service >/dev/null 2>&1 || true
   fi
@@ -761,8 +767,29 @@ cleanup_session_lock() {
   esac
 }
 
+release_session_lock_for_restore() {
+  c15_trace "release_session_lock_for_restore_begin"
+  c1523_phase "settings_visual_done"
+  cleanup_trigger_request || true
+  cleanup_session_lock || true
+  c17_4_trace "session_lock_released_before_restore"
+  if [ -e "$LOCK_DIR" ]; then
+    c15_trace "release_session_lock_for_restore_failed"
+    c1523_phase "release_session_lock_failed"
+    return 1
+  fi
+  c15_trace "release_session_lock_for_restore_done"
+  c1523_phase "release_session_lock_done lock_removed_before_restore=true"
+  return 0
+}
+
 write_final_status() {
-  wait_player_running || true
+  if [ -e "$LOCK_DIR" ]; then
+    c15_trace "write_final_status_skip_wait_session_lock_present"
+    c1523_phase "write_final_status_skip_wait_session_lock_present"
+  else
+    wait_player_running || true
+  fi
   python3 - "$FINAL_STATUS" "$OUT_DIR" "$WIZARD_OUT_DIR" "$MODE" "$EXPECTED_RESULT" "$WIZARD_RC" \
     "$INITIAL_SERVICE_ACTIVE" "$INITIAL_SERVICE_ENABLED" "$SERVICE_STOP_ATTEMPTED" "$SERVICE_RESTORE_ATTEMPTED" \
     "$(systemctl is-active kiosky-player.service 2>/dev/null || true)" \
@@ -1228,8 +1255,13 @@ if [ "$EXPECTED_RESULT" = "real_write_passed" ] && [ "$REAL_CONFIG_WRITTEN" != "
 fi
 
 c1523_phase "session_cleanup_start rc=0"
-restore_service || true
-wait_player_running || true
+if release_session_lock_for_restore; then
+  restore_service || true
+  wait_player_running || true
+else
+  c15_trace "restore_skipped_session_lock_present"
+  c1523_phase "restore_skipped_session_lock_present"
+fi
 c1523_phase "post_restore_t+0s active=$(systemctl is-active kiosky-player.service 2>/dev/null || true) playback=$(read_json_value /tmp/kiosky-status.json playback_state)"
 if [ -n "$(c1523_monitor_dir)" ]; then
   sleep 5
@@ -1244,5 +1276,6 @@ restore_getty || true
 cleanup_trigger_request || true
 trap - EXIT INT TERM HUP
 cleanup_session_lock || true
+c17_4_trace "session_done_after_restore"
 c1523_phase "session_done rc=0"
 exit 0

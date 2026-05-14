@@ -161,3 +161,14 @@ post-writer cleanup and player restore pass promptly on HDMI.
 Next step:
 
 `C17_4_1_SETTINGS_LOCK_RESTORE_LATENCY_FIX`
+
+## C17.4.1 Follow-up
+
+C17.4.1 implemented and hotfix-tested the settings lock restore ordering fix.
+The normal successful settings path now removes the session lock before
+requesting player restore, and `restore_service` refuses to start while the
+lock still exists. Runtime retest passed with writer-to-player-active latency
+around 2 seconds and writer-to-playing latency around 5 seconds.
+
+C17.4 remains blocked for batch/dispatch because the fix still needs to be
+rebuilt into a clean image and validated as C17.4.2.

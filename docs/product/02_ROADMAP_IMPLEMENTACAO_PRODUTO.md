@@ -2814,3 +2814,21 @@ pos-servico rodou. C17.4 continua `blocked`, agora por
 `POST_WRITER_RESTORE_LATENCY_LOCK_ORDER`; funcionalmente chegou a playing, mas
 a latencia pos-writer e a transicao percebida como "do nada" bloqueiam
 batch/dispatch e C18.
+
+Atualizacao C17.4.1: 2026-05-14. Foi corrigida a ordem pos-writer da sessao
+de configuracao. A causa confirmada era que o caminho normal chamava
+`restore_service` enquanto o lock de sessao ainda existia; a unit do player
+corretamente pulava o start por `ConditionPathExists`, e o script esperava
+player antes de remover o lock. A correcao adicionou a fase explicita
+`release_session_lock_for_restore` antes do restore e protegeu
+`restore_service` contra start com lock presente. O hotfix foi aplicado na placa
+atual sem reboot, poweroff, apt, pip, Wi-Fi real alterado, leitura de config ou
+writer manual. Reteste pelo fluxo F10/settings passou: writer passou, lock foi
+removido antes do restore, `kiosky-player.service` nao foi pulado pela
+condicao, `totem-open-settings.service` finalizou, feedback de carregamento
+apareceu e playback voltou a `playing`. Latencia observada: writer -> player
+ativo ~2s; writer -> playing ~5s. Resultado:
+`c17_4_1_status=passed`, `ready_for_c17_4_2_image_rebuild=true`,
+`ready_for_batch_flash=false`, `ready_for_dispatch=false` e
+`ready_for_c18_player_audit=false`. C18 segue fechado ate imagem limpa C17.4.2
+passar.

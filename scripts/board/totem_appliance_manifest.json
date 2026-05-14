@@ -1,6 +1,6 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3 and C17.4)",
+  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3, C17.4 and C17.4.1)",
   "homologation_release": {
     "image_tag": "c17-4-firstboot-visual-f10-fix",
     "image_version": "c17.4",
@@ -14,6 +14,8 @@
     "c16_2_gates_used": true,
     "c17_2_visual_polish_embedded": true,
     "c17_4_firstboot_visual_f10_fix_embedded": true,
+    "c17_4_1_settings_lock_restore_fix_hotfix_validated": true,
+    "ready_for_c17_4_2_image_rebuild": true,
     "clean_board_validation_pending": true,
     "ready_for_batch_flash": false,
     "ready_for_dispatch": false,
