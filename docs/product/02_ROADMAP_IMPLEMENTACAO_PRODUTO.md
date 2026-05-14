@@ -2832,3 +2832,14 @@ ativo ~2s; writer -> playing ~5s. Resultado:
 `ready_for_batch_flash=false`, `ready_for_dispatch=false` e
 `ready_for_c18_player_audit=false`. C18 segue fechado ate imagem limpa C17.4.2
 passar.
+
+Atualizacao C17.4.2 offline: 2026-05-14. Foi derivada a imagem privada
+`c17-4-2-settings-restore-clean` com o fix C17.4.1 embutido. A validacao
+offline do rootfs passou e confirmou a ordem desejada: remover o lock antes do
+restore, impedir start do player enquanto o lock existe e evitar espera longa
+em `write_final_status` quando o lock ainda estiver presente. A imagem gerada
+tem SHA256 `184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af`.
+Como a gravacao e manual pelo Armbian Imager, a validacao em cartao limpo ainda
+esta pendente; portanto `ready_for_batch_flash=false`,
+`ready_for_dispatch=false` e `ready_for_c18_player_audit=false` ate C17.4.2
+passar no fluxo completo de primeira configuracao.

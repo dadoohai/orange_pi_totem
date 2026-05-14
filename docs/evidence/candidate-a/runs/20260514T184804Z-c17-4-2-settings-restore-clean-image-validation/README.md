@@ -1,0 +1,99 @@
+# C17.4.2 Settings Restore Clean Image Validation
+
+c17_4_2_status=blocked
+blocker=clean_card_validation_pending_manual_flash
+image_built=true
+image_file=/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img
+image_sha256=184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af
+kernel_reused=true
+kernel_rebuild_executed=false
+
+artifact_private=true
+final_image=false
+homologation_shipping_image=true
+
+previous_c17_4_1_passed=true
+c17_4_1_fix_embedded=true
+restore_order_static_check_passed=true
+
+card_written=false
+single_board_validated=false
+full_setup_flow_passed=false
+
+first_boot_black_screen_fixed=false
+startup_feedback_before_config_visible=false
+f10_ready_on_first_boot=false
+first_f10_opens_wizard=false
+misformatted_splash_fixed=false
+config_missing_text_overlap=false
+wizard_surface_exclusive=false
+status_renderer_respects_session_lock=true
+kiosky_player_not_drawing_during_settings=true
+
+writer_passed=false
+real_config_written=false
+session_lock_cleanup_ok=false
+lock_removed_before_restore=true
+restore_service_called_after_lock_removed=true
+restore_called_while_lock_exists=false
+kiosky_player_condition_skipped=false
+totem_open_settings_service_stuck_activating=false
+session_done=false
+player_restore_ok=false
+ssh_active_after_writer=false
+network_connected_after_writer=false
+loading_content_feedback_visible=unknown
+playback_state_after_restore=not_run
+
+writer_done_to_player_active_sec=unknown
+writer_done_to_playing_sec=unknown
+restore_latency_within_30s=false
+restore_latency_within_10s=false
+
+old_orange_config_missing_style_seen=false
+old_orange_config_missing_style_severity=unknown
+visual_backlog_next=none
+
+gate_api_cache_content=deferred
+gate_wifi_negative=deferred
+gate_update_ux=deferred
+gate_wizard_visual_consistency=deferred
+
+pull_update_timer_enabled=true
+totem_updatectl_status_ok=false
+
+ready_for_batch_flash=false
+ready_for_dispatch=false
+ready_for_c18_player_audit=false
+
+## Offline Result
+
+The offline derivation passed. The rootfs validation confirmed the C17.4.1
+restore-order fix is embedded: the settings lock is released before player
+restore, `restore_service` refuses to start while the lock still exists, and
+the final-status path does not enter a long player wait while the lock exists.
+
+Clean-card validation is still pending because card flashing is manual through
+Armbian Imager. C17.4.2 remains blocked until a clean card proves first boot,
+F10, wizard ownership, writer, lock cleanup and fast player restore.
+
+Guardrails:
+secrets_published=false
+apt_update_executed=false
+apt_upgrade_executed=false
+pip_install_executed=false
+read_only_touched=false
+kernel_touched=false
+wifi_touched_only_by_wizard=false
+networkmanager_touched_only_by_wizard=false
+poweroff_executed=false
+power_cut_tested=false
+planned_power_cut_tested=false
+c12_4_power_cut_tested=false
+scheduler_changed=false
+sync_changed=false
+duration_changed=false
+loop_changed=false
+exposure_time_ms_changed=false
+c12_readonly_blocked=true
+c12_4_blocked=true
