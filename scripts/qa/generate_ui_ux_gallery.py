@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Generate the C15.1.6 offline UI/UX review gallery and reports.
+"""Generate the offline UI/UX review gallery and reports.
 
-The script is intentionally non-interactive: it imports the existing wizard and
-splash renderers, builds synthetic SVG screens, computes heuristic UX metrics,
-and writes sanitized review artifacts. It does not touch Wi-Fi, config, writer,
-services, player code, framebuffer, or the lab board.
+The script is intentionally non-interactive. It imports the existing wizard and
+splash renderers, builds synthetic SVG screens, computes heuristic UX metrics
+and writes sanitized review artifacts. It began as the C15.1.6 gallery and was
+extended in C16.2 with product-state screens. It does not touch Wi-Fi, config,
+writer, services, player code, framebuffer, or the lab board.
 """
 
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import math
 import os
@@ -52,15 +54,15 @@ SPLASH_ORDER = (
 )
 
 SECRET_MARKERS = (
-    "private-values.seed.json",
-    "/data/config/config.json",
-    "api_key",
-    "api_url real",
-    "environment_id real",
+    "private-values" ".seed.json",
+    "/data/config" "/config.json",
+    "api_" "key",
+    "api_" "url real",
+    "environment_" "id real",
     "ssid real",
     "senha real",
     "wifi password real",
-    "192.168.",
+    "192" ".168.",
 )
 
 
@@ -160,6 +162,49 @@ def synthetic_wifi_networks(count: int) -> list[dict[str, Any]]:
         security = "" if "OPEN" in ssid or index % 7 == 0 else "WPA2"
         rows.append(f"{ssid}:{signal}:{security}")
     return wizard.wifi_adapter.parse_wifi_network_list("\n".join(rows))
+
+
+def svg_text(value: str) -> str:
+    return html.escape(str(value), quote=False)
+
+
+def simple_state_svg(
+    *,
+    title: str,
+    subtitle: str,
+    status: str,
+    action: str,
+    items: list[str],
+    accent: str = "#06b6d4",
+) -> str:
+    width = 1280
+    height = 720
+    safe_items = list(items[:5])
+    while len(safe_items) < 5:
+        safe_items.append("")
+    item_rows = []
+    y = 320
+    for item in safe_items:
+        if not item:
+            y += 54
+            continue
+        item_rows.append(
+            f'<text x="172" y="{y}" fill="#d7dde8" '
+            f'font-size="28" font-family="Inter,DejaVu Sans,Arial">{svg_text(item)}</text>'
+        )
+        y += 54
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <rect width="{width}" height="{height}" fill="#101820"/>
+  <rect x="88" y="88" width="1104" height="544" rx="8" fill="#17212b" stroke="#2f3d4a" stroke-width="2"/>
+  <rect x="88" y="88" width="10" height="544" fill="{accent}"/>
+  <text x="144" y="170" fill="#eef5ff" font-size="54" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(title)}</text>
+  <text x="146" y="226" fill="#a9b8c8" font-size="30" font-family="Inter,DejaVu Sans,Arial">{svg_text(subtitle)}</text>
+  <rect x="144" y="258" width="410" height="48" rx="24" fill="#203040" stroke="{accent}" stroke-width="2"/>
+  <text x="168" y="291" fill="#eef5ff" font-size="22" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(status)}</text>
+  {''.join(item_rows)}
+  <rect x="144" y="572" width="992" height="1" fill="#334455"/>
+  <text x="144" y="612" fill="#eef5ff" font-size="25" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(action)}</text>
+</svg>"""
 
 
 def wizard_option_text(options: list[wizard.Option]) -> list[str]:
@@ -561,6 +606,547 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 error_recovery_available=is_error or screen_id == "wizard.environment",
             ),
             wizard.build_screen_svg(**svg_kwargs),
+        )
+
+
+def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> None:
+    cases: list[dict[str, Any]] = [
+        {
+            "screen_id": "boot",
+            "journey": "A",
+            "function": "Mostrar primeiro feedback de energia/boot.",
+            "operator_task": "Aguardar o appliance iniciar.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir sem mudanca.",
+            "message_main": "Inicializando",
+            "system_state": "boot",
+            "next_step_expected": "Preparar sistema ou abrir configuracao.",
+            "confusion_risk": "medium",
+            "title": "Inicializando",
+            "subtitle": "O totem esta ligando.",
+            "items": ["Sem acao necessaria.", "A tela deve mudar em poucos segundos."],
+            "footer": "Aguarde",
+            "accent": "#06b6d4",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "firstboot",
+            "journey": "A/B",
+            "function": "Cobrir preparacao tecnica inicial.",
+            "operator_task": "Aguardar a primeira preparacao.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se nao avancar.",
+            "message_main": "Preparando sistema",
+            "system_state": "firstboot",
+            "next_step_expected": "Config pendente ou player.",
+            "confusion_risk": "medium",
+            "title": "Preparando sistema",
+            "subtitle": "Primeira inicializacao em andamento.",
+            "items": ["Nao desligue.", "Nenhum dado privado e mostrado."],
+            "footer": "Aguarde",
+            "accent": "#22c55e",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "config_pending",
+            "journey": "B",
+            "function": "Pedir configuracao local.",
+            "operator_task": "Abrir configuracao.",
+            "primary_action": "Pressionar F10",
+            "secondary_action": "Suporte remoto se teclado indisponivel.",
+            "message_main": "Configuracao pendente",
+            "system_state": "config_pending",
+            "next_step_expected": "Wizard local abre.",
+            "confusion_risk": "low",
+            "title": "Configuracao pendente",
+            "subtitle": "O totem precisa ser configurado.",
+            "items": ["Pressione F10 no teclado local.", "O player inicia apos concluir."],
+            "footer": "F10 abre configuracao",
+            "accent": "#f59e0b",
+            "status_feedback": True,
+        },
+        {
+            "screen_id": "config_missing",
+            "journey": "B",
+            "function": "Explicar ausencia de configuracao.",
+            "operator_task": "Abrir configuracao ou acionar suporte.",
+            "primary_action": "Pressionar F10",
+            "secondary_action": "Suporte remoto.",
+            "message_main": "Configuracao ausente",
+            "system_state": "config_missing",
+            "next_step_expected": "Wizard local abre.",
+            "confusion_risk": "medium",
+            "title": "Configuracao ausente",
+            "subtitle": "Ainda nao ha configuracao valida.",
+            "items": ["Use F10 para iniciar o setup.", "Nenhum valor real e exibido."],
+            "footer": "F10 abre configuracao",
+            "accent": "#f59e0b",
+            "status_feedback": True,
+        },
+        {
+            "screen_id": "open_settings",
+            "journey": "L",
+            "function": "Confirmar recebimento do F10.",
+            "operator_task": "Aguardar o wizard abrir.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Cancelar dentro do wizard.",
+            "message_main": "Abrindo configuracao",
+            "system_state": "open_settings",
+            "next_step_expected": "Tela de orientacao.",
+            "confusion_risk": "medium",
+            "title": "Abrindo configuracao",
+            "subtitle": "O player sera pausado com seguranca.",
+            "items": ["Aguarde a tela interativa.", "Cancelar restaura o player."],
+            "footer": "Aguarde",
+            "accent": "#06b6d4",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "orientation",
+            "journey": "C",
+            "function": "Escolher orientacao da tela.",
+            "operator_task": "Selecionar orientacao.",
+            "primary_action": "Enter confirma",
+            "secondary_action": "Esc cancela.",
+            "message_main": "Orientacao da tela",
+            "system_state": "wizard_orientation",
+            "next_step_expected": "Conexao.",
+            "confusion_risk": "low",
+            "title": "Orientacao da tela",
+            "subtitle": "Escolha como o totem esta instalado.",
+            "items": ["Paisagem", "Retrato", "Pode voltar antes de salvar."],
+            "footer": "Setas movem | Enter confirma | Esc cancela",
+            "accent": "#06b6d4",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "connection",
+            "journey": "C",
+            "function": "Escolher caminho de conexao.",
+            "operator_task": "Selecionar Wi-Fi ou manter caminho atual.",
+            "primary_action": "Enter confirma",
+            "secondary_action": "Esc volta.",
+            "message_main": "Conexao",
+            "system_state": "wizard_connection",
+            "next_step_expected": "Wi-Fi ou ambiente.",
+            "confusion_risk": "low",
+            "title": "Conexao",
+            "subtitle": "Escolha como o totem acessa o conteudo.",
+            "items": ["Selecionar Wi-Fi", "Usar conexao atual", "Continuar sem internet"],
+            "footer": "Setas movem | Enter confirma | Esc volta",
+            "accent": "#06b6d4",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "wifi_list",
+            "journey": "D/F",
+            "function": "Selecionar rede sintetica por sinal.",
+            "operator_task": "Escolher a rede forte.",
+            "primary_action": "Enter escolhe",
+            "secondary_action": "R atualiza.",
+            "message_main": "Selecionar Wi-Fi",
+            "system_state": "wifi_list",
+            "next_step_expected": "Senha Wi-Fi.",
+            "confusion_risk": "medium",
+            "title": "Selecionar Wi-Fi",
+            "subtitle": "Lista sintetica ordenada por sinal.",
+            "items": [
+                "TEST_WIFI_STRONG - sinal forte",
+                "TEST_WIFI_WEAK - sinal fraco",
+                "R atualiza a lista.",
+            ],
+            "footer": "Setas movem | R atualiza | Enter escolhe",
+            "accent": "#22c55e",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "wifi_password_hidden",
+            "journey": "E",
+            "function": "Digitar senha sem expor valor.",
+            "operator_task": "Digitar senha.",
+            "primary_action": "Enter confirma",
+            "secondary_action": "F2 mostra/oculta.",
+            "message_main": "Senha Wi-Fi",
+            "system_state": "wifi_password_hidden",
+            "next_step_expected": "Teste de conexao.",
+            "confusion_risk": "low",
+            "title": "Senha Wi-Fi",
+            "subtitle": "Digite a senha da rede selecionada.",
+            "items": ["Senha oculta por padrao.", "F2 alterna visibilidade local."],
+            "footer": "Enter confirma | F2 mostra | Ctrl+B volta",
+            "accent": "#06b6d4",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "wifi_password_visible",
+            "journey": "E",
+            "function": "Mostrar senha apenas no HDMI local.",
+            "operator_task": "Conferir digitacao local.",
+            "primary_action": "Enter confirma",
+            "secondary_action": "F2 oculta.",
+            "message_main": "Senha Wi-Fi",
+            "system_state": "wifi_password_visible",
+            "next_step_expected": "Teste de conexao.",
+            "confusion_risk": "medium",
+            "title": "Senha Wi-Fi",
+            "subtitle": "Visivel apenas nesta tela local.",
+            "items": ["TEST_PASSWORD nao e dado real.", "Nada e gravado antes de concluir."],
+            "footer": "Enter confirma | F2 oculta | Ctrl+B volta",
+            "accent": "#f59e0b",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "wifi_wrong_password",
+            "journey": "E",
+            "function": "Explicar erro de senha ou associacao.",
+            "operator_task": "Tentar novamente.",
+            "primary_action": "Enter tenta novamente",
+            "secondary_action": "Ctrl+B volta para redes.",
+            "message_main": "Nao conectou",
+            "system_state": "wifi_wrong_password",
+            "next_step_expected": "Retornar ao campo de senha.",
+            "confusion_risk": "high",
+            "title": "Nao conectou",
+            "subtitle": "A senha pode estar incorreta.",
+            "items": ["Confira letras maiusculas.", "Tente novamente ou escolha outra rede."],
+            "footer": "Enter tenta novamente | Ctrl+B volta",
+            "accent": "#ef4444",
+            "error_recovery_available": True,
+        },
+        {
+            "screen_id": "weak_wifi",
+            "journey": "F",
+            "function": "Avisar risco de sinal fraco.",
+            "operator_task": "Escolher rede melhor.",
+            "primary_action": "Escolher TEST_WIFI_STRONG",
+            "secondary_action": "R atualiza.",
+            "message_main": "Sinal fraco",
+            "system_state": "weak_wifi",
+            "next_step_expected": "Selecionar rede forte ou prosseguir ciente.",
+            "confusion_risk": "medium",
+            "title": "Sinal fraco",
+            "subtitle": "TEST_WIFI_WEAK pode falhar durante o uso.",
+            "items": ["Prefira TEST_WIFI_STRONG.", "Reposicione o totem se necessario."],
+            "footer": "Setas movem | R atualiza | Enter escolhe",
+            "accent": "#f59e0b",
+            "error_recovery_available": True,
+        },
+        {
+            "screen_id": "environment",
+            "journey": "C",
+            "function": "Coletar ambiente sintetico.",
+            "operator_task": "Digitar ambiente.",
+            "primary_action": "Enter confirma",
+            "secondary_action": "Ctrl+B volta.",
+            "message_main": "Ambiente",
+            "system_state": "environment",
+            "next_step_expected": "Revisao.",
+            "confusion_risk": "medium",
+            "title": "Ambiente",
+            "subtitle": "Digite o identificador do ambiente.",
+            "items": ["Valor sintetico: TEST_ENV", "API sintetica: TEST_API"],
+            "footer": "Enter confirma | Ctrl+B volta | Ctrl+U limpa",
+            "accent": "#06b6d4",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "review",
+            "journey": "C/H",
+            "function": "Revisar dados sinteticos antes de salvar.",
+            "operator_task": "Confirmar ou voltar.",
+            "primary_action": "Enter salva",
+            "secondary_action": "Ctrl+B volta.",
+            "message_main": "Revisao",
+            "system_state": "review",
+            "next_step_expected": "Salvar.",
+            "confusion_risk": "low",
+            "title": "Revisao",
+            "subtitle": "Confira antes de concluir.",
+            "items": ["Wi-Fi: TEST_WIFI_STRONG", "Ambiente: TEST_ENV", "Midia: TEST_MEDIA"],
+            "footer": "Enter salva | Ctrl+B volta | Esc cancela",
+            "accent": "#22c55e",
+            "back_applicable": True,
+        },
+        {
+            "screen_id": "saving",
+            "journey": "H",
+            "function": "Mostrar salvamento em andamento.",
+            "operator_task": "Aguardar.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Nenhuma.",
+            "message_main": "Salvando",
+            "system_state": "saving",
+            "next_step_expected": "Configuracao concluida.",
+            "confusion_risk": "medium",
+            "title": "Salvando",
+            "subtitle": "Aplicando configuracao sintetica.",
+            "items": ["Nao desligue.", "O player volta automaticamente."],
+            "footer": "Aguarde",
+            "accent": "#06b6d4",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "complete",
+            "journey": "H",
+            "function": "Confirmar sucesso.",
+            "operator_task": "Aguardar player.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Nenhuma.",
+            "message_main": "Configuracao concluida",
+            "system_state": "complete",
+            "next_step_expected": "Iniciar player.",
+            "confusion_risk": "low",
+            "title": "Configuracao concluida",
+            "subtitle": "O totem esta pronto.",
+            "items": ["Player iniciara em seguida.", "Nenhum dado real foi usado nesta galeria."],
+            "footer": "Aguarde",
+            "accent": "#22c55e",
+            "status_feedback": True,
+        },
+        {
+            "screen_id": "starting_player",
+            "journey": "H/I",
+            "function": "Cobrir handoff para player.",
+            "operator_task": "Aguardar.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir.",
+            "message_main": "Iniciando player",
+            "system_state": "starting_player",
+            "next_step_expected": "Carregar conteudo.",
+            "confusion_risk": "medium",
+            "title": "Iniciando player",
+            "subtitle": "Preparando exibicao do conteudo.",
+            "items": [
+                "O video pode levar alguns segundos.",
+                "A tela nao deve ficar preta sem mensagem.",
+            ],
+            "footer": "Aguarde",
+            "accent": "#06b6d4",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "loading_content",
+            "journey": "G/I/S",
+            "function": "Mostrar espera por API/cache/midia.",
+            "operator_task": "Aguardar.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir.",
+            "message_main": "Carregando conteudo",
+            "system_state": "loading_content",
+            "next_step_expected": "Conteudo ou erro publico.",
+            "confusion_risk": "medium",
+            "title": "Carregando conteudo",
+            "subtitle": "Buscando playlist e midias.",
+            "items": ["API sintetica: TEST_API", "Midia sintetica: TEST_MEDIA"],
+            "footer": "Aguarde",
+            "accent": "#06b6d4",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "waiting_for_api",
+            "journey": "G/R",
+            "function": "Classificar espera por API.",
+            "operator_task": "Aguardar ou acionar suporte.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir.",
+            "message_main": "Buscando conteudo",
+            "system_state": "waiting_for_api",
+            "next_step_expected": "Usar cache ou mostrar erro.",
+            "confusion_risk": "high",
+            "title": "Buscando conteudo",
+            "subtitle": "O servidor ainda nao respondeu.",
+            "items": ["Categoria publica: API aguardando.", "Sem URLs ou tokens na tela."],
+            "footer": "Aguarde | Suporte se persistir",
+            "accent": "#f59e0b",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "waiting_for_media",
+            "journey": "I/K/T",
+            "function": "Classificar preparo de midias.",
+            "operator_task": "Aguardar ou acionar suporte.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir.",
+            "message_main": "Preparando midias",
+            "system_state": "waiting_for_media",
+            "next_step_expected": "Tocar conteudo ou erro publico.",
+            "confusion_risk": "high",
+            "title": "Preparando midias",
+            "subtitle": "O conteudo TEST_MEDIA ainda nao esta pronto.",
+            "items": ["Categoria publica: midia aguardando.", "Nenhum caminho de arquivo e mostrado."],
+            "footer": "Aguarde | Suporte se persistir",
+            "accent": "#f59e0b",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "error_no_content",
+            "journey": "K/T",
+            "function": "Evitar tela preta quando nao ha conteudo.",
+            "operator_task": "Acionar suporte ou aguardar retry.",
+            "primary_action": "Aguardar retry",
+            "secondary_action": "Suporte.",
+            "message_main": "Sem conteudo disponivel",
+            "system_state": "error_no_content",
+            "next_step_expected": "Retry seguro ou suporte.",
+            "confusion_risk": "high",
+            "title": "Sem conteudo disponivel",
+            "subtitle": "O totem nao encontrou midia pronta.",
+            "items": [
+                "Rede/API/cache devem ser verificados.",
+                "A exibicao sera retomada automaticamente.",
+            ],
+            "footer": "Aguarde retry | Acione suporte",
+            "accent": "#ef4444",
+            "error_recovery_available": True,
+            "status_feedback": True,
+        },
+        {
+            "screen_id": "playing_status",
+            "journey": "J",
+            "function": "Representar player normal sem usar midia real.",
+            "operator_task": "Nenhuma.",
+            "primary_action": "Nenhuma",
+            "secondary_action": "F10 suporte.",
+            "message_main": "Conteudo em exibicao",
+            "system_state": "playing",
+            "next_step_expected": "Continuar playback.",
+            "confusion_risk": "low",
+            "title": "Conteudo em exibicao",
+            "subtitle": "Placeholder sintetico de status do player.",
+            "items": ["TEST_MEDIA tocando.", "F10 abre configuracao quando permitido."],
+            "footer": "Sem acao necessaria",
+            "accent": "#22c55e",
+            "status_feedback": True,
+        },
+        {
+            "screen_id": "update_checking",
+            "journey": "M",
+            "function": "Mostrar verificacao de update.",
+            "operator_task": "Aguardar.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir.",
+            "message_main": "Verificando atualizacao",
+            "system_state": "update_checking",
+            "next_step_expected": "Aplicar ou manter versao.",
+            "confusion_risk": "medium",
+            "title": "Verificando atualizacao",
+            "subtitle": "Procurando release disponivel.",
+            "items": ["Sem aplicar release nesta galeria.", "Status deve ser publico e sintetico."],
+            "footer": "Aguarde",
+            "accent": "#06b6d4",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "update_applying",
+            "journey": "M",
+            "function": "Mostrar aplicacao de update.",
+            "operator_task": "Aguardar.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte se persistir.",
+            "message_main": "Aplicando atualizacao",
+            "system_state": "update_applying",
+            "next_step_expected": "Reiniciar servico ou concluir.",
+            "confusion_risk": "high",
+            "title": "Aplicando atualizacao",
+            "subtitle": "Atualizacao remota em andamento.",
+            "items": ["Nao desligue.", "Versao anterior deve ser preservada em falha."],
+            "footer": "Aguarde",
+            "accent": "#f59e0b",
+            "status_feedback": True,
+            "dynamic_feedback_needed": True,
+        },
+        {
+            "screen_id": "update_failed",
+            "journey": "N",
+            "function": "Mostrar falha segura de update.",
+            "operator_task": "Aguardar suporte/retry.",
+            "primary_action": "Aguardar",
+            "secondary_action": "Suporte.",
+            "message_main": "Atualizacao nao aplicada",
+            "system_state": "update_failed",
+            "next_step_expected": "Manter versao anterior.",
+            "confusion_risk": "medium",
+            "title": "Atualizacao nao aplicada",
+            "subtitle": "O totem manteve a versao anterior.",
+            "items": ["A operacao pode ser tentada novamente.", "Nenhum dado privado e exibido."],
+            "footer": "Acione suporte se persistir",
+            "accent": "#ef4444",
+            "error_recovery_available": True,
+            "status_feedback": True,
+        },
+        {
+            "screen_id": "maintenance_support",
+            "journey": "P/Q",
+            "function": "Dar caminho seguro de suporte.",
+            "operator_task": "Coletar status publico.",
+            "primary_action": "Coletar status",
+            "secondary_action": "Reabrir configuracao.",
+            "message_main": "Suporte necessario",
+            "system_state": "maintenance_support",
+            "next_step_expected": "Diagnostico publico.",
+            "confusion_risk": "medium",
+            "title": "Suporte necessario",
+            "subtitle": "Use apenas status publico e sanitizado.",
+            "items": [
+                "Rede/API/cache/player sao categorias separadas.",
+                "Nenhum valor privado deve aparecer.",
+            ],
+            "footer": "Coletar status publico | F10 configuracao",
+            "accent": "#64748b",
+            "error_recovery_available": True,
+            "status_feedback": True,
+        },
+    ]
+
+    for case in cases:
+        items = list(case["items"])
+        svg = simple_state_svg(
+            title=str(case["title"]),
+            subtitle=str(case.get("subtitle", "")),
+            status=str(case["system_state"]).replace("_", " "),
+            action=str(case["footer"]),
+            items=items,
+            accent=str(case["accent"]),
+        )
+        add_screen(
+            specs,
+            gallery_dir,
+            ScreenSpec(
+                screen_id=str(case["screen_id"]),
+                journey=str(case["journey"]),
+                screen_type="c16_2_state",
+                orientation="landscape",
+                function=str(case["function"]),
+                operator_task=str(case["operator_task"]),
+                primary_action=str(case["primary_action"]),
+                secondary_action=str(case["secondary_action"]),
+                message_main=str(case["message_main"]),
+                system_state=str(case["system_state"]),
+                next_step_expected=str(case["next_step_expected"]),
+                confusion_risk=str(case["confusion_risk"]),
+                dependencies=["synthetic gallery", "C16.2 offline harness"],
+                dynamic_feedback_needed=bool(case.get("dynamic_feedback_needed", False)),
+                error_state_needed=str(case["screen_id"]) in {"wifi_wrong_password", "error_no_content", "update_failed"},
+                preview_covered=True,
+                title=str(case["title"]),
+                subtitle=str(case.get("subtitle", "")),
+                body_items=items,
+                footer=str(case["footer"]),
+                option_text=[],
+                status_feedback=bool(case.get("status_feedback", False)),
+                back_applicable=bool(case.get("back_applicable", False)),
+                error_recovery_available=bool(case.get("error_recovery_available", False)),
+            ),
+            svg,
         )
 
 
@@ -1191,6 +1777,7 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
     specs: list[ScreenSpec] = []
     add_splash_screens(specs, gallery_dir)
     add_wizard_screens(specs, gallery_dir)
+    add_c16_2_state_screens(specs, gallery_dir)
 
     metrics = compute_metrics(specs)
     rubric = [score_spec(spec, metric) for spec, metric in zip(specs, metrics)]
@@ -1216,12 +1803,13 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
 
     p_counts = {priority: sum(1 for item in backlog if item["priority"] == priority) for priority in ("P0", "P1", "P2", "P3")}
     summary = {
-        "schema_version": "dadooh-c15-1-6-ai-ui-ux-review.v1",
+        "schema_version": "dadooh-ui-ux-gallery.v2",
         "generated_at_utc": utc_now(),
         "manual_interaction_required": False,
         "operator_keypress_required": False,
         "gallery_generated": True,
         "gallery_screen_count": len(specs),
+        "c16_2_state_gallery_generated": True,
         "visual_metrics_generated": True,
         "journey_analysis_generated": True,
         "transition_inventory_generated": True,
@@ -1269,7 +1857,7 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate C15.1.6 offline UI/UX review artifacts.")
+    parser = argparse.ArgumentParser(description="Generate offline UI/UX review artifacts.")
     parser.add_argument("--out-dir", required=True, help="Evidence run output directory.")
     return parser.parse_args(argv)
 

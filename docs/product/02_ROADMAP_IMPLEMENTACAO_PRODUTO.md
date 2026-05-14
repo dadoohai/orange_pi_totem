@@ -2687,3 +2687,18 @@ C16.2 fica recomendado como incremento util de QA visual offline/runtime, mas
 nao como bloqueador obrigatorio antes de C17. A proxima imagem consolidada deve
 ser C17; C18 ou posterior deve voltar a scheduler/sync/duration/looping do
 player. C12 read-only e C12.4 continuam bloqueados.
+
+Atualizacao C16.2: 2026-05-14. C16.2 transformou o modelo C16.1 em harness
+executavel offline de UX QA e usuario sintetico, sem tocar placa, runtime,
+Wi-Fi, NetworkManager, writer, config real, imagem, kernel, read-only,
+poweroff ou corte seco. Foram estendidos os artefatos de galeria sintetica para
+boot, firstboot, config pendente/ausente, F10, wizard, Wi-Fi negativo, API,
+cache, midia, player, update e suporte. O novo
+`scripts/qa/c16_2_synthetic_user_ux_review.py` gerou 75 simulacoes com cinco
+usuarios sinteticos, pontuou 15 jornadas criticas e 25 telas, produziu backlog,
+gates C17 e decisao. Resultado: `p0_items_count=0`, `p1_items_count=5`,
+`worst_journey=T_estado_sem_cache`, `worst_screen=wifi_list`,
+`ready_for_c17_image=true`, `need_c16_3_runtime_probes_before_c17=false`,
+`need_c16_4_visual_fix_before_c17=false`,
+`blocked_p0_user_journey=false`. Os P1 restantes viraram gates C17 ou gate de
+escala; C18 continua reservado para scheduler/sync/duration/looping do player.

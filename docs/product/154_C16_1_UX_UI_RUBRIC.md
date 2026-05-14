@@ -4,18 +4,16 @@
 
 Each screen or journey is scored from 1 to 5:
 
-| Dimension | What is scored |
-| --- | --- |
-| Task clarity | The user understands why the screen exists |
-| Primary action clarity | The next action is obvious |
-| Text density | The screen is readable without overload |
-| Visual hierarchy | Title, content and actions have clear priority |
-| Progress feedback | Waiting states look intentional |
-| Error recovery | Failure has a safe next step |
-| Language consistency | Words match the rest of the appliance |
-| Perceived trust | The appliance feels reliable, not improvised |
-| Perceived polish | The screen looks like product UI |
-| Confusion risk | Low, medium or high likelihood of misinterpretation |
+- Task clarity: The user understands why the screen exists.
+- Primary action clarity: The next action is obvious.
+- Text density: The screen is readable without overload.
+- Visual hierarchy: Title, content and actions have clear priority.
+- Progress feedback: Waiting states look intentional.
+- Error recovery: Failure has a safe next step.
+- Language consistency: Words match the rest of the appliance.
+- Perceived trust: The appliance feels reliable, not improvised.
+- Perceived polish: The screen looks like product UI.
+- Confusion risk: Low, medium or high likelihood of misinterpretation.
 
 ## Score Meaning
 

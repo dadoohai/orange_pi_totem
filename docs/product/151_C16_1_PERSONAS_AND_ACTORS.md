@@ -5,15 +5,78 @@
 These personas are operational roles, not marketing abstractions. Each one
 exists to make product, QA and engineering discussions concrete.
 
-| Actor | Goal | Knowledge | Anxiety | Expected action | Likely error | Needed feedback | Criticality |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Operador instalador | Put the totem into service on the first visit | Medium | High during black screens or network failure | Power on, press F10, select Wi-Fi, enter environment, finish | Wrong password, weak network, treating wait as freeze | Current state, next action, recoverable error, success | Critical |
-| Operador de suporte | Diagnose operation remotely | High | Medium when status is ambiguous | Check status, guide local operator, decide update/reconfig | Confusing content wait with player failure | Public status, timeline, sanitized categories | High |
-| Espectador passivo | See content, not infrastructure | Low | Low, but technical screens break trust | None | Treating black screen or login as product failure | Content or clean wait message | Medium |
-| Cliente que recebe o equipamento | Receive a finished-feeling product | Low | High if first setup needs support | Watch install or use configured device | Thinking boot/update wait is broken | Clean, consistent visual states | High |
-| Tecnico remoto | Recover and maintain safely | High | High when logs lack categories | Use SSH, updater and sanitized probes | Collecting too much data or using destructive flow | Safe status contracts and guardrails | Critical |
-| Backend/API | Provide playlist/config data | System | None | Respond or fail observably | Timeout without public category | `waiting_for_api`, cache/fallback/error categories | High |
-| Appliance autonomo | Keep the product surface safe | System | None | Boot, show state, play, update, recover | No feedback, TTY/DRM fight, raw technical screen | Public state machine and minimal visual feedback | Critical |
+## Actors
+
+### Operador instalador
+
+- Goal: Put the totem into service on the first visit.
+- Knowledge: Medium.
+- Anxiety: High during black screens or network failure.
+- Expected action: Power on, press F10, select Wi-Fi, enter environment,
+  finish.
+- Likely error: Wrong password, weak network, treating wait as freeze.
+- Needed feedback: Current state, next action, recoverable error, success.
+- Criticality: Critical.
+
+### Operador de suporte
+
+- Goal: Diagnose operation remotely.
+- Knowledge: High.
+- Anxiety: Medium when status is ambiguous.
+- Expected action: Check status, guide local operator, decide update/reconfig.
+- Likely error: Confusing content wait with player failure.
+- Needed feedback: Public status, timeline, sanitized categories.
+- Criticality: High.
+
+### Espectador passivo
+
+- Goal: See content, not infrastructure.
+- Knowledge: Low.
+- Anxiety: Low, but technical screens break trust.
+- Expected action: None.
+- Likely error: Treating black screen or login as product failure.
+- Needed feedback: Content or clean wait message.
+- Criticality: Medium.
+
+### Cliente que recebe o equipamento
+
+- Goal: Receive a finished-feeling product.
+- Knowledge: Low.
+- Anxiety: High if first setup needs support.
+- Expected action: Watch install or use configured device.
+- Likely error: Thinking boot/update wait is broken.
+- Needed feedback: Clean, consistent visual states.
+- Criticality: High.
+
+### Tecnico remoto
+
+- Goal: Recover and maintain safely.
+- Knowledge: High.
+- Anxiety: High when logs lack categories.
+- Expected action: Use SSH, updater and sanitized probes.
+- Likely error: Collecting too much data or using destructive flow.
+- Needed feedback: Safe status contracts and guardrails.
+- Criticality: Critical.
+
+### Backend/API
+
+- Goal: Provide playlist/config data.
+- Knowledge: System.
+- Anxiety: None.
+- Expected action: Respond or fail observably.
+- Likely error: Timeout without public category.
+- Needed feedback: `waiting_for_api`, cache/fallback/error categories.
+- Criticality: High.
+
+### Appliance autonomo
+
+- Goal: Keep the product surface safe.
+- Knowledge: System.
+- Anxiety: None.
+- Expected action: Boot, show state, play, update, recover.
+- Likely error: No feedback, TTY/DRM fight, raw technical screen.
+- Needed feedback: Public state machine and minimal visual feedback.
+- Criticality: Critical.
 
 ## Practical Use
 

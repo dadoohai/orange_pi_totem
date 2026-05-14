@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#101820"/>
+  <rect x="88" y="88" width="1104" height="544" rx="8" fill="#17212b" stroke="#2f3d4a" stroke-width="2"/>
+  <rect x="88" y="88" width="10" height="544" fill="#06b6d4"/>
+  <text x="144" y="170" fill="#eef5ff" font-size="54" font-weight="700" font-family="Inter,DejaVu Sans,Arial">Iniciando player</text>
+  <text x="146" y="226" fill="#a9b8c8" font-size="30" font-family="Inter,DejaVu Sans,Arial">Preparando exibicao do conteudo.</text>
+  <rect x="144" y="258" width="410" height="48" rx="24" fill="#203040" stroke="#06b6d4" stroke-width="2"/>
+  <text x="168" y="291" fill="#eef5ff" font-size="22" font-weight="700" font-family="Inter,DejaVu Sans,Arial">starting player</text>
+  <text x="172" y="320" fill="#d7dde8" font-size="28" font-family="Inter,DejaVu Sans,Arial">O video pode levar alguns segundos.</text><text x="172" y="374" fill="#d7dde8" font-size="28" font-family="Inter,DejaVu Sans,Arial">A tela nao deve ficar preta sem mensagem.</text>
+  <rect x="144" y="572" width="992" height="1" fill="#334455"/>
+  <text x="144" y="612" fill="#eef5ff" font-size="25" font-weight="700" font-family="Inter,DejaVu Sans,Arial">Aguarde</text>
+</svg>

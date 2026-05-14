@@ -10,6 +10,7 @@ p3_items_count=2
 ready_for_c17_image=true
 need_c16_2_before_c17=false
 blocked_p0_user_journey=false
+c16_2_p1_gates_created=true
 ```
 
 No P0 user-journey blocker was found. C17 can start as the next consolidated
@@ -68,3 +69,17 @@ None identified in C16.1.
 - **C17 image build:** consolidate C15.3.2 and C16.1 docs/harness policy.
 - **C18 player timing/sync:** return to scheduler, duration, sync and loop when
   the product/UX system is in place.
+
+## C16.2 Update
+
+C16.2 converted the five P1 items above into explicit gates:
+
+- API/cache/content negatives: mandatory C17 gate.
+- Wi-Fi wrong password/weak Wi-Fi: mandatory C17 gate.
+- Update UX path: mandatory C17 gate with simulation only.
+- HDMI/camera methodology: optional before C17, required before scale.
+- Wizard visual consistency: mandatory C17 gallery/rubric gate.
+
+C16.2 found no P0 and no critical screen below 4. C17 remains recommended as
+the next image round; C16.3 runtime probes and C16.4 visual fixes are not
+mandatory before C17.

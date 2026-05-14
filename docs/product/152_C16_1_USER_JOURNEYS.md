@@ -5,28 +5,207 @@
 This map defines the critical journeys that future UI/UX QA must score. It is
 also the checklist C17 should use when validating the next consolidated image.
 
-| ID | Journey | Success exit | Error exit | Max no-feedback | Expected screen | Recovery | Existing test | Missing test |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A | Primeira energizacao | feedback inicial appears | black screen prolonged | 3s | boot | support checks boot/power | C15 splash validations | HDMI/camera timing |
-| B | Boot sem configuracao | config pending visible | login/terminal visible | 3s | config_pending | press F10/support | C15.2.4 clean-board | camera flicker check |
-| C | Primeira configuracao via F10 | config written/player restored | wizard exits alone | 5s | wizard | back/cancel/retry | C15.2.4 full setup | synthetic journey runner |
-| D | Selecao de Wi-Fi | network selected | list confusing | 10s | wifi_list | R refresh/Esc | C15.1.4 | offline visual regression |
-| E | Senha Wi-Fi errada | user can retry | technical failure | 5s | wifi_password_error | retry/back | partial | negative board test |
-| F | Wi-Fi fraco/instavel | signal risk visible | unexplained drop | 10s | wifi_list | choose stronger network | C15.1.4 labels | weak-signal scenario |
-| G | Backend/API inacessivel | wait/error public state | black wait | 5s | waiting_for_api | cache/retry/error | C15.3.2 bridge | API outage simulation |
-| H | Configuracao concluida | player starts | no confirmation | 3s | saving/player | error if writer fails | C15.2.4 | camera timing |
-| I | Espera por conteudo/cache/API | loading_content visible | black screen | 5s | loading_content | retry/error_no_content | C15.3.2 | first-frame HDMI validation |
-| J | Player normal | content plays | loop/black failure | 10s | playing | status/restart | C15.2.4/C15.3.2 | C18 timing/sync audit |
-| K | Midia indisponivel | friendly error/fallback | black screen | 5s | error_no_content | support/retry | partial status bridge | missing-media scenario |
-| L | Reabrir configuracao | wizard opens/restores player | echo/config race | 3s | open_settings/setup | cancel restores | C15.1.3/C15.2.4 | regression battery |
-| M | Update remoto | update status safe | unknown update state | 10s | update_checking/applying | rollback/status | C14 updater | update UX scenario |
-| N | Falha de update | old version preserved | user thinks broken | 5s | update_failed | retry/support | C14 rollback scripts | failure UX test |
-| O | Reboot controlado | boot to player/config | long black screen | 3s | boot/preparing/player | support if no return | C15.1.3 | C17 clean reboot pass |
-| P | Recuperacao pos-falha | safe action clear | physical cut confused with test | 5s | support/maintenance | sanitized probes | C15.2.3 | runbook UX validation |
-| Q | Suporte remoto | public status sufficient | secrets/raw logs | 10s | maintenance/support | temporary probes | C15/C14 probes | status schema audit |
-| R | Estado sem internet | cache or clear error | black screen | 5s | waiting_for_api/offline | reconnect/configure | offline-first tests | board offline UX |
-| S | Estado com cache existente | cached content or wait shown | API/cache ambiguity | 5s | loading_content/playing | use cache | player cache tests | visual cache scenario |
-| T | Estado sem cache | no-content error | indefinite black | 5s | error_no_content | network/API support | partial | no-cache negative test |
+## Journey Catalog
+
+### A - Primeira energizacao
+
+- Success exit: feedback inicial appears.
+- Error exit: black screen prolonged.
+- Max no-feedback: 3s.
+- Expected screen: boot.
+- Recovery: support checks boot/power.
+- Existing test: C15 splash validations.
+- Missing test: HDMI/camera timing.
+
+### B - Boot sem configuracao
+
+- Success exit: config pending visible.
+- Error exit: login/terminal visible.
+- Max no-feedback: 3s.
+- Expected screen: config_pending.
+- Recovery: press F10/support.
+- Existing test: C15.2.4 clean-board.
+- Missing test: camera flicker check.
+
+### C - Primeira configuracao via F10
+
+- Success exit: config written/player restored.
+- Error exit: wizard exits alone.
+- Max no-feedback: 5s.
+- Expected screen: wizard.
+- Recovery: back/cancel/retry.
+- Existing test: C15.2.4 full setup.
+- Missing test: synthetic journey runner.
+
+### D - Selecao de Wi-Fi
+
+- Success exit: network selected.
+- Error exit: list confusing.
+- Max no-feedback: 10s.
+- Expected screen: wifi_list.
+- Recovery: R refresh/Esc.
+- Existing test: C15.1.4.
+- Missing test: offline visual regression.
+
+### E - Senha Wi-Fi errada
+
+- Success exit: user can retry.
+- Error exit: technical failure.
+- Max no-feedback: 5s.
+- Expected screen: wifi_password_error.
+- Recovery: retry/back.
+- Existing test: partial.
+- Missing test: negative board test.
+
+### F - Wi-Fi fraco/instavel
+
+- Success exit: signal risk visible.
+- Error exit: unexplained drop.
+- Max no-feedback: 10s.
+- Expected screen: wifi_list.
+- Recovery: choose stronger network.
+- Existing test: C15.1.4 labels.
+- Missing test: weak-signal scenario.
+
+### G - Backend/API inacessivel
+
+- Success exit: wait/error public state.
+- Error exit: black wait.
+- Max no-feedback: 5s.
+- Expected screen: waiting_for_api.
+- Recovery: cache/retry/error.
+- Existing test: C15.3.2 bridge.
+- Missing test: API outage simulation.
+
+### H - Configuracao concluida
+
+- Success exit: player starts.
+- Error exit: no confirmation.
+- Max no-feedback: 3s.
+- Expected screen: saving/player.
+- Recovery: error if writer fails.
+- Existing test: C15.2.4.
+- Missing test: camera timing.
+
+### I - Espera por conteudo/cache/API
+
+- Success exit: loading_content visible.
+- Error exit: black screen.
+- Max no-feedback: 5s.
+- Expected screen: loading_content.
+- Recovery: retry/error_no_content.
+- Existing test: C15.3.2.
+- Missing test: first-frame HDMI validation.
+
+### J - Player normal
+
+- Success exit: content plays.
+- Error exit: loop/black failure.
+- Max no-feedback: 10s.
+- Expected screen: playing.
+- Recovery: status/restart.
+- Existing test: C15.2.4/C15.3.2.
+- Missing test: C18 timing/sync audit.
+
+### K - Midia indisponivel
+
+- Success exit: friendly error/fallback.
+- Error exit: black screen.
+- Max no-feedback: 5s.
+- Expected screen: error_no_content.
+- Recovery: support/retry.
+- Existing test: partial status bridge.
+- Missing test: missing-media scenario.
+
+### L - Reabrir configuracao
+
+- Success exit: wizard opens/restores player.
+- Error exit: echo/config race.
+- Max no-feedback: 3s.
+- Expected screen: open_settings/setup.
+- Recovery: cancel restores.
+- Existing test: C15.1.3/C15.2.4.
+- Missing test: regression battery.
+
+### M - Update remoto
+
+- Success exit: update status safe.
+- Error exit: unknown update state.
+- Max no-feedback: 10s.
+- Expected screen: update_checking/applying.
+- Recovery: rollback/status.
+- Existing test: C14 updater.
+- Missing test: update UX scenario.
+
+### N - Falha de update
+
+- Success exit: old version preserved.
+- Error exit: user thinks broken.
+- Max no-feedback: 5s.
+- Expected screen: update_failed.
+- Recovery: retry/support.
+- Existing test: C14 rollback scripts.
+- Missing test: failure UX test.
+
+### O - Reboot controlado
+
+- Success exit: boot to player/config.
+- Error exit: long black screen.
+- Max no-feedback: 3s.
+- Expected screen: boot/preparing/player.
+- Recovery: support if no return.
+- Existing test: C15.1.3.
+- Missing test: C17 clean reboot pass.
+
+### P - Recuperacao pos-falha
+
+- Success exit: safe action clear.
+- Error exit: physical cut confused with test.
+- Max no-feedback: 5s.
+- Expected screen: support/maintenance.
+- Recovery: sanitized probes.
+- Existing test: C15.2.3.
+- Missing test: runbook UX validation.
+
+### Q - Suporte remoto
+
+- Success exit: public status sufficient.
+- Error exit: secrets/raw logs.
+- Max no-feedback: 10s.
+- Expected screen: maintenance/support.
+- Recovery: temporary probes.
+- Existing test: C15/C14 probes.
+- Missing test: status schema audit.
+
+### R - Estado sem internet
+
+- Success exit: cache or clear error.
+- Error exit: black screen.
+- Max no-feedback: 5s.
+- Expected screen: waiting_for_api/offline.
+- Recovery: reconnect/configure.
+- Existing test: offline-first tests.
+- Missing test: board offline UX.
+
+### S - Estado com cache existente
+
+- Success exit: cached content or wait shown.
+- Error exit: API/cache ambiguity.
+- Max no-feedback: 5s.
+- Expected screen: loading_content/playing.
+- Recovery: use cache.
+- Existing test: player cache tests.
+- Missing test: visual cache scenario.
+
+### T - Estado sem cache
+
+- Success exit: no-content error.
+- Error exit: indefinite black.
+- Max no-feedback: 5s.
+- Expected screen: error_no_content.
+- Recovery: network/API support.
+- Existing test: partial.
+- Missing test: no-cache negative test.
 
 ## Rules
 

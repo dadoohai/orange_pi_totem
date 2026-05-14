@@ -12,6 +12,7 @@ c12_readonly_blocked=true
 c12_4_blocked=true
 ready_for_c17_image=true
 need_c16_2_before_c17=false
+c16_2_executable_harness_created=true
 ```
 
 C16.1 changes the operating model for product, UX, visual QA and engineering
@@ -97,3 +98,12 @@ C16.1 found no P0 product/UX blocker. Remaining P1 work is accepted as either
 C17 validation criteria or follow-up C16.2/C16.3 harness improvements. C17 can
 start as the next consolidated image round, but it must use the C16.1 journeys,
 screen intent map and rubric as validation gates.
+
+## C16.2 Pointer
+
+C16.2 implemented the executable synthetic-user UX review harness and converted
+the inherited P1 items into C17/C18/scale gates. See:
+
+- `docs/product/158_C16_2_C17_VALIDATION_GATES.md`
+- `docs/product/159_C16_2_UX_PDCA_PROCESS.md`
+- `docs/product/160_C16_2_SYNTHETIC_USER_UX_REVIEW.md`

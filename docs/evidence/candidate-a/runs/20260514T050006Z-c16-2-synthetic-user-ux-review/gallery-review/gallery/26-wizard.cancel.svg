@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280" data-display-rotation-deg="90" data-layout-mode="portrait" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="720" height="1280" fill="#0f172a"/>
+  <rect x="0" y="0" width="720" height="12" fill="#06b6d4"/>
+  <rect x="0" y="12" width="720" height="148" fill="#111827"/>
+  <text x="56" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <text x="210" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">Configuracao do Totem</text>
+  <text x="56" y="162" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">Layout retrato para direita</text>
+  <rect x="48" y="96" width="116" height="44" rx="8" fill="#1f2937" stroke="#334155"/><text x="61" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">1. Tela</text>
+  <rect x="172" y="96" width="116" height="44" rx="8" fill="#1f2937" stroke="#334155"/><text x="185" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">2. Conexao</text>
+  <rect x="296" y="96" width="116" height="44" rx="8" fill="#1f2937" stroke="#334155"/><text x="309" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">3. Ambient</text>
+  <rect x="420" y="96" width="116" height="44" rx="8" fill="#ecfeff" stroke="#0891b2"/><text x="433" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#0f172a">4. Revisao</text>
+  <rect x="544" y="96" width="116" height="44" rx="8" fill="#1f2937" stroke="#334155"/><text x="557" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">5. Conclui</text>
+  <text x="56" y="220" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">Cancelado</text>
+  <text x="58" y="258" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" fill="#cbd5e1"><tspan x="58" dy="0">Nada foi salvo.</tspan></text>
+
+
+
+  <rect x="56" y="740" width="608" height="300" rx="8" fill="#111827" stroke="#334155"/>
+  <text x="88" y="780" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Nesta etapa</text>
+  <circle cx="92" cy="792" r="5" fill="#06b6d4"/><text x="112" y="798" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Config mantida.</tspan></text> <circle cx="92" cy="846" r="5" fill="#06b6d4"/><text x="112" y="852" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Player volta ao final.</tspan></text> <circle cx="92" cy="900" r="5" fill="#06b6d4"/><text x="112" y="906" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Pode tentar de novo.</tspan></text>
+
+
+  <rect x="0" y="1210" width="720" height="70" fill="#0b1120"/><text x="56" y="1252" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#dbeafe">Enter sai</text>
+</svg>
