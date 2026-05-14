@@ -40,6 +40,19 @@ SUBTITLE_LIMIT = 80
 BODY_ITEM_LIMIT = 3
 FOOTER_LIMIT = 90
 NORMAL_TEXT_LIMIT = 420
+C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
+VISUAL = {
+    "bg": "#0b1220",
+    "surface": "#111827",
+    "surface_raised": "#151f30",
+    "surface_active": "#13263a",
+    "footer": "#07111f",
+    "border": "#2f3d4a",
+    "border_muted": "#334155",
+    "text": "#f8fafc",
+    "text_muted": "#cbd5e1",
+    "text_dim": "#94a3b8",
+}
 
 SPLASH_ORDER = (
     "boot",
@@ -183,27 +196,32 @@ def simple_state_svg(
     while len(safe_items) < 5:
         safe_items.append("")
     item_rows = []
-    y = 320
+    y = 330
     for item in safe_items:
         if not item:
             y += 54
             continue
         item_rows.append(
-            f'<text x="172" y="{y}" fill="#d7dde8" '
-            f'font-size="28" font-family="Inter,DejaVu Sans,Arial">{svg_text(item)}</text>'
+            f'<rect x="146" y="{y - 18}" width="10" height="10" rx="3" fill="{accent}"/>'
+            f'<text x="172" y="{y}" fill="{VISUAL["text_muted"]}" '
+            f'font-size="27" font-family="Inter,DejaVu Sans,Arial">{svg_text(item)}</text>'
         )
         y += 54
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-  <rect width="{width}" height="{height}" fill="#101820"/>
-  <rect x="88" y="88" width="1104" height="544" rx="8" fill="#17212b" stroke="#2f3d4a" stroke-width="2"/>
-  <rect x="88" y="88" width="10" height="544" fill="{accent}"/>
-  <text x="144" y="170" fill="#eef5ff" font-size="54" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(title)}</text>
-  <text x="146" y="226" fill="#a9b8c8" font-size="30" font-family="Inter,DejaVu Sans,Arial">{svg_text(subtitle)}</text>
-  <rect x="144" y="258" width="410" height="48" rx="24" fill="#203040" stroke="{accent}" stroke-width="2"/>
-  <text x="168" y="291" fill="#eef5ff" font-size="22" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(status)}</text>
+  <rect width="{width}" height="{height}" fill="{VISUAL["bg"]}"/>
+  <rect x="0" y="0" width="{width}" height="10" fill="{accent}"/>
+  <rect x="0" y="634" width="{width}" height="86" fill="{VISUAL["footer"]}"/>
+  <rect x="88" y="88" width="1104" height="500" rx="8" fill="{VISUAL["surface"]}" stroke="{VISUAL["border"]}" stroke-width="2"/>
+  <rect x="88" y="88" width="10" height="500" rx="4" fill="{accent}"/>
+  <rect x="144" y="132" width="142" height="44" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}" stroke-width="2"/>
+  <text x="168" y="160" fill="{VISUAL["text"]}" font-size="23" font-weight="700" font-family="Inter,DejaVu Sans,Arial">Dadooh</text>
+  <text x="144" y="236" fill="{VISUAL["text"]}" font-size="54" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(title)}</text>
+  <text x="146" y="288" fill="{VISUAL["text_muted"]}" font-size="29" font-family="Inter,DejaVu Sans,Arial">{svg_text(subtitle)}</text>
+  <rect x="866" y="128" width="270" height="48" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}" stroke-width="2"/>
+  <text x="890" y="161" fill="{VISUAL["text"]}" font-size="21" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(status)}</text>
   {''.join(item_rows)}
-  <rect x="144" y="572" width="992" height="1" fill="#334455"/>
-  <text x="144" y="612" fill="#eef5ff" font-size="25" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(action)}</text>
+  <rect x="144" y="646" width="992" height="46" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}" stroke-width="2"/>
+  <text x="168" y="677" fill="{VISUAL["text"]}" font-size="24" font-weight="700" font-family="Inter,DejaVu Sans,Arial">{svg_text(action)}</text>
 </svg>"""
 
 
@@ -1804,6 +1822,8 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
     p_counts = {priority: sum(1 for item in backlog if item["priority"] == priority) for priority in ("P0", "P1", "P2", "P3")}
     summary = {
         "schema_version": "dadooh-ui-ux-gallery.v2",
+        "visual_design_system_version": C17_2_VISUAL_SYSTEM_VERSION,
+        "visual_polish_pass_applied": True,
         "generated_at_utc": utc_now(),
         "manual_interaction_required": False,
         "operator_keypress_required": False,

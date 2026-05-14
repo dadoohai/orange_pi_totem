@@ -2718,3 +2718,17 @@ status publico seguro, sem fault injection destrutivo. Resultado:
 `ready_for_batch_flash=true`, `ready_for_dispatch=true`,
 `ready_for_c18_player_audit=true`. HDMI/camera continua obrigatorio antes de
 escala; C12 read-only e C12.4/corte seco continuam bloqueados.
+
+Atualizacao C17.2: 2026-05-14. C17.1 foi aceito como validacao funcional de
+imagem e gates C16.2, mas a frente grafica/UX percebida continuou aberta.
+C17.2 criou o mini design system `c17.2-appliance-ui.v1` e aplicou a primeira
+passada explicita de polish visual em wizard SVG, splash e status publico, sem
+tocar placa, writer, Wi-Fi real, NetworkManager, config real, imagem, kernel,
+read-only, poweroff, corte seco ou C18. A galeria SVG foi regenerada com 53
+telas; PNG permaneceu indisponivel sem novas dependencias. Resultado da
+rubrica C16.2 pos-mudanca: `worst_screen=wifi_list`,
+`worst_screen_score=4.3`, `critical_screens_below_4=false` e
+`visual_scores_regressed=false`. Decisao:
+`passed_visual_polish=true`, `ready_for_c17_3_image_rebuild=true` e
+`ready_for_c18_player_audit=false`. C18 segue aguardando ate fechar a linha
+visual C17.2/C17.3.

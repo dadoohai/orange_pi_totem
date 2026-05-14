@@ -1,0 +1,79 @@
+[
+  {
+    "anxiety": "Alta quando a tela fica preta ou a rede falha.",
+    "criticality": "critica",
+    "expected_action": "Ligar, apertar F10, selecionar Wi-Fi, preencher ambiente e concluir.",
+    "goal": "Colocar o totem em funcionamento na primeira visita.",
+    "likely_error": "Digitar senha errada, escolher rede fraca, interpretar espera como travamento.",
+    "name": "Operador instalador",
+    "needed_feedback": "Estado atual, proxima acao, erro recuperavel e confirmacao de sucesso.",
+    "persona_id": "installer",
+    "technical_knowledge": "medio"
+  },
+  {
+    "anxiety": "Media quando nao ha sinal publico de estado.",
+    "criticality": "alta",
+    "expected_action": "Consultar status, orientar operador local, decidir update ou reconfiguracao.",
+    "goal": "Diagnosticar remotamente se o aparelho esta operando.",
+    "likely_error": "Confundir espera por conteudo com falha de player.",
+    "name": "Operador de suporte",
+    "needed_feedback": "Status publico seguro, timeline, categorias de erro e evidencia sanitizada.",
+    "persona_id": "support_operator",
+    "technical_knowledge": "alto"
+  },
+  {
+    "anxiety": "Baixa, mas qualquer tela tecnica quebra confianca.",
+    "criticality": "media",
+    "expected_action": "Nenhuma.",
+    "goal": "Ver conteudo sem perceber a infraestrutura.",
+    "likely_error": "Interpretar tela preta ou terminal como defeito do produto.",
+    "name": "Espectador passivo",
+    "needed_feedback": "Conteudo ou mensagem curta de espera, nunca shell/login/log tecnico.",
+    "persona_id": "spectator",
+    "technical_knowledge": "baixo"
+  },
+  {
+    "anxiety": "Alta se precisar pedir ajuda na primeira configuracao.",
+    "criticality": "alta",
+    "expected_action": "Acompanhar instalador ou ligar o aparelho ja configurado.",
+    "goal": "Receber um aparelho que pareca produto acabado.",
+    "likely_error": "Achar que o totem travou durante boot, update ou espera por midia.",
+    "name": "Cliente que recebe o equipamento",
+    "needed_feedback": "Sinais visuais limpos, consistentes e confiaveis.",
+    "persona_id": "customer_receiver",
+    "technical_knowledge": "baixo"
+  },
+  {
+    "anxiety": "Alta quando logs/status nao distinguem rede, API, cache e player.",
+    "criticality": "critica",
+    "expected_action": "Usar SSH, updater e probes sanitizados.",
+    "goal": "Recuperar e manter o appliance sem expor dados privados.",
+    "likely_error": "Coletar evidencias demais ou acionar fluxo destrutivo sem necessidade.",
+    "name": "Tecnico remoto",
+    "needed_feedback": "Contratos de status seguros, probes pequenos e guardrails claros.",
+    "persona_id": "remote_technician",
+    "technical_knowledge": "alto"
+  },
+  {
+    "anxiety": "Nenhuma, mas indisponibilidade precisa ser comunicada ao usuario.",
+    "criticality": "alta",
+    "expected_action": "Responder ou falhar de forma observavel.",
+    "goal": "Fornecer playlist/configuracao operacional ao player.",
+    "likely_error": "Timeout sem categoria publica.",
+    "name": "Backend/API",
+    "needed_feedback": "Estado waiting_for_api, error_no_content ou fallback cacheado.",
+    "persona_id": "backend_api",
+    "technical_knowledge": "sistema"
+  },
+  {
+    "anxiety": "Nenhuma; deve operar sem humano.",
+    "criticality": "critica",
+    "expected_action": "Bootar, mostrar estado, tocar conteudo, atualizar, recuperar.",
+    "goal": "Manter uma superficie visual segura e recuperavel.",
+    "likely_error": "Ficar sem feedback, disputar DRM/TTY, expor tela tecnica.",
+    "name": "Dispositivo/appliance como agente autonomo",
+    "needed_feedback": "Maquina de estados publica, visual minimo e logs sanitizados.",
+    "persona_id": "appliance_agent",
+    "technical_knowledge": "sistema"
+  }
+]

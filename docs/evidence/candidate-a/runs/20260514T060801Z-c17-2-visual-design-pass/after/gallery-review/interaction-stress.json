@@ -1,0 +1,29 @@
+{
+  "backspace_semantics_ok": true,
+  "ctrl_u_semantics_ok": true,
+  "f2_v_toggle_semantics_covered": true,
+  "input_stabilizes_under_500ms": "simulated",
+  "max_render_rate_limited": true,
+  "password_logged": false,
+  "render_count_for_20_backspaces": 2,
+  "render_count_for_20_fast_chars": 2,
+  "repeated_backspace_coalesced": true,
+  "splash_modes_previewed": true,
+  "ssid_logged": false,
+  "wifi_pagination_18_page_1": {
+    "count": 8,
+    "end": 8,
+    "start": 1
+  },
+  "wifi_pagination_18_page_2": {
+    "count": 8,
+    "end": 16,
+    "start": 9
+  },
+  "wifi_pagination_18_page_3": {
+    "count": 2,
+    "end": 18,
+    "start": 17
+  },
+  "wifi_refresh_selection_preserved": true
+}

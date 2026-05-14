@@ -117,6 +117,19 @@ HDMI/camera capture remains required before scale to prove perception-level
 black-frame, flicker and transition quality. C12 read-only and C12.4 power-cut
 testing remain blocked and were not touched in C17.1.
 
+## C17.2 Follow-Up
+
+C17.2 accepted C17.1 as functional image/gate validation but kept the perceived
+UX line open. It created a mini visual design system and applied the first
+explicit visual polish pass to wizard, splash and public status SVGs without
+opening C18 or changing player timing/sync/duration/loop behavior.
+
+```text
+c17_2_status=passed
+ready_for_c17_3_image_rebuild=true
+ready_for_c18_player_audit=false
+```
+
 Evidence:
 
 ```text

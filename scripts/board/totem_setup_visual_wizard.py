@@ -79,6 +79,25 @@ CANVAS_HEIGHT = LANDSCAPE_CANVAS_HEIGHT
 BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
 STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
+C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
+VISUAL = {
+    "bg": "#0b1220",
+    "surface": "#111827",
+    "surface_raised": "#151d2a",
+    "surface_active": "#13263a",
+    "surface_input": "#f8fafc",
+    "border": "#2f3d4a",
+    "border_muted": "#334155",
+    "text": "#f8fafc",
+    "text_muted": "#cbd5e1",
+    "text_dim": "#94a3b8",
+    "text_dark": "#111827",
+    "accent": "#06b6d4",
+    "accent_strong": "#22d3ee",
+    "success": "#22c55e",
+    "warning": "#f59e0b",
+    "footer": "#07111f",
+}
 
 CANDIDATE_FILENAME = "config.candidate.json"
 STATUS_FILENAME = "setup-status.json"
@@ -307,14 +326,20 @@ def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
     y = 96
     for index, step in enumerate(STEPS):
         active = index == active_step
-        fill = "#ecfeff" if active else "#1f2937"
-        stroke = "#0891b2" if active else "#334155"
-        text_fill = "#0f172a" if active else "#cbd5e1"
+        fill = VISUAL["surface_active"] if active else "#172033"
+        stroke = VISUAL["accent_strong"] if active else VISUAL["border_muted"]
+        text_fill = VISUAL["text"] if active else VISUAL["text_muted"]
         width = 116 if layout.portrait else (180 if index in {0, 4} else 176)
         label = step if not layout.portrait else step[:7]
         font_size = 14 if layout.portrait else 17
+        rail = (
+            f'<rect x="{x}" y="{y}" width="5" height="44" rx="3" fill="{VISUAL["accent_strong"]}"/>'
+            if active
+            else ""
+        )
         parts.append(
             f'<rect x="{x}" y="{y}" width="{width}" height="44" rx="8" fill="{fill}" stroke="{stroke}"/>'
+            f"{rail}"
             f'<text x="{x + 13}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" '
             f'font-size="{font_size}" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(label)}</text>'
         )
@@ -333,13 +358,15 @@ def option_cards(options: list[Option], selected_index: int, *, layout_rotation_
     description_width = 47 if layout.portrait else 54
     for index, option in enumerate(options[:5]):
         active = index == selected_index
-        fill = "#f8fafc" if active else "#182130"
-        stroke = "#06b6d4" if active else "#334155"
-        title_fill = "#111827" if active else "#f8fafc"
-        body_fill = "#334155" if active else "#cbd5e1"
-        marker_fill = "#0891b2" if active else "#475569"
+        fill = VISUAL["surface_active"] if active else VISUAL["surface"]
+        stroke = VISUAL["accent_strong"] if active else VISUAL["border"]
+        title_fill = VISUAL["text"] if active else "#eef5ff"
+        body_fill = VISUAL["text_muted"] if active else "#aebbd0"
+        marker_fill = VISUAL["accent"] if active else "#475569"
+        rail_fill = VISUAL["accent_strong"] if active else "#263244"
         parts.append(
             f'<rect x="{x}" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
+            f'<rect x="{x}" y="{y}" width="8" height="{card_height}" rx="4" fill="{rail_fill}"/>'
             f'<circle cx="{x + 36}" cy="{y + 48}" r="18" fill="{marker_fill}"/>'
             f'<text x="{x + 30}" y="{y + 55}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" '
             f'font-weight="700" fill="#ffffff">{escape_text(">" if active else "")}</text>'
@@ -369,13 +396,14 @@ def info_panel(
     bullet_parts = []
     for item in items[:MAX_PANEL_ITEMS]:
         bullet_parts.append(
-            f'<circle cx="{panel_x + 36}" cy="{y - 6}" r="5" fill="#06b6d4"/>'
-            f'{svg_lines(item, x=panel_x + 56, y=y, size=17, fill="#cbd5e1", width=text_width, line_gap=24, max_lines=2)}'
+            f'<rect x="{panel_x + 31}" y="{y - 13}" width="10" height="10" rx="3" fill="{VISUAL["accent_strong"]}"/>'
+            f'{svg_lines(item, x=panel_x + 56, y=y, size=17, fill=VISUAL["text_muted"], width=text_width, line_gap=24, max_lines=2)}'
         )
         y += 54 if layout.portrait else 66
     return f"""
-  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" rx="8" fill="#111827" stroke="#334155"/>
-  <text x="{panel_x + 32}" y="{panel_y + 40}" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
+  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" rx="8" fill="{VISUAL["surface_raised"]}" stroke="{VISUAL["border"]}"/>
+  <rect x="{panel_x}" y="{panel_y}" width="7" height="{panel_height}" rx="4" fill="{VISUAL["accent"]}"/>
+  <text x="{panel_x + 32}" y="{panel_y + 40}" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
   {' '.join(bullet_parts)}
 """
 
@@ -398,7 +426,8 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
         weight=700,
     )
     return f"""
-  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="142" rx="8" fill="#f8fafc" stroke="#06b6d4" stroke-width="2"/>
+  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="142" rx="8" fill="{VISUAL["surface_input"]}" stroke="{VISUAL["accent_strong"]}" stroke-width="2"/>
+  <rect x="{panel_x}" y="{panel_y}" width="8" height="142" rx="4" fill="{VISUAL["accent"]}"/>
   <text x="{panel_x + 36}" y="{panel_y + 46}" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#0f172a">{escape_text(label)}</text>
   {value_svg}
   <text x="{panel_x + 36}" y="{panel_y + 174}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">{escape_text(note)}</text>
@@ -407,11 +436,34 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
 
 def footer_text(text: str, *, layout_rotation_deg: int = 0) -> str:
     layout = screen_layout(layout_rotation_deg)
-    return (
-        f'<rect x="0" y="{layout.height - 70}" width="{layout.width}" height="70" fill="#0b1120"/>'
-        f'<text x="{layout.margin_x}" y="{layout.height - 28}" font-family="Arial, DejaVu Sans, sans-serif" '
-        f'font-size="20" fill="#dbeafe">{escape_text(text)}</text>'
+    footer_h = 82
+    footer_y = layout.height - footer_h
+    actions = [part.strip() for part in str(text or "").split("|") if part.strip()]
+    primary = actions[0] if actions else str(text or "")
+    secondary = " | ".join(actions[1:])
+    primary_w = min(layout.width - (layout.margin_x * 2), max(158, len(primary) * 12 + 48))
+    secondary_x = layout.margin_x + primary_w + 22
+    secondary_chars = max(10, int((layout.width - secondary_x - layout.margin_x) / 9))
+    secondary_svg = (
+        svg_lines(
+            secondary,
+            x=secondary_x,
+            y=footer_y + 50,
+            size=17,
+            fill=VISUAL["text_muted"],
+            width=secondary_chars,
+            line_gap=21,
+            max_lines=1,
+        )
+        if secondary and secondary_x < layout.width - layout.margin_x
+        else ""
     )
+    return f"""
+  <rect x="0" y="{footer_y}" width="{layout.width}" height="{footer_h}" fill="{VISUAL["footer"]}"/>
+  <rect x="{layout.margin_x}" y="{footer_y + 19}" width="{primary_w}" height="44" rx="8" fill="{VISUAL["surface_active"]}" stroke="{VISUAL["accent"]}"/>
+  <text x="{layout.margin_x + 24}" y="{footer_y + 48}" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="{VISUAL["text"]}">{escape_text(primary)}</text>
+  {secondary_svg}
+"""
 
 
 def rect_svg(x: int, y: int, width: int, height: int, fill: str, *, rx: int = 0) -> str:
@@ -556,15 +608,16 @@ def build_screen_svg(
     )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{layout.width}" height="{layout.height}" viewBox="0 0 {layout.width} {layout.height}" data-display-rotation-deg="{layout.rotation_deg}" data-layout-mode="{layout.mode}" role="img" aria-label="Dadooh setup visual wizard">
-  <rect width="{layout.width}" height="{layout.height}" fill="#0f172a"/>
+  <rect width="{layout.width}" height="{layout.height}" fill="{VISUAL["bg"]}"/>
   <rect x="0" y="0" width="{layout.width}" height="12" fill="{accent}"/>
-  <rect x="0" y="12" width="{layout.width}" height="148" fill="#111827"/>
-  <text x="{layout.margin_x}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">{BRAND}</text>
-  <text x="{layout.margin_x + 154}" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">{TITLE}</text>
-  <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">{escape_text(layout.note)}</text>
+  <rect x="0" y="12" width="{layout.width}" height="148" fill="{VISUAL["surface"]}"/>
+  <rect x="{layout.margin_x}" y="32" width="132" height="42" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}"/>
+  <text x="{layout.margin_x + 22}" y="60" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" font-weight="700" fill="{VISUAL["text"]}">{BRAND}</text>
+  <text x="{layout.margin_x + 154}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="{VISUAL["text_dim"]}">{TITLE}</text>
+  <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="{VISUAL["text_dim"]}">{escape_text(layout.note)}</text>
   {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg)}
-  <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">{escape_text(title)}</text>
-  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=21, fill="#cbd5e1", width=subtitle_width, line_gap=28, max_lines=1)}
+  <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
+  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=21, fill=VISUAL["text_muted"], width=subtitle_width, line_gap=28, max_lines=1)}
   {options_svg}
   {field_svg}
   {panel_svg}

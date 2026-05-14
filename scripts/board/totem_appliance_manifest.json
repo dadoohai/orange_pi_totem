@@ -18,6 +18,20 @@
     "c12_readonly_blocked": true,
     "c12_4_blocked": true
   },
+  "visual_design_system": {
+    "version": "c17.2-appliance-ui.v1",
+    "scope": [
+      "wizard_svg",
+      "splash",
+      "public_status_svg",
+      "qa_gallery"
+    ],
+    "external_assets_required": false,
+    "new_fonts_required": false,
+    "new_dependencies_required": false,
+    "ready_for_c17_3_image_rebuild": true,
+    "ready_for_c18_player_audit": false
+  },
   "orange_pi_totem": {
     "repository": "dadoohai/orange_pi_totem",
     "branch": "foundation-v0.1",

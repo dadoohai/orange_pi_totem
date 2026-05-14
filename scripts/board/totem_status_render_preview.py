@@ -84,6 +84,20 @@ STATE_PRESETS = {
     },
 }
 
+C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
+VISUAL = {
+    "bg": "#0b1220",
+    "surface": "#111827",
+    "surface_raised": "#151f30",
+    "surface_active": "#13263a",
+    "footer": "#07111f",
+    "border": "#2f3d4a",
+    "border_muted": "#334155",
+    "text": "#f8fafc",
+    "text_muted": "#cbd5e1",
+    "text_dim": "#94a3b8",
+}
+
 SENSITIVE_PATTERNS = (
     re.compile(r"https?://\S+", re.IGNORECASE),
     re.compile(r"\b(api[_-]?key|token|secret|password|senha)\b\s*[:=]\s*\S+", re.IGNORECASE),
@@ -183,33 +197,36 @@ def build_svg(
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {canvas_width} {canvas_height}" role="img" aria-label="Dadooh status preview">
-  <rect width="{canvas_width}" height="{canvas_height}" fill="#101318"/>
+  <rect width="{canvas_width}" height="{canvas_height}" fill="{VISUAL["bg"]}"/>
   <rect x="0" y="0" width="{canvas_width}" height="10" fill="{accent}"/>
-  <rect x="0" y="10" width="{canvas_width}" height="{canvas_height - 10}" fill="#101318"/>
-  <path d="M0 {canvas_height - 118} L{canvas_width} {canvas_height - 196} L{canvas_width} {canvas_height} L0 {canvas_height} Z" fill="#151923"/>
-  <text x="{margin_x}" y="{brand_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="700" fill="#f8fafc">Dadooh</text>
-  <text x="{margin_x}" y="{brand_y + 34}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#94a3b8">{html.escape(device_label)}</text>
+  <rect x="0" y="10" width="{canvas_width}" height="{canvas_height - 10}" fill="{VISUAL["bg"]}"/>
+  <rect x="0" y="{canvas_height - 86}" width="{canvas_width}" height="86" fill="{VISUAL["footer"]}"/>
+  <rect x="{margin_x}" y="38" width="132" height="44" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}"/>
+  <text x="{margin_x + 22}" y="{brand_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="28" font-weight="700" fill="{VISUAL["text"]}">Dadooh</text>
+  <text x="{margin_x + 160}" y="{brand_y - 2}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{html.escape(device_label)}</text>
 
-  <rect x="{main_x}" y="{main_y}" width="{main_width}" height="{main_height}" rx="8" fill="#171b24" stroke="#2b3240"/>
+  <rect x="{main_x}" y="{main_y}" width="{main_width}" height="{main_height}" rx="8" fill="{VISUAL["surface"]}" stroke="{VISUAL["border"]}"/>
   <rect x="{main_x}" y="{main_y}" width="8" height="{main_height}" rx="4" fill="{accent}"/>
   <text x="{main_x + 40}" y="{main_y + 78}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{accent}">STATUS DO TOTEM</text>
-  {svg_text_lines(preset["title"], x=main_x + 40, y=main_y + 154, size=56, fill="#f8fafc", max_chars=22, line_gap=60, weight=700)}
-  {svg_text_lines(message, x=main_x + 40, y=main_y + 226, size=30, fill="#d8dee9", max_chars=37, line_gap=40)}
-  {svg_text_lines(action_hint, x=main_x + 40, y=main_y + 302, size=24, fill="#b6c2d2", max_chars=48, line_gap=34)}
-  {badge(status, x=main_x + 40, y=main_y + 348, width=360, fill="#111827", stroke="#374151", text_fill="#f8fafc")}
-  <text x="{main_x + 40}" y="{main_y + 430}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="700" fill="#94a3b8">CÓDIGO PÚBLICO</text>
+  {svg_text_lines(preset["title"], x=main_x + 40, y=main_y + 154, size=56, fill=VISUAL["text"], max_chars=22, line_gap=60, weight=700)}
+  {svg_text_lines(message, x=main_x + 40, y=main_y + 226, size=30, fill=VISUAL["text_muted"], max_chars=37, line_gap=40)}
+  {svg_text_lines(action_hint, x=main_x + 40, y=main_y + 302, size=24, fill=VISUAL["text_muted"], max_chars=48, line_gap=34)}
+  {badge(status, x=main_x + 40, y=main_y + 348, width=360, fill=VISUAL["surface_active"], stroke=VISUAL["border_muted"], text_fill=VISUAL["text"])}
+  <text x="{main_x + 40}" y="{main_y + 430}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="700" fill="{VISUAL["text_dim"]}">CÓDIGO PÚBLICO</text>
   <text x="{main_x + 218}" y="{main_y + 432}" font-family="Arial, DejaVu Sans Mono, monospace" font-size="30" font-weight="700" fill="{accent}">{html.escape(code)}</text>
 
-  <rect x="{side_x}" y="{side_y}" width="{side_width}" height="{side_height}" rx="8" fill="#121620" stroke="#2b3240"/>
-  <text x="{side_x + 34}" y="{side_y + 62}" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" font-weight="700" fill="#f8fafc">Configuração assistida</text>
-  {svg_text_lines("Área reservada para a próxima fase.", x=side_x + 34, y=side_y + 98, size=18, fill="#94a3b8", max_chars=31, line_gap=26)}
-  <rect x="{side_x + 78}" y="{side_y + 136}" width="212" height="212" rx="8" fill="#0f131c" stroke="{accent}" stroke-width="3" stroke-dasharray="12 12"/>
-  <text x="{side_x + 122}" y="{side_y + 238}" font-family="Arial, DejaVu Sans, sans-serif" font-size="34" font-weight="700" fill="#f8fafc">Em breve</text>
-  <text x="{side_x + 104}" y="{side_y + 278}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#b6c2d2">Sem QR ativo agora</text>
-  <line x1="{side_x + 34}" y1="{side_y + 382}" x2="{side_x + side_width - 34}" y2="{side_y + 382}" stroke="#2b3240"/>
-  {svg_text_lines("A configuração será guiada sem expor dados privados.", x=side_x + 34, y=side_y + 420, size=18, fill="#cbd5e1", max_chars=31, line_gap=26)}
+  <rect x="{side_x}" y="{side_y}" width="{side_width}" height="{side_height}" rx="8" fill="{VISUAL["surface_raised"]}" stroke="{VISUAL["border"]}"/>
+  <rect x="{side_x}" y="{side_y}" width="7" height="{side_height}" rx="4" fill="{accent}"/>
+  <text x="{side_x + 34}" y="{side_y + 62}" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" font-weight="700" fill="{VISUAL["text"]}">Suporte</text>
+  {svg_text_lines("Use apenas o estado público exibido nesta tela.", x=side_x + 34, y=side_y + 104, size=19, fill=VISUAL["text_muted"], max_chars=31, line_gap=28)}
+  <rect x="{side_x + 34}" y="{side_y + 160}" width="{side_width - 68}" height="74" rx="8" fill="{VISUAL["surface_active"]}" stroke="{VISUAL["border_muted"]}"/>
+  <text x="{side_x + 58}" y="{side_y + 205}" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="700" fill="{VISUAL["text"]}">Sem dados privados</text>
+  <rect x="{side_x + 34}" y="{side_y + 252}" width="{side_width - 68}" height="74" rx="8" fill="{VISUAL["surface_active"]}" stroke="{VISUAL["border_muted"]}"/>
+  <text x="{side_x + 58}" y="{side_y + 297}" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="700" fill="{VISUAL["text"]}">F10 abre configuração</text>
+  <line x1="{side_x + 34}" y1="{side_y + 362}" x2="{side_x + side_width - 34}" y2="{side_y + 362}" stroke="{VISUAL["border"]}"/>
+  {svg_text_lines("Rede, API, cache e player devem aparecer como categorias separadas.", x=side_x + 34, y=side_y + 408, size=18, fill=VISUAL["text_muted"], max_chars=31, line_gap=26)}
 
-  <text x="{margin_x}" y="{footer_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#7d8796">Estado público: {html.escape(state)} | Atualizado: {html.escape(now)}</text>
+  <text x="{margin_x}" y="{footer_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="{VISUAL["text_dim"]}">Estado público: {html.escape(state)} | Atualizado: {html.escape(now)}</text>
 </svg>
 """
 

@@ -53,6 +53,26 @@ MESSAGES = {
 }
 
 PREVIEW_MODES = ("boot", "player", "loading_content", "config_pending", "setup", "saving")
+C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
+VISUAL = {
+    "bg": (11, 18, 32),
+    "surface": (17, 24, 39),
+    "surface_raised": (21, 31, 48),
+    "footer": (7, 17, 31),
+    "accent": (6, 182, 212),
+    "text": (248, 250, 252),
+    "text_muted": (203, 213, 225),
+}
+SVG_VISUAL = {
+    "bg": "#0b1220",
+    "surface": "#111827",
+    "surface_raised": "#151f30",
+    "footer": "#07111f",
+    "accent": "#06b6d4",
+    "text": "#f8fafc",
+    "text_muted": "#cbd5e1",
+    "border": "#2f3d4a",
+}
 
 ORIENTATIONS = {
     "landscape": 0,
@@ -285,20 +305,26 @@ class FramebufferSplash:
         ctx = self.render_context(rotation_deg)
         source_w = int(ctx["source_w"])
         source_h = int(ctx["source_h"])
-        self.fill((15, 23, 42))
+        self.fill(VISUAL["bg"])
         top_bar = max(10, source_h // 70)
         footer_h = max(64, source_h // 13)
-        self.draw_logical_rect(0, 0, source_w, top_bar, (6, 182, 212), ctx)
-        self.draw_logical_rect(0, source_h - footer_h, source_w, footer_h, (11, 17, 32), ctx)
+        panel_w = max(420, int(source_w * 0.64))
+        panel_h = max(220, int(source_h * 0.32))
+        panel_x = (source_w - panel_w) // 2
+        panel_y = max(72, source_h // 2 - panel_h // 2 - 12)
+        self.draw_logical_rect(0, 0, source_w, top_bar, VISUAL["accent"], ctx)
+        self.draw_logical_rect(0, source_h - footer_h, source_w, footer_h, VISUAL["footer"], ctx)
+        self.draw_logical_rect(panel_x, panel_y, panel_w, panel_h, VISUAL["surface"], ctx)
+        self.draw_logical_rect(panel_x, panel_y, max(8, source_w // 160), panel_h, VISUAL["accent"], ctx)
         title_scale = max(3, min(7, source_w // 210))
         message_scale = max(2, min(4, source_w // 330))
         title_width = len(title) * (self.font.width + 1) * title_scale
         message_lines = self.normalized_lines(message)
         line_height = (self.font.height + 8) * message_scale
         message_block_h = max(line_height, len(message_lines) * line_height)
-        title_y = max(80, source_h // 2 - 110)
-        message_y = max(150, int(source_h // 2 + 8 - message_block_h / 2))
-        self.draw_text(max(32, (source_w - title_width) // 2), title_y, title, title_scale, (248, 250, 252), ctx)
+        title_y = panel_y + max(74, panel_h // 3)
+        message_y = max(panel_y + 126, int(panel_y + panel_h // 2 + 30 - message_block_h / 2))
+        self.draw_text(max(32, (source_w - title_width) // 2), title_y, title, title_scale, VISUAL["text"], ctx)
         for index, line in enumerate(message_lines):
             line_width = len(line) * (self.font.width + 1) * message_scale
             self.draw_text(
@@ -306,7 +332,7 @@ class FramebufferSplash:
                 message_y + index * line_height,
                 line,
                 message_scale,
-                (203, 213, 225),
+                VISUAL["text_muted"],
                 ctx,
             )
         self.fb.flush()
@@ -359,20 +385,26 @@ def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
     rotation = normalize_rotation_deg(rotation_deg)
     source_w, source_h, layout_mode = source_size_for_rotation(rotation)
     message_lines = FramebufferSplash.normalized_lines(message)
-    line_y = source_h // 2 + 24
+    panel_w = int(source_w * 0.64)
+    panel_h = int(source_h * 0.32)
+    panel_x = (source_w - panel_w) // 2
+    panel_y = source_h // 2 - panel_h // 2 - 12
+    line_y = panel_y + panel_h // 2 + 48
     line_parts = []
     for index, line in enumerate(message_lines[:3]):
         line_parts.append(
             f'<text x="{source_w // 2}" y="{line_y + index * 44}" '
             'font-family="Arial, DejaVu Sans, sans-serif" font-size="30" '
-            f'text-anchor="middle" fill="#cbd5e1">{escape_text(line)}</text>'
+            f'text-anchor="middle" fill="{SVG_VISUAL["text_muted"]}">{escape_text(line)}</text>'
         )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{source_w}" height="{source_h}" viewBox="0 0 {source_w} {source_h}" data-display-rotation-deg="{rotation}" data-layout-mode="{layout_mode}" role="img" aria-label="Dadooh splash preview {escape_text(mode)}">
-  <rect width="{source_w}" height="{source_h}" fill="#0f172a"/>
-  <rect x="0" y="0" width="{source_w}" height="12" fill="#06b6d4"/>
-  <rect x="0" y="{source_h - 72}" width="{source_w}" height="72" fill="#0b1120"/>
-  <text x="{source_w // 2}" y="{source_h // 2 - 58}" font-family="Arial, DejaVu Sans, sans-serif" font-size="52" font-weight="700" text-anchor="middle" fill="#f8fafc">{escape_text(title)}</text>
+  <rect width="{source_w}" height="{source_h}" fill="{SVG_VISUAL["bg"]}"/>
+  <rect x="0" y="0" width="{source_w}" height="12" fill="{SVG_VISUAL["accent"]}"/>
+  <rect x="0" y="{source_h - 72}" width="{source_w}" height="72" fill="{SVG_VISUAL["footer"]}"/>
+  <rect x="{panel_x}" y="{panel_y}" width="{panel_w}" height="{panel_h}" rx="8" fill="{SVG_VISUAL["surface"]}" stroke="{SVG_VISUAL["border"]}"/>
+  <rect x="{panel_x}" y="{panel_y}" width="9" height="{panel_h}" rx="4" fill="{SVG_VISUAL["accent"]}"/>
+  <text x="{source_w // 2}" y="{panel_y + panel_h // 2 - 20}" font-family="Arial, DejaVu Sans, sans-serif" font-size="52" font-weight="700" text-anchor="middle" fill="{SVG_VISUAL["text"]}">{escape_text(title)}</text>
   {' '.join(line_parts)}
 </svg>
 """

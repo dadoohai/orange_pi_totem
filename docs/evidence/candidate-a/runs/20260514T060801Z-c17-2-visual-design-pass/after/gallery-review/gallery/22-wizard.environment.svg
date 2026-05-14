@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280" data-display-rotation-deg="90" data-layout-mode="portrait" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="720" height="1280" fill="#0b1220"/>
+  <rect x="0" y="0" width="720" height="12" fill="#06b6d4"/>
+  <rect x="0" y="12" width="720" height="148" fill="#111827"/>
+  <rect x="56" y="32" width="132" height="42" rx="8" fill="#13263a" stroke="#06b6d4"/>
+  <text x="78" y="60" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <text x="210" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">Configuracao do Totem</text>
+  <text x="56" y="162" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">Layout retrato para direita</text>
+  <rect x="48" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="61" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">1. Tela</text>
+  <rect x="172" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="185" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">2. Conexao</text>
+  <rect x="296" y="96" width="116" height="44" rx="8" fill="#13263a" stroke="#22d3ee"/><rect x="296" y="96" width="5" height="44" rx="3" fill="#22d3ee"/><text x="309" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">3. Ambient</text>
+  <rect x="420" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="433" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">4. Revisao</text>
+  <rect x="544" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="557" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">5. Conclui</text>
+  <text x="56" y="220" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">Ambiente</text>
+  <text x="58" y="258" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" fill="#cbd5e1"><tspan x="58" dy="0">Digite o identificador.</tspan></text>
+
+
+  <rect x="56" y="390" width="608" height="142" rx="8" fill="#f8fafc" stroke="#22d3ee" stroke-width="2"/>
+  <rect x="56" y="390" width="8" height="142" rx="4" fill="#06b6d4"/>
+  <text x="92" y="436" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Identificador do ambiente</text>
+  <text x="92" y="482" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" fill="#111827" font-weight="700"><tspan x="92" dy="0">TEST_ENV_01</tspan></text>
+  <text x="92" y="564" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">Entrada local.</text>
+
+
+  <rect x="56" y="610" width="608" height="300" rx="8" fill="#151d2a" stroke="#2f3d4a"/>
+  <rect x="56" y="610" width="7" height="300" rx="4" fill="#06b6d4"/>
+  <text x="88" y="650" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Nesta etapa</text>
+  <rect x="87" y="655" width="10" height="10" rx="3" fill="#22d3ee"/><text x="112" y="668" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">3 a 128 caracteres.</tspan></text> <rect x="87" y="709" width="10" height="10" rx="3" fill="#22d3ee"/><text x="112" y="722" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Use letras e numeros.</tspan></text> <rect x="87" y="763" width="10" height="10" rx="3" fill="#22d3ee"/><text x="112" y="776" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Enter confirma.</tspan></text>
+
+
+
+  <rect x="0" y="1198" width="720" height="82" fill="#07111f"/>
+  <rect x="56" y="1217" width="158" height="44" rx="8" fill="#13263a" stroke="#06b6d4"/>
+  <text x="80" y="1246" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="#f8fafc">Enter OK</text>
+  <text x="236" y="1248" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="236" dy="0">Ctrl+B volta | Ctrl+U limpa | Esc</tspan></text>
+
+</svg>

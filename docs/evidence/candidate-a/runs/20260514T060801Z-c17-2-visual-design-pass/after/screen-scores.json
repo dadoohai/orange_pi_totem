@@ -1,0 +1,327 @@
+[
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "boot",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "boot"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "firstboot",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "firstboot"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "splash.preparing",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.9,
+    "screen_id": "preparing"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "config_missing",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "config_missing"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "config_pending",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.9,
+    "screen_id": "config_pending"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "open_settings",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "open_settings"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "orientation",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.6,
+    "screen_id": "wizard_orientation"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "connection",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.6,
+    "screen_id": "wizard_connection"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "wifi_list",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.3,
+    "screen_id": "wifi_list"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "wifi_password_hidden",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "medium",
+    "score_overall": 4.5,
+    "screen_id": "wifi_password"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "environment",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.5,
+    "screen_id": "environment"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "review",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.6,
+    "screen_id": "review"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "saving",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "saving"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "complete",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.9,
+    "screen_id": "complete"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "wifi_wrong_password",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "high",
+    "score_overall": 4.3,
+    "screen_id": "error"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "starting_player",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "starting_player"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "loading_content",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "loading_content"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "waiting_for_api",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "waiting_for_api"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "waiting_for_media",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "high",
+    "score_overall": 4.4,
+    "screen_id": "waiting_for_media"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "playing_status",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "low",
+    "score_overall": 4.9,
+    "screen_id": "playing"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "error_no_content",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "high",
+    "score_overall": 4.4,
+    "screen_id": "player_error"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "update_checking",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "update_checking"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "update_applying",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "keep",
+    "risk": "high",
+    "score_overall": 4.4,
+    "screen_id": "update_applying"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "update_failed",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "update_failed"
+  },
+  {
+    "critical_below_4": false,
+    "gallery_screen_id": "maintenance_support",
+    "heuristic_basis": "C16.1 screen intent + C16.2 synthetic gallery rubric",
+    "lowest_dimension": {
+      "name": "perceived_polish",
+      "score": 4.0
+    },
+    "recommended_action": "minor_copy_change",
+    "risk": "medium",
+    "score_overall": 4.6,
+    "screen_id": "maintenance_support"
+  }
+]
