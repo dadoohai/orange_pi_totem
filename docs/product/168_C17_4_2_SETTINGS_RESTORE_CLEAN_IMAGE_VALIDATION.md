@@ -1,6 +1,6 @@
 # 168 - C17.4.2 - Settings Restore Clean Image Validation
 
-Status: offline image built, clean-card validation pending
+Status: passed clean-card validation
 
 C17.4.1 passed as a hotfix on the already configured board. C17.4.2 packages
 that restore-order fix into a new private homologation image so the complete
@@ -46,16 +46,34 @@ Offline rootfs validation passed:
 
 ## Runtime Status
 
-Clean-card runtime validation is still pending because the card must be flashed
-manually through Armbian Imager.
+Clean-card runtime validation passed after manual flashing through Armbian
+Imager.
 
-C17.4.2 is not yet released for batch flash, dispatch or C18:
+Operator HDMI observation confirmed:
 
-`ready_for_batch_flash=false`
+- first boot did not stay black;
+- pre-config/config_missing feedback appeared;
+- config_missing was legible and did not show the previous overlap;
+- F10 opened the wizard on the first boot.
 
-`ready_for_dispatch=false`
+Sanitized SSH/runtime evidence confirmed:
 
-`ready_for_c18_player_audit=false`
+- writer passed;
+- real config was written without publishing contents;
+- settings lock was removed before player restore;
+- `kiosky-player.service` was not skipped by the session-lock condition;
+- `totem-open-settings.service` finished instead of staying `activating`;
+- player service became active about 2 seconds after write/config completion;
+- playback reached `playing`;
+- SSH and NetworkManager remained active.
+
+Observed latency:
+
+- writer/config completion to player active: about 2 seconds;
+- writer/config completion to playback `playing`: about 32 seconds.
+
+The longer playback time was content/media availability after restore, not a
+settings-lock restore delay.
 
 ## Clean-Card Criteria
 
@@ -74,8 +92,13 @@ The next validation must prove:
 
 ## Decision
 
-`c17_4_2_status=blocked`
+`c17_4_2_status=passed`
 
-Reason: `clean_card_validation_pending_manual_flash`.
+`ready_for_batch_flash=true`
 
-C18 remains closed until C17.4.2 passes from a clean card.
+`ready_for_dispatch=true`
+
+`ready_for_c18_player_audit=true`
+
+C18 can open after this point, but C17.4.2 does not start C18 and did not
+change scheduler, sync, duration, playlist, loop or `exposure_time_ms`.

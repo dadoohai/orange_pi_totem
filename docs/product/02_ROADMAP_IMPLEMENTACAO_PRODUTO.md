@@ -2843,3 +2843,15 @@ Como a gravacao e manual pelo Armbian Imager, a validacao em cartao limpo ainda
 esta pendente; portanto `ready_for_batch_flash=false`,
 `ready_for_dispatch=false` e `ready_for_c18_player_audit=false` ate C17.4.2
 passar no fluxo completo de primeira configuracao.
+
+Atualizacao C17.4.2 runtime: 2026-05-14. A imagem C17.4.2 foi gravada
+manualmente em cartao limpo e validada. A observacao HDMI confirmou primeiro
+boot sem tela preta, feedback pre-config/config_missing visivel e legivel, F10
+abrindo o wizard na primeira tentativa e sem sobreposicao de texto. A coleta
+SSH sanitizada confirmou wizard com lock ativo antes do writer, writer
+`passed`, config real criada sem publicar conteudo, lock removido antes do
+restore, `kiosky-player.service` ativo cerca de 2s apos a escrita,
+`totem-open-settings.service` finalizado, SSH/NetworkManager ativos e playback
+em `playing`. C17.4.2 fica `passed`: `ready_for_batch_flash=true`,
+`ready_for_dispatch=true` e `ready_for_c18_player_audit=true`. C18 pode abrir
+depois desta validacao, mas nao foi iniciado nesta rodada.

@@ -81,13 +81,13 @@ clean card before batch flash, dispatch or C18 can open.
 
 C17.4.2 was derived offline as
 `c17-4-2-settings-restore-clean` with the C17.4.1 restore-order fix embedded.
-Offline rootfs validation passed, but clean-card validation is still pending
-because card flashing is manual through Armbian Imager.
+Offline rootfs validation passed, and clean-card runtime validation later
+passed after manual flashing through Armbian Imager.
 
-Until the clean-card first-configuration flow passes:
+After C17.4.2 clean-card validation:
 
-`ready_for_batch_flash=false`
+`ready_for_batch_flash=true`
 
-`ready_for_dispatch=false`
+`ready_for_dispatch=true`
 
-`ready_for_c18_player_audit=false`
+`ready_for_c18_player_audit=true`
