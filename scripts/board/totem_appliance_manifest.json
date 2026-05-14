@@ -1,9 +1,9 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1 (extended by C14.2.1, C17.1 and C17.3)",
+  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3 and C17.4)",
   "homologation_release": {
-    "image_tag": "c17-3-homolog-visual-polish",
-    "image_version": "c17.3",
+    "image_tag": "c17-4-firstboot-visual-f10-fix",
+    "image_version": "c17.4",
     "artifact_private": true,
     "final_image": false,
     "homologation_shipping_image": true,
@@ -13,6 +13,7 @@
     "kernel_rebuild_executed": false,
     "c16_2_gates_used": true,
     "c17_2_visual_polish_embedded": true,
+    "c17_4_firstboot_visual_f10_fix_embedded": true,
     "clean_board_validation_pending": true,
     "ready_for_batch_flash": false,
     "ready_for_dispatch": false,
@@ -115,6 +116,8 @@
     {"path": "/data/state", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/state/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/data/state/totem-appliance", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
+    {"path": "/data/state/totem-debug", "type": "dir", "owner": "root", "group": "root", "mode": "0755", "runtime_state": true, "content_policy": "sanitized_debug_events_no_private_values"},
+    {"path": "/data/state/totem-debug/c17-4-firstboot", "type": "dir", "owner": "totem", "group": "totem", "mode": "0700", "runtime_state": true, "content_policy": "sanitized_firstboot_visual_f10_events"},
     {"path": "/data/state/totem-display", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "public_orientation_file_allowlisted_no_directory_hash"},
     {"path": "/data/state/totem-boot-visual", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "rollback_state_no_directory_hash"},
     {"path": "/data/state/totem-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "private_settings_context_no_content_read"},
@@ -124,7 +127,7 @@
     {"path": "/data/logs/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/tmp/kiosky", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
     {"path": "/run/dadooh-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700"},
-    {"path": "/run/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0700"},
+    {"path": "/run/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/apps", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/apps/kiosky-player", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
     {"path": "/data/apps/kiosky-player/releases", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
@@ -192,7 +195,9 @@
     "firstboot_gate": {
       "reserved_tty": "tty2",
       "raw_tty_output_allowed": false,
-      "renderer_failure_fallback": "clear_reserved_vt_without_text"
+      "renderer_failure_fallback": "clear_reserved_vt_without_text",
+      "runs_even_when_armbian_marker_absent": true,
+      "c17_4_trace_dir": "/data/state/totem-debug/c17-4-firstboot"
     },
     "visual_tty_guard": {
       "reserved_ttys": [
@@ -207,6 +212,30 @@
         "totem-open-settings.service"
       ]
     }
+  },
+  "visual_surface_ownership": {
+    "version": "c17.4-firstboot-visual-f10.v1",
+    "session_lock": "/run/totem/settings-session.lock",
+    "session_lock_public_metadata_only": true,
+    "kiosky_player_condition_blocks_while_session_lock_exists": true,
+    "status_renderer_checks_session_lock_before_start": true,
+    "status_renderer_exits_when_session_lock_appears": true,
+    "launcher_does_not_draw_public_status_while_session_lock_exists": true,
+    "settings_session_releases_lock_before_restoring_player": true,
+    "kiosky_player_waits_for_settings_trigger_before_config_pending": true,
+    "kiosky_player_does_not_wait_for_network_online_before_preconfig_feedback": true,
+    "firstboot_trace_dir": "/data/state/totem-debug/c17-4-firstboot",
+    "public_status_must_not_include": [
+      "ssid",
+      "wifi_password",
+      "bssid",
+      "mac",
+      "ip",
+      "dns",
+      "api_key",
+      "api_url real",
+      "environment_id real"
+    ]
   },
   "public_orientation": {
     "path": "/data/state/totem-display/orientation.json",

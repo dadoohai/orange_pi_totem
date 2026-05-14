@@ -309,21 +309,25 @@ class FramebufferSplash:
         top_bar = max(10, source_h // 70)
         footer_h = max(64, source_h // 13)
         panel_w = max(420, int(source_w * 0.64))
-        panel_h = max(220, int(source_h * 0.32))
+        panel_h = max(300, int(source_h * 0.44))
         panel_x = (source_w - panel_w) // 2
-        panel_y = max(72, source_h // 2 - panel_h // 2 - 12)
+        panel_y = max(72, (source_h - panel_h) // 2 - 8)
         self.draw_logical_rect(0, 0, source_w, top_bar, VISUAL["accent"], ctx)
         self.draw_logical_rect(0, source_h - footer_h, source_w, footer_h, VISUAL["footer"], ctx)
         self.draw_logical_rect(panel_x, panel_y, panel_w, panel_h, VISUAL["surface"], ctx)
         self.draw_logical_rect(panel_x, panel_y, max(8, source_w // 160), panel_h, VISUAL["accent"], ctx)
-        title_scale = max(3, min(7, source_w // 210))
-        message_scale = max(2, min(4, source_w // 330))
+        title_scale = max(3, min(4, source_w // 300))
+        message_scale = max(2, min(3, source_w // 420))
         title_width = len(title) * (self.font.width + 1) * title_scale
+        title_h = self.font.height * title_scale
         message_lines = self.normalized_lines(message)
         line_height = (self.font.height + 8) * message_scale
         message_block_h = max(line_height, len(message_lines) * line_height)
-        title_y = panel_y + max(74, panel_h // 3)
-        message_y = max(panel_y + 126, int(panel_y + panel_h // 2 + 30 - message_block_h / 2))
+        title_y = panel_y + max(52, panel_h // 6)
+        message_y = title_y + title_h + max(38, panel_h // 10)
+        max_message_y = panel_y + panel_h - message_block_h - max(42, panel_h // 10)
+        if message_y > max_message_y:
+            message_y = max(panel_y + title_h + 28, max_message_y)
         self.draw_text(max(32, (source_w - title_width) // 2), title_y, title, title_scale, VISUAL["text"], ctx)
         for index, line in enumerate(message_lines):
             line_width = len(line) * (self.font.width + 1) * message_scale
@@ -380,21 +384,34 @@ def escape_text(value: Any) -> str:
     return html.escape(str(value), quote=True)
 
 
+def wait_for_framebuffer(timeout_sec: float) -> None:
+    if timeout_sec <= 0:
+        return
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        if pathlib.Path("/dev/fb0").exists() and pathlib.Path("/sys/class/graphics/fb0/virtual_size").exists():
+            return
+        time.sleep(0.25)
+
+
 def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
     title, message = MESSAGES[mode]
     rotation = normalize_rotation_deg(rotation_deg)
     source_w, source_h, layout_mode = source_size_for_rotation(rotation)
     message_lines = FramebufferSplash.normalized_lines(message)
     panel_w = int(source_w * 0.64)
-    panel_h = int(source_h * 0.32)
+    panel_h = max(300, int(source_h * 0.44))
     panel_x = (source_w - panel_w) // 2
-    panel_y = source_h // 2 - panel_h // 2 - 12
-    line_y = panel_y + panel_h // 2 + 48
+    panel_y = max(72, (source_h - panel_h) // 2 - 8)
+    title_size = 48 if layout_mode == "landscape" else 42
+    message_size = 30 if layout_mode == "landscape" else 26
+    title_y = panel_y + max(96, panel_h // 4)
+    line_y = title_y + max(64, panel_h // 6)
     line_parts = []
     for index, line in enumerate(message_lines[:3]):
         line_parts.append(
             f'<text x="{source_w // 2}" y="{line_y + index * 44}" '
-            'font-family="Arial, DejaVu Sans, sans-serif" font-size="30" '
+            f'font-family="Arial, DejaVu Sans, sans-serif" font-size="{message_size}" '
             f'text-anchor="middle" fill="{SVG_VISUAL["text_muted"]}">{escape_text(line)}</text>'
         )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -404,7 +421,7 @@ def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
   <rect x="0" y="{source_h - 72}" width="{source_w}" height="72" fill="{SVG_VISUAL["footer"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="{panel_w}" height="{panel_h}" rx="8" fill="{SVG_VISUAL["surface"]}" stroke="{SVG_VISUAL["border"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="9" height="{panel_h}" rx="4" fill="{SVG_VISUAL["accent"]}"/>
-  <text x="{source_w // 2}" y="{panel_y + panel_h // 2 - 20}" font-family="Arial, DejaVu Sans, sans-serif" font-size="52" font-weight="700" text-anchor="middle" fill="{SVG_VISUAL["text"]}">{escape_text(title)}</text>
+  <text x="{source_w // 2}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="{title_size}" font-weight="700" text-anchor="middle" fill="{SVG_VISUAL["text"]}">{escape_text(title)}</text>
   {' '.join(line_parts)}
 </svg>
 """
@@ -442,6 +459,7 @@ def render_mode(
     status_out: pathlib.Path | None,
     rotation_deg: int = 0,
     orientation_source: str = "argument",
+    wait_framebuffer_sec: float = 0.0,
 ) -> dict[str, Any]:
     title, message = MESSAGES[mode]
     rotation = normalize_rotation_deg(rotation_deg)
@@ -465,6 +483,7 @@ def render_mode(
         "raw_logs_written": False,
     }
     try:
+        wait_for_framebuffer(wait_framebuffer_sec)
         renderer = FramebufferSplash(font_path)
         try:
             renderer.render(title, message, rotation_deg=rotation)
@@ -545,6 +564,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--status-out", help="Optional sanitized status JSON path under /tmp.")
     parser.add_argument("--rotation-deg", type=int, help="Display orientation rotation in degrees: 0, 90, 180 or 270.")
     parser.add_argument("--orientation", choices=sorted(ORIENTATIONS), help="Named orientation alias.")
+    parser.add_argument("--wait-framebuffer-sec", type=float, default=0.0, help="Wait briefly for /dev/fb0 before rendering.")
     parser.add_argument("--out-dir", default="/tmp/dadooh-splash-preview", help="Preview output directory under /tmp.")
     parser.add_argument("--preview-screens", action="store_true", help="Generate offline SVG preview screens and exit.")
     parser.add_argument("--self-test", action="store_true", help="Run self-tests and exit.")
@@ -575,7 +595,14 @@ def main(argv: list[str]) -> int:
         payload = write_preview_screens(out_dir, rotation_deg=rotation)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
-    render_mode(args.mode, font_path=args.font, status_out=status_out, rotation_deg=rotation, orientation_source=source)
+    render_mode(
+        args.mode,
+        font_path=args.font,
+        status_out=status_out,
+        rotation_deg=rotation,
+        orientation_source=source,
+        wait_framebuffer_sec=max(0.0, float(args.wait_framebuffer_sec)),
+    )
     return 0
 
 

@@ -20,6 +20,7 @@ LOCAL_OPERATOR_SAVE_CONFIRMED="false"
 PRIVATE_SETTINGS_CONTEXT_PATH="/data/state/totem-settings/last-settings.json"
 LOCK_DIR="/run/totem/settings-session.lock"
 RESTORE_GETTY_AFTER_SETTINGS="${TOTEM_RESTORE_GETTY_AFTER_SETTINGS:-0}"
+TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
 
 usage() {
   cat <<'USAGE'
@@ -283,6 +284,28 @@ INITIAL_SERVICE_ENABLED="$(systemctl is-enabled kiosky-player.service 2>/dev/nul
 declare -A GETTY_ACTIVE
 declare -A GETTY_ENABLED
 
+c17_4_trace() {
+  local event="$1"
+  local root="$TOTEM_C17_4_FIRSTBOOT_TRACE_DIR"
+  local lock_state="absent"
+  local uptime_value="unknown"
+
+  [ -e "$LOCK_DIR" ] && lock_state="present"
+  uptime_value="$(awk '{print int($1)}' /proc/uptime 2>/dev/null || printf unknown)"
+  if ! mkdir -p "$root" 2>/dev/null; then
+    root="/run/totem/c17-4-firstboot"
+    mkdir -p "$root" 2>/dev/null || return 0
+  fi
+  chown totem:totem "$root" 2>/dev/null || true
+  chmod 700 "$root" 2>/dev/null || true
+  printf '%s uptime=%s pid=%d component=open_settings_session event=%s session_lock=%s\n' \
+    "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$uptime_value" "$$" "$event" "$lock_state" \
+    >> "$root/events.log" 2>/dev/null || true
+  case "$root" in
+    /data/*) sync "$root/events.log" >/dev/null 2>&1 || true ;;
+  esac
+}
+
 for path in "$VISUAL" "$SPLASH" "$AGGREGATE"; do
   if [ ! -f "$path" ]; then
     echo "error: missing local session dependency" >&2
@@ -338,11 +361,14 @@ PY
 
 umask 077
 mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" "$REQUEST_DIR"
-chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" "$REQUEST_DIR" 2>/dev/null || true
+chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$REQUEST_DIR" 2>/dev/null || true
+chmod 755 "$(dirname "$LOCK_DIR")" 2>/dev/null || true
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "settings_session_already_running" >&2
   exit 23
 fi
+chmod 755 "$LOCK_DIR" 2>/dev/null || true
+c17_4_trace "session_lock_acquired"
 
 for unit in "${GETTY_UNITS[@]}"; do
   GETTY_ACTIVE["$unit"]="$(systemctl is-active "$unit" 2>/dev/null || true)"
@@ -978,10 +1004,11 @@ on_exit() {
   kill_visual_if_running || true
   cleanup_apply_policy || true
   cleanup_trigger_request || true
+  cleanup_session_lock || true
+  c17_4_trace "session_lock_released"
   restore_service || true
   write_final_status || true
   restore_getty || true
-  cleanup_session_lock || true
   c1523_phase "session_done rc=$rc"
   c15_trace "on_exit_done rc=$rc"
   exit "$rc"
@@ -1026,6 +1053,7 @@ for unit in "${GETTY_UNITS[@]}"; do
 done
 
 c15_trace "before_show_transition_1"
+c17_4_trace "settings_transition_start"
 show_transition setup || true
 c15_trace "after_show_transition_1 INITIAL_SERVICE_ACTIVE=$INITIAL_SERVICE_ACTIVE"
 if [ "$INITIAL_SERVICE_ACTIVE" = "active" ] || [ "$INITIAL_SERVICE_ENABLED" = "enabled" ]; then
@@ -1071,6 +1099,7 @@ if [ "${1:-0}" -ne 0 ] || [ "${2:-0}" -ne 0 ] || [ "${3:-0}" -ne 0 ] || [ "${4:-
   exit 42
 fi
 c15_trace "before_openvt"
+c17_4_trace "wizard_surface_owner"
 c1523_phase "wizard_started"
 
 set +e

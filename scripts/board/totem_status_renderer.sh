@@ -5,6 +5,7 @@ umask 077
 
 STATUS_SVG="${1:-/tmp/dadooh-status/status.svg}"
 MPV_BIN="${TOTEM_STATUS_RENDERER_MPV_BIN:-mpv}"
+TOTEM_SETTINGS_SESSION_LOCK="${TOTEM_SETTINGS_SESSION_LOCK:-/run/totem/settings-session.lock}"
 
 MPV_PID=""
 STOP_REQUESTED=0
@@ -15,6 +16,23 @@ stamp() {
 
 log() {
   printf '%s totem_status_renderer[%s]: %s\n' "$(stamp)" "$$" "$*"
+}
+
+settings_session_active() {
+  [ -e "$TOTEM_SETTINGS_SESSION_LOCK" ]
+}
+
+process_alive() {
+  local pid="$1"
+  local state=""
+
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  if [ -r "/proc/$pid/stat" ]; then
+    state="$(sed -n 's/^[^)]*) \([^ ]\).*/\1/p' "/proc/$pid/stat" 2>/dev/null || true)"
+    [ "$state" = "Z" ] && return 1
+  fi
+  return 0
 }
 
 stop_mpv() {
@@ -38,6 +56,11 @@ esac
 if [ ! -r "$STATUS_SVG" ] || [ ! -f "$STATUS_SVG" ]; then
   log "status_svg_unavailable"
   exit 1
+fi
+
+if settings_session_active; then
+  log "settings_session_active renderer_not_started"
+  exit 0
 fi
 
 if ! command -v "$MPV_BIN" >/dev/null 2>&1; then
@@ -67,7 +90,19 @@ trap stop_mpv TERM INT
   -- "$STATUS_SVG" &
 MPV_PID="$!"
 
-wait "$MPV_PID"
+while process_alive "$MPV_PID"; do
+  if settings_session_active; then
+    log "settings_session_active stopping_renderer"
+    STOP_REQUESTED=1
+    kill -TERM "$MPV_PID" >/dev/null 2>&1 || true
+    wait "$MPV_PID" 2>/dev/null || true
+    MPV_PID=""
+    exit 0
+  fi
+  sleep 1
+done
+
+wait "$MPV_PID" 2>/dev/null
 rc="$?"
 MPV_PID=""
 

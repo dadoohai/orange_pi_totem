@@ -2764,3 +2764,21 @@ renderer/MPV de status ativos, `public_state=config_missing`,
 `blocked`: `ready_for_batch_flash=false`, `ready_for_dispatch=false`,
 `ready_for_c18_player_audit=false`, `ready_for_c17_4_first_boot_fix=true`.
 Isto nao e C18/player timing; pertence a C17.4 first-boot pre-config visual/F10.
+
+Atualizacao C17.4: 2026-05-14. Foi implementada uma correcao conservadora para
+first boot/pre-config e ownership da superficie visual. `kiosky-player.service`
+deixou de esperar `network-online.target` para feedback pre-config, passou a
+aguardar `totem-settings-trigger.service` e a respeitar
+`/run/totem/settings-session.lock`. O launcher e o renderer de status agora
+cedem a superficie quando a sessao de configuracao esta ativa; o splash ganhou
+espera curta por framebuffer e layout sem sobreposicao em `config_pending`; e
+instrumentacao sanitizada C17.4 foi adicionada em
+`/data/state/totem-debug/c17-4-firstboot/`. Foi derivada a imagem privada
+`c17-4-firstboot-visual-f10-fix` com SHA256
+`9e9092fb7dcb04a06e1617ad048042305a285373c19261b0dd10bc96c0975058`, sem
+Armbian Build, apt, pip, recompilacao de kernel, U-Boot, DTB ou BSP. Validacao
+offline passou, mas a gravacao limpa/manual e o primeiro boot HDMI ainda nao
+foram executados; portanto `c17_4_status=blocked`,
+`ready_for_batch_flash=false`, `ready_for_dispatch=false` e
+`ready_for_c18_player_audit=false`. C18 segue fechado ate C17.4 passar em
+placa limpa.

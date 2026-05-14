@@ -17,6 +17,8 @@ TOTEM_STATUS_RENDERER="${TOTEM_STATUS_RENDERER:-/opt/totem/bin/totem_status_rend
 TOTEM_STATUS_SVG="${TOTEM_STATUS_SVG:-/tmp/dadooh-status/status.svg}"
 TOTEM_VISUAL_SPLASH="${TOTEM_VISUAL_SPLASH:-/opt/totem/bin/totem_visual_splash.py}"
 TOTEM_PLAYER_SPLASH_SKIP_FILE="${TOTEM_PLAYER_SPLASH_SKIP_FILE:-/tmp/kiosky/player-splash-rendered}"
+TOTEM_SETTINGS_SESSION_LOCK="${TOTEM_SETTINGS_SESSION_LOCK:-/run/totem/settings-session.lock}"
+TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
 TOTEM_SETUP_LOCAL_ENABLED="${TOTEM_SETUP_LOCAL_ENABLED:-0}"
 TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING="${TOTEM_SETUP_LOCAL_AUTORUN_CONFIG_MISSING:-0}"
 TOTEM_SETUP_LOCAL_TRIGGER_FILE="${TOTEM_SETUP_LOCAL_TRIGGER_FILE:-/tmp/dadooh-setup-local.request}"
@@ -45,6 +47,7 @@ LAST_DISPLAY_LOG_EPOCH=0
 LAST_CONFIG_LOG_EPOCH=0
 LAST_STATUS_AGGREGATOR_WARN_EPOCH=0
 LAST_STATUS_RENDERER_WARN_EPOCH=0
+LAST_SETTINGS_LOCK_LOG_EPOCH=0
 LAST_SPLASH_MODE=""
 SETUP_LOCAL_RUN_COUNT=0
 
@@ -54,6 +57,27 @@ stamp() {
 
 log() {
   printf '%s kiosky_service_launcher[%s]: %s\n' "$(stamp)" "$$" "$*"
+}
+
+c17_4_trace() {
+  local event="$1"
+  local root="$TOTEM_C17_4_FIRSTBOOT_TRACE_DIR"
+  local lock_state="absent"
+  local uptime_value="unknown"
+
+  [ -e "$TOTEM_SETTINGS_SESSION_LOCK" ] && lock_state="present"
+  uptime_value="$(awk '{print int($1)}' /proc/uptime 2>/dev/null || printf unknown)"
+  if ! mkdir -p "$root" 2>/dev/null; then
+    root="/run/totem/c17-4-firstboot"
+    mkdir -p "$root" 2>/dev/null || return 0
+  fi
+  chmod 700 "$root" 2>/dev/null || true
+  printf '%s uptime=%s pid=%d component=kiosky_service_launcher event=%s session_lock=%s renderer_pid=%s child_pid=%s\n' \
+    "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$uptime_value" "$$" "$event" "$lock_state" "${STATUS_RENDERER_PID:-none}" "${CHILD_PID:-none}" \
+    >> "$root/events.log" 2>/dev/null || true
+  case "$root" in
+    /data/*) sync "$root/events.log" >/dev/null 2>&1 || true ;;
+  esac
 }
 
 positive_integer_or_default() {
@@ -119,6 +143,10 @@ process_alive() {
   fi
 
   return 0
+}
+
+settings_session_active() {
+  [ -e "$TOTEM_SETTINGS_SESSION_LOCK" ]
 }
 
 run_status_aggregator() {
@@ -288,6 +316,11 @@ stop_status_renderer() {
 }
 
 start_status_renderer() {
+  if settings_session_active; then
+    c17_4_trace "status_renderer_blocked_by_settings_session"
+    return 0
+  fi
+
   if ! display_connected; then
     return 0
   fi
@@ -321,6 +354,11 @@ start_status_renderer() {
 
 show_public_splash() {
   local mode="$1"
+
+  if settings_session_active; then
+    c17_4_trace "public_splash_blocked_by_settings_session mode=$mode"
+    return 0
+  fi
 
   if [ "$mode" = "player" ] && [ -f "$TOTEM_PLAYER_SPLASH_SKIP_FILE" ]; then
     rm -f "$TOTEM_PLAYER_SPLASH_SKIP_FILE" 2>/dev/null || true
@@ -526,6 +564,20 @@ run_setup_local_once() {
 handle_connected_display() {
   local now_epoch
 
+  if settings_session_active; then
+    if ! stop_status_renderer; then
+      warn_status_renderer "status_renderer_stop_failed settings_session_active"
+    fi
+    now_epoch="$(date +%s)"
+    if [ $((now_epoch - LAST_SETTINGS_LOCK_LOG_EPOCH)) -ge "$DISPLAY_LOG_INTERVAL_SEC" ]; then
+      log "settings_session_active visual_surface_reserved"
+      c17_4_trace "launcher_paused_for_settings_session"
+      LAST_SETTINGS_LOCK_LOG_EPOCH="$now_epoch"
+    fi
+    sleep_interruptible "$CONFIG_RETRY_SEC"
+    return 0
+  fi
+
   if config_valid; then
     run_app_once
     return 0
@@ -593,6 +645,12 @@ request_stop() {
 run_app_once() {
   local rc=0
 
+  if settings_session_active; then
+    c17_4_trace "app_start_blocked_by_settings_session"
+    sleep_interruptible "$APP_RESTART_SEC"
+    return 0
+  fi
+
   if ! stop_status_renderer; then
     log "status_renderer_stop_failed refusing_start_app"
     write_status "app_exited" "true" "125"
@@ -632,6 +690,7 @@ main() {
   trap request_stop TERM INT
 
   log "launcher_started uid=$(id -u) user=$(id -un 2>/dev/null || printf unknown)"
+  c17_4_trace "launcher_start"
   write_status "starting" "false"
 
   while true; do

@@ -6,6 +6,7 @@ MARKER="/root/.not_logged_in_yet"
 OUT_DIR="/run/dadooh-firstboot-gate"
 REMOTE_TTY="2"
 POLL_SEC="5"
+TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
 
 usage() {
   cat <<'USAGE'
@@ -69,6 +70,28 @@ SPLASH="$SCRIPT_DIR/totem_visual_splash.py"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 STATUS_OUT="$OUT_DIR/status.json"
 
+c17_4_trace() {
+  local event="$1"
+  local root="$TOTEM_C17_4_FIRSTBOOT_TRACE_DIR"
+  local marker_state="absent"
+  local uptime_value="unknown"
+
+  [ -e "$MARKER" ] && marker_state="present"
+  uptime_value="$(awk '{print int($1)}' /proc/uptime 2>/dev/null || printf unknown)"
+  if ! mkdir -p "$root" 2>/dev/null; then
+    root="/run/totem/c17-4-firstboot"
+    mkdir -p "$root" 2>/dev/null || return 0
+  fi
+  chown totem:totem "$root" 2>/dev/null || true
+  chmod 700 "$root" 2>/dev/null || true
+  printf '%s uptime=%s pid=%d component=firstboot_gate event=%s armbian_marker=%s tty=%s\n' \
+    "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$uptime_value" "$$" "$event" "$marker_state" "$REMOTE_TTY" \
+    >> "$root/events.log" 2>/dev/null || true
+  case "$root" in
+    /data/*) sync "$root/events.log" >/dev/null 2>&1 || true ;;
+  esac
+}
+
 if [ "$MODE" = "self-test" ]; then
   bash -n "$0"
   printf 'self-test: ok\n'
@@ -77,6 +100,7 @@ fi
 
 mkdir -p "$OUT_DIR"
 chmod 700 "$OUT_DIR" 2>/dev/null || true
+c17_4_trace "firstboot_gate_start"
 
 write_status() {
   local state="$1"
@@ -109,6 +133,7 @@ PY
 }
 
 show_firstboot_splash() {
+  c17_4_trace "config_pending_render_attempt"
   if [ -e "$TTY_DEVICE" ]; then
     command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
     printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
@@ -122,10 +147,12 @@ show_firstboot_splash() {
         fi
       }
   fi
+  c17_4_trace "config_pending_render_done"
 }
 
 if [ "$MODE" = "status" ]; then
   write_status status
+  c17_4_trace "firstboot_gate_status"
   exit 0
 fi
 
@@ -136,3 +163,4 @@ while [ -e "$MARKER" ]; do
 done
 
 write_status complete
+c17_4_trace "firstboot_gate_complete"

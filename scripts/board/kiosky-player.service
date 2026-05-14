@@ -1,7 +1,8 @@
 [Unit]
 Description=Kiosky Player
-After=network-online.target totem-firstboot-gate.service totem-visual-tty-guard.service
-Wants=network-online.target totem-visual-tty-guard.service
+After=NetworkManager.service totem-firstboot-gate.service totem-visual-tty-guard.service totem-settings-trigger.service
+Wants=NetworkManager.service totem-visual-tty-guard.service totem-settings-trigger.service
+ConditionPathExists=!/run/totem/settings-session.lock
 StartLimitIntervalSec=300
 StartLimitBurst=5
 

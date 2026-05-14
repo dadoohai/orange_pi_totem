@@ -113,3 +113,23 @@ ready_for_c17_4_first_boot_fix=true
 
 C17.4 should fix and prove first-boot pre-config visual/F10 behavior. C18
 remains closed until the clean-board setup journey is reliable again.
+
+## C17.4 Follow-Up
+
+C17.4 produced a first-boot visual/F10/session-ownership fix and a new private
+homologation image:
+
+```text
+image_tag=c17-4-firstboot-visual-f10-fix
+c17_4_status=blocked
+card_written=false
+single_board_validated=false
+ready_for_batch_flash=false
+ready_for_dispatch=false
+ready_for_c18_player_audit=false
+```
+
+The fix is documented in
+`docs/product/166_C17_4_FIRST_BOOT_VISUAL_F10_FIX.md`. The C17.4 image is
+blocked only because clean-board validation is still pending manual card write
+and first boot observation.

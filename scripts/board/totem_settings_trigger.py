@@ -31,6 +31,7 @@ sys.dont_write_bytecode = True
 SCHEMA_VERSION = "dadooh-c10.6-settings-trigger.v1"
 REQUEST_SCHEMA_VERSION = 1
 DEFAULT_REQUEST_DIR = "/run/dadooh-settings"
+C17_4_TRACE_DIR = "/data/state/totem-debug/c17-4-firstboot"
 REQUEST_FILENAME = "request.json"
 STATUS_FILENAME = "trigger-status.json"
 SUMMARY_FILENAME = "summary.txt"
@@ -198,6 +199,48 @@ def atomic_write_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
 
 def utc_timestamp() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def c17_4_trace(event: str, **fields: Any) -> None:
+    root = pathlib.Path(os.environ.get("TOTEM_C17_4_FIRSTBOOT_TRACE_DIR", C17_4_TRACE_DIR))
+    fallback = pathlib.Path("/run/totem/c17-4-firstboot")
+    try:
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError:
+        root = fallback
+        try:
+            root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        except OSError:
+            return
+    try:
+        root.chmod(0o700)
+    except OSError:
+        pass
+    if os.geteuid() == 0:
+        try:
+            shutil.chown(root, user="totem", group="totem")
+        except Exception:
+            pass
+    safe_fields = {
+        "uptime": str(int(time.monotonic())),
+        "pid": str(os.getpid()),
+        "component": "settings_trigger",
+        "event": event,
+    }
+    for key, value in fields.items():
+        key_text = "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in str(key))[:40]
+        value_text = str(value).replace("\n", "_").replace("\r", "_")
+        if len(value_text) > 80:
+            value_text = value_text[:80]
+        safe_fields[key_text] = value_text
+    line = utc_timestamp() + " " + " ".join(f"{key}={value}" for key, value in safe_fields.items()) + "\n"
+    try:
+        with (root / "events.log").open("a", encoding="utf-8") as handle:
+            handle.write(line)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except OSError:
+        return
 
 
 def build_request(trigger_type: str) -> dict[str, Any]:
@@ -546,6 +589,8 @@ def daemon_loop(
 ) -> int:
     if cooldown_sec < 0:
         raise TriggerError("cooldown_sec_invalid")
+    c17_4_trace("settings_trigger_active", session_lock=session_lock.exists())
+    c17_4_trace("f10_ready", visual_tty=visual_tty)
     next_allowed = 0.0
     while True:
         rc = wait_for_function_hold(
@@ -563,6 +608,7 @@ def daemon_loop(
             except Exception:
                 status = {}
             trigger_type = str(status.get("trigger_type") or "keyboard_f10_hold")
+            c17_4_trace("f10_detected", trigger_type=trigger_type, session_lock=session_lock.exists())
             now = time.monotonic()
             if now < next_allowed:
                 clear_request(request_dir)
@@ -585,6 +631,7 @@ def daemon_loop(
                     removed = remove_stale_session_lock(session_lock)
                     if removed:
                         result = trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
+                        c17_4_trace("open_settings_requested", result=result, stale_lock_removed=True)
                         write_status(
                             request_dir,
                             {
@@ -621,6 +668,7 @@ def daemon_loop(
                 time.sleep(1.0)
                 continue
             result = trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
+            c17_4_trace("open_settings_requested", result=result, stale_lock_removed=False)
             write_status(
                 request_dir,
                 {
