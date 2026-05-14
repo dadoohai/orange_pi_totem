@@ -1,0 +1,110 @@
+[
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "splash.boot",
+    "from_state": "power_on",
+    "function": "Dar primeiro sinal visual publico apos boot.",
+    "future_test_required": "hdmi_capture_or_camera",
+    "risk_dead_moment": "medium",
+    "risk_reason": "Janela anterior ao systemd splash depende do boot base.",
+    "to_state": "boot_splash",
+    "transition_id": "transition.power_on_to_first_feedback"
+  },
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "splash.player",
+    "from_state": "boot_or_preparing",
+    "function": "Indicar que o player esta sendo iniciado.",
+    "future_test_required": "hdmi_capture_or_camera_for_final_perception",
+    "risk_dead_moment": "low",
+    "risk_reason": "C15.1.5 removeu render duplicado e manteve splash controlado.",
+    "to_state": "player_start",
+    "transition_id": "transition.boot_preparing_to_player"
+  },
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "splash.config_pending",
+    "from_state": "config_missing",
+    "function": "Explicar que configuracao local e necessaria.",
+    "future_test_required": "none",
+    "risk_dead_moment": "low",
+    "risk_reason": "Launcher renderiza feedback publico quando config esta ausente.",
+    "to_state": "config_pending_feedback",
+    "transition_id": "transition.no_config_to_config_pending"
+  },
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "splash.setup",
+    "from_state": "player_running",
+    "function": "Mostrar entrada controlada na configuracao.",
+    "future_test_required": "hdmi_capture_or_camera_for_flicker",
+    "risk_dead_moment": "low",
+    "risk_reason": "Sessao F10 renderiza splash antes de parar/abrir wizard.",
+    "to_state": "setup_splash",
+    "transition_id": "transition.f10_to_setup_splash"
+  },
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": false,
+    "feedback_screen": "wizard.orientation.landscape",
+    "from_state": "setup_splash",
+    "function": "Trocar feedback estatico pelo wizard interativo.",
+    "future_test_required": "hdmi_capture_or_camera_for_flicker",
+    "risk_dead_moment": "low",
+    "risk_reason": "Renderizador do wizard assume a VT apos openvt.",
+    "to_state": "wizard_orientation",
+    "transition_id": "transition.setup_splash_to_wizard"
+  },
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "splash.saving",
+    "from_state": "wizard_review_confirmed",
+    "function": "Indicar escrita/aplicacao controlada.",
+    "future_test_required": "none",
+    "risk_dead_moment": "low",
+    "risk_reason": "Sessao F10 chama splash saving antes do writer real.",
+    "to_state": "saving_feedback",
+    "transition_id": "transition.wizard_to_saving"
+  },
+  {
+    "covered_by_preview": true,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "splash.player",
+    "from_state": "saving_feedback",
+    "function": "Restaurar feedback e voltar ao player.",
+    "future_test_required": "hdmi_capture_or_camera",
+    "risk_dead_moment": "medium",
+    "risk_reason": "C15.1.5 corrigiu render duplicado; percepcao final ainda nao foi capturada em video.",
+    "to_state": "player_start",
+    "transition_id": "transition.saving_to_player"
+  },
+  {
+    "covered_by_preview": false,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "status_renderer_or_player_state",
+    "from_state": "player_start",
+    "function": "Manter operador informado enquanto conteudo real chega.",
+    "future_test_required": "runtime_or_hdmi_capture",
+    "risk_dead_moment": "medium",
+    "risk_reason": "Nao houve inspecao runtime do MPV/cache/API nesta rodada.",
+    "to_state": "player_content_visible",
+    "transition_id": "transition.player_waiting_for_media_cache_api"
+  },
+  {
+    "covered_by_preview": false,
+    "dynamic_feedback_needed": true,
+    "feedback_screen": "future_error_state",
+    "from_state": "player_error",
+    "function": "Mostrar erro recuperavel sem expor detalhe tecnico privado.",
+    "future_test_required": "future_player_error_fixture",
+    "risk_dead_moment": "medium",
+    "risk_reason": "Erro amigavel especifico do player nao foi redesenhado nesta rodada.",
+    "to_state": "public_error_or_config_pending",
+    "transition_id": "transition.player_failure_fallback"
+  }
+]

@@ -96,3 +96,19 @@ ready_for_c18_player_audit=false
 
 C17.3 can rebuild/derive an image carrying this UI polish. C18 should remain
 blocked until the C17.2/C17.3 visual line is closed.
+
+## C17.3 Follow-Up
+
+C17.3 derived the private homologation image
+`c17-3-homolog-visual-polish` with the C17.2 visual polish embedded and passed
+offline rootfs/harness validation. Clean-board validation is still blocked until
+the image is manually flashed with Armbian Imager and booted on the lab board.
+
+```text
+c17_3_status=blocked
+image_built=true
+card_written=false
+ready_for_batch_flash=false
+ready_for_dispatch=false
+ready_for_c18_player_audit=false
+```

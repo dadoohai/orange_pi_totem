@@ -1,0 +1,407 @@
+[
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": false,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 4.0,
+      "progress_feedback": 4.2,
+      "recovery_clarity": 4.0,
+      "runtime_observability": 4.0,
+      "state_clarity": 4.5,
+      "visual_evidence": 3.6
+    },
+    "finding": "Boot inicial tem linguagem clara, mas percepcao final ainda depende de HDMI/camera.",
+    "journey_id": "A",
+    "lowest_dimension": {
+      "name": "visual_evidence",
+      "score": 3.6
+    },
+    "name": "Primeira energizacao",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P2",
+    "recommendation": "Validar no boot da imagem C17 e manter HDMI/camera como gate antes de escala.",
+    "required_test_before_C17": true,
+    "requires_image": true,
+    "score_overall": 4.2
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": false,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 4.0,
+      "progress_feedback": 4.4,
+      "recovery_clarity": 4.3,
+      "runtime_observability": 4.0,
+      "state_clarity": 4.6,
+      "visual_evidence": 3.8
+    },
+    "finding": "Sem configuracao fica compreensivel e recuperavel via F10.",
+    "journey_id": "B",
+    "lowest_dimension": {
+      "name": "visual_evidence",
+      "score": 3.8
+    },
+    "name": "Boot sem configuracao",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P2",
+    "recommendation": "Revalidar como gate de clean image em C17.",
+    "required_test_before_C17": true,
+    "requires_image": true,
+    "score_overall": 4.3
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.9,
+      "progress_feedback": 4.0,
+      "recovery_clarity": 4.2,
+      "runtime_observability": 4.0,
+      "state_clarity": 4.4,
+      "visual_evidence": 4.0
+    },
+    "finding": "Fluxo F10 e wizard estao bons para homologacao, com risco residual em negativos.",
+    "journey_id": "C",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.9
+    },
+    "name": "Primeira configuracao via F10",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P2",
+    "recommendation": "Rodar full setup C17 e manter negativos Wi-Fi/API como gates separados.",
+    "required_test_before_C17": true,
+    "requires_image": true,
+    "score_overall": 4.2
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 4.0,
+      "progress_feedback": 4.2,
+      "recovery_clarity": 4.1,
+      "runtime_observability": 4.0,
+      "state_clarity": 4.3,
+      "visual_evidence": 4.2
+    },
+    "finding": "Selecao de rede e legivel na galeria sintetica.",
+    "journey_id": "D",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 4.0
+    },
+    "name": "Selecao de Wi-Fi",
+    "needs_hdmi_camera": false,
+    "needs_runtime_probe": false,
+    "priority": "P2",
+    "recommendation": "Manter regressao offline e validar uma lista real sanitizada em C17 se autorizado.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 4.3
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.2,
+      "progress_feedback": 3.8,
+      "recovery_clarity": 4.0,
+      "runtime_observability": 3.2,
+      "state_clarity": 3.9,
+      "visual_evidence": 4.0
+    },
+    "finding": "Senha errada e comum e ainda precisa de validacao negativa runtime.",
+    "journey_id": "E",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.2
+    },
+    "name": "Senha Wi-Fi errada",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 com falha sintetica de associacao/senha e evidencia sanitizada.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.9
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.3,
+      "progress_feedback": 3.8,
+      "recovery_clarity": 3.9,
+      "runtime_observability": 3.3,
+      "state_clarity": 4.0,
+      "visual_evidence": 4.0
+    },
+    "finding": "Wi-Fi fraco precisa ser distinguido de erro generico de conexao.",
+    "journey_id": "F",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.3
+    },
+    "name": "Wi-Fi fraco/instavel",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 com output sintetico nmcli e, se autorizado, leitura real sanitizada.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.9
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.0,
+      "progress_feedback": 4.0,
+      "recovery_clarity": 3.5,
+      "runtime_observability": 3.3,
+      "state_clarity": 3.8,
+      "visual_evidence": 3.8
+    },
+    "finding": "API indisponivel precisa virar categoria publica verificavel.",
+    "journey_id": "G",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.0
+    },
+    "name": "Backend/API inacessivel",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 de outage sintetico sem dados reais; C16.3 e opcional se C17 nao cobrir.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.8
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.8,
+      "progress_feedback": 4.2,
+      "recovery_clarity": 4.1,
+      "runtime_observability": 4.0,
+      "state_clarity": 4.4,
+      "visual_evidence": 3.9
+    },
+    "finding": "Conclusao do setup e clara, com lacuna perceptiva no handoff para player.",
+    "journey_id": "H",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.8
+    },
+    "name": "Configuracao concluida",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P2",
+    "recommendation": "Gate C17 full setup com timeline e observacao HDMI quando disponivel.",
+    "required_test_before_C17": true,
+    "requires_image": true,
+    "score_overall": 4.2
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.2,
+      "progress_feedback": 4.1,
+      "recovery_clarity": 3.5,
+      "runtime_observability": 3.4,
+      "state_clarity": 4.0,
+      "visual_evidence": 3.8
+    },
+    "finding": "Espera por conteudo melhorou, mas negativos cache/API ainda precisam de gate.",
+    "journey_id": "I",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.2
+    },
+    "name": "Espera por conteudo/cache/API",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 para loading_content, waiting_for_api, waiting_for_media e no-content.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.9
+  },
+  {
+    "can_be_tested_offline": false,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.8,
+      "progress_feedback": 4.0,
+      "recovery_clarity": 4.0,
+      "runtime_observability": 4.0,
+      "state_clarity": 4.5,
+      "visual_evidence": 3.8
+    },
+    "finding": "Player normal pode ser validado em C17 sem abrir timing/sync/loop.",
+    "journey_id": "J",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.8
+    },
+    "name": "Player normal",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P2",
+    "recommendation": "Smoke C17 de playback normal; timing/sync/duration/loop ficam para C18.",
+    "required_test_before_C17": true,
+    "requires_image": true,
+    "score_overall": 4.2
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.0,
+      "progress_feedback": 3.6,
+      "recovery_clarity": 3.4,
+      "runtime_observability": 3.2,
+      "state_clarity": 3.8,
+      "visual_evidence": 3.7
+    },
+    "finding": "Midia indisponivel e a principal lacuna de erro visual sem tela preta.",
+    "journey_id": "K",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.0
+    },
+    "name": "Midia indisponivel",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 de missing-media/no-content com status publico e sem URLs sensiveis.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.7
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.2,
+      "progress_feedback": 3.8,
+      "recovery_clarity": 3.6,
+      "runtime_observability": 3.3,
+      "state_clarity": 3.9,
+      "visual_evidence": 4.0
+    },
+    "finding": "Update remoto tem engenharia, mas o caminho visual ainda precisa de scenario gate.",
+    "journey_id": "M",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.2
+    },
+    "name": "Update remoto",
+    "needs_hdmi_camera": false,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 simulando checking/applying sem aplicar release real.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.8
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.1,
+      "progress_feedback": 3.6,
+      "recovery_clarity": 3.7,
+      "runtime_observability": 3.2,
+      "state_clarity": 3.8,
+      "visual_evidence": 4.0
+    },
+    "finding": "Falha de update precisa provar que a versao anterior e preservada.",
+    "journey_id": "N",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.1
+    },
+    "name": "Falha de update",
+    "needs_hdmi_camera": false,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 de falha simulada com status update_failed e rollback seguro.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.8
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 3.0,
+      "progress_feedback": 3.8,
+      "recovery_clarity": 3.4,
+      "runtime_observability": 3.2,
+      "state_clarity": 3.7,
+      "visual_evidence": 3.8
+    },
+    "finding": "Sem internet precisa diferenciar cache, API e rede sem virar tela preta.",
+    "journey_id": "R",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 3.0
+    },
+    "name": "Estado sem internet",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 de sem-internet com cache e sem cache, sem mudar rede real nesta rodada.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.7
+  },
+  {
+    "can_be_tested_offline": true,
+    "can_be_updated_remotely": true,
+    "dimension_scores": {
+      "guardrail_safety": 5.0,
+      "negative_path_coverage": 2.9,
+      "progress_feedback": 3.5,
+      "recovery_clarity": 3.3,
+      "runtime_observability": 3.1,
+      "state_clarity": 3.5,
+      "visual_evidence": 3.7
+    },
+    "finding": "Sem cache e sem API e a pior jornada: precisa erro publico, nao espera indefinida.",
+    "journey_id": "T",
+    "lowest_dimension": {
+      "name": "negative_path_coverage",
+      "score": 2.9
+    },
+    "name": "Estado sem cache",
+    "needs_hdmi_camera": true,
+    "needs_runtime_probe": true,
+    "priority": "P1",
+    "recommendation": "Gate C17 obrigatorio de no-cache/no-content; C18 so trata timing/sync/loop.",
+    "required_test_before_C17": true,
+    "requires_image": false,
+    "score_overall": 3.6
+  }
+]

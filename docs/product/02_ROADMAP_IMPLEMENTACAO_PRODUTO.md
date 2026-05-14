@@ -2732,3 +2732,18 @@ rubrica C16.2 pos-mudanca: `worst_screen=wifi_list`,
 `passed_visual_polish=true`, `ready_for_c17_3_image_rebuild=true` e
 `ready_for_c18_player_audit=false`. C18 segue aguardando ate fechar a linha
 visual C17.2/C17.3.
+
+Atualizacao C17.3: 2026-05-14. Foi derivada a imagem privada de homologacao
+`c17-3-homolog-visual-polish`, consolidando o polish visual C17.2 em wizard,
+splash e status publico. A derivacao reutilizou a base C14.2.1 validada, sem
+Armbian Build, apt, pip, recompilacao de kernel, U-Boot, DTB ou BSP. A
+validacao offline confirmou C17.2 embutido, C14 updater, fixes C15, feedback
+C15.3.2, kiosky-player embutido, seed privada 0600, ausencia de config real e
+QA/evidence fora do appliance. O harness C16.2 pos-imagem passou com
+`worst_screen=wifi_list`, `worst_screen_score=4.3`,
+`critical_screens_below_4=false` e `p0_items_count=0`. A gravacao do cartao e
+manual via Armbian Imager e ainda nao foi executada nesta rodada; portanto
+`c17_3_status=blocked`, `card_written=false`,
+`single_board_validated=false`, `ready_for_batch_flash=false`,
+`ready_for_dispatch=false` e `ready_for_c18_player_audit=false`. C18 permanece
+fechado ate a validacao limpa C17.3 passar.

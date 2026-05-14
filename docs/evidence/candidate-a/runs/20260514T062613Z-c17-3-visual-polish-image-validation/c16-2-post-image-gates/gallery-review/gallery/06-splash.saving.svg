@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-display-rotation-deg="0" data-layout-mode="landscape" role="img" aria-label="Dadooh splash preview saving">
+  <rect width="1280" height="720" fill="#0b1220"/>
+  <rect x="0" y="0" width="1280" height="12" fill="#06b6d4"/>
+  <rect x="0" y="648" width="1280" height="72" fill="#07111f"/>
+  <rect x="230" y="233" width="819" height="230" rx="8" fill="#111827" stroke="#2f3d4a"/>
+  <rect x="230" y="233" width="9" height="230" rx="4" fill="#06b6d4"/>
+  <text x="640" y="328" font-family="Arial, DejaVu Sans, sans-serif" font-size="52" font-weight="700" text-anchor="middle" fill="#f8fafc">Dadooh</text>
+  <text x="640" y="396" font-family="Arial, DejaVu Sans, sans-serif" font-size="30" text-anchor="middle" fill="#cbd5e1">Salvando configuracao</text>
+</svg>

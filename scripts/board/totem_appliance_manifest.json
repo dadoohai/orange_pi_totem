@@ -1,9 +1,9 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1 (extended by C14.2.1 and C17.1)",
+  "created_for": "C10.8.1 (extended by C14.2.1, C17.1 and C17.3)",
   "homologation_release": {
-    "image_tag": "c17-1-homolog-ux-gated",
-    "image_version": "c17.1",
+    "image_tag": "c17-3-homolog-visual-polish",
+    "image_version": "c17.3",
     "artifact_private": true,
     "final_image": false,
     "homologation_shipping_image": true,
@@ -12,9 +12,11 @@
     "kernel_reused": true,
     "kernel_rebuild_executed": false,
     "c16_2_gates_used": true,
-    "ready_for_batch_flash": true,
-    "ready_for_dispatch": true,
-    "ready_for_c18_player_audit": true,
+    "c17_2_visual_polish_embedded": true,
+    "clean_board_validation_pending": true,
+    "ready_for_batch_flash": false,
+    "ready_for_dispatch": false,
+    "ready_for_c18_player_audit": false,
     "c12_readonly_blocked": true,
     "c12_4_blocked": true
   },

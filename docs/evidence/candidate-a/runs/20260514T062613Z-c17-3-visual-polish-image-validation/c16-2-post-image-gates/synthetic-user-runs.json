@@ -1,0 +1,677 @@
+[
+  {
+    "expected_understanding": "Entende Primeira energizacao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "A",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Validar no boot da imagem C17 e manter HDMI/camera como gate antes de escala.",
+    "score": 4.2,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Boot sem configuracao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "B",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Revalidar como gate de clean image em C17.",
+    "score": 4.3,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Primeira configuracao via F10 se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "C",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Rodar full setup C17 e manter negativos Wi-Fi/API como gates separados.",
+    "score": 4.2,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Selecao de Wi-Fi se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "D",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Manter regressao offline e validar uma lista real sanitizada em C17 se autorizado.",
+    "score": 4.3,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Senha Wi-Fi errada se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "E",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 com falha sintetica de associacao/senha e evidencia sanitizada.",
+    "score": 3.5,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Wi-Fi fraco/instavel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "F",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 com output sintetico nmcli e, se autorizado, leitura real sanitizada.",
+    "score": 3.5,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Backend/API inacessivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "G",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 de outage sintetico sem dados reais; C16.3 e opcional se C17 nao cobrir.",
+    "score": 3.4,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Configuracao concluida se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "H",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 full setup com timeline e observacao HDMI quando disponivel.",
+    "score": 4.2,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Espera por conteudo/cache/API se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "I",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 para loading_content, waiting_for_api, waiting_for_media e no-content.",
+    "score": 3.5,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Player normal se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "J",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Smoke C17 de playback normal; timing/sync/duration/loop ficam para C18.",
+    "score": 4.2,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Midia indisponivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "K",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 de missing-media/no-content com status publico e sem URLs sensiveis.",
+    "score": 3.3,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Update remoto se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "M",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 simulando checking/applying sem aplicar release real.",
+    "score": 3.8,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Falha de update se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "N",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de falha simulada com status update_failed e rollback seguro.",
+    "score": 3.8,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Estado sem internet se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "R",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 de sem-internet com cache e sem cache, sem mudar rede real nesta rodada.",
+    "score": 3.3,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Estado sem cache se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "T",
+    "likely_confusion": "Alto: baixa tolerancia a espera e erro; pode repetir acao errada.",
+    "missing_feedback": "Precisa mensagem curta, erro recuperavel e proximo passo obvio.",
+    "recommendation": "Gate C17 obrigatorio de no-cache/no-content; C18 so trata timing/sync/loop.",
+    "score": 3.2,
+    "synthetic_user_id": "installer_rushed"
+  },
+  {
+    "expected_understanding": "Entende Primeira energizacao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "A",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Validar no boot da imagem C17 e manter HDMI/camera como gate antes de escala.",
+    "score": 4.2,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Boot sem configuracao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "B",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Revalidar como gate de clean image em C17.",
+    "score": 4.3,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Primeira configuracao via F10 se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "C",
+    "likely_confusion": "Medio: tolera espera, mas depende de voltar/cancelar visivel.",
+    "missing_feedback": "Confirmar que cancelar nao corrompe configuracao.",
+    "recommendation": "Rodar full setup C17 e manter negativos Wi-Fi/API como gates separados.",
+    "score": 4.3,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Selecao de Wi-Fi se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "D",
+    "likely_confusion": "Medio: tolera espera, mas depende de voltar/cancelar visivel.",
+    "missing_feedback": "Confirmar que cancelar nao corrompe configuracao.",
+    "recommendation": "Manter regressao offline e validar uma lista real sanitizada em C17 se autorizado.",
+    "score": 4.4,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Senha Wi-Fi errada se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "E",
+    "likely_confusion": "Medio: tolera espera, mas depende de voltar/cancelar visivel.",
+    "missing_feedback": "Confirmar que cancelar nao corrompe configuracao.",
+    "recommendation": "Gate C17 com falha sintetica de associacao/senha e evidencia sanitizada.",
+    "score": 4.0,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Wi-Fi fraco/instavel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "F",
+    "likely_confusion": "Medio: tolera espera, mas depende de voltar/cancelar visivel.",
+    "missing_feedback": "Confirmar que cancelar nao corrompe configuracao.",
+    "recommendation": "Gate C17 com output sintetico nmcli e, se autorizado, leitura real sanitizada.",
+    "score": 4.0,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Backend/API inacessivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "G",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de outage sintetico sem dados reais; C16.3 e opcional se C17 nao cobrir.",
+    "score": 3.8,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Configuracao concluida se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "H",
+    "likely_confusion": "Medio: tolera espera, mas depende de voltar/cancelar visivel.",
+    "missing_feedback": "Confirmar que cancelar nao corrompe configuracao.",
+    "recommendation": "Gate C17 full setup com timeline e observacao HDMI quando disponivel.",
+    "score": 4.3,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Espera por conteudo/cache/API se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "I",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 para loading_content, waiting_for_api, waiting_for_media e no-content.",
+    "score": 3.9,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Player normal se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "J",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Smoke C17 de playback normal; timing/sync/duration/loop ficam para C18.",
+    "score": 4.2,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Midia indisponivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "K",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de missing-media/no-content com status publico e sem URLs sensiveis.",
+    "score": 3.7,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Update remoto se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "M",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 simulando checking/applying sem aplicar release real.",
+    "score": 3.8,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Falha de update se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "N",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de falha simulada com status update_failed e rollback seguro.",
+    "score": 3.8,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Estado sem internet se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "R",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de sem-internet com cache e sem cache, sem mudar rede real nesta rodada.",
+    "score": 3.7,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Estado sem cache se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "T",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 obrigatorio de no-cache/no-content; C18 so trata timing/sync/loop.",
+    "score": 3.6,
+    "synthetic_user_id": "installer_cautious"
+  },
+  {
+    "expected_understanding": "Entende Primeira energizacao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "A",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Validar no boot da imagem C17 e manter HDMI/camera como gate antes de escala.",
+    "score": 3.9,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Boot sem configuracao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "B",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Revalidar como gate de clean image em C17.",
+    "score": 4.0,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Primeira configuracao via F10 se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "C",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Rodar full setup C17 e manter negativos Wi-Fi/API como gates separados.",
+    "score": 3.9,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Selecao de Wi-Fi se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "D",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Manter regressao offline e validar uma lista real sanitizada em C17 se autorizado.",
+    "score": 4.3,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Senha Wi-Fi errada se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "E",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 com falha sintetica de associacao/senha e evidencia sanitizada.",
+    "score": 3.6,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Wi-Fi fraco/instavel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "F",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 com output sintetico nmcli e, se autorizado, leitura real sanitizada.",
+    "score": 3.6,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Backend/API inacessivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "G",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 de outage sintetico sem dados reais; C16.3 e opcional se C17 nao cobrir.",
+    "score": 3.5,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Configuracao concluida se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "H",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 full setup com timeline e observacao HDMI quando disponivel.",
+    "score": 3.9,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Espera por conteudo/cache/API se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "I",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 para loading_content, waiting_for_api, waiting_for_media e no-content.",
+    "score": 3.6,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Player normal se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "J",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Smoke C17 de playback normal; timing/sync/duration/loop ficam para C18.",
+    "score": 3.9,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Midia indisponivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "K",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 de missing-media/no-content com status publico e sem URLs sensiveis.",
+    "score": 3.4,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Update remoto se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "M",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player.",
+    "recommendation": "Gate C17 simulando checking/applying sem aplicar release real.",
+    "score": 3.5,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Falha de update se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "N",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player.",
+    "recommendation": "Gate C17 de falha simulada com status update_failed e rollback seguro.",
+    "score": 3.5,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Estado sem internet se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "R",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 de sem-internet com cache e sem cache, sem mudar rede real nesta rodada.",
+    "score": 3.4,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Estado sem cache se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "T",
+    "likely_confusion": "Medio/alto: sem probe runtime, categorias publicas ainda sao promessa.",
+    "missing_feedback": "Status publico deve separar rede, API, cache, midia, update e player. HDMI/camera continua necessario para percepcao final.",
+    "recommendation": "Gate C17 obrigatorio de no-cache/no-content; C18 so trata timing/sync/loop.",
+    "score": 3.3,
+    "synthetic_user_id": "support_remote"
+  },
+  {
+    "expected_understanding": "Entende Primeira energizacao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "A",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Validar no boot da imagem C17 e manter HDMI/camera como gate antes de escala.",
+    "score": 3.9,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Boot sem configuracao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "B",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Revalidar como gate de clean image em C17.",
+    "score": 4.3,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Primeira configuracao via F10 se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "C",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Rodar full setup C17 e manter negativos Wi-Fi/API como gates separados.",
+    "score": 4.2,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Selecao de Wi-Fi se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "D",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Manter regressao offline e validar uma lista real sanitizada em C17 se autorizado.",
+    "score": 4.3,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Senha Wi-Fi errada se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "E",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 com falha sintetica de associacao/senha e evidencia sanitizada.",
+    "score": 3.9,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Wi-Fi fraco/instavel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "F",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 com output sintetico nmcli e, se autorizado, leitura real sanitizada.",
+    "score": 3.9,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Backend/API inacessivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "G",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Gate C17 de outage sintetico sem dados reais; C16.3 e opcional se C17 nao cobrir.",
+    "score": 3.5,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Configuracao concluida se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "H",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 full setup com timeline e observacao HDMI quando disponivel.",
+    "score": 4.2,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Espera por conteudo/cache/API se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "I",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Gate C17 para loading_content, waiting_for_api, waiting_for_media e no-content.",
+    "score": 3.6,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Player normal se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "J",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Smoke C17 de playback normal; timing/sync/duration/loop ficam para C18.",
+    "score": 4.1,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Midia indisponivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "K",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Gate C17 de missing-media/no-content com status publico e sem URLs sensiveis.",
+    "score": 3.4,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Update remoto se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "M",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 simulando checking/applying sem aplicar release real.",
+    "score": 3.8,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Falha de update se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "N",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de falha simulada com status update_failed e rollback seguro.",
+    "score": 3.8,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Estado sem internet se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "R",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Gate C17 de sem-internet com cache e sem cache, sem mudar rede real nesta rodada.",
+    "score": 3.4,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Estado sem cache se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "T",
+    "likely_confusion": "Alto se houver tela preta ou mensagem tecnica prolongada.",
+    "missing_feedback": "Tela deve sempre parecer produto ativo ou espera intencional.",
+    "recommendation": "Gate C17 obrigatorio de no-cache/no-content; C18 so trata timing/sync/loop.",
+    "score": 3.3,
+    "synthetic_user_id": "spectator"
+  },
+  {
+    "expected_understanding": "Entende Primeira energizacao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "A",
+    "likely_confusion": "Medio: transicao abrupta parece baixa qualidade, mesmo sem bug funcional.",
+    "missing_feedback": "Precisa polimento perceptivo e status visivel durante transicoes.",
+    "recommendation": "Validar no boot da imagem C17 e manter HDMI/camera como gate antes de escala.",
+    "score": 3.9,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Boot sem configuracao se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "B",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Revalidar como gate de clean image em C17.",
+    "score": 4.3,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Primeira configuracao via F10 se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "C",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Rodar full setup C17 e manter negativos Wi-Fi/API como gates separados.",
+    "score": 4.2,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Selecao de Wi-Fi se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "D",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Manter regressao offline e validar uma lista real sanitizada em C17 se autorizado.",
+    "score": 4.3,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Senha Wi-Fi errada se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "E",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 com falha sintetica de associacao/senha e evidencia sanitizada.",
+    "score": 3.9,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Wi-Fi fraco/instavel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "F",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 com output sintetico nmcli e, se autorizado, leitura real sanitizada.",
+    "score": 3.9,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Backend/API inacessivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "G",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de outage sintetico sem dados reais; C16.3 e opcional se C17 nao cobrir.",
+    "score": 3.8,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Configuracao concluida se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "H",
+    "likely_confusion": "Medio: transicao abrupta parece baixa qualidade, mesmo sem bug funcional.",
+    "missing_feedback": "Precisa polimento perceptivo e status visivel durante transicoes.",
+    "recommendation": "Gate C17 full setup com timeline e observacao HDMI quando disponivel.",
+    "score": 3.9,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Espera por conteudo/cache/API se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "I",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 para loading_content, waiting_for_api, waiting_for_media e no-content.",
+    "score": 3.9,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Player normal se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "J",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Smoke C17 de playback normal; timing/sync/duration/loop ficam para C18.",
+    "score": 4.2,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Midia indisponivel se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "K",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de missing-media/no-content com status publico e sem URLs sensiveis.",
+    "score": 3.7,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Update remoto se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "M",
+    "likely_confusion": "Medio: transicao abrupta parece baixa qualidade, mesmo sem bug funcional.",
+    "missing_feedback": "Precisa polimento perceptivo e status visivel durante transicoes.",
+    "recommendation": "Gate C17 simulando checking/applying sem aplicar release real.",
+    "score": 3.5,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Falha de update se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "N",
+    "likely_confusion": "Medio: transicao abrupta parece baixa qualidade, mesmo sem bug funcional.",
+    "missing_feedback": "Precisa polimento perceptivo e status visivel durante transicoes.",
+    "recommendation": "Gate C17 de falha simulada com status update_failed e rollback seguro.",
+    "score": 3.5,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Estado sem internet se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "R",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 de sem-internet com cache e sem cache, sem mudar rede real nesta rodada.",
+    "score": 3.7,
+    "synthetic_user_id": "customer_receiver"
+  },
+  {
+    "expected_understanding": "Entende Estado sem cache se a tela mantiver estado, acao e recuperacao claros.",
+    "journey_id": "T",
+    "likely_confusion": "Baixo: estado e acao ficam claros na galeria sintetica.",
+    "missing_feedback": "Sem lacuna offline; falta validacao runtime quando o gate exigir.",
+    "recommendation": "Gate C17 obrigatorio de no-cache/no-content; C18 so trata timing/sync/loop.",
+    "score": 3.6,
+    "synthetic_user_id": "customer_receiver"
+  }
+]

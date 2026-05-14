@@ -1,0 +1,117 @@
+[
+  {
+    "can_remote_update": true,
+    "effort": "small",
+    "files_probable": [
+      "scripts/board/totem_visual_splash.py"
+    ],
+    "id": "C15.1.6-P1-001",
+    "impact": "Evita lacuna entre modos reais e galeria QA.",
+    "priority": "P1",
+    "recommendation": "defer",
+    "requires_board": false,
+    "requires_image": false,
+    "risk": "low",
+    "severity": "medium",
+    "title": "Expandir preview padrao de splash para todos os modos publicos"
+  },
+  {
+    "can_remote_update": true,
+    "effort": "small",
+    "files_probable": [
+      "scripts/board/totem_setup_visual_wizard.py",
+      "scripts/qa/generate_ui_ux_gallery.py"
+    ],
+    "id": "C15.1.6-P1-002",
+    "impact": "Mantem limite de densidade textual durante ajustes futuros.",
+    "priority": "P1",
+    "recommendation": "defer",
+    "requires_board": false,
+    "requires_image": false,
+    "risk": "low",
+    "severity": "medium",
+    "title": "Adicionar snapshot heuristico de copy/acoes ao self-test do wizard"
+  },
+  {
+    "can_remote_update": true,
+    "effort": "small",
+    "files_probable": [
+      "scripts/board/kiosky_service_launcher.sh",
+      "scripts/board/totem_visual_splash.py"
+    ],
+    "id": "C15.1.6-P1-003",
+    "impact": "Reduz risco de tela parecer parada antes do primeiro conteudo.",
+    "priority": "P1",
+    "recommendation": "defer",
+    "requires_board": true,
+    "requires_image": false,
+    "risk": "medium",
+    "severity": "medium",
+    "title": "Definir feedback publico para espera de midia/cache/API no player"
+  },
+  {
+    "can_remote_update": true,
+    "effort": "small",
+    "files_probable": [
+      "scripts/board/totem_setup_visual_wizard.py"
+    ],
+    "id": "C15.1.6-P1-004",
+    "impact": "Deixa a UI menos tecnica sem mudar fluxo.",
+    "priority": "P1",
+    "recommendation": "defer",
+    "requires_board": false,
+    "requires_image": false,
+    "risk": "low",
+    "severity": "low",
+    "title": "Padronizar footers longos em Wi-Fi e senha"
+  },
+  {
+    "can_remote_update": true,
+    "effort": "medium",
+    "files_probable": [
+      "scripts/board/totem_setup_visual_wizard.py"
+    ],
+    "id": "C15.1.6-P2-001",
+    "impact": "Evolui de wizard funcional para experiencia mais profissional.",
+    "priority": "P2",
+    "recommendation": "defer",
+    "requires_board": false,
+    "requires_image": false,
+    "risk": "medium",
+    "severity": "medium",
+    "title": "Criar design system visual do wizard completo"
+  },
+  {
+    "can_remote_update": false,
+    "effort": "medium",
+    "files_probable": [
+      "docs/product/142_C15_1_6_AI_ASSISTED_UI_UX_REVIEW.md"
+    ],
+    "id": "C15.1.6-P2-002",
+    "impact": "Mede percepcao real que SVG offline e SSH nao conseguem provar.",
+    "priority": "P2",
+    "recommendation": "needs_hardware_capture",
+    "requires_board": true,
+    "requires_image": false,
+    "risk": "low",
+    "severity": "medium",
+    "title": "Adicionar QA por captura HDMI ou camera para flicker/transicoes"
+  },
+  {
+    "can_remote_update": true,
+    "effort": "large",
+    "files_probable": [
+      "scripts/board/totem_setup_visual_wizard.py",
+      "scripts/board/totem_visual_splash.py"
+    ],
+    "id": "C15.1.6-P3-001",
+    "impact": "Aumenta percepcao de produto acabado quando o fluxo base estiver congelado.",
+    "priority": "P3",
+    "recommendation": "defer",
+    "requires_board": true,
+    "requires_image": false,
+    "risk": "medium",
+    "severity": "low",
+    "title": "Motion design e microinteracoes premium"
+  }
+]
