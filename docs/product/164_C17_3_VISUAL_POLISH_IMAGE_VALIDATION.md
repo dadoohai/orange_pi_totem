@@ -101,7 +101,7 @@ and full setup restore.
 
 ## Decision
 
-C17.3 is not released for batch flash, dispatch or C18 yet:
+C17.3 is not released for batch flash, dispatch or C18:
 
 ```text
 ready_for_batch_flash=false
@@ -109,10 +109,17 @@ ready_for_dispatch=false
 ready_for_c18_player_audit=false
 ```
 
-The blocker is procedural/runtime, not a failed image check: a manually flashed
-clean board must still prove the visual polish on HDMI, the wizard flow, writer
-handoff, loading-content feedback and player restore. C18 remains closed until
-that validation passes.
+The initial blocker was pending manual clean-board validation. After manual
+flash and boot, C17.3 exposed a first-boot pre-config visual/F10 blocker:
+first boot showed a black HDMI screen, F10 did not respond, and recovery needed
+a physical power cycle. On the second boot the wizard opened after F10, but
+later the operator saw the public configuration-pending/status surface instead
+of the wizard while the writer had not run. See:
+
+```text
+docs/product/165_C17_3_FIRST_BOOT_VISUAL_F10_BLOCKER.md
+docs/evidence/candidate-a/runs/20260514T165343Z-c17-3-first-boot-visual-f10-blocker/
+```
 
 ## Remaining Limits
 

@@ -2747,3 +2747,20 @@ manual via Armbian Imager e ainda nao foi executada nesta rodada; portanto
 `single_board_validated=false`, `ready_for_batch_flash=false`,
 `ready_for_dispatch=false` e `ready_for_c18_player_audit=false`. C18 permanece
 fechado ate a validacao limpa C17.3 passar.
+
+Atualizacao C17.3 runtime: 2026-05-14. A imagem C17.3 foi gravada manualmente
+com Armbian Imager e bootada em cartao limpo. O primeiro boot antes de
+configuracao ficou em tela preta no HDMI; F10 nao respondeu; SSH nao estava
+disponivel porque Wi-Fi ainda nao existia; a recuperacao exigiu ciclo fisico
+de energia pelo operador. Esse ciclo foi emergencial, nao planejado, e nao
+conta como C12.4. No segundo boot apareceu splash/config_missing, mas com
+texto visualmente sobreposto/desconfigurado. F10 abriu o wizard, o operador
+rotacionou a tela e conectou Wi-Fi, mas antes do writer o HDMI passou a mostrar
+uma tela azul escuro/laranja de configuracao pendente em vez do wizard. A
+coleta SSH sanitizada mostrou `totem-open-settings.service=activating`,
+`totem_setup_visual_wizard.py` vivo em `tty2`, `kiosky-player.service=active`,
+renderer/MPV de status ativos, `public_state=config_missing`,
+`session_lock_present=true` e `config_real_present=false`. C17.3 permanece
+`blocked`: `ready_for_batch_flash=false`, `ready_for_dispatch=false`,
+`ready_for_c18_player_audit=false`, `ready_for_c17_4_first_boot_fix=true`.
+Isto nao e C18/player timing; pertence a C17.4 first-boot pre-config visual/F10.
