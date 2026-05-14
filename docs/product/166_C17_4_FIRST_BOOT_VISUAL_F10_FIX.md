@@ -1,6 +1,6 @@
 # 166 - C17.4 - First Boot Visual/F10 Fix
 
-Status: blocked by post-writer restore cleanup after clean-board runtime
+Status: blocked by post-writer restore latency after clean-board runtime
 
 C17.4 addresses the C17.3 blocker in the first energization / first
 configuration journey. C17.3 failed before normal player operation: first boot
@@ -41,16 +41,22 @@ scale, allowing title/message overlap in `config_pending`.
 
 Confirmed C17.4 runtime blocker:
 
-- `SETTINGS_SESSION_LOCK_HELD_DURING_PLAYER_RESTORE`
+- `POST_WRITER_RESTORE_LATENCY_LOCK_ORDER`
 
 The manually flashed C17.4 clean card fixed the C17.3 first-boot symptoms:
 pre-config HDMI was visible, the initial splash did not overlap text, F10
 responded on first boot, and the wizard opened with exclusive visual ownership.
 After the wizard completed, the writer passed and a real config was created,
-but the settings-session lock remained present. `totem-open-settings.service`
-stayed `activating`, and `kiosky-player.service` was skipped because its own
-`ConditionPathExists=!/run/totem/settings-session.lock` check was unmet. This
-blocks player restore after the writer.
+but the first post-writer snapshot still showed the settings-session lock
+present and `kiosky-player.service` inactive. Without any additional operator
+action, the screen later advanced to loading content and then playback.
+
+The service did not restore promptly because the normal session path calls
+`restore_service` while the settings-session lock is still present. The C17.4
+unit then correctly skips `kiosky-player.service` because
+`ConditionPathExists=!/run/totem/settings-session.lock` is unmet. The script
+waits for player state before removing the lock, so restore is delayed until
+the session finally exits and post-service cleanup can start the player.
 
 ## Ownership Rules
 
@@ -121,10 +127,19 @@ Passed on the clean board:
   wizard;
 - writer passed and created the real config.
 
-Blocked on the clean board:
+Eventually passed on the clean board, but too late:
 
-- settings-session lock cleanup after writer;
-- player restore after writer.
+- settings-session lock cleanup eventually completed;
+- player restore eventually completed;
+- public state reached player running;
+- playback reached playing.
+
+Blocked on product/UX timing:
+
+- the player restore appeared only after a long delay without additional
+  operator action;
+- the loading-content transition was perceived as sudden;
+- the post-writer restore order is not reliable enough for batch/dispatch.
 
 Minor visual backlog:
 
@@ -141,8 +156,8 @@ Minor visual backlog:
 `ready_for_c18_player_audit=false`
 
 C17.4 must continue with a manually flashed clean card. C18 remains closed until
-post-writer cleanup and player restore pass on HDMI.
+post-writer cleanup and player restore pass promptly on HDMI.
 
 Next step:
 
-`C17_4_1_SETTINGS_LOCK_RESTORE_FIX`
+`C17_4_1_SETTINGS_LOCK_RESTORE_LATENCY_FIX`

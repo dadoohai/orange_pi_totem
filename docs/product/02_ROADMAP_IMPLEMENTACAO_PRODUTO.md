@@ -2799,3 +2799,18 @@ enquanto o lock existe. C17.4 permanece `blocked` por
 `ready_for_batch_flash=false`, `ready_for_dispatch=false` e
 `ready_for_c18_player_audit=false`. Isto nao e C18/player timing; o proximo
 passo deve corrigir a ordem de limpeza do lock e restore pos-writer.
+
+Atualizacao C17.4 runtime refinada: 2026-05-14. Sem nova acao do operador, a
+tela avancou posteriormente para `Carregando conteudo` e o snapshot sanitizado
+seguinte mostrou `totem-open-settings.service=inactive`,
+`kiosky-player.service=active`, `session_lock_present=false`,
+`public_state=player_running` e `playback_state=playing`. A classificacao foi
+refinada: o restore nao ficou permanentemente travado, mas atrasou por ordem
+incorreta entre lock e restore. O caminho normal chama `restore_service`
+enquanto o lock de sessao ainda existe; a unit do player corretamente pula o
+start por `ConditionPathExists`, e o script espera player antes de remover o
+lock. O player so iniciou quando a sessao finalmente saiu e o cleanup
+pos-servico rodou. C17.4 continua `blocked`, agora por
+`POST_WRITER_RESTORE_LATENCY_LOCK_ORDER`; funcionalmente chegou a playing, mas
+a latencia pos-writer e a transicao percebida como "do nada" bloqueiam
+batch/dispatch e C18.

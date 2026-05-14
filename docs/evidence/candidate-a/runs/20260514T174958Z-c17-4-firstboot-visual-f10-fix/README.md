@@ -24,17 +24,23 @@ kiosky_player_not_drawing_during_settings=true
 full_setup_flow_passed=false
 writer_passed=true
 real_config_written=true
-session_lock_cleanup_ok=false
-player_restore_ok=false
+session_lock_cleanup_ok=true
+session_lock_cleanup_latency_ok=false
+player_restore_ok=true
+player_restore_latency_ok=false
 ssh_active_after_writer=true
 network_connected_after_writer=true
-loading_content_feedback_visible=false
-playback_state_after_restore=unknown
+loading_content_feedback_visible=true
+playback_state_after_restore=playing
 post_wizard_black_screen_observed=false
 black_screen_without_feedback_observed=false
 
-failure_category=SETTINGS_SESSION_LOCK_HELD_DURING_PLAYER_RESTORE
-failure_area=post_writer_settings_cleanup_and_player_restore
+late_player_restore_observed=true
+restore_recovered_without_operator_action=true
+post_writer_restore_latency_seconds_observed_min=508
+open_settings_elapsed_seconds_observed=1520
+failure_category=POST_WRITER_RESTORE_LATENCY_LOCK_ORDER
+failure_area=post_writer_settings_cleanup_and_player_restore_latency
 ready_for_batch_flash=false
 ready_for_dispatch=false
 ready_for_c18_player_audit=false
@@ -74,30 +80,44 @@ The remaining visible gap is the older orange `config_missing` style after the
 initial splash. It did not block the flow and is classified as P2 visual
 backlog: `CONFIG_MISSING_STYLE_CONSISTENCY`.
 
-## Blocker
+## Late Restore Observation
 
 After the operator completed the wizard, the writer passed and a real config was
-created, but the settings-session lock remained present. The open-settings
-session then tried to restore the player while the lock still existed.
+created. The first post-writer snapshot showed the settings-session lock still
+present and the player service inactive. The operator then reported that
+`Carregando conteudo` appeared without any additional action.
 
 Sanitized systemd evidence showed:
 
-- `totem-open-settings.service=activating`;
-- `kiosky-player.service=inactive`;
-- `session_lock_present=true`;
-- `config_real_present=true`;
-- `wizard=0`;
-- `status_renderer=0`;
-- `mpv=0`;
+- early post-writer snapshot:
+  - `totem-open-settings.service=activating`;
+  - `kiosky-player.service=inactive`;
+  - `session_lock_present=true`;
+  - `config_real_present=true`;
+  - `wizard=0`;
+  - `status_renderer=0`;
+  - `mpv=0`;
+- late snapshot:
+  - `totem-open-settings.service=inactive`;
+  - `kiosky-player.service=active`;
+  - `session_lock_present=false`;
+  - `public_state=player_running`;
+  - `playback_state=playing`;
+  - `mpv=1`;
 - NetworkManager and SSH stayed active.
 
-The decisive evidence is that `kiosky-player.service` was skipped by its own
-condition because the settings-session lock still existed. This confirms the
-failure as settings cleanup / player restore ordering, not C18 player timing.
+The decisive evidence is that `kiosky-player.service` was skipped twice by its
+own condition because the settings-session lock still existed. The service only
+started after the open-settings session finally exited and the lock was gone.
+
+This refines the failure from a permanent restore block to a severe post-writer
+restore latency/order bug. The functional state eventually reached
+`playback_state=playing`, but the user-visible delay was long enough to remain a
+C17.4 blocker.
 
 ## Decision
 
 C17.4 remains blocked. Batch flash, dispatch and C18 player audit stay closed.
 The next step should fix post-writer cleanup/restore ordering so the lock is
-released before player restoration is requested, or the restore path is made
-explicitly lock-aware.
+released before player restoration is requested, and remove the long waits that
+currently delay the actual player start.
