@@ -2702,3 +2702,19 @@ gates C17 e decisao. Resultado: `p0_items_count=0`, `p1_items_count=5`,
 `need_c16_4_visual_fix_before_c17=false`,
 `blocked_p0_user_journey=false`. Os P1 restantes viraram gates C17 ou gate de
 escala; C18 continua reservado para scheduler/sync/duration/looping do player.
+
+Atualizacao C17.1: 2026-05-14. Foi gerada e validada em placa limpa a imagem
+privada de homologacao `c17-1-homolog-ux-gated`, consolidando C14, C15,
+C15.3.2 e os gates C16.2. A imagem reutilizou kernel/BSP existente
+(`kernel_reused=true`, `kernel_rebuild_executed=false`) e permanece
+`artifact_private=true`, `final_image=false`,
+`homologation_shipping_image=true`, `not_for_production=true` e
+`not_for_distribution=true`. O fluxo limpo passou pelo wizard, writer e restore
+do player: `writer_passed=true`, `player_restore_ok=true`,
+`playback_state_after_restore=playing`, SSH e NetworkManager continuaram ativos
+e `totem-updatectl status` passou. Os gates C17 de API/cache/conteudo, Wi-Fi
+negativo, update UX e consistencia visual passaram por harness/galeria C16.2 e
+status publico seguro, sem fault injection destrutivo. Resultado:
+`ready_for_batch_flash=true`, `ready_for_dispatch=true`,
+`ready_for_c18_player_audit=true`. HDMI/camera continua obrigatorio antes de
+escala; C12 read-only e C12.4/corte seco continuam bloqueados.

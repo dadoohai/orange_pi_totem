@@ -88,3 +88,23 @@ C16.2 is an offline/synthetic review. It cannot prove HDMI perception, flicker,
 black frames or first-frame timing. HDMI/camera evidence remains required
 before scale and should be recorded during or after C17 validation when
 available.
+
+## C17.1 Follow-Up
+
+C17.1 used the C16.2 gates during clean-board homologation and passed the
+image/setup validation. The negative API/cache/content, Wi-Fi and update paths
+were exercised through the C16.2 harness/gallery plus safe public-status checks;
+no destructive fault injection was applied on the configured board.
+
+```text
+c17_1_status=passed
+ready_for_batch_flash=true
+ready_for_dispatch=true
+ready_for_c18_player_audit=true
+```
+
+See:
+
+```text
+docs/product/161_C17_1_HOMOLOG_UX_GATED_IMAGE_VALIDATION.md
+```

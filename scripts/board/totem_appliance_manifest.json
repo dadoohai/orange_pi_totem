@@ -1,6 +1,23 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1 (extended by C14.2.1)",
+  "created_for": "C10.8.1 (extended by C14.2.1 and C17.1)",
+  "homologation_release": {
+    "image_tag": "c17-1-homolog-ux-gated",
+    "image_version": "c17.1",
+    "artifact_private": true,
+    "final_image": false,
+    "homologation_shipping_image": true,
+    "not_for_production": true,
+    "not_for_distribution": true,
+    "kernel_reused": true,
+    "kernel_rebuild_executed": false,
+    "c16_2_gates_used": true,
+    "ready_for_batch_flash": true,
+    "ready_for_dispatch": true,
+    "ready_for_c18_player_audit": true,
+    "c12_readonly_blocked": true,
+    "c12_4_blocked": true
+  },
   "orange_pi_totem": {
     "repository": "dadoohai/orange_pi_totem",
     "branch": "foundation-v0.1",
