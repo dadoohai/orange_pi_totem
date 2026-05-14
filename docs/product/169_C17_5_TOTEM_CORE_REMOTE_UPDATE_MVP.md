@@ -20,6 +20,11 @@ playlist, loop or `exposure_time_ms`.
 
 C17.6 should deliver the environment input UX as the first `totem-core` update.
 
+Follow-up: C17.6 delivered that first real remote UX update via `totem-core`.
+The release `totem-core-c17.6-environment-input-20260514T211247Z` applied on
+the lab board, F10/wizard remained functional, and the environment field now
+has cursor editing, UUID validation and safe API/content preflight.
+
 ## Component
 
 New component:

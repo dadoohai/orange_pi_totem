@@ -30,8 +30,12 @@ import tempfile
 import textwrap
 import time
 import tty
+import uuid
 from dataclasses import dataclass
 from typing import Any
+from urllib import error as urllib_error
+from urllib import parse as urllib_parse
+from urllib import request as urllib_request
 
 
 sys.dont_write_bytecode = True
@@ -109,6 +113,13 @@ PUBLIC_ORIENTATION_PATH = pathlib.Path("/data/state/totem-display/orientation.js
 PRIVATE_SETTINGS_CONTEXT_PATH = pathlib.Path(
     os.environ.get("TOTEM_VISUAL_WIZARD_PRIVATE_SETTINGS_CONTEXT", "/data/state/totem-settings/last-settings.json")
 )
+PRIVATE_VALUES_SEED_PATH = pathlib.Path(
+    os.environ.get("TOTEM_VISUAL_WIZARD_PRIVATE_VALUES_SEED", "/data/state/totem-settings/private-values.seed.json")
+)
+ENVIRONMENT_VALIDATION_TIMEOUT_SEC = float(
+    os.environ.get("TOTEM_VISUAL_WIZARD_ENV_VALIDATION_TIMEOUT_SEC", "4.0")
+)
+ENVIRONMENT_VALIDATION_ENABLED = os.environ.get("TOTEM_VISUAL_WIZARD_ENV_VALIDATION_ENABLED", "1") != "0"
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -148,6 +159,20 @@ class Option:
     key: str
     label: str
     description: str
+
+
+@dataclass(frozen=True)
+class EnvironmentPreflight:
+    endpoint: str
+    environment_exists: str
+    environment_not_found: bool
+    invalid_environment_id: bool
+    validation_auth_required: bool
+    validation_unavailable: bool
+    content_available: str
+    content_empty: bool
+    requires_confirmation: bool
+    confirmed_by_operator: bool
 
 
 @dataclass(frozen=True)
@@ -1075,11 +1100,11 @@ def read_key(timeout_sec: float | None = None) -> str:
         if rest == b"[6~":
             return "pagedown"
         if rest in {b"[H", b"OH"}:
-            return "up"
+            return "home"
         if rest in {b"[F", b"OF"}:
-            return "down"
+            return "end"
         if rest in {b"[3~", b"[P"}:
-            return "backspace"
+            return "delete"
         if rest in {b"OQ", b"[[B", b"[12~"}:
             return "f2"
         return "unknown"
@@ -1319,7 +1344,7 @@ def is_printable_input_key(key: str) -> bool:
 
 
 def is_text_mutation_key(key: str) -> bool:
-    return key in {"backspace", "clear"} or is_printable_input_key(key)
+    return key in {"backspace", "delete", "clear"} or is_printable_input_key(key)
 
 
 def is_secret_toggle_key(key: str) -> bool:
@@ -1361,6 +1386,47 @@ def text_field_apply_key(
         next_value = value + key
         next_error = ""
     return next_value, next_error, (next_value != value or next_error != error)
+
+
+def text_field_apply_edit_key(
+    value: str,
+    cursor: int,
+    key: str,
+    *,
+    max_length: int,
+    error: str,
+) -> tuple[str, int, str, bool]:
+    cursor = max(0, min(len(value), cursor))
+    next_value = value
+    next_cursor = cursor
+    next_error = error
+    if key == "left":
+        next_cursor = max(0, cursor - 1)
+    elif key == "right":
+        next_cursor = min(len(value), cursor + 1)
+    elif key == "home":
+        next_cursor = 0
+    elif key == "end":
+        next_cursor = len(value)
+    elif key == "backspace":
+        if cursor > 0:
+            next_value = value[: cursor - 1] + value[cursor:]
+            next_cursor = cursor - 1
+            next_error = ""
+    elif key == "delete":
+        if cursor < len(value):
+            next_value = value[:cursor] + value[cursor + 1 :]
+            next_error = ""
+    elif key == "clear":
+        next_value = ""
+        next_cursor = 0
+        next_error = ""
+    elif is_printable_input_key(key) and len(value) < max_length:
+        next_value = value[:cursor] + key + value[cursor:]
+        next_cursor = cursor + 1
+        next_error = ""
+    changed = next_value != value or next_cursor != cursor or next_error != error
+    return next_value, next_cursor, next_error, changed
 
 
 def estimate_debounced_input_render_count(
@@ -1408,14 +1474,19 @@ def read_text_field(
     allow_hidden_toggle: bool = False,
     layout_rotation_deg: int = 0,
     initial_value: str = "",
+    show_cursor: bool = False,
+    custom_footer: str | None = None,
+    escape_returns_back: bool = False,
+    validation_error_message: str = "Formato invalido.",
 ) -> str | None:
     value = str(initial_value or "")[:max_length]
+    cursor = len(value)
     error = ""
     reveal_hidden_value = False
     needs_render = True
     force_render = True
     last_render_at = 0.0
-    last_visual_state: tuple[str, str, bool] | None = None
+    last_visual_state: tuple[str, str, bool, int] | None = None
     while True:
         if needs_render:
             now = time.monotonic()
@@ -1438,7 +1509,7 @@ def read_text_field(
                                 try:
                                     return validator(candidate)
                                 except Exception:
-                                    error = "Formato invalido."
+                                    error = validation_error_message
                                     needs_render = True
                                     force_render = True
                                     break
@@ -1452,30 +1523,45 @@ def read_text_field(
                             break
                         if allow_back and drained_key == "back":
                             return None
+                        if allow_back and escape_returns_back and drained_key == "escape":
+                            return None
                         if drained_key in {"escape", "q", "Q"}:
                             raise VisualWizardAbort("setup visual cancelado pelo operador")
                         previous_value = value
+                        previous_cursor = cursor
                         previous_error = error
-                        value, error, changed = text_field_apply_key(
+                        value, cursor, error, changed = text_field_apply_edit_key(
                             value,
+                            cursor,
                             drained_key,
                             max_length=max_length,
                             error=error,
                         )
-                        needs_render = needs_render or changed or value != previous_value or error != previous_error
+                        needs_render = (
+                            needs_render
+                            or changed
+                            or value != previous_value
+                            or cursor != previous_cursor
+                            or error != previous_error
+                        )
                     continue
                 continue
 
             effective_show_plain_value = show_plain_value or bool(hidden and allow_hidden_toggle and reveal_hidden_value)
-            hint = text_field_display_hint(value, hidden=hidden, show_plain_value=effective_show_plain_value)
+            hint = text_field_display_hint(
+                value,
+                hidden=hidden,
+                show_plain_value=effective_show_plain_value,
+                cursor_index=cursor if show_cursor and not hidden and effective_show_plain_value else None,
+            )
             note = error or ("Senha oculta." if hidden and not effective_show_plain_value else "Entrada local.")
-            footer = "Enter OK | Ctrl+U limpa | Esc cancela"
+            footer = custom_footer or "Enter OK | Ctrl+U limpa | Esc cancela"
             if allow_back:
-                footer = "Enter OK | Ctrl+B volta | Ctrl+U limpa | Esc"
+                footer = custom_footer or "Enter OK | Ctrl+B volta | Ctrl+U limpa | Esc"
             if hidden and allow_hidden_toggle:
                 toggle_label = "oculta" if reveal_hidden_value else "mostra"
                 footer = f"Enter OK | F2 {toggle_label} | Ctrl+B volta | Ctrl+U limpa"
-            visual_state = (hint, note, reveal_hidden_value)
+            visual_state = (hint, note, reveal_hidden_value, cursor)
             if visual_state != last_visual_state:
                 display.show(
                     screen_id,
@@ -1510,7 +1596,7 @@ def read_text_field(
                     try:
                         return validator(candidate)
                     except Exception:
-                        error = "Formato invalido."
+                        error = validation_error_message
                         needs_render = True
                         force_render = True
                         break
@@ -1523,10 +1609,13 @@ def read_text_field(
                 break
             if allow_back and drained_key == "back":
                 return None
+            if allow_back and escape_returns_back and drained_key == "escape":
+                return None
             if drained_key in {"escape", "q", "Q"}:
                 raise VisualWizardAbort("setup visual cancelado pelo operador")
-            value, error, changed = text_field_apply_key(
+            value, cursor, error, changed = text_field_apply_edit_key(
                 value,
+                cursor,
                 drained_key,
                 max_length=max_length,
                 error=error,
@@ -1534,18 +1623,299 @@ def read_text_field(
             needs_render = needs_render or changed
 
 
-def text_field_display_hint(value: str, *, hidden: bool, show_plain_value: bool) -> str:
+def text_field_display_hint(
+    value: str,
+    *,
+    hidden: bool,
+    show_plain_value: bool,
+    cursor_index: int | None = None,
+) -> str:
     if hidden:
         if show_plain_value:
             return value or "Aguardando entrada"
         return "*" * len(value) if value else "Aguardando entrada"
     if show_plain_value:
+        if cursor_index is not None:
+            cursor = max(0, min(len(value), cursor_index))
+            rendered = value[:cursor] + "|" + value[cursor:]
+            return rendered or "|"
         return value or "Aguardando entrada"
     return f"{len(value)} caracteres digitados" if value else "Aguardando entrada"
 
 
 def validate_environment_id(value: str) -> str:
-    return setup.validate_environment_id(value)
+    candidate = value.strip()
+    try:
+        parsed = uuid.UUID(candidate)
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise VisualWizardError("environment_id must be a UUID") from exc
+    if not re.fullmatch(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+        candidate,
+    ):
+        raise VisualWizardError("environment_id must be a canonical UUID")
+    return str(parsed)
+
+
+def private_file_mode_ok(path: pathlib.Path) -> bool:
+    try:
+        mode = stat.S_IMODE(path.stat().st_mode)
+    except OSError:
+        return False
+    return bool(mode & 0o600) and not bool(mode & 0o077)
+
+
+def load_environment_validation_credentials(path: pathlib.Path = PRIVATE_VALUES_SEED_PATH) -> dict[str, str] | None:
+    if not ENVIRONMENT_VALIDATION_ENABLED:
+        return None
+    try:
+        if path.is_symlink() or path.parent.is_symlink() or not path.is_file() or not private_file_mode_ok(path):
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    api_url = data.get("api_url")
+    api_key = data.get("api_key")
+    if not isinstance(api_url, str) or not isinstance(api_key, str):
+        return None
+    api_url = api_url.strip()
+    api_key = api_key.strip()
+    if not api_url or not api_key:
+        return None
+    parsed = urllib_parse.urlsplit(api_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return {"api_url": api_url, "api_key": api_key}
+
+
+def derive_environment_endpoint(api_url: str, environment_id: str) -> str | None:
+    parsed = urllib_parse.urlsplit(api_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    path = parsed.path.rstrip("/")
+    if path.endswith("/search"):
+        base_path = path[: -len("/search")]
+    elif path == "/search":
+        base_path = ""
+    else:
+        base_path = path
+    env_path = f"{base_path}/environments/{urllib_parse.quote(environment_id, safe='')}"
+    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, env_path, "", ""))
+
+
+def http_json_request(
+    url: str,
+    *,
+    api_key: str,
+    method: str,
+    payload: dict[str, Any] | None = None,
+    timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+) -> tuple[int, dict[str, Any] | None]:
+    data = None
+    headers = {
+        "Accept": "application/json",
+        "x-api-key": api_key,
+    }
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    req = urllib_request.Request(url, data=data, headers=headers, method=method)
+    with urllib_request.urlopen(req, timeout=max(1.0, timeout_sec)) as resp:
+        raw = resp.read(256 * 1024)
+        body: dict[str, Any] | None = None
+        if raw:
+            try:
+                parsed = json.loads(raw.decode("utf-8"))
+                body = parsed if isinstance(parsed, dict) else None
+            except Exception:
+                body = None
+        return int(resp.status), body
+
+
+def response_has_content(data: dict[str, Any] | None) -> tuple[str, bool]:
+    if not isinstance(data, dict):
+        return "unknown", False
+    total = data.get("total")
+    if isinstance(total, int):
+        return ("true", False) if total > 0 else ("false", True)
+    if isinstance(total, str) and total.isdigit():
+        return ("true", False) if int(total) > 0 else ("false", True)
+    units = data.get("units")
+    if isinstance(units, list):
+        for unit in units:
+            if not isinstance(unit, dict):
+                continue
+            campaigns = unit.get("campaigns")
+            if isinstance(campaigns, list) and campaigns:
+                return "true", False
+            media_urls = unit.get("media_urls")
+            if isinstance(media_urls, list) and media_urls:
+                return "true", False
+    return "unknown", False
+
+
+def environment_preflight_unavailable(endpoint: str = "none", *, requires_confirmation: bool = True) -> EnvironmentPreflight:
+    return EnvironmentPreflight(
+        endpoint=endpoint,
+        environment_exists="unknown",
+        environment_not_found=False,
+        invalid_environment_id=False,
+        validation_auth_required=False,
+        validation_unavailable=True,
+        content_available="unknown",
+        content_empty=False,
+        requires_confirmation=requires_confirmation,
+        confirmed_by_operator=False,
+    )
+
+
+def validate_environment_remote(environment_id: str) -> EnvironmentPreflight:
+    credentials = load_environment_validation_credentials()
+    if credentials is None:
+        return environment_preflight_unavailable("none")
+    api_url = credentials["api_url"]
+    api_key = credentials["api_key"]
+    env_endpoint = derive_environment_endpoint(api_url, environment_id)
+    if env_endpoint is None:
+        return environment_preflight_unavailable("none")
+
+    environment_exists = "unknown"
+    validation_auth_required = False
+    validation_unavailable = False
+    endpoint_label = "environments_by_id"
+    try:
+        status, _data = http_json_request(env_endpoint, api_key=api_key, method="GET")
+        if 200 <= status < 300:
+            environment_exists = "true"
+        else:
+            validation_unavailable = True
+    except urllib_error.HTTPError as exc:
+        if exc.code == 404:
+            return EnvironmentPreflight(
+                endpoint=endpoint_label,
+                environment_exists="false",
+                environment_not_found=True,
+                invalid_environment_id=False,
+                validation_auth_required=False,
+                validation_unavailable=False,
+                content_available="unknown",
+                content_empty=False,
+                requires_confirmation=False,
+                confirmed_by_operator=False,
+            )
+        if exc.code == 400:
+            return EnvironmentPreflight(
+                endpoint=endpoint_label,
+                environment_exists="unknown",
+                environment_not_found=False,
+                invalid_environment_id=True,
+                validation_auth_required=False,
+                validation_unavailable=False,
+                content_available="unknown",
+                content_empty=False,
+                requires_confirmation=False,
+                confirmed_by_operator=False,
+            )
+        if exc.code in {401, 403}:
+            validation_auth_required = True
+        else:
+            validation_unavailable = True
+    except Exception:
+        validation_unavailable = True
+
+    content_available = "unknown"
+    content_empty = False
+    try:
+        _status, search_data = http_json_request(
+            api_url,
+            api_key=api_key,
+            method="POST",
+            payload={
+                "environmentId": environment_id,
+                "onlyStandby": False,
+                "searchIn": "campaign",
+                "includeDescendants": True,
+                "limit": 20,
+            },
+        )
+        content_available, content_empty = response_has_content(search_data)
+        if environment_exists == "unknown" and content_available == "true":
+            endpoint_label = "search_only"
+    except urllib_error.HTTPError as exc:
+        if exc.code in {401, 403}:
+            validation_auth_required = True
+        else:
+            validation_unavailable = True
+    except Exception:
+        validation_unavailable = True
+
+    requires_confirmation = (
+        validation_auth_required
+        or validation_unavailable
+        or content_empty
+        or environment_exists == "unknown"
+    )
+    return EnvironmentPreflight(
+        endpoint=endpoint_label,
+        environment_exists=environment_exists,
+        environment_not_found=False,
+        invalid_environment_id=False,
+        validation_auth_required=validation_auth_required,
+        validation_unavailable=validation_unavailable,
+        content_available=content_available,
+        content_empty=content_empty,
+        requires_confirmation=requires_confirmation,
+        confirmed_by_operator=False,
+    )
+
+
+def preflight_public_status(preflight: EnvironmentPreflight | None) -> dict[str, Any]:
+    if preflight is None:
+        return {
+            "available": False,
+            "endpoint": "none",
+            "environment_exists": "not_checked",
+            "environment_not_found": False,
+            "invalid_environment_id": False,
+            "validation_auth_required": False,
+            "validation_unavailable": False,
+            "content_available": "not_checked",
+            "content_empty": False,
+            "requires_confirmation": False,
+            "confirmed_by_operator": False,
+            "raw_values_written": False,
+        }
+    return {
+        "available": preflight.endpoint != "none",
+        "endpoint": preflight.endpoint,
+        "environment_exists": preflight.environment_exists,
+        "environment_not_found": preflight.environment_not_found,
+        "invalid_environment_id": preflight.invalid_environment_id,
+        "validation_auth_required": preflight.validation_auth_required,
+        "validation_unavailable": preflight.validation_unavailable,
+        "content_available": preflight.content_available,
+        "content_empty": preflight.content_empty,
+        "requires_confirmation": preflight.requires_confirmation,
+        "confirmed_by_operator": preflight.confirmed_by_operator,
+        "raw_values_written": False,
+    }
+
+
+def preflight_with_confirmation(preflight: EnvironmentPreflight) -> EnvironmentPreflight:
+    return EnvironmentPreflight(
+        endpoint=preflight.endpoint,
+        environment_exists=preflight.environment_exists,
+        environment_not_found=preflight.environment_not_found,
+        invalid_environment_id=preflight.invalid_environment_id,
+        validation_auth_required=preflight.validation_auth_required,
+        validation_unavailable=preflight.validation_unavailable,
+        content_available=preflight.content_available,
+        content_empty=preflight.content_empty,
+        requires_confirmation=preflight.requires_confirmation,
+        confirmed_by_operator=True,
+    )
 
 
 def resolve_display_selection(rotation_key: str) -> dict[str, str | int]:
@@ -2190,7 +2560,9 @@ def build_visual_status(
     environment_id: str,
     network: dict[str, Any],
     contract_validation: dict[str, Any],
+    environment_preflight: EnvironmentPreflight | None = None,
 ) -> dict[str, Any]:
+    preflight_status = preflight_public_status(environment_preflight)
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": generated_at,
@@ -2257,13 +2629,17 @@ def build_visual_status(
             "environment_id_present": bool(environment_id),
             "environment_id_valid": True,
             "environment_identifier_raw_written_to_status": False,
+            "uuid_format_validation": True,
+            "remote_preflight": preflight_status,
         },
         "validation": {
-            "environment_id": "format_validated_only",
+            "environment_id": "uuid_format_validated",
             "display": "candidate_only",
             "rotation_degrees": int(rotation["rotation_deg"]),
             "rotation_label_written_to_status": False,
-            "backend_validation": "not_checked",
+            "backend_validation": preflight_status["endpoint"],
+            "environment_exists": preflight_status["environment_exists"],
+            "content_available": preflight_status["content_available"],
             "network_validation": network["connectivity"],
             "wifi_activation_result": network["wifi_activation_result"],
         },
@@ -2277,7 +2653,7 @@ def build_visual_status(
             "writer_real_mode_called": False,
             "data_written": False,
             "opt_written": False,
-            "network_external_access": False,
+            "network_external_access": preflight_status["endpoint"] != "none",
             "network_changed": network["network_changed"],
             "wifi_changed": network["network_changed"],
             "display_changed": False,
@@ -2291,7 +2667,9 @@ def build_visual_status(
             "player_stopped": False,
             "main_player_mpv_called": False,
             "visual_renderer_mpv_called": visual_renderer_uses_mpv(),
-            "backend_called": False,
+            "backend_called": preflight_status["endpoint"] != "none",
+            "backend_preflight_attempted": environment_preflight is not None,
+            "backend_preflight_raw_values_written": False,
             "nmcli_called": network["nmcli_called"],
         },
         "privacy": {
@@ -2351,6 +2729,14 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             f"selected_network_security_present: {status['network']['selected_network_security_present']}",
             f"environment_id_present: {str(status['environment']['environment_id_present']).lower()}",
             f"environment_id_valid: {str(status['environment']['environment_id_valid']).lower()}",
+            "environment_uuid_format_validation: true",
+            f"environment_validation_endpoint: {status['environment']['remote_preflight']['endpoint']}",
+            f"environment_exists: {status['environment']['remote_preflight']['environment_exists']}",
+            f"content_available: {status['environment']['remote_preflight']['content_available']}",
+            f"validation_unavailable_requires_confirmation: "
+            f"{str(status['environment']['remote_preflight']['requires_confirmation']).lower()}",
+            f"validation_confirmed_by_operator: "
+            f"{str(status['environment']['remote_preflight']['confirmed_by_operator']).lower()}",
             f"rotation_degrees: {status['validation']['rotation_degrees']}",
             "splash_rotation_supported: true",
             "player_rotation_contract: config.rotation_deg",
@@ -2373,6 +2759,8 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             f"visual_renderer_mpv_called: {str(status['guardrails']['visual_renderer_mpv_called']).lower()}",
             f"nmcli_called: {str(status['guardrails']['nmcli_called']).lower()}",
             f"network_changed: {str(status['guardrails']['network_changed']).lower()}",
+            f"backend_preflight_attempted: {str(status['guardrails']['backend_preflight_attempted']).lower()}",
+            "backend_preflight_raw_values_written: false",
             "display_changed: false",
             "rotation_applied: false",
             "hotspot_created: false",
@@ -2523,6 +2911,7 @@ def write_visual_artifacts(
     network: dict[str, Any],
     *,
     public_orientation_path: pathlib.Path | None = None,
+    environment_preflight: EnvironmentPreflight | None = None,
 ) -> dict[str, Any]:
     prepare_private_dir(out_dir)
     generated_at = utc_timestamp()
@@ -2552,7 +2941,14 @@ def write_visual_artifacts(
         write_public_orientation_contract(public_orientation_path, generated_at, rotation)
         public_orientation_written = True
 
-    status = build_visual_status(generated_at, rotation, environment_id, network, contract_validation)
+    status = build_visual_status(
+        generated_at,
+        rotation,
+        environment_id,
+        network,
+        contract_validation,
+        environment_preflight=environment_preflight,
+    )
     status["orientation"]["public_orientation_contract_written"] = public_orientation_written
     status["orientation"]["public_orientation_path_allowlisted"] = public_orientation_written
     status["guardrails"]["writes_only_under_tmp"] = not public_orientation_written
@@ -2660,6 +3056,149 @@ def review_and_confirm(
         return True
     if key in {"b", "B", "back"}:
         return False
+    raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
+def show_environment_validation_status(
+    display: VisualDisplay,
+    *,
+    title: str,
+    subtitle: str,
+    panel_items: list[str],
+    footer: str,
+    accent: str,
+    layout_rotation_deg: int,
+) -> str:
+    display.show(
+        "03-environment-validation",
+        build_screen_svg(
+            active_step=2,
+            title=title,
+            subtitle=subtitle,
+            footer=footer,
+            panel_title="Validacao",
+            panel_items=panel_items,
+            accent=accent,
+            layout_rotation_deg=layout_rotation_deg,
+        ),
+    )
+    return read_key()
+
+
+def run_environment_preflight(
+    display: VisualDisplay,
+    environment_id: str,
+    *,
+    layout_rotation_deg: int,
+) -> EnvironmentPreflight | None:
+    display.show(
+        "03-environment-validating",
+        build_screen_svg(
+            active_step=2,
+            title="Ambiente",
+            subtitle="Validando ambiente...",
+            footer="Aguarde",
+            panel_title="Checagem",
+            panel_items=[
+                "Formato UUID OK.",
+                "Consultando cadastro.",
+                "Sem exibir dados privados.",
+            ],
+            layout_rotation_deg=layout_rotation_deg,
+        ),
+    )
+    preflight = validate_environment_remote(environment_id)
+    if preflight.environment_not_found:
+        key = show_environment_validation_status(
+            display,
+            title="Ambiente nao encontrado",
+            subtitle="Verifique o ID e tente novamente.",
+            footer="Enter corrige | Esc cancela",
+            panel_items=["Nada foi salvo.", "ID nao publicado.", "Corrija o campo."],
+            accent="#ef4444",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key == "enter":
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+    if preflight.invalid_environment_id:
+        key = show_environment_validation_status(
+            display,
+            title="ID invalido",
+            subtitle="Verifique e tente novamente.",
+            footer="Enter corrige | Esc cancela",
+            panel_items=["Formato recusado.", "Nada foi salvo.", "Corrija o campo."],
+            accent="#ef4444",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key == "enter":
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    if preflight.content_available == "true" and not preflight.requires_confirmation:
+        key = show_environment_validation_status(
+            display,
+            title="Ambiente validado",
+            subtitle="Conteudo encontrado.",
+            footer="Enter continua | B volta | Esc",
+            panel_items=["Cadastro encontrado.", "Midia disponivel.", "Pode revisar."],
+            accent="#22c55e",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key == "enter":
+            return preflight
+        if key in {"b", "B", "back"}:
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    if preflight.content_empty:
+        key = show_environment_validation_status(
+            display,
+            title="Sem midia ativa agora",
+            subtitle="O ambiente existe, mas pode iniciar aguardando conteudo.",
+            footer="Enter continua | B volta | Esc",
+            panel_items=["Ambiente nao e invalido.", "Player pode aguardar.", "Revise antes de salvar."],
+            accent="#f59e0b",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key == "enter":
+            return preflight_with_confirmation(preflight)
+        if key in {"b", "B", "back"}:
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    if preflight.requires_confirmation:
+        reason = "API indisponivel"
+        if preflight.validation_auth_required:
+            reason = "Validacao exige permissao"
+        key = show_environment_validation_status(
+            display,
+            title="Nao foi possivel validar agora",
+            subtitle=reason,
+            footer="Enter continua | B volta | Esc",
+            panel_items=["Formato UUID OK.", "Sem dados privados.", "Confirme para seguir."],
+            accent="#f59e0b",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key == "enter":
+            return preflight_with_confirmation(preflight)
+        if key in {"b", "B", "back"}:
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    key = show_environment_validation_status(
+        display,
+        title="Ambiente validado",
+        subtitle="Cadastro confirmado.",
+        footer="Enter continua | B volta | Esc",
+        panel_items=["Cadastro encontrado.", "Sem dados privados.", "Pode revisar."],
+        accent="#22c55e",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+    if key == "enter":
+        return preflight
+    if key in {"b", "B", "back"}:
+        return None
     raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
@@ -2785,23 +3324,34 @@ def run_visual_wizard(
                         screen_id="03-environment",
                         active_step=2,
                         title="Ambiente",
-                        subtitle="Digite o identificador.",
-                        label="Identificador do ambiente",
+                        subtitle="Digite o ID do ambiente",
+                        label="Environment ID",
                         hidden=False,
-                        min_length=3,
-                        max_length=128,
+                        min_length=36,
+                        max_length=36,
                         validator=validate_environment_id,
                         panel_items=[
-                            "3 a 128 caracteres.",
-                            "Use letras, numeros e _ - . :",
-                            "Enter confirma.",
+                            "UUID do ambiente.",
+                            "Corrija sem apagar tudo.",
+                            "Enter valida.",
                         ],
                         show_plain_value=True,
+                        show_cursor=True,
+                        custom_footer="←→ move | Ctrl+U limpa | Enter valida | Esc volta",
+                        escape_returns_back=True,
+                        validation_error_message="ID invalido. Verifique e tente novamente.",
                         layout_rotation_deg=layout_rotation_deg,
                         initial_value=initial_environment_id,
                     )
                     if environment_id is None:
                         break
+                    environment_preflight = run_environment_preflight(
+                        display,
+                        environment_id,
+                        layout_rotation_deg=layout_rotation_deg,
+                    )
+                    if environment_preflight is None:
+                        continue
                     if not review_and_confirm(display, environment_id, rotation, network):
                         continue
                     status = write_visual_artifacts(
@@ -2810,6 +3360,7 @@ def run_visual_wizard(
                         rotation,
                         network,
                         public_orientation_path=public_orientation_path,
+                        environment_preflight=environment_preflight,
                     )
                     show_complete(display, status)
                     return status
@@ -2941,12 +3492,55 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=2,
             title="Ambiente",
-            subtitle="Digite o identificador.",
-            footer="Digite no teclado | Enter confirma",
-            field_label="Identificador do ambiente",
-            field_value_hint="18 caracteres digitados",
+            subtitle="Digite o ID do ambiente",
+            footer="←→ move | Ctrl+U limpa | Enter valida | Esc volta",
+            field_label="Environment ID",
+            field_value_hint=text_field_display_hint(
+                "11111111-2222-4333-8444-555555555555",
+                hidden=False,
+                show_plain_value=True,
+                cursor_index=14,
+            ),
             field_note="Entrada local.",
-            panel_items=["3 a 128 caracteres.", "Use letras e numeros.", "Enter confirma."],
+            panel_items=["UUID do ambiente.", "Corrija no meio.", "Enter valida."],
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "03-environment-validating",
+        build_screen_svg(
+            active_step=2,
+            title="Ambiente",
+            subtitle="Validando ambiente...",
+            footer="Aguarde",
+            panel_title="Checagem",
+            panel_items=["Formato UUID OK.", "Consultando cadastro.", "Sem dados privados."],
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "03-environment-empty-content",
+        build_screen_svg(
+            active_step=2,
+            title="Sem midia ativa agora",
+            subtitle="O ambiente existe, mas pode iniciar aguardando conteudo.",
+            footer="Enter continua | B volta | Esc",
+            panel_title="Validacao",
+            panel_items=["Ambiente nao e invalido.", "Player pode aguardar.", "Revise antes de salvar."],
+            accent="#f59e0b",
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "03-environment-not-found",
+        build_screen_svg(
+            active_step=2,
+            title="Ambiente nao encontrado",
+            subtitle="Verifique o ID e tente novamente.",
+            footer="Enter corrige | Esc cancela",
+            panel_title="Validacao",
+            panel_items=["Nada foi salvo.", "ID nao publicado.", "Corrija o campo."],
+            accent="#ef4444",
             layout_rotation_deg=90,
         ),
     )
@@ -3179,12 +3773,21 @@ def run_self_test() -> None:
     assert_raises(lambda: require_tmp_dir("/var/tmp/dadooh-c9-9"), "out-dir outside /tmp should fail")
     assert_raises(lambda: validate_environment_id("bad environment"), "environment with space should fail")
     assert_raises(lambda: validate_environment_id("api_key"), "api_key-like environment should fail")
+    assert_raises(lambda: validate_environment_id("ENV-PRODUTO-VISUAL-01"), "non-UUID environment should fail")
+    assert_true(
+        validate_environment_id("11111111-2222-4333-8444-555555555555")
+        == "11111111-2222-4333-8444-555555555555",
+        "canonical UUID environment should pass",
+    )
     assert_raises(lambda: resolve_display_selection("diagonal"), "unknown display option should fail")
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-9-visual-wizard-self-test-", dir="/tmp"))
     try:
         synthetic_ssid = "TEST_WIFI_SHOULD_NOT_LEAK"
         synthetic_password = "TEST_PASSWORD_SHOULD_NOT_LEAK"
+        context_environment_id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        primary_environment_id = "11111111-2222-4333-8444-555555555555"
+        public_environment_id = "22222222-3333-4444-8555-666666666666"
         assert_true(
             text_field_display_hint(synthetic_ssid, hidden=False, show_plain_value=True) == synthetic_ssid,
             "Wi-Fi network field should show local typed value",
@@ -3200,8 +3803,12 @@ def run_self_test() -> None:
             "count-only mode should not show raw value",
         )
         assert_true(
-            text_field_display_hint("ENV-LAST-SETTING", hidden=False, show_plain_value=True) == "ENV-LAST-SETTING",
+            text_field_display_hint(context_environment_id, hidden=False, show_plain_value=True) == context_environment_id,
             "environment prefill should be visible only in the local field",
+        )
+        assert_true(
+            text_field_display_hint("abcd", hidden=False, show_plain_value=True, cursor_index=2) == "ab|cd",
+            "cursor should render inside visible environment field",
         )
         assert_true(MAX_PANEL_ITEMS == 3, "operator panels should stay limited to three items")
         panel_limit_svg = info_panel(["one", "two", "three", "four"])
@@ -3218,6 +3825,101 @@ def run_self_test() -> None:
             text_field_apply_key("abcdef", "clear", max_length=128, error="")[0] == "",
             "Ctrl+U clear should keep working",
         )
+        edited, edited_cursor, edited_error, edited_changed = text_field_apply_edit_key(
+            "abef",
+            2,
+            "c",
+            max_length=128,
+            error="old",
+        )
+        assert_true(
+            (edited, edited_cursor, edited_error, edited_changed) == ("abcef", 3, "", True),
+            "editable field should insert in the middle and clear stale error",
+        )
+        edited, edited_cursor, _, _ = text_field_apply_edit_key("abcef", 3, "delete", max_length=128, error="")
+        assert_true((edited, edited_cursor) == ("abcf", 3), "Delete should remove character at cursor")
+        edited, edited_cursor, _, _ = text_field_apply_edit_key("abcf", 3, "backspace", max_length=128, error="")
+        assert_true((edited, edited_cursor) == ("abf", 2), "Backspace should remove before cursor")
+        edited, edited_cursor, _, _ = text_field_apply_edit_key("abf", 2, "home", max_length=128, error="")
+        assert_true((edited, edited_cursor) == ("abf", 0), "Home should move cursor to start")
+        edited, edited_cursor, _, _ = text_field_apply_edit_key("abf", 0, "end", max_length=128, error="")
+        assert_true((edited, edited_cursor) == ("abf", 3), "End should move cursor to end")
+        endpoint = derive_environment_endpoint("https://api.example.com/search", primary_environment_id)
+        assert_true(
+            endpoint == f"https://api.example.com/environments/{primary_environment_id}",
+            "environment endpoint should derive from /search URL",
+        )
+        assert_true(response_has_content({"total": 1}) == ("true", False), "search total>0 should mean content")
+        assert_true(response_has_content({"total": 0}) == ("false", True), "search total=0 should warn, not invalidate")
+        original_load_credentials = globals()["load_environment_validation_credentials"]
+        original_http_json_request = globals()["http_json_request"]
+
+        def fake_credentials() -> dict[str, str]:
+            return {
+                "api_url": "https://api.example.com/search",
+                "api_key": "SYNTHETIC_KEY_NOT_PRINTED",
+            }
+
+        def fake_http_json_request(
+            url: str,
+            *,
+            api_key: str,
+            method: str,
+            payload: dict[str, Any] | None = None,
+            timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+        ) -> tuple[int, dict[str, Any] | None]:
+            assert_true(api_key == "SYNTHETIC_KEY_NOT_PRINTED", "preflight should pass API key only to request layer")
+            if method == "GET":
+                return 200, {"ok": True}
+            assert_true(payload is not None and payload.get("environmentId") == primary_environment_id, "search should use selected environment")
+            return 200, {"total": 0}
+
+        globals()["load_environment_validation_credentials"] = fake_credentials
+        globals()["http_json_request"] = fake_http_json_request
+        try:
+            preflight = validate_environment_remote(primary_environment_id)
+            assert_true(preflight.environment_exists == "true", "environment 200 should mark exists")
+            assert_true(preflight.content_empty is True, "search total=0 should become content warning")
+            assert_true(preflight.requires_confirmation is True, "empty content should require operator confirmation")
+            public_preflight = json.dumps(preflight_public_status(preflight), sort_keys=True)
+            for forbidden in (primary_environment_id, "SYNTHETIC_KEY_NOT_PRINTED", "api.example.com"):
+                assert_true(forbidden not in public_preflight, "preflight public status should stay sanitized")
+
+            def fake_http_404(
+                url: str,
+                *,
+                api_key: str,
+                method: str,
+                payload: dict[str, Any] | None = None,
+                timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+            ) -> tuple[int, dict[str, Any] | None]:
+                if method == "GET":
+                    raise urllib_error.HTTPError("https://redacted.invalid", 404, "Not Found", {}, None)
+                return 200, {"total": 1}
+
+            globals()["http_json_request"] = fake_http_404
+            missing = validate_environment_remote(primary_environment_id)
+            assert_true(missing.environment_not_found is True, "environment 404 should block")
+
+            def fake_http_timeout(
+                url: str,
+                *,
+                api_key: str,
+                method: str,
+                payload: dict[str, Any] | None = None,
+                timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+            ) -> tuple[int, dict[str, Any] | None]:
+                raise TimeoutError("synthetic timeout")
+
+            globals()["http_json_request"] = fake_http_timeout
+            unavailable = validate_environment_remote(primary_environment_id)
+            assert_true(
+                unavailable.validation_unavailable and unavailable.requires_confirmation,
+                "validation unavailable should require confirmation",
+            )
+        finally:
+            globals()["load_environment_validation_credentials"] = original_load_credentials
+            globals()["http_json_request"] = original_http_json_request
         assert_true(
             text_field_apply_key("ab", "v", max_length=128, error="")[0] == "abv",
             "lowercase v should remain a printable password character",
@@ -3250,14 +3952,14 @@ def run_self_test() -> None:
         context_path.parent.mkdir(parents=True, mode=setup.PRIVATE_DIR_MODE)
         context_payload = {
             "schema_version": "dadooh-private-settings-context.v1",
-            "environment_id": "ENV-LAST-SETTING",
+            "environment_id": context_environment_id,
             "rotation_deg": 270,
             "network_step": "existing_configured_wifi",
         }
         context_path.write_text(json.dumps(context_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         context_path.chmod(setup.PRIVATE_FILE_MODE)
         loaded_context = load_private_settings_context(context_path)
-        assert_true(loaded_context["environment_id"] == "ENV-LAST-SETTING", "private context should load environment")
+        assert_true(loaded_context["environment_id"] == context_environment_id, "private context should load environment")
         assert_true(loaded_context["rotation_deg"] == 270, "private context should load rotation")
         assert_true(loaded_context["network_step"] == "existing_configured_wifi", "private context should load network step")
         public_orientation_path = root / "public-orientation-priority" / "orientation.json"
@@ -3370,7 +4072,7 @@ def run_self_test() -> None:
         out_dir = require_tmp_dir(str(root / "out"))
         status = run_scripted(
             out_dir,
-            environment_id="ENV-PRODUTO-VISUAL-01",
+            environment_id=primary_environment_id,
             rotation_key="portrait_left",
             network_step="configured_wifi",
         )
@@ -3399,7 +4101,7 @@ def run_self_test() -> None:
 
         candidate = json.loads((out_dir / CANDIDATE_FILENAME).read_text(encoding="utf-8"))
         orientation_contract = json.loads((out_dir / ORIENTATION_FILENAME).read_text(encoding="utf-8"))
-        assert_true(candidate["environment_id"] == "ENV-PRODUTO-VISUAL-01", "candidate should keep environment")
+        assert_true(candidate["environment_id"] == primary_environment_id, "candidate should keep environment")
         assert_true(candidate["rotation_deg"] == 270, "candidate should keep rotation")
         assert_true(orientation_contract["rotation_deg"] == 270, "orientation contract should keep rotation")
         assert_true(orientation_contract["layout_mode"] == "portrait", "orientation contract should expose layout mode")
@@ -3411,9 +4113,9 @@ def run_self_test() -> None:
         real_dry_run = contract.validate_candidate_config(candidate, "real-dry-run")
         assert_true(allow_mock["valid"], "C9.9 candidate should pass allow-mock")
         assert_true(not real_dry_run["valid"], "C9.9 candidate should fail real-dry-run with placeholders")
-        assert_sanitized_outputs(out_dir, "ENV-PRODUTO-VISUAL-01")
+        assert_sanitized_outputs(out_dir, primary_environment_id)
         public_text = output_text(out_dir)
-        for forbidden in (synthetic_ssid, synthetic_password, "ENV-LAST-SETTING"):
+        for forbidden in (synthetic_ssid, synthetic_password, context_environment_id):
             assert_true(forbidden not in public_text, "Wi-Fi credentials should not be public artifacts")
 
         public_dir = require_tmp_dir(str(root / "public-orientation"))
@@ -3421,7 +4123,7 @@ def run_self_test() -> None:
         public_out_dir = require_tmp_dir(str(root / "out-public"))
         public_status = run_scripted(
             public_out_dir,
-            environment_id="ENV-PRODUTO-VISUAL-02",
+            environment_id=public_environment_id,
             rotation_key="landscape_inverted",
             network_step="bench_mock",
             public_orientation_path=public_path,
@@ -3433,7 +4135,7 @@ def run_self_test() -> None:
         assert_true(public_status["orientation"]["public_orientation_contract_written"] is True, "public orientation should be recorded")
         assert_true(public_status["guardrails"]["allowlisted_data_state_written"] is True, "allowlisted /data write should be recorded")
         public_text = output_text(public_out_dir) + public_path.read_text(encoding="utf-8")
-        for forbidden in (synthetic_ssid, synthetic_password, "ENV-PRODUTO-VISUAL-02", "api_key"):
+        for forbidden in (synthetic_ssid, synthetic_password, public_environment_id, "api_key"):
             assert_true(forbidden not in public_text, "public orientation/status should stay sanitized")
     finally:
         shutil.rmtree(root, ignore_errors=True)
@@ -3443,7 +4145,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run C9.9 local visual setup wizard.")
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help="Artifact directory under /tmp.")
     parser.add_argument("--mpv-bin", default="mpv", help="MPV binary for visual DRM rendering.")
-    parser.add_argument("--environment-id", default="ENV-C9-9-VISUAL-SMOKE", help="Scripted environment_id.")
+    parser.add_argument(
+        "--environment-id",
+        default="11111111-2222-4333-8444-555555555555",
+        help="Scripted environment_id UUID.",
+    )
     parser.add_argument("--rotation-key", default="landscape", help="Scripted rotation key.")
     parser.add_argument("--network-step", default="configured_wifi", help="Scripted network step.")
     parser.add_argument("--auto-exit-sec", type=int, default=12, help="Preview display duration.")

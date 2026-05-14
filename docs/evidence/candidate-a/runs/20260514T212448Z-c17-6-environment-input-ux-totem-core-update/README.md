@@ -1,0 +1,95 @@
+# C17.6 - Environment Input UX Totem-Core Update
+
+c17_6_status=passed
+
+totem_core_update_used=true
+totem_core_package_built=true
+totem_core_release_published=true
+totem_core_apply_remote_tested=true
+totem_core_apply_local_tested=true
+totem_core_rollback_tested=false
+totem_core_rollback_skipped_reason=kept_board_on_validated_c17_6_release_for_next_round
+totem_core_current_version=c17.6-environment-input-20260514T211247Z
+
+totem_core_release_tag=totem-core-c17.6-environment-input-20260514T211247Z
+totem_core_payload_sha256=e6b643429709ba9f747d86bb113abc35ab9645da23216eb81455dbc2f5a9acb9
+
+physical_f10_keypress_after_bootstrap_tested=true
+physical_f10_keypress_after_bootstrap_passed=true
+
+text_cursor_enabled=true
+cursor_left_right_supported=true
+backspace_middle_supported=true
+delete_middle_supported=true
+ctrl_u_clear_supported=true
+environment_uuid_format_validation=true
+
+environment_exists_validation_available=true
+environment_validation_endpoint=environments_by_id
+environment_not_found_blocks=true
+validation_unavailable_requires_confirmation=true
+
+search_content_preflight_available=true
+content_available_status_supported=true
+content_empty_warning_supported=true
+
+physical_cursor_test_passed=true
+physical_validation_test_passed=true
+
+remote_apply_sha256_valid=true
+wizard_uses_data_current=true
+fallback_available=true
+settings_lock_absent_before_apply=true
+settings_lock_guard_clear_before_apply=true
+settings_lock_cleanup_ok=true
+player_restore_ok=true
+playback_state_after_restore=playing
+ssh_active_after_writer=true
+networkmanager_active_after_writer=true
+writer_called_only_by_operator_completion=true
+
+ready_for_c18_player_audit=true
+ready_for_c17_7_image_embed_totem_core=true
+
+## Notes
+
+The update was applied through `totem-updatectl apply-github-latest
+--component totem-core` from the published GitHub prerelease. The operator then
+opened the wizard with F10 and confirmed the environment field cursor/editing
+and validation UX on HDMI. The operator completed the wizard through the normal
+flow; post-run state was sanitized and showed the settings lock absent,
+`totem-open-settings.service` inactive, `kiosky-player.service` active and
+playback restored to `playing`.
+
+Rollback was not executed in this round because C17.5 already validated
+rollback for the component and the board should remain on the validated C17.6
+release for C17.7/C18 entry.
+
+## Guardrails
+
+secrets_published=false
+api_key_published=false
+api_url_published=false
+environment_id_published=false
+ssid_published=false
+wifi_password_published=false
+media_urls_published=false
+apt_update_executed=false
+apt_upgrade_executed=false
+pip_install_executed=false
+read_only_touched=false
+kernel_touched=false
+wifi_real_changed=false
+networkmanager_touched=false
+poweroff_executed=false
+power_cut_tested=false
+planned_power_cut_tested=false
+c12_4_power_cut_tested=false
+writer_called_only_by_operator_completion=true
+scheduler_changed=false
+sync_changed=false
+duration_changed=false
+loop_changed=false
+exposure_time_ms_changed=false
+c12_readonly_blocked=true
+c12_4_blocked=true

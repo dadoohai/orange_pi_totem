@@ -4,6 +4,17 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.6: 2026-05-14. C17.6 entregou o primeiro update real de UX via
+`totem-core`: o campo `environment_id` do wizard passou a ter cursor, edicao no
+meio do texto, Delete, Ctrl+U, validacao UUID local, validacao segura por
+`/environments/:id` e preflight de conteudo via `/search`. O pacote
+`c17.6-environment-input-20260514T211247Z` foi publicado como prerelease,
+aplicado remotamente na placa, validado por SHA256 e confirmado no HDMI pelo
+operador. O fluxo normal do wizard foi concluido pelo operador, o lock limpou,
+o player voltou para `playing` e SSH/NetworkManager permaneceram ativos. C17.6
+libera C18 player audit e tambem recomenda C17.7 para embutir o bootstrap
+`totem-core` em futura imagem.
+
 Atualizacao C17.5: 2026-05-14. C17.5 criou o MVP de update remoto
 `totem-core` para wizard/configurador/splash/status, reutilizando GitHub
 Releases e o schema `dadooh.totem.update.v1` do C14. O layout novo usa
