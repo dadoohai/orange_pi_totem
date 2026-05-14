@@ -88,3 +88,10 @@ round.
 `ready_for_c18_player_audit=true`
 
 `ready_for_c17_7_image_embed_totem_core=true`
+
+## Follow-Up
+
+C17.7 built a new private homologation image with this C17.6 totem-core release
+embedded as `/data/core/totem/current`, with wrappers and `/opt` fallback
+present from first boot. See
+`docs/product/171_C17_7_TOTEM_CORE_EMBEDDED_IMAGE_BUILD.md`.

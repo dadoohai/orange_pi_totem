@@ -467,6 +467,157 @@ def ensure_files():
                 changed.append(f"disable:{unit}")
 
 
+def write_text_file(target, text, mode_text="0644", reason="generated appliance metadata"):
+    target = pathlib.Path(target)
+    current = None
+    if target.exists() and not target.is_symlink() and target.is_file():
+        try:
+            current = target.read_text(encoding="utf-8")
+        except OSError:
+            current = None
+    if current == text and mode_str(target) == mode_text and owner_name(target) == "root" and group_name(target) == "root":
+        return
+    action("write_text_file", str(target), reason)
+    if mode == "apply":
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_name(f".{target.name}.tmp")
+        tmp.write_text(text, encoding="utf-8")
+        chmod_chown(tmp, "root", "root", mode_text)
+        os.replace(tmp, target)
+        changed.append(str(target))
+
+
+def ensure_totem_core_image_embed():
+    spec = manifest.get("totem_core_image_embed", {})
+    if not spec or spec.get("enabled") is not True:
+        return
+    version = str(spec.get("current_version") or "").strip()
+    core_files = list(spec.get("core_files") or [])
+    if not version:
+        blockers.append("totem_core_image_embed_current_version_missing")
+        return
+    if not core_files:
+        blockers.append("totem_core_image_embed_core_files_missing")
+        return
+
+    layout = spec.get("layout") or {}
+    base_dir = pathlib.Path(str(layout.get("base") or "/data/core/totem"))
+    releases_dir = base_dir / "releases"
+    release_dir = releases_dir / version
+    release_bin = release_dir / "bin"
+    fallback_bin = pathlib.Path(str(layout.get("fallback") or "/opt/totem/core-fallback/bin"))
+    wrappers_bin = pathlib.Path(str(layout.get("wrappers") or "/opt/totem/bin"))
+    current_link = pathlib.Path(str(layout.get("current") or "/data/core/totem/current"))
+    current_target = str(layout.get("current_target") or f"releases/{version}")
+
+    for path in (base_dir, releases_dir, release_dir, release_bin, release_dir / "health", release_dir / "manifest-fragment", fallback_bin, wrappers_bin):
+        ensure_dir({"path": str(path), "type": "dir", "owner": "root", "group": "root", "mode": "0755"})
+
+    wrapper_py = "scripts/board/totem_core_exec.py"
+    wrapper_sh = "scripts/board/totem_core_exec.sh"
+    copy_file({"source": wrapper_py, "target": str(wrappers_bin / "totem_core_exec.py"), "owner": "root", "group": "root", "mode": "0755"})
+    copy_file({"source": wrapper_sh, "target": str(wrappers_bin / "totem_core_exec.sh"), "owner": "root", "group": "root", "mode": "0755"})
+
+    for core_file in core_files:
+        if "/" in core_file or core_file.startswith("."):
+            blockers.append(f"totem_core_image_embed_unsafe_core_file:{core_file}")
+            continue
+        source_rel = f"scripts/board/{core_file}"
+        copy_file({"source": source_rel, "target": str(fallback_bin / core_file), "owner": "root", "group": "root", "mode": "0755"})
+        copy_file({"source": source_rel, "target": str(release_bin / core_file), "owner": "root", "group": "root", "mode": "0755"})
+        wrapper_rel = wrapper_py if core_file.endswith(".py") else wrapper_sh if core_file.endswith(".sh") else ""
+        if not wrapper_rel:
+            blockers.append(f"totem_core_image_embed_unknown_wrapper_type:{core_file}")
+            continue
+        copy_file({"source": wrapper_rel, "target": str(wrappers_bin / core_file), "owner": "root", "group": "root", "mode": "0755"})
+
+    health = {
+        "schema": "dadooh.totem.core.health.v1",
+        "component": "totem-core",
+        "version": version,
+        "embedded_in_image": True,
+        "self_tests": [
+            "python3 bin/totem_setup_visual_wizard.py --self-test",
+            "python3 bin/totem_wifi_nm_adapter.py --self-test",
+            "python3 bin/totem_visual_splash.py --self-test",
+            "python3 bin/totem_config_contract_validate.py --self-test",
+            "bash -n bin/totem_open_settings_session.sh",
+            "bash -n bin/totem_visual_tty_guard.sh",
+            "bash -n bin/totem_firstboot_gate.sh",
+            "bash -n bin/totem_status_renderer.sh",
+            "bash -n bin/kiosky_service_launcher.sh",
+            "restore-order-static-check",
+        ],
+    }
+    write_text_file(
+        release_dir / "health" / "totem-core-health.json",
+        json.dumps(health, indent=2, sort_keys=True) + "\n",
+        "0644",
+        "totem-core embedded health metadata",
+    )
+
+    fragment = {
+        "component": "totem-core",
+        "layout": str(base_dir),
+        "fallback": str(fallback_bin),
+        "wrappers": str(wrappers_bin),
+        "systemd_units_included": False,
+        "updater_self_update": False,
+        "embedded_in_image": True,
+    }
+    write_text_file(
+        release_dir / "manifest-fragment" / "totem-core.json",
+        json.dumps(fragment, indent=2, sort_keys=True) + "\n",
+        "0644",
+        "totem-core embedded manifest fragment",
+    )
+
+    if current_link.exists() or current_link.is_symlink():
+        if current_link.is_symlink() and os.readlink(current_link) == current_target:
+            pass
+        elif current_link.is_symlink() or current_link.is_file():
+            action("set_totem_core_current_symlink", str(current_link), current_target)
+            if mode == "apply":
+                current_link.unlink()
+                os.symlink(current_target, current_link)
+                changed.append(str(current_link))
+        else:
+            blockers.append(f"totem_core_current_not_replaceable:{current_link}")
+    else:
+        action("set_totem_core_current_symlink", str(current_link), current_target)
+        if mode == "apply":
+            current_link.parent.mkdir(parents=True, exist_ok=True)
+            os.symlink(current_target, current_link)
+            changed.append(str(current_link))
+
+    state = {
+        "schema": "dadooh.totem.update.state.v1",
+        "component": "totem-core",
+        "current": {
+            "version": version,
+            "path": current_target,
+            "source": "image_embed",
+            "source_repo": "dadoohai/orange_pi_totem",
+            "source_branch": manifest.get("orange_pi_totem", {}).get("branch", "foundation-v0.1"),
+            "source_commit": repo_value(["rev-parse", "HEAD"], ".orange_pi_totem_head"),
+            "payload_sha256": spec.get("payload_sha256"),
+        },
+        "previous": None,
+        "last_operation": {
+            "type": "image_embed",
+            "status": "ok",
+            "version": version,
+        },
+        "updated_at": "image_embed",
+    }
+    write_text_file(
+        base_dir / "state.json",
+        json.dumps(state, indent=2, sort_keys=True) + "\n",
+        "0644",
+        "totem-core image embedded update state",
+    )
+
+
 def parse_armbian_env(path):
     lines = []
     values = {}
@@ -646,6 +797,7 @@ check_readonly_prerequisites()
 for item in manifest["paths"]:
     ensure_dir(item)
 ensure_files()
+ensure_totem_core_image_embed()
 ensure_boot_guardrails()
 ensure_orientation()
 generate_installed_manifest()

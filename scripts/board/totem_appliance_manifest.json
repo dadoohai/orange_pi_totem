@@ -1,9 +1,9 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3, C17.4, C17.4.1, C17.4.2, C17.5 and C17.6)",
+  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3, C17.4, C17.4.1, C17.4.2, C17.5, C17.6 and C17.7)",
   "homologation_release": {
-    "image_tag": "c17-4-2-settings-restore-clean",
-    "image_version": "c17.4.2",
+    "image_tag": "c17-7-totem-core-embedded",
+    "image_version": "c17.7",
     "artifact_private": true,
     "final_image": false,
     "homologation_shipping_image": true,
@@ -17,10 +17,10 @@
     "c17_4_1_settings_lock_restore_fix_embedded": true,
     "c17_4_1_settings_lock_restore_fix_hotfix_validated": true,
     "ready_for_c17_4_2_image_rebuild": true,
-    "clean_board_validation_pending": false,
-    "ready_for_batch_flash": true,
-    "ready_for_dispatch": true,
-    "ready_for_c18_player_audit": true,
+    "clean_board_validation_pending": true,
+    "ready_for_batch_flash": false,
+    "ready_for_dispatch": false,
+    "ready_for_c18_player_audit": false,
     "c12_readonly_blocked": true,
     "c12_4_blocked": true,
     "c17_4_2_clean_board_validation_passed": true,
@@ -28,7 +28,11 @@
     "totem_core_remote_update_mvp_passed": true,
     "ready_for_c17_6_environment_input_update": true,
     "c17_5_keeps_c18_closed": true,
-    "c17_6_environment_input_update_passed": true
+    "c17_6_environment_input_update_passed": true,
+    "c17_6_environment_input_embedded": true,
+    "totem_core_current_embedded": true,
+    "totem_core_image_embed_version": "c17.6-environment-input-20260514T211247Z",
+    "ready_for_c17_7_clean_card_validation": true
   },
   "visual_design_system": {
     "version": "c17.2-appliance-ui.v1",
@@ -940,5 +944,48 @@
     "environment_id_published": false,
     "ready_for_c18_player_audit_after_runtime_validation": true,
     "ready_for_c17_7_image_embed_totem_core_after_runtime_validation": true
+  },
+  "totem_core_image_embed": {
+    "version": "c17.7-totem-core-embedded-image.v1",
+    "enabled": true,
+    "component": "totem-core",
+    "current_version": "c17.6-environment-input-20260514T211247Z",
+    "source_release_tag": "totem-core-c17.6-environment-input-20260514T211247Z",
+    "payload_sha256": "e6b643429709ba9f747d86bb113abc35ab9645da23216eb81455dbc2f5a9acb9",
+    "layout": {
+      "base": "/data/core/totem",
+      "current": "/data/core/totem/current",
+      "current_target": "releases/c17.6-environment-input-20260514T211247Z",
+      "fallback": "/opt/totem/core-fallback/bin",
+      "wrappers": "/opt/totem/bin"
+    },
+    "core_files": [
+      "totem_setup_visual_wizard.py",
+      "totem_wifi_nm_adapter.py",
+      "totem_visual_splash.py",
+      "totem_status_aggregate.py",
+      "totem_status_render_preview.py",
+      "totem_config_contract_validate.py",
+      "totem_open_settings_session.sh",
+      "totem_visual_tty_guard.sh",
+      "totem_firstboot_gate.sh",
+      "totem_status_renderer.sh",
+      "totem_settings_trigger.py",
+      "totem_open_settings_cleanup.sh",
+      "totem_visual_setup_writer_handoff.py",
+      "totem_config_writer_real.py",
+      "totem_setup_minimal_server.py",
+      "totem_setup_local_wizard.py",
+      "kiosky_service_launcher.sh"
+    ],
+    "splash_service_uses_totem_core_wrapper": true,
+    "fallback_available_without_data_current": true,
+    "remote_update_path_preserved": true,
+    "systemd_units_updated_for_wrapper_entrypoints": [
+      "dadooh-visual-splash.service"
+    ],
+    "clean_card_validation_required_before_batch": true,
+    "ready_for_c17_7_clean_card_validation": true,
+    "c18_started": false
   }
 }

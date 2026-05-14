@@ -4,6 +4,18 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.7: 2026-05-14. C17.7 gerou uma nova imagem privada de
+homologacao com o `totem-core` C17.6 embutido diretamente no rootfs. A imagem
+parte da C17.4.2 validada, preserva kernel/U-Boot/DTB/BSP, instala wrappers em
+`/opt/totem/bin`, fallback em `/opt/totem/core-fallback/bin` e
+`/data/core/totem/current` apontando para
+`c17.6-environment-input-20260514T211247Z`. O `dadooh-visual-splash.service`
+passa a usar o wrapper `/opt/totem/bin/totem_visual_splash.py`, mantendo
+fallback local. A validacao offline passou e produziu SHA256
+`69dfaa0c3454fa67a18d4e49c74f97343d4623b67826ed0cebb8eeb2e8081780`. Como
+nenhum cartao foi gravado nesta rodada, batch/dispatch/C18 ficam bloqueados ate
+a validacao limpa da imagem C17.7 em placa.
+
 Atualizacao C17.6: 2026-05-14. C17.6 entregou o primeiro update real de UX via
 `totem-core`: o campo `environment_id` do wizard passou a ter cursor, edicao no
 meio do texto, Delete, Ctrl+U, validacao UUID local, validacao segura por
