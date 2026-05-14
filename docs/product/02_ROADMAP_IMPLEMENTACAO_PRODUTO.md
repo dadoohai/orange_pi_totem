@@ -4,6 +4,17 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.5: 2026-05-14. C17.5 criou o MVP de update remoto
+`totem-core` para wizard/configurador/splash/status, reutilizando GitHub
+Releases e o schema `dadooh.totem.update.v1` do C14. O layout novo usa
+`/data/core/totem/releases`, `current`, `previous` e fallback forte em
+`/opt/totem/core-fallback/bin`, com wrappers em `/opt/totem/bin`. O pacote bom
+`c17.5-core-mvp-20260514T204200Z` foi publicado como prerelease, aplicado
+remotamente na placa C17.4.2, validado por SHA256, revertido para fallback e
+reaplicado. O guard bloqueia apply durante sessao de settings. C17.6 fica
+liberada para entregar a melhoria de `environment_id` via `totem-core`; C18
+continua fechado nesta etapa.
+
 Atualizacao C11.3.1: 2026-05-06. C11.3.1 confirmou que o caminho read-only
 deve continuar usando o mecanismo oficial do Armbian e que o prerequisito exato
 e o pacote `overlayroot`. O dry-run de instalacao na placa dev foi seguro, sem

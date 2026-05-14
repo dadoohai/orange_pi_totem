@@ -102,3 +102,10 @@ The next validation must prove:
 
 C18 can open after this point, but C17.4.2 does not start C18 and did not
 change scheduler, sync, duration, playlist, loop or `exposure_time_ms`.
+
+## Follow-Up
+
+C17.5 was opened before C18 to add a `totem-core` remote update MVP for
+wizard/configurator/splash/status changes. That allows C17.6 to deliver the
+`environment_id` UX update remotely instead of rebuilding the full image for
+each small UI change.

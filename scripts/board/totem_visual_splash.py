@@ -527,7 +527,7 @@ def run_self_test() -> None:
     preview_payload = write_preview_screens(preview_dir, rotation_deg=90)
     assert preview_payload["preview_screens_generated"] == len(PREVIEW_MODES)
     assert (preview_dir / "screens" / "01-boot.svg").exists()
-    assert (preview_dir / "screens" / "03-config_pending.svg").exists()
+    assert any((preview_dir / "screens").glob("*-config_pending.svg"))
     preview_text = (preview_dir / "splash-preview-status.json").read_text(encoding="utf-8")
     for forbidden in ("api_key", "SSID", "password", "192.0.2.1", "aa:bb:cc:dd:ee:ff"):
         assert forbidden not in preview_text

@@ -1,6 +1,6 @@
 {
   "schema_version": "dadooh-totem-appliance-manifest.v1",
-  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3, C17.4, C17.4.1 and C17.4.2)",
+  "created_for": "C10.8.1 (extended by C14.2.1, C17.1, C17.3, C17.4, C17.4.1, C17.4.2 and C17.5)",
   "homologation_release": {
     "image_tag": "c17-4-2-settings-restore-clean",
     "image_version": "c17.4.2",
@@ -17,12 +17,17 @@
     "c17_4_1_settings_lock_restore_fix_embedded": true,
     "c17_4_1_settings_lock_restore_fix_hotfix_validated": true,
     "ready_for_c17_4_2_image_rebuild": true,
-    "clean_board_validation_pending": true,
-    "ready_for_batch_flash": false,
-    "ready_for_dispatch": false,
+    "clean_board_validation_pending": false,
+    "ready_for_batch_flash": true,
+    "ready_for_dispatch": true,
     "ready_for_c18_player_audit": false,
     "c12_readonly_blocked": true,
-    "c12_4_blocked": true
+    "c12_4_blocked": true,
+    "c17_4_2_clean_board_validation_passed": true,
+    "totem_core_remote_update_mvp_defined": true,
+    "totem_core_remote_update_mvp_passed": true,
+    "ready_for_c17_6_environment_input_update": true,
+    "c17_5_keeps_c18_closed": true
   },
   "visual_design_system": {
     "version": "c17.2-appliance-ui.v1",
@@ -108,73 +113,499 @@
     }
   },
   "paths": [
-    {"path": "/opt/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/opt/totem/bin", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/opt/totem/share", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/opt/totem/kiosky-player", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/config", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/data/media", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/media/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/data/state", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/state/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/data/state/totem-appliance", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/state/totem-debug", "type": "dir", "owner": "root", "group": "root", "mode": "0755", "runtime_state": true, "content_policy": "sanitized_debug_events_no_private_values"},
-    {"path": "/data/state/totem-debug/c17-4-firstboot", "type": "dir", "owner": "totem", "group": "totem", "mode": "0700", "runtime_state": true, "content_policy": "sanitized_firstboot_visual_f10_events"},
-    {"path": "/data/state/totem-display", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "public_orientation_file_allowlisted_no_directory_hash"},
-    {"path": "/data/state/totem-boot-visual", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "rollback_state_no_directory_hash"},
-    {"path": "/data/state/totem-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700", "runtime_state": true, "content_policy": "private_settings_context_no_content_read"},
-    {"path": "/data/spool", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/spool/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/data/logs", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/logs/kiosky-player", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/tmp/kiosky", "type": "dir", "owner": "totem", "group": "totem", "mode": "0750"},
-    {"path": "/run/dadooh-settings", "type": "dir", "owner": "root", "group": "root", "mode": "0700"},
-    {"path": "/run/totem", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/apps", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/apps/kiosky-player", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/apps/kiosky-player/releases", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/updates", "type": "dir", "owner": "root", "group": "root", "mode": "0755"},
-    {"path": "/data/updates/incoming", "type": "dir", "owner": "root", "group": "root", "mode": "0755"}
+    {
+      "path": "/opt/totem",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/opt/totem/bin",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/opt/totem/share",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/opt/totem/kiosky-player",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/config",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0750"
+    },
+    {
+      "path": "/data/media",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/media/kiosky-player",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0750"
+    },
+    {
+      "path": "/data/state",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/state/kiosky-player",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0750"
+    },
+    {
+      "path": "/data/state/totem-appliance",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/state/totem-debug",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755",
+      "runtime_state": true,
+      "content_policy": "sanitized_debug_events_no_private_values"
+    },
+    {
+      "path": "/data/state/totem-debug/c17-4-firstboot",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0700",
+      "runtime_state": true,
+      "content_policy": "sanitized_firstboot_visual_f10_events"
+    },
+    {
+      "path": "/data/state/totem-display",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0700",
+      "runtime_state": true,
+      "content_policy": "public_orientation_file_allowlisted_no_directory_hash"
+    },
+    {
+      "path": "/data/state/totem-boot-visual",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0700",
+      "runtime_state": true,
+      "content_policy": "rollback_state_no_directory_hash"
+    },
+    {
+      "path": "/data/state/totem-settings",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0700",
+      "runtime_state": true,
+      "content_policy": "private_settings_context_no_content_read"
+    },
+    {
+      "path": "/data/spool",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/spool/kiosky-player",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0750"
+    },
+    {
+      "path": "/data/logs",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/logs/kiosky-player",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0750"
+    },
+    {
+      "path": "/tmp/kiosky",
+      "type": "dir",
+      "owner": "totem",
+      "group": "totem",
+      "mode": "0750"
+    },
+    {
+      "path": "/run/dadooh-settings",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0700"
+    },
+    {
+      "path": "/run/totem",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/apps",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/apps/kiosky-player",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/apps/kiosky-player/releases",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/updates",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/updates/incoming",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/opt/totem/core-fallback",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/opt/totem/core-fallback/bin",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/core",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/core/totem",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/core/totem/releases",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "path": "/data/updates/incoming/totem-core",
+      "type": "dir",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    }
   ],
   "bin_scripts": [
-    {"source": "scripts/board/kiosky_service_launcher.sh", "target": "/opt/totem/bin/kiosky_service_launcher.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_config_contract_validate.py", "target": "/opt/totem/bin/totem_config_contract_validate.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_config_writer_real.py", "target": "/opt/totem/bin/totem_config_writer_real.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_open_settings_session.sh", "target": "/opt/totem/bin/totem_open_settings_session.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_open_settings_cleanup.sh", "target": "/opt/totem/bin/totem_open_settings_cleanup.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_firstboot_gate.sh", "target": "/opt/totem/bin/totem_firstboot_gate.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_settings_trigger.py", "target": "/opt/totem/bin/totem_settings_trigger.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_settings_lab_apply_policy.sh", "target": "/opt/totem/bin/totem_settings_lab_apply_policy.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_setup_local_wizard.py", "target": "/opt/totem/bin/totem_setup_local_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_setup_minimal_server.py", "target": "/opt/totem/bin/totem_setup_minimal_server.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_setup_visual_wizard.py", "target": "/opt/totem/bin/totem_setup_visual_wizard.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_status_aggregate.py", "target": "/opt/totem/bin/totem_status_aggregate.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_status_render_preview.py", "target": "/opt/totem/bin/totem_status_render_preview.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_status_renderer.sh", "target": "/opt/totem/bin/totem_status_renderer.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_visual_setup_writer_handoff.py", "target": "/opt/totem/bin/totem_visual_setup_writer_handoff.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_visual_splash.py", "target": "/opt/totem/bin/totem_visual_splash.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_visual_tty_guard.sh", "target": "/opt/totem/bin/totem_visual_tty_guard.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_wifi_local_credentials_tty.py", "target": "/opt/totem/bin/totem_wifi_local_credentials_tty.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_wifi_nm_adapter.py", "target": "/opt/totem/bin/totem_wifi_nm_adapter.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/verify_totem_read_only_policy.sh", "target": "/opt/totem/bin/verify_totem_read_only_policy.sh", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_updatectl.py", "target": "/opt/totem/bin/totem-updatectl", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem-kiosky-launcher.sh", "target": "/opt/totem/bin/totem-kiosky-launcher.sh", "owner": "root", "group": "root", "mode": "0755"}
+    {
+      "source": "scripts/board/kiosky_service_launcher.sh",
+      "target": "/opt/totem/bin/kiosky_service_launcher.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_config_contract_validate.py",
+      "target": "/opt/totem/bin/totem_config_contract_validate.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_config_writer_real.py",
+      "target": "/opt/totem/bin/totem_config_writer_real.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_open_settings_session.sh",
+      "target": "/opt/totem/bin/totem_open_settings_session.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_open_settings_cleanup.sh",
+      "target": "/opt/totem/bin/totem_open_settings_cleanup.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_firstboot_gate.sh",
+      "target": "/opt/totem/bin/totem_firstboot_gate.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_settings_trigger.py",
+      "target": "/opt/totem/bin/totem_settings_trigger.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_settings_lab_apply_policy.sh",
+      "target": "/opt/totem/bin/totem_settings_lab_apply_policy.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_setup_local_wizard.py",
+      "target": "/opt/totem/bin/totem_setup_local_wizard.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_setup_minimal_server.py",
+      "target": "/opt/totem/bin/totem_setup_minimal_server.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_setup_visual_wizard.py",
+      "target": "/opt/totem/bin/totem_setup_visual_wizard.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_status_aggregate.py",
+      "target": "/opt/totem/bin/totem_status_aggregate.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_status_render_preview.py",
+      "target": "/opt/totem/bin/totem_status_render_preview.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_status_renderer.sh",
+      "target": "/opt/totem/bin/totem_status_renderer.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_visual_setup_writer_handoff.py",
+      "target": "/opt/totem/bin/totem_visual_setup_writer_handoff.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_visual_splash.py",
+      "target": "/opt/totem/bin/totem_visual_splash.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_visual_tty_guard.sh",
+      "target": "/opt/totem/bin/totem_visual_tty_guard.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_wifi_local_credentials_tty.py",
+      "target": "/opt/totem/bin/totem_wifi_local_credentials_tty.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_wifi_nm_adapter.py",
+      "target": "/opt/totem/bin/totem_wifi_nm_adapter.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/verify_totem_read_only_policy.sh",
+      "target": "/opt/totem/bin/verify_totem_read_only_policy.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_updatectl.py",
+      "target": "/opt/totem/bin/totem-updatectl",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem-kiosky-launcher.sh",
+      "target": "/opt/totem/bin/totem-kiosky-launcher.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_core_exec.py",
+      "target": "/opt/totem/bin/totem_core_exec.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_core_exec.sh",
+      "target": "/opt/totem/bin/totem_core_exec.sh",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    }
   ],
   "extra_files": [
-    {"source": "scripts/board/totem_visual_splash.py", "target": "/usr/local/sbin/dadooh-visual-splash.py", "owner": "root", "group": "root", "mode": "0755"},
-    {"source": "scripts/board/totem_read_only_policy.json", "target": "/opt/totem/share/totem_read_only_policy.json", "owner": "root", "group": "root", "mode": "0644"},
-    {"source": "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf", "target": "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf", "owner": "root", "group": "root", "mode": "0644"}
+    {
+      "source": "scripts/board/totem_visual_splash.py",
+      "target": "/usr/local/sbin/dadooh-visual-splash.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
+      "source": "scripts/board/totem_read_only_policy.json",
+      "target": "/opt/totem/share/totem_read_only_policy.json",
+      "owner": "root",
+      "group": "root",
+      "mode": "0644"
+    },
+    {
+      "source": "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
+      "target": "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf",
+      "owner": "root",
+      "group": "root",
+      "mode": "0644"
+    }
   ],
   "systemd_units": [
-    {"source": "scripts/board/kiosky-player.service", "target": "/etc/systemd/system/kiosky-player.service", "enabled": true, "active_expected_on_dev": "active"},
-    {"source": "scripts/board/totem-visual-tty-guard.service", "target": "/etc/systemd/system/totem-visual-tty-guard.service", "enabled": true, "active_expected_on_dev": "active"},
-    {"source": "scripts/board/totem-firstboot-gate.service", "target": "/etc/systemd/system/totem-firstboot-gate.service", "enabled": true, "active_expected_on_dev": "inactive"},
-    {"source": "scripts/board/totem-settings-trigger.service", "target": "/etc/systemd/system/totem-settings-trigger.service", "enabled": true, "active_expected_on_dev": "active"},
-    {"source": "scripts/board/totem-open-settings.service", "target": "/etc/systemd/system/totem-open-settings.service", "enabled": false, "enabled_state": "static", "active_expected_on_dev": "inactive"},
-    {"source": "scripts/board/dadooh-visual-splash.service", "target": "/etc/systemd/system/dadooh-visual-splash.service", "enabled": true, "active_expected_on_dev": "active"},
-    {"source": "scripts/board/systemd/totem-update-agent.service", "target": "/etc/systemd/system/totem-update-agent.service", "enabled": false, "enabled_state": "static", "active_expected_on_dev": "inactive"},
-    {"source": "scripts/board/systemd/totem-update-agent.timer", "target": "/etc/systemd/system/totem-update-agent.timer", "enabled": true, "active_expected_on_dev": "active"}
+    {
+      "source": "scripts/board/kiosky-player.service",
+      "target": "/etc/systemd/system/kiosky-player.service",
+      "enabled": true,
+      "active_expected_on_dev": "active"
+    },
+    {
+      "source": "scripts/board/totem-visual-tty-guard.service",
+      "target": "/etc/systemd/system/totem-visual-tty-guard.service",
+      "enabled": true,
+      "active_expected_on_dev": "active"
+    },
+    {
+      "source": "scripts/board/totem-firstboot-gate.service",
+      "target": "/etc/systemd/system/totem-firstboot-gate.service",
+      "enabled": true,
+      "active_expected_on_dev": "inactive"
+    },
+    {
+      "source": "scripts/board/totem-settings-trigger.service",
+      "target": "/etc/systemd/system/totem-settings-trigger.service",
+      "enabled": true,
+      "active_expected_on_dev": "active"
+    },
+    {
+      "source": "scripts/board/totem-open-settings.service",
+      "target": "/etc/systemd/system/totem-open-settings.service",
+      "enabled": false,
+      "enabled_state": "static",
+      "active_expected_on_dev": "inactive"
+    },
+    {
+      "source": "scripts/board/dadooh-visual-splash.service",
+      "target": "/etc/systemd/system/dadooh-visual-splash.service",
+      "enabled": true,
+      "active_expected_on_dev": "active"
+    },
+    {
+      "source": "scripts/board/systemd/totem-update-agent.service",
+      "target": "/etc/systemd/system/totem-update-agent.service",
+      "enabled": false,
+      "enabled_state": "static",
+      "active_expected_on_dev": "inactive"
+    },
+    {
+      "source": "scripts/board/systemd/totem-update-agent.timer",
+      "target": "/etc/systemd/system/totem-update-agent.timer",
+      "enabled": true,
+      "active_expected_on_dev": "active"
+    }
   ],
   "boot_visual_guardrails": {
     "armbian_env": "/boot/armbianEnv.txt",
@@ -428,5 +859,51 @@
     "raw logs",
     "media cache",
     "private candidate files"
-  ]
+  ],
+  "totem_core_update_mvp": {
+    "version": "c17.5-totem-core-remote-update-mvp.v1",
+    "component": "totem-core",
+    "schema": "dadooh.totem.update.v1",
+    "layout": {
+      "base": "/data/core/totem",
+      "releases": "/data/core/totem/releases/<version>",
+      "current": "/data/core/totem/current",
+      "previous": "/data/core/totem/previous",
+      "state": "/data/core/totem/state.json",
+      "fallback": "/opt/totem/core-fallback/bin",
+      "wrappers": "/opt/totem/bin"
+    },
+    "included_scope": [
+      "wizard",
+      "configurator",
+      "splash",
+      "status",
+      "settings-session",
+      "wifi-adapter",
+      "config-contract",
+      "firstboot-pre-config-helpers"
+    ],
+    "excluded_scope": [
+      "systemd-units",
+      "kernel",
+      "u-boot",
+      "dtb",
+      "networkmanager",
+      "updater-self-update",
+      "read-only-c12",
+      "player-timing-sync-duration-loop"
+    ],
+    "wrappers_fallback_required": true,
+    "settings_session_lock_guard_required": true,
+    "apply_while_settings_session_active_allowed": false,
+    "rollback_required": true,
+    "ready_for_c17_6_environment_input_update": true,
+    "ready_for_c18_player_audit": false,
+    "package_version": "c17.5-core-mvp-20260514T204200Z",
+    "payload_sha256": "8a7724382b1c786caaf957d90bf35d79271cb777352ddc23993a0d0df72843e2",
+    "github_release_tag": "totem-core-c17.5-core-mvp-20260514T204200Z",
+    "remote_apply_tested": true,
+    "rollback_tested": true,
+    "bootstrap_applied_to_c17_4_2_board": true
+  }
 }

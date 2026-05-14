@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# C14.1.1 - totem_updatectl: pull-based app updater for kiosky-player.
+# C14.1.1 / C17.5 - totem_updatectl: pull-based updater.
 #
 # Scope:
-#   - Updates ONLY the kiosky-player application under /data/apps/kiosky-player.
+#   - Updates kiosky-player under /data/apps/kiosky-player.
+#   - Updates totem-core under /data/core/totem.
 #   - Pulls assets from GitHub Releases via HTTPS (no git, no apt, no pip).
 #   - Validates manifest schema + payload SHA256 before extracting.
 #   - Atomic symlink swap of `current`. Keeps `previous` for rollback.
-#   - Restarts kiosky-player.service via systemctl.
-#   - Performs health check; auto-rollback on failure.
+#   - Performs component health check; auto-rollback on failure.
 #
 # Out of scope (this round):
 #   - OS / kernel / U-Boot / DTB / BSP updates.
@@ -43,16 +43,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 SCHEMA_MANIFEST = "dadooh.totem.update.v1"
 SCHEMA_STATE = "dadooh.totem.update.state.v1"
-COMPONENT = "kiosky-player"
+DEFAULT_COMPONENT = "kiosky-player"
+COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
 
 DATA_ROOT = Path(os.environ.get("TOTEM_DATA_ROOT", "/data"))
+UPDATES_DIR = DATA_ROOT / "updates"
 APP_BASE = DATA_ROOT / "apps" / COMPONENT
 RELEASES_DIR = APP_BASE / "releases"
 CURRENT_LINK = APP_BASE / "current"
 PREVIOUS_LINK = APP_BASE / "previous"
-
-UPDATES_DIR = DATA_ROOT / "updates"
 INCOMING_DIR = UPDATES_DIR / "incoming"
 STATE_FILE = UPDATES_DIR / "state.json"
 
@@ -64,14 +64,61 @@ TOKEN_FILE = Path(os.environ.get("TOTEM_DEVICE_GITHUB_TOKEN_FILE",
                                  "/data/secrets/github-release-token"))
 
 SERVICE_NAME = os.environ.get("TOTEM_KIOSKY_SERVICE", "kiosky-player.service")
+SETTINGS_LOCK = Path(os.environ.get("TOTEM_SETTINGS_SESSION_LOCK",
+                                    "/run/totem/settings-session.lock"))
+OPEN_SETTINGS_SERVICE = os.environ.get("TOTEM_OPEN_SETTINGS_SERVICE",
+                                       "totem-open-settings.service")
 
 GITHUB_API = "https://api.github.com"
 HTTP_TIMEOUT_S = 30
 DOWNLOAD_TIMEOUT_S = 300
-USER_AGENT = "dadooh-totem-updatectl/0.1 (+orangepizero3)"
+USER_AGENT = "dadooh-totem-updatectl/0.2 (+orangepizero3)"
 
 HEALTH_GRACE_SECONDS = int(os.environ.get("TOTEM_HEALTH_GRACE_SECONDS", "12"))
 HEALTH_CHECK_TIMEOUT_S = int(os.environ.get("TOTEM_HEALTH_CHECK_TIMEOUT_S", "30"))
+
+TOTEM_CORE_REQUIRED_BIN = (
+    "totem_setup_visual_wizard.py",
+    "totem_wifi_nm_adapter.py",
+    "totem_visual_splash.py",
+    "totem_status_aggregate.py",
+    "totem_status_render_preview.py",
+    "totem_config_contract_validate.py",
+    "totem_open_settings_session.sh",
+    "totem_visual_tty_guard.sh",
+    "totem_firstboot_gate.sh",
+    "totem_status_renderer.sh",
+    "totem_settings_trigger.py",
+    "totem_open_settings_cleanup.sh",
+    "totem_visual_setup_writer_handoff.py",
+    "totem_config_writer_real.py",
+    "totem_setup_minimal_server.py",
+    "totem_setup_local_wizard.py",
+    "kiosky_service_launcher.sh",
+)
+
+
+def configure_component(component: str) -> None:
+    """Select paths and behavior for a supported update component."""
+    global COMPONENT, APP_BASE, RELEASES_DIR, CURRENT_LINK, PREVIOUS_LINK
+    global INCOMING_DIR, STATE_FILE
+
+    if component not in {"kiosky-player", "totem-core"}:
+        raise RuntimeError(f"unsupported component: {component}")
+
+    COMPONENT = component
+    if component == "kiosky-player":
+        APP_BASE = DATA_ROOT / "apps" / "kiosky-player"
+        INCOMING_DIR = UPDATES_DIR / "incoming"
+        STATE_FILE = UPDATES_DIR / "state.json"
+    else:
+        APP_BASE = DATA_ROOT / "core" / "totem"
+        INCOMING_DIR = UPDATES_DIR / "incoming" / "totem-core"
+        STATE_FILE = APP_BASE / "state.json"
+
+    RELEASES_DIR = APP_BASE / "releases"
+    CURRENT_LINK = APP_BASE / "current"
+    PREVIOUS_LINK = APP_BASE / "previous"
 
 
 # ----------------------------------------------------------------------------
@@ -231,6 +278,14 @@ def _http_download(url: str, dest: Path,
     return total, sha
 
 
+def _sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 # ----------------------------------------------------------------------------
 # Filesystem helpers
 # ----------------------------------------------------------------------------
@@ -324,7 +379,7 @@ def _write_state(state: Dict[str, Any]) -> None:
 
 REQUIRED_MANIFEST_FIELDS = (
     "schema", "component", "version", "payload",
-    "payload_sha256", "entrypoint", "requires",
+    "payload_sha256", "requires",
 )
 
 
@@ -346,8 +401,23 @@ def _validate_manifest(m: Dict[str, Any]) -> None:
     sha = m["payload_sha256"]
     if not isinstance(sha, str) or len(sha) != 64 or not all(c in "0123456789abcdefABCDEF" for c in sha):
         raise RuntimeError("payload_sha256 must be a 64-char hex digest")
-    if m["entrypoint"] != "kiosk.py":
-        raise RuntimeError(f"unsupported entrypoint: {m['entrypoint']!r}")
+    if COMPONENT == "kiosky-player":
+        if "entrypoint" not in m:
+            raise RuntimeError("manifest missing fields: ['entrypoint']")
+        if m["entrypoint"] != "kiosk.py":
+            raise RuntimeError(f"unsupported entrypoint: {m['entrypoint']!r}")
+    elif COMPONENT == "totem-core":
+        entrypoint = m.get("entrypoint")
+        if entrypoint is not None and (
+            not isinstance(entrypoint, str)
+            or not entrypoint.startswith("bin/")
+            or "/" not in entrypoint
+            or ".." in Path(entrypoint).parts
+        ):
+            raise RuntimeError(f"unsupported totem-core entrypoint: {entrypoint!r}")
+        updates = m.get("updates")
+        if not isinstance(updates, list) or not updates:
+            raise RuntimeError("totem-core manifest requires non-empty updates list")
 
 
 # ----------------------------------------------------------------------------
@@ -544,12 +614,119 @@ def _service_health_check() -> Tuple[bool, str]:
     return True, "service active and stable"
 
 
+def _systemd_unit_state(unit: str) -> str:
+    r = _systemctl("is-active", unit)
+    return (r.stdout or "").strip() or "unknown"
+
+
+def _totem_core_apply_guard() -> Tuple[bool, str]:
+    """Block totem-core apply while settings/writer visual session owns the device."""
+    if COMPONENT != "totem-core":
+        return True, "not totem-core"
+    if SETTINGS_LOCK.exists():
+        return False, "settings_session_lock_present"
+    state = _systemd_unit_state(OPEN_SETTINGS_SERVICE)
+    if state in {"active", "activating"}:
+        return False, f"open_settings_service_{state}"
+    request_file = Path("/run/dadooh-settings/request.json")
+    if request_file.exists():
+        return False, "settings_request_present"
+    return True, "settings_session_inactive"
+
+
+def _run_health_cmd(args: List[str], timeout_s: int = 45) -> Tuple[bool, str]:
+    try:
+        r = subprocess.run(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+        )
+    except Exception as e:
+        return False, f"{Path(args[0]).name}_failed_to_run:{e}"
+    if r.returncode != 0:
+        stderr = (r.stderr or r.stdout or "").strip().splitlines()
+        detail = stderr[-1] if stderr else f"rc={r.returncode}"
+        return False, f"{Path(args[-2] if args[0].endswith('python3') else args[-1]).name}:{detail}"
+    return True, "ok"
+
+
+def _restore_order_static_check(bin_dir: Path) -> Tuple[bool, str]:
+    session = bin_dir / "totem_open_settings_session.sh"
+    try:
+        text = session.read_text(encoding="utf-8")
+        restore_start = text.index("restore_service() {")
+        restore_end = text.index("\n}\n\nkill_visual_if_running()", restore_start)
+        release_start = text.index("release_session_lock_for_restore() {")
+        release_end = text.index("\n}\n\nwrite_final_status()", release_start)
+        normal_start = text.index('c1523_phase "session_cleanup_start rc=0"')
+        normal_end = text.index('c1523_phase "session_done rc=0"', normal_start)
+    except Exception as e:
+        return False, f"restore_order_parse_failed:{e}"
+
+    restore = text[restore_start:restore_end]
+    release = text[release_start:release_end]
+    normal = text[normal_start:normal_end]
+    checks = {
+        "restore_has_lock_guard": '[ -e "$LOCK_DIR" ]' in restore,
+        "restore_guard_before_start": (
+            '[ -e "$LOCK_DIR" ]' in restore
+            and "systemctl start kiosky-player.service" in restore
+            and restore.index('[ -e "$LOCK_DIR" ]') < restore.index("systemctl start kiosky-player.service")
+        ),
+        "release_removes_lock": "cleanup_session_lock" in release,
+        "release_logs_before_restore": "session_lock_released_before_restore" in release,
+        "normal_releases_before_restore": (
+            "release_session_lock_for_restore" in normal
+            and "restore_service" in normal
+            and normal.index("release_session_lock_for_restore") < normal.index("restore_service")
+        ),
+    }
+    failed = [name for name, ok in checks.items() if not ok]
+    if failed:
+        return False, "restore_order_failed:" + ",".join(failed)
+    return True, "restore order ok"
+
+
+def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
+    bin_dir = release_dir / "bin"
+    if not bin_dir.is_dir():
+        return False, "bin_dir_missing"
+    missing = [name for name in TOTEM_CORE_REQUIRED_BIN if not (bin_dir / name).is_file()]
+    if missing:
+        return False, "missing_bin:" + ",".join(missing)
+
+    checks = [
+        ["/usr/bin/python3", str(bin_dir / "totem_setup_visual_wizard.py"), "--self-test"],
+        ["/usr/bin/python3", str(bin_dir / "totem_wifi_nm_adapter.py"), "--self-test"],
+        ["/usr/bin/python3", str(bin_dir / "totem_visual_splash.py"), "--self-test"],
+        ["/usr/bin/python3", str(bin_dir / "totem_config_contract_validate.py"), "--self-test"],
+        ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_open_settings_session.sh")],
+        ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_visual_tty_guard.sh")],
+        ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_firstboot_gate.sh")],
+        ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_status_renderer.sh")],
+        ["/usr/bin/env", "bash", "-n", str(bin_dir / "kiosky_service_launcher.sh")],
+    ]
+    for cmd in checks:
+        ok, info = _run_health_cmd(cmd)
+        if not ok:
+            return False, info
+
+    ok, info = _restore_order_static_check(bin_dir)
+    if not ok:
+        return False, info
+    return True, "totem-core health checks passed"
+
+
 # ----------------------------------------------------------------------------
 # Apply flow
 # ----------------------------------------------------------------------------
 
 def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
-                              source: str) -> int:
+                              source: str,
+                              payload_path_override: Optional[Path] = None) -> int:
     """
     Common apply logic.
     `manifest_path` must already exist on disk (validated JSON).
@@ -558,6 +735,11 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     """
     started_at = _utcnow_iso()
     log("INFO", "apply_start", source=source, manifest=str(manifest_path))
+
+    ok, reason = _totem_core_apply_guard()
+    if not ok:
+        log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=reason)
+        return 40
 
     try:
         with manifest_path.open("r", encoding="utf-8") as f:
@@ -576,20 +758,33 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     stage.mkdir(parents=True, exist_ok=True)
     payload_local = stage / payload_name
 
-    if payload_url is None:
+    if payload_path_override is not None:
+        try:
+            actual_sha = _sha256_file(payload_path_override)
+            if actual_sha.lower() != sha:
+                log("ERROR", "local_payload_sha256_mismatch",
+                    expected=sha, actual=actual_sha)
+                return 6
+            shutil.copy2(payload_path_override, payload_local)
+            n = payload_local.stat().st_size
+        except Exception as e:
+            log("ERROR", "local_payload_stage_failed", err=str(e))
+            return 6
+        log("INFO", "local_payload_staged", bytes=n, sha256=actual_sha)
+    elif payload_url is None:
         log("ERROR", "apply_failed_no_payload_url")
         return 5
-
-    log("INFO", "downloading_payload", version=version, dest=str(payload_local))
-    try:
-        n, actual_sha = _http_download(payload_url, payload_local, expected_sha256=sha)
-    except HttpError as e:
-        log("ERROR", "payload_download_http_error", code=e.code, reason=e.reason)
-        return 6
-    except Exception as e:
-        log("ERROR", "payload_download_failed", err=str(e))
-        return 6
-    log("INFO", "payload_downloaded", bytes=n, sha256=actual_sha)
+    else:
+        log("INFO", "downloading_payload", version=version, dest=str(payload_local))
+        try:
+            n, actual_sha = _http_download(payload_url, payload_local, expected_sha256=sha)
+        except HttpError as e:
+            log("ERROR", "payload_download_http_error", code=e.code, reason=e.reason)
+            return 6
+        except Exception as e:
+            log("ERROR", "payload_download_failed", err=str(e))
+            return 6
+        log("INFO", "payload_downloaded", bytes=n, sha256=actual_sha)
 
     # Extract
     release_dir = RELEASES_DIR / version
@@ -607,25 +802,35 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
             pass
         return 7
 
-    # Entrypoint must exist post-extract
-    entry = release_dir / manifest["entrypoint"]
-    if not entry.is_file():
-        log("ERROR", "entrypoint_missing", entry=str(entry))
-        try:
-            shutil.rmtree(release_dir)
-        except OSError:
-            pass
-        return 8
+    if COMPONENT == "kiosky-player":
+        # Entrypoint must exist post-extract
+        entry = release_dir / manifest["entrypoint"]
+        if not entry.is_file():
+            log("ERROR", "entrypoint_missing", entry=str(entry))
+            try:
+                shutil.rmtree(release_dir)
+            except OSError:
+                pass
+            return 8
 
-    # requirements compat
-    ok, reason = _check_requirements_compat(release_dir)
-    if not ok:
-        log("ERROR", "requirements_incompatible", reason=reason)
-        try:
-            shutil.rmtree(release_dir)
-        except OSError:
-            pass
-        return 9
+        # requirements compat
+        ok, reason = _check_requirements_compat(release_dir)
+        if not ok:
+            log("ERROR", "requirements_incompatible", reason=reason)
+            try:
+                shutil.rmtree(release_dir)
+            except OSError:
+                pass
+            return 9
+    else:
+        ok, reason = _totem_core_health_check(release_dir)
+        if not ok:
+            log("ERROR", "totem_core_health_precheck_failed", reason=reason)
+            try:
+                shutil.rmtree(release_dir)
+            except OSError:
+                pass
+            return 9
 
     # Remember the existing current as "previous_before_apply" for rollback
     prev_target_before_apply = _read_symlink_target(CURRENT_LINK)
@@ -660,19 +865,26 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     }
     _write_state(state)
 
-    # Restart service
-    log("INFO", "restarting_service", service=SERVICE_NAME)
-    ok, info = _service_restart()
-    if not ok:
-        log("ERROR", "service_restart_failed", err=info)
-        return _rollback_with_reason(state, started_at, "service_restart_failed")
+    if COMPONENT == "kiosky-player":
+        # Restart service
+        log("INFO", "restarting_service", service=SERVICE_NAME)
+        ok, info = _service_restart()
+        if not ok:
+            log("ERROR", "service_restart_failed", err=info)
+            return _rollback_with_reason(state, started_at, "service_restart_failed")
 
-    # Health check
-    log("INFO", "health_check_starting")
-    ok, info = _service_health_check()
-    if not ok:
-        log("ERROR", "health_check_failed", reason=info)
-        return _rollback_with_reason(state, started_at, info)
+        # Health check
+        log("INFO", "health_check_starting")
+        ok, info = _service_health_check()
+        if not ok:
+            log("ERROR", "health_check_failed", reason=info)
+            return _rollback_with_reason(state, started_at, info)
+    else:
+        log("INFO", "totem_core_health_check_starting")
+        ok, info = _totem_core_health_check(release_dir)
+        if not ok:
+            log("ERROR", "totem_core_health_check_failed", reason=info)
+            return _rollback_with_reason(state, started_at, info)
 
     state["last_operation"] = {
         "type": "apply",
@@ -691,6 +903,24 @@ def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -
     log("WARN", "auto_rollback_starting", reason=reason)
     prev_link = _read_symlink_target(PREVIOUS_LINK)
     if not prev_link:
+        if COMPONENT == "totem-core":
+            try:
+                if CURRENT_LINK.is_symlink() or CURRENT_LINK.exists():
+                    CURRENT_LINK.unlink()
+            except OSError:
+                pass
+            state["current"] = None
+            state["last_operation"] = {
+                "type": "apply",
+                "status": "rolled_back_to_fallback",
+                "started_at_utc": started_at,
+                "finished_at_utc": _utcnow_iso(),
+                "rollback_reason": reason,
+                "rolled_back_to": "fallback",
+            }
+            _write_state(state)
+            log("INFO", "auto_rollback_complete", rolled_to="fallback")
+            return 10
         log("ERROR", "auto_rollback_failed_no_previous")
         state["last_operation"] = {
             "type": "apply",
@@ -705,13 +935,17 @@ def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -
     # Atomic swap: current <- previous
     _atomic_symlink(prev_link, CURRENT_LINK)
 
-    ok, info = _service_restart()
+    if COMPONENT == "kiosky-player":
+        ok, info = _service_restart()
+    else:
+        ok, info = _totem_core_health_check(APP_BASE / prev_link)
     if not ok:
         log("ERROR", "rollback_restart_failed", err=info)
     else:
-        ok, info = _service_health_check()
-        if not ok:
-            log("ERROR", "rollback_health_check_failed", reason=info)
+        if COMPONENT == "kiosky-player":
+            ok, info = _service_health_check()
+            if not ok:
+                log("ERROR", "rollback_health_check_failed", reason=info)
 
     rolled_to_version = prev_link.split("/")[-1] if "/" in prev_link else prev_link
     state["current"] = state.get("previous")
@@ -733,18 +967,23 @@ def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -
 # ----------------------------------------------------------------------------
 
 def cmd_status(args: argparse.Namespace) -> int:
+    configure_component(args.component)
     _ensure_dirs()
     state = _read_state()
     cur_link = _read_symlink_target(CURRENT_LINK)
     prev_link = _read_symlink_target(PREVIOUS_LINK)
+    guard_ok, guard_reason = _totem_core_apply_guard()
     out = {
         "schema": SCHEMA_STATE,
         "component": COMPONENT,
         "data_root": str(DATA_ROOT),
+        "component_base": str(APP_BASE),
         "current_symlink_target": cur_link,
         "previous_symlink_target": prev_link,
         "state": state,
         "service_active": _service_is_active(),
+        "component_apply_guard_ok": guard_ok,
+        "component_apply_guard_reason": guard_reason,
         "token_file_present": TOKEN_FILE.is_file(),
     }
     print(json.dumps(out, indent=2, sort_keys=True))
@@ -752,18 +991,26 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_self_test(args: argparse.Namespace) -> int:
+    configure_component(args.component)
     _ensure_dirs()
     checks = {
         "data_root_writable": os.access(str(DATA_ROOT), os.W_OK),
-        "app_base_exists": APP_BASE.is_dir(),
+        "component_base_exists": APP_BASE.is_dir(),
         "updates_dir_exists": UPDATES_DIR.is_dir(),
         "log_dir_writable": os.access(str(LOG_DIR), os.W_OK),
         "systemctl_present": Path("/bin/systemctl").exists(),
         "python_stdlib_only": True,
         "service_unit_known": False,
     }
-    r = _systemctl("show", SERVICE_NAME, "-p", "LoadState", "--value")
-    checks["service_unit_known"] = (r.stdout.strip() == "loaded")
+    if COMPONENT == "kiosky-player":
+        r = _systemctl("show", SERVICE_NAME, "-p", "LoadState", "--value")
+        checks["service_unit_known"] = (r.stdout.strip() == "loaded")
+    else:
+        checks["service_unit_known"] = True
+        checks["fallback_bin_exists"] = Path("/opt/totem/core-fallback/bin").is_dir()
+        checks["settings_lock_guard_available"] = True
+        guard_ok, _ = _totem_core_apply_guard()
+        checks["settings_lock_guard_clear"] = guard_ok
     out = {
         "self_test": all(checks.values()),
         "checks": checks,
@@ -774,6 +1021,7 @@ def cmd_self_test(args: argparse.Namespace) -> int:
 
 
 def cmd_check_github_latest(args: argparse.Namespace) -> int:
+    configure_component(args.component)
     _ensure_dirs()
     try:
         rel = _gh_get_latest_release(args.repo)
@@ -814,6 +1062,7 @@ def cmd_check_github_latest(args: argparse.Namespace) -> int:
 
 
 def cmd_apply_github_latest(args: argparse.Namespace) -> int:
+    configure_component(args.component)
     _ensure_dirs()
     try:
         rel = _gh_get_latest_release(args.repo)
@@ -856,6 +1105,7 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
 
 
 def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
+    configure_component(args.component)
     _ensure_dirs()
     manifest_url = args.url
     log("INFO", "fetching_manifest", url=_safe_url(manifest_url))
@@ -883,10 +1133,65 @@ def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     return _apply_from_manifest_path(manifest_dest, payload_url, f"manifest_url:{_safe_url(manifest_url)}")
 
 
+def cmd_apply_local(args: argparse.Namespace) -> int:
+    configure_component(args.component)
+    _ensure_dirs()
+    manifest_path = Path(args.manifest)
+    if not manifest_path.is_file() or manifest_path.is_symlink():
+        print("local_manifest_not_found", file=sys.stderr)
+        return 41
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        log("ERROR", "local_manifest_read_failed", err=str(e))
+        return 41
+    try:
+        _validate_manifest(manifest)
+    except Exception as e:
+        log("ERROR", "local_manifest_validate_failed", err=str(e))
+        return 41
+    payload_path = Path(args.payload) if args.payload else manifest_path.parent / str(manifest["payload"])
+    if not payload_path.is_file() or payload_path.is_symlink():
+        print("local_payload_not_found", file=sys.stderr)
+        return 42
+    return _apply_from_manifest_path(
+        manifest_path,
+        payload_url=None,
+        source=f"local:{manifest_path.name}",
+        payload_path_override=payload_path,
+    )
+
+
 def cmd_rollback(args: argparse.Namespace) -> int:
+    configure_component(args.component)
     _ensure_dirs()
     prev_link = _read_symlink_target(PREVIOUS_LINK)
     if not prev_link:
+        if COMPONENT == "totem-core":
+            started_at = _utcnow_iso()
+            cur_link = _read_symlink_target(CURRENT_LINK)
+            try:
+                if CURRENT_LINK.is_symlink() or CURRENT_LINK.exists():
+                    CURRENT_LINK.unlink()
+                if cur_link:
+                    _atomic_symlink(cur_link, PREVIOUS_LINK)
+            except OSError:
+                pass
+            state = _read_state()
+            state["previous"] = state.get("current")
+            state["current"] = None
+            state["last_operation"] = {
+                "type": "rollback",
+                "status": "success",
+                "started_at_utc": started_at,
+                "finished_at_utc": _utcnow_iso(),
+                "rolled_back_to": "fallback",
+            }
+            _write_state(state)
+            log("INFO", "manual_rollback_ok", rolled_to="fallback")
+            print(json.dumps({"rollback": "ok", "rolled_to": "fallback"},
+                             indent=2, sort_keys=True))
+            return 0
         print("rollback_not_available_no_previous", file=sys.stderr)
         log("WARN", "rollback_no_previous")
         return 30
@@ -897,14 +1202,20 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     if cur_link:
         _atomic_symlink(cur_link, PREVIOUS_LINK)  # swap
 
-    ok, info = _service_restart()
-    if not ok:
-        log("ERROR", "manual_rollback_restart_failed", err=info)
-        return 31
-    ok, info = _service_health_check()
-    if not ok:
-        log("ERROR", "manual_rollback_health_failed", reason=info)
-        return 32
+    if COMPONENT == "kiosky-player":
+        ok, info = _service_restart()
+        if not ok:
+            log("ERROR", "manual_rollback_restart_failed", err=info)
+            return 31
+        ok, info = _service_health_check()
+        if not ok:
+            log("ERROR", "manual_rollback_health_failed", reason=info)
+            return 32
+    else:
+        ok, info = _totem_core_health_check(APP_BASE / prev_link)
+        if not ok:
+            log("ERROR", "manual_rollback_health_failed", reason=info)
+            return 32
 
     state = _read_state()
     state["previous"] = state.get("current")
@@ -935,28 +1246,46 @@ def cmd_rollback(args: argparse.Namespace) -> int:
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(
         prog="totem-updatectl",
-        description="Pull-based app updater for kiosky-player (C14.1.1).",
+        description="Pull-based updater for kiosky-player and totem-core.",
     )
     sub = parser.add_subparsers(dest="cmd")
     sub.required = True
+    component_parent = argparse.ArgumentParser(add_help=False)
+    component_parent.add_argument(
+        "--component",
+        choices=("kiosky-player", "totem-core"),
+        default=DEFAULT_COMPONENT,
+        help="update component (default: kiosky-player)",
+    )
 
-    sub.add_parser("status", help="Show updater state and current/previous links")
-    sub.add_parser("self-test", help="Sanity check that updater can run on this device")
+    sub.add_parser("status", parents=[component_parent],
+                   help="Show updater state and current/previous links")
+    sub.add_parser("self-test", parents=[component_parent],
+                   help="Sanity check that updater can run on this device")
 
     p_check = sub.add_parser("check-github-latest",
+                             parents=[component_parent],
                              help="Inspect the latest release on a GitHub repo")
     p_check.add_argument("--repo", required=True,
                          help="owner/repo, e.g. dadoohai/kiosky-player")
 
     p_apply = sub.add_parser("apply-github-latest",
+                             parents=[component_parent],
                              help="Apply the latest release from a GitHub repo")
     p_apply.add_argument("--repo", required=True)
 
     p_url = sub.add_parser("apply-manifest-url",
+                           parents=[component_parent],
                            help="Apply from an explicit manifest URL")
     p_url.add_argument("url")
 
-    sub.add_parser("rollback", help="Roll back current -> previous")
+    p_local = sub.add_parser("apply-local", parents=[component_parent],
+                             help="Apply a local manifest + sibling payload")
+    p_local.add_argument("manifest")
+    p_local.add_argument("--payload", default="")
+
+    sub.add_parser("rollback", parents=[component_parent],
+                   help="Roll back current -> previous")
 
     args = parser.parse_args(argv)
     handlers = {
@@ -965,6 +1294,7 @@ def main(argv: List[str]) -> int:
         "check-github-latest": cmd_check_github_latest,
         "apply-github-latest": cmd_apply_github_latest,
         "apply-manifest-url": cmd_apply_manifest_url,
+        "apply-local": cmd_apply_local,
         "rollback": cmd_rollback,
     }
     return handlers[args.cmd](args)
