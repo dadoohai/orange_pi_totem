@@ -2672,3 +2672,18 @@ NetworkManager ativos e sem reboot, writer, poweroff ou corte seco. C15.3.2
 fica `passed`: `ready_for_image_rebuild=true`,
 `ready_for_c16_player_audit=true`, `c16_started=false`. Detalhes em
 `docs/product/148_C15_3_2_PLAYER_STARTUP_FEEDBACK_FIX.md`.
+
+Atualizacao C16.1: 2026-05-14. C16 foi aberta como frente de metodologia de
+produto/UX/QA, nao como auditoria de timing/sync do player. A rodada nao tocou
+runtime, placa, Wi-Fi, NetworkManager, writer, config real, imagem, kernel,
+read-only, poweroff ou corte seco. Foram criados o charter de experiencia,
+personas, jornadas, mapa de intencao de telas, rubrica UX/UI, arquitetura de
+QA assistido por IA, arquitetura do harness e backlog P0/P1/P2/P3. Tambem foi
+adicionado `scripts/qa/c16_ux_operating_model_audit.py`, harness offline que
+gera artefatos estruturados sanitizados para evidencia. Resultado:
+`p0_items_count=0`, `p1_items_count=5`, `ready_for_c17_image=true`,
+`need_c16_2_before_c17=false`, `blocked_p0_user_journey=false`.
+C16.2 fica recomendado como incremento util de QA visual offline/runtime, mas
+nao como bloqueador obrigatorio antes de C17. A proxima imagem consolidada deve
+ser C17; C18 ou posterior deve voltar a scheduler/sync/duration/looping do
+player. C12 read-only e C12.4 continuam bloqueados.
