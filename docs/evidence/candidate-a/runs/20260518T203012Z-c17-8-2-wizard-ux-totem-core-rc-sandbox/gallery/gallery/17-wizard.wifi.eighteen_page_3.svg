@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280" data-display-rotation-deg="90" data-layout-mode="portrait" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="720" height="1280" fill="#0b1220"/>
+  <rect x="0" y="0" width="720" height="12" fill="#06b6d4"/>
+  <rect x="0" y="12" width="720" height="148" fill="#111827"/>
+  <rect x="56" y="32" width="132" height="42" rx="8" fill="#13263a" stroke="#06b6d4"/>
+  <text x="78" y="60" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <text x="210" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#94a3b8">Configuracao do Totem</text>
+  <text x="56" y="162" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">Layout retrato para direita</text>
+  <rect x="48" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="61" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">1. Tela</text>
+  <rect x="172" y="96" width="116" height="44" rx="8" fill="#13263a" stroke="#22d3ee"/><rect x="172" y="96" width="5" height="44" rx="3" fill="#22d3ee"/><text x="185" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">2. Conexao</text>
+  <rect x="296" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="309" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">3. Ambient</text>
+  <rect x="420" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="433" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">4. Revisao</text>
+  <rect x="544" y="96" width="116" height="44" rx="8" fill="#172033" stroke="#334155"/><text x="557" y="125" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">5. Conclui</text>
+  <text x="56" y="220" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="#f8fafc">Selecionar Wi-Fi</text>
+  <text x="58" y="258" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" fill="#cbd5e1"><tspan x="58" dy="0">Atualizado ha 4s. Sinal em percentual e</tspan></text>
+  <rect x="56" y="354" width="608" height="98" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="56" y="354" width="8" height="98" rx="4" fill="#263244"/><circle cx="92" cy="402" r="18" fill="#475569"/><text x="86" y="409" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff"></text><text x="128" y="391" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#eef5ff" font-weight="700"><tspan x="128" dy="0">TEST_WIFI_LAB_A</tspan></text><text x="128" y="422" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#aebbd0"><tspan x="128" dy="0">56% ██ Medio | Protegida</tspan></text>
+  <rect x="56" y="466" width="608" height="98" rx="8" fill="#13263a" stroke="#22d3ee" stroke-width="2"/><rect x="56" y="466" width="8" height="98" rx="4" fill="#22d3ee"/><circle cx="92" cy="514" r="18" fill="#06b6d4"/><text x="86" y="521" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff">&gt;</text><text x="128" y="503" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#f8fafc" font-weight="700"><tspan x="128" dy="0">TEST_WIFI_LAB_B</tspan></text><text x="128" y="534" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="128" dy="0">52% ██ Medio | Protegida</tspan></text>
+  <rect x="56" y="578" width="608" height="98" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="56" y="578" width="8" height="98" rx="4" fill="#263244"/><circle cx="92" cy="626" r="18" fill="#475569"/><text x="86" y="633" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff"></text><text x="128" y="615" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#eef5ff" font-weight="700"><tspan x="128" dy="0">TEST_WIFI_LAB_C</tspan></text><text x="128" y="646" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#aebbd0"><tspan x="128" dy="0">48% ██ Medio | Protegida</tspan></text>
+  <rect x="56" y="690" width="608" height="98" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="56" y="690" width="8" height="98" rx="4" fill="#263244"/><circle cx="92" cy="738" r="18" fill="#475569"/><text x="86" y="745" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff"></text><text x="128" y="727" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#eef5ff" font-weight="700"><tspan x="128" dy="0">TEST_WIFI_LAB_D</tspan></text><text x="128" y="758" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#aebbd0"><tspan x="128" dy="0">44% ██ Medio | Protegida</tspan></text>
+  <rect x="56" y="802" width="608" height="98" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="56" y="802" width="8" height="98" rx="4" fill="#263244"/><circle cx="92" cy="850" r="18" fill="#475569"/><text x="86" y="857" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff"></text><text x="128" y="839" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#eef5ff" font-weight="700"><tspan x="128" dy="0">TEST_WIFI_LAB_E</tspan></text><text x="128" y="870" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#aebbd0"><tspan x="128" dy="0">40% ██ Medio | Aberta</tspan></text>
+
+
+  <rect x="56" y="930" width="608" height="246" rx="8" fill="#151d2a" stroke="#2f3d4a"/>
+  <rect x="56" y="930" width="7" height="246" rx="4" fill="#06b6d4"/>
+  <text x="88" y="970" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Lista local</text>
+  <rect x="87" y="975" width="10" height="10" rx="3" fill="#22d3ee"/><text x="112" y="988" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Mostrando 11-15 de 18</tspan></text> <rect x="87" y="1029" width="10" height="10" rx="3" fill="#22d3ee"/><text x="112" y="1042" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Rede 12 de 18</tspan></text> <rect x="87" y="1083" width="10" height="10" rx="3" fill="#22d3ee"/><text x="112" y="1096" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="112" dy="0">Pagina seguinte.</tspan></text>
+
+
+
+  <rect x="0" y="1198" width="720" height="82" fill="#07111f"/>
+  <rect x="56" y="1217" width="180" height="44" rx="8" fill="#13263a" stroke="#06b6d4"/>
+  <text x="80" y="1246" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="#f8fafc">Setas rolam</text>
+  <text x="258" y="1248" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="258" dy="0">Enter escolhe | R atualiza/Esc volta</tspan></text>
+
+</svg>

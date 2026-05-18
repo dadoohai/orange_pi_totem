@@ -1,0 +1,38 @@
+{
+  "channel": "lab",
+  "component": "totem-core",
+  "created_at": "2026-05-18T20:27:40Z",
+  "created_at_utc": "2026-05-18T20:27:40Z",
+  "entrypoint": "bin/totem_setup_visual_wizard.py",
+  "health_checks": [
+    "wizard_self_test",
+    "wifi_adapter_self_test",
+    "splash_self_test",
+    "config_contract_self_test",
+    "bash_syntax",
+    "restore_order_static"
+  ],
+  "payload": "dadooh-totem-core-c17.8.2-wizard-ux-rc-20260518T202740Z.tar.gz",
+  "payload_bytes": 133301,
+  "payload_sha256": "4704e49f482cb52c1a1b5d697d22ee72ae71c9b403a8af5c8c3e05831abc11d2",
+  "required_base_image_min": "c17.4.2",
+  "requires": {
+    "base_image_min": "c17.4.2",
+    "device": "orangepizero3"
+  },
+  "schema": "dadooh.totem.update.v1",
+  "source_branch": "foundation-v0.1",
+  "source_commit": "f0f67c6d84adb7d9a024bcb0544a5d5747b5cce0",
+  "source_dirty": false,
+  "source_repo": "dadoohai/orange_pi_totem",
+  "updates": [
+    "wizard",
+    "splash",
+    "status",
+    "settings-session",
+    "wifi-adapter",
+    "config-contract",
+    "firstboot"
+  ],
+  "version": "c17.8.2-wizard-ux-rc-20260518T202740Z"
+}

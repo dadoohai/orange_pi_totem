@@ -154,3 +154,14 @@ Still requires Orange Pi:
 `ready_for_hardware_wizard_validation=true`
 
 `ready_for_c18_player_work=true`
+
+## C17.8.2 Follow-Up
+
+C17.8.2 packaged the C17.8.1 wizard runtime as local totem-core RC
+`c17.8.2-wizard-ux-rc-20260518T202740Z` on channel `lab`. The package manifest
+and SHA256 were validated, apply-local/rollback/fallback/settings-lock guard
+passed in `.sim/c17-8-2`, and the input replay/gallery were executed against
+`.sim/c17-8-2/data/core/totem/current`.
+
+No remote GitHub Release was published. Next update-channel governance belongs
+in C17.9.

@@ -48,7 +48,7 @@ CORE_FILES = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Prepare .sim/totem sandbox for C17.8.")
-    parser.add_argument("--sandbox", type=Path, default=DEFAULT_SANDBOX)
+    parser.add_argument("--sandbox", "--out-dir", dest="sandbox", type=Path, default=DEFAULT_SANDBOX)
     parser.add_argument("--mode", choices=("repo_overlay", "image_copyout"), default="repo_overlay")
     parser.add_argument("--image-dir", type=Path, default=DEFAULT_IMAGE_DIR)
     parser.add_argument("--reset", action="store_true", help="Remove the existing sandbox first")

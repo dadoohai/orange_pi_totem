@@ -54,6 +54,18 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run C17.8 totem-core local sandbox.")
     parser.add_argument("--sandbox", type=Path, default=DEFAULT_SANDBOX)
     parser.add_argument("--evidence-dir", type=Path, default=None)
+    parser.add_argument(
+        "--package-manifest",
+        type=Path,
+        default=None,
+        help="Apply this local totem-core manifest instead of building a sandbox package.",
+    )
+    parser.add_argument(
+        "--package-payload",
+        type=Path,
+        default=None,
+        help="Payload path for --package-manifest; defaults to manifest sibling payload.",
+    )
     parser.add_argument("--json", action="store_true", help="Print compact JSON summary")
     return parser.parse_args()
 
@@ -275,6 +287,20 @@ def build_package(sandbox: Path, env: dict[str, str]) -> tuple[Path | None, Path
     return fake_manifest, fake_payload, built_by_script, "fake_package_fallback"
 
 
+def resolve_external_package(manifest: Path, payload: Path | None) -> tuple[Path | None, Path | None, bool, str]:
+    manifest = manifest.resolve()
+    if not manifest.is_file():
+        return None, None, False, "external_manifest_missing"
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except Exception:
+        return manifest, None, False, "external_manifest_invalid_json"
+    resolved_payload = (payload.resolve() if payload else manifest.parent / str(data.get("payload", "")))
+    if not resolved_payload.is_file():
+        return manifest, None, False, "external_payload_missing"
+    return manifest, resolved_payload, True, "external_package"
+
+
 def manifest_sha_matches(manifest: Path, payload: Path) -> bool:
     data = json.loads(manifest.read_text(encoding="utf-8"))
     return str(data.get("payload_sha256", "")).lower() == sha256_file(payload).lower()
@@ -365,7 +391,13 @@ def main() -> int:
     package_built = False
     package_source = "none"
     if not blockers:
-        manifest, payload, package_built, package_source = build_package(sandbox, env)
+        if args.package_manifest is not None:
+            manifest, payload, package_built, package_source = resolve_external_package(
+                args.package_manifest,
+                args.package_payload,
+            )
+        else:
+            manifest, payload, package_built, package_source = build_package(sandbox, env)
         if manifest is None or payload is None:
             blockers.append("package_build_failed")
 
@@ -401,13 +433,19 @@ def main() -> int:
     if manifest and sha_ok:
         lock_path = sandbox / "run" / "totem" / "settings-session.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
+        current_before_blocked_apply = current_target(sandbox)
         lock_path.write_text("sandbox-settings-session\n", encoding="utf-8")
         blocked_proc = run_updatectl_apply(manifest, env)
         settings_blocked = blocked_proc.returncode == 40
+        current_after_blocked_apply = current_target(sandbox)
         lock_path.unlink(missing_ok=True)
         final_proc = run_updatectl_apply(manifest, env)
         final_apply_passed = final_proc.returncode == 0
-        settings_lock_guard_passed = settings_blocked and final_apply_passed
+        settings_lock_guard_passed = (
+            settings_blocked
+            and current_after_blocked_apply == current_before_blocked_apply
+            and final_apply_passed
+        )
     if apply_local_passed and not settings_lock_guard_passed:
         blockers.append("settings_lock_guard_failed")
 
@@ -431,7 +469,9 @@ def main() -> int:
         "wrapper_current_passed": wrapper_current_passed,
         "wrapper_fallback_passed": wrapper_fallback_passed,
         "settings_lock_guard_passed": settings_lock_guard_passed,
+        "apply_blocked_when_settings_active": settings_lock_guard_passed,
         "final_apply_after_lock_removed_passed": final_apply_passed,
+        "final_current": current_target(sandbox),
         "writes_outside_sim_detected": False,
         "result": result_status,
         "blockers": blockers,
@@ -445,10 +485,16 @@ def main() -> int:
         },
     }
     if manifest and payload:
+        manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
         result["package"] = {
             "manifest": str(manifest),
             "payload": str(payload),
             "payload_sha256": sha256_file(payload),
+            "manifest_version": manifest_data.get("version"),
+            "manifest_channel": manifest_data.get("channel"),
+            "manifest_source_repo": manifest_data.get("source_repo"),
+            "manifest_source_branch": manifest_data.get("source_branch"),
+            "manifest_source_commit": manifest_data.get("source_commit"),
         }
 
     out_path = evidence_dir / "totem-core-sandbox.json"
@@ -467,6 +513,7 @@ def main() -> int:
             "rollback_passed": rollback_passed,
             "wrapper_fallback_passed": wrapper_fallback_passed,
             "settings_lock_guard_passed": settings_lock_guard_passed,
+            "apply_blocked_when_settings_active": settings_lock_guard_passed,
         }, sort_keys=True))
     else:
         print(f"totem_core_sandbox_tested=true")

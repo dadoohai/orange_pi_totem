@@ -28,7 +28,29 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-BOARD_DIR = REPO_ROOT / "scripts" / "board"
+
+
+def _source_from_argv(argv: list[str]) -> pathlib.Path | None:
+    for index, arg in enumerate(argv):
+        if arg == "--source" and index + 1 < len(argv):
+            return pathlib.Path(argv[index + 1])
+        if arg.startswith("--source="):
+            return pathlib.Path(arg.split("=", 1)[1])
+    return None
+
+
+def _board_dir_from_source(source: pathlib.Path | None) -> pathlib.Path:
+    if source is None:
+        return REPO_ROOT / "scripts" / "board"
+    source = source.resolve()
+    if (source / "bin" / "totem_setup_visual_wizard.py").is_file():
+        return source / "bin"
+    if (source / "totem_setup_visual_wizard.py").is_file():
+        return source
+    raise SystemExit(f"wizard source not found: {source}")
+
+
+BOARD_DIR = _board_dir_from_source(_source_from_argv(sys.argv[1:]))
 sys.path.insert(0, str(BOARD_DIR))
 
 import totem_setup_visual_wizard as wizard  # noqa: E402
@@ -1879,6 +1901,12 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate offline UI/UX review artifacts.")
     parser.add_argument("--out-dir", required=True, help="Evidence run output directory.")
+    parser.add_argument(
+        "--source",
+        type=pathlib.Path,
+        default=None,
+        help="Wizard source directory or applied totem-core current release.",
+    )
     return parser.parse_args(argv)
 
 

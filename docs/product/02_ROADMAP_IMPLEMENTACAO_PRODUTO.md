@@ -4,6 +4,19 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.8.2: 2026-05-18. C17.8.2 empacotou as mudancas de runtime do
+wizard C17.8.1 como RC local de `totem-core` no canal `lab`, sem publicar
+GitHub Release, sem criar tag, sem placa, sem imagem e sem alterar
+`kiosky-player`. O pacote
+`c17.8.2-wizard-ux-rc-20260518T202740Z` foi gerado em
+`releases/core-updates/`, com manifest `dadooh.totem.update.v1` valido e SHA256
+`4704e49f482cb52c1a1b5d697d22ee72ae71c9b403a8af5c8c3e05831abc11d2`
+conferido. O sandbox `.sim/c17-8-2` passou apply-local, current/previous,
+rollback, wrapper current/fallback e settings-lock guard; o replay de input com
+7 cenarios e a galeria foram executados contra o `current` empacotado. C17.8.2
+fica `passed`, `ready_for_c17_9_update_channel_governance=true`,
+`ready_for_c18_player_work=true` e `hardware_homologation_required=true`.
+
 Atualizacao C17.8.1: 2026-05-18. C17.8.1 reabriu o wizard/configurador como
 produto/UX em laboratorio local, sem Orange Pi, sem imagem, sem writer real e
 sem alterar `kiosky-player`. O fluxo atual foi auditado, o contrato de

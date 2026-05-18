@@ -9,6 +9,7 @@ It does not call NetworkManager, the real writer, SSH, MPV or backend services.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import pathlib
 import shutil
@@ -19,9 +20,7 @@ from typing import Any, Callable
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 BOARD_DIR = ROOT / "scripts" / "board"
-sys.path.insert(0, str(BOARD_DIR))
-
-import totem_setup_visual_wizard as wizard  # noqa: E402
+wizard: Any | None = None
 
 
 SCENARIOS = [
@@ -35,6 +34,31 @@ SCENARIOS = [
 ]
 
 TEST_ENV_UUID = "11111111-2222-4333-8444-555555555555"
+
+
+def resolve_source_dir(source: pathlib.Path | None) -> pathlib.Path:
+    if source is None:
+        return BOARD_DIR
+    source = source.resolve()
+    if (source / "bin" / "totem_setup_visual_wizard.py").is_file():
+        return source / "bin"
+    if (source / "totem_setup_visual_wizard.py").is_file():
+        return source
+    raise SystemExit(f"wizard source not found: {source}")
+
+
+def load_wizard(source: pathlib.Path | None) -> None:
+    global wizard
+    source_dir = resolve_source_dir(source)
+    module_path = source_dir / "totem_setup_visual_wizard.py"
+    sys.path.insert(0, str(source_dir))
+    spec = importlib.util.spec_from_file_location("totem_setup_visual_wizard_replay", module_path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"could not load wizard module from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    wizard = module
 
 
 @dataclass
@@ -432,6 +456,12 @@ def run(out_dir: pathlib.Path, selected_scenarios: list[str]) -> dict[str, Any]:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Replay visual wizard input scenarios locally.")
     parser.add_argument("--out-dir", required=False, default="/tmp/c17-8-1-wizard-replay", help="Output directory.")
+    parser.add_argument(
+        "--source",
+        type=pathlib.Path,
+        default=None,
+        help="Wizard source directory or applied totem-core current release.",
+    )
     parser.add_argument("--scenario", action="append", choices=SCENARIOS, help="Run one scenario; repeatable.")
     parser.add_argument("--list-scenarios", action="store_true", help="List implemented scenarios as JSON.")
     return parser.parse_args(argv)
@@ -442,6 +472,7 @@ def main(argv: list[str]) -> int:
     if args.list_scenarios:
         print(json.dumps({"implemented": True, "scenarios": SCENARIOS}, indent=2, sort_keys=True))
         return 0
+    load_wizard(args.source)
     selected = args.scenario or SCENARIOS
     summary = run(pathlib.Path(args.out_dir), selected)
     print(json.dumps(summary, indent=2, sort_keys=True))
