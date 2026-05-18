@@ -1210,9 +1210,9 @@ def choose_option(
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
     while True:
-        footer = "Setas movem | Enter OK | Esc cancela"
+        footer = "Setas escolhem | Enter confirma | Esc cancela"
         if allow_back:
-            footer = "Setas movem | Enter OK | B volta | Esc"
+            footer = "Setas escolhem | Enter confirma | Esc volta"
         display.show(
             screen_id,
             build_screen_svg(
@@ -1233,9 +1233,9 @@ def choose_option(
             selected = (selected + 1) % len(options)
         elif key == "enter":
             return options[selected]
-        elif allow_back and key in {"b", "B", "back"}:
+        elif allow_back and key in {"b", "B", "back", "escape"}:
             return None
-        elif key in {"escape", "q", "Q"}:
+        elif key in {"q", "Q"} or (key == "escape" and not allow_back):
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
@@ -1261,7 +1261,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     active_step=0,
                     title="Orientacao da tela",
                     subtitle="Escolha como o totem esta instalado.",
-                    footer="Setas movem | Enter visualiza | Esc",
+                    footer="Setas escolhem | Enter visualiza | Esc cancela",
                     options=options,
                     selected_index=selected,
                     panel_title="Tela",
@@ -1310,7 +1310,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     active_step=0,
                     title="Usar esta orientacao?",
                     subtitle="Confira o sentido antes de continuar.",
-                    footer="Setas movem | Enter OK | B volta | Esc",
+                    footer="Setas escolhem | Enter confirma | Esc volta",
                     options=confirm_options,
                     selected_index=confirm_selected,
                     panel_title="Confirmar",
@@ -1332,10 +1332,10 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     return rotation
                 needs_render = True
                 break
-            if confirm_key in {"b", "B", "back"}:
+            if confirm_key in {"b", "B", "back", "escape"}:
                 needs_render = True
                 break
-            if confirm_key in {"escape", "q", "Q"}:
+            if confirm_key in {"q", "Q"}:
                 raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
@@ -1521,9 +1521,7 @@ def read_text_field(
                             needs_render = True
                             force_render = True
                             break
-                        if allow_back and drained_key == "back":
-                            return None
-                        if allow_back and escape_returns_back and drained_key == "escape":
+                        if allow_back and drained_key in {"back", "escape"}:
                             return None
                         if drained_key in {"escape", "q", "Q"}:
                             raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -1555,12 +1553,12 @@ def read_text_field(
                 cursor_index=cursor if show_cursor and not hidden and effective_show_plain_value else None,
             )
             note = error or ("Senha oculta." if hidden and not effective_show_plain_value else "Entrada local.")
-            footer = custom_footer or "Enter OK | Ctrl+U limpa | Esc cancela"
+            footer = custom_footer or "Enter confirma | Ctrl+U limpa | Esc cancela"
             if allow_back:
-                footer = custom_footer or "Enter OK | Ctrl+B volta | Ctrl+U limpa | Esc"
+                footer = custom_footer or "Enter confirma | Esc volta | Ctrl+U limpa"
             if hidden and allow_hidden_toggle:
                 toggle_label = "oculta" if reveal_hidden_value else "mostra"
-                footer = f"Enter OK | F2 {toggle_label} | Ctrl+B volta | Ctrl+U limpa"
+                footer = f"Enter confirma | Esc volta | F2 {toggle_label}"
             visual_state = (hint, note, reveal_hidden_value, cursor)
             if visual_state != last_visual_state:
                 display.show(
@@ -1607,9 +1605,7 @@ def read_text_field(
                 needs_render = True
                 force_render = True
                 break
-            if allow_back and drained_key == "back":
-                return None
-            if allow_back and escape_returns_back and drained_key == "escape":
+            if allow_back and drained_key in {"back", "escape"}:
                 return None
             if drained_key in {"escape", "q", "Q"}:
                 raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -2141,7 +2137,7 @@ def wifi_list_screen_svg(
         active_step=1,
         title="Selecionar Wi-Fi",
         subtitle=f"{updated_line}. Sinal em percentual e barras.",
-        footer="Setas rolam | R atualiza | Enter OK | B/Esc volta",
+        footer="Setas rolam | Enter escolhe | R atualiza/Esc volta",
         options=options,
         selected_index=selected_on_page,
         panel_title="Lista local",
@@ -2305,9 +2301,9 @@ def choose_wifi_network(
             last_refresh = time.monotonic()
             needs_render = True
             continue
-        if key in {"b", "B", "back"}:
+        if key in {"b", "B", "back", "escape"}:
             return None
-        if key in {"escape", "q", "Q"}:
+        if key in {"q", "Q"}:
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
@@ -2327,7 +2323,7 @@ def collect_wifi_credentials(
             active_step=1,
             title="Rede selecionada",
             subtitle=local_display_value(ssid, max_chars=56),
-            footer="Enter continua | B volta | Esc",
+            footer="Enter continua | Esc volta",
             panel_title="Proximo",
             panel_items=[
                 "Digite a senha.",
@@ -2338,7 +2334,7 @@ def collect_wifi_credentials(
         ),
     )
     key = read_key()
-    if key == "back":
+    if key in {"back", "escape"}:
         return None
     if key != "enter":
         raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -2370,8 +2366,8 @@ def collect_wifi_credentials(
             active_step=1,
             title="Aplicar Wi-Fi",
             subtitle="Vamos testar o perfil dedicado.",
-            footer="Enter aplica | Ctrl+B volta | Esc",
-            panel_title="Atenção",
+            footer="Enter aplica | Esc volta",
+            panel_title="Atencao",
             panel_items=[
                 "SSH pode oscilar.",
                 "Console local fica ativo.",
@@ -2381,7 +2377,7 @@ def collect_wifi_credentials(
         ),
     )
     key = read_key()
-    if key == "back":
+    if key in {"back", "escape"}:
         return None
     if key != "enter":
         raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -2505,7 +2501,7 @@ def run_wifi_persistent(
             active_step=1,
             title="Resultado do Wi-Fi",
             subtitle=f"Resultado: {network['wifi_activation_result']}.",
-            footer="Enter continua | B volta | Esc",
+            footer="Enter continua | Esc volta",
             panel_title="Resultado",
             panel_items=[
                 f"Perfil presente: {network['dedicated_profile_present_final']}",
@@ -2516,7 +2512,7 @@ def run_wifi_persistent(
         ),
     )
     key = read_key()
-    if key == "back":
+    if key in {"back", "escape"}:
         return None
     if key == "enter":
         return network
@@ -3028,13 +3024,13 @@ def review_and_confirm(
             subtitle = "Salvar aplica a configuracao nesta placa."
         else:
             subtitle = "Salvar aplica as mudancas."
-        footer = "Enter salva | B volta | Esc cancela"
+        footer = "Enter salva | Esc volta"
     elif APPLY_CONTEXT == "dry-run":
         subtitle = "Concluir valida sem aplicar."
-        footer = "Enter valida | B volta | Esc cancela"
+        footer = "Enter valida | Esc volta"
     else:
         subtitle = "Concluir prepara a candidata."
-        footer = "Enter prepara candidata | B volta | Esc cancela"
+        footer = "Enter prepara candidata | Esc volta"
     display.show(
         "05-review",
         build_screen_svg(
@@ -3054,7 +3050,7 @@ def review_and_confirm(
     key = read_key()
     if key == "enter":
         return True
-    if key in {"b", "B", "back"}:
+    if key in {"b", "B", "back", "escape"}:
         return False
     raise VisualWizardAbort("setup visual cancelado pelo operador")
 
@@ -3140,14 +3136,14 @@ def run_environment_preflight(
             display,
             title="Ambiente validado",
             subtitle="Conteudo encontrado.",
-            footer="Enter continua | B volta | Esc",
+            footer="Enter continua | Esc volta",
             panel_items=["Cadastro encontrado.", "Midia disponivel.", "Pode revisar."],
             accent="#22c55e",
             layout_rotation_deg=layout_rotation_deg,
         )
         if key == "enter":
             return preflight
-        if key in {"b", "B", "back"}:
+        if key in {"b", "B", "back", "escape"}:
             return None
         raise VisualWizardAbort("setup visual cancelado pelo operador")
 
@@ -3156,14 +3152,14 @@ def run_environment_preflight(
             display,
             title="Sem midia ativa agora",
             subtitle="O ambiente existe, mas pode iniciar aguardando conteudo.",
-            footer="Enter continua | B volta | Esc",
+            footer="Enter continua | Esc volta",
             panel_items=["Ambiente nao e invalido.", "Player pode aguardar.", "Revise antes de salvar."],
             accent="#f59e0b",
             layout_rotation_deg=layout_rotation_deg,
         )
         if key == "enter":
             return preflight_with_confirmation(preflight)
-        if key in {"b", "B", "back"}:
+        if key in {"b", "B", "back", "escape"}:
             return None
         raise VisualWizardAbort("setup visual cancelado pelo operador")
 
@@ -3175,14 +3171,14 @@ def run_environment_preflight(
             display,
             title="Nao foi possivel validar agora",
             subtitle=reason,
-            footer="Enter continua | B volta | Esc",
+            footer="Enter continua | Esc volta",
             panel_items=["Formato UUID OK.", "Sem dados privados.", "Confirme para seguir."],
             accent="#f59e0b",
             layout_rotation_deg=layout_rotation_deg,
         )
         if key == "enter":
             return preflight_with_confirmation(preflight)
-        if key in {"b", "B", "back"}:
+        if key in {"b", "B", "back", "escape"}:
             return None
         raise VisualWizardAbort("setup visual cancelado pelo operador")
 
@@ -3190,14 +3186,14 @@ def run_environment_preflight(
         display,
         title="Ambiente validado",
         subtitle="Cadastro confirmado.",
-        footer="Enter continua | B volta | Esc",
+        footer="Enter continua | Esc volta",
         panel_items=["Cadastro encontrado.", "Sem dados privados.", "Pode revisar."],
         accent="#22c55e",
         layout_rotation_deg=layout_rotation_deg,
     )
     if key == "enter":
         return preflight
-    if key in {"b", "B", "back"}:
+    if key in {"b", "B", "back", "escape"}:
         return None
     raise VisualWizardAbort("setup visual cancelado pelo operador")
 
@@ -3337,7 +3333,7 @@ def run_visual_wizard(
                         ],
                         show_plain_value=True,
                         show_cursor=True,
-                        custom_footer="←→ move | Ctrl+U limpa | Enter valida | Esc volta",
+                        custom_footer="Enter valida | Esc volta | Setas/Ctrl+U editam",
                         escape_returns_back=True,
                         validation_error_message="ID invalido. Verifique e tente novamente.",
                         layout_rotation_deg=layout_rotation_deg,
@@ -3376,7 +3372,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Orientacao da tela",
             subtitle="Escolha como o totem esta instalado.",
-            footer="Setas movem | Enter OK | Esc",
+            footer="Setas escolhem | Enter confirma | Esc cancela",
             options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
             selected_index=0,
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
@@ -3389,7 +3385,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
-            footer="Setas movem | Enter OK | B volta | Esc",
+            footer="Setas escolhem | Enter confirma | Esc volta",
             options=[
                 Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
@@ -3406,7 +3402,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Conexao",
             subtitle="Escolha a conexao.",
-            footer="Setas movem | Enter OK | Esc",
+            footer="Setas escolhem | Enter confirma | Esc cancela",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
             panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
@@ -3465,7 +3461,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Senha Wi-Fi",
             subtitle="Digite a senha da rede.",
-            footer="Enter OK | F2 mostra | Ctrl+B volta | Ctrl+U limpa",
+            footer="Enter confirma | Esc volta | F2 mostra",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
             field_note="Senha oculta por padrao.",
@@ -3479,7 +3475,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Senha Wi-Fi",
             subtitle="Digite a senha da rede.",
-            footer="Enter OK | F2 oculta | Ctrl+B volta | Ctrl+U limpa",
+            footer="Enter confirma | Esc volta | F2 oculta",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
             field_note="Valor visivel apenas no HDMI local.",
@@ -3493,7 +3489,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=2,
             title="Ambiente",
             subtitle="Digite o ID do ambiente",
-            footer="←→ move | Ctrl+U limpa | Enter valida | Esc volta",
+            footer="Enter valida | Esc volta | Setas/Ctrl+U editam",
             field_label="Environment ID",
             field_value_hint=text_field_display_hint(
                 "11111111-2222-4333-8444-555555555555",
@@ -3524,7 +3520,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=2,
             title="Sem midia ativa agora",
             subtitle="O ambiente existe, mas pode iniciar aguardando conteudo.",
-            footer="Enter continua | B volta | Esc",
+            footer="Enter continua | Esc volta",
             panel_title="Validacao",
             panel_items=["Ambiente nao e invalido.", "Player pode aguardar.", "Revise antes de salvar."],
             accent="#f59e0b",
@@ -3550,7 +3546,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=3,
             title="Revisao",
             subtitle="Confira antes de concluir.",
-            footer="Enter conclui | B volta | Esc cancela",
+            footer="Enter conclui | Esc volta",
             panel_items=["Conexao definida.", "Ambiente informado.", "Tela escolhida."],
             layout_rotation_deg=90,
         ),
@@ -3654,7 +3650,7 @@ def show_wifi_list_preview(
                 active_step=1,
                 title="Senha Wi-Fi",
                 subtitle="Digite a senha da rede.",
-                footer="Enter OK | F2 mostra | Ctrl+B volta | Ctrl+U limpa",
+                footer="Enter confirma | Esc volta | F2 mostra",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
                 field_note="Senha oculta por padrao.",
@@ -3668,7 +3664,7 @@ def show_wifi_list_preview(
                 active_step=1,
                 title="Senha Wi-Fi",
                 subtitle="Digite a senha da rede.",
-                footer="Enter OK | F2 oculta | Ctrl+B volta | Ctrl+U limpa",
+                footer="Enter confirma | Esc volta | F2 oculta",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
                 field_note="Valor visivel apenas no HDMI local.",

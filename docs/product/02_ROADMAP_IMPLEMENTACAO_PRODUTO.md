@@ -4,6 +4,23 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.8.1: 2026-05-18. C17.8.1 reabriu o wizard/configurador como
+produto/UX em laboratorio local, sem Orange Pi, sem imagem, sem writer real e
+sem alterar `kiosky-player`. O fluxo atual foi auditado, o contrato de
+navegacao foi padronizado em Enter/Esc/setas/Backspace/Ctrl+U/R/F2, e B/Ctrl+B
+saíram das instrucoes primarias, permanecendo apenas como compatibilidade
+temporaria. O wizard recebeu uma melhoria pequena de runtime nos footers e no
+comportamento de Esc em subetapas; a galeria C16.2 foi alinhada ao mesmo
+contrato. O novo `scripts/sim/run_wizard_input_replay.py` executa replay local
+com dados TEST_*, gera trace/assertions/screens/summary e cobriu 7 cenarios:
+happy path, voltar/corrigir, UUID invalido, edicao no meio do environment,
+senha Wi-Fi errada fake, API indisponivel fake e cancelamento sem writer. A
+galeria SVG gerou 53 telas, sem P0, sem tela critica abaixo de 4 e sem PNG
+disponivel no ambiente. Como houve mudanca de runtime do wizard,
+`totem_core_package_needed=true` e o proximo passo e C17.8.2 empacotar
+totem-core; validacao fisica de F10, HDMI, Wi-Fi real e writer segue
+obrigatoria.
+
 Atualizacao C18.2: 2026-05-18. C18.2 corrigiu de forma pequena a semantica de
 duracao do `kiosky-player` em simulacao local, sem Orange Pi, sem imagem e sem
 release. O contrato agora define `exposure_time_ms` como campo canonico em
