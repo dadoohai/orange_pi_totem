@@ -1,0 +1,2754 @@
+{
+  "boot_partition_changed": false,
+  "boot_risk_level": "low",
+  "boot_script_changed": false,
+  "c17_4_2_image_found": true,
+  "c17_7_image_found": true,
+  "conclusion": "Boot-critical artifacts matched; observed delta is rootfs/userland. Hardware validation remains mandatory because C17.7 has not booted on Orange Pi.",
+  "created_at_utc": "2026-05-18T18:33:47Z",
+  "dtb_changed": false,
+  "guardrails": {
+    "debugfs_readonly": true,
+    "image_written": false,
+    "loop_device_used": false,
+    "mounted_rw": false,
+    "temporary_partition_copy_removed": true
+  },
+  "image_dir": "/home/builder/totem-os/armbian-build-v25.11/output/images",
+  "image_missing": false,
+  "images": {
+    "c17_4_2": {
+      "boot": {
+        "boot_config": {
+          "/boot/config-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "0a946081fce1cb1fa2eea4d8e798156939029b3b02717bdf1a7fbc5e5ec1df53",
+            "size": 234542,
+            "type": "regular"
+          }
+        },
+        "boot_files": {
+          "/boot/.next": {
+            "exists": true,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "size": 0,
+            "type": "regular"
+          },
+          "/boot/Image": {
+            "exists": true,
+            "resolved_path": "/boot/vmlinuz-6.12.58-current-sunxi64",
+            "resolved_sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "resolved_size": 39059464,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "vmlinuz-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/System.map-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "1ed4538497239143e28e00ca64a0fbf9f050badcdc55ede2675d23b95cdffd9a",
+            "size": 5421456,
+            "type": "regular"
+          },
+          "/boot/armbianEnv.txt": {
+            "exists": true,
+            "sha256": "f628719d8f9278f106c81f1d25319e8b9dc3792594064d886808b96f17505b69",
+            "size": 297,
+            "type": "regular"
+          },
+          "/boot/boot.bmp": {
+            "exists": true,
+            "sha256": "01ae4a9cb9e151c5957e419dd733ff9591ddb1c0243cd5e94a7c2c9b27db3d95",
+            "size": 230454,
+            "type": "regular"
+          },
+          "/boot/boot.cmd": {
+            "exists": true,
+            "sha256": "9e51128954b04325ccbeb603a03b6f7246828c04de62f554fe4cfce673e23be1",
+            "size": 4569,
+            "type": "regular"
+          },
+          "/boot/boot.scr": {
+            "exists": true,
+            "sha256": "f0e59bfd447c4a78009e9a603821fc1755f273ad0297492ec270a3bc68d74338",
+            "size": 4641,
+            "type": "regular"
+          },
+          "/boot/config-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "0a946081fce1cb1fa2eea4d8e798156939029b3b02717bdf1a7fbc5e5ec1df53",
+            "size": 234542,
+            "type": "regular"
+          },
+          "/boot/dtb": {
+            "exists": true,
+            "resolved_path": "/boot/dtb-6.12.58-current-sunxi64",
+            "resolved_type": "directory",
+            "size": 27,
+            "symlink_target": "dtb-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64": {
+            "exists": true,
+            "size": 4096,
+            "type": "directory"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner": {
+            "exists": true,
+            "size": 4096,
+            "type": "directory"
+          },
+          "/boot/initrd.img-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "e7a0602ce463d9d0ad6214500e7e126bfdf04b4c04744bdcc2a188db71f5c2b9",
+            "size": 13781336,
+            "type": "regular"
+          },
+          "/boot/uInitrd": {
+            "exists": true,
+            "resolved_path": "/boot/uInitrd-6.12.58-current-sunxi64",
+            "resolved_sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "resolved_size": 13781400,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "uInitrd-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/uInitrd-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "size": 13781400,
+            "type": "regular"
+          },
+          "/boot/vmlinuz-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "size": 39059464,
+            "type": "regular"
+          }
+        },
+        "boot_script": {
+          "/boot/armbianEnv.txt": {
+            "exists": true,
+            "sha256": "f628719d8f9278f106c81f1d25319e8b9dc3792594064d886808b96f17505b69",
+            "size": 297,
+            "type": "regular"
+          },
+          "/boot/boot.cmd": {
+            "exists": true,
+            "sha256": "9e51128954b04325ccbeb603a03b6f7246828c04de62f554fe4cfce673e23be1",
+            "size": 4569,
+            "type": "regular"
+          },
+          "/boot/boot.scr": {
+            "exists": true,
+            "sha256": "f0e59bfd447c4a78009e9a603821fc1755f273ad0297492ec270a3bc68d74338",
+            "size": 4641,
+            "type": "regular"
+          }
+        },
+        "dtb": {
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/README.sun50i-a64-overlays": {
+            "exists": true,
+            "sha256": "7d973af2c80e849d0659d9ce2e3b9d3888fdf857fa23d0538c940fb4557344d1",
+            "size": 3998,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/README.sun50i-h5-overlays": {
+            "exists": true,
+            "sha256": "c212a5fc84ecb747bee32be00ed7a0aae234a4d54c8121024992b5d727c3ecc2",
+            "size": 4782,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-fixup.scr": {
+            "exists": true,
+            "sha256": "dd871d975f35ff96aad89d0f42141e45324033039f0b4e9203e419f21e923779",
+            "size": 3821,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "fb9cbdaca7020904b2e718363498ee91a422aadeaab56c2237124f9f0d46a755",
+            "size": 794,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "587cc991e2a94f64ee2f1ab13d7c0ed5864c68ca754a0832c7c2ca51807c7929",
+            "size": 496,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-pine64-7inch-lcd.dtbo": {
+            "exists": true,
+            "sha256": "d314ecc6441a761b40622379d459657adaa5a21885cc1d4e265aebbc12b728d7",
+            "size": 2364,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-pps-gpio.dtbo": {
+            "exists": true,
+            "sha256": "067771abb290942be52a64fe87463d1c5b15bedee82efe0a1d0cfda22cf55253",
+            "size": 778,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-spi-add-cs1.dtbo": {
+            "exists": true,
+            "sha256": "0b36a91fe993dcdea01c61c9914c173358065653e378c4be21548a6e4298fd35",
+            "size": 1173,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-spi-jedec-nor.dtbo": {
+            "exists": true,
+            "sha256": "25edc2d4cdae082fa398d4db26314391f4653198c486f505e2b1e98d40fb58e8",
+            "size": 668,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "612d54f6062ff070fa79d6ca646ea8319d8f0b797d7f336a19021cbef92f62db",
+            "size": 808,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart1.dtbo": {
+            "exists": true,
+            "sha256": "edb4b2aeee4c3bd60cc14f1c96d55279711d897990ca3327c445643bcda88af8",
+            "size": 506,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart2.dtbo": {
+            "exists": true,
+            "sha256": "55e32435d4f9f661b41ebf2e342236fa8e5dd13fee2326e46b24c5a5896d9b03",
+            "size": 963,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart3.dtbo": {
+            "exists": true,
+            "sha256": "7173dafa674024a305865e70bbc63325908800b4faa2aa59c9fce1c15b71b44c",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart4.dtbo": {
+            "exists": true,
+            "sha256": "efd903e06307fd2d93696a60988053e137b77d78c02afe7552cde00c390fa9b6",
+            "size": 963,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-w1-gpio.dtbo": {
+            "exists": true,
+            "sha256": "6870d16618d71e3319d6ed5f4ba352216baa187b32be165e47a388ebf6161f26",
+            "size": 777,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-analog-codec.dtbo": {
+            "exists": true,
+            "sha256": "01495d8c861199a1390fdf4a4d4ed768fdd09e3abf02b21027305a8a1b472dc5",
+            "size": 339,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cir.dtbo": {
+            "exists": true,
+            "sha256": "19633d79cb0f26c14104aa00037e019d46a1ea2ca6324eb08461e4bb215418ec",
+            "size": 384,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cpu-clock-1.0GHz-1.1v.dtbo": {
+            "exists": true,
+            "sha256": "437cd65a939611feb723d73be1bb018e18a800997f76a6510bb8d5a0c9dc6740",
+            "size": 477,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cpu-clock-1.2GHz-1.3v.dtbo": {
+            "exists": true,
+            "sha256": "a159e5b08808ca1cee87f5e23246ca44246bc363d5c34a64ab0f1503a23ba4b1",
+            "size": 477,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cpu-clock-1.3GHz-1.3v.dtbo": {
+            "exists": true,
+            "sha256": "ff6cc646e72f7f5e4bbcf61d8ea8201b55410a1f01e4e88181e81fd8b5923a40",
+            "size": 897,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-fixup.scr": {
+            "exists": true,
+            "sha256": "f981043de425628e6f3f22fdd1d7eb8e7d584f5d4ea0be57bc4770714fe2f07e",
+            "size": 4191,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-gpio-regulator-1.3v.dtbo": {
+            "exists": true,
+            "sha256": "c04d7f89968fa37ccaaa255f13b52bd875f557dbf9bea1727fa0f2709f1c35da",
+            "size": 1020,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "f9994b047f2360e516f1a9e1d4c161dd331d4c6fa5ccfc1b87f79c8fb74176e1",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "387acb410d07daa6fb2ebbc3bbe6e5fa8c88dc296407e96d661abcb8196152f0",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-i2c2.dtbo": {
+            "exists": true,
+            "sha256": "b6482854c1e0649c973db5c897e15c5651c35c89ced157e1f0407897eb44a342",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-pps-gpio.dtbo": {
+            "exists": true,
+            "sha256": "5eb32ec9cb82e6e08d48d342625292e1033db80032067fb90089c8950127bd9c",
+            "size": 778,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-pwm.dtbo": {
+            "exists": true,
+            "sha256": "f082cd550e029b4500b520428cebe7ff6baf8d877fda001530d12e410d080392",
+            "size": 862,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spdif-out.dtbo": {
+            "exists": true,
+            "sha256": "f7ace5ef9214b6c014e623d6689aecf9b005637887e3a44c537f1747e7e33f27",
+            "size": 1040,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spi-add-cs1.dtbo": {
+            "exists": true,
+            "sha256": "2c6250d528bf34c869df4b802404750481b2004892026e5e655cc21f20ad63b2",
+            "size": 1177,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spi-jedec-nor.dtbo": {
+            "exists": true,
+            "sha256": "b85800858789b5a3a5e66a20f0a9949b4222abfebef3cead5a8bc10c7e48c0cf",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "5e6811e1e2e69af9131e24cc370a47910e7d64d27cb3a729e580a1f3e51703bc",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-tve.dtbo": {
+            "exists": true,
+            "sha256": "a7004e5871af4962af094e4c95e346d90b12088a4099520ae20cef7db548ba37",
+            "size": 617,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-uart1.dtbo": {
+            "exists": true,
+            "sha256": "3451e85a4abdb3e31928676da1631180874bbeacd59299c6fa99fa9ab10d8c81",
+            "size": 502,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-uart2.dtbo": {
+            "exists": true,
+            "sha256": "3c47c7eaf207a66a854fb5a40692a6d65702d55ad9e84f8b5de6829235367902",
+            "size": 794,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-uart3.dtbo": {
+            "exists": true,
+            "sha256": "14db2b78da1de93748b4bff56e9a5dace45d4e7a08aecfd671af9681a690acf6",
+            "size": 798,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost0.dtbo": {
+            "exists": true,
+            "sha256": "f55c1486ffac8b11e75902ec09a16414970547feb99aff39063530ac7293dbb5",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost1.dtbo": {
+            "exists": true,
+            "sha256": "0f0b4e960da537951a40f05cc525950b50e53558cab13146d7075cbb6a23c5f6",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost2.dtbo": {
+            "exists": true,
+            "sha256": "18289ce99575920ab2acf1b2c23a2a651cce6ccf529add068f40a788a9cd401f",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost3.dtbo": {
+            "exists": true,
+            "sha256": "433e929d4b11c9755c0b7771dfba82d89c2ce1e2e6fd4b61be17b5c07dbf03e2",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-w1-gpio.dtbo": {
+            "exists": true,
+            "sha256": "6de209e71d2ecdbdbe86a7d5a6b64c9176985b95fcc2e33b7a9b6f16f690ebfb",
+            "size": 777,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-fixup.scr": {
+            "exists": true,
+            "sha256": "c09543071e3cb3e8167d54c11b17163462f8701ef70557be2522112cbcee8573",
+            "size": 3844,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "fe7af448162bd7f0c2d2f8a8b53aea119ad764810de3897639ef163215f6156f",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "5bf1985bf38300b9af9c559716c57629dee7bc0c1409b2cf8c9725b5421087c2",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-i2c2.dtbo": {
+            "exists": true,
+            "sha256": "6d891e63aba3e230a6da90b2b7ff2e47aafa5785c40a5b4cb9f137cc686dabe2",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-pwm.dtbo": {
+            "exists": true,
+            "sha256": "fff9442f8a9d3f5579aec8a5a373bd088b25f5f7dc1b6ca0016c90162aad411d",
+            "size": 671,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-ruart.dtbo": {
+            "exists": true,
+            "sha256": "809847c445dc47785098df1d69ce90b7c8661201bbd6931003520c4c8fc97a11",
+            "size": 268,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-add-cs1.dtbo": {
+            "exists": true,
+            "sha256": "24206c35978e33645925241406524a311796aa48a3e66ed4e370b95998405f89",
+            "size": 1177,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-jedec-nor.dtbo": {
+            "exists": true,
+            "sha256": "907c23608a893783b82e6464647f6e436cf02c401a9e3cf0e00906e1d9f0a997",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "07f27ac5e37cd66186dc2a5b214b210b236d3a3390c81f8b4597530033c77fa7",
+            "size": 808,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-spidev1.dtbo": {
+            "exists": true,
+            "sha256": "82bb849555f2699cd73896fba07f719c0434e78beefea6321a0004ec19daa257",
+            "size": 657,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-uart1.dtbo": {
+            "exists": true,
+            "sha256": "18fb331176d1145e8d0753d4d6241b506dc2599dc77b290fdd90076e46ca74c8",
+            "size": 502,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-uart2.dtbo": {
+            "exists": true,
+            "sha256": "e086467239a0bd65a0d53ac69c72fee07d3de08d64d9058247cbd7e1f3742945",
+            "size": 798,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-uart3.dtbo": {
+            "exists": true,
+            "sha256": "b4824a8f50a9963b76937827ba0a326b5ffb672c3cb96a9574d4fa94146abd40",
+            "size": 798,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-w1-gpio.dtbo": {
+            "exists": true,
+            "sha256": "71d50656dcf992edbbdbc456f7c43b787f390bc25d7d9350b3b574405efe03e3",
+            "size": 773,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-15-16-i2c4.dtbo": {
+            "exists": true,
+            "sha256": "eb2f0d71f001dd215700e9f8baa9ee0d12b371587eb50633b8e425222870d340",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-17-18-i2c3.dtbo": {
+            "exists": true,
+            "sha256": "f0ca2c32d12d13408d47dcbfd03348f3921f45141228624f5dd368906bd51e15",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-6-7-uart1.dtbo": {
+            "exists": true,
+            "sha256": "0d146aa877e75413cdd7cc7fbcf5aa5d23e515effbf9bc3626bff56af20c3685",
+            "size": 315,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-8-9-rts-cts-uart1.dtbo": {
+            "exists": true,
+            "sha256": "b1801ed922beef6c848cfc4a333ebcbe9c9fbf47ec1e904ba31e8e87810b64a6",
+            "size": 533,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-ph-2-3-uart5.dtbo": {
+            "exists": true,
+            "sha256": "8884fc1c01b9f3a45ec7eca99e98d2413e2b1a816f4d63f8d2f37df20004192a",
+            "size": 315,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-13-14-uart4.dtbo": {
+            "exists": true,
+            "sha256": "7113f8c40e02d934da7d7e8d0477c35664d24c05ccd341a79d93daf78f732db7",
+            "size": 315,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-15-16-rts-cts-uart4.dtbo": {
+            "exists": true,
+            "sha256": "d99fdb730a414ca7ea0a65d23b27421f23113d0e3ed029300f2cbc1d7dbc20df",
+            "size": 539,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-5-6-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "7fc79e6d1e36365ad87b6d5b57207b5dad1ca8a773ff686b8690766c0247fd30",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-7-8-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "64a10a4b295bfdfbc4a9f77243d57eb4ac158b0380e18672a64db32c7783a081",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-sdio-wifi-bt.dtbo": {
+            "exists": true,
+            "sha256": "6fba3c974e814542628b815350bf5c2be94664e082f9cf27d06bd5f357b96086",
+            "size": 1358,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-spi1-cs0-cs1-spidev.dtbo": {
+            "exists": true,
+            "sha256": "07e4a759a837718d5aa623967ccc515f6fe3bab6c294993ff6f0f386f6cd5f55",
+            "size": 843,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-spi1-cs0-spidev.dtbo": {
+            "exists": true,
+            "sha256": "50e6cf1f4b45439b832f57aad109d2108ceabb906a96ea5fed7665ce61547f80",
+            "size": 678,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-spi1-cs1-spidev.dtbo": {
+            "exists": true,
+            "sha256": "589bc3b3b39e1c520f0b9135eb76f4e2299adb45853f91444c06108228c95872",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-fixup.scr": {
+            "exists": true,
+            "sha256": "e4928f7ea9d47908911d6fd1ff43242d93ea1c3aad9f4a6602e5c23e3c6f1749",
+            "size": 4203,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-gpu.dtbo": {
+            "exists": true,
+            "sha256": "f6a7734e283428190b39c6f5540a9ee5b5f17ab6a7906dbac11e571df912b81d",
+            "size": 269,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c0-pi.dtbo": {
+            "exists": true,
+            "sha256": "524979c0c823c821cf6900b857ae40a98b4d312259044216425a76e7d7d5cc05",
+            "size": 513,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c1-pi.dtbo": {
+            "exists": true,
+            "sha256": "c4e8aae2210a39bd607b4d58b58cd61b7555bdc08a41d7b3bddadbf3a5b10e28",
+            "size": 391,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c2-ph.dtbo": {
+            "exists": true,
+            "sha256": "958b2e91a7b6a5c21317943cd06eb368303112d0ff5051681ea2465190426860",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c2-pi.dtbo": {
+            "exists": true,
+            "sha256": "bf6012114af37e731140cf92c3b55c4753dcb504ef2bb3b1ec2f99416b6f6c6a",
+            "size": 513,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c3-pg.dtbo": {
+            "exists": true,
+            "sha256": "5e75eeab6aed76f191098ee17b54a1af544e315964a8444a74033c2981d21ffe",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c3-ph.dtbo": {
+            "exists": true,
+            "sha256": "0a039fd5a211d67e286137b226a9281881fba431b55252307eb002ca601b2e17",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c4-pg.dtbo": {
+            "exists": true,
+            "sha256": "7879b760f1472a5026fe0b89680d2c483692153b699a0043f3212705ace15733",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c4-ph.dtbo": {
+            "exists": true,
+            "sha256": "70601f48830c6b37f761649e965feee5f8186acba1b1f16bdbd62f4da2590b8e",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-ir.dtbo": {
+            "exists": true,
+            "sha256": "cc521b0d8ff946faf7dafa20964c6fe6bac92dcfdd9d6e51dbeaacb171bb724d",
+            "size": 268,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-light.dtbo": {
+            "exists": true,
+            "sha256": "779267122dacb7752e2b9e53a8620b30c6e96ee615f05fb791576536cd7d8452",
+            "size": 396,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-mcp2515.dtbo": {
+            "exists": true,
+            "sha256": "0fe196149b21d04d9ea8e815533420d408be9bc2baa942c95e3ee17124cba26c",
+            "size": 339,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "a83f5a14617071e6cd7432e3f621ec579c089fb68f013aec6a1e9cf5cdf295c7",
+            "size": 808,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev0_0.dtbo": {
+            "exists": true,
+            "sha256": "9b7b75d6250e61c1679f1a869cdc0d11e2f96c0125b3a43c8249f3f49252d164",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev1_0.dtbo": {
+            "exists": true,
+            "sha256": "c7a11370a4b712a5f845e6b8fc01cf7b461acc71d4bf80de2aefef4b031f8b2d",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev1_1.dtbo": {
+            "exists": true,
+            "sha256": "04f4ffe3e3c6c92f461068682a710af858b898dbcecf4ad33ade09662f823959",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev1_2.dtbo": {
+            "exists": true,
+            "sha256": "9c2e72055211105746c0749e4fb6ee9ec7239561899c3b643ded09795c250566",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-tft35_spi.dtbo": {
+            "exists": true,
+            "sha256": "6b8d955667925c651598e7c5c1f683dbc971f168dca7bc4b45a5244289fedb77",
+            "size": 616,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-pg-rts-cts.dtbo": {
+            "exists": true,
+            "sha256": "901c4b1c6c1c4dcee14e7c705d3f671e799a1fcee693e3b3cafcbafab1e21ad5",
+            "size": 487,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-pg.dtbo": {
+            "exists": true,
+            "sha256": "3396fb2b4548535fc394205a067fe59b2ebdc020920330a7472723f6330cd48b",
+            "size": 413,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-ph-rts-cts.dtbo": {
+            "exists": true,
+            "sha256": "e5f6b9b82757138cda4665203c167691574d5855b396e176db215a9d88fc289d",
+            "size": 487,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-ph.dtbo": {
+            "exists": true,
+            "sha256": "2fbfc12249eb638f96639619c45adc0b8ad170527429ca467a75a89139ce2ca4",
+            "size": 413,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart5.dtbo": {
+            "exists": true,
+            "sha256": "cd1f41c576d1f05bb28d9136e300764048159ee2e04aad8ea670e6489ab4546f",
+            "size": 410,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-ws2812.dtbo": {
+            "exists": true,
+            "sha256": "0c206a5e4884b20db17a6db15f468b2b7b08bf6ec83b3343efedf232cb60a343",
+            "size": 272,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a100-allwinner-perf1.dtb": {
+            "exists": true,
+            "sha256": "265cdac650dd3471ec956476bb2963ad85be0fd2c0fb49ed3691d567c6857e56",
+            "size": 14088,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-amarula-relic.dtb": {
+            "exists": true,
+            "sha256": "eb076b928db551f5af7a831b899e1375f42fb9ce5c0028114bed7e98e3fcacbd",
+            "size": 41557,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-bananapi-m64.dtb": {
+            "exists": true,
+            "sha256": "277308a561de0d29e929801c3c7613c286364192c7afe6973b03855260cd7640",
+            "size": 41882,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-nanopi-a64.dtb": {
+            "exists": true,
+            "sha256": "3f8aaaa1a380cb93fcc3116dc89706eeabdb2b1c87333bf7d0abdfe1dbd0f260",
+            "size": 40750,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-oceanic-5205-5inmfd.dtb": {
+            "exists": true,
+            "sha256": "4e7df8b49804647e982ea153648b4e6226014fed7861e4a71e11ed0b7b5f0a51",
+            "size": 40197,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1G.dtb": {
+            "exists": true,
+            "sha256": "467ec855f13654aed706ddc5c24be6010528779a94f56fd02491dd4457d3668b",
+            "size": 40744,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1Ge16GW.dtb": {
+            "exists": true,
+            "sha256": "5d23c1273d1e3f6fd1cfa98e305d1062a34e3fdb0416b85e6eaa740c994d4274",
+            "size": 42171,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1Ge4GW.dtb": {
+            "exists": true,
+            "sha256": "a765731a7b45dbb6cb7178b778f01a306881b2756a08b3d4c4544e16ffc6810c",
+            "size": 42137,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1Gs16M.dtb": {
+            "exists": true,
+            "sha256": "fe1db756bf4328c15d866f1a7b28b6e3eef1e6e63128c88dc3e6fcda96776f42",
+            "size": 40954,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-2Ge8G.dtb": {
+            "exists": true,
+            "sha256": "4e4fb22d85839f07c8769488fa410cdd16f4924d6b26de2c45df03dc59d3b6a2",
+            "size": 40900,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-emmc.dtb": {
+            "exists": true,
+            "sha256": "0def93058ab67cd8b6b9b4b090919a318eacf853f172a0fcaff2963129f8768b",
+            "size": 42455,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino.dtb": {
+            "exists": true,
+            "sha256": "25e2023656f01121543558ec26db56f1326405cf2873228f4d3bcacfd622391c",
+            "size": 42041,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-orangepi-win.dtb": {
+            "exists": true,
+            "sha256": "5a9859c6c910202030f8061247380008e2613d05e5a5e3b803f0b40b541460d3",
+            "size": 42575,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pine64-lts.dtb": {
+            "exists": true,
+            "sha256": "c97653b846135f7deb4a61de9d0ef17e8f0df4469b7ef00f3cfdd125b5e5b78f",
+            "size": 41553,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pine64-plus.dtb": {
+            "exists": true,
+            "sha256": "5ebeed4a7a06839237f76ccf1b9e9401270306bc0bacf4205fe6076889efa832",
+            "size": 41629,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pine64.dtb": {
+            "exists": true,
+            "sha256": "7e08fba052745211b86024b5ee0a854de0620e2694a300deb4bcd3e618a61bbd",
+            "size": 41503,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinebook.dtb": {
+            "exists": true,
+            "sha256": "0b08050fd8c7a163ce500fa59c6a2e732d24ca37b26b165d111ce31e89a3271e",
+            "size": 43455,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.0.dtb": {
+            "exists": true,
+            "sha256": "0946144f30967ac5301fff09ced3db6dde92d314d051ed32e36acc5db4755caf",
+            "size": 54389,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.1.dtb": {
+            "exists": true,
+            "sha256": "35c138910c90f37daecdbde9b4c56f985dba4951107b7eb2c17f3b1b73087adf",
+            "size": 54416,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.2.dtb": {
+            "exists": true,
+            "sha256": "8456fd9cfd156844a617d42e009e93ba5e246e1c796fda6767acb0811719eaf1",
+            "size": 54427,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.2b.dtb": {
+            "exists": true,
+            "sha256": "44c2d31dbd25817d66992a1a079c0acf9241d47f3f401d2540bf7c0e671d2f9e",
+            "size": 54715,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinetab-early-adopter.dtb": {
+            "exists": true,
+            "sha256": "d394f14bdb7c0ed70c482f01afbf75fc74cefdcd74a4c098d53723a84ebc11ee",
+            "size": 44784,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinetab.dtb": {
+            "exists": true,
+            "sha256": "e0fb8f6ef73f3de0b1ff744d0017e486f2fde01e95c54459dd550571027a546a",
+            "size": 44752,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-sopine-baseboard.dtb": {
+            "exists": true,
+            "sha256": "25cdfc8ab385504a465d7279c613ce600b8ea38078256cc73d3ede42c06ab568",
+            "size": 41433,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-teres-i.dtb": {
+            "exists": true,
+            "sha256": "dc1cff46d22a12971d7393202fd9a8351fc5a3a78f47f3afde8bfd8805029bb8",
+            "size": 42618,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h313-tanix-tx1.dtb": {
+            "exists": true,
+            "sha256": "792a9443a6a541a91e1fef65f624ac5523b60fbd917072a6acee123968f14526",
+            "size": 39714,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h313-x96q-lpddr3.dtb": {
+            "exists": true,
+            "sha256": "e094dbf173906c0c1507789bdd036eeda05889fbe6067b8e6b7ea0baf39ffbc7",
+            "size": 42411,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-bananapi-m2-plus-v1.2.dtb": {
+            "exists": true,
+            "sha256": "1a01f3e0ff64384b599154194c6b1a9f8405c45d72f6b1c5ff85e2a7df050a94",
+            "size": 36690,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-bananapi-m2-plus.dtb": {
+            "exists": true,
+            "sha256": "c20b5cd55fe4ae43d4c3437a344d22bab2ca1440f2caccdeb6327b599d606dbc",
+            "size": 36249,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-emlid-neutis-n5-devboard.dtb": {
+            "exists": true,
+            "sha256": "bf35b1f54a41f7f62d4ee66720fc6f73fd0d2f53500e01bb3416f752318ec41d",
+            "size": 34892,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-libretech-all-h3-cc.dtb": {
+            "exists": true,
+            "sha256": "b6ebe108086c14466db5e7fefe785c8fd2c441b9e9ea7150de7cf7d5f98719da",
+            "size": 35129,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-libretech-all-h3-it.dtb": {
+            "exists": true,
+            "sha256": "2db429791ba36f881b088bdce0fdfd594e954d8c5a9139512674276a6eedc622",
+            "size": 33787,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-libretech-all-h5-cc.dtb": {
+            "exists": true,
+            "sha256": "87ba12659aa98092d613ae1867c82e94dcb342489f53c3ce6bf79d00c530f8d9",
+            "size": 35724,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-k1-plus.dtb": {
+            "exists": true,
+            "sha256": "67e6c813bc5b4faf38143653637d48313af7a202cfa5de748e906ff0b2b1c474",
+            "size": 37361,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-m1-plus2.dtb": {
+            "exists": true,
+            "sha256": "629f297847a8f255b50a12b4f7e40e77396ba6418d4f5cf08b999b888116eff7",
+            "size": 34629,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo-core2.dtb": {
+            "exists": true,
+            "sha256": "f4c7a93bd79365d85747acb1682dbd32d2e1293f55621fc6f13ff51bf834d300",
+            "size": 34569,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo-plus2.dtb": {
+            "exists": true,
+            "sha256": "b8c15caa8b0b3da5b2d0823aac1073c39f7862e7e31c05dc08f91f92fc111318",
+            "size": 35148,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo2-v1.1.dtb": {
+            "exists": true,
+            "sha256": "ad596d8d0d03eb150b8f61c0299c188689c72e81f71e89ee1372b022c3210cf9",
+            "size": 34318,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo2.dtb": {
+            "exists": true,
+            "sha256": "a7a17b85b3ea1f5d653042fc90785a9f6867ffc12c8b8c8ef26fdacb8cf6c474",
+            "size": 34326,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-r1s-h5.dtb": {
+            "exists": true,
+            "sha256": "1eaf27ded40e37398a26108380d5ebe98c2c91b1d3fc82699d768f32af807c8e",
+            "size": 35466,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-pc2.dtb": {
+            "exists": true,
+            "sha256": "04ba357c70fd34bb6b2a44afd61280fa0631b4b5b8aba7a9c5ba6465365608ab",
+            "size": 35166,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-prime.dtb": {
+            "exists": true,
+            "sha256": "11cdd32530c7bf685e28eb32de215350bf914c0569216aadf9efbdc50041c63e",
+            "size": 35189,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-zero-plus.dtb": {
+            "exists": true,
+            "sha256": "47af860f24e7fa6aff33ce5a9a3bcea93f80100faca335eccc35fdc3a62af3b5",
+            "size": 34419,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-zero-plus2.dtb": {
+            "exists": true,
+            "sha256": "550beb6a495117e06042ae17d96d6ac13a362499c6633e53a8d257c8b52a0bbe",
+            "size": 32880,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-beelink-gs1.dtb": {
+            "exists": true,
+            "sha256": "14358ff48346befdfd5221953fe4bae0e900f1323fd5969b0e4c9900ef4733da",
+            "size": 39299,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-inovato-quadra.dtb": {
+            "exists": true,
+            "sha256": "90257f2f995f6fe3d0be52b8b3374b425d16cb635c52775c055a72a2962a7c30",
+            "size": 36421,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-3-lts.dtb": {
+            "exists": true,
+            "sha256": "e303dff4fa8e355e9cd12ab7d8c8518bbfd9e8b1bdf90152d37936dc10103508",
+            "size": 39056,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-3.dtb": {
+            "exists": true,
+            "sha256": "761b9f6d2b01a2c0881a52cb542db94df1946bade86e9a1d16f2610ad353d1f2",
+            "size": 38908,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-lite2.dtb": {
+            "exists": true,
+            "sha256": "0f44ed390cc0929d75a894ed54d8d50caf05f7399b2800a552695fd1478b7cc6",
+            "size": 38643,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-one-plus.dtb": {
+            "exists": true,
+            "sha256": "8f6d9a9e1286bac374879d62034c6523283e1c7c414b0d2ebfd11ae654bdd401",
+            "size": 38172,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-pine-h64-model-b.dtb": {
+            "exists": true,
+            "sha256": "149a762945ceffb2b7d8fa272136b7bab1458b52ee0021cf675dd7bccec119c6",
+            "size": 39082,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-pine-h64.dtb": {
+            "exists": true,
+            "sha256": "9e78d8c88432956655a6aaa4da558ec654ecb9dfaf961f10cb191095ca2cea88",
+            "size": 39055,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-tanix-tx6-mini.dtb": {
+            "exists": true,
+            "sha256": "aef57b11a76b56d85639421690eb9dd01e4f9d59dfd0b14622017886b38d027d",
+            "size": 35970,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-tanix-tx6.dtb": {
+            "exists": true,
+            "sha256": "20f827b0310096104c1d724cdd25843aeabb545f6656d78abd3d26c9dc3d2345",
+            "size": 36193,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-cb1-emmc.dtb": {
+            "exists": true,
+            "sha256": "025d4b573c526d780de5008fbbef659e745c3527a59d57e031a02eb04a347945",
+            "size": 44949,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-cb1-manta.dtb": {
+            "exists": true,
+            "sha256": "1cd1316d56e77a7f4ac8c7bacc2d8692c1b42f69074e014607456ddba6d74c07",
+            "size": 44696,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-cb1-sd.dtb": {
+            "exists": true,
+            "sha256": "0ad3e8cde37107bddc7a6261257818e19b880223a20509b1dc67e31559e0f07a",
+            "size": 44888,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-pi.dtb": {
+            "exists": true,
+            "sha256": "935f59d754055299734e56341ad4a36936beb89ef9d653ad3bf797b8e9cb6fe3",
+            "size": 44672,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-orangepi-zero2.dtb": {
+            "exists": true,
+            "sha256": "eaa77d11ad6267292416f37af46da95f348786e5a73361c44ca1bc7956aefc99",
+            "size": 43824,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-x96-mate.dtb": {
+            "exists": true,
+            "sha256": "1c7c600274e243986ef2e4e03735a1800ff14f61cf12cb0d67e88699c5dfbc46",
+            "size": 42437,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-bananapi-m4-berry.dtb": {
+            "exists": true,
+            "sha256": "6e7a54157a17c1df7e48736fdf6270c7db71b4e46a3c9b1dc34785128fd4d20f",
+            "size": 44807,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-bananapi-m4-zero.dtb": {
+            "exists": true,
+            "sha256": "8455a3fca15bc8a34485cb32383f053a85d5fb115aa9e98ab2e8f5b4e24f2474",
+            "size": 43728,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-kickpi-k2b.dtb": {
+            "exists": true,
+            "sha256": "1d5e883e76caa75435b0cb756efeee78c916189faa28d902f0ba30c8c041512a",
+            "size": 43768,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-longanpi-3h.dtb": {
+            "exists": true,
+            "sha256": "94d4baaa40153935f8cce87131318f46ce8d909455e56fd5019cedb0ba45504e",
+            "size": 41827,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-orangepi-zero2w.dtb": {
+            "exists": true,
+            "sha256": "be50cf6a39355a0dcc1a0236e8ebab672543b4fa4bd16c5f14fa2712fa5a2965",
+            "size": 45599,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-orangepi-zero3.dtb": {
+            "exists": true,
+            "sha256": "bc073037168955a98e7a49249f92083aa130c53bf7910b1272df99fd223dddad",
+            "size": 43230,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-transpeed-8k618-t.dtb": {
+            "exists": true,
+            "sha256": "37b042d6895eeda9b7928356cad47e378aad96414160988794ecd81ad2239491",
+            "size": 41506,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h64-remix-mini-pc.dtb": {
+            "exists": true,
+            "sha256": "4739bf1f8d5355521a2d5d64dbc08b5c36a2813366cbf04a7e38363ee626a965",
+            "size": 41675,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-2024.dtb": {
+            "exists": true,
+            "sha256": "37183db07b49db85e6c0c6185001e109d38d12eec15b3eef21d04800f764e142",
+            "size": 45116,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-h.dtb": {
+            "exists": true,
+            "sha256": "81ac67a64543342764de46d1f46d50b04819250f1f8c448c7f3ae8292ad30356",
+            "size": 47415,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-plus.dtb": {
+            "exists": true,
+            "sha256": "1dbdfe535f82831ceb3bd9328996dbcc35f51c8028c984235b48d73eeb4a8d9a",
+            "size": 45910,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-sp.dtb": {
+            "exists": true,
+            "sha256": "d6ea01180f57195998acbbebc5ad3311c03ce7d0805cfcd175bbc1f343573658",
+            "size": 46266,
+            "type": "regular"
+          }
+        },
+        "initrd": {
+          "/boot/initrd.img-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "e7a0602ce463d9d0ad6214500e7e126bfdf04b4c04744bdcc2a188db71f5c2b9",
+            "size": 13781336,
+            "type": "regular"
+          },
+          "/boot/uInitrd": {
+            "exists": true,
+            "resolved_path": "/boot/uInitrd-6.12.58-current-sunxi64",
+            "resolved_sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "resolved_size": 13781400,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "uInitrd-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/uInitrd-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "size": 13781400,
+            "type": "regular"
+          }
+        },
+        "kernel": {
+          "/boot/Image": {
+            "exists": true,
+            "resolved_path": "/boot/vmlinuz-6.12.58-current-sunxi64",
+            "resolved_sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "resolved_size": 39059464,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "vmlinuz-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/vmlinuz-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "size": 39059464,
+            "type": "regular"
+          }
+        }
+      },
+      "boot_directory_present": true,
+      "image": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img",
+      "image_name": "Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img",
+      "image_sha256": "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af",
+      "image_size": 1971322880,
+      "label": "c17_4_2",
+      "markers": {
+        "/etc/dadooh/c17-4-2-settings-restore-clean-image": {
+          "contains_c17_7_status_gate": false,
+          "contains_kernel_reused": true,
+          "contains_totem_core": false,
+          "exists": true,
+          "line_count": 35,
+          "sha256": "0287b84ff855d62174b8f4d1e6ee7c14bc82f0a0ec396134a4f9dea2e139fda9",
+          "size": 1258,
+          "type": "regular"
+        },
+        "/etc/dadooh/c17-7-totem-core-embedded-image": {
+          "exists": false,
+          "type": "missing"
+        }
+      },
+      "mbr_sha256": "8d18857f1374b32b9a065eb338a5ca91829ff236ef774cef3405f429a02eebec",
+      "partition_table": {
+        "label": "dos",
+        "partitions": [
+          {
+            "bootable": false,
+            "size": 3842048,
+            "start": 8192,
+            "type": "83"
+          }
+        ],
+        "sectorsize": 512,
+        "unit": "sectors"
+      },
+      "pre_partition_sha256_excluding_mbr": "e1d1f5a8de140145a0c0a5360330002ab7b5c7bdc1a4cc456644f2402962957a",
+      "rootfs_bytes": 1967128576,
+      "rootfs_offset": 4194304,
+      "systemd_units": {
+        "/etc/systemd/system/dadooh-visual-splash.service": {
+          "exists": true,
+          "sha256": "24e8d2c31323339bfe186e85bb300fea9943a717373d62f415b53ff3f683f05b",
+          "size": 588,
+          "type": "regular"
+        },
+        "/etc/systemd/system/kiosky-player.service": {
+          "exists": true,
+          "sha256": "6eb8c3fb20f40cbea0d0e42cbf143d16d52d83ae4f4e4da501f8c2ebe9244e83",
+          "size": 1015,
+          "type": "regular"
+        },
+        "/etc/systemd/system/multi-user.target.wants/dadooh-visual-splash.service": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/etc/systemd/system/multi-user.target.wants/kiosky-player.service": {
+          "exists": true,
+          "resolved_path": "/etc/systemd/system/kiosky-player.service",
+          "resolved_sha256": "6eb8c3fb20f40cbea0d0e42cbf143d16d52d83ae4f4e4da501f8c2ebe9244e83",
+          "resolved_size": 1015,
+          "resolved_type": "regular",
+          "size": 41,
+          "symlink_target": "/etc/systemd/system/kiosky-player.service",
+          "type": "symlink"
+        },
+        "/etc/systemd/system/multi-user.target.wants/totem-firstboot-gate.service": {
+          "exists": true,
+          "resolved_path": "/etc/systemd/system/totem-firstboot-gate.service",
+          "resolved_sha256": "17c536e57151430f305347486c403d0ea4c8aefcb5ad0c9cc859942daa5fac0e",
+          "resolved_size": 432,
+          "resolved_type": "regular",
+          "size": 48,
+          "symlink_target": "/etc/systemd/system/totem-firstboot-gate.service",
+          "type": "symlink"
+        },
+        "/etc/systemd/system/timers.target.wants/totem-update-agent.timer": {
+          "exists": true,
+          "resolved_path": "/etc/systemd/system/totem-update-agent.timer",
+          "resolved_sha256": "eecb83a9aadb1af772f4390c7f2e989c6688eb0a06a173ca5f03446b8372c8eb",
+          "resolved_size": 614,
+          "resolved_type": "regular",
+          "size": 44,
+          "symlink_target": "/etc/systemd/system/totem-update-agent.timer",
+          "type": "symlink"
+        },
+        "/etc/systemd/system/totem-firstboot-gate.service": {
+          "exists": true,
+          "sha256": "17c536e57151430f305347486c403d0ea4c8aefcb5ad0c9cc859942daa5fac0e",
+          "size": 432,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-open-settings.service": {
+          "exists": true,
+          "sha256": "27e9db9d22ce8bacc9b857ead9c6cd6979eab2941138bb1ae8904572510eb73c",
+          "size": 1360,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-update-agent.service": {
+          "exists": true,
+          "sha256": "df1649034fb5964c23450c3ed12b734cf2f10ae1c724ad4d8411e80670dff301",
+          "size": 1377,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-update-agent.timer": {
+          "exists": true,
+          "sha256": "eecb83a9aadb1af772f4390c7f2e989c6688eb0a06a173ca5f03446b8372c8eb",
+          "size": 614,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-visual-tty-guard.service": {
+          "exists": true,
+          "sha256": "df201e8fc1692ab7dd0ff298e11c0098c067ec2862b582dfa37ebdceac906373",
+          "size": 537,
+          "type": "regular"
+        },
+        "/lib/systemd/system/armbian-firstrun.service": {
+          "exists": true,
+          "sha256": "cbcc1df2b226d6251493cab2e88fec22901733ac251b62d0edac8ed3424bf927",
+          "size": 451,
+          "type": "regular"
+        }
+      },
+      "totem_core_paths": {
+        "/data/core/totem/current": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/previous": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/bin/totem_setup_visual_wizard.py": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/bin/totem_visual_splash.py": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/health/totem-core-health.json": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/manifest-fragment/totem-core.json": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/state.json": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/opt/totem/bin/totem_open_settings_session.sh": {
+          "exists": true,
+          "sha256": "2cf5671dc546cee8379ae4dbc94079f21b9373bbecc1e20556a67f8eb2960787",
+          "size": 44333,
+          "type": "regular"
+        },
+        "/opt/totem/bin/totem_setup_visual_wizard.py": {
+          "exists": true,
+          "sha256": "e7da67a4aed78beaa7945ca86ddc2656a8ff8ff974ccb0dc75362fa522c71e29",
+          "size": 146685,
+          "type": "regular"
+        },
+        "/opt/totem/bin/totem_visual_splash.py": {
+          "exists": true,
+          "sha256": "ae5c35f28ea79fcdb56a2de74889fb9e32d4d23b9a1bc658166a165046741ece",
+          "size": 24147,
+          "type": "regular"
+        },
+        "/opt/totem/core-fallback/bin/totem_open_settings_session.sh": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/opt/totem/core-fallback/bin/totem_setup_visual_wizard.py": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/opt/totem/core-fallback/bin/totem_visual_splash.py": {
+          "exists": false,
+          "type": "missing"
+        }
+      },
+      "wrapper_markers": {
+        "/opt/totem/bin/totem_open_settings_session.sh": false,
+        "/opt/totem/bin/totem_setup_visual_wizard.py": false,
+        "/opt/totem/bin/totem_visual_splash.py": false
+      }
+    },
+    "c17_7": {
+      "boot": {
+        "boot_config": {
+          "/boot/config-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "0a946081fce1cb1fa2eea4d8e798156939029b3b02717bdf1a7fbc5e5ec1df53",
+            "size": 234542,
+            "type": "regular"
+          }
+        },
+        "boot_files": {
+          "/boot/.next": {
+            "exists": true,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "size": 0,
+            "type": "regular"
+          },
+          "/boot/Image": {
+            "exists": true,
+            "resolved_path": "/boot/vmlinuz-6.12.58-current-sunxi64",
+            "resolved_sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "resolved_size": 39059464,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "vmlinuz-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/System.map-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "1ed4538497239143e28e00ca64a0fbf9f050badcdc55ede2675d23b95cdffd9a",
+            "size": 5421456,
+            "type": "regular"
+          },
+          "/boot/armbianEnv.txt": {
+            "exists": true,
+            "sha256": "f628719d8f9278f106c81f1d25319e8b9dc3792594064d886808b96f17505b69",
+            "size": 297,
+            "type": "regular"
+          },
+          "/boot/boot.bmp": {
+            "exists": true,
+            "sha256": "01ae4a9cb9e151c5957e419dd733ff9591ddb1c0243cd5e94a7c2c9b27db3d95",
+            "size": 230454,
+            "type": "regular"
+          },
+          "/boot/boot.cmd": {
+            "exists": true,
+            "sha256": "9e51128954b04325ccbeb603a03b6f7246828c04de62f554fe4cfce673e23be1",
+            "size": 4569,
+            "type": "regular"
+          },
+          "/boot/boot.scr": {
+            "exists": true,
+            "sha256": "f0e59bfd447c4a78009e9a603821fc1755f273ad0297492ec270a3bc68d74338",
+            "size": 4641,
+            "type": "regular"
+          },
+          "/boot/config-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "0a946081fce1cb1fa2eea4d8e798156939029b3b02717bdf1a7fbc5e5ec1df53",
+            "size": 234542,
+            "type": "regular"
+          },
+          "/boot/dtb": {
+            "exists": true,
+            "resolved_path": "/boot/dtb-6.12.58-current-sunxi64",
+            "resolved_type": "directory",
+            "size": 27,
+            "symlink_target": "dtb-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64": {
+            "exists": true,
+            "size": 4096,
+            "type": "directory"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner": {
+            "exists": true,
+            "size": 4096,
+            "type": "directory"
+          },
+          "/boot/initrd.img-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "e7a0602ce463d9d0ad6214500e7e126bfdf04b4c04744bdcc2a188db71f5c2b9",
+            "size": 13781336,
+            "type": "regular"
+          },
+          "/boot/uInitrd": {
+            "exists": true,
+            "resolved_path": "/boot/uInitrd-6.12.58-current-sunxi64",
+            "resolved_sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "resolved_size": 13781400,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "uInitrd-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/uInitrd-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "size": 13781400,
+            "type": "regular"
+          },
+          "/boot/vmlinuz-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "size": 39059464,
+            "type": "regular"
+          }
+        },
+        "boot_script": {
+          "/boot/armbianEnv.txt": {
+            "exists": true,
+            "sha256": "f628719d8f9278f106c81f1d25319e8b9dc3792594064d886808b96f17505b69",
+            "size": 297,
+            "type": "regular"
+          },
+          "/boot/boot.cmd": {
+            "exists": true,
+            "sha256": "9e51128954b04325ccbeb603a03b6f7246828c04de62f554fe4cfce673e23be1",
+            "size": 4569,
+            "type": "regular"
+          },
+          "/boot/boot.scr": {
+            "exists": true,
+            "sha256": "f0e59bfd447c4a78009e9a603821fc1755f273ad0297492ec270a3bc68d74338",
+            "size": 4641,
+            "type": "regular"
+          }
+        },
+        "dtb": {
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/README.sun50i-a64-overlays": {
+            "exists": true,
+            "sha256": "7d973af2c80e849d0659d9ce2e3b9d3888fdf857fa23d0538c940fb4557344d1",
+            "size": 3998,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/README.sun50i-h5-overlays": {
+            "exists": true,
+            "sha256": "c212a5fc84ecb747bee32be00ed7a0aae234a4d54c8121024992b5d727c3ecc2",
+            "size": 4782,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-fixup.scr": {
+            "exists": true,
+            "sha256": "dd871d975f35ff96aad89d0f42141e45324033039f0b4e9203e419f21e923779",
+            "size": 3821,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "fb9cbdaca7020904b2e718363498ee91a422aadeaab56c2237124f9f0d46a755",
+            "size": 794,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "587cc991e2a94f64ee2f1ab13d7c0ed5864c68ca754a0832c7c2ca51807c7929",
+            "size": 496,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-pine64-7inch-lcd.dtbo": {
+            "exists": true,
+            "sha256": "d314ecc6441a761b40622379d459657adaa5a21885cc1d4e265aebbc12b728d7",
+            "size": 2364,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-pps-gpio.dtbo": {
+            "exists": true,
+            "sha256": "067771abb290942be52a64fe87463d1c5b15bedee82efe0a1d0cfda22cf55253",
+            "size": 778,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-spi-add-cs1.dtbo": {
+            "exists": true,
+            "sha256": "0b36a91fe993dcdea01c61c9914c173358065653e378c4be21548a6e4298fd35",
+            "size": 1173,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-spi-jedec-nor.dtbo": {
+            "exists": true,
+            "sha256": "25edc2d4cdae082fa398d4db26314391f4653198c486f505e2b1e98d40fb58e8",
+            "size": 668,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "612d54f6062ff070fa79d6ca646ea8319d8f0b797d7f336a19021cbef92f62db",
+            "size": 808,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart1.dtbo": {
+            "exists": true,
+            "sha256": "edb4b2aeee4c3bd60cc14f1c96d55279711d897990ca3327c445643bcda88af8",
+            "size": 506,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart2.dtbo": {
+            "exists": true,
+            "sha256": "55e32435d4f9f661b41ebf2e342236fa8e5dd13fee2326e46b24c5a5896d9b03",
+            "size": 963,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart3.dtbo": {
+            "exists": true,
+            "sha256": "7173dafa674024a305865e70bbc63325908800b4faa2aa59c9fce1c15b71b44c",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-uart4.dtbo": {
+            "exists": true,
+            "sha256": "efd903e06307fd2d93696a60988053e137b77d78c02afe7552cde00c390fa9b6",
+            "size": 963,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-a64-w1-gpio.dtbo": {
+            "exists": true,
+            "sha256": "6870d16618d71e3319d6ed5f4ba352216baa187b32be165e47a388ebf6161f26",
+            "size": 777,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-analog-codec.dtbo": {
+            "exists": true,
+            "sha256": "01495d8c861199a1390fdf4a4d4ed768fdd09e3abf02b21027305a8a1b472dc5",
+            "size": 339,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cir.dtbo": {
+            "exists": true,
+            "sha256": "19633d79cb0f26c14104aa00037e019d46a1ea2ca6324eb08461e4bb215418ec",
+            "size": 384,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cpu-clock-1.0GHz-1.1v.dtbo": {
+            "exists": true,
+            "sha256": "437cd65a939611feb723d73be1bb018e18a800997f76a6510bb8d5a0c9dc6740",
+            "size": 477,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cpu-clock-1.2GHz-1.3v.dtbo": {
+            "exists": true,
+            "sha256": "a159e5b08808ca1cee87f5e23246ca44246bc363d5c34a64ab0f1503a23ba4b1",
+            "size": 477,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-cpu-clock-1.3GHz-1.3v.dtbo": {
+            "exists": true,
+            "sha256": "ff6cc646e72f7f5e4bbcf61d8ea8201b55410a1f01e4e88181e81fd8b5923a40",
+            "size": 897,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-fixup.scr": {
+            "exists": true,
+            "sha256": "f981043de425628e6f3f22fdd1d7eb8e7d584f5d4ea0be57bc4770714fe2f07e",
+            "size": 4191,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-gpio-regulator-1.3v.dtbo": {
+            "exists": true,
+            "sha256": "c04d7f89968fa37ccaaa255f13b52bd875f557dbf9bea1727fa0f2709f1c35da",
+            "size": 1020,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "f9994b047f2360e516f1a9e1d4c161dd331d4c6fa5ccfc1b87f79c8fb74176e1",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "387acb410d07daa6fb2ebbc3bbe6e5fa8c88dc296407e96d661abcb8196152f0",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-i2c2.dtbo": {
+            "exists": true,
+            "sha256": "b6482854c1e0649c973db5c897e15c5651c35c89ced157e1f0407897eb44a342",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-pps-gpio.dtbo": {
+            "exists": true,
+            "sha256": "5eb32ec9cb82e6e08d48d342625292e1033db80032067fb90089c8950127bd9c",
+            "size": 778,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-pwm.dtbo": {
+            "exists": true,
+            "sha256": "f082cd550e029b4500b520428cebe7ff6baf8d877fda001530d12e410d080392",
+            "size": 862,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spdif-out.dtbo": {
+            "exists": true,
+            "sha256": "f7ace5ef9214b6c014e623d6689aecf9b005637887e3a44c537f1747e7e33f27",
+            "size": 1040,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spi-add-cs1.dtbo": {
+            "exists": true,
+            "sha256": "2c6250d528bf34c869df4b802404750481b2004892026e5e655cc21f20ad63b2",
+            "size": 1177,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spi-jedec-nor.dtbo": {
+            "exists": true,
+            "sha256": "b85800858789b5a3a5e66a20f0a9949b4222abfebef3cead5a8bc10c7e48c0cf",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "5e6811e1e2e69af9131e24cc370a47910e7d64d27cb3a729e580a1f3e51703bc",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-tve.dtbo": {
+            "exists": true,
+            "sha256": "a7004e5871af4962af094e4c95e346d90b12088a4099520ae20cef7db548ba37",
+            "size": 617,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-uart1.dtbo": {
+            "exists": true,
+            "sha256": "3451e85a4abdb3e31928676da1631180874bbeacd59299c6fa99fa9ab10d8c81",
+            "size": 502,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-uart2.dtbo": {
+            "exists": true,
+            "sha256": "3c47c7eaf207a66a854fb5a40692a6d65702d55ad9e84f8b5de6829235367902",
+            "size": 794,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-uart3.dtbo": {
+            "exists": true,
+            "sha256": "14db2b78da1de93748b4bff56e9a5dace45d4e7a08aecfd671af9681a690acf6",
+            "size": 798,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost0.dtbo": {
+            "exists": true,
+            "sha256": "f55c1486ffac8b11e75902ec09a16414970547feb99aff39063530ac7293dbb5",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost1.dtbo": {
+            "exists": true,
+            "sha256": "0f0b4e960da537951a40f05cc525950b50e53558cab13146d7075cbb6a23c5f6",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost2.dtbo": {
+            "exists": true,
+            "sha256": "18289ce99575920ab2acf1b2c23a2a651cce6ccf529add068f40a788a9cd401f",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-usbhost3.dtbo": {
+            "exists": true,
+            "sha256": "433e929d4b11c9755c0b7771dfba82d89c2ce1e2e6fd4b61be17b5c07dbf03e2",
+            "size": 504,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h5-w1-gpio.dtbo": {
+            "exists": true,
+            "sha256": "6de209e71d2ecdbdbe86a7d5a6b64c9176985b95fcc2e33b7a9b6f16f690ebfb",
+            "size": 777,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-fixup.scr": {
+            "exists": true,
+            "sha256": "c09543071e3cb3e8167d54c11b17163462f8701ef70557be2522112cbcee8573",
+            "size": 3844,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "fe7af448162bd7f0c2d2f8a8b53aea119ad764810de3897639ef163215f6156f",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "5bf1985bf38300b9af9c559716c57629dee7bc0c1409b2cf8c9725b5421087c2",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-i2c2.dtbo": {
+            "exists": true,
+            "sha256": "6d891e63aba3e230a6da90b2b7ff2e47aafa5785c40a5b4cb9f137cc686dabe2",
+            "size": 374,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-pwm.dtbo": {
+            "exists": true,
+            "sha256": "fff9442f8a9d3f5579aec8a5a373bd088b25f5f7dc1b6ca0016c90162aad411d",
+            "size": 671,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-ruart.dtbo": {
+            "exists": true,
+            "sha256": "809847c445dc47785098df1d69ce90b7c8661201bbd6931003520c4c8fc97a11",
+            "size": 268,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-add-cs1.dtbo": {
+            "exists": true,
+            "sha256": "24206c35978e33645925241406524a311796aa48a3e66ed4e370b95998405f89",
+            "size": 1177,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-jedec-nor.dtbo": {
+            "exists": true,
+            "sha256": "907c23608a893783b82e6464647f6e436cf02c401a9e3cf0e00906e1d9f0a997",
+            "size": 804,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "07f27ac5e37cd66186dc2a5b214b210b236d3a3390c81f8b4597530033c77fa7",
+            "size": 808,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-spi-spidev1.dtbo": {
+            "exists": true,
+            "sha256": "82bb849555f2699cd73896fba07f719c0434e78beefea6321a0004ec19daa257",
+            "size": 657,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-uart1.dtbo": {
+            "exists": true,
+            "sha256": "18fb331176d1145e8d0753d4d6241b506dc2599dc77b290fdd90076e46ca74c8",
+            "size": 502,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-uart2.dtbo": {
+            "exists": true,
+            "sha256": "e086467239a0bd65a0d53ac69c72fee07d3de08d64d9058247cbd7e1f3742945",
+            "size": 798,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-uart3.dtbo": {
+            "exists": true,
+            "sha256": "b4824a8f50a9963b76937827ba0a326b5ffb672c3cb96a9574d4fa94146abd40",
+            "size": 798,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h6-w1-gpio.dtbo": {
+            "exists": true,
+            "sha256": "71d50656dcf992edbbdbc456f7c43b787f390bc25d7d9350b3b574405efe03e3",
+            "size": 773,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-15-16-i2c4.dtbo": {
+            "exists": true,
+            "sha256": "eb2f0d71f001dd215700e9f8baa9ee0d12b371587eb50633b8e425222870d340",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-17-18-i2c3.dtbo": {
+            "exists": true,
+            "sha256": "f0ca2c32d12d13408d47dcbfd03348f3921f45141228624f5dd368906bd51e15",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-6-7-uart1.dtbo": {
+            "exists": true,
+            "sha256": "0d146aa877e75413cdd7cc7fbcf5aa5d23e515effbf9bc3626bff56af20c3685",
+            "size": 315,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pg-8-9-rts-cts-uart1.dtbo": {
+            "exists": true,
+            "sha256": "b1801ed922beef6c848cfc4a333ebcbe9c9fbf47ec1e904ba31e8e87810b64a6",
+            "size": 533,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-ph-2-3-uart5.dtbo": {
+            "exists": true,
+            "sha256": "8884fc1c01b9f3a45ec7eca99e98d2413e2b1a816f4d63f8d2f37df20004192a",
+            "size": 315,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-13-14-uart4.dtbo": {
+            "exists": true,
+            "sha256": "7113f8c40e02d934da7d7e8d0477c35664d24c05ccd341a79d93daf78f732db7",
+            "size": 315,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-15-16-rts-cts-uart4.dtbo": {
+            "exists": true,
+            "sha256": "d99fdb730a414ca7ea0a65d23b27421f23113d0e3ed029300f2cbc1d7dbc20df",
+            "size": 539,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-5-6-i2c0.dtbo": {
+            "exists": true,
+            "sha256": "7fc79e6d1e36365ad87b6d5b57207b5dad1ca8a773ff686b8690766c0247fd30",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-pi-7-8-i2c1.dtbo": {
+            "exists": true,
+            "sha256": "64a10a4b295bfdfbc4a9f77243d57eb4ac158b0380e18672a64db32c7783a081",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-sdio-wifi-bt.dtbo": {
+            "exists": true,
+            "sha256": "6fba3c974e814542628b815350bf5c2be94664e082f9cf27d06bd5f357b96086",
+            "size": 1358,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-spi1-cs0-cs1-spidev.dtbo": {
+            "exists": true,
+            "sha256": "07e4a759a837718d5aa623967ccc515f6fe3bab6c294993ff6f0f386f6cd5f55",
+            "size": 843,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-spi1-cs0-spidev.dtbo": {
+            "exists": true,
+            "sha256": "50e6cf1f4b45439b832f57aad109d2108ceabb906a96ea5fed7665ce61547f80",
+            "size": 678,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-bananapi-m4-spi1-cs1-spidev.dtbo": {
+            "exists": true,
+            "sha256": "589bc3b3b39e1c520f0b9135eb76f4e2299adb45853f91444c06108228c95872",
+            "size": 314,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-fixup.scr": {
+            "exists": true,
+            "sha256": "e4928f7ea9d47908911d6fd1ff43242d93ea1c3aad9f4a6602e5c23e3c6f1749",
+            "size": 4203,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-gpu.dtbo": {
+            "exists": true,
+            "sha256": "f6a7734e283428190b39c6f5540a9ee5b5f17ab6a7906dbac11e571df912b81d",
+            "size": 269,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c0-pi.dtbo": {
+            "exists": true,
+            "sha256": "524979c0c823c821cf6900b857ae40a98b4d312259044216425a76e7d7d5cc05",
+            "size": 513,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c1-pi.dtbo": {
+            "exists": true,
+            "sha256": "c4e8aae2210a39bd607b4d58b58cd61b7555bdc08a41d7b3bddadbf3a5b10e28",
+            "size": 391,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c2-ph.dtbo": {
+            "exists": true,
+            "sha256": "958b2e91a7b6a5c21317943cd06eb368303112d0ff5051681ea2465190426860",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c2-pi.dtbo": {
+            "exists": true,
+            "sha256": "bf6012114af37e731140cf92c3b55c4753dcb504ef2bb3b1ec2f99416b6f6c6a",
+            "size": 513,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c3-pg.dtbo": {
+            "exists": true,
+            "sha256": "5e75eeab6aed76f191098ee17b54a1af544e315964a8444a74033c2981d21ffe",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c3-ph.dtbo": {
+            "exists": true,
+            "sha256": "0a039fd5a211d67e286137b226a9281881fba431b55252307eb002ca601b2e17",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c4-pg.dtbo": {
+            "exists": true,
+            "sha256": "7879b760f1472a5026fe0b89680d2c483692153b699a0043f3212705ace15733",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-i2c4-ph.dtbo": {
+            "exists": true,
+            "sha256": "70601f48830c6b37f761649e965feee5f8186acba1b1f16bdbd62f4da2590b8e",
+            "size": 344,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-ir.dtbo": {
+            "exists": true,
+            "sha256": "cc521b0d8ff946faf7dafa20964c6fe6bac92dcfdd9d6e51dbeaacb171bb724d",
+            "size": 268,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-light.dtbo": {
+            "exists": true,
+            "sha256": "779267122dacb7752e2b9e53a8620b30c6e96ee615f05fb791576536cd7d8452",
+            "size": 396,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-mcp2515.dtbo": {
+            "exists": true,
+            "sha256": "0fe196149b21d04d9ea8e815533420d408be9bc2baa942c95e3ee17124cba26c",
+            "size": 339,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spi-spidev.dtbo": {
+            "exists": true,
+            "sha256": "a83f5a14617071e6cd7432e3f621ec579c089fb68f013aec6a1e9cf5cdf295c7",
+            "size": 808,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev0_0.dtbo": {
+            "exists": true,
+            "sha256": "9b7b75d6250e61c1679f1a869cdc0d11e2f96c0125b3a43c8249f3f49252d164",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev1_0.dtbo": {
+            "exists": true,
+            "sha256": "c7a11370a4b712a5f845e6b8fc01cf7b461acc71d4bf80de2aefef4b031f8b2d",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev1_1.dtbo": {
+            "exists": true,
+            "sha256": "04f4ffe3e3c6c92f461068682a710af858b898dbcecf4ad33ade09662f823959",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-spidev1_2.dtbo": {
+            "exists": true,
+            "sha256": "9c2e72055211105746c0749e4fb6ee9ec7239561899c3b643ded09795c250566",
+            "size": 661,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-tft35_spi.dtbo": {
+            "exists": true,
+            "sha256": "6b8d955667925c651598e7c5c1f683dbc971f168dca7bc4b45a5244289fedb77",
+            "size": 616,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-pg-rts-cts.dtbo": {
+            "exists": true,
+            "sha256": "901c4b1c6c1c4dcee14e7c705d3f671e799a1fcee693e3b3cafcbafab1e21ad5",
+            "size": 487,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-pg.dtbo": {
+            "exists": true,
+            "sha256": "3396fb2b4548535fc394205a067fe59b2ebdc020920330a7472723f6330cd48b",
+            "size": 413,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-ph-rts-cts.dtbo": {
+            "exists": true,
+            "sha256": "e5f6b9b82757138cda4665203c167691574d5855b396e176db215a9d88fc289d",
+            "size": 487,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart2-ph.dtbo": {
+            "exists": true,
+            "sha256": "2fbfc12249eb638f96639619c45adc0b8ad170527429ca467a75a89139ce2ca4",
+            "size": 413,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-uart5.dtbo": {
+            "exists": true,
+            "sha256": "cd1f41c576d1f05bb28d9136e300764048159ee2e04aad8ea670e6489ab4546f",
+            "size": 410,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/overlay/sun50i-h616-ws2812.dtbo": {
+            "exists": true,
+            "sha256": "0c206a5e4884b20db17a6db15f468b2b7b08bf6ec83b3343efedf232cb60a343",
+            "size": 272,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a100-allwinner-perf1.dtb": {
+            "exists": true,
+            "sha256": "265cdac650dd3471ec956476bb2963ad85be0fd2c0fb49ed3691d567c6857e56",
+            "size": 14088,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-amarula-relic.dtb": {
+            "exists": true,
+            "sha256": "eb076b928db551f5af7a831b899e1375f42fb9ce5c0028114bed7e98e3fcacbd",
+            "size": 41557,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-bananapi-m64.dtb": {
+            "exists": true,
+            "sha256": "277308a561de0d29e929801c3c7613c286364192c7afe6973b03855260cd7640",
+            "size": 41882,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-nanopi-a64.dtb": {
+            "exists": true,
+            "sha256": "3f8aaaa1a380cb93fcc3116dc89706eeabdb2b1c87333bf7d0abdfe1dbd0f260",
+            "size": 40750,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-oceanic-5205-5inmfd.dtb": {
+            "exists": true,
+            "sha256": "4e7df8b49804647e982ea153648b4e6226014fed7861e4a71e11ed0b7b5f0a51",
+            "size": 40197,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1G.dtb": {
+            "exists": true,
+            "sha256": "467ec855f13654aed706ddc5c24be6010528779a94f56fd02491dd4457d3668b",
+            "size": 40744,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1Ge16GW.dtb": {
+            "exists": true,
+            "sha256": "5d23c1273d1e3f6fd1cfa98e305d1062a34e3fdb0416b85e6eaa740c994d4274",
+            "size": 42171,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1Ge4GW.dtb": {
+            "exists": true,
+            "sha256": "a765731a7b45dbb6cb7178b778f01a306881b2756a08b3d4c4544e16ffc6810c",
+            "size": 42137,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-1Gs16M.dtb": {
+            "exists": true,
+            "sha256": "fe1db756bf4328c15d866f1a7b28b6e3eef1e6e63128c88dc3e6fcda96776f42",
+            "size": 40954,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-2Ge8G.dtb": {
+            "exists": true,
+            "sha256": "4e4fb22d85839f07c8769488fa410cdd16f4924d6b26de2c45df03dc59d3b6a2",
+            "size": 40900,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino-emmc.dtb": {
+            "exists": true,
+            "sha256": "0def93058ab67cd8b6b9b4b090919a318eacf853f172a0fcaff2963129f8768b",
+            "size": 42455,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-olinuxino.dtb": {
+            "exists": true,
+            "sha256": "25e2023656f01121543558ec26db56f1326405cf2873228f4d3bcacfd622391c",
+            "size": 42041,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-orangepi-win.dtb": {
+            "exists": true,
+            "sha256": "5a9859c6c910202030f8061247380008e2613d05e5a5e3b803f0b40b541460d3",
+            "size": 42575,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pine64-lts.dtb": {
+            "exists": true,
+            "sha256": "c97653b846135f7deb4a61de9d0ef17e8f0df4469b7ef00f3cfdd125b5e5b78f",
+            "size": 41553,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pine64-plus.dtb": {
+            "exists": true,
+            "sha256": "5ebeed4a7a06839237f76ccf1b9e9401270306bc0bacf4205fe6076889efa832",
+            "size": 41629,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pine64.dtb": {
+            "exists": true,
+            "sha256": "7e08fba052745211b86024b5ee0a854de0620e2694a300deb4bcd3e618a61bbd",
+            "size": 41503,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinebook.dtb": {
+            "exists": true,
+            "sha256": "0b08050fd8c7a163ce500fa59c6a2e732d24ca37b26b165d111ce31e89a3271e",
+            "size": 43455,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.0.dtb": {
+            "exists": true,
+            "sha256": "0946144f30967ac5301fff09ced3db6dde92d314d051ed32e36acc5db4755caf",
+            "size": 54389,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.1.dtb": {
+            "exists": true,
+            "sha256": "35c138910c90f37daecdbde9b4c56f985dba4951107b7eb2c17f3b1b73087adf",
+            "size": 54416,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.2.dtb": {
+            "exists": true,
+            "sha256": "8456fd9cfd156844a617d42e009e93ba5e246e1c796fda6767acb0811719eaf1",
+            "size": 54427,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinephone-1.2b.dtb": {
+            "exists": true,
+            "sha256": "44c2d31dbd25817d66992a1a079c0acf9241d47f3f401d2540bf7c0e671d2f9e",
+            "size": 54715,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinetab-early-adopter.dtb": {
+            "exists": true,
+            "sha256": "d394f14bdb7c0ed70c482f01afbf75fc74cefdcd74a4c098d53723a84ebc11ee",
+            "size": 44784,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-pinetab.dtb": {
+            "exists": true,
+            "sha256": "e0fb8f6ef73f3de0b1ff744d0017e486f2fde01e95c54459dd550571027a546a",
+            "size": 44752,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-sopine-baseboard.dtb": {
+            "exists": true,
+            "sha256": "25cdfc8ab385504a465d7279c613ce600b8ea38078256cc73d3ede42c06ab568",
+            "size": 41433,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-a64-teres-i.dtb": {
+            "exists": true,
+            "sha256": "dc1cff46d22a12971d7393202fd9a8351fc5a3a78f47f3afde8bfd8805029bb8",
+            "size": 42618,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h313-tanix-tx1.dtb": {
+            "exists": true,
+            "sha256": "792a9443a6a541a91e1fef65f624ac5523b60fbd917072a6acee123968f14526",
+            "size": 39714,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h313-x96q-lpddr3.dtb": {
+            "exists": true,
+            "sha256": "e094dbf173906c0c1507789bdd036eeda05889fbe6067b8e6b7ea0baf39ffbc7",
+            "size": 42411,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-bananapi-m2-plus-v1.2.dtb": {
+            "exists": true,
+            "sha256": "1a01f3e0ff64384b599154194c6b1a9f8405c45d72f6b1c5ff85e2a7df050a94",
+            "size": 36690,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-bananapi-m2-plus.dtb": {
+            "exists": true,
+            "sha256": "c20b5cd55fe4ae43d4c3437a344d22bab2ca1440f2caccdeb6327b599d606dbc",
+            "size": 36249,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-emlid-neutis-n5-devboard.dtb": {
+            "exists": true,
+            "sha256": "bf35b1f54a41f7f62d4ee66720fc6f73fd0d2f53500e01bb3416f752318ec41d",
+            "size": 34892,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-libretech-all-h3-cc.dtb": {
+            "exists": true,
+            "sha256": "b6ebe108086c14466db5e7fefe785c8fd2c441b9e9ea7150de7cf7d5f98719da",
+            "size": 35129,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-libretech-all-h3-it.dtb": {
+            "exists": true,
+            "sha256": "2db429791ba36f881b088bdce0fdfd594e954d8c5a9139512674276a6eedc622",
+            "size": 33787,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-libretech-all-h5-cc.dtb": {
+            "exists": true,
+            "sha256": "87ba12659aa98092d613ae1867c82e94dcb342489f53c3ce6bf79d00c530f8d9",
+            "size": 35724,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-k1-plus.dtb": {
+            "exists": true,
+            "sha256": "67e6c813bc5b4faf38143653637d48313af7a202cfa5de748e906ff0b2b1c474",
+            "size": 37361,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-m1-plus2.dtb": {
+            "exists": true,
+            "sha256": "629f297847a8f255b50a12b4f7e40e77396ba6418d4f5cf08b999b888116eff7",
+            "size": 34629,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo-core2.dtb": {
+            "exists": true,
+            "sha256": "f4c7a93bd79365d85747acb1682dbd32d2e1293f55621fc6f13ff51bf834d300",
+            "size": 34569,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo-plus2.dtb": {
+            "exists": true,
+            "sha256": "b8c15caa8b0b3da5b2d0823aac1073c39f7862e7e31c05dc08f91f92fc111318",
+            "size": 35148,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo2-v1.1.dtb": {
+            "exists": true,
+            "sha256": "ad596d8d0d03eb150b8f61c0299c188689c72e81f71e89ee1372b022c3210cf9",
+            "size": 34318,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-neo2.dtb": {
+            "exists": true,
+            "sha256": "a7a17b85b3ea1f5d653042fc90785a9f6867ffc12c8b8c8ef26fdacb8cf6c474",
+            "size": 34326,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-nanopi-r1s-h5.dtb": {
+            "exists": true,
+            "sha256": "1eaf27ded40e37398a26108380d5ebe98c2c91b1d3fc82699d768f32af807c8e",
+            "size": 35466,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-pc2.dtb": {
+            "exists": true,
+            "sha256": "04ba357c70fd34bb6b2a44afd61280fa0631b4b5b8aba7a9c5ba6465365608ab",
+            "size": 35166,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-prime.dtb": {
+            "exists": true,
+            "sha256": "11cdd32530c7bf685e28eb32de215350bf914c0569216aadf9efbdc50041c63e",
+            "size": 35189,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-zero-plus.dtb": {
+            "exists": true,
+            "sha256": "47af860f24e7fa6aff33ce5a9a3bcea93f80100faca335eccc35fdc3a62af3b5",
+            "size": 34419,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h5-orangepi-zero-plus2.dtb": {
+            "exists": true,
+            "sha256": "550beb6a495117e06042ae17d96d6ac13a362499c6633e53a8d257c8b52a0bbe",
+            "size": 32880,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-beelink-gs1.dtb": {
+            "exists": true,
+            "sha256": "14358ff48346befdfd5221953fe4bae0e900f1323fd5969b0e4c9900ef4733da",
+            "size": 39299,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-inovato-quadra.dtb": {
+            "exists": true,
+            "sha256": "90257f2f995f6fe3d0be52b8b3374b425d16cb635c52775c055a72a2962a7c30",
+            "size": 36421,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-3-lts.dtb": {
+            "exists": true,
+            "sha256": "e303dff4fa8e355e9cd12ab7d8c8518bbfd9e8b1bdf90152d37936dc10103508",
+            "size": 39056,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-3.dtb": {
+            "exists": true,
+            "sha256": "761b9f6d2b01a2c0881a52cb542db94df1946bade86e9a1d16f2610ad353d1f2",
+            "size": 38908,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-lite2.dtb": {
+            "exists": true,
+            "sha256": "0f44ed390cc0929d75a894ed54d8d50caf05f7399b2800a552695fd1478b7cc6",
+            "size": 38643,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-orangepi-one-plus.dtb": {
+            "exists": true,
+            "sha256": "8f6d9a9e1286bac374879d62034c6523283e1c7c414b0d2ebfd11ae654bdd401",
+            "size": 38172,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-pine-h64-model-b.dtb": {
+            "exists": true,
+            "sha256": "149a762945ceffb2b7d8fa272136b7bab1458b52ee0021cf675dd7bccec119c6",
+            "size": 39082,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-pine-h64.dtb": {
+            "exists": true,
+            "sha256": "9e78d8c88432956655a6aaa4da558ec654ecb9dfaf961f10cb191095ca2cea88",
+            "size": 39055,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-tanix-tx6-mini.dtb": {
+            "exists": true,
+            "sha256": "aef57b11a76b56d85639421690eb9dd01e4f9d59dfd0b14622017886b38d027d",
+            "size": 35970,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h6-tanix-tx6.dtb": {
+            "exists": true,
+            "sha256": "20f827b0310096104c1d724cdd25843aeabb545f6656d78abd3d26c9dc3d2345",
+            "size": 36193,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-cb1-emmc.dtb": {
+            "exists": true,
+            "sha256": "025d4b573c526d780de5008fbbef659e745c3527a59d57e031a02eb04a347945",
+            "size": 44949,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-cb1-manta.dtb": {
+            "exists": true,
+            "sha256": "1cd1316d56e77a7f4ac8c7bacc2d8692c1b42f69074e014607456ddba6d74c07",
+            "size": 44696,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-cb1-sd.dtb": {
+            "exists": true,
+            "sha256": "0ad3e8cde37107bddc7a6261257818e19b880223a20509b1dc67e31559e0f07a",
+            "size": 44888,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-bigtreetech-pi.dtb": {
+            "exists": true,
+            "sha256": "935f59d754055299734e56341ad4a36936beb89ef9d653ad3bf797b8e9cb6fe3",
+            "size": 44672,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-orangepi-zero2.dtb": {
+            "exists": true,
+            "sha256": "eaa77d11ad6267292416f37af46da95f348786e5a73361c44ca1bc7956aefc99",
+            "size": 43824,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h616-x96-mate.dtb": {
+            "exists": true,
+            "sha256": "1c7c600274e243986ef2e4e03735a1800ff14f61cf12cb0d67e88699c5dfbc46",
+            "size": 42437,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-bananapi-m4-berry.dtb": {
+            "exists": true,
+            "sha256": "6e7a54157a17c1df7e48736fdf6270c7db71b4e46a3c9b1dc34785128fd4d20f",
+            "size": 44807,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-bananapi-m4-zero.dtb": {
+            "exists": true,
+            "sha256": "8455a3fca15bc8a34485cb32383f053a85d5fb115aa9e98ab2e8f5b4e24f2474",
+            "size": 43728,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-kickpi-k2b.dtb": {
+            "exists": true,
+            "sha256": "1d5e883e76caa75435b0cb756efeee78c916189faa28d902f0ba30c8c041512a",
+            "size": 43768,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-longanpi-3h.dtb": {
+            "exists": true,
+            "sha256": "94d4baaa40153935f8cce87131318f46ce8d909455e56fd5019cedb0ba45504e",
+            "size": 41827,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-orangepi-zero2w.dtb": {
+            "exists": true,
+            "sha256": "be50cf6a39355a0dcc1a0236e8ebab672543b4fa4bd16c5f14fa2712fa5a2965",
+            "size": 45599,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-orangepi-zero3.dtb": {
+            "exists": true,
+            "sha256": "bc073037168955a98e7a49249f92083aa130c53bf7910b1272df99fd223dddad",
+            "size": 43230,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h618-transpeed-8k618-t.dtb": {
+            "exists": true,
+            "sha256": "37b042d6895eeda9b7928356cad47e378aad96414160988794ecd81ad2239491",
+            "size": 41506,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h64-remix-mini-pc.dtb": {
+            "exists": true,
+            "sha256": "4739bf1f8d5355521a2d5d64dbc08b5c36a2813366cbf04a7e38363ee626a965",
+            "size": 41675,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-2024.dtb": {
+            "exists": true,
+            "sha256": "37183db07b49db85e6c0c6185001e109d38d12eec15b3eef21d04800f764e142",
+            "size": 45116,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-h.dtb": {
+            "exists": true,
+            "sha256": "81ac67a64543342764de46d1f46d50b04819250f1f8c448c7f3ae8292ad30356",
+            "size": 47415,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-plus.dtb": {
+            "exists": true,
+            "sha256": "1dbdfe535f82831ceb3bd9328996dbcc35f51c8028c984235b48d73eeb4a8d9a",
+            "size": 45910,
+            "type": "regular"
+          },
+          "/boot/dtb-6.12.58-current-sunxi64/allwinner/sun50i-h700-anbernic-rg35xx-sp.dtb": {
+            "exists": true,
+            "sha256": "d6ea01180f57195998acbbebc5ad3311c03ce7d0805cfcd175bbc1f343573658",
+            "size": 46266,
+            "type": "regular"
+          }
+        },
+        "initrd": {
+          "/boot/initrd.img-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "e7a0602ce463d9d0ad6214500e7e126bfdf04b4c04744bdcc2a188db71f5c2b9",
+            "size": 13781336,
+            "type": "regular"
+          },
+          "/boot/uInitrd": {
+            "exists": true,
+            "resolved_path": "/boot/uInitrd-6.12.58-current-sunxi64",
+            "resolved_sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "resolved_size": 13781400,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "uInitrd-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/uInitrd-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "3312ca50d9219c94a4198a7bd828d4a0bc2907108474a518e9612666ede817e0",
+            "size": 13781400,
+            "type": "regular"
+          }
+        },
+        "kernel": {
+          "/boot/Image": {
+            "exists": true,
+            "resolved_path": "/boot/vmlinuz-6.12.58-current-sunxi64",
+            "resolved_sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "resolved_size": 39059464,
+            "resolved_type": "regular",
+            "size": 31,
+            "symlink_target": "vmlinuz-6.12.58-current-sunxi64",
+            "type": "symlink"
+          },
+          "/boot/vmlinuz-6.12.58-current-sunxi64": {
+            "exists": true,
+            "sha256": "5e17e81ded838cc41003c91935c1ebf8fab429d9ecd998136ba3a08e052df3ee",
+            "size": 39059464,
+            "type": "regular"
+          }
+        }
+      },
+      "boot_directory_present": true,
+      "image": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-7-totem-core-embedded_minimal.img",
+      "image_name": "Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-7-totem-core-embedded_minimal.img",
+      "image_sha256": "69dfaa0c3454fa67a18d4e49c74f97343d4623b67826ed0cebb8eeb2e8081780",
+      "image_size": 1971322880,
+      "label": "c17_7",
+      "markers": {
+        "/etc/dadooh/c17-4-2-settings-restore-clean-image": {
+          "contains_c17_7_status_gate": false,
+          "contains_kernel_reused": true,
+          "contains_totem_core": false,
+          "exists": true,
+          "line_count": 35,
+          "sha256": "0287b84ff855d62174b8f4d1e6ee7c14bc82f0a0ec396134a4f9dea2e139fda9",
+          "size": 1258,
+          "type": "regular"
+        },
+        "/etc/dadooh/c17-7-totem-core-embedded-image": {
+          "contains_c17_7_status_gate": true,
+          "contains_kernel_reused": true,
+          "contains_totem_core": true,
+          "exists": true,
+          "line_count": 32,
+          "sha256": "d2d48c1054538cb47a4084686236180e5bdf1932b079c9640af8b641db74f53b",
+          "size": 1204,
+          "type": "regular"
+        }
+      },
+      "mbr_sha256": "8d18857f1374b32b9a065eb338a5ca91829ff236ef774cef3405f429a02eebec",
+      "partition_table": {
+        "label": "dos",
+        "partitions": [
+          {
+            "bootable": false,
+            "size": 3842048,
+            "start": 8192,
+            "type": "83"
+          }
+        ],
+        "sectorsize": 512,
+        "unit": "sectors"
+      },
+      "pre_partition_sha256_excluding_mbr": "e1d1f5a8de140145a0c0a5360330002ab7b5c7bdc1a4cc456644f2402962957a",
+      "rootfs_bytes": 1967128576,
+      "rootfs_offset": 4194304,
+      "systemd_units": {
+        "/etc/systemd/system/dadooh-visual-splash.service": {
+          "exists": true,
+          "sha256": "ff896183df53d74f134146d249766a9ce2a722f051168af9b0d519d3114bbe97",
+          "size": 584,
+          "type": "regular"
+        },
+        "/etc/systemd/system/kiosky-player.service": {
+          "exists": true,
+          "sha256": "6eb8c3fb20f40cbea0d0e42cbf143d16d52d83ae4f4e4da501f8c2ebe9244e83",
+          "size": 1015,
+          "type": "regular"
+        },
+        "/etc/systemd/system/multi-user.target.wants/dadooh-visual-splash.service": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/etc/systemd/system/multi-user.target.wants/kiosky-player.service": {
+          "exists": true,
+          "resolved_path": "/etc/systemd/system/kiosky-player.service",
+          "resolved_sha256": "6eb8c3fb20f40cbea0d0e42cbf143d16d52d83ae4f4e4da501f8c2ebe9244e83",
+          "resolved_size": 1015,
+          "resolved_type": "regular",
+          "size": 41,
+          "symlink_target": "/etc/systemd/system/kiosky-player.service",
+          "type": "symlink"
+        },
+        "/etc/systemd/system/multi-user.target.wants/totem-firstboot-gate.service": {
+          "exists": true,
+          "resolved_path": "/etc/systemd/system/totem-firstboot-gate.service",
+          "resolved_sha256": "17c536e57151430f305347486c403d0ea4c8aefcb5ad0c9cc859942daa5fac0e",
+          "resolved_size": 432,
+          "resolved_type": "regular",
+          "size": 48,
+          "symlink_target": "/etc/systemd/system/totem-firstboot-gate.service",
+          "type": "symlink"
+        },
+        "/etc/systemd/system/timers.target.wants/totem-update-agent.timer": {
+          "exists": true,
+          "resolved_path": "/etc/systemd/system/totem-update-agent.timer",
+          "resolved_sha256": "eecb83a9aadb1af772f4390c7f2e989c6688eb0a06a173ca5f03446b8372c8eb",
+          "resolved_size": 614,
+          "resolved_type": "regular",
+          "size": 44,
+          "symlink_target": "/etc/systemd/system/totem-update-agent.timer",
+          "type": "symlink"
+        },
+        "/etc/systemd/system/totem-firstboot-gate.service": {
+          "exists": true,
+          "sha256": "17c536e57151430f305347486c403d0ea4c8aefcb5ad0c9cc859942daa5fac0e",
+          "size": 432,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-open-settings.service": {
+          "exists": true,
+          "sha256": "27e9db9d22ce8bacc9b857ead9c6cd6979eab2941138bb1ae8904572510eb73c",
+          "size": 1360,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-update-agent.service": {
+          "exists": true,
+          "sha256": "df1649034fb5964c23450c3ed12b734cf2f10ae1c724ad4d8411e80670dff301",
+          "size": 1377,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-update-agent.timer": {
+          "exists": true,
+          "sha256": "eecb83a9aadb1af772f4390c7f2e989c6688eb0a06a173ca5f03446b8372c8eb",
+          "size": 614,
+          "type": "regular"
+        },
+        "/etc/systemd/system/totem-visual-tty-guard.service": {
+          "exists": true,
+          "sha256": "df201e8fc1692ab7dd0ff298e11c0098c067ec2862b582dfa37ebdceac906373",
+          "size": 537,
+          "type": "regular"
+        },
+        "/lib/systemd/system/armbian-firstrun.service": {
+          "exists": true,
+          "sha256": "cbcc1df2b226d6251493cab2e88fec22901733ac251b62d0edac8ed3424bf927",
+          "size": 451,
+          "type": "regular"
+        }
+      },
+      "totem_core_paths": {
+        "/data/core/totem/current": {
+          "exists": true,
+          "resolved_path": "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z",
+          "resolved_type": "directory",
+          "size": 49,
+          "symlink_target": "releases/c17.6-environment-input-20260514T211247Z",
+          "type": "symlink"
+        },
+        "/data/core/totem/previous": {
+          "exists": false,
+          "type": "missing"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/bin/totem_setup_visual_wizard.py": {
+          "exists": true,
+          "sha256": "286aeb22f99fc2aea7e5d7bd948009816d3facfa28865e7011e0a450525e49d2",
+          "size": 175231,
+          "type": "regular"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/bin/totem_visual_splash.py": {
+          "exists": true,
+          "sha256": "a72a52d2f6846b4e2b3c597eaef3fc5dd3d674b316cfc3ace4af8dafda7ab501",
+          "size": 24146,
+          "type": "regular"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/health/totem-core-health.json": {
+          "exists": true,
+          "sha256": "b411d087a861ab76c7c45d547e79ae5d90aba83c9b7a1999ee62a8ae7e353f8f",
+          "size": 680,
+          "type": "regular"
+        },
+        "/data/core/totem/releases/c17.6-environment-input-20260514T211247Z/manifest-fragment/totem-core.json": {
+          "exists": true,
+          "sha256": "64b9886666919658ca31e725bbd789b340b1fdd82eb8c72bdaba1ebb692b3718",
+          "size": 238,
+          "type": "regular"
+        },
+        "/data/core/totem/state.json": {
+          "exists": true,
+          "sha256": "b23ad1f836903047a22e967225a580752c85231df12a75f664a1c0c2ce57f7d0",
+          "size": 682,
+          "type": "regular"
+        },
+        "/opt/totem/bin/totem_open_settings_session.sh": {
+          "exists": true,
+          "sha256": "a210358fe0cf02bdd171d53018e9425a8d04283a7e6327c6c3756c001f792038",
+          "size": 916,
+          "type": "regular"
+        },
+        "/opt/totem/bin/totem_setup_visual_wizard.py": {
+          "exists": true,
+          "sha256": "fbbc84ebced888bc046b69711b9c56477d578358d35cae6420d9dab716bb2250",
+          "size": 1635,
+          "type": "regular"
+        },
+        "/opt/totem/bin/totem_visual_splash.py": {
+          "exists": true,
+          "sha256": "fbbc84ebced888bc046b69711b9c56477d578358d35cae6420d9dab716bb2250",
+          "size": 1635,
+          "type": "regular"
+        },
+        "/opt/totem/core-fallback/bin/totem_open_settings_session.sh": {
+          "exists": true,
+          "sha256": "2cf5671dc546cee8379ae4dbc94079f21b9373bbecc1e20556a67f8eb2960787",
+          "size": 44333,
+          "type": "regular"
+        },
+        "/opt/totem/core-fallback/bin/totem_setup_visual_wizard.py": {
+          "exists": true,
+          "sha256": "286aeb22f99fc2aea7e5d7bd948009816d3facfa28865e7011e0a450525e49d2",
+          "size": 175231,
+          "type": "regular"
+        },
+        "/opt/totem/core-fallback/bin/totem_visual_splash.py": {
+          "exists": true,
+          "sha256": "a72a52d2f6846b4e2b3c597eaef3fc5dd3d674b316cfc3ace4af8dafda7ab501",
+          "size": 24146,
+          "type": "regular"
+        }
+      },
+      "wrapper_markers": {
+        "/opt/totem/bin/totem_open_settings_session.sh": true,
+        "/opt/totem/bin/totem_setup_visual_wizard.py": true,
+        "/opt/totem/bin/totem_visual_splash.py": true
+      }
+    }
+  },
+  "initrd_changed": false,
+  "kernel_changed": false,
+  "notable_deltas": {
+    "markers_changed": true,
+    "systemd_units_changed": true,
+    "totem_core_paths_changed": true,
+    "wrapper_markers_changed": true
+  },
+  "rootfs_only_change": true,
+  "schema": "dadooh.c17_8.boot_artifact_diff.v1",
+  "uboot_changed": false
+}

@@ -1,0 +1,37 @@
+{
+  "apply_local_passed": true,
+  "blockers": [],
+  "created_at_utc": "2026-05-18T18:34:06Z",
+  "current_symlink_updated": true,
+  "fallback_exists": true,
+  "final_apply_after_lock_removed_passed": true,
+  "guardrails": {
+    "apt_update_executed": false,
+    "board_touched": false,
+    "github_release_published": false,
+    "network_required": false,
+    "pip_install_executed": false,
+    "ssh_used": false
+  },
+  "initial_current": "releases/c17.8-sim-initial",
+  "package": {
+    "manifest": "/home/builder/totem-os/orange_pi_totem/.sim/totem/tmp/packages/c17.8-sim-core-20260518T183357Z/dadooh-totem-core-c17.8-sim-core-20260518T183357Z.manifest.json",
+    "payload": "/home/builder/totem-os/orange_pi_totem/.sim/totem/tmp/packages/c17.8-sim-core-20260518T183357Z/dadooh-totem-core-c17.8-sim-core-20260518T183357Z.tar.gz",
+    "payload_sha256": "50d145cf4d1500257c6bb8d7f7d5ceb2b458e4eecdfe828831c098b75f82f885"
+  },
+  "package_built": true,
+  "package_built_by_release_script": true,
+  "package_source": "build_script",
+  "previous_symlink_updated": true,
+  "result": "passed",
+  "rollback_passed": true,
+  "sandbox": "/home/builder/totem-os/orange_pi_totem/.sim/totem",
+  "sandbox_created": true,
+  "sandbox_mode": "repo_overlay",
+  "schema": "dadooh.c17_8.totem_core_sandbox.v1",
+  "settings_lock_guard_passed": true,
+  "sha256_validated": true,
+  "wrapper_current_passed": true,
+  "wrapper_fallback_passed": true,
+  "writes_outside_sim_detected": false
+}

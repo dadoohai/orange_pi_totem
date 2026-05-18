@@ -6,6 +6,9 @@ docs/evidence/candidate-a/runs/**/raw/
 # Builder-side ephemeral logs from deploy scripts (may contain device IPs).
 .cache/
 
+# Local simulation sandboxes are reproducible runtime state.
+.sim/
+
 # App-update package outputs: keep manifest in git, but tarballs are large and
 # already authoritative on GitHub Releases.
 releases/app-updates/**/*.tar.gz

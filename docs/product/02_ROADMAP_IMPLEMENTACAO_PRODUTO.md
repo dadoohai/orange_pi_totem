@@ -4,6 +4,18 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.8: 2026-05-18. C17.7 fica oficialmente reclassificada como
+`offline_passed_hardware_unvalidated`: passou validacao offline/rootfs, mas nao
+foi validada em cartao limpo e nao libera batch, dispatch ou C18. Como nao ha
+Orange Pi disponivel, C17.8 abre uma metodologia simulation-first de QA local
+para reduzir dependencia de placa: compara artefatos de boot entre C17.4.2 e
+C17.7, cria sandbox `.sim/totem` com `/data`, `/run` e `/tmp` falsos, valida
+`totem-core` apply-local, SHA256, current/previous, rollback, wrapper fallback e
+settings-lock guard, e registra matriz do que pode ser simulado versus o que
+exige Orange Pi. O diff local classificou o risco de boot como `low` por nao
+detectar mudanca em U-Boot/kernel/DTB/initrd/boot script, mas a homologacao
+fisica segue obrigatoria antes de qualquer lote, despacho ou auditoria C18.
+
 Atualizacao C17.7: 2026-05-14. C17.7 gerou uma nova imagem privada de
 homologacao com o `totem-core` C17.6 embutido diretamente no rootfs. A imagem
 parte da C17.4.2 validada, preserva kernel/U-Boot/DTB/BSP, instala wrappers em

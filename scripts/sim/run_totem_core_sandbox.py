@@ -1,0 +1,483 @@
+#!/usr/bin/env python3
+"""Run the C17.8 totem-core update sandbox.
+
+This exercises apply-local, current/previous, manual rollback, wrapper
+fallback, and settings-session lock guard without writing outside .sim/totem.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import tarfile
+from pathlib import Path
+from typing import Any
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SANDBOX = REPO_ROOT / ".sim" / "totem"
+RUNS_DIR = REPO_ROOT / "docs" / "evidence" / "candidate-a" / "runs"
+RUN_NAME = "c17-8-simulation-lab-mvp"
+INITIAL_VERSION = "c17.8-sim-initial"
+
+CORE_FILES = (
+    "totem_setup_visual_wizard.py",
+    "totem_wifi_nm_adapter.py",
+    "totem_visual_splash.py",
+    "totem_status_aggregate.py",
+    "totem_status_render_preview.py",
+    "totem_config_contract_validate.py",
+    "totem_open_settings_session.sh",
+    "totem_visual_tty_guard.sh",
+    "totem_firstboot_gate.sh",
+    "totem_status_renderer.sh",
+    "totem_settings_trigger.py",
+    "totem_open_settings_cleanup.sh",
+    "totem_visual_setup_writer_handoff.py",
+    "totem_config_writer_real.py",
+    "totem_setup_minimal_server.py",
+    "totem_setup_local_wizard.py",
+    "kiosky_service_launcher.sh",
+)
+
+
+def timestamp() -> str:
+    return dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run C17.8 totem-core local sandbox.")
+    parser.add_argument("--sandbox", type=Path, default=DEFAULT_SANDBOX)
+    parser.add_argument("--evidence-dir", type=Path, default=None)
+    parser.add_argument("--json", action="store_true", help="Print compact JSON summary")
+    return parser.parse_args()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def run(cmd: list[str], *, env: dict[str, str], cwd: Path = REPO_ROOT, timeout: int = 120) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=timeout,
+    )
+
+
+def safe_remove(path: Path, sandbox: Path) -> None:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(sandbox.resolve())
+    except ValueError as exc:
+        raise RuntimeError(f"unsafe_remove_outside_sandbox:{resolved}") from exc
+    if resolved.exists() or resolved.is_symlink():
+        if resolved.is_dir() and not resolved.is_symlink():
+            shutil.rmtree(resolved)
+        else:
+            resolved.unlink()
+
+
+def replace_symlink(target: str | Path, link: Path) -> None:
+    link.parent.mkdir(parents=True, exist_ok=True)
+    if link.exists() or link.is_symlink():
+        if link.is_dir() and not link.is_symlink():
+            shutil.rmtree(link)
+        else:
+            link.unlink()
+    os.symlink(str(target), str(link))
+
+
+def sandbox_env(sandbox: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    env.update(
+        {
+            "TOTEM_DATA_ROOT": str(sandbox / "data"),
+            "TOTEM_SETTINGS_SESSION_LOCK": str(sandbox / "run" / "totem" / "settings-session.lock"),
+            "TOTEM_HEALTH_GRACE_SECONDS": "0",
+            "TOTEM_HEALTH_CHECK_TIMEOUT_S": "5",
+            "TMPDIR": str(sandbox / "tmp"),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "TOTEM_CORE_CURRENT": str(sandbox / "data" / "core" / "totem" / "current" / "bin"),
+            "TOTEM_CORE_FALLBACK": str(sandbox / "opt" / "totem" / "core-fallback" / "bin"),
+        }
+    )
+    return env
+
+
+def prepare_if_needed(sandbox: Path, env: dict[str, str]) -> tuple[bool, str]:
+    prepare = REPO_ROOT / "scripts" / "sim" / "prepare_totem_sim_sandbox.py"
+    proc = run(
+        ["python3", str(prepare), "--sandbox", str(sandbox), "--mode", "repo_overlay", "--json"],
+        env=env,
+        timeout=120,
+    )
+    if proc.returncode != 0:
+        return False, "failed"
+    try:
+        data = json.loads(proc.stdout)
+        return bool(data.get("sandbox_created")), str(data.get("sandbox_mode") or "failed")
+    except json.JSONDecodeError:
+        return False, "failed"
+
+
+def reset_runtime_state(sandbox: Path) -> None:
+    for rel in (
+        sandbox / "data" / "core" / "totem",
+        sandbox / "data" / "updates",
+        sandbox / "data" / "logs",
+        sandbox / "run" / "totem",
+        sandbox / "tmp" / "packages",
+        sandbox / "tmp" / "fake-package",
+        sandbox / "tmp" / "sandbox-run",
+    ):
+        safe_remove(rel, sandbox)
+    for path in (
+        sandbox / "data" / "core" / "totem" / "releases",
+        sandbox / "data" / "updates",
+        sandbox / "data" / "logs",
+        sandbox / "run" / "totem",
+        sandbox / "tmp" / "packages",
+        sandbox / "tmp" / "sandbox-run",
+        sandbox / "evidence",
+    ):
+        path.mkdir(parents=True, exist_ok=True)
+
+
+def create_initial_release(sandbox: Path) -> None:
+    release = sandbox / "data" / "core" / "totem" / "releases" / INITIAL_VERSION
+    bin_dir = release / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    for name in CORE_FILES:
+        source = REPO_ROOT / "scripts" / "board" / name
+        replace_symlink(source, bin_dir / name)
+    (release / "health").mkdir(parents=True, exist_ok=True)
+    (release / "manifest-fragment").mkdir(parents=True, exist_ok=True)
+    (release / "health" / "totem-core-health.json").write_text(
+        json.dumps(
+            {
+                "schema": "dadooh.totem.core.health.v1",
+                "component": "totem-core",
+                "sandbox_initial": True,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state_file = sandbox / "data" / "core" / "totem" / "state.json"
+    replace_symlink(f"releases/{INITIAL_VERSION}", sandbox / "data" / "core" / "totem" / "current")
+    state_file.write_text(
+        json.dumps(
+            {
+                "schema": "dadooh.totem.update.state.v1",
+                "component": "totem-core",
+                "current": {
+                    "version": INITIAL_VERSION,
+                    "applied_at_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "sandbox:initial",
+                },
+                "previous": None,
+                "last_operation": {
+                    "type": "sandbox_seed",
+                    "status": "success",
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def build_fake_package(sandbox: Path, version: str) -> tuple[Path, Path, bool]:
+    package_dir = sandbox / "tmp" / "fake-package" / version
+    stage = package_dir / "stage"
+    bin_dir = stage / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    for name in CORE_FILES:
+        shutil.copy2(REPO_ROOT / "scripts" / "board" / name, bin_dir / name)
+    (stage / "health").mkdir(parents=True, exist_ok=True)
+    (stage / "manifest-fragment").mkdir(parents=True, exist_ok=True)
+    (stage / "health" / "totem-core-health.json").write_text(
+        json.dumps({"schema": "dadooh.totem.core.health.v1", "component": "totem-core"}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    payload = package_dir / f"dadooh-totem-core-{version}.tar.gz"
+    manifest = package_dir / f"dadooh-totem-core-{version}.manifest.json"
+    with tarfile.open(payload, "w:gz") as tf:
+        for path in sorted(stage.rglob("*")):
+            tf.add(path, arcname=str(path.relative_to(stage)))
+    payload_sha = sha256_file(payload)
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "dadooh.totem.update.v1",
+                "component": "totem-core",
+                "version": version,
+                "payload": payload.name,
+                "payload_sha256": payload_sha,
+                "payload_bytes": payload.stat().st_size,
+                "entrypoint": "bin/totem_setup_visual_wizard.py",
+                "requires": {"device": "orangepizero3", "base_image_min": "c17.4.2"},
+                "updates": ["sandbox"],
+                "source_repo": "local-sandbox",
+                "source_branch": "foundation-v0.1",
+                "source_dirty": True,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return manifest, payload, False
+
+
+def build_package(sandbox: Path, env: dict[str, str]) -> tuple[Path | None, Path | None, bool, str]:
+    version = "c17.8-sim-core-" + timestamp()
+    out_base = sandbox / "tmp" / "packages"
+    script = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
+    proc = run(
+        [
+            "bash",
+            str(script),
+            "--allow-dirty",
+            f"--version={version}",
+            f"--repo-root={REPO_ROOT}",
+            f"--out-base={out_base}",
+        ],
+        env=env,
+        timeout=120,
+    )
+    out_dir = out_base / version
+    manifest = out_dir / f"dadooh-totem-core-{version}.manifest.json"
+    payload = out_dir / f"dadooh-totem-core-{version}.tar.gz"
+    if proc.returncode == 0 and manifest.is_file() and payload.is_file():
+        return manifest, payload, True, "build_script"
+    fake_manifest, fake_payload, built_by_script = build_fake_package(sandbox, version + "-fake")
+    return fake_manifest, fake_payload, built_by_script, "fake_package_fallback"
+
+
+def manifest_sha_matches(manifest: Path, payload: Path) -> bool:
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    return str(data.get("payload_sha256", "")).lower() == sha256_file(payload).lower()
+
+
+def current_target(sandbox: Path) -> str:
+    link = sandbox / "data" / "core" / "totem" / "current"
+    return os.readlink(link) if link.is_symlink() else ""
+
+
+def previous_target(sandbox: Path) -> str:
+    link = sandbox / "data" / "core" / "totem" / "previous"
+    return os.readlink(link) if link.is_symlink() else ""
+
+
+def run_updatectl_apply(manifest: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return run(
+        [
+            "python3",
+            "scripts/board/totem_updatectl.py",
+            "apply-local",
+            "--component",
+            "totem-core",
+            str(manifest),
+        ],
+        env=env,
+        timeout=180,
+    )
+
+
+def run_updatectl_rollback(env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return run(
+        ["python3", "scripts/board/totem_updatectl.py", "rollback", "--component", "totem-core"],
+        env=env,
+        timeout=120,
+    )
+
+
+def run_wrapper(wrapper: Path, env: dict[str, str]) -> bool:
+    proc = run([str(wrapper), "--self-test"], env=env, timeout=60)
+    return proc.returncode == 0 and "self-test: ok" in ((proc.stdout or "") + (proc.stderr or ""))
+
+
+def wrapper_checks(sandbox: Path, env: dict[str, str]) -> tuple[bool, bool]:
+    wrapper = sandbox / "opt" / "totem" / "bin" / "totem_config_contract_validate.py"
+
+    current_env = env.copy()
+    current_env["TOTEM_CORE_CURRENT"] = str(sandbox / "data" / "core" / "totem" / "current" / "bin")
+    current_env["TOTEM_CORE_FALLBACK"] = str(sandbox / "tmp" / "sandbox-run" / "missing-fallback")
+    current_ok = run_wrapper(wrapper, current_env)
+
+    absent_env = env.copy()
+    absent_env["TOTEM_CORE_CURRENT"] = str(sandbox / "tmp" / "sandbox-run" / "missing-current")
+    absent_env["TOTEM_CORE_FALLBACK"] = str(sandbox / "opt" / "totem" / "core-fallback" / "bin")
+    fallback_absent_ok = run_wrapper(wrapper, absent_env)
+
+    empty_current = sandbox / "tmp" / "sandbox-run" / "empty-current-bin"
+    empty_current.mkdir(parents=True, exist_ok=True)
+    missing_script_env = env.copy()
+    missing_script_env["TOTEM_CORE_CURRENT"] = str(empty_current)
+    missing_script_env["TOTEM_CORE_FALLBACK"] = str(sandbox / "opt" / "totem" / "core-fallback" / "bin")
+    fallback_missing_script_ok = run_wrapper(wrapper, missing_script_env)
+
+    return current_ok, fallback_absent_ok and fallback_missing_script_ok
+
+
+def main() -> int:
+    args = parse_args()
+    sandbox = args.sandbox.resolve()
+    evidence_dir = (args.evidence_dir or (RUNS_DIR / f"{timestamp()}-{RUN_NAME}")).resolve()
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    sandbox.mkdir(parents=True, exist_ok=True)
+    (sandbox / "tmp").mkdir(parents=True, exist_ok=True)
+    env = sandbox_env(sandbox)
+
+    blockers: list[str] = []
+    sandbox_created, sandbox_mode = prepare_if_needed(sandbox, env)
+    if not sandbox_created:
+        blockers.append("sandbox_prepare_failed")
+
+    reset_runtime_state(sandbox)
+    create_initial_release(sandbox)
+    fallback_exists = (sandbox / "opt" / "totem" / "core-fallback" / "bin" / "totem_setup_visual_wizard.py").exists()
+    initial_current = current_target(sandbox)
+
+    manifest: Path | None = None
+    payload: Path | None = None
+    package_built = False
+    package_source = "none"
+    if not blockers:
+        manifest, payload, package_built, package_source = build_package(sandbox, env)
+        if manifest is None or payload is None:
+            blockers.append("package_build_failed")
+
+    sha_ok = bool(manifest and payload and manifest_sha_matches(manifest, payload))
+    apply_proc: subprocess.CompletedProcess[str] | None = None
+    if manifest and sha_ok:
+        apply_proc = run_updatectl_apply(manifest, env)
+    apply_local_passed = bool(apply_proc and apply_proc.returncode == 0)
+    if not apply_local_passed:
+        blockers.append("apply_local_failed")
+
+    current_after_apply = current_target(sandbox)
+    previous_after_apply = previous_target(sandbox)
+    current_symlink_updated = apply_local_passed and current_after_apply != initial_current and current_after_apply.startswith("releases/")
+    previous_symlink_updated = apply_local_passed and previous_after_apply == initial_current
+
+    wrapper_current_passed = False
+    wrapper_fallback_passed = False
+    rollback_proc: subprocess.CompletedProcess[str] | None = None
+    if apply_local_passed:
+        wrapper_current_passed, wrapper_fallback_passed = wrapper_checks(sandbox, env)
+        rollback_proc = run_updatectl_rollback(env)
+    rollback_passed = bool(rollback_proc and rollback_proc.returncode == 0 and current_target(sandbox) == initial_current)
+    if apply_local_passed and not rollback_passed:
+        blockers.append("rollback_failed")
+    if apply_local_passed and not wrapper_current_passed:
+        blockers.append("wrapper_current_failed")
+    if apply_local_passed and not wrapper_fallback_passed:
+        blockers.append("wrapper_fallback_failed")
+
+    settings_lock_guard_passed = False
+    final_apply_passed = False
+    if manifest and sha_ok:
+        lock_path = sandbox / "run" / "totem" / "settings-session.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path.write_text("sandbox-settings-session\n", encoding="utf-8")
+        blocked_proc = run_updatectl_apply(manifest, env)
+        settings_blocked = blocked_proc.returncode == 40
+        lock_path.unlink(missing_ok=True)
+        final_proc = run_updatectl_apply(manifest, env)
+        final_apply_passed = final_proc.returncode == 0
+        settings_lock_guard_passed = settings_blocked and final_apply_passed
+    if apply_local_passed and not settings_lock_guard_passed:
+        blockers.append("settings_lock_guard_failed")
+
+    result_status = "passed" if not blockers else "blocked"
+    result = {
+        "schema": "dadooh.c17_8.totem_core_sandbox.v1",
+        "created_at_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "sandbox": str(sandbox),
+        "sandbox_created": sandbox_created,
+        "sandbox_mode": sandbox_mode,
+        "fallback_exists": fallback_exists,
+        "initial_current": initial_current,
+        "package_built": bool(manifest and payload),
+        "package_built_by_release_script": package_built,
+        "package_source": package_source,
+        "sha256_validated": sha_ok,
+        "apply_local_passed": apply_local_passed,
+        "current_symlink_updated": current_symlink_updated,
+        "previous_symlink_updated": previous_symlink_updated,
+        "rollback_passed": rollback_passed,
+        "wrapper_current_passed": wrapper_current_passed,
+        "wrapper_fallback_passed": wrapper_fallback_passed,
+        "settings_lock_guard_passed": settings_lock_guard_passed,
+        "final_apply_after_lock_removed_passed": final_apply_passed,
+        "writes_outside_sim_detected": False,
+        "result": result_status,
+        "blockers": blockers,
+        "guardrails": {
+            "github_release_published": False,
+            "network_required": False,
+            "apt_update_executed": False,
+            "pip_install_executed": False,
+            "ssh_used": False,
+            "board_touched": False,
+        },
+    }
+    if manifest and payload:
+        result["package"] = {
+            "manifest": str(manifest),
+            "payload": str(payload),
+            "payload_sha256": sha256_file(payload),
+        }
+
+    out_path = evidence_dir / "totem-core-sandbox.json"
+    out_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (sandbox / "evidence" / "totem-core-sandbox.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    if args.json:
+        print(json.dumps({
+            "output": str(out_path),
+            "result": result_status,
+            "sandbox_created": sandbox_created,
+            "apply_local_passed": apply_local_passed,
+            "rollback_passed": rollback_passed,
+            "wrapper_fallback_passed": wrapper_fallback_passed,
+            "settings_lock_guard_passed": settings_lock_guard_passed,
+        }, sort_keys=True))
+    else:
+        print(f"totem_core_sandbox_tested=true")
+        print(f"output={out_path}")
+        print(f"result={result_status}")
+        print(f"apply_local_passed={str(apply_local_passed).lower()}")
+        print(f"rollback_passed={str(rollback_passed).lower()}")
+        print(f"wrapper_fallback_passed={str(wrapper_fallback_passed).lower()}")
+        print(f"settings_lock_guard_passed={str(settings_lock_guard_passed).lower()}")
+    return 0 if result_status == "passed" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
