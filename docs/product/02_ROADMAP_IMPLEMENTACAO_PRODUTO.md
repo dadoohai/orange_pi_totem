@@ -4,6 +4,20 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.1: 2026-05-18. C18 foi aberto somente como auditoria local de
+player timing/sync/loop, sem Orange Pi, sem imagem, sem release e sem mudanca de
+semantica de producao do `kiosky-player`. Foram adicionados fakes de API, MPV e
+clock deterministico no repo `kiosky-player`, com 11 cenarios cobrindo duracao,
+playlist unica/multipla, cache/API, erro de midia, flags de loop do MPV e sync
+estavel. Achados principais: o parser atual usa `exposure_time_ms`, ignora
+`exposureTimeMs`/`exposureTimeSeconds`/`duration` e cai para
+`default_duration_ms`; MPV inicia com `--loop-file=inf`, entao video curto pode
+repetir dentro da janela de exposicao; playlist de um item repete por desenho.
+Classificacao: `timing_semantics_status=default_duration_overrides_api`,
+`looping_cause=mpv_loop_file`, `player_sim_confidence=high`,
+`ready_for_c18_2_fix=true`. Validacao fisica em Orange Pi continua obrigatoria
+para DRM/KMS, HDMI, decodificacao real e comportamento de placa.
+
 Atualizacao C17.8: 2026-05-18. C17.7 fica oficialmente reclassificada como
 `offline_passed_hardware_unvalidated`: passou validacao offline/rootfs, mas nao
 foi validada em cartao limpo e nao libera batch, dispatch ou C18. Como nao ha
