@@ -4,6 +4,20 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.2: 2026-05-18. C18.2 corrigiu de forma pequena a semantica de
+duracao do `kiosky-player` em simulacao local, sem Orange Pi, sem imagem e sem
+release. O contrato agora define `exposure_time_ms` como campo canonico em
+milissegundos, aceita `exposureTimeMs` em milissegundos e
+`exposureTimeSeconds` em segundos, e mantem `duration` ignorado por ambiguidade.
+Valores invalidos, zero ou negativos caem para `default_duration_ms`, mas uma
+duracao valida da API nao e sobrescrita pelo default. O player tambem passa a
+rastrear `duration_source` em itens/cache/status. A politica de video curto foi
+documentada como `repeat_to_fill_exposure`: se o video for menor que a janela de
+exposicao, a repeticao por `--loop-file=inf` e intencional e o avanco ocorre no
+fim da janela. Os testes locais passaram e C18.2 fica
+`ready_for_c18_3_release_package=true`, mas a validacao fisica em Orange Pi
+continua obrigatoria para MPV/DRM/KMS, HDMI e comportamento real de placa.
+
 Atualizacao C18.1: 2026-05-18. C18 foi aberto somente como auditoria local de
 player timing/sync/loop, sem Orange Pi, sem imagem, sem release e sem mudanca de
 semantica de producao do `kiosky-player`. Foram adicionados fakes de API, MPV e
