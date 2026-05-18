@@ -94,6 +94,10 @@ if ! [[ "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
   die "version contains unsafe characters: $VERSION"
 fi
 
+if ! [[ "$CHANNEL" =~ ^(lab|homologation|stable)$ ]]; then
+  die "unsupported channel: $CHANNEL (expected lab, homologation, or stable)"
+fi
+
 OUT_DIR="${OUT_BASE}/${VERSION}"
 PAYLOAD_NAME="dadooh-${COMPONENT}-${VERSION}.tar.gz"
 MANIFEST_NAME="dadooh-${COMPONENT}-${VERSION}.manifest.json"

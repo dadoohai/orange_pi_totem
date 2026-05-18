@@ -4,7 +4,7 @@
 # Inputs (env or args):
 #   KIOSKY_REPO   path to kiosky-player working copy (default /home/builder/kiosky-player)
 #   VERSION       explicit version string; default: homolog-<UTC timestamp>
-#   CHANNEL       homologation (default) | rc | stable
+#   CHANNEL       lab | homologation (default) | stable
 #   OUT_BASE      output base dir (default releases/app-updates)
 #   --prepare-only   inspect inputs, print plan, do not write tar/manifest
 #   --build-package  build tar.gz + manifest (default)
@@ -86,6 +86,10 @@ fi
 # version must be path-safe
 if ! [[ "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
   die "version contains unsafe characters: $VERSION"
+fi
+
+if ! [[ "$CHANNEL" =~ ^(lab|homologation|stable)$ ]]; then
+  die "unsupported channel: $CHANNEL (expected lab, homologation, or stable)"
 fi
 
 OUT_DIR="${OUT_BASE}/${VERSION}"

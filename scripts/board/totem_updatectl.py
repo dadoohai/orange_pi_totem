@@ -35,7 +35,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # ----------------------------------------------------------------------------
 # Constants
@@ -43,12 +43,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 SCHEMA_MANIFEST = "dadooh.totem.update.v1"
 SCHEMA_STATE = "dadooh.totem.update.state.v1"
+SCHEMA_POLICY = "dadooh.totem.update.policy.v1"
 DEFAULT_COMPONENT = "kiosky-player"
 COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
+UPDATE_CHANNELS = ("lab", "homologation", "stable")
+DEFAULT_DEVICE_CHANNEL = "stable"
 
 DATA_ROOT = Path(os.environ.get("TOTEM_DATA_ROOT", "/data"))
 UPDATES_DIR = DATA_ROOT / "updates"
+POLICY_FILE = UPDATES_DIR / "policy.json"
 APP_BASE = DATA_ROOT / "apps" / COMPONENT
 RELEASES_DIR = APP_BASE / "releases"
 CURRENT_LINK = APP_BASE / "current"
@@ -374,23 +378,102 @@ def _write_state(state: Dict[str, Any]) -> None:
 
 
 # ----------------------------------------------------------------------------
+# Update channel policy
+# ----------------------------------------------------------------------------
+
+def _default_policy() -> Dict[str, Any]:
+    return {
+        "schema": SCHEMA_POLICY,
+        "device_channel": DEFAULT_DEVICE_CHANNEL,
+        "allowed_components": ["kiosky-player", "totem-core"],
+        "allow_prerelease": False,
+        "allow_downgrade": False,
+        "policy_source": "default_stable",
+    }
+
+
+def _normalise_policy(raw: Any, source: str = "file") -> Dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise RuntimeError("policy must be a JSON object")
+    if raw.get("schema") != SCHEMA_POLICY:
+        raise RuntimeError(f"unsupported policy schema: {raw.get('schema')!r}")
+    channel = raw.get("device_channel")
+    if channel not in UPDATE_CHANNELS:
+        raise RuntimeError(f"unsupported device_channel: {channel!r}")
+    allowed_components = raw.get("allowed_components", ["kiosky-player", "totem-core"])
+    if not isinstance(allowed_components, list) or not allowed_components:
+        raise RuntimeError("policy allowed_components must be a non-empty list")
+    clean_components = []
+    for item in allowed_components:
+        if item not in {"kiosky-player", "totem-core"}:
+            raise RuntimeError(f"unsupported policy component: {item!r}")
+        clean_components.append(item)
+    return {
+        "schema": SCHEMA_POLICY,
+        "device_channel": channel,
+        "allowed_components": sorted(set(clean_components)),
+        "allow_prerelease": bool(raw.get("allow_prerelease", False)),
+        "allow_downgrade": bool(raw.get("allow_downgrade", False)),
+        "policy_source": source,
+    }
+
+
+def _load_update_policy() -> Dict[str, Any]:
+    if not POLICY_FILE.exists():
+        return _default_policy()
+    try:
+        return _normalise_policy(json.loads(POLICY_FILE.read_text(encoding="utf-8")))
+    except Exception as e:
+        policy = _default_policy()
+        policy["policy_source"] = "invalid_file_fail_closed_stable"
+        policy["policy_error"] = str(e)
+        log("WARN", "update_policy_invalid_fail_closed", err=str(e))
+        return policy
+
+
+def _policy_allows_manifest(policy: Dict[str, Any],
+                            component: str,
+                            manifest_channel: str) -> Tuple[bool, str]:
+    if component not in policy.get("allowed_components", []):
+        return False, "component_not_allowed_by_policy"
+    # Conservative C17.9 policy: devices accept only their exact channel.
+    if manifest_channel != policy.get("device_channel"):
+        return False, "channel_incompatible_with_device_policy"
+    return True, "ok"
+
+
+# ----------------------------------------------------------------------------
 # Manifest validation
 # ----------------------------------------------------------------------------
 
 REQUIRED_MANIFEST_FIELDS = (
     "schema", "component", "version", "payload",
-    "payload_sha256", "requires",
+    "payload_sha256", "requires", "channel",
 )
 
 
-def _validate_manifest(m: Dict[str, Any]) -> None:
+def _validate_manifest(m: Dict[str, Any],
+                       policy: Optional[Dict[str, Any]] = None,
+                       component: Optional[str] = None) -> None:
+    expected_component = component or COMPONENT
     missing = [k for k in REQUIRED_MANIFEST_FIELDS if k not in m]
     if missing:
         raise RuntimeError(f"manifest missing fields: {missing}")
     if m["schema"] != SCHEMA_MANIFEST:
         raise RuntimeError(f"unsupported manifest schema: {m['schema']!r}")
-    if m["component"] != COMPONENT:
-        raise RuntimeError(f"manifest component mismatch: {m['component']!r} != {COMPONENT!r}")
+    if m["component"] != expected_component:
+        raise RuntimeError(f"manifest component mismatch: {m['component']!r} != {expected_component!r}")
+    channel = m["channel"]
+    if channel not in UPDATE_CHANNELS:
+        raise RuntimeError(f"unsupported manifest channel: {channel!r}")
+    active_policy = policy or _load_update_policy()
+    allowed, reason = _policy_allows_manifest(active_policy, expected_component, channel)
+    if not allowed:
+        raise RuntimeError(
+            f"manifest channel rejected by policy: component={expected_component!r} "
+            f"channel={channel!r} device_channel={active_policy.get('device_channel')!r} "
+            f"reason={reason}"
+        )
     req = m.get("requires") or {}
     dev = req.get("device")
     if dev and dev != DEVICE_REQUIRED:
@@ -401,12 +484,12 @@ def _validate_manifest(m: Dict[str, Any]) -> None:
     sha = m["payload_sha256"]
     if not isinstance(sha, str) or len(sha) != 64 or not all(c in "0123456789abcdefABCDEF" for c in sha):
         raise RuntimeError("payload_sha256 must be a 64-char hex digest")
-    if COMPONENT == "kiosky-player":
+    if expected_component == "kiosky-player":
         if "entrypoint" not in m:
             raise RuntimeError("manifest missing fields: ['entrypoint']")
         if m["entrypoint"] != "kiosk.py":
             raise RuntimeError(f"unsupported entrypoint: {m['entrypoint']!r}")
-    elif COMPONENT == "totem-core":
+    elif expected_component == "totem-core":
         entrypoint = m.get("entrypoint")
         if entrypoint is not None and (
             not isinstance(entrypoint, str)
@@ -501,53 +584,150 @@ def _check_requirements_compat(new_release_dir: Path) -> Tuple[bool, str]:
 # GitHub Releases discovery
 # ----------------------------------------------------------------------------
 
-def _gh_get_latest_release(repo: str) -> Dict[str, Any]:
-    # /releases/latest returns the latest non-draft, non-prerelease.
-    # We want prereleases (homologation), so list /releases and pick the most recent
-    # whose name/tag matches our app convention or whose manifest matches the component.
+def _gh_list_releases(repo: str) -> List[Dict[str, Any]]:
     url = f"{GITHUB_API}/repos/{repo}/releases"
     data = _http_get_json(url)
     if not isinstance(data, list):
         raise RuntimeError("unexpected /releases response shape")
-    # Sort by published_at descending (GitHub already returns newest first, but be explicit)
-    def _sort_key(r: Dict[str, Any]) -> str:
-        return r.get("published_at") or r.get("created_at") or ""
-    data.sort(key=_sort_key, reverse=True)
-    for rel in data:
-        if rel.get("draft"):
-            continue
-        assets = rel.get("assets") or []
-        manifest_asset = next(
-            (a for a in assets
-             if isinstance(a, dict) and isinstance(a.get("name"), str)
-             and a["name"].startswith(f"dadooh-{COMPONENT}-")
-             and a["name"].endswith(".manifest.json")),
-            None,
-        )
-        if manifest_asset:
-            return rel
-    raise RuntimeError(
-        f"no release on {repo} has a dadooh-{COMPONENT}-*.manifest.json asset"
-    )
+    return [r for r in data if isinstance(r, dict)]
 
 
-def _gh_pick_assets(rel: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def _release_sort_key(rel: Dict[str, Any]) -> str:
+    return str(rel.get("published_at") or rel.get("created_at") or "")
+
+
+def _gh_pick_assets(rel: Dict[str, Any],
+                    component: Optional[str] = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    expected_component = component or COMPONENT
     assets = rel.get("assets") or []
     manifest = next(
         (a for a in assets
-         if a.get("name", "").startswith(f"dadooh-{COMPONENT}-")
+         if isinstance(a, dict)
+         and a.get("name", "").startswith(f"dadooh-{expected_component}-")
          and a.get("name", "").endswith(".manifest.json")),
         None,
     )
     payload = next(
         (a for a in assets
-         if a.get("name", "").startswith(f"dadooh-{COMPONENT}-")
+         if isinstance(a, dict)
+         and a.get("name", "").startswith(f"dadooh-{expected_component}-")
          and a.get("name", "").endswith(".tar.gz")),
         None,
     )
     if manifest is None or payload is None:
         raise RuntimeError(f"release {rel.get('tag_name')} missing manifest or payload asset")
     return manifest, payload
+
+
+def select_update_release(
+    releases: List[Dict[str, Any]],
+    policy: Dict[str, Any],
+    component: str,
+    manifest_loader: Optional[Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    Select the newest release matching component and device channel policy.
+
+    `manifest_loader` lets production code fetch the manifest asset. Tests can
+    embed a synthetic `manifest` dict directly in the release fixture.
+    """
+    decisions: List[Dict[str, Any]] = []
+    for rel in sorted(releases, key=_release_sort_key, reverse=True):
+        tag = str(rel.get("tag_name") or rel.get("name") or "unknown")
+        item = {
+            "tag_name": tag,
+            "draft": bool(rel.get("draft")),
+            "prerelease": bool(rel.get("prerelease")),
+            "selected": False,
+            "reason": "",
+        }
+        if rel.get("draft"):
+            item["reason"] = "draft_release_ignored"
+            decisions.append(item)
+            continue
+        if rel.get("prerelease") and not bool(policy.get("allow_prerelease")):
+            item["reason"] = "prerelease_not_allowed_by_policy"
+            decisions.append(item)
+            continue
+        try:
+            manifest_asset, payload_asset = _gh_pick_assets(rel, component)
+        except Exception:
+            item["reason"] = "missing_component_assets"
+            decisions.append(item)
+            continue
+        try:
+            manifest = manifest_loader(rel, manifest_asset) if manifest_loader else rel.get("manifest")
+            if not isinstance(manifest, dict):
+                raise RuntimeError("manifest missing or not JSON object")
+            _validate_manifest(manifest, policy=policy, component=component)
+        except Exception as e:
+            item["reason"] = "invalid_manifest_ignored"
+            item["detail"] = str(e)
+            decisions.append(item)
+            continue
+        item["selected"] = True
+        item["reason"] = "selected"
+        item["manifest_channel"] = manifest.get("channel")
+        item["manifest_version"] = manifest.get("version")
+        decisions.append(item)
+        return {
+            "release": rel,
+            "manifest": manifest,
+            "manifest_asset": manifest_asset,
+            "payload_asset": payload_asset,
+            "decisions": decisions,
+            "policy": policy,
+        }
+    return {
+        "release": None,
+        "manifest": None,
+        "manifest_asset": None,
+        "payload_asset": None,
+        "decisions": decisions,
+        "policy": policy,
+    }
+
+
+def _safe_stage_name(raw: str) -> str:
+    return "".join(c for c in raw if c.isalnum() or c in "._-") or "unknown"
+
+
+def _download_manifest_asset(asset: Dict[str, Any], dest_dir: Path) -> Path:
+    url = asset.get("browser_download_url")
+    if not isinstance(url, str) or not url:
+        raise RuntimeError("manifest asset missing browser_download_url")
+    name = _safe_stage_name(str(asset.get("name") or "manifest.json"))
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / name
+    log("INFO", "downloading_manifest", url=_safe_url(url), dest=str(dest))
+    _http_download(url, dest, expected_sha256=None)
+    return dest
+
+
+def _gh_select_latest_release(repo: str,
+                              stage_dir: Path) -> Dict[str, Any]:
+    releases = _gh_list_releases(repo)
+    policy = _load_update_policy()
+    manifest_paths: Dict[Tuple[str, str], Path] = {}
+
+    def load_manifest(rel: Dict[str, Any], asset: Dict[str, Any]) -> Dict[str, Any]:
+        tag = _safe_stage_name(str(rel.get("tag_name") or "unknown"))
+        path = _download_manifest_asset(asset, stage_dir / tag)
+        manifest_paths[(tag, str(asset.get("name") or ""))] = path
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+
+    selected = select_update_release(releases, policy, COMPONENT, load_manifest)
+    rel = selected.get("release")
+    if not isinstance(rel, dict):
+        raise RuntimeError(
+            f"no release on {repo} matched component={COMPONENT} "
+            f"device_channel={policy.get('device_channel')}"
+        )
+    tag = _safe_stage_name(str(rel.get("tag_name") or "unknown"))
+    asset = selected["manifest_asset"]
+    selected["manifest_path"] = manifest_paths.get((tag, str(asset.get("name") or "")))
+    return selected
 
 
 # ----------------------------------------------------------------------------
@@ -853,6 +1033,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
         "source_repo": manifest.get("source_repo"),
         "source_branch": manifest.get("source_branch"),
         "source_commit": manifest.get("source_commit"),
+        "channel": manifest.get("channel"),
         "payload_sha256": sha,
         "path": str(release_dir),
     }
@@ -970,6 +1151,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     configure_component(args.component)
     _ensure_dirs()
     state = _read_state()
+    policy = _load_update_policy()
     cur_link = _read_symlink_target(CURRENT_LINK)
     prev_link = _read_symlink_target(PREVIOUS_LINK)
     guard_ok, guard_reason = _totem_core_apply_guard()
@@ -978,6 +1160,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         "component": COMPONENT,
         "data_root": str(DATA_ROOT),
         "component_base": str(APP_BASE),
+        "update_policy": policy,
         "current_symlink_target": cur_link,
         "previous_symlink_target": prev_link,
         "state": state,
@@ -1023,8 +1206,9 @@ def cmd_self_test(args: argparse.Namespace) -> int:
 def cmd_check_github_latest(args: argparse.Namespace) -> int:
     configure_component(args.component)
     _ensure_dirs()
+    tmp = tempfile.TemporaryDirectory(prefix="totem-update-check-")
     try:
-        rel = _gh_get_latest_release(args.repo)
+        selected = _gh_select_latest_release(args.repo, Path(tmp.name))
     except HttpError as e:
         if e.code == 404:
             print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
@@ -1038,34 +1222,81 @@ def cmd_check_github_latest(args: argparse.Namespace) -> int:
         log("ERROR", "github_latest_failed", err=str(e))
         return 21
 
-    try:
-        m_asset, p_asset = _gh_pick_assets(rel)
-    except Exception as e:
-        log("ERROR", "github_latest_pick_assets_failed", err=str(e))
-        return 22
+    rel = selected["release"]
+    manifest = selected["manifest"]
+    m_asset = selected["manifest_asset"]
+    p_asset = selected["payload_asset"]
 
     out = {
+        "dry_run": True,
         "repo": args.repo,
         "tag_name": rel.get("tag_name"),
         "name": rel.get("name"),
         "prerelease": rel.get("prerelease"),
         "published_at": rel.get("published_at"),
+        "component": COMPONENT,
+        "manifest_channel": manifest.get("channel"),
+        "device_channel": selected["policy"].get("device_channel"),
         "manifest_asset": m_asset.get("name"),
         "manifest_url": m_asset.get("browser_download_url"),
         "payload_asset": p_asset.get("name"),
         "payload_url": p_asset.get("browser_download_url"),
         "payload_size": p_asset.get("size"),
+        "selection_decisions": selected.get("decisions", []),
     }
     print(json.dumps(out, indent=2, sort_keys=True))
     log("INFO", "github_latest_check_ok", tag=rel.get("tag_name"))
     return 0
 
 
+def cmd_list_github(args: argparse.Namespace) -> int:
+    configure_component(args.component)
+    _ensure_dirs()
+    tmp = tempfile.TemporaryDirectory(prefix="totem-update-list-")
+    try:
+        selected = _gh_select_latest_release(args.repo, Path(tmp.name))
+    except HttpError as e:
+        if e.code == 404:
+            print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
+                  else "GITHUB_RELEASE_ASSET_NOT_ACCESSIBLE_FROM_DEVICE",
+                  file=sys.stderr)
+            log("ERROR", "list_github_404", repo=args.repo)
+            return 20
+        log("ERROR", "list_github_http_error", code=e.code, reason=e.reason)
+        return 21
+    except Exception as e:
+        log("ERROR", "list_github_failed", err=str(e))
+        return 21
+
+    rel = selected.get("release")
+    manifest = selected.get("manifest") or {}
+    out = {
+        "dry_run": bool(args.dry_run),
+        "repo": args.repo,
+        "component": COMPONENT,
+        "device_channel": selected["policy"].get("device_channel"),
+        "allow_prerelease": selected["policy"].get("allow_prerelease"),
+        "selected_tag": rel.get("tag_name") if isinstance(rel, dict) else None,
+        "selected_version": manifest.get("version") if isinstance(manifest, dict) else None,
+        "selected_channel": manifest.get("channel") if isinstance(manifest, dict) else None,
+        "selection_decisions": selected.get("decisions", []),
+        "state_changed": False,
+    }
+    print(json.dumps(out, indent=2, sort_keys=True))
+    return 0 if rel else 21
+
+
 def cmd_apply_github_latest(args: argparse.Namespace) -> int:
     configure_component(args.component)
     _ensure_dirs()
+    tmp = None
+    if args.dry_run:
+        tmp = tempfile.TemporaryDirectory(prefix="totem-update-apply-dry-run-")
+        stage = Path(tmp.name)
+    else:
+        stage = INCOMING_DIR / f"github-select-{int(time.time())}"
     try:
-        rel = _gh_get_latest_release(args.repo)
+        selected = _gh_select_latest_release(args.repo, stage)
     except HttpError as e:
         if e.code == 404:
             print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
@@ -1079,26 +1310,33 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
         log("ERROR", "apply_github_latest_failed", err=str(e))
         return 21
 
-    m_asset, p_asset = _gh_pick_assets(rel)
-    m_url = m_asset["browser_download_url"]
+    rel = selected["release"]
+    manifest = selected["manifest"]
+    m_asset = selected["manifest_asset"]
+    p_asset = selected["payload_asset"]
     p_url = p_asset["browser_download_url"]
     tag = rel.get("tag_name") or "unknown"
-
-    # Stage incoming dir using tag (or filename without ext for safety)
-    safe_tag = "".join(c for c in tag if c.isalnum() or c in "._-") or "unknown"
-    stage = INCOMING_DIR / safe_tag
-    stage.mkdir(parents=True, exist_ok=True)
-    manifest_dest = stage / m_asset["name"]
-
-    log("INFO", "downloading_manifest", url=_safe_url(m_url), dest=str(manifest_dest))
-    try:
-        _http_download(m_url, manifest_dest, expected_sha256=None)
-    except HttpError as e:
-        log("ERROR", "manifest_download_http_error", code=e.code, reason=e.reason)
+    manifest_dest = selected.get("manifest_path")
+    if not isinstance(manifest_dest, Path) or not manifest_dest.is_file():
+        log("ERROR", "selected_manifest_missing_after_selection")
         return 23
-    except Exception as e:
-        log("ERROR", "manifest_download_failed", err=str(e))
-        return 23
+
+    if args.dry_run:
+        out = {
+            "dry_run": True,
+            "repo": args.repo,
+            "component": COMPONENT,
+            "tag_name": tag,
+            "prerelease": rel.get("prerelease"),
+            "manifest_channel": manifest.get("channel"),
+            "manifest_version": manifest.get("version"),
+            "device_channel": selected["policy"].get("device_channel"),
+            "payload_asset": p_asset.get("name"),
+            "state_changed": False,
+        }
+        print(json.dumps(out, indent=2, sort_keys=True))
+        log("INFO", "apply_github_latest_dry_run_ok", tag=tag)
+        return 0
 
     source = f"github:{args.repo}:{tag}"
     return _apply_from_manifest_path(manifest_dest, p_url, source)
@@ -1269,10 +1507,18 @@ def main(argv: List[str]) -> int:
     p_check.add_argument("--repo", required=True,
                          help="owner/repo, e.g. dadoohai/kiosky-player")
 
+    p_list = sub.add_parser("list-github",
+                            parents=[component_parent],
+                            help="Dry-run GitHub release selection with channel policy")
+    p_list.add_argument("--repo", required=True)
+    p_list.add_argument("--dry-run", action="store_true", default=True)
+
     p_apply = sub.add_parser("apply-github-latest",
                              parents=[component_parent],
                              help="Apply the latest release from a GitHub repo")
     p_apply.add_argument("--repo", required=True)
+    p_apply.add_argument("--dry-run", action="store_true",
+                         help="Select and validate a release without applying it")
 
     p_url = sub.add_parser("apply-manifest-url",
                            parents=[component_parent],
@@ -1292,6 +1538,7 @@ def main(argv: List[str]) -> int:
         "status": cmd_status,
         "self-test": cmd_self_test,
         "check-github-latest": cmd_check_github_latest,
+        "list-github": cmd_list_github,
         "apply-github-latest": cmd_apply_github_latest,
         "apply-manifest-url": cmd_apply_manifest_url,
         "apply-local": cmd_apply_local,

@@ -4,6 +4,22 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C17.9: 2026-05-18. C17.9 definiu governanca de canais para os
+dois componentes atualizaveis, `kiosky-player` e `totem-core`, antes de
+qualquer publicacao remota nova. A politica escolhida e conservadora: cada
+placa aceita somente o proprio canal (`lab`, `homologation` ou `stable`), com
+`stable` como default quando `/data/updates/policy.json` nao existe ou e
+invalido. O manifest `dadooh.totem.update.v1` agora exige `channel`; o updater
+filtra component/channel, ignora draft, bloqueia prerelease quando a policy nao
+permite, ignora manifests invalidos e oferece dry-run para selecao remota. Os
+testes sinteticos C17.9 passaram com 13 cenarios cobrindo stable/lab/
+homologation, prerelease, draft, manifest invalido, SHA ausente, cross-component
+e dry-run sem mutacao de state/current/previous. O sandbox `.sim/c17-9` passou
+apply-local, rollback, fallback, settings-lock guard e bloqueio por canal
+incompativel. Nenhum GitHub Release/tag foi publicado; `ready_for_c18_3_player_rc_package=true`,
+`ready_for_totem_core_publish=false` e stable release segue bloqueada ate
+homologacao fisica.
+
 Atualizacao C17.8.2: 2026-05-18. C17.8.2 empacotou as mudancas de runtime do
 wizard C17.8.1 como RC local de `totem-core` no canal `lab`, sem publicar
 GitHub Release, sem criar tag, sem placa, sem imagem e sem alterar

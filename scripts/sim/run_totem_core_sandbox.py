@@ -218,6 +218,39 @@ def create_initial_release(sandbox: Path) -> None:
     )
 
 
+def write_update_policy(sandbox: Path, channel: str) -> None:
+    policy_path = sandbox / "data" / "updates" / "policy.json"
+    policy_path.parent.mkdir(parents=True, exist_ok=True)
+    policy_path.write_text(
+        json.dumps(
+            {
+                "schema": "dadooh.totem.update.policy.v1",
+                "device_channel": channel,
+                "allowed_components": ["kiosky-player", "totem-core"],
+                "allow_prerelease": channel != "stable",
+                "allow_downgrade": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def manifest_channel(manifest: Path) -> str:
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        channel = data.get("channel")
+        return channel if channel in {"lab", "homologation", "stable"} else "stable"
+    except Exception:
+        return "stable"
+
+
+def incompatible_channel(channel: str) -> str:
+    return "stable" if channel != "stable" else "lab"
+
+
 def build_fake_package(sandbox: Path, version: str) -> tuple[Path, Path, bool]:
     package_dir = sandbox / "tmp" / "fake-package" / version
     stage = package_dir / "stage"
@@ -243,6 +276,7 @@ def build_fake_package(sandbox: Path, version: str) -> tuple[Path, Path, bool]:
                 "schema": "dadooh.totem.update.v1",
                 "component": "totem-core",
                 "version": version,
+                "channel": "lab",
                 "payload": payload.name,
                 "payload_sha256": payload_sha,
                 "payload_bytes": payload.stat().st_size,
@@ -274,6 +308,7 @@ def build_package(sandbox: Path, env: dict[str, str]) -> tuple[Path | None, Path
             f"--version={version}",
             f"--repo-root={REPO_ROOT}",
             f"--out-base={out_base}",
+            "--channel=lab",
         ],
         env=env,
         timeout=120,
@@ -402,6 +437,9 @@ def main() -> int:
             blockers.append("package_build_failed")
 
     sha_ok = bool(manifest and payload and manifest_sha_matches(manifest, payload))
+    selected_channel = manifest_channel(manifest) if manifest else "stable"
+    if manifest:
+        write_update_policy(sandbox, selected_channel)
     apply_proc: subprocess.CompletedProcess[str] | None = None
     if manifest and sha_ok:
         apply_proc = run_updatectl_apply(manifest, env)
@@ -427,6 +465,21 @@ def main() -> int:
         blockers.append("wrapper_current_failed")
     if apply_local_passed and not wrapper_fallback_passed:
         blockers.append("wrapper_fallback_failed")
+
+    channel_guard_incompatible_blocked = False
+    channel_guard_compatible_passed = apply_local_passed
+    if manifest and sha_ok:
+        current_before_channel_guard = current_target(sandbox)
+        write_update_policy(sandbox, incompatible_channel(selected_channel))
+        blocked_channel_proc = run_updatectl_apply(manifest, env)
+        current_after_channel_guard = current_target(sandbox)
+        channel_guard_incompatible_blocked = (
+            blocked_channel_proc.returncode == 41
+            and current_after_channel_guard == current_before_channel_guard
+        )
+        write_update_policy(sandbox, selected_channel)
+    if apply_local_passed and not channel_guard_incompatible_blocked:
+        blockers.append("channel_guard_failed")
 
     settings_lock_guard_passed = False
     final_apply_passed = False
@@ -470,6 +523,9 @@ def main() -> int:
         "wrapper_fallback_passed": wrapper_fallback_passed,
         "settings_lock_guard_passed": settings_lock_guard_passed,
         "apply_blocked_when_settings_active": settings_lock_guard_passed,
+        "channel_guard_compatible_passed": channel_guard_compatible_passed,
+        "channel_guard_incompatible_blocked": channel_guard_incompatible_blocked,
+        "device_channel_for_success": selected_channel,
         "final_apply_after_lock_removed_passed": final_apply_passed,
         "final_current": current_target(sandbox),
         "writes_outside_sim_detected": False,
