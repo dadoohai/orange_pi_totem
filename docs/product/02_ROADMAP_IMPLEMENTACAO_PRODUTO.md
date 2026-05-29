@@ -4,6 +4,33 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.2: 2026-05-29. Correcao em repo derivada do diagnostico
+C18.RUNTIME.1, sem placa, sem release, sem update remoto, sem imagem. A causa
+raiz provavel da repeticao/percepcao de tempo incorreto era reinicio
+desnecessario do MPV por `media_load_failed`: `load_file()` declara falha quando
+o ACK IPC do `loadfile` nao volta em `mpv_ipc_timeout_sec` (2.0s), e ao primeiro
+ACK falho o player fazia restart completo do MPV (tela preta + recarga do item),
+o que e visivel como repeticao. Como o MPV confirma `loadfile` em milissegundos,
+timeouts de 2s intermitentes em todos os assets indicam contencao transitoria do
+IPC no SoC, nao corrupcao. Fix (`kiosky-player@7ca6691`, branch `appliance-v0.1`):
+reenviar `loadfile` ate `mpv_load_soft_retries` vezes (default 2, intervalo
+`mpv_load_soft_retry_delay_sec`=0.3s) antes de escalar para o restart completo;
+estritamente mais seguro (falhas reais ainda reiniciam; caminho de ping do
+watchdog inalterado). Espelhado no harness de simulacao (FakeMPV com
+`transient_fail_counts`) com 2 cenarios novos (recupera-sem-restart e
+escalacao-preservada); regressao de falha permanente mantida. Testes: 101 OK
+(era 99). Observacao de honestidade: a placa ficou inacessivel via SSH (porta 22
+caiu) durante esta rodada, entao o `duration_sec` exato dos eventos de falha nao
+foi capturado; o soft-retry e robusto independente disso, mas a confirmacao em
+hardware (capturar `duration_sec`, medir queda na taxa de restart, e considerar
+aumentar `mpv_ipc_timeout_sec`/grace do watchdog se necessario) e o proximo
+passo. Resultado: `c18_runtime_2_status=fixed_in_repo_sim_validated`,
+`player_code_changed=true`, `duration_changed=false`, `board_touched=false`,
+`release_published=false`, `hardware_validation_required=true`,
+`ready_for_c18_3_release_package=true`. Doc tecnico em
+`docs/product/180_C18_RUNTIME_MEDIA_LOAD_FAILED_SOFT_RETRY_FIX.md`; evidencia em
+`docs/evidence/candidate-a/runs/20260529T212942Z-c18-runtime-2-media-load-failed-soft-retry-fix/`.
+
 Atualizacao C18.RUNTIME.1: 2026-05-29. Primeiro diagnostico de runtime do
 player em hardware real (Orange Pi Zero 3, imagem C17.4.2), via SSH sanitizado,
 sem release, sem update remoto, sem imagem, sem writer, sem alterar config real,
