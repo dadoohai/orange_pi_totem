@@ -4,6 +4,40 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.1: 2026-05-29. Primeiro diagnostico de runtime do
+player em hardware real (Orange Pi Zero 3, imagem C17.4.2), via SSH sanitizado,
+sem release, sem update remoto, sem imagem, sem writer, sem alterar config real,
+sem poweroff/corte seco, sem apt/pip, C12/read-only intocado. O player em
+execucao e `/opt/totem/kiosky-player/kiosk.py` == commit `307d986` (C18.1),
+assado na imagem C17.4.2 (mtime 2026-05-14); o release remoto `c71318a` em
+`/data/apps/.../current` esta staged mas nao executa. **A placa nao tem C18.2.**
+Achado principal de duracao: a API search (Habitat) retorna **somente
+`exposure_time_ms` (canonico)** para os 7 ativos deste ambiente — sem
+`exposureTimeMs`, sem `exposureTimeSeconds`, sem `duration`. O player pre-C18.2
+**honra `exposure_time_ms` corretamente**; as duracoes em runtime batem 1:1 com a
+API (3900..28100 ms). Logo **nao ha bug de duracao aqui e C18.2 nao mudaria o
+comportamento atual**. A playlist avanca de forma previsivel (88 plays / ~11
+ciclos em 15 min, `index_monotonic_wrap=true`), sem sync/resync (0 eventos;
+chrony sub-ms), sem poll na janela, sem API duplicada, sem playlist de 1 item,
+sem cache offline. A repeticao/percepcao de tempo incorreto e melhor explicada
+por **`media_load_failed` -> reinicio do MPV pelo watchdog -> recarga do item
+corrente**: 11 reinicios em ~89 min de servico, 100% `media_load_failed`,
+atingindo todos os 7 assets intermitentemente, com 0 cooldown e 1 unico MPV vivo
+(sem orfaos). A politica `--loop-file=inf`/`repeat_to_fill_exposure` existe mas
+esta inativa no conteudo atual (`clip_s ~= exposure_time_ms`, `loops=0`).
+Classificacao: `duration_issue_cause=api_returns_only_exposure_time_ms_and_player_uses_it_correctly`,
+`repeat_issue_cause=media_load_failure_retries_previous`,
+`sync_status=enabled_stable`, `mpv_loop_policy_status=loop_file_inf_present`.
+Resultado: `c18_runtime_status=diagnostic_only`,
+`board_has_c18_2_duration_fix=false`, `player_uses_api_duration=true`,
+`ready_for_c18_runtime_fix=true` (alvo: tolerancia/grace de carga do watchdog e/ou
+retomada com offset para evitar repeticao visivel),
+`ready_for_kiosky_player_release_candidate=false` (o fix da repeticao ainda nao
+existe; C18.2 e RC separado de forward-compat/observabilidade, nao resolve a
+repeticao), `hardware_validation_required=true`. Evidencia em
+`docs/evidence/candidate-a/runs/20260529T200805Z-c18-runtime-player-repetition-duration-diagnosis/`;
+detalhe tecnico em `docs/product/179_C18_RUNTIME_PLAYER_REPETITION_DURATION_DIAGNOSIS.md`.
+
 Atualizacao C17.9: 2026-05-18. C17.9 definiu governanca de canais para os
 dois componentes atualizaveis, `kiosky-player` e `totem-core`, antes de
 qualquer publicacao remota nova. A politica escolhida e conservadora: cada
