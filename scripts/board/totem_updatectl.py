@@ -27,6 +27,7 @@ import os
 import shutil
 import socket
 import ssl
+import stat
 import subprocess
 import sys
 import tarfile
@@ -320,6 +321,36 @@ def _read_symlink_target(link: Path) -> Optional[str]:
     return None
 
 
+def _make_world_traversable(root: Path) -> None:
+    """Equivalent of `chmod -R a+rX` on an extracted release tree.
+
+    The kiosky-player.service runs as a NON-root user (`totem`). A restrictive
+    umask and/or tar member perms can leave the release dir 0700 root:root, which
+    `totem` cannot traverse -- the launcher's `[ -f current/kiosk.py ]` then fails
+    and it silently falls back to /opt, so the pulled release NEVER takes effect.
+    Normalize so any service user can traverse dirs (a+x) and read files (a+r),
+    without granting write or stripping existing executable bits.
+    """
+    paths: List[Path] = [root]
+    paths.extend(sorted(root.rglob("*")))
+    for p in paths:
+        try:
+            st = p.lstat()
+        except OSError:
+            continue
+        if stat.S_ISLNK(st.st_mode):
+            continue  # perms of symlink targets are handled when visited directly
+        mode = stat.S_IMODE(st.st_mode)
+        new_mode = mode | 0o044  # a+r
+        if stat.S_ISDIR(st.st_mode) or (mode & 0o111):
+            new_mode |= 0o011    # a+x for dirs and already-executable files ('X')
+        if new_mode != mode:
+            try:
+                os.chmod(p, new_mode)
+            except OSError:
+                pass
+
+
 def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
     """Tar extraction that rejects absolute paths, '..' traversal, and non-files/dirs."""
     dest.mkdir(parents=True, exist_ok=True)
@@ -339,6 +370,8 @@ def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
                 raise RuntimeError(f"tar member escapes dest: {m.name}")
             members.append(m)
         tf.extractall(path=str(dest), members=members)
+    # Ensure the non-root service user can traverse/read the extracted release.
+    _make_world_traversable(dest)
 
 
 # ----------------------------------------------------------------------------
