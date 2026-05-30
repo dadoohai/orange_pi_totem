@@ -4,6 +4,22 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.3 (shader-cache + fecho de player-config): 2026-05-30.
+Ultimo workaround barato de player-config testado cirurgicamente
+(`--gpu-shader-cache-dir`, vo=gpu, /opt swap reversivel, 25min, placa restaurada):
+**NAO resolve** — media_load_failed 1.45% (~baseline 2.1%) e o cache **nunca
+populou** (=> o custo por loadfile do caminho GPU nao e compilacao de shader). Com
+isso, **encerram-se as tentativas baratas de player-config** (soft-retry,
+recv-timeout, send-timeout, normalizacao de resolucao, vo=drm, shader-cache — todas
+refutadas/descartadas/sem efeito). Restam **(A) imagem/userspace com HW decode
+(Cedrus/V4L2 Request)** — plano em
+`docs/product/184_C18_RUNTIME_OPTION_A_CEDRUS_HWDECODE_POC_PLAN.md` (PoC isolada,
+criterios de aceite incl. verificacao visual; **sem buildar imagem ainda**) — ou
+**(C) aceitacao temporaria (somente com decisao humana)**. R4 (perms do updater)
+**integrado em rodada propria** (merge do branch `c18-runtime-updater-perms-fix`,
+pois destrava updates futuros). Limitacao C **NAO aceita**; sem imagem/kernel/
+release/backend/config-permanente. Evidencia: run `20260530T165137Z-c18-runtime-3-gpu-shader-cache-test`.
+
 Atualizacao C18.RUNTIME.3 (VO/resolution validation): 2026-05-30. Rodada curta
 (correlacao read-only + teste cirurgico reversivel de vo=drm; placa restaurada ao
 original, sanitizado). (1) Correlacao: os media_load_failed (~2.1%, 118/5628)

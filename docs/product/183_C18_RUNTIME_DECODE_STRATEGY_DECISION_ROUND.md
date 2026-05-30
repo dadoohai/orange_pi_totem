@@ -46,11 +46,18 @@ vo=drm; placa restaurada). Evidencia:
   saturou **~3 de 4 cores (CPU 308%)** e causou **~88 reinicios do watchdog em
   15min** (MPV sem servir IPC). => **vo=drm DESCARTADO** (degrada muito).
 - **Option B (decode leve, R10):** refutado (init de decode ja <0.5s).
+- **gpu-shader-cache-dir (vo=gpu, 25min):** NAO resolve — media_load_failed 1.45%
+  (~baseline), e o cache **nunca populou** (custo por loadfile do GPU nao e
+  compilacao de shader). Evidencia: run `20260530T165137Z-...gpu-shader-cache-test`.
 
-**Sintese:** o caminho VO/GPU esta implicado, porem **nenhum workaround de
-player-config nem de conteudo e viavel**. Restam **(A) imagem/userspace com HW
-decode (Cedrus/V4L2 Request)** ou **(C) aceitacao temporaria**. Limitacao NAO
-aceita; nenhuma imagem/kernel/release iniciada.
+**Sintese (tentativas baratas de player-config ESGOTADAS):** soft-retry,
+recv-timeout, send-timeout, normalizacao de resolucao, `vo=drm` e
+`gpu-shader-cache-dir` — todas refutadas/descartadas/sem efeito. O caminho VO/GPU
+esta implicado, mas **nenhum workaround de player-config nem de conteudo e
+viavel**. Restam **(A) imagem/userspace com HW decode (Cedrus/V4L2 Request)** —
+plano detalhado em `docs/product/184_C18_RUNTIME_OPTION_A_CEDRUS_HWDECODE_POC_PLAN.md`
+— ou **(C) aceitacao temporaria (somente com decisao humana)**. Nenhuma imagem/
+kernel/release iniciada; limitacao NAO aceita.
 
 ## Opcoes a comparar
 
