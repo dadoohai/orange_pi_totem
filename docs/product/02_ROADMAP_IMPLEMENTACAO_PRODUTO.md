@@ -4,6 +4,18 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.4 (integracao do fix de perms do updater): 2026-05-30.
+Integrado em rodada propria (merge --no-ff do branch
+`c18-runtime-updater-perms-fix`) o fix do R4: o updater extraia diretorios de
+release como 0700 root:root, intransitaveis pelo usuario de servico `totem`,
+fazendo o launcher cair no /opt — logo **releases publicadas NUNCA faziam efeito**.
+Fix: `_make_world_traversable` (chmod -R a+rX) apos a extracao em
+`totem_updatectl.py`. Integrado agora porque **destrava updates remotos futuros**
+(pre-requisito para entregar qualquer fix de decode adiante). Testes: perms test
+OK + C17.9 governance 13/13 OK. Chega as placas existentes **somente via nova
+imagem** (o app-updater C14 nao se auto-atualiza); sem imagem construida aqui.
+Docs: 181. Sem release publicada, sem placa alterada.
+
 Atualizacao C18.RUNTIME.3 (shader-cache + fecho de player-config): 2026-05-30.
 Ultimo workaround barato de player-config testado cirurgicamente
 (`--gpu-shader-cache-dir`, vo=gpu, /opt swap reversivel, 25min, placa restaurada):
