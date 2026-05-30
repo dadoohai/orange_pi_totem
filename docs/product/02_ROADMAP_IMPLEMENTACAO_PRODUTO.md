@@ -4,6 +4,24 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.A1 (PoC HW decode Cedrus/V4L2 Request): 2026-05-30.
+Rodada PDCA isolada na branch `c18-runtime-a1-cedrus-hwdecode-poc` (commits
+experimentais so la; foundation recebe so o resultado). Executado (read-only na
+placa): recon do userspace + probe V4L2 pure-Python em /dev/video0. Achados:
+**kernel/Cedrus PRONTO** — decode **stateless** (Request API) com
+`OUTPUT [S264] H.264 slice` (+ S265/MG2S/VP8F) -> `CAPTURE [NV12]`, **stateless-only**
+(sem H264 stateful) — confirma por que o `h264_v4l2m2m` stateful do ffmpeg falhava.
+Userspace: ffmpeg 5.1.8 so tem o v4l2m2m **stateful** (sem v4l2-request), libva sem
+VA driver p/ Cedrus => **A_BLOCKED_STACK**. Build: placa sem toolchain, cross-host
+sem sysroot aarch64, e o caminho real exige ffmpeg downstream/patched casado com a
+uAPI + build de imagem-lab => **A_BLOCKED_BUILD** (decisao primaria). **NAO e
+C_ONLY** — A segue viavel via rodada de imagem-lab (kernel pronto); receita
+registrada (docs 184/185): ffmpeg V4L2-stateless + mpv, `totem` no grupo `video`,
+validar em placa de TESTE (hwdec engaja, media_load_failed~0, olho no HDMI, soak).
+Nada de imagem/kernel/release/backend/config; placa intocada (read-only,
+307d986/vo=gpu); **C nao aceito**. Docs: 185 + evidencia
+`20260530T174327Z-c18-runtime-a1-cedrus-hwdecode-poc`.
+
 Atualizacao C18.RUNTIME.4 (integracao do fix de perms do updater): 2026-05-30.
 Integrado em rodada propria (merge --no-ff do branch
 `c18-runtime-updater-perms-fix`) o fix do R4: o updater extraia diretorios de
