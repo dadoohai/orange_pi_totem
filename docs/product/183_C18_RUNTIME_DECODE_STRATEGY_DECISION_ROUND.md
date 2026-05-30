@@ -31,6 +31,27 @@ segue em branch propria (`c18-runtime-updater-perms-fix`), para rodada posterior
   regime estavel ~54% de 1 core (sem frame drops). O problema e o **init**, nao
   o regime.
 
+## C18.RUNTIME.3 — resultados dos testes executados (2026-05-30)
+
+Rodada curta executada (correlacao read-only + teste cirurgico reversivel de
+vo=drm; placa restaurada). Evidencia:
+`docs/evidence/candidate-a/runs/20260530T154445Z-c18-runtime-3-vo-resolution-validation/`.
+
+- **Correlacao resolucao:** falhas NAO correlacionam com mudanca de resolucao
+  (84% das falhas em troca de resolucao vs **86%** de base; taxa same-res **2.4%**
+  ~= res-change **2.1%**), nem com o clip 1080p (proporcional). => **Opcao B'
+  (normalizacao de resolucao) NAO suportada.**
+- **vo=drm (cirurgico, 15min):** derrubou media_load_failed de ~2.1% para 1.06%
+  (=> o VO/GPU **contribui** para ~metade dos stalls), MAS o render por software
+  saturou **~3 de 4 cores (CPU 308%)** e causou **~88 reinicios do watchdog em
+  15min** (MPV sem servir IPC). => **vo=drm DESCARTADO** (degrada muito).
+- **Option B (decode leve, R10):** refutado (init de decode ja <0.5s).
+
+**Sintese:** o caminho VO/GPU esta implicado, porem **nenhum workaround de
+player-config nem de conteudo e viavel**. Restam **(A) imagem/userspace com HW
+decode (Cedrus/V4L2 Request)** ou **(C) aceitacao temporaria**. Limitacao NAO
+aceita; nenhuma imagem/kernel/release iniciada.
+
 ## Opcoes a comparar
 
 ### Opcao A — Hardware decode via Cedrus / V4L2 Request API

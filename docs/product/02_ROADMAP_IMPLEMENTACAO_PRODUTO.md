@@ -4,6 +4,25 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.3 (VO/resolution validation): 2026-05-30. Rodada curta
+(correlacao read-only + teste cirurgico reversivel de vo=drm; placa restaurada ao
+original, sanitizado). (1) Correlacao: os media_load_failed (~2.1%, 118/5628)
+**NAO correlacionam** com mudanca de resolucao (84% das falhas em troca de
+resolucao vs 86% de base; taxa same-res 2.4% ~= res-change 2.1%) nem com o clip
+1080x1920 (proporcional) => **normalizacao de resolucao (B') descartada** como
+fix. (2) vo=drm (15min, /opt swap reversivel): derrubou media_load_failed para
+1.06% (o VO/GPU **contribui** ~metade dos stalls), MAS o render por software
+saturou ~3 de 4 cores (**CPU 308%**) e causou **~88 reinicios do watchdog** em
+15min (MPV sem servir IPC) => **vo=drm DESCARTADO** (degrada muito). (3) Option B
+(decode leve, R10) ja refutada (init <0.5s). Sintese: o caminho VO/GPU esta
+implicado, mas nenhum workaround de player-config (vo=drm) nem de conteudo
+(normalizacao de resolucao) e viavel. Restam **(A) imagem/userspace com HW decode
+(Cedrus/V4L2 Request)** ou **(C) aceitacao temporaria** — decisao da equipe.
+**Limitacao NAO aceita; sem imagem/kernel/release/backend; config real nao
+alterada permanentemente; placa restaurada (vo=gpu, sha 38ecb0de, estavel).** R4
+segue em branch propria `c18-runtime-updater-perms-fix`. Detalhe: doc 183 +
+evidencia `20260530T154445Z-c18-runtime-3-vo-resolution-validation`.
+
 Atualizacao C18.RUNTIME (estrategia de decode): 2026-05-30. Teste cirurgico e
 reversivel (MPV standalone off-display, `--vo=null`, sem tocar o player, sem
 imagem/kernel/release): `hwdec=v4l2m2m-copy` **NAO engata**. O decoder Cedrus
