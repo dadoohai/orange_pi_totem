@@ -4,6 +4,24 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME (estrategia de decode): 2026-05-30. Teste cirurgico e
+reversivel (MPV standalone off-display, `--vo=null`, sem tocar o player, sem
+imagem/kernel/release): `hwdec=v4l2m2m-copy` **NAO engata**. O decoder Cedrus
+existe (`/dev/video0`=cedrus, driver staging do kernel), mas o `h264_v4l2m2m` do
+ffmpeg (stateful) e incompativel com o Cedrus (stateless / V4L2 Request) ->
+"Could not find a valid device" -> fallback p/ software (mesmo como root, logo
+nao e permissao). Conclusao: **HW decode nao e um flag de config**; exige o
+caminho V4L2 Request no userspace (ffmpeg/mpv com `v4l2-request`/
+`libva-v4l2-request` ou build mais novo) + `totem` no grupo `video` = trabalho de
+imagem/build. Acao: **aberta rodada de DECISAO** (doc
+`183_C18_RUNTIME_DECODE_STRATEGY_DECISION_ROUND.md`) para comparar 3 caminhos —
+(A) HW decode via Cedrus/V4L2 Request, (B) otimizacao/transcode das midias para
+software decode, (C) aceitacao temporaria. Nesta rodada **nao** se constroi
+imagem/kernel, **nao** se publica release e **nao** se aceita a limitacao;
+decisao da equipe. R4 (perms do updater) mantido em branch propria
+`c18-runtime-updater-perms-fix` para rodada posterior. Placa nao alterada pelo
+teste. Evidencia atualizada no run `20260530T003326Z-...` e doc 182.
+
 Atualizacao C18.RUNTIME (consolidacao HW): 2026-05-30. Campanha de validacao em
 hardware (Orange Pi Zero 3 / H618, imagem C17.4.2) dos fixes de runtime do
 `kiosky-player`, cirurgica e reversivel (swap em /opt com backup+restore; sem

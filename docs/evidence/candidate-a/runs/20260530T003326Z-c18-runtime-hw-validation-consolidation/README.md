@@ -37,14 +37,22 @@ R5_stall_probe=not_io (io_max_kbps=0, no D-state); main thread busy
 R7_thread_probe=mpv_main_thread_99pct_cpu_during_stall
 R8_sendtimeout_hw=send_failed_durations=[2.001,2.002,8.007,8.008] restarts=1 (>8s stall confirmed)
 decode_query=hwdec-current=no (software h264)
+R9_hwdec_v4l2m2m_copy_test=does_NOT_engage
+R9_cedrus_present=true (/dev/video0=cedrus, kernel staging driver)
+R9_reason=ffmpeg_h264_v4l2m2m_stateful_incompatible_with_cedrus_stateless ("Could not find a valid device" -> software fallback, even as root)
+R9_implication=hw_decode_needs_v4l2_request_stack (image/build), NOT a config flag
+R9_board_modified=false (standalone off-display mpv --vo=null, self-removed)
 
 ## Disposition
 
 kiosky_player_soft_retry_reverted=true (commit e76204a; back to C18.2 baseline d4e4c4e)
 kiosky_player_runtime_fix_shipped=false
-correct_fix_direction=enable_hw_decode (kernel V4L2/cedrus + mpv hwdec) OR accept_restart
-correct_fix_layer=image_bsp_decode (NOT kiosky-player)
-next_decision=team
+hwdec_config_flag_viable=false (v4l2m2m-copy does not engage on current mpv/ffmpeg)
+correct_fix_options=[A_cedrus_v4l2_request_hw_decode(image/build), B_media_transcode_for_sw_decode(backend), C_temporary_acceptance]
+decision_round_opened=doc_183_C18_RUNTIME_DECODE_STRATEGY_DECISION_ROUND
+image_or_kernel_started=false ; limitation_accepted=false
+r4_kept_on_branch=c18-runtime-updater-perms-fix
+next_decision=team (via doc 183)
 
 ## Guardrails
 

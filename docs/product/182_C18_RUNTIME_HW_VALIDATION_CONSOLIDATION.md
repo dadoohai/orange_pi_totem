@@ -32,6 +32,26 @@ cai no /opt; backup+restore; sem release, sem imagem). Observacao por janela de
 | R7 | (probe por thread) | dado | thread `mpv` (main/playloop) a **99% CPU** durante o stall |
 | R8 | send-timeout 8s | **REFUTADO** | `sendall` bloqueou **8.0s** e ainda falhou => stall > 8s |
 | query | mpv decode props | causa raiz | **hwdec-current=no** (software H264), 576x1024@30, ~54% CPU steady |
+| R9 | hwdec=v4l2m2m-copy (off-display) | **NAO ENGATA** | Cedrus presente (/dev/video0); ffmpeg `h264_v4l2m2m` (stateful) incompativel com Cedrus stateless => "Could not find a valid device" -> software |
+
+## R9 — teste hwdec=v4l2m2m-copy (cirurgico, off-display, read-only)
+
+MPV standalone com `--vo=null` (sem DRM, sem tocar o player) sobre um arquivo em
+cache. Achados:
+- Hardware presente: `/dev/video0`=`cedrus`; dmesg
+  `cedrus 1c0e000.video-codec: Device registered as /dev/video0` (driver staging).
+- MPV 0.35.1 aceitou `--hwdec=v4l2m2m-copy` e tentou `h264_v4l2m2m`, mas:
+  `Could not find a valid device` -> `can't configure decoder` -> **Falling back
+  to software decoding** (mesmo como root => nao e permissao).
+- `hwdec=auto-copy` nem tenta v4l2m2m (so nvdec/vaapi/vdpau) => por isso a placa
+  fica em software (`hwdec-current=no`).
+- **Causa:** Cedrus e um decoder **stateless** (V4L2 Request API); o
+  `h264_v4l2m2m` do ffmpeg e o wrapper **stateful** — incompativeis. Habilitar HW
+  decode exige o caminho **V4L2 Request / Cedrus stateless** no userspace
+  (ffmpeg/mpv com `v4l2-request`/`libva-v4l2-request` ou build mais novo) — e
+  **trabalho de imagem/build, NAO um flag de config**. (Secundario: o player roda
+  como `totem`, que precisaria estar no grupo `video` para abrir `/dev/video0`.)
+- Placa **nao alterada** pelo teste (mpv standalone off-display, auto-removido).
 
 ## Causa raiz (confirmada)
 
@@ -75,17 +95,22 @@ cada ~17 min. A playlist em si avanca previsivel (179) e a duracao e respeitada.
 
 ## Fix correto (direcao; fora do kiosky-player)
 
-1. **Habilitar HW decode no H618**: o Allwinner H618 tem video engine; precisa do
-   driver V4L2/cedrus no kernel + um metodo `hwdec` que o MPV suporte (ex.:
-   `v4l2m2m-copy`). `auto` escolheu `no` -> driver/back-end ausente ou nao
-   selecionado. Com HW decode, o custo de init e o CPU steady caem muito -> o
-   spike de transicao fica abaixo da janela de IPC -> somem os restarts falsos
-   (e o flash/lingering). **Provavelmente trabalho de imagem/BSP/kernel/mpv**,
-   nao do `kiosky-player`.
-2. **Aceitar o restart** como limitacao de HW: recupera em ~1-2s, recarrega o item
+1. **Habilitar HW decode no H618 (Cedrus)**: o kernel ja tem o Cedrus
+   (`/dev/video0`, staging), mas o teste R9 mostrou que `hwdec=v4l2m2m-copy`
+   **NAO engata** com o MPV/ffmpeg atuais (Cedrus e **stateless/V4L2 Request**;
+   `h264_v4l2m2m` e stateful -> incompativel). Habilitar exige o caminho **V4L2
+   Request / Cedrus stateless** no userspace (ffmpeg/mpv com `v4l2-request` /
+   `libva-v4l2-request` ou build mais novo) + `totem` no grupo `video`. Ou seja,
+   **trabalho de imagem/build, NAO um flag de config**.
+2. **Otimizar/transcodar as midias** para software decode barato/init rapido
+   (nivel backend/conteudo Habitat) — sem mudar imagem.
+3. **Aceitar o restart** como limitacao de HW: recupera em ~1-2s, recarrega o item
    alvo em offset 0; documentar e seguir.
 
-Decisao **adiada para a equipe** (rodada pausada).
+As tres opcoes foram **abertas como rodada de decisao** no doc
+`183_C18_RUNTIME_DECODE_STRATEGY_DECISION_ROUND.md` (comparacao; sem construir
+imagem/kernel, sem aceitar a limitacao ainda). R4 (perms do updater) segue em
+branch propria `c18-runtime-updater-perms-fix`.
 
 ## Estado atual
 
