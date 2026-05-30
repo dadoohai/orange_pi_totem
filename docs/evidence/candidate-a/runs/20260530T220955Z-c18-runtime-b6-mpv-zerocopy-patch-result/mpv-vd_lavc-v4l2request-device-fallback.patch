@@ -1,0 +1,22 @@
+diff --git a/video/decode/vd_lavc.c b/video/decode/vd_lavc.c
+index 2cdbb8c..7b07254 100644
+--- a/video/decode/vd_lavc.c
++++ b/video/decode/vd_lavc.c
+@@ -463,6 +463,17 @@ static AVBufferRef *hwdec_create_dev(struct mp_filter *vd,
+             return av_buffer_ref(hw_ctx->av_device_ref);
+     }
+ 
++    /* C18.RUNTIME zero-copy fallback: the v4l2request hwdevice has no VO-typed interop
++       (VOs register their drm_prime interop under AV_HWDEVICE_TYPE_DRM, so the lookup
++       above misses). Create the device standalone; the decoder emits drm_prime frames
++       that vo_drm scans out on its overlay plane (zero-copy) and vo_null simply drops
++       (no readback). */
++    if (hwdec->lavc_device == AV_HWDEVICE_TYPE_V4L2REQUEST) {
++        AVBufferRef *ref = NULL;
++        if (av_hwdevice_ctx_create(&ref, hwdec->lavc_device, "/dev/media0", NULL, 0) >= 0)
++            return ref;
++    }
++
+     return NULL;
+ }
+ 
