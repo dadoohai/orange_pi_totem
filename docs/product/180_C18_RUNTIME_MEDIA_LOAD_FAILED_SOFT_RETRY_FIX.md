@@ -1,5 +1,14 @@
 # 180 — C18.RUNTIME.2 media_load_failed Soft-Retry Fix (kiosky-player)
 
+> **REFUTADO E REVERTIDO (ver doc 182).** A validacao em hardware mostrou que o
+> soft-retry **nao resolve** o `media_load_failed` (0 recoveries; restart mesmo
+> assim; prolonga o lingering). A causa raiz e **software decode**
+> (`hwdec-current=no`): o init de `loadfile` satura o main thread do MPV >8s e
+> bloqueia o IPC — nenhum fix de timeout/retry no player resolve. O commit
+> `kiosky-player@7ca6691` foi **revertido** em `e76204a` (de volta a baseline
+> C18.2). Este documento fica como registro historico da tentativa. Conclusao e
+> evidencia no doc **182**.
+
 Rodada de **correcao** derivada do diagnostico C18.RUNTIME.1 (doc 179). Corrige a
 causa raiz provavel da repeticao/percepcao de tempo incorreto observada pelo
 operador na placa C17.4.2: reinicios desnecessarios do MPV por

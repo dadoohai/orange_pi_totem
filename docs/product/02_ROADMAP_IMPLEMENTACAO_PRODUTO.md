@@ -4,6 +4,35 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME (consolidacao HW): 2026-05-30. Campanha de validacao em
+hardware (Orange Pi Zero 3 / H618, imagem C17.4.2) dos fixes de runtime do
+`kiosky-player`, cirurgica e reversivel (swap em /opt com backup+restore; sem
+release, sem imagem, sem config real). **Resultado: o fix do doc 180 (soft-retry)
+e mais duas tentativas foram REFUTADOS em hardware, e a causa raiz esta em outra
+camada — decodificacao de video.** Sequencia: (R3) soft-retry em HW => 0
+recoveries, restart mesmo assim; (R5) probe passivo => stall nao e I/O (sem
+D-state, io=0); (R6) recv-timeout 8s => refutado (a falha e no SEND, nao no
+recv); (R7) probe por thread => o thread `mpv` main fica a **99% CPU** durante o
+stall; (R8) send-timeout 8s => `sendall` bloqueou 8.0s e ainda falhou, logo o
+stall **excede 8s**; (query) `hwdec-current=no` => o MPV **decodifica H.264 em
+software** no A53 (576x1024@30, ~54% CPU steady, sem drops). Causa raiz: o init
+de um `loadfile` novo (decoder SW + 1o keyframe + VO DRM/KMS com rotacao 270)
+satura o main thread do MPV por tempo variavel que **pode passar de 8s**;
+enquanto isso o MPV nao le o IPC, o `sendall` do player estoura e gera
+`media_load_failed` -> restart. Nenhum fix de timeout/retry no player resolve
+(camada errada). O efeito visivel real: o item corrente congela/loopa ~2-8s + um
+flash no restart (~1-2x a cada ~17min); os restarts recarregam o item alvo em
+offset 0 (nao e repeticao de playlist) — isto **refina/enfraquece** a inferencia
+"media_load_failed -> repeat" do doc 179. A parte de **duracao** do 179 segue
+valida. Disposicao: o soft-retry foi **revertido** (`kiosky-player@e76204a`, de
+volta a baseline C18.2; 99 testes OK); doc 180 marcado como refutado; placa
+restaurada ao original `307d986` e limpa. **Fix correto = habilitar HW decode no
+H618 (driver V4L2/cedrus + mpv hwdec, nivel imagem/BSP) OU aceitar o restart** —
+decisao de equipe; rodada **pausada**. Detalhe e evidencia: doc
+`182_C18_RUNTIME_HW_VALIDATION_CONSOLIDATION.md` e
+`docs/evidence/candidate-a/runs/20260530T003326Z-c18-runtime-hw-validation-consolidation/`.
+C12/read-only intocado.
+
 Atualizacao C18.RUNTIME.2: 2026-05-29. Correcao em repo derivada do diagnostico
 C18.RUNTIME.1, sem placa, sem release, sem update remoto, sem imagem. A causa
 raiz provavel da repeticao/percepcao de tempo incorreto era reinicio

@@ -10,6 +10,17 @@ IP/MAC/DNS, sem payload bruto).
 
 Evidencia: `docs/evidence/candidate-a/runs/20260529T200805Z-c18-runtime-player-repetition-duration-diagnosis/`.
 
+> **CORRECAO (pos validacao em hardware) — ver doc 182.** A parte de **duracao**
+> deste diagnostico se confirmou (API usa `exposure_time_ms`; o player honra; C18.2
+> nao muda nada). Porem a **inferencia "media_load_failed -> repeat"** foi
+> **refinada/enfraquecida** pela validacao em hardware: os restarts recarregam o
+> item alvo em **offset 0** (nao e repeticao de playlist); o visivel e o item
+> corrente congelando/loopando ~2-8s + um flash no restart. E a **causa raiz** do
+> `media_load_failed` NAO e o player: e **software decode (hwdec-current=no)** cujo
+> init de `loadfile` satura o main thread do MPV >8s e bloqueia o IPC. Os fixes de
+> timeout no player (incl. o soft-retry do doc 180) foram **refutados**. Detalhe e
+> evidencia no doc **182**.
+
 ## TL;DR
 
 - **Duracao NAO e o problema.** A API search (Habitat) **retorna apenas
