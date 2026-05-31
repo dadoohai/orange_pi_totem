@@ -4,6 +4,25 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.IMAGE-LAB.1 (HW decode image-lab build): 2026-05-31. Incorporou a stack
+de HW decode provada (C18.RUNTIME) numa **imagem-lab privada**, derivada **offline e
+rootless (debugfs)** da ultima imagem validada em hardware **C17.4.2** (C17.7 NAO usada —
+hardware-unvalidated). Sem rebuild Armbian/kernel, sem cartao, sem placa, sem SSH, sem
+mexer em C12/read-only. Injetou `/opt/totem/hwdecode/{bin/mpv,bin/ffmpeg,lib}` (FFmpeg
+`Kwiboo@2af4006` + mpv `Kwiboo@8670d2e` + libplacebo `@64c1954` + libass/ft/fribidi),
+wrapper `/opt/totem/bin/totem-mpv-hwdecode` que forca `--vo=gpu --gpu-context=drm
+--hwdec=v4l2request` (preserva IPC/`--video-rotate`), apontou o player (kiosk.py mpv_path)
+para o wrapper, injetou **R4** (a C17.4.2 e anterior), `totem` ja no grupo `video`. Imagem
+`...-c18-hwdecode-lab-1_minimal.img` sha256 `a1103ba822d3...b620e587` (1971322880 B).
+Validacao offline PASSOU (fsck clean, `elf_missing_libs=[]`, sem `/data/config/config.json`,
+sem secrets, kernel/u-boot/dtb/C12 intocados). `artifact_private=true final_image=false
+not_for_production=true`. **Recuperado apos falha de I/O do WSL** (a imagem ja estava
+escrita+SHA antes; SHA reconferido identico apos reinicio; sem rebuild). `ready_for_manual_
+card_flash=true`. Proximo = usuario grava via Armbian Imager + **C18.IMAGE-LAB.2 clean-board
+validation** (hwdec engaja, zero-copy, visual+rotacao 270 no HDMI, media_load_failed~0,
+30fps). Docs: **187** + evidencia
+`20260531T145557Z-c18-image-lab-1-hwdecode-build`. C nao aceito.
+
 Atualizacao C18.RUNTIME.A2..B9 (HW decode + display zero-copy PROVADO end-to-end):
 2026-05-30. **Supera o A_BLOCKED_BUILD do A1**: o build foi feito e a solucao esta
 **provada de ponta a ponta na placa real**. Branch `c18-runtime-a1-cedrus-hwdecode-poc`

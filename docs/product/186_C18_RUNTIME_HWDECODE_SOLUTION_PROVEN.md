@@ -68,3 +68,11 @@ real_config_changed=false c12_readonly_touched=false client_board_deploy=false
 board_restored=true (player active, hdmi connected) ; limitation_C_accepted=false
 secrets/urls/api_key/api_url/environment_id/ssid/wifi/ip/mac/dns_published=false
 ```
+
+## Produtizado → C18.IMAGE-LAB.1
+A stack provada aqui foi incorporada numa **imagem-lab privada** (derivada offline da
+C17.4.2), com o player apontando para o mpv custom e `--hwdec=v4l2request --vo=gpu
+--gpu-context=drm`. Ver **doc 187** e a evidencia
+`docs/evidence/candidate-a/runs/20260531T145557Z-c18-image-lab-1-hwdecode-build/`.
+Imagem `...-c18-hwdecode-lab-1_minimal.img` (sha256 `a1103ba8...`); `final_image=false`,
+`not_for_production=true`. Validacao em hardware (C18.IMAGE-LAB.2 clean-board) **obrigatoria**.

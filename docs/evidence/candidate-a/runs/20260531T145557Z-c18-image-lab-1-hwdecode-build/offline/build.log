@@ -1,0 +1,8 @@
+base_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img
+out_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1_minimal.img
+copy base image -> output ...
+linux partition offset=4194304 length=1967128576
+debugfs commands: 118 (stack libs real=11 symlink=21)
+e2fsck rc=0 (clean)
+rootfs written back into output image
+sha256=a1103ba822d3bdba1b637a8e602677ee503369d85e8bc8b307d4863bf620e587

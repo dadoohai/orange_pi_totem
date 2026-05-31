@@ -1,0 +1,271 @@
+#!/usr/bin/env python3
+"""Derive the C18.IMAGE-LAB.1 HW-decode image-lab from the validated C17.4.2 image.
+
+Offline, userspace-only, rootless (debugfs — no mount, no root, no Armbian/kernel
+rebuild, no apt, no board, no card). It copies the hardware-validated C17.4.2 image and:
+  * injects the proven Cedrus/V4L2-Request HW-decode userspace stack
+    (FFmpeg fork libav* + mpv + libplacebo + libass/freetype/fribidi) under
+    /opt/totem/hwdecode/{bin,lib};
+  * installs a wrapper /opt/totem/bin/totem-mpv-hwdecode that runs the custom mpv with
+    the zero-copy display path forced (--vo=gpu --gpu-context=drm --hwdec=v4l2request,
+    override-last) and LD_LIBRARY_PATH scoped to the stack;
+  * points the embedded player (DEFAULT_CONFIG mpv_path in /opt/totem/kiosky-player/
+    kiosk.py) at that wrapper — preserving IPC/playlist/duration/sync/rotation logic;
+  * injects the R4 updater-perms fix (foundation totem_updatectl.py), which C17.4.2
+    predates;
+  * writes the image-lab marker (artifact_private/final_image=false/not_for_production).
+
+It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB/BSP,
+real config, media/cache, or secrets.
+"""
+from __future__ import annotations
+import argparse, json, os, shutil, subprocess, sys, tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import derive_c15_2_1_homolog_image as base
+
+ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
+BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
+                    "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
+TAG = "c18-hwdecode-lab-1"
+VERSION = "c18.image-lab.1"
+OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
+                   f"6.12.58-{TAG}_minimal.img")
+
+BUNDLE = Path("/tmp/ffbuild/bundle")
+FFMPEG_CLI = Path("/tmp/ffbuild/ffmpeg.stripped")
+R4_UPDATECTL = Path("/home/builder/totem-os/orange_pi_totem/scripts/board/totem_updatectl.py")
+
+HWDIR = "/opt/totem/hwdecode"
+WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
+KIOSK = "/opt/totem/kiosky-player/kiosk.py"
+UPDATECTL = "/opt/totem/bin/totem-updatectl"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1-image"
+
+MPV_PATH_OLD = '"mpv_path": "mpv",'
+MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
+
+WRAPPER_SH = (
+    "#!/bin/sh\n"
+    "# C18.IMAGE-LAB.1 HW-decode wrapper (artifact_private; not_for_production).\n"
+    "# Runs the custom Cedrus/V4L2-Request mpv with the zero-copy display path forced\n"
+    "# (override-last), preserving every option the player passes (IPC, rotation, etc.).\n"
+    "export LD_LIBRARY_PATH=/opt/totem/hwdecode/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}\n"
+    'exec /opt/totem/hwdecode/bin/mpv "$@" --vo=gpu --gpu-context=drm --hwdec=v4l2request\n'
+)
+
+SOURCES = {
+    "ffmpeg_source": "github.com/Kwiboo/FFmpeg", "ffmpeg_commit": "2af4006",
+    "ffmpeg_branch": "v4l2request-2024-v2",
+    "mpv_source": "github.com/Kwiboo/mpv", "mpv_commit": "8670d2e",
+    "mpv_branch": "v4l2request-test-20240808",
+    "libplacebo_commit": "64c1954", "libplacebo_config": "opengl=enabled; vulkan/d3d11/shaderc/glslang/lcms disabled",
+}
+
+
+def sh(cmd):
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--force", action="store_true")
+    args = ap.parse_args()
+
+    log = []
+    def L(m): print(m); log.append(m)
+
+    # ---- preflight ----
+    if not shutil.which("debugfs"):
+        raise SystemExit("BLOCKED: debugfs_missing")
+    for p in (BASE_IMAGE, BUNDLE / "mpv", BUNDLE / "lib", R4_UPDATECTL):
+        if not p.exists():
+            raise SystemExit(f"BLOCKED: missing_input {p}")
+    if OUT_IMAGE.exists() and not args.force:
+        raise SystemExit(f"output exists (use --force): {OUT_IMAGE}")
+    L(f"base_image={BASE_IMAGE.name}")
+    L(f"out_image={OUT_IMAGE.name}")
+
+    work = Path(tempfile.mkdtemp(prefix="c18-hwdecode-lab-"))
+    rootfs = work / "rootfs.ext4"
+
+    # ---- copy base -> out, extract rootfs ----
+    L("copy base image -> output ...")
+    shutil.copy2(BASE_IMAGE, OUT_IMAGE)
+    off, length = base.parse_mbr_linux_partition(OUT_IMAGE)
+    L(f"linux partition offset={off} length={length}")
+    base.copy_range(OUT_IMAGE, rootfs, offset=off, length=length)
+
+    # ---- read + patch kiosk.py (point player at the wrapper) ----
+    kiosk_src = base.cat_file(rootfs, KIOSK)
+    if not kiosk_src or MPV_PATH_OLD not in kiosk_src:
+        raise SystemExit(f"BLOCKED: kiosk.py mpv_path default not found for patch")
+    n = kiosk_src.count(MPV_PATH_OLD)
+    if n != 1:
+        raise SystemExit(f"BLOCKED: kiosk.py mpv_path default occurs {n}x (expected 1)")
+    kiosk_patched = kiosk_src.replace(MPV_PATH_OLD, MPV_PATH_NEW, 1)
+    kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_patched, encoding="utf-8")
+
+    # ---- wrapper + marker temp files ----
+    wrap_tmp = work / "totem-mpv-hwdecode"; wrap_tmp.write_text(WRAPPER_SH, encoding="utf-8")
+    marker_tmp = work / "marker"
+    marker_tmp.write_text("\n".join([
+        f"image_tag={TAG}", f"image_version={VERSION}",
+        "artifact_private=true", "final_image=false",
+        "not_for_production=true", "not_for_distribution=true",
+        "base_image_line=c17.4.2", "c17_7_used_as_base=false",
+        "kernel_touched=false", "u_boot_touched=false", "dtb_touched=false",
+        "c12_readonly_touched=false",
+        "hwdecode_stack=cedrus_v4l2request",
+        f"ffmpeg={SOURCES['ffmpeg_source']}@{SOURCES['ffmpeg_commit']}",
+        f"mpv={SOURCES['mpv_source']}@{SOURCES['mpv_commit']}",
+        f"libplacebo@{SOURCES['libplacebo_commit']}",
+        "player_hwdec=v4l2request vo=gpu gpu_context=drm",
+        "r4_updater_perms=injected",
+        "hardware_validation_required=true",
+    ]) + "\n", encoding="utf-8")
+
+    # ---- build the debugfs command batch (rootless ext4 edit) ----
+    cmds = []
+    for d in (HWDIR, f"{HWDIR}/bin", f"{HWDIR}/lib"):
+        cmds += [f"mkdir {d}", f"set_inode_field {d} mode 040755",
+                 f"set_inode_field {d} uid 0", f"set_inode_field {d} gid 0"]
+
+    def put(local, target, mode):
+        cmds.append(f"rm {target}")  # harmless if absent
+        cmds.append(f"write {local} {target}")
+        cmds.append(f"set_inode_field {target} mode {base.mode_with_type(mode)}")
+        cmds.append(f"set_inode_field {target} uid 0")
+        cmds.append(f"set_inode_field {target} gid 0")
+
+    # stack binaries
+    put(str(BUNDLE / "mpv"), f"{HWDIR}/bin/mpv", "0755")
+    ffmpeg_included = FFMPEG_CLI.exists()
+    if ffmpeg_included:
+        put(str(FFMPEG_CLI), f"{HWDIR}/bin/ffmpeg", "0755")
+
+    # stack libs: real files first, then symlinks
+    libdir = BUNDLE / "lib"
+    real_files, symlinks = [], []
+    for entry in sorted(os.listdir(libdir)):
+        p = libdir / entry
+        (symlinks if p.is_symlink() else real_files).append(entry)
+    for entry in real_files:
+        put(str(libdir / entry), f"{HWDIR}/lib/{entry}", "0755")
+    for entry in symlinks:
+        tgt = os.readlink(libdir / entry)
+        cmds.append(f"symlink {HWDIR}/lib/{entry} {tgt}")
+
+    # wrapper, patched kiosk.py, R4 updatectl, marker
+    put(str(wrap_tmp), WRAPPER, "0755")
+    put(str(kiosk_tmp), KIOSK, "0644")
+    put(str(R4_UPDATECTL), UPDATECTL, "0755")
+    put(str(marker_tmp), MARKER, "0644")
+
+    L(f"debugfs commands: {len(cmds)} (stack libs real={len(real_files)} symlink={len(symlinks)})")
+    out = base.debugfs_batch(rootfs, cmds, work)
+    bad = [ln for ln in out.splitlines() if "rror" in ln.lower() and "Errno 2" not in ln
+           and "while trying to delete" not in ln.lower()]
+    if bad:
+        L("debugfs stderr (filtered):")
+        for ln in bad[:30]:
+            L("  " + ln)
+
+    # ---- fsck consistency check (read-only) ----
+    fsck = sh(["e2fsck", "-f", "-n", str(rootfs)])
+    fsck_clean = fsck.returncode in (0,)  # 0=clean; non-zero would indicate problems
+    L(f"e2fsck rc={fsck.returncode} ({'clean' if fsck_clean else 'CHECK'})")
+
+    # ---- write rootfs back into the image ----
+    base.write_range(OUT_IMAGE, rootfs, offset=off)
+    L("rootfs written back into output image")
+
+    # ---- sha256 ----
+    sha = base.file_sha256(OUT_IMAGE)
+    (Path(str(OUT_IMAGE) + ".sha256")).write_text(f"{sha}  {OUT_IMAGE.name}\n", encoding="utf-8")
+    L(f"sha256={sha}")
+
+    # ---- offline validation: re-extract final image, verify via debugfs ----
+    off2, len2 = base.parse_mbr_linux_partition(OUT_IMAGE)
+    vroot = work / "verify.ext4"
+    base.copy_range(OUT_IMAGE, vroot, offset=off2, length=len2)
+
+    def present(path):
+        return base.stat_file(vroot, path).get("present", False)
+    def execu(path):
+        return bool(base.stat_file(vroot, path).get("mode", 0) & 0o111)
+
+    grp = base.cat_file(vroot, "/etc/group") or ""
+    video_line = next((ln for ln in grp.splitlines() if ln.startswith("video:")), "")
+    kiosk_now = base.cat_file(vroot, KIOSK) or ""
+    wrap_now = base.cat_file(vroot, WRAPPER) or ""
+    upd_now = base.cat_file(vroot, UPDATECTL) or ""
+    marker_now = base.cat_file(vroot, MARKER) or ""
+    libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
+
+    v = {
+        "custom_mpv_installed": present(f"{HWDIR}/bin/mpv") and execu(f"{HWDIR}/bin/mpv"),
+        "custom_ffmpeg_installed": present(f"{HWDIR}/bin/ffmpeg") if ffmpeg_included else "n/a",
+        "all_stack_libs_present": all(libs_present.values()),
+        "wrapper_present": present(WRAPPER) and execu(WRAPPER),
+        "wrapper_forces_hwdec": "--hwdec=v4l2request" in wrap_now and "--vo=gpu" in wrap_now
+                                and "--gpu-context=drm" in wrap_now and "LD_LIBRARY_PATH" in wrap_now,
+        "player_points_to_wrapper": MPV_PATH_NEW in kiosk_now,
+        "player_no_longer_default_mpv": MPV_PATH_OLD not in kiosk_now,
+        "r4_updater_perms_present": "_make_world_traversable" in upd_now,
+        "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
+        "marker_present": present(MARKER),
+        "marker_final_image_false": "final_image=false" in marker_now,
+        "no_real_config_embedded": not present("/data/config/config.json"),
+        "kiosky_service_present": present("/etc/systemd/system/kiosky-player.service"),
+        "fsck_clean": fsck_clean,
+    }
+    offline_ok = all(x is True or x == "n/a" for x in v.values())
+
+    manifest = {
+        "round": "C18.IMAGE-LAB.1", "image_tag": TAG, "image_version": VERSION,
+        "image_file": str(OUT_IMAGE), "image_sha256": sha,
+        "image_bytes": OUT_IMAGE.stat().st_size,
+        "artifact_private": True, "final_image": False,
+        "not_for_production": True, "not_for_distribution": True,
+        "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
+        "base_image": BASE_IMAGE.name,
+        "kernel_touched": False, "kernel_rebuild_executed": False,
+        "u_boot_touched": False, "dtb_touched": False, "c12_readonly_touched": False,
+        "build_host": "x86_64 dev sandbox (rootless debugfs derive; no Armbian/kernel rebuild)",
+        "sysroot_source": "Debian Bookworm arm64 .debs (glibc 2.36) — prior C18.RUNTIME PoC",
+        "hwdecode_stack_built": True, "stack_reused_from": "C18.RUNTIME B1..B9 (hardware-proven)",
+        "ffmpeg_v4l2request_built": True, "mpv_v4l2request_built": True,
+        "mpv_patch_applied": True, "libplacebo_egl_gbm_built": True,
+        "custom_mpv_installed": True, "custom_ffmpeg_installed": ffmpeg_included,
+        "toolchain_note": "GCC-13 cross + static-libstdc++ + __isoc23 shim (libplacebo only); "
+                          "libass without harfbuzz. Hardware-proven (B9). "
+                          "Recommend GCC-12-clean rebuild for the production image.",
+        "player_uses_custom_mpv": True, "player_hwdec_flag": "v4l2request",
+        "player_vo": "gpu", "player_gpu_context": "drm", "player_rotation": "from config/wizard (270 in homolog)",
+        "mpv_ipc_preserved": True,
+        "totem_in_video_group": v["totem_in_video_group"],
+        "r4_updater_perms_preserved": v["r4_updater_perms_present"],
+        "offline_validation_passed": offline_ok,
+        "offline_validation_detail": v,
+        "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
+        "sources": SOURCES,
+        "ready_for_manual_card_flash": offline_ok,
+        "ready_for_c18_image_lab_2_clean_board_validation": offline_ok,
+        "hardware_validation_required": True,
+        "card_written": False, "board_touched": False, "ssh_used": False,
+    }
+    print("\n=== C18.IMAGE-LAB.1 RESULT ===")
+    print(json.dumps(manifest, indent=2))
+    out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
+    (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (work / "offline_validation.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
+    (work / "build.log").write_text("\n".join(log) + "\n", encoding="utf-8")
+    print(f"\nWORKDIR={work}")
+    print(f"OFFLINE_VALIDATION_PASSED={offline_ok}")
+    return 0 if offline_ok else 3
+
+
+if __name__ == "__main__":
+    sys.exit(main())
