@@ -4,6 +4,28 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.RUNTIME.A2..B9 (HW decode + display zero-copy PROVADO end-to-end):
+2026-05-30. **Supera o A_BLOCKED_BUILD do A1**: o build foi feito e a solucao esta
+**provada de ponta a ponta na placa real**. Branch `c18-runtime-a1-cedrus-hwdecode-poc`
+(commits A2..B9 so la; foundation recebe so o resultado). Provado, com placa restaurada
+ao fim de cada teste: **A2** decoder Cedrus stateless decodifica via userspace; **B1**
+ffmpeg fork Kwiboo (hwaccel `v4l2request`) decodifica conteudo real 1080p High/CABAC/
+B-frames a **~24x menos CPU** (0,41s vs 9,98s); **B2/B3** stack userspace inteira
+cross-buildada (ffmpeg+libplacebo+mpv+libass/ft/fribidi), mpv engaja HW decode na placa;
+**B4-B6** root-cause do display (zero-copy e via vo=gpu, nao vo=drm); **B7** display
+zero-copy PROVADO no HDMI (`--vo=gpu --gpu-context=drm --hwdec=v4l2request`, interop
+`v4l2request-overlay`, frames ficam `drm_prime` sem autoconvert) **~7x menos CPU**; **B8**
+rotacao 270 + zero-copy via EGLImage/GPU (CPU baixa); **B9** soak de transicao
+**ZERO_COPY_LOADFILE_SOAK_PASSED** — 30 min, **867 transicoes `loadfile`**, ACK avg 1,5ms/
+max 13ms (vs timeout 2000ms), **0 media_load_failed**, hwdec 867/867, zero-copy mantido,
+**20,2% de um nucleo**. **Causa-raiz eliminada sob o estresse de transicao** que originava
+o bug. Falta so produtizacao (rodada de imagem-lab, GATED em acesso fisico): chroot
+Bookworm GCC-12, `kiosk.py --hwdec=v4l2request` (hoje `auto`=SW), `totem` no grupo `video`,
+build da imagem, validacao em placa de TESTE (visual/olho-humano + 30fps real + soak) +
+flash. So existe 1 placa, viva, remota => flash exige acesso fisico/reserva (nao feito).
+Nada de imagem/release/backend/config; **C nao aceito**. Docs: **186** + plano em
+`docs/evidence/candidate-a/runs/<b9>/IMAGE-LAB-PLAN.md` + evidencia A2..B9 na branch PoC.
+
 Atualizacao C18.RUNTIME.A1 (PoC HW decode Cedrus/V4L2 Request): 2026-05-30.
 Rodada PDCA isolada na branch `c18-runtime-a1-cedrus-hwdecode-poc` (commits
 experimentais so la; foundation recebe so o resultado). Executado (read-only na
