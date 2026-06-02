@@ -164,6 +164,37 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                         component="totem-core",
                     )
 
+    def test_totem_core_manifest_requires_track_features_and_supported_base(self) -> None:
+        cases = [
+            ("missing-track", lambda m: m["requires"].pop("device_track"), "requires device_track"),
+            ("missing-features", lambda m: m["requires"].pop("updater_features"), "requires updater_features"),
+            (
+                "missing-one-feature",
+                lambda m: m["requires"]["updater_features"].pop(),
+                "missing required updater features",
+            ),
+            (
+                "unsupported-base",
+                lambda m: m["requires"].__setitem__("base_image_min", "future-image-line"),
+                "base_image_min requirement not met",
+            ),
+        ]
+        for name, mutate, pattern in cases:
+            with self.subTest(name=name):
+                data = manifest(f"core-{name}")
+                mutate(data)
+                with self.assertRaisesRegex(RuntimeError, pattern):
+                    updatectl._validate_manifest(data, policy=policy(), component="totem-core")
+
+    def test_missing_policy_fails_closed_for_totem_core(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            loaded = updatectl._load_update_policy()
+            self.assertEqual(loaded["allowed_components"], [])
+            with self.assertRaisesRegex(RuntimeError, "component_not_allowed_by_policy"):
+                updatectl._validate_manifest(manifest("core-no-policy"), component="totem-core")
+
     def test_older_created_at_is_rejected_without_downgrade_permission(self) -> None:
         state = {
             "current": {

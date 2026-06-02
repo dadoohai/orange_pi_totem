@@ -18,12 +18,14 @@ novo pacote do sistema, mudanca de kernel/BSP/DTB/U-Boot, mudanca de MPV,
 mudanca de `/opt/totem/hwdecode` ou mudanca em `kiosky-player`. Se depender, o
 caminho correto e nova imagem, nao OTA.
 
-Regra de longevidade: manifests C18 novos devem declarar `requires.device_track`
-e `requires.updater_features`. Imagens antigas rejeitam track errado, feature
-desconhecida e chaves novas em `requires`. Isso e intencional: daqui a anos, se
-uma release precisar de capacidade que o updater antigo nao possui, a falha
-correta e "nao aplicar", nao aplicar parcialmente. Para destravar esse caso,
-fazer imagem nova ou uma release ponte que continue dentro do contrato antigo.
+Regra de longevidade: manifests C18 novos de `totem-core` devem declarar
+`requires.base_image_min`, `requires.device_track` e
+`requires.updater_features`. A partir da linha `1g`, o updater rejeita manifest
+sem esses campos, track errado, feature ausente/desconhecida e chaves novas em
+`requires`. Isso e intencional: daqui a anos, se uma release precisar de
+capacidade que o updater antigo nao possui, a falha correta e "nao aplicar",
+nao aplicar parcialmente. Para destravar esse caso, fazer imagem nova ou uma
+release ponte que continue dentro do contrato antigo.
 
 ## Canais
 
@@ -85,6 +87,10 @@ nova versao.
 O script de publish chama o gate C18 antes de criar a release. Publicacao que
 nao passa no gate deve ser tratada como bloqueada, nao como aviso.
 
+O payload aceito deve conter somente diretorios e arquivos regulares. Symlinks,
+hardlinks, path absoluto, `..` e entradas especiais no tar sao rejeitados pelo
+gate e pelo updater.
+
 ## Dry-run obrigatorio
 
 Antes de qualquer apply real, rodar dry-run do mesmo comando que seria aplicado:
@@ -104,6 +110,7 @@ O apply real so acontece depois do dry-run aprovado e com janela de rollback
 definida. Antes do apply, confirmar:
 
 - policy presente e canal esperado;
+- policy ausente ou invalida bloqueia apply, inclusive manual;
 - `allowed_components` restrito a `totem-core`;
 - timer de update desabilitado/inativo;
 - nenhuma sessao de settings em andamento;

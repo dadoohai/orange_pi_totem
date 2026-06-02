@@ -175,9 +175,16 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
                     parts = Path(name).parts
                     if name.startswith("/") or ".." in parts or any(part in FORBIDDEN_TAR_PARTS for part in parts):
                         bad_names.append(name)
+                bad_types = [
+                    member.name
+                    for member in tf.getmembers()
+                    if not (member.isfile() or member.isdir())
+                ]
                 checks["tar_no_path_escape_or_forbidden_entries"] = not bad_names
+                checks["tar_regular_files_and_dirs_only"] = not bad_types
                 result["tar_entry_count"] = len(names)
                 result["tar_bad_entries"] = bad_names[:20]
+                result["tar_bad_type_entries"] = bad_types[:20]
                 small_text_hits: list[str] = []
                 for member in tf.getmembers():
                     if not member.isfile() or member.size > 256 * 1024:

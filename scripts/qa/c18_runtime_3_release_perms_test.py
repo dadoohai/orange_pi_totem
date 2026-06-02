@@ -87,6 +87,26 @@ class ReleasePermsTest(unittest.TestCase):
         finally:
             os.umask(old_umask)
 
+    def test_safe_extract_rejects_symlink_and_hardlink_members(self) -> None:
+        for link_type in (tarfile.SYMTYPE, tarfile.LNKTYPE):
+            with self.subTest(link_type=link_type):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    payload = root / "payload.tar.gz"
+                    with tarfile.open(payload, "w:gz") as tf:
+                        data = b"ok\n"
+                        ti = tarfile.TarInfo("regular.txt")
+                        ti.size = len(data)
+                        tf.addfile(ti, io.BytesIO(data))
+
+                        link = tarfile.TarInfo("link")
+                        link.type = link_type
+                        link.linkname = "regular.txt"
+                        tf.addfile(link)
+
+                    with self.assertRaisesRegex(RuntimeError, "unsupported tar member type"):
+                        updatectl._safe_extract_tar(payload, root / "out")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

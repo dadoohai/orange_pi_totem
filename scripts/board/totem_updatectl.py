@@ -51,6 +51,7 @@ COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
 DEVICE_TRACK_DEFAULT = "c18-hwdecode"
 SUPPORTED_DEVICE_TRACKS = ("c18-hwdecode",)
+SUPPORTED_BASE_IMAGE_LINES = ("c17.4.2",)
 UPDATER_FEATURES = frozenset({
     "c18-freeze-kiosky-player-v1",
     "c18-rollback-reapply-v1",
@@ -396,7 +397,7 @@ def _make_world_traversable(root: Path) -> None:
 
 
 def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
-    """Tar extraction that rejects absolute paths, '..' traversal, and non-files/dirs."""
+    """Tar extraction that rejects traversal and anything except regular files/dirs."""
     dest.mkdir(parents=True, exist_ok=True)
     dest_abs = dest.resolve()
     with tarfile.open(tar_path, mode="r:gz") as tf:
@@ -404,7 +405,7 @@ def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
         for m in tf.getmembers():
             if m.name.startswith("/") or ".." in Path(m.name).parts:
                 raise RuntimeError(f"unsafe tar member rejected: {m.name}")
-            if not (m.isreg() or m.isdir() or m.issym() or m.islnk()):
+            if not (m.isreg() or m.isdir()):
                 raise RuntimeError(f"unsupported tar member type: {m.name}")
             # ensure resolved target is inside dest
             target_abs = (dest_abs / m.name).resolve()
@@ -463,10 +464,10 @@ def _default_policy() -> Dict[str, Any]:
         "schema": SCHEMA_POLICY,
         "device_channel": DEFAULT_DEVICE_CHANNEL,
         "device_track": DEVICE_TRACK_DEFAULT,
-        "allowed_components": ["kiosky-player", "totem-core"],
+        "allowed_components": [],
         "allow_prerelease": False,
         "allow_downgrade": False,
-        "policy_source": "default_stable",
+        "policy_source": "missing_policy_fail_closed",
     }
 
 
@@ -675,9 +676,13 @@ def _validate_manifest(m: Dict[str, Any],
     if dev and dev != DEVICE_REQUIRED:
         raise RuntimeError(f"manifest device requirement not met: {dev!r} != {DEVICE_REQUIRED!r}")
     base_image_min = req.get("base_image_min")
-    if base_image_min is not None and not isinstance(base_image_min, str):
+    if not isinstance(base_image_min, str) or not base_image_min:
         raise RuntimeError("manifest base_image_min requirement must be a string")
+    if expected_component == "totem-core" and base_image_min not in SUPPORTED_BASE_IMAGE_LINES:
+        raise RuntimeError(f"manifest base_image_min requirement not met: {base_image_min!r}")
     device_track = req.get("device_track")
+    if expected_component == "totem-core" and not isinstance(device_track, str):
+        raise RuntimeError("totem-core manifest requires device_track")
     if device_track is not None:
         if not isinstance(device_track, str):
             raise RuntimeError("manifest device_track requirement must be a string")
@@ -687,12 +692,18 @@ def _validate_manifest(m: Dict[str, Any],
                 f"manifest device_track requirement not met: {device_track!r} != {policy_track!r}"
             )
     updater_features = req.get("updater_features")
+    if expected_component == "totem-core" and updater_features is None:
+        raise RuntimeError("totem-core manifest requires updater_features")
     if updater_features is not None:
         if (
             not isinstance(updater_features, list)
+            or not updater_features
             or not all(isinstance(item, str) and item for item in updater_features)
         ):
             raise RuntimeError("manifest updater_features requirement must be a non-empty string list")
+        missing_features = sorted(UPDATER_FEATURES - set(updater_features))
+        if expected_component == "totem-core" and missing_features:
+            raise RuntimeError(f"totem-core manifest missing required updater features: {missing_features}")
         unsupported_features = sorted(set(updater_features) - UPDATER_FEATURES)
         if unsupported_features:
             raise RuntimeError(f"manifest requires unsupported updater features: {unsupported_features}")
