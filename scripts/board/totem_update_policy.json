@@ -1,0 +1,9 @@
+{
+  "schema": "dadooh.totem.update.policy.v1",
+  "device_channel": "homologation",
+  "allowed_components": [
+    "totem-core"
+  ],
+  "allow_prerelease": true,
+  "allow_downgrade": false
+}

@@ -13,6 +13,9 @@ rebuild, no apt, no board, no card). It copies the hardware-validated C17.4.2 im
     kiosk.py) at that wrapper — preserving IPC/playlist/duration/sync/rotation logic;
   * injects the R4 updater-perms fix (foundation totem_updatectl.py), which C17.4.2
     predates;
+  * embeds the C17.6 totem-core update layout so wizard/core fixes are OTA-ready
+    from first boot (/data/core/totem current release, /opt fallback scripts and
+    wrappers);
   * writes the image-lab marker (artifact_private/final_image=false/not_for_production).
 
 It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB/BSP,
@@ -24,12 +27,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import derive_c15_2_1_homolog_image as base
+import totem_core_image_embed
 
 ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1d"   # 1d = stability fallback: v4l2request-copy avoids panfrost dmabuf faults seen on some portrait media; C17.4 trace moved to /run.
-VERSION = "c18.image-lab.1d"
+TAG = "c18-hwdecode-lab-1e"   # 1e = 1d HW-decode stability + totem-core OTA-ready layout embedded.
+VERSION = "c18.image-lab.1e"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -41,7 +46,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1d-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1e-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -184,9 +189,13 @@ def main():
         f"libplacebo@{SOURCES['libplacebo_commit']}",
         "player_hwdec=v4l2request-copy vo=gpu gpu_context=drm",
         "r4_updater_perms=injected",
+        "totem_core_current_embedded=true",
+        f"totem_core_current_version={totem_core_image_embed.TOTEM_CORE_VERSION}",
+        "totem_update_policy_embedded=true",
+        "totem_update_timer_enabled=false",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -224,6 +233,9 @@ def main():
         put(str(libdir / entry), f"{HWDIR}/lib/{entry}", "0755")
     for entry in symlinks:
         tgt = os.readlink(libdir / entry)
+        if "/" in entry or entry.startswith(".") or os.path.isabs(tgt) or ".." in Path(tgt).parts:
+            raise SystemExit(f"BLOCKED: unsafe stack lib symlink {entry!r}->{tgt!r}")
+        cmds.append(f"rm {HWDIR}/lib/{entry}")
         cmds.append(f"symlink {HWDIR}/lib/{entry} {tgt}")
 
     # wrapper, patched kiosk.py, R4 updatectl, marker
@@ -245,6 +257,14 @@ def main():
         L("debugfs stderr (filtered):")
         for ln in bad[:30]:
             L("  " + ln)
+
+    # ---- embed OTA-ready totem-core current/fallback/wrapper layout ----
+    totem_core_embed = totem_core_image_embed.write_totem_core_embed(rootfs, work, REPO_ROOT)
+    L(
+        "totem-core embedded "
+        f"version={totem_core_embed['totem_core_current_version']} "
+        f"files={totem_core_embed['totem_core_files_embedded']}"
+    )
 
     # ---- fsck consistency check (read-only) ----
     fsck = sh(["e2fsck", "-f", "-n", str(rootfs)])
@@ -276,6 +296,7 @@ def main():
     upd_now = base.cat_file(vroot, UPDATECTL) or ""
     marker_now = base.cat_file(vroot, MARKER) or ""
     panfrost_unit_now = base.cat_file(vroot, PANFROST_UNIT) or ""
+    totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
 
     # py_compile the patched kiosk.py from the FINAL image via a clean dump (the missing
@@ -306,6 +327,7 @@ def main():
         "panfrost_unit_before_player": "Before=kiosky-player.service" in panfrost_unit_now,
         "c17_4_trace_moved_to_run": present(C18_STABILITY_DROPIN),
         "r4_updater_perms_present": "_make_world_traversable" in upd_now,
+        "totem_core_ota_ready": totem_core_validation["ok"],
         "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
         "marker_present": present(MARKER),
         "marker_final_image_false": "final_image=false" in marker_now,
@@ -316,7 +338,7 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1d", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1e", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -335,15 +357,18 @@ def main():
                           "libass without harfbuzz. Hardware-proven (B9). "
                           "Recommend GCC-12-clean rebuild for the production image.",
         "player_uses_custom_mpv": True, "player_hwdec_flag": "v4l2request-copy",
-        "player_vo": "gpu", "player_gpu_context": "drm", "player_rotation": "from config/wizard (270 in homolog)",
+        "player_vo": "gpu", "player_gpu_context": "drm", "player_rotation": "from config/wizard (0 in current C18 baseline)",
         "mpv_ipc_preserved": True,
         "totem_in_video_group": v["totem_in_video_group"],
         "r4_updater_perms_preserved": v["r4_updater_perms_present"],
+        "totem_core_ota_ready": v["totem_core_ota_ready"],
+        "totem_core_embed": totem_core_embed,
+        "totem_core_offline_validation": totem_core_validation,
         "offline_validation_passed": offline_ok,
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
@@ -356,7 +381,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1d RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1e RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

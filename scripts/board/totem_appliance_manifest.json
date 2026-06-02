@@ -608,8 +608,8 @@
     {
       "source": "scripts/board/systemd/totem-update-agent.timer",
       "target": "/etc/systemd/system/totem-update-agent.timer",
-      "enabled": true,
-      "active_expected_on_dev": "active"
+      "enabled": false,
+      "active_expected_on_dev": "inactive"
     }
   ],
   "boot_visual_guardrails": {

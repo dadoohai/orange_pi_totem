@@ -1,19 +1,22 @@
 [Unit]
-Description=Dadooh Totem Update Agent (pull-mode app updater)
+Description=Dadooh Totem Update Agent (manual core updater)
 Documentation=https://github.com/dadoohai/orange_pi_totem
 After=network-online.target
 Wants=network-online.target
 
-# We do NOT update if kiosky-player isn't even loaded — this is the appliance
-# fail-safe.  We still run when kiosky-player is failed (e.g. config_missing)
-# because in some cases the update is what fixes the failure.
+# C18 fail-safe: the unit only runs when the updater and explicit component
+# policy are present. The timer is disabled by default; operators may start
+# this oneshot manually for totem-core updates.
 ConditionPathExists=/opt/totem/bin/totem-updatectl
+ConditionPathExists=/data/updates/policy.json
 
 [Service]
 Type=oneshot
 User=root
-# In-process update with auto-rollback on failed health check.
-ExecStart=/opt/totem/bin/totem-updatectl apply-github-latest --repo dadoohai/kiosky-player
+# Manual/operator-triggered core update with rollback on failed health check.
+# The periodic timer is disabled in C18; kiosky-player/MPV/hwdecode are frozen
+# out of OTA until a C18-aware player package exists.
+ExecStart=/opt/totem/bin/totem-updatectl apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem
 
 # Best-effort isolation; /data must remain writable so updater can stage payloads.
 ProtectSystem=full

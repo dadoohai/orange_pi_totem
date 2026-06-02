@@ -50,6 +50,9 @@ COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
 UPDATE_CHANNELS = ("lab", "homologation", "stable")
 DEFAULT_DEVICE_CHANNEL = "stable"
+OTA_FROZEN_COMPONENTS = {
+    "kiosky-player": "kiosky-player OTA is frozen until a C18-aware player/hwdecode package exists",
+}
 
 DATA_ROOT = Path(os.environ.get("TOTEM_DATA_ROOT", "/data"))
 UPDATES_DIR = DATA_ROOT / "updates"
@@ -300,6 +303,30 @@ def _ensure_dirs() -> None:
         d.mkdir(parents=True, exist_ok=True)
 
 
+def _cleanup_stage(stage: Path) -> None:
+    """Best-effort cleanup of a single staging directory under INCOMING_DIR."""
+    try:
+        if not (stage.exists() or stage.is_symlink()):
+            return
+        incoming = INCOMING_DIR.resolve()
+        target = stage.resolve()
+        if target == incoming:
+            log("WARN", "stage_cleanup_refused_incoming_root", path=str(stage))
+            return
+        try:
+            target.relative_to(incoming)
+        except ValueError:
+            log("WARN", "stage_cleanup_refused_outside_incoming", path=str(stage))
+            return
+        if stage.is_symlink() or stage.is_file():
+            stage.unlink()
+        else:
+            shutil.rmtree(stage)
+        log("INFO", "stage_cleanup_ok", path=str(stage))
+    except Exception as e:
+        log("WARN", "stage_cleanup_failed", path=str(stage), err=str(e))
+
+
 def _atomic_symlink(target_rel: str, link: Path) -> None:
     """Replace `link` -> `target_rel` atomically (within the same fs)."""
     tmp = link.parent / (link.name + ".__tmp__")
@@ -473,6 +500,94 @@ def _policy_allows_manifest(policy: Dict[str, Any],
     if manifest_channel != policy.get("device_channel"):
         return False, "channel_incompatible_with_device_policy"
     return True, "ok"
+
+
+def _apply_frozen_reason(component: Optional[str] = None) -> Optional[str]:
+    return OTA_FROZEN_COMPONENTS.get(component or COMPONENT)
+
+
+def _block_frozen_apply() -> Optional[int]:
+    reason = _apply_frozen_reason()
+    if reason is None:
+        return None
+    log("WARN", "apply_blocked_component_frozen", component=COMPONENT, reason=reason)
+    print(f"component_frozen_for_ota: {COMPONENT}: {reason}", file=sys.stderr)
+    return 44
+
+
+def _state_entry_identity(entry: Any) -> Optional[Tuple[str, str]]:
+    if not isinstance(entry, dict):
+        return None
+    version = entry.get("version")
+    sha = entry.get("payload_sha256")
+    if not isinstance(version, str) or not version:
+        return None
+    if not isinstance(sha, str) or not sha:
+        return None
+    return version, sha.lower()
+
+
+def _parse_utc_timestamp(raw: Any) -> Optional[_dt.datetime]:
+    if not isinstance(raw, str) or not raw:
+        return None
+    value = raw
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        parsed = _dt.datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(_dt.timezone.utc)
+
+
+def _state_entry_created_at(entry: Any) -> Optional[_dt.datetime]:
+    if not isinstance(entry, dict):
+        return None
+    return _parse_utc_timestamp(entry.get("manifest_created_at_utc") or entry.get("created_at_utc"))
+
+
+def _candidate_created_at(manifest: Dict[str, Any]) -> Optional[_dt.datetime]:
+    return _parse_utc_timestamp(manifest.get("created_at_utc"))
+
+
+def _downgrade_policy_allows_manifest(policy: Dict[str, Any],
+                                      manifest: Dict[str, Any],
+                                      state: Dict[str, Any]) -> Tuple[bool, str]:
+    """Conservative downgrade guard using exact identity and optional manifest timestamps."""
+    allow_downgrade = bool(policy.get("allow_downgrade"))
+    version = manifest["version"]
+    sha = str(manifest["payload_sha256"]).lower()
+    candidate_identity = (version, sha)
+    current = state.get("current")
+    previous = state.get("previous")
+    current_identity = _state_entry_identity(current)
+    previous_identity = _state_entry_identity(previous)
+
+    for label, identity in (("current", current_identity), ("previous", previous_identity)):
+        if identity and identity[0] == version and identity[1] != sha:
+            return False, f"{label}_version_payload_sha256_mismatch"
+
+    if current_identity == candidate_identity:
+        return True, "same_current_identity"
+
+    if previous_identity == candidate_identity:
+        if allow_downgrade:
+            return True, "previous_identity_allowed_by_policy"
+        return False, "downgrade_not_allowed_by_policy"
+
+    current_created = _state_entry_created_at(current)
+    candidate_created = _candidate_created_at(manifest)
+    if current_created is not None:
+        if candidate_created is None:
+            if allow_downgrade:
+                return True, "candidate_missing_created_at_allowed_by_policy"
+            return False, "candidate_created_at_required_to_rule_out_downgrade"
+        if candidate_created < current_created and not allow_downgrade:
+            return False, "downgrade_not_allowed_by_policy"
+
+    return True, "not_a_known_downgrade"
 
 
 # ----------------------------------------------------------------------------
@@ -949,6 +1064,10 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     started_at = _utcnow_iso()
     log("INFO", "apply_start", source=source, manifest=str(manifest_path))
 
+    frozen_rc = _block_frozen_apply()
+    if frozen_rc is not None:
+        return frozen_rc
+
     ok, reason = _totem_core_apply_guard()
     if not ok:
         log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=reason)
@@ -960,7 +1079,14 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     except (OSError, json.JSONDecodeError) as e:
         log("ERROR", "manifest_read_failed", err=str(e))
         return 4
-    _validate_manifest(manifest)
+    policy = _load_update_policy()
+    _validate_manifest(manifest, policy=policy)
+    state = _read_state()
+    ok, reason = _downgrade_policy_allows_manifest(policy, manifest, state)
+    if not ok:
+        log("ERROR", "manifest_rejected_by_downgrade_policy", reason=reason,
+            version=manifest.get("version"))
+        return 45
 
     version = manifest["version"]
     sha = manifest["payload_sha256"].lower()
@@ -977,15 +1103,18 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
             if actual_sha.lower() != sha:
                 log("ERROR", "local_payload_sha256_mismatch",
                     expected=sha, actual=actual_sha)
+                _cleanup_stage(stage)
                 return 6
             shutil.copy2(payload_path_override, payload_local)
             n = payload_local.stat().st_size
         except Exception as e:
             log("ERROR", "local_payload_stage_failed", err=str(e))
+            _cleanup_stage(stage)
             return 6
         log("INFO", "local_payload_staged", bytes=n, sha256=actual_sha)
     elif payload_url is None:
         log("ERROR", "apply_failed_no_payload_url")
+        _cleanup_stage(stage)
         return 5
     else:
         log("INFO", "downloading_payload", version=version, dest=str(payload_local))
@@ -993,9 +1122,11 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
             n, actual_sha = _http_download(payload_url, payload_local, expected_sha256=sha)
         except HttpError as e:
             log("ERROR", "payload_download_http_error", code=e.code, reason=e.reason)
+            _cleanup_stage(stage)
             return 6
         except Exception as e:
             log("ERROR", "payload_download_failed", err=str(e))
+            _cleanup_stage(stage)
             return 6
         log("INFO", "payload_downloaded", bytes=n, sha256=actual_sha)
 
@@ -1013,6 +1144,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
             shutil.rmtree(release_dir)
         except OSError:
             pass
+        _cleanup_stage(stage)
         return 7
 
     if COMPONENT == "kiosky-player":
@@ -1024,6 +1156,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
                 shutil.rmtree(release_dir)
             except OSError:
                 pass
+            _cleanup_stage(stage)
             return 8
 
         # requirements compat
@@ -1034,6 +1167,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
                 shutil.rmtree(release_dir)
             except OSError:
                 pass
+            _cleanup_stage(stage)
             return 9
     else:
         ok, reason = _totem_core_health_check(release_dir)
@@ -1043,6 +1177,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
                 shutil.rmtree(release_dir)
             except OSError:
                 pass
+            _cleanup_stage(stage)
             return 9
 
     # Remember the existing current as "previous_before_apply" for rollback
@@ -1055,7 +1190,6 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
         _atomic_symlink(prev_target_before_apply, PREVIOUS_LINK)
 
     # Record state (preliminary)
-    state = _read_state()
     state["component"] = COMPONENT
     state["schema"] = SCHEMA_STATE
     state["previous"] = state.get("current")
@@ -1068,6 +1202,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
         "source_commit": manifest.get("source_commit"),
         "channel": manifest.get("channel"),
         "payload_sha256": sha,
+        "manifest_created_at_utc": manifest.get("created_at_utc"),
         "path": str(release_dir),
     }
     state["last_operation"] = {
@@ -1085,20 +1220,26 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
         ok, info = _service_restart()
         if not ok:
             log("ERROR", "service_restart_failed", err=info)
-            return _rollback_with_reason(state, started_at, "service_restart_failed")
+            rc = _rollback_with_reason(state, started_at, "service_restart_failed")
+            _cleanup_stage(stage)
+            return rc
 
         # Health check
         log("INFO", "health_check_starting")
         ok, info = _service_health_check()
         if not ok:
             log("ERROR", "health_check_failed", reason=info)
-            return _rollback_with_reason(state, started_at, info)
+            rc = _rollback_with_reason(state, started_at, info)
+            _cleanup_stage(stage)
+            return rc
     else:
         log("INFO", "totem_core_health_check_starting")
         ok, info = _totem_core_health_check(release_dir)
         if not ok:
             log("ERROR", "totem_core_health_check_failed", reason=info)
-            return _rollback_with_reason(state, started_at, info)
+            rc = _rollback_with_reason(state, started_at, info)
+            _cleanup_stage(stage)
+            return rc
 
     state["last_operation"] = {
         "type": "apply",
@@ -1110,6 +1251,7 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     }
     _write_state(state)
     log("INFO", "apply_success", version=version)
+    _cleanup_stage(stage)
     return 0
 
 
@@ -1321,6 +1463,10 @@ def cmd_list_github(args: argparse.Namespace) -> int:
 
 def cmd_apply_github_latest(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    if not args.dry_run:
+        frozen_rc = _block_frozen_apply()
+        if frozen_rc is not None:
+            return frozen_rc
     _ensure_dirs()
     tmp = None
     if args.dry_run:
@@ -1329,54 +1475,60 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
     else:
         stage = INCOMING_DIR / f"github-select-{int(time.time())}"
     try:
-        selected = _gh_select_latest_release(args.repo, stage)
-    except HttpError as e:
-        if e.code == 404:
-            print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
-                  else "GITHUB_RELEASE_ASSET_NOT_ACCESSIBLE_FROM_DEVICE",
-                  file=sys.stderr)
-            log("ERROR", "apply_github_latest_404", repo=args.repo)
-            return 20
-        log("ERROR", "apply_github_latest_http_error", code=e.code, reason=e.reason)
-        return 21
-    except Exception as e:
-        log("ERROR", "apply_github_latest_failed", err=str(e))
-        return 21
+        try:
+            selected = _gh_select_latest_release(args.repo, stage)
+        except HttpError as e:
+            if e.code == 404:
+                print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
+                      else "GITHUB_RELEASE_ASSET_NOT_ACCESSIBLE_FROM_DEVICE",
+                      file=sys.stderr)
+                log("ERROR", "apply_github_latest_404", repo=args.repo)
+                return 20
+            log("ERROR", "apply_github_latest_http_error", code=e.code, reason=e.reason)
+            return 21
+        except Exception as e:
+            log("ERROR", "apply_github_latest_failed", err=str(e))
+            return 21
 
-    rel = selected["release"]
-    manifest = selected["manifest"]
-    m_asset = selected["manifest_asset"]
-    p_asset = selected["payload_asset"]
-    p_url = p_asset["browser_download_url"]
-    tag = rel.get("tag_name") or "unknown"
-    manifest_dest = selected.get("manifest_path")
-    if not isinstance(manifest_dest, Path) or not manifest_dest.is_file():
-        log("ERROR", "selected_manifest_missing_after_selection")
-        return 23
+        rel = selected["release"]
+        manifest = selected["manifest"]
+        p_asset = selected["payload_asset"]
+        p_url = p_asset["browser_download_url"]
+        tag = rel.get("tag_name") or "unknown"
+        manifest_dest = selected.get("manifest_path")
+        if not isinstance(manifest_dest, Path) or not manifest_dest.is_file():
+            log("ERROR", "selected_manifest_missing_after_selection")
+            return 23
 
-    if args.dry_run:
-        out = {
-            "dry_run": True,
-            "repo": args.repo,
-            "component": COMPONENT,
-            "tag_name": tag,
-            "prerelease": rel.get("prerelease"),
-            "manifest_channel": manifest.get("channel"),
-            "manifest_version": manifest.get("version"),
-            "device_channel": selected["policy"].get("device_channel"),
-            "payload_asset": p_asset.get("name"),
-            "state_changed": False,
-        }
-        print(json.dumps(out, indent=2, sort_keys=True))
-        log("INFO", "apply_github_latest_dry_run_ok", tag=tag)
-        return 0
+        if args.dry_run:
+            out = {
+                "dry_run": True,
+                "repo": args.repo,
+                "component": COMPONENT,
+                "tag_name": tag,
+                "prerelease": rel.get("prerelease"),
+                "manifest_channel": manifest.get("channel"),
+                "manifest_version": manifest.get("version"),
+                "device_channel": selected["policy"].get("device_channel"),
+                "payload_asset": p_asset.get("name"),
+                "state_changed": False,
+            }
+            print(json.dumps(out, indent=2, sort_keys=True))
+            log("INFO", "apply_github_latest_dry_run_ok", tag=tag)
+            return 0
 
-    source = f"github:{args.repo}:{tag}"
-    return _apply_from_manifest_path(manifest_dest, p_url, source)
+        source = f"github:{args.repo}:{tag}"
+        return _apply_from_manifest_path(manifest_dest, p_url, source)
+    finally:
+        if not args.dry_run:
+            _cleanup_stage(stage)
 
 
 def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    frozen_rc = _block_frozen_apply()
+    if frozen_rc is not None:
+        return frozen_rc
     _ensure_dirs()
     manifest_url = args.url
     log("INFO", "fetching_manifest", url=_safe_url(manifest_url))
@@ -1387,25 +1539,31 @@ def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     stage.mkdir(parents=True, exist_ok=True)
     manifest_dest = stage / safe
     try:
-        _http_download(manifest_url, manifest_dest, expected_sha256=None)
-    except HttpError as e:
-        log("ERROR", "manifest_url_http_error", code=e.code, reason=e.reason)
-        return 23
-    except Exception as e:
-        log("ERROR", "manifest_url_failed", err=str(e))
-        return 23
+        try:
+            _http_download(manifest_url, manifest_dest, expected_sha256=None)
+        except HttpError as e:
+            log("ERROR", "manifest_url_http_error", code=e.code, reason=e.reason)
+            return 23
+        except Exception as e:
+            log("ERROR", "manifest_url_failed", err=str(e))
+            return 23
 
-    # Parse manifest to find payload URL: must be sibling URL of manifest
-    with manifest_dest.open("r", encoding="utf-8") as f:
-        manifest = json.load(f)
-    payload_name = manifest["payload"]
-    # construct payload URL relative to manifest URL
-    payload_url = manifest_url.rsplit("/", 1)[0] + "/" + payload_name
-    return _apply_from_manifest_path(manifest_dest, payload_url, f"manifest_url:{_safe_url(manifest_url)}")
+        # Parse manifest to find payload URL: must be sibling URL of manifest
+        with manifest_dest.open("r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        payload_name = manifest["payload"]
+        # construct payload URL relative to manifest URL
+        payload_url = manifest_url.rsplit("/", 1)[0] + "/" + payload_name
+        return _apply_from_manifest_path(manifest_dest, payload_url, f"manifest_url:{_safe_url(manifest_url)}")
+    finally:
+        _cleanup_stage(stage)
 
 
 def cmd_apply_local(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    frozen_rc = _block_frozen_apply()
+    if frozen_rc is not None:
+        return frozen_rc
     _ensure_dirs()
     manifest_path = Path(args.manifest)
     if not manifest_path.is_file() or manifest_path.is_symlink():
@@ -1489,23 +1647,30 @@ def cmd_rollback(args: argparse.Namespace) -> int:
             return 32
 
     state = _read_state()
+    previous_entry = state.get("previous")
+    rolled_to_version = prev_link.split("/")[-1] if "/" in prev_link else prev_link
     state["previous"] = state.get("current")
-    # The "previous" entry in state should reflect the prior current; reconstruct lazily
-    state["current"] = {
-        "version": prev_link.split("/")[-1] if "/" in prev_link else prev_link,
-        "applied_at_utc": _utcnow_iso(),
-        "via": "manual_rollback",
-    }
+    if isinstance(previous_entry, dict) and previous_entry.get("version") == rolled_to_version:
+        state["current"] = previous_entry
+        state["current"]["via"] = "manual_rollback"
+        state["current"]["applied_at_utc"] = _utcnow_iso()
+    else:
+        # The "previous" entry in state should reflect the prior current; reconstruct lazily
+        state["current"] = {
+            "version": rolled_to_version,
+            "applied_at_utc": _utcnow_iso(),
+            "via": "manual_rollback",
+        }
     state["last_operation"] = {
         "type": "rollback",
         "status": "success",
         "started_at_utc": started_at,
         "finished_at_utc": _utcnow_iso(),
-        "rolled_back_to": state["current"]["version"],
+        "rolled_back_to": rolled_to_version,
     }
     _write_state(state)
-    log("INFO", "manual_rollback_ok", rolled_to=state["current"]["version"])
-    print(json.dumps({"rollback": "ok", "rolled_to": state["current"]["version"]},
+    log("INFO", "manual_rollback_ok", rolled_to=rolled_to_version)
+    print(json.dumps({"rollback": "ok", "rolled_to": rolled_to_version},
                      indent=2, sort_keys=True))
     return 0
 

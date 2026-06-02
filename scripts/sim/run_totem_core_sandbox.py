@@ -218,7 +218,7 @@ def create_initial_release(sandbox: Path) -> None:
     )
 
 
-def write_update_policy(sandbox: Path, channel: str) -> None:
+def write_update_policy(sandbox: Path, channel: str, *, allow_downgrade: bool = False) -> None:
     policy_path = sandbox / "data" / "updates" / "policy.json"
     policy_path.parent.mkdir(parents=True, exist_ok=True)
     policy_path.write_text(
@@ -228,7 +228,7 @@ def write_update_policy(sandbox: Path, channel: str) -> None:
                 "device_channel": channel,
                 "allowed_components": ["kiosky-player", "totem-core"],
                 "allow_prerelease": channel != "stable",
-                "allow_downgrade": False,
+                "allow_downgrade": allow_downgrade,
             },
             indent=2,
             sort_keys=True,
@@ -492,8 +492,10 @@ def main() -> int:
         settings_blocked = blocked_proc.returncode == 40
         current_after_blocked_apply = current_target(sandbox)
         lock_path.unlink(missing_ok=True)
+        write_update_policy(sandbox, selected_channel, allow_downgrade=True)
         final_proc = run_updatectl_apply(manifest, env)
         final_apply_passed = final_proc.returncode == 0
+        write_update_policy(sandbox, selected_channel)
         settings_lock_guard_passed = (
             settings_blocked
             and current_after_blocked_apply == current_before_blocked_apply

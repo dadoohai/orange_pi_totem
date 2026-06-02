@@ -37,6 +37,7 @@ die() { printf '[bootstrap_c17_5 %s] FATAL %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ
 
 [[ -d "$REPO_ROOT/.git" ]] || die "REPO_ROOT is not a git repo: $REPO_ROOT"
 [[ -f "$REPO_ROOT/scripts/board/totem_updatectl.py" ]] || die "missing totem_updatectl.py"
+[[ -f "$REPO_ROOT/scripts/board/totem_update_policy.json" ]] || die "missing totem_update_policy.json"
 [[ -f "$REPO_ROOT/scripts/board/totem_core_exec.py" ]] || die "missing totem_core_exec.py"
 [[ -f "$REPO_ROOT/scripts/board/totem_core_exec.sh" ]] || die "missing totem_core_exec.sh"
 for file in "${CORE_FILES[@]}"; do
@@ -49,6 +50,7 @@ trap cleanup EXIT
 
 mkdir -p "$WORK_DIR/scripts/board"
 install -m 0755 "$REPO_ROOT/scripts/board/totem_updatectl.py" "$WORK_DIR/scripts/board/totem_updatectl.py"
+install -m 0644 "$REPO_ROOT/scripts/board/totem_update_policy.json" "$WORK_DIR/scripts/board/totem_update_policy.json"
 install -m 0755 "$REPO_ROOT/scripts/board/totem_core_exec.py" "$WORK_DIR/scripts/board/totem_core_exec.py"
 install -m 0755 "$REPO_ROOT/scripts/board/totem_core_exec.sh" "$WORK_DIR/scripts/board/totem_core_exec.sh"
 for file in "${CORE_FILES[@]}"; do
@@ -119,6 +121,12 @@ install -d -m 0755 -o root -g root /opt/totem/core-fallback /opt/totem/core-fall
 install -d -m 0755 -o root -g root /opt/totem/core-fallback/original-pre-c17-5
 install -d -m 0755 -o root -g root /data/core /data/core/totem /data/core/totem/releases
 install -d -m 0755 -o root -g root /data/updates /data/updates/incoming /data/updates/incoming/totem-core /data/logs
+if [[ ! -e /data/updates/policy.json ]]; then
+  install -m 0644 -o root -g root "$SRC_DIR/scripts/board/totem_update_policy.json" /data/updates/policy.json
+  policy_created=true
+else
+  policy_created=false
+fi
 
 is_wrapper() {
   local path="$1"
@@ -174,6 +182,7 @@ totem_core_layout_created=true
 totem_core_wrappers_created=true
 totem_core_fallback_available=true
 totem_updatectl_multi_component=true
+totem_update_policy_created=${policy_created}
 wizard_fallback_to_opt_tested=true
 f10_preview_test=${preview_result}
 writer_called=false
@@ -189,6 +198,7 @@ say "totem_core_layout_created=true"
 say "totem_core_wrappers_created=true"
 say "totem_core_fallback_available=true"
 say "totem_updatectl_multi_component=true"
+say "totem_update_policy_created=${policy_created}"
 say "wizard_fallback_to_opt_tested=true"
 say "f10_preview_test=${preview_result}"
 REMOTE
