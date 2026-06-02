@@ -28,8 +28,8 @@ import derive_c15_2_1_homolog_image as base
 ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1b"   # 1b = corrected rebuild (kiosk.py debugfs-banner fix + panfrost rebind); supersedes defective 1
-VERSION = "c18.image-lab.1b"
+TAG = "c18-hwdecode-lab-1c"   # 1c = wrapper strips --no-osc (no-Lua mpv lacks the OSC option); supersedes 1 (kiosk banner) & 1b (--no-osc fatal). HW-validated live.
+VERSION = "c18.image-lab.1c"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -41,7 +41,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1b-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1c-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -83,10 +83,18 @@ PANFROST_UNIT_BODY = (
 
 WRAPPER_SH = (
     "#!/bin/sh\n"
-    "# C18.IMAGE-LAB.1 HW-decode wrapper (artifact_private; not_for_production).\n"
-    "# Runs the custom Cedrus/V4L2-Request mpv with the zero-copy display path forced\n"
-    "# (override-last), preserving every option the player passes (IPC, rotation, etc.).\n"
+    "# C18 HW-decode wrapper (artifact_private; not_for_production). Forces the zero-copy\n"
+    "# display path (override-last) + scoped LD_LIBRARY_PATH; preserves IPC/rotation/etc.\n"
+    "# Strips options the minimal (no-Lua) custom mpv lacks: stock mpv's --no-osc comes from\n"
+    "# the OSC Lua script; with -Dlua=disabled that option does not exist, so the player's\n"
+    "# --no-osc made mpv fatal-exit before creating the IPC socket (the C18.IMAGE-LAB.1b\n"
+    "# 'iniciando player' crash-loop). Dropping it is correct (no OSC to disable).\n"
     "export LD_LIBRARY_PATH=/opt/totem/hwdecode/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}\n"
+    'for a in "$@"; do\n'
+    "  shift\n"
+    '  case "$a" in --no-osc) continue ;; esac\n'
+    '  set -- "$@" "$a"\n'
+    "done\n"
     'exec /opt/totem/hwdecode/bin/mpv "$@" --vo=gpu --gpu-context=drm --hwdec=v4l2request\n'
 )
 
@@ -165,7 +173,7 @@ def main():
         "player_hwdec=v4l2request vo=gpu gpu_context=drm",
         "r4_updater_perms=injected",
         "panfrost_rebind_service=installed",
-        "supersedes=c18-hwdecode-lab-1 (defective: kiosk.py debugfs-banner SyntaxError)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -273,6 +281,7 @@ def main():
         "wrapper_present": present(WRAPPER) and execu(WRAPPER),
         "wrapper_forces_hwdec": "--hwdec=v4l2request" in wrap_now and "--vo=gpu" in wrap_now
                                 and "--gpu-context=drm" in wrap_now and "LD_LIBRARY_PATH" in wrap_now,
+        "wrapper_strips_no_osc": "--no-osc) continue" in wrap_now,
         "player_points_to_wrapper": MPV_PATH_NEW in kiosk_clean,
         "player_no_longer_default_mpv": MPV_PATH_OLD not in kiosk_clean,
         "kiosk_py_compiles": kiosk_compiles,
@@ -291,7 +300,7 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1b", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1c", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -318,16 +327,18 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (defective: kiosk.py debugfs-banner SyntaxError; no panfrost rebind)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
+        "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "panfrost_rebind_service": True,
         "kiosk_py_compiles": v["kiosk_py_compiles"],
+        "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
         "ready_for_manual_card_flash": offline_ok,
         "ready_for_c18_image_lab_2_clean_board_validation": offline_ok,
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1b RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1c RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

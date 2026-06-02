@@ -81,3 +81,21 @@ kiosk.py lido via **`debugfs dump`** + **`py_compile`** na validação; serviço
 (inclui `kiosk_py_compiles` + checks do panfrost). **Gravar a `1b`** (não a `1`). Evidência:
 `docs/evidence/candidate-a/runs/20260602T011057Z-c18-image-lab-1b-hwdecode-rebuild/`.
 Diagnóstico (Round A/B em hardware) na memória `c18-image-lab-2-firstboot-obs`.
+
+## → C18.IMAGE-LAB.1c (2026-06-02) — 3º fix + VALIDADO em hardware
+A `1b` corrigiu kiosk.py + panfrost, mas o player ainda travava em "iniciando player".
+**3ª causa:** o player passa `--no-osc` (válido no mpv 0.35.1), mas o mpv custom é
+`-Dlua=disabled` → a opção `--osc` (script Lua) **não existe** → mpv **aborta antes de criar
+o socket IPC** → timeout de 10s → loop. **Fix (`1c`):** o wrapper `totem-mpv-hwdecode` agora
+**filtra `--no-osc`** antes do exec. **Validação AO VIVO** (placa 192.168.18.131, fix aplicado
+in-place): `hwdec-current=v4l2request`, tocando H.264 real, **`media_load_failed=0`**, mpv
+estável (1 pid), transições limpas, CPU ~13,6%. A raiz `/` é **ext4 rw** e `overlayroot=tmpfs`
+**não está ativo** → o fix in-place **persiste** → a placa **funciona e sobrevive a reboot,
+sem regravação urgente**. Imagem canônica limpa **`...-c18-hwdecode-lab-1c_minimal.img`**
+sha256 `766a3eb2071e599df5561918c8308f9559fb8d24ee65168839a8cf6a75d85c29` (as defeituosas
+`1` e `1b` foram removidas de `output/images`). Os **3 defeitos eram bugs do meu deriver**; a
+stack de HW decode (B1..B9) sempre esteve correta. **A solução C18 de HW decode está PROVADA
+numa imagem em hardware.** Evidência:
+`docs/evidence/candidate-a/runs/20260602T022925Z-c18-image-lab-1c-noosc-fix-and-hw-validation/`.
+Secundário (não-bloqueante): boot ~2min + tela preta antes do wizard (otimizar depois);
+terminal-no-boot **não** reapareceu na 1b/1c.

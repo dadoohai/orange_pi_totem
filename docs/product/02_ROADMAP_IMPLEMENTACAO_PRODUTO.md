@@ -4,6 +4,25 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.IMAGE-LAB.2 / 1c (validacao em hardware + 3o fix): 2026-06-02. A 1b corrigiu
+kiosk.py+panfrost mas o player ainda travava em "iniciando player". **3a causa:** o player
+passa `--no-osc` (valido no mpv 0.35.1) mas o mpv custom (`-Dlua=disabled`) NAO tem a opcao
+`--osc` (script Lua) -> mpv **aborta antes de criar o socket IPC** -> timeout de 10s -> loop.
+**Fix (1c):** o wrapper `totem-mpv-hwdecode` **filtra `--no-osc`**. **VALIDADO AO VIVO** na
+placa (192.168.18.131, fix in-place, autorizado pelo usuario): `hwdec-current=v4l2request`,
+tocando H.264 real, **`media_load_failed=0`**, mpv estavel (1 pid), transicoes limpas, CPU
+~13.6%. Raiz `/` e **ext4 rw** e `overlayroot=tmpfs` **NAO ativo** (C12 nunca shipado) -> o
+fix in-place **PERSISTE** -> a placa funciona e sobrevive a reboot, **sem regravacao urgente**.
+Imagem canonica limpa `...-c18-hwdecode-lab-1c_minimal.img` sha256
+`766a3eb2071e599df5561918c8308f9559fb8d24ee65168839a8cf6a75d85c29` (defeituosas 1 e 1b
+removidas de output/images). Os **3 defeitos eram bugs do meu deriver**; a stack de HW decode
+(B1..B9) sempre esteve correta. **A solucao C18 de HW decode esta PROVADA numa imagem em
+hardware** (hwdec engaja, zero media_load_failed nas transicoes, CPU baixa). Secundario
+(nao-bloqueante): boot ~2min + tela preta antes do wizard (otimizar depois); terminal-no-boot
+NAO reapareceu. Docs: 187 + evidencia
+`20260602T022925Z-c18-image-lab-1c-noosc-fix-and-hw-validation`. Memoria:
+`c18-image-lab-2-firstboot-obs`. C nao aceito.
+
 Atualizacao C18.IMAGE-LAB.1b (rebuild corrigido): 2026-06-01. A C18.IMAGE-LAB.1 **falhou no
 1o boot em hardware** (C18.IMAGE-LAB.2, placa 192.168.18.131): (a) **player travado em
 "iniciando player"** = `kiosk.py` com SyntaxError na linha 3425 — o deriver leu o arquivo via
