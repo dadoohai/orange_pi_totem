@@ -99,3 +99,34 @@ numa imagem em hardware.** Evidência:
 `docs/evidence/candidate-a/runs/20260602T022925Z-c18-image-lab-1c-noosc-fix-and-hw-validation/`.
 Secundário (não-bloqueante): boot ~2min + tela preta antes do wizard (otimizar depois);
 terminal-no-boot **não** reapareceu na 1b/1c.
+
+## → C18.IMAGE-LAB.1d (2026-06-02) — fallback de estabilidade + validação inicial
+A `1c` provou o fix do bug original (`media_load_failed` por saturação de CPU), mas a
+validação ao vivo seguinte isolou dois problemas que contaminavam o diagnóstico de tela
+preta/ordem:
+
+- o caminho zero-copy `v4l2request`/`drm_prime` gerou `panfrost js fault` em algumas mídias
+  portrait;
+- o cartão usado na `1c` apresentou erros `mmc`/I-O e depois falhou no `h2testw`.
+
+**Fix (`1d`):** o wrapper `totem-mpv-hwdecode` passa a forçar
+`--hwdec=v4l2request-copy`, mantendo `--vo=gpu --gpu-context=drm`, IPC, rotação e filtro de
+`--no-osc`. A imagem também adiciona o drop-in
+`/etc/systemd/system/kiosky-player.service.d/30-c18-stability.conf`, movendo o trace
+diagnóstico C17.4 para `/run/totem/c17-4-firstboot` via
+`TOTEM_C17_4_FIRSTBOOT_TRACE_DIR`, para não bloquear o startup em `/data` se houver I/O
+lento.
+
+Imagem **`...-c18-hwdecode-lab-1d_minimal.img`** sha256
+`82a1717f56be8b6aeb8a6b55f43ab5b694d05ce3c751c47dee524c1aed386ca0`.
+Validação offline passou (`OFFLINE_VALIDATION_PASSED=True`, fsck clean). Em cartão novo
+aprovado pelo usuário, o boot ficou sensivelmente mais rápido e a validação inicial ao vivo
+mostrou: config real aplicada pelo writer guardado a partir do seed local com `mpv_path`
+corrigido para o wrapper, 8 mídias baixadas, `state=player_running`,
+`hwdec-current=v4l2request-copy`, `video pixelformat=nv12`, **24 eventos `Playing media`
+(3 voltas 0→7 em ordem)**, `panfrost_js_faults=0`, erros `mmc`/I-O = 0,
+`media_load_failed=0`, `mpv_restart=0`, `hard_resync=0`.
+
+Status: **imagem-lab privada**, `final_image=false`, `not_for_production=true`. A 1d é o
+candidato atual para continuar C18; ainda falta confirmação visual humana do HDMI para
+qualidade perceptual da transição/tela preta antes de declarar imagem final.

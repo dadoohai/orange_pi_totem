@@ -4,6 +4,22 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.IMAGE-LAB.1d (fallback de estabilidade): 2026-06-02. A `1c` engajou HW
+decode e eliminou o bug original de `media_load_failed`, mas a investigacao ao vivo achou
+`panfrost js faults` no caminho zero-copy `v4l2request`/`drm_prime` em algumas midias
+portrait. O cartao anterior tambem apresentou erros `mmc`/I-O e falhou no `h2testw`, logo
+seus sintomas nao sao evidencia limpa contra o player. **Fix (1d):** o wrapper passa a
+forcar `--hwdec=v4l2request-copy` e mantem `--vo=gpu --gpu-context=drm`; o trace C17.4 foi
+movido para `/run/totem/c17-4-firstboot`. Imagem
+`...-c18-hwdecode-lab-1d_minimal.img` sha256
+`82a1717f56be8b6aeb8a6b55f43ab5b694d05ce3c751c47dee524c1aed386ca0`. Em cartao novo, com
+config real aplicada pelo writer guardado a partir do seed local, validacao inicial:
+`state=player_running`, 8 midias baixadas, `hwdec-current=v4l2request-copy`, pixelformat
+`nv12`, **24 eventos `Playing media` (3 voltas 0->7 em ordem)**, `panfrost_js_faults=0`,
+erros `mmc`/I-O = 0, `media_load_failed=0`, `mpv_restart=0`, `hard_resync=0`. Status:
+imagem-lab privada, ainda pendente de confirmacao
+visual humana da transicao/HDMI; C nao aceito.
+
 Atualizacao C18.IMAGE-LAB.2 / 1c (validacao em hardware + 3o fix): 2026-06-02. A 1b corrigiu
 kiosk.py+panfrost mas o player ainda travava em "iniciando player". **3a causa:** o player
 passa `--no-osc` (valido no mpv 0.35.1) mas o mpv custom (`-Dlua=disabled`) NAO tem a opcao

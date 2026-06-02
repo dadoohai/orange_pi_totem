@@ -41,7 +41,7 @@ Tudo commitado na branch isolada **`c18-runtime-a1-cedrus-hwdecode-poc`** (A1..B
 
 ---
 
-## Produtização — C18.IMAGE-LAB (imagem 1c, sha, deriver, integração)
+## Produtização — C18.IMAGE-LAB (imagem 1d, sha, deriver, integração)
 
 Imagem-lab privada derivada **OFFLINE** e **ROOTLESS** (via **debugfs**, sem rebuild do Armbian/kernel) a partir da última imagem validada em hardware **C17.4.2**.
 
@@ -57,17 +57,18 @@ Imagem-lab privada derivada **OFFLINE** e **ROOTLESS** (via **debugfs**, sem reb
 - Stack em `/opt/totem/hwdecode/{bin/mpv,bin/ffmpeg,lib}`;
 - Wrapper `/opt/totem/bin/totem-mpv-hwdecode` que:
   - ajusta `LD_LIBRARY_PATH`;
-  - força `--vo=gpu --gpu-context=drm --hwdec=v4l2request`;
+  - na `1c`, força `--vo=gpu --gpu-context=drm --hwdec=v4l2request`;
+  - na `1d`, força `--vo=gpu --gpu-context=drm --hwdec=v4l2request-copy`;
   - **FILTRA** `--no-osc`;
 - `kiosk.py` com `DEFAULT` `mpv_path` → apontando para o **wrapper**;
 - Serviço **oneshot** `totem-panfrost-rebind` (userspace, roda **antes do player**, faz bind do panfrost se faltar `/dev/dri/renderD128`);
 - **R4 `updatectl`** injetado;
 - usuário `totem` já no **grupo `video`**.
 
-**Imagem final:**
+**Imagem atual:**
 
-- Nome: **`c18-hwdecode-lab-1c`**;
-- **sha256:** `766a3eb2071e599df5561918c8308f9559fb8d24ee65168839a8cf6a75d85c29`;
+- Nome: **`c18-hwdecode-lab-1d`**;
+- **sha256:** `82a1717f56be8b6aeb8a6b55f43ab5b694d05ce3c751c47dee524c1aed386ca0`;
 - As versões defeituosas **1** e **1b** foram **removidas** de `output/images`;
 - Flags do artefato: `artifact_private=true`, `final_image=false`, `not_for_production=true`.
 
@@ -95,6 +96,18 @@ O player passa `--no-osc` (válido no mpv 0.35.1), mas o mpv custom é **`-Dlua=
 
 **Correção:** o **wrapper FILTRA `--no-osc`**.
 
+### Ajuste 4 (1c → 1d) — panfrost faults no zero-copy + I/O do cartão antigo
+
+A `1c` provou o HW decode e eliminou o bug original, mas a rodada de continuidade achou:
+
+- `panfrost js fault` no caminho zero-copy `v4l2request`/`drm_prime` para algumas mídias
+  portrait;
+- o cartão anterior tinha erros `mmc`/I-O e falhou no `h2testw`, contaminando sintomas de
+  tela preta/ordem/boot lento.
+
+**Correção:** imagem **`1d`** força `v4l2request-copy` no wrapper e move o trace C17.4 para
+`/run/totem/c17-4-firstboot`.
+
 ---
 
 ## Estado atual (validado em hardware)
@@ -103,23 +116,32 @@ A placa:
 
 - IP **`192.168.18.131`**, usuário **`root`**, senha **interativa** via helper expect lendo `$SSHPASS` (**NUNCA persistir**);
 - hostname **`orangepizero3`**;
-- está rodando o **conteúdo da 1c** (a **1b** gravada pelo usuário **+** o **wrapper corrigido aplicado in-place**, autorizado pelo usuário).
+- foi regravada pelo usuário com **`c18-hwdecode-lab-1d`** em cartão novo; o cartão anterior
+  falhou no `h2testw` e saiu da investigação.
 
 Persistência:
 
 - A raiz `/` é **ext4 rw** e **`overlayroot=tmpfs` NÃO está ativo** (o C12 read-only nunca foi de fato shipado);
 - Portanto o **fix in-place PERSISTE no reboot** → a placa funciona e **sobrevive a reboot**, **SEM** necessidade urgente de regravar.
 
-Validação ao vivo (**C18.IMAGE-LAB.2**, clean-board, no core):
+Validação ao vivo (**C18.IMAGE-LAB.1d**, cartão novo, config real aplicada pelo writer
+guardado a partir do seed local com `mpv_path` corrigido para o wrapper):
 
-- `hwdec-current=v4l2request`;
+- `hwdec-current=v4l2request-copy`;
+- `video pixelformat=nv12` (copy-back; não `drm_prime`);
 - tocando **H.264 real**;
 - `media_load_failed=0`;
-- mpv **estável** (**1 pid**);
-- CPU ~**13,6%**;
-- transições **sem crash**.
+- mpv **estável** (**1 pid**, sem restart observado);
+- 8 mídias baixadas;
+- **24 eventos `Playing media`** observados (**3 voltas 0→7 em ordem**);
+- `panfrost_js_faults=0`;
+- erros `mmc`/I-O = 0;
+- `mpv_restart=0`, `hard_resync=0`, `ipc_timeout_error_count=0`.
 
 **O bug original (`media_load_failed` por saturação de CPU) está ELIMINADO.**
+O problema de ordem/preto errático tinha forte componente de cartão ruim + zero-copy/panfrost.
+A confirmação visual humana do HDMI ainda é necessária para fechar qualidade perceptual da
+transição.
 
 ---
 
@@ -129,30 +151,21 @@ Validação ao vivo (**C18.IMAGE-LAB.2**, clean-board, no core):
 
 ### (A) #1 PRINCIPAL — TELA PRETA entre os vídeos + sequenciamento errado
 
-**Sintoma (relato do usuário, errático):** **TELA PRETA** entre os vídeos — às vezes fica **MUITO TEMPO**, **SEM padrão de transição**, e as **MÍDIAS NÃO ESTÃO SEQUENCIANDO CORRETAMENTE**.
+**Status em 2026-06-02:** mitigado tecnicamente na `1d`, mas ainda pendente de confirmação
+visual humana.
 
-Medições anteriores:
+Achados:
 
-- playlist de **8 itens** (index 0..7);
-- transições agendadas "coladas" (gap de agendamento ~**0,1–0,2s**);
-- resolução **constante 480x848**.
+- a lógica de sequência do `kiosk.py` é byte-idêntica à referência C17.4.2, exceto `mpv_path`;
+- `sync_enabled=false` e `preload_next=false` foram preservados na config real aplicada;
+- no cartão antigo havia `mmc`/I-O stall e o cartão falhou `h2testw`;
+- na `1c`, zero-copy gerava `panfrost js fault` em algumas mídias portrait;
+- na `1d` + cartão novo, a sequência observada fez **3 voltas 0→7 em ordem**, sem
+  `media_load_failed`, sem restart do mpv, sem hard-resync e sem faults panfrost.
 
-Mas o usuário vê **pretos longos / erráticos + sequência errada**.
-
-Observações:
-
-- **NÃO diagnosticado a fundo ainda;**
-- **NÃO** é diferença 1b ↔ 1c nem coisa de regravar (a placa **==** conteúdo 1c);
-- É **qualidade/lógica de transição**: latência do `loadfile-replace` (descarrega → preto → carrega → 1º frame) e possivelmente **reinit de hwdec/VO por arquivo**;
-- O player usa **`loadfile ... replace`** por item (+ `append` / `keep-open`).
-
-Hipóteses de correção:
-
-- **prefetch/preload** do próximo (`mpv --prefetch-playlist`);
-- **segurar o último frame** até o próximo aparecer;
-- ajustar a **lógica de transição do `kiosk.py`**.
-
-**PRECISA:** medir a **duração do preto ao vivo**, entender a **sequência errada**, e **decidir** se resolve com **flags do mpv** (rápido) ou **mudança no `kiosk.py`**.
+Se o usuário ainda vir preto longo na `1d`, a próxima investigação deve medir visualmente o
+gap do `loadfile replace` e só então avaliar flags/lógica. Não voltar ao zero-copy como fix
+rápido sem nova validação por mídia.
 
 ### (B) Boot lento (~2min de tela preta antes do wizard)
 
@@ -170,8 +183,8 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 ## Próximos passos / a validar
 
-1. **Diagnosticar e corrigir a tela preta + sequenciamento** (ao vivo via SSH, **SEM regravar**);
-2. **Confirmação VISUAL no HDMI** (olho humano: imagem correta + rotação);
+1. **Confirmar visualmente a tela preta + sequenciamento** na `1d` (ao vivo via SSH se o usuário observar regressão, **SEM regravar**);
+2. **Confirmação VISUAL no HDMI** (olho humano: imagem correta, rotação e gap de transição aceitável);
 3. **Otimizar tempo de boot;**
 4. **Rebuild GCC-12 de produção;**
 5. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
@@ -197,7 +210,7 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 **Repositórios / branches:**
 
-- Repo **`orange_pi_totem`** branch **`foundation-v0.1`** — último commit **`5a0ceb3`** (= doc 187 + roadmap + deriver + evidência 1c; também 186);
+- Repo **`orange_pi_totem`** branch **`foundation-v0.1`** — base local **`8705d78`** antes desta rodada;
 - **PoC A1..B9** na branch **`c18-runtime-a1-cedrus-hwdecode-poc`**;
 - **`kiosky-player`** branch **`appliance-v0.1`** `@e76204a`.
 
@@ -220,8 +233,8 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 **Imagem:**
 
-- Nome: `c18-hwdecode-lab-1c`;
-- **sha256:** `766a3eb2071e599df5561918c8308f9559fb8d24ee65168839a8cf6a75d85c29`;
+- Nome: `c18-hwdecode-lab-1d`;
+- **sha256:** `82a1717f56be8b6aeb8a6b55f43ab5b694d05ce3c751c47dee524c1aed386ca0`;
 - Flags: `artifact_private=true`, `final_image=false`, `not_for_production=true`.
 
 **Placa:**

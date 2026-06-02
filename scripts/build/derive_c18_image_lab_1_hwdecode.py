@@ -7,8 +7,8 @@ rebuild, no apt, no board, no card). It copies the hardware-validated C17.4.2 im
     (FFmpeg fork libav* + mpv + libplacebo + libass/freetype/fribidi) under
     /opt/totem/hwdecode/{bin,lib};
   * installs a wrapper /opt/totem/bin/totem-mpv-hwdecode that runs the custom mpv with
-    the zero-copy display path forced (--vo=gpu --gpu-context=drm --hwdec=v4l2request,
-    override-last) and LD_LIBRARY_PATH scoped to the stack;
+    the HW-decode fallback display path forced (--vo=gpu --gpu-context=drm
+    --hwdec=v4l2request-copy, override-last) and LD_LIBRARY_PATH scoped to the stack;
   * points the embedded player (DEFAULT_CONFIG mpv_path in /opt/totem/kiosky-player/
     kiosk.py) at that wrapper — preserving IPC/playlist/duration/sync/rotation logic;
   * injects the R4 updater-perms fix (foundation totem_updatectl.py), which C17.4.2
@@ -28,8 +28,8 @@ import derive_c15_2_1_homolog_image as base
 ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1c"   # 1c = wrapper strips --no-osc (no-Lua mpv lacks the OSC option); supersedes 1 (kiosk banner) & 1b (--no-osc fatal). HW-validated live.
-VERSION = "c18.image-lab.1c"
+TAG = "c18-hwdecode-lab-1d"   # 1d = stability fallback: v4l2request-copy avoids panfrost dmabuf faults seen on some portrait media; C17.4 trace moved to /run.
+VERSION = "c18.image-lab.1d"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -41,10 +41,11 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1c-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1d-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
+C18_STABILITY_DROPIN = "/etc/systemd/system/kiosky-player.service.d/30-c18-stability.conf"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
@@ -83,8 +84,11 @@ PANFROST_UNIT_BODY = (
 
 WRAPPER_SH = (
     "#!/bin/sh\n"
-    "# C18 HW-decode wrapper (artifact_private; not_for_production). Forces the zero-copy\n"
-    "# display path (override-last) + scoped LD_LIBRARY_PATH; preserves IPC/rotation/etc.\n"
+    "# C18 HW-decode wrapper (artifact_private; not_for_production). Forces the\n"
+    "# copy-back fallback path (override-last) + scoped LD_LIBRARY_PATH; preserves\n"
+    "# IPC/rotation/etc. C18.IMAGE-LAB.1d uses v4l2request-copy because the zero-copy\n"
+    "# drm_prime->panfrost path generated runtime panfrost js faults on some portrait\n"
+    "# media in hardware validation.\n"
     "# Strips options the minimal (no-Lua) custom mpv lacks: stock mpv's --no-osc comes from\n"
     "# the OSC Lua script; with -Dlua=disabled that option does not exist, so the player's\n"
     "# --no-osc made mpv fatal-exit before creating the IPC socket (the C18.IMAGE-LAB.1b\n"
@@ -95,7 +99,15 @@ WRAPPER_SH = (
     '  case "$a" in --no-osc) continue ;; esac\n'
     '  set -- "$@" "$a"\n'
     "done\n"
-    'exec /opt/totem/hwdecode/bin/mpv "$@" --vo=gpu --gpu-context=drm --hwdec=v4l2request\n'
+    'exec /opt/totem/hwdecode/bin/mpv "$@" --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy\n'
+)
+
+C18_STABILITY_DROPIN_BODY = (
+    "[Service]\n"
+    "# C18.IMAGE-LAB.1d: C17.4 firstboot trace is diagnostic-only. Keep it out of\n"
+    "# /data so slow/failing mmc I/O cannot block kiosky-player startup before\n"
+    "# kiosk.py launches.\n"
+    "Environment=TOTEM_C17_4_FIRSTBOOT_TRACE_DIR=/run/totem/c17-4-firstboot\n"
 )
 
 SOURCES = {
@@ -170,16 +182,18 @@ def main():
         f"ffmpeg={SOURCES['ffmpeg_source']}@{SOURCES['ffmpeg_commit']}",
         f"mpv={SOURCES['mpv_source']}@{SOURCES['mpv_commit']}",
         f"libplacebo@{SOURCES['libplacebo_commit']}",
-        "player_hwdec=v4l2request vo=gpu gpu_context=drm",
+        "player_hwdec=v4l2request-copy vo=gpu gpu_context=drm",
         "r4_updater_perms=injected",
         "panfrost_rebind_service=installed",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv)",
+        "c17_4_trace_dir=/run/totem/c17-4-firstboot",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
     # panfrost rebind service + script temp files
     panfrost_sh_tmp = work / "totem-panfrost-rebind.sh"; panfrost_sh_tmp.write_text(PANFROST_SH_BODY, encoding="utf-8")
     panfrost_unit_tmp = work / "totem-panfrost-rebind.service"; panfrost_unit_tmp.write_text(PANFROST_UNIT_BODY, encoding="utf-8")
+    stability_dropin_tmp = work / "30-c18-stability.conf"; stability_dropin_tmp.write_text(C18_STABILITY_DROPIN_BODY, encoding="utf-8")
 
     # ---- build the debugfs command batch (rootless ext4 edit) ----
     cmds = []
@@ -221,6 +235,7 @@ def main():
     put(str(panfrost_sh_tmp), PANFROST_SH, "0755")
     put(str(panfrost_unit_tmp), PANFROST_UNIT, "0644")
     cmds.append(f"symlink {PANFROST_WANTS} {PANFROST_UNIT}")
+    put(str(stability_dropin_tmp), C18_STABILITY_DROPIN, "0644")
 
     L(f"debugfs commands: {len(cmds)} (stack libs real={len(real_files)} symlink={len(symlinks)})")
     out = base.debugfs_batch(rootfs, cmds, work)
@@ -279,7 +294,7 @@ def main():
         "custom_ffmpeg_installed": present(f"{HWDIR}/bin/ffmpeg") if ffmpeg_included else "n/a",
         "all_stack_libs_present": all(libs_present.values()),
         "wrapper_present": present(WRAPPER) and execu(WRAPPER),
-        "wrapper_forces_hwdec": "--hwdec=v4l2request" in wrap_now and "--vo=gpu" in wrap_now
+        "wrapper_forces_hwdec": "--hwdec=v4l2request-copy" in wrap_now and "--vo=gpu" in wrap_now
                                 and "--gpu-context=drm" in wrap_now and "LD_LIBRARY_PATH" in wrap_now,
         "wrapper_strips_no_osc": "--no-osc) continue" in wrap_now,
         "player_points_to_wrapper": MPV_PATH_NEW in kiosk_clean,
@@ -289,6 +304,7 @@ def main():
         "panfrost_rebind_unit_present": present(PANFROST_UNIT),
         "panfrost_rebind_enabled": present(PANFROST_WANTS),
         "panfrost_unit_before_player": "Before=kiosky-player.service" in panfrost_unit_now,
+        "c17_4_trace_moved_to_run": present(C18_STABILITY_DROPIN),
         "r4_updater_perms_present": "_make_world_traversable" in upd_now,
         "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
         "marker_present": present(MARKER),
@@ -300,7 +316,7 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1c", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1d", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -318,7 +334,7 @@ def main():
         "toolchain_note": "GCC-13 cross + static-libstdc++ + __isoc23 shim (libplacebo only); "
                           "libass without harfbuzz. Hardware-proven (B9). "
                           "Recommend GCC-12-clean rebuild for the production image.",
-        "player_uses_custom_mpv": True, "player_hwdec_flag": "v4l2request",
+        "player_uses_custom_mpv": True, "player_hwdec_flag": "v4l2request-copy",
         "player_vo": "gpu", "player_gpu_context": "drm", "player_rotation": "from config/wizard (270 in homolog)",
         "mpv_ipc_preserved": True,
         "totem_in_video_group": v["totem_in_video_group"],
@@ -327,9 +343,11 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
+        "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
+        "fix_c17_4_trace_dir": "kiosky-player drop-in moves optional C17.4 firstboot trace from /data to /run so mmc I/O stalls cannot block startup before kiosk.py",
         "panfrost_rebind_service": True,
         "kiosk_py_compiles": v["kiosk_py_compiles"],
         "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
@@ -338,7 +356,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1c RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1d RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

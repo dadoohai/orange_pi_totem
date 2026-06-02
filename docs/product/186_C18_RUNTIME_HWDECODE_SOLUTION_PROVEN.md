@@ -80,3 +80,10 @@ Imagem `...-c18-hwdecode-lab-1_minimal.img` (sha256 `a1103ba8...`); `final_image
 banner do debugfs + panfrost deferred-probe race) → **gravar a `1b`**
 (`...-c18-hwdecode-lab-1b_minimal.img`, sha256 `27ed2906...`), não a `1`. Ver doc 187 (seção
 Correção) e a evidência `...-c18-image-lab-1b-hwdecode-rebuild/`.
+
+**Nota pós-image-lab (2026-06-02):** B7/B8/B9 continuam provando tecnicamente o caminho
+zero-copy usado na PoC, mas a validação de imagem com o conjunto real encontrou `panfrost js
+faults` em algumas mídias portrait no caminho `v4l2request`/`drm_prime`. A
+**C18.IMAGE-LAB.1d** troca o wrapper para **`v4l2request-copy`** como fallback de estabilidade
+e preserva o HW decode Cedrus. Não tratar zero-copy como caminho final de produto até nova
+validação com mídias reais; ver doc 187/188.
