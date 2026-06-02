@@ -33,10 +33,10 @@ baseline `1d`.
 - Testes estáticos de policy/service/timer.
 - Testes unitários de freeze, downgrade e GC de staging.
 - Sandbox `totem-core` apply/rollback/settings-lock.
-- Validação offline da imagem `1e` deve comprovar policy presente, timer
+- Validação offline da próxima imagem (`1f`) deve comprovar policy presente, timer
   desligado e service apontando para `totem-core`.
 
-## Estado live da 1e (2026-06-02)
+## Estado live da 1e + OTA smoke (2026-06-02)
 
 - Imagem gerada: `c18-hwdecode-lab-1e`
   (`sha256=b782421c684783bdeba029c90b014f3a469888d34d69caf524e5a69d88dff211`),
@@ -68,10 +68,37 @@ baseline `1d`.
   falha com `rc=44` (`component_frozen_for_ota`), independente da policy.
 - Residuo conhecido fora do escopo C18: `console-setup.service` falhado no boot
   por setup de fonte/keymap; nao afetou player/OTA e nao deve abrir frente agora.
+- Release homologation publicada para smoke manual:
+  `totem-core-c18.ota-core-smoke-20260602T190718Z-8a1d640`.
+  Manifest: `component=totem-core`, `channel=homologation`,
+  `source_branch=foundation-v0.1`, `source_commit=8a1d640...`,
+  `source_dirty=false`, `payload_sha256=a8e67c3112fb31e6f4718ac97e4c7a39f5a56e72bf8bf833febcd62f25d09674`.
+- `apply-github-latest --dry-run` selecionou exatamente essa release e nao
+  mudou estado.
+- `apply-github-latest` manual passou: `current` virou
+  `c18.ota-core-smoke-20260602T190718Z-8a1d640`, `previous` virou o embed
+  `c17.6-environment-input-20260514T211247Z`, policy continuou somente
+  `totem-core`, timer continuou desligado, player continuou `active`,
+  `NRestarts=0`.
+- Rollback real passou para o embed C17.6. A primeira tentativa de reapply
+  encontrou bug real no guard de downgrade (`rc=45`) porque a release mais nova
+  estava em `previous`.
+- Hotfix do updater aplicado in-place na placa lab (backup preservado em
+  `/opt/totem/bin/totem-updatectl.pre-c18fix-*`) e incorporado ao repo:
+  - reapply de `previous` e mais novo que `current` e permitido com
+    `allow_downgrade=false`;
+  - versoes/payloads de manifest agora rejeitam `.`/`..`, path traversal,
+    path absoluto/subdiretorio e payload fora do nome esperado.
+- Repeticao apos hotfix: rollback para C17.6 + reapply GitHub da release C18
+  passou com `allow_downgrade=false`; placa terminou em `current=C18 smoke`,
+  `previous=C17.6 embed`, player `active`, `NRestarts=0`, timer `disabled`.
+- Proximo build de imagem deve ser `c18-hwdecode-lab-1f` (nao reusar o nome
+  `1e`), pois o conteudo do updater mudou apos a imagem `1e` ja ter sido
+  gravada/validada.
 
 ## Continuidade pos-compactacao
 
-1. Revisar o diff OTA `1e` como um lote unico e manter fora do stage o WIP
+1. Revisar o diff OTA `1f` como um lote unico e manter fora do stage o WIP
    alheio `scripts/qa/generate_ui_ux_gallery.py`.
 2. Rodar novamente os gates antes de commit:
    `py_compile`, `c18_ota_policy_static_test.py`,
@@ -79,7 +106,7 @@ baseline `1d`.
    `c17_9_update_channel_policy_test.py`,
    `c18_runtime_3_release_perms_test.py`,
    `run_totem_core_sandbox.py --json`, `git diff --check`.
-3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1e.
+3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1f.
 4. Proxima frente funcional do projeto: fluxo OTA manual de `totem-core`
    (publicacao/seleção/aplicacao controlada do wizard/core), mantendo auto-pull
    desligado e `kiosky-player` congelado.

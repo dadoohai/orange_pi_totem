@@ -90,7 +90,10 @@ else
   VERSION="$VERSION_OVERRIDE"
 fi
 
-if ! [[ "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
+if ! [[ "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
+  die "version contains unsafe characters: $VERSION"
+fi
+if [[ "$VERSION" == *..* ]]; then
   die "version contains unsafe characters: $VERSION"
 fi
 

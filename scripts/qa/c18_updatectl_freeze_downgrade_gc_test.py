@@ -42,13 +42,19 @@ def policy(*, allow_downgrade: bool = False) -> dict:
     }
 
 
-def manifest(version: str, sha: str = "a" * 64, *, created_at: str | None = "2026-06-02T10:00:00Z") -> dict:
+def manifest(
+    version: str,
+    sha: str = "a" * 64,
+    *,
+    created_at: str | None = "2026-06-02T10:00:00Z",
+    payload: str | None = None,
+) -> dict:
     data: dict[str, object] = {
         "schema": "dadooh.totem.update.v1",
         "component": "totem-core",
         "version": version,
         "channel": "stable",
-        "payload": f"dadooh-totem-core-{version}.tar.gz",
+        "payload": payload or f"dadooh-totem-core-{version}.tar.gz",
         "payload_sha256": sha,
         "payload_bytes": 1,
         "entrypoint": "bin/totem_setup_visual_wizard.py",
@@ -100,6 +106,27 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(reason, "previous_identity_allowed_by_policy")
 
+    def test_reapply_newer_previous_identity_after_rollback_is_allowed(self) -> None:
+        state = {
+            "current": {
+                "version": "core-old",
+                "payload_sha256": "a" * 64,
+                "manifest_created_at_utc": "2026-06-02T10:00:00Z",
+            },
+            "previous": {
+                "version": "core-new",
+                "payload_sha256": "b" * 64,
+                "manifest_created_at_utc": "2026-06-02T11:00:00Z",
+            },
+        }
+        ok, reason = updatectl._downgrade_policy_allows_manifest(
+            policy(),
+            manifest("core-new", sha="b" * 64, created_at="2026-06-02T11:00:00Z"),
+            state,
+        )
+        self.assertTrue(ok)
+        self.assertEqual(reason, "previous_identity_not_older_than_current")
+
     def test_same_version_different_sha_is_always_rejected(self) -> None:
         state = {"current": {"version": "core-a", "payload_sha256": "b" * 64}}
         ok, reason = updatectl._downgrade_policy_allows_manifest(
@@ -109,6 +136,22 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
         )
         self.assertFalse(ok)
         self.assertEqual(reason, "current_version_payload_sha256_mismatch")
+
+    def test_manifest_rejects_release_dir_version_hazards(self) -> None:
+        for version in (".", "..", "-bad", "bad/name", "bad..name", ""):
+            with self.subTest(version=version):
+                with self.assertRaisesRegex(RuntimeError, "unsafe version string"):
+                    updatectl._validate_manifest(manifest(version), policy=policy(), component="totem-core")
+
+    def test_manifest_rejects_payload_path_hazards(self) -> None:
+        for payload_name in ("../evil.tar.gz", "/tmp/evil.tar.gz", "nested/evil.tar.gz", ".", "evil.tar.gz"):
+            with self.subTest(payload=payload_name):
+                with self.assertRaisesRegex(RuntimeError, "payload name"):
+                    updatectl._validate_manifest(
+                        manifest("core-safe", payload=payload_name),
+                        policy=policy(),
+                        component="totem-core",
+                    )
 
     def test_older_created_at_is_rejected_without_downgrade_permission(self) -> None:
         state = {

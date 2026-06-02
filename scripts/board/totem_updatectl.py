@@ -24,6 +24,7 @@ import datetime as _dt
 import hashlib
 import json
 import os
+import re
 import shutil
 import socket
 import ssl
@@ -50,6 +51,7 @@ COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
 UPDATE_CHANNELS = ("lab", "homologation", "stable")
 DEFAULT_DEVICE_CHANNEL = "stable"
+SAFE_RELEASE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 OTA_FROZEN_COMPONENTS = {
     "kiosky-player": "kiosky-player OTA is frozen until a C18-aware player/hwdecode package exists",
 }
@@ -572,11 +574,6 @@ def _downgrade_policy_allows_manifest(policy: Dict[str, Any],
     if current_identity == candidate_identity:
         return True, "same_current_identity"
 
-    if previous_identity == candidate_identity:
-        if allow_downgrade:
-            return True, "previous_identity_allowed_by_policy"
-        return False, "downgrade_not_allowed_by_policy"
-
     current_created = _state_entry_created_at(current)
     candidate_created = _candidate_created_at(manifest)
     if current_created is not None:
@@ -587,7 +584,33 @@ def _downgrade_policy_allows_manifest(policy: Dict[str, Any],
         if candidate_created < current_created and not allow_downgrade:
             return False, "downgrade_not_allowed_by_policy"
 
+    if previous_identity == candidate_identity:
+        if allow_downgrade:
+            return True, "previous_identity_allowed_by_policy"
+        if current_created is not None and candidate_created is not None and candidate_created >= current_created:
+            return True, "previous_identity_not_older_than_current"
+        return False, "downgrade_not_allowed_by_policy"
+
     return True, "not_a_known_downgrade"
+
+
+def _validate_release_version(version: Any) -> str:
+    if not isinstance(version, str) or not SAFE_RELEASE_VERSION_RE.fullmatch(version):
+        raise RuntimeError(f"unsafe version string: {version!r}")
+    if version in {".", ".."} or ".." in version:
+        raise RuntimeError(f"unsafe version string: {version!r}")
+    return version
+
+
+def _validate_payload_name(payload: Any, *, component: str, version: str) -> str:
+    if not isinstance(payload, str) or not payload:
+        raise RuntimeError(f"unsafe payload name: {payload!r}")
+    if payload != Path(payload).name or payload in {".", ".."} or "\x00" in payload:
+        raise RuntimeError(f"unsafe payload name: {payload!r}")
+    expected = f"dadooh-{component}-{version}.tar.gz"
+    if payload != expected:
+        raise RuntimeError(f"unexpected payload name: {payload!r} != {expected!r}")
+    return payload
 
 
 # ----------------------------------------------------------------------------
@@ -626,9 +649,8 @@ def _validate_manifest(m: Dict[str, Any],
     dev = req.get("device")
     if dev and dev != DEVICE_REQUIRED:
         raise RuntimeError(f"manifest device requirement not met: {dev!r} != {DEVICE_REQUIRED!r}")
-    ver = m["version"]
-    if not isinstance(ver, str) or not ver or "/" in ver or ".." in ver or "\x00" in ver:
-        raise RuntimeError(f"unsafe version string: {ver!r}")
+    ver = _validate_release_version(m["version"])
+    _validate_payload_name(m["payload"], component=expected_component, version=ver)
     sha = m["payload_sha256"]
     if not isinstance(sha, str) or len(sha) != 64 or not all(c in "0123456789abcdefABCDEF" for c in sha):
         raise RuntimeError("payload_sha256 must be a 64-char hex digest")

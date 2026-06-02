@@ -202,6 +202,8 @@ def create_initial_release(sandbox: Path) -> None:
                 "current": {
                     "version": INITIAL_VERSION,
                     "applied_at_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "manifest_created_at_utc": "2026-05-01T00:00:00Z",
+                    "payload_sha256": "0" * 64,
                     "source": "sandbox:initial",
                 },
                 "previous": None,
@@ -492,10 +494,8 @@ def main() -> int:
         settings_blocked = blocked_proc.returncode == 40
         current_after_blocked_apply = current_target(sandbox)
         lock_path.unlink(missing_ok=True)
-        write_update_policy(sandbox, selected_channel, allow_downgrade=True)
         final_proc = run_updatectl_apply(manifest, env)
         final_apply_passed = final_proc.returncode == 0
-        write_update_policy(sandbox, selected_channel)
         settings_lock_guard_passed = (
             settings_blocked
             and current_after_blocked_apply == current_before_blocked_apply
