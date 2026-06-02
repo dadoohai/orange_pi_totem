@@ -28,8 +28,8 @@ import derive_c15_2_1_homolog_image as base
 ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1"
-VERSION = "c18.image-lab.1"
+TAG = "c18-hwdecode-lab-1b"   # 1b = corrected rebuild (kiosk.py debugfs-banner fix + panfrost rebind); supersedes defective 1
+VERSION = "c18.image-lab.1b"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -41,10 +41,45 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1b-image"
+PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
+PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
+PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
+
+# Workaround for the H618 panfrost boot deferred-probe race (-110): bind the GPU before the
+# player if the render node is missing. Userspace only — no kernel/DTB/cmdline change.
+PANFROST_SH_BODY = (
+    "#!/bin/sh\n"
+    "# C18: ensure the panfrost GPU is bound before the player (boot deferred-probe race\n"
+    "# workaround). If /dev/dri/renderD128 is absent, (re)bind 1800000.gpu. No-op if present.\n"
+    "i=0\n"
+    "while [ \"$i\" -lt 8 ]; do\n"
+    "  [ -e /dev/dri/renderD128 ] && exit 0\n"
+    "  echo 1800000.gpu > /sys/bus/platform/drivers/panfrost/bind 2>/dev/null || true\n"
+    "  [ -e /dev/dri/renderD128 ] && exit 0\n"
+    "  i=$((i+1)); sleep 1\n"
+    "done\n"
+    "[ -e /dev/dri/renderD128 ]\n"
+)
+PANFROST_UNIT_BODY = (
+    "[Unit]\n"
+    "Description=Dadooh totem: bind panfrost GPU (boot deferred-probe race workaround)\n"
+    "DefaultDependencies=no\n"
+    "After=systemd-modules-load.service\n"
+    "Before=kiosky-player.service\n"
+    "ConditionPathExists=!/dev/dri/renderD128\n"
+    "\n"
+    "[Service]\n"
+    "Type=oneshot\n"
+    "RemainAfterExit=yes\n"
+    f"ExecStart={PANFROST_SH}\n"
+    "\n"
+    "[Install]\n"
+    "WantedBy=multi-user.target\n"
+)
 
 WRAPPER_SH = (
     "#!/bin/sh\n"
@@ -98,7 +133,13 @@ def main():
     base.copy_range(OUT_IMAGE, rootfs, offset=off, length=length)
 
     # ---- read + patch kiosk.py (point player at the wrapper) ----
-    kiosk_src = base.cat_file(rootfs, KIOSK)
+    # Read via `debugfs dump` (binary-faithful: the file's exact bytes go to a local file,
+    # debugfs's version banner goes to stderr — NOT into the content). NOTE: cat_file()
+    # concatenates stdout+stderr, which appended the "debugfs 1.47.0 ..." banner to the file
+    # in the defective build (c18-hwdecode-lab-1) → SyntaxError. Do NOT use cat for content.
+    kiosk_orig = work / "kiosk_orig.py"
+    base.debugfs(rootfs, f"dump {KIOSK} {kiosk_orig}")
+    kiosk_src = kiosk_orig.read_text(encoding="utf-8") if kiosk_orig.exists() else ""
     if not kiosk_src or MPV_PATH_OLD not in kiosk_src:
         raise SystemExit(f"BLOCKED: kiosk.py mpv_path default not found for patch")
     n = kiosk_src.count(MPV_PATH_OLD)
@@ -123,8 +164,14 @@ def main():
         f"libplacebo@{SOURCES['libplacebo_commit']}",
         "player_hwdec=v4l2request vo=gpu gpu_context=drm",
         "r4_updater_perms=injected",
+        "panfrost_rebind_service=installed",
+        "supersedes=c18-hwdecode-lab-1 (defective: kiosk.py debugfs-banner SyntaxError)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
+
+    # panfrost rebind service + script temp files
+    panfrost_sh_tmp = work / "totem-panfrost-rebind.sh"; panfrost_sh_tmp.write_text(PANFROST_SH_BODY, encoding="utf-8")
+    panfrost_unit_tmp = work / "totem-panfrost-rebind.service"; panfrost_unit_tmp.write_text(PANFROST_UNIT_BODY, encoding="utf-8")
 
     # ---- build the debugfs command batch (rootless ext4 edit) ----
     cmds = []
@@ -162,6 +209,10 @@ def main():
     put(str(kiosk_tmp), KIOSK, "0644")
     put(str(R4_UPDATECTL), UPDATECTL, "0755")
     put(str(marker_tmp), MARKER, "0644")
+    # panfrost rebind service (oneshot, before kiosky-player) + enable symlink
+    put(str(panfrost_sh_tmp), PANFROST_SH, "0755")
+    put(str(panfrost_unit_tmp), PANFROST_UNIT, "0644")
+    cmds.append(f"symlink {PANFROST_WANTS} {PANFROST_UNIT}")
 
     L(f"debugfs commands: {len(cmds)} (stack libs real={len(real_files)} symlink={len(symlinks)})")
     out = base.debugfs_batch(rootfs, cmds, work)
@@ -198,11 +249,22 @@ def main():
 
     grp = base.cat_file(vroot, "/etc/group") or ""
     video_line = next((ln for ln in grp.splitlines() if ln.startswith("video:")), "")
-    kiosk_now = base.cat_file(vroot, KIOSK) or ""
     wrap_now = base.cat_file(vroot, WRAPPER) or ""
     upd_now = base.cat_file(vroot, UPDATECTL) or ""
     marker_now = base.cat_file(vroot, MARKER) or ""
+    panfrost_unit_now = base.cat_file(vroot, PANFROST_UNIT) or ""
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
+
+    # py_compile the patched kiosk.py from the FINAL image via a clean dump (the missing
+    # check that let the defective v1 ship — cat-read had the banner; v1's file did not compile)
+    import py_compile as _pyc
+    kverify = work / "kiosk_verify.py"
+    base.debugfs(vroot, f"dump {KIOSK} {kverify}")
+    kiosk_clean = kverify.read_text(encoding="utf-8", errors="replace") if kverify.exists() else ""
+    try:
+        _pyc.compile(str(kverify), doraise=True); kiosk_compiles = True
+    except Exception as e:
+        kiosk_compiles = False; L(f"kiosk.py compile FAILED: {e}")
 
     v = {
         "custom_mpv_installed": present(f"{HWDIR}/bin/mpv") and execu(f"{HWDIR}/bin/mpv"),
@@ -211,8 +273,13 @@ def main():
         "wrapper_present": present(WRAPPER) and execu(WRAPPER),
         "wrapper_forces_hwdec": "--hwdec=v4l2request" in wrap_now and "--vo=gpu" in wrap_now
                                 and "--gpu-context=drm" in wrap_now and "LD_LIBRARY_PATH" in wrap_now,
-        "player_points_to_wrapper": MPV_PATH_NEW in kiosk_now,
-        "player_no_longer_default_mpv": MPV_PATH_OLD not in kiosk_now,
+        "player_points_to_wrapper": MPV_PATH_NEW in kiosk_clean,
+        "player_no_longer_default_mpv": MPV_PATH_OLD not in kiosk_clean,
+        "kiosk_py_compiles": kiosk_compiles,
+        "panfrost_rebind_script_present": present(PANFROST_SH) and execu(PANFROST_SH),
+        "panfrost_rebind_unit_present": present(PANFROST_UNIT),
+        "panfrost_rebind_enabled": present(PANFROST_WANTS),
+        "panfrost_unit_before_player": "Before=kiosky-player.service" in panfrost_unit_now,
         "r4_updater_perms_present": "_make_world_traversable" in upd_now,
         "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
         "marker_present": present(MARKER),
@@ -224,7 +291,7 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1b", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -251,12 +318,16 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
+        "supersedes": "c18-hwdecode-lab-1 (defective: kiosk.py debugfs-banner SyntaxError; no panfrost rebind)",
+        "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
+        "panfrost_rebind_service": True,
+        "kiosk_py_compiles": v["kiosk_py_compiles"],
         "ready_for_manual_card_flash": offline_ok,
         "ready_for_c18_image_lab_2_clean_board_validation": offline_ok,
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1 RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1b RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

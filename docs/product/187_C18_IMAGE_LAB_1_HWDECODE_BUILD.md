@@ -66,3 +66,18 @@ card_written=false poweroff=false c12_readonly_touched=false apt_upgrade=false p
 real_config_written=false media_or_cache_embedded=false secrets_published=false
 limitation_C_accepted=false
 ```
+
+## Correção → C18.IMAGE-LAB.1b (2026-06-01)
+A imagem `1` mostrou-se **defeituosa no 1º boot em hardware** (início da C18.IMAGE-LAB.2):
+(1) **player travado em "iniciando player"** = `kiosk.py` com `SyntaxError` na linha 3425 — o
+deriver leu o arquivo via `cat`, que concatena o **banner do `debugfs`** (stderr) ao conteúdo,
+poluindo o fim do arquivo; (2) **`panfrost -110`** (deferred-probe race) no boot, sem
+`/dev/dri/renderD128` — GPU **sã** (re-bind `echo 1800000.gpu > .../panfrost/bind` sobe na
+hora). Correções na **`1b`** (offline/rootless, deriva da C17.4.2, sem kernel/DTB/C12):
+kiosk.py lido via **`debugfs dump`** + **`py_compile`** na validação; serviço oneshot
+**`totem-panfrost-rebind`** (userspace, antes do player) que faz bind do panfrost se faltar
+`renderD128`. Imagem **`...-c18-hwdecode-lab-1b_minimal.img`** sha256
+`27ed29064a087091bdfc448560c93f217d032d9104a753b04c5ae7f65e701bf3`. Validação offline passou
+(inclui `kiosk_py_compiles` + checks do panfrost). **Gravar a `1b`** (não a `1`). Evidência:
+`docs/evidence/candidate-a/runs/20260602T011057Z-c18-image-lab-1b-hwdecode-rebuild/`.
+Diagnóstico (Round A/B em hardware) na memória `c18-image-lab-2-firstboot-obs`.

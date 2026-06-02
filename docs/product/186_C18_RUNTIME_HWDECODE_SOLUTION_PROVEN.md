@@ -76,3 +76,7 @@ C17.4.2), com o player apontando para o mpv custom e `--hwdec=v4l2request --vo=g
 `docs/evidence/candidate-a/runs/20260531T145557Z-c18-image-lab-1-hwdecode-build/`.
 Imagem `...-c18-hwdecode-lab-1_minimal.img` (sha256 `a1103ba8...`); `final_image=false`,
 `not_for_production=true`. Validacao em hardware (C18.IMAGE-LAB.2 clean-board) **obrigatoria**.
+**Correção (2026-06-01):** a `1` falhou no 1º boot em hardware (kiosk.py `SyntaxError` por
+banner do debugfs + panfrost deferred-probe race) → **gravar a `1b`**
+(`...-c18-hwdecode-lab-1b_minimal.img`, sha256 `27ed2906...`), não a `1`. Ver doc 187 (seção
+Correção) e a evidência `...-c18-image-lab-1b-hwdecode-rebuild/`.

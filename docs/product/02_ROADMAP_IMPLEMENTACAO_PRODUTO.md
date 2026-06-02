@@ -4,6 +4,24 @@ Status: proposta incremental. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Atualizacao C18.IMAGE-LAB.1b (rebuild corrigido): 2026-06-01. A C18.IMAGE-LAB.1 **falhou no
+1o boot em hardware** (C18.IMAGE-LAB.2, placa 192.168.18.131): (a) **player travado em
+"iniciando player"** = `kiosk.py` com SyntaxError na linha 3425 — o deriver leu o arquivo via
+`cat`, que concatenou o **banner do debugfs (stderr)** ao conteudo (bug meu); (b) **panfrost
+-110** deferred-probe race no boot, sem `renderD128` — **GPU sa** (re-bind cirurgico
+`echo 1800000.gpu > .../panfrost/bind` subiu mali-g31 na hora). Corrigido na **1b**
+(offline/rootless via debugfs, deriva da C17.4.2, **sem kernel/DTB/C12**): kiosk.py lido via
+**`debugfs dump`** + **`py_compile`** na validacao; servico oneshot **`totem-panfrost-rebind`**
+(userspace, antes do player) que faz bind do panfrost se faltar `renderD128`. Imagem
+`...-c18-hwdecode-lab-1b_minimal.img` sha256
+`27ed29064a087091bdfc448560c93f217d032d9104a753b04c5ae7f65e701bf3`. Validacao offline PASSOU
+(kiosk_py_compiles + panfrost checks + stack/wrapper/R4/totem-video/no-real-config/fsck).
+`ready_for_manual_card_flash=true` (**gravar a 1b, nao a 1**). Proximo = re-gravar +
+C18.IMAGE-LAB.2 (player chega em "tocando", panfrost no boot, hwdec engaja, zero-copy+rotacao
+270 no HDMI, sem terminal, media_load_failed~0). Docs: **187** (secao Correcao) + evidencia
+`20260602T011057Z-c18-image-lab-1b-hwdecode-rebuild`. Memoria: `c18-image-lab-2-firstboot-obs`.
+C nao aceito.
+
 Atualizacao C18.IMAGE-LAB.1 (HW decode image-lab build): 2026-05-31. Incorporou a stack
 de HW decode provada (C18.RUNTIME) numa **imagem-lab privada**, derivada **offline e
 rootless (debugfs)** da ultima imagem validada em hardware **C17.4.2** (C17.7 NAO usada —

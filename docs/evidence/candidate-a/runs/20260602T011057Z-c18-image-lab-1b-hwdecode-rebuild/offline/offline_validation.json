@@ -1,0 +1,21 @@
+{
+  "custom_mpv_installed": true,
+  "custom_ffmpeg_installed": true,
+  "all_stack_libs_present": true,
+  "wrapper_present": true,
+  "wrapper_forces_hwdec": true,
+  "player_points_to_wrapper": true,
+  "player_no_longer_default_mpv": true,
+  "kiosk_py_compiles": true,
+  "panfrost_rebind_script_present": true,
+  "panfrost_rebind_unit_present": true,
+  "panfrost_rebind_enabled": true,
+  "panfrost_unit_before_player": true,
+  "r4_updater_perms_present": true,
+  "totem_in_video_group": true,
+  "marker_present": true,
+  "marker_final_image_false": true,
+  "no_real_config_embedded": true,
+  "kiosky_service_present": true,
+  "fsck_clean": true
+}
