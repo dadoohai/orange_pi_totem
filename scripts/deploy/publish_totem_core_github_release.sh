@@ -90,7 +90,7 @@ ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-[[ -n "$REPO_ROOT" && -x "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" ]] \
+[[ -n "$REPO_ROOT" && -f "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" ]] \
   || die "c18 OTA release gate not found; run from orange_pi_totem checkout"
 python3 "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" \
   --package-manifest "$MANIFEST" \
