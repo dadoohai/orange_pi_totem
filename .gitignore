@@ -12,3 +12,7 @@ docs/evidence/candidate-a/runs/**/raw/
 # App-update package outputs: keep manifest in git, but tarballs are large and
 # already authoritative on GitHub Releases.
 releases/app-updates/**/*.tar.gz
+
+# Python bytecode caches (build artifacts; regenerated automatically).
+__pycache__/
+*.pyc
