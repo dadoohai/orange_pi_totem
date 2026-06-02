@@ -65,7 +65,8 @@ done
 log() { printf '[build_totem_core_release_package] %s\n' "$*"; }
 die() { printf '[build_totem_core_release_package] FATAL: %s\n' "$*" >&2; exit 1; }
 
-[[ -d "$REPO_ROOT/.git" ]] || die "REPO_ROOT ($REPO_ROOT) is not a git repo"
+git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  || die "REPO_ROOT ($REPO_ROOT) is not a git repo"
 for file in "${CORE_FILES[@]}"; do
   [[ -f "$REPO_ROOT/scripts/board/$file" ]] || die "missing core file: scripts/board/$file"
 done
