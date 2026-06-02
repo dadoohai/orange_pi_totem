@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # C17.5 - Bootstrap totem-core wrappers/fallback/updatectl on the lab board.
 #
+# C18 update-contract note: this script is a historical/manual bootstrap path.
+# It must not install kiosky_service_launcher.sh as a totem-core wrapper or
+# payload; that launcher is player-runtime and is fixed by the image.
+#
 # Runs on the builder and uses ssh/scp. The operator enters the SSH password
 # interactively. The script does not store credentials and does not read or
 # print appliance config, Wi-Fi details, NetworkManager profiles or secrets.
@@ -29,7 +33,6 @@ CORE_FILES=(
   totem_config_writer_real.py
   totem_setup_minimal_server.py
   totem_setup_local_wizard.py
-  kiosky_service_launcher.sh
 )
 
 say() { printf '[bootstrap_c17_5 %s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"; }
@@ -84,7 +87,6 @@ CORE_FILES=(
   totem_config_writer_real.py
   totem_setup_minimal_server.py
   totem_setup_local_wizard.py
-  kiosky_service_launcher.sh
 )
 
 [[ "$(id -u)" -eq 0 ]] || die "must run as root"

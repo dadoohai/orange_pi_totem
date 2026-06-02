@@ -42,6 +42,9 @@ CORE_FILES = (
     "totem_config_writer_real.py",
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
+)
+
+IMAGE_FIXED_PLAYER_FILES = (
     "kiosky_service_launcher.sh",
 )
 
@@ -107,6 +110,12 @@ def repo_overlay(sandbox: Path) -> dict[str, Any]:
         wrapper = wrapper_py if name.endswith(".py") else wrapper_sh
         replace_symlink(wrapper, wrappers_bin / name)
 
+    for name in IMAGE_FIXED_PLAYER_FILES:
+        source = REPO_ROOT / "scripts" / "board" / name
+        if not source.is_file():
+            raise RuntimeError(f"missing_fixed_player_file:{name}")
+        replace_symlink(source, wrappers_bin / name)
+
     replace_symlink(wrapper_py, wrappers_bin / "totem_core_exec.py")
     replace_symlink(wrapper_sh, wrappers_bin / "totem_core_exec.sh")
 
@@ -116,6 +125,7 @@ def repo_overlay(sandbox: Path) -> dict[str, Any]:
         "paths_created": [str(path) for path in created_paths],
         "fallback_files": len(CORE_FILES),
         "wrapper_files": len(CORE_FILES),
+        "fixed_player_files": len(IMAGE_FIXED_PLAYER_FILES),
     }
 
 
@@ -221,6 +231,10 @@ def image_copyout(sandbox: Path, image_dir: Path) -> dict[str, Any]:
                 copied += 1
             if debug.dump(f"/opt/totem/bin/{name}", wrappers_bin / name):
                 copied += 1
+        fixed_player_copied = 0
+        for name in IMAGE_FIXED_PLAYER_FILES:
+            if debug.dump(f"/opt/totem/bin/{name}", wrappers_bin / name):
+                fixed_player_copied += 1
         debug.dump(
             f"/data/core/totem/releases/{TOTEM_CORE_VERSION}/health/totem-core-health.json",
             sandbox / "data" / "core" / "totem" / "releases" / TOTEM_CORE_VERSION / "health" / "totem-core-health.json",
@@ -234,8 +248,11 @@ def image_copyout(sandbox: Path, image_dir: Path) -> dict[str, Any]:
         current_target = debug.symlink_target("/data/core/totem/current") or f"releases/{TOTEM_CORE_VERSION}"
         replace_symlink(current_target, sandbox / "data" / "core" / "totem" / "current")
 
-        if copied < len(CORE_FILES):
+        expected_core_copies = len(CORE_FILES) * 3
+        if copied < expected_core_copies:
             raise RuntimeError(f"image_copyout_incomplete:copied={copied}")
+        if fixed_player_copied < len(IMAGE_FIXED_PLAYER_FILES):
+            raise RuntimeError(f"image_copyout_fixed_player_incomplete:copied={fixed_player_copied}")
 
         return {
             "sandbox_created": True,
@@ -243,6 +260,7 @@ def image_copyout(sandbox: Path, image_dir: Path) -> dict[str, Any]:
             "paths_created": [str(path) for path in created_paths],
             "source_image": str(image),
             "files_copied": copied,
+            "fixed_player_files_copied": fixed_player_copied,
         }
     finally:
         shutil.rmtree(tempdir, ignore_errors=True)

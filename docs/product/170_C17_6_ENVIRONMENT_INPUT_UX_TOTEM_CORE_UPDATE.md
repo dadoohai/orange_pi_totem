@@ -1,5 +1,9 @@
 # 170 - C17.6 - Environment Input UX via Totem-Core Update
 
+> Regras atuais de atualizacao C18 estao consolidadas em
+> [docs/UPDATE_CONTRACT.md](../UPDATE_CONTRACT.md). Este documento permanece
+> como historico/evidencia.
+
 Status: passed
 
 C17.6 is the first real UX update delivered through the `totem-core` remote

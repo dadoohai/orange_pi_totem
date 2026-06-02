@@ -3,6 +3,9 @@
 # no pip).  Idempotent: replaces /opt/totem/bin/totem_open_settings_session.sh
 # with the repo copy.  The next F10 activation picks the new code on its own.
 #
+# LAB/BYPASS ONLY: this is not the C18 update path. For release/update
+# decisions, use docs/UPDATE_CONTRACT.md.
+#
 # Reads TOTEM_BOARD_PASS from env (never written anywhere).
 #
 # Note: rootfs uses overlayroot=tmpfs (C12 read-only).  Hotfix lives in the

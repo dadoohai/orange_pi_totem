@@ -1,5 +1,9 @@
 # 135 — C14.1.1 — GitHub Releases pull deploy MVP
 
+> Nota C18: este documento e historico. Nao usar os passos de
+> publish/apply/timer daqui como contrato vigente sem conferir
+> [docs/UPDATE_CONTRACT.md](../UPDATE_CONTRACT.md).
+
 ## Por que existe esta frente
 
 A imagem privada de homologação C13.1.3 está rodando bem na placa. Precisamos

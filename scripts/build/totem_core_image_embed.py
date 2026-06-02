@@ -39,6 +39,9 @@ CORE_FILES = [
     "totem_config_writer_real.py",
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
+]
+
+IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
 ]
 
@@ -125,6 +128,13 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
             commands.extend(write_file_commands(wrapper_sh, f"{wrappers_bin}/{core_file}"))
         else:
             raise RuntimeError(f"unknown_totem_core_wrapper_type:{core_file}")
+    for player_file in IMAGE_FIXED_PLAYER_FILES:
+        if "/" in player_file or player_file.startswith("."):
+            raise RuntimeError(f"unsafe_fixed_player_file:{player_file}")
+        source = repo_root / "scripts/board" / player_file
+        if not source.is_file():
+            raise RuntimeError(f"missing_fixed_player_file:{player_file}")
+        commands.extend(write_file_commands(source, f"{wrappers_bin}/{player_file}"))
 
     health_file = work_dir / "totem-core-health.json"
     health_file.write_text(
@@ -143,7 +153,6 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
                     "bash -n bin/totem_visual_tty_guard.sh",
                     "bash -n bin/totem_firstboot_gate.sh",
                     "bash -n bin/totem_status_renderer.sh",
-                    "bash -n bin/kiosky_service_launcher.sh",
                     "restore-order-static-check",
                 ],
             },
@@ -243,6 +252,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
     return {
         "totem_core_current_version": TOTEM_CORE_VERSION,
         "totem_core_files_embedded": len(core_files),
+        "image_fixed_player_files_embedded": len(IMAGE_FIXED_PLAYER_FILES),
         "totem_core_embed_debugfs_output_lines": len(output.splitlines()),
     }
 
@@ -327,6 +337,11 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
         checks[f"totem_core_fallback_{core_file}"] = _has_exec(rootfs, f"/opt/totem/core-fallback/bin/{core_file}")
         wrapper = base.cat_file(rootfs, f"/opt/totem/bin/{core_file}") or ""
         checks[f"totem_core_wrapper_{core_file}"] = "TOTEM_CORE_EXEC_WRAPPER" in wrapper
+    for player_file in IMAGE_FIXED_PLAYER_FILES:
+        wrapper = base.cat_file(rootfs, f"/opt/totem/bin/{player_file}") or ""
+        checks[f"image_fixed_player_{player_file}"] = _has_exec(rootfs, f"/opt/totem/bin/{player_file}")
+        checks[f"image_fixed_player_{player_file}_not_totem_core_wrapper"] = "TOTEM_CORE_EXEC_WRAPPER" not in wrapper
+        checks[f"totem_core_release_excludes_{player_file}"] = not _is_file(rootfs, f"{release_root}/bin/{player_file}")
     return {
         "ok": all(checks.values()),
         "checks": checks,

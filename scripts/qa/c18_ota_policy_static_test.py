@@ -17,6 +17,10 @@ POLICY_PATH = REPO_ROOT / "scripts" / "board" / "totem_update_policy.json"
 SERVICE_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.service"
 MANIFEST_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json"
 EMBED_PATH = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
+BUILD_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
+UPDATECTL_PATH = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
+BOOTSTRAP_C17_5_PATH = REPO_ROOT / "scripts" / "remote" / "bootstrap_c17_5_totem_core_on_board.sh"
+DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_embedded_image.py"
 
 
 class C18OtaPolicyStaticTest(unittest.TestCase):
@@ -53,6 +57,39 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("totem-update-agent.timer", embed)
         self.assertIn("totem_core_update_timer_disabled", embed)
         self.assertIn("totem_core_update_policy_restricts_core", embed)
+
+    def test_totem_core_ota_payload_excludes_player_launcher(self) -> None:
+        build = BUILD_CORE_PATH.read_text(encoding="utf-8")
+        core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
+        self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
+        self.assertNotIn("bash -n bin/kiosky_service_launcher.sh", build)
+
+    def test_image_embed_keeps_player_launcher_fixed_to_image(self) -> None:
+        embed = EMBED_PATH.read_text(encoding="utf-8")
+        core_files_block = embed.split("CORE_FILES = [", 1)[1].split("]", 1)[0]
+        self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
+        self.assertIn("IMAGE_FIXED_PLAYER_FILES", embed)
+        self.assertIn("not_totem_core_wrapper", embed)
+
+    def test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher(self) -> None:
+        bootstrap = BOOTSTRAP_C17_5_PATH.read_text(encoding="utf-8")
+        for block in bootstrap.split("CORE_FILES=(")[1:]:
+            self.assertNotIn("kiosky_service_launcher.sh", block.split(")", 1)[0])
+        self.assertIn("player-runtime and is fixed by the image", bootstrap)
+
+        c17_7 = DERIVE_C17_7_PATH.read_text(encoding="utf-8")
+        core_files_block = c17_7.split("CORE_FILES = [", 1)[1].split("]", 1)[0]
+        self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
+        self.assertIn("IMAGE_FIXED_PLAYER_FILES", c17_7)
+        self.assertIn("image_fixed_player_launcher_not_totem_core_wrapper", c17_7)
+
+    def test_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at(self) -> None:
+        updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
+        self.assertIn('"created_at_utc"', updatectl)
+        self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", updatectl)
+        self.assertNotIn('raw.get("allowed_components", ["kiosky-player", "totem-core"])', updatectl)
+        required_bin_block = updatectl.split("TOTEM_CORE_REQUIRED_BIN = (", 1)[1].split(")", 1)[0]
+        self.assertNotIn("kiosky_service_launcher.sh", required_bin_block)
 
 
 if __name__ == "__main__":

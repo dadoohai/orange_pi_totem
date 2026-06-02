@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# LAB/BYPASS ONLY: this is not the C18 player update path.
+# For release/update decisions, use docs/UPDATE_CONTRACT.md.
 set -eu
 
 REMOTE_APP_DIR="/opt/totem/kiosky-player"

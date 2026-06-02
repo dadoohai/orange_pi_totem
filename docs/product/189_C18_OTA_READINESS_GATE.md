@@ -38,7 +38,7 @@ baseline `1d`.
 - Testes estáticos de policy/service/timer.
 - Testes unitários de freeze, downgrade e GC de staging.
 - Sandbox `totem-core` apply/rollback/settings-lock.
-- Validação offline da próxima imagem (`1g`) deve comprovar policy presente, timer
+- Validação offline da próxima imagem (`1h`) deve comprovar policy presente, timer
   desligado e service apontando para `totem-core`.
 
 ## Contrato futuro de OTA
@@ -50,7 +50,7 @@ Toda release C18 nova de `totem-core` deve declarar no manifest:
 - `requires.updater_features` contendo `c18-freeze-kiosky-player-v1`,
   `c18-rollback-reapply-v1`, `c18-safe-payload-v1` e `c18-track-v1`.
 
-Updater `1g+` que nao encontrar esses campos, nao entender uma chave nova em
+Updater `1h+` que nao encontrar esses campos, nao entender uma chave nova em
 `requires`, encontrar track diferente, base incompatível, feature ausente ou
 feature desconhecida deve rejeitar a release. Se uma mudanca futura precisar
 novo updater, nova unit, novo pacote do sistema, player/MPV/hwdecode ou reboot
@@ -129,7 +129,11 @@ vir como nova imagem ou release ponte explicitamente homologada.
   apenas tipado, policy ausente permitia default e tar aceitava links. Esses
   pontos foram tratados no lote `1g`; por isso `1f` fica como validação limpa de
   config/playback, nao como proxima base de campo.
-- Build offline subsequente gerou `c18-hwdecode-lab-1g`.
+- Build offline subsequente gerou `c18-hwdecode-lab-1g` como endurecimento
+  intermediario. A auditoria de governanca seguinte apontou uma fronteira ainda
+  porosa: `kiosky_service_launcher.sh` estava no payload/fallback de
+  `totem-core`, permitindo que uma OTA de core alterasse o start do player. Por
+  isso `1g` foi supersedida antes de validacao em hardware.
   - Arquivo:
     `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1g_minimal.img`
   - `sha256=e6c59038f6141454261e8313ef9dc028782fec13ffcbf42331a23464548defa1`
@@ -138,14 +142,26 @@ vir como nova imagem ou release ponte explicitamente homologada.
     presente; timer desligado; service apontando para `totem-core`; sem config
     real embutida.
   - Ainda nao foi validada em hardware como flash limpo.
+- Build offline subsequente gerou `c18-hwdecode-lab-1h`.
+  - Arquivo:
+    `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1h_minimal.img`
+  - `sha256=778b60b86ea7487e1d4661c3f53f17c598894274fdf76b629d671c80865f8393`
+  - Tamanho: `1971322880` bytes.
+  - `OFFLINE_VALIDATION_PASSED=True`; `totem_core_ota_ready=true`; policy
+    presente; timer desligado; service apontando para `totem-core`; sem config
+    real embutida.
+  - Contrato de fronteira validado offline:
+    `image_fixed_player_kiosky_service_launcher.sh_not_totem_core_wrapper=true`
+    e `totem_core_release_excludes_kiosky_service_launcher.sh=true`.
+  - Ainda nao foi validada em hardware como flash limpo.
 
 ## Continuidade pos-compactacao
 
-1. Revisar o diff OTA `1g` como um lote unico e manter fora do stage o WIP
+1. Revisar o diff OTA `1h` como um lote unico e manter fora do stage o WIP
    alheio `scripts/qa/generate_ui_ux_gallery.py`.
 2. Rodar novamente os gates antes de commit:
    `PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json`.
-3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1g.
+3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1h.
 4. Proxima frente funcional do projeto: fluxo OTA manual de `totem-core`
    (publicacao/seleção/aplicacao controlada do wizard/core), mantendo auto-pull
    desligado e `kiosky-player` congelado.

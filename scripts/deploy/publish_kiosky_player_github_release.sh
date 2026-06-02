@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # C14.1.1 - Publish a kiosky-player release package to GitHub Releases.
 #
+# C18 guardrail: this is a historical publishing helper, not the current C18
+# OTA path. Release eligibility, channel policy, hardware validation and
+# updater-image requirements are defined in docs/UPDATE_CONTRACT.md.
+#
 # Inputs:
 #   --release-dir <path>   directory containing tar.gz + manifest (from builder)
 #   --repo <owner/repo>    GitHub repo (default dadoohai/kiosky-player)

@@ -9,6 +9,7 @@ release and before promoting a C18 OTA/image change.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import os
@@ -59,6 +60,10 @@ SECRET_PATTERNS = (
     "ghs_",
     "-----BEGIN ",
 )
+FORBIDDEN_TOTEM_CORE_TAR_NAMES = {
+    "bin/kiosky_service_launcher.sh",
+    "./bin/kiosky_service_launcher.sh",
+}
 
 
 def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]:
@@ -96,6 +101,17 @@ def payload_for_manifest(manifest_path: Path, override: Path | None) -> Path:
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     payload = override or manifest_path.parent / str(data.get("payload", ""))
     return payload
+
+
+def is_utc_timestamp(raw: Any) -> bool:
+    if not isinstance(raw, str) or not raw:
+        return False
+    value = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+    try:
+        parsed = dt.datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None and parsed.utcoffset() == dt.timedelta(0)
 
 
 def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_dirty: bool) -> dict[str, Any]:
@@ -146,7 +162,7 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
         and data.get("source_commit") == head.stdout.strip()
     )
     checks["payload_name_exact"] = data.get("payload") == expected_payload and payload_path.name == expected_payload
-    checks["created_at_utc_present"] = isinstance(data.get("created_at_utc"), str) and bool(data.get("created_at_utc"))
+    checks["created_at_utc_utc_timestamp"] = is_utc_timestamp(data.get("created_at_utc"))
     checks["requires_device"] = (data.get("requires") or {}).get("device") == "orangepizero3"
     checks["requires_device_track"] = (data.get("requires") or {}).get("device_track") == "c18-hwdecode"
     required_features = set((data.get("requires") or {}).get("updater_features") or [])
@@ -182,6 +198,10 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
                 ]
                 checks["tar_no_path_escape_or_forbidden_entries"] = not bad_names
                 checks["tar_regular_files_and_dirs_only"] = not bad_types
+                checks["tar_excludes_player_launcher"] = not (
+                    data.get("component") == "totem-core"
+                    and any(name.lstrip("./") in FORBIDDEN_TOTEM_CORE_TAR_NAMES for name in names)
+                )
                 result["tar_entry_count"] = len(names)
                 result["tar_bad_entries"] = bad_names[:20]
                 result["tar_bad_type_entries"] = bad_types[:20]

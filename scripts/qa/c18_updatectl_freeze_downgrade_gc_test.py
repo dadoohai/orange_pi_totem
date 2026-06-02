@@ -7,6 +7,7 @@ import argparse
 import importlib.util
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -186,6 +187,37 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, pattern):
                     updatectl._validate_manifest(data, policy=policy(), component="totem-core")
 
+    def test_manifest_requires_created_at_utc_timestamp(self) -> None:
+        cases = [
+            ("missing", lambda m: m.pop("created_at_utc"), "missing fields.*created_at_utc"),
+            ("empty", lambda m: m.__setitem__("created_at_utc", ""), "created_at_utc"),
+            ("invalid", lambda m: m.__setitem__("created_at_utc", "not-a-time"), "created_at_utc"),
+            ("naive", lambda m: m.__setitem__("created_at_utc", "2026-06-02T10:00:00"), "created_at_utc"),
+        ]
+        for name, mutate, pattern in cases:
+            with self.subTest(name=name):
+                data = manifest(f"core-created-at-{name}")
+                mutate(data)
+                with self.assertRaisesRegex(RuntimeError, pattern):
+                    updatectl._validate_manifest(data, policy=policy(), component="totem-core")
+
+    def test_policy_without_allowed_components_fails_closed(self) -> None:
+        raw = policy()
+        raw.pop("allowed_components")
+        with self.assertRaisesRegex(RuntimeError, "allowed_components"):
+            updatectl._normalise_policy(raw)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl.POLICY_FILE.parent.mkdir(parents=True)
+            updatectl.POLICY_FILE.write_text(json.dumps(raw, sort_keys=True) + "\n", encoding="utf-8")
+            loaded = updatectl._load_update_policy()
+            self.assertEqual(loaded["allowed_components"], [])
+            self.assertEqual(loaded["policy_source"], "invalid_file_fail_closed_stable")
+            with self.assertRaisesRegex(RuntimeError, "component_not_allowed_by_policy"):
+                updatectl._validate_manifest(manifest("core-policy-missing-allowlist"), component="totem-core")
+
     def test_missing_policy_fails_closed_for_totem_core(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -194,6 +226,20 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertEqual(loaded["allowed_components"], [])
             with self.assertRaisesRegex(RuntimeError, "component_not_allowed_by_policy"):
                 updatectl._validate_manifest(manifest("core-no-policy"), component="totem-core")
+
+    def test_totem_core_health_check_does_not_require_player_launcher(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            release = Path(tmp) / "release"
+            bin_dir = release / "bin"
+            bin_dir.mkdir(parents=True)
+            for name in updatectl.TOTEM_CORE_REQUIRED_BIN:
+                source = REPO_ROOT / "scripts" / "board" / name
+                self.assertNotEqual(name, "kiosky_service_launcher.sh")
+                shutil.copy2(source, bin_dir / name)
+
+            ok, reason = updatectl._totem_core_health_check(release)
+
+            self.assertTrue(ok, reason)
 
     def test_older_created_at_is_rejected_without_downgrade_permission(self) -> None:
         state = {

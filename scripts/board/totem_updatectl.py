@@ -2,8 +2,8 @@
 # C14.1.1 / C17.5 - totem_updatectl: pull-based updater.
 #
 # Scope:
-#   - Updates kiosky-player under /data/apps/kiosky-player.
-#   - Updates totem-core under /data/core/totem.
+#   - C18: applies manual totem-core updates under /data/core/totem.
+#   - kiosky-player OTA is frozen until a C18-aware player/runtime package exists.
 #   - Pulls assets from GitHub Releases via HTTPS (no git, no apt, no pip).
 #   - Validates manifest schema + payload SHA256 before extracting.
 #   - Atomic symlink swap of `current`. Keeps `previous` for rollback.
@@ -120,7 +120,6 @@ TOTEM_CORE_REQUIRED_BIN = (
     "totem_config_writer_real.py",
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
-    "kiosky_service_launcher.sh",
 )
 
 
@@ -482,7 +481,7 @@ def _normalise_policy(raw: Any, source: str = "file") -> Dict[str, Any]:
     device_track = raw.get("device_track", DEVICE_TRACK_DEFAULT)
     if device_track not in SUPPORTED_DEVICE_TRACKS:
         raise RuntimeError(f"unsupported device_track: {device_track!r}")
-    allowed_components = raw.get("allowed_components", ["kiosky-player", "totem-core"])
+    allowed_components = raw.get("allowed_components")
     if not isinstance(allowed_components, list) or not allowed_components:
         raise RuntimeError("policy allowed_components must be a non-empty list")
     clean_components = []
@@ -640,7 +639,7 @@ def _validate_payload_name(payload: Any, *, component: str, version: str) -> str
 
 REQUIRED_MANIFEST_FIELDS = (
     "schema", "component", "version", "payload",
-    "payload_sha256", "requires", "channel",
+    "payload_sha256", "requires", "channel", "created_at_utc",
 )
 
 
@@ -655,6 +654,8 @@ def _validate_manifest(m: Dict[str, Any],
         raise RuntimeError(f"unsupported manifest schema: {m['schema']!r}")
     if m["component"] != expected_component:
         raise RuntimeError(f"manifest component mismatch: {m['component']!r} != {expected_component!r}")
+    if _candidate_created_at(m) is None:
+        raise RuntimeError("manifest created_at_utc must be an ISO-8601 UTC timestamp")
     channel = m["channel"]
     if channel not in UPDATE_CHANNELS:
         raise RuntimeError(f"unsupported manifest channel: {channel!r}")
@@ -1120,7 +1121,6 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
         ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_visual_tty_guard.sh")],
         ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_firstboot_gate.sh")],
         ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_status_renderer.sh")],
-        ["/usr/bin/env", "bash", "-n", str(bin_dir / "kiosky_service_launcher.sh")],
     ]
     for cmd in checks:
         ok, info = _run_health_cmd(cmd)

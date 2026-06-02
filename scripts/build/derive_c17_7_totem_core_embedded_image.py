@@ -8,6 +8,9 @@ core entrypoints in /opt/totem/bin with the C17.5 wrappers.
 
 It does not invoke Armbian Build, apt, pip, kernel tooling, or a board, and it
 never reads or prints private config/seed contents.
+
+C18 update-contract note: kiosky_service_launcher.sh is player-runtime. Keep it
+fixed in /opt/totem/bin and out of the totem-core release/fallback payload.
 """
 
 from __future__ import annotations
@@ -63,6 +66,9 @@ CORE_FILES = [
     "totem_config_writer_real.py",
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
+]
+
+IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
 ]
 
@@ -175,6 +181,13 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
             commands.extend(write_file_commands(wrapper_sh, f"{wrappers_bin}/{core_file}"))
         else:
             raise RuntimeError(f"unknown_totem_core_wrapper_type:{core_file}")
+    for player_file in IMAGE_FIXED_PLAYER_FILES:
+        if "/" in player_file or player_file.startswith("."):
+            raise RuntimeError(f"unsafe_fixed_player_file:{player_file}")
+        source = repo_root / "scripts/board" / player_file
+        if not source.is_file():
+            raise RuntimeError(f"missing_fixed_player_file:{player_file}")
+        commands.extend(write_file_commands(source, f"{wrappers_bin}/{player_file}"))
 
     health_file = work_dir / "totem-core-health.json"
     health_file.write_text(
@@ -193,7 +206,6 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
                     "bash -n bin/totem_visual_tty_guard.sh",
                     "bash -n bin/totem_firstboot_gate.sh",
                     "bash -n bin/totem_status_renderer.sh",
-                    "bash -n bin/kiosky_service_launcher.sh",
                     "restore-order-static-check",
                 ],
             },
@@ -264,6 +276,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
     return {
         "totem_core_current_version": TOTEM_CORE_VERSION,
         "totem_core_files_embedded": len(core_files),
+        "image_fixed_player_files_embedded": len(IMAGE_FIXED_PLAYER_FILES),
         "totem_core_embed_debugfs_output_lines": len(output.splitlines()),
     }
 
@@ -349,6 +362,7 @@ def validate_c17_7(rootfs: Path, image_name: str, *, repo_root: Path) -> dict[st
         rootfs, f"/data/core/totem/releases/{TOTEM_CORE_VERSION}/bin/totem_open_settings_session.sh"
     ) or ""
     updatectl = base.cat_file(rootfs, "/opt/totem/bin/totem-updatectl") or ""
+    player_launcher = base.cat_file(rootfs, "/opt/totem/bin/kiosky_service_launcher.sh") or ""
     checks["image_name_contains_c17_7"] = EXPECTED_IMAGE_TOKEN in image_name
     checks["c17_7_marker_present"] = is_file(rootfs, MARKER_PATH)
     checks["c17_7_marker_records_totem_core"] = all(
@@ -384,6 +398,11 @@ def validate_c17_7(rootfs: Path, image_name: str, *, repo_root: Path) -> dict[st
     checks["settings_restore_order_current_ok"] = all(restore_order_checks(session_current).values())
     checks["splash_service_uses_wrapper"] = "/opt/totem/bin/totem_visual_splash.py boot" in splash_service
     checks["totem_updatectl_multi_component"] = "totem-core" in updatectl and "_totem_core_health_check" in updatectl
+    checks["image_fixed_player_launcher_present"] = executable(rootfs, "/opt/totem/bin/kiosky_service_launcher.sh")
+    checks["image_fixed_player_launcher_not_totem_core_wrapper"] = "TOTEM_CORE_EXEC_WRAPPER" not in player_launcher
+    checks["totem_core_release_excludes_player_launcher"] = not is_file(
+        rootfs, f"/data/core/totem/releases/{TOTEM_CORE_VERSION}/bin/kiosky_service_launcher.sh"
+    )
     checks["pull_update_timer_enabled"] = is_symlink(
         rootfs, "/etc/systemd/system/timers.target.wants/totem-update-agent.timer"
     )

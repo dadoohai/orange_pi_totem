@@ -63,6 +63,11 @@ C18.
 `kiosky-player`, MPV e hwdecode ficam congelados fora do OTA C18. O freeze vale
 mesmo que uma release, manifest ou policy tente aplicar `kiosky-player`.
 
+`kiosky_service_launcher.sh` e tratado como fronteira de `player-runtime`, nao
+como `totem-core` operacional. Releases OTA de `totem-core` nao devem incluir
+`bin/kiosky_service_launcher.sh`; a imagem deve fornecer esse launcher como
+arquivo fixo em `/opt/totem/bin`.
+
 Qualquer mudanca em duracao, playlist, sync, decode, wrapper de MPV, flags de
 MPV, panfrost, path de player, service do player ou fallback `/opt` exige frente
 separada e imagem/homologacao apropriadas.

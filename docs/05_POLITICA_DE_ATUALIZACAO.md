@@ -83,6 +83,12 @@ Podem ser atualizados pelo backend e gravados em `/data`:
 
 ### 5.2 Aplicação
 
+Nota C18: para `kiosky-player` e `totem-core`, o contrato vigente e
+[UPDATE_CONTRACT.md](UPDATE_CONTRACT.md). O layout abaixo e conceitual/historico;
+a implementacao atual usa `/data/apps/kiosky-player/current` ou
+`/data/core/totem/current` com manifest, canal, SHA e rollback, respeitando as
+fronteiras C18.
+
 Deve usar release versionada, com rollback:
 
 ```text

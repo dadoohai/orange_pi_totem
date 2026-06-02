@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # C14.1.1 - Build kiosky-player release package for GitHub Releases pull deploy.
 #
+# C18 guardrail: this is a historical packaging helper, not the current C18
+# OTA path. Release eligibility, channel policy, hardware validation and
+# updater-image requirements are defined in docs/UPDATE_CONTRACT.md.
+#
 # Inputs (env or args):
 #   KIOSKY_REPO   path to kiosky-player working copy (default /home/builder/kiosky-player)
 #   VERSION       explicit version string; default: homolog-<UTC timestamp>

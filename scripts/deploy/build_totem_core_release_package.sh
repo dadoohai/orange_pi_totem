@@ -7,7 +7,8 @@
 #
 # Payload contains only updater-safe appliance core scripts under bin/.
 # It does not include secrets, config, logs, media, NetworkManager profiles,
-# systemd units, kernel/BSP artifacts, or the updater as a self-update.
+# systemd units, kernel/BSP artifacts, player launchers, or the updater as a
+# self-update.
 
 set -euo pipefail
 
@@ -39,7 +40,6 @@ CORE_FILES=(
   totem_config_writer_real.py
   totem_setup_minimal_server.py
   totem_setup_local_wizard.py
-  kiosky_service_launcher.sh
 )
 
 for arg in "$@"; do
@@ -150,7 +150,6 @@ cat > "$STAGE_DIR/health/totem-core-health.json" <<JSON
     "bash -n bin/totem_visual_tty_guard.sh",
     "bash -n bin/totem_firstboot_gate.sh",
     "bash -n bin/totem_status_renderer.sh",
-    "bash -n bin/kiosky_service_launcher.sh",
     "restore-order-static-check"
   ]
 }

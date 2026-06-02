@@ -1,5 +1,9 @@
 # 181 — C18.RUNTIME.3 Updater Release-Permissions Fix (remote updates never took effect)
 
+> Regras atuais de atualizacao C18 estao consolidadas em
+> [docs/UPDATE_CONTRACT.md](../UPDATE_CONTRACT.md). Este documento permanece
+> como historico/evidencia de bugfix.
+
 Rodada de **correcao** do mecanismo de auto-update (C14 pull updater). Durante a
 validacao em hardware (C17.4.2) descobriu-se que **publicar uma release no GitHub
 NAO troca o player que roda na placa** — a release e baixada e "aplicada", mas o

@@ -44,6 +44,7 @@ def manifest(component: str, version: str, channel: str, **overrides: object) ->
         "payload": payload,
         "payload_sha256": "a" * 64,
         "payload_bytes": 10,
+        "created_at_utc": "2026-05-18T10:00:00Z",
         "requires": {
             "device": "orangepizero3",
             "base_image_min": "c17.4.2",

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# LAB/BYPASS ONLY: this helper bypasses the C18 update contract.
+# For release/update decisions, use docs/UPDATE_CONTRACT.md.
 set -eu
 
 usage() {

@@ -1,5 +1,9 @@
 # 169 - C17.5 - Totem-Core Remote Update MVP
 
+> Regras atuais de atualizacao C18 estao consolidadas em
+> [docs/UPDATE_CONTRACT.md](../UPDATE_CONTRACT.md). Este documento permanece
+> como historico/evidencia da origem do `totem-core`.
+
 Status: passed
 
 C17.4.2 passed clean-card validation and could have opened C18 from a purely

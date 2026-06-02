@@ -545,7 +545,6 @@ def ensure_totem_core_image_embed():
             "bash -n bin/totem_visual_tty_guard.sh",
             "bash -n bin/totem_firstboot_gate.sh",
             "bash -n bin/totem_status_renderer.sh",
-            "bash -n bin/kiosky_service_launcher.sh",
             "restore-order-static-check",
         ],
     }

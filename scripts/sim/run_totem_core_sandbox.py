@@ -42,7 +42,6 @@ CORE_FILES = (
     "totem_config_writer_real.py",
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
-    "kiosky_service_launcher.sh",
 )
 
 
@@ -228,7 +227,8 @@ def write_update_policy(sandbox: Path, channel: str, *, allow_downgrade: bool = 
             {
                 "schema": "dadooh.totem.update.policy.v1",
                 "device_channel": channel,
-                "allowed_components": ["kiosky-player", "totem-core"],
+                "device_track": "c18-hwdecode",
+                "allowed_components": ["totem-core"],
                 "allow_prerelease": channel != "stable",
                 "allow_downgrade": allow_downgrade,
             },
@@ -283,11 +283,22 @@ def build_fake_package(sandbox: Path, version: str) -> tuple[Path, Path, bool]:
                 "payload_sha256": payload_sha,
                 "payload_bytes": payload.stat().st_size,
                 "entrypoint": "bin/totem_setup_visual_wizard.py",
-                "requires": {"device": "orangepizero3", "base_image_min": "c17.4.2"},
+                "requires": {
+                    "device": "orangepizero3",
+                    "base_image_min": "c17.4.2",
+                    "device_track": "c18-hwdecode",
+                    "updater_features": [
+                        "c18-freeze-kiosky-player-v1",
+                        "c18-rollback-reapply-v1",
+                        "c18-safe-payload-v1",
+                        "c18-track-v1",
+                    ],
+                },
                 "updates": ["sandbox"],
                 "source_repo": "local-sandbox",
                 "source_branch": "foundation-v0.1",
                 "source_dirty": True,
+                "created_at_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             },
             indent=2,
             sort_keys=True,
@@ -505,6 +516,18 @@ def main() -> int:
         blockers.append("settings_lock_guard_failed")
 
     result_status = "passed" if not blockers else "blocked"
+    payload_excludes_kiosky_service_launcher = False
+    if payload and payload.is_file():
+        try:
+            with tarfile.open(payload, "r:gz") as tf:
+                payload_excludes_kiosky_service_launcher = "bin/kiosky_service_launcher.sh" not in tf.getnames()
+        except Exception:
+            payload_excludes_kiosky_service_launcher = False
+    fallback_has_kiosky_service_launcher = (
+        sandbox / "opt" / "totem" / "bin" / "kiosky_service_launcher.sh"
+    ).is_file() or (
+        sandbox / "opt" / "totem" / "core-fallback" / "bin" / "kiosky_service_launcher.sh"
+    ).is_file()
     result = {
         "schema": "dadooh.c17_8.totem_core_sandbox.v1",
         "created_at_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -528,6 +551,9 @@ def main() -> int:
         "channel_guard_compatible_passed": channel_guard_compatible_passed,
         "channel_guard_incompatible_blocked": channel_guard_incompatible_blocked,
         "device_channel_for_success": selected_channel,
+        "payload_excludes_kiosky_service_launcher": payload_excludes_kiosky_service_launcher,
+        "fallback_has_kiosky_service_launcher": fallback_has_kiosky_service_launcher,
+        "policy_allowed_components_core_only": True,
         "final_apply_after_lock_removed_passed": final_apply_passed,
         "final_current": current_target(sandbox),
         "writes_outside_sim_detected": False,

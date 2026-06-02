@@ -975,7 +975,9 @@
       "totem_visual_setup_writer_handoff.py",
       "totem_config_writer_real.py",
       "totem_setup_minimal_server.py",
-      "totem_setup_local_wizard.py",
+      "totem_setup_local_wizard.py"
+    ],
+    "image_fixed_player_files": [
       "kiosky_service_launcher.sh"
     ],
     "splash_service_uses_totem_core_wrapper": true,

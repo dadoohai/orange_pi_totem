@@ -1,5 +1,8 @@
 # Estado Atual do Player MPV
 
+> Nota historica: qualquer redeploy/update atual de player ou runtime de midia
+> deve seguir [docs/UPDATE_CONTRACT.md](../UPDATE_CONTRACT.md).
+
 Data: 2026-04-30
 
 ## Resumo executivo

@@ -83,6 +83,7 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Testes iniciais e evidências](docs/03_TESTES_INICIAIS_E_EVIDENCIAS.md)
 - [Roadmap de produto, testes, atualização e monitoramento](docs/04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md)
 - [Política de atualização](docs/05_POLITICA_DE_ATUALIZACAO.md)
+- [Contrato C18 de atualização](docs/UPDATE_CONTRACT.md)
 - [Status atual consolidado](docs/STATUS_ATUAL.md)
 - [Estratégia produto/UX](docs/product/01_ESTRATEGIA_PRODUTO_UX.md)
 - [Roadmap implementação produto/UX](docs/product/02_ROADMAP_IMPLEMENTACAO_PRODUTO.md)
@@ -111,4 +112,4 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 
 ## Regra operacional crítica
 
-Não rodar `apt upgrade`, `apt full-upgrade`, `apt dist-upgrade` ou `armbian-upgrade` em campo. A base foi validada com kernel/DTB/U-Boot/BSP congelados. Atualizações devem seguir fluxo controlado por release.
+Não rodar `apt upgrade`, `apt full-upgrade`, `apt dist-upgrade` ou `armbian-upgrade` em campo. A base foi validada com kernel/DTB/U-Boot/BSP congelados. Atualizações de player/core devem seguir [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md); documentos C14/C15/C17 e scripts remotos são históricos/lab quando divergirem desse contrato.

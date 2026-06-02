@@ -1,5 +1,9 @@
 # 178 - C17.9 - Update Channel Governance
 
+> Regras atuais de atualizacao C18 estao consolidadas em
+> [docs/UPDATE_CONTRACT.md](../UPDATE_CONTRACT.md). Este documento segue como
+> base historica da politica de canais.
+
 Date: 2026-05-18
 
 Status: passed
