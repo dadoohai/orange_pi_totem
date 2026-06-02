@@ -57,7 +57,7 @@ novo updater, nova unit, novo pacote do sistema, player/MPV/hwdecode ou reboot
 para se tornar verdadeira, ela nao pertence ao OTA normal de `totem-core`; deve
 vir como nova imagem ou release ponte explicitamente homologada.
 
-## Estado live da 1e + OTA smoke (2026-06-02)
+## Estado live, imagens e OTA smoke (2026-06-02)
 
 - Imagem gerada: `c18-hwdecode-lab-1e`
   (`sha256=b782421c684783bdeba029c90b014f3a469888d34d69caf524e5a69d88dff211`),
@@ -173,19 +173,40 @@ vir como nova imagem ou release ponte explicitamente homologada.
     e `totem_core_release_excludes_kiosky_service_launcher.sh=true`.
   - Seed de homologacao preserva HW decode:
     `homologation_seed_mpv_path_points_to_wrapper=true`.
-  - Ainda nao foi validada em hardware como flash limpo.
+  - Validada em hardware como flash limpo:
+    - marker `c18-hwdecode-lab-1i` presente;
+    - policy presente e restrita a `totem-core`;
+    - `totem-update-agent.timer` `disabled`/`inactive`;
+    - service de update apontando para
+      `--component totem-core --repo dadoohai/orange_pi_totem`;
+    - `kiosky_service_launcher.sh` fixo na imagem, fora do payload
+      `totem-core`;
+    - `/data/apps/kiosky-player/current` ausente.
+  - Config real aplicada via writer a partir do seed local de homologacao, sem
+    publicar valores privados. A config ativa preservou
+    `mpv_path=/opt/totem/bin/totem-mpv-hwdecode`.
+  - Player pos-config:
+    - processo MPV em `/opt/totem/hwdecode/bin/mpv`;
+    - `hwdec-current=v4l2request-copy`;
+    - `media_load_failed=0`;
+    - `NRestarts=0`;
+    - sem erros panfrost na amostra curta.
+  - OTA local de `totem-core` validado na placa com pacote gerado do commit
+    `e56fddb`: apply, rollback e reapply passaram; o player permaneceu ativo e
+    com HW decode apos cada etapa.
+  - Dry-run GitHub nao encontrou release compativel de `totem-core`, esperado
+    enquanto nao houver release C18 nova publicada com o contrato `1i`.
+  - Tentativa de OTA de `kiosky-player` continuou bloqueada com
+    `rc=44` (`component_frozen_for_ota`).
 
 ## Continuidade pos-compactacao
 
-1. Revisar o diff OTA `1i` como um lote unico e manter fora do stage o WIP
+1. Comitar esta evidencia de hardware da `1i` mantendo fora do stage o WIP
    alheio `scripts/qa/generate_ui_ux_gallery.py`.
-2. Rodar novamente os gates antes de commit:
-   `PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json`.
-3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1i.
-4. Proxima frente funcional do projeto: fluxo OTA manual de `totem-core`
-   (publicacao/seleção/aplicacao controlada do wizard/core), mantendo auto-pull
+2. Proxima frente funcional do projeto: publicar uma release C18 compativel de
+   `totem-core` e validar o fluxo GitHub end-to-end, mantendo auto-pull
    desligado e `kiosky-player` congelado.
-5. Depois disso, abrir as frentes separadas: compatibilidade HDMI/resolucao por
+3. Depois disso, abrir as frentes separadas: compatibilidade HDMI/resolucao por
    display e melhorias do wizard (cursor, rede aberta, UX de entrada).
 
 ## Fora de escopo
