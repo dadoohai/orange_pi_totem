@@ -93,6 +93,9 @@ O gate deve provar, no minimo:
 - payload com SHA correto e sem path traversal, symlink, hardlink ou segredo;
 - policy/service/timer C18 coerentes;
 - freeze de `kiosky-player` preservado;
+- scripts historicos de release de `kiosky-player` falhando por padrao, salvo
+  override explicito para release `player-runtime` C18-aware homologada;
+- diff OTA comum sem arquivos `player-runtime` fixos por imagem;
 - sandbox apply/rollback de `totem-core` passando.
 
 ## Quando Gerar Imagem

@@ -64,6 +64,12 @@ FORBIDDEN_TOTEM_CORE_TAR_NAMES = {
     "bin/kiosky_service_launcher.sh",
     "./bin/kiosky_service_launcher.sh",
 }
+PLAYER_RUNTIME_DIFF_PATHS = {
+    "scripts/board/kiosky_service_launcher.sh",
+    "scripts/board/totem-kiosky-launcher.sh",
+    "scripts/board/kiosky-player.service",
+    "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
+}
 
 
 def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]:
@@ -86,6 +92,45 @@ def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]
         "passed": proc.returncode == 0,
         "stdout_tail": proc.stdout[-4000:],
         "stderr_tail": proc.stderr[-4000:],
+    }
+
+
+def player_runtime_diff_guard() -> dict[str, Any]:
+    names: set[str] = set()
+    for cmd in (
+        ["git", "diff", "--name-only"],
+        ["git", "diff", "--cached", "--name-only"],
+    ):
+        proc = subprocess.run(
+            cmd,
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return {
+                "name": "player_runtime_diff_guard",
+                "cmd": cmd,
+                "returncode": proc.returncode,
+                "passed": False,
+                "stdout_tail": proc.stdout[-4000:],
+                "stderr_tail": proc.stderr[-4000:],
+            }
+        names.update(line.strip() for line in proc.stdout.splitlines() if line.strip())
+    hits = sorted(names & PLAYER_RUNTIME_DIFF_PATHS)
+    message = (
+        "player-runtime files changed; this is outside ordinary totem-core OTA "
+        "and requires image/homologation or an explicit C18-aware player-runtime release"
+    )
+    return {
+        "name": "player_runtime_diff_guard",
+        "cmd": ["git", "diff", "--name-only", "&&", "git", "diff", "--cached", "--name-only"],
+        "returncode": 1 if hits else 0,
+        "passed": not hits,
+        "stdout_tail": "\n".join(hits),
+        "stderr_tail": message if hits else "",
     }
 
 
@@ -248,6 +293,7 @@ def main() -> int:
     steps.append(run_step("py_compile", ["python3", "-m", "py_compile", *PY_COMPILE_TARGETS]))
     for target in BASH_SYNTAX_TARGETS:
         steps.append(run_step(f"bash_syntax:{target}", ["bash", "-n", target]))
+    steps.append(player_runtime_diff_guard())
     for name, cmd in TEST_COMMANDS:
         steps.append(run_step(name, cmd))
 

@@ -142,7 +142,12 @@ vir como nova imagem ou release ponte explicitamente homologada.
     presente; timer desligado; service apontando para `totem-core`; sem config
     real embutida.
   - Ainda nao foi validada em hardware como flash limpo.
-- Build offline subsequente gerou `c18-hwdecode-lab-1h`.
+- Build offline subsequente gerou `c18-hwdecode-lab-1h` como fechamento da
+  fronteira `totem-core`/`player-runtime`. A validação em placa limpa mostrou
+  que a imagem estava correta no contrato OTA, mas o seed de homologacao ainda
+  continha `mpv_path="mpv"`; ao gravar a config real, isso sobrescrevia o
+  wrapper C18 e fazia o player subir com `/usr/bin/mpv` e
+  `hwdec-current=no`. Por isso `1h` foi supersedida antes de virar baseline.
   - Arquivo:
     `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1h_minimal.img`
   - `sha256=778b60b86ea7487e1d4661c3f53f17c598894274fdf76b629d671c80865f8393`
@@ -153,15 +158,30 @@ vir como nova imagem ou release ponte explicitamente homologada.
   - Contrato de fronteira validado offline:
     `image_fixed_player_kiosky_service_launcher.sh_not_totem_core_wrapper=true`
     e `totem_core_release_excludes_kiosky_service_launcher.sh=true`.
+  - Validada em hardware somente ate o achado do seed; nao usar como proxima
+    base de campo.
+- Build offline subsequente gerou `c18-hwdecode-lab-1i`.
+  - Arquivo:
+    `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1i_minimal.img`
+  - `sha256=5944f284fec4025b021413608a7bc98034a088046d742c09496e634a37074c4e`
+  - Tamanho: `1971322880` bytes.
+  - `OFFLINE_VALIDATION_PASSED=True`; `totem_core_ota_ready=true`; policy
+    presente; timer desligado; service apontando para `totem-core`; sem config
+    real embutida.
+  - Contrato de fronteira validado offline:
+    `image_fixed_player_kiosky_service_launcher.sh_not_totem_core_wrapper=true`
+    e `totem_core_release_excludes_kiosky_service_launcher.sh=true`.
+  - Seed de homologacao preserva HW decode:
+    `homologation_seed_mpv_path_points_to_wrapper=true`.
   - Ainda nao foi validada em hardware como flash limpo.
 
 ## Continuidade pos-compactacao
 
-1. Revisar o diff OTA `1h` como um lote unico e manter fora do stage o WIP
+1. Revisar o diff OTA `1i` como um lote unico e manter fora do stage o WIP
    alheio `scripts/qa/generate_ui_ux_gallery.py`.
 2. Rodar novamente os gates antes de commit:
    `PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json`.
-3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1h.
+3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1i.
 4. Proxima frente funcional do projeto: fluxo OTA manual de `totem-core`
    (publicacao/seleção/aplicacao controlada do wizard/core), mantendo auto-pull
    desligado e `kiosky-player` congelado.

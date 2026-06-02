@@ -21,6 +21,9 @@ BUILD_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_p
 UPDATECTL_PATH = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
 BOOTSTRAP_C17_5_PATH = REPO_ROOT / "scripts" / "remote" / "bootstrap_c17_5_totem_core_on_board.sh"
 DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_embedded_image.py"
+BUILD_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "build_kiosky_player_release_package.sh"
+PUBLISH_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_kiosky_player_github_release.sh"
+RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
 
 
 class C18OtaPolicyStaticTest(unittest.TestCase):
@@ -90,6 +93,20 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn('raw.get("allowed_components", ["kiosky-player", "totem-core"])', updatectl)
         required_bin_block = updatectl.split("TOTEM_CORE_REQUIRED_BIN = (", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", required_bin_block)
+
+    def test_player_release_scripts_are_frozen_by_default(self) -> None:
+        for path in (BUILD_PLAYER_PATH, PUBLISH_PLAYER_PATH):
+            script = path.read_text(encoding="utf-8")
+            self.assertIn("ALLOW_C18_FROZEN_PLAYER_RELEASE", script)
+            self.assertIn("kiosky-player OTA", script)
+            self.assertIn("is frozen for C18", script)
+
+    def test_release_gate_blocks_player_runtime_diff(self) -> None:
+        gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
+        self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
+        self.assertIn("player_runtime_diff_guard", gate)
+        self.assertIn("requires image/homologation", gate)
 
 
 if __name__ == "__main__":

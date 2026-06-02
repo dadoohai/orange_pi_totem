@@ -33,8 +33,8 @@ ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1h"   # 1h = 1g + sealed OTA/player-runtime boundary.
-VERSION = "c18.image-lab.1h"
+TAG = "c18-hwdecode-lab-1i"   # 1i = 1h + homologation seed preserves HW-decode wrapper.
+VERSION = "c18.image-lab.1i"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -46,11 +46,12 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1h-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1i-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
 C18_STABILITY_DROPIN = "/etc/systemd/system/kiosky-player.service.d/30-c18-stability.conf"
+HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
@@ -173,6 +174,17 @@ def main():
     kiosk_patched = kiosk_src.replace(MPV_PATH_OLD, MPV_PATH_NEW, 1)
     kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_patched, encoding="utf-8")
 
+    seed_orig = work / "private-values.seed.orig.json"
+    base.debugfs(rootfs, f"dump {HOMOLOGATION_SEED} {seed_orig}")
+    if not seed_orig.exists():
+        raise SystemExit(f"BLOCKED: homologation seed missing at {HOMOLOGATION_SEED}")
+    seed_data = json.loads(seed_orig.read_text(encoding="utf-8"))
+    if not isinstance(seed_data, dict):
+        raise SystemExit("BLOCKED: homologation seed root is not an object")
+    seed_data["mpv_path"] = WRAPPER
+    seed_tmp = work / "private-values.seed.json"
+    seed_tmp.write_text(json.dumps(seed_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
     # ---- wrapper + marker temp files ----
     wrap_tmp = work / "totem-mpv-hwdecode"; wrap_tmp.write_text(WRAPPER_SH, encoding="utf-8")
     marker_tmp = work / "marker"
@@ -195,9 +207,10 @@ def main():
         "totem_update_timer_enabled=false",
         "player_runtime_launcher_fixed_by_image=true",
         "totem_core_excludes_kiosky_service_launcher=true",
+        "homologation_seed_mpv_path=totem-mpv-hwdecode",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -244,6 +257,7 @@ def main():
     put(str(wrap_tmp), WRAPPER, "0755")
     put(str(kiosk_tmp), KIOSK, "0644")
     put(str(R4_UPDATECTL), UPDATECTL, "0755")
+    put(str(seed_tmp), HOMOLOGATION_SEED, "0600")
     put(str(marker_tmp), MARKER, "0644")
     # panfrost rebind service (oneshot, before kiosky-player) + enable symlink
     put(str(panfrost_sh_tmp), PANFROST_SH, "0755")
@@ -298,6 +312,9 @@ def main():
     upd_now = base.cat_file(vroot, UPDATECTL) or ""
     marker_now = base.cat_file(vroot, MARKER) or ""
     panfrost_unit_now = base.cat_file(vroot, PANFROST_UNIT) or ""
+    seed_verify_file = work / "private-values.seed.verify.json"
+    base.debugfs(vroot, f"dump {HOMOLOGATION_SEED} {seed_verify_file}")
+    seed_verify = json.loads(seed_verify_file.read_text(encoding="utf-8")) if seed_verify_file.exists() else {}
     totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
 
@@ -333,6 +350,7 @@ def main():
         "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
         "marker_present": present(MARKER),
         "marker_final_image_false": "final_image=false" in marker_now,
+        "homologation_seed_mpv_path_points_to_wrapper": seed_verify.get("mpv_path") == WRAPPER,
         "no_real_config_embedded": not present("/data/config/config.json"),
         "kiosky_service_present": present("/etc/systemd/system/kiosky-player.service"),
         "fsck_clean": fsck_clean,
@@ -340,7 +358,7 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1h", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1i", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -370,7 +388,7 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
@@ -383,7 +401,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1h RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1i RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

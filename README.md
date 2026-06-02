@@ -2,6 +2,21 @@
 
 Documentação técnica e operacional para construção, validação e evolução de uma imagem Armbian customizada para totens baseados em Orange Pi Zero 3.
 
+## Estado C18 OTA
+
+Baseline atual de laboratório: `c18-hwdecode-lab-1i` (C18 HW decode + contrato
+OTA endurecido). O OTA C18 comum é manual/operator-triggered e restrito a
+`totem-core`; `kiosky-player`, launcher do player, MPV/hwdecode, display,
+kernel, systemd e updater ficam fora desse fluxo e exigem imagem/homologação
+ou um pacote C18-aware explicitamente aprovado.
+
+Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
+Gate obrigatório antes de publicar/aceitar uma release OTA:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json
+```
+
 ## Estado atual
 
 **Candidato A**: Armbian Build v25.11 + Debian Bookworm Minimal + kernel `6.12.58-current-sunxi64` + U-Boot `2025.04`.
