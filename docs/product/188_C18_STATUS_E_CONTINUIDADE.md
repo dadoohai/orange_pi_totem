@@ -140,8 +140,8 @@ guardado a partir do seed local com `mpv_path` corrigido para o wrapper):
 
 **O bug original (`media_load_failed` por saturação de CPU) está ELIMINADO.**
 O problema de ordem/preto errático tinha forte componente de cartão ruim + zero-copy/panfrost.
-A confirmação visual humana do HDMI ainda é necessária para fechar qualidade perceptual da
-transição.
+A confirmação visual humana do HDMI em 2026-06-02 reportou **nenhum preto perceptível** entre
+vídeos.
 
 ---
 
@@ -151,8 +151,7 @@ transição.
 
 ### (A) #1 PRINCIPAL — TELA PRETA entre os vídeos + sequenciamento errado
 
-**Status em 2026-06-02:** mitigado tecnicamente na `1d`, mas ainda pendente de confirmação
-visual humana.
+**Status em 2026-06-02:** **RESOLVIDO na `1d`** para a placa/cartão/mídias atuais.
 
 Achados:
 
@@ -162,6 +161,7 @@ Achados:
 - na `1c`, zero-copy gerava `panfrost js fault` em algumas mídias portrait;
 - na `1d` + cartão novo, a sequência observada fez **3 voltas 0→7 em ordem**, sem
   `media_load_failed`, sem restart do mpv, sem hard-resync e sem faults panfrost.
+- confirmação visual humana: **nenhum preto perceptível** entre vídeos.
 
 Se o usuário ainda vir preto longo na `1d`, a próxima investigação deve medir visualmente o
 gap do `loadfile replace` e só então avaliar flags/lógica. Não voltar ao zero-copy como fix
@@ -183,11 +183,9 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 ## Próximos passos / a validar
 
-1. **Confirmar visualmente a tela preta + sequenciamento** na `1d` (ao vivo via SSH se o usuário observar regressão, **SEM regravar**);
-2. **Confirmação VISUAL no HDMI** (olho humano: imagem correta, rotação e gap de transição aceitável);
-3. **Otimizar tempo de boot;**
-4. **Rebuild GCC-12 de produção;**
-5. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
+1. **Otimizar tempo de boot;**
+2. **Rebuild GCC-12 de produção;**
+3. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 
 > **NÃO** aceitar a limitação **(C)** (aceitar o restart) sem **decisão humana**.
 

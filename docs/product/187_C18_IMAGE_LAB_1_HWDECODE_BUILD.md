@@ -128,5 +128,5 @@ corrigido para o wrapper, 8 mídias baixadas, `state=player_running`,
 `media_load_failed=0`, `mpv_restart=0`, `hard_resync=0`.
 
 Status: **imagem-lab privada**, `final_image=false`, `not_for_production=true`. A 1d é o
-candidato atual para continuar C18; ainda falta confirmação visual humana do HDMI para
-qualidade perceptual da transição/tela preta antes de declarar imagem final.
+candidato atual para continuar C18. Confirmação visual humana do HDMI em 2026-06-02:
+**nenhum preto perceptível** entre vídeos.

@@ -17,8 +17,8 @@ config real aplicada pelo writer guardado a partir do seed local, validacao inic
 `state=player_running`, 8 midias baixadas, `hwdec-current=v4l2request-copy`, pixelformat
 `nv12`, **24 eventos `Playing media` (3 voltas 0->7 em ordem)**, `panfrost_js_faults=0`,
 erros `mmc`/I-O = 0, `media_load_failed=0`, `mpv_restart=0`, `hard_resync=0`. Status:
-imagem-lab privada, ainda pendente de confirmacao
-visual humana da transicao/HDMI; C nao aceito.
+imagem-lab privada; confirmacao visual humana em HDMI: **nenhum preto perceptivel** entre
+videos. C nao aceito.
 
 Atualizacao C18.IMAGE-LAB.2 / 1c (validacao em hardware + 3o fix): 2026-06-02. A 1b corrigiu
 kiosk.py+panfrost mas o player ainda travava em "iniciando player". **3a causa:** o player
