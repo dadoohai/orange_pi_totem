@@ -11,6 +11,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +27,7 @@ def policy(channel: str, *, allow_prerelease: bool = False) -> dict:
     return {
         "schema": "dadooh.totem.update.policy.v1",
         "device_channel": channel,
+        "device_track": "c18-hwdecode",
         "allowed_components": ["kiosky-player", "totem-core"],
         "allow_prerelease": allow_prerelease,
         "allow_downgrade": False,
@@ -42,7 +44,17 @@ def manifest(component: str, version: str, channel: str, **overrides: object) ->
         "payload": payload,
         "payload_sha256": "a" * 64,
         "payload_bytes": 10,
-        "requires": {"device": "orangepizero3", "base_image_min": "c17.4.2"},
+        "requires": {
+            "device": "orangepizero3",
+            "base_image_min": "c17.4.2",
+            "device_track": "c18-hwdecode",
+            "updater_features": [
+                "c18-freeze-kiosky-player-v1",
+                "c18-rollback-reapply-v1",
+                "c18-safe-payload-v1",
+                "c18-track-v1",
+            ],
+        },
         "source_repo": "synthetic/repo",
         "source_branch": "test",
         "source_commit": "0" * 40,
@@ -143,6 +155,49 @@ class UpdateChannelPolicyTest(unittest.TestCase):
         ]
         self.assertEqual(selected_tag(releases, policy("stable"), "kiosky-player"), "good")
 
+    def test_manifest_with_wrong_device_track_is_ignored(self) -> None:
+        bad_req = {
+            "device": "orangepizero3",
+            "base_image_min": "c17.4.2",
+            "device_track": "future-display-track",
+            "updater_features": ["c18-track-v1"],
+        }
+        bad_manifest = manifest("totem-core", "2.0.0", "stable", requires=bad_req)
+        releases = [
+            release("bad-track", "totem-core", "2.0.0", "stable", manifest_override=bad_manifest),
+            release("good-track", "totem-core", "1.0.0", "stable", published_at="2026-05-18T09:00:00Z"),
+        ]
+        self.assertEqual(selected_tag(releases, policy("stable"), "totem-core"), "good-track")
+
+    def test_manifest_with_unknown_requires_key_is_ignored(self) -> None:
+        bad_req = {
+            "device": "orangepizero3",
+            "base_image_min": "c17.4.2",
+            "device_track": "c18-hwdecode",
+            "updater_features": ["c18-track-v1"],
+            "requires_new_systemd_unit": True,
+        }
+        bad_manifest = manifest("totem-core", "2.0.0", "stable", requires=bad_req)
+        releases = [
+            release("unknown-requires", "totem-core", "2.0.0", "stable", manifest_override=bad_manifest),
+            release("good", "totem-core", "1.0.0", "stable", published_at="2026-05-18T09:00:00Z"),
+        ]
+        self.assertEqual(selected_tag(releases, policy("stable"), "totem-core"), "good")
+
+    def test_manifest_with_unsupported_updater_feature_is_ignored(self) -> None:
+        bad_req = {
+            "device": "orangepizero3",
+            "base_image_min": "c17.4.2",
+            "device_track": "c18-hwdecode",
+            "updater_features": ["c18-track-v1", "future-updater-v9"],
+        }
+        bad_manifest = manifest("totem-core", "2.0.0", "stable", requires=bad_req)
+        releases = [
+            release("unsupported-feature", "totem-core", "2.0.0", "stable", manifest_override=bad_manifest),
+            release("good", "totem-core", "1.0.0", "stable", published_at="2026-05-18T09:00:00Z"),
+        ]
+        self.assertEqual(selected_tag(releases, policy("stable"), "totem-core"), "good")
+
     def test_manifest_without_sha_is_ignored(self) -> None:
         missing_sha = manifest("kiosky-player", "1.1.0", "stable")
         missing_sha.pop("payload_sha256")
@@ -184,6 +239,31 @@ class UpdateChannelPolicyTest(unittest.TestCase):
             after = (current.readlink(), previous.readlink(), sorted(root.iterdir()))
             self.assertIsNotNone(result.get("release"))
             self.assertEqual(before, after)
+
+    def test_github_release_listing_paginates(self) -> None:
+        calls: list[str] = []
+        original = updatectl._http_get_json
+
+        def fake_get_json(url: str) -> list[dict]:
+            calls.append(url)
+            page = parse_qs(urlparse(url).query).get("page", [""])[0]
+            if page == "1":
+                return [{"tag_name": f"release-{i}"} for i in range(100)]
+            if page == "2":
+                return [{"tag_name": "release-100"}]
+            return []
+
+        try:
+            updatectl._http_get_json = fake_get_json
+            releases = updatectl._gh_list_releases("example/repo")
+        finally:
+            updatectl._http_get_json = original
+
+        self.assertEqual(len(releases), 101)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("per_page=100", calls[0])
+        self.assertIn("page=1", calls[0])
+        self.assertIn("page=2", calls[1])
 
 
 if __name__ == "__main__":

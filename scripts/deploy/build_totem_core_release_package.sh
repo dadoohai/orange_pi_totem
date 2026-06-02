@@ -17,6 +17,7 @@ CHANNEL="${CHANNEL:-homologation}"
 OUT_BASE="${OUT_BASE:-releases/core-updates}"
 SOURCE_REPO_FULL="${SOURCE_REPO_FULL:-dadoohai/orange_pi_totem}"
 REQUIRED_BASE_IMAGE_MIN="${REQUIRED_BASE_IMAGE_MIN:-c17.4.2}"
+REQUIRED_DEVICE_TRACK="${REQUIRED_DEVICE_TRACK:-c18-hwdecode}"
 MODE="build-package"
 ALLOW_DIRTY=0
 VERSION_OVERRIDE="${VERSION:-}"
@@ -113,6 +114,7 @@ log "channel         = $CHANNEL"
 log "source_repo     = $SOURCE_REPO_FULL"
 log "source_branch   = $SOURCE_BRANCH"
 log "source_commit   = $SOURCE_COMMIT"
+log "device_track    = $REQUIRED_DEVICE_TRACK"
 log "dirty           = $DIRTY"
 log "out_dir         = $OUT_DIR"
 log "mode            = $MODE"
@@ -229,7 +231,14 @@ manifest = {
     "required_base_image_min": "${REQUIRED_BASE_IMAGE_MIN}",
     "requires": {
         "device": "orangepizero3",
-        "base_image_min": "${REQUIRED_BASE_IMAGE_MIN}"
+        "base_image_min": "${REQUIRED_BASE_IMAGE_MIN}",
+        "device_track": "${REQUIRED_DEVICE_TRACK}",
+        "updater_features": [
+            "c18-freeze-kiosky-player-v1",
+            "c18-rollback-reapply-v1",
+            "c18-safe-payload-v1",
+            "c18-track-v1"
+        ]
     },
     "updates": [
         "wizard",

@@ -24,6 +24,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
         self.assertEqual(policy["schema"], "dadooh.totem.update.policy.v1")
         self.assertEqual(policy["allowed_components"], ["totem-core"])
+        self.assertEqual(policy["device_track"], "c18-hwdecode")
         self.assertFalse(policy["allow_downgrade"])
         self.assertIn(policy["device_channel"], {"lab", "homologation", "stable"})
 

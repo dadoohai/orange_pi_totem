@@ -311,6 +311,7 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
         "totem_core_update_policy_mode_0644": int(policy_stat.get("mode", 0)) == 0o644,
         "totem_core_update_policy_root_owned": policy_stat.get("uid") == 0 and policy_stat.get("gid") == 0,
         "totem_core_update_policy_restricts_core": update_policy.get("allowed_components") == ["totem-core"],
+        "totem_core_update_policy_device_track_c18": update_policy.get("device_track") == "c18-hwdecode",
         "totem_core_update_policy_downgrade_false": update_policy.get("allow_downgrade") is False,
         "totem_core_update_policy_channel_explicit": update_policy.get("device_channel") in {"lab", "homologation", "stable"},
         "totem_core_update_agent_service_core_repo": (

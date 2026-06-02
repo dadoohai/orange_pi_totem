@@ -49,6 +49,20 @@ SCHEMA_POLICY = "dadooh.totem.update.policy.v1"
 DEFAULT_COMPONENT = "kiosky-player"
 COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
+DEVICE_TRACK_DEFAULT = "c18-hwdecode"
+SUPPORTED_DEVICE_TRACKS = ("c18-hwdecode",)
+UPDATER_FEATURES = frozenset({
+    "c18-freeze-kiosky-player-v1",
+    "c18-rollback-reapply-v1",
+    "c18-safe-payload-v1",
+    "c18-track-v1",
+})
+KNOWN_REQUIRES_KEYS = frozenset({
+    "device",
+    "base_image_min",
+    "device_track",
+    "updater_features",
+})
 UPDATE_CHANNELS = ("lab", "homologation", "stable")
 DEFAULT_DEVICE_CHANNEL = "stable"
 SAFE_RELEASE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -80,6 +94,7 @@ OPEN_SETTINGS_SERVICE = os.environ.get("TOTEM_OPEN_SETTINGS_SERVICE",
                                        "totem-open-settings.service")
 
 GITHUB_API = "https://api.github.com"
+GITHUB_RELEASE_PAGE_LIMIT = 10
 HTTP_TIMEOUT_S = 30
 DOWNLOAD_TIMEOUT_S = 300
 USER_AGENT = "dadooh-totem-updatectl/0.2 (+orangepizero3)"
@@ -447,6 +462,7 @@ def _default_policy() -> Dict[str, Any]:
     return {
         "schema": SCHEMA_POLICY,
         "device_channel": DEFAULT_DEVICE_CHANNEL,
+        "device_track": DEVICE_TRACK_DEFAULT,
         "allowed_components": ["kiosky-player", "totem-core"],
         "allow_prerelease": False,
         "allow_downgrade": False,
@@ -462,6 +478,9 @@ def _normalise_policy(raw: Any, source: str = "file") -> Dict[str, Any]:
     channel = raw.get("device_channel")
     if channel not in UPDATE_CHANNELS:
         raise RuntimeError(f"unsupported device_channel: {channel!r}")
+    device_track = raw.get("device_track", DEVICE_TRACK_DEFAULT)
+    if device_track not in SUPPORTED_DEVICE_TRACKS:
+        raise RuntimeError(f"unsupported device_track: {device_track!r}")
     allowed_components = raw.get("allowed_components", ["kiosky-player", "totem-core"])
     if not isinstance(allowed_components, list) or not allowed_components:
         raise RuntimeError("policy allowed_components must be a non-empty list")
@@ -473,6 +492,7 @@ def _normalise_policy(raw: Any, source: str = "file") -> Dict[str, Any]:
     return {
         "schema": SCHEMA_POLICY,
         "device_channel": channel,
+        "device_track": device_track,
         "allowed_components": sorted(set(clean_components)),
         "allow_prerelease": bool(raw.get("allow_prerelease", False)),
         "allow_downgrade": bool(raw.get("allow_downgrade", False)),
@@ -646,9 +666,36 @@ def _validate_manifest(m: Dict[str, Any],
             f"reason={reason}"
         )
     req = m.get("requires") or {}
+    if not isinstance(req, dict):
+        raise RuntimeError("manifest requires must be a JSON object")
+    unknown_requires = sorted(set(req) - KNOWN_REQUIRES_KEYS)
+    if unknown_requires:
+        raise RuntimeError(f"manifest requires unsupported keys: {unknown_requires}")
     dev = req.get("device")
     if dev and dev != DEVICE_REQUIRED:
         raise RuntimeError(f"manifest device requirement not met: {dev!r} != {DEVICE_REQUIRED!r}")
+    base_image_min = req.get("base_image_min")
+    if base_image_min is not None and not isinstance(base_image_min, str):
+        raise RuntimeError("manifest base_image_min requirement must be a string")
+    device_track = req.get("device_track")
+    if device_track is not None:
+        if not isinstance(device_track, str):
+            raise RuntimeError("manifest device_track requirement must be a string")
+        policy_track = active_policy.get("device_track", DEVICE_TRACK_DEFAULT)
+        if device_track != policy_track:
+            raise RuntimeError(
+                f"manifest device_track requirement not met: {device_track!r} != {policy_track!r}"
+            )
+    updater_features = req.get("updater_features")
+    if updater_features is not None:
+        if (
+            not isinstance(updater_features, list)
+            or not all(isinstance(item, str) and item for item in updater_features)
+        ):
+            raise RuntimeError("manifest updater_features requirement must be a non-empty string list")
+        unsupported_features = sorted(set(updater_features) - UPDATER_FEATURES)
+        if unsupported_features:
+            raise RuntimeError(f"manifest requires unsupported updater features: {unsupported_features}")
     ver = _validate_release_version(m["version"])
     _validate_payload_name(m["payload"], component=expected_component, version=ver)
     sha = m["payload_sha256"]
@@ -755,11 +802,16 @@ def _check_requirements_compat(new_release_dir: Path) -> Tuple[bool, str]:
 # ----------------------------------------------------------------------------
 
 def _gh_list_releases(repo: str) -> List[Dict[str, Any]]:
-    url = f"{GITHUB_API}/repos/{repo}/releases"
-    data = _http_get_json(url)
-    if not isinstance(data, list):
-        raise RuntimeError("unexpected /releases response shape")
-    return [r for r in data if isinstance(r, dict)]
+    releases: List[Dict[str, Any]] = []
+    for page in range(1, GITHUB_RELEASE_PAGE_LIMIT + 1):
+        url = f"{GITHUB_API}/repos/{repo}/releases?per_page=100&page={page}"
+        data = _http_get_json(url)
+        if not isinstance(data, list):
+            raise RuntimeError("unexpected /releases response shape")
+        releases.extend(r for r in data if isinstance(r, dict))
+        if len(data) < 100:
+            break
+    return releases
 
 
 def _release_sort_key(rel: Dict[str, Any]) -> str:

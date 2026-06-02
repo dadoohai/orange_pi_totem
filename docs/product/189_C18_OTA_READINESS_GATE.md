@@ -9,7 +9,8 @@ baseline `1d`.
 - OTA C18 imediato = `totem-core` **manual/operator-triggered**.
 - `kiosky-player`, MPV e `/opt/totem/hwdecode` ficam **congelados fora do OTA**.
 - Imagem C18 nova deve nascer com `/data/updates/policy.json` restritivo:
-  `allowed_components=["totem-core"]`, `allow_downgrade=false`.
+  `device_track="c18-hwdecode"`, `allowed_components=["totem-core"]`,
+  `allow_downgrade=false`.
 - `totem-update-agent.timer` nasce desabilitado; auto-pull fica fora de escopo
   até hardening posterior.
 - O service de update aponta para
@@ -26,7 +27,10 @@ baseline `1d`.
 - `scripts/build/totem_core_image_embed.py`: escreve policy/service/timer e
   remove o symlink `timers.target.wants/totem-update-agent.timer` na rootfs.
 - `scripts/board/totem_updatectl.py`: bloqueia apply de `kiosky-player`, aplica
-  regra conservadora de downgrade e limpa staging em `incoming`.
+  regra conservadora de downgrade, limpa staging em `incoming`, pagina releases
+  do GitHub e rejeita manifests com track/features incompativeis.
+- `scripts/qa/c18_ota_release_gate.py`: gate offline unico para merge/publicacao
+  de `totem-core`, incluindo pacote real quando informado.
 
 ## Gates
 
@@ -35,6 +39,20 @@ baseline `1d`.
 - Sandbox `totem-core` apply/rollback/settings-lock.
 - Validação offline da próxima imagem (`1f`) deve comprovar policy presente, timer
   desligado e service apontando para `totem-core`.
+
+## Contrato futuro de OTA
+
+Toda release C18 nova de `totem-core` deve declarar no manifest:
+
+- `requires.device_track="c18-hwdecode"`;
+- `requires.updater_features` contendo `c18-freeze-kiosky-player-v1`,
+  `c18-rollback-reapply-v1`, `c18-safe-payload-v1` e `c18-track-v1`.
+
+Updater antigo que nao entender uma chave nova em `requires`, track diferente ou
+feature desconhecida deve rejeitar a release. Se uma mudanca futura precisar
+novo updater, nova unit, novo pacote do sistema, player/MPV/hwdecode ou reboot
+para se tornar verdadeira, ela nao pertence ao OTA normal de `totem-core`; deve
+vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Estado live da 1e + OTA smoke (2026-06-02)
 
@@ -92,20 +110,24 @@ baseline `1d`.
 - Repeticao apos hotfix: rollback para C17.6 + reapply GitHub da release C18
   passou com `allow_downgrade=false`; placa terminou em `current=C18 smoke`,
   `previous=C17.6 embed`, player `active`, `NRestarts=0`, timer `disabled`.
-- Proximo build de imagem deve ser `c18-hwdecode-lab-1f` (nao reusar o nome
-  `1e`), pois o conteudo do updater mudou apos a imagem `1e` ja ter sido
-  gravada/validada.
+- Build offline subsequente gerou `c18-hwdecode-lab-1f` (nao reusar o nome
+  `1e`, pois o conteudo do updater mudou apos a imagem `1e` ja ter sido
+  gravada/validada).
+  - Arquivo:
+    `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1f_minimal.img`
+  - `sha256=bbcf59950324f6629db56c0d542ce03f25bd8f6ad3b38fb60127d2d219da793f`
+  - Tamanho: `1971322880` bytes.
+  - `OFFLINE_VALIDATION_PASSED=True`; `totem_core_ota_ready=true`; policy
+    presente; timer desligado; service apontando para `totem-core`; sem config
+    real embutida.
+  - Ainda nao foi validada em hardware como flash limpo.
 
 ## Continuidade pos-compactacao
 
 1. Revisar o diff OTA `1f` como um lote unico e manter fora do stage o WIP
    alheio `scripts/qa/generate_ui_ux_gallery.py`.
 2. Rodar novamente os gates antes de commit:
-   `py_compile`, `c18_ota_policy_static_test.py`,
-   `c18_updatectl_freeze_downgrade_gc_test.py`,
-   `c17_9_update_channel_policy_test.py`,
-   `c18_runtime_3_release_perms_test.py`,
-   `run_totem_core_sandbox.py --json`, `git diff --check`.
+   `PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json`.
 3. Se o diff continuar limpo, commitar a frente como C18 OTA readiness/1f.
 4. Proxima frente funcional do projeto: fluxo OTA manual de `totem-core`
    (publicacao/seleção/aplicacao controlada do wizard/core), mantendo auto-pull

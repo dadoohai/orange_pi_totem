@@ -1,6 +1,7 @@
 {
   "schema": "dadooh.totem.update.policy.v1",
   "device_channel": "homologation",
+  "device_track": "c18-hwdecode",
   "allowed_components": [
     "totem-core"
   ],

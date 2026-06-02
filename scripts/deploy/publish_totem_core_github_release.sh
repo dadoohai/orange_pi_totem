@@ -88,6 +88,16 @@ ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 [[ "$ACTUAL_SHA" == "$MANIFEST_SHA" ]] \
   || die "payload sha256 mismatch: actual=$ACTUAL_SHA manifest=$MANIFEST_SHA"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+[[ -n "$REPO_ROOT" && -x "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" ]] \
+  || die "c18 OTA release gate not found; run from orange_pi_totem checkout"
+python3 "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" \
+  --package-manifest "$MANIFEST" \
+  --package-payload "$PAYLOAD" \
+  --json >/dev/null \
+  || die "c18 OTA release gate failed; refusing to publish"
+
 if [[ -n "$TAG_OVERRIDE" ]]; then
   TAG="$TAG_OVERRIDE"
 else

@@ -36,6 +36,7 @@ def policy(*, allow_downgrade: bool = False) -> dict:
     return {
         "schema": "dadooh.totem.update.policy.v1",
         "device_channel": "stable",
+        "device_track": "c18-hwdecode",
         "allowed_components": ["totem-core"],
         "allow_prerelease": False,
         "allow_downgrade": allow_downgrade,
@@ -58,7 +59,17 @@ def manifest(
         "payload_sha256": sha,
         "payload_bytes": 1,
         "entrypoint": "bin/totem_setup_visual_wizard.py",
-        "requires": {"device": "orangepizero3", "base_image_min": "c17.4.2"},
+        "requires": {
+            "device": "orangepizero3",
+            "base_image_min": "c17.4.2",
+            "device_track": "c18-hwdecode",
+            "updater_features": [
+                "c18-freeze-kiosky-player-v1",
+                "c18-rollback-reapply-v1",
+                "c18-safe-payload-v1",
+                "c18-track-v1",
+            ],
+        },
         "updates": ["test"],
     }
     if created_at is not None:
