@@ -231,6 +231,14 @@ laboratorio: exige `--lab-only-candidate-runner` e
 sanitizada, desliga UI/telemetria/segredos, usa IPC/status/log/cache isolados e
 devolve os hashes observados do release testado. Esse runner nao altera o CLI
 publico do updater, nao liga auto-pull e nao autoriza thaw de producao.
+O harness `scripts/qa/c18_player_runtime_lab_apply.py` e o unico caminho
+repo-side para exercitar apply local de candidato antes do thaw publico: exige
+`--lab-only-apply` e `C18_PLAYER_RUNTIME_LAB_APPLY=1`, aceita somente
+manifest/payload locais, roda o gate de release, injeta o runner de health como
+hook interno e confirma ao final que o CLI publico continua congelado com
+`rc=44`. Por padrao usa `data_root` temporario em sandbox; tocar `/data` exige
+tambem `--allow-device-data-root` e `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
+Ele nao usa GitHub, timer, auto-pull nem policy permanente do device.
 O `scripts/board/kiosky_service_observer_probe.sh` continua como diagnostico de
 referencia mais amplo, mas para validacao de update ele e intrusivo porque para
 o servico ao final da observacao. O probe manual de playback continua sendo

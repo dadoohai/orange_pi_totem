@@ -491,6 +491,15 @@ vir como nova imagem ou release ponte explicitamente homologada.
   hashes observados do release candidato. Isso ainda nao prova DRM/HW em placa
   nem descongela `player-runtime`; e a base para a proxima validacao de
   hardware controlada.
+- Foi adicionado tambem o harness
+  `scripts/qa/c18_player_runtime_lab_apply.py`: local-only, exige
+  `C18_PLAYER_RUNTIME_LAB_APPLY=1` + `--lab-only-apply`, roda o gate do pacote,
+  injeta o health hook e confirma que o CLI publico continua `rc=44`. Ele nao
+  usa GitHub, timer, policy permanente nem auto-pull; usa `data_root`
+  temporario por padrao e so toca `/data` com
+  `--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
+  Serve para a primeira validacao lab de apply real de candidato, ainda antes de
+  qualquer thaw publico.
 
 ## Fora de escopo
 

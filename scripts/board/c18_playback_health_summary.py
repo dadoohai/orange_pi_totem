@@ -164,8 +164,12 @@ def evaluate(
             status_failure_samples += 1
 
     service_active = bool(systemd.get("service_active"))
+    target_mode = str(systemd.get("target_mode") or "service")
     nrestarts_delta = as_int(systemd.get("nrestarts_delta"))
     mpv_count = as_int(process.get("mpv_count"))
+    total_mpv_count_present = "total_mpv_count" in process
+    total_mpv_count = as_int(process.get("total_mpv_count"))
+    process_filter = str(process.get("process_filter") or "")
     mpv_path = str(process.get("mpv_path") or "")
     mpv_path_ok = mpv_path in EXPECTED_MPV_PATHS
     panfrost_faults = as_int(kernel.get("panfrost_faults"))
@@ -195,6 +199,10 @@ def evaluate(
         "service_active": service_active,
         "nrestarts_stable": nrestarts_delta == 0,
         "single_mpv": mpv_count == 1,
+        "service_process_unfiltered": target_mode != "service" or not process_filter,
+        "service_total_mpv_count_present": target_mode != "service" or total_mpv_count_present,
+        "service_single_total_mpv": target_mode != "service" or total_mpv_count == 1,
+        "candidate_process_filtered": target_mode != "candidate" or process_filter == "input-ipc-server",
         "mpv_path_c18_stack": mpv_path_ok,
         "media_load_failed_zero": media_load_failed == 0,
         "mpv_restart_zero": mpv_restart == 0,
@@ -230,6 +238,7 @@ def evaluate(
             "status_failure_samples": status_failure_samples,
             "nrestarts_delta": nrestarts_delta,
             "mpv_count": mpv_count,
+            "total_mpv_count": total_mpv_count,
             "media_load_failed": media_load_failed,
             "mpv_restart": mpv_restart,
             "panfrost_faults": panfrost_faults,

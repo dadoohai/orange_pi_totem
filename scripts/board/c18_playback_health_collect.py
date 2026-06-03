@@ -358,7 +358,15 @@ def collect_samples(out_dir: Path,
 def pid_running(pid: int | None) -> bool:
     if pid is None or pid <= 0:
         return False
-    return (Path("/proc") / str(pid)).exists()
+    proc = Path("/proc") / str(pid)
+    if not proc.exists():
+        return False
+    try:
+        status = (proc / "status").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    match = re.search(r"^State:\s+(\S+)", status, re.MULTILINE)
+    return not (match and match.group(1) == "Z")
 
 
 def service_nrestarts(service: str) -> int:

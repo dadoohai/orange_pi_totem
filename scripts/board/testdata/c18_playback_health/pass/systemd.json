@@ -1,4 +1,5 @@
 {
   "nrestarts_delta": 0,
-  "service_active": true
+  "service_active": true,
+  "target_mode": "service"
 }

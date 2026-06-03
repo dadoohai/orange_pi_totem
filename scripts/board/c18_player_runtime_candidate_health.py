@@ -32,6 +32,52 @@ import totem_updatectl as updatectl
 LAB_ENV = "C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY"
 SCHEMA = "dadooh.c18.player_runtime.candidate_health.v1"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
+SAFE_TEMPLATE_KEYS = {
+    "allow_empty_playlist_from_api",
+    "cache_max_bytes",
+    "cache_max_files",
+    "cleanup_interval_sec",
+    "default_duration_ms",
+    "disable_cleanup_when_offline",
+    "hotkey_open_key",
+    "hotkeys_enabled",
+    "hwdec",
+    "include_descendants",
+    "limit",
+    "lock_input",
+    "low_resource_mode",
+    "max_download_bytes",
+    "media_load_retry_cooldown_sec",
+    "min_free_space_bytes",
+    "mpv_ao",
+    "mpv_debug_events",
+    "mpv_gpu_context",
+    "mpv_ipc_timeout_sec",
+    "mpv_msg_level",
+    "mpv_query_uses_fresh_ipc",
+    "mpv_startup_timeout_sec",
+    "mpv_vo",
+    "mpv_watchdog_grace_after_load_sec",
+    "mpv_watchdog_grace_after_restart_sec",
+    "mpv_watchdog_ping_failures_before_restart",
+    "mute",
+    "offline_fallback",
+    "offline_ignore_max_age_when_no_network",
+    "offline_max_age_hours",
+    "only_standby",
+    "poll_interval_sec",
+    "preload_next",
+    "request_timeout_sec",
+    "require_full_download_before_switch",
+    "rotation_deg",
+    "search_in",
+    "startup_feedback_enabled",
+    "status_interval_sec",
+    "sync_drift_threshold_ms",
+    "sync_hard_resync_ms",
+    "tmp_max_age_sec",
+    "watchdog_interval_sec",
+}
 
 
 def read_json_object(path: Path | None) -> dict[str, Any]:
@@ -66,7 +112,8 @@ def candidate_identity(release_dir: Path, manifest: dict[str, Any] | None = None
 
 
 def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, Any]:
-    cfg = read_json_object(template_path)
+    template = read_json_object(template_path)
+    cfg = {key: template[key] for key in SAFE_TEMPLATE_KEYS if key in template}
     runtime_dir = work_dir / "runtime"
     overrides = {
         "api_url": "https://api.example.invalid/search",
@@ -91,6 +138,30 @@ def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, An
     }
     cfg.update(overrides)
     return cfg
+
+
+def minimal_candidate_env(work_root: Path) -> dict[str, str]:
+    home = work_root / "home"
+    tmp = work_root / "tmp"
+    xdg_runtime = work_root / "xdg-runtime"
+    xdg_config = work_root / "xdg-config"
+    for path in (home, tmp, xdg_runtime, xdg_config):
+        path.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(path, 0o700)
+        except OSError:
+            pass
+    return {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "PYTHONUNBUFFERED": "1",
+        "HOME": str(home),
+        "TMPDIR": str(tmp),
+        "XDG_RUNTIME_DIR": str(xdg_runtime),
+        "XDG_CONFIG_HOME": str(xdg_config),
+        "KIOSKY_TELEMETRY_TOKEN": "",
+    }
 
 
 def terminate_process(proc: subprocess.Popen[str], timeout_sec: float = 5.0) -> None:
@@ -142,17 +213,7 @@ def run_candidate_health(
     cfg = candidate_config(config_template, work_root)
     write_json(config_path, cfg)
 
-    env = os.environ.copy()
-    env.update(
-        {
-            "PYTHONUNBUFFERED": "1",
-            "HOME": str(work_root / "home"),
-            "TMPDIR": str(work_root / "tmp"),
-            "KIOSKY_TELEMETRY_TOKEN": "",
-        }
-    )
-    Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
-    Path(env["TMPDIR"]).mkdir(parents=True, exist_ok=True)
+    env = minimal_candidate_env(work_root)
 
     proc = subprocess.Popen(
         [sys.executable, str(release_dir / "kiosk.py"), "--config", str(config_path)],

@@ -112,6 +112,7 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
 
     def test_candidate_process_filter_allows_ambient_live_mpv(self) -> None:
         fixture = self.with_case()
+        fixture.mutate_json("systemd.json", target_mode="candidate", candidate_pid_present=True)
         fixture.mutate_json(
             "process.json",
             mpv_count=1,
@@ -119,6 +120,22 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             process_filter="input-ipc-server",
         )
         self.assertTrue(fixture.result()["passed"])
+
+    def test_service_mode_rejects_filtered_or_extra_mpv_evidence(self) -> None:
+        fixture = self.with_case()
+        fixture.mutate_json("systemd.json", target_mode="service")
+        fixture.mutate_json("process.json", mpv_count=1, total_mpv_count=2, process_filter="input-ipc-server")
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertIn("service_process_unfiltered", result["failure_reasons"])
+        self.assertIn("service_single_total_mpv", result["failure_reasons"])
+
+    def test_service_mode_requires_total_mpv_count_evidence(self) -> None:
+        fixture = self.with_case()
+        process = fixture.read_json("process.json")
+        process.pop("total_mpv_count", None)
+        fixture.write_json("process.json", process)
+        self.assert_fails_with(fixture, "service_total_mpv_count_present")
 
     def test_rejects_media_load_failed_and_mpv_restart(self) -> None:
         fixture = self.with_case()
@@ -173,6 +190,7 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
                         "api_key": "SECRET",
                         "environment_id": "ENV_SECRET",
                         "telemetry_token": "TOKEN_SECRET",
+                        "custom_secret": "CUSTOM_SECRET",
                         "config_ui_enabled": True,
                         "cache_dir": "/data/media/kiosky-player",
                         "ipc_path": "/tmp/kiosky/mpv.sock",
@@ -188,9 +206,21 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             self.assertFalse(cfg["config_ui_enabled"])
             self.assertTrue(str(cfg["cache_dir"]).startswith(str(root / "work")))
             self.assertTrue(str(cfg["ipc_path"]).startswith(str(root / "work")))
+            self.assertNotIn("custom_secret", cfg)
             payload = json.dumps(cfg, sort_keys=True)
-            for forbidden in ("SECRET", "ENV_SECRET", "TOKEN_SECRET", "private.example"):
+            for forbidden in ("SECRET", "ENV_SECRET", "TOKEN_SECRET", "CUSTOM_SECRET", "private.example"):
                 self.assertNotIn(forbidden, payload)
+
+    def test_candidate_health_env_is_minimal(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-env-") as tmp:
+            env = candidate_health.minimal_candidate_env(Path(tmp))
+            self.assertIn("PATH", env)
+            self.assertIn("HOME", env)
+            self.assertIn("TMPDIR", env)
+            self.assertIn("XDG_RUNTIME_DIR", env)
+            self.assertEqual(env.get("KIOSKY_TELEMETRY_TOKEN"), "")
+            for forbidden in ("GITHUB_TOKEN", "HTTP_PROXY", "HTTPS_PROXY", "TOTEM_DATA_ROOT", "SSHPASS"):
+                self.assertNotIn(forbidden, env)
 
     def test_candidate_health_cli_requires_lab_guard(self) -> None:
         rc = candidate_health.main(["--release-dir", str(REPO_ROOT / "player-runtime" / "kiosky-player"), "--json"])

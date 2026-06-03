@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -37,6 +38,7 @@ PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_obse
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
+PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -351,6 +353,18 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("observed_tree_sha256", candidate)
         self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", candidate)
 
+        lab_apply = PLAYER_RUNTIME_LAB_APPLY_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_APPLY", lab_apply)
+        self.assertIn("C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT", lab_apply)
+        self.assertIn("--lab-only-apply", lab_apply)
+        self.assertIn("--allow-device-data-root", lab_apply)
+        self.assertIn('work_dir / "data"', lab_apply)
+        self.assertIn("public_cli_still_frozen", lab_apply)
+        self.assertIn("release_gate.validate_release", lab_apply)
+        self.assertIn("candidate_health.run_candidate_health", lab_apply)
+        self.assertNotIn("apply-github-latest", lab_apply)
+        self.assertNotIn("gh release", lab_apply)
+
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("totem_config_contract_self_test", gate)
@@ -400,6 +414,45 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 self.assertIn("player-runtime/kiosky-player/kiosk.py", result["stdout_tail"])
             finally:
                 gate.REPO_ROOT = old_root
+
+    def test_player_runtime_lab_apply_guards_are_executable(self) -> None:
+        missing_manifest = Path(tempfile.gettempdir()) / "c18-missing-player-runtime.manifest.json"
+        missing_payload = Path(tempfile.gettempdir()) / "c18-missing-player-runtime.tar.gz"
+        base_cmd = [
+            "python3",
+            str(PLAYER_RUNTIME_LAB_APPLY_PATH),
+            "--manifest",
+            str(missing_manifest),
+            "--payload",
+            str(missing_payload),
+        ]
+
+        no_lab = subprocess.run(
+            [*base_cmd, "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(no_lab.returncode, 44)
+
+        env = {"PATH": os.environ.get("PATH", ""), "C18_PLAYER_RUNTIME_LAB_APPLY": "1"}
+        for guarded_arg in (
+            ["--lab-only-apply", "--data-root", "/data/foo"],
+            ["--lab-only-apply", "--output-dir", "/data/foo"],
+        ):
+            proc = subprocess.run(
+                [*base_cmd, *guarded_arg, "--json"],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 43, proc.stderr)
+            self.assertIn("device_data_root_guard_required", proc.stderr)
 
 
 if __name__ == "__main__":
