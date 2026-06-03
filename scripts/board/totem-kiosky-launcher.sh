@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# C14.1.1 - totem-kiosky-launcher
+# C18 - totem-kiosky-launcher
 #
 # Chooses which kiosk.py to run:
-#   - /data/apps/kiosky-player/current/kiosk.py  (if present, via symlink)
-#   - /opt/totem/kiosky-player/kiosk.py          (fallback shipped in image)
+#   - /data/player-runtime/current/kiosk.py  (future C18-aware slot)
+#   - /opt/totem/kiosky-player/kiosk.py      (fallback shipped in image)
 #
 # Then delegates to the existing kiosky_service_launcher.sh (which provides
 # the watchdog, status writer, setup-trigger plumbing, etc.).  We pass the
@@ -18,7 +18,7 @@
 set -u
 
 FALLBACK_APP_DIR="${TOTEM_KIOSKY_FALLBACK_APP_DIR:-/opt/totem/kiosky-player}"
-DATA_APP_DIR="${TOTEM_KIOSKY_DATA_APP_DIR:-/data/apps/kiosky-player/current}"
+DATA_APP_DIR="${TOTEM_KIOSKY_DATA_APP_DIR:-/data/player-runtime/current}"
 INNER_LAUNCHER="${TOTEM_KIOSKY_INNER_LAUNCHER:-/opt/totem/bin/kiosky_service_launcher.sh}"
 
 stamp() { date '+%Y-%m-%dT%H:%M:%S%z'; }

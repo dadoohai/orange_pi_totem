@@ -422,9 +422,9 @@ def main() -> int:
             "deep_health_fixture_passed": True,
         },
         "path_debt": {
-            "launcher_default_data_dir": "/data/apps/kiosky-player/current",
+            "launcher_default_data_dir": "/data/player-runtime/current",
             "player_runtime_component_base": "/data/player-runtime",
-            "requires_image_launcher_env_or_path_convergence_before_thaw": True,
+            "requires_image_launcher_env_or_path_convergence_before_thaw": False,
         },
     }
     result["passed"] = all(result["checks"].values())

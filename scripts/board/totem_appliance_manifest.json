@@ -290,21 +290,14 @@
       "mode": "0755"
     },
     {
-      "path": "/data/apps",
+      "path": "/data/player-runtime",
       "type": "dir",
       "owner": "root",
       "group": "root",
       "mode": "0755"
     },
     {
-      "path": "/data/apps/kiosky-player",
-      "type": "dir",
-      "owner": "root",
-      "group": "root",
-      "mode": "0755"
-    },
-    {
-      "path": "/data/apps/kiosky-player/releases",
+      "path": "/data/player-runtime/releases",
       "type": "dir",
       "owner": "root",
       "group": "root",

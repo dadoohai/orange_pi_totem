@@ -86,8 +86,9 @@ Podem ser atualizados pelo backend e gravados em `/data`:
 Nota C18: o contrato vigente e [UPDATE_CONTRACT.md](UPDATE_CONTRACT.md). O
 layout abaixo e conceitual/historico. OTA comum atual usa
 `/data/core/totem/current` somente para `totem-core`; o caminho
-`/data/apps/kiosky-player/current` e legado/congelado na C18 e nao libera OTA
-de `kiosky-player`.
+governado futuro para `player-runtime` C18 e `/data/player-runtime/current`.
+O caminho historico `/data/apps/kiosky-player/current` e legado/congelado na
+C18 e nao libera OTA de `kiosky-player`.
 
 Deve usar release versionada, com rollback:
 

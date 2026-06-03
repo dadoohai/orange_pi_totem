@@ -31,6 +31,10 @@ MANUAL_KIOSKY_DOC_PATH = REPO_ROOT / "docs" / "app-integration" / "01_TESTE_MANU
 MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_playlist_probe.sh"
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
+KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
+KIOSKY_LAUNCHER_DROPIN_PATH = (
+    REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
+)
 TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.timer"
 ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md"
 POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
@@ -76,6 +80,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         timer = units["/etc/systemd/system/totem-update-agent.timer"]
         self.assertIs(timer.get("enabled"), False)
         self.assertEqual(timer.get("active_expected_on_dev"), "inactive")
+
+    def test_player_runtime_launcher_path_is_governed(self) -> None:
+        launcher = KIOSKY_LAUNCHER_PATH.read_text(encoding="utf-8")
+        dropin = KIOSKY_LAUNCHER_DROPIN_PATH.read_text(encoding="utf-8")
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        dirs = {
+            item["path"]
+            for item in manifest.get("paths", [])
+            if isinstance(item, dict) and item.get("type") == "dir"
+        }
+
+        self.assertIn("/data/player-runtime/current", launcher)
+        self.assertNotIn("/data/apps/kiosky-player/current", launcher)
+        self.assertIn("/data/player-runtime/current/kiosk.py", dropin)
+        self.assertNotIn("/data/apps/kiosky-player/current", dropin)
+        self.assertIn("/data/player-runtime", dirs)
+        self.assertIn("/data/player-runtime/releases", dirs)
+        self.assertNotIn("/data/apps/kiosky-player", dirs)
+        self.assertNotIn("/data/apps/kiosky-player/releases", dirs)
 
     def test_image_embed_writes_policy_service_and_disables_timer(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")
