@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "board"))
 
 import c18_playback_health_summary as health
+import c18_playback_health_collect as collector
 
 
 FIXTURE = REPO_ROOT / "scripts" / "board" / "testdata" / "c18_playback_health" / "pass"
@@ -118,11 +119,36 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
 
     def test_rejects_kernel_fault_counters(self) -> None:
         fixture = self.with_case()
-        fixture.mutate_json("kernel.json", panfrost_faults=1, mmc_timeout_reset=1)
+        fixture.mutate_json("kernel.json", panfrost_faults=1, mmc_timeout_reset=1, ext4_errors=1)
         result = fixture.result()
         self.assertFalse(result["passed"])
         self.assertIn("panfrost_faults_zero", result["failure_reasons"])
         self.assertIn("mmc_timeout_reset_zero", result["failure_reasons"])
+        self.assertIn("ext4_errors_zero", result["failure_reasons"])
+
+    def test_rejects_missing_ext4_counter(self) -> None:
+        fixture = self.with_case()
+        kernel = fixture.read_json("kernel.json")
+        kernel.pop("ext4_errors", None)
+        fixture.write_json("kernel.json", kernel)
+        self.assert_fails_with(fixture, "ext4_errors_present")
+
+    def test_non_destructive_collector_static_contract(self) -> None:
+        source = (REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py").read_text(encoding="utf-8")
+        self.assertNotIn("systemctl stop", source)
+        self.assertNotIn("systemctl restart", source)
+        self.assertNotIn("systemctl start", source)
+        self.assertNotIn("truncate", source)
+        self.assertIn("playback-deep-health-public.json", source)
+        self.assertIn("health.evaluate", source)
+
+    def test_collector_aliases_do_not_echo_sensitive_paths_or_urls(self) -> None:
+        url = "https://media.example.invalid/private/file.mp4?api_key=SECRET"
+        path = "/data/media/kiosky-player/private-file.mp4"
+        self.assertNotIn("https://", collector.safe_path_alias(url))
+        self.assertNotIn("api_key", collector.safe_path_alias(url))
+        self.assertNotIn("private-file", collector.safe_path_alias(path))
+        self.assertTrue(collector.media_alias(path, url).startswith("media-"))
 
     def test_rejects_status_failure_and_missing_transition(self) -> None:
         fixture = self.with_case()

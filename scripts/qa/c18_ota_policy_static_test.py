@@ -19,6 +19,7 @@ MANIFEST_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json
 EMBED_PATH = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
 BUILD_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
 PUBLISH_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_totem_core_github_release.sh"
+BUILD_PLAYER_RUNTIME_PATH = REPO_ROOT / "scripts" / "deploy" / "build_player_runtime_release_package.sh"
 UPDATECTL_PATH = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
 BOOTSTRAP_C17_5_PATH = REPO_ROOT / "scripts" / "remote" / "bootstrap_c17_5_totem_core_on_board.sh"
 DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_embedded_image.py"
@@ -31,6 +32,7 @@ MANUAL_KIOSKY_DOC_PATH = REPO_ROOT / "docs" / "app-integration" / "01_TESTE_MANU
 MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_playlist_probe.sh"
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
+PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -204,6 +206,21 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("legacy lab reproduction bypass", script)
             self.assertIn("not approval for a C18-aware player-runtime release", script)
 
+    def test_player_runtime_builder_is_lab_only_and_gated(self) -> None:
+        script = BUILD_PLAYER_RUNTIME_PATH.read_text(encoding="utf-8")
+        self.assertIn('COMPONENT="player-runtime"', script)
+        self.assertIn("c18_player_runtime_release_gate.py", script)
+        self.assertIn('BUILD_DIR="$(mktemp -d -t player-runtime-build-XXXXXX)"', script)
+        self.assertIn('TMP_PAYLOAD_PATH="$BUILD_DIR/$PAYLOAD_NAME"', script)
+        self.assertIn('TMP_MANIFEST_PATH="$BUILD_DIR/$MANIFEST_NAME"', script)
+        self.assertIn("--manifest", script)
+        self.assertIn("--payload", script)
+        self.assertIn('mv -f "$TMP_PAYLOAD_PATH" "$PAYLOAD_PATH"', script)
+        self.assertLess(script.index('"$RELEASE_GATE"'), script.index('mv -f "$TMP_PAYLOAD_PATH" "$PAYLOAD_PATH"'))
+        self.assertIn("does not publish", script)
+        self.assertNotIn("gh release create", script)
+        self.assertNotIn("ALLOW_C18_FROZEN_PLAYER_RELEASE", script)
+
     def test_legacy_c14_remote_scripts_are_guarded_as_bypass(self) -> None:
         for path in LEGACY_C14_REMOTE_SCRIPTS:
             script = path.read_text(encoding="utf-8")
@@ -280,6 +297,20 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("post-c18-playback-deep-health", service_observer)
         self.assertIn("mmc.*(timeout|timed out|reset|I/O error)", service_observer)
         self.assertNotIn("mmc.*(timeout|reset|error)", service_observer)
+
+        collector = PLAYBACK_HEALTH_COLLECTOR_PATH.read_text(encoding="utf-8")
+        self.assertIn("c18_playback_health_summary", collector)
+        self.assertIn("playback-samples.tsv", collector)
+        self.assertIn("deep-health-systemd.json", collector)
+        self.assertIn("deep-health-process.json", collector)
+        self.assertIn("deep-health-kernel.json", collector)
+        self.assertIn("deep-health-player-counters.json", collector)
+        self.assertIn("playback-deep-health-public.json", collector)
+        self.assertIn("journalctl\", \"-k\", \"-b\"", collector)
+        self.assertIn("EXT4-fs error|Aborting journal|Remounting filesystem read-only", collector)
+        self.assertNotIn("systemctl stop", collector)
+        self.assertNotIn("systemctl restart", collector)
+        self.assertNotIn("systemctl start", collector)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

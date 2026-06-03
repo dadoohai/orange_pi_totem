@@ -362,6 +362,36 @@ def _cleanup_stage(stage: Path) -> None:
         log("WARN", "stage_cleanup_failed", path=str(stage), err=str(e))
 
 
+def _cleanup_unpromoted_release(release_dir: Path) -> None:
+    """Best-effort cleanup of an extracted release that was never promoted."""
+    try:
+        if not (release_dir.exists() or release_dir.is_symlink()):
+            return
+        releases = RELEASES_DIR.resolve()
+        target = release_dir.resolve()
+        if target == releases:
+            log("WARN", "release_cleanup_refused_releases_root", path=str(release_dir))
+            return
+        try:
+            target.relative_to(releases)
+        except ValueError:
+            log("WARN", "release_cleanup_refused_outside_releases", path=str(release_dir))
+            return
+        current = _read_symlink_target(CURRENT_LINK)
+        previous = _read_symlink_target(PREVIOUS_LINK)
+        rel_target = f"releases/{release_dir.name}"
+        if current == rel_target or previous == rel_target:
+            log("WARN", "release_cleanup_refused_linked_release", path=str(release_dir))
+            return
+        if release_dir.is_symlink() or release_dir.is_file():
+            release_dir.unlink()
+        else:
+            shutil.rmtree(release_dir)
+        log("INFO", "release_cleanup_ok", path=str(release_dir))
+    except Exception as e:
+        log("WARN", "release_cleanup_failed", path=str(release_dir), err=str(e))
+
+
 def _atomic_symlink(target_rel: str, link: Path) -> None:
     """Replace `link` -> `target_rel` atomically (within the same fs)."""
     tmp = link.parent / (link.name + ".__tmp__")
@@ -1655,14 +1685,24 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         return 6
 
     release_dir = RELEASES_DIR / version
-    if release_dir.exists():
-        current_target = _read_symlink_target(CURRENT_LINK)
-        if current_target == f"releases/{version}":
-            log("ERROR", "player_runtime_refusing_to_overwrite_current_release", version=version)
-            _cleanup_stage(stage)
-            return 46
+    linked_target = f"releases/{version}"
+    current_target = _read_symlink_target(CURRENT_LINK)
+    previous_target = _read_symlink_target(PREVIOUS_LINK)
+    if current_target == linked_target or previous_target == linked_target:
+        log(
+            "ERROR",
+            "player_runtime_refusing_to_overwrite_linked_release",
+            version=version,
+            link="current" if current_target == linked_target else "previous",
+        )
+        _cleanup_stage(stage)
+        return 46
+    if release_dir.exists() or release_dir.is_symlink():
         try:
-            shutil.rmtree(release_dir)
+            if release_dir.is_symlink() or release_dir.is_file():
+                release_dir.unlink()
+            else:
+                shutil.rmtree(release_dir)
         except OSError as e:
             log("ERROR", "release_dir_remove_failed", err=str(e))
             _cleanup_stage(stage)
@@ -1683,12 +1723,14 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         identity = _player_runtime_identity(release_dir, manifest)
     except Exception as e:
         log("ERROR", "player_runtime_identity_failed", err=str(e))
+        _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 8
 
     quarantined, quarantine_reason = _player_runtime_is_quarantined(identity, state)
     if quarantined:
         log("ERROR", "player_runtime_candidate_quarantined", reason=quarantine_reason)
+        _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 47
 
@@ -1722,6 +1764,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             "rolled_back_to": "previous" if old_current else "image_fallback",
         }
         _write_state(state)
+        _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 11 if not old_current else 10
 
@@ -1743,6 +1786,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             "rolled_back_to": "previous" if old_current else "image_fallback",
         }
         _write_state(state)
+        _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 12
 

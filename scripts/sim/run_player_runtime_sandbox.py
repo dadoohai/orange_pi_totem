@@ -149,6 +149,13 @@ def write_policy(sandbox: Path) -> None:
     policy_path.write_text(json.dumps(policy, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def set_policy_allow_downgrade(sandbox: Path, allowed: bool) -> None:
+    policy_path = sandbox / "data" / "updates" / "policy.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["allow_downgrade"] = allowed
+    policy_path.write_text(json.dumps(policy, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def seed_image_runtime(sandbox: Path) -> None:
     fallback = sandbox / "opt" / "totem" / "kiosky-player"
     fallback.mkdir(parents=True, exist_ok=True)
@@ -371,6 +378,23 @@ def main() -> int:
     rollback2_ok, rollback2_to = rollback_player_runtime_offline(sandbox)
     current_after_rollback2 = readlink(sandbox / "data" / "player-runtime" / "current")
 
+    set_policy_allow_downgrade(sandbox, True)
+    previous_marker_before_collision = marker_a.read_text(encoding="utf-8")
+    previous_collision_ok, previous_collision_reason = apply_player_runtime_offline(
+        sandbox,
+        manifest=manifest_a,
+        payload=payload_a,
+        pass_health=False,
+    )
+    set_policy_allow_downgrade(sandbox, False)
+    current_after_previous_collision = readlink(sandbox / "data" / "player-runtime" / "current")
+    previous_after_previous_collision = readlink(sandbox / "data" / "player-runtime" / "previous")
+    previous_marker_after_collision = marker_a.read_text(encoding="utf-8") if marker_a.exists() else ""
+    previous_marker_valid_after_collision = updatectl._validate_player_runtime_marker(
+        sandbox / "data" / "player-runtime" / "releases" / "sandbox-a",
+        read_state(sandbox),
+    )[0]
+
     failed_with_previous_ok, failed_with_previous_reason = apply_player_runtime_offline(
         sandbox,
         manifest=manifest_bad,
@@ -378,6 +402,9 @@ def main() -> int:
         pass_health=False,
     )
     current_after_failed_b = readlink(sandbox / "data" / "player-runtime" / "current")
+    bad_release_with_previous_exists = (
+        sandbox / "data" / "player-runtime" / "releases" / "sandbox-bad"
+    ).exists()
 
     safe_remove(sandbox / "data" / "player-runtime" / "current", sandbox)
     safe_remove(sandbox / "data" / "player-runtime" / "previous", sandbox)
@@ -388,6 +415,9 @@ def main() -> int:
         pass_health=False,
     )
     current_after_failed_no_previous = readlink(sandbox / "data" / "player-runtime" / "current")
+    bad_release_without_previous_exists = (
+        sandbox / "data" / "player-runtime" / "releases" / "sandbox-bad-no-prev"
+    ).exists()
     launcher_fallback = probe_launcher_source(sandbox, data_dir=sandbox / "data" / "player-runtime" / "current")
     fallback_kiosk = sandbox / "opt" / "totem" / "kiosky-player" / "kiosk.py"
     fallback_kiosk_tmp = fallback_kiosk.with_suffix(".py.missing")
@@ -404,6 +434,9 @@ def main() -> int:
         observed_identity="fallback",
     )
     current_after_fallback_health = readlink(sandbox / "data" / "player-runtime" / "current")
+    fallback_health_rejected_release_exists = (
+        sandbox / "data" / "player-runtime" / "releases" / "sandbox-bad-fallback"
+    ).exists()
 
     cli_apply_frozen, cli_rollback_frozen = cli_still_frozen(sandbox)
 
@@ -435,17 +468,27 @@ def main() -> int:
                 and current_after_rollback1 == expected_a
                 and current_after_rollback2 == expected_b
             ),
+            "previous_release_collision_preserves_marker": (
+                not previous_collision_ok
+                and previous_collision_reason.startswith("rc=46:")
+                and current_after_previous_collision == expected_b
+                and previous_after_previous_collision == expected_a
+                and previous_marker_after_collision == previous_marker_before_collision
+                and previous_marker_valid_after_collision
+            ),
             "failed_apply_with_previous_rolled_back": (
                 not failed_with_previous_ok
                 and failed_with_previous_reason == "rolled_back_to_previous"
                 and current_after_failed_b == expected_b
             ),
+            "failed_apply_with_previous_cleaned_release": not bad_release_with_previous_exists,
             "failed_apply_without_previous_falls_back_to_image": (
                 not failed_without_previous_ok
                 and failed_without_previous_reason == "rolled_back_to_image_fallback"
                 and current_after_failed_no_previous == ""
                 and launcher_fallback == str(sandbox / "opt" / "totem" / "kiosky-player")
             ),
+            "failed_apply_without_previous_cleaned_release": not bad_release_without_previous_exists,
             "missing_image_fallback_fails_closed": launcher_missing_fallback == "launcher_failed:78",
             "reconcile_candidate_rejected_hygiene_passed": (
                 reconcile_after_no_previous_failure.get("status") == "image_fallback"
@@ -456,6 +499,7 @@ def main() -> int:
                 and fallback_health_reason == "rejected_health_observed_fallback"
                 and current_after_fallback_health == ""
             ),
+            "fallback_health_rejected_release_cleaned": not fallback_health_rejected_release_exists,
             "cli_apply_still_frozen": cli_apply_frozen,
             "cli_rollback_still_frozen": cli_rollback_frozen,
             "deep_health_fixture_passed": True,

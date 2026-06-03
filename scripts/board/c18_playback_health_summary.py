@@ -170,6 +170,8 @@ def evaluate(
     mpv_path_ok = mpv_path in EXPECTED_MPV_PATHS
     panfrost_faults = as_int(kernel.get("panfrost_faults"))
     mmc_timeout_reset = as_int(kernel.get("mmc_timeout_reset"))
+    ext4_errors_present = "ext4_errors" in kernel
+    ext4_errors = as_int(kernel.get("ext4_errors"))
     media_load_failed = as_int(player_counters.get("media_load_failed"))
     mpv_restart = as_int(player_counters.get("mpv_restart"))
     playlist_size = max_playlist_size(rows)
@@ -198,6 +200,8 @@ def evaluate(
         "mpv_restart_zero": mpv_restart == 0,
         "panfrost_faults_zero": panfrost_faults == 0,
         "mmc_timeout_reset_zero": mmc_timeout_reset == 0,
+        "ext4_errors_present": ext4_errors_present,
+        "ext4_errors_zero": ext4_errors == 0,
     }
     failure_reasons = [key for key, passed in checks.items() if not passed]
 
@@ -230,6 +234,7 @@ def evaluate(
             "mpv_restart": mpv_restart,
             "panfrost_faults": panfrost_faults,
             "mmc_timeout_reset": mmc_timeout_reset,
+            "ext4_errors": ext4_errors,
         },
     }
 

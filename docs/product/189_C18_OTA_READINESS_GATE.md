@@ -427,11 +427,13 @@ vir como nova imagem ou release ponte explicitamente homologada.
 - O boot adoption seguro fica no launcher: ele valida marker/hash/quarentena no
   momento de escolher `/data` ou `/opt`. O `reconcile` do updater e higiene
   explicita para state/symlink drift, nao a barreira primaria de boot.
-- Ainda nao ha publish/builder de `player-runtime`, collector real
-  nao-destrutivo nem thaw em hardware. O sandbox prova fluxo/estado com health
-  hook injetavel; nao prova decode real em hardware nem durabilidade sob corte
-  de energia. Esses sao os proximos gates antes de qualquer release real de
-  player.
+- Ja existe builder local lab-only de `player-runtime`
+  (`scripts/deploy/build_player_runtime_release_package.sh`) e collector real
+  nao destrutivo (`scripts/board/c18_playback_health_collect.py`). Ainda nao ha
+  publisher, thaw em hardware nem health hook de candidato isolado. O sandbox
+  prova fluxo/estado com health hook injetavel; nao prova decode real de uma
+  release candidata em hardware nem durabilidade sob corte de energia. Esses sao
+  os proximos gates antes de qualquer release real de player.
 - Auditoria adversarial pos-1k confirmou dividas pre-thaw que **nao afetam a
   golden enquanto `rc=44` estiver ativo**, mas bloqueiam qualquer thaw real:
   validar os args efetivos entregues ao `Popen` (nao so strings literais em
@@ -458,6 +460,16 @@ vir como nova imagem ou release ponte explicitamente homologada.
   dry-run/apply/rollback/reapply aprovado, e `kiosky-player`/`player-runtime`
   ainda bloqueados com `rc=44`. A `1l` substitui a `1k` como golden atual de
   laboratorio/delivery.
+- Rodada seguinte de entrega adicionou e validou em hardware o collector
+  nao-destrutivo de deep-health sobre a `1l`, sem alterar servico/config:
+  janela curta de 45s com `45/45` amostras IPC bem-sucedidas,
+  `hwdec-current=v4l2request-copy`, `vo-configured=true`, 3 aliases observados,
+  `NRestarts_delta=0`, `media_load_failed=0`, `mpv_restart=0`,
+  panfrost/mmc/ext4 `0`, servico ainda `active` apos a coleta. Tambem adicionou
+  limpeza de release candidata rejeitada no fluxo interno de `player-runtime`,
+  guard contra sobrescrever releases ja ligadas como `current`/`previous`, e
+  builder local lab-only de pacote `player-runtime` que so promove artefatos
+  apos o gate passar, mantendo o CLI publico congelado com `rc=44`.
 
 ## Fora de escopo
 
