@@ -4,11 +4,14 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 ## Estado C18 OTA
 
-Baseline atual de laboratório: `c18-hwdecode-lab-1i` (C18 HW decode + contrato
-OTA endurecido). O OTA C18 comum é manual/operator-triggered e restrito a
-`totem-core`; `kiosky-player`, launcher do player, MPV/hwdecode, display,
-kernel, systemd e updater ficam fora desse fluxo e exigem imagem/homologação
-ou um pacote C18-aware explicitamente aprovado.
+Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1j` (C18 HW decode +
+OTA `totem-core` validado end-to-end). A imagem `c18-hwdecode-lab-1k` existe
+como candidata offline da fundação de thaw seguro do `player-runtime`, mas ainda
+não substitui a golden sem validação em placa. O OTA C18 comum é
+manual/operator-triggered e restrito a `totem-core`; `kiosky-player`, launcher
+do player, MPV/hwdecode, display, kernel, systemd e updater ficam fora desse
+fluxo e exigem imagem/homologação ou um pacote C18-aware explicitamente
+aprovado.
 
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Gate obrigatório antes de publicar/aceitar uma release OTA:

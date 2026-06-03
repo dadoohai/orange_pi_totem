@@ -33,8 +33,8 @@ ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1j"   # 1j = 1i + governed player-runtime launcher path.
-VERSION = "c18.image-lab.1j"
+TAG = "c18-hwdecode-lab-1k"   # 1k = 1j + player-runtime thaw foundation.
+VERSION = "c18.image-lab.1k"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -48,7 +48,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1j-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1k-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -218,13 +218,18 @@ def main():
         "totem_update_policy_embedded=true",
         "totem_update_timer_enabled=false",
         "player_runtime_launcher_fixed_by_image=true",
+        "player_runtime_verified_marker_required=true",
+        "player_runtime_reconcile_available=true",
+        "player_runtime_lab_thaw_guard=true",
+        "player_runtime_gate_semantic_mpv_args=true",
+        "player_runtime_ota_still_frozen=true",
         "totem_core_excludes_kiosky_service_launcher=true",
         f"player_runtime_kiosk_source={PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)}",
         f"player_runtime_kiosk_sha256={kiosk_snapshot_sha}",
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -327,11 +332,33 @@ def main():
     marker_now = base.cat_file(vroot, MARKER) or ""
     panfrost_unit_now = base.cat_file(vroot, PANFROST_UNIT) or ""
     totem_launcher_now = base.cat_file(vroot, "/opt/totem/bin/totem-kiosky-launcher.sh") or ""
+    kiosky_dropin_now = base.cat_file(vroot, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf") or ""
     seed_verify_file = work / "private-values.seed.verify.json"
     base.debugfs(vroot, f"dump {HOMOLOGATION_SEED} {seed_verify_file}")
     seed_verify = json.loads(seed_verify_file.read_text(encoding="utf-8")) if seed_verify_file.exists() else {}
     totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
+    player_runtime_gate = sh([
+        sys.executable,
+        str(REPO_ROOT / "scripts/qa/c18_player_runtime_release_gate.py"),
+        "--self-test",
+    ])
+    player_runtime_sandbox = sh([
+        sys.executable,
+        str(REPO_ROOT / "scripts/sim/run_player_runtime_sandbox.py"),
+        "--json",
+    ])
+    sandbox_json_start = player_runtime_sandbox.stdout.find("{")
+    try:
+        player_runtime_sandbox_json = json.loads(player_runtime_sandbox.stdout[sandbox_json_start:]) if sandbox_json_start >= 0 else {}
+    except json.JSONDecodeError:
+        player_runtime_sandbox_json = {}
+    if player_runtime_gate.returncode != 0:
+        L("player-runtime release gate FAILED:")
+        L(player_runtime_gate.stdout[-2000:])
+    if player_runtime_sandbox.returncode != 0 or player_runtime_sandbox_json.get("passed") is not True:
+        L("player-runtime sandbox FAILED:")
+        L(player_runtime_sandbox.stdout[-2000:])
 
     # py_compile the patched kiosk.py from the FINAL image via a clean dump (the missing
     # check that let the defective v1 ship — cat-read had the banner; v1's file did not compile)
@@ -359,25 +386,70 @@ def main():
         "panfrost_rebind_unit_present": present(PANFROST_UNIT),
         "panfrost_rebind_enabled": present(PANFROST_WANTS),
         "panfrost_unit_before_player": "Before=kiosky-player.service" in panfrost_unit_now,
+        "kiosky_service_routes_through_totem_launcher": (
+            "ExecStart=" in kiosky_dropin_now
+            and "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in kiosky_dropin_now
+        ),
         "totem_kiosky_launcher_uses_player_runtime_path": (
             "/data/player-runtime/current" in totem_launcher_now
             and "/data/apps/kiosky-player/current" not in totem_launcher_now
         ),
+        "totem_kiosky_launcher_requires_verified_marker": (
+            ".release_verified.json" in totem_launcher_now
+            and "kiosk_py_sha256" in totem_launcher_now
+            and "tree_sha256" in totem_launcher_now
+            and "deep_health_not_passed" in totem_launcher_now
+            and "quarantined" in totem_launcher_now
+            and "FALLBACK_APP_DIR" in totem_launcher_now
+        ),
         "c17_4_trace_moved_to_run": present(C18_STABILITY_DROPIN),
         "r4_updater_perms_present": "_make_world_traversable" in upd_now,
+        "player_runtime_updatectl_marker_schema": "dadooh.c18.player_runtime.verified.v1" in upd_now,
+        "player_runtime_updatectl_primitives_present": (
+            "def _apply_player_runtime_from_manifest_path_unfrozen" in upd_now
+            and "def _write_player_runtime_marker" in upd_now
+            and "def _validate_player_runtime_marker" in upd_now
+            and "def _quarantine_player_runtime_identity" in upd_now
+            and "health did not observe candidate kiosk.py identity" in upd_now
+            and "health did not observe candidate tree identity" in upd_now
+        ),
+        "player_runtime_updatectl_reconcile_available": (
+            "def _reconcile_player_runtime_state" in upd_now
+            and '"reconcile": cmd_reconcile' in upd_now
+        ),
+        "player_runtime_lab_thaw_guard_present": (
+            "PLAYER_RUNTIME_LAB_THAW_ENABLED = False" in upd_now
+            and "requires explicit lab thaw guard" in upd_now
+        ),
+        "player_runtime_ota_still_frozen": (
+            '"player-runtime": "player-runtime OTA is frozen' in upd_now
+            and "return 44" in upd_now
+        ),
+        "player_runtime_release_gate_passed": player_runtime_gate.returncode == 0,
+        "player_runtime_sandbox_passed": (
+            player_runtime_sandbox.returncode == 0
+            and player_runtime_sandbox_json.get("passed") is True
+            and player_runtime_sandbox_json.get("checks", {}).get("cli_apply_still_frozen") is True
+            and player_runtime_sandbox_json.get("checks", {}).get("failed_apply_without_previous_falls_back_to_image") is True
+            and player_runtime_sandbox_json.get("checks", {}).get("launcher_unmarked_data_current_falls_back") is True
+            and player_runtime_sandbox_json.get("checks", {}).get("reconcile_candidate_rejected_hygiene_passed") is True
+        ),
         "totem_core_ota_ready": totem_core_validation["ok"],
         "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
         "marker_present": present(MARKER),
         "marker_final_image_false": "final_image=false" in marker_now,
         "homologation_seed_mpv_path_points_to_wrapper": seed_verify.get("mpv_path") == WRAPPER,
         "no_real_config_embedded": not present("/data/config/config.json"),
+        "no_player_runtime_current_embedded": not present("/data/player-runtime/current"),
+        "no_legacy_kiosky_player_current_embedded": not present("/data/apps/kiosky-player/current"),
+        "no_player_runtime_marker_preforged": not present("/data/player-runtime/current/.release_verified.json"),
         "kiosky_service_present": present("/etc/systemd/system/kiosky-player.service"),
         "fsck_clean": fsck_clean,
     }
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1j", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1k", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -399,6 +471,13 @@ def main():
         "player_runtime_kiosk_source": str(PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)),
         "player_runtime_kiosk_sha256": kiosk_snapshot_sha,
         "player_runtime_snapshot_governed": True,
+        "player_runtime_verified_marker_required": v["totem_kiosky_launcher_requires_verified_marker"],
+        "player_runtime_reconcile_available": v["player_runtime_updatectl_reconcile_available"],
+        "player_runtime_lab_thaw_guard": v["player_runtime_lab_thaw_guard_present"],
+        "player_runtime_ota_still_frozen": v["player_runtime_ota_still_frozen"],
+        "player_runtime_gate_semantic_mpv_args": v["player_runtime_release_gate_passed"],
+        "player_runtime_release_gate_passed": v["player_runtime_release_gate_passed"],
+        "player_runtime_sandbox_passed": v["player_runtime_sandbox_passed"],
         "player_vo": "gpu", "player_gpu_context": "drm", "player_rotation": "from config/wizard (0 in current C18 baseline)",
         "mpv_ipc_preserved": True,
         "totem_in_video_group": v["totem_in_video_group"],
@@ -410,12 +489,13 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
         "fix_c17_4_trace_dir": "kiosky-player drop-in moves optional C17.4 firstboot trace from /data to /run so mmc I/O stalls cannot block startup before kiosk.py",
         "fix_player_runtime_path": "totem-kiosky-launcher default now uses /data/player-runtime/current; legacy /data/apps/kiosky-player/current no longer shadows the image player on C18",
+        "fix_player_runtime_thaw_foundation": "player-runtime remains frozen (rc=44) but image includes marker-bound launcher adoption, updatectl reconcile/state hygiene, lab thaw guard, quarantine and verify-then-promote primitives for future homologation",
         "panfrost_rebind_service": True,
         "kiosk_py_compiles": v["kiosk_py_compiles"],
         "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
@@ -424,7 +504,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1j RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1k RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

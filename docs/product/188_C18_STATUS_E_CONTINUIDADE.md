@@ -11,6 +11,9 @@ Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém
 > Este doc preserva histórico da `1d`; para o baseline live/golden e contrato
 > OTA atual, consultar também `docs/product/189_C18_OTA_READINESS_GATE.md` e
 > `docs/UPDATE_CONTRACT.md`.
+> Existe também a candidata offline **`c18-hwdecode-lab-1k`** para a fundação
+> de thaw seguro do `player-runtime`; ela ainda **não** substitui a golden `1j`
+> sem validação em placa.
 
 ---
 
@@ -193,9 +196,13 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 ## Próximos passos / a validar
 
-1. **Otimizar tempo de boot;**
-2. **Rebuild GCC-12 de produção;**
-3. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
+1. Validar em hardware a candidata offline **`c18-hwdecode-lab-1k`**, mantendo
+   `1j` como golden até flash limpo + playback/HW decode + OTA/freeze passarem;
+2. Continuar a frente de governança de atualizações: `totem-core` OTA manual já
+   validado; `player-runtime` só avança em thaw controlado, ainda congelado para
+   produção;
+3. **Rebuild GCC-12 de produção;**
+4. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 
 > **NÃO** aceitar a limitação **(C)** (aceitar o restart) sem **decisão humana**.
 
