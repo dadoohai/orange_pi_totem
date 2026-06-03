@@ -129,6 +129,8 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
         raise GateError(f"payload name must be {expected_payload!r}")
     if manifest["payload_sha256"].lower() != sha256_file(payload):
         raise GateError("payload_sha256 mismatch")
+    if manifest.get("channel") == "stable":
+        raise GateError("player-runtime stable releases are blocked until lab thaw and homologation gates exist")
     parse_utc_timestamp(manifest["created_at_utc"])
 
     requires = manifest["requires"]
@@ -693,6 +695,15 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         result = validate_release(manifest, payload)
         self.assertTrue(result["passed"])
+
+    def test_rejects_stable_channel_until_thaw(self) -> None:
+        manifest, payload, tmp = self.with_case("stable-blocked")
+        self.addCleanup(tmp.cleanup)
+        data = load_json(manifest)
+        data["channel"] = "stable"
+        manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "stable releases are blocked"):
+            validate_release(manifest, payload)
 
     def test_rejects_stock_mpv_default(self) -> None:
         tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")

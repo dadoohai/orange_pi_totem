@@ -10,6 +10,7 @@ RELEASE_DIR=""
 TAG_OVERRIDE=""
 TITLE_OVERRIDE=""
 PRERELEASE=""
+BASE_REF="${C18_OTA_BASE_REF:-}"
 DRAFT=0
 MODE="publish"
 
@@ -24,6 +25,8 @@ while [[ $# -gt 0 ]]; do
     --tag) shift; TAG_OVERRIDE="${1:-}" ;;
     --title=*) TITLE_OVERRIDE="${arg#*=}" ;;
     --title) shift; TITLE_OVERRIDE="${1:-}" ;;
+    --base-ref=*) BASE_REF="${arg#*=}" ;;
+    --base-ref) shift; BASE_REF="${1:-}" ;;
     --prerelease) PRERELEASE="yes" ;;
     --no-prerelease) PRERELEASE="no" ;;
     --draft) DRAFT=1 ;;
@@ -80,11 +83,40 @@ COMPONENT="$(read_json "$MANIFEST" component)"
 MANIFEST_SHA="$(read_json "$MANIFEST" payload_sha256)"
 PAYLOAD_BASENAME="$(read_json "$MANIFEST" payload)"
 SOURCE_COMMIT="$(read_json "$MANIFEST" source_commit)"
+GATE_EVIDENCE="$RELEASE_DIR/c18-ota-release-gate.json"
+STABLE_EVIDENCE="$RELEASE_DIR/c18-stable-promotion-evidence.json"
 
 [[ "$COMPONENT" == "totem-core" ]] || die "manifest component is not totem-core"
 [[ "$(basename "$PAYLOAD")" == "$PAYLOAD_BASENAME" ]] \
   || die "payload basename mismatch: $(basename "$PAYLOAD") != $PAYLOAD_BASENAME"
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]] || die "manifest source_commit is not a full SHA: $SOURCE_COMMIT"
+if [[ "$CHANNEL" == "stable" ]]; then
+  STABLE_EVIDENCE_SHA="$(read_json "$MANIFEST" stable_promotion_evidence_sha256)"
+  [[ "${ALLOW_C18_STABLE_PROMOTION:-0}" == "1" ]] \
+    || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1)"
+  [[ -f "$STABLE_EVIDENCE" ]] \
+    || die "stable channel requires $STABLE_EVIDENCE"
+  if ! python3 - "$STABLE_EVIDENCE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+if not isinstance(data, dict):
+    raise SystemExit(1)
+if data.get("schema") != "dadooh.c18.stable_promotion.v1":
+    raise SystemExit(1)
+if data.get("approved") is not True:
+    raise SystemExit(1)
+PY
+  then
+    die "stable promotion evidence must be JSON with schema=dadooh.c18.stable_promotion.v1 and approved=true"
+  fi
+  [[ "$STABLE_EVIDENCE_SHA" =~ ^[0-9a-f]{64}$ ]] \
+    || die "stable manifest must include stable_promotion_evidence_sha256"
+  ACTUAL_STABLE_EVIDENCE_SHA="$(sha256sum "$STABLE_EVIDENCE" | awk '{print $1}')"
+  [[ "$ACTUAL_STABLE_EVIDENCE_SHA" == "$STABLE_EVIDENCE_SHA" ]] \
+    || die "stable evidence sha256 mismatch: actual=$ACTUAL_STABLE_EVIDENCE_SHA manifest=$STABLE_EVIDENCE_SHA"
+fi
 
 ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 [[ "$ACTUAL_SHA" == "$MANIFEST_SHA" ]] \
@@ -94,11 +126,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" ]] \
   || die "c18 OTA release gate not found; run from orange_pi_totem checkout"
+[[ -n "$BASE_REF" ]] \
+  || die "missing --base-ref (or C18_OTA_BASE_REF); publish must compare committed diff against an explicit base"
+TMP_GATE_EVIDENCE="$(mktemp -t c18-ota-release-gate-XXXXXX.json)"
+trap 'rm -f "$TMP_GATE_EVIDENCE"' EXIT
 python3 "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" \
   --package-manifest "$MANIFEST" \
   --package-payload "$PAYLOAD" \
-  --json >/dev/null \
+  --base-ref "$BASE_REF" \
+  --json >"$TMP_GATE_EVIDENCE" \
   || die "c18 OTA release gate failed; refusing to publish"
+mv -f "$TMP_GATE_EVIDENCE" "$GATE_EVIDENCE"
 
 if [[ -n "$TAG_OVERRIDE" ]]; then
   TAG="$TAG_OVERRIDE"
@@ -145,6 +183,11 @@ log "prerelease      = $PRERELEASE"
 log "draft           = $DRAFT"
 log "manifest        = $MANIFEST"
 log "payload         = $PAYLOAD"
+log "base_ref        = $BASE_REF"
+log "gate_evidence   = $GATE_EVIDENCE"
+if [[ "$CHANNEL" == "stable" ]]; then
+  log "stable_evidence = $STABLE_EVIDENCE"
+fi
 log "payload_sha256  = $MANIFEST_SHA"
 log "version         = $VERSION"
 log "channel         = $CHANNEL"
@@ -158,7 +201,7 @@ if [[ "$MODE" == "prepare-only" ]]; then
 fi
 
 NOTES_FILE="$(mktemp -t totem-core-release-notes-XXXXXX.md)"
-trap 'rm -f "$NOTES_FILE"' EXIT
+trap 'rm -f "$NOTES_FILE" "$TMP_GATE_EVIDENCE"' EXIT
 
 {
   echo "# Dadooh Totem core update — ${VERSION}"
@@ -193,8 +236,12 @@ fi
 [[ "$PRERELEASE" == "yes" ]] && GH_ARGS+=( --prerelease )
 [[ "$DRAFT" -eq 1 ]] && GH_ARGS+=( --draft )
 
-log "calling: gh ${GH_ARGS[*]} -- <manifest> <payload>"
-RELEASE_URL="$(gh "${GH_ARGS[@]}" -- "$MANIFEST" "$PAYLOAD")"
+ASSETS=( "$MANIFEST" "$PAYLOAD" "$GATE_EVIDENCE" )
+if [[ "$CHANNEL" == "stable" ]]; then
+  ASSETS+=( "$STABLE_EVIDENCE" )
+fi
+log "calling: gh ${GH_ARGS[*]} -- <manifest> <payload> <gate_evidence>"
+RELEASE_URL="$(gh "${GH_ARGS[@]}" -- "${ASSETS[@]}")"
 log "release_url=${RELEASE_URL}"
 log "release_tag=${TAG}"
 log "published=true"

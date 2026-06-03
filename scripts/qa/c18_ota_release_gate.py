@@ -128,11 +128,12 @@ def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]
     }
 
 
-def player_runtime_diff_guard() -> dict[str, Any]:
+def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
     names: set[str] = set()
     for cmd in (
         ["git", "diff", "--name-only"],
         ["git", "diff", "--cached", "--name-only"],
+        ["git", "ls-files", "--others", "--exclude-standard"],
     ):
         proc = subprocess.run(
             cmd,
@@ -152,6 +153,44 @@ def player_runtime_diff_guard() -> dict[str, Any]:
                 "stderr_tail": proc.stderr[-4000:],
             }
         names.update(line.strip() for line in proc.stdout.splitlines() if line.strip())
+    base_cmd: list[str] | None = None
+    if base_ref:
+        merge_base = subprocess.run(
+            ["git", "merge-base", base_ref, "HEAD"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if merge_base.returncode != 0:
+            return {
+                "name": "player_runtime_diff_guard",
+                "cmd": ["git", "merge-base", base_ref, "HEAD"],
+                "returncode": merge_base.returncode,
+                "passed": False,
+                "stdout_tail": merge_base.stdout[-4000:],
+                "stderr_tail": merge_base.stderr[-4000:],
+            }
+        base_cmd = ["git", "diff", "--name-only", f"{base_ref}...HEAD"]
+        proc = subprocess.run(
+            base_cmd,
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return {
+                "name": "player_runtime_diff_guard",
+                "cmd": base_cmd,
+                "returncode": proc.returncode,
+                "passed": False,
+                "stdout_tail": proc.stdout[-4000:],
+                "stderr_tail": proc.stderr[-4000:],
+            }
+        names.update(line.strip() for line in proc.stdout.splitlines() if line.strip())
     hits = sorted(names & PLAYER_RUNTIME_DIFF_PATHS)
     message = (
         "player-runtime files changed; this is outside ordinary totem-core OTA "
@@ -159,7 +198,11 @@ def player_runtime_diff_guard() -> dict[str, Any]:
     )
     return {
         "name": "player_runtime_diff_guard",
-        "cmd": ["git", "diff", "--name-only", "&&", "git", "diff", "--cached", "--name-only"],
+        "cmd": [
+            "git",
+            "diff/status name scan",
+            *(["--base-ref", base_ref] if base_ref else []),
+        ],
         "returncode": 1 if hits else 0,
         "passed": not hits,
         "stdout_tail": "\n".join(hits),
@@ -312,6 +355,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--package-manifest", type=Path, default=None)
     parser.add_argument("--package-payload", type=Path, default=None)
     parser.add_argument("--allow-dirty-manifest", action="store_true")
+    parser.add_argument("--base-ref", default=os.environ.get("C18_OTA_BASE_REF") or None)
     parser.add_argument("--sandbox", type=Path, default=None)
     parser.add_argument("--evidence-dir", type=Path, default=None)
     parser.add_argument("--json", action="store_true")
@@ -326,7 +370,7 @@ def main() -> int:
     steps.append(run_step("py_compile", ["python3", "-m", "py_compile", *PY_COMPILE_TARGETS]))
     for target in BASH_SYNTAX_TARGETS:
         steps.append(run_step(f"bash_syntax:{target}", ["bash", "-n", target]))
-    steps.append(player_runtime_diff_guard())
+    steps.append(player_runtime_diff_guard(args.base_ref))
     for name, cmd in TEST_COMMANDS:
         steps.append(run_step(name, cmd))
 

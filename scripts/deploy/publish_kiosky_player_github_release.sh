@@ -186,11 +186,11 @@ trap 'rm -f "$NOTES_FILE"' EXIT
   echo "- \`$(basename "$MANIFEST")\` — manifest (schema dadooh.totem.update.v1)"
   echo "- \`$(basename "$PAYLOAD")\` — kiosky-player tarball"
   echo
-  echo "## Apply on device (homologation lab)"
+  echo "## C18 status"
   echo
-  echo "\`\`\`"
-  echo "/opt/totem/bin/totem-updatectl apply-github-latest --repo ${REPO}"
-  echo "\`\`\`"
+  echo "Legacy lab reproduction only. C18 devices keep kiosky-player OTA frozen"
+  echo "and will reject apply with rc=44. Use the C18 player-runtime contract"
+  echo "only after an explicit thaw/homologation flow exists."
   echo
   echo "Pre-deploy MVP per C14.1.1. App update only; no OS / kernel / U-Boot changes."
 } > "$NOTES_FILE"

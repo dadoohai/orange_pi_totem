@@ -51,8 +51,13 @@ def utcnow() -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sandbox", type=Path, default=DEFAULT_SANDBOX)
+    parser.add_argument("--package-manifest", type=Path, default=None)
+    parser.add_argument("--package-payload", type=Path, default=None)
     parser.add_argument("--json", action="store_true")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if (args.package_manifest is None) != (args.package_payload is None):
+        parser.error("--package-manifest and --package-payload must be provided together")
+    return args
 
 
 def run(cmd: list[str], *, env: dict[str, str], cwd: Path = REPO_ROOT, timeout: int = 60) -> subprocess.CompletedProcess[str]:
@@ -205,6 +210,11 @@ def read_state(sandbox: Path) -> dict[str, Any]:
     return json.loads(state_path.read_text(encoding="utf-8"))
 
 
+def manifest_version(manifest: Path) -> str:
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    return str(data.get("version") or "")
+
+
 def write_state(sandbox: Path, state: dict[str, Any]) -> None:
     state_path = sandbox / "data" / "player-runtime" / "state.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -350,6 +360,23 @@ def main() -> int:
     seed_image_runtime(sandbox)
     write_policy(sandbox)
 
+    external_package_requested = args.package_manifest is not None
+    external_package_ok = True
+    external_package_reason = "not_requested"
+    external_package_version = ""
+    external_package_current = ""
+    if args.package_manifest is not None and args.package_payload is not None:
+        external_package_version = manifest_version(args.package_manifest)
+        external_package_ok, external_package_reason = apply_player_runtime_offline(
+            sandbox,
+            manifest=args.package_manifest.resolve(),
+            payload=args.package_payload.resolve(),
+        )
+        external_package_current = readlink(sandbox / "data" / "player-runtime" / "current")
+        reset_sandbox(sandbox)
+        seed_image_runtime(sandbox)
+        write_policy(sandbox)
+
     manifest_a, payload_a = build_player_runtime_package(sandbox, "sandbox-a", "A")
     manifest_b, payload_b = build_player_runtime_package(sandbox, "sandbox-b", "B")
     manifest_bad, payload_bad = build_player_runtime_package(sandbox, "sandbox-bad", "bad")
@@ -450,6 +477,14 @@ def main() -> int:
         "network_required": False,
         "checks": {
             "release_gate_validated": True,
+            "external_package_apply_passed": (
+                not external_package_requested
+                or (
+                    external_package_ok
+                    and external_package_reason == "applied"
+                    and external_package_current == f"releases/{external_package_version}"
+                )
+            ),
             "apply_a_offline_passed": apply_a_ok and apply_a_reason == "applied" and current_after_a == expected_a,
             "launcher_data_source_passed": launcher_after_a == str(sandbox / "data" / "player-runtime" / "current"),
             "launcher_corrupt_marker_falls_back": launcher_after_corrupt_marker == str(sandbox / "opt" / "totem" / "kiosky-player"),
@@ -508,6 +543,11 @@ def main() -> int:
             "launcher_default_data_dir": "/data/player-runtime/current",
             "player_runtime_component_base": "/data/player-runtime",
             "requires_image_launcher_env_or_path_convergence_before_thaw": False,
+        },
+        "external_package": {
+            "requested": external_package_requested,
+            "version": external_package_version,
+            "reason": external_package_reason,
         },
     }
     result["passed"] = all(result["checks"].values())

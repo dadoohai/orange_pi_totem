@@ -49,7 +49,7 @@ RELEASE_GATE="$REPO_ROOT/scripts/qa/c18_player_runtime_release_gate.py"
 
 [[ -f "$SNAPSHOT" ]] || die "governed player-runtime snapshot not found: $SNAPSHOT"
 [[ -f "$RELEASE_GATE" ]] || die "player-runtime release gate not found: $RELEASE_GATE"
-[[ "$CHANNEL" =~ ^(lab|homologation|stable)$ ]] || die "unsupported channel: $CHANNEL"
+[[ "$CHANNEL" =~ ^(lab|homologation)$ ]] || die "unsupported channel: $CHANNEL (player-runtime lab builder only supports lab or homologation)"
 
 pushd "$REPO_ROOT" >/dev/null
 SOURCE_BRANCH="$(git rev-parse --abbrev-ref HEAD)"

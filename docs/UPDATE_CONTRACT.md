@@ -160,6 +160,12 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py \
   --json
 ```
 
+Em PR/branch ou antes de publish, usar tambem `--base-ref <ref>` (ou
+`C18_OTA_BASE_REF=<ref>`) para que o guard compare o conjunto commitado contra
+a base, nao apenas o worktree local. O publisher de `totem-core` deve falhar
+fechado se a base nao for declarada e deve publicar o JSON de evidencia do gate
+junto ao manifest/payload.
+
 O gate deve provar, no minimo:
 
 - `totem-core` sem `bin/kiosky_service_launcher.sh` no payload;
@@ -225,7 +231,8 @@ O builder local `scripts/deploy/build_player_runtime_release_package.sh` cria
 um pacote lab-only de `player-runtime` a partir do snapshot governado e roda
 `scripts/qa/c18_player_runtime_release_gate.py` antes de promover payload e
 manifest ao diretorio final. Ele nao publica, nao toca a placa e nao descongela
-o `rc=44` do updater.
+o `rc=44` do updater. Por construcao, esse builder nao gera canal `stable`; um
+manifest `player-runtime` com `channel=stable` tambem e rejeitado pelo gate.
 
 Sem esse gate, update de player fica restrito a imagem/homologacao manual.
 
@@ -275,6 +282,10 @@ devem ser copiados para procedimentos C18.
 `stable` nao e apenas `channel=stable`. Antes de stable/batch, exigir gate de
 promocao proprio, homologacao fisica, policy stable, `allow_prerelease=false`,
 rollback definido, evidencia sanitizada e decisao explicita sobre imagem final.
+Os builders/publishers C18 devem falhar fechados para `stable` sem
+`ALLOW_C18_STABLE_PROMOTION=1` e uma evidencia JSON aprovada
+`dadooh.c18.stable_promotion.v1`. O publisher de `totem-core` deve preservar
+`c18-ota-release-gate.json` junto da release para manter a trilha de auditoria.
 
 CI, assinatura/attestation, bridge de updater e A/B de imagem sao hardening
 futuro; nao fazem parte do OTA manual imediato.

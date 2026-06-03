@@ -19,6 +19,7 @@ OUT_BASE="${OUT_BASE:-releases/core-updates}"
 SOURCE_REPO_FULL="${SOURCE_REPO_FULL:-dadoohai/orange_pi_totem}"
 REQUIRED_BASE_IMAGE_MIN="${REQUIRED_BASE_IMAGE_MIN:-c17.4.2}"
 REQUIRED_DEVICE_TRACK="${REQUIRED_DEVICE_TRACK:-c18-hwdecode}"
+STABLE_PROMOTION_EVIDENCE="${STABLE_PROMOTION_EVIDENCE:-}"
 MODE="build-package"
 ALLOW_DIRTY=0
 VERSION_OVERRIDE="${VERSION:-}"
@@ -51,6 +52,7 @@ for arg in "$@"; do
     --repo-root=*) REPO_ROOT="${arg#*=}" ;;
     --out-base=*) OUT_BASE="${arg#*=}" ;;
     --channel=*) CHANNEL="${arg#*=}" ;;
+    --stable-promotion-evidence=*) STABLE_PROMOTION_EVIDENCE="${arg#*=}" ;;
     -h|--help)
       sed -n '2,21p' "$0"
       exit 0
@@ -103,6 +105,30 @@ if ! [[ "$CHANNEL" =~ ^(lab|homologation|stable)$ ]]; then
   die "unsupported channel: $CHANNEL (expected lab, homologation, or stable)"
 fi
 
+STABLE_PROMOTION_EVIDENCE_SHA256=""
+if [[ "$CHANNEL" == "stable" ]]; then
+  [[ "${ALLOW_C18_STABLE_PROMOTION:-0}" == "1" ]] \
+    || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1 and provide --stable-promotion-evidence)"
+  [[ -n "$STABLE_PROMOTION_EVIDENCE" && -f "$STABLE_PROMOTION_EVIDENCE" ]] \
+    || die "stable channel requires --stable-promotion-evidence=<json>"
+  if ! python3 - "$STABLE_PROMOTION_EVIDENCE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+if not isinstance(data, dict):
+    raise SystemExit(1)
+if data.get("schema") != "dadooh.c18.stable_promotion.v1":
+    raise SystemExit(1)
+if data.get("approved") is not True:
+    raise SystemExit(1)
+PY
+  then
+    die "stable promotion evidence must be JSON with schema=dadooh.c18.stable_promotion.v1 and approved=true"
+  fi
+  STABLE_PROMOTION_EVIDENCE_SHA256="$(sha256sum "$STABLE_PROMOTION_EVIDENCE" | awk '{print $1}')"
+fi
+
 OUT_DIR="${OUT_BASE}/${VERSION}"
 PAYLOAD_NAME="dadooh-${COMPONENT}-${VERSION}.tar.gz"
 MANIFEST_NAME="dadooh-${COMPONENT}-${VERSION}.manifest.json"
@@ -116,6 +142,9 @@ log "source_repo     = $SOURCE_REPO_FULL"
 log "source_branch   = $SOURCE_BRANCH"
 log "source_commit   = $SOURCE_COMMIT"
 log "device_track    = $REQUIRED_DEVICE_TRACK"
+if [[ "$CHANNEL" == "stable" ]]; then
+  log "stable_evidence = $STABLE_PROMOTION_EVIDENCE"
+fi
 log "dirty           = $DIRTY"
 log "out_dir         = $OUT_DIR"
 log "mode            = $MODE"
@@ -203,6 +232,9 @@ if grep -rEl --binary-files=without-match "$SCAN_REGEX" "$STAGE_DIR" > "$SCAN_HI
 fi
 
 mkdir -p "$OUT_DIR"
+if [[ "$CHANNEL" == "stable" ]]; then
+  cp -f "$STABLE_PROMOTION_EVIDENCE" "$OUT_DIR/c18-stable-promotion-evidence.json"
+fi
 tar \
   --owner=0 --group=0 --numeric-owner \
   --sort=name \
@@ -225,6 +257,7 @@ manifest = {
     "source_branch": "${SOURCE_BRANCH}",
     "source_commit": "${SOURCE_COMMIT}",
     "source_dirty": bool(${DIRTY}),
+    "stable_promotion_evidence_sha256": "${STABLE_PROMOTION_EVIDENCE_SHA256}",
     "payload": "${PAYLOAD_NAME}",
     "payload_sha256": "${PAYLOAD_SHA256}",
     "payload_bytes": ${PAYLOAD_BYTES},

@@ -7,7 +7,10 @@ operator-created policy file or on the legacy kiosky-player update service.
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -134,6 +137,26 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--target \"$SOURCE_COMMIT\"", publish)
         self.assertIn("--verify-tag", publish)
         self.assertIn("does not point to manifest source_commit", publish)
+        self.assertIn("c18-ota-release-gate.json", publish)
+        self.assertIn("TMP_GATE_EVIDENCE", publish)
+        self.assertIn('BASE_REF="${C18_OTA_BASE_REF:-}"', publish)
+        self.assertIn("missing --base-ref", publish)
+        self.assertIn('--base-ref "$BASE_REF"', publish)
+        self.assertIn("--json >\"$TMP_GATE_EVIDENCE\"", publish)
+        self.assertNotIn("c18_ota_release_gate.py\" \\\n  --package-manifest \"$MANIFEST\" \\\n  --package-payload \"$PAYLOAD\" \\\n  --json >/dev/null", publish)
+
+    def test_stable_channel_requires_promotion_evidence(self) -> None:
+        build = BUILD_CORE_PATH.read_text(encoding="utf-8")
+        publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
+        for script in (build, publish):
+            self.assertIn("ALLOW_C18_STABLE_PROMOTION", script)
+            self.assertIn("dadooh.c18.stable_promotion.v1", script)
+            self.assertIn("approved", script)
+        self.assertIn("--stable-promotion-evidence", build)
+        self.assertIn("c18-stable-promotion-evidence.json", publish)
+        self.assertIn("stable_promotion_evidence_sha256", publish)
+        self.assertIn("stable evidence sha256 mismatch", publish)
+        self.assertIn("ACTUAL_STABLE_EVIDENCE_SHA", publish)
 
     def test_image_embed_keeps_player_launcher_fixed_to_image(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")
@@ -205,11 +228,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("is frozen for C18", script)
             self.assertIn("legacy lab reproduction bypass", script)
             self.assertIn("not approval for a C18-aware player-runtime release", script)
+        publish = PUBLISH_PLAYER_PATH.read_text(encoding="utf-8")
+        self.assertIn("will reject apply with rc=44", publish)
+        self.assertNotIn("totem-updatectl apply-github-latest --repo ${REPO}", publish)
 
     def test_player_runtime_builder_is_lab_only_and_gated(self) -> None:
         script = BUILD_PLAYER_RUNTIME_PATH.read_text(encoding="utf-8")
         self.assertIn('COMPONENT="player-runtime"', script)
         self.assertIn("c18_player_runtime_release_gate.py", script)
+        self.assertIn("lab builder only supports lab or homologation", script)
         self.assertIn('BUILD_DIR="$(mktemp -d -t player-runtime-build-XXXXXX)"', script)
         self.assertIn('TMP_PAYLOAD_PATH="$BUILD_DIR/$PAYLOAD_NAME"', script)
         self.assertIn('TMP_MANIFEST_PATH="$BUILD_DIR/$MANIFEST_NAME"', script)
@@ -220,6 +247,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("does not publish", script)
         self.assertNotIn("gh release create", script)
         self.assertNotIn("ALLOW_C18_FROZEN_PLAYER_RELEASE", script)
+
+        gate = (REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_release_gate.py").read_text(encoding="utf-8")
+        self.assertIn("player-runtime stable releases are blocked", gate)
 
     def test_legacy_c14_remote_scripts_are_guarded_as_bypass(self) -> None:
         for path in LEGACY_C14_REMOTE_SCRIPTS:
@@ -318,7 +348,49 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
         self.assertIn("player_runtime_diff_guard", gate)
+        self.assertIn("--base-ref", gate)
+        self.assertIn("C18_OTA_BASE_REF", gate)
+        self.assertIn("merge-base", gate)
         self.assertIn("requires image/homologation", gate)
+
+    def test_release_gate_base_ref_catches_committed_player_runtime_diff(self) -> None:
+        spec = importlib.util.spec_from_file_location("c18_ota_release_gate_test", RELEASE_GATE_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        gate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gate)  # type: ignore[union-attr]
+
+        with tempfile.TemporaryDirectory(prefix="c18-base-ref-gate-") as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=root, check=True)
+            protected = root / "player-runtime" / "kiosky-player" / "kiosk.py"
+            protected.parent.mkdir(parents=True)
+            protected.write_text("print('base')\n", encoding="utf-8")
+            ordinary = root / "scripts" / "board" / "totem_status_render_preview.py"
+            ordinary.parent.mkdir(parents=True)
+            ordinary.write_text("print('base')\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "base"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+
+            ordinary.write_text("print('ordinary')\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "ordinary"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            old_root = gate.REPO_ROOT
+            try:
+                gate.REPO_ROOT = root
+                self.assertTrue(gate.player_runtime_diff_guard(base)["passed"])
+                protected.write_text("print('protected')\n", encoding="utf-8")
+                subprocess.run(["git", "add", "."], cwd=root, check=True)
+                subprocess.run(["git", "commit", "-m", "protected"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                result = gate.player_runtime_diff_guard(base)
+                self.assertFalse(result["passed"])
+                self.assertIn("player-runtime/kiosky-player/kiosk.py", result["stdout_tail"])
+            finally:
+                gate.REPO_ROOT = old_root
 
 
 if __name__ == "__main__":

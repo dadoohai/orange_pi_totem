@@ -470,6 +470,17 @@ vir como nova imagem ou release ponte explicitamente homologada.
   guard contra sobrescrever releases ja ligadas como `current`/`previous`, e
   builder local lab-only de pacote `player-runtime` que so promove artefatos
   apos o gate passar, mantendo o CLI publico congelado com `rc=44`.
+- Rodada de governanca seguinte manteve o foco em velocidade segura: o gate
+  C18 ganhou `--base-ref` para pegar mudanca commitada em paths
+  `player-runtime`/image-fixed, `stable` passou a falhar fechado sem evidencia
+  de promocao aprovada, o publisher de `totem-core` preserva
+  `c18-ota-release-gate.json` como evidencia, o builder/gate de
+  `player-runtime` rejeitam canal `stable`, e o sandbox de `player-runtime`
+  agora aceita um pacote real gerado pelo builder alem dos pacotes sinteticos.
+  Auditoria subsequente fechou dois pontos load-bearing desse publish: o
+  publisher agora exige `--base-ref`/`C18_OTA_BASE_REF` em vez de tratar como
+  recomendacao, e compara o SHA da evidencia stable publicada com
+  `stable_promotion_evidence_sha256` declarado no manifest.
 
 ## Fora de escopo
 
