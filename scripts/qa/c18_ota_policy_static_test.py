@@ -202,8 +202,6 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
     def test_playback_observers_collect_c18_decode_properties(self) -> None:
         for path in (PLAYBACK_OBSERVER_PATH, SERVICE_OBSERVER_PATH):
             script = path.read_text(encoding="utf-8")
-            self.assertNotIn("DEEP_HEALTH_RC", script)
-            self.assertNotIn("c18_deep_health_passed", script)
             self.assertIn('C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"', script)
             self.assertIn("mpv_path_c18_contract", script)
             self.assertIn("DECODE_HEALTH_RC", script)
@@ -224,6 +222,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("estimated_frame_progressed", script)
             self.assertIn("status_failure_samples", script)
             self.assertIn("c18_decode_health_passed", script)
+
+        service_observer = SERVICE_OBSERVER_PATH.read_text(encoding="utf-8")
+        self.assertIn("c18_playback_health_summary.py", service_observer)
+        self.assertIn("deep-health-systemd.json", service_observer)
+        self.assertIn("deep-health-process.json", service_observer)
+        self.assertIn("deep-health-kernel.json", service_observer)
+        self.assertIn("deep-health-player-counters.json", service_observer)
+        self.assertIn("playback-deep-health-public.json", service_observer)
+        self.assertIn("post-c18-playback-deep-health", service_observer)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

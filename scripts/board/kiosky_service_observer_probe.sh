@@ -11,6 +11,8 @@ RUNTIME_DIR="/tmp/kiosky"
 STATUS_FILE="/tmp/kiosky-status.json"
 MPV_LOG_FILE="/tmp/kiosky/mpv.log"
 MPV_GENERATION_LOG_DIR="/tmp/kiosky"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+PLAYBACK_HEALTH_SUMMARY_SCRIPT="${C18_PLAYBACK_HEALTH_SUMMARY_SCRIPT:-$SCRIPT_DIR/c18_playback_health_summary.py}"
 BASE_DIR="${TOTEM_DIAG_BASE:-/root/totem-diag}"
 TIMESTAMP="${TOTEM_DIAG_TIMESTAMP:-$(date +%Y%m%d-%H%M%S%z)}"
 RUN_NAME="kiosky-service-observer-$TIMESTAMP"
@@ -24,6 +26,8 @@ OBSERVER_IPC_TIMEOUT_SEC="${KIOSKY_SERVICE_OBSERVER_IPC_TIMEOUT_SEC:-0.8}"
 OBSERVER_PID=""
 RUN_SHELL_LAST_RC=0
 DECODE_HEALTH_RC=0
+PLAYBACK_HEALTH_RC=0
+SERVICE_NRESTARTS_START=0
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: run this script as root." >&2
@@ -289,6 +293,158 @@ check_decode_health_summary() {
   else
     append_summary "post-c18-decode-health" "1" "sanitized C18 decode-health summary failed; inspect playback-observer-summary.tsv"
     DECODE_HEALTH_RC=1
+  fi
+  return 0
+}
+
+read_service_nrestarts() {
+  local raw=""
+  raw="$(systemctl show "$SERVICE_NAME" -p NRestarts --value 2>/dev/null || true)"
+  case "$raw" in
+    ''|*[!0-9]*)
+      printf '0'
+      ;;
+    *)
+      printf '%s' "$raw"
+      ;;
+  esac
+}
+
+write_playback_health_sidecars() {
+  local stdout_file="$OUT_DIR/playback-health-sidecars.stdout.txt"
+  local stderr_file="$OUT_DIR/playback-health-sidecars.stderr.txt"
+  local rc=0
+
+  python3 - "$OUT_DIR" "$SERVICE_NAME" "$APP_USER" "$SERVICE_NRESTARTS_START" >"$stdout_file" 2>"$stderr_file" <<'PY'
+import json
+import os
+import pwd
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+out_dir = Path(sys.argv[1])
+service_name = sys.argv[2]
+app_user = sys.argv[3]
+nrestarts_start = int(sys.argv[4] or "0")
+
+
+def run(args):
+    return subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False)
+
+
+def write_json(name, payload):
+    path = out_dir / name
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.chmod(path, 0o600)
+
+
+def as_int(value):
+    try:
+        return int(str(value).strip())
+    except Exception:
+        return 0
+
+
+active = run(["systemctl", "is-active", service_name]).stdout.strip() == "active"
+nrestarts_end = as_int(run(["systemctl", "show", service_name, "-p", "NRestarts", "--value"]).stdout)
+write_json(
+    "deep-health-systemd.json",
+    {
+        "service_active": active,
+        "nrestarts_delta": max(nrestarts_end - nrestarts_start, 0),
+    },
+)
+
+try:
+    app_uid = pwd.getpwnam(app_user).pw_uid
+except Exception:
+    app_uid = None
+
+mpv_processes = []
+if app_uid is not None:
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            status = (proc / "status").read_text(encoding="utf-8", errors="replace")
+            uid_match = re.search(r"^Uid:\s+(\d+)\s", status, re.MULTILINE)
+            if not uid_match or int(uid_match.group(1)) != app_uid:
+                continue
+            comm = (proc / "comm").read_text(encoding="utf-8", errors="replace").strip()
+            if comm != "mpv":
+                continue
+            mpv_processes.append(os.readlink(proc / "exe"))
+        except Exception:
+            continue
+
+write_json(
+    "deep-health-process.json",
+    {
+        "mpv_count": len(mpv_processes),
+        "mpv_path": mpv_processes[0] if mpv_processes else "",
+    },
+)
+
+kernel_text = run(["journalctl", "-k", "-b", "--no-pager", "--output=cat"]).stdout
+write_json(
+    "deep-health-kernel.json",
+    {
+        "panfrost_faults": len(re.findall(r"panfrost.*(fault|hang|reset|error)", kernel_text, re.I)),
+        "mmc_timeout_reset": len(re.findall(r"mmc.*(timeout|reset|error)", kernel_text, re.I)),
+    },
+)
+
+log_text = ""
+for path in [out_dir / "post-mpv.log", *sorted((out_dir / "mpv-generation-logs").glob("*.log"))]:
+    try:
+        log_text += path.read_text(encoding="utf-8", errors="replace") + "\n"
+    except Exception:
+        pass
+
+write_json(
+    "deep-health-player-counters.json",
+    {
+        "media_load_failed": len(re.findall(r"media_load_failed|Failed to load media", log_text, re.I)),
+        "mpv_restart": len(re.findall(r"\bRestarting MPV\b", log_text)),
+    },
+)
+
+print("deep-health sidecars written")
+PY
+  rc=$?
+  chmod 0600 "$stdout_file" "$stderr_file" 2>/dev/null || true
+  append_summary "post-c18-playback-health-sidecars" "$rc" "deep-health sidecars written from sanitized counters"
+  return 0
+}
+
+check_playback_deep_health_summary() {
+  local stdout_file="$OUT_DIR/playback-deep-health.stdout.txt"
+  local stderr_file="$OUT_DIR/playback-deep-health.stderr.txt"
+  local output_file="$OUT_DIR/playback-deep-health-public.json"
+  local rc=0
+
+  if [ ! -f "$PLAYBACK_HEALTH_SUMMARY_SCRIPT" ]; then
+    append_summary "post-c18-playback-deep-health" "127" "missing $PLAYBACK_HEALTH_SUMMARY_SCRIPT"
+    PLAYBACK_HEALTH_RC=127
+    return 0
+  fi
+
+  python3 "$PLAYBACK_HEALTH_SUMMARY_SCRIPT" \
+    --samples "$OUT_DIR/playback-samples.tsv" \
+    --systemd "$OUT_DIR/deep-health-systemd.json" \
+    --process "$OUT_DIR/deep-health-process.json" \
+    --kernel "$OUT_DIR/deep-health-kernel.json" \
+    --player-counters "$OUT_DIR/deep-health-player-counters.json" \
+    --output "$output_file" >"$stdout_file" 2>"$stderr_file"
+  rc=$?
+  chmod 0600 "$stdout_file" "$stderr_file" "$output_file" 2>/dev/null || true
+  if [ "$rc" -eq 0 ]; then
+    append_summary "post-c18-playback-deep-health" "0" "sanitized playback deep-health summary passed"
+  else
+    append_summary "post-c18-playback-deep-health" "$rc" "sanitized playback deep-health summary failed; inspect playback-deep-health-public.json"
+    PLAYBACK_HEALTH_RC="$rc"
   fi
   return 0
 }
@@ -822,6 +978,7 @@ fi
 touch "$MARKER"
 chmod 0600 "$MARKER"
 JOURNAL_SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
+SERVICE_NRESTARTS_START="$(read_service_nrestarts)"
 append_summary "marker-created" "0" "$MARKER"
 
 start_observer
@@ -835,6 +992,8 @@ run_shell "post-service-journal" "journal for service observation window" "journ
 run_shell "post-status-json-stat" "stat status JSON without printing content" "stat '$STATUS_FILE' || true"
 copy_mpv_log "post"
 copy_new_mpv_generation_logs
+write_playback_health_sidecars
+check_playback_deep_health_summary
 
 run_shell "stop-service" "stop service after observation" "systemctl stop '$SERVICE_NAME'"
 run_shell "post-systemctl-is-active-after-stop" "systemctl is-active after stopping service" "systemctl is-active '$SERVICE_NAME' || true"
@@ -851,4 +1010,7 @@ archive_rc=$?
 if [ "$archive_rc" -ne 0 ]; then
   exit "$archive_rc"
 fi
-exit "$DECODE_HEALTH_RC"
+if [ "$DECODE_HEALTH_RC" -ne 0 ]; then
+  exit "$DECODE_HEALTH_RC"
+fi
+exit "$PLAYBACK_HEALTH_RC"

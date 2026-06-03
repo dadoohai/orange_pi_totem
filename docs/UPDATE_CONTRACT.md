@@ -172,6 +172,11 @@ e pelos fixtures de `scripts/qa/c18_playback_deep_health_fixture_test.py`.
 Esse avaliador consome apenas artefatos sanitizados (`playback-samples.tsv` e
 sidecars de systemd/processo/kernel/contadores) e emite
 `dadooh.c18.playback.deep_health.v1`.
+O `scripts/board/kiosky_service_observer_probe.sh` e o produtor de evidencia de
+referencia: ele escreve os sidecars `deep-health-*.json` e o
+`playback-deep-health-public.json` durante uma observacao do servico real. O
+probe manual de playback continua sendo diagnostico auxiliar e nao substitui a
+validacao do servico.
 
 Sem esse gate, update de player fica restrito a imagem/homologacao manual.
 
