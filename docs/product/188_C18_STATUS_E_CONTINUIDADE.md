@@ -3,17 +3,17 @@
 Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém retome o trabalho **do zero**, após uma compactação de contexto, usando apenas fatos verificados.
 
 > **Nota de continuidade 2026-06-03:** a golden atual de laboratório/delivery
-> para C18 passou a ser **`c18-hwdecode-lab-1j`**,
-> sha256 `995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152`.
+> para C18 passou a ser **`c18-hwdecode-lab-1k`**,
+> sha256 `d0aae1e0dc234be1d9071b7f88d913b1dfb0f89d980904e9c2dc9291e648ac5e`.
 > O estado runtime de referência do marco aplica por cima a release OTA manual
 > `totem-core`
 > `c18.ota-core-config-missing-20260603T150429Z-2a7a327`.
 > Este doc preserva histórico da `1d`; para o baseline live/golden e contrato
 > OTA atual, consultar também `docs/product/189_C18_OTA_READINESS_GATE.md` e
 > `docs/UPDATE_CONTRACT.md`.
-> Existe também a candidata offline **`c18-hwdecode-lab-1k`** para a fundação
-> de thaw seguro do `player-runtime`; ela ainda **não** substitui a golden `1j`
-> sem validação em placa.
+> `1j` permanece como golden historica anterior. A `1k` valida em hardware a
+> fundação de thaw seguro do `player-runtime`, mas `player-runtime` continua
+> congelado no fluxo publico (`rc=44`).
 
 ---
 
@@ -196,11 +196,12 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 ## Próximos passos / a validar
 
-1. Validar em hardware a candidata offline **`c18-hwdecode-lab-1k`**, mantendo
-   `1j` como golden até flash limpo + playback/HW decode + OTA/freeze passarem;
-2. Continuar a frente de governança de atualizações: `totem-core` OTA manual já
+1. Continuar a frente de governança de atualizações: `totem-core` OTA manual já
    validado; `player-runtime` só avança em thaw controlado, ainda congelado para
    produção;
+2. Antes de qualquer thaw de `player-runtime`: endurecer o gate AST sobre os
+   args efetivos do MPV, ligar/definir reconcile no boot e ajustar o deriver
+   para nao deixar artefato quando a validacao offline falhar;
 3. **Rebuild GCC-12 de produção;**
 4. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 

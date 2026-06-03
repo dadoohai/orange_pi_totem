@@ -48,10 +48,11 @@ mudancas indiretas no runtime do player.
 
 O snapshot governado do player C18 fica em
 `player-runtime/kiosky-player/kiosk.py`, com provenance em
-`player-runtime/kiosky-player/SOURCE.json`. Esse arquivo e o `kiosk.py` validado
-na imagem `c18-hwdecode-lab-1i`: upstream `dadoohai/kiosky-player` em
-`c25659aff200d9aac1720e60e60794c432c79393` mais o patch C18 de
-`DEFAULT_CONFIG.mpv_path` para `/opt/totem/bin/totem-mpv-hwdecode`.
+`player-runtime/kiosky-player/SOURCE.json`. Esse arquivo nasceu do `kiosk.py`
+validado na imagem `c18-hwdecode-lab-1i` e segue validado na golden `1k`:
+upstream `dadoohai/kiosky-player` em `c25659aff200d9aac1720e60e60794c432c79393`
+mais o patch C18 de `DEFAULT_CONFIG.mpv_path` para
+`/opt/totem/bin/totem-mpv-hwdecode`.
 
 Esse snapshot e fonte governada para imagem/gate, nao pacote OTA. Mudancas nele
 devem bloquear o gate OTA comum de `totem-core` e exigir gate separado de
@@ -61,11 +62,13 @@ Qualquer pacote futuro de `player-runtime` deve passar antes por
 `scripts/qa/c18_player_runtime_release_gate.py`. Esse gate abre o payload,
 confere o SHA do manifest, rejeita path traversal, symlink/hardlink, config,
 seed, marker pre-forjado, arquivos de controle/imagem e arquivos com cara de
-segredo, e exige `kiosk.py` compilavel preservando semanticamente o wrapper e o
-HW decode C18. O gate tambem rejeita argumentos MPV que abrem superficies de
-script/config externo/YTDL ou desvio de IPC/hwdec, preservando somente os
-argumentos C18 esperados. Passar nesse gate nao habilita apply: o componente
-continua congelado ate thaw explicito.
+segredo, e exige `kiosk.py` compilavel preservando o wrapper e o HW decode C18
+nos defaults e em `build_mpv_args`. O gate tambem rejeita argumentos MPV
+perigosos literais dentro desse builder. Antes de qualquer thaw, ele ainda deve
+ser endurecido para validar os args efetivos entregues ao `Popen` e bloquear
+mutacoes dinamicas de `args`/`cfg["hwdec"]` fora do caminho controlado. Passar
+nesse gate nao habilita apply: o componente continua congelado ate thaw
+explicito.
 
 Uma release de `player-runtime` so pode ser adotada se o updater escrever, dentro
 do diretorio da release, `.release_verified.json` com schema

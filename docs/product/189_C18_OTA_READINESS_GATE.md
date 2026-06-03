@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1j`.
+golden atual `1k`.
 
 ## Decisão
 
@@ -21,32 +21,32 @@ golden atual `1j`.
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1j`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1k`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1j_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1k_minimal.img`;
 - **sha256:**
-  `995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152`;
+  `d0aae1e0dc234be1d9071b7f88d913b1dfb0f89d980904e9c2dc9291e648ac5e`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
 - **Estado runtime esperado apos aplicar OTA de homologacao atual:**
   `totem-core` em
-  `c18.ota-core-config-missing-20260603T150429Z-2a7a327`, com `previous` na
-  release 1j GitHub smoke;
+  `c18.ota-core-config-missing-20260603T150429Z-2a7a327`, com `previous` no
+  embed `c17.6-environment-input-20260514T211247Z`;
 - **Player/runtime esperado:** fallback de imagem, sem `/data/player-runtime/current`
   e sem `/data/apps/kiosky-player/current`; `hwdec-current=v4l2request-copy`,
   `vo-configured=true`, `NRestarts=0`;
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1j`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1k`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `c18-hwdecode-lab-1k` existe como candidata offline da fundacao de thaw
-seguro do `player-runtime`. Ela ainda nao substitui a golden `1j` ate passar por
-flash limpo, validacao em placa e registro de promocao neste doc.
+Nota: `1j` permanece como golden historica anterior. A `1k` valida a fundacao
+segura para um thaw futuro de `player-runtime`, mas o `player-runtime` continua
+congelado no fluxo publico (`rc=44`).
 
 ## Implementação no repo
 
@@ -349,8 +349,7 @@ vir como nova imagem ou release ponte explicitamente homologada.
   - Tentativas de apply de `kiosky-player` e `player-runtime` continuaram
     bloqueadas com `rc=44`.
 - Build offline subsequente gerou `c18-hwdecode-lab-1k` como candidata da
-  fundacao de thaw seguro do `player-runtime`. Esta imagem **nao substitui** a
-  golden `1j` ate validacao em hardware.
+  fundacao de thaw seguro do `player-runtime`.
   - Arquivo:
     `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1k_minimal.img`
   - `sha256=d0aae1e0dc234be1d9071b7f88d913b1dfb0f89d980904e9c2dc9291e648ac5e`
@@ -367,22 +366,39 @@ vir como nova imagem ou release ponte explicitamente homologada.
     `/data/apps/kiosky-player/current`; sem marker pre-forjado em `/data`;
     `player-runtime` e `kiosky-player` continuam congelados no fluxo publico
     (`rc=44`).
-  - Gates antes de promover a golden: flash limpo, marker `1k`, policy/timer/
-    service, player fallback `/opt`, config real via writer, playback/HW decode,
-    deep-health em hardware, OTA `totem-core` apply/rollback/reapply e freeze
-    `rc=44` preservado.
+  - Validada em hardware como flash limpo em 2026-06-03:
+    - marker `c18-hwdecode-lab-1k` presente;
+    - policy presente e restrita a `totem-core`;
+    - `totem-update-agent.timer` `disabled`/`inactive`;
+    - service de update apontando para
+      `--component totem-core --repo dadoohai/orange_pi_totem`;
+    - `kiosky-player.service` roteado por `totem-kiosky-launcher.sh`;
+    - `/data/player-runtime/current` e `/data/apps/kiosky-player/current`
+      ausentes; player usa fallback validado da imagem;
+    - config real escrita via writer guardado a partir do seed local de
+      homologacao, sem publicar valores privados; config ativa ficou
+      `0640 root:totem` e preservou
+      `mpv_path=/opt/totem/bin/totem-mpv-hwdecode`;
+    - player pos-config em playback `playing`, playlist com 9 itens,
+      `hwdec-current=v4l2request-copy`, `vo-configured=true`,
+      `video-codec=H.264`, `NRestarts=0`;
+    - contadores da janela: `media_load_failed=0`, `mpv_restart=0`,
+      panfrost fault real `0`, `mmc_timeout/reset=0`, erros EXT4/IO `0`;
+    - `apply-github-latest`/rollback/reapply de `totem-core` passaram na placa;
+      ao final `current=c18.ota-core-config-missing-20260603T150429Z-2a7a327`
+      e `previous=c17.6-environment-input-20260514T211247Z`;
+    - tentativas de apply de `kiosky-player` e `player-runtime` continuaram
+      bloqueadas com `rc=44`.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1j` como baseline de laboratorio validada para a
+1. Tratar `c18-hwdecode-lab-1k` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
-2. Tratar `c18-hwdecode-lab-1k` como proxima candidata offline para validacao
-   em placa; ela nao e golden ate os gates de hardware acima passarem.
-3. Fluxo manual de release GitHub `totem-core` validado na 1j com mudanca real
+2. Fluxo manual de release GitHub `totem-core` validado na 1k com mudanca real
    de aplicacao, rollback e reapply. Proximas mudancas de wizard/core devem
    seguir este gate antes de aplicar em placa, mantendo auto-pull desligado e
    `kiosky-player`/`player-runtime` congelados ate thaw explicito.
-4. Proxima frente da jornada de delivery: preparar a liberacao controlada de
+3. Proxima frente da jornada de delivery: preparar a liberacao controlada de
    `player-runtime` sem descongelar producao. Frentes de display, Wi-Fi aberta,
    cursor/UX de wizard e acesso de manutencao ficam adiadas ate o delivery estar
    pleno.
@@ -399,9 +415,9 @@ vir como nova imagem ou release ponte explicitamente homologada.
   marker escrito pelo updater e recusa identidade quarentenada. Qualquer duvida
   volta para `/opt/totem/kiosky-player`.
 - O gate de `player-runtime` passou a rejeitar `hwdec="no"`, `mpv_path`
-  inseguro, args MPV perigosos (`--script`, config externo, YTDL, IPC/hwdec
-  hard-coded inseguro), marker pre-forjado, paths de controle/imagem e payload
-  SHA adulterado.
+  inseguro, args MPV perigosos literais dentro de `build_mpv_args`
+  (`--script`, config externo, YTDL, IPC/hwdec hard-coded inseguro), marker
+  pre-forjado, paths de controle/imagem e payload SHA adulterado.
 - O sandbox de `player-runtime` deixou de provar uma copia da mecanica e passou
   a chamar as primitivas reais do updater com health hook injetavel. Ele valida:
   apply A/B, rollback roundtrip, marker corrompido -> `/opt`, health que observa
@@ -415,6 +431,13 @@ vir como nova imagem ou release ponte explicitamente homologada.
   hook injetavel; nao prova decode real em hardware nem durabilidade sob corte
   de energia. Esses sao os proximos gates antes de qualquer release real de
   player.
+- Auditoria adversarial pos-1k confirmou dividas pre-thaw que **nao afetam a
+  golden enquanto `rc=44` estiver ativo**, mas bloqueiam qualquer thaw real:
+  validar os args efetivos entregues ao `Popen` (nao so strings literais em
+  `build_mpv_args`), impedir mutacao de `cfg["hwdec"]`/`args` fora do caminho
+  controlado, ligar `reconcile` em boot ou documentar formalmente o launcher
+  como reconcile primario, e fazer o deriver abortar/limpar artefato se a
+  validacao offline falhar.
 
 ## Fora de escopo
 
