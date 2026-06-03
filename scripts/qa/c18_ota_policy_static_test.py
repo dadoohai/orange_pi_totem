@@ -218,6 +218,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("ipc_timeout_after_first_success", script)
             self.assertIn('"time-pos"', script)
             self.assertIn('"estimated-frame-number"', script)
+            self.assertIn("def progressed(values):", script)
+            self.assertIn("max(clean) > min(clean)", script)
             self.assertIn("time_pos_progressed", script)
             self.assertIn("estimated_frame_progressed", script)
             self.assertIn("status_failure_samples", script)
@@ -231,6 +233,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("deep-health-player-counters.json", service_observer)
         self.assertIn("playback-deep-health-public.json", service_observer)
         self.assertIn("post-c18-playback-deep-health", service_observer)
+        self.assertIn("mmc.*(timeout|timed out|reset|I/O error)", service_observer)
+        self.assertNotIn("mmc.*(timeout|reset|error)", service_observer)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

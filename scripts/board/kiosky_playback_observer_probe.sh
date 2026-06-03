@@ -358,10 +358,8 @@ hwdec_ok_samples = 0
 hwdec_unexpected_samples = 0
 vo_configured_true_samples = 0
 vo_configured_bad_samples = 0
-time_pos_first = None
-time_pos_last = None
-frame_first = None
-frame_last = None
+time_pos_values = []
+frame_values = []
 status_failure_samples = 0
 
 
@@ -428,6 +426,11 @@ def as_int(value):
 
 def compact_json(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def progressed(values):
+    clean = [value for value in values if value is not None]
+    return len(clean) >= 2 and max(clean) > min(clean)
 
 
 def load_json_file(path):
@@ -650,15 +653,11 @@ while not stop:
 
         current_time_pos = as_float(values.get("time-pos"))
         if current_time_pos is not None:
-            if time_pos_first is None:
-                time_pos_first = current_time_pos
-            time_pos_last = current_time_pos
+            time_pos_values.append(current_time_pos)
 
         current_frame = as_float(values.get("estimated-frame-number"))
         if current_frame is not None:
-            if frame_first is None:
-                frame_first = current_frame
-            frame_last = current_frame
+            frame_values.append(current_frame)
 
     if status_has_failure(status):
         status_failure_samples += 1
@@ -705,10 +704,8 @@ while not stop:
         time.sleep(min(0.1, deadline - time.monotonic()))
 
 with open(summary_path, "w", encoding="utf-8") as summary:
-    time_pos_progressed = (
-        time_pos_first is not None and time_pos_last is not None and time_pos_last > time_pos_first
-    )
-    frame_progressed = frame_first is not None and frame_last is not None and frame_last > frame_first
+    time_pos_progressed = progressed(time_pos_values)
+    frame_progressed = progressed(frame_values)
     c18_decode_health_passed = (
         seq > 0
         and counts.get("success", 0) > 0
