@@ -356,6 +356,35 @@ vir como nova imagem ou release ponte explicitamente homologada.
    cursor/UX de wizard e acesso de manutencao ficam adiadas ate o delivery estar
    pleno.
 
+## Marco 2026-06-03 — Fundacao De Thaw Seguro Do Player-Runtime
+
+- O `player-runtime` continua congelado no CLI publico (`rc=44`), mas o repo
+  agora contem primitivas reais e testaveis para um thaw futuro de laboratorio:
+  verify-then-promote, marker `.release_verified.json` sha-bound, fallback
+  fail-closed para `/opt`, quarentena por identidade de conteudo e rollback
+  interno de `player-runtime`.
+- O launcher de player nao adota mais `/data/player-runtime/current` apenas por
+  existir `kiosk.py`: ele recomputa `kiosk_py_sha256` e `tree_sha256`, valida o
+  marker escrito pelo updater e recusa identidade quarentenada. Qualquer duvida
+  volta para `/opt/totem/kiosky-player`.
+- O gate de `player-runtime` passou a rejeitar `hwdec="no"`, `mpv_path`
+  inseguro, args MPV perigosos (`--script`, config externo, YTDL, IPC/hwdec
+  hard-coded inseguro), marker pre-forjado, paths de controle/imagem e payload
+  SHA adulterado.
+- O sandbox de `player-runtime` deixou de provar uma copia da mecanica e passou
+  a chamar as primitivas reais do updater com health hook injetavel. Ele valida:
+  apply A/B, rollback roundtrip, marker corrompido -> `/opt`, health que observa
+  fallback rejeitado, falha com previous e sem previous, hygiene/reconcile de
+  `state.json`, `/data` sem marker caindo para `/opt`, e freeze preservado.
+- O boot adoption seguro fica no launcher: ele valida marker/hash/quarentena no
+  momento de escolher `/data` ou `/opt`. O `reconcile` do updater e higiene
+  explicita para state/symlink drift, nao a barreira primaria de boot.
+- Ainda nao ha publish/builder de `player-runtime`, collector real
+  nao-destrutivo nem thaw em hardware. O sandbox prova fluxo/estado com health
+  hook injetavel; nao prova decode real em hardware nem durabilidade sob corte
+  de energia. Esses sao os proximos gates antes de qualquer release real de
+  player.
+
 ## Fora de escopo
 
 - Ligar auto-pull.

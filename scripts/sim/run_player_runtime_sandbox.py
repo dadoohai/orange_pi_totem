@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Run an offline C18 player-runtime slot/rollback sandbox.
 
-This intentionally does not thaw or call the real player-runtime apply path.
-The production CLI must keep returning rc=44 while this sandbox proves the
-mechanics needed before a future hardware-gated thaw.
+This intentionally does not thaw the production CLI. It enables the internal
+lab guard and calls the real player-runtime primitives so the production CLI can
+keep returning rc=44 while the sandbox proves mechanics needed before hardware.
 """
 
 from __future__ import annotations
@@ -204,103 +204,98 @@ def write_state(sandbox: Path, state: dict[str, Any]) -> None:
     state_path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def health_fixture_result(pass_health: bool) -> tuple[bool, str]:
-    if pass_health:
-        return True, "deep_health_fixture_passed"
-    return False, "deep_health_fixture_failed"
-
-
 def apply_player_runtime_offline(
     sandbox: Path,
     *,
     manifest: Path,
     payload: Path,
     pass_health: bool = True,
+    observed_identity: str = "candidate",
 ) -> tuple[bool, str]:
     configure_updatectl_paths(sandbox)
-    policy = updatectl._normalise_policy(json.loads((sandbox / "data" / "updates" / "policy.json").read_text()), "sandbox")
-    manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
-    updatectl._validate_manifest(manifest_data, policy=policy, component=COMPONENT)
     release_gate.validate_release(manifest, payload)
 
-    version = manifest_data["version"]
-    release_dir = sandbox / "data" / "player-runtime" / "releases" / version
-    extract_payload(payload, release_dir)
-
-    current_link = sandbox / "data" / "player-runtime" / "current"
-    previous_link = sandbox / "data" / "player-runtime" / "previous"
-    old_current = readlink(current_link)
-    state = read_state(sandbox)
-
-    updatectl._atomic_symlink(f"releases/{version}", current_link)
-    if old_current and old_current != f"releases/{version}":
-        updatectl._atomic_symlink(old_current, previous_link)
-
-    ok, reason = health_fixture_result(pass_health)
-    if not ok:
-        if old_current:
-            updatectl._atomic_symlink(old_current, current_link)
-            current_version = old_current.split("/")[-1] if "/" in old_current else old_current
-            previous_state = state.get("previous")
-            if isinstance(previous_state, dict) and previous_state.get("version") == current_version:
-                state["current"] = previous_state
-            state["last_operation"] = {
-                "type": "sandbox_apply",
-                "status": "rolled_back",
-                "rollback_reason": reason,
-                "version": version,
-                "rolled_back_to": current_version,
+    def health_hook(release_dir: Path, identity: dict[str, Any]) -> dict[str, Any]:
+        if not pass_health:
+            return {
+                "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "passed": False,
+                "failure_reasons": ["deep_health_fixture_failed"],
+                "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                "observed_tree_sha256": identity["tree_sha256"],
+                "artifact_id": "sandbox_fail",
             }
-            write_state(sandbox, state)
-            return False, "rolled_back_to_previous"
-        if current_link.exists() or current_link.is_symlink():
-            current_link.unlink()
-        state["previous"] = state.get("current")
-        state["current"] = None
-        state["last_operation"] = {
-            "type": "sandbox_apply",
-            "status": "rolled_back_to_image_fallback",
-            "rollback_reason": reason,
-            "version": version,
-            "rolled_back_to": "image_fallback",
+        if observed_identity == "fallback":
+            fallback_identity = {
+                "kiosk_py_sha256": updatectl._sha256_file(sandbox / "opt" / "totem" / "kiosky-player" / "kiosk.py"),
+                "tree_sha256": updatectl._tree_hash(sandbox / "opt" / "totem" / "kiosky-player"),
+            }
+            return {
+                "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "passed": True,
+                "failure_reasons": [],
+                "observed_kiosk_py_sha256": fallback_identity["kiosk_py_sha256"],
+                "observed_tree_sha256": fallback_identity["tree_sha256"],
+                "artifact_id": "sandbox_fallback",
+            }
+        return {
+            "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+            "passed": True,
+            "failure_reasons": [],
+            "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+            "observed_tree_sha256": identity["tree_sha256"],
+            "artifact_id": "sandbox_candidate",
         }
-        write_state(sandbox, state)
-        return False, "rolled_back_to_image_fallback"
 
-    state["schema"] = "dadooh.totem.update.state.v1"
-    state["component"] = COMPONENT
-    state["previous"] = state.get("current")
-    state["current"] = {
-        "version": version,
-        "payload_sha256": manifest_data["payload_sha256"],
-        "manifest_created_at_utc": manifest_data["created_at_utc"],
-        "applied_at_utc": utcnow(),
-        "source": "sandbox",
-    }
-    state["last_operation"] = {
-        "type": "sandbox_apply",
-        "status": "success",
-        "version": version,
-    }
-    write_state(sandbox, state)
-    return True, "applied"
+    previous_hook = updatectl.PLAYER_RUNTIME_HEALTH_HOOK
+    previous_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+    updatectl.PLAYER_RUNTIME_HEALTH_HOOK = health_hook
+    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+    try:
+        rc = updatectl._apply_from_manifest_path_unfrozen(
+            manifest,
+            payload_url=None,
+            source=f"sandbox:{manifest.name}",
+            payload_path_override=payload,
+        )
+    finally:
+        updatectl.PLAYER_RUNTIME_HEALTH_HOOK = previous_hook
+        updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = previous_thaw
+
+    state = read_state(sandbox)
+    last = state.get("last_operation") if isinstance(state, dict) else {}
+    status = last.get("status") if isinstance(last, dict) else ""
+    if rc == 0 and status == "success":
+        return True, "applied"
+    if observed_identity == "fallback":
+        return False, "rejected_health_observed_fallback"
+    if not pass_health and status == "candidate_rejected":
+        rolled_to = last.get("rolled_back_to") if isinstance(last, dict) else ""
+        return False, "rolled_back_to_previous" if rolled_to == "previous" else "rolled_back_to_image_fallback"
+    return False, f"rc={rc}:{status}"
 
 
 def rollback_player_runtime_offline(sandbox: Path) -> tuple[bool, str]:
-    current_link = sandbox / "data" / "player-runtime" / "current"
-    previous_link = sandbox / "data" / "player-runtime" / "previous"
-    current = readlink(current_link)
-    previous = readlink(previous_link)
+    configure_updatectl_paths(sandbox)
+    previous = readlink(sandbox / "data" / "player-runtime" / "previous")
+    previous_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+    try:
+        rc = updatectl._rollback_player_runtime_unfrozen("sandbox")
+    finally:
+        updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = previous_thaw
+    if rc != 0:
+        return False, f"rc={rc}"
     if not previous:
-        if current_link.exists() or current_link.is_symlink():
-            current_link.unlink()
-        if current:
-            updatectl._atomic_symlink(current, previous_link)
         return True, "fallback"
-    updatectl._atomic_symlink(previous, current_link)
-    if current:
-        updatectl._atomic_symlink(current, previous_link)
     return True, previous.split("/")[-1]
+
+
+def reconcile_player_runtime_offline(sandbox: Path) -> dict[str, Any]:
+    configure_updatectl_paths(sandbox)
+    rc, result = updatectl._reconcile_player_runtime_state("sandbox")
+    result["rc"] = rc
+    return result
 
 
 def probe_launcher_source(sandbox: Path, *, data_dir: Path | None) -> str:
@@ -313,6 +308,7 @@ def probe_launcher_source(sandbox: Path, *, data_dir: Path | None) -> str:
             "TOTEM_KIOSKY_FALLBACK_APP_DIR": str(sandbox / "opt" / "totem" / "kiosky-player"),
             "TOTEM_KIOSKY_INNER_LAUNCHER": str(sandbox / "opt" / "totem" / "bin" / "kiosky_service_launcher.sh"),
             "TOTEM_KIOSKY_LAUNCHER_CAPTURE": str(capture),
+            "TOTEM_PLAYER_RUNTIME_STATE_FILE": str(sandbox / "data" / "player-runtime" / "state.json"),
         }
     )
     if data_dir is not None:
@@ -350,10 +346,22 @@ def main() -> int:
     manifest_a, payload_a = build_player_runtime_package(sandbox, "sandbox-a", "A")
     manifest_b, payload_b = build_player_runtime_package(sandbox, "sandbox-b", "B")
     manifest_bad, payload_bad = build_player_runtime_package(sandbox, "sandbox-bad", "bad")
+    manifest_bad_no_prev, payload_bad_no_prev = build_player_runtime_package(sandbox, "sandbox-bad-no-prev", "bad-no-prev")
+    manifest_bad_fallback, payload_bad_fallback = build_player_runtime_package(sandbox, "sandbox-bad-fallback", "bad-fallback")
 
     apply_a_ok, apply_a_reason = apply_player_runtime_offline(sandbox, manifest=manifest_a, payload=payload_a)
     current_after_a = readlink(sandbox / "data" / "player-runtime" / "current")
     launcher_after_a = probe_launcher_source(sandbox, data_dir=sandbox / "data" / "player-runtime" / "current")
+    marker_a = sandbox / "data" / "player-runtime" / "releases" / "sandbox-a" / updatectl.PLAYER_RUNTIME_MARKER_NAME
+    marker_a_original = marker_a.read_text(encoding="utf-8")
+    marker_a.write_text("{bad json\n", encoding="utf-8")
+    launcher_after_corrupt_marker = probe_launcher_source(sandbox, data_dir=sandbox / "data" / "player-runtime" / "current")
+    marker_a.write_text(marker_a_original, encoding="utf-8")
+    reconcile_after_a = reconcile_player_runtime_offline(sandbox)
+    unmarked_dir = sandbox / "data" / "player-runtime" / "releases" / "unmarked"
+    unmarked_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SNAPSHOT_KIOSK, unmarked_dir / "kiosk.py")
+    launcher_unmarked_fallback = probe_launcher_source(sandbox, data_dir=unmarked_dir)
 
     apply_b_ok, apply_b_reason = apply_player_runtime_offline(sandbox, manifest=manifest_b, payload=payload_b)
     current_after_b = readlink(sandbox / "data" / "player-runtime" / "current")
@@ -375,12 +383,27 @@ def main() -> int:
     safe_remove(sandbox / "data" / "player-runtime" / "previous", sandbox)
     failed_without_previous_ok, failed_without_previous_reason = apply_player_runtime_offline(
         sandbox,
-        manifest=manifest_bad,
-        payload=payload_bad,
+        manifest=manifest_bad_no_prev,
+        payload=payload_bad_no_prev,
         pass_health=False,
     )
     current_after_failed_no_previous = readlink(sandbox / "data" / "player-runtime" / "current")
     launcher_fallback = probe_launcher_source(sandbox, data_dir=sandbox / "data" / "player-runtime" / "current")
+    fallback_kiosk = sandbox / "opt" / "totem" / "kiosky-player" / "kiosk.py"
+    fallback_kiosk_tmp = fallback_kiosk.with_suffix(".py.missing")
+    fallback_kiosk.rename(fallback_kiosk_tmp)
+    launcher_missing_fallback = probe_launcher_source(sandbox, data_dir=sandbox / "data" / "player-runtime" / "current")
+    fallback_kiosk_tmp.rename(fallback_kiosk)
+    reconcile_after_no_previous_failure = reconcile_player_runtime_offline(sandbox)
+
+    fallback_health_ok, fallback_health_reason = apply_player_runtime_offline(
+        sandbox,
+        manifest=manifest_bad_fallback,
+        payload=payload_bad_fallback,
+        pass_health=True,
+        observed_identity="fallback",
+    )
+    current_after_fallback_health = readlink(sandbox / "data" / "player-runtime" / "current")
 
     cli_apply_frozen, cli_rollback_frozen = cli_still_frozen(sandbox)
 
@@ -396,6 +419,12 @@ def main() -> int:
             "release_gate_validated": True,
             "apply_a_offline_passed": apply_a_ok and apply_a_reason == "applied" and current_after_a == expected_a,
             "launcher_data_source_passed": launcher_after_a == str(sandbox / "data" / "player-runtime" / "current"),
+            "launcher_corrupt_marker_falls_back": launcher_after_corrupt_marker == str(sandbox / "opt" / "totem" / "kiosky-player"),
+            "reconcile_verified_current_passed": (
+                reconcile_after_a.get("status") == "current_verified"
+                and reconcile_after_a.get("current_link") == expected_a
+            ),
+            "launcher_unmarked_data_current_falls_back": launcher_unmarked_fallback == str(sandbox / "opt" / "totem" / "kiosky-player"),
             "apply_b_offline_passed": apply_b_ok and apply_b_reason == "applied" and current_after_b == expected_b,
             "current_previous_swap_passed": current_after_b == expected_b and previous_after_b == expected_a,
             "rollback_roundtrip_passed": (
@@ -416,6 +445,16 @@ def main() -> int:
                 and failed_without_previous_reason == "rolled_back_to_image_fallback"
                 and current_after_failed_no_previous == ""
                 and launcher_fallback == str(sandbox / "opt" / "totem" / "kiosky-player")
+            ),
+            "missing_image_fallback_fails_closed": launcher_missing_fallback == "launcher_failed:78",
+            "reconcile_candidate_rejected_hygiene_passed": (
+                reconcile_after_no_previous_failure.get("status") == "image_fallback"
+                and not reconcile_after_no_previous_failure.get("current_link")
+            ),
+            "fallback_health_does_not_verify_candidate": (
+                not fallback_health_ok
+                and fallback_health_reason == "rejected_health_observed_fallback"
+                and current_after_fallback_health == ""
             ),
             "cli_apply_still_frozen": cli_apply_frozen,
             "cli_rollback_still_frozen": cli_rollback_frozen,

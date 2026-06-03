@@ -60,14 +60,34 @@ devem bloquear o gate OTA comum de `totem-core` e exigir gate separado de
 Qualquer pacote futuro de `player-runtime` deve passar antes por
 `scripts/qa/c18_player_runtime_release_gate.py`. Esse gate abre o payload,
 confere o SHA do manifest, rejeita path traversal, symlink/hardlink, config,
-seed e arquivos com cara de segredo, e exige `kiosk.py` compilavel preservando o
-wrapper C18. Passar nesse gate nao habilita apply: o componente continua
-congelado ate existir rollback + deep-health em hardware.
+seed, marker pre-forjado, arquivos de controle/imagem e arquivos com cara de
+segredo, e exige `kiosk.py` compilavel preservando semanticamente o wrapper e o
+HW decode C18. O gate tambem rejeita argumentos MPV que abrem superficies de
+script/config externo/YTDL ou desvio de IPC/hwdec, preservando somente os
+argumentos C18 esperados. Passar nesse gate nao habilita apply: o componente
+continua congelado ate thaw explicito.
+
+Uma release de `player-runtime` so pode ser adotada se o updater escrever, dentro
+do diretorio da release, `.release_verified.json` com schema
+`dadooh.c18.player_runtime.verified.v1`. O marker precisa amarrar `version`,
+`payload_sha256`, `kiosk_py_sha256`, `tree_sha256` e um deep-health aprovado. O
+launcher deve recomputar os hashes antes de adotar `/data/player-runtime/current`.
+Marker ausente, corrompido, divergente ou identidade quarentenada fecha para
+`/opt/totem/kiosky-player`.
+
+No boot, a decisao de adocao e do launcher: ele e o reconcile fail-closed entre
+`/data/player-runtime/current` e `/opt`. O subcomando `reconcile` do updater
+serve para higiene de `state.json`/symlink drift e nao substitui essa decisao de
+boot.
 
 O sandbox `scripts/sim/run_player_runtime_sandbox.py` prova a mecanica offline
-necessaria antes de descongelar: apply A/B, `current`/`previous`, rollback
-roundtrip, falha com rollback para previous, falha sem previous caindo para a
-imagem, e CLI real ainda congelado (`rc=44`). O slot governado de runtime e
+necessaria antes de descongelar usando as primitivas reais do updater:
+verify-then-promote, apply A/B, `current`/`previous`, rollback roundtrip,
+marker corrompido caindo para imagem, health que observa fallback rejeitado,
+falha com rollback para previous, falha sem previous caindo para a imagem, e CLI
+real ainda congelado (`rc=44`). Essa prova e de fluxo/estado com health hook
+injetavel; ela nao prova decode real em hardware nem durabilidade sob corte de
+energia. Esses continuam gates de homologacao. O slot governado de runtime e
 `/data/player-runtime/current`; o launcher C18 deve procurar esse caminho antes
 do fallback de imagem e nao deve sombrear o player validado pelo caminho legado
 `/data/apps/kiosky-player/current`.

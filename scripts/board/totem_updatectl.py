@@ -111,6 +111,12 @@ USER_AGENT = "dadooh-totem-updatectl/0.2 (+orangepizero3)"
 HEALTH_GRACE_SECONDS = int(os.environ.get("TOTEM_HEALTH_GRACE_SECONDS", "12"))
 HEALTH_CHECK_TIMEOUT_S = int(os.environ.get("TOTEM_HEALTH_CHECK_TIMEOUT_S", "30"))
 
+PLAYER_RUNTIME_MARKER_NAME = ".release_verified.json"
+PLAYER_RUNTIME_MARKER_SCHEMA = "dadooh.c18.player_runtime.verified.v1"
+PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA = "dadooh.c18.playback.deep_health.v1"
+PLAYER_RUNTIME_HEALTH_HOOK: Optional[Callable[[Path, Dict[str, Any]], Any]] = None
+PLAYER_RUNTIME_LAB_THAW_ENABLED = False
+
 TOTEM_CORE_REQUIRED_BIN = (
     "totem_setup_visual_wizard.py",
     "totem_wifi_nm_adapter.py",
@@ -366,6 +372,39 @@ def _atomic_symlink(target_rel: str, link: Path) -> None:
             pass
     os.symlink(target_rel, str(tmp))
     os.replace(str(tmp), str(link))
+    _fsync_dir(link.parent)
+
+
+def _fsync_dir(path: Path) -> None:
+    try:
+        fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
+
+
+def _atomic_write_json(path: Path, data: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".__tmp__")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+        f.write("\n")
+        try:
+            f.flush()
+            os.fsync(f.fileno())
+        except OSError:
+            pass
+    try:
+        os.chmod(tmp, 0o644)
+    except OSError:
+        pass
+    os.replace(str(tmp), str(path))
+    _fsync_dir(path.parent)
 
 
 def _read_symlink_target(link: Path) -> Optional[str]:
@@ -430,6 +469,181 @@ def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
     _make_world_traversable(dest)
 
 
+def _tree_hash(root: Path) -> str:
+    """Hash regular-file contents and relative paths under a release dir."""
+    hasher = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        rel = path.relative_to(root).as_posix()
+        if rel == PLAYER_RUNTIME_MARKER_NAME:
+            continue
+        try:
+            st = path.lstat()
+        except OSError:
+            continue
+        if stat.S_ISDIR(st.st_mode):
+            continue
+        if not stat.S_ISREG(st.st_mode):
+            raise RuntimeError(f"unsupported release member type: {rel}")
+        hasher.update(rel.encode("utf-8") + b"\0")
+        hasher.update(_sha256_file(path).encode("ascii") + b"\0")
+    return hasher.hexdigest()
+
+
+def _player_runtime_identity(release_dir: Path, manifest: Dict[str, Any]) -> Dict[str, Any]:
+    kiosk = release_dir / "kiosk.py"
+    if not kiosk.is_file():
+        raise RuntimeError("player-runtime kiosk.py missing")
+    payload_sha = str(manifest["payload_sha256"]).lower()
+    return {
+        "version": manifest["version"],
+        "payload_sha256": payload_sha,
+        "kiosk_py_sha256": _sha256_file(kiosk),
+        "tree_sha256": _tree_hash(release_dir),
+    }
+
+
+def _quarantine_entries(state: Dict[str, Any]) -> List[Dict[str, Any]]:
+    entries = state.get("quarantine") or state.get("quarantined_identities") or []
+    if not isinstance(entries, list):
+        return []
+    return [entry for entry in entries if isinstance(entry, dict)]
+
+
+def _player_runtime_is_quarantined(identity: Dict[str, Any], state: Dict[str, Any]) -> Tuple[bool, str]:
+    for entry in _quarantine_entries(state):
+        if entry.get("payload_sha256") and entry.get("payload_sha256") == identity.get("payload_sha256"):
+            return True, "payload_sha256_quarantined"
+        if entry.get("tree_sha256") and entry.get("tree_sha256") == identity.get("tree_sha256"):
+            return True, "tree_sha256_quarantined"
+    return False, "not_quarantined"
+
+
+def _quarantine_player_runtime_identity(state: Dict[str, Any],
+                                        identity: Dict[str, Any],
+                                        reason: str) -> None:
+    entries = _quarantine_entries(state)
+    if not any(
+        entry.get("payload_sha256") == identity.get("payload_sha256")
+        or entry.get("tree_sha256") == identity.get("tree_sha256")
+        for entry in entries
+    ):
+        entries.append({
+            "version": identity.get("version"),
+            "payload_sha256": identity.get("payload_sha256"),
+            "tree_sha256": identity.get("tree_sha256"),
+            "kiosk_py_sha256": identity.get("kiosk_py_sha256"),
+            "reason": reason,
+            "quarantined_at_utc": _utcnow_iso(),
+        })
+    state["quarantine"] = entries
+
+
+def _write_player_runtime_marker(release_dir: Path,
+                                 manifest: Dict[str, Any],
+                                 identity: Dict[str, Any],
+                                 health: Dict[str, Any]) -> Dict[str, Any]:
+    marker = {
+        "schema": PLAYER_RUNTIME_MARKER_SCHEMA,
+        "verdict": "verified",
+        "version": identity["version"],
+        "payload_sha256": identity["payload_sha256"],
+        "kiosk_py_sha256": identity["kiosk_py_sha256"],
+        "tree_sha256": identity["tree_sha256"],
+        "source_commit": manifest.get("source_commit"),
+        "channel": manifest.get("channel"),
+        "written_at_utc": _utcnow_iso(),
+        "deep_health": {
+            "schema": health.get("schema", PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA),
+            "passed": bool(health.get("passed")),
+            "artifact_id": health.get("artifact_id", "injected"),
+            "observed_kiosk_py_sha256": health.get("observed_kiosk_py_sha256"),
+            "observed_tree_sha256": health.get("observed_tree_sha256"),
+        },
+    }
+    if not marker["deep_health"]["passed"]:
+        raise RuntimeError("refusing to write verified marker for failed health")
+    if marker["deep_health"]["observed_kiosk_py_sha256"] != identity["kiosk_py_sha256"]:
+        raise RuntimeError("health did not observe candidate kiosk.py identity")
+    if marker["deep_health"]["observed_tree_sha256"] != identity["tree_sha256"]:
+        raise RuntimeError("health did not observe candidate tree identity")
+    _atomic_write_json(release_dir / PLAYER_RUNTIME_MARKER_NAME, marker)
+    return marker
+
+
+def _load_player_runtime_marker(release_dir: Path) -> Dict[str, Any]:
+    marker_path = release_dir / PLAYER_RUNTIME_MARKER_NAME
+    try:
+        data = json.loads(marker_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise RuntimeError(f"marker_invalid:{e}") from e
+    if not isinstance(data, dict):
+        raise RuntimeError("marker_not_object")
+    if data.get("schema") != PLAYER_RUNTIME_MARKER_SCHEMA:
+        raise RuntimeError("marker_schema")
+    if data.get("verdict") != "verified":
+        raise RuntimeError("marker_not_verified")
+    return data
+
+
+def _validate_player_runtime_marker(release_dir: Path,
+                                    state: Optional[Dict[str, Any]] = None) -> Tuple[bool, str, Dict[str, Any]]:
+    try:
+        marker = _load_player_runtime_marker(release_dir)
+        kiosk = release_dir / "kiosk.py"
+        if not kiosk.is_file():
+            return False, "kiosk_missing", marker
+        identity = {
+            "version": marker.get("version"),
+            "payload_sha256": marker.get("payload_sha256"),
+            "kiosk_py_sha256": _sha256_file(kiosk),
+            "tree_sha256": _tree_hash(release_dir),
+        }
+        if marker.get("kiosk_py_sha256") != identity["kiosk_py_sha256"]:
+            return False, "kiosk_sha_mismatch", marker
+        if marker.get("tree_sha256") != identity["tree_sha256"]:
+            return False, "tree_sha_mismatch", marker
+        if state is not None:
+            quarantined, reason = _player_runtime_is_quarantined(identity, state)
+            if quarantined:
+                return False, reason, marker
+        return True, "verified", marker
+    except Exception as e:
+        return False, str(e), {}
+
+
+def _default_player_runtime_health_hook(release_dir: Path,
+                                        identity: Dict[str, Any]) -> Dict[str, Any]:
+    """Run/collect candidate health.
+
+    Production callers must observe the isolated candidate release_dir. Observing
+    the currently launched service or /opt fallback is intentionally rejected by
+    _write_player_runtime_marker via observed_* identity matching.
+    """
+    if PLAYER_RUNTIME_HEALTH_HOOK is not None:
+        result = PLAYER_RUNTIME_HEALTH_HOOK(release_dir, identity)
+        if isinstance(result, tuple):
+            ok, reason = result
+            return {
+                "schema": PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "passed": bool(ok),
+                "failure_reasons": [] if ok else [str(reason)],
+                "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                "observed_tree_sha256": identity["tree_sha256"],
+                "artifact_id": "injected_tuple",
+            }
+        if isinstance(result, dict):
+            return result
+        raise RuntimeError("player-runtime health hook returned unsupported result")
+    return {
+        "schema": PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+        "passed": False,
+        "failure_reasons": ["player_runtime_health_hook_not_configured"],
+        "observed_kiosk_py_sha256": None,
+        "observed_tree_sha256": None,
+        "artifact_id": "missing_health_hook",
+    }
+
+
 # ----------------------------------------------------------------------------
 # State file
 # ----------------------------------------------------------------------------
@@ -458,12 +672,7 @@ def _read_state() -> Dict[str, Any]:
 
 
 def _write_state(state: Dict[str, Any]) -> None:
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = STATE_FILE.with_suffix(".json.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, sort_keys=True)
-        f.write("\n")
-    tmp.replace(STATE_FILE)
+    _atomic_write_json(STATE_FILE, state)
 
 
 # ----------------------------------------------------------------------------
@@ -1182,6 +1391,30 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     if frozen_rc is not None:
         return frozen_rc
 
+    return _apply_from_manifest_path_unfrozen(
+        manifest_path,
+        payload_url,
+        source,
+        payload_path_override=payload_path_override,
+    )
+
+
+def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optional[str],
+                                       source: str,
+                                       payload_path_override: Optional[Path] = None) -> int:
+    """Internal apply path. Tests may call this for frozen components."""
+    if COMPONENT == "player-runtime":
+        if not PLAYER_RUNTIME_LAB_THAW_ENABLED:
+            raise RuntimeError("player-runtime unfrozen apply requires explicit lab thaw guard")
+        return _apply_player_runtime_from_manifest_path_unfrozen(
+            manifest_path,
+            payload_url,
+            source,
+            payload_path_override=payload_path_override,
+        )
+
+    started_at = _utcnow_iso()
+
     ok, reason = _totem_core_apply_guard()
     if not ok:
         log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=reason)
@@ -1369,6 +1602,182 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
     return 0
 
 
+def _apply_player_runtime_from_manifest_path_unfrozen(
+    manifest_path: Path,
+    payload_url: Optional[str],
+    source: str,
+    payload_path_override: Optional[Path] = None,
+) -> int:
+    """C18 player-runtime candidate verify-then-promote path for lab thaw tests."""
+    started_at = _utcnow_iso()
+    if COMPONENT != "player-runtime":
+        raise RuntimeError("player-runtime apply path called for wrong component")
+
+    try:
+        with manifest_path.open("r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        log("ERROR", "manifest_read_failed", err=str(e))
+        return 4
+    policy = _load_update_policy()
+    _validate_manifest(manifest, policy=policy, component="player-runtime")
+    state = _read_state()
+    ok, reason = _downgrade_policy_allows_manifest(policy, manifest, state)
+    if not ok:
+        log("ERROR", "manifest_rejected_by_downgrade_policy", reason=reason,
+            version=manifest.get("version"))
+        return 45
+
+    version = manifest["version"]
+    sha = str(manifest["payload_sha256"]).lower()
+    payload_name = manifest["payload"]
+    stage = INCOMING_DIR / version
+    stage.mkdir(parents=True, exist_ok=True)
+    payload_local = stage / payload_name
+
+    try:
+        if payload_path_override is not None:
+            actual_sha = _sha256_file(payload_path_override)
+            if actual_sha.lower() != sha:
+                log("ERROR", "local_payload_sha256_mismatch", expected=sha, actual=actual_sha)
+                _cleanup_stage(stage)
+                return 6
+            shutil.copy2(payload_path_override, payload_local)
+        elif payload_url is None:
+            log("ERROR", "apply_failed_no_payload_url")
+            _cleanup_stage(stage)
+            return 5
+        else:
+            _http_download(payload_url, payload_local, expected_sha256=sha)
+    except Exception as e:
+        log("ERROR", "player_runtime_payload_stage_failed", err=str(e))
+        _cleanup_stage(stage)
+        return 6
+
+    release_dir = RELEASES_DIR / version
+    if release_dir.exists():
+        current_target = _read_symlink_target(CURRENT_LINK)
+        if current_target == f"releases/{version}":
+            log("ERROR", "player_runtime_refusing_to_overwrite_current_release", version=version)
+            _cleanup_stage(stage)
+            return 46
+        try:
+            shutil.rmtree(release_dir)
+        except OSError as e:
+            log("ERROR", "release_dir_remove_failed", err=str(e))
+            _cleanup_stage(stage)
+            return 7
+    release_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        _safe_extract_tar(payload_local, release_dir)
+    except Exception as e:
+        log("ERROR", "extract_failed", err=str(e))
+        try:
+            shutil.rmtree(release_dir)
+        except OSError:
+            pass
+        _cleanup_stage(stage)
+        return 7
+
+    try:
+        identity = _player_runtime_identity(release_dir, manifest)
+    except Exception as e:
+        log("ERROR", "player_runtime_identity_failed", err=str(e))
+        _cleanup_stage(stage)
+        return 8
+
+    quarantined, quarantine_reason = _player_runtime_is_quarantined(identity, state)
+    if quarantined:
+        log("ERROR", "player_runtime_candidate_quarantined", reason=quarantine_reason)
+        _cleanup_stage(stage)
+        return 47
+
+    old_current = _read_symlink_target(CURRENT_LINK)
+    state["component"] = COMPONENT
+    state["schema"] = SCHEMA_STATE
+    state["last_operation"] = {
+        "type": "apply",
+        "status": "verifying",
+        "started_at_utc": started_at,
+        "version": version,
+        "source": source,
+        "candidate_identity": identity,
+    }
+    _write_state(state)
+
+    health = _default_player_runtime_health_hook(release_dir, identity)
+    if not bool(health.get("passed")):
+        reason = ",".join(str(item) for item in health.get("failure_reasons", [])) or "deep_health_failed"
+        _quarantine_player_runtime_identity(state, identity, reason)
+        if not old_current:
+            state["current"] = None
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous" if old_current else "image_fallback",
+        }
+        _write_state(state)
+        _cleanup_stage(stage)
+        return 11 if not old_current else 10
+
+    try:
+        marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
+    except Exception as e:
+        reason = f"marker_write_failed:{e}"
+        _quarantine_player_runtime_identity(state, identity, reason)
+        if not old_current:
+            state["current"] = None
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous" if old_current else "image_fallback",
+        }
+        _write_state(state)
+        _cleanup_stage(stage)
+        return 12
+
+    if old_current and old_current != f"releases/{version}":
+        _atomic_symlink(old_current, PREVIOUS_LINK)
+    _atomic_symlink(f"releases/{version}", CURRENT_LINK)
+    state["previous"] = state.get("current")
+    state["current"] = {
+        "version": version,
+        "applied_at_utc": _utcnow_iso(),
+        "source": source,
+        "source_repo": manifest.get("source_repo"),
+        "source_branch": manifest.get("source_branch"),
+        "source_commit": manifest.get("source_commit"),
+        "channel": manifest.get("channel"),
+        "payload_sha256": sha,
+        "manifest_created_at_utc": manifest.get("created_at_utc"),
+        "path": str(release_dir),
+        "kiosk_py_sha256": identity["kiosk_py_sha256"],
+        "tree_sha256": identity["tree_sha256"],
+        "verified_marker": marker,
+    }
+    state["last_operation"] = {
+        "type": "apply",
+        "status": "success",
+        "started_at_utc": started_at,
+        "finished_at_utc": _utcnow_iso(),
+        "version": version,
+        "source": source,
+    }
+    _write_state(state)
+    _cleanup_stage(stage)
+    return 0
+
+
 def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -> int:
     log("WARN", "auto_rollback_starting", reason=reason)
     prev_link = _read_symlink_target(PREVIOUS_LINK)
@@ -1430,6 +1839,156 @@ def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -
     _write_state(state)
     log("INFO", "auto_rollback_complete", rolled_to=rolled_to_version)
     return 10
+
+
+def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback") -> int:
+    """Rollback player-runtime current->previous, or fall back to image."""
+    if COMPONENT != "player-runtime":
+        raise RuntimeError("player-runtime rollback path called for wrong component")
+    if not PLAYER_RUNTIME_LAB_THAW_ENABLED:
+        raise RuntimeError("player-runtime unfrozen rollback requires explicit lab thaw guard")
+    started_at = _utcnow_iso()
+    state = _read_state()
+    cur_link = _read_symlink_target(CURRENT_LINK)
+    prev_link = _read_symlink_target(PREVIOUS_LINK)
+
+    if prev_link:
+        prev_dir = APP_BASE / prev_link
+        ok, info, marker = _validate_player_runtime_marker(prev_dir, state)
+        if ok:
+            _atomic_symlink(prev_link, CURRENT_LINK)
+            if cur_link and cur_link != prev_link:
+                _atomic_symlink(cur_link, PREVIOUS_LINK)
+            rolled_to_version = prev_link.split("/")[-1] if "/" in prev_link else prev_link
+            previous_entry = state.get("previous")
+            state["previous"] = state.get("current")
+            if isinstance(previous_entry, dict) and previous_entry.get("version") == rolled_to_version:
+                state["current"] = previous_entry
+            else:
+                state["current"] = {
+                    "version": rolled_to_version,
+                    "payload_sha256": marker.get("payload_sha256"),
+                    "kiosk_py_sha256": marker.get("kiosk_py_sha256"),
+                    "tree_sha256": marker.get("tree_sha256"),
+                    "via": "player_runtime_rollback",
+                    "applied_at_utc": _utcnow_iso(),
+                }
+            state["last_operation"] = {
+                "type": "rollback",
+                "status": "success",
+                "started_at_utc": started_at,
+                "finished_at_utc": _utcnow_iso(),
+                "rollback_reason": reason,
+                "rolled_back_to": rolled_to_version,
+            }
+            _write_state(state)
+            return 0
+        log("WARN", "player_runtime_previous_not_adopted", reason=info, previous=prev_link)
+
+    try:
+        if CURRENT_LINK.is_symlink() or CURRENT_LINK.exists():
+            CURRENT_LINK.unlink()
+    except OSError:
+        pass
+    state["current"] = None
+    state["last_operation"] = {
+        "type": "rollback",
+        "status": "success",
+        "started_at_utc": started_at,
+        "finished_at_utc": _utcnow_iso(),
+        "rollback_reason": reason,
+        "rolled_back_to": "image_fallback",
+    }
+    _write_state(state)
+    return 0
+
+
+def _player_runtime_state_entry_from_marker(link: str,
+                                            marker: Dict[str, Any],
+                                            via: str) -> Dict[str, Any]:
+    version = str(marker.get("version") or link.split("/")[-1] or "unknown")
+    return {
+        "version": version,
+        "payload_sha256": marker.get("payload_sha256"),
+        "kiosk_py_sha256": marker.get("kiosk_py_sha256"),
+        "tree_sha256": marker.get("tree_sha256"),
+        "path": str(APP_BASE / link),
+        "via": via,
+        "applied_at_utc": _utcnow_iso(),
+    }
+
+
+def _reconcile_player_runtime_state(reason: str = "manual_reconcile") -> Tuple[int, Dict[str, Any]]:
+    """Fail closed for stale player-runtime state; launcher already validates at adopt time."""
+    if COMPONENT != "player-runtime":
+        raise RuntimeError("player-runtime reconcile path called for wrong component")
+    started_at = _utcnow_iso()
+    state = _read_state()
+    state["component"] = COMPONENT
+    state["schema"] = SCHEMA_STATE
+    cur_link = _read_symlink_target(CURRENT_LINK)
+    prev_link = _read_symlink_target(PREVIOUS_LINK)
+
+    def finish(status: str, **extra: Any) -> Tuple[int, Dict[str, Any]]:
+        state["last_operation"] = {
+            "type": "reconcile",
+            "status": status,
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "reason": reason,
+            **extra,
+        }
+        _write_state(state)
+        result = {
+            "component": COMPONENT,
+            "status": status,
+            "current_link": _read_symlink_target(CURRENT_LINK),
+            **extra,
+        }
+        return 0, result
+
+    if cur_link:
+        ok, info, marker = _validate_player_runtime_marker(APP_BASE / cur_link, state)
+        if ok:
+            state["current"] = _player_runtime_state_entry_from_marker(
+                cur_link, marker, "player_runtime_reconcile"
+            )
+            return finish("current_verified", verified=cur_link)
+
+        if prev_link:
+            prev_ok, prev_info, prev_marker = _validate_player_runtime_marker(APP_BASE / prev_link, state)
+            if prev_ok:
+                _atomic_symlink(prev_link, CURRENT_LINK)
+                state["current"] = _player_runtime_state_entry_from_marker(
+                    prev_link, prev_marker, "player_runtime_reconcile_previous"
+                )
+                return finish(
+                    "previous_adopted",
+                    rejected_current=cur_link,
+                    reject_reason=info,
+                    adopted_previous=prev_link,
+                )
+            log("WARN", "player_runtime_previous_not_adopted_during_reconcile",
+                previous=prev_link, reason=prev_info)
+
+        try:
+            if CURRENT_LINK.is_symlink() or CURRENT_LINK.exists():
+                CURRENT_LINK.unlink()
+        except OSError:
+            pass
+        state["current"] = None
+        return finish("image_fallback", rejected_current=cur_link, reject_reason=info)
+
+    last = state.get("last_operation")
+    last_status = last.get("status") if isinstance(last, dict) else None
+    if state.get("current") is not None or last_status in {
+        "verifying",
+        "pending_health_check",
+        "candidate_rejected",
+    }:
+        state["current"] = None
+        return finish("image_fallback", reject_reason="no_current_symlink")
+    return finish("noop")
 
 
 # ----------------------------------------------------------------------------
@@ -1715,6 +2274,12 @@ def cmd_rollback(args: argparse.Namespace) -> int:
         print(f"component_frozen_for_ota: {COMPONENT}: {frozen_reason}", file=sys.stderr)
         log("WARN", "rollback_blocked_component_frozen", component=COMPONENT, reason=frozen_reason)
         return 44
+    if COMPONENT == "player-runtime":
+        _ensure_dirs()
+        rc = _rollback_player_runtime_unfrozen()
+        if rc == 0:
+            print(json.dumps({"rollback": "ok", "component": COMPONENT}, indent=2, sort_keys=True))
+        return rc
     _ensure_dirs()
     prev_link = _read_symlink_target(PREVIOUS_LINK)
     if not prev_link:
@@ -1797,6 +2362,22 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reconcile(args: argparse.Namespace) -> int:
+    configure_component(args.component)
+    _ensure_dirs()
+    if COMPONENT == "player-runtime":
+        rc, result = _reconcile_player_runtime_state()
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return rc
+    result = {
+        "component": COMPONENT,
+        "status": "noop",
+        "reason": "reconcile currently has player-runtime semantics only",
+    }
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 # ----------------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------------
@@ -1852,6 +2433,8 @@ def main(argv: List[str]) -> int:
 
     sub.add_parser("rollback", parents=[component_parent],
                    help="Roll back current -> previous")
+    sub.add_parser("reconcile", parents=[component_parent],
+                   help="Reconcile stale state; player-runtime falls closed to verified current or image fallback")
 
     args = parser.parse_args(argv)
     handlers = {
@@ -1863,6 +2446,7 @@ def main(argv: List[str]) -> int:
         "apply-manifest-url": cmd_apply_manifest_url,
         "apply-local": cmd_apply_local,
         "rollback": cmd_rollback,
+        "reconcile": cmd_reconcile,
     }
     return handlers[args.cmd](args)
 

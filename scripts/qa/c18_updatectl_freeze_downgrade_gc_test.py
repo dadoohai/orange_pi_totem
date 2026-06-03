@@ -122,6 +122,20 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertEqual(rc, 44)
             self.assertFalse((root / "data" / "player-runtime").exists())
 
+    def test_player_runtime_apply_url_and_github_are_frozen_before_io(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            rc_url = updatectl.cmd_apply_manifest_url(
+                argparse.Namespace(component="player-runtime", url="https://example.invalid/manifest.json")
+            )
+            rc_gh = updatectl.cmd_apply_github_latest(
+                argparse.Namespace(component="player-runtime", repo="dadoohai/example", dry_run=False)
+            )
+            self.assertEqual(rc_url, 44)
+            self.assertEqual(rc_gh, 44)
+            self.assertFalse((root / "data" / "player-runtime").exists())
+
     def test_player_runtime_rollback_is_frozen(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -151,6 +165,18 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                 policy=good_policy,
                 component="player-runtime",
             )
+
+    def test_player_runtime_same_version_different_sha_is_rejected(self) -> None:
+        state = {"current": {"version": "runtime-a", "payload_sha256": "b" * 64}}
+        candidate = player_runtime_manifest("runtime-a")
+        candidate["payload_sha256"] = "a" * 64
+        ok, reason = updatectl._downgrade_policy_allows_manifest(
+            policy(allow_downgrade=True),
+            candidate,
+            state,
+        )
+        self.assertFalse(ok)
+        self.assertEqual(reason, "current_version_payload_sha256_mismatch")
 
     def test_downgrade_rejects_previous_identity_without_policy_permission(self) -> None:
         state = {
@@ -212,6 +238,46 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
         )
         self.assertFalse(ok)
         self.assertEqual(reason, "current_version_payload_sha256_mismatch")
+
+    def test_player_runtime_marker_is_sha_bound_and_quarantine_checked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            release = root / "data" / "player-runtime" / "releases" / "runtime-a"
+            release.mkdir(parents=True)
+            (release / "kiosk.py").write_text('print("ok")\n', encoding="utf-8")
+            raw_manifest = player_runtime_manifest("runtime-a")
+            identity = updatectl._player_runtime_identity(release, raw_manifest)
+            health = {
+                "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "passed": True,
+                "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                "observed_tree_sha256": identity["tree_sha256"],
+                "artifact_id": "unit",
+            }
+            updatectl._write_player_runtime_marker(release, raw_manifest, identity, health)
+            ok, reason, _marker = updatectl._validate_player_runtime_marker(release, {"quarantine": []})
+            self.assertTrue(ok, reason)
+
+            (release / "kiosk.py").write_text('print("tampered")\n', encoding="utf-8")
+            ok, reason, _marker = updatectl._validate_player_runtime_marker(release, {"quarantine": []})
+            self.assertFalse(ok)
+            self.assertEqual(reason, "kiosk_sha_mismatch")
+
+    def test_player_runtime_quarantine_is_content_based(self) -> None:
+        state: dict = {}
+        identity = {
+            "version": "runtime-a",
+            "payload_sha256": "a" * 64,
+            "kiosk_py_sha256": "b" * 64,
+            "tree_sha256": "c" * 64,
+        }
+        updatectl._quarantine_player_runtime_identity(state, identity, "unit")
+        same_content_new_version = dict(identity)
+        same_content_new_version["version"] = "runtime-b"
+        ok, reason = updatectl._player_runtime_is_quarantined(same_content_new_version, state)
+        self.assertTrue(ok)
+        self.assertIn(reason, {"payload_sha256_quarantined", "tree_sha256_quarantined"})
 
     def test_manifest_rejects_release_dir_version_hazards(self) -> None:
         for version in (".", "..", "-bad", "bad/name", "bad..name", ""):

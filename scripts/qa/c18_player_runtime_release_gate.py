@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import datetime as dt
 import hashlib
 import json
@@ -31,6 +32,29 @@ EXPECTED_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 EXPECTED_HWDEC = "v4l2request-copy"
 EXPECTED_DEEP_HEALTH_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 SAFE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+MARKER_NAME = ".release_verified.json"
+FORBIDDEN_RUNTIME_BASENAMES = {
+    "totem_updatectl.py",
+    "totem-kiosky-launcher.sh",
+    "kiosky_service_launcher.sh",
+}
+FORBIDDEN_MPV_OPTION_PREFIXES = (
+    "--script",
+    "--scripts",
+    "--scripts-append",
+    "--load-scripts",
+    "--ytdl",
+    "--script-opts",
+    "--config-dir",
+    "--config=",
+    "--include",
+    "--use-filedir-conf",
+    "--input-file",
+    "--input-terminal",
+    "--input-test",
+    "--input-command",
+    "--osc",
+)
 
 
 class GateError(RuntimeError):
@@ -42,6 +66,21 @@ def sha256_file(path: Path) -> str:
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
             hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def tree_hash(root: Path) -> str:
+    hasher = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        rel = path.relative_to(root).as_posix()
+        if rel == MARKER_NAME:
+            continue
+        if path.is_dir():
+            continue
+        if not path.is_file() or path.is_symlink():
+            raise GateError(f"unsupported member in extracted tree: {rel}")
+        hasher.update(rel.encode("utf-8") + b"\0")
+        hasher.update(sha256_file(path).encode("ascii") + b"\0")
     return hasher.hexdigest()
 
 
@@ -128,12 +167,20 @@ def validate_tar_member(member: tarfile.TarInfo) -> Path:
         raise GateError(f"unsupported tar member type: {member.name}")
     lowered = "/".join(path.parts).lower()
     basename = path.name.lower()
+    if lowered.startswith(("opt/", "etc/systemd/", "usr/", "lib/systemd/")):
+        raise GateError(f"image-fixed/control path is not allowed in player-runtime payload: {member.name}")
     if lowered.startswith(("data/", "media/", "secrets/", "config/")):
         raise GateError(f"field-data path is not allowed in player-runtime payload: {member.name}")
     if basename in {".env", "config.json", "seed.json", "policy.json"}:
         raise GateError(f"field-data file is not allowed in player-runtime payload: {member.name}")
+    if basename == MARKER_NAME:
+        raise GateError(f"verified marker must be written by updater, not payload: {member.name}")
+    if basename in FORBIDDEN_RUNTIME_BASENAMES:
+        raise GateError(f"control file is not allowed in player-runtime payload: {member.name}")
     if basename.endswith((".key", ".token", ".secret")):
         raise GateError(f"secret-like file is not allowed in player-runtime payload: {member.name}")
+    if member.mode & 0o002:
+        raise GateError(f"world-writable file mode is not allowed in player-runtime payload: {member.name}")
     return path
 
 
@@ -148,11 +195,193 @@ def find_kiosk_member(tf: tarfile.TarFile) -> tarfile.TarInfo:
     return kiosk_members[0]
 
 
+def literal_default_config_values(source: str) -> dict[str, Any]:
+    """Return literal DEFAULT_CONFIG keys that are safety-critical for C18."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        raise GateError(f"kiosk.py syntax error: {exc}") from exc
+
+    configs: list[ast.Dict] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if any(isinstance(target, ast.Name) and target.id == "DEFAULT_CONFIG" for target in node.targets):
+            if not isinstance(node.value, ast.Dict):
+                raise GateError("DEFAULT_CONFIG must be a dict literal")
+            configs.append(node.value)
+    if len(configs) != 1:
+        raise GateError(f"expected exactly one DEFAULT_CONFIG assignment, found {len(configs)}")
+
+    result: dict[str, Any] = {}
+    for key_node, value_node in zip(configs[0].keys, configs[0].values):
+        try:
+            key = ast.literal_eval(key_node)
+        except Exception:
+            continue
+        if key not in {"mpv_path", "hwdec", "mpv_vo", "mpv_gpu_context"}:
+            continue
+        try:
+            result[str(key)] = ast.literal_eval(value_node)
+        except Exception:
+            raise GateError(f"DEFAULT_CONFIG[{key!r}] must be a literal value")
+    return result
+
+
+def find_function(tree: ast.AST, name: str) -> ast.FunctionDef:
+    matches = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == name]
+    if len(matches) != 1:
+        raise GateError(f"expected exactly one {name}() function, found {len(matches)}")
+    return matches[0]
+
+
+def cfg_subscript_key(node: ast.AST) -> str | None:
+    if not isinstance(node, ast.Subscript):
+        return None
+    if not isinstance(node.value, ast.Name) or node.value.id != "cfg":
+        return None
+    try:
+        key = ast.literal_eval(node.slice)
+    except Exception:
+        return None
+    return str(key) if isinstance(key, str) else None
+
+
+def joined_option_cfg_key(node: ast.JoinedStr, prefix: str) -> str | None:
+    if len(node.values) != 2:
+        return None
+    head, tail = node.values
+    if not isinstance(head, ast.Constant) or head.value != prefix:
+        return None
+    if not isinstance(tail, ast.FormattedValue):
+        return None
+    return cfg_subscript_key(tail.value)
+
+
+def joined_single_name(node: ast.JoinedStr, prefix: str) -> str | None:
+    if len(node.values) != 2:
+        return None
+    head, tail = node.values
+    if not isinstance(head, ast.Constant) or head.value != prefix:
+        return None
+    if not isinstance(tail, ast.FormattedValue) or not isinstance(tail.value, ast.Name):
+        return None
+    return tail.value.id
+
+
+def iter_string_nodes_without_joined_children(node: ast.AST):
+    if isinstance(node, ast.JoinedStr):
+        yield node
+        return
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        yield node
+        return
+    for child in ast.iter_child_nodes(node):
+        yield from iter_string_nodes_without_joined_children(child)
+
+
+def cfg_get_key(node: ast.AST) -> str | None:
+    if not isinstance(node, ast.Call):
+        return None
+    if not isinstance(node.func, ast.Attribute) or node.func.attr != "get":
+        return None
+    if not isinstance(node.func.value, ast.Name) or node.func.value.id != "cfg":
+        return None
+    if not node.args:
+        return None
+    try:
+        key = ast.literal_eval(node.args[0])
+    except Exception:
+        return None
+    return str(key) if isinstance(key, str) else None
+
+
+def validate_append_mpv_option_calls(fn: ast.FunctionDef) -> None:
+    allowed = {
+        "vo": "mpv_vo",
+        "gpu-context": "mpv_gpu_context",
+        "ao": "mpv_ao",
+    }
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "append_mpv_option_once":
+            continue
+        if len(node.args) != 3 or not isinstance(node.args[0], ast.Name) or node.args[0].id != "args":
+            raise GateError("append_mpv_option_once calls must use args plus one controlled cfg option")
+        try:
+            option_name = ast.literal_eval(node.args[1])
+        except Exception as exc:
+            raise GateError("append_mpv_option_once option name must be literal") from exc
+        if option_name not in allowed:
+            raise GateError(f"append_mpv_option_once uses forbidden MPV option: {option_name!r}")
+        if cfg_get_key(node.args[2]) != allowed[option_name]:
+            raise GateError(f"append_mpv_option_once {option_name!r} must read cfg[{allowed[option_name]!r}]")
+
+
+def validate_mpv_args_semantics(tree: ast.AST) -> None:
+    fn = find_function(tree, "build_mpv_args")
+    validate_append_mpv_option_calls(fn)
+    ipc_args = 0
+    hwdec_args = 0
+    for node in iter_string_nodes_without_joined_children(fn):
+        if isinstance(node, ast.JoinedStr):
+            prefix = ""
+            if node.values and isinstance(node.values[0], ast.Constant) and isinstance(node.values[0].value, str):
+                prefix = node.values[0].value
+            if prefix == "--input-ipc-server=":
+                ipc_args += 1
+                if joined_option_cfg_key(node, prefix) != "ipc_path":
+                    raise GateError("build_mpv_args must derive --input-ipc-server from cfg['ipc_path']")
+                continue
+            if prefix == "--hwdec=":
+                hwdec_args += 1
+                if joined_option_cfg_key(node, prefix) != "hwdec":
+                    raise GateError("build_mpv_args must derive --hwdec from cfg['hwdec']")
+                continue
+            if prefix == "--input-conf=":
+                if joined_single_name(node, prefix) != "hotkey_conf":
+                    raise GateError("build_mpv_args must derive --input-conf from hotkey_conf")
+                continue
+            if any(prefix.startswith(item) for item in FORBIDDEN_MPV_OPTION_PREFIXES):
+                raise GateError(f"build_mpv_args contains forbidden MPV option: {prefix}")
+            continue
+
+        value = str(node.value)
+        if any(value.startswith(item) for item in FORBIDDEN_MPV_OPTION_PREFIXES):
+            raise GateError(f"build_mpv_args contains forbidden MPV option: {value}")
+        if value.startswith("--input-ipc-server="):
+            raise GateError("build_mpv_args must not hard-code --input-ipc-server")
+        if value.startswith("--input-conf="):
+            raise GateError("build_mpv_args must not hard-code --input-conf")
+        if value.startswith("--hwdec=") and value not in {
+            "--hwdec=auto",
+            "--hwdec=auto-safe",
+            f"--hwdec={EXPECTED_HWDEC}",
+        }:
+            raise GateError(f"build_mpv_args contains forbidden hwdec option: {value}")
+    if ipc_args != 1:
+        raise GateError("build_mpv_args must set exactly one controlled --input-ipc-server")
+    if hwdec_args != 1:
+        raise GateError("build_mpv_args must set exactly one controlled --hwdec")
+
+
 def validate_kiosk_source(source: str) -> None:
-    if f'"mpv_path": "{EXPECTED_WRAPPER}"' not in source:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        raise GateError(f"kiosk.py syntax error: {exc}") from exc
+    defaults = literal_default_config_values(source)
+    if defaults.get("mpv_path") != EXPECTED_WRAPPER:
         raise GateError("kiosk.py must default mpv_path to the C18 hwdecode wrapper")
-    if '"mpv_path": "mpv"' in source or '"mpv_path": "/usr/bin/mpv"' in source:
+    if defaults.get("mpv_path") in {"mpv", "/usr/bin/mpv"}:
         raise GateError("kiosk.py must not default mpv_path to stock mpv")
+    hwdec = defaults.get("hwdec")
+    if hwdec not in {"auto", "auto-safe", EXPECTED_HWDEC}:
+        raise GateError("kiosk.py must default hwdec to auto/auto-safe/v4l2request-copy")
+    if hwdec == "no" or "--hwdec=no" in source:
+        raise GateError("kiosk.py must not disable hardware decode")
+    validate_mpv_args_semantics(tree)
     required_anchors = (
         'cfg["mpv_path"]',
         "--hwdec-codecs=h264,mpeg4,mpeg2video",
@@ -171,16 +400,32 @@ def validate_payload(payload: Path) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="c18-player-runtime-gate-") as tmp:
         temp_root = Path(tmp)
         with tarfile.open(payload, "r:gz") as tf:
-            kiosk_member = find_kiosk_member(tf)
-            extracted = tf.extractfile(kiosk_member)
-            if extracted is None:
-                raise GateError("failed to read kiosk.py from payload")
-            source = extracted.read().decode("utf-8")
+            kiosk_members = []
+            for member in tf.getmembers():
+                path = validate_tar_member(member)
+                if member.isdir():
+                    (temp_root / path).mkdir(parents=True, exist_ok=True)
+                    continue
+                if path.name == "kiosk.py":
+                    kiosk_members.append(member)
+                extracted = tf.extractfile(member)
+                if extracted is None:
+                    raise GateError(f"failed to read payload member: {member.name}")
+                target = temp_root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(extracted.read())
+                os.chmod(target, member.mode & 0o7777)
+            if len(kiosk_members) != 1:
+                raise GateError(f"expected exactly one kiosk.py, found {len(kiosk_members)}")
         kiosk_path = temp_root / "kiosk.py"
-        kiosk_path.write_text(source, encoding="utf-8")
+        source = kiosk_path.read_text(encoding="utf-8")
         py_compile.compile(str(kiosk_path), doraise=True)
         validate_kiosk_source(source)
-    return {"kiosk_py_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest()}
+        tree = tree_hash(temp_root)
+    return {
+        "kiosk_py_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+        "tree_sha256": tree,
+    }
 
 
 def validate_release(manifest_path: Path, payload_path: Path) -> dict[str, Any]:
@@ -270,6 +515,121 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         with self.assertRaisesRegex(GateError, "stock mpv|hwdecode wrapper"):
             validate_release(manifest, payload)
 
+    def test_rejects_hwdec_no_default(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace('"hwdec": "auto"', '"hwdec": "no"')
+        payload = write_payload(root, "bad-hwdec-no", source)
+        manifest = write_manifest(root, "bad-hwdec-no", payload)
+        with self.assertRaisesRegex(GateError, "hardware decode|hwdec"):
+            validate_release(manifest, payload)
+
+    def test_rejects_hwdec_no_mpv_arg(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--hwdec=no")\n    return args',
+        )
+        payload = write_payload(root, "bad-hwdec-arg", source)
+        manifest = write_manifest(root, "bad-hwdec-arg", payload)
+        with self.assertRaisesRegex(GateError, "hardware decode|hwdec|forbidden"):
+            validate_release(manifest, payload)
+
+    def test_rejects_dangerous_mpv_script_arg(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--script=/tmp/evil.lua")\n    return args',
+        )
+        payload = write_payload(root, "bad-script-arg", source)
+        manifest = write_manifest(root, "bad-script-arg", payload)
+        with self.assertRaisesRegex(GateError, "forbidden MPV option"):
+            validate_release(manifest, payload)
+
+    def test_rejects_external_ipc_server_arg(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            'f"--input-ipc-server={cfg[\'ipc_path\']}",',
+            '"--input-ipc-server=/tmp/evil.sock",',
+        )
+        payload = write_payload(root, "bad-ipc-arg", source)
+        manifest = write_manifest(root, "bad-ipc-arg", payload)
+        with self.assertRaisesRegex(GateError, "input-ipc-server"):
+            validate_release(manifest, payload)
+
+    def test_rejects_hardcoded_input_conf_arg(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--input-conf=/tmp/evil.conf")\n    return args',
+        )
+        payload = write_payload(root, "bad-input-conf", source)
+        manifest = write_manifest(root, "bad-input-conf", payload)
+        with self.assertRaisesRegex(GateError, "input-conf"):
+            validate_release(manifest, payload)
+
+    def test_rejects_ytdl_and_include_args(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--ytdl=yes")\n    args.append("--include=/tmp/mpv.conf")\n    return args',
+        )
+        payload = write_payload(root, "bad-ytdl-include", source)
+        manifest = write_manifest(root, "bad-ytdl-include", payload)
+        with self.assertRaisesRegex(GateError, "forbidden MPV option"):
+            validate_release(manifest, payload)
+
+    def test_rejects_osc_enable_arg(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--osc=yes")\n    return args',
+        )
+        payload = write_payload(root, "bad-osc", source)
+        manifest = write_manifest(root, "bad-osc", payload)
+        with self.assertRaisesRegex(GateError, "forbidden MPV option"):
+            validate_release(manifest, payload)
+
+    def test_rejects_forbidden_append_mpv_option_helper_call(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            'append_mpv_option_once(args, "ao", cfg.get("mpv_ao"))',
+            'append_mpv_option_once(args, "ao", cfg.get("mpv_ao"))\n'
+            '    append_mpv_option_once(args, "script", "/tmp/evil.lua")',
+        )
+        payload = write_payload(root, "bad-helper-script", source)
+        manifest = write_manifest(root, "bad-helper-script", payload)
+        with self.assertRaisesRegex(GateError, "append_mpv_option_once"):
+            validate_release(manifest, payload)
+
+    def test_accepts_explicit_c18_hwdec_default(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            '"hwdec": "auto"',
+            f'"hwdec": "{EXPECTED_HWDEC}"',
+        )
+        payload = write_payload(root, "good-explicit-hwdec", source)
+        manifest = write_manifest(root, "good-explicit-hwdec", payload)
+        result = validate_release(manifest, payload)
+        self.assertTrue(result["passed"])
+
     def test_rejects_field_data_payload(self) -> None:
         tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
         self.addCleanup(tmp.cleanup)
@@ -282,6 +642,57 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         )
         manifest = write_manifest(root, "bad-config", payload)
         with self.assertRaisesRegex(GateError, "field-data"):
+            validate_release(manifest, payload)
+
+    def test_rejects_control_files(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        payload = write_payload(
+            root,
+            "bad-control",
+            SNAPSHOT_KIOSK.read_text(encoding="utf-8"),
+            {"bin/totem-kiosky-launcher.sh": b"#!/bin/sh\n"},
+        )
+        manifest = write_manifest(root, "bad-control", payload)
+        with self.assertRaisesRegex(GateError, "control file"):
+            validate_release(manifest, payload)
+
+    def test_rejects_payload_provided_verified_marker(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        payload = write_payload(
+            root,
+            "bad-marker",
+            SNAPSHOT_KIOSK.read_text(encoding="utf-8"),
+            {MARKER_NAME: b"{}\n"},
+        )
+        manifest = write_manifest(root, "bad-marker", payload)
+        with self.assertRaisesRegex(GateError, "verified marker"):
+            validate_release(manifest, payload)
+
+    def test_rejects_image_fixed_paths(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        payload = write_payload(
+            root,
+            "bad-opt",
+            SNAPSHOT_KIOSK.read_text(encoding="utf-8"),
+            {"opt/totem/bin/anything": b"nope\n"},
+        )
+        manifest = write_manifest(root, "bad-opt", payload)
+        with self.assertRaisesRegex(GateError, "image-fixed|control path"):
+            validate_release(manifest, payload)
+
+    def test_rejects_tampered_payload_sha(self) -> None:
+        manifest, payload, tmp = self.with_case("bad-sha")
+        self.addCleanup(tmp.cleanup)
+        raw = load_json(manifest)
+        raw["payload_sha256"] = "b" * 64
+        manifest.write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "payload_sha256 mismatch"):
             validate_release(manifest, payload)
 
     def test_rejects_wrong_media_stack_contract(self) -> None:

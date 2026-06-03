@@ -92,6 +92,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         }
 
         self.assertIn("/data/player-runtime/current", launcher)
+        self.assertIn(".release_verified.json", launcher)
+        self.assertIn("kiosk_sha_mismatch", launcher)
+        self.assertIn("tree_sha_mismatch", launcher)
+        self.assertIn("quarantined", launcher)
+        self.assertIn("data app dir present but not verified; falling back", launcher)
         self.assertNotIn("/data/apps/kiosky-player/current", launcher)
         self.assertIn("/data/player-runtime/current/kiosk.py", dropin)
         self.assertNotIn("/data/apps/kiosky-player/current", dropin)
@@ -151,6 +156,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
     def test_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at(self) -> None:
         updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
+        self.assertIn('"player-runtime": "player-runtime OTA is frozen', updatectl)
+        self.assertIn("PLAYER_RUNTIME_MARKER_SCHEMA", updatectl)
+        self.assertIn("_apply_player_runtime_from_manifest_path_unfrozen", updatectl)
+        self.assertIn("_write_player_runtime_marker", updatectl)
+        self.assertIn("_player_runtime_is_quarantined", updatectl)
+        self.assertIn("health did not observe candidate kiosk.py identity", updatectl)
         self.assertIn('"created_at_utc"', updatectl)
         self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", updatectl)
         self.assertNotIn('raw.get("allowed_components", ["kiosky-player", "totem-core"])', updatectl)
