@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1k`.
+golden atual `1l`.
 
 ## Decisão
 
@@ -21,11 +21,11 @@ golden atual `1k`.
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1k`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1l`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1k_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1l_minimal.img`;
 - **sha256:**
-  `d0aae1e0dc234be1d9071b7f88d913b1dfb0f89d980904e9c2dc9291e648ac5e`;
+  `146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -39,14 +39,15 @@ Marco de referência para continuidade C18/delivery:
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1k`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1l`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `1j` permanece como golden historica anterior. A `1k` valida a fundacao
-segura para um thaw futuro de `player-runtime`, mas o `player-runtime` continua
-congelado no fluxo publico (`rc=44`).
+Nota: `1k` permanece como golden historica anterior. A `1l` valida em hardware
+o fechamento das dividas pre-thaw imediatas: gate semantico endurecido,
+`reconcile` no boot e deriver que so promove imagem apos `offline_ok`. O
+`player-runtime` continua congelado no fluxo publico (`rc=44`).
 
 ## Implementação no repo
 
@@ -69,10 +70,10 @@ congelado no fluxo publico (`rc=44`).
 - Testes estáticos de policy/service/timer.
 - Testes unitários de freeze, downgrade e GC de staging.
 - Sandbox `totem-core` apply/rollback/settings-lock.
-- Validacao offline da proxima imagem (`1l`) deve comprovar policy presente,
-  timer desligado, service apontando para `totem-core`, sem config real embutida,
-  `player-runtime` ainda congelado e launcher adotando `/data` apenas com marker
-  verificado.
+- Validacao offline + hardware da imagem corrente deve comprovar policy
+  presente, timer desligado, service apontando para `totem-core`, sem config
+  real embutida, `player-runtime` ainda congelado e launcher adotando `/data`
+  apenas com marker verificado.
 
 ## Contrato futuro de OTA
 
@@ -392,9 +393,9 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1k` como baseline de laboratorio validada para a
+1. Tratar `c18-hwdecode-lab-1l` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
-2. Fluxo manual de release GitHub `totem-core` validado na 1k com mudanca real
+2. Fluxo manual de release GitHub `totem-core` validado na 1l com mudanca real
    de aplicacao, rollback e reapply. Proximas mudancas de wizard/core devem
    seguir este gate antes de aplicar em placa, mantendo auto-pull desligado e
    `kiosky-player`/`player-runtime` congelados ate thaw explicito.
@@ -449,8 +450,14 @@ vir como nova imagem ou release ponte explicitamente homologada.
 - Build offline da candidata `c18-hwdecode-lab-1l` passou:
   `OFFLINE_VALIDATION_PASSED=True`, `artifact_promoted=true`,
   `sha256=146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`.
-  A `1l` ainda requer flash e validacao curta em hardware antes de substituir a
-  `1k` como golden.
+  Validacao em hardware como flash limpo tambem passou: marker `1l`, drop-in
+  com `reconcile` efetivo, policy restrita a `totem-core`, timer desligado,
+  config real escrita pelo writer, playback em HW decode
+  `v4l2request-copy`, `media_load_failed=0`, `mpv_restart=0`, faults
+  panfrost/mmc/ext4 `0`, OTA GitHub `totem-core`
+  dry-run/apply/rollback/reapply aprovado, e `kiosky-player`/`player-runtime`
+  ainda bloqueados com `rc=44`. A `1l` substitui a `1k` como golden atual de
+  laboratorio/delivery.
 
 ## Fora de escopo
 
