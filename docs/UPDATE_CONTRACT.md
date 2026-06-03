@@ -64,6 +64,14 @@ seed e arquivos com cara de segredo, e exige `kiosk.py` compilavel preservando o
 wrapper C18. Passar nesse gate nao habilita apply: o componente continua
 congelado ate existir rollback + deep-health em hardware.
 
+O sandbox `scripts/sim/run_player_runtime_sandbox.py` prova a mecanica offline
+necessaria antes de descongelar: apply A/B, `current`/`previous`, rollback
+roundtrip, falha com rollback para previous, falha sem previous caindo para a
+imagem, e CLI real ainda congelado (`rc=44`). Ele tambem registra a divida de
+path: o componente governado usa `/data/player-runtime`, enquanto o launcher
+historico ainda assume `/data/apps/kiosky-player/current` por default. Antes de
+qualquer thaw, a imagem deve convergir esse caminho via launcher/env/systemd.
+
 `kiosky_service_launcher.sh` e arquivo de `player-runtime`: a imagem deve
 fornece-lo como arquivo fixo em `/opt/totem/bin`, e releases OTA de
 `totem-core` nao devem inclui-lo em `bin/`.

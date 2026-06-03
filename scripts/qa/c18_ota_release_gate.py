@@ -31,6 +31,7 @@ PY_COMPILE_TARGETS = (
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
     "scripts/sim/run_totem_core_sandbox.py",
+    "scripts/sim/run_player_runtime_sandbox.py",
     "scripts/qa/c18_ota_policy_static_test.py",
     "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
     "scripts/qa/c18_player_runtime_static_test.py",
@@ -50,6 +51,7 @@ TEST_COMMANDS = (
     ("c18_playback_deep_health_fixture", ["python3", "scripts/qa/c18_playback_deep_health_fixture_test.py"]),
     ("c17_9_update_channel_policy", ["python3", "scripts/qa/c17_9_update_channel_policy_test.py"]),
     ("c18_runtime_3_release_perms", ["python3", "scripts/qa/c18_runtime_3_release_perms_test.py"]),
+    ("player_runtime_sandbox", ["python3", "scripts/sim/run_player_runtime_sandbox.py", "--json"]),
 )
 BASH_SYNTAX_TARGETS = (
     "scripts/board/kiosky_playback_observer_probe.sh",
