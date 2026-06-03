@@ -48,6 +48,7 @@ SCHEMA_STATE = "dadooh.totem.update.state.v1"
 SCHEMA_POLICY = "dadooh.totem.update.policy.v1"
 DEFAULT_COMPONENT = "kiosky-player"  # legacy default; C18 operational OTA must pass --component totem-core.
 COMPONENT = DEFAULT_COMPONENT
+SUPPORTED_COMPONENTS = ("kiosky-player", "player-runtime", "totem-core")
 DEVICE_REQUIRED = "orangepizero3"
 DEVICE_TRACK_DEFAULT = "c18-hwdecode"
 SUPPORTED_DEVICE_TRACKS = ("c18-hwdecode",)
@@ -63,12 +64,19 @@ KNOWN_REQUIRES_KEYS = frozenset({
     "base_image_min",
     "device_track",
     "updater_features",
+    "media_stack_id",
+    "mpv_wrapper",
+    "hwdec",
+    "vo",
+    "gpu_context",
+    "deep_health_schema",
 })
 UPDATE_CHANNELS = ("lab", "homologation", "stable")
 DEFAULT_DEVICE_CHANNEL = "stable"
 SAFE_RELEASE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 OTA_FROZEN_COMPONENTS = {
     "kiosky-player": "kiosky-player OTA is frozen until a C18-aware player/hwdecode package exists",
+    "player-runtime": "player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware",
 }
 
 DATA_ROOT = Path(os.environ.get("TOTEM_DATA_ROOT", "/data"))
@@ -128,7 +136,7 @@ def configure_component(component: str) -> None:
     global COMPONENT, APP_BASE, RELEASES_DIR, CURRENT_LINK, PREVIOUS_LINK
     global INCOMING_DIR, STATE_FILE
 
-    if component not in {"kiosky-player", "totem-core"}:
+    if component not in SUPPORTED_COMPONENTS:
         raise RuntimeError(f"unsupported component: {component}")
 
     COMPONENT = component
@@ -136,9 +144,13 @@ def configure_component(component: str) -> None:
         APP_BASE = DATA_ROOT / "apps" / "kiosky-player"
         INCOMING_DIR = UPDATES_DIR / "incoming"
         STATE_FILE = UPDATES_DIR / "state.json"
-    else:
+    elif component == "totem-core":
         APP_BASE = DATA_ROOT / "core" / "totem"
         INCOMING_DIR = UPDATES_DIR / "incoming" / "totem-core"
+        STATE_FILE = APP_BASE / "state.json"
+    else:
+        APP_BASE = DATA_ROOT / "player-runtime"
+        INCOMING_DIR = UPDATES_DIR / "incoming" / "player-runtime"
         STATE_FILE = APP_BASE / "state.json"
 
     RELEASES_DIR = APP_BASE / "releases"
@@ -486,7 +498,7 @@ def _normalise_policy(raw: Any, source: str = "file") -> Dict[str, Any]:
         raise RuntimeError("policy allowed_components must be a non-empty list")
     clean_components = []
     for item in allowed_components:
-        if item not in {"kiosky-player", "totem-core"}:
+        if item not in SUPPORTED_COMPONENTS:
             raise RuntimeError(f"unsupported policy component: {item!r}")
         clean_components.append(item)
     return {
@@ -647,6 +659,8 @@ def _validate_manifest(m: Dict[str, Any],
                        policy: Optional[Dict[str, Any]] = None,
                        component: Optional[str] = None) -> None:
     expected_component = component or COMPONENT
+    if expected_component not in SUPPORTED_COMPONENTS:
+        raise RuntimeError(f"unsupported component: {expected_component}")
     missing = [k for k in REQUIRED_MANIFEST_FIELDS if k not in m]
     if missing:
         raise RuntimeError(f"manifest missing fields: {missing}")
@@ -679,11 +693,11 @@ def _validate_manifest(m: Dict[str, Any],
     base_image_min = req.get("base_image_min")
     if not isinstance(base_image_min, str) or not base_image_min:
         raise RuntimeError("manifest base_image_min requirement must be a string")
-    if expected_component == "totem-core" and base_image_min not in SUPPORTED_BASE_IMAGE_LINES:
+    if expected_component in {"totem-core", "player-runtime"} and base_image_min not in SUPPORTED_BASE_IMAGE_LINES:
         raise RuntimeError(f"manifest base_image_min requirement not met: {base_image_min!r}")
     device_track = req.get("device_track")
-    if expected_component == "totem-core" and not isinstance(device_track, str):
-        raise RuntimeError("totem-core manifest requires device_track")
+    if expected_component in {"totem-core", "player-runtime"} and not isinstance(device_track, str):
+        raise RuntimeError(f"{expected_component} manifest requires device_track")
     if device_track is not None:
         if not isinstance(device_track, str):
             raise RuntimeError("manifest device_track requirement must be a string")
@@ -718,6 +732,21 @@ def _validate_manifest(m: Dict[str, Any],
             raise RuntimeError("manifest missing fields: ['entrypoint']")
         if m["entrypoint"] != "kiosk.py":
             raise RuntimeError(f"unsupported entrypoint: {m['entrypoint']!r}")
+    elif expected_component == "player-runtime":
+        expected_runtime_requires = {
+            "media_stack_id": "c18-hwdecode-v4l2request-copy",
+            "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+            "hwdec": "v4l2request-copy",
+            "vo": "gpu",
+            "gpu_context": "drm",
+            "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+        }
+        for key, expected_value in expected_runtime_requires.items():
+            if req.get(key) != expected_value:
+                raise RuntimeError(f"player-runtime manifest requires {key}={expected_value!r}")
+        entrypoint = m.get("entrypoint", "kiosk.py")
+        if entrypoint != "kiosk.py":
+            raise RuntimeError(f"unsupported player-runtime entrypoint: {entrypoint!r}")
     elif expected_component == "totem-core":
         entrypoint = m.get("entrypoint")
         if entrypoint is not None and (
@@ -1448,12 +1477,15 @@ def cmd_self_test(args: argparse.Namespace) -> int:
     if COMPONENT == "kiosky-player":
         r = _systemctl("show", SERVICE_NAME, "-p", "LoadState", "--value")
         checks["service_unit_known"] = (r.stdout.strip() == "loaded")
-    else:
+    elif COMPONENT == "totem-core":
         checks["service_unit_known"] = True
         checks["fallback_bin_exists"] = Path("/opt/totem/core-fallback/bin").is_dir()
         checks["settings_lock_guard_available"] = True
         guard_ok, _ = _totem_core_apply_guard()
         checks["settings_lock_guard_clear"] = guard_ok
+    else:
+        checks["service_unit_known"] = True
+        checks["component_apply_frozen"] = _apply_frozen_reason() is not None
     out = {
         "self_test": all(checks.values()),
         "checks": checks,
@@ -1678,6 +1710,11 @@ def cmd_apply_local(args: argparse.Namespace) -> int:
 
 def cmd_rollback(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    frozen_reason = _apply_frozen_reason()
+    if COMPONENT == "player-runtime" and frozen_reason:
+        print(f"component_frozen_for_ota: {COMPONENT}: {frozen_reason}", file=sys.stderr)
+        log("WARN", "rollback_blocked_component_frozen", component=COMPONENT, reason=frozen_reason)
+        return 44
     _ensure_dirs()
     prev_link = _read_symlink_target(PREVIOUS_LINK)
     if not prev_link:
@@ -1774,7 +1811,7 @@ def main(argv: List[str]) -> int:
     component_parent = argparse.ArgumentParser(add_help=False)
     component_parent.add_argument(
         "--component",
-        choices=("kiosky-player", "totem-core"),
+        choices=SUPPORTED_COMPONENTS,
         default=DEFAULT_COMPONENT,
         help="update component (legacy default: kiosky-player; C18 OTA must pass --component totem-core)",
     )

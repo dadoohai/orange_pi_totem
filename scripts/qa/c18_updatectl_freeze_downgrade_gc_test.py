@@ -78,6 +78,31 @@ def manifest(
     return data
 
 
+def player_runtime_manifest(version: str, *, hwdec: str = "v4l2request-copy") -> dict:
+    return {
+        "schema": "dadooh.totem.update.v1",
+        "component": "player-runtime",
+        "version": version,
+        "channel": "stable",
+        "created_at_utc": "2026-06-02T10:00:00Z",
+        "payload": f"dadooh-player-runtime-{version}.tar.gz",
+        "payload_sha256": "a" * 64,
+        "payload_bytes": 1,
+        "entrypoint": "kiosk.py",
+        "requires": {
+            "device": "orangepizero3",
+            "base_image_min": "c17.4.2",
+            "device_track": "c18-hwdecode",
+            "media_stack_id": "c18-hwdecode-v4l2request-copy",
+            "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+            "hwdec": hwdec,
+            "vo": "gpu",
+            "gpu_context": "drm",
+            "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+        },
+    }
+
+
 class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
     def test_kiosky_player_apply_local_is_frozen_before_manifest_read(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -87,6 +112,45 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             rc = updatectl.cmd_apply_local(args)
             self.assertEqual(rc, 44)
             self.assertFalse((root / "data" / "apps" / "kiosky-player").exists())
+
+    def test_player_runtime_apply_local_is_frozen_before_manifest_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            args = argparse.Namespace(component="player-runtime", manifest=str(root / "missing.json"), payload="")
+            rc = updatectl.cmd_apply_local(args)
+            self.assertEqual(rc, 44)
+            self.assertFalse((root / "data" / "player-runtime").exists())
+
+    def test_player_runtime_rollback_is_frozen(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            args = argparse.Namespace(component="player-runtime")
+            rc = updatectl.cmd_rollback(args)
+            self.assertEqual(rc, 44)
+
+    def test_policy_may_name_player_runtime_but_apply_stays_frozen(self) -> None:
+        raw = policy()
+        raw["allowed_components"] = ["totem-core", "player-runtime"]
+        normalised = updatectl._normalise_policy(raw)
+        self.assertEqual(normalised["allowed_components"], ["player-runtime", "totem-core"])
+
+    def test_player_runtime_manifest_requires_media_stack_contract(self) -> None:
+        raw_policy = policy()
+        raw_policy["allowed_components"] = ["player-runtime"]
+        good_policy = updatectl._normalise_policy(raw_policy)
+        updatectl._validate_manifest(
+            player_runtime_manifest("player-good"),
+            policy=good_policy,
+            component="player-runtime",
+        )
+        with self.assertRaisesRegex(RuntimeError, "requires hwdec"):
+            updatectl._validate_manifest(
+                player_runtime_manifest("player-bad", hwdec="no"),
+                policy=good_policy,
+                component="player-runtime",
+            )
 
     def test_downgrade_rejects_previous_identity_without_policy_permission(self) -> None:
         state = {
