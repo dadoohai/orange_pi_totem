@@ -18,6 +18,7 @@ SERVICE_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent
 MANIFEST_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json"
 EMBED_PATH = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
 BUILD_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
+PUBLISH_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_totem_core_github_release.sh"
 UPDATECTL_PATH = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
 BOOTSTRAP_C17_5_PATH = REPO_ROOT / "scripts" / "remote" / "bootstrap_c17_5_totem_core_on_board.sh"
 DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_embedded_image.py"
@@ -66,6 +67,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("bash -n bin/kiosky_service_launcher.sh", build)
+
+    def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
+        publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
+        self.assertIn('SOURCE_COMMIT="$(read_json "$MANIFEST" source_commit)"', publish)
+        self.assertIn("manifest source_commit is not a full SHA", publish)
+        self.assertIn("git ls-remote --tags", publish)
+        self.assertIn("--target \"$SOURCE_COMMIT\"", publish)
+        self.assertIn("--verify-tag", publish)
+        self.assertIn("does not point to manifest source_commit", publish)
 
     def test_image_embed_keeps_player_launcher_fixed_to_image(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")

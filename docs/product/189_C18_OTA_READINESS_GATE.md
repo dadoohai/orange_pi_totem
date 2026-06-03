@@ -194,18 +194,31 @@ vir como nova imagem ou release ponte explicitamente homologada.
   - OTA local de `totem-core` validado na placa com pacote gerado do commit
     `e56fddb`: apply, rollback e reapply passaram; o player permaneceu ativo e
     com HW decode apos cada etapa.
-  - Dry-run GitHub nao encontrou release compativel de `totem-core`, esperado
-    enquanto nao houver release C18 nova publicada com o contrato `1i`.
+  - Release GitHub de homologacao publicada e validada end-to-end:
+    `totem-core-c18.ota-core-1i-github-smoke-20260603T012036Z-09ba8d1`.
+    - Manifest: `component=totem-core`, `channel=homologation`,
+      `source_commit=09ba8d15154b15ff83569ce0acbab50258121366`,
+      `source_dirty=false`.
+    - Payload SHA256:
+      `e57dd720d21e429fae8271a153913ee96db5c0576e38df97be74f94a8a436254`.
+    - Dry-run na placa selecionou exatamente essa release e retornou
+      `state_changed=false`.
+    - Apply GitHub, rollback e reapply GitHub passaram; ao final a placa ficou
+      em `current=c18.ota-core-1i-github-smoke-20260603T012036Z-09ba8d1` e
+      `previous=c17.5-core-mvp-20260602-231123-e56fddb`.
+    - O player permaneceu `active`, `NRestarts=0`, MPV em
+      `/opt/totem/hwdecode/bin/mpv`, `hwdec-current=v4l2request-copy`,
+      `media_load_failed=0`, sem erros panfrost/mmc na janela de validacao.
   - Tentativa de OTA de `kiosky-player` continuou bloqueada com
     `rc=44` (`component_frozen_for_ota`).
 
 ## Continuidade pos-compactacao
 
-1. Comitar esta evidencia de hardware da `1i` mantendo fora do stage o WIP
+1. Comitar esta evidencia de GitHub end-to-end mantendo fora do stage o WIP
    alheio `scripts/qa/generate_ui_ux_gallery.py`.
-2. Proxima frente funcional do projeto: publicar uma release C18 compativel de
-   `totem-core` e validar o fluxo GitHub end-to-end, mantendo auto-pull
-   desligado e `kiosky-player` congelado.
+2. Proxima frente funcional do projeto: usar este fluxo para evoluir
+   `totem-core`/wizard em releases manuais, mantendo auto-pull desligado e
+   `kiosky-player` congelado.
 3. Depois disso, abrir as frentes separadas: compatibilidade HDMI/resolucao por
    display e melhorias do wizard (cursor, rede aberta, UX de entrada).
 

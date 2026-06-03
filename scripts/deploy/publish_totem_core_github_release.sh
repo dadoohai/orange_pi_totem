@@ -79,10 +79,12 @@ CHANNEL="$(read_json "$MANIFEST" channel)"
 COMPONENT="$(read_json "$MANIFEST" component)"
 MANIFEST_SHA="$(read_json "$MANIFEST" payload_sha256)"
 PAYLOAD_BASENAME="$(read_json "$MANIFEST" payload)"
+SOURCE_COMMIT="$(read_json "$MANIFEST" source_commit)"
 
 [[ "$COMPONENT" == "totem-core" ]] || die "manifest component is not totem-core"
 [[ "$(basename "$PAYLOAD")" == "$PAYLOAD_BASENAME" ]] \
   || die "payload basename mismatch: $(basename "$PAYLOAD") != $PAYLOAD_BASENAME"
+[[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]] || die "manifest source_commit is not a full SHA: $SOURCE_COMMIT"
 
 ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 [[ "$ACTUAL_SHA" == "$MANIFEST_SHA" ]] \
@@ -119,8 +121,25 @@ if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
   die "release with tag '$TAG' already exists on $REPO (will not clobber)"
 fi
 
+REMOTE_TAG_TARGET=""
+REMOTE_TAG_REFS="$(git ls-remote --tags "https://github.com/${REPO}.git" "refs/tags/${TAG}" "refs/tags/${TAG}^{}" 2>/dev/null || true)"
+if [[ -n "$REMOTE_TAG_REFS" ]]; then
+  REMOTE_TAG_TARGET="$(printf '%s\n' "$REMOTE_TAG_REFS" | awk -v tag="refs/tags/${TAG}^{}" '$2 == tag {print $1; found=1} END {if (!found) exit 1}' 2>/dev/null || true)"
+  if [[ -z "$REMOTE_TAG_TARGET" ]]; then
+    REMOTE_TAG_TARGET="$(printf '%s\n' "$REMOTE_TAG_REFS" | awk -v tag="refs/tags/${TAG}" '$2 == tag {print $1; exit}')"
+  fi
+  [[ "$REMOTE_TAG_TARGET" == "$SOURCE_COMMIT" ]] \
+    || die "remote tag '$TAG' does not point to manifest source_commit (tag=$REMOTE_TAG_TARGET source=$SOURCE_COMMIT)"
+fi
+
 log "repo            = $REPO"
 log "tag             = $TAG"
+log "source_commit   = $SOURCE_COMMIT"
+if [[ -n "$REMOTE_TAG_REFS" ]]; then
+  log "tag_target      = $REMOTE_TAG_TARGET"
+else
+  log "tag_target      = ${SOURCE_COMMIT} (will be created by gh --target)"
+fi
 log "title           = $TITLE"
 log "prerelease      = $PRERELEASE"
 log "draft           = $DRAFT"
@@ -166,6 +185,11 @@ GH_ARGS=(
   --title "$TITLE"
   --notes-file "$NOTES_FILE"
 )
+if [[ -n "$REMOTE_TAG_REFS" ]]; then
+  GH_ARGS+=( --verify-tag )
+else
+  GH_ARGS+=( --target "$SOURCE_COMMIT" )
+fi
 [[ "$PRERELEASE" == "yes" ]] && GH_ARGS+=( --prerelease )
 [[ "$DRAFT" -eq 1 ]] && GH_ARGS+=( --draft )
 

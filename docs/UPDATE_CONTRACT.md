@@ -91,6 +91,8 @@ O gate deve provar, no minimo:
 - `totem-core` sem `bin/kiosky_service_launcher.sh` no payload;
 - manifest com contrato C18 completo;
 - payload com SHA correto e sem path traversal, symlink, hardlink ou segredo;
+- release GitHub publicada a partir do `source_commit` declarado no manifest,
+  nunca do default branch implicito do `gh`;
 - policy/service/timer C18 coerentes;
 - freeze de `kiosky-player` preservado;
 - scripts historicos de release de `kiosky-player` falhando por padrao, salvo
