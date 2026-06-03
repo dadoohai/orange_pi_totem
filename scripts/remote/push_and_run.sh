@@ -16,6 +16,18 @@ Examples:
 USAGE
 }
 
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [ "${ALLOW_LEGACY_C18_REMOTE_BYPASS:-0}" != "1" ]; then
+  echo "FATAL: legacy remote bypass is disabled for C18. Set ALLOW_LEGACY_C18_REMOTE_BYPASS=1 only for an explicitly approved lab reproduction; not approval for C18 OTA or field use." >&2
+  exit 44
+fi
+
 if [ "$#" -ge 2 ] && [ "${1#*@}" != "$1" ]; then
   TARGET="$1"
   SCRIPT="$2"

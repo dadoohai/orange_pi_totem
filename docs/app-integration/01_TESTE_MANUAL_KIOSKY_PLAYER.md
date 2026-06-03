@@ -58,7 +58,7 @@ cat >/data/config/config.json <<'JSON'
   "cache_max_bytes": 2147483648,
   "min_free_space_bytes": 536870912,
   "max_download_bytes": 536870912,
-  "mpv_path": "mpv",
+  "mpv_path": "/opt/totem/bin/totem-mpv-hwdecode",
   "ipc_path": "/tmp/kiosky/mpv.sock",
   "runtime_dir": "/tmp/kiosky",
   "strict_paths_enabled": true,

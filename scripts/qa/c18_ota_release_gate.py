@@ -23,6 +23,9 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PY_COMPILE_TARGETS = (
+    "scripts/board/totem_config_contract_validate.py",
+    "scripts/board/totem_config_writer_real.py",
+    "scripts/board/totem_visual_setup_writer_handoff.py",
     "scripts/board/totem_updatectl.py",
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
@@ -32,14 +35,26 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_ota_release_gate.py",
 )
 TEST_COMMANDS = (
+    ("totem_config_contract_self_test", ["python3", "scripts/board/totem_config_contract_validate.py", "--self-test"]),
+    ("totem_config_writer_real_self_test", ["python3", "scripts/board/totem_config_writer_real.py", "--self-test"]),
+    ("totem_visual_setup_writer_handoff_self_test", ["python3", "scripts/board/totem_visual_setup_writer_handoff.py", "--self-test"]),
     ("c18_ota_policy_static", ["python3", "scripts/qa/c18_ota_policy_static_test.py"]),
     ("c18_updatectl_freeze_downgrade_gc", ["python3", "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py"]),
     ("c17_9_update_channel_policy", ["python3", "scripts/qa/c17_9_update_channel_policy_test.py"]),
     ("c18_runtime_3_release_perms", ["python3", "scripts/qa/c18_runtime_3_release_perms_test.py"]),
 )
 BASH_SYNTAX_TARGETS = (
+    "scripts/board/kiosky_playback_observer_probe.sh",
+    "scripts/board/kiosky_service_observer_probe.sh",
+    "scripts/board/mpv_controller_playlist_probe.sh",
     "scripts/deploy/build_totem_core_release_package.sh",
     "scripts/deploy/publish_totem_core_github_release.sh",
+    "scripts/remote/apply_c15_1_1_session_hotfix.sh",
+    "scripts/remote/bootstrap_c14_1_1_on_board.sh",
+    "scripts/remote/bootstrap_c17_5_totem_core_on_board.sh",
+    "scripts/remote/deploy_kiosky_player.sh",
+    "scripts/remote/push_and_run.sh",
+    "scripts/remote/validate_c14_2_1_clean_board.sh",
 )
 FORBIDDEN_TAR_PARTS = {
     ".git",

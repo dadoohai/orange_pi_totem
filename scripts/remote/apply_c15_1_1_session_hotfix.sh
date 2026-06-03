@@ -13,6 +13,17 @@
 # rebuild (recorded in C15.1.1 evidence as a follow-up).
 
 set -euo pipefail
+
+case " ${*:-} " in
+  *" -h "*|*" --help "*) ;;
+  *)
+    if [[ "${ALLOW_LEGACY_C18_REMOTE_BYPASS:-0}" != "1" ]]; then
+      echo "FATAL: legacy remote bypass is disabled for C18. Set ALLOW_LEGACY_C18_REMOTE_BYPASS=1 only for an explicitly approved lab reproduction; not approval for C18 OTA or field use." >&2
+      exit 44
+    fi
+    ;;
+esac
+
 REPO_ROOT="${REPO_ROOT:-/home/builder/totem-os/orange_pi_totem}"
 BOARD_HOST="${BOARD_HOST:-${1:-}}"
 OUT="${OUT:-$REPO_ROOT/.cache/c15-1-1-hotfix.out}"

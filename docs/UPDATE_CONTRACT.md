@@ -22,6 +22,25 @@ nao entram no OTA comum.
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, HDMI/display, kernel, DTB, U-Boot, BSP | nova imagem + homologacao | imagem/cartao known-good; sem A/B nesta linha |
 | `field-data` | config real, seed, midia, playlist/cache, estado operacional | fluxo operacional em `/data`; nao release de software | writer/backup/re-sync conforme o dado |
 
+## Contrato De Config C18
+
+`field-data` nao pode escolher outro binario de MPV na linha C18. Esse campo
+parece dado operacional, mas muda diretamente o runtime de midia e ja causou
+regressao na 1h.
+
+Para `device_track="c18-hwdecode"`:
+
+- `mpv_path` deve estar ausente; ou
+- `mpv_path` deve ser exatamente `/opt/totem/bin/totem-mpv-hwdecode`.
+
+Qualquer outro valor, incluindo `mpv`, `/usr/bin/mpv`, caminho relativo ou
+string vazia, deve ser rejeitado pelo contrato de config antes de gravar
+`/data/config/config.json`.
+
+O writer, o handoff privado, seeds de homologacao e exemplos usados em C18
+devem passar pelo mesmo contrato. Mudancas em MPV, wrapper, flags de decode ou
+stack `/opt/totem/hwdecode` continuam sendo `media-system` e exigem imagem.
+
 ## Fronteira Do Player
 
 `kiosky-player` OTA esta congelado na C18. O congelamento tambem vale para
@@ -104,6 +123,41 @@ O gate deve provar, no minimo:
 - diff OTA comum sem arquivos `player-runtime` fixos por imagem;
 - sandbox apply/rollback de `totem-core` passando.
 
+## Deep-Health De Playback
+
+O health-check de `systemd active + NRestarts` nao prova playback nem decode.
+Qualquer pacote C18-aware de `player-runtime` deve ter um deep-health antes de
+persistir como sucesso. O resumo deve ser sanitizado e conter somente
+contadores/estados, nunca URLs de midia, SSID, IP, MAC, DNS, config real ou
+tokens.
+
+Contrato minimo para uma janela curta:
+
+- `kiosky-player.service` ativo;
+- `NRestarts_delta=0`;
+- um unico MPV real observado;
+- MPV executando a stack C18 (`/opt/totem/hwdecode/bin/mpv` ou wrapper
+  `/opt/totem/bin/totem-mpv-hwdecode`);
+- `hwdec-current=v4l2request-copy`;
+- `vo-configured=true`;
+- `time-pos` ou `estimated-frame-number` avancando;
+- pelo menos duas transicoes ou dois aliases de midia observados quando houver
+  playlist suficiente;
+- `media_load_failed=0`;
+- `mpv_restart=0`;
+- `ipc_timeout=0`;
+- `panfrost_faults=0`;
+- `mmc_timeout_reset=0`.
+
+Os probes `kiosky_playback_observer_probe.sh` e
+`kiosky_service_observer_probe.sh` ja produzem um resumo sanitizado com
+`c18_decode_health_passed`. Uma falha nesse campo torna o probe nao-verde. Esse
+campo cobre o subconjunto de decode/runtime (`hwdec-current`, `vo-configured`,
+progresso e falhas sanitizadas do status); nao substitui o deep-health completo
+necessario para descongelar OTA de player.
+
+Sem esse gate, update de player fica restrito a imagem/homologacao manual.
+
 ## Quando Gerar Imagem
 
 Gerar nova imagem quando a mudanca tocar:
@@ -134,6 +188,12 @@ Scripts historicos de release de `kiosky-player` tambem nao liberam OTA de
 player na C18. `ALLOW_C18_FROZEN_PLAYER_RELEASE=1` e apenas bypass de
 reproducao legada/lab, nao aprovacao de release C18-aware. Um pacote
 `player-runtime` C18-aware exige contrato, gate e homologacao novos.
+
+Scripts remotos historicos que alteram player, `/opt`, systemd ou estado fora
+do OTA comum devem falhar fechados por padrao. Excecoes de bancada exigem uma
+variavel explicita, como `ALLOW_LEGACY_C14_UPDATE_BYPASS=1` para fluxo C14 ou
+`ALLOW_LEGACY_C18_REMOTE_BYPASS=1` para hotfix/bootstrap remoto historico.
+Esses flags nao aprovam uso de campo nem substituem release OTA.
 
 Todo comando C18 de update operacional deve declarar `--component totem-core`.
 Comandos sem `--component` preservam default historico/legado do updater e nao

@@ -24,6 +24,7 @@ OBSERVER_INTERVAL_SEC="${KIOSKY_PLAYBACK_OBSERVER_INTERVAL_SEC:-1}"
 OBSERVER_IPC_TIMEOUT_SEC="${KIOSKY_PLAYBACK_OBSERVER_IPC_TIMEOUT_SEC:-0.8}"
 OBSERVER_PID=""
 RUN_SHELL_LAST_RC=0
+DECODE_HEALTH_RC=0
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: run this script as root." >&2
@@ -123,6 +124,7 @@ expected = {
     "mpv_msg_level": "all=v",
     "mpv_debug_events": True,
 }
+C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 
 
 def matches(actual, expected_value):
@@ -150,6 +152,10 @@ for key, expected_value in expected.items():
     status = "OK" if matches(cfg.get(key), expected_value) else "MISMATCH"
     rows.append((key, status))
     ok = ok and status == "OK"
+
+mpv_path_ok = "mpv_path" not in cfg or cfg.get("mpv_path") == C18_HWDECODE_WRAPPER
+rows.append(("mpv_path_c18_contract", "OK" if mpv_path_ok else "MISMATCH"))
+ok = ok and mpv_path_ok
 
 st = os.stat(config_path)
 mode_ok = stat.S_IMODE(st.st_mode) == 0o640
@@ -275,6 +281,26 @@ finish_archive() {
   return 127
 }
 
+check_decode_health_summary() {
+  local observer_summary_file="$OUT_DIR/playback-observer-summary.tsv"
+  local passed=""
+
+  if [ ! -f "$observer_summary_file" ]; then
+    append_summary "post-c18-decode-health" "1" "missing playback observer summary"
+    DECODE_HEALTH_RC=1
+    return 0
+  fi
+
+  passed="$(awk -F '\t' '$1 == "c18_decode_health_passed" {print $2}' "$observer_summary_file" | tail -n 1)"
+  if [ "$passed" = "true" ]; then
+    append_summary "post-c18-decode-health" "0" "sanitized C18 decode-health summary passed"
+  else
+    append_summary "post-c18-decode-health" "1" "sanitized C18 decode-health summary failed; inspect playback-observer-summary.tsv"
+    DECODE_HEALTH_RC=1
+  fi
+  return 0
+}
+
 trap 'stop_observer >/dev/null 2>&1 || true' EXIT
 
 start_observer() {
@@ -317,12 +343,26 @@ props = [
     "percent-pos",
     "eof-reached",
     "estimated-frame-number",
+    "hwdec-current",
+    "vo-configured",
     "filename",
     "path",
     "video-params",
 ]
 counts = {"success": 0, "timeout": 0, "error": 0}
 unique_aliases = set()
+seen_ipc_success = False
+post_success_counts = {"timeout": 0, "error": 0}
+hwdec_expected = "v4l2request-copy"
+hwdec_ok_samples = 0
+hwdec_unexpected_samples = 0
+vo_configured_true_samples = 0
+vo_configured_bad_samples = 0
+time_pos_first = None
+time_pos_last = None
+frame_first = None
+frame_last = None
+status_failure_samples = 0
 
 
 def request_stop(signum, frame):
@@ -366,6 +406,24 @@ def scalar(value):
     if isinstance(value, (int, float)):
         return f"{float(value):.6f}".rstrip("0").rstrip(".")
     return str(value)
+
+
+def as_float(value):
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def as_int(value):
+    if value is None or value == "":
+        return 0
+    try:
+        return int(value)
+    except Exception:
+        return 0
 
 
 def compact_json(value):
@@ -518,6 +576,22 @@ def ipc_query_many(ipc_path):
     return "success", "", responses, elapsed_ms, prop_errors
 
 
+def status_has_failure(status):
+    if not isinstance(status, dict) or not status.get("present"):
+        return False
+    playback_state = str(status.get("playback_state") or "").lower()
+    if "error" in playback_state:
+        return True
+    if as_int(status.get("consecutive_failures")) > 0:
+        return True
+    if as_int(status.get("blocked_media_count")) > 0:
+        return True
+    for key in ("last_poll_error", "last_render_error", "black_screen_risk_reason"):
+        if status.get(key) not in (None, "", "null"):
+            return True
+    return False
+
+
 with open(config_path, "r", encoding="utf-8") as fh:
     cfg = json.load(fh)
 
@@ -528,7 +602,7 @@ with open(samples_path, "w", encoding="utf-8") as samples:
     samples.write(
         "seq\trel_sec\twall_time\tipc_result\tipc_error\tipc_elapsed_ms\t"
         "current_alias\tpath_alias\tfilename_alias\ttime_pos\tduration\tpercent_pos\t"
-        "idle_active\tpause\teof_reached\testimated_frame_number\tvideo_params_json\t"
+        "idle_active\tpause\teof_reached\testimated_frame_number\thwdec_current\tvo_configured\tvideo_params_json\t"
         "property_errors_json\tstatus_present\tstatus_playback_state\tstatus_current_alias\t"
         "status_path_alias\tstatus_duration_ms\tstatus_current_index\tstatus_mpv_running\t"
         "status_snapshot_json\n"
@@ -541,6 +615,10 @@ while not stop:
     wall_time = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     ipc_result, ipc_error, values, ipc_elapsed_ms, prop_errors = ipc_query_many(ipc_path)
     counts[ipc_result] = counts.get(ipc_result, 0) + 1
+    if ipc_result == "success":
+        seen_ipc_success = True
+    elif seen_ipc_success and ipc_result in post_success_counts:
+        post_success_counts[ipc_result] = post_success_counts.get(ipc_result, 0) + 1
 
     path_alias = safe_path_alias(values.get("path"))
     filename_alias = safe_path_alias(values.get("filename"))
@@ -556,6 +634,34 @@ while not stop:
         current_alias = status_path_alias or status_current_alias
     if current_alias:
         unique_aliases.add(current_alias)
+
+    if ipc_result == "success":
+        hwdec_current = values.get("hwdec-current")
+        if hwdec_current == hwdec_expected:
+            hwdec_ok_samples += 1
+        elif hwdec_current not in (None, ""):
+            hwdec_unexpected_samples += 1
+
+        vo_configured = values.get("vo-configured")
+        if vo_configured is True:
+            vo_configured_true_samples += 1
+        elif vo_configured not in (None, ""):
+            vo_configured_bad_samples += 1
+
+        current_time_pos = as_float(values.get("time-pos"))
+        if current_time_pos is not None:
+            if time_pos_first is None:
+                time_pos_first = current_time_pos
+            time_pos_last = current_time_pos
+
+        current_frame = as_float(values.get("estimated-frame-number"))
+        if current_frame is not None:
+            if frame_first is None:
+                frame_first = current_frame
+            frame_last = current_frame
+
+    if status_has_failure(status):
+        status_failure_samples += 1
 
     status_snapshot_json = compact_json(status)
     with open(status_samples_path, "a", encoding="utf-8") as status_samples:
@@ -578,6 +684,8 @@ while not stop:
         scalar(values.get("pause")),
         scalar(values.get("eof-reached")),
         scalar(values.get("estimated-frame-number")),
+        scalar(values.get("hwdec-current")),
+        scalar(values.get("vo-configured")),
         video_params_json,
         compact_json(prop_errors),
         "true" if status.get("present") else "false",
@@ -597,12 +705,39 @@ while not stop:
         time.sleep(min(0.1, deadline - time.monotonic()))
 
 with open(summary_path, "w", encoding="utf-8") as summary:
+    time_pos_progressed = (
+        time_pos_first is not None and time_pos_last is not None and time_pos_last > time_pos_first
+    )
+    frame_progressed = frame_first is not None and frame_last is not None and frame_last > frame_first
+    c18_decode_health_passed = (
+        seq > 0
+        and counts.get("success", 0) > 0
+        and post_success_counts.get("timeout", 0) == 0
+        and post_success_counts.get("error", 0) == 0
+        and hwdec_ok_samples > 0
+        and hwdec_unexpected_samples == 0
+        and vo_configured_true_samples > 0
+        and vo_configured_bad_samples == 0
+        and (time_pos_progressed or frame_progressed)
+        and status_failure_samples == 0
+    )
     summary.write("metric\tvalue\n")
     summary.write(f"samples\t{seq}\n")
     summary.write(f"ipc_success\t{counts.get('success', 0)}\n")
     summary.write(f"ipc_timeout\t{counts.get('timeout', 0)}\n")
     summary.write(f"ipc_error\t{counts.get('error', 0)}\n")
+    summary.write(f"ipc_timeout_after_first_success\t{post_success_counts.get('timeout', 0)}\n")
+    summary.write(f"ipc_error_after_first_success\t{post_success_counts.get('error', 0)}\n")
     summary.write(f"unique_aliases\t{len(unique_aliases)}\n")
+    summary.write(f"expected_hwdec_current\t{hwdec_expected}\n")
+    summary.write(f"hwdec_ok_samples\t{hwdec_ok_samples}\n")
+    summary.write(f"hwdec_unexpected_samples\t{hwdec_unexpected_samples}\n")
+    summary.write(f"vo_configured_true_samples\t{vo_configured_true_samples}\n")
+    summary.write(f"vo_configured_bad_samples\t{vo_configured_bad_samples}\n")
+    summary.write(f"time_pos_progressed\t{str(time_pos_progressed).lower()}\n")
+    summary.write(f"estimated_frame_progressed\t{str(frame_progressed).lower()}\n")
+    summary.write(f"status_failure_samples\t{status_failure_samples}\n")
+    summary.write(f"c18_decode_health_passed\t{str(c18_decode_health_passed).lower()}\n")
 PY
   OBSERVER_PID="$!"
   append_summary "playback-observer-start" "0" "external short-connection MPV IPC observer started pid=$OBSERVER_PID"
@@ -708,6 +843,7 @@ else
 fi
 
 stop_observer
+check_decode_health_summary
 copy_mpv_log "post"
 copy_new_mpv_generation_logs
 
@@ -728,3 +864,8 @@ run_shell "post-journalctl-kernel-critical-filter" "journalctl kernel critical f
   "journalctl -k -b --no-pager --output=short-iso | grep -Ei 'oops|panic|EXT4-fs error|Aborting journal|Remounting filesystem read-only|mmc.*timeout|mmc.*reset|voltage|fail|error' || true"
 
 finish_archive
+archive_rc=$?
+if [ "$archive_rc" -ne 0 ]; then
+  exit "$archive_rc"
+fi
+exit "$DECODE_HEALTH_RC"

@@ -8,6 +8,7 @@ RUNTIME_DIR="/tmp/kiosky"
 MEDIA_ROOT="/data/media/kiosky-player"
 IPC_SOCKET="$RUNTIME_DIR/controller-probe-mpv.sock"
 MPV_LOG="$RUNTIME_DIR/controller-probe-mpv.log"
+export MPV_CONTROLLER_PROBE_MPV_PATH="${MPV_CONTROLLER_PROBE_MPV_PATH:-/opt/totem/bin/totem-mpv-hwdecode}"
 BASE_DIR="${TOTEM_DIAG_BASE:-/root/totem-diag}"
 TIMESTAMP="${TOTEM_DIAG_TIMESTAMP:-$(date +%Y%m%d-%H%M%S%z)}"
 RUN_NAME="mpv-controller-playlist-$TIMESTAMP"
@@ -371,7 +372,7 @@ def main(argv):
     cfg = dict(kiosk.DEFAULT_CONFIG)
     cfg.update(
         {
-            "mpv_path": "mpv",
+            "mpv_path": os.environ.get("MPV_CONTROLLER_PROBE_MPV_PATH", "/opt/totem/bin/totem-mpv-hwdecode"),
             "ipc_path": ipc_path,
             "runtime_dir": runtime_dir,
             "mpv_log_file": mpv_log_file,

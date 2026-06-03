@@ -616,6 +616,20 @@ def run_self_test() -> None:
             "private file inside repository should fail",
         )
 
+        unsafe_source_path = root / "source" / "config.unsafe-mpv-path.json"
+        unsafe_source = build_source_candidate()
+        unsafe_source["mpv_path"] = "mpv"
+        write_json_file(unsafe_source_path, unsafe_source)
+        assert_raises_handoff(
+            lambda: run_handoff(
+                source_candidate_raw=str(unsafe_source_path),
+                private_values_raw=str(private_values_path),
+                out_dir_raw=str(root / "out-unsafe-mpv-path"),
+                confirm_private_values_approved=True,
+            ),
+            "handoff should reject unsafe C18 mpv_path before writer",
+        )
+
         out_dir = root / "out"
         status = run_handoff(
             source_candidate_raw=str(source_path),

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # LAB/BYPASS ONLY: this is not the C18 player update path.
+# LEGACY C14 / BYPASS ONLY: not the C18 update path.
 # For release/update decisions, use docs/UPDATE_CONTRACT.md.
 set -eu
 
@@ -17,6 +18,18 @@ This copies application code only. It does not install dependencies, copy privat
 config, enable systemd, or start the app.
 USAGE
 }
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [ "${ALLOW_LEGACY_C14_UPDATE_BYPASS:-0}" != "1" ]; then
+  echo "FATAL: legacy C14 update bypass is disabled for C18. Set ALLOW_LEGACY_C14_UPDATE_BYPASS=1 only for an explicitly approved lab reproduction." >&2
+  exit 44
+fi
 
 if [ "$#" -ne 2 ]; then
   usage

@@ -162,6 +162,10 @@ def normalize_candidate_path(raw_path: str) -> pathlib.Path:
 def path_is_in_repository(path: pathlib.Path) -> bool:
     current = path if path.is_dir() else path.parent
     for candidate in (current, *current.parents):
+        # Release/test workspaces may leave /tmp/.git behind. Real candidates
+        # are required to live under /tmp, so only nested repo markers matter.
+        if candidate == TMP_ROOT:
+            continue
         if (candidate / ".git").exists():
             return True
     return False
@@ -863,6 +867,11 @@ def run_self_test() -> None:
         synthetic = build_synthetic_candidate()
         synthetic_status = validate_real_dry_run(synthetic)
         assert_true(synthetic_status["valid"], "synthetic candidate should pass real-dry-run")
+
+        unsafe_mpv_path = dict(synthetic)
+        unsafe_mpv_path["mpv_path"] = "mpv"
+        unsafe_mpv_status = validate_real_dry_run(unsafe_mpv_path)
+        assert_true(not unsafe_mpv_status["valid"], "writer contract should reject unsafe C18 mpv_path")
 
         candidate = root / "candidate" / "config.synthetic.json"
         write_self_test_candidate(candidate, synthetic)

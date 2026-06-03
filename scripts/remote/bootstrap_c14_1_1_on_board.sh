@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # C14.1.1 - Bootstrap script that runs ON the totem board.
+# LEGACY C14 / BYPASS ONLY: not the C18 update path.
+# For C18 release/update decisions, use docs/UPDATE_CONTRACT.md.
 #
 # Expects to be run from a directory that contains:
 #   scripts/board/totem_updatectl.py
@@ -20,6 +22,11 @@ STAMP() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 say() { printf '[c14_1_1_bootstrap %s] %s\n' "$(STAMP)" "$*"; }
 warn() { printf '[c14_1_1_bootstrap %s] WARN %s\n' "$(STAMP)" "$*" >&2; }
 die() { printf '[c14_1_1_bootstrap %s] FATAL %s\n' "$(STAMP)" "$*" >&2; exit 1; }
+
+if [[ "${ALLOW_LEGACY_C14_UPDATE_BYPASS:-0}" != "1" ]]; then
+  echo "FATAL: legacy C14 update bypass is disabled for C18. Set ALLOW_LEGACY_C14_UPDATE_BYPASS=1 only for an explicitly approved lab reproduction." >&2
+  exit 44
+fi
 
 # Source dir (where the orchestrator unpacked us)
 SRC_DIR="${C14_BOOTSTRAP_SRC_DIR:-$(pwd)}"

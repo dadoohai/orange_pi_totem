@@ -25,14 +25,29 @@ DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_e
 BUILD_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "build_kiosky_player_release_package.sh"
 PUBLISH_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_kiosky_player_github_release.sh"
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
+CONFIG_CONTRACT_PATH = REPO_ROOT / "scripts" / "board" / "totem_config_contract_validate.py"
+APP_INTEGRATION_CONFIG_PATH = REPO_ROOT / "docs" / "app-integration" / "config.homologation-v0.1.example.json"
+MANUAL_KIOSKY_DOC_PATH = REPO_ROOT / "docs" / "app-integration" / "01_TESTE_MANUAL_KIOSKY_PLAYER.md"
+MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_playlist_probe.sh"
+PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
+SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
 TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.timer"
 ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md"
 POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
+UPDATE_CONTRACT_PATH = REPO_ROOT / "docs" / "UPDATE_CONTRACT.md"
 LEGACY_C14_REMOTE_SCRIPTS = (
+    REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
+    REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
+    REPO_ROOT / "scripts" / "remote" / "validate_c14_2_1_clean_board.sh",
     REPO_ROOT / "scripts" / "remote" / "run_c14_1_1_github_releases_pull_deploy_mvp.sh",
     REPO_ROOT / "scripts" / "remote" / "apply_c14_1_1_release_on_board.sh",
     REPO_ROOT / "scripts" / "remote" / "rollback_c14_1_1_on_board.sh",
     REPO_ROOT / "scripts" / "remote" / "test_rollback_c14_1_1_on_board.sh",
+)
+LEGACY_C18_REMOTE_BYPASS_SCRIPTS = (
+    REPO_ROOT / "scripts" / "remote" / "apply_c15_1_1_session_hotfix.sh",
+    REPO_ROOT / "scripts" / "remote" / "bootstrap_c17_5_totem_core_on_board.sh",
+    REPO_ROOT / "scripts" / "remote" / "push_and_run.sh",
 )
 
 
@@ -115,6 +130,26 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         required_bin_block = updatectl.split("TOTEM_CORE_REQUIRED_BIN = (", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", required_bin_block)
 
+    def test_config_contract_seals_c18_mpv_path(self) -> None:
+        contract = CONFIG_CONTRACT_PATH.read_text(encoding="utf-8")
+        self.assertIn('C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"', contract)
+        self.assertIn("validate_c18_mpv_path_contract", contract)
+        self.assertIn("must_preserve_c18_hwdecode_wrapper", contract)
+        self.assertIn("must preserve C18 HW-decode wrapper", contract)
+        self.assertIn('for bad_mpv_path in ("mpv", "/usr/bin/mpv", "relative/mpv", "")', contract)
+        self.assertIn('"/usr/bin/mpv"', contract)
+
+    def test_c18_docs_and_probes_do_not_default_to_stock_mpv(self) -> None:
+        for path in (APP_INTEGRATION_CONFIG_PATH, MANUAL_KIOSKY_DOC_PATH):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn('/opt/totem/bin/totem-mpv-hwdecode', text)
+            self.assertNotIn('"mpv_path": "mpv"', text)
+
+        probe = MPV_CONTROLLER_PROBE_PATH.read_text(encoding="utf-8")
+        self.assertIn("MPV_CONTROLLER_PROBE_MPV_PATH", probe)
+        self.assertIn("/opt/totem/bin/totem-mpv-hwdecode", probe)
+        self.assertNotIn('"mpv_path": "mpv"', probe)
+
     def test_player_release_scripts_are_frozen_by_default(self) -> None:
         for path in (BUILD_PLAYER_PATH, PUBLISH_PLAYER_PATH):
             script = path.read_text(encoding="utf-8")
@@ -132,6 +167,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("ALLOW_LEGACY_C14_UPDATE_BYPASS", script)
             self.assertIn("legacy C14 update bypass is disabled for C18", script)
 
+    def test_legacy_remote_bypass_scripts_are_guarded(self) -> None:
+        for path in LEGACY_C18_REMOTE_BYPASS_SCRIPTS:
+            script = path.read_text(encoding="utf-8")
+            self.assertIn("LAB/BYPASS", script)
+            self.assertIn("docs/UPDATE_CONTRACT.md", script)
+            self.assertIn("ALLOW_LEGACY_C18_REMOTE_BYPASS", script)
+            self.assertIn("legacy remote bypass is disabled for C18", script)
+
     def test_historical_docs_and_timer_point_to_c18_contract(self) -> None:
         roadmap = ROADMAP_PATH.read_text(encoding="utf-8")
         self.assertIn("Nota C18", roadmap)
@@ -147,8 +190,44 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("C18 manual OTA only", timer)
         self.assertIn("timer disabled", timer)
 
+    def test_update_contract_declares_c18_config_and_deep_health(self) -> None:
+        contract = UPDATE_CONTRACT_PATH.read_text(encoding="utf-8")
+        self.assertIn("Contrato De Config C18", contract)
+        self.assertIn("/opt/totem/bin/totem-mpv-hwdecode", contract)
+        self.assertIn("Deep-Health De Playback", contract)
+        self.assertIn("hwdec-current=v4l2request-copy", contract)
+        self.assertIn("media_load_failed=0", contract)
+        self.assertIn("ALLOW_LEGACY_C18_REMOTE_BYPASS", contract)
+
+    def test_playback_observers_collect_c18_decode_properties(self) -> None:
+        for path in (PLAYBACK_OBSERVER_PATH, SERVICE_OBSERVER_PATH):
+            script = path.read_text(encoding="utf-8")
+            self.assertNotIn("DEEP_HEALTH_RC", script)
+            self.assertNotIn("c18_deep_health_passed", script)
+            self.assertIn('C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"', script)
+            self.assertIn("mpv_path_c18_contract", script)
+            self.assertIn("DECODE_HEALTH_RC", script)
+            self.assertIn("check_decode_health_summary", script)
+            self.assertIn("post-c18-decode-health", script)
+            self.assertIn('"hwdec-current"', script)
+            self.assertIn('"vo-configured"', script)
+            self.assertIn("hwdec_current", script)
+            self.assertIn("vo_configured", script)
+            self.assertIn('hwdec_expected = "v4l2request-copy"', script)
+            self.assertIn("hwdec_ok_samples", script)
+            self.assertIn("hwdec_unexpected_samples", script)
+            self.assertIn("vo_configured_true_samples", script)
+            self.assertIn("ipc_timeout_after_first_success", script)
+            self.assertIn('"time-pos"', script)
+            self.assertIn('"estimated-frame-number"', script)
+            self.assertIn("time_pos_progressed", script)
+            self.assertIn("estimated_frame_progressed", script)
+            self.assertIn("status_failure_samples", script)
+            self.assertIn("c18_decode_health_passed", script)
+
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("totem_config_contract_self_test", gate)
         self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
         self.assertIn("player_runtime_diff_guard", gate)

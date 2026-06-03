@@ -32,6 +32,7 @@ MOCK_API_URL = "https://api.example.invalid/search"
 MOCK_API_KEY = "API_KEY_MOCK_NOT_FOR_PRODUCTION"
 MOCK_ENVIRONMENT_ID = "ENVIRONMENT_ID_MOCK"
 MOCK_STATION_ID = "STATION_ID_MOCK"
+C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 
 REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "api_url": str,
@@ -337,6 +338,41 @@ def append_invalid(invalid_fields: list[dict[str, str]], field: str, reason: str
     invalid_fields.append({"field": field, "reason": reason})
 
 
+def validate_c18_mpv_path_contract(config: dict[str, Any]) -> tuple[dict[str, str], dict[str, str] | None]:
+    """C18 field-data must not select a different MPV binary.
+
+    The player default is still "mpv" in upstream kiosk.py, so omitting this
+    field lets image defaults/seed decide. If field-data carries it, it must
+    preserve the C18 wrapper that pins the validated HW-decode stack.
+    """
+    if "mpv_path" not in config:
+        return {
+            "field": "mpv_path",
+            "status": "not_present",
+            "required_if_present": C18_HWDECODE_WRAPPER,
+        }, None
+    value = config.get("mpv_path")
+    if not isinstance(value, str):
+        return {
+            "field": "mpv_path",
+            "status": "invalid",
+            "reason": "not_a_string",
+            "required_value": C18_HWDECODE_WRAPPER,
+        }, {"field": "mpv_path", "reason": "must be a string"}
+    if value != C18_HWDECODE_WRAPPER:
+        return {
+            "field": "mpv_path",
+            "status": "invalid",
+            "reason": "must_preserve_c18_hwdecode_wrapper",
+            "required_value": C18_HWDECODE_WRAPPER,
+        }, {"field": "mpv_path", "reason": "must preserve C18 HW-decode wrapper"}
+    return {
+        "field": "mpv_path",
+        "status": "ok",
+        "required_value": C18_HWDECODE_WRAPPER,
+    }, None
+
+
 def build_base_status(mode: str) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -346,6 +382,7 @@ def build_base_status(mode: str) -> dict[str, Any]:
         "invalid_fields": [],
         "placeholder_findings": [],
         "path_findings": [],
+        "runtime_contract_findings": [],
         "api_key_present": False,
         "api_key_placeholder_detected": False,
         "environment_id_status": {
@@ -379,6 +416,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
     invalid_fields: list[dict[str, str]] = []
     placeholder_findings: list[dict[str, str]] = []
     path_findings: list[dict[str, str]] = []
+    runtime_contract_findings: list[dict[str, str]] = []
 
     for field in missing_fields:
         append_invalid(invalid_fields, field, "missing required field")
@@ -403,6 +441,11 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
         path_findings.append(finding)
         if invalid is not None:
             invalid_fields.append(invalid)
+
+    finding, invalid = validate_c18_mpv_path_contract(config)
+    runtime_contract_findings.append(finding)
+    if invalid is not None:
+        invalid_fields.append(invalid)
 
     api_key = config.get("api_key")
     api_key_present = isinstance(api_key, str) and bool(api_key.strip())
@@ -474,6 +517,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
     status["invalid_fields"] = invalid_fields
     status["placeholder_findings"] = placeholder_findings
     status["path_findings"] = path_findings
+    status["runtime_contract_findings"] = runtime_contract_findings
     status["valid"] = not missing_fields and not invalid_fields
     return status
 
@@ -489,6 +533,7 @@ def build_summary(status: dict[str, Any]) -> str:
             f"missing_fields_count: {len(status['missing_fields'])}",
             f"invalid_fields_count: {len(status['invalid_fields'])}",
             f"placeholder_findings_count: {len(status['placeholder_findings'])}",
+            f"runtime_contract_findings_count: {len(status['runtime_contract_findings'])}",
             f"api_key_present: {str(status['api_key_present']).lower()}",
             "api_key_value_written: false",
             "candidate_config_copied: false",
@@ -614,6 +659,24 @@ def run_self_test() -> None:
         invalid_environment = dict(mock_candidate)
         invalid_environment["environment_id"] = "bad environment"
         assert_invalid(invalid_environment, "allow-mock", "invalid environment_id should fail")
+
+        wrapper_candidate = dict(mock_candidate)
+        wrapper_candidate["mpv_path"] = C18_HWDECODE_WRAPPER
+        wrapper_status = validate_candidate_config(wrapper_candidate, "allow-mock")
+        assert_true(wrapper_status["valid"], "C18 wrapper mpv_path should pass when present")
+
+        for bad_mpv_path in ("mpv", "/usr/bin/mpv", "relative/mpv", ""):
+            invalid_mpv_path = dict(mock_candidate)
+            invalid_mpv_path["mpv_path"] = bad_mpv_path
+            status = assert_invalid(
+                invalid_mpv_path,
+                "allow-mock",
+                f"unsafe mpv_path {bad_mpv_path!r} should fail",
+            )
+            assert_true(
+                any(item["field"] == "mpv_path" for item in status["invalid_fields"]),
+                "mpv_path invalid field should be reported",
+            )
 
         try:
             require_tmp_dir("/var/tmp/dadooh-c5-1-validator")

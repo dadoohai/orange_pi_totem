@@ -2,6 +2,8 @@
 # C17.5 - Bootstrap totem-core wrappers/fallback/updatectl on the lab board.
 #
 # C18 update-contract note: this script is a historical/manual bootstrap path.
+# LAB/BYPASS ONLY: this is not the C18 update path.
+# For the current C18 update rules, use docs/UPDATE_CONTRACT.md.
 # It must not install kiosky_service_launcher.sh as a totem-core wrapper or
 # payload; that launcher is player-runtime and is fixed by the image.
 #
@@ -10,6 +12,16 @@
 # print appliance config, Wi-Fi details, NetworkManager profiles or secrets.
 
 set -euo pipefail
+
+case " ${*:-} " in
+  *" -h "*|*" --help "*) ;;
+  *)
+    if [[ "${ALLOW_LEGACY_C18_REMOTE_BYPASS:-0}" != "1" ]]; then
+      echo "FATAL: legacy remote bypass is disabled for C18. Set ALLOW_LEGACY_C18_REMOTE_BYPASS=1 only for an explicitly approved lab reproduction; not approval for C18 OTA or field use." >&2
+      exit 44
+    fi
+    ;;
+esac
 
 REPO_ROOT="${REPO_ROOT:-/home/builder/totem-os/orange_pi_totem}"
 BOARD_HOST="${BOARD_HOST:-${1:-root@192.168.1.223}}"
