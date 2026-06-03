@@ -36,9 +36,9 @@ STATE_PRESETS = {
     },
     "config_missing": {
         "title": "Configuração pendente",
-        "message": "Este totem ainda não foi ativado.",
-        "hint": "Acione a equipe responsável para concluir a configuração.",
-        "status": "Player parado com segurança",
+        "message": "Este totem está aguardando configuração local.",
+        "hint": "Pressione F10 no teclado para abrir a configuração.",
+        "status": "Aguardando configuração",
         "code": "CONFIG_MISSING",
         "accent": "#f97316",
     },
@@ -250,11 +250,49 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--output", default="/tmp/totem-status-preview.svg", help="SVG output path under /tmp.")
     parser.add_argument("--width", type=positive_dimension, default=1280)
     parser.add_argument("--height", type=positive_dimension, default=720)
+    parser.add_argument("--self-test", action="store_true", help="Run offline renderer self-tests and exit.")
     return parser.parse_args(argv)
+
+
+def run_self_test() -> None:
+    out = require_tmp_output("/tmp/dadooh-status-render-preview-self-test/config-missing.svg")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    svg = build_svg(
+        state="config_missing",
+        message=sanitize_public_text("api_key=abc https://example.invalid/secret"),
+        action_hint=STATE_PRESETS["config_missing"]["hint"],
+        device_label=sanitize_public_text("Totem Dadooh environment_id=private"),
+        width=1280,
+        height=720,
+    )
+    out.write_text(svg, encoding="utf-8")
+    out.chmod(0o600)
+    text = out.read_text(encoding="utf-8")
+    assert "Pressione F10" in text
+    assert "Aguardando configuração" in text
+    assert "CONFIG_MISSING" in text
+    for forbidden in ("api_key=abc", "example.invalid/secret", "environment_id=private"):
+        assert forbidden not in text
+    assert require_tmp_output(str(out)) == out
+    for bad in ("/var/tmp/status.svg", "/tmp/status.txt"):
+        try:
+            require_tmp_output(bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"unsafe output path accepted: {bad}")
 
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    if args.self_test:
+        try:
+            run_self_test()
+        except Exception:
+            print("error: self-test failed", file=sys.stderr)
+            return 1
+        print("self-test: ok")
+        return 0
     preset = STATE_PRESETS[args.state]
     message = sanitize_public_text(args.message or preset["message"])
     action_hint = sanitize_public_text(args.action_hint or preset["hint"])
