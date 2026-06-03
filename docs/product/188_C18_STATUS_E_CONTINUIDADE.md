@@ -2,6 +2,16 @@
 
 Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém retome o trabalho **do zero**, após uma compactação de contexto, usando apenas fatos verificados.
 
+> **Nota de continuidade 2026-06-03:** a golden atual de laboratório/delivery
+> para C18 passou a ser **`c18-hwdecode-lab-1j`**,
+> sha256 `995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152`.
+> O estado runtime de referência do marco aplica por cima a release OTA manual
+> `totem-core`
+> `c18.ota-core-config-missing-20260603T150429Z-2a7a327`.
+> Este doc preserva histórico da `1d`; para o baseline live/golden e contrato
+> OTA atual, consultar também `docs/product/189_C18_OTA_READINESS_GATE.md` e
+> `docs/UPDATE_CONTRACT.md`.
+
 ---
 
 ## Problema original

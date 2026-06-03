@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-baseline `1d`.
+golden atual `1j`.
 
 ## Decisão
 
@@ -16,6 +16,33 @@ baseline `1d`.
 - O service de update aponta para
   `apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem`
   e exige policy presente.
+
+## Golden atual (2026-06-03)
+
+Marco de referência para continuidade C18/delivery:
+
+- **Imagem gravável golden:** `c18-hwdecode-lab-1j`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1j_minimal.img`;
+- **sha256:**
+  `995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152`;
+- **Tamanho:** `1971322880` bytes;
+- **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
+  `stable`/batch de producao;
+- **Estado runtime esperado apos aplicar OTA de homologacao atual:**
+  `totem-core` em
+  `c18.ota-core-config-missing-20260603T150429Z-2a7a327`, com `previous` na
+  release 1j GitHub smoke;
+- **Player/runtime esperado:** fallback de imagem, sem `/data/player-runtime/current`
+  e sem `/data/apps/kiosky-player/current`; `hwdec-current=v4l2request-copy`,
+  `vo-configured=true`, `NRestarts=0`;
+- **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
+  `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
+
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1j`.
+Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
+release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
+sem nova validacao offline + hardware + registro neste doc.
 
 ## Implementação no repo
 
