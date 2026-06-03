@@ -25,6 +25,15 @@ DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_e
 BUILD_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "build_kiosky_player_release_package.sh"
 PUBLISH_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_kiosky_player_github_release.sh"
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
+TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.timer"
+ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md"
+POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
+LEGACY_C14_REMOTE_SCRIPTS = (
+    REPO_ROOT / "scripts" / "remote" / "run_c14_1_1_github_releases_pull_deploy_mvp.sh",
+    REPO_ROOT / "scripts" / "remote" / "apply_c14_1_1_release_on_board.sh",
+    REPO_ROOT / "scripts" / "remote" / "rollback_c14_1_1_on_board.sh",
+    REPO_ROOT / "scripts" / "remote" / "test_rollback_c14_1_1_on_board.sh",
+)
 
 
 class C18OtaPolicyStaticTest(unittest.TestCase):
@@ -101,6 +110,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"created_at_utc"', updatectl)
         self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", updatectl)
         self.assertNotIn('raw.get("allowed_components", ["kiosky-player", "totem-core"])', updatectl)
+        self.assertIn("C18 operational OTA must pass --component totem-core", updatectl)
+        self.assertIn("C18 OTA must pass --component totem-core", updatectl)
         required_bin_block = updatectl.split("TOTEM_CORE_REQUIRED_BIN = (", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", required_bin_block)
 
@@ -110,6 +121,31 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("ALLOW_C18_FROZEN_PLAYER_RELEASE", script)
             self.assertIn("kiosky-player OTA", script)
             self.assertIn("is frozen for C18", script)
+            self.assertIn("legacy lab reproduction bypass", script)
+            self.assertIn("not approval for a C18-aware player-runtime release", script)
+
+    def test_legacy_c14_remote_scripts_are_guarded_as_bypass(self) -> None:
+        for path in LEGACY_C14_REMOTE_SCRIPTS:
+            script = path.read_text(encoding="utf-8")
+            self.assertIn("LEGACY C14 / BYPASS ONLY", script)
+            self.assertIn("docs/UPDATE_CONTRACT.md", script)
+            self.assertIn("ALLOW_LEGACY_C14_UPDATE_BYPASS", script)
+            self.assertIn("legacy C14 update bypass is disabled for C18", script)
+
+    def test_historical_docs_and_timer_point_to_c18_contract(self) -> None:
+        roadmap = ROADMAP_PATH.read_text(encoding="utf-8")
+        self.assertIn("Nota C18", roadmap)
+        self.assertIn("UPDATE_CONTRACT.md", roadmap)
+        self.assertIn("OTA C18 comum", roadmap)
+
+        policy_doc = POLICY_DOC_PATH.read_text(encoding="utf-8")
+        self.assertIn("OTA comum atual usa", policy_doc)
+        self.assertIn("kiosky-player/current` e legado/congelado", policy_doc)
+
+        timer = TIMER_PATH.read_text(encoding="utf-8")
+        self.assertIn("Disabled legacy", timer)
+        self.assertIn("C18 manual OTA only", timer)
+        self.assertIn("timer disabled", timer)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

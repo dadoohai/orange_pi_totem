@@ -131,8 +131,13 @@ Exemplos de bypass/lab-only:
 - scripts antigos `run_c*` que copiam/aplicam mudanças diretamente na placa.
 
 Scripts historicos de release de `kiosky-player` tambem nao liberam OTA de
-player na C18; eles falham por padrao salvo override explicito para uma frente
-`player-runtime` C18-aware homologada.
+player na C18. `ALLOW_C18_FROZEN_PLAYER_RELEASE=1` e apenas bypass de
+reproducao legada/lab, nao aprovacao de release C18-aware. Um pacote
+`player-runtime` C18-aware exige contrato, gate e homologacao novos.
+
+Todo comando C18 de update operacional deve declarar `--component totem-core`.
+Comandos sem `--component` preservam default historico/legado do updater e nao
+devem ser copiados para procedimentos C18.
 
 ## Stable E Producao
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # C14.1.1 — Orchestrator: ship board files + run bootstrap on the lab board.
+# LEGACY C14 / BYPASS ONLY: not the C18 update path.
+# For C18 release/update decisions, use docs/UPDATE_CONTRACT.md.
 #
 # Run this script on the BUILDER host (not on the board).
 # It opens a single SSH session and:
@@ -22,6 +24,16 @@
 # Does NOT save the password. Does NOT log the password. Does NOT print secrets.
 
 set -euo pipefail
+
+case " ${*:-} " in
+  *" -h "*|*" --help "*) ;;
+  *)
+    if [[ "${ALLOW_LEGACY_C14_UPDATE_BYPASS:-0}" != "1" ]]; then
+      echo "FATAL: legacy C14 update bypass is disabled for C18. Set ALLOW_LEGACY_C14_UPDATE_BYPASS=1 only for an explicitly approved lab reproduction." >&2
+      exit 44
+    fi
+    ;;
+esac
 
 REPO_ROOT="${REPO_ROOT:-/home/builder/totem-os/orange_pi_totem}"
 BOARD_HOST="${BOARD_HOST:-${1:-}}"

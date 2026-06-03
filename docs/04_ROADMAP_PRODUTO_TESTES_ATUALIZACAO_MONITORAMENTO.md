@@ -4,6 +4,10 @@
 **Base atual:** Candidato A — Armbian Build v25.11 / Bookworm Minimal / kernel 6.12.58  
 **Status:** boot e reboots iniciais aprovados; próximos passos envolvem carga, aplicação, `/data`, read-only e operação remota.
 
+> Nota C18: este roadmap preserva planejamento histórico/conceitual. O contrato
+> vigente de atualização é [UPDATE_CONTRACT.md](UPDATE_CONTRACT.md); quando este
+> documento divergir dele, seguir o contrato C18.
+
 ---
 
 ## 1. Visão geral do roadmap
@@ -435,6 +439,10 @@ Só depois do root read-only ativo:
 ---
 
 ## 10. Fase 9 — Atualização da aplicação
+
+> Nota C18: a estratégia abaixo é histórica/conceitual. OTA C18 comum é
+> manual/operator-triggered e restrito a `totem-core`; `kiosky-player` e
+> runtime de mídia estão congelados fora do OTA comum.
 
 ### Estratégia recomendada
 

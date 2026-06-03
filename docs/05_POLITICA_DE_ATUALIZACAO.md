@@ -83,11 +83,11 @@ Podem ser atualizados pelo backend e gravados em `/data`:
 
 ### 5.2 Aplicação
 
-Nota C18: para `kiosky-player` e `totem-core`, o contrato vigente e
-[UPDATE_CONTRACT.md](UPDATE_CONTRACT.md). O layout abaixo e conceitual/historico;
-a implementacao atual usa `/data/apps/kiosky-player/current` ou
-`/data/core/totem/current` com manifest, canal, SHA e rollback, respeitando as
-fronteiras C18.
+Nota C18: o contrato vigente e [UPDATE_CONTRACT.md](UPDATE_CONTRACT.md). O
+layout abaixo e conceitual/historico. OTA comum atual usa
+`/data/core/totem/current` somente para `totem-core`; o caminho
+`/data/apps/kiosky-player/current` e legado/congelado na C18 e nao libera OTA
+de `kiosky-player`.
 
 Deve usar release versionada, com rollback:
 

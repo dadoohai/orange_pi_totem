@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # C14.1.1 — Rollback to previous release on the lab board (Part 10).
+# LEGACY C14 / BYPASS ONLY: not the C18 update path.
+# For C18 release/update decisions, use docs/UPDATE_CONTRACT.md.
 #
 # Runs on the BUILDER host. Opens one ssh session and runs:
 #   /opt/totem/bin/totem-updatectl rollback
@@ -8,6 +10,16 @@
 # Operator types SSH password once.
 
 set -euo pipefail
+
+case " ${*:-} " in
+  *" -h "*|*" --help "*) ;;
+  *)
+    if [[ "${ALLOW_LEGACY_C14_UPDATE_BYPASS:-0}" != "1" ]]; then
+      echo "FATAL: legacy C14 update bypass is disabled for C18. Set ALLOW_LEGACY_C14_UPDATE_BYPASS=1 only for an explicitly approved lab reproduction." >&2
+      exit 44
+    fi
+    ;;
+esac
 
 REPO_ROOT="${REPO_ROOT:-/home/builder/totem-os/orange_pi_totem}"
 BOARD_HOST="${BOARD_HOST:-${1:-}}"

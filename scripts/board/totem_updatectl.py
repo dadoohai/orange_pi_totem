@@ -46,7 +46,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 SCHEMA_MANIFEST = "dadooh.totem.update.v1"
 SCHEMA_STATE = "dadooh.totem.update.state.v1"
 SCHEMA_POLICY = "dadooh.totem.update.policy.v1"
-DEFAULT_COMPONENT = "kiosky-player"
+DEFAULT_COMPONENT = "kiosky-player"  # legacy default; C18 operational OTA must pass --component totem-core.
 COMPONENT = DEFAULT_COMPONENT
 DEVICE_REQUIRED = "orangepizero3"
 DEVICE_TRACK_DEFAULT = "c18-hwdecode"
@@ -1767,7 +1767,7 @@ def cmd_rollback(args: argparse.Namespace) -> int:
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(
         prog="totem-updatectl",
-        description="Pull-based updater for kiosky-player and totem-core.",
+        description="Pull-based updater. C18 operational OTA must use --component totem-core.",
     )
     sub = parser.add_subparsers(dest="cmd")
     sub.required = True
@@ -1776,7 +1776,7 @@ def main(argv: List[str]) -> int:
         "--component",
         choices=("kiosky-player", "totem-core"),
         default=DEFAULT_COMPONENT,
-        help="update component (default: kiosky-player)",
+        help="update component (legacy default: kiosky-player; C18 OTA must pass --component totem-core)",
     )
 
     sub.add_parser("status", parents=[component_parent],

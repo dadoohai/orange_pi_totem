@@ -61,7 +61,7 @@ log() { printf '[build_kiosky_player_release_package] %s\n' "$*"; }
 die() { printf '[build_kiosky_player_release_package] FATAL: %s\n' "$*" >&2; exit 1; }
 
 if [[ "${ALLOW_C18_FROZEN_PLAYER_RELEASE:-0}" != "1" ]]; then
-  die "kiosky-player OTA packaging is frozen for C18; use image/homologation or set ALLOW_C18_FROZEN_PLAYER_RELEASE=1 only for an explicitly approved C18-aware player-runtime release"
+  die "kiosky-player OTA packaging is frozen for C18; use image/homologation. ALLOW_C18_FROZEN_PLAYER_RELEASE=1 is only a legacy lab reproduction bypass, not approval for a C18-aware player-runtime release"
 fi
 
 # ----- validate inputs -----

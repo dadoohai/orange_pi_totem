@@ -1,9 +1,13 @@
 [Unit]
-Description=Periodic dadooh totem app update check
+Description=Disabled legacy dadooh totem update timer (C18 manual OTA only)
 Documentation=https://github.com/dadoohai/orange_pi_totem
 
 [Timer]
-# Conservative cadence for shipping homologation lot (C14.2.1):
+# Legacy cadence from the C14.2.1 shipping homologation lot. C18 images keep
+# this timer disabled; totem-core OTA is manual/operator-triggered.
+# If a future production line enables auto-pull, re-homologate the full
+# non-assisted update path instead of reusing this cadence by default.
+# Historical behavior:
 #   - first run 10 minutes after boot so the player settles first;
 #   - then once every 6 hours while the device is running;
 #   - +/- 10 minutes of jitter so a lot of devices don't hit GitHub together.
