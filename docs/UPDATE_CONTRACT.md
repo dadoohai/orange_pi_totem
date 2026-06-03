@@ -3,6 +3,10 @@
 Este e o contrato vigente para atualizacoes da linha C18. Documentos C14/C15/C17
 sao historicos quando divergirem daqui.
 
+Estado live/baseline validado deve ser consultado em
+`docs/product/189_C18_OTA_READINESS_GATE.md`. Este contrato define regras; o 189
+registra qual imagem/release esta em laboratório em cada rodada.
+
 ## Regra Principal
 
 OTA C18 e manual/operator-triggered e restrito a `totem-core` operacional.
@@ -112,6 +116,23 @@ Gerar nova imagem quando a mudanca tocar:
 - systemd units/timers;
 - policy de update de fabrica;
 - qualquer mudanca que exige reboot ou alteracao fora de `/data/core/totem`.
+
+## Scripts Bypass E Historicos
+
+Scripts de SSH/rsync/hotfix direto sao ferramentas de bancada ou evidência
+histórica. Eles nao sao caminho de update C18, nao substituem release GitHub e
+nao devem ser usados para campo/producao.
+
+Exemplos de bypass/lab-only:
+
+- `scripts/remote/push_and_run.sh`;
+- `scripts/remote/deploy_kiosky_player.sh`;
+- `scripts/remote/apply_c15_1_1_session_hotfix.sh`;
+- scripts antigos `run_c*` que copiam/aplicam mudanças diretamente na placa.
+
+Scripts historicos de release de `kiosky-player` tambem nao liberam OTA de
+player na C18; eles falham por padrao salvo override explicito para uma frente
+`player-runtime` C18-aware homologada.
 
 ## Stable E Producao
 

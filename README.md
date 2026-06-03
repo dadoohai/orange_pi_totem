@@ -123,7 +123,7 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 ## Scripts de bancada
 
 - `scripts/board/`: scripts para coleta de diagnóstico, snapshot de rede, stress leve, criação idempotente do layout `/data` (`config`, `media/kiosky-player`, `state/kiosky-player`, `spool/kiosky-player`, `logs/kiosky-player`) e desativação idempotente de Bluetooth.
-- `scripts/remote/push_and_run.sh`: wrapper local para copiar um script de `scripts/board/` para a placa e executá-lo via SSH quando essa etapa for liberada.
+- `scripts/remote/push_and_run.sh`: helper de bancada/lab para copiar e executar scripts via SSH. Ele bypassa o contrato C18 e não é caminho de update em campo.
 
 ## Regra operacional crítica
 

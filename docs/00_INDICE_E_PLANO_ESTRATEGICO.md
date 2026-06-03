@@ -34,6 +34,20 @@ Para estado atual, consultar:
 Esta atualização não substitui a leitura histórica original e não transforma
 desenvolvimento em homologação ou produção.
 
+## Atualização C18 OTA
+
+A linha C18 acrescentou HW decode validado e um contrato de atualização novo.
+Para qualquer decisão de update, a fonte vigente é:
+
+- `docs/UPDATE_CONTRACT.md`;
+- `docs/product/189_C18_OTA_READINESS_GATE.md` para o estado live/baseline de
+  laboratório validado;
+- `docs/product/191_C18_OTA_OPERATING_MODEL.md` para o modelo operacional.
+
+Regra curta: OTA C18 comum é manual/operator-triggered e restrito a
+`totem-core`; `kiosky-player`, launcher do player, MPV/hwdecode, systemd,
+kernel/display, updater e imagem base não entram no OTA comum.
+
 ---
 
 ## 2. Documentos gerados
@@ -71,6 +85,13 @@ Arquivo: `04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md`
 Registra a regra operacional de não executar upgrades amplos em campo e separa atualização de conteúdo, aplicação, sistema e camada kernel/DTB/U-Boot/BSP.
 
 Arquivo: `05_POLITICA_DE_ATUALIZACAO.md`
+
+### Contrato C18 de atualização
+
+Fonte vigente para a linha C18. Define classes de mudança, fronteira do player,
+manifest/policy, gates, quando gerar imagem e o que é bypass de laboratório.
+
+Arquivo: `UPDATE_CONTRACT.md`
 
 ### Release de homologação v0.1-rc1
 
