@@ -282,17 +282,52 @@ vir como nova imagem ou release ponte explicitamente homologada.
     `previous` no embed C17.6, com player `playing`,
     `hwdec-current=v4l2request-copy`, `vo-configured=true`, `NRestarts=0`,
     `media_load_failed=0`.
+- Release GitHub de homologacao com mudanca funcional pequena de `totem-core`
+  publicada a partir do HEAD `2a7a327` e validada end-to-end na placa `1j`:
+  `totem-core-c18.ota-core-config-missing-20260603T150429Z-2a7a327`.
+  - Escopo: somente status preview publico de `config_missing` em
+    `totem_status_render_preview.py`, com self-test novo no pacote/gate. Nao
+    toca player, launchers, MPV/hwdecode, updater, units, policy, Wi-Fi real ou
+    field-data.
+  - Manifest: `component=totem-core`, `channel=homologation`,
+    `source_branch=foundation-v0.1`,
+    `source_commit=2a7a3272cd49a2e0742d2a4ad070de588771877d`,
+    `source_dirty=false`.
+  - Payload SHA256:
+    `908bb4dc38e2b19f94cdf1f9cdacbaa6e7f2a5d546e21747882bc93d5eed9d4d`.
+  - Gate de release passou com o pacote antes da publicacao; a release foi
+    publicada como prerelease e a tag aponta para o `source_commit`.
+  - Dry-run na placa selecionou exatamente essa release e retornou
+    `state_changed=false`.
+  - Apply GitHub passou: `current` virou
+    `c18.ota-core-config-missing-20260603T150429Z-2a7a327`, `previous` ficou
+    `c18.ota-core-1j-github-smoke-20260603T142540Z-1e040c0`;
+    o arquivo ativo em `/data/core/totem/current/bin` continha a nova copia
+    publica de `config_missing`, `totem_status_render_preview.py --self-test`
+    passou, player permaneceu `active`, `hwdec-current=v4l2request-copy`,
+    `vo-configured=true`, `NRestarts=0`.
+  - Rollback passou para a release 1j; a copia nova saiu do slot `current`,
+    player permaneceu `active`, `hwdec-current=v4l2request-copy`,
+    `vo-configured=true`, `NRestarts=0`.
+  - Reapply GitHub passou; ao final a placa ficou em `current` na release
+    `c18.ota-core-config-missing-20260603T150429Z-2a7a327` e `previous` na
+    release 1j, timer `disabled/inactive`, player `active`,
+    `hwdec-current=v4l2request-copy`, `vo-configured=true`, `NRestarts=0`.
+  - Tentativas de apply de `kiosky-player` e `player-runtime` continuaram
+    bloqueadas com `rc=44`.
 
 ## Continuidade pos-compactacao
 
 1. Tratar `c18-hwdecode-lab-1j` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
-2. Fluxo manual de release GitHub `totem-core` validado na 1j; proximas
-   mudancas de wizard/core devem seguir este gate antes de aplicar em placa,
-   mantendo auto-pull desligado e `kiosky-player`/`player-runtime` congelados
-   ate thaw explicito.
-3. Depois disso, abrir as frentes separadas: compatibilidade HDMI/resolucao por
-   display e melhorias do wizard (cursor, rede aberta, UX de entrada).
+2. Fluxo manual de release GitHub `totem-core` validado na 1j com mudanca real
+   de aplicacao, rollback e reapply. Proximas mudancas de wizard/core devem
+   seguir este gate antes de aplicar em placa, mantendo auto-pull desligado e
+   `kiosky-player`/`player-runtime` congelados ate thaw explicito.
+3. Proxima frente da jornada de delivery: preparar a liberacao controlada de
+   `player-runtime` sem descongelar producao. Frentes de display, Wi-Fi aberta,
+   cursor/UX de wizard e acesso de manutencao ficam adiadas ate o delivery estar
+   pleno.
 
 ## Fora de escopo
 
