@@ -30,6 +30,7 @@ PY_COMPILE_TARGETS = (
     "scripts/board/totem_updatectl.py",
     "scripts/board/c18_playback_health_collect.py",
     "scripts/board/c18_playback_health_summary.py",
+    "scripts/board/c18_player_runtime_candidate_health.py",
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
     "scripts/sim/run_totem_core_sandbox.py",

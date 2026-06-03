@@ -481,6 +481,16 @@ vir como nova imagem ou release ponte explicitamente homologada.
   publisher agora exige `--base-ref`/`C18_OTA_BASE_REF` em vez de tratar como
   recomendacao, e compara o SHA da evidencia stable publicada com
   `stable_promotion_evidence_sha256` declarado no manifest.
+- Frente seguinte iniciou a ponte para health real de `player-runtime` sem thaw
+  publico: o collector ganhou modo `candidate` e filtro de processo por
+  `--input-ipc-server`, permitindo coexistir com o MPV do servico vivo; foi
+  adicionado o runner lab-only
+  `scripts/board/c18_player_runtime_candidate_health.py`, que exige
+  `C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY=1` +
+  `--lab-only-candidate-runner`, cria config temporaria sanitizada e devolve
+  hashes observados do release candidato. Isso ainda nao prova DRM/HW em placa
+  nem descongela `player-runtime`; e a base para a proxima validacao de
+  hardware controlada.
 
 ## Fora de escopo
 

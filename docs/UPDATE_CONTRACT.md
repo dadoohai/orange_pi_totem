@@ -222,6 +222,15 @@ O coletor nao destrutivo preferencial e
 `scripts/board/c18_playback_health_collect.py`: ele observa o servico real por
 IPC/status/systemd/proc/journal, escreve os sidecars `deep-health-*.json` e o
 `playback-deep-health-public.json`, e nao chama stop/start/restart do servico.
+Para candidato `player-runtime`, o mesmo coletor tem modo `candidate`: ele
+filtra o processo MPV pelo `--input-ipc-server` do candidato e permite coexistir
+com o MPV do servico vivo sem reprovar por contagem global de processos. O
+runner `scripts/board/c18_player_runtime_candidate_health.py` e somente de
+laboratorio: exige `--lab-only-candidate-runner` e
+`C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY=1`, cria config temporaria
+sanitizada, desliga UI/telemetria/segredos, usa IPC/status/log/cache isolados e
+devolve os hashes observados do release testado. Esse runner nao altera o CLI
+publico do updater, nao liga auto-pull e nao autoriza thaw de producao.
 O `scripts/board/kiosky_service_observer_probe.sh` continua como diagnostico de
 referencia mais amplo, mas para validacao de update ele e intrusivo porque para
 o servico ao final da observacao. O probe manual de playback continua sendo

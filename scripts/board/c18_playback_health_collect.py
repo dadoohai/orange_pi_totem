@@ -35,6 +35,7 @@ DEFAULT_MPV_GENERATION_DIR = Path("/tmp/kiosky")
 DEFAULT_DURATION_SEC = 60
 DEFAULT_INTERVAL_SEC = 1.0
 DEFAULT_IPC_TIMEOUT_SEC = 0.8
+TARGET_MODES = ("service", "candidate")
 PROPS = (
     "idle-active",
     "pause",
@@ -354,21 +355,55 @@ def collect_samples(out_dir: Path,
             time.sleep(min(0.1, next_sample - time.monotonic(), deadline - time.monotonic()))
 
 
+def pid_running(pid: int | None) -> bool:
+    if pid is None or pid <= 0:
+        return False
+    return (Path("/proc") / str(pid)).exists()
+
+
 def service_nrestarts(service: str) -> int:
     return as_int(run(["systemctl", "show", service, "-p", "NRestarts", "--value"]).stdout)
 
 
-def write_systemd_sidecar(out_dir: Path, service: str, nrestarts_start: int) -> None:
-    active = run(["systemctl", "is-active", service]).stdout.strip() == "active"
-    nrestarts_end = service_nrestarts(service)
+def write_systemd_sidecar(out_dir: Path,
+                          service: str,
+                          nrestarts_start: int,
+                          *,
+                          target_mode: str,
+                          candidate_pid: int | None = None) -> None:
+    if target_mode == "candidate":
+        active = pid_running(candidate_pid)
+        nrestarts_delta = 0
+    else:
+        active = run(["systemctl", "is-active", service]).stdout.strip() == "active"
+        nrestarts_end = service_nrestarts(service)
+        nrestarts_delta = max(nrestarts_end - nrestarts_start, 0)
     write_json(out_dir / "deep-health-systemd.json", {
+        "target_mode": target_mode,
         "service_active": active,
-        "nrestarts_delta": max(nrestarts_end - nrestarts_start, 0),
+        "nrestarts_delta": nrestarts_delta,
+        "candidate_pid_present": bool(candidate_pid) if target_mode == "candidate" else False,
     })
 
 
-def write_process_sidecar(out_dir: Path, app_user: str) -> None:
+def argv_matches_ipc(argv: list[str], ipc_path: Path) -> bool:
+    expected = str(ipc_path)
+    for index, arg in enumerate(argv):
+        if arg == f"--input-ipc-server={expected}":
+            return True
+        if arg == "--input-ipc-server" and index + 1 < len(argv) and argv[index + 1] == expected:
+            return True
+    return False
+
+
+def proc_argv(proc: Path) -> list[str]:
+    raw = (proc / "cmdline").read_bytes()
+    return [part.decode("utf-8", errors="replace") for part in raw.split(b"\0") if part]
+
+
+def write_process_sidecar(out_dir: Path, app_user: str, process_ipc_path: Path | None = None) -> None:
     mpv_processes: list[str] = []
+    total_mpv_processes = 0
     try:
         app_uid = pwd.getpwnam(app_user).pw_uid
     except Exception:
@@ -385,11 +420,16 @@ def write_process_sidecar(out_dir: Path, app_user: str) -> None:
                 comm = (proc / "comm").read_text(encoding="utf-8", errors="replace").strip()
                 if comm != "mpv":
                     continue
+                total_mpv_processes += 1
+                if process_ipc_path is not None and not argv_matches_ipc(proc_argv(proc), process_ipc_path):
+                    continue
                 mpv_processes.append(os.readlink(proc / "exe"))
             except Exception:
                 continue
     write_json(out_dir / "deep-health-process.json", {
         "mpv_count": len(mpv_processes),
+        "total_mpv_count": total_mpv_processes,
+        "process_filter": "input-ipc-server" if process_ipc_path is not None else "",
         "mpv_path": mpv_processes[0] if mpv_processes else "",
     })
 
@@ -448,10 +488,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--interval-sec", type=float, default=float(os.environ.get("C18_PLAYBACK_HEALTH_INTERVAL_SEC", DEFAULT_INTERVAL_SEC)))
     parser.add_argument("--ipc-timeout-sec", type=float, default=float(os.environ.get("C18_PLAYBACK_HEALTH_IPC_TIMEOUT_SEC", DEFAULT_IPC_TIMEOUT_SEC)))
     parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--target-mode", choices=TARGET_MODES, default="service")
+    parser.add_argument("--candidate-pid", type=int, default=None)
     parser.add_argument("--service", default=DEFAULT_SERVICE)
     parser.add_argument("--app-user", default=DEFAULT_APP_USER)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--status", type=Path, default=DEFAULT_STATUS)
+    parser.add_argument("--match-process-ipc", action="store_true", help="count only the mpv process using the config IPC socket")
+    parser.add_argument("--process-ipc-path", type=Path, default=None, help="count only the mpv process using this IPC socket")
     parser.add_argument("--mpv-log", type=Path, default=DEFAULT_MPV_LOG)
     parser.add_argument("--mpv-generation-dir", type=Path, default=DEFAULT_MPV_GENERATION_DIR)
     parser.add_argument("--json", action="store_true", help="print sanitized public summary JSON to stdout")
@@ -466,7 +510,12 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     except OSError:
         pass
 
-    nrestarts_start = service_nrestarts(args.service)
+    ipc_path, _status_path = read_config(args.config, args.status)
+    process_ipc_path = args.process_ipc_path
+    if process_ipc_path is None and args.match_process_ipc:
+        process_ipc_path = ipc_path
+
+    nrestarts_start = service_nrestarts(args.service) if args.target_mode == "service" else 0
     collect_samples(
         out_dir,
         config_path=args.config,
@@ -475,8 +524,14 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
         interval_sec=max(float(args.interval_sec), 0.1),
         ipc_timeout_sec=max(float(args.ipc_timeout_sec), 0.05),
     )
-    write_systemd_sidecar(out_dir, args.service, nrestarts_start)
-    write_process_sidecar(out_dir, args.app_user)
+    write_systemd_sidecar(
+        out_dir,
+        args.service,
+        nrestarts_start,
+        target_mode=args.target_mode,
+        candidate_pid=args.candidate_pid,
+    )
+    write_process_sidecar(out_dir, args.app_user, process_ipc_path)
     write_kernel_sidecar(out_dir)
     write_player_counter_sidecar(out_dir, args.mpv_log, args.mpv_generation_dir)
     result = evaluate_artifacts(out_dir, out_dir.name)

@@ -36,6 +36,7 @@ MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_pl
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
+PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -341,6 +342,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("systemctl stop", collector)
         self.assertNotIn("systemctl restart", collector)
         self.assertNotIn("systemctl start", collector)
+
+        candidate = PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY", candidate)
+        self.assertIn("--lab-only-candidate-runner", candidate)
+        self.assertIn("config_ui_enabled", candidate)
+        self.assertIn("observed_kiosk_py_sha256", candidate)
+        self.assertIn("observed_tree_sha256", candidate)
+        self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", candidate)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

@@ -17,6 +17,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "board"))
 
 import c18_playback_health_summary as health
 import c18_playback_health_collect as collector
+import c18_player_runtime_candidate_health as candidate_health
 
 
 FIXTURE = REPO_ROOT / "scripts" / "board" / "testdata" / "c18_playback_health" / "pass"
@@ -109,6 +110,16 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         fixture.mutate_json("process.json", mpv_count=2)
         self.assert_fails_with(fixture, "single_mpv")
 
+    def test_candidate_process_filter_allows_ambient_live_mpv(self) -> None:
+        fixture = self.with_case()
+        fixture.mutate_json(
+            "process.json",
+            mpv_count=1,
+            total_mpv_count=2,
+            process_filter="input-ipc-server",
+        )
+        self.assertTrue(fixture.result()["passed"])
+
     def test_rejects_media_load_failed_and_mpv_restart(self) -> None:
         fixture = self.with_case()
         fixture.mutate_json("player-counters.json", media_load_failed=1, mpv_restart=1)
@@ -141,6 +152,49 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertNotIn("truncate", source)
         self.assertIn("playback-deep-health-public.json", source)
         self.assertIn("health.evaluate", source)
+        self.assertIn("--target-mode", source)
+        self.assertIn("--match-process-ipc", source)
+        self.assertIn("process_filter", source)
+
+    def test_collector_matches_candidate_ipc_argv(self) -> None:
+        ipc = Path("/tmp/c18-candidate/mpv.sock")
+        self.assertTrue(collector.argv_matches_ipc([f"--input-ipc-server={ipc}"], ipc))
+        self.assertTrue(collector.argv_matches_ipc(["--input-ipc-server", str(ipc)], ipc))
+        self.assertFalse(collector.argv_matches_ipc(["--input-ipc-server=/tmp/other.sock"], ipc))
+
+    def test_candidate_health_config_is_isolated_and_sanitized(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-config-") as tmp:
+            root = Path(tmp)
+            template = root / "template.json"
+            template.write_text(
+                json.dumps(
+                    {
+                        "api_url": "https://private.example.invalid/api?api_key=SECRET",
+                        "api_key": "SECRET",
+                        "environment_id": "ENV_SECRET",
+                        "telemetry_token": "TOKEN_SECRET",
+                        "config_ui_enabled": True,
+                        "cache_dir": "/data/media/kiosky-player",
+                        "ipc_path": "/tmp/kiosky/mpv.sock",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            cfg = candidate_health.candidate_config(template, root / "work")
+            self.assertEqual(cfg["api_key"], "")
+            self.assertEqual(cfg["environment_id"], "")
+            self.assertEqual(cfg["telemetry_token"], "")
+            self.assertFalse(cfg["telemetry_enabled"])
+            self.assertFalse(cfg["config_ui_enabled"])
+            self.assertTrue(str(cfg["cache_dir"]).startswith(str(root / "work")))
+            self.assertTrue(str(cfg["ipc_path"]).startswith(str(root / "work")))
+            payload = json.dumps(cfg, sort_keys=True)
+            for forbidden in ("SECRET", "ENV_SECRET", "TOKEN_SECRET", "private.example"):
+                self.assertNotIn(forbidden, payload)
+
+    def test_candidate_health_cli_requires_lab_guard(self) -> None:
+        rc = candidate_health.main(["--release-dir", str(REPO_ROOT / "player-runtime" / "kiosky-player"), "--json"])
+        self.assertEqual(rc, 44)
 
     def test_collector_aliases_do_not_echo_sensitive_paths_or_urls(self) -> None:
         url = "https://media.example.invalid/private/file.mp4?api_key=SECRET"
