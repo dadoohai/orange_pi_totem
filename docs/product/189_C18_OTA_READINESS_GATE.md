@@ -228,13 +228,42 @@ vir como nova imagem ou release ponte explicitamente homologada.
     `image_fixed_player_totem-kiosky-launcher.sh_not_totem_core_wrapper=true`,
     `totem_core_release_excludes_kiosky_service_launcher.sh=true` e
     `totem_core_release_excludes_totem-kiosky-launcher.sh=true`.
-  - Ainda nao foi validada em hardware como flash limpo; essa e a proxima imagem
-    candidata para flash quando a frente de hardware continuar.
+  - Validada em hardware como flash limpo:
+    - marker `c18-hwdecode-lab-1j` presente;
+    - policy presente e restrita a `totem-core`;
+    - `totem-update-agent.timer` `disabled`/`inactive`;
+    - service de update apontando para
+      `--component totem-core --repo dadoohai/orange_pi_totem`;
+    - `totem-kiosky-launcher.sh` fixo na imagem, usando
+      `/data/player-runtime/current` e sem default para
+      `/data/apps/kiosky-player/current`;
+    - `/data/player-runtime/current` ausente e
+      `/data/apps/kiosky-player/current` ausente, portanto player usa fallback
+      validado da imagem;
+    - config real escrita via writer guardado a partir do seed local de
+      homologacao, sem publicar valores privados; config ativa ficou
+      `0640 root:totem` e preservou
+      `mpv_path=/opt/totem/bin/totem-mpv-hwdecode`;
+    - player pos-config em playback `playing`, IPC ativo,
+      `hwdec-current=v4l2request-copy`, `vo-configured=true`, `NRestarts=0`;
+    - deep-health de playback passou em hardware:
+      `hwdec_no_unexpected=true`, `media_load_failed_zero=true`,
+      `panfrost_faults_zero=true`, `mmc_timeout_reset_zero=true`,
+      `single_mpv=true`, `playback_progressed=true`,
+      `transitions_observed_when_required=true`;
+    - probes temporarios de deep-health foram removidos da placa apos a coleta.
+  - Contrato OTA pos-flash:
+    - `apply-local --component kiosky-player` bloqueado com `rc=44`;
+    - `apply-local --component player-runtime` bloqueado com `rc=44`;
+    - `apply-github-latest --component totem-core --dry-run` retornou `rc=0` e
+      selecionou a release de homologacao
+      `totem-core-c18.ota-core-1i-github-smoke-20260603T012036Z-09ba8d1`, sem
+      aplicar mudanca.
 
 ## Continuidade pos-compactacao
 
-1. Validar `c18-hwdecode-lab-1j` em hardware como flash limpo antes de trata-la
-   como baseline de laboratorio.
+1. Tratar `c18-hwdecode-lab-1j` como baseline de laboratorio validada para a
+   frente OTA/manual, ainda `final_image=false`.
 2. Proxima frente funcional do projeto: usar este fluxo para evoluir
    `totem-core`/wizard em releases manuais, mantendo auto-pull desligado e
    `kiosky-player`/`player-runtime` congelados ate thaw explicito.
