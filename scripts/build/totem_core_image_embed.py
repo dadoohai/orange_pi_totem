@@ -43,6 +43,7 @@ CORE_FILES = [
 
 IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
+    "totem-kiosky-launcher.sh",
 ]
 
 

@@ -971,7 +971,8 @@
       "totem_setup_local_wizard.py"
     ],
     "image_fixed_player_files": [
-      "kiosky_service_launcher.sh"
+      "kiosky_service_launcher.sh",
+      "totem-kiosky-launcher.sh"
     ],
     "splash_service_uses_totem_core_wrapper": true,
     "fallback_available_without_data_current": true,

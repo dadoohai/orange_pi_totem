@@ -88,6 +88,8 @@ SECRET_PATTERNS = (
 FORBIDDEN_TOTEM_CORE_TAR_NAMES = {
     "bin/kiosky_service_launcher.sh",
     "./bin/kiosky_service_launcher.sh",
+    "bin/totem-kiosky-launcher.sh",
+    "./bin/totem-kiosky-launcher.sh",
 }
 PLAYER_RUNTIME_DIFF_PATHS = {
     "scripts/board/kiosky_service_launcher.sh",

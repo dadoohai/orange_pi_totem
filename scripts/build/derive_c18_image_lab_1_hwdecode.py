@@ -33,8 +33,8 @@ ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1i"   # 1i = 1h + homologation seed preserves HW-decode wrapper.
-VERSION = "c18.image-lab.1i"
+TAG = "c18-hwdecode-lab-1j"   # 1j = 1i + governed player-runtime launcher path.
+VERSION = "c18.image-lab.1j"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 
@@ -48,7 +48,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1i-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1j-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -224,7 +224,7 @@ def main():
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -326,6 +326,7 @@ def main():
     upd_now = base.cat_file(vroot, UPDATECTL) or ""
     marker_now = base.cat_file(vroot, MARKER) or ""
     panfrost_unit_now = base.cat_file(vroot, PANFROST_UNIT) or ""
+    totem_launcher_now = base.cat_file(vroot, "/opt/totem/bin/totem-kiosky-launcher.sh") or ""
     seed_verify_file = work / "private-values.seed.verify.json"
     base.debugfs(vroot, f"dump {HOMOLOGATION_SEED} {seed_verify_file}")
     seed_verify = json.loads(seed_verify_file.read_text(encoding="utf-8")) if seed_verify_file.exists() else {}
@@ -358,6 +359,10 @@ def main():
         "panfrost_rebind_unit_present": present(PANFROST_UNIT),
         "panfrost_rebind_enabled": present(PANFROST_WANTS),
         "panfrost_unit_before_player": "Before=kiosky-player.service" in panfrost_unit_now,
+        "totem_kiosky_launcher_uses_player_runtime_path": (
+            "/data/player-runtime/current" in totem_launcher_now
+            and "/data/apps/kiosky-player/current" not in totem_launcher_now
+        ),
         "c17_4_trace_moved_to_run": present(C18_STABILITY_DROPIN),
         "r4_updater_perms_present": "_make_world_traversable" in upd_now,
         "totem_core_ota_ready": totem_core_validation["ok"],
@@ -372,7 +377,7 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
 
     manifest = {
-        "round": "C18.IMAGE-LAB.1i", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1j", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": OUT_IMAGE.stat().st_size,
         "artifact_private": True, "final_image": False,
@@ -410,6 +415,7 @@ def main():
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
         "fix_c17_4_trace_dir": "kiosky-player drop-in moves optional C17.4 firstboot trace from /data to /run so mmc I/O stalls cannot block startup before kiosk.py",
+        "fix_player_runtime_path": "totem-kiosky-launcher default now uses /data/player-runtime/current; legacy /data/apps/kiosky-player/current no longer shadows the image player on C18",
         "panfrost_rebind_service": True,
         "kiosk_py_compiles": v["kiosk_py_compiles"],
         "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
@@ -418,7 +424,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1i RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1j RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

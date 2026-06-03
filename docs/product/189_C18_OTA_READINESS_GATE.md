@@ -211,14 +211,33 @@ vir como nova imagem ou release ponte explicitamente homologada.
       `media_load_failed=0`, sem erros panfrost/mmc na janela de validacao.
   - Tentativa de OTA de `kiosky-player` continuou bloqueada com
     `rc=44` (`component_frozen_for_ota`).
+- Build offline subsequente gerou `c18-hwdecode-lab-1j`.
+  - Arquivo:
+    `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1j_minimal.img`
+  - `sha256=995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152`
+  - Tamanho: `1971322880` bytes.
+  - `OFFLINE_VALIDATION_PASSED=True`; `totem_core_ota_ready=true`; policy
+    presente; timer desligado; service apontando para `totem-core`; sem config
+    real embutida.
+  - Delta sobre `1i`: `totem-kiosky-launcher.sh` tambem e arquivo fixo de
+    imagem/player-runtime, fora do payload `totem-core`; o default do launcher
+    agora usa `/data/player-runtime/current`, e o caminho legado
+    `/data/apps/kiosky-player/current` nao sombreia mais o player validado.
+  - Contrato de fronteira validado offline:
+    `image_fixed_player_kiosky_service_launcher.sh_not_totem_core_wrapper=true`,
+    `image_fixed_player_totem-kiosky-launcher.sh_not_totem_core_wrapper=true`,
+    `totem_core_release_excludes_kiosky_service_launcher.sh=true` e
+    `totem_core_release_excludes_totem-kiosky-launcher.sh=true`.
+  - Ainda nao foi validada em hardware como flash limpo; essa e a proxima imagem
+    candidata para flash quando a frente de hardware continuar.
 
 ## Continuidade pos-compactacao
 
-1. Comitar esta evidencia de GitHub end-to-end mantendo fora do stage o WIP
-   alheio `scripts/qa/generate_ui_ux_gallery.py`.
+1. Validar `c18-hwdecode-lab-1j` em hardware como flash limpo antes de trata-la
+   como baseline de laboratorio.
 2. Proxima frente funcional do projeto: usar este fluxo para evoluir
    `totem-core`/wizard em releases manuais, mantendo auto-pull desligado e
-   `kiosky-player` congelado.
+   `kiosky-player`/`player-runtime` congelados ate thaw explicito.
 3. Depois disso, abrir as frentes separadas: compatibilidade HDMI/resolucao por
    display e melhorias do wizard (cursor, rede aberta, UX de entrada).
 

@@ -113,7 +113,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         build = BUILD_CORE_PATH.read_text(encoding="utf-8")
         core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
+        self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertNotIn("bash -n bin/kiosky_service_launcher.sh", build)
+        self.assertNotIn("bash -n bin/totem-kiosky-launcher.sh", build)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
@@ -128,7 +130,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         embed = EMBED_PATH.read_text(encoding="utf-8")
         core_files_block = embed.split("CORE_FILES = [", 1)[1].split("]", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
+        self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertIn("IMAGE_FIXED_PLAYER_FILES", embed)
+        self.assertIn('"kiosky_service_launcher.sh"', embed)
+        self.assertIn('"totem-kiosky-launcher.sh"', embed)
         self.assertIn("not_totem_core_wrapper", embed)
 
     def test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher(self) -> None:
@@ -140,6 +145,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         c17_7 = DERIVE_C17_7_PATH.read_text(encoding="utf-8")
         core_files_block = c17_7.split("CORE_FILES = [", 1)[1].split("]", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
+        self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertIn("IMAGE_FIXED_PLAYER_FILES", c17_7)
         self.assertIn("image_fixed_player_launcher_not_totem_core_wrapper", c17_7)
 

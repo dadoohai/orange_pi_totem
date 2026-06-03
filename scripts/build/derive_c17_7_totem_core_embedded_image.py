@@ -9,8 +9,9 @@ core entrypoints in /opt/totem/bin with the C17.5 wrappers.
 It does not invoke Armbian Build, apt, pip, kernel tooling, or a board, and it
 never reads or prints private config/seed contents.
 
-C18 update-contract note: kiosky_service_launcher.sh is player-runtime. Keep it
-fixed in /opt/totem/bin and out of the totem-core release/fallback payload.
+C18 update-contract note: kiosky_service_launcher.sh and totem-kiosky-launcher.sh
+are player-runtime. Keep them fixed in /opt/totem/bin and out of the
+totem-core release/fallback payload.
 """
 
 from __future__ import annotations
@@ -70,6 +71,7 @@ CORE_FILES = [
 
 IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
+    "totem-kiosky-launcher.sh",
 ]
 
 
