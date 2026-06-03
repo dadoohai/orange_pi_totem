@@ -57,6 +57,13 @@ Esse snapshot e fonte governada para imagem/gate, nao pacote OTA. Mudancas nele
 devem bloquear o gate OTA comum de `totem-core` e exigir gate separado de
 `player-runtime` + homologacao.
 
+Qualquer pacote futuro de `player-runtime` deve passar antes por
+`scripts/qa/c18_player_runtime_release_gate.py`. Esse gate abre o payload,
+confere o SHA do manifest, rejeita path traversal, symlink/hardlink, config,
+seed e arquivos com cara de segredo, e exige `kiosk.py` compilavel preservando o
+wrapper C18. Passar nesse gate nao habilita apply: o componente continua
+congelado ate existir rollback + deep-health em hardware.
+
 `kiosky_service_launcher.sh` e arquivo de `player-runtime`: a imagem deve
 fornece-lo como arquivo fixo em `/opt/totem/bin`, e releases OTA de
 `totem-core` nao devem inclui-lo em `bin/`.
