@@ -18,6 +18,11 @@ Gate obrigatório antes de publicar/aceitar uma release OTA:
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json
 ```
 
+Esse gate deve falhar se o diff corrente tocar arquivos de `player-runtime` ou
+player fixos por imagem. Nessa frente, a falha e intencional: a mudanca deixa de
+ser OTA comum de `totem-core` e exige imagem/homologacao ou release C18-aware
+separada.
+
 ## Estado atual
 
 **Candidato A**: Armbian Build v25.11 + Debian Bookworm Minimal + kernel `6.12.58-current-sunxi64` + U-Boot `2025.04`.

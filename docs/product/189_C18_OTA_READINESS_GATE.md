@@ -69,7 +69,7 @@ congelado no fluxo publico (`rc=44`).
 - Testes estáticos de policy/service/timer.
 - Testes unitários de freeze, downgrade e GC de staging.
 - Sandbox `totem-core` apply/rollback/settings-lock.
-- Validação offline da próxima imagem (`1k`) deve comprovar policy presente,
+- Validacao offline da proxima imagem (`1l`) deve comprovar policy presente,
   timer desligado, service apontando para `totem-core`, sem config real embutida,
   `player-runtime` ainda congelado e launcher adotando `/data` apenas com marker
   verificado.
@@ -438,6 +438,19 @@ vir como nova imagem ou release ponte explicitamente homologada.
   controlado, ligar `reconcile` em boot ou documentar formalmente o launcher
   como reconcile primario, e fazer o deriver abortar/limpar artefato se a
   validacao offline falhar.
+- Rodada repo-side pos-1k fechou essas tres dividas imediatas sem descongelar o
+  componente: o gate de `player-runtime` agora valida o caminho efetivo
+  `build_mpv_args -> subprocess.Popen(args, ...)` e cobre bypasses de args/cfg;
+  o drop-in do player executa `reconcile --component player-runtime` como
+  `ExecStartPre=-...` nao-fatal; e o deriver constroi em arquivo temporario,
+  promovendo `.img/.sha256` final apenas depois de `offline_ok`. Por mudar
+  conteudo de imagem, a proxima candidata passa a ser `c18-hwdecode-lab-1l`; a
+  `1k` permanece golden validada.
+- Build offline da candidata `c18-hwdecode-lab-1l` passou:
+  `OFFLINE_VALIDATION_PASSED=True`, `artifact_promoted=true`,
+  `sha256=146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`.
+  A `1l` ainda requer flash e validacao curta em hardware antes de substituir a
+  `1k` como golden.
 
 ## Fora de escopo
 

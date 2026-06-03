@@ -22,7 +22,7 @@ It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB
 real config, media/cache, or secrets.
 """
 from __future__ import annotations
-import argparse, json, os, shutil, subprocess, sys, tempfile
+import argparse, atexit, json, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,10 +33,11 @@ ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1k"   # 1k = 1j + player-runtime thaw foundation.
-VERSION = "c18.image-lab.1k"
+TAG = "c18-hwdecode-lab-1l"   # 1l = 1k + pre-thaw hardening gap closure.
+VERSION = "c18.image-lab.1l"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
+OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
 
 BUNDLE = Path("/tmp/ffbuild/bundle")
 FFMPEG_CLI = Path("/tmp/ffbuild/ffmpeg.stripped")
@@ -48,7 +49,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1k-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1l-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -146,20 +147,38 @@ def main():
     for p in (BASE_IMAGE, BUNDLE / "mpv", BUNDLE / "lib", R4_UPDATECTL, PLAYER_RUNTIME_KIOSK, PLAYER_RUNTIME_SOURCE):
         if not p.exists():
             raise SystemExit(f"BLOCKED: missing_input {p}")
-    if OUT_IMAGE.exists() and not args.force:
+    if (OUT_IMAGE.exists() or OUT_SHA.exists()) and not args.force:
         raise SystemExit(f"output exists (use --force): {OUT_IMAGE}")
     L(f"base_image={BASE_IMAGE.name}")
     L(f"out_image={OUT_IMAGE.name}")
 
     work = Path(tempfile.mkdtemp(prefix="c18-hwdecode-lab-"))
     rootfs = work / "rootfs.ext4"
+    tmp_fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{OUT_IMAGE.name}.",
+        suffix=".tmp",
+        dir=OUT_IMAGE.parent,
+    )
+    os.close(tmp_fd)
+    build_image = Path(tmp_name)
+    build_sha = Path(str(build_image) + ".sha256")
 
-    # ---- copy base -> out, extract rootfs ----
-    L("copy base image -> output ...")
-    shutil.copy2(BASE_IMAGE, OUT_IMAGE)
-    off, length = base.parse_mbr_linux_partition(OUT_IMAGE)
+    def cleanup_temp_artifacts():
+        for leftover in (build_sha, build_image):
+            try:
+                if leftover.exists():
+                    leftover.unlink()
+            except OSError as exc:
+                print(f"WARN: failed to remove temp artifact {leftover}: {exc}", file=sys.stderr)
+
+    atexit.register(cleanup_temp_artifacts)
+
+    # ---- copy base -> candidate, extract rootfs ----
+    L("copy base image -> temp output ...")
+    shutil.copy2(BASE_IMAGE, build_image)
+    off, length = base.parse_mbr_linux_partition(build_image)
     L(f"linux partition offset={off} length={length}")
-    base.copy_range(OUT_IMAGE, rootfs, offset=off, length=length)
+    base.copy_range(build_image, rootfs, offset=off, length=length)
 
     # ---- read + patch kiosk.py (point player at the wrapper) ----
     # Read via `debugfs dump` (binary-faithful: the file's exact bytes go to a local file,
@@ -307,18 +326,17 @@ def main():
     L(f"e2fsck rc={fsck.returncode} ({'clean' if fsck_clean else 'CHECK'})")
 
     # ---- write rootfs back into the image ----
-    base.write_range(OUT_IMAGE, rootfs, offset=off)
-    L("rootfs written back into output image")
+    base.write_range(build_image, rootfs, offset=off)
+    L("rootfs written back into temp output image")
 
-    # ---- sha256 ----
-    sha = base.file_sha256(OUT_IMAGE)
-    (Path(str(OUT_IMAGE) + ".sha256")).write_text(f"{sha}  {OUT_IMAGE.name}\n", encoding="utf-8")
+    # ---- candidate sha256 (do not publish .sha256 before validation passes) ----
+    sha = base.file_sha256(build_image)
     L(f"sha256={sha}")
 
-    # ---- offline validation: re-extract final image, verify via debugfs ----
-    off2, len2 = base.parse_mbr_linux_partition(OUT_IMAGE)
+    # ---- offline validation: re-extract candidate image, verify via debugfs ----
+    off2, len2 = base.parse_mbr_linux_partition(build_image)
     vroot = work / "verify.ext4"
-    base.copy_range(OUT_IMAGE, vroot, offset=off2, length=len2)
+    base.copy_range(build_image, vroot, offset=off2, length=len2)
 
     def present(path):
         return base.stat_file(vroot, path).get("present", False)
@@ -390,6 +408,9 @@ def main():
             "ExecStart=" in kiosky_dropin_now
             and "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in kiosky_dropin_now
         ),
+        "kiosky_service_reconciles_player_runtime_state": (
+            "ExecStartPre=-/opt/totem/bin/totem-updatectl reconcile --component player-runtime" in kiosky_dropin_now
+        ),
         "totem_kiosky_launcher_uses_player_runtime_path": (
             "/data/player-runtime/current" in totem_launcher_now
             and "/data/apps/kiosky-player/current" not in totem_launcher_now
@@ -447,11 +468,23 @@ def main():
         "fsck_clean": fsck_clean,
     }
     offline_ok = all(x is True or x == "n/a" for x in v.values())
+    artifact_promoted = False
+    if offline_ok:
+        build_sha.write_text(f"{sha}  {OUT_IMAGE.name}\n", encoding="utf-8")
+        os.replace(build_image, OUT_IMAGE)
+        os.replace(build_sha, OUT_SHA)
+        artifact_promoted = True
+        L(f"promoted_image={OUT_IMAGE.name}")
+        L(f"promoted_sha256={OUT_SHA.name}")
+    else:
+        L("offline validation failed; final image/sha256 not promoted")
 
+    image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
     manifest = {
-        "round": "C18.IMAGE-LAB.1k", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1l", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
-        "image_bytes": OUT_IMAGE.stat().st_size,
+        "image_bytes": image_bytes,
+        "artifact_promoted": artifact_promoted,
         "artifact_private": True, "final_image": False,
         "not_for_production": True, "not_for_distribution": True,
         "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
@@ -489,7 +522,7 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1k (validated golden before pre-thaw hardening gap closure)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
@@ -504,7 +537,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1k RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1l RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

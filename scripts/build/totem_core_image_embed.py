@@ -45,6 +45,12 @@ IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
     "totem-kiosky-launcher.sh",
 ]
+IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
+    (
+        "systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
+        "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf",
+    ),
+]
 
 
 def repo_head(path: Path) -> str:
@@ -136,6 +142,13 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
         if not source.is_file():
             raise RuntimeError(f"missing_fixed_player_file:{player_file}")
         commands.extend(write_file_commands(source, f"{wrappers_bin}/{player_file}"))
+    for source_rel, target in IMAGE_FIXED_PLAYER_SYSTEMD_FILES:
+        if source_rel.startswith(".") or ".." in Path(source_rel).parts:
+            raise RuntimeError(f"unsafe_fixed_player_systemd_file:{source_rel}")
+        source = repo_root / "scripts/board" / source_rel
+        if not source.is_file():
+            raise RuntimeError(f"missing_fixed_player_systemd_file:{source_rel}")
+        commands.extend(write_file_commands(source, target, "0644"))
 
     health_file = work_dir / "totem-core-health.json"
     health_file.write_text(
@@ -254,6 +267,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
         "totem_core_current_version": TOTEM_CORE_VERSION,
         "totem_core_files_embedded": len(core_files),
         "image_fixed_player_files_embedded": len(IMAGE_FIXED_PLAYER_FILES),
+        "image_fixed_player_systemd_files_embedded": len(IMAGE_FIXED_PLAYER_SYSTEMD_FILES),
         "totem_core_embed_debugfs_output_lines": len(output.splitlines()),
     }
 
@@ -300,6 +314,7 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
     updatectl = base.cat_file(rootfs, "/opt/totem/bin/totem-updatectl") or ""
     splash_service = base.cat_file(rootfs, "/etc/systemd/system/dadooh-visual-splash.service") or ""
     update_agent_service = _dump_text(rootfs, UPDATE_AGENT_SERVICE_TARGET)
+    player_dropin = _dump_text(rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf")
     policy_text = _dump_text(rootfs, UPDATE_POLICY_TARGET)
     try:
         update_policy = json.loads(policy_text)
@@ -332,6 +347,15 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
         ),
         "totem_core_update_timer_unit_present": _is_file(rootfs, UPDATE_AGENT_TIMER_TARGET),
         "totem_core_update_timer_disabled": not base.stat_file(rootfs, UPDATE_AGENT_TIMER_WANTS).get("present", False),
+        "image_fixed_player_dropin_present": _is_file(
+            rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf"
+        ),
+        "image_fixed_player_dropin_reconciles_player_runtime": (
+            "ExecStartPre=-/opt/totem/bin/totem-updatectl reconcile --component player-runtime" in player_dropin
+        ),
+        "image_fixed_player_dropin_routes_through_totem_launcher": (
+            "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in player_dropin
+        ),
     }
     for core_file in CORE_FILES:
         checks[f"totem_core_release_{core_file}"] = _has_exec(rootfs, f"{release_root}/bin/{core_file}")

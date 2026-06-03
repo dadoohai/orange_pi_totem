@@ -54,21 +54,21 @@ upstream `dadoohai/kiosky-player` em `c25659aff200d9aac1720e60e60794c432c79393`
 mais o patch C18 de `DEFAULT_CONFIG.mpv_path` para
 `/opt/totem/bin/totem-mpv-hwdecode`.
 
-Esse snapshot e fonte governada para imagem/gate, nao pacote OTA. Mudancas nele
-devem bloquear o gate OTA comum de `totem-core` e exigir gate separado de
-`player-runtime` + homologacao.
+Esse snapshot e fonte governada para imagem/gate, nao pacote OTA. Mudancas nele,
+no launcher/drop-in do player ou em outros arquivos fixos por imagem devem
+bloquear o gate OTA comum de `totem-core` e exigir gate separado de
+`player-runtime`, nova imagem ou homologacao.
 
 Qualquer pacote futuro de `player-runtime` deve passar antes por
 `scripts/qa/c18_player_runtime_release_gate.py`. Esse gate abre o payload,
 confere o SHA do manifest, rejeita path traversal, symlink/hardlink, config,
 seed, marker pre-forjado, arquivos de controle/imagem e arquivos com cara de
 segredo, e exige `kiosk.py` compilavel preservando o wrapper e o HW decode C18
-nos defaults e em `build_mpv_args`. O gate tambem rejeita argumentos MPV
-perigosos literais dentro desse builder. Antes de qualquer thaw, ele ainda deve
-ser endurecido para validar os args efetivos entregues ao `Popen` e bloquear
-mutacoes dinamicas de `args`/`cfg["hwdec"]` fora do caminho controlado. Passar
-nesse gate nao habilita apply: o componente continua congelado ate thaw
-explicito.
+nos defaults, em `build_mpv_args` e no caminho efetivo ate
+`subprocess.Popen(args, ...)`. O gate rejeita argumentos MPV perigosos, inclusive
+construcao dinamica simples, builder alternativo, mutacao de `args` depois do
+builder e mutacao de `cfg["hwdec"]` fora do caminho controlado. Passar nesse
+gate nao habilita apply: o componente continua congelado ate thaw explicito.
 
 Uma release de `player-runtime` so pode ser adotada se o updater escrever, dentro
 do diretorio da release, `.release_verified.json` com schema
@@ -81,7 +81,9 @@ Marker ausente, corrompido, divergente ou identidade quarentenada fecha para
 No boot, a decisao de adocao e do launcher: ele e o reconcile fail-closed entre
 `/data/player-runtime/current` e `/opt`. O subcomando `reconcile` do updater
 serve para higiene de `state.json`/symlink drift e nao substitui essa decisao de
-boot.
+boot. A fonte da proxima imagem tambem executa esse reconcile como
+`ExecStartPre=-...` nao-fatal antes do player, preservando o launcher como
+barreira primaria.
 
 O sandbox `scripts/sim/run_player_runtime_sandbox.py` prova a mecanica offline
 necessaria antes de descongelar usando as primitivas reais do updater:

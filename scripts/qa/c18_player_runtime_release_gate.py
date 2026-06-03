@@ -280,6 +280,54 @@ def iter_string_nodes_without_joined_children(node: ast.AST):
         yield from iter_string_nodes_without_joined_children(child)
 
 
+def literal_string_expr(node: ast.AST) -> str | None:
+    """Fold only side-effect-free string constants used as MPV argv entries."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = literal_string_expr(node.left)
+        right = literal_string_expr(node.right)
+        if left is not None and right is not None:
+            return left + right
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for item in node.values:
+            if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+                return None
+            parts.append(item.value)
+        return "".join(parts)
+    return None
+
+
+def is_dangerous_format_call(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "format"
+        and isinstance(node.func.value, ast.Constant)
+        and isinstance(node.func.value.value, str)
+        and node.func.value.value.startswith("--")
+    )
+
+
+def is_cfg_like(node: ast.AST) -> bool:
+    if isinstance(node, ast.Name) and node.id == "cfg":
+        return True
+    return isinstance(node, ast.Attribute) and node.attr in {"_cfg", "cfg"}
+
+
+def assigned_subscript_key(node: ast.AST) -> tuple[ast.AST, str] | None:
+    if not isinstance(node, ast.Subscript):
+        return None
+    try:
+        key = ast.literal_eval(node.slice)
+    except Exception:
+        return None
+    if not isinstance(key, str):
+        return None
+    return node.value, key
+
+
 def cfg_get_key(node: ast.AST) -> str | None:
     if not isinstance(node, ast.Call):
         return None
@@ -294,6 +342,64 @@ def cfg_get_key(node: ast.AST) -> str | None:
     except Exception:
         return None
     return str(key) if isinstance(key, str) else None
+
+
+def validate_mpv_arg_expr(node: ast.AST, *, context: str,
+                          counts: dict[str, int] | None = None) -> None:
+    if cfg_subscript_key(node) == "mpv_path":
+        return
+
+    literal = literal_string_expr(node)
+    if literal is not None:
+        if any(literal.startswith(item) for item in FORBIDDEN_MPV_OPTION_PREFIXES):
+            raise GateError(f"{context} contains forbidden MPV option: {literal}")
+        if literal.startswith("--input-ipc-server="):
+            raise GateError(f"{context} must not hard-code --input-ipc-server")
+        if literal.startswith("--input-conf="):
+            raise GateError(f"{context} must not hard-code --input-conf")
+        if literal.startswith("--hwdec=") and literal not in {
+            "--hwdec=auto",
+            "--hwdec=auto-safe",
+            f"--hwdec={EXPECTED_HWDEC}",
+        }:
+            raise GateError(f"{context} contains forbidden hwdec option: {literal}")
+        return
+
+    if is_dangerous_format_call(node):
+        raise GateError(f"{context} must not construct MPV options with .format()")
+
+    if isinstance(node, ast.JoinedStr):
+        prefix = ""
+        if node.values and isinstance(node.values[0], ast.Constant) and isinstance(node.values[0].value, str):
+            prefix = node.values[0].value
+        if prefix == "--input-ipc-server=":
+            if joined_option_cfg_key(node, prefix) != "ipc_path":
+                raise GateError(f"{context} must derive --input-ipc-server from cfg['ipc_path']")
+            if counts is not None:
+                counts["ipc"] = counts.get("ipc", 0) + 1
+            return
+        if prefix == "--hwdec=":
+            if joined_option_cfg_key(node, prefix) != "hwdec":
+                raise GateError(f"{context} must derive --hwdec from cfg['hwdec']")
+            if counts is not None:
+                counts["hwdec"] = counts.get("hwdec", 0) + 1
+            return
+        if prefix == "--input-conf=":
+            if joined_single_name(node, prefix) != "hotkey_conf":
+                raise GateError(f"{context} must derive --input-conf from hotkey_conf")
+            return
+        if any(prefix.startswith(item) for item in FORBIDDEN_MPV_OPTION_PREFIXES):
+            raise GateError(f"{context} contains forbidden MPV option: {prefix}")
+        if prefix in {"--log-file=", "--msg-level=", "--video-rotate="}:
+            return
+        if prefix.startswith("--"):
+            raise GateError(f"{context} contains unsupported dynamic MPV option: {prefix}")
+        return
+
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "int":
+        return
+
+    raise GateError(f"{context} contains unsupported dynamic MPV argument expression")
 
 
 def validate_append_mpv_option_calls(fn: ast.FunctionDef) -> None:
@@ -322,48 +428,120 @@ def validate_append_mpv_option_calls(fn: ast.FunctionDef) -> None:
 def validate_mpv_args_semantics(tree: ast.AST) -> None:
     fn = find_function(tree, "build_mpv_args")
     validate_append_mpv_option_calls(fn)
-    ipc_args = 0
-    hwdec_args = 0
-    for node in iter_string_nodes_without_joined_children(fn):
-        if isinstance(node, ast.JoinedStr):
-            prefix = ""
-            if node.values and isinstance(node.values[0], ast.Constant) and isinstance(node.values[0].value, str):
-                prefix = node.values[0].value
-            if prefix == "--input-ipc-server=":
-                ipc_args += 1
-                if joined_option_cfg_key(node, prefix) != "ipc_path":
-                    raise GateError("build_mpv_args must derive --input-ipc-server from cfg['ipc_path']")
-                continue
-            if prefix == "--hwdec=":
-                hwdec_args += 1
-                if joined_option_cfg_key(node, prefix) != "hwdec":
-                    raise GateError("build_mpv_args must derive --hwdec from cfg['hwdec']")
-                continue
-            if prefix == "--input-conf=":
-                if joined_single_name(node, prefix) != "hotkey_conf":
-                    raise GateError("build_mpv_args must derive --input-conf from hotkey_conf")
-                continue
-            if any(prefix.startswith(item) for item in FORBIDDEN_MPV_OPTION_PREFIXES):
-                raise GateError(f"build_mpv_args contains forbidden MPV option: {prefix}")
-            continue
+    counts: dict[str, int] = {"ipc": 0, "hwdec": 0}
+    for node in ast.walk(fn):
+        if isinstance(node, ast.List):
+            for item in node.elts:
+                validate_mpv_arg_expr(item, context="build_mpv_args", counts=counts)
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Attribute) and node.func.attr == "append":
+                if isinstance(node.func.value, ast.Name) and node.func.value.id == "args" and node.args:
+                    validate_mpv_arg_expr(node.args[0], context="build_mpv_args", counts=counts)
+        elif isinstance(node, ast.AugAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == "args":
+                if not isinstance(node.value, ast.List):
+                    raise GateError("build_mpv_args must only extend args with literal lists")
+                for item in node.value.elts:
+                    validate_mpv_arg_expr(item, context="build_mpv_args", counts=counts)
 
-        value = str(node.value)
-        if any(value.startswith(item) for item in FORBIDDEN_MPV_OPTION_PREFIXES):
-            raise GateError(f"build_mpv_args contains forbidden MPV option: {value}")
-        if value.startswith("--input-ipc-server="):
-            raise GateError("build_mpv_args must not hard-code --input-ipc-server")
-        if value.startswith("--input-conf="):
-            raise GateError("build_mpv_args must not hard-code --input-conf")
-        if value.startswith("--hwdec=") and value not in {
-            "--hwdec=auto",
-            "--hwdec=auto-safe",
-            f"--hwdec={EXPECTED_HWDEC}",
-        }:
-            raise GateError(f"build_mpv_args contains forbidden hwdec option: {value}")
-    if ipc_args != 1:
+    if counts["ipc"] != 1:
         raise GateError("build_mpv_args must set exactly one controlled --input-ipc-server")
-    if hwdec_args != 1:
+    if counts["hwdec"] != 1:
         raise GateError("build_mpv_args must set exactly one controlled --hwdec")
+
+
+def is_build_mpv_args_call(node: ast.AST) -> bool:
+    return isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "build_mpv_args"
+
+
+def is_subprocess_popen_call(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "Popen"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "subprocess"
+    )
+
+
+def mutates_name(node: ast.AST, name: str) -> bool:
+    if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        return any(isinstance(target, ast.Name) and target.id == name for target in targets)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        if isinstance(node.func.value, ast.Name) and node.func.value.id == name:
+            return node.func.attr in {"append", "extend", "insert", "remove", "pop", "clear", "sort", "reverse"}
+    return False
+
+
+def stmt_contains_popen(stmt: ast.stmt) -> ast.Call | None:
+    for node in ast.walk(stmt):
+        if is_subprocess_popen_call(node):
+            return node
+    return None
+
+
+def validate_effective_popen_args(tree: ast.AST) -> None:
+    fn = find_function(tree, "_start_locked")
+    body = list(fn.body)
+    build_index: int | None = None
+    popen_index: int | None = None
+    popen_call: ast.Call | None = None
+    build_assigns = 0
+    popen_calls = 0
+
+    for index, stmt in enumerate(body):
+        if isinstance(stmt, ast.Assign):
+            if any(isinstance(target, ast.Name) and target.id == "args" for target in stmt.targets):
+                if not is_build_mpv_args_call(stmt.value):
+                    raise GateError("_start_locked must assign args directly from build_mpv_args")
+                build_assigns += 1
+                build_index = index
+        call = stmt_contains_popen(stmt)
+        if call is not None:
+            popen_calls += 1
+            popen_index = index
+            popen_call = call
+
+    if build_assigns != 1:
+        raise GateError("_start_locked must assign args from build_mpv_args exactly once")
+    if popen_calls != 1 or popen_call is None:
+        raise GateError("_start_locked must call subprocess.Popen exactly once")
+    if popen_index is None or build_index is None or popen_index <= build_index:
+        raise GateError("_start_locked must build args before subprocess.Popen")
+    if not popen_call.args or not isinstance(popen_call.args[0], ast.Name) or popen_call.args[0].id != "args":
+        raise GateError("subprocess.Popen must receive the verified args variable")
+
+    for stmt in body[build_index + 1:popen_index + 1]:
+        for node in ast.walk(stmt):
+            if mutates_name(node, "args"):
+                raise GateError("_start_locked must not mutate args after build_mpv_args")
+
+
+def validate_hwdec_not_mutated(tree: ast.AST) -> None:
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                result = assigned_subscript_key(target)
+                if result is None:
+                    continue
+                base, key = result
+                if key == "hwdec" and is_cfg_like(base):
+                    raise GateError("kiosk.py must not mutate cfg['hwdec'] at runtime")
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr not in {"setdefault", "update"} or not is_cfg_like(node.func.value):
+                continue
+            for arg in node.args:
+                if not isinstance(arg, ast.Dict):
+                    continue
+                for key_node in arg.keys:
+                    try:
+                        key = ast.literal_eval(key_node)
+                    except Exception:
+                        continue
+                    if key == "hwdec":
+                        raise GateError("kiosk.py must not mutate cfg['hwdec'] at runtime")
 
 
 def validate_kiosk_source(source: str) -> None:
@@ -382,6 +560,8 @@ def validate_kiosk_source(source: str) -> None:
     if hwdec == "no" or "--hwdec=no" in source:
         raise GateError("kiosk.py must not disable hardware decode")
     validate_mpv_args_semantics(tree)
+    validate_effective_popen_args(tree)
+    validate_hwdec_not_mutated(tree)
     required_anchors = (
         'cfg["mpv_path"]',
         "--hwdec-codecs=h264,mpeg4,mpeg2video",
@@ -499,6 +679,15 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         manifest = write_manifest(root, version, payload)
         return manifest, payload, tmp
 
+    def assert_bad_source(self, version: str, source: str, pattern: str) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        payload = write_payload(root, version, source)
+        manifest = write_manifest(root, version, payload)
+        with self.assertRaisesRegex(GateError, pattern):
+            validate_release(manifest, payload)
+
     def test_accepts_governed_snapshot_payload(self) -> None:
         manifest, payload, tmp = self.with_case("good")
         self.addCleanup(tmp.cleanup)
@@ -550,6 +739,56 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         manifest = write_manifest(root, "bad-script-arg", payload)
         with self.assertRaisesRegex(GateError, "forbidden MPV option"):
             validate_release(manifest, payload)
+
+    def test_rejects_callsite_mpv_arg_mutation_after_builder(self) -> None:
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)",
+            "args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)\n"
+            '        args.append("--script=/tmp/evil.lua")',
+        )
+        self.assert_bad_source("bad-callsite-append", source, "mutate args after build_mpv_args")
+
+    def test_rejects_callsite_mpv_arg_reassignment_after_builder(self) -> None:
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)",
+            "args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)\n"
+            '        args = args + ["--script=/tmp/evil.lua"]',
+        )
+        self.assert_bad_source("bad-callsite-reassign", source, "args")
+
+    def test_rejects_dynamic_concatenated_dangerous_mpv_arg(self) -> None:
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--scr" + "ipt=/tmp/evil.lua")\n    return args',
+        )
+        self.assert_bad_source("bad-dynamic-concat", source, "forbidden MPV option")
+
+    def test_rejects_format_constructed_dangerous_mpv_arg(self) -> None:
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "return args",
+            'args.append("--{}={}".format("script", "/tmp/evil.lua"))\n    return args',
+        )
+        self.assert_bad_source("bad-dynamic-format", source, r"\.format")
+
+    def test_rejects_alternative_builder_at_popen_callsite(self) -> None:
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "\n\nclass MPVController:",
+            '\n\ndef build_alt_mpv_args(cfg: Dict, mpv_log_file: Optional[str] = None) -> List[str]:\n'
+            '    return [cfg["mpv_path"], "--script=/tmp/evil.lua"]\n'
+            "\n\nclass MPVController:",
+        ).replace(
+            "args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)",
+            "args = build_alt_mpv_args(self._cfg, mpv_log_file=mpv_log_file)",
+        )
+        self.assert_bad_source("bad-alt-builder", source, "build_mpv_args")
+
+    def test_rejects_runtime_hwdec_mutation_before_builder(self) -> None:
+        source = SNAPSHOT_KIOSK.read_text(encoding="utf-8").replace(
+            "args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)",
+            'self._cfg["hwdec"] = "n" + "o"\n'
+            "        args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)",
+        )
+        self.assert_bad_source("bad-hwdec-runtime-mutation", source, r"cfg\['hwdec'\]")
 
     def test_rejects_external_ipc_server_arg(self) -> None:
         tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")

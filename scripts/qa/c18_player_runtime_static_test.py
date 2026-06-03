@@ -80,10 +80,24 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")
+        self.assertIn('TAG = "c18-hwdecode-lab-1l"', derive)
+        self.assertIn('VERSION = "c18.image-lab.1l"', derive)
+        self.assertIn('MARKER = "/etc/dadooh/c18-hwdecode-lab-1l-image"', derive)
         self.assertIn('PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"', derive)
         self.assertIn("PLAYER_RUNTIME_KIOSK_SHA256", derive)
         self.assertIn("governed player-runtime kiosk.py", derive)
         self.assertIn("player_runtime_snapshot_governed", derive)
+
+    def test_c18_deriver_promotes_artifacts_only_after_offline_validation(self) -> None:
+        derive = DERIVE_C18_PATH.read_text(encoding="utf-8")
+        self.assertIn("OUT_SHA = Path(str(OUT_IMAGE) + \".sha256\")", derive)
+        self.assertIn("tempfile.mkstemp", derive)
+        self.assertIn("build_sha.write_text", derive)
+        self.assertIn("os.replace(build_image, OUT_IMAGE)", derive)
+        self.assertIn("offline validation failed; final image/sha256 not promoted", derive)
+        self.assertLess(derive.index("offline_ok = all("), derive.index("os.replace(build_image, OUT_IMAGE)"))
+        self.assertNotIn("shutil.copy2(BASE_IMAGE, OUT_IMAGE)", derive)
+        self.assertNotIn("(Path(str(OUT_IMAGE) + \".sha256\")).write_text", derive)
 
     def test_common_ota_gate_tracks_player_runtime_boundary(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

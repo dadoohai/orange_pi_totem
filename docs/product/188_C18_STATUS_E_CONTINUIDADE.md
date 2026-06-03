@@ -196,12 +196,13 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 ## Próximos passos / a validar
 
-1. Continuar a frente de governança de atualizações: `totem-core` OTA manual já
-   validado; `player-runtime` só avança em thaw controlado, ainda congelado para
-   produção;
-2. Antes de qualquer thaw de `player-runtime`: endurecer o gate AST sobre os
-   args efetivos do MPV, ligar/definir reconcile no boot e ajustar o deriver
-   para nao deixar artefato quando a validacao offline falhar;
+1. Continuar a frente de governanca de atualizacoes: `totem-core` OTA manual ja
+   validado; `player-runtime` so avanca em thaw controlado, ainda congelado para
+   producao;
+2. Pos-`1k`, o repo ja fechou tres dividas pre-thaw: gate de `player-runtime`
+   sobre args efetivos do MPV/Popen, reconcile nao-fatal no start do player, e
+   deriver promovendo `.img/.sha256` so depois de `offline_ok`. Proxima imagem
+   deve incorporar isso antes de qualquer thaw de laboratorio;
 3. **Rebuild GCC-12 de produção;**
 4. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 

@@ -99,6 +99,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("data app dir present but not verified; falling back", launcher)
         self.assertNotIn("/data/apps/kiosky-player/current", launcher)
         self.assertIn("/data/player-runtime/current/kiosk.py", dropin)
+        self.assertIn("ExecStartPre=-/opt/totem/bin/totem-updatectl reconcile --component player-runtime", dropin)
+        self.assertIn("non-fatal player-runtime reconcile", dropin)
         self.assertNotIn("/data/apps/kiosky-player/current", dropin)
         self.assertIn("/data/player-runtime", dirs)
         self.assertIn("/data/player-runtime/releases", dirs)
@@ -137,8 +139,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertIn("IMAGE_FIXED_PLAYER_FILES", embed)
+        self.assertIn("IMAGE_FIXED_PLAYER_SYSTEMD_FILES", embed)
         self.assertIn('"kiosky_service_launcher.sh"', embed)
         self.assertIn('"totem-kiosky-launcher.sh"', embed)
+        self.assertIn("20-dadooh-launcher.conf", embed)
+        self.assertIn("image_fixed_player_dropin_reconciles_player_runtime", embed)
         self.assertIn("not_totem_core_wrapper", embed)
 
     def test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher(self) -> None:
