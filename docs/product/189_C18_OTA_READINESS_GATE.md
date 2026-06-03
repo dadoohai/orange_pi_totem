@@ -255,18 +255,42 @@ vir como nova imagem ou release ponte explicitamente homologada.
   - Contrato OTA pos-flash:
     - `apply-local --component kiosky-player` bloqueado com `rc=44`;
     - `apply-local --component player-runtime` bloqueado com `rc=44`;
-    - `apply-github-latest --component totem-core --dry-run` retornou `rc=0` e
-      selecionou a release de homologacao
-      `totem-core-c18.ota-core-1i-github-smoke-20260603T012036Z-09ba8d1`, sem
+    - antes da nova publicacao, `apply-github-latest --component totem-core
+      --dry-run` retornou `rc=0` e selecionou a release de homologacao 1i, sem
       aplicar mudanca.
+- Release GitHub de homologacao publicada a partir do HEAD `1e040c0` e validada
+  end-to-end na placa `1j`:
+  `totem-core-c18.ota-core-1j-github-smoke-20260603T142540Z-1e040c0`.
+  - Manifest: `component=totem-core`, `channel=homologation`,
+    `source_branch=foundation-v0.1`,
+    `source_commit=1e040c0672d08606717b8048313194afc50d8c86`,
+    `source_dirty=false`.
+  - Payload SHA256:
+    `d3073d2e3756b9ae102be216831ad3b6b363ba7d7b580e852e46d7d4f7c92856`.
+  - Gate de release passou com o pacote antes da publicacao; a release foi
+    publicada como prerelease e a tag aponta para o `source_commit`.
+  - Dry-run na placa selecionou exatamente essa release e retornou
+    `state_changed=false`.
+  - Apply GitHub passou: `current` virou
+    `c18.ota-core-1j-github-smoke-20260603T142540Z-1e040c0`, `previous` ficou
+    `c17.6-environment-input-20260514T211247Z`, player permaneceu `playing`,
+    `hwdec-current=v4l2request-copy`, `NRestarts=0`, `media_load_failed=0`.
+  - Rollback passou para o embed C17.6; `previous` virou a release 1j, player
+    permaneceu `playing`, `hwdec-current=v4l2request-copy`, `NRestarts=0`,
+    `media_load_failed=0`.
+  - Reapply GitHub passou; ao final a placa ficou em `current` na release 1j e
+    `previous` no embed C17.6, com player `playing`,
+    `hwdec-current=v4l2request-copy`, `vo-configured=true`, `NRestarts=0`,
+    `media_load_failed=0`.
 
 ## Continuidade pos-compactacao
 
 1. Tratar `c18-hwdecode-lab-1j` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
-2. Proxima frente funcional do projeto: usar este fluxo para evoluir
-   `totem-core`/wizard em releases manuais, mantendo auto-pull desligado e
-   `kiosky-player`/`player-runtime` congelados ate thaw explicito.
+2. Fluxo manual de release GitHub `totem-core` validado na 1j; proximas
+   mudancas de wizard/core devem seguir este gate antes de aplicar em placa,
+   mantendo auto-pull desligado e `kiosky-player`/`player-runtime` congelados
+   ate thaw explicito.
 3. Depois disso, abrir as frentes separadas: compatibilidade HDMI/resolucao por
    display e melhorias do wizard (cursor, rede aberta, UX de entrada).
 
