@@ -32,7 +32,9 @@ PY_COMPILE_TARGETS = (
     "scripts/sim/run_totem_core_sandbox.py",
     "scripts/qa/c18_ota_policy_static_test.py",
     "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
+    "scripts/qa/c18_player_runtime_static_test.py",
     "scripts/qa/c18_ota_release_gate.py",
+    "player-runtime/kiosky-player/kiosk.py",
 )
 TEST_COMMANDS = (
     ("totem_config_contract_self_test", ["python3", "scripts/board/totem_config_contract_validate.py", "--self-test"]),
@@ -40,6 +42,7 @@ TEST_COMMANDS = (
     ("totem_visual_setup_writer_handoff_self_test", ["python3", "scripts/board/totem_visual_setup_writer_handoff.py", "--self-test"]),
     ("c18_ota_policy_static", ["python3", "scripts/qa/c18_ota_policy_static_test.py"]),
     ("c18_updatectl_freeze_downgrade_gc", ["python3", "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py"]),
+    ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
     ("c17_9_update_channel_policy", ["python3", "scripts/qa/c17_9_update_channel_policy_test.py"]),
     ("c18_runtime_3_release_perms", ["python3", "scripts/qa/c18_runtime_3_release_perms_test.py"]),
 )
@@ -84,6 +87,8 @@ PLAYER_RUNTIME_DIFF_PATHS = {
     "scripts/board/totem-kiosky-launcher.sh",
     "scripts/board/kiosky-player.service",
     "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
+    "player-runtime/kiosky-player/kiosk.py",
+    "player-runtime/kiosky-player/SOURCE.json",
 }
 
 

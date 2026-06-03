@@ -46,6 +46,17 @@ stack `/opt/totem/hwdecode` continuam sendo `media-system` e exigem imagem.
 `kiosky-player` OTA esta congelado na C18. O congelamento tambem vale para
 mudancas indiretas no runtime do player.
 
+O snapshot governado do player C18 fica em
+`player-runtime/kiosky-player/kiosk.py`, com provenance em
+`player-runtime/kiosky-player/SOURCE.json`. Esse arquivo e o `kiosk.py` validado
+na imagem `c18-hwdecode-lab-1i`: upstream `dadoohai/kiosky-player` em
+`c25659aff200d9aac1720e60e60794c432c79393` mais o patch C18 de
+`DEFAULT_CONFIG.mpv_path` para `/opt/totem/bin/totem-mpv-hwdecode`.
+
+Esse snapshot e fonte governada para imagem/gate, nao pacote OTA. Mudancas nele
+devem bloquear o gate OTA comum de `totem-core` e exigir gate separado de
+`player-runtime` + homologacao.
+
 `kiosky_service_launcher.sh` e arquivo de `player-runtime`: a imagem deve
 fornece-lo como arquivo fixo em `/opt/totem/bin`, e releases OTA de
 `totem-core` nao devem inclui-lo em `bin/`.

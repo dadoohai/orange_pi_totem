@@ -1,0 +1,34 @@
+{
+  "apply_enabled": false,
+  "component": "player-runtime",
+  "image_source": {
+    "base_image_line": "c17.4.2",
+    "image_sha256": "5944f284fec4025b021413608a7bc98034a088046d742c09496e634a37074c4e",
+    "image_tag": "c18-hwdecode-lab-1i",
+    "image_version": "c18.image-lab.1i",
+    "path": "/opt/totem/kiosky-player/kiosk.py"
+  },
+  "notes": [
+    "Governed C18 baseline snapshot only; not an OTA player release.",
+    "Runtime behavior matches the 1i image: upstream kiosk.py plus C18 mpv_path wrapper patch.",
+    "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
+  ],
+  "patches": [
+    {
+      "field": "DEFAULT_CONFIG.mpv_path",
+      "from": "mpv",
+      "to": "/opt/totem/bin/totem-mpv-hwdecode"
+    }
+  ],
+  "schema": "dadooh.c18.player_runtime.source.v1",
+  "snapshot": {
+    "path": "player-runtime/kiosky-player/kiosk.py",
+    "sha256": "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167"
+  },
+  "upstream": {
+    "commit": "c25659aff200d9aac1720e60e60794c432c79393",
+    "path": "kiosk.py",
+    "repo": "dadoohai/kiosky-player",
+    "sha256_before_c18_patch": "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
+  }
+}

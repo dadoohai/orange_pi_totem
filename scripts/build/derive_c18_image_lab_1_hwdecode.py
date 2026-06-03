@@ -41,6 +41,8 @@ OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
 BUNDLE = Path("/tmp/ffbuild/bundle")
 FFMPEG_CLI = Path("/tmp/ffbuild/ffmpeg.stripped")
 R4_UPDATECTL = Path("/home/builder/totem-os/orange_pi_totem/scripts/board/totem_updatectl.py")
+PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
+PLAYER_RUNTIME_SOURCE = REPO_ROOT / "player-runtime" / "kiosky-player" / "SOURCE.json"
 
 HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
@@ -55,6 +57,7 @@ HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
+PLAYER_RUNTIME_KIOSK_SHA256 = "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167"
 
 # Workaround for the H618 panfrost boot deferred-probe race (-110): bind the GPU before the
 # player if the render node is missing. Userspace only — no kernel/DTB/cmdline change.
@@ -140,7 +143,7 @@ def main():
     # ---- preflight ----
     if not shutil.which("debugfs"):
         raise SystemExit("BLOCKED: debugfs_missing")
-    for p in (BASE_IMAGE, BUNDLE / "mpv", BUNDLE / "lib", R4_UPDATECTL):
+    for p in (BASE_IMAGE, BUNDLE / "mpv", BUNDLE / "lib", R4_UPDATECTL, PLAYER_RUNTIME_KIOSK, PLAYER_RUNTIME_SOURCE):
         if not p.exists():
             raise SystemExit(f"BLOCKED: missing_input {p}")
     if OUT_IMAGE.exists() and not args.force:
@@ -172,7 +175,16 @@ def main():
     if n != 1:
         raise SystemExit(f"BLOCKED: kiosk.py mpv_path default occurs {n}x (expected 1)")
     kiosk_patched = kiosk_src.replace(MPV_PATH_OLD, MPV_PATH_NEW, 1)
-    kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_patched, encoding="utf-8")
+    kiosk_snapshot = PLAYER_RUNTIME_KIOSK.read_text(encoding="utf-8")
+    kiosk_snapshot_sha = base.file_sha256(PLAYER_RUNTIME_KIOSK)
+    source_data = json.loads(PLAYER_RUNTIME_SOURCE.read_text(encoding="utf-8"))
+    if source_data.get("snapshot", {}).get("sha256") != PLAYER_RUNTIME_KIOSK_SHA256:
+        raise SystemExit("BLOCKED: player-runtime SOURCE.json snapshot sha mismatch")
+    if kiosk_snapshot_sha != PLAYER_RUNTIME_KIOSK_SHA256:
+        raise SystemExit(f"BLOCKED: player-runtime kiosk.py sha mismatch {kiosk_snapshot_sha}")
+    if kiosk_snapshot != kiosk_patched:
+        raise SystemExit("BLOCKED: governed player-runtime kiosk.py no longer matches C18 base-image patch")
+    kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_snapshot, encoding="utf-8")
 
     seed_orig = work / "private-values.seed.orig.json"
     base.debugfs(rootfs, f"dump {HOMOLOGATION_SEED} {seed_orig}")
@@ -207,6 +219,8 @@ def main():
         "totem_update_timer_enabled=false",
         "player_runtime_launcher_fixed_by_image=true",
         "totem_core_excludes_kiosky_service_launcher=true",
+        f"player_runtime_kiosk_source={PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)}",
+        f"player_runtime_kiosk_sha256={kiosk_snapshot_sha}",
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
@@ -377,6 +391,9 @@ def main():
                           "libass without harfbuzz. Hardware-proven (B9). "
                           "Recommend GCC-12-clean rebuild for the production image.",
         "player_uses_custom_mpv": True, "player_hwdec_flag": "v4l2request-copy",
+        "player_runtime_kiosk_source": str(PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)),
+        "player_runtime_kiosk_sha256": kiosk_snapshot_sha,
+        "player_runtime_snapshot_governed": True,
         "player_vo": "gpu", "player_gpu_context": "drm", "player_rotation": "from config/wizard (0 in current C18 baseline)",
         "mpv_ipc_preserved": True,
         "totem_in_video_group": v["totem_in_video_group"],

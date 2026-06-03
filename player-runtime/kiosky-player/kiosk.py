@@ -1,0 +1,3424 @@
+#!/usr/bin/env python3
+import argparse
+import calendar
+import html
+import hashlib
+import json
+import logging
+import os
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from dataclasses import dataclass
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from logging.handlers import RotatingFileHandler
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlparse
+
+try:
+    import requests
+except Exception:  # pragma: no cover - handled at runtime
+    requests = None
+
+
+def default_ipc_path() -> str:
+    if os.name == "nt":
+        return r"\\.\pipe\mpv-kiosk"
+    return os.path.join(tempfile.gettempdir(), "mpv-kiosk.sock")
+
+
+def default_runtime_dir() -> str:
+    return os.path.join(tempfile.gettempdir(), "kiosky")
+
+
+def default_sync_ntp_command() -> str:
+    if sys.platform.startswith("linux"):
+        return "chronyc -a makestep"
+    return ""
+
+
+DEFAULT_CONFIG = {
+    "api_url": "https://api.example.invalid/search",
+    "api_key": "",
+    "environment_id": "",
+    "only_standby": True,
+    "search_in": "campaign",
+    "include_descendants": True,
+    "limit": 20,
+    "poll_interval_sec": 1800,
+    "request_timeout_sec": 15,
+    "default_duration_ms": 10000,
+    "cache_dir": "./media_cache",
+    "state_dir": "",
+    "offline_fallback": True,
+    "offline_max_age_hours": 0,
+    "offline_ignore_max_age_when_no_network": True,
+    "require_full_download_before_switch": True,
+    "allow_empty_playlist_from_api": False,
+    "disable_cleanup_when_offline": True,
+    "cache_max_files": 0,
+    "cache_max_bytes": 0,
+    "min_free_space_bytes": 512 * 1024 * 1024,
+    "max_download_bytes": 512 * 1024 * 1024,
+    "mpv_path": "/opt/totem/bin/totem-mpv-hwdecode",
+    "mpv_log_file": "",
+    "mpv_msg_level": "",
+    "mpv_ipc_timeout_sec": 2.0,
+    "mpv_startup_timeout_sec": 10.0,
+    "mpv_debug_events": False,
+    "mpv_query_uses_fresh_ipc": False,
+    "mpv_vo": "",
+    "mpv_gpu_context": "",
+    "mpv_ao": "",
+    "ipc_path": default_ipc_path(),
+    "runtime_dir": default_runtime_dir(),
+    "strict_paths_enabled": False,
+    "rotation_deg": 0,
+    "hotkeys_enabled": True,
+    "hotkey_open_key": "Ctrl+s",
+    "config_ui_enabled": True,
+    "config_ui_bind": "127.0.0.1",
+    "config_ui_port": 8765,
+    "low_resource_mode": False,
+    "telemetry_enabled": False,
+    "telemetry_url": "https://telemetry.example.invalid/telemetry",
+    "telemetry_token": "",
+    "telemetry_interval_sec": 60,
+    "telemetry_timeout_sec": 10,
+    "station_id": "",
+    "preload_next": True,
+    "mute": False,
+    "lock_input": True,
+    "hwdec": "auto",
+    "log_file": "",
+    "log_max_bytes": 5_000_000,
+    "log_backup_count": 3,
+    "watchdog_interval_sec": 10,
+    "mpv_watchdog_ping_failures_before_restart": 1,
+    "mpv_watchdog_grace_after_load_sec": 0,
+    "mpv_watchdog_grace_after_restart_sec": 0,
+    "media_load_retry_cooldown_sec": 60,
+    "tmp_max_age_sec": 3600,
+    "status_file": "",
+    "status_interval_sec": 5,
+    "startup_feedback_enabled": True,
+    "cleanup_interval_sec": 1800,
+    "sync_enabled": True,
+    "sync_drift_threshold_ms": 300,
+    "sync_hard_resync_ms": 1200,
+    "sync_boot_hard_check_sec": 300,
+    "sync_checkpoint_interval_sec": 3600,
+    "sync_prep_mode": "play_then_resync",
+    "sync_ntp_command": default_sync_ntp_command(),
+}
+
+SECONDS_PER_DAY = 24 * 3600
+SYNC_DAILY_ANCHOR_SEC_UTC = 5 * 60
+SYNC_PREP_WINDOW_START_SEC_UTC = 23 * 3600 + 58 * 60
+
+
+@dataclass(frozen=True)
+class MediaItem:
+    url: str
+    duration_ms: int
+    path: str
+    campaign_id: str
+    campaign_name: str
+
+
+@dataclass(frozen=True)
+class CyclePosition:
+    index: int
+    offset_ms: int
+    cycle_pos_ms: int
+    cycle_total_ms: int
+    anchor_ts: float
+
+
+class PlaylistState:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._items: List[MediaItem] = []
+        self._version = 0
+        self._fingerprint = ""
+        self._items_signature = ""
+
+    def get(self) -> Tuple[List[MediaItem], int]:
+        with self._lock:
+            return list(self._items), self._version
+
+    def update(self, items: List[MediaItem], fingerprint: str) -> bool:
+        with self._lock:
+            signature = items_signature(items)
+            if fingerprint == self._fingerprint and signature == self._items_signature:
+                return False
+            self._items = list(items)
+            self._version += 1
+            self._fingerprint = fingerprint
+            self._items_signature = signature
+            return True
+
+
+def load_config(path: str) -> Dict:
+    abs_path = os.path.abspath(path)
+    if not os.path.exists(abs_path):
+        raise FileNotFoundError(f"Config not found: {path}")
+    with open(abs_path, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+    cfg = dict(DEFAULT_CONFIG)
+    cfg.update(data)
+    if not cfg.get("ipc_path"):
+        cfg["ipc_path"] = default_ipc_path()
+    config_dir = os.path.dirname(abs_path)
+    for key in ("cache_dir", "state_dir", "log_file", "mpv_log_file", "status_file", "runtime_dir"):
+        value = cfg.get(key)
+        if isinstance(value, str) and value:
+            cfg[key] = resolve_path_from_base(config_dir, value)
+    ipc_path = cfg.get("ipc_path")
+    if isinstance(ipc_path, str) and ipc_path and not is_windows_named_pipe(ipc_path):
+        cfg["ipc_path"] = resolve_path_from_base(config_dir, ipc_path)
+    validate_strict_paths(cfg)
+    return cfg
+
+
+def is_windows_named_pipe(path: str) -> bool:
+    return path.startswith("\\\\.\\pipe\\")
+
+
+def resolve_path_from_base(base_dir: str, value: str) -> str:
+    if not value:
+        return value
+    if os.path.isabs(value):
+        return os.path.normpath(value)
+    return os.path.normpath(os.path.join(base_dir, value))
+
+
+def path_is_under(path: str, root: str) -> bool:
+    normalized_path = os.path.abspath(os.path.normpath(path))
+    normalized_root = os.path.abspath(os.path.normpath(root))
+    return normalized_path == normalized_root or normalized_path.startswith(normalized_root + os.sep)
+
+
+def validate_strict_paths(cfg: Dict) -> None:
+    if not cfg.get("strict_paths_enabled"):
+        return
+
+    errors = []
+    for key in ("cache_dir", "state_dir"):
+        value = cfg.get(key)
+        if not isinstance(value, str) or not value or not path_is_under(value, "/data"):
+            errors.append(f"{key} must be under /data")
+
+    for key in ("status_file", "ipc_path", "runtime_dir"):
+        value = cfg.get(key)
+        if not isinstance(value, str) or not value or not path_is_under(value, "/tmp"):
+            errors.append(f"{key} must be under /tmp")
+
+    log_file = cfg.get("log_file")
+    if log_file and (not isinstance(log_file, str) or not path_is_under(log_file, "/data/logs")):
+        errors.append("log_file must be empty or under /data/logs")
+
+    mpv_log_file = cfg.get("mpv_log_file")
+    if mpv_log_file and (
+        not isinstance(mpv_log_file, str)
+        or not (path_is_under(mpv_log_file, "/tmp") or path_is_under(mpv_log_file, "/data/logs"))
+    ):
+        errors.append("mpv_log_file must be empty or under /tmp or /data/logs")
+
+    if errors:
+        raise ValueError("strict_paths_enabled path validation failed: " + "; ".join(errors))
+
+
+def setup_logging(cfg: Dict) -> None:
+    level = logging.INFO
+    handlers: List[logging.Handler] = [logging.StreamHandler(sys.stdout)]
+    log_file = cfg.get("log_file")
+    if log_file:
+        log_dir = os.path.dirname(log_file)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+        handlers.append(
+            RotatingFileHandler(
+                log_file,
+                maxBytes=int(cfg.get("log_max_bytes") or 0),
+                backupCount=int(cfg.get("log_backup_count") or 0),
+            )
+        )
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(message)s",
+        handlers=handlers,
+    )
+
+
+def iso_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def iso_from_ts(timestamp: float) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp))
+
+
+def parse_iso_utc(value: str) -> Optional[int]:
+    try:
+        return calendar.timegm(time.strptime(value, "%Y-%m-%dT%H:%M:%SZ"))
+    except Exception:
+        return None
+
+
+def effective_duration_ms(duration_ms: int) -> int:
+    try:
+        parsed = int(duration_ms)
+    except Exception:
+        parsed = 0
+    return max(parsed, 1000)
+
+
+def cycle_timeline(items: List[MediaItem]) -> Tuple[List[int], List[int], int]:
+    durations: List[int] = []
+    cycle_start_ms: List[int] = []
+    total = 0
+    for item in items:
+        duration = effective_duration_ms(item.duration_ms)
+        durations.append(duration)
+        cycle_start_ms.append(total)
+        total += duration
+    return durations, cycle_start_ms, total
+
+
+def seconds_since_midnight_utc(now_ts: float) -> int:
+    utc_now = time.gmtime(now_ts)
+    return utc_now.tm_hour * 3600 + utc_now.tm_min * 60 + utc_now.tm_sec
+
+
+def daily_anchor_utc_ts(now_ts: float) -> float:
+    utc_now = time.gmtime(now_ts)
+    anchor = calendar.timegm((utc_now.tm_year, utc_now.tm_mon, utc_now.tm_mday, 0, 5, 0, 0, 0, 0))
+    if now_ts < anchor:
+        anchor -= SECONDS_PER_DAY
+    return float(anchor)
+
+
+def next_daily_anchor_utc_ts(now_ts: float) -> float:
+    utc_now = time.gmtime(now_ts)
+    anchor = calendar.timegm((utc_now.tm_year, utc_now.tm_mon, utc_now.tm_mday, 0, 5, 0, 0, 0, 0))
+    if now_ts < anchor:
+        return float(anchor)
+    return float(anchor + SECONDS_PER_DAY)
+
+
+def is_prep_window_utc(now_ts: float) -> bool:
+    sec = seconds_since_midnight_utc(now_ts)
+    return sec >= SYNC_PREP_WINDOW_START_SEC_UTC or sec < SYNC_DAILY_ANCHOR_SEC_UTC
+
+
+def compute_cycle_position_from_utc(now_ts: float, durations_ms: List[int]) -> CyclePosition:
+    if not durations_ms:
+        raise ValueError("durations_ms cannot be empty")
+    cycle_total = max(sum(durations_ms), 1)
+    anchor_ts = daily_anchor_utc_ts(now_ts)
+    elapsed_ms = int((now_ts - anchor_ts) * 1000) % cycle_total
+    cursor = 0
+    for idx, duration in enumerate(durations_ms):
+        next_cursor = cursor + duration
+        if elapsed_ms < next_cursor:
+            return CyclePosition(
+                index=idx,
+                offset_ms=elapsed_ms - cursor,
+                cycle_pos_ms=elapsed_ms,
+                cycle_total_ms=cycle_total,
+                anchor_ts=anchor_ts,
+            )
+        cursor = next_cursor
+    last_idx = len(durations_ms) - 1
+    last_duration = durations_ms[last_idx]
+    return CyclePosition(
+        index=last_idx,
+        offset_ms=max(last_duration - 1, 0),
+        cycle_pos_ms=max(cycle_total - 1, 0),
+        cycle_total_ms=cycle_total,
+        anchor_ts=anchor_ts,
+    )
+
+
+def signed_cycle_delta_ms(target_ms: int, current_ms: int, cycle_total_ms: int) -> int:
+    if cycle_total_ms <= 0:
+        return 0
+    half = cycle_total_ms / 2.0
+    delta = ((target_ms - current_ms + half) % cycle_total_ms) - half
+    return int(round(delta))
+
+
+def classify_drift_action(
+    drift_ms: int,
+    drift_threshold_ms: int,
+    hard_resync_ms: int,
+) -> str:
+    threshold = max(int(drift_threshold_ms), 0)
+    hard = max(int(hard_resync_ms), threshold)
+    abs_drift = abs(int(drift_ms))
+    if abs_drift == 0:
+        return "none"
+    if threshold <= 0:
+        return "hard_resync" if abs_drift >= hard else "soft_resync"
+    if abs_drift < threshold:
+        return "none"
+    if abs_drift >= hard:
+        return "hard_resync"
+    return "soft_resync"
+
+
+def next_hour_checkpoint_utc_ts(now_ts: float, interval_sec: int = 3600) -> float:
+    if interval_sec <= 0:
+        interval_sec = 3600
+    now_int = int(now_ts)
+    return float(((now_int // interval_sec) + 1) * interval_sec)
+
+
+def ensure_pending_daily_zero_ts(now_ts: float, pending_daily_zero_ts: Optional[float]) -> float:
+    if pending_daily_zero_ts is not None and pending_daily_zero_ts > now_ts:
+        return float(pending_daily_zero_ts)
+    return next_daily_anchor_utc_ts(now_ts)
+
+
+def run_ntp_sync_command(cfg_snapshot: Dict) -> None:
+    command = str(cfg_snapshot.get("sync_ntp_command") or "").strip()
+    if not command:
+        logging.info("Sync prep: sync_ntp_command vazio; assumindo NTP do sistema.")
+        return
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+        )
+    except Exception as exc:
+        logging.warning("Sync prep: falha ao executar sync_ntp_command: %s", exc)
+        return
+    if result.returncode == 0:
+        logging.info("Sync prep: sync_ntp_command executado com sucesso.")
+    else:
+        logging.warning("Sync prep: sync_ntp_command retornou %s.", result.returncode)
+
+
+def api_endpoint_reachable(cfg: Dict, timeout_sec: float = 2.0) -> bool:
+    api_url = str(cfg.get("api_url") or "").strip()
+    if not api_url:
+        return False
+    parsed = urlparse(api_url)
+    host = parsed.hostname
+    if not host:
+        return False
+    if parsed.port:
+        port = int(parsed.port)
+    elif parsed.scheme == "https":
+        port = 443
+    else:
+        port = 80
+    try:
+        with socket.create_connection((host, port), timeout=timeout_sec):
+            return True
+    except Exception:
+        return False
+
+
+def state_dir(cfg: Dict) -> str:
+    configured = cfg.get("state_dir")
+    if configured:
+        return configured
+    cache_dir = cfg.get("cache_dir") or "."
+    return os.path.join(cache_dir, ".state")
+
+
+def state_path(cfg: Dict, filename: str) -> str:
+    return os.path.join(state_dir(cfg), filename)
+
+
+def load_json_file(path: str) -> Optional[Dict]:
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return None
+    except Exception as exc:
+        logging.warning("Failed to read state file %s: %s", path, exc)
+        return None
+
+
+def write_json_file(path: str, data: Dict, ensure_ascii: bool = True) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2, ensure_ascii=ensure_ascii)
+    os.replace(tmp_path, path)
+
+
+def playlist_state_path(cfg: Dict) -> str:
+    return state_path(cfg, "playlist_last.json")
+
+
+def cache_index_path(cfg: Dict) -> str:
+    return state_path(cfg, "cache_index.json")
+
+
+def last_success_path(cfg: Dict) -> str:
+    return state_path(cfg, "last_success.json")
+
+
+def save_last_success(cfg: Dict, timestamp: str) -> None:
+    payload = {"last_success": timestamp}
+    write_json_file(last_success_path(cfg), payload, ensure_ascii=True)
+
+
+def load_last_success(cfg: Dict) -> Optional[str]:
+    data = load_json_file(last_success_path(cfg))
+    if not data:
+        return None
+    value = data.get("last_success")
+    return value if isinstance(value, str) else None
+
+
+def save_playlist_state(cfg: Dict, items: List["MediaItem"], fingerprint: str) -> None:
+    payload = {
+        "version": 1,
+        "saved_at": iso_now(),
+        "fingerprint": fingerprint,
+        "playlist": [
+            {
+                "url": item.url,
+                "duration_ms": item.duration_ms,
+                "path": item.path,
+                "campaign_id": item.campaign_id,
+                "campaign_name": item.campaign_name,
+            }
+            for item in items
+        ],
+    }
+    write_json_file(playlist_state_path(cfg), payload, ensure_ascii=False)
+
+
+def load_playlist_state(cfg: Dict) -> Tuple[List[Dict], Optional[str], Optional[str]]:
+    data = load_json_file(playlist_state_path(cfg))
+    if not data:
+        return [], None, None
+    raw_items = data.get("playlist") or []
+    fingerprint = data.get("fingerprint")
+    saved_at = data.get("saved_at")
+    if not isinstance(raw_items, list):
+        return [], None, None
+    return raw_items, fingerprint if isinstance(fingerprint, str) else None, saved_at if isinstance(saved_at, str) else None
+
+
+def saved_playlist_paths(cfg: Dict) -> set:
+    raw_items, _fingerprint, _saved_at = load_playlist_state(cfg)
+    keep_paths: set = set()
+    cache_dir = cfg.get("cache_dir") or "."
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        path = item.get("path")
+        if path and isinstance(path, str) and os.path.exists(path):
+            keep_paths.add(path)
+            continue
+        url = item.get("url")
+        if not url:
+            continue
+        path = cache_path(cache_dir, url)
+        if os.path.exists(path):
+            keep_paths.add(path)
+    return keep_paths
+
+
+def media_items_from_saved(cfg: Dict, raw_items: List[Dict]) -> Tuple[List["MediaItem"], List[Dict]]:
+    items: List[MediaItem] = []
+    fingerprint_items_payload: List[Dict] = []
+    cache_dir = cfg.get("cache_dir") or "."
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        path = item.get("path")
+        if path and isinstance(path, str):
+            resolved_path = path
+        else:
+            resolved_path = ""
+        url = item.get("url")
+        try:
+            duration_ms = int(item.get("duration_ms") or cfg.get("default_duration_ms") or 0)
+        except Exception:
+            duration_ms = int(cfg.get("default_duration_ms") or 0)
+        if duration_ms <= 0:
+            duration_ms = int(cfg.get("default_duration_ms") or 10000)
+        if not resolved_path and url:
+            resolved_path = cache_path(cache_dir, str(url))
+        if not resolved_path or not os.path.exists(resolved_path):
+            continue
+        if not is_supported_media_path(resolved_path, allow_bin=bool(url)):
+            continue
+        if (safe_getsize(resolved_path) or 0) <= 0:
+            continue
+        resolved_url = str(url) if url else f"cache://{os.path.basename(resolved_path)}"
+        items.append(
+            MediaItem(
+                url=resolved_url,
+                duration_ms=duration_ms,
+                path=resolved_path,
+                campaign_id=str(item.get("campaign_id", "")),
+                campaign_name=str(item.get("campaign_name", "")),
+            )
+        )
+        fingerprint_items_payload.append({"url": resolved_url, "duration_ms": duration_ms, "path": resolved_path})
+    return items, fingerprint_items_payload
+
+
+def media_items_from_cache(
+    cfg: Dict,
+    cache_index: Optional["CacheIndex"] = None,
+) -> Tuple[List["MediaItem"], List[Dict]]:
+    cache_dir = cfg.get("cache_dir") or "."
+    if not os.path.isdir(cache_dir):
+        return [], []
+
+    index_snapshot: Dict[str, Dict[str, object]] = {}
+    if cache_index is not None:
+        try:
+            index_snapshot = cache_index.snapshot()
+        except Exception:
+            index_snapshot = {}
+
+    seen_paths: set = set()
+    candidates: List[Tuple[str, Dict[str, object], float]] = []
+
+    def _add_candidate(path: str, meta: Dict[str, object]) -> None:
+        if path in seen_paths:
+            return
+        if not os.path.isfile(path):
+            return
+        if path.endswith(".tmp"):
+            return
+        if not is_supported_media_path(path, allow_bin=bool(meta.get("url"))):
+            return
+        if (safe_getsize(path) or 0) <= 0:
+            return
+        last_used_ts = None
+        last_used = meta.get("last_used")
+        if isinstance(last_used, str):
+            last_used_ts = parse_iso_utc(last_used)
+        if last_used_ts is None:
+            try:
+                last_used_ts = os.path.getmtime(path)
+            except OSError:
+                last_used_ts = 0.0
+        candidates.append((path, dict(meta), float(last_used_ts)))
+        seen_paths.add(path)
+
+    for path, meta in index_snapshot.items():
+        if isinstance(meta, dict):
+            _add_candidate(path, meta)
+
+    for name in os.listdir(cache_dir):
+        path = os.path.join(cache_dir, name)
+        _add_candidate(path, {})
+
+    candidates.sort(key=lambda entry: (entry[2], entry[0]))
+    default_duration_ms = int(cfg.get("default_duration_ms") or 10000)
+    items: List[MediaItem] = []
+    fingerprint_items_payload: List[Dict] = []
+
+    for path, meta, _ in candidates:
+        raw_duration = meta.get("duration_ms", default_duration_ms)
+        try:
+            duration_ms = int(raw_duration)
+        except Exception:
+            duration_ms = default_duration_ms
+        if duration_ms <= 0:
+            duration_ms = default_duration_ms
+        url = str(meta.get("url") or f"cache://{os.path.basename(path)}")
+        campaign_id = str(meta.get("campaign_id", ""))
+        campaign_name = str(meta.get("campaign_name", ""))
+        items.append(
+            MediaItem(
+                url=url,
+                duration_ms=duration_ms,
+                path=path,
+                campaign_id=campaign_id,
+                campaign_name=campaign_name,
+            )
+        )
+        fingerprint_items_payload.append({"url": url, "duration_ms": duration_ms, "path": path})
+
+    return items, fingerprint_items_payload
+
+
+def offline_playlist_allowed(
+    cfg: Dict,
+    saved_at: Optional[str],
+    network_available: Optional[bool] = None,
+) -> bool:
+    max_age_hours = float(cfg.get("offline_max_age_hours") or 0)
+    if max_age_hours <= 0:
+        return True
+    if (
+        cfg.get("offline_ignore_max_age_when_no_network", True)
+        and network_available is False
+    ):
+        return True
+    ref = load_last_success(cfg) or saved_at
+    if not ref:
+        return True
+    ref_ts = parse_iso_utc(ref)
+    if ref_ts is None:
+        return True
+    age_hours = (time.time() - ref_ts) / 3600.0
+    return age_hours <= max_age_hours
+
+
+def config_snapshot(cfg: Dict, lock: threading.Lock) -> Dict:
+    with lock:
+        return dict(cfg)
+
+
+def write_config(path: str, cfg: Dict) -> None:
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        json.dump(cfg, fh, indent=2, ensure_ascii=False)
+    os.replace(tmp_path, path)
+
+
+def normalize_rotation(value: str) -> int:
+    try:
+        rotation = int(value)
+    except Exception:
+        return 0
+    if rotation not in {0, 90, 180, 270}:
+        return 0
+    return rotation
+
+
+def client_timestamp_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def build_telemetry_payload(
+    cfg_snapshot: Dict,
+    status_snapshot: Dict[str, Optional[object]],
+    heartbeat_type: str,
+    status: str,
+    error_code: Optional[str] = None,
+    error_message: Optional[str] = None,
+    notes: Optional[str] = None,
+    uptime_seconds: Optional[int] = None,
+) -> Dict:
+    current = status_snapshot.get("current_item") or {}
+    next_item = status_snapshot.get("next_item") or {}
+    playlist_size = status_snapshot.get("playlist_size")
+    preload_size = 1 if isinstance(next_item, dict) and next_item.get("path") else 0
+    payload: Dict[str, object] = {
+        "environmentId": cfg_snapshot.get("environment_id", ""),
+        "status": status,
+        "heartbeatType": heartbeat_type,
+        "clientTimestamp": client_timestamp_ms(),
+        "playlistSize": playlist_size,
+        "activeCampaignName": current.get("campaign_name") if isinstance(current, dict) else None,
+        "nextCampaignName": next_item.get("campaign_name") if isinstance(next_item, dict) else None,
+        "rotation": cfg_snapshot.get("rotation_deg"),
+        "metrics": {
+            "uptimeSeconds": uptime_seconds,
+            "preloadSize": preload_size,
+            "pendingEntries": 0,
+        },
+        "notes": notes,
+    }
+    station_id = cfg_snapshot.get("station_id")
+    if station_id:
+        payload["stationId"] = station_id
+    if error_code:
+        payload["errorCode"] = error_code
+    if error_message:
+        payload["errorMessage"] = error_message
+    if status_snapshot.get("consecutive_failures") is not None:
+        payload["consecutiveFailures"] = int(status_snapshot.get("consecutive_failures") or 0)
+    return payload
+
+
+def telemetry_token(cfg_snapshot: Dict) -> str:
+    token = cfg_snapshot.get("telemetry_token") or os.environ.get("KIOSKY_TELEMETRY_TOKEN", "")
+    return str(token).strip()
+
+
+def send_telemetry(
+    cfg_snapshot: Dict,
+    status_snapshot: Dict[str, Optional[object]],
+    heartbeat_type: str,
+    status: str = "ok",
+    error_code: Optional[str] = None,
+    error_message: Optional[str] = None,
+    notes: Optional[str] = None,
+    uptime_seconds: Optional[int] = None,
+) -> bool:
+    if not cfg_snapshot.get("telemetry_enabled"):
+        return False
+    if requests is None:
+        return False
+    url = cfg_snapshot.get("telemetry_url")
+    if not url:
+        return False
+    token = telemetry_token(cfg_snapshot)
+    if not token:
+        logging.info("Telemetry enabled but no telemetry token is configured; skipping.")
+        return False
+    headers = {"x-interact-telemetry-token": token}
+    payload = build_telemetry_payload(
+        cfg_snapshot,
+        status_snapshot,
+        heartbeat_type,
+        status,
+        error_code=error_code,
+        error_message=error_message,
+        notes=notes,
+        uptime_seconds=uptime_seconds,
+    )
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=int(cfg_snapshot.get("telemetry_timeout_sec") or 10),
+        )
+        response.raise_for_status()
+        return True
+    except Exception as exc:
+        logging.warning("Telemetry failed: %s", exc)
+        return False
+
+
+class StatusState:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._data: Dict[str, Optional[object]] = {
+            "status_schema_version": "kiosky-player-status.v2",
+            "started_at": iso_now(),
+            "last_poll_success": None,
+            "last_poll_error": None,
+            "playlist_size": None,
+            "current_index": None,
+            "current_item": None,
+            "next_item": None,
+            "mpv_running": None,
+            "mpv_last_ok": None,
+            "last_cleanup": None,
+            "last_cleanup_removed": None,
+            "consecutive_failures": 0,
+            "last_telemetry_error": None,
+            "sync_mode": "idle",
+            "sync_anchor_utc": None,
+            "sync_drift_ms": None,
+            "sync_last_check_utc": None,
+            "sync_last_action": None,
+            "sync_next_checkpoint_utc": None,
+            "sync_checkpoint_reason": None,
+            "sync_cycle_ms": None,
+            "player_state": "player_starting",
+            "playback_state": "player_starting",
+            "startup_phase": "player_starting",
+            "startup_feedback_state": "player_starting",
+            "startup_feedback_visible": False,
+            "startup_feedback_display": "none",
+            "startup_feedback_message": "Iniciando player",
+            "content_state": "unknown",
+            "first_frame_ready": False,
+            "first_content_load_accepted": False,
+            "black_screen_risk_reason": None,
+            "blocked_media_count": 0,
+            "last_render_ok": None,
+            "last_render_error": None,
+        }
+        self.start_time = time.time()
+
+    def update(self, **kwargs: object) -> None:
+        with self._lock:
+            self._data.update(kwargs)
+
+    def snapshot(self) -> Dict[str, Optional[object]]:
+        with self._lock:
+            return dict(self._data)
+
+
+STARTUP_FEEDBACK_MESSAGES = {
+    "player_starting": ("Dadooh", "Iniciando player", "Aguarde alguns instantes."),
+    "waiting_for_api": ("Dadooh", "Carregando conteudo", "Buscando configuracao de midia."),
+    "waiting_for_playlist": ("Dadooh", "Carregando conteudo", "Preparando lista de midias."),
+    "waiting_for_media_cache": ("Dadooh", "Carregando conteudo", "Preparando midias locais."),
+    "waiting_for_media": ("Dadooh", "Carregando conteudo", "Aguardando midia disponivel."),
+    "waiting_for_content": ("Dadooh", "Carregando conteudo", "Preparando exibicao."),
+    "preparing_first_frame": ("Dadooh", "Carregando conteudo", "Abrindo primeira midia."),
+    "error_no_content": ("Dadooh", "Conteudo indisponivel", "O sistema tentara novamente."),
+    "error_player_start": ("Dadooh", "Player indisponivel", "O sistema tentara reiniciar."),
+}
+
+
+def public_startup_state(value: object) -> str:
+    state = str(value or "").strip().lower()
+    if state in STARTUP_FEEDBACK_MESSAGES or state == "playing":
+        return state
+    return "waiting_for_content"
+
+
+def update_waiting_status(
+    status: StatusState,
+    *,
+    startup_phase: str,
+    content_state: str,
+    playback_state: str = "waiting_for_content",
+    black_screen_risk_reason: Optional[str] = "waiting_for_content",
+) -> None:
+    snapshot = status.snapshot()
+    if snapshot.get("playback_state") == "playing" or snapshot.get("first_frame_ready") is True:
+        return
+    phase = public_startup_state(startup_phase)
+    status.update(
+        player_state=phase,
+        playback_state=playback_state,
+        startup_phase=phase,
+        startup_feedback_state=phase,
+        content_state=content_state,
+        first_frame_ready=False,
+        black_screen_risk_reason=black_screen_risk_reason,
+    )
+
+
+def startup_feedback_svg_path(cfg: Dict) -> str:
+    runtime_dir = cfg.get("runtime_dir") or default_runtime_dir()
+    return os.path.join(str(runtime_dir), "startup-feedback.svg")
+
+
+def build_startup_feedback_svg(state: str, *, width: int = 1280, height: int = 720) -> str:
+    safe_state = public_startup_state(state)
+    title, message, hint = STARTUP_FEEDBACK_MESSAGES.get(
+        safe_state, STARTUP_FEEDBACK_MESSAGES["waiting_for_content"]
+    )
+    escaped_state = html.escape(safe_state)
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 1280 720" role="img" aria-label="Dadooh carregando conteudo">
+  <rect width="1280" height="720" fill="#101318"/>
+  <rect x="0" y="0" width="1280" height="10" fill="#22c55e"/>
+  <path d="M0 602 L1280 520 L1280 720 L0 720 Z" fill="#151923"/>
+  <text x="72" y="104" font-family="Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="700" fill="#f8fafc">{html.escape(title)}</text>
+  <text x="72" y="218" font-family="Arial, DejaVu Sans, sans-serif" font-size="64" font-weight="700" fill="#f8fafc">{html.escape(message)}</text>
+  <text x="76" y="276" font-family="Arial, DejaVu Sans, sans-serif" font-size="28" fill="#cbd5e1">{html.escape(hint)}</text>
+  <rect x="76" y="344" width="392" height="54" rx="8" fill="#111827" stroke="#374151"/>
+  <text x="104" y="379" font-family="Arial, DejaVu Sans Mono, monospace" font-size="22" font-weight="700" fill="#86efac">STATUS: {escaped_state}</text>
+  <text x="76" y="646" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#7d8796">Estado publico seguro. Nenhum dado privado exibido.</text>
+</svg>
+"""
+
+
+def write_startup_feedback_svg(cfg: Dict, state: str = "waiting_for_content") -> str:
+    target = startup_feedback_svg_path(cfg)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    tmp_path = f"{target}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        fh.write(build_startup_feedback_svg(state))
+    os.replace(tmp_path, target)
+    try:
+        os.chmod(target, 0o600)
+    except OSError:
+        pass
+    return target
+
+
+def show_startup_feedback(mpv: "MPVController", cfg: Dict, status: StatusState, state: str) -> bool:
+    if not cfg.get("startup_feedback_enabled", True):
+        return False
+    feedback_state = public_startup_state(state)
+    try:
+        path = write_startup_feedback_svg(cfg, feedback_state)
+        ok = mpv.load_file(path, alias=f"startup-feedback:{feedback_state}")
+    except Exception as exc:
+        logging.warning("Startup feedback render failed state=%s error=%s", feedback_state, exc)
+        status.update(
+            startup_feedback_visible=False,
+            startup_feedback_display="failed",
+            startup_feedback_state=feedback_state,
+        )
+        return False
+    status.update(
+        player_state=feedback_state,
+        playback_state="waiting_for_content",
+        startup_phase=feedback_state,
+        startup_feedback_state=feedback_state,
+        startup_feedback_visible=bool(ok),
+        startup_feedback_display="mpv_placeholder" if ok else "failed",
+        startup_feedback_message=STARTUP_FEEDBACK_MESSAGES[feedback_state][1],
+        content_state=feedback_state,
+        first_frame_ready=False,
+        first_content_load_accepted=False,
+        black_screen_risk_reason=None if ok else "startup_feedback_failed",
+    )
+    return bool(ok)
+
+
+def mark_player_error(status: StatusState, reason: str) -> None:
+    status.update(
+        player_state="error_player_start",
+        playback_state="error",
+        startup_phase="error_player_start",
+        startup_feedback_state="error_player_start",
+        content_state="error_no_content",
+        first_frame_ready=False,
+        black_screen_risk_reason=reason,
+    )
+
+
+def safe_getsize(path: str) -> Optional[int]:
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return None
+
+
+class CacheIndex:
+    def __init__(self, cfg: Dict) -> None:
+        self._path = cache_index_path(cfg)
+        self._lock = threading.Lock()
+        self._items: Dict[str, Dict[str, object]] = {}
+        self._last_save = 0.0
+        self._save_interval = 5.0
+        self._load()
+
+    def _load(self) -> None:
+        data = load_json_file(self._path) or {}
+        items = data.get("items")
+        if isinstance(items, dict):
+            self._items = {k: v for k, v in items.items() if isinstance(v, dict)}
+
+    def _save(self, force: bool = False) -> None:
+        now = time.time()
+        if not force and now - self._last_save < self._save_interval:
+            return
+        payload = {
+            "version": 1,
+            "updated_at": iso_now(),
+            "items": self._items,
+        }
+        write_json_file(self._path, payload, ensure_ascii=False)
+        self._last_save = now
+
+    def record_download(self, item: MediaItem) -> None:
+        with self._lock:
+            meta = dict(self._items.get(item.path, {}))
+            meta.update(
+                {
+                    "url": item.url,
+                    "duration_ms": item.duration_ms,
+                    "campaign_id": item.campaign_id,
+                    "campaign_name": item.campaign_name,
+                    "last_used": iso_now(),
+                    "size": safe_getsize(item.path) or meta.get("size"),
+                }
+            )
+            self._items[item.path] = meta
+            self._save()
+
+    def touch(self, item: MediaItem) -> None:
+        with self._lock:
+            meta = dict(self._items.get(item.path, {}))
+            meta.update(
+                {
+                    "url": item.url,
+                    "duration_ms": item.duration_ms,
+                    "campaign_id": item.campaign_id,
+                    "campaign_name": item.campaign_name,
+                    "last_used": iso_now(),
+                    "size": safe_getsize(item.path) or meta.get("size"),
+                }
+            )
+            self._items[item.path] = meta
+            self._save()
+
+    def remove_missing(self) -> None:
+        with self._lock:
+            missing = [path for path in self._items if not os.path.exists(path)]
+            if not missing:
+                return
+            for path in missing:
+                self._items.pop(path, None)
+            self._save(force=True)
+
+    def snapshot(self) -> Dict[str, Dict[str, object]]:
+        with self._lock:
+            return dict(self._items)
+
+def sha1_hex(text: str) -> str:
+    return hashlib.sha1(text.encode("utf-8"), usedforsecurity=False).hexdigest()
+
+
+def cache_path(cache_dir: str, url: str) -> str:
+    parsed = urlparse(url)
+    _, ext = os.path.splitext(parsed.path)
+    if not ext:
+        ext = ".bin"
+    return os.path.join(cache_dir, f"{sha1_hex(url)}{ext}")
+
+
+def positive_int_config(cfg: Dict, key: str) -> int:
+    try:
+        value = int(cfg.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, value)
+
+
+def positive_float_config(cfg: Dict, key: str, default: float) -> float:
+    raw_value = cfg.get(key)
+    if raw_value is None or raw_value == "":
+        return default
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def watchdog_ping_failure_threshold(cfg: Dict) -> int:
+    try:
+        value = int(cfg.get("mpv_watchdog_ping_failures_before_restart", 1))
+    except (TypeError, ValueError):
+        return 1
+    return max(1, value)
+
+
+def watchdog_grace_seconds(cfg: Dict, key: str) -> float:
+    return positive_float_config(cfg, key, 0.0)
+
+
+def media_alias(path: str, url: str = "") -> str:
+    source = url or path or "unknown"
+    return f"media-{sha1_hex(source)[:10]}"
+
+
+def safe_media_path_for_log(path: str) -> str:
+    if not path:
+        return "<empty>"
+    if "://" in path:
+        return "<redacted-url>"
+    if path_is_under(path, "/data/media") or path_is_under(path, "/tmp"):
+        return f"<media-path:{sha1_hex(path)[:10]}>"
+    if path_is_under(path, "/data"):
+        return f"<data-path:{sha1_hex(path)[:10]}>"
+    return f"<local-path:{sha1_hex(path)[:10]}>"
+
+
+def media_load_log_context(item: MediaItem, index: int, duration_ms: int, mpv: "MPVController") -> str:
+    return (
+        f"alias={media_alias(item.path, item.url)} "
+        f"media_path={safe_media_path_for_log(item.path)} "
+        f"index={index} "
+        f"duration_ms={duration_ms} "
+        f"mpv_generation={mpv.generation()} "
+        f"mpv_pid={mpv.pid() or 'none'}"
+    )
+
+
+def free_space_bytes(path: str) -> int:
+    stat = os.statvfs(path)
+    return int(stat.f_bavail) * int(stat.f_frsize)
+
+
+def ensure_download_space(cache_dir: str, download_bytes: int, min_free_space_bytes: int) -> None:
+    available = free_space_bytes(cache_dir)
+    required = download_bytes + min_free_space_bytes
+    if available < required:
+        raise IOError(
+            f"Insufficient free space for download "
+            f"({available} available, {download_bytes} needed, {min_free_space_bytes} reserved)"
+        )
+
+
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi", ".mpeg", ".mpg"}
+
+
+def is_image_path(path: str) -> bool:
+    ext = os.path.splitext(path.lower())[1]
+    return ext in IMAGE_EXTENSIONS
+
+
+def is_supported_media_path(path: str, allow_bin: bool = False) -> bool:
+    ext = os.path.splitext(path.lower())[1]
+    if ext in IMAGE_EXTENSIONS or ext in VIDEO_EXTENSIONS:
+        return True
+    return allow_bin and ext == ".bin"
+
+
+def fetch_media_list(cfg: Dict) -> List[Dict]:
+    if requests is None:
+        raise RuntimeError("requests is required. Install with: pip install -r requirements.txt")
+
+    payload = {
+        "environmentId": cfg["environment_id"],
+        "onlyStandby": cfg["only_standby"],
+        "searchIn": cfg["search_in"],
+        "includeDescendants": cfg["include_descendants"],
+        "limit": cfg["limit"],
+    }
+    headers = {"x-api-key": cfg["api_key"]}
+
+    resp = requests.post(
+        cfg["api_url"],
+        headers=headers,
+        json=payload,
+        timeout=cfg["request_timeout_sec"],
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    items: List[Dict] = []
+    for unit in data.get("units", []):
+        for campaign in unit.get("campaigns", []) or []:
+            status = str(campaign.get("status", "")).lower()
+            if status and status not in {"ativa", "active"}:
+                continue
+            duration_ms = int(campaign.get("exposure_time_ms") or cfg["default_duration_ms"])
+            urls = list(campaign.get("media_urls") or [])
+            if not urls and campaign.get("primary_media_url"):
+                urls = [campaign["primary_media_url"]]
+            for url in urls:
+                if not url:
+                    continue
+                items.append(
+                    {
+                        "url": url,
+                        "duration_ms": duration_ms,
+                        "campaign_id": str(campaign.get("id", "")),
+                        "campaign_name": str(campaign.get("name", "")),
+                    }
+                )
+    return items
+
+
+def download_media(cfg: Dict, raw_items: List[Dict], cache_index: Optional[CacheIndex]) -> List[MediaItem]:
+    os.makedirs(cfg["cache_dir"], exist_ok=True)
+    items: List[MediaItem] = []
+    min_free_space_bytes = positive_int_config(cfg, "min_free_space_bytes")
+    max_download_bytes = positive_int_config(cfg, "max_download_bytes")
+
+    for item in raw_items:
+        url = item["url"]
+        dest = cache_path(cfg["cache_dir"], url)
+        alias = media_alias(dest, url)
+        safe_dest = safe_media_path_for_log(dest)
+        if not os.path.exists(dest):
+            tmp_path = f"{dest}.tmp"
+            try:
+                logging.info("Downloading media alias=%s path=%s", alias, safe_dest)
+                resp = requests.get(url, stream=True, timeout=cfg["request_timeout_sec"])
+                resp.raise_for_status()
+                expected_size = None
+                content_length = resp.headers.get("Content-Length")
+                if content_length and content_length.isdigit():
+                    expected_size = int(content_length)
+                if expected_size is not None:
+                    if max_download_bytes and expected_size > max_download_bytes:
+                        raise IOError(f"Download exceeds max_download_bytes ({expected_size}/{max_download_bytes})")
+                    ensure_download_space(cfg["cache_dir"], expected_size, min_free_space_bytes)
+                else:
+                    if not max_download_bytes:
+                        raise IOError("Download without Content-Length requires max_download_bytes > 0")
+                    ensure_download_space(cfg["cache_dir"], max_download_bytes, min_free_space_bytes)
+                bytes_written = 0
+                with open(tmp_path, "wb") as fh:
+                    for chunk in resp.iter_content(chunk_size=1024 * 256):
+                        if chunk:
+                            if max_download_bytes and bytes_written + len(chunk) > max_download_bytes:
+                                raise IOError(
+                                    f"Download exceeds max_download_bytes ({bytes_written + len(chunk)}/{max_download_bytes})"
+                                )
+                            fh.write(chunk)
+                            bytes_written += len(chunk)
+                if expected_size is not None and bytes_written < expected_size:
+                    raise IOError(f"Incomplete download ({bytes_written}/{expected_size} bytes)")
+                if expected_size is not None and bytes_written > expected_size:
+                    raise IOError(f"Download size mismatch ({bytes_written}/{expected_size} bytes)")
+                os.replace(tmp_path, dest)
+            except Exception as exc:
+                logging.warning("Failed to download media alias=%s path=%s error=%s", alias, safe_dest, exc)
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception as cleanup_exc:
+                    logging.warning("Failed to cleanup temp file for media alias=%s path=%s error=%s", alias, safe_dest, cleanup_exc)
+                if os.path.exists(dest):
+                    logging.info("Using cached file for media alias=%s path=%s", alias, safe_dest)
+                else:
+                    continue
+
+        media_item = MediaItem(
+            url=url,
+            duration_ms=int(item["duration_ms"]),
+            path=dest,
+            campaign_id=item.get("campaign_id", ""),
+            campaign_name=item.get("campaign_name", ""),
+        )
+        items.append(media_item)
+        if cache_index is not None:
+            cache_index.record_download(media_item)
+    return items
+
+
+def fingerprint_items(raw_items: List[Dict]) -> str:
+    payload = [{"url": i["url"], "duration_ms": i["duration_ms"]} for i in raw_items]
+    return sha1_hex(json.dumps(payload, sort_keys=True))
+
+
+def items_signature(items: List[MediaItem]) -> str:
+    payload = [{"path": i.path, "duration_ms": i.duration_ms} for i in items]
+    return sha1_hex(json.dumps(payload, sort_keys=True))
+
+
+def build_open_command(cfg: Dict) -> List[str]:
+    url = f"http://{cfg['config_ui_bind']}:{cfg['config_ui_port']}"
+    if os.name == "nt":
+        return ["cmd", "/c", "start", "", url]
+    if sys.platform == "darwin":
+        return ["open", url]
+    return ["xdg-open", url]
+
+
+def ensure_hotkey_conf(cfg: Dict) -> Optional[str]:
+    if not cfg.get("hotkeys_enabled"):
+        return None
+    runtime_dir = cfg.get("runtime_dir") or default_runtime_dir()
+    os.makedirs(runtime_dir, exist_ok=True)
+    conf_path = os.path.join(runtime_dir, "hotkeys.conf")
+    cmd = build_open_command(cfg)
+    quoted = " ".join([f'"{arg}"' for arg in cmd])
+    line = f"{cfg.get('hotkey_open_key', 'Ctrl+s')} run {quoted}\n"
+    try:
+        with open(conf_path, "w", encoding="utf-8") as fh:
+            fh.write(line)
+    except Exception as exc:
+        logging.warning("Failed to write hotkey conf: %s", exc)
+        return None
+    return conf_path
+
+
+def ensure_runtime_paths(cfg: Dict) -> None:
+    runtime_dir = cfg.get("runtime_dir") or default_runtime_dir()
+    if runtime_dir:
+        os.makedirs(runtime_dir, exist_ok=True)
+
+    ipc_path = cfg.get("ipc_path")
+    if isinstance(ipc_path, str) and ipc_path and not is_windows_named_pipe(ipc_path):
+        ipc_dir = os.path.dirname(ipc_path)
+        if ipc_dir:
+            os.makedirs(ipc_dir, exist_ok=True)
+
+    mpv_log_file = cfg.get("mpv_log_file")
+    if isinstance(mpv_log_file, str) and mpv_log_file:
+        mpv_log_dir = os.path.dirname(mpv_log_file)
+        if mpv_log_dir:
+            os.makedirs(mpv_log_dir, exist_ok=True)
+
+
+def mpv_log_file_for_generation(mpv_log_file: object, generation: int) -> str:
+    if not isinstance(mpv_log_file, str) or not mpv_log_file:
+        return ""
+    try:
+        generation_number = max(int(generation), 0)
+    except (TypeError, ValueError):
+        generation_number = 0
+    root, ext = os.path.splitext(mpv_log_file)
+    suffix = f"-g{generation_number:03d}"
+    if ext:
+        return f"{root}{suffix}{ext}"
+    return f"{mpv_log_file}{suffix}"
+
+
+def update_latest_mpv_log_alias(mpv_log_file: object, generation_log_file: str) -> None:
+    if os.name == "nt" or not isinstance(mpv_log_file, str) or not mpv_log_file or not generation_log_file:
+        return
+    if os.path.abspath(mpv_log_file) == os.path.abspath(generation_log_file):
+        return
+    try:
+        if os.path.lexists(mpv_log_file):
+            if os.path.islink(mpv_log_file) or os.path.getsize(mpv_log_file) == 0:
+                os.remove(mpv_log_file)
+            else:
+                logging.info(
+                    "MPV latest log alias not updated; existing file is not empty alias=%s log_file=%s",
+                    mpv_log_file,
+                    generation_log_file,
+                )
+                return
+        os.symlink(generation_log_file, mpv_log_file)
+    except OSError as exc:
+        logging.info(
+            "MPV latest log alias not updated alias=%s log_file=%s error=%s",
+            mpv_log_file,
+            generation_log_file,
+            exc,
+        )
+
+
+def append_mpv_option_once(args: List[str], option_name: str, value: object) -> None:
+    if value is None or value == "":
+        return
+    option_prefix = f"--{option_name}"
+    if any(arg == option_prefix or arg.startswith(f"{option_prefix}=") for arg in args):
+        return
+    args.append(f"{option_prefix}={value}")
+
+
+def build_mpv_args(cfg: Dict, mpv_log_file: Optional[str] = None) -> List[str]:
+    args = [
+        cfg["mpv_path"],
+        "--fs",
+        "--force-window=yes",
+        "--idle=yes",
+        "--keep-open=yes",
+        "--no-terminal",
+        "--loop-file=inf",
+        "--image-display-duration=inf",
+        "--no-osc",
+        "--osd-level=0",
+        f"--input-ipc-server={cfg['ipc_path']}",
+    ]
+    effective_mpv_log_file = cfg.get("mpv_log_file") if mpv_log_file is None else mpv_log_file
+    if effective_mpv_log_file:
+        args.append(f"--log-file={effective_mpv_log_file}")
+    mpv_msg_level = cfg.get("mpv_msg_level")
+    if mpv_msg_level:
+        args.append(f"--msg-level={mpv_msg_level}")
+    append_mpv_option_once(args, "vo", cfg.get("mpv_vo"))
+    append_mpv_option_once(args, "gpu-context", cfg.get("mpv_gpu_context"))
+    append_mpv_option_once(args, "ao", cfg.get("mpv_ao"))
+    args.append("--no-input-default-bindings")
+    if cfg.get("low_resource_mode"):
+        args += [
+            "--profile=low-latency",
+            "--video-sync=audio",
+            "--vd-lavc-threads=1",
+            "--scale=bilinear",
+            "--dscale=bilinear",
+            "--cscale=bilinear",
+            "--interpolation=no",
+            "--correct-pts=no",
+            "--framedrop=decoder+vo",
+            "--hwdec-codecs=h264,mpeg4,mpeg2video",
+        ]
+    if cfg.get("rotation_deg") is not None:
+        args.append(f"--video-rotate={int(cfg['rotation_deg'])}")
+    hotkey_conf = ensure_hotkey_conf(cfg)
+    if hotkey_conf:
+        args.append(f"--input-conf={hotkey_conf}")
+        args.append("--input-vo-keyboard=yes")
+    elif cfg.get("lock_input", True):
+        args.append("--input-vo-keyboard=no")
+    if cfg.get("mute"):
+        args.append("--mute=yes")
+    if cfg.get("hwdec"):
+        args.append(f"--hwdec={cfg['hwdec']}")
+    return args
+
+
+class MPVController:
+    def __init__(self, cfg: Dict) -> None:
+        self._cfg = cfg
+        self._proc: Optional[subprocess.Popen] = None
+        self._ipc = None
+        self._ipc_socket = False
+        self._lock = threading.RLock()
+        self._ipc_lock = threading.Lock()
+        self._request_id_lock = threading.Lock()
+        self._request_id = 0
+        self._recv_buffer = ""
+        self._generation = 0
+        self._restart_count = 0
+        self._current_log_file = ""
+        self._last_start_monotonic: Optional[float] = None
+        self._last_loadfile_monotonic: Optional[float] = None
+
+    def _ipc_timeout(self) -> float:
+        return positive_float_config(self._cfg, "mpv_ipc_timeout_sec", 2.0)
+
+    def _startup_timeout(self) -> float:
+        return positive_float_config(self._cfg, "mpv_startup_timeout_sec", 10.0)
+
+    def _debug_events(self) -> bool:
+        return bool(self._cfg.get("mpv_debug_events"))
+
+    def _query_uses_fresh_ipc(self) -> bool:
+        return bool(self._cfg.get("mpv_query_uses_fresh_ipc"))
+
+    def pid(self) -> Optional[int]:
+        if self._proc is None:
+            return None
+        return self._proc.pid
+
+    def current_log_file(self) -> str:
+        return self._current_log_file
+
+    def last_start_monotonic(self) -> Optional[float]:
+        return self._last_start_monotonic
+
+    def last_loadfile_monotonic(self) -> Optional[float]:
+        return self._last_loadfile_monotonic
+
+    def _log_file_for_generation(self, generation: int) -> str:
+        return mpv_log_file_for_generation(self._cfg.get("mpv_log_file"), generation)
+
+    def _cleanup_ipc_path(self) -> None:
+        ipc_path = self._cfg["ipc_path"]
+        if os.name == "nt":
+            return
+        if os.path.exists(ipc_path):
+            try:
+                os.remove(ipc_path)
+            except OSError:
+                pass
+
+    def _open_ipc(self) -> bool:
+        ipc_path = self._cfg["ipc_path"]
+        start = time.monotonic()
+        timeout = self._startup_timeout()
+        last_error = None
+        logging.info(
+            "MPV IPC startup wait begin generation=%d pid=%s timeout_sec=%.2f ipc_path=%s log_file=%s",
+            self._generation,
+            self.pid() or "none",
+            timeout,
+            ipc_path,
+            self._current_log_file or "none",
+        )
+        while time.monotonic() - start < timeout:
+            try:
+                if os.name == "nt" and ipc_path.startswith("\\\\.\\pipe\\"):
+                    ipc = open(ipc_path, "r+b", buffering=0)
+                    with self._ipc_lock:
+                        self._close_ipc_locked()
+                        self._ipc = ipc
+                        self._ipc_socket = False
+                    logging.info(
+                        "MPV IPC startup wait complete transport=pipe generation=%d pid=%s duration_sec=%.2f timeout_sec=%.2f log_file=%s",
+                        self._generation,
+                        self.pid() or "none",
+                        time.monotonic() - start,
+                        timeout,
+                        self._current_log_file or "none",
+                    )
+                    return True
+                if os.path.exists(ipc_path):
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    sock.settimeout(2.0)
+                    sock.connect(ipc_path)
+                    with self._ipc_lock:
+                        self._close_ipc_locked()
+                        self._ipc = sock
+                        self._ipc_socket = True
+                    logging.info(
+                        "MPV IPC startup wait complete transport=socket generation=%d pid=%s duration_sec=%.2f timeout_sec=%.2f ipc_path=%s log_file=%s",
+                        self._generation,
+                        self.pid() or "none",
+                        time.monotonic() - start,
+                        timeout,
+                        ipc_path,
+                        self._current_log_file or "none",
+                    )
+                    return True
+            except Exception as exc:
+                last_error = exc
+                time.sleep(0.2)
+        logging.warning(
+            "MPV IPC startup timeout generation=%d pid=%s duration_sec=%.2f timeout_sec=%.2f ipc_path=%s log_file=%s last_error=%s",
+            self._generation,
+            self.pid() or "none",
+            time.monotonic() - start,
+            timeout,
+            ipc_path,
+            self._current_log_file or "none",
+            last_error or "none",
+        )
+        return False
+
+    def _close_ipc_locked(self) -> None:
+        if self._ipc is None:
+            return
+        try:
+            self._ipc.close()
+        except Exception:
+            pass
+        finally:
+            self._ipc = None
+            self._ipc_socket = False
+            self._recv_buffer = ""
+
+    def _close_ipc(self, reason: str = "cleanup", log_context: bool = False) -> None:
+        generation = self._generation
+        pid = self.pid() or "none"
+        log_file = self._current_log_file or "none"
+        if log_context:
+            logging.info(
+                "MPV IPC close waiting for IPC critical section reason=%s generation=%d pid=%s log_file=%s",
+                reason,
+                generation,
+                pid,
+                log_file,
+            )
+        with self._ipc_lock:
+            if log_context:
+                logging.info(
+                    "MPV IPC close entered IPC critical section reason=%s generation=%d pid=%s log_file=%s",
+                    reason,
+                    generation,
+                    pid,
+                    log_file,
+                )
+            self._close_ipc_locked()
+
+    def _stop_locked(self, reason: str = "stop") -> None:
+        self._close_ipc(reason=reason, log_context=True)
+        if self._proc and self._proc.poll() is None:
+            try:
+                if os.name != "nt" and self._proc.pid:
+                    os.killpg(self._proc.pid, signal.SIGTERM)
+                else:
+                    self._proc.terminate()
+                self._proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    if os.name != "nt" and self._proc.pid:
+                        os.killpg(self._proc.pid, signal.SIGKILL)
+                    else:
+                        self._proc.kill()
+                except Exception:
+                    pass
+        self._proc = None
+        self._cleanup_ipc_path()
+
+    def _start_locked(self) -> bool:
+        if self._proc and self._proc.poll() is None and self._ipc is not None:
+            return True
+        if self._proc and self._proc.poll() is None and self._ipc is None:
+            self._stop_locked(reason="start_ipc_unavailable")
+
+        self._close_ipc(reason="start_cleanup")
+        self._cleanup_ipc_path()
+        try:
+            ensure_runtime_paths(self._cfg)
+        except Exception as exc:
+            logging.error("Failed to prepare MPV runtime paths: %s", exc)
+            return False
+        next_generation = self._generation + 1
+        mpv_log_file = self._log_file_for_generation(next_generation)
+        update_latest_mpv_log_alias(self._cfg.get("mpv_log_file"), mpv_log_file)
+        args = build_mpv_args(self._cfg, mpv_log_file=mpv_log_file)
+        popen_kwargs = {
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+        }
+        if os.name == "nt":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            popen_kwargs["start_new_session"] = True
+        try:
+            self._proc = subprocess.Popen(args, **popen_kwargs)
+        except Exception as exc:
+            self._proc = None
+            logging.error("Failed to start MPV process: %s", exc)
+            return False
+        self._generation = next_generation
+        self._current_log_file = mpv_log_file
+        logging.info(
+            "MPV process started pid=%s generation=%d log_file=%s",
+            self.pid() or "none",
+            self._generation,
+            self._current_log_file or "none",
+        )
+        if self._open_ipc():
+            self._last_start_monotonic = time.monotonic()
+            return True
+        logging.warning(
+            "MPV IPC not available after launch; will retry. generation=%d pid=%s timeout_sec=%.2f log_file=%s",
+            self._generation,
+            self.pid() or "none",
+            self._startup_timeout(),
+            self._current_log_file or "none",
+        )
+        self._stop_locked(reason="start_ipc_timeout")
+        return False
+
+    def start(self) -> None:
+        with self._lock:
+            if self._start_locked():
+                return
+            time.sleep(1)
+            self._start_locked()
+
+    def restart(self, reason: str = "manual") -> None:
+        with self._lock:
+            self._restart_count += 1
+            logging.warning(
+                "Restarting MPV reason=%s restart_count=%d generation=%d pid=%s log_file=%s",
+                reason,
+                self._restart_count,
+                self._generation,
+                self.pid() or "none",
+                self._current_log_file or "none",
+            )
+            self._stop_locked(reason=reason)
+            time.sleep(1)
+            self._start_locked()
+
+    def stop(self) -> None:
+        with self._lock:
+            self._stop_locked(reason="stop")
+
+    def ensure_running(self) -> None:
+        if self._proc is None or self._proc.poll() is not None:
+            logging.warning(
+                "MPV process not running; starting generation=%d pid=%s log_file=%s",
+                self._generation,
+                self.pid() or "none",
+                self._current_log_file or "none",
+            )
+            self.start()
+
+    def is_running(self) -> bool:
+        return self._proc is not None and self._proc.poll() is None
+
+    def generation(self) -> int:
+        return self._generation
+
+    def _next_request_id(self) -> int:
+        with self._request_id_lock:
+            self._request_id += 1
+            return self._request_id
+
+    def _send(
+        self,
+        payload: Dict,
+        expect_response: bool = False,
+        timeout: Optional[float] = None,
+        command_name: str = "",
+        media_alias_value: str = "",
+    ) -> Optional[Dict]:
+        if timeout is None:
+            timeout = self._ipc_timeout()
+        command_label = command_name or str((payload.get("command") or ["unknown"])[0])
+        start = time.monotonic()
+        data = (json.dumps(payload) + "\n").encode("utf-8")
+        with self._ipc_lock:
+            if self._ipc is None:
+                logging.warning(
+                    "MPV IPC command skipped; IPC unavailable command=%s alias=%s generation=%d pid=%s log_file=%s",
+                    command_label,
+                    media_alias_value or "none",
+                    self._generation,
+                    self.pid() or "none",
+                    self._current_log_file or "none",
+                )
+                return None if expect_response else False
+            request_id = None
+            if expect_response:
+                request_id = self._next_request_id()
+                payload["request_id"] = request_id
+                data = (json.dumps(payload) + "\n").encode("utf-8")
+            try:
+                if self._ipc_socket:
+                    self._ipc.sendall(data)
+                else:
+                    self._ipc.write(data)
+                    self._ipc.flush()
+            except Exception as exc:
+                logging.warning(
+                    "MPV IPC command send failed command=%s alias=%s generation=%d pid=%s duration_sec=%.3f log_file=%s error=%s",
+                    command_label,
+                    media_alias_value or "none",
+                    self._generation,
+                    self.pid() or "none",
+                    time.monotonic() - start,
+                    self._current_log_file or "none",
+                    exc,
+                )
+                return None if expect_response else False
+            if not expect_response:
+                if self._debug_events():
+                    logging.info(
+                        "MPV IPC command sent command=%s alias=%s generation=%d pid=%s duration_sec=%.3f log_file=%s",
+                        command_label,
+                        media_alias_value or "none",
+                        self._generation,
+                        self.pid() or "none",
+                        time.monotonic() - start,
+                        self._current_log_file or "none",
+                    )
+                return True
+            response = self._recv_response(request_id or 0, timeout)
+            duration = time.monotonic() - start
+            if response is None:
+                logging.warning(
+                    "MPV IPC command timeout command=%s alias=%s generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                    command_label,
+                    media_alias_value or "none",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    timeout,
+                    self._current_log_file or "none",
+                )
+            elif response.get("error") != "success":
+                logging.warning(
+                    "MPV IPC command returned error command=%s alias=%s generation=%d pid=%s duration_sec=%.3f log_file=%s error=%s",
+                    command_label,
+                    media_alias_value or "none",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    self._current_log_file or "none",
+                    response.get("error"),
+                )
+            elif self._debug_events():
+                logging.info(
+                    "MPV IPC command ok command=%s alias=%s generation=%d pid=%s duration_sec=%.3f log_file=%s",
+                    command_label,
+                    media_alias_value or "none",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    self._current_log_file or "none",
+                )
+            return response
+
+    def _recv_response_from_ipc(
+        self,
+        ipc,
+        ipc_socket: bool,
+        request_id: int,
+        timeout: float,
+        initial_buffer: str = "",
+        transport: str = "persistent",
+    ) -> Tuple[Optional[Dict], str]:
+        if not ipc_socket or ipc is None:
+            return None, initial_buffer
+        deadline = time.time() + max(timeout, 0.1)
+        buffer = initial_buffer
+        buffer_before_bytes = len(buffer.encode("utf-8", errors="ignore"))
+        lines_read = 0
+        events_without_request_id = 0
+        responses_other_request_id = 0
+        responses_expected_request_id = 0
+        invalid_json_lines = 0
+        while time.time() < deadline:
+            if "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                lines_read += 1
+                if line:
+                    try:
+                        payload = json.loads(line)
+                    except Exception:
+                        invalid_json_lines += 1
+                        payload = None
+                    if isinstance(payload, dict):
+                        payload_request_id = payload.get("request_id")
+                        if payload_request_id == request_id:
+                            responses_expected_request_id += 1
+                            return payload, buffer
+                        if payload_request_id is None:
+                            events_without_request_id += 1
+                        else:
+                            responses_other_request_id += 1
+                    elif payload is not None:
+                        events_without_request_id += 1
+                continue
+            try:
+                ipc.settimeout(max(deadline - time.time(), 0.1))
+                chunk = ipc.recv(4096)
+                if not chunk:
+                    break
+                buffer += chunk.decode("utf-8", errors="ignore")
+            except socket.timeout:
+                continue
+            except Exception:
+                break
+        logging.warning(
+            "MPV IPC response timeout request_id=%d transport=%s generation=%d pid=%s timeout_sec=%.2f lines_read=%d events_without_request_id=%d responses_other_request_id=%d responses_expected_request_id=%d invalid_json_lines=%d buffer_before_bytes=%d buffer_after_bytes=%d log_file=%s",
+            request_id,
+            transport,
+            self._generation,
+            self.pid() or "none",
+            timeout,
+            lines_read,
+            events_without_request_id,
+            responses_other_request_id,
+            responses_expected_request_id,
+            invalid_json_lines,
+            buffer_before_bytes,
+            len(buffer.encode("utf-8", errors="ignore")),
+            self._current_log_file or "none",
+        )
+        return None, buffer
+
+    def _recv_response(self, request_id: int, timeout: float) -> Optional[Dict]:
+        response, buffer = self._recv_response_from_ipc(
+            self._ipc,
+            self._ipc_socket,
+            request_id,
+            timeout,
+            initial_buffer=self._recv_buffer,
+            transport="persistent",
+        )
+        self._recv_buffer = buffer
+        return response
+
+    def _open_fresh_ipc(self, timeout: float):
+        ipc_path = self._cfg["ipc_path"]
+        if os.name == "nt" and ipc_path.startswith("\\\\.\\pipe\\"):
+            return open(ipc_path, "r+b", buffering=0), False
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(timeout)
+            sock.connect(ipc_path)
+        except Exception:
+            sock.close()
+            raise
+        return sock, True
+
+    def _fresh_ipc_query(
+        self,
+        command: List[object],
+        command_name: str,
+        timeout: Optional[float] = None,
+    ) -> Optional[Dict]:
+        if timeout is None:
+            timeout = self._ipc_timeout()
+        request_id = self._next_request_id()
+        payload = {"command": command, "request_id": request_id}
+        data = (json.dumps(payload) + "\n").encode("utf-8")
+        start = time.monotonic()
+        ipc = None
+        logging.info(
+            "MPV IPC fresh query begin command=%s request_id=%d generation=%d pid=%s timeout_sec=%.2f log_file=%s",
+            command_name,
+            request_id,
+            self._generation,
+            self.pid() or "none",
+            timeout,
+            self._current_log_file or "none",
+        )
+        try:
+            ipc, ipc_socket = self._open_fresh_ipc(timeout)
+            if ipc_socket:
+                ipc.sendall(data)
+            else:
+                ipc.write(data)
+                ipc.flush()
+            response, _buffer = self._recv_response_from_ipc(
+                ipc,
+                ipc_socket,
+                request_id,
+                timeout,
+                initial_buffer="",
+                transport="fresh",
+            )
+        except Exception as exc:
+            logging.warning(
+                "MPV IPC fresh query failed command=%s request_id=%d generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s error=%s",
+                command_name,
+                request_id,
+                self._generation,
+                self.pid() or "none",
+                time.monotonic() - start,
+                timeout,
+                self._current_log_file or "none",
+                exc,
+            )
+            return None
+        finally:
+            if ipc is not None:
+                try:
+                    ipc.close()
+                except Exception:
+                    pass
+        duration = time.monotonic() - start
+        if response is None:
+            logging.warning(
+                "MPV IPC fresh query timeout command=%s request_id=%d generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                command_name,
+                request_id,
+                self._generation,
+                self.pid() or "none",
+                duration,
+                timeout,
+                self._current_log_file or "none",
+            )
+        elif response.get("error") != "success":
+            logging.warning(
+                "MPV IPC fresh query returned error command=%s request_id=%d generation=%d pid=%s duration_sec=%.3f log_file=%s error=%s",
+                command_name,
+                request_id,
+                self._generation,
+                self.pid() or "none",
+                duration,
+                self._current_log_file or "none",
+                response.get("error"),
+            )
+        else:
+            logging.info(
+                "MPV IPC fresh query ok command=%s request_id=%d generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                command_name,
+                request_id,
+                self._generation,
+                self.pid() or "none",
+                duration,
+                timeout,
+                self._current_log_file or "none",
+            )
+        return response
+
+    def _fresh_ipc_get_property(self, name: str, timeout: Optional[float] = None) -> Optional[Dict]:
+        return self._fresh_ipc_query(["get_property", name], command_name="get_property", timeout=timeout)
+
+    def load_file(self, path: str, alias: str = "") -> bool:
+        alias_value = alias or media_alias(path)
+        safe_path = safe_media_path_for_log(path)
+        start = time.monotonic()
+        self._last_loadfile_monotonic = start
+        if self._debug_events():
+            logging.info(
+                "MPV loadfile sent alias=%s media_path=%s generation=%d pid=%s timeout_sec=%.2f log_file=%s",
+                alias_value,
+                safe_path,
+                self._generation,
+                self.pid() or "none",
+                self._ipc_timeout(),
+                self._current_log_file or "none",
+            )
+            response = self._send(
+                {"command": ["loadfile", path, "replace"]},
+                expect_response=True,
+                timeout=self._ipc_timeout(),
+                command_name="loadfile",
+                media_alias_value=alias_value,
+            )
+            ok = isinstance(response, dict) and response.get("error") == "success"
+        else:
+            ok = bool(
+                self._send(
+                    {"command": ["loadfile", path, "replace"]},
+                    command_name="loadfile",
+                    media_alias_value=alias_value,
+                )
+            )
+        if not ok:
+            logging.warning(
+                "MPV loadfile returned error alias=%s media_path=%s generation=%d pid=%s duration_sec=%.3f log_file=%s",
+                alias_value,
+                safe_path,
+                self._generation,
+                self.pid() or "none",
+                time.monotonic() - start,
+                self._current_log_file or "none",
+            )
+        elif self._debug_events():
+            logging.info(
+                "MPV loadfile result alias=%s result=success media_path=%s generation=%d pid=%s duration_sec=%.3f log_file=%s",
+                alias_value,
+                safe_path,
+                self._generation,
+                self.pid() or "none",
+                time.monotonic() - start,
+                self._current_log_file or "none",
+            )
+        return ok
+
+    def append_file(self, path: str) -> bool:
+        self._last_loadfile_monotonic = time.monotonic()
+        return bool(self._send({"command": ["loadfile", path, "append"]}))
+
+    def playlist_next(self) -> bool:
+        return bool(self._send({"command": ["playlist-next", "force"]}))
+
+    def playlist_remove(self, index: int) -> bool:
+        return bool(self._send({"command": ["playlist-remove", index]}))
+
+    def set_property(self, name: str, value: object) -> bool:
+        return bool(self._send({"command": ["set_property", name, value]}))
+
+    def seek_absolute(self, seconds: float) -> bool:
+        return bool(self._send({"command": ["seek", float(seconds), "absolute+exact"]}))
+
+    def ping(self) -> bool:
+        start = time.monotonic()
+        if self._query_uses_fresh_ipc():
+            payload = self._fresh_ipc_get_property("idle-active", timeout=self._ipc_timeout())
+            ok = isinstance(payload, dict) and payload.get("error") == "success"
+            duration = time.monotonic() - start
+            if not ok:
+                logging.warning(
+                    "MPV IPC ping failed generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    self._ipc_timeout(),
+                    self._current_log_file or "none",
+                )
+            elif self._debug_events():
+                logging.info(
+                    "MPV IPC ping ok generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    self._ipc_timeout(),
+                    self._current_log_file or "none",
+                )
+            return ok
+        if not self._ipc_socket:
+            ok = bool(self._send({"command": ["get_property", "idle-active"]}, command_name="ping"))
+            duration = time.monotonic() - start
+            if not ok:
+                logging.warning(
+                    "MPV IPC ping failed generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    self._ipc_timeout(),
+                    self._current_log_file or "none",
+                )
+            elif self._debug_events():
+                logging.info(
+                    "MPV IPC ping ok generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                    self._generation,
+                    self.pid() or "none",
+                    duration,
+                    self._ipc_timeout(),
+                    self._current_log_file or "none",
+                )
+            return ok
+        payload = self._send(
+            {"command": ["get_property", "idle-active"]},
+            expect_response=True,
+            timeout=self._ipc_timeout(),
+            command_name="ping",
+        )
+        ok = isinstance(payload, dict) and payload.get("error") == "success"
+        duration = time.monotonic() - start
+        if not ok:
+            logging.warning(
+                "MPV IPC ping failed generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                self._generation,
+                self.pid() or "none",
+                duration,
+                self._ipc_timeout(),
+                self._current_log_file or "none",
+            )
+        elif self._debug_events():
+            logging.info(
+                "MPV IPC ping ok generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                self._generation,
+                self.pid() or "none",
+                duration,
+                self._ipc_timeout(),
+                self._current_log_file or "none",
+            )
+        return ok
+
+    def get_property(self, name: str, timeout: float = 2.0) -> Optional[object]:
+        if self._query_uses_fresh_ipc():
+            payload = self._fresh_ipc_get_property(name, timeout=timeout)
+        else:
+            payload = self._send({"command": ["get_property", name]}, expect_response=True, timeout=timeout)
+        if isinstance(payload, dict) and payload.get("error") == "success":
+            return payload.get("data")
+        return None
+
+
+class ConfigServer:
+    def __init__(
+        self,
+        cfg: Dict,
+        cfg_lock: threading.Lock,
+        config_path: str,
+        mpv: MPVController,
+        poll_now_event: threading.Event,
+    ) -> None:
+        self._cfg = cfg
+        self._cfg_lock = cfg_lock
+        self._config_path = config_path
+        self._mpv = mpv
+        self._poll_now_event = poll_now_event
+        self._server: Optional[ThreadingHTTPServer] = None
+
+    def start(self) -> None:
+        snapshot = config_snapshot(self._cfg, self._cfg_lock)
+        if not snapshot.get("config_ui_enabled"):
+            return
+        bind = snapshot.get("config_ui_bind", "127.0.0.1")
+        port = int(snapshot.get("config_ui_port", 8765))
+        try:
+            server = ThreadingHTTPServer((bind, port), self._make_handler())
+        except Exception as exc:
+            logging.warning("Config UI unavailable on %s:%s: %s", bind, port, exc)
+            return
+        self._server = server
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        logging.info("Config UI disponível em http://%s:%s", bind, port)
+
+    def _make_handler(self):
+        cfg = self._cfg
+        cfg_lock = self._cfg_lock
+        config_path = self._config_path
+        mpv = self._mpv
+        poll_now = self._poll_now_event
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, fmt, *args) -> None:
+                logging.info("ConfigUI %s - %s", self.address_string(), fmt % args)
+
+            def do_GET(self) -> None:  # noqa: N802
+                if self.path not in {"/", ""}:
+                    self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+                    return
+                snapshot = config_snapshot(cfg, cfg_lock)
+                env_id = snapshot.get("environment_id", "")
+                rotation = int(snapshot.get("rotation_deg") or 0)
+                html = f"""<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<title>Kiosky Config</title>
+<style>
+body{{font-family:Arial,Helvetica,sans-serif;margin:24px;background:#111;color:#eee;}}
+label{{display:block;margin:12px 0 6px;}}
+input,select,button{{font-size:16px;padding:8px;border-radius:6px;border:1px solid #444;background:#1b1b1b;color:#eee;}}
+button{{cursor:pointer;background:#2b7a78;border-color:#2b7a78;}}
+.small{{font-size:12px;color:#aaa;}}
+</style></head><body>
+<h2>Configuração Kiosky</h2>
+<form method="POST" action="/save">
+<label>Environment ID</label>
+<input name="environment_id" value="{env_id}" style="width:420px">
+<label>Rotação</label>
+<select name="rotation_deg">
+  <option value="0" {"selected" if rotation==0 else ""}>0°</option>
+  <option value="90" {"selected" if rotation==90 else ""}>90°</option>
+  <option value="180" {"selected" if rotation==180 else ""}>180°</option>
+  <option value="270" {"selected" if rotation==270 else ""}>270°</option>
+</select>
+<div style="margin-top:16px"><button type="submit">Salvar</button></div>
+<p class="small">Após salvar, o player aplica a rotação e atualiza o ambiente.</p>
+</form>
+</body></html>
+"""
+                payload = html.encode("utf-8")
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+            def do_POST(self) -> None:  # noqa: N802
+                if self.path != "/save":
+                    self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+                    return
+                length = int(self.headers.get("Content-Length", "0"))
+                body = self.rfile.read(length).decode("utf-8")
+                data = parse_qs(body)
+                env_id = (data.get("environment_id") or [""])[0].strip()
+                rotation = normalize_rotation((data.get("rotation_deg") or ["0"])[0])
+
+                with cfg_lock:
+                    if env_id:
+                        cfg["environment_id"] = env_id
+                    cfg["rotation_deg"] = rotation
+                    write_config(config_path, cfg)
+
+                mpv.set_property("video-rotate", rotation)
+                poll_now.set()
+
+                html = """<!doctype html><html><head><meta charset='utf-8'>
+<title>Salvo</title></head><body>
+<p>Configuração salva com sucesso.</p>
+<script>setTimeout(() => window.close(), 800);</script>
+</body></html>"""
+                payload = html.encode("utf-8")
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+        return Handler
+
+
+def poller(
+    cfg: Dict,
+    cfg_lock: threading.Lock,
+    poll_now_event: threading.Event,
+    state: PlaylistState,
+    status: StatusState,
+    cache_index: CacheIndex,
+    stop_event: threading.Event,
+) -> None:
+    def wait_poll_interval(cfg_snapshot: Dict) -> None:
+        interval = int(cfg_snapshot.get("poll_interval_sec") or 0)
+        for _ in range(int(interval * 5)):
+            if stop_event.is_set():
+                break
+            if poll_now_event.is_set():
+                poll_now_event.clear()
+                break
+            time.sleep(0.2)
+
+    backoff = 2
+    consecutive_failures = 0
+    while not stop_event.is_set():
+        cfg_snapshot = config_snapshot(cfg, cfg_lock)
+        try:
+            update_waiting_status(
+                status,
+                startup_phase="waiting_for_api",
+                content_state="waiting_for_api",
+                black_screen_risk_reason="api_playlist_wait",
+            )
+            raw_items = fetch_media_list(cfg_snapshot)
+            update_waiting_status(
+                status,
+                startup_phase="waiting_for_playlist",
+                content_state="waiting_for_playlist",
+                black_screen_risk_reason="playlist_wait",
+            )
+            if not raw_items and not cfg_snapshot.get("allow_empty_playlist_from_api", False):
+                current_items, _ = state.get()
+                if current_items:
+                    logging.warning(
+                        "API returned empty playlist; keeping current playlist (%d items).",
+                        len(current_items),
+                    )
+                    status.update(playlist_size=len(current_items))
+                    status.update(last_poll_success=iso_now(), last_poll_error=None)
+                    save_last_success(cfg_snapshot, iso_now())
+                    consecutive_failures = 0
+                    status.update(consecutive_failures=consecutive_failures)
+                    backoff = 2
+                    wait_poll_interval(cfg_snapshot)
+                    continue
+
+                cache_items, cache_payload = media_items_from_cache(cfg_snapshot, cache_index)
+                if cache_items:
+                    update_waiting_status(
+                        status,
+                        startup_phase="waiting_for_media_cache",
+                        content_state="local_cache_ready",
+                        black_screen_risk_reason="media_cache_wait",
+                    )
+                    cache_fp = fingerprint_items(cache_payload)
+                    updated = state.update(cache_items, cache_fp)
+                    if updated:
+                        save_playlist_state(cfg_snapshot, cache_items, cache_fp)
+                        logging.warning(
+                            "API returned empty playlist; loaded %d items from local cache.",
+                            len(cache_items),
+                        )
+                    status.update(playlist_size=len(cache_items))
+                    status.update(last_poll_success=iso_now(), last_poll_error=None)
+                    save_last_success(cfg_snapshot, iso_now())
+                    consecutive_failures = 0
+                    status.update(consecutive_failures=consecutive_failures)
+                    backoff = 2
+                    wait_poll_interval(cfg_snapshot)
+                    continue
+
+                raise RuntimeError("API returned empty playlist and no local media is available")
+
+            fingerprint = fingerprint_items(raw_items)
+            update_waiting_status(
+                status,
+                startup_phase="waiting_for_media_cache",
+                content_state="downloading_or_validating_media",
+                black_screen_risk_reason="media_cache_wait",
+            )
+            items = download_media(cfg_snapshot, raw_items, cache_index)
+            switch_ok = True
+            if cfg_snapshot.get("require_full_download_before_switch"):
+                switch_ok = len(items) >= len(raw_items)
+                if not switch_ok:
+                    logging.warning(
+                        "Playlist download incomplete (%d/%d). Keeping current playlist.",
+                        len(items),
+                        len(raw_items),
+                    )
+            if switch_ok:
+                updated = state.update(items, fingerprint)
+                if updated:
+                    logging.info("Playlist updated: %d items", len(items))
+                if items and (updated or not os.path.exists(playlist_state_path(cfg_snapshot))):
+                    save_playlist_state(cfg_snapshot, items, fingerprint)
+                if updated:
+                    status_snapshot = status.snapshot()
+                    keep_paths = {item.path for item in items}
+                    current = status_snapshot.get("current_item") or {}
+                    next_item = status_snapshot.get("next_item") or {}
+                    if isinstance(current, dict) and current.get("path"):
+                        keep_paths.add(current["path"])
+                    if isinstance(next_item, dict) and next_item.get("path"):
+                        keep_paths.add(next_item["path"])
+                    removed = cleanup_cache_dir(
+                        cfg_snapshot["cache_dir"],
+                        keep_paths,
+                        cache_index,
+                        cfg_snapshot,
+                    )
+                    status.update(last_cleanup=iso_now(), last_cleanup_removed=removed)
+                    status_snapshot = status.snapshot()
+                    send_telemetry(
+                        cfg_snapshot,
+                        status_snapshot,
+                        heartbeat_type="playlist",
+                        status="ok",
+                        notes="playlist updated",
+                        uptime_seconds=int(time.time() - status.start_time),
+                    )
+                status.update(playlist_size=len(items))
+            else:
+                current_items, _ = state.get()
+                status.update(playlist_size=len(current_items))
+            status.update(last_poll_success=iso_now(), last_poll_error=None)
+            save_last_success(cfg_snapshot, iso_now())
+            consecutive_failures = 0
+            status.update(consecutive_failures=consecutive_failures)
+            backoff = 2
+        except Exception as exc:
+            logging.warning("API polling failed: %s", exc)
+            update_waiting_status(
+                status,
+                startup_phase="waiting_for_api",
+                content_state="api_error_retrying",
+                black_screen_risk_reason="api_playlist_wait",
+            )
+            status.update(last_poll_error=f"{iso_now()} {exc}")
+            consecutive_failures += 1
+            status.update(consecutive_failures=consecutive_failures)
+            status_snapshot = status.snapshot()
+            send_telemetry(
+                cfg_snapshot,
+                status_snapshot,
+                heartbeat_type="media_fetch",
+                status="error",
+                error_code="media_fetch_failed",
+                error_message=str(exc),
+                uptime_seconds=int(time.time() - status.start_time),
+            )
+            time.sleep(backoff)
+            backoff = min(backoff * 2, 300)
+        else:
+            wait_poll_interval(cfg_snapshot)
+
+
+def mpv_monotonic_timestamp(mpv: MPVController, method_name: str) -> Optional[float]:
+    method = getattr(mpv, method_name, None)
+    if not callable(method):
+        return None
+    try:
+        value = method()
+    except Exception:
+        return None
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def watchdog_grace_state(
+    cfg: Dict,
+    mpv: MPVController,
+    now_monotonic: float,
+) -> Optional[Tuple[str, float, float]]:
+    candidates: List[Tuple[str, float, float]] = []
+    load_grace_sec = watchdog_grace_seconds(cfg, "mpv_watchdog_grace_after_load_sec")
+    load_ts = mpv_monotonic_timestamp(mpv, "last_loadfile_monotonic")
+    if load_grace_sec > 0 and load_ts is not None:
+        elapsed_sec = max(now_monotonic - load_ts, 0.0)
+        if elapsed_sec < load_grace_sec:
+            candidates.append(("within_grace_after_load", elapsed_sec, load_grace_sec))
+
+    restart_grace_sec = watchdog_grace_seconds(cfg, "mpv_watchdog_grace_after_restart_sec")
+    start_ts = mpv_monotonic_timestamp(mpv, "last_start_monotonic")
+    if restart_grace_sec > 0 and start_ts is not None:
+        elapsed_sec = max(now_monotonic - start_ts, 0.0)
+        if elapsed_sec < restart_grace_sec:
+            candidates.append(("within_grace_after_restart", elapsed_sec, restart_grace_sec))
+
+    if not candidates:
+        return None
+    return min(candidates, key=lambda item: item[1])
+
+
+def watchdog(
+    cfg: Dict,
+    cfg_lock: threading.Lock,
+    mpv: MPVController,
+    status: StatusState,
+    stop_event: threading.Event,
+) -> None:
+    consecutive_ping_failures = 0
+    ping_failure_generation: Optional[int] = None
+    active_grace_reason: Optional[str] = None
+    active_grace_sec = 0.0
+    grace_suppressed_ping_failures = 0
+    while not stop_event.is_set():
+        try:
+            mpv.ensure_running()
+            cfg_snapshot = config_snapshot(cfg, cfg_lock)
+            timeout_sec = positive_float_config(cfg_snapshot, "mpv_ipc_timeout_sec", 2.0)
+            threshold = watchdog_ping_failure_threshold(cfg_snapshot)
+            now_monotonic = time.monotonic()
+            grace_state = watchdog_grace_state(cfg_snapshot, mpv, now_monotonic)
+            current_generation = mpv.generation()
+            current_pid = mpv.pid() or "none"
+            current_log_file = mpv.current_log_file() or "none"
+            if grace_state is None and active_grace_reason is not None:
+                logging.info(
+                    "MPV watchdog grace window expired; resuming normal ping policy reason=%s suppressed_ping_failures=%d threshold=%d timeout_sec=%.2f grace_sec=%.2f generation=%d pid=%s log_file=%s",
+                    active_grace_reason,
+                    grace_suppressed_ping_failures,
+                    threshold,
+                    timeout_sec,
+                    active_grace_sec,
+                    current_generation,
+                    current_pid,
+                    current_log_file,
+                )
+                active_grace_reason = None
+                active_grace_sec = 0.0
+                grace_suppressed_ping_failures = 0
+            elif grace_state is not None:
+                active_grace_reason = grace_state[0]
+                active_grace_sec = grace_state[2]
+            if (
+                consecutive_ping_failures
+                and ping_failure_generation is not None
+                and ping_failure_generation != current_generation
+            ):
+                logging.info(
+                    "MPV IPC ping failure counter reset after generation change consecutive_ping_failures=%d threshold=%d timeout_sec=%.2f previous_generation=%d generation=%d pid=%s log_file=%s",
+                    consecutive_ping_failures,
+                    threshold,
+                    timeout_sec,
+                    ping_failure_generation,
+                    current_generation,
+                    current_pid,
+                    current_log_file,
+                )
+                consecutive_ping_failures = 0
+                ping_failure_generation = None
+            if not mpv.ping():
+                if grace_state is not None:
+                    reason, elapsed_sec, grace_sec = grace_state
+                    grace_suppressed_ping_failures += 1
+                    if consecutive_ping_failures:
+                        logging.info(
+                            "MPV IPC ping failure counter reset during watchdog grace consecutive_ping_failures=%d threshold=%d timeout_sec=%.2f reason=%s generation=%d pid=%s log_file=%s",
+                            consecutive_ping_failures,
+                            threshold,
+                            timeout_sec,
+                            reason,
+                            current_generation,
+                            current_pid,
+                            current_log_file,
+                        )
+                    consecutive_ping_failures = 0
+                    ping_failure_generation = None
+                    logging.warning(
+                        "MPV IPC ping failed within watchdog grace; restart suppressed reason=%s suppressed_ping_failures=%d threshold=%d timeout_sec=%.2f generation=%d pid=%s elapsed_sec=%.2f grace_sec=%.2f log_file=%s",
+                        reason,
+                        grace_suppressed_ping_failures,
+                        threshold,
+                        timeout_sec,
+                        current_generation,
+                        current_pid,
+                        elapsed_sec,
+                        grace_sec,
+                        current_log_file,
+                    )
+                else:
+                    ping_failure_generation = current_generation
+                    consecutive_ping_failures += 1
+                    if consecutive_ping_failures < threshold:
+                        logging.warning(
+                            "MPV IPC ping failed below restart threshold consecutive_ping_failures=%d threshold=%d timeout_sec=%.2f generation=%d pid=%s log_file=%s",
+                            consecutive_ping_failures,
+                            threshold,
+                            timeout_sec,
+                            current_generation,
+                            current_pid,
+                            current_log_file,
+                        )
+                    else:
+                        logging.warning(
+                            "MPV IPC unresponsive, restarting reason=ipc_unresponsive consecutive_ping_failures=%d threshold=%d timeout_sec=%.2f generation=%d pid=%s log_file=%s",
+                            consecutive_ping_failures,
+                            threshold,
+                            timeout_sec,
+                            current_generation,
+                            current_pid,
+                            current_log_file,
+                        )
+                        mpv.restart(reason="ipc_unresponsive")
+                        consecutive_ping_failures = 0
+                        ping_failure_generation = None
+            else:
+                if consecutive_ping_failures:
+                    logging.info(
+                        "MPV IPC ping recovered consecutive_ping_failures=%d threshold=%d timeout_sec=%.2f generation=%d pid=%s log_file=%s",
+                        consecutive_ping_failures,
+                        threshold,
+                        timeout_sec,
+                        current_generation,
+                        current_pid,
+                        current_log_file,
+                    )
+                consecutive_ping_failures = 0
+                ping_failure_generation = None
+            status.update(mpv_running=mpv.is_running(), mpv_last_ok=iso_now())
+        except Exception as exc:
+            logging.warning("Watchdog error: %s", exc)
+        cfg_snapshot = config_snapshot(cfg, cfg_lock)
+        interval = int(cfg_snapshot.get("watchdog_interval_sec") or 0)
+        for _ in range(int(interval * 5)):
+            if stop_event.is_set():
+                break
+            time.sleep(0.2)
+
+
+def telemetry_worker(
+    cfg: Dict,
+    cfg_lock: threading.Lock,
+    status: StatusState,
+    stop_event: threading.Event,
+) -> None:
+    cfg_snapshot = config_snapshot(cfg, cfg_lock)
+    if not cfg_snapshot.get("telemetry_enabled") or not cfg_snapshot.get("telemetry_url"):
+        return
+    interval = int(cfg_snapshot.get("telemetry_interval_sec") or 0)
+    if interval <= 0:
+        return
+
+    status_snapshot = status.snapshot()
+    ok = send_telemetry(
+        cfg_snapshot,
+        status_snapshot,
+        heartbeat_type="startup",
+        status="ok",
+        notes="startup",
+        uptime_seconds=int(time.time() - status.start_time),
+    )
+    if not ok:
+        status.update(last_telemetry_error=iso_now())
+
+    while not stop_event.is_set():
+        cfg_snapshot = config_snapshot(cfg, cfg_lock)
+        status_snapshot = status.snapshot()
+        failures = int(status_snapshot.get("consecutive_failures") or 0)
+        hb_status = "ok"
+        error_message = None
+        if failures >= 3:
+            hb_status = "error"
+            error_message = str(status_snapshot.get("last_poll_error") or "")
+        elif failures > 0:
+            hb_status = "warning"
+            error_message = str(status_snapshot.get("last_poll_error") or "")
+
+        ok = send_telemetry(
+            cfg_snapshot,
+            status_snapshot,
+            heartbeat_type="healthcheck",
+            status=hb_status,
+            error_code="media_fetch_failed" if failures > 0 else None,
+            error_message=error_message if failures > 0 else None,
+            notes="healthcheck",
+            uptime_seconds=int(time.time() - status.start_time),
+        )
+        if not ok:
+            status.update(last_telemetry_error=iso_now())
+
+        for _ in range(int(interval * 5)):
+            if stop_event.is_set():
+                break
+            time.sleep(0.2)
+
+
+def write_status_snapshot(status_path: str, status: StatusState) -> bool:
+    if not status_path:
+        return False
+    status_dir = os.path.dirname(status_path)
+    if status_dir:
+        os.makedirs(status_dir, exist_ok=True)
+    snapshot = status.snapshot()
+    snapshot["uptime_sec"] = int(time.time() - status.start_time)
+    tmp_path = f"{status_path}.tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as fh:
+            json.dump(snapshot, fh, ensure_ascii=True)
+        os.replace(tmp_path, status_path)
+        return True
+    except Exception as exc:
+        logging.warning("Status write failed: %s", exc)
+        return False
+
+
+def write_status_once(cfg: Dict, status: StatusState) -> bool:
+    status_path = str(cfg.get("status_file") or "")
+    if not status_path:
+        return False
+    return write_status_snapshot(status_path, status)
+
+
+def status_writer(cfg: Dict, cfg_lock: threading.Lock, status: StatusState, stop_event: threading.Event) -> None:
+    cfg_snapshot = config_snapshot(cfg, cfg_lock)
+    if not cfg_snapshot.get("status_file"):
+        return
+    status_path = cfg_snapshot["status_file"]
+    interval = int(cfg_snapshot.get("status_interval_sec") or 0)
+    if interval <= 0:
+        return
+    status_dir = os.path.dirname(status_path)
+    if status_dir:
+        os.makedirs(status_dir, exist_ok=True)
+    while not stop_event.is_set():
+        write_status_snapshot(status_path, status)
+        for _ in range(int(interval * 5)):
+            if stop_event.is_set():
+                break
+            time.sleep(0.2)
+
+
+def cleanup_cache_dir(
+    cache_dir: str,
+    keep_paths: set,
+    cache_index: CacheIndex,
+    cfg_snapshot: Dict,
+) -> int:
+    removed = 0
+    if not os.path.isdir(cache_dir):
+        return removed
+
+    max_files = int(cfg_snapshot.get("cache_max_files") or 0)
+    max_bytes = int(cfg_snapshot.get("cache_max_bytes") or 0)
+    index_snapshot = cache_index.snapshot()
+
+    candidates: List[Tuple[str, int, float]] = []
+    total_size = 0
+    total_count = 0
+    for name in os.listdir(cache_dir):
+        path = os.path.join(cache_dir, name)
+        if not os.path.isfile(path):
+            continue
+        size = safe_getsize(path) or 0
+        total_size += size
+        total_count += 1
+        if path in keep_paths:
+            continue
+        meta = index_snapshot.get(path) or {}
+        last_used = meta.get("last_used")
+        last_used_ts = parse_iso_utc(last_used) if isinstance(last_used, str) else None
+        if last_used_ts is None:
+            try:
+                last_used_ts = os.path.getmtime(path)
+            except OSError:
+                last_used_ts = 0.0
+        candidates.append((path, size, float(last_used_ts)))
+
+    to_remove: List[str] = []
+    if max_files <= 0 and max_bytes <= 0:
+        to_remove = [path for path, _size, _ts in candidates]
+    else:
+        candidates.sort(key=lambda entry: entry[2])
+        while candidates and (
+            (max_files > 0 and total_count > max_files)
+            or (max_bytes > 0 and total_size > max_bytes)
+        ):
+            path, size, _ = candidates.pop(0)
+            to_remove.append(path)
+            total_count -= 1
+            total_size -= size
+
+    for path in to_remove:
+        try:
+            os.remove(path)
+            removed += 1
+        except Exception as exc:
+            logging.warning("Failed to delete %s: %s", path, exc)
+
+    if removed:
+        cache_index.remove_missing()
+    return removed
+
+
+def cleanup_temp_files(cache_dir: str, max_age_sec: int) -> int:
+    if max_age_sec <= 0 or not os.path.isdir(cache_dir):
+        return 0
+    now = time.time()
+    removed = 0
+    for name in os.listdir(cache_dir):
+        if not name.endswith(".tmp"):
+            continue
+        path = os.path.join(cache_dir, name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            age = now - os.path.getmtime(path)
+        except OSError:
+            age = max_age_sec + 1
+        if age < max_age_sec:
+            continue
+        try:
+            os.remove(path)
+            removed += 1
+        except Exception as exc:
+            logging.warning("Failed to delete temp file %s: %s", path, exc)
+    return removed
+
+
+def cleanup_worker(
+    cfg: Dict,
+    cfg_lock: threading.Lock,
+    state: PlaylistState,
+    status: StatusState,
+    cache_index: CacheIndex,
+    stop_event: threading.Event,
+) -> None:
+    while not stop_event.is_set():
+        cfg_snapshot = config_snapshot(cfg, cfg_lock)
+        interval = int(cfg_snapshot.get("cleanup_interval_sec") or 0)
+        if interval <= 0:
+            time.sleep(1)
+            continue
+        temp_max_age = int(cfg_snapshot.get("tmp_max_age_sec") or 0)
+        temp_removed = cleanup_temp_files(cfg_snapshot["cache_dir"], temp_max_age)
+        status_snapshot = status.snapshot()
+        if cfg_snapshot.get("disable_cleanup_when_offline"):
+            failures = int(status_snapshot.get("consecutive_failures") or 0)
+            if failures > 0 or not status_snapshot.get("last_poll_success"):
+                for _ in range(int(interval * 5)):
+                    if stop_event.is_set():
+                        break
+                    time.sleep(0.2)
+                continue
+        items, _ = state.get()
+        keep_paths = {item.path for item in items}
+        keep_paths.update(saved_playlist_paths(cfg_snapshot))
+        snapshot = status.snapshot()
+        current = snapshot.get("current_item") or {}
+        next_item = snapshot.get("next_item") or {}
+        if isinstance(current, dict) and current.get("path"):
+            keep_paths.add(current["path"])
+        if isinstance(next_item, dict) and next_item.get("path"):
+            keep_paths.add(next_item["path"])
+
+        removed = cleanup_cache_dir(cfg_snapshot["cache_dir"], keep_paths, cache_index, cfg_snapshot)
+        status.update(last_cleanup=iso_now(), last_cleanup_removed=removed + temp_removed)
+
+        for _ in range(int(interval * 5)):
+            if stop_event.is_set():
+                break
+            time.sleep(0.2)
+
+
+def playback_loop(
+    cfg: Dict,
+    cfg_lock: threading.Lock,
+    state: PlaylistState,
+    status: StatusState,
+    mpv: MPVController,
+    cache_index: CacheIndex,
+    stop_event: threading.Event,
+) -> None:
+    idx = 0
+    offset_ms = 0
+    last_version = -1
+    preloaded_path: Optional[str] = None
+    last_mpv_generation = -1
+    blocked_media_until: Dict[str, float] = {}
+
+    boot_wall_ts = time.time()
+    boot_mono_ts = time.monotonic()
+    pending_soft_resync = False
+    pending_daily_zero_ts: Optional[float] = None
+
+    cfg_snapshot = config_snapshot(cfg, cfg_lock)
+    sync_enabled = bool(cfg_snapshot.get("sync_enabled", True))
+    drift_threshold_ms = int(cfg_snapshot.get("sync_drift_threshold_ms") or 300)
+    hard_resync_ms = int(cfg_snapshot.get("sync_hard_resync_ms") or 1200)
+    checkpoint_interval_sec = int(cfg_snapshot.get("sync_checkpoint_interval_sec") or 3600)
+    boot_hard_check_sec = int(cfg_snapshot.get("sync_boot_hard_check_sec") or 300)
+    prep_mode = str(cfg_snapshot.get("sync_prep_mode") or "wait_until_anchor").strip().lower()
+    prep_wait_mode = prep_mode in {"wait", "wait_until_anchor", "hold_until_anchor"}
+    boot_hard_check_due_mono: Optional[float] = None
+    next_checkpoint_ts: Optional[float] = None
+    force_daily_zero_once = False
+
+    if sync_enabled:
+        if is_prep_window_utc(boot_wall_ts):
+            prep_anchor_ts = next_daily_anchor_utc_ts(boot_wall_ts)
+            status.update(
+                sync_mode="prep",
+                sync_anchor_utc=iso_from_ts(prep_anchor_ts),
+                sync_last_action="prep_wait_anchor",
+            )
+            run_ntp_sync_command(cfg_snapshot)
+            if prep_wait_mode:
+                wait_sec = max(prep_anchor_ts - time.time(), 0.0)
+                status.update(
+                    playback_state="waiting_sync_anchor",
+                    black_screen_risk_reason="sync_prep_wait",
+                )
+                logging.info(
+                    "Sync PREP ativo no boot. Aguardando 00:05 UTC por %.2fs para forcar index=0/offset=0.",
+                    wait_sec,
+                )
+                while not stop_event.is_set():
+                    if time.time() >= prep_anchor_ts:
+                        break
+                    time.sleep(0.2)
+                if stop_event.is_set():
+                    return
+                force_daily_zero_once = True
+                status.update(
+                    sync_mode="running",
+                    sync_anchor_utc=iso_from_ts(prep_anchor_ts),
+                    sync_last_action="daily_zero_ready",
+                    playback_state="starting",
+                    black_screen_risk_reason=None,
+                )
+                logging.info("Sync PREP concluido. Player iniciara em index=0/offset=0.")
+            else:
+                pending_daily_zero_ts = prep_anchor_ts
+                status.update(
+                    sync_mode="running",
+                    sync_anchor_utc=iso_from_ts(prep_anchor_ts),
+                    sync_last_action="prep_play_until_anchor",
+                )
+                logging.info("Sync PREP ativo no boot com modo play_then_resync; tocando ate 00:05 UTC.")
+        else:
+            status.update(sync_mode="running")
+
+        if boot_hard_check_sec > 0:
+            boot_hard_check_due_mono = boot_mono_ts + boot_hard_check_sec
+        next_checkpoint_ts = next_hour_checkpoint_utc_ts(time.time(), checkpoint_interval_sec)
+        status.update(sync_next_checkpoint_utc=iso_from_ts(next_checkpoint_ts))
+    else:
+        status.update(sync_mode="disabled")
+
+    while not stop_event.is_set():
+        items, version = state.get()
+        if not items:
+            status.update(
+                playback_state="waiting_for_media",
+                player_state="waiting_for_media",
+                startup_phase="waiting_for_media",
+                startup_feedback_state="waiting_for_media",
+                startup_feedback_visible=bool(status.snapshot().get("startup_feedback_visible")),
+                content_state="waiting_for_playlist",
+                first_frame_ready=False,
+                black_screen_risk_reason="playlist_empty",
+                blocked_media_count=0,
+            )
+            time.sleep(1)
+            continue
+
+        durations_ms, cycle_start_ms, cycle_total_ms = cycle_timeline(items)
+        if cycle_total_ms <= 0:
+            status.update(
+                playback_state="waiting_for_media",
+                player_state="waiting_for_media",
+                startup_phase="waiting_for_media",
+                startup_feedback_state="waiting_for_media",
+                content_state="invalid_playlist_timeline",
+                first_frame_ready=False,
+                black_screen_risk_reason="invalid_playlist_timeline",
+            )
+            time.sleep(1)
+            continue
+
+        now_for_block = time.time()
+        blocked_media_until = {p: ts for p, ts in blocked_media_until.items() if ts > now_for_block}
+        blocked_count = sum(1 for media in items if blocked_media_until.get(media.path, 0.0) > now_for_block)
+        if blocked_count >= len(items):
+            status.update(
+                playback_state="waiting_for_media",
+                player_state="waiting_for_media",
+                startup_phase="waiting_for_media",
+                startup_feedback_state="waiting_for_media",
+                content_state="all_media_temporarily_blocked",
+                first_frame_ready=False,
+                black_screen_risk_reason="all_media_temporarily_blocked",
+                blocked_media_count=blocked_count,
+            )
+            time.sleep(1)
+            continue
+
+        cfg_snapshot = config_snapshot(cfg, cfg_lock)
+        sync_enabled = bool(cfg_snapshot.get("sync_enabled", True))
+        drift_threshold_ms = int(cfg_snapshot.get("sync_drift_threshold_ms") or 300)
+        hard_resync_ms = int(cfg_snapshot.get("sync_hard_resync_ms") or 1200)
+        checkpoint_interval_sec = int(cfg_snapshot.get("sync_checkpoint_interval_sec") or 3600)
+
+        if sync_enabled and next_checkpoint_ts is None:
+            next_checkpoint_ts = next_hour_checkpoint_utc_ts(time.time(), checkpoint_interval_sec)
+            status.update(sync_next_checkpoint_utc=iso_from_ts(next_checkpoint_ts))
+        if sync_enabled:
+            pending_daily_zero_ts = ensure_pending_daily_zero_ts(time.time(), pending_daily_zero_ts)
+        if not sync_enabled:
+            pending_soft_resync = False
+            pending_daily_zero_ts = None
+            boot_hard_check_due_mono = None
+            next_checkpoint_ts = None
+            status.update(sync_mode="disabled", sync_cycle_ms=cycle_total_ms)
+        else:
+            status.update(sync_mode="running", sync_cycle_ms=cycle_total_ms)
+
+        if version != last_version:
+            last_version = version
+            preloaded_path = None
+            pending_soft_resync = False
+            if sync_enabled:
+                if force_daily_zero_once:
+                    idx = 0
+                    offset_ms = 0
+                    force_daily_zero_once = False
+                    status.update(sync_last_action="daily_zero_applied")
+                    logging.info("Sync daily zero aplicado em 00:05 UTC (index=0, offset=0).")
+                else:
+                    sync_pos = compute_cycle_position_from_utc(time.time(), durations_ms)
+                    idx = sync_pos.index
+                    offset_ms = sync_pos.offset_ms
+                    status.update(
+                        sync_anchor_utc=iso_from_ts(sync_pos.anchor_ts),
+                        sync_last_action="playlist_realign",
+                    )
+                    logging.info(
+                        "Playlist alterada. Recalculando posicao UTC: index=%d offset=%dms",
+                        idx,
+                        offset_ms,
+                    )
+            else:
+                idx = 0
+                offset_ms = 0
+
+        idx = idx % len(items)
+        item = items[idx]
+        if blocked_media_until.get(item.path, 0.0) > time.time():
+            idx += 1
+            offset_ms = 0
+            continue
+        item_duration_ms = durations_ms[idx]
+        next_item = None
+        if len(items) > 1:
+            next_item = items[(idx + 1) % len(items)]
+
+        mpv.ensure_running()
+        if mpv.generation() != last_mpv_generation:
+            last_mpv_generation = mpv.generation()
+            preloaded_path = None
+        reuse_preloaded = preloaded_path == item.path and offset_ms <= 0
+        if not reuse_preloaded:
+            item_alias = media_alias(item.path, item.url)
+            load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
+            status.update(
+                player_state="preparing_first_frame",
+                playback_state="preparing_first_frame",
+                startup_phase="preparing_first_frame",
+                startup_feedback_state="preparing_first_frame",
+                content_state="content_ready",
+                first_frame_ready=False,
+                first_content_load_accepted=False,
+                black_screen_risk_reason=None,
+            )
+            if not mpv.load_file(item.path, alias=item_alias):
+                logging.warning("Failed to load media, restarting MPV: %s", load_context)
+                mpv.restart(reason=f"media_load_failed:{item_alias}")
+                load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
+                if not mpv.load_file(item.path, alias=item_alias):
+                    cooldown_sec = max(int(cfg_snapshot.get("media_load_retry_cooldown_sec") or 0), 5)
+                    blocked_media_until[item.path] = time.time() + cooldown_sec
+                    logging.warning(
+                        "Media load retry failed, entering cooldown: %s cooldown_sec=%d",
+                        load_context,
+                        cooldown_sec,
+                    )
+                    status.update(
+                        player_state="error_player_start",
+                        playback_state="recovering",
+                        startup_phase="error_player_start",
+                        startup_feedback_state="error_player_start",
+                        content_state="media_load_failed",
+                        first_frame_ready=False,
+                        first_content_load_accepted=False,
+                        black_screen_risk_reason="media_load_failed",
+                        blocked_media_count=len(blocked_media_until),
+                        last_render_error=f"{iso_now()} failed_to_load:{item.path}",
+                    )
+                    idx += 1
+                    offset_ms = 0
+                    time.sleep(0.2)
+                    continue
+            if offset_ms > 0 and not is_image_path(item.path):
+                offset_seconds = offset_ms / 1000.0
+                if not mpv.seek_absolute(offset_seconds):
+                    mpv.set_property("time-pos", offset_seconds)
+        preloaded_path = None
+        blocked_media_until.pop(item.path, None)
+
+        if next_item is not None and cfg_snapshot.get("preload_next"):
+            mpv.append_file(next_item.path)
+
+        status.update(
+            player_state="playing",
+            playback_state="playing",
+            startup_phase="playing",
+            startup_feedback_state="playing",
+            startup_feedback_visible=False,
+            startup_feedback_display="player",
+            content_state="playing",
+            first_frame_ready=True,
+            first_content_load_accepted=True,
+            black_screen_risk_reason=None,
+            blocked_media_count=len(blocked_media_until),
+            last_render_ok=iso_now(),
+            last_render_error=None,
+            current_index=idx % len(items),
+            current_item={
+                "url": item.url,
+                "path": item.path,
+                "duration_ms": item_duration_ms,
+                "campaign_id": item.campaign_id,
+                "campaign_name": item.campaign_name,
+                "started_at": iso_now(),
+                "offset_ms": offset_ms,
+            },
+            next_item=(
+                {
+                    "url": next_item.url,
+                    "path": next_item.path,
+                    "duration_ms": next_item.duration_ms,
+                    "campaign_id": next_item.campaign_id,
+                    "campaign_name": next_item.campaign_name,
+                }
+                if next_item is not None
+                else None
+            ),
+        )
+        cache_index.touch(item)
+
+        logging.info(
+            "Playing media alias=%s path=%s index=%d duration_ms=%s offset_ms=%s mpv_generation=%d mpv_pid=%s",
+            media_alias(item.path, item.url),
+            safe_media_path_for_log(item.path),
+            idx % len(items),
+            item_duration_ms,
+            offset_ms,
+            mpv.generation(),
+            mpv.pid() or "none",
+        )
+        item_started_mono = time.monotonic()
+        remaining_ms = max(item_duration_ms - offset_ms, 1)
+        current_cycle_start_ms = cycle_start_ms[idx]
+        hard_resync_requested = False
+
+        while not stop_event.is_set():
+            now_mono = time.monotonic()
+            elapsed_ms = int((now_mono - item_started_mono) * 1000)
+            if elapsed_ms >= remaining_ms:
+                break
+
+            check_reason: Optional[str] = None
+            now_ts = time.time()
+            if sync_enabled:
+                if pending_daily_zero_ts is not None and now_ts >= pending_daily_zero_ts:
+                    check_reason = "daily_zero"
+                    pending_daily_zero_ts = next_daily_anchor_utc_ts(now_ts)
+                elif boot_hard_check_due_mono is not None and now_mono >= boot_hard_check_due_mono:
+                    check_reason = "boot_5min"
+                    boot_hard_check_due_mono = None
+                elif next_checkpoint_ts is not None and now_ts >= next_checkpoint_ts:
+                    check_reason = "utc_checkpoint"
+                    next_checkpoint_ts = next_hour_checkpoint_utc_ts(now_ts, checkpoint_interval_sec)
+                    status.update(sync_next_checkpoint_utc=iso_from_ts(next_checkpoint_ts))
+
+            if check_reason:
+                if check_reason == "daily_zero":
+                    idx = 0
+                    offset_ms = 0
+                    pending_soft_resync = False
+                    hard_resync_requested = True
+                    preloaded_path = None
+                    status.update(
+                        sync_anchor_utc=iso_from_ts(daily_anchor_utc_ts(now_ts)),
+                        sync_last_check_utc=iso_from_ts(now_ts),
+                        sync_checkpoint_reason=check_reason,
+                        sync_last_action="daily_zero_applied",
+                    )
+                    logging.info("Sync daily zero aplicado em 00:05 UTC (index=0, offset=0).")
+                    break
+
+                sync_pos = compute_cycle_position_from_utc(now_ts, durations_ms)
+                actual_offset_ms = min(offset_ms + elapsed_ms, item_duration_ms)
+                actual_cycle_pos_ms = (current_cycle_start_ms + actual_offset_ms) % sync_pos.cycle_total_ms
+                drift_ms = signed_cycle_delta_ms(
+                    target_ms=sync_pos.cycle_pos_ms,
+                    current_ms=actual_cycle_pos_ms,
+                    cycle_total_ms=sync_pos.cycle_total_ms,
+                )
+                action = classify_drift_action(
+                    drift_ms=drift_ms,
+                    drift_threshold_ms=drift_threshold_ms,
+                    hard_resync_ms=hard_resync_ms,
+                )
+                status.update(
+                    sync_anchor_utc=iso_from_ts(sync_pos.anchor_ts),
+                    sync_drift_ms=drift_ms,
+                    sync_last_check_utc=iso_from_ts(now_ts),
+                    sync_checkpoint_reason=check_reason,
+                )
+
+                if action == "hard_resync":
+                    idx = sync_pos.index
+                    offset_ms = sync_pos.offset_ms
+                    pending_soft_resync = False
+                    hard_resync_requested = True
+                    preloaded_path = None
+                    status.update(sync_last_action=f"hard_resync:{check_reason}")
+                    logging.warning(
+                        "Hard resync (%s): drift=%dms -> index=%d offset=%dms",
+                        check_reason,
+                        drift_ms,
+                        idx,
+                        offset_ms,
+                    )
+                    break
+                if action == "soft_resync":
+                    pending_soft_resync = True
+                    status.update(sync_last_action=f"soft_resync_pending:{check_reason}")
+                    logging.info("Soft resync agendado (%s): drift=%dms", check_reason, drift_ms)
+                else:
+                    status.update(sync_last_action=f"stable:{check_reason}")
+
+            time.sleep(0.2)
+
+        if hard_resync_requested:
+            continue
+
+        if sync_enabled and pending_soft_resync:
+            sync_pos = compute_cycle_position_from_utc(time.time(), durations_ms)
+            idx = sync_pos.index
+            offset_ms = sync_pos.offset_ms
+            pending_soft_resync = False
+            preloaded_path = None
+            status.update(
+                sync_anchor_utc=iso_from_ts(sync_pos.anchor_ts),
+                sync_last_action="soft_resync_applied",
+            )
+            logging.info("Soft resync aplicado na borda: index=%d offset=%dms", idx, offset_ms)
+            continue
+
+        if next_item is not None and cfg_snapshot.get("preload_next"):
+            if mpv.playlist_next():
+                mpv.playlist_remove(0)
+                preloaded_path = next_item.path
+                idx += 1
+                offset_ms = 0
+                continue
+
+        idx += 1
+        offset_ms = 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Kiosky MPV player")
+    parser.add_argument("--config", default="config.json", help="Path to config.json")
+    args = parser.parse_args()
+    config_path = os.path.abspath(args.config)
+
+    cfg = load_config(config_path)
+    setup_logging(cfg)
+
+    api_credentials_ready = bool(cfg.get("api_key") and cfg.get("environment_id"))
+    if not api_credentials_ready:
+        logging.warning("API credentials missing; startup will run in offline-only mode if local media is available.")
+    if requests is None:
+        logging.warning("requests dependency unavailable; API polling disabled.")
+    api_polling_enabled = api_credentials_ready and requests is not None
+
+    cfg_lock = threading.Lock()
+    poll_now_event = threading.Event()
+
+    state = PlaylistState()
+    status = StatusState()
+    mpv = MPVController(cfg)
+    cache_index = CacheIndex(cfg)
+    cache_index.remove_missing()
+    stop_event = threading.Event()
+    force_exit = threading.Event()
+
+    update_waiting_status(
+        status,
+        startup_phase="waiting_for_content",
+        content_state="checking_startup_content",
+        black_screen_risk_reason="waiting_for_content",
+    )
+    if cfg.get("offline_fallback"):
+        offline_network_available: Optional[bool] = None
+        if (
+            float(cfg.get("offline_max_age_hours") or 0) > 0
+            and cfg.get("offline_ignore_max_age_when_no_network", True)
+        ):
+            offline_network_available = api_endpoint_reachable(cfg, timeout_sec=2.0)
+            if offline_network_available is False:
+                logging.warning("API endpoint unavailable at boot; ignoring offline age limit for startup fallback.")
+
+        loaded_offline = False
+        update_waiting_status(
+            status,
+            startup_phase="waiting_for_playlist",
+            content_state="checking_offline_playlist",
+            black_screen_risk_reason="playlist_wait",
+        )
+        saved_items, _saved_fp, saved_at = load_playlist_state(cfg)
+        if saved_items and offline_playlist_allowed(cfg, saved_at, offline_network_available):
+            offline_items, fp_payload = media_items_from_saved(cfg, saved_items)
+            if offline_items:
+                offline_fp = fingerprint_items(fp_payload)
+                state.update(offline_items, offline_fp)
+                status.update(playlist_size=len(offline_items), content_state="offline_playlist_ready")
+                logging.info("Loaded offline playlist: %d items", len(offline_items))
+                loaded_offline = True
+            else:
+                logging.warning("Offline playlist found but no cached files are available.")
+        elif saved_items:
+            logging.info("Offline playlist skipped due to max age policy.")
+        if not loaded_offline and offline_playlist_allowed(cfg, None, offline_network_available):
+            update_waiting_status(
+                status,
+                startup_phase="waiting_for_media_cache",
+                content_state="checking_local_cache",
+                black_screen_risk_reason="media_cache_wait",
+            )
+            cache_items, cache_payload = media_items_from_cache(cfg, cache_index)
+            if cache_items:
+                cache_fp = fingerprint_items(cache_payload)
+                state.update(cache_items, cache_fp)
+                save_playlist_state(cfg, cache_items, cache_fp)
+                status.update(playlist_size=len(cache_items), content_state="local_cache_ready")
+                logging.info("Loaded offline playlist from local cache: %d items", len(cache_items))
+
+    current_items, _current_version = state.get()
+    if not api_polling_enabled and not current_items:
+        if not api_credentials_ready:
+            logging.error("api_key/environment_id ausentes e nenhuma midia offline disponivel.")
+        elif requests is None:
+            logging.error("requests indisponivel e nenhuma midia offline disponivel.")
+        mark_player_error(status, "no_content")
+        return 2
+    if not api_polling_enabled:
+        status.update(last_poll_error=f"{iso_now()} polling_disabled")
+        logging.warning("API polling disabled; player running with local media only.")
+
+    def _force_kill_after_delay() -> None:
+        time.sleep(5)
+        if not force_exit.is_set():
+            return
+        try:
+            mpv.stop()
+        finally:
+            os._exit(1)
+
+    def _handle(sig, _frame):
+        logging.info("Signal %s received, stopping...", sig)
+        if stop_event.is_set():
+            force_exit.set()
+            threading.Thread(target=_force_kill_after_delay, daemon=True).start()
+            return
+        stop_event.set()
+        force_exit.set()
+        threading.Thread(target=_force_kill_after_delay, daemon=True).start()
+
+    signal.signal(signal.SIGINT, _handle)
+    signal.signal(signal.SIGTERM, _handle)
+
+    status.update(
+        player_state="player_starting",
+        playback_state="player_starting",
+        startup_phase="player_starting",
+        startup_feedback_state="player_starting",
+        content_state="starting_mpv",
+    )
+    mpv.start()
+    if not mpv.is_running():
+        mark_player_error(status, "mpv_start_failed")
+        write_status_once(cfg, status)
+        return 3
+    show_startup_feedback(mpv, cfg, status, "waiting_for_content")
+    write_status_once(cfg, status)
+
+    threads: List[threading.Thread] = []
+    if api_polling_enabled:
+        threads.append(
+            threading.Thread(
+                target=poller,
+                args=(cfg, cfg_lock, poll_now_event, state, status, cache_index, stop_event),
+                daemon=True,
+            )
+        )
+    threads.extend(
+        [
+            threading.Thread(
+                target=watchdog,
+                args=(cfg, cfg_lock, mpv, status, stop_event),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=status_writer,
+                args=(cfg, cfg_lock, status, stop_event),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=cleanup_worker,
+                args=(cfg, cfg_lock, state, status, cache_index, stop_event),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=telemetry_worker,
+                args=(cfg, cfg_lock, status, stop_event),
+                daemon=True,
+            ),
+        ]
+    )
+    for thread in threads:
+        thread.start()
+
+    config_server = ConfigServer(cfg, cfg_lock, config_path, mpv, poll_now_event)
+    config_server.start()
+
+    try:
+        playback_loop(cfg, cfg_lock, state, status, mpv, cache_index, stop_event)
+    finally:
+        stop_event.set()
+        for thread in threads:
+            thread.join(timeout=5)
+        mpv.stop()
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
