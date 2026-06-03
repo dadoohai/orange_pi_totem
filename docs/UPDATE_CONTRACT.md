@@ -167,6 +167,12 @@ campo cobre o subconjunto de decode/runtime (`hwdec-current`, `vo-configured`,
 progresso e falhas sanitizadas do status); nao substitui o deep-health completo
 necessario para descongelar OTA de player.
 
+O contrato completo deve passar por `scripts/board/c18_playback_health_summary.py`
+e pelos fixtures de `scripts/qa/c18_playback_deep_health_fixture_test.py`.
+Esse avaliador consome apenas artefatos sanitizados (`playback-samples.tsv` e
+sidecars de systemd/processo/kernel/contadores) e emite
+`dadooh.c18.playback.deep_health.v1`.
+
 Sem esse gate, update de player fica restrito a imagem/homologacao manual.
 
 ## Quando Gerar Imagem

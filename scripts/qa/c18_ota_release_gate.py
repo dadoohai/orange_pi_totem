@@ -27,12 +27,14 @@ PY_COMPILE_TARGETS = (
     "scripts/board/totem_config_writer_real.py",
     "scripts/board/totem_visual_setup_writer_handoff.py",
     "scripts/board/totem_updatectl.py",
+    "scripts/board/c18_playback_health_summary.py",
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
     "scripts/sim/run_totem_core_sandbox.py",
     "scripts/qa/c18_ota_policy_static_test.py",
     "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
     "scripts/qa/c18_player_runtime_static_test.py",
+    "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
 )
@@ -43,6 +45,7 @@ TEST_COMMANDS = (
     ("c18_ota_policy_static", ["python3", "scripts/qa/c18_ota_policy_static_test.py"]),
     ("c18_updatectl_freeze_downgrade_gc", ["python3", "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py"]),
     ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
+    ("c18_playback_deep_health_fixture", ["python3", "scripts/qa/c18_playback_deep_health_fixture_test.py"]),
     ("c17_9_update_channel_policy", ["python3", "scripts/qa/c17_9_update_channel_policy_test.py"]),
     ("c18_runtime_3_release_perms", ["python3", "scripts/qa/c18_runtime_3_release_perms_test.py"]),
 )
