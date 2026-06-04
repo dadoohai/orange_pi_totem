@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -47,6 +48,7 @@ TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.t
 ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md"
 POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
 UPDATE_CONTRACT_PATH = REPO_ROOT / "docs" / "UPDATE_CONTRACT.md"
+DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
     REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
@@ -241,6 +243,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", publish)
         self.assertIn("will reject apply with rc=44", publish)
         self.assertNotIn("totem-updatectl apply-github-latest --repo ${REPO}", publish)
+
+    def test_c18_status_doc_188_keeps_board_identifiers_redacted(self) -> None:
+        doc = DOC188_PATH.read_text(encoding="utf-8")
+        ipv4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+        mac = re.compile(r"\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b")
+        self.assertIsNone(ipv4.search(doc))
+        self.assertIsNone(mac.search(doc))
+        self.assertIn("<board-ip-redacted>", doc)
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:

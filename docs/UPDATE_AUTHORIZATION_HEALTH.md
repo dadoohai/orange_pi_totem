@@ -96,6 +96,11 @@ O coletor preferencial e
 `scripts/board/c18_playback_health_collect.py`, gerando artefatos publicos
 sanitizados e `dadooh.c18.playback.deep_health.v1`.
 
+Na linha C18 atual, progresso de frame estimado e evidencia obrigatoria para
+aprovar playback de video. Se uma classe futura de midia legitima nao expuser
+`estimated-frame-number`, ela deve ganhar health contract proprio; nao voltar ao
+criterio inseguro de aprovar apenas por `time_pos`.
+
 `soak` e endurance, nao smoke test. Para producao/batch, o soak esperado e uma
 janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 

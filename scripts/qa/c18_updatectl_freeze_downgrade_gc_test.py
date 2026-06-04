@@ -153,6 +153,23 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             rc = updatectl.cmd_rollback(args)
             self.assertEqual(rc, 44)
 
+    def test_totem_core_rollback_to_image_fallback_still_works(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl._ensure_dirs()
+            release = updatectl.RELEASES_DIR / "core-current"
+            release.mkdir(parents=True)
+            updatectl._atomic_symlink("releases/core-current", updatectl.CURRENT_LINK)
+
+            rc = updatectl.cmd_rollback(argparse.Namespace(component="totem-core"))
+
+            self.assertEqual(rc, 0)
+            self.assertFalse(updatectl.CURRENT_LINK.exists())
+            self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), "releases/core-current")
+            state = updatectl._read_state()
+            self.assertEqual(state["last_operation"]["rolled_back_to"], "fallback")
+
     def test_policy_may_name_player_runtime_but_apply_stays_frozen(self) -> None:
         raw = policy()
         raw["allowed_components"] = ["totem-core", "player-runtime"]
