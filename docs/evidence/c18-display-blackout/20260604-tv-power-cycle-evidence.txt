@@ -1,0 +1,48 @@
+=== before display power-cycle ===
+now_local=2026-06-04T19:47:26-0300
+uptime_s=28976
+mpv_pid=11289
+kiosky=active
+EVENT=plugin count=1096
+EVENT=plugout count=1
+connector_status=connected
+dpms=On
+enabled=enabled
+tcon-tv0_rate=84750000
+hdmi_tmds_rate=84750000
+mpv_estimated_frame=689
+
+=== manual display unplug/replug ===
+now_local=2026-06-04T19:57:14-0300
+uptime_s=29564
+mpv_pid=11289
+kiosky=active
+EVENT=plugin count=1113
+EVENT=plugout count=2
+connector_status=connected
+dpms=On
+enabled=enabled
+tcon-tv0_rate=84750000
+hdmi_tmds_rate=84750000
+mpv_frame=162
+mpv_core_idle=False
+
+=== after display hard power-cycle ===
+now_local=2026-06-04T20:07:33-0300
+uptime_s=30183
+mpv_pid=11289
+kiosky=active
+NRestarts=0
+EVENT=plugin count=1119
+EVENT=plugout count=6
+connector_status=connected
+dpms=On
+enabled=enabled
+tcon-tv0_rate=84750000
+hdmi_tmds_rate=84750000
+mpv_frame=4
+mpv_core_idle=False
+
+=== interpretation ===
+The board did not reboot and the kiosk/player did not restart. The display-side
+hard power cycle restored visible output while the board stayed untouched.
