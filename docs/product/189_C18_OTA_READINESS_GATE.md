@@ -539,6 +539,19 @@ vir como nova imagem ou release ponte explicitamente homologada.
   progresso de frame estimado presente/avancando, presence-guard para contadores
   de falha, freeze de rollback para todo componente em `OTA_FROZEN_COMPONENTS`,
   e bloqueio de `stable` nos scripts historicos de release de `kiosky-player`.
+- Marco pos-1m: primeiro `player-runtime` lab apply real em hardware passou sem
+  descongelar o CLI publico. Foi gerado pacote local homologation a partir do
+  snapshot governado (`c18.player-runtime-lab-20260604T030359Z-0059de4`), o
+  harness rodou com `C18_PLAYER_RUNTIME_LAB_APPLY=1`, `data_root` temporario em
+  `/tmp`, `github_used=false`, `network_required=false`,
+  `device_data_root=false`, e confirmou `public_cli_apply_still_frozen rc=44`.
+  O candidato foi validado com canario local offline, marker
+  `.release_verified.json` `verdict=verified`, MPV da stack C18,
+  `hwdec-current=v4l2request-copy`, `vo-configured=true`, progresso de frame,
+  `media_load_failed=0`, `mpv_restart=0`, panfrost/mmc/ext4 `0`. Em hardware,
+  o candidato precisou de janela controlada com `kiosky-player.service` parado
+  para liberar DRM master; o servico foi religado e o deep-health do player
+  normal passou ao final.
 
 ## Fora de escopo
 

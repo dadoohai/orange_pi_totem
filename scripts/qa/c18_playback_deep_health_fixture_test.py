@@ -156,6 +156,25 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         fixture.write_json("process.json", process)
         self.assert_fails_with(fixture, "service_total_mpv_count_present")
 
+    def test_candidate_mode_tolerates_polling_disabled_status_only(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["last_poll_error"] = "present"
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+        fixture.write_rows(rows)
+
+        service_result = fixture.result()
+        self.assertFalse(service_result["passed"])
+        self.assertIn("status_no_failures", service_result["failure_reasons"])
+
+        fixture.mutate_json("systemd.json", target_mode="candidate", candidate_pid_present=True)
+        fixture.mutate_json("process.json", process_filter="input-ipc-server")
+        candidate_result = fixture.result()
+        self.assertTrue(candidate_result["checks"]["status_no_failures"])
+        self.assertNotIn("status_no_failures", candidate_result["failure_reasons"])
+
     def test_rejects_media_load_failed_and_mpv_restart(self) -> None:
         fixture = self.with_case()
         fixture.mutate_json("player-counters.json", media_load_failed=1, mpv_restart=1)
@@ -256,6 +275,45 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             payload = json.dumps(cfg, sort_keys=True)
             for forbidden in ("SECRET", "ENV_SECRET", "TOKEN_SECRET", "CUSTOM_SECRET", "private.example"):
                 self.assertNotIn(forbidden, payload)
+
+    def test_candidate_health_canary_playlist_is_explicit_and_isolated(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-canary-") as tmp:
+            root = Path(tmp)
+            canary = root / "clip.mp4"
+            canary.write_bytes(b"not-a-real-video-for-playlist-shape")
+            cfg = candidate_health.candidate_config(None, root / "work")
+            normalized = candidate_health.normalize_canary_media(canary)
+            self.assertEqual(normalized, canary.resolve())
+            candidate_health.write_canary_playlist(cfg, normalized)
+
+            state = json.loads((Path(cfg["state_dir"]) / "playlist_last.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["version"], 1)
+            self.assertEqual(len(state["playlist"]), 1)
+            self.assertEqual(state["playlist"][0]["path"], str(canary.resolve()))
+            self.assertEqual(state["playlist"][0]["duration_ms"], cfg["default_duration_ms"])
+
+            public_config = json.dumps(cfg, sort_keys=True)
+            self.assertNotIn(str(canary), public_config)
+
+    def test_candidate_health_canary_rejects_private_or_unsupported_paths(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-canary-") as tmp:
+            root = Path(tmp)
+            unsupported = root / "clip.txt"
+            unsupported.write_text("nope", encoding="utf-8")
+            with self.assertRaises(RuntimeError):
+                candidate_health.normalize_canary_media(unsupported)
+            with self.assertRaises(RuntimeError):
+                candidate_health.normalize_canary_media(Path("/data/config/config.json"))
+            outside_allowed = root / "clip.mp4"
+            outside_allowed.write_bytes(b"video-shape")
+            previous_roots = candidate_health.CANARY_MEDIA_ALLOWED_ROOTS
+            candidate_health.CANARY_MEDIA_ALLOWED_ROOTS = (root / "allowed",)
+            try:
+                with self.assertRaises(RuntimeError) as raised:
+                    candidate_health.normalize_canary_media(outside_allowed)
+                self.assertNotIn(str(outside_allowed), str(raised.exception))
+            finally:
+                candidate_health.CANARY_MEDIA_ALLOWED_ROOTS = previous_roots
 
     def test_candidate_health_env_is_minimal(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-candidate-env-") as tmp:

@@ -147,6 +147,12 @@ Antes de qualquer thaw de laboratorio:
   `scripts/qa/c18_player_runtime_lab_apply.py` com flags e env vars lab-only;
 - health de candidato deve usar runner lab-only isolado, sem GitHub, sem timer,
   sem auto-pull e sem policy permanente;
+- quando nao houver API real no runner, o health de candidato deve usar canario
+  offline explicito (`--canary-media`) sob `/tmp` ou `/data/media`, com playlist
+  temporaria isolada e sem publicar o path em evidencia publica;
+- em Orange Pi/DRM, validacao de candidato pode exigir janela controlada com o
+  player vivo parado para liberar DRM master; isso e validacao de laboratorio,
+  com restart do servico ao final, nao thaw publico nem auto-pull;
 - launcher deve adotar `/data/player-runtime/current` somente com marker
   `.release_verified.json` valido, hashes conferidos, deep-health aprovado e
   identidade nao quarentenada;

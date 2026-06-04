@@ -78,6 +78,8 @@ SAFE_TEMPLATE_KEYS = {
     "tmp_max_age_sec",
     "watchdog_interval_sec",
 }
+CANARY_MEDIA_ALLOWED_ROOTS = (Path("/tmp"), Path("/data/media"))
+CANARY_MEDIA_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi"}
 
 
 def read_json_object(path: Path | None) -> dict[str, Any]:
@@ -96,6 +98,55 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
         os.chmod(path, 0o600)
     except OSError:
         pass
+
+
+def is_under(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def normalize_canary_media(raw_path: Path | None) -> Path | None:
+    if raw_path is None:
+        return None
+    path = raw_path.expanduser()
+    if not path.is_absolute():
+        raise RuntimeError("canary media path must be absolute")
+    if path.is_symlink():
+        raise RuntimeError("canary media path must not be a symlink")
+    try:
+        resolved = path.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("canary media file not found") from exc
+    if not resolved.is_file():
+        raise RuntimeError("canary media must be a file")
+    if resolved.suffix.lower() not in CANARY_MEDIA_EXTENSIONS:
+        raise RuntimeError("canary media must be a supported video file")
+    if not any(is_under(resolved, root) for root in CANARY_MEDIA_ALLOWED_ROOTS):
+        raise RuntimeError("canary media must live under /tmp or /data/media")
+    return resolved
+
+
+def write_canary_playlist(cfg: dict[str, Any], canary_media: Path) -> None:
+    state_dir = Path(str(cfg["state_dir"]))
+    state_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": 1,
+        "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "fingerprint": "c18-candidate-canary",
+        "playlist": [
+            {
+                "url": "",
+                "duration_ms": int(cfg.get("default_duration_ms") or 10000),
+                "path": str(canary_media),
+                "campaign_id": "c18-canary",
+                "campaign_name": "C18 canary",
+            }
+        ],
+    }
+    write_json(state_dir / "playlist_last.json", payload)
 
 
 def candidate_identity(release_dir: Path, manifest: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -124,6 +175,7 @@ def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, An
         "telemetry_token": "",
         "config_ui_enabled": False,
         "sync_enabled": False,
+        "default_duration_ms": int(cfg.get("default_duration_ms") or 10000),
         "cache_dir": str(work_dir / "media_cache"),
         "state_dir": str(work_dir / "state"),
         "ipc_path": str(work_dir / "mpv.sock"),
@@ -195,6 +247,7 @@ def run_candidate_health(
     identity: dict[str, Any] | None = None,
     *,
     config_template: Path | None = None,
+    canary_media: Path | None = None,
     output_dir: Path | None = None,
     duration_sec: float = 30.0,
     interval_sec: float = 1.0,
@@ -212,6 +265,9 @@ def run_candidate_health(
     config_path = work_root / "candidate-config.json"
     cfg = candidate_config(config_template, work_root)
     write_json(config_path, cfg)
+    normalized_canary = normalize_canary_media(canary_media)
+    if normalized_canary is not None:
+        write_canary_playlist(cfg, normalized_canary)
 
     env = minimal_candidate_env(work_root)
 
@@ -251,6 +307,7 @@ def run_candidate_health(
     result["observed_kiosk_py_sha256"] = identity.get("kiosk_py_sha256")
     result["observed_tree_sha256"] = identity.get("tree_sha256")
     result["candidate_version"] = identity.get("version")
+    result["canary_media_used"] = normalized_canary is not None
     return result
 
 
@@ -260,6 +317,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--release-dir", required=True, type=Path)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--config-template", type=Path)
+    parser.add_argument("--canary-media", type=Path)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--duration-sec", type=float, default=30.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
@@ -282,6 +340,7 @@ def main(argv: list[str]) -> int:
             args.release_dir,
             candidate_identity(args.release_dir, manifest),
             config_template=args.config_template,
+            canary_media=args.canary_media,
             output_dir=args.output_dir,
             duration_sec=args.duration_sec,
             interval_sec=args.interval_sec,

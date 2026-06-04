@@ -249,6 +249,10 @@ laboratorio: exige `--lab-only-candidate-runner` e
 sanitizada, desliga UI/telemetria/segredos, usa IPC/status/log/cache isolados e
 devolve os hashes observados do release testado. Esse runner nao altera o CLI
 publico do updater, nao liga auto-pull e nao autoriza thaw de producao.
+Quando o candidato nao deve usar API real, o runner pode receber
+`--canary-media` apontando para um video local explicito sob `/tmp` ou
+`/data/media`; ele cria uma playlist offline no state temporario do candidato e
+publica apenas `canary_media_used=true/false`, nao o path da midia.
 O harness `scripts/qa/c18_player_runtime_lab_apply.py` e o unico caminho
 repo-side para exercitar apply local de candidato antes do thaw publico: exige
 `--lab-only-apply` e `C18_PLAYER_RUNTIME_LAB_APPLY=1`, aceita somente
@@ -257,6 +261,10 @@ hook interno e confirma ao final que o CLI publico continua congelado com
 `rc=44`. Por padrao usa `data_root` temporario em sandbox; tocar `/data` exige
 tambem `--allow-device-data-root` e `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
 Ele nao usa GitHub, timer, auto-pull nem policy permanente do device.
+Em hardware com DRM, o candidato pode precisar de uma janela de laboratorio com
+o `kiosky-player.service` parado para adquirir DRM master. Essa pausa deve ser
+controlada, reversivel e seguida de novo deep-health do servico real; nao e
+permissao para auto-pull nem para thaw publico.
 O `scripts/board/kiosky_service_observer_probe.sh` continua como diagnostico de
 referencia mais amplo, mas para validacao de update ele e intrusivo porque para
 o servico ao final da observacao. O probe manual de playback continua sendo

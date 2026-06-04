@@ -57,7 +57,7 @@ def load_samples(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh, delimiter="\t"))
 
 
-def status_has_failure(row: dict[str, str]) -> bool:
+def status_has_failure(row: dict[str, str], target_mode: str) -> bool:
     state = str(row.get("status_playback_state") or "").lower()
     if "error" in state or "failed" in state:
         return True
@@ -76,7 +76,15 @@ def status_has_failure(row: dict[str, str]) -> bool:
     if as_int(data.get("blocked_media_count")) > 0:
         return True
     for key in ("last_poll_error", "last_render_error", "black_screen_risk_reason"):
-        if data.get(key) not in (None, "", "null", False):
+        value = data.get(key)
+        if (
+            target_mode == "candidate"
+            and key == "last_poll_error"
+            and isinstance(value, str)
+            and ("polling_disabled" in value or value == "present")
+        ):
+            continue
+        if value not in (None, "", "null", False):
             return True
     return False
 
@@ -142,6 +150,7 @@ def evaluate(
     time_values: list[float | None] = []
     frame_values: list[float | None] = []
     status_failure_samples = 0
+    target_mode = str(systemd.get("target_mode") or "service")
 
     for row in rows:
         alias = row.get("current_alias") or row.get("status_current_alias") or row.get("status_path_alias")
@@ -164,11 +173,10 @@ def evaluate(
             time_values.append(as_float(row.get("time_pos")))
             frame_values.append(as_float(row.get("estimated_frame_number")))
 
-        if status_has_failure(row):
+        if status_has_failure(row, target_mode):
             status_failure_samples += 1
 
     service_active = bool(systemd.get("service_active"))
-    target_mode = str(systemd.get("target_mode") or "service")
     nrestarts_delta_present = "nrestarts_delta" in systemd
     nrestarts_delta = as_int(systemd.get("nrestarts_delta"))
     mpv_count = as_int(process.get("mpv_count"))

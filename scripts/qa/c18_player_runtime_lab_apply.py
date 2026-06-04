@@ -130,6 +130,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument("--allow-device-data-root", action="store_true")
     parser.add_argument("--config-template", type=Path)
+    parser.add_argument("--canary-media", type=Path)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--duration-sec", type=float, default=30.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
@@ -162,6 +163,7 @@ def main(argv: list[str]) -> int:
             release_dir,
             identity,
             config_template=args.config_template,
+            canary_media=args.canary_media,
             output_dir=work_dir / "candidate-health",
             duration_sec=args.duration_sec,
             interval_sec=args.interval_sec,
