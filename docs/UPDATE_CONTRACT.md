@@ -143,6 +143,24 @@ Policy C18 deve existir em `/data/updates/policy.json` e restringir:
 `allowed_components` valido deve falhar fechada, nao assumir componente por
 default.
 
+## Sistema De Autorizacao De Update
+
+A autorizacao C18 tem duas camadas:
+
+- **device/gate:** manifest valido, policy local, canal exato,
+  `allowed_components`, `device_track`, `updater_features`, SHA do payload,
+  gate offline e dry-run selecionando a release esperada;
+- **operacao humana:** decisao explicita de janela, componente, canal e
+  rollback antes de qualquer apply real, regravacao, publish stable, auto-pull
+  ou thaw de `player-runtime`.
+
+Lab-only flags, bypasses historicos e harnesses de bancada nao sao autorizacao
+de campo. `kiosky-player` e `player-runtime` devem seguir retornando `rc=44` em
+apply/rollback publicos ate thaw explicito. Auto-pull permanece desligado nesta
+linha.
+
+Guia operacional curto: `docs/UPDATE_AUTHORIZATION_HEALTH.md`.
+
 ## Gates Minimos
 
 Antes de publicar ou promover OTA C18:

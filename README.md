@@ -12,6 +12,8 @@ MPV/hwdecode, display, kernel, systemd e updater ficam fora desse fluxo e
 exigem imagem/homologação ou um pacote C18-aware explicitamente aprovado.
 
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
+Guia curto de autorização e health gates:
+[docs/UPDATE_AUTHORIZATION_HEALTH.md](docs/UPDATE_AUTHORIZATION_HEALTH.md).
 Gate obrigatório antes de publicar/aceitar uma release OTA:
 
 ```bash
@@ -105,6 +107,8 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Roadmap de produto, testes, atualização e monitoramento](docs/04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md)
 - [Política de atualização](docs/05_POLITICA_DE_ATUALIZACAO.md)
 - [Contrato C18 de atualização](docs/UPDATE_CONTRACT.md)
+- [Autorização C18 de update e health gates](docs/UPDATE_AUTHORIZATION_HEALTH.md)
+- [Readiness C18 OTA](docs/product/189_C18_OTA_READINESS_GATE.md)
 - [Status atual consolidado](docs/STATUS_ATUAL.md)
 - [Estratégia produto/UX](docs/product/01_ESTRATEGIA_PRODUTO_UX.md)
 - [Roadmap implementação produto/UX](docs/product/02_ROADMAP_IMPLEMENTACAO_PRODUTO.md)

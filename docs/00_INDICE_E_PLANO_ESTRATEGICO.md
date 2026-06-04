@@ -40,6 +40,8 @@ A linha C18 acrescentou HW decode validado e um contrato de atualização novo.
 Para qualquer decisão de update, a fonte vigente é:
 
 - `docs/UPDATE_CONTRACT.md`;
+- `docs/UPDATE_AUTHORIZATION_HEALTH.md` para a leitura operacional curta de
+  autorizacao e health gates;
 - `docs/product/189_C18_OTA_READINESS_GATE.md` para o estado live/baseline de
   laboratório validado;
 - `docs/product/191_C18_OTA_OPERATING_MODEL.md` para o modelo operacional.
@@ -92,6 +94,14 @@ Fonte vigente para a linha C18. Define classes de mudança, fronteira do player,
 manifest/policy, gates, quando gerar imagem e o que é bypass de laboratório.
 
 Arquivo: `UPDATE_CONTRACT.md`
+
+### Autorização C18 de update e health gates
+
+Guia curto para dev/IA futura entender quem autoriza update, quais componentes
+podem ser atualizados hoje, o que permanece congelado e como distinguir service
+health, deep-health e soak.
+
+Arquivo: `UPDATE_AUTHORIZATION_HEALTH.md`
 
 ### Release de homologação v0.1-rc1
 
