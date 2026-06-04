@@ -227,12 +227,15 @@ def apply_player_runtime_offline(
     manifest: Path,
     payload: Path,
     pass_health: bool = True,
+    raise_health: bool = False,
     observed_identity: str = "candidate",
 ) -> tuple[bool, str]:
     configure_updatectl_paths(sandbox)
     release_gate.validate_release(manifest, payload)
 
     def health_hook(release_dir: Path, identity: dict[str, Any]) -> dict[str, Any]:
+        if raise_health:
+            raise RuntimeError("sandbox_health_hook_failed")
         if not pass_health:
             return {
                 "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
@@ -286,7 +289,7 @@ def apply_player_runtime_offline(
         return True, "applied"
     if observed_identity == "fallback":
         return False, "rejected_health_observed_fallback"
-    if not pass_health and status == "candidate_rejected":
+    if (not pass_health or raise_health) and status == "candidate_rejected":
         rolled_to = last.get("rolled_back_to") if isinstance(last, dict) else ""
         return False, "rolled_back_to_previous" if rolled_to == "previous" else "rolled_back_to_image_fallback"
     return False, f"rc={rc}:{status}"
@@ -382,6 +385,7 @@ def main() -> int:
     manifest_bad, payload_bad = build_player_runtime_package(sandbox, "sandbox-bad", "bad")
     manifest_bad_no_prev, payload_bad_no_prev = build_player_runtime_package(sandbox, "sandbox-bad-no-prev", "bad-no-prev")
     manifest_bad_fallback, payload_bad_fallback = build_player_runtime_package(sandbox, "sandbox-bad-fallback", "bad-fallback")
+    manifest_hook_error, payload_hook_error = build_player_runtime_package(sandbox, "sandbox-hook-error", "hook-error")
 
     apply_a_ok, apply_a_reason = apply_player_runtime_offline(sandbox, manifest=manifest_a, payload=payload_a)
     current_after_a = readlink(sandbox / "data" / "player-runtime" / "current")
@@ -432,6 +436,22 @@ def main() -> int:
     bad_release_with_previous_exists = (
         sandbox / "data" / "player-runtime" / "releases" / "sandbox-bad"
     ).exists()
+
+    hook_error_ok, hook_error_reason = apply_player_runtime_offline(
+        sandbox,
+        manifest=manifest_hook_error,
+        payload=payload_hook_error,
+        raise_health=True,
+    )
+    current_after_hook_error = readlink(sandbox / "data" / "player-runtime" / "current")
+    hook_error_release_exists = (
+        sandbox / "data" / "player-runtime" / "releases" / "sandbox-hook-error"
+    ).exists()
+    hook_error_stage_exists = (
+        sandbox / "data" / "updates" / "incoming" / "player-runtime" / "sandbox-hook-error"
+    ).exists()
+    state_after_hook_error = read_state(sandbox)
+    hook_error_last = state_after_hook_error.get("last_operation", {})
 
     safe_remove(sandbox / "data" / "player-runtime" / "current", sandbox)
     safe_remove(sandbox / "data" / "player-runtime" / "previous", sandbox)
@@ -517,6 +537,17 @@ def main() -> int:
                 and current_after_failed_b == expected_b
             ),
             "failed_apply_with_previous_cleaned_release": not bad_release_with_previous_exists,
+            "health_hook_exception_keeps_previous_current": (
+                not hook_error_ok
+                and hook_error_reason == "rolled_back_to_previous"
+                and current_after_hook_error == expected_b
+                and isinstance(hook_error_last, dict)
+                and hook_error_last.get("status") == "candidate_rejected"
+                and hook_error_last.get("rollback_reason") == "deep_health_exception:RuntimeError"
+            ),
+            "health_hook_exception_cleans_release_and_stage": (
+                not hook_error_release_exists and not hook_error_stage_exists
+            ),
             "failed_apply_without_previous_falls_back_to_image": (
                 not failed_without_previous_ok
                 and failed_without_previous_reason == "rolled_back_to_image_fallback"

@@ -1747,7 +1747,27 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     }
     _write_state(state)
 
-    health = _default_player_runtime_health_hook(release_dir, identity)
+    try:
+        health = _default_player_runtime_health_hook(release_dir, identity)
+    except Exception as e:
+        reason = f"deep_health_exception:{type(e).__name__}"
+        log("ERROR", "player_runtime_deep_health_exception", err_type=type(e).__name__)
+        if not old_current:
+            state["current"] = None
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous" if old_current else "image_fallback",
+        }
+        _write_state(state)
+        _cleanup_unpromoted_release(release_dir)
+        _cleanup_stage(stage)
+        return 13
     if not bool(health.get("passed")):
         reason = ",".join(str(item) for item in health.get("failure_reasons", [])) or "deep_health_failed"
         _quarantine_player_runtime_identity(state, identity, reason)
