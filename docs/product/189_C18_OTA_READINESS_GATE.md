@@ -625,3 +625,29 @@ validacao em placa. A candidata offline gerada e validada em hardware foi:
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
 - **Status:** promovida a golden de laboratorio/delivery; ainda
   `final_image=false`, nao stable e nao batch de producao.
+
+## Candidata 1o (offline, pos-guard/evidence-gate)
+
+Apos a golden `1n`, o commit `b766b4a` fechou a lacuna de governanca do
+`reconcile --component player-runtime`: o comando publico volta a ficar
+congelado com `rc=44`, e a higiene de boot passa a exigir autorizacao explicita
+(`--allow-player-runtime-maintenance` + `C18_PLAYER_RUNTIME_RECONCILE=1`) no
+`ExecStartPre` da imagem. A mesma rodada tambem adicionou o gate de evidencia
+sanitizada para o proximo ensaio persistente de `player-runtime`.
+
+Por tocar `totem_updatectl.py`, drop-in systemd e scripts de deep-health, essa
+rodada exige nova imagem antes de validacao em placa. A candidata offline gerada
+foi:
+
+- **Imagem candidata:** `c18-hwdecode-lab-1o`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1o_minimal.img`;
+- **sha256:**
+  `07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164`;
+- **Validacao offline:** `OFFLINE_VALIDATION_PASSED=True`,
+  `artifact_promoted=true`, `totem_core_ota_ready=true`,
+  `player_runtime_ota_still_frozen=true`, `player_runtime_release_gate_passed=true`,
+  `player_runtime_sandbox_passed=true`, `ready_for_manual_card_flash=true`;
+- **Status:** candidata offline pronta para gravacao/validacao curta em placa.
+  Ainda nao e golden; a golden permanece `c18-hwdecode-lab-1n` ate a `1o`
+  passar hardware.
