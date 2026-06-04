@@ -257,9 +257,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
 
-    def test_c18_docs_keep_1m_as_current_golden(self) -> None:
-        current_tag = "c18-hwdecode-lab-1m"
-        current_sha = "d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c"
+    def test_c18_docs_keep_1n_as_current_golden(self) -> None:
+        current_tag = "c18-hwdecode-lab-1n"
+        current_sha = "29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c"
+        legacy_sha_1m = "d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c"
         legacy_sha_1l = "146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3"
         legacy_sha_1j = "995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152"
         for path in (README_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
@@ -276,6 +277,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--package-payload <release-dir>/dadooh-totem-core-<version>.tar.gz", operating_model)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
+        self.assertIn(legacy_sha_1m, doc189)
         doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
         self.assertNotIn(legacy_sha_1l, doc188_top)
         doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]

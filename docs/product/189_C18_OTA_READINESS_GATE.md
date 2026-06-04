@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1m`.
+golden atual `1n`.
 
 ## Decisão
 
@@ -17,15 +17,15 @@ golden atual `1m`.
   `apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem`
   e exige policy presente.
 
-## Golden atual (2026-06-03)
+## Golden atual (2026-06-04)
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1m`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1n`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1m_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1n_minimal.img`;
 - **sha256:**
-  `d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`;
+  `29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -39,16 +39,15 @@ Marco de referência para continuidade C18/delivery:
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1m`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1n`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `1k` e `1l` permanecem como golden historicas anteriores. A `1m` valida
-em hardware os follow-ups pos-1l: deep-health com progresso de frame
-obrigatorio, freeze simetrico de rollback para componentes congelados,
-documentacao encontravel dos health gates e testes de nao-regressao de
-`totem-core`. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
+Nota: `1k`, `1l` e `1m` permanecem como golden historicas anteriores. A `1n`
+valida em hardware o follow-up pos-1m: excecao no health hook interno de
+`player-runtime` rejeita candidato, preserva `current` e limpa stage/release.
+O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
 ## Promocao 1m (offline + hardware)
 
@@ -562,7 +561,7 @@ vir como nova imagem ou release ponte explicitamente homologada.
 - Read-only/C12.
 - Kernel/U-Boot/DTB/BSP, pacotes NetworkManager e `apt upgrade`.
 
-## Candidata 1n (offline, pendente de hardware)
+## Promocao 1n (offline + hardware)
 
 Apos a golden `1m`, a rodada `1f378a9` fechou mais um caso de fault-injection
 pre-thaw: se o health hook interno do `player-runtime` levantar excecao, o
@@ -572,8 +571,8 @@ automaticamente uma falha de harness/ambiente. O sandbox passou a cobrir
 `health_hook_exception_keeps_previous_current` e
 `health_hook_exception_cleans_release_and_stage`.
 
-Por tocar `totem_updatectl.py`, essa correcao exige nova imagem antes de
-validacao em placa. A candidata offline gerada e:
+Por tocar `totem_updatectl.py`, essa correcao exigiu nova imagem antes de
+validacao em placa. A candidata offline gerada e validada em hardware foi:
 
 - **Imagem candidata:** `c18-hwdecode-lab-1n`;
 - **Arquivo:**
@@ -584,5 +583,12 @@ validacao em placa. A candidata offline gerada e:
   `artifact_promoted=true`, `totem_core_ota_ready=true`,
   `player_runtime_ota_still_frozen=true`, `player_runtime_release_gate_passed=true`,
   `player_runtime_sandbox_passed=true`;
-- **Status:** pendente de flash/validacao em hardware. Ate passar hardware, a
-  golden de laboratorio/delivery continua sendo `1m`.
+- **Validacao hardware:** marker `1n`, policy restrita a `totem-core`, timer
+  desligado, config real escrita via handoff/writer a partir do seed, player
+  fallback de imagem ativo, `kiosky-player` e `player-runtime` bloqueados com
+  `rc=44` em apply e rollback, OTA GitHub `totem-core` dry-run/apply/rollback/
+  reapply aprovado, staging limpo, e deep-health final `passed=true` com
+  `hwdec-current=v4l2request-copy`, progresso de frame, `media_load_failed=0`,
+  `mpv_restart=0`, panfrost/mmc/ext4 `0`.
+- **Status:** promovida a golden de laboratorio/delivery; ainda
+  `final_image=false`, nao stable e nao batch de producao.
