@@ -1,0 +1,90 @@
+
+=== captured_at ===
+2026-06-04T21:12:32Z
+=== marker ===
+c18-hwdecode-lab-1n-image
+image_tag=c18-hwdecode-lab-1n
+image_version=c18.image-lab.1n
+final_image=false
+totem_update_timer_enabled=false
+=== service ===
+Result=success
+NRestarts=0
+ExecMainPID=11229
+ExecMainStatus=0
+ActiveState=active
+SubState=running
+=== drm ===
+card0-HDMI-A-1_status=connected
+card0-HDMI-A-1_enabled=enabled
+card0-HDMI-A-1_dpms=On
+card0-HDMI-A-1_modes=1360x768,1920x1080,1920x1080,1920x1080,1920x1080i,1920x1080i,1920x1080i,1920x1080,1920x1080,1920x1080i,1920x1080i,1920x1080,1920x1080,1920x1080,1920x1080,1920x1080,1600x1200,1280x720,1280x720,1280x720,1280x720,1024x768,800x600,720x576,720x480,720x480,640x480,640x480,640x480,
+=== mpv ===
+mpv_count=1
+mpv_exe=/opt/totem/hwdecode/bin/mpv
+=== mpv_ipc ===
+ipc_ready=True
+idle-active=false
+pause=false
+core-idle=false
+eof-reached=false
+playlist-count=1
+playlist-pos=0
+vo-configured=true
+current-vo="gpu"
+hwdec-current="v4l2request-copy"
+video-codec="H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+estimated-frame-number=166
+time-pos=5.533333
+video-out-params={"dh": 848, "dw": 480, "h": 848, "par": 1.0, "pixelformat": "nv12", "rotate": 0, "w": 480}
+display-names=null
+frame_progress_sample_start
+frame=166 time=5.533333
+frame=196 time=6.533333
+frame=226 time=7.533333
+frame=256 time=8.566667
+frame=287 time=9.566667
+frame_progress_sample_end
+=== kernel_counts ===
+recent_relevant=300
+recent_faults=0
+
+=== drm_kms_state_sanitized ===
+state_file=/sys/kernel/debug/dri/0/state
+plane[32]: plane-0
+	crtc=(null)
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+	normalized-zpos=0
+plane[38]: plane-1
+	crtc=crtc-0
+	fb=54
+	crtc-pos=1360x768+0+0
+	src-pos=1360.000000x768.000000+0.000000+0.000000
+	rotation=1
+	normalized-zpos=0
+plane[42]: plane-2
+	crtc=(null)
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+	normalized-zpos=2
+plane[46]: plane-3
+	crtc=(null)
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+	normalized-zpos=3
+crtc[50]: crtc-0
+	active=1
+	self_refresh_active=0
+connector[52]: HDMI-A-1
+	crtc=crtc-0
+edid_bytes=256
+edid_sha256=4e15d1dd325dc9cc2c3bd07f596896db9190b33f21f564341adf7d5ddec517e4
+
+__EXPECT_EXIT_CODE__=0
