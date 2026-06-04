@@ -113,6 +113,15 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertEqual(rc, 44)
             self.assertFalse((root / "data" / "apps" / "kiosky-player").exists())
 
+    def test_kiosky_player_rollback_is_frozen_before_state_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "kiosky-player")
+            args = argparse.Namespace(component="kiosky-player")
+            rc = updatectl.cmd_rollback(args)
+            self.assertEqual(rc, 44)
+            self.assertFalse((root / "data" / "apps" / "kiosky-player").exists())
+
     def test_player_runtime_apply_local_is_frozen_before_manifest_read(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

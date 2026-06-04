@@ -110,6 +110,25 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         fixture.mutate_json("process.json", mpv_count=2)
         self.assert_fails_with(fixture, "single_mpv")
 
+    def test_rejects_decode_stall_when_time_advances_but_frame_is_frozen(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            row["estimated_frame_number"] = "275"
+        fixture.write_rows(rows)
+        result = self.assert_fails_with(fixture, "playback_progressed")
+        self.assertTrue(result["counters"]["time_pos_progressed"])
+        self.assertFalse(result["counters"]["estimated_frame_progressed"])
+
+    def test_rejects_missing_frame_progress_evidence(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            row["estimated_frame_number"] = ""
+        fixture.write_rows(rows)
+        result = self.assert_fails_with(fixture, "estimated_frame_present")
+        self.assertIn("playback_progressed", result["failure_reasons"])
+
     def test_candidate_process_filter_allows_ambient_live_mpv(self) -> None:
         fixture = self.with_case()
         fixture.mutate_json("systemd.json", target_mode="candidate", candidate_pid_present=True)
@@ -160,6 +179,33 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         kernel.pop("ext4_errors", None)
         fixture.write_json("kernel.json", kernel)
         self.assert_fails_with(fixture, "ext4_errors_present")
+
+    def test_rejects_missing_restart_and_fault_counter_evidence(self) -> None:
+        fixture = self.with_case()
+        systemd = fixture.read_json("systemd.json")
+        systemd.pop("nrestarts_delta", None)
+        fixture.write_json("systemd.json", systemd)
+
+        kernel = fixture.read_json("kernel.json")
+        kernel.pop("panfrost_faults", None)
+        kernel.pop("mmc_timeout_reset", None)
+        fixture.write_json("kernel.json", kernel)
+
+        counters = fixture.read_json("player-counters.json")
+        counters.pop("media_load_failed", None)
+        counters.pop("mpv_restart", None)
+        fixture.write_json("player-counters.json", counters)
+
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        for reason in (
+            "nrestarts_delta_present",
+            "panfrost_faults_present",
+            "mmc_timeout_reset_present",
+            "media_load_failed_present",
+            "mpv_restart_present",
+        ):
+            self.assertIn(reason, result["failure_reasons"])
 
     def test_non_destructive_collector_static_contract(self) -> None:
         source = (REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py").read_text(encoding="utf-8")

@@ -2314,7 +2314,7 @@ def cmd_apply_local(args: argparse.Namespace) -> int:
 def cmd_rollback(args: argparse.Namespace) -> int:
     configure_component(args.component)
     frozen_reason = _apply_frozen_reason()
-    if COMPONENT == "player-runtime" and frozen_reason:
+    if frozen_reason:
         print(f"component_frozen_for_ota: {COMPONENT}: {frozen_reason}", file=sys.stderr)
         log("WARN", "rollback_blocked_component_frozen", component=COMPONENT, reason=frozen_reason)
         return 44

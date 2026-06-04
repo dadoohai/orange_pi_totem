@@ -500,6 +500,13 @@ vir como nova imagem ou release ponte explicitamente homologada.
   `--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
   Serve para a primeira validacao lab de apply real de candidato, ainda antes de
   qualquer thaw publico.
+- Auditoria adversarial pos-harness encontrou dois buracos pequenos mas
+  load-bearing antes de thaw: o deep-health aceitava `time_pos` avancando mesmo
+  com `estimated_frame_number` congelado, e `rollback --component kiosky-player`
+  nao seguia o mesmo freeze `rc=44` do apply. A correcao consolidada exige
+  progresso de frame estimado presente/avancando, presence-guard para contadores
+  de falha, freeze de rollback para todo componente em `OTA_FROZEN_COMPONENTS`,
+  e bloqueio de `stable` nos scripts historicos de release de `kiosky-player`.
 
 ## Fora de escopo
 

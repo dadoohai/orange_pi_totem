@@ -244,6 +244,11 @@ referencia mais amplo, mas para validacao de update ele e intrusivo porque para
 o servico ao final da observacao. O probe manual de playback continua sendo
 diagnostico auxiliar e nao substitui a validacao do servico.
 
+O deep-health C18 deve falhar fechado quando a evidencia de progresso de frame
+estiver ausente ou congelada. `time_pos` e diagnostico util, mas nao pode aprovar
+sozinho uma janela de playback com `estimated_frame_number` travado, pois esse e
+o modo de falha que a linha C18 precisa barrar antes de qualquer thaw de player.
+
 O builder local `scripts/deploy/build_player_runtime_release_package.sh` cria
 um pacote lab-only de `player-runtime` a partir do snapshot governado e roda
 `scripts/qa/c18_player_runtime_release_gate.py` antes de promover payload e
@@ -281,8 +286,10 @@ Exemplos de bypass/lab-only:
 
 Scripts historicos de release de `kiosky-player` tambem nao liberam OTA de
 player na C18. `ALLOW_C18_FROZEN_PLAYER_RELEASE=1` e apenas bypass de
-reproducao legada/lab, nao aprovacao de release C18-aware. Um pacote
-`player-runtime` C18-aware exige contrato, gate e homologacao novos.
+reproducao legada/lab, nao aprovacao de release C18-aware. Mesmo com esse bypass,
+os scripts historicos nao podem gerar nem publicar `channel=stable`, e o
+publisher deve exigir `source_commit` completo e `created_at_utc` valido. Um
+pacote `player-runtime` C18-aware exige contrato, gate e homologacao novos.
 
 Scripts remotos historicos que alteram player, `/opt`, systemd ou estado fora
 do OTA comum devem falhar fechados por padrao. Excecoes de bancada exigem uma

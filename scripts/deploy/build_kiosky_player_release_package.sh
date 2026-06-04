@@ -8,7 +8,7 @@
 # Inputs (env or args):
 #   KIOSKY_REPO   path to kiosky-player working copy (default /home/builder/kiosky-player)
 #   VERSION       explicit version string; default: homolog-<UTC timestamp>
-#   CHANNEL       lab | homologation (default) | stable
+#   CHANNEL       lab | homologation (default). stable is blocked for C18.
 #   OUT_BASE      output base dir (default releases/app-updates)
 #   --prepare-only   inspect inputs, print plan, do not write tar/manifest
 #   --build-package  build tar.gz + manifest (default)
@@ -96,8 +96,8 @@ if ! [[ "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
   die "version contains unsafe characters: $VERSION"
 fi
 
-if ! [[ "$CHANNEL" =~ ^(lab|homologation|stable)$ ]]; then
-  die "unsupported channel: $CHANNEL (expected lab, homologation, or stable)"
+if ! [[ "$CHANNEL" =~ ^(lab|homologation)$ ]]; then
+  die "unsupported channel: $CHANNEL (legacy kiosky-player C18 builder only supports lab or homologation)"
 fi
 
 OUT_DIR="${OUT_BASE}/${VERSION}"

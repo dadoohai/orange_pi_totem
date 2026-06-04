@@ -232,8 +232,46 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("legacy lab reproduction bypass", script)
             self.assertIn("not approval for a C18-aware player-runtime release", script)
         publish = PUBLISH_PLAYER_PATH.read_text(encoding="utf-8")
+        build = BUILD_PLAYER_PATH.read_text(encoding="utf-8")
+        self.assertIn("legacy kiosky-player C18 builder only supports lab or homologation", build)
+        self.assertIn("legacy kiosky-player stable releases are blocked for C18", publish)
+        self.assertIn("legacy kiosky-player C18 publisher only supports lab or homologation", publish)
+        self.assertIn("manifest component must be kiosky-player", publish)
+        self.assertIn("manifest source_commit is not a full SHA", publish)
+        self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", publish)
         self.assertIn("will reject apply with rc=44", publish)
         self.assertNotIn("totem-updatectl apply-github-latest --repo ${REPO}", publish)
+
+    def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:
+            root = Path(tmp)
+            repo = root / "kiosky-player"
+            out = root / "out"
+            repo.mkdir()
+            subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=repo, check=True)
+            (repo / "kiosk.py").write_text("print('ok')\n", encoding="utf-8")
+            subprocess.run(["git", "add", "kiosk.py"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "fixture"], cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            env = os.environ.copy()
+            env["ALLOW_C18_FROZEN_PLAYER_RELEASE"] = "1"
+            result = subprocess.run(
+                [
+                    str(BUILD_PLAYER_PATH),
+                    "--prepare-only",
+                    "--channel=stable",
+                    f"--kiosky-repo={repo}",
+                    f"--out-base={out}",
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("stable", result.stdout + result.stderr)
 
     def test_player_runtime_builder_is_lab_only_and_gated(self) -> None:
         script = BUILD_PLAYER_RUNTIME_PATH.read_text(encoding="utf-8")

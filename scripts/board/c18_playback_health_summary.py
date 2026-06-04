@@ -103,6 +103,10 @@ def progressed(values: list[float | None]) -> bool:
     return max(clean) > min(clean)
 
 
+def present_count(values: list[float | None]) -> int:
+    return len([value for value in values if value is not None])
+
+
 def evaluate(
     *,
     samples_path: Path,
@@ -165,6 +169,7 @@ def evaluate(
 
     service_active = bool(systemd.get("service_active"))
     target_mode = str(systemd.get("target_mode") or "service")
+    nrestarts_delta_present = "nrestarts_delta" in systemd
     nrestarts_delta = as_int(systemd.get("nrestarts_delta"))
     mpv_count = as_int(process.get("mpv_count"))
     total_mpv_count_present = "total_mpv_count" in process
@@ -172,17 +177,22 @@ def evaluate(
     process_filter = str(process.get("process_filter") or "")
     mpv_path = str(process.get("mpv_path") or "")
     mpv_path_ok = mpv_path in EXPECTED_MPV_PATHS
+    panfrost_faults_present = "panfrost_faults" in kernel
     panfrost_faults = as_int(kernel.get("panfrost_faults"))
+    mmc_timeout_reset_present = "mmc_timeout_reset" in kernel
     mmc_timeout_reset = as_int(kernel.get("mmc_timeout_reset"))
     ext4_errors_present = "ext4_errors" in kernel
     ext4_errors = as_int(kernel.get("ext4_errors"))
+    media_load_failed_present = "media_load_failed" in player_counters
     media_load_failed = as_int(player_counters.get("media_load_failed"))
+    mpv_restart_present = "mpv_restart" in player_counters
     mpv_restart = as_int(player_counters.get("mpv_restart"))
     playlist_size = max_playlist_size(rows)
     transition_required = playlist_size >= 2
     unique_aliases = len(aliases)
     transition_ok = not transition_required or unique_aliases >= 2
     time_pos_progressed = progressed(time_values)
+    estimated_frame_present = present_count(frame_values) >= 2
     frame_progressed = progressed(frame_values)
 
     checks = {
@@ -193,10 +203,12 @@ def evaluate(
         "hwdec_no_unexpected": hwdec_unexpected_samples == 0,
         "vo_configured_present": vo_configured_true_samples > 0,
         "vo_configured_no_unexpected": vo_configured_unexpected_samples == 0,
-        "playback_progressed": time_pos_progressed or frame_progressed,
+        "estimated_frame_present": estimated_frame_present,
+        "playback_progressed": frame_progressed,
         "status_no_failures": status_failure_samples == 0,
         "transitions_observed_when_required": transition_ok,
         "service_active": service_active,
+        "nrestarts_delta_present": nrestarts_delta_present,
         "nrestarts_stable": nrestarts_delta == 0,
         "single_mpv": mpv_count == 1,
         "service_process_unfiltered": target_mode != "service" or not process_filter,
@@ -204,9 +216,13 @@ def evaluate(
         "service_single_total_mpv": target_mode != "service" or total_mpv_count == 1,
         "candidate_process_filtered": target_mode != "candidate" or process_filter == "input-ipc-server",
         "mpv_path_c18_stack": mpv_path_ok,
+        "media_load_failed_present": media_load_failed_present,
         "media_load_failed_zero": media_load_failed == 0,
+        "mpv_restart_present": mpv_restart_present,
         "mpv_restart_zero": mpv_restart == 0,
+        "panfrost_faults_present": panfrost_faults_present,
         "panfrost_faults_zero": panfrost_faults == 0,
+        "mmc_timeout_reset_present": mmc_timeout_reset_present,
         "mmc_timeout_reset_zero": mmc_timeout_reset == 0,
         "ext4_errors_present": ext4_errors_present,
         "ext4_errors_zero": ext4_errors == 0,

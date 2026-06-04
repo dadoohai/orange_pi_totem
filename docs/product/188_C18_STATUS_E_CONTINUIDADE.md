@@ -128,7 +128,7 @@ A `1c` provou o HW decode e eliminou o bug original, mas a rodada de continuidad
 
 A placa:
 
-- IP **`192.168.18.131`**, usuário **`root`**, senha **interativa** via helper expect lendo `$SSHPASS` (**NUNCA persistir**);
+- IP **`<board-ip-redacted>`**, usuário **`root`**, senha **interativa** via helper expect lendo `$SSHPASS` (**NUNCA persistir**);
 - hostname **`orangepizero3`**;
 - foi regravada pelo usuário com **`c18-hwdecode-lab-1d`** em cartão novo; o cartão anterior
   falhou no `h2testw` e saiu da investigação.
@@ -214,7 +214,7 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 ## Guardrails permanentes
 
 - **NÃO** gerar imagem de produção/release/flash/cartão/poweroff **sem autorização**;
-- **SSH só na ÚNICA placa disponível** (`192.168.18.131`);
+- **SSH só na ÚNICA placa disponível** (`<board-ip-redacted>`);
 - **Senha nunca persistida**;
 - **Sanitizar tudo** — não imprimir: `api_key`, `api_url` real, `environment_id` real, SSID, senha wifi, IP/MAC/DNS, URLs reais de mídia;
 - **Não embutir** `/data/config/config.json` nem config real;
@@ -257,7 +257,7 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 
 **Placa:**
 
-- IP `192.168.18.131`, usuário `root`, hostname `orangepizero3`, senha interativa via expect lendo `$SSHPASS` (nunca persistir).
+- IP `<board-ip-redacted>`, usuário `root`, hostname `orangepizero3`, senha interativa via expect lendo `$SSHPASS` (nunca persistir).
 
 **Memórias relevantes:**
 

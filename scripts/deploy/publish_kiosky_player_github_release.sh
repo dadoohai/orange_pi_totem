@@ -102,11 +102,34 @@ print(val)
 " "$1" "$2"
 }
 
-VERSION="$(read_json "$MANIFEST" version)"
-CHANNEL="$(read_json "$MANIFEST" channel)"
-COMPONENT="$(read_json "$MANIFEST" component)"
-MANIFEST_SHA="$(read_json "$MANIFEST" payload_sha256)"
-PAYLOAD_BASENAME="$(read_json "$MANIFEST" payload)"
+VERSION="$(read_json "$MANIFEST" version)" || die "manifest missing version"
+CHANNEL="$(read_json "$MANIFEST" channel)" || die "manifest missing channel"
+COMPONENT="$(read_json "$MANIFEST" component)" || die "manifest missing component"
+SOURCE_COMMIT="$(read_json "$MANIFEST" source_commit)" || die "manifest missing source_commit"
+CREATED_AT_UTC="$(read_json "$MANIFEST" created_at_utc)" || die "manifest missing created_at_utc"
+MANIFEST_SHA="$(read_json "$MANIFEST" payload_sha256)" || die "manifest missing payload_sha256"
+PAYLOAD_BASENAME="$(read_json "$MANIFEST" payload)" || die "manifest missing payload"
+
+[[ "$COMPONENT" == "kiosky-player" ]] \
+  || die "manifest component must be kiosky-player"
+[[ "$CHANNEL" != "stable" ]] \
+  || die "legacy kiosky-player stable releases are blocked for C18; use image/homologation or the future player-runtime contract"
+[[ "$CHANNEL" =~ ^(lab|homologation)$ ]] \
+  || die "unsupported channel: $CHANNEL (legacy kiosky-player C18 publisher only supports lab or homologation)"
+[[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]] \
+  || die "manifest source_commit is not a full SHA"
+if ! python3 - "$CREATED_AT_UTC" <<'PY'
+import datetime as dt
+import sys
+
+raw = sys.argv[1]
+parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+if parsed.tzinfo is None or parsed.utcoffset() is None:
+    raise SystemExit(1)
+PY
+then
+  die "manifest created_at_utc must be an ISO-8601 UTC timestamp"
+fi
 
 [[ "$(basename "$PAYLOAD")" == "$PAYLOAD_BASENAME" ]] \
   || die "payload basename mismatch: $(basename "$PAYLOAD") != $PAYLOAD_BASENAME"
@@ -178,8 +201,9 @@ trap 'rm -f "$NOTES_FILE"' EXIT
   echo
   echo "Channel: \`${CHANNEL}\`"
   echo "Component: \`${COMPONENT}\`"
-  echo "Source commit: \`$(read_json "$MANIFEST" source_commit)\`"
+  echo "Source commit: \`${SOURCE_COMMIT}\`"
   echo "Source branch: \`$(read_json "$MANIFEST" source_branch)\`"
+  echo "Created at: \`${CREATED_AT_UTC}\`"
   echo "Payload SHA256: \`${MANIFEST_SHA}\`"
   echo
   echo "## Assets"
