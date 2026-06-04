@@ -115,11 +115,11 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 ## Status Atual
 
-Baseline de laboratorio/delivery registrado em 2026-06-03:
+Baseline de laboratorio/delivery registrado em 2026-06-04:
 
-- imagem golden: `c18-hwdecode-lab-1m`;
+- imagem golden: `c18-hwdecode-lab-1n`;
 - sha256:
-  `d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`;
+  `29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -145,6 +145,10 @@ Antes de qualquer thaw de laboratorio:
   ate `subprocess.Popen(args, ...)`;
 - apply lab-only deve usar
   `scripts/qa/c18_player_runtime_lab_apply.py` com flags e env vars lab-only;
+- rollback/reconcile lab-only deve usar
+  `scripts/qa/c18_player_runtime_lab_rollback.py` com flags e env vars
+  lab-only (`C18_PLAYER_RUNTIME_LAB_ROLLBACK=1` + `--lab-only-rollback`) antes
+  de qualquer ensaio persistente em `/data`;
 - health de candidato deve usar runner lab-only isolado, sem GitHub, sem timer,
   sem auto-pull e sem policy permanente;
 - quando nao houver API real no runner, o health de candidato deve usar canario

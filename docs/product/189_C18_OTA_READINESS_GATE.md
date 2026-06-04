@@ -424,9 +424,9 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1m` como baseline de laboratorio validada para a
+1. Tratar `c18-hwdecode-lab-1n` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
-2. Fluxo manual de release GitHub `totem-core` validado na 1m com mudanca real
+2. Fluxo manual de release GitHub `totem-core` validado na 1n com mudanca real
    de aplicacao, rollback e reapply. Proximas mudancas de wizard/core devem
    seguir este gate antes de aplicar em placa, mantendo auto-pull desligado e
    `kiosky-player`/`player-runtime` congelados ate thaw explicito.
@@ -531,6 +531,14 @@ vir como nova imagem ou release ponte explicitamente homologada.
   `--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
   Serve para a primeira validacao lab de apply real de candidato, ainda antes de
   qualquer thaw publico.
+- A rodada pos-1n acrescentou o escape simetrico
+  `scripts/qa/c18_player_runtime_lab_rollback.py`: local-only, exige
+  `C18_PLAYER_RUNTIME_LAB_ROLLBACK=1` + `--lab-only-rollback`, roda rollback ou
+  reconcile interno de `player-runtime`, confirma que o CLI publico continua
+  bloqueado com `rc=44`, e so toca `/data` com
+  `--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
+  Esse harness e pre-condicao antes de qualquer ensaio persistente em
+  `/data/player-runtime/current`.
 - Auditoria adversarial pos-harness encontrou dois buracos pequenos mas
   load-bearing antes de thaw: o deep-health aceitava `time_pos` avancando mesmo
   com `estimated_frame_number` congelado, e `rollback --component kiosky-player`

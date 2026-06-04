@@ -40,6 +40,7 @@ SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observ
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
+PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -48,6 +49,7 @@ TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.t
 ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md"
 POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
 UPDATE_CONTRACT_PATH = REPO_ROOT / "docs" / "UPDATE_CONTRACT.md"
+UPDATE_AUTHORIZATION_HEALTH_PATH = REPO_ROOT / "docs" / "UPDATE_AUTHORIZATION_HEALTH.md"
 README_PATH = REPO_ROOT / "README.md"
 DOC_INDEX_PATH = REPO_ROOT / "docs" / "00_INDICE_E_PLANO_ESTRATEGICO.md"
 DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md"
@@ -263,10 +265,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         legacy_sha_1m = "d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c"
         legacy_sha_1l = "146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3"
         legacy_sha_1j = "995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152"
-        for path in (README_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
+        for path in (README_PATH, UPDATE_AUTHORIZATION_HEALTH_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
             text = path.read_text(encoding="utf-8")
             self.assertIn(current_tag, text)
-        for path in (DOC188_PATH, DOC189_PATH, DOC190_PATH):
+        for path in (UPDATE_AUTHORIZATION_HEALTH_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
             text = path.read_text(encoding="utf-8")
             self.assertIn(current_sha, text)
         index = DOC_INDEX_PATH.read_text(encoding="utf-8")
@@ -277,6 +279,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--package-payload <release-dir>/dadooh-totem-core-<version>.tar.gz", operating_model)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
+        self.assertNotIn("Tratar `c18-hwdecode-lab-1m` como baseline", doc189)
         self.assertIn(legacy_sha_1m, doc189)
         doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
         self.assertNotIn(legacy_sha_1l, doc188_top)
@@ -444,6 +447,21 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("apply-github-latest", lab_apply)
         self.assertNotIn("gh release", lab_apply)
 
+        lab_rollback = PLAYER_RUNTIME_LAB_ROLLBACK_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_ROLLBACK", lab_rollback)
+        self.assertIn("C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT", lab_rollback)
+        self.assertIn("--lab-only-rollback", lab_rollback)
+        self.assertIn("--allow-device-data-root", lab_rollback)
+        self.assertIn("_rollback_player_runtime_unfrozen", lab_rollback)
+        self.assertIn("_reconcile_player_runtime_state", lab_rollback)
+        self.assertIn("public_cli_rollback_still_frozen", lab_rollback)
+        self.assertNotIn("apply-github-latest", lab_rollback)
+        self.assertNotIn("gh release", lab_rollback)
+
+        update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_ROLLBACK", update_auth)
+
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("totem_config_contract_self_test", gate)
@@ -520,6 +538,39 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         for guarded_arg in (
             ["--lab-only-apply", "--data-root", "/data/foo"],
             ["--lab-only-apply", "--output-dir", "/data/foo"],
+        ):
+            proc = subprocess.run(
+                [*base_cmd, *guarded_arg, "--json"],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 43, proc.stderr)
+            self.assertIn("device_data_root_guard_required", proc.stderr)
+
+    def test_player_runtime_lab_rollback_guards_are_executable(self) -> None:
+        base_cmd = [
+            "python3",
+            str(PLAYER_RUNTIME_LAB_ROLLBACK_PATH),
+        ]
+
+        no_lab = subprocess.run(
+            [*base_cmd, "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(no_lab.returncode, 44)
+
+        env = {"PATH": os.environ.get("PATH", ""), "C18_PLAYER_RUNTIME_LAB_ROLLBACK": "1"}
+        for guarded_arg in (
+            ["--lab-only-rollback", "--data-root", "/data/foo"],
+            ["--lab-only-rollback", "--output-dir", "/data/foo"],
         ):
             proc = subprocess.run(
                 [*base_cmd, *guarded_arg, "--json"],

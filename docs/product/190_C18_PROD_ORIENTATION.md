@@ -5,8 +5,9 @@ caminhada da 1ª candidata controlada de produção (**RC1**) a partir da baseli
 O bug original (`media_load_failed` / saturação de CPU no decode em software) está **RESOLVIDO**;
 HW decode end-to-end OK. Esta é a separação **RC1 controlada ≠ produção final/batch**.
 
-> **Nota 2026-06-03:** este doc preserva a orientação tomada quando a baseline
-> era `1d`. A golden atual de laboratório/delivery passou a ser
+> **Nota 2026-06-04:** este doc preserva a orientação tomada quando a baseline
+> era `1d` e nao e fonte autoritativa para a linha viva de updates C18. A golden
+> atual de laboratório/delivery passou a ser
 > `c18-hwdecode-lab-1n`
 > (`sha256=29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`),
 > com estado runtime de referência após OTA manual `totem-core`

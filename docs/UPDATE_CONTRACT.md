@@ -261,6 +261,13 @@ hook interno e confirma ao final que o CLI publico continua congelado com
 `rc=44`. Por padrao usa `data_root` temporario em sandbox; tocar `/data` exige
 tambem `--allow-device-data-root` e `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
 Ele nao usa GitHub, timer, auto-pull nem policy permanente do device.
+O escape simetrico de laboratorio e
+`scripts/qa/c18_player_runtime_lab_rollback.py`: exige
+`--lab-only-rollback` e `C18_PLAYER_RUNTIME_LAB_ROLLBACK=1`, confirma que o CLI
+publico de apply/rollback continua congelado com `rc=44`, e so toca `/data` com
+`--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
+Qualquer ensaio persistente em `/data/player-runtime/current` deve provar esse
+rollback/reconcile antes de promover o proximo degrau de homologacao.
 Em hardware com DRM, o candidato pode precisar de uma janela de laboratorio com
 o `kiosky-player.service` parado para adquirir DRM master. Essa pausa deve ser
 controlada, reversivel e seguida de novo deep-health do servico real; nao e

@@ -40,6 +40,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_static_test.py",
     "scripts/qa/c18_player_runtime_release_gate.py",
     "scripts/qa/c18_player_runtime_lab_apply.py",
+    "scripts/qa/c18_player_runtime_lab_rollback.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
