@@ -409,7 +409,9 @@ def main():
             and "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in kiosky_dropin_now
         ),
         "kiosky_service_reconciles_player_runtime_state": (
-            "ExecStartPre=-/opt/totem/bin/totem-updatectl reconcile --component player-runtime" in kiosky_dropin_now
+            "C18_PLAYER_RUNTIME_RECONCILE=1" in kiosky_dropin_now
+            and "--allow-player-runtime-maintenance" in kiosky_dropin_now
+            and "reconcile --component player-runtime" in kiosky_dropin_now
         ),
         "totem_kiosky_launcher_uses_player_runtime_path": (
             "/data/player-runtime/current" in totem_launcher_now

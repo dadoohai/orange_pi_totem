@@ -457,7 +457,11 @@ vir como nova imagem ou release ponte explicitamente homologada.
   `state.json`, `/data` sem marker caindo para `/opt`, e freeze preservado.
 - O boot adoption seguro fica no launcher: ele valida marker/hash/quarentena no
   momento de escolher `/data` ou `/opt`. O `reconcile` do updater e higiene
-  explicita para state/symlink drift, nao a barreira primaria de boot.
+  explicita para state/symlink drift, nao a barreira primaria de boot. Por
+  poder mexer em symlink/state de `player-runtime`, o comando de manutencao
+  passa a exigir `--allow-player-runtime-maintenance` +
+  `C18_PLAYER_RUNTIME_RECONCILE=1`; o `ExecStartPre` da imagem fornece essa
+  autorizacao de forma explicita e nao-fatal.
 - Ja existe builder local lab-only de `player-runtime`
   (`scripts/deploy/build_player_runtime_release_package.sh`) e collector real
   nao destrutivo (`scripts/board/c18_playback_health_collect.py`). Ainda nao ha
@@ -572,7 +576,14 @@ vir como nova imagem ou release ponte explicitamente homologada.
   `media_load_failed_zero`, `mpv_restart_zero`, panfrost/mmc/ext4 `0`. A
   coleta longa do servico real apos restart tambem passou, com uma transicao
   observada e 1 MPV. Nada tocou `/data/player-runtime/current`, GitHub, timer ou
-  policy permanente.
+  policy permanente. Ressalva de governanca: essa rodada foi registrada como
+  resumo de sessao, nao como pacote de evidencia versionado; ela autoriza
+  preparar o proximo ensaio, mas nao deve ser usada sozinha para destravar thaw
+  ou homologacao. O proximo ensaio persistente precisa preservar os artefatos
+  sanitizados que lastreiam `passed=true` e exercitar rollback real sobre o
+  mesmo `data_root` que recebeu o candidato. A evidencia deve passar por
+  `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>` antes de ser
+  versionada.
 
 ## Fora de escopo
 

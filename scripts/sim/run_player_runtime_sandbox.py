@@ -313,7 +313,7 @@ def rollback_player_runtime_offline(sandbox: Path) -> tuple[bool, str]:
 
 def reconcile_player_runtime_offline(sandbox: Path) -> dict[str, Any]:
     configure_updatectl_paths(sandbox)
-    rc, result = updatectl._reconcile_player_runtime_state("sandbox")
+    rc, result = updatectl._reconcile_player_runtime_state("sandbox", allow_maintenance=True)
     result["rc"] = rc
     return result
 
@@ -340,7 +340,7 @@ def probe_launcher_source(sandbox: Path, *, data_dir: Path | None) -> str:
     return str(data.get("kiosky_app_dir", ""))
 
 
-def cli_still_frozen(sandbox: Path) -> tuple[bool, bool]:
+def cli_still_frozen(sandbox: Path) -> tuple[bool, bool, bool]:
     env = sandbox_env(sandbox)
     missing = sandbox / "tmp" / "missing.manifest.json"
     apply_proc = run(
@@ -353,7 +353,12 @@ def cli_still_frozen(sandbox: Path) -> tuple[bool, bool]:
         env=env,
         timeout=30,
     )
-    return apply_proc.returncode == 44, rollback_proc.returncode == 44
+    reconcile_proc = run(
+        ["python3", "scripts/board/totem_updatectl.py", "reconcile", "--component", COMPONENT],
+        env=env,
+        timeout=30,
+    )
+    return apply_proc.returncode == 44, rollback_proc.returncode == 44, reconcile_proc.returncode == 44
 
 
 def main() -> int:
@@ -485,7 +490,7 @@ def main() -> int:
         sandbox / "data" / "player-runtime" / "releases" / "sandbox-bad-fallback"
     ).exists()
 
-    cli_apply_frozen, cli_rollback_frozen = cli_still_frozen(sandbox)
+    cli_apply_frozen, cli_rollback_frozen, cli_reconcile_frozen = cli_still_frozen(sandbox)
 
     expected_a = "releases/sandbox-a"
     expected_b = "releases/sandbox-b"
@@ -568,6 +573,7 @@ def main() -> int:
             "fallback_health_rejected_release_cleaned": not fallback_health_rejected_release_exists,
             "cli_apply_still_frozen": cli_apply_frozen,
             "cli_rollback_still_frozen": cli_rollback_frozen,
+            "cli_reconcile_still_frozen": cli_reconcile_frozen,
             "deep_health_fixture_passed": True,
         },
         "path_debt": {

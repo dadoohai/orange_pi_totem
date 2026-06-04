@@ -159,6 +159,14 @@ def sanitize_error_presence(value: Any) -> str:
     return "present"
 
 
+def sanitize_poll_error(value: Any) -> str:
+    if value in (None, "", False):
+        return "null"
+    if isinstance(value, str) and "polling_disabled" in value:
+        return "polling_disabled"
+    return "present"
+
+
 def sanitize_item(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {}
@@ -196,7 +204,7 @@ def sanitize_status(status_path: Path) -> dict[str, Any]:
         "consecutive_failures": raw.get("consecutive_failures"),
         "blocked_media_count": raw.get("blocked_media_count"),
         "uptime_sec": raw.get("uptime_sec"),
-        "last_poll_error": sanitize_error_presence(raw.get("last_poll_error")),
+        "last_poll_error": sanitize_poll_error(raw.get("last_poll_error")),
         "last_render_error": sanitize_error_presence(raw.get("last_render_error")),
         "black_screen_risk_reason": sanitize_error_presence(raw.get("black_screen_risk_reason")),
         "current_item": current_item,

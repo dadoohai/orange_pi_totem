@@ -85,6 +85,8 @@ def public_cli_freeze(data_root: Path, action: str) -> dict[str, Any]:
         cmd.extend(["apply-local", str(missing), "--component", COMPONENT])
     elif action == "rollback":
         cmd.extend(["rollback", "--component", COMPONENT])
+    elif action == "reconcile":
+        cmd.extend(["reconcile", "--component", COMPONENT])
     else:
         raise RuntimeError(f"unsupported public freeze action: {action}")
     proc = subprocess.run(
@@ -163,13 +165,20 @@ def main(argv: list[str]) -> int:
 
     public_apply = public_cli_freeze(data_root, "apply")
     public_rollback = public_cli_freeze(data_root, "rollback")
+    public_reconcile = public_cli_freeze(data_root, "reconcile")
     result = {
         "schema": "dadooh.c18.player_runtime.lab_rollback.v1",
         "component": COMPONENT,
-        "passed": rc == 0 and public_apply["frozen"] and public_rollback["frozen"],
+        "passed": (
+            rc == 0
+            and public_apply["frozen"]
+            and public_rollback["frozen"]
+            and public_reconcile["frozen"]
+        ),
         "operation": operation,
         "public_cli_apply_still_frozen": public_apply,
         "public_cli_rollback_still_frozen": public_rollback,
+        "public_cli_reconcile_still_frozen": public_reconcile,
         "data_root": str(data_root),
         "device_data_root": data_root.resolve() == Path("/data"),
         "output_dir": str(work_dir),

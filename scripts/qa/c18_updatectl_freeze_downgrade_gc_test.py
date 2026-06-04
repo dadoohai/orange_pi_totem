@@ -153,6 +153,80 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             rc = updatectl.cmd_rollback(args)
             self.assertEqual(rc, 44)
 
+    def test_player_runtime_reconcile_requires_explicit_maintenance_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            current = root / "data" / "player-runtime" / "releases" / "runtime-a"
+            current.mkdir(parents=True)
+            updatectl.CURRENT_LINK.parent.mkdir(parents=True, exist_ok=True)
+            updatectl.CURRENT_LINK.symlink_to("releases/runtime-a")
+
+            args = argparse.Namespace(component="player-runtime", allow_player_runtime_maintenance=False)
+            rc = updatectl.cmd_reconcile(args)
+
+            self.assertEqual(rc, 44)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/runtime-a")
+
+    def test_player_runtime_reconcile_requires_both_flag_and_env(self) -> None:
+        for name, env_value, allow_flag in (
+            ("env_only", "1", False),
+            ("flag_only", None, True),
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "player-runtime")
+                current = root / "data" / "player-runtime" / "releases" / "runtime-a"
+                current.mkdir(parents=True)
+                updatectl.CURRENT_LINK.parent.mkdir(parents=True, exist_ok=True)
+                updatectl.CURRENT_LINK.symlink_to("releases/runtime-a")
+
+                old = os.environ.get(updatectl.PLAYER_RUNTIME_RECONCILE_ENV)
+                try:
+                    if env_value is None:
+                        os.environ.pop(updatectl.PLAYER_RUNTIME_RECONCILE_ENV, None)
+                    else:
+                        os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = env_value
+                    args = argparse.Namespace(
+                        component="player-runtime",
+                        allow_player_runtime_maintenance=allow_flag,
+                    )
+                    rc = updatectl.cmd_reconcile(args)
+                finally:
+                    if old is None:
+                        os.environ.pop(updatectl.PLAYER_RUNTIME_RECONCILE_ENV, None)
+                    else:
+                        os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = old
+
+                self.assertEqual(rc, 44)
+                self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/runtime-a")
+
+    def test_player_runtime_reconcile_authorized_boot_hygiene_falls_back(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            current = root / "data" / "player-runtime" / "releases" / "runtime-a"
+            current.mkdir(parents=True)
+            (current / "kiosk.py").write_text("print('unmarked')\n", encoding="utf-8")
+            updatectl.CURRENT_LINK.parent.mkdir(parents=True, exist_ok=True)
+            updatectl.CURRENT_LINK.symlink_to("releases/runtime-a")
+
+            old = os.environ.get(updatectl.PLAYER_RUNTIME_RECONCILE_ENV)
+            os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = "1"
+            try:
+                args = argparse.Namespace(component="player-runtime", allow_player_runtime_maintenance=True)
+                rc = updatectl.cmd_reconcile(args)
+            finally:
+                if old is None:
+                    os.environ.pop(updatectl.PLAYER_RUNTIME_RECONCILE_ENV, None)
+                else:
+                    os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = old
+
+            self.assertEqual(rc, 0)
+            self.assertFalse(updatectl.CURRENT_LINK.exists())
+            state = updatectl._read_state()
+            self.assertEqual(state["last_operation"]["status"], "image_fallback")
+
     def test_totem_core_rollback_to_image_fallback_still_works(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

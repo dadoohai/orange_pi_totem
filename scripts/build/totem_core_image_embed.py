@@ -351,7 +351,9 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
             rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf"
         ),
         "image_fixed_player_dropin_reconciles_player_runtime": (
-            "ExecStartPre=-/opt/totem/bin/totem-updatectl reconcile --component player-runtime" in player_dropin
+            "C18_PLAYER_RUNTIME_RECONCILE=1" in player_dropin
+            and "--allow-player-runtime-maintenance" in player_dropin
+            and "reconcile --component player-runtime" in player_dropin
         ),
         "image_fixed_player_dropin_routes_through_totem_launcher": (
             "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in player_dropin

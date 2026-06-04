@@ -41,6 +41,7 @@ PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
+PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_evidence_gate.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -116,8 +117,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("data app dir present but not verified; falling back", launcher)
         self.assertNotIn("/data/apps/kiosky-player/current", launcher)
         self.assertIn("/data/player-runtime/current/kiosk.py", dropin)
-        self.assertIn("ExecStartPre=-/opt/totem/bin/totem-updatectl reconcile --component player-runtime", dropin)
-        self.assertIn("non-fatal player-runtime reconcile", dropin)
+        self.assertIn("C18_PLAYER_RUNTIME_RECONCILE=1", dropin)
+        self.assertIn("--allow-player-runtime-maintenance", dropin)
+        self.assertIn("reconcile --component player-runtime", dropin)
+        self.assertIn("non-fatal, explicitly authorized player-runtime reconcile", dropin)
         self.assertNotIn("/data/apps/kiosky-player/current", dropin)
         self.assertIn("/data/player-runtime", dirs)
         self.assertIn("/data/player-runtime/releases", dirs)
@@ -203,6 +206,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("_apply_player_runtime_from_manifest_path_unfrozen", updatectl)
         self.assertIn("_write_player_runtime_marker", updatectl)
         self.assertIn("_player_runtime_is_quarantined", updatectl)
+        self.assertIn("PLAYER_RUNTIME_RECONCILE_ENV", updatectl)
+        self.assertIn("--allow-player-runtime-maintenance", updatectl)
+        self.assertIn("player_runtime_reconcile_guard_required", updatectl)
         self.assertIn("health did not observe candidate kiosk.py identity", updatectl)
         self.assertIn('"created_at_utc"', updatectl)
         self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", updatectl)
@@ -415,6 +421,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         collector = PLAYBACK_HEALTH_COLLECTOR_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_playback_health_summary", collector)
+        self.assertIn("sanitize_poll_error", collector)
+        self.assertIn('"polling_disabled"', collector)
         self.assertIn("playback-samples.tsv", collector)
         self.assertIn("deep-health-systemd.json", collector)
         self.assertIn("deep-health-process.json", collector)
@@ -441,9 +449,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--lab-only-apply", lab_apply)
         self.assertIn("--allow-device-data-root", lab_apply)
         self.assertIn('work_dir / "data"', lab_apply)
-        self.assertIn("public_cli_still_frozen", lab_apply)
+        self.assertIn("public_cli_apply_still_frozen", lab_apply)
         self.assertIn("release_gate.validate_release", lab_apply)
         self.assertIn("candidate_health.run_candidate_health", lab_apply)
+        self.assertIn("public_cli_reconcile_still_frozen", lab_apply)
         self.assertNotIn("apply-github-latest", lab_apply)
         self.assertNotIn("gh release", lab_apply)
 
@@ -455,12 +464,24 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("_rollback_player_runtime_unfrozen", lab_rollback)
         self.assertIn("_reconcile_player_runtime_state", lab_rollback)
         self.assertIn("public_cli_rollback_still_frozen", lab_rollback)
+        self.assertIn("public_cli_reconcile_still_frozen", lab_rollback)
         self.assertNotIn("apply-github-latest", lab_rollback)
         self.assertNotIn("gh release", lab_rollback)
+
+        evidence_gate = PLAYER_RUNTIME_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("ALLOWED_PATTERNS", evidence_gate)
+        self.assertIn("playback-samples.tsv", evidence_gate)
+        self.assertIn("status-samples.ndjson", evidence_gate)
+        self.assertIn("candidate-config.json", evidence_gate)
+        self.assertIn("LEAK_PATTERNS", evidence_gate)
+        self.assertIn("/data/media", evidence_gate)
+        self.assertIn("api_key", evidence_gate)
+        self.assertIn("--self-test", evidence_gate)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
         self.assertIn("C18_PLAYER_RUNTIME_LAB_ROLLBACK", update_auth)
+        self.assertIn("c18_player_runtime_evidence_gate.py", update_auth)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
@@ -583,6 +604,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 43, proc.stderr)
             self.assertIn("device_data_root_guard_required", proc.stderr)
+
+    def test_player_runtime_evidence_gate_self_test_passes(self) -> None:
+        proc = subprocess.run(
+            ["python3", str(PLAYER_RUNTIME_EVIDENCE_GATE_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
 
 
 if __name__ == "__main__":

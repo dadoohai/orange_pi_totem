@@ -116,6 +116,7 @@ PLAYER_RUNTIME_MARKER_SCHEMA = "dadooh.c18.player_runtime.verified.v1"
 PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 PLAYER_RUNTIME_HEALTH_HOOK: Optional[Callable[[Path, Dict[str, Any]], Any]] = None
 PLAYER_RUNTIME_LAB_THAW_ENABLED = False
+PLAYER_RUNTIME_RECONCILE_ENV = "C18_PLAYER_RUNTIME_RECONCILE"
 
 TOTEM_CORE_REQUIRED_BIN = (
     "totem_setup_visual_wizard.py",
@@ -1982,10 +1983,16 @@ def _player_runtime_state_entry_from_marker(link: str,
     }
 
 
-def _reconcile_player_runtime_state(reason: str = "manual_reconcile") -> Tuple[int, Dict[str, Any]]:
+def _reconcile_player_runtime_state(
+    reason: str = "manual_reconcile",
+    *,
+    allow_maintenance: bool = False,
+) -> Tuple[int, Dict[str, Any]]:
     """Fail closed for stale player-runtime state; launcher already validates at adopt time."""
     if COMPONENT != "player-runtime":
         raise RuntimeError("player-runtime reconcile path called for wrong component")
+    if not PLAYER_RUNTIME_LAB_THAW_ENABLED and not allow_maintenance:
+        raise RuntimeError("player-runtime reconcile requires explicit maintenance guard")
     started_at = _utcnow_iso()
     state = _read_state()
     state["component"] = COMPONENT
@@ -2428,11 +2435,22 @@ def cmd_rollback(args: argparse.Namespace) -> int:
 
 def cmd_reconcile(args: argparse.Namespace) -> int:
     configure_component(args.component)
-    _ensure_dirs()
     if COMPONENT == "player-runtime":
-        rc, result = _reconcile_player_runtime_state()
+        allow_maintenance = bool(getattr(args, "allow_player_runtime_maintenance", False))
+        if not allow_maintenance or os.environ.get(PLAYER_RUNTIME_RECONCILE_ENV) != "1":
+            print(
+                "player_runtime_reconcile_guard_required: pass "
+                "--allow-player-runtime-maintenance and set "
+                f"{PLAYER_RUNTIME_RECONCILE_ENV}=1",
+                file=sys.stderr,
+            )
+            log("WARN", "reconcile_blocked_component_frozen", component=COMPONENT)
+            return 44
+        _ensure_dirs()
+        rc, result = _reconcile_player_runtime_state(allow_maintenance=True)
         print(json.dumps(result, indent=2, sort_keys=True))
         return rc
+    _ensure_dirs()
     result = {
         "component": COMPONENT,
         "status": "noop",
@@ -2497,8 +2515,13 @@ def main(argv: List[str]) -> int:
 
     sub.add_parser("rollback", parents=[component_parent],
                    help="Roll back current -> previous")
-    sub.add_parser("reconcile", parents=[component_parent],
-                   help="Reconcile stale state; player-runtime falls closed to verified current or image fallback")
+    p_reconcile = sub.add_parser("reconcile", parents=[component_parent],
+                                 help="Reconcile stale state; player-runtime falls closed to verified current or image fallback")
+    p_reconcile.add_argument(
+        "--allow-player-runtime-maintenance",
+        action="store_true",
+        help="allow guarded player-runtime state hygiene when C18_PLAYER_RUNTIME_RECONCILE=1 is also set",
+    )
 
     args = parser.parse_args(argv)
     handlers = {

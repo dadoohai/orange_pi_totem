@@ -137,7 +137,9 @@ Baseline de laboratorio/delivery registrado em 2026-06-04:
   candidato isolado com canario local, `github_used=false`,
   `network_required=false`, apply `rc=0`, rollback `rc=0`, reconcile `rc=0`,
   CLI publico ainda congelado com `rc=44`, e deep-health do servico real
-  aprovado apos restart.
+  aprovado apos restart. Esse marco foi registrado como resumo operacional da
+  sessao; antes de qualquer ensaio persistente em `/data`, a evidencia deve ser
+  preservada em artefatos sanitizados e auditaveis, nao apenas em prosa.
 
 ## Gates Antes De Thaw Do Player-Runtime
 
@@ -155,6 +157,17 @@ Antes de qualquer thaw de laboratorio:
   `scripts/qa/c18_player_runtime_lab_rollback.py` com flags e env vars
   lab-only (`C18_PLAYER_RUNTIME_LAB_ROLLBACK=1` + `--lab-only-rollback`) antes
   de qualquer ensaio persistente em `/data`;
+- `reconcile --component player-runtime` de manutencao deve exigir
+  `--allow-player-runtime-maintenance` e `C18_PLAYER_RUNTIME_RECONCILE=1`; o
+  boot da imagem pode passar essa autorizacao explicitamente, mas o comando nao
+  deve ficar solto como API publica mutavel;
+- o proximo ensaio persistente deve guardar manifest/payload SHA,
+  `playback-samples.tsv`, sidecars `deep-health-*.json` e
+  `playback-deep-health-public.json` sanitizados, junto de um resumo que prove
+  apply, adocao pelo launcher, rollback real e fallback esperado;
+- antes de commitar essa evidencia, rodar
+  `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>` para aplicar
+  allowlist de arquivos e scan de vazamento;
 - health de candidato deve usar runner lab-only isolado, sem GitHub, sem timer,
   sem auto-pull e sem policy permanente;
 - quando nao houver API real no runner, o health de candidato deve usar canario

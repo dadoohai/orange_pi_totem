@@ -161,7 +161,7 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         rows = fixture.rows()
         for row in rows:
             snapshot = json.loads(row["status_snapshot_json"])
-            snapshot["last_poll_error"] = "present"
+            snapshot["last_poll_error"] = "polling_disabled"
             row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
         fixture.write_rows(rows)
 
@@ -174,6 +174,18 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         candidate_result = fixture.result()
         self.assertTrue(candidate_result["checks"]["status_no_failures"])
         self.assertNotIn("status_no_failures", candidate_result["failure_reasons"])
+
+    def test_candidate_mode_rejects_generic_poll_error_presence(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["last_poll_error"] = "present"
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+        fixture.write_rows(rows)
+        fixture.mutate_json("systemd.json", target_mode="candidate", candidate_pid_present=True)
+        fixture.mutate_json("process.json", process_filter="input-ipc-server")
+        self.assert_fails_with(fixture, "status_no_failures")
 
     def test_rejects_media_load_failed_and_mpv_restart(self) -> None:
         fixture = self.with_case()

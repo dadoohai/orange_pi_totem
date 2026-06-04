@@ -81,9 +81,11 @@ Marker ausente, corrompido, divergente ou identidade quarentenada fecha para
 No boot, a decisao de adocao e do launcher: ele e o reconcile fail-closed entre
 `/data/player-runtime/current` e `/opt`. O subcomando `reconcile` do updater
 serve para higiene de `state.json`/symlink drift e nao substitui essa decisao de
-boot. A fonte da proxima imagem tambem executa esse reconcile como
-`ExecStartPre=-...` nao-fatal antes do player, preservando o launcher como
-barreira primaria.
+boot. Por poder mexer em symlink/state de `player-runtime`, ele nao e comando
+publico livre: precisa de `--allow-player-runtime-maintenance` e
+`C18_PLAYER_RUNTIME_RECONCILE=1`. A fonte da proxima imagem executa esse
+reconcile como `ExecStartPre=-...` nao-fatal e explicitamente autorizado antes
+do player, preservando o launcher como barreira primaria.
 
 O sandbox `scripts/sim/run_player_runtime_sandbox.py` prova a mecanica offline
 necessaria antes de descongelar usando as primitivas reais do updater:
@@ -258,14 +260,16 @@ repo-side para exercitar apply local de candidato antes do thaw publico: exige
 `--lab-only-apply` e `C18_PLAYER_RUNTIME_LAB_APPLY=1`, aceita somente
 manifest/payload locais, roda o gate de release, injeta o runner de health como
 hook interno e confirma ao final que o CLI publico continua congelado com
-`rc=44`. Por padrao usa `data_root` temporario em sandbox; tocar `/data` exige
-tambem `--allow-device-data-root` e `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
+`rc=44` para apply e plain reconcile. Por padrao usa `data_root` temporario em
+sandbox; tocar `/data` exige tambem `--allow-device-data-root` e
+`C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
 Ele nao usa GitHub, timer, auto-pull nem policy permanente do device.
 O escape simetrico de laboratorio e
 `scripts/qa/c18_player_runtime_lab_rollback.py`: exige
 `--lab-only-rollback` e `C18_PLAYER_RUNTIME_LAB_ROLLBACK=1`, confirma que o CLI
-publico de apply/rollback continua congelado com `rc=44`, e so toca `/data` com
-`--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
+publico de apply/rollback/reconcile continua congelado com `rc=44`, e so toca
+`/data` com `--allow-device-data-root` +
+`C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
 Qualquer ensaio persistente em `/data/player-runtime/current` deve provar esse
 rollback/reconcile antes de promover o proximo degrau de homologacao.
 Em hardware com DRM, o candidato pode precisar de uma janela de laboratorio com
@@ -281,6 +285,19 @@ O deep-health C18 deve falhar fechado quando a evidencia de progresso de frame
 estiver ausente ou congelada. `time_pos` e diagnostico util, mas nao pode aprovar
 sozinho uma janela de playback com `estimated_frame_number` travado, pois esse e
 o modo de falha que a linha C18 precisa barrar antes de qualquer thaw de player.
+No modo `candidate`, `last_poll_error` so pode ser tolerado quando o status
+sanitizado indicar explicitamente `polling_disabled`; erro generico presente
+continua falha de health.
+
+Evidencia de ensaio `player-runtime` precisa ser inspecionavel e sanitizada.
+Antes de versionar qualquer rodada, rodar
+`scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>`. O gate aceita
+somente README, manifest/gate JSON, JSONs dos harnesses, marker verificado e os
+artefatos publicos de deep-health (`playback-samples.tsv`,
+`status-samples.ndjson`, sidecars `deep-health-*.json` e
+`playback-deep-health-public.json`). Ele rejeita tarballs, logs, config/seed,
+playlist com path de canario, `raw/`, `extracted/`, paths de midia/config e
+padroes de segredo/URL/IP/MAC.
 
 O builder local `scripts/deploy/build_player_runtime_release_package.sh` cria
 um pacote lab-only de `player-runtime` a partir do snapshot governado e roda

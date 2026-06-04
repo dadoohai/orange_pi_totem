@@ -81,7 +81,7 @@ def status_has_failure(row: dict[str, str], target_mode: str) -> bool:
             target_mode == "candidate"
             and key == "last_poll_error"
             and isinstance(value, str)
-            and ("polling_disabled" in value or value == "present")
+            and "polling_disabled" in value
         ):
             continue
         if value not in (None, "", "null", False):

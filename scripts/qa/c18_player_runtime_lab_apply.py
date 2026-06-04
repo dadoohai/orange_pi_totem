@@ -82,7 +82,7 @@ def write_lab_policy(policy_path: Path, channel: str) -> None:
     )
 
 
-def public_cli_still_frozen(data_root: Path) -> dict[str, Any]:
+def public_cli_freeze(data_root: Path, action: str) -> dict[str, Any]:
     missing = Path(tempfile.gettempdir()) / "c18-player-runtime-missing.manifest.json"
     env = {
         "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -91,15 +91,15 @@ def public_cli_still_frozen(data_root: Path) -> dict[str, Any]:
         "PYTHONDONTWRITEBYTECODE": "1",
         "TOTEM_DATA_ROOT": str(data_root),
     }
+    cmd = [sys.executable, str(BOARD_DIR / "totem_updatectl.py")]
+    if action == "apply":
+        cmd.extend(["apply-local", "--component", COMPONENT, str(missing)])
+    elif action == "reconcile":
+        cmd.extend(["reconcile", "--component", COMPONENT])
+    else:
+        raise RuntimeError(f"unsupported public freeze action: {action}")
     proc = subprocess.run(
-        [
-            sys.executable,
-            str(BOARD_DIR / "totem_updatectl.py"),
-            "apply-local",
-            "--component",
-            COMPONENT,
-            str(missing),
-        ],
+        cmd,
         check=False,
         text=True,
         stdout=subprocess.PIPE,
@@ -185,15 +185,17 @@ def main(argv: list[str]) -> int:
         updatectl.PLAYER_RUNTIME_HEALTH_HOOK = previous_hook
         updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = previous_thaw
 
-    public_freeze = public_cli_still_frozen(data_root)
+    public_apply = public_cli_freeze(data_root, "apply")
+    public_reconcile = public_cli_freeze(data_root, "reconcile")
     result = {
         "schema": "dadooh.c18.player_runtime.lab_apply.v1",
         "component": COMPONENT,
         "version": manifest.get("version"),
         "channel": manifest.get("channel"),
         "rc": rc,
-        "passed": rc == 0 and public_freeze["frozen"],
-        "public_cli_apply_still_frozen": public_freeze,
+        "passed": rc == 0 and public_apply["frozen"] and public_reconcile["frozen"],
+        "public_cli_apply_still_frozen": public_apply,
+        "public_cli_reconcile_still_frozen": public_reconcile,
         "data_root": str(data_root),
         "device_data_root": data_root.resolve() == Path("/data"),
         "output_dir": str(work_dir),
