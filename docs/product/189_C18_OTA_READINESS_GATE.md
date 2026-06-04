@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1l`.
+golden atual `1m`.
 
 ## Decisão
 
@@ -21,11 +21,11 @@ golden atual `1l`.
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1l`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1m`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1l_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1m_minimal.img`;
 - **sha256:**
-  `146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`;
+  `d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -44,19 +44,21 @@ Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `1k` permanece como golden historica anterior. A `1l` valida em hardware
-o fechamento das dividas pre-thaw imediatas: gate semantico endurecido,
-`reconcile` no boot e deriver que so promove imagem apos `offline_ok`. O
-`player-runtime` continua congelado no fluxo publico (`rc=44`).
+Nota: `1k` e `1l` permanecem como golden historicas anteriores. A `1m` valida
+em hardware os follow-ups pos-1l: deep-health com progresso de frame
+obrigatorio, freeze simetrico de rollback para componentes congelados,
+documentacao encontravel dos health gates e testes de nao-regressao de
+`totem-core`. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
-## Candidata atual pós-1l (pendente hardware)
+## Promocao 1m (offline + hardware)
 
 Os commits pós-golden `31b1245`, `93354fb` e `dc21a37` fecham follow-ups de
 auditoria que vivem em arquivos da imagem: deep-health com progresso de frame
 obrigatorio, freeze simetrico de rollback para componentes congelados,
 documentacao encontravel dos health gates, teste de rollback `totem-core` e
 guarda de sanitizacao do doc 188. Por isso a proxima candidata de imagem e
-`c18-hwdecode-lab-1m`, sem promover a golden `1l` ate validacao em placa.
+`c18-hwdecode-lab-1m`, promovida a golden de laboratorio/delivery apos
+validacao em placa.
 
 - **Imagem candidata:** `c18-hwdecode-lab-1m`;
 - **Arquivo:**
@@ -68,8 +70,16 @@ guarda de sanitizacao do doc 188. Por isso a proxima candidata de imagem e
   `artifact_promoted=true`, `totem_core_ota_ready=true`,
   `player_runtime_ota_still_frozen=true`, `player_runtime_release_gate_passed=true`,
   `player_runtime_sandbox_passed=true`;
-- **Status:** pendente de flash limpo + validacao curta em hardware. Ate isso
-  passar, a golden operacional continua sendo `1l`.
+- **Validacao hardware:** marker `1m`, policy restrita a `totem-core`, timer
+  desligado, service de update apontando para `totem-core`, `reconcile` no
+  `kiosky-player.service`, config real escrita via writer a partir do seed,
+  `kiosky-player` e `player-runtime` bloqueados com `rc=44` em apply e
+  rollback, OTA GitHub `totem-core` apply/rollback/reapply aprovado, e
+  deep-health final `passed=true` com MPV da stack C18, HW decode
+  `v4l2request-copy`, progresso de frame, `media_load_failed=0`,
+  `mpv_restart=0`, panfrost/mmc/ext4 `0`.
+- **Status:** golden de laboratorio/delivery; ainda `final_image=false`, nao
+  stable e nao batch de producao.
 
 ## Implementação no repo
 
@@ -415,9 +425,9 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1l` como baseline de laboratorio validada para a
+1. Tratar `c18-hwdecode-lab-1m` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
-2. Fluxo manual de release GitHub `totem-core` validado na 1l com mudanca real
+2. Fluxo manual de release GitHub `totem-core` validado na 1m com mudanca real
    de aplicacao, rollback e reapply. Proximas mudancas de wizard/core devem
    seguir este gate antes de aplicar em placa, mantendo auto-pull desligado e
    `kiosky-player`/`player-runtime` congelados ate thaw explicito.

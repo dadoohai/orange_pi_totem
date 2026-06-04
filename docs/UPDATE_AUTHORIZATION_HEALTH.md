@@ -117,9 +117,9 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 Baseline de laboratorio/delivery registrado em 2026-06-03:
 
-- imagem golden: `c18-hwdecode-lab-1l`;
+- imagem golden: `c18-hwdecode-lab-1m`;
 - sha256:
-  `146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`;
+  `d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -128,7 +128,10 @@ Baseline de laboratorio/delivery registrado em 2026-06-03:
 - auto-pull fora de escopo;
 - `kiosky-player` e `player-runtime` ainda congelados no fluxo publico;
 - player esperado pelo fallback da imagem, com HW decode
-  `v4l2request-copy`, `vo-configured=true`, `NRestarts=0`.
+  `v4l2request-copy`, `vo-configured=true`, `NRestarts=0`;
+- deep-health real em hardware validado apos config real + OTA de core:
+  progresso de frame presente/avancando, `media_load_failed=0`,
+  `mpv_restart=0`, panfrost/mmc/ext4 `0`.
 
 ## Gates Antes De Thaw Do Player-Runtime
 

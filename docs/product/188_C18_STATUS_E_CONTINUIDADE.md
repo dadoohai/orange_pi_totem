@@ -3,7 +3,7 @@
 Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém retome o trabalho **do zero**, após uma compactação de contexto, usando apenas fatos verificados.
 
 > **Nota de continuidade 2026-06-03:** a golden atual de laboratório/delivery
-> para C18 passou a ser **`c18-hwdecode-lab-1l`**,
+> para C18 passou a ser **`c18-hwdecode-lab-1m`**,
 > sha256 `146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`.
 > O estado runtime de referência do marco aplica por cima a release OTA manual
 > `totem-core`
@@ -11,7 +11,7 @@ Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém
 > Este doc preserva histórico da `1d`; para o baseline live/golden e contrato
 > OTA atual, consultar também `docs/product/189_C18_OTA_READINESS_GATE.md` e
 > `docs/UPDATE_CONTRACT.md`.
-> `1k` permanece como golden historica anterior. A `1l` valida em hardware a
+> `1k`/`1l` permanecem como golden historicas anteriores. A `1m` valida em hardware a
 > fundação de thaw seguro do `player-runtime` com reconcile no boot e gate
 > semantico endurecido, mas `player-runtime` continua congelado no fluxo publico
 > (`rc=44`).
@@ -200,10 +200,9 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 1. Continuar a frente de governanca de atualizacoes: `totem-core` OTA manual ja
    validado; `player-runtime` so avanca em thaw controlado, ainda congelado para
    producao;
-2. `c18-hwdecode-lab-1l` incorporou e validou em hardware as tres dividas
-   pre-thaw: gate de `player-runtime` sobre args efetivos do MPV/Popen,
-   reconcile nao-fatal no start do player, e deriver promovendo `.img/.sha256`
-   so depois de `offline_ok`;
+2. `c18-hwdecode-lab-1m` e a golden de laboratorio/delivery atual: mantem o
+   fechamento pre-thaw da `1l` e valida em hardware os follow-ups pos-auditoria
+   de deep-health, freeze simetrico de rollback e documentacao/gates;
 3. **Rebuild GCC-12 de produção;**
 4. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 

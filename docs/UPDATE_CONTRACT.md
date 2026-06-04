@@ -49,7 +49,7 @@ mudancas indiretas no runtime do player.
 O snapshot governado do player C18 fica em
 `player-runtime/kiosky-player/kiosk.py`, com provenance em
 `player-runtime/kiosky-player/SOURCE.json`. Esse arquivo nasceu do `kiosk.py`
-validado na imagem `c18-hwdecode-lab-1i` e segue validado na golden `1l`:
+validado na imagem `c18-hwdecode-lab-1i` e segue validado na golden `1m`:
 upstream `dadoohai/kiosky-player` em `c25659aff200d9aac1720e60e60794c432c79393`
 mais o patch C18 de `DEFAULT_CONFIG.mpv_path` para
 `/opt/totem/bin/totem-mpv-hwdecode`.
