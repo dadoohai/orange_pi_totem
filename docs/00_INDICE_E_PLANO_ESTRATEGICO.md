@@ -105,6 +105,15 @@ health, deep-health e soak.
 
 Arquivo: `UPDATE_AUTHORIZATION_HEALTH.md`
 
+### Diagnóstico operacional e incidentes de campo
+
+Fonte para diagnosticos que atravessam produto, suporte, display/sink e
+operacao, sem pertencerem exclusivamente ao contrato OTA. Inclui o caso C18
+`sink_hung_board_healthy`, em que a tela ficou preta por travamento do
+display/sink enquanto o board continuou saudavel e transmitindo.
+
+Arquivo: `OPERATIONS_DIAGNOSTICS.md`
+
 ### Release de homologação v0.1-rc1
 
 Consolida a versão de homologação atual, ainda não produção, para reproduzir a configuração candidata em uma segunda placa/cartão. Inclui README da release, roteiro de provisionamento, checklist de homologação e template de config sanitizado.

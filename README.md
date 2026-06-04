@@ -113,6 +113,7 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Política de atualização](docs/05_POLITICA_DE_ATUALIZACAO.md)
 - [Contrato C18 de atualização](docs/UPDATE_CONTRACT.md)
 - [Autorização C18 de update e health gates](docs/UPDATE_AUTHORIZATION_HEALTH.md)
+- [Diagnóstico operacional e incidentes de campo](docs/OPERATIONS_DIAGNOSTICS.md)
 - [Readiness C18 OTA](docs/product/189_C18_OTA_READINESS_GATE.md)
 - [Modelo operacional C18 OTA](docs/product/191_C18_OTA_OPERATING_MODEL.md)
 - [Continuidade C18 historica](docs/product/188_C18_STATUS_E_CONTINUIDADE.md)
