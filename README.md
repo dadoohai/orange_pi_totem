@@ -25,11 +25,16 @@ player fixos por imagem. Nessa frente, a falha e intencional: a mudanca deixa de
 ser OTA comum de `totem-core` e exige imagem/homologacao ou release C18-aware
 separada.
 
-## Estado atual
+## Estado historico pre-C18
 
 **Candidato A**: Armbian Build v25.11 + Debian Bookworm Minimal + kernel `6.12.58-current-sunxi64` + U-Boot `2025.04`.
 
 Status: aprovado em boot inicial, reboots curtos, baseline de rede cabeada/NetworkManager, stress leve CPU/RAM de 30 minutos, criação do layout `/data`, Wi-Fi cliente 5 GHz, desativação de `bluetooth.service`, desativação de `aw859a-bluetooth.service`, preparação inicial de usuário/diretórios para a aplicação, instalação controlada do runtime mínimo (`mpv`, `ffmpeg`, `python3-requests`), validação de pré-requisitos com `/tmp/kiosky` garantido e teste manual de MPV via DRM/KMS com confirmação visual. O `kiosky-player` já foi deployado em `/opt/totem/kiosky-player`, a config privada já foi criada em `/data/config/config.json` fora do Git, e o app já rodou manualmente como usuário `totem`, baixando mídias em `/data/media/kiosky-player`, criando estado em `/data/state/kiosky-player` e status em `/tmp/kiosky-status.json`.
+
+Esta secao preserva o historico pre-C18/Candidato A. Ela nao e o baseline
+vigente de delivery; para C18, usar a secao "Estado C18 OTA" acima e os docs
+`UPDATE_CONTRACT.md`, `UPDATE_AUTHORIZATION_HEALTH.md` e
+`189_C18_OTA_READINESS_GATE.md`.
 
 O Candidato A ainda não está homologado para produção. A base do sistema operacional permanece saudável, com `systemctl --failed` em `0 loaded units listed` nas rodadas recentes e sem `Oops`, `panic`, erro EXT4, remount read-only ou `mmc timeout/reset`. A fase app-MPV avançou: `mpv_query_uses_fresh_ipc=true` estabilizou IPC/watchdog/loadfile, e a saída MPV explícita `--vo=gpu --gpu-context=drm --ao=null` foi aprovada no app real por 300s na rodada `20260430-133130`, com todos os 5 aliases avançando `time-pos` e `estimated-frame-number`. Na placa de desenvolvimento, `systemd` start/stop, autoboot com HDMI conectado e launcher para HDMI ausente/reconexão também foram aprovados. Xorg, Wayland, compositor, Chromium, `pip` e venv continuam fora desta fase.
 
@@ -109,6 +114,8 @@ Documentação da release: [docs/releases/v0.1-rc1-homologacao/README.md](docs/r
 - [Contrato C18 de atualização](docs/UPDATE_CONTRACT.md)
 - [Autorização C18 de update e health gates](docs/UPDATE_AUTHORIZATION_HEALTH.md)
 - [Readiness C18 OTA](docs/product/189_C18_OTA_READINESS_GATE.md)
+- [Modelo operacional C18 OTA](docs/product/191_C18_OTA_OPERATING_MODEL.md)
+- [Continuidade C18 historica](docs/product/188_C18_STATUS_E_CONTINUIDADE.md)
 - [Status atual consolidado](docs/STATUS_ATUAL.md)
 - [Estratégia produto/UX](docs/product/01_ESTRATEGIA_PRODUTO_UX.md)
 - [Roadmap implementação produto/UX](docs/product/02_ROADMAP_IMPLEMENTACAO_PRODUTO.md)

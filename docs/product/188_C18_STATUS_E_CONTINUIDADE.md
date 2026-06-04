@@ -4,7 +4,7 @@ Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém
 
 > **Nota de continuidade 2026-06-03:** a golden atual de laboratório/delivery
 > para C18 passou a ser **`c18-hwdecode-lab-1m`**,
-> sha256 `146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3`.
+> sha256 `d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`.
 > O estado runtime de referência do marco aplica por cima a release OTA manual
 > `totem-core`
 > `c18.ota-core-config-missing-20260603T150429Z-2a7a327`.
@@ -55,7 +55,7 @@ Tudo commitado na branch isolada **`c18-runtime-a1-cedrus-hwdecode-poc`** (A1..B
 
 ---
 
-## Produtização — C18.IMAGE-LAB (imagem 1d, sha, deriver, integração)
+## Produtização historica — C18.IMAGE-LAB (imagem 1d, sha, deriver, integração)
 
 Imagem-lab privada derivada **OFFLINE** e **ROOTLESS** (via **debugfs**, sem rebuild do Armbian/kernel) a partir da última imagem validada em hardware **C17.4.2**.
 
@@ -79,7 +79,7 @@ Imagem-lab privada derivada **OFFLINE** e **ROOTLESS** (via **debugfs**, sem reb
 - **R4 `updatectl`** injetado;
 - usuário `totem` já no **grupo `video`**.
 
-**Imagem atual:**
+**Imagem historica 1d:**
 
 - Nome: **`c18-hwdecode-lab-1d`**;
 - **sha256:** `82a1717f56be8b6aeb8a6b55f43ab5b694d05ce3c751c47dee524c1aed386ca0`;
@@ -124,7 +124,7 @@ A `1c` provou o HW decode e eliminou o bug original, mas a rodada de continuidad
 
 ---
 
-## Estado atual (validado em hardware)
+## Estado historico 1d (validado em hardware)
 
 A placa:
 

@@ -39,7 +39,7 @@ Marco de referência para continuidade C18/delivery:
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1l`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1m`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.

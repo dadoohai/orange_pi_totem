@@ -2,7 +2,8 @@
 
 Documento operacional curto para OTA C18 futuro. Complementa o gate tecnico de
 `189_C18_OTA_READINESS_GATE.md` e a orientacao de producao de
-`190_C18_PROD_ORIENTATION.md`; nao substitui nenhum gate deles.
+`190_C18_PROD_ORIENTATION.md`; nao substitui nenhum gate deles. A fonte
+contratual vigente e `docs/UPDATE_CONTRACT.md`.
 
 ## Regra principal
 
@@ -174,6 +175,7 @@ Antes de publicar um pacote especifico:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py \
   --package-manifest <release-dir>/dadooh-totem-core-<version>.manifest.json \
+  --package-payload <release-dir>/dadooh-totem-core-<version>.tar.gz \
   --json
 ```
 

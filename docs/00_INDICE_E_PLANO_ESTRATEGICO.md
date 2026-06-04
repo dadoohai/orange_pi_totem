@@ -24,7 +24,7 @@ Esta não é ainda uma homologação final do produto. É a documentação da **
 Este documento preserva a fundação técnica inicial. O desenvolvimento posterior
 avançou até C6 config real + `player_running` na placa de desenvolvimento.
 
-Para estado atual, consultar:
+Para estado historico pre-C18/C6, consultar:
 
 - `docs/STATUS_ATUAL.md`;
 - `docs/product/02_ROADMAP_IMPLEMENTACAO_PRODUTO.md`;
@@ -45,6 +45,8 @@ Para qualquer decisão de update, a fonte vigente é:
 - `docs/product/189_C18_OTA_READINESS_GATE.md` para o estado live/baseline de
   laboratório validado;
 - `docs/product/191_C18_OTA_OPERATING_MODEL.md` para o modelo operacional.
+- `docs/product/188_C18_STATUS_E_CONTINUIDADE.md` para continuidade historica
+  C18; o baseline live continua em `189`.
 
 Regra curta: OTA C18 comum é manual/operator-triggered e restrito a
 `totem-core`; `kiosky-player`, launcher do player, MPV/hwdecode, systemd,

@@ -48,7 +48,12 @@ TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.t
 ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONITORAMENTO.md"
 POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
 UPDATE_CONTRACT_PATH = REPO_ROOT / "docs" / "UPDATE_CONTRACT.md"
+README_PATH = REPO_ROOT / "README.md"
+DOC_INDEX_PATH = REPO_ROOT / "docs" / "00_INDICE_E_PLANO_ESTRATEGICO.md"
 DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md"
+DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
+DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
+DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
     REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
@@ -251,6 +256,30 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(ipv4.search(doc))
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
+
+    def test_c18_docs_keep_1m_as_current_golden(self) -> None:
+        current_tag = "c18-hwdecode-lab-1m"
+        current_sha = "d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c"
+        legacy_sha_1l = "146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3"
+        legacy_sha_1j = "995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152"
+        for path in (README_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(current_tag, text)
+        for path in (DOC188_PATH, DOC189_PATH, DOC190_PATH):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(current_sha, text)
+        index = DOC_INDEX_PATH.read_text(encoding="utf-8")
+        self.assertIn("docs/product/189_C18_OTA_READINESS_GATE.md", index)
+        self.assertIn("baseline live continua em `189`", index)
+        operating_model = DOC191_PATH.read_text(encoding="utf-8")
+        self.assertIn("docs/UPDATE_CONTRACT.md", operating_model)
+        self.assertIn("--package-payload <release-dir>/dadooh-totem-core-<version>.tar.gz", operating_model)
+        doc189 = DOC189_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("partir da imagem `1l`", doc189)
+        doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
+        self.assertNotIn(legacy_sha_1l, doc188_top)
+        doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]
+        self.assertNotIn(legacy_sha_1j, doc190_top)
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:

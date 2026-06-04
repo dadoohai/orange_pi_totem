@@ -7,8 +7,8 @@ HW decode end-to-end OK. Esta é a separação **RC1 controlada ≠ produção f
 
 > **Nota 2026-06-03:** este doc preserva a orientação tomada quando a baseline
 > era `1d`. A golden atual de laboratório/delivery passou a ser
-> `c18-hwdecode-lab-1j`
-> (`sha256=995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152`),
+> `c18-hwdecode-lab-1m`
+> (`sha256=d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`),
 > com estado runtime de referência após OTA manual `totem-core`
 > `c18.ota-core-config-missing-20260603T150429Z-2a7a327`. Consultar
 > `189_C18_OTA_READINESS_GATE.md` para o baseline live/golden.
