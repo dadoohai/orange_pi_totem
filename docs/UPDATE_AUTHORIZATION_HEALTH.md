@@ -132,6 +132,12 @@ Baseline de laboratorio/delivery registrado em 2026-06-04:
 - deep-health real em hardware validado apos config real + OTA de core:
   progresso de frame presente/avancando, `media_load_failed=0`,
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
+- ensaio lab-only de `player-runtime` em hardware validado com pacote local
+  `homologation` do commit `3af11d4`, `data_root` temporario em `/tmp`,
+  candidato isolado com canario local, `github_used=false`,
+  `network_required=false`, apply `rc=0`, rollback `rc=0`, reconcile `rc=0`,
+  CLI publico ainda congelado com `rc=44`, e deep-health do servico real
+  aprovado apos restart.
 
 ## Gates Antes De Thaw Do Player-Runtime
 

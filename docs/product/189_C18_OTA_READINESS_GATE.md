@@ -559,6 +559,20 @@ vir como nova imagem ou release ponte explicitamente homologada.
   o candidato precisou de janela controlada com `kiosky-player.service` parado
   para liberar DRM master; o servico foi religado e o deep-health do player
   normal passou ao final.
+- Marco pos-1n / commit `3af11d4`: o apply lab-only foi repetido em hardware a
+  partir da golden `1n`, com pacote local homologation
+  `c18.player-runtime-lab-20260604T155628Z-3af11d4`
+  (`payload_sha256=d87bbd6439c6d4ee4c8197fa54ba003fba87a4716a664f943734323e30c50c0d`).
+  Alem do apply `rc=0` em `data_root` temporario sob `/tmp`, a rodada executou
+  o novo harness `c18_player_runtime_lab_rollback.py`: rollback `rc=0`,
+  reconcile `rc=0`, `public_cli_apply_still_frozen=true` e
+  `public_cli_rollback_still_frozen=true`. O deep-health do candidato aprovou
+  todos os checks publicos, incluindo `hwdec_expected_present`,
+  `hwdec_no_unexpected`, `mpv_path_c18_stack`, `playback_progressed`,
+  `media_load_failed_zero`, `mpv_restart_zero`, panfrost/mmc/ext4 `0`. A
+  coleta longa do servico real apos restart tambem passou, com uma transicao
+  observada e 1 MPV. Nada tocou `/data/player-runtime/current`, GitHub, timer ou
+  policy permanente.
 
 ## Fora de escopo
 
