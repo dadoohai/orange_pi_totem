@@ -33,8 +33,8 @@ ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1m"   # 1m = 1l + post-golden audit follow-up hardening/docs.
-VERSION = "c18.image-lab.1m"
+TAG = "c18-hwdecode-lab-1n"   # 1n = 1m + player-runtime health-hook cleanup hardening.
+VERSION = "c18.image-lab.1n"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
@@ -49,7 +49,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1m-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1n-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -481,7 +481,7 @@ def main():
 
     image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
     manifest = {
-        "round": "C18.IMAGE-LAB.1m", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1n", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": image_bytes,
         "artifact_promoted": artifact_promoted,
@@ -537,7 +537,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1m RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1n RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

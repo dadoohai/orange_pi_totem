@@ -561,3 +561,28 @@ vir como nova imagem ou release ponte explicitamente homologada.
 - Rotação 270.
 - Read-only/C12.
 - Kernel/U-Boot/DTB/BSP, pacotes NetworkManager e `apt upgrade`.
+
+## Candidata 1n (offline, pendente de hardware)
+
+Apos a golden `1m`, a rodada `1f378a9` fechou mais um caso de fault-injection
+pre-thaw: se o health hook interno do `player-runtime` levantar excecao, o
+updater agora rejeita o candidato, preserva o `current` anterior, limpa
+release/stage e registra `candidate_rejected` sem promover nem quarentenar
+automaticamente uma falha de harness/ambiente. O sandbox passou a cobrir
+`health_hook_exception_keeps_previous_current` e
+`health_hook_exception_cleans_release_and_stage`.
+
+Por tocar `totem_updatectl.py`, essa correcao exige nova imagem antes de
+validacao em placa. A candidata offline gerada e:
+
+- **Imagem candidata:** `c18-hwdecode-lab-1n`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1n_minimal.img`;
+- **sha256:**
+  `29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`;
+- **Validacao offline:** `OFFLINE_VALIDATION_PASSED=True`,
+  `artifact_promoted=true`, `totem_core_ota_ready=true`,
+  `player_runtime_ota_still_frozen=true`, `player_runtime_release_gate_passed=true`,
+  `player_runtime_sandbox_passed=true`;
+- **Status:** pendente de flash/validacao em hardware. Ate passar hardware, a
+  golden de laboratorio/delivery continua sendo `1m`.
