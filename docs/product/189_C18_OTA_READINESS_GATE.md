@@ -49,6 +49,28 @@ o fechamento das dividas pre-thaw imediatas: gate semantico endurecido,
 `reconcile` no boot e deriver que so promove imagem apos `offline_ok`. O
 `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
+## Candidata atual pós-1l (pendente hardware)
+
+Os commits pós-golden `31b1245`, `93354fb` e `dc21a37` fecham follow-ups de
+auditoria que vivem em arquivos da imagem: deep-health com progresso de frame
+obrigatorio, freeze simetrico de rollback para componentes congelados,
+documentacao encontravel dos health gates, teste de rollback `totem-core` e
+guarda de sanitizacao do doc 188. Por isso a proxima candidata de imagem e
+`c18-hwdecode-lab-1m`, sem promover a golden `1l` ate validacao em placa.
+
+- **Imagem candidata:** `c18-hwdecode-lab-1m`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1m_minimal.img`;
+- **sha256:**
+  `d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c`;
+- **Tamanho:** `1971322880` bytes;
+- **Validacao offline:** `OFFLINE_VALIDATION_PASSED=True`,
+  `artifact_promoted=true`, `totem_core_ota_ready=true`,
+  `player_runtime_ota_still_frozen=true`, `player_runtime_release_gate_passed=true`,
+  `player_runtime_sandbox_passed=true`;
+- **Status:** pendente de flash limpo + validacao curta em hardware. Ate isso
+  passar, a golden operacional continua sendo `1l`.
+
 ## Implementação no repo
 
 - `scripts/board/totem_update_policy.json`: policy canônica C18 lab/homologation.
