@@ -1,5 +1,4 @@
 {
-  "artifact_id": "c18-1q-deep-health-current-fixed",
   "checks": {
     "candidate_process_filtered": true,
     "estimated_frame_present": true,
@@ -33,6 +32,8 @@
     "vo_configured_present": true
   },
   "counters": {
+    "estimated_frame_evaluable_segments": 5,
+    "estimated_frame_failed_segments": 0,
     "estimated_frame_positive_steps": 4,
     "estimated_frame_progressed": true,
     "estimated_frame_required_steps": 2,
@@ -46,12 +47,16 @@
     "media_load_failed": 0,
     "mmc_timeout_reset": 0,
     "mpv_count": 1,
+    "mpv_media_transitions_observed": false,
     "mpv_restart": 0,
+    "mpv_unique_aliases": 1,
     "nrestarts_delta": 0,
     "panfrost_faults": 0,
     "playlist_size_max": 9,
     "samples": 30,
     "status_failure_samples": 0,
+    "status_transitions_observed": true,
+    "status_unique_aliases": 4,
     "time_pos_progressed": true,
     "total_mpv_count": 1,
     "unique_aliases": 4,

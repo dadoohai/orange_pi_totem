@@ -285,6 +285,8 @@ O deep-health C18 deve falhar fechado quando a evidencia de progresso de frame
 estiver ausente ou congelada. `time_pos` e diagnostico util, mas nao pode aprovar
 sozinho uma janela de playback com `estimated_frame_number` travado, pois esse e
 o modo de falha que a linha C18 precisa barrar antes de qualquer thaw de player.
+Em janela multi-item, o avaliador deve exigir progresso em todos os segmentos
+avaliaveis; nao basta o ultimo segmento passar depois de um stall anterior.
 No modo `candidate`, `last_poll_error` so pode ser tolerado quando o status
 sanitizado indicar explicitamente `polling_disabled`; erro generico presente
 continua falha de health.

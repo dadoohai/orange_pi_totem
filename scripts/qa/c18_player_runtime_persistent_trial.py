@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import signal
 import shutil
 import subprocess
 import sys
@@ -84,8 +85,28 @@ def run_json(cmd: list[str],
     return data
 
 
-def run_systemctl(action: str) -> None:
-    subprocess.run(["systemctl", action, SERVICE], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def read_symlink_target(path: Path) -> str | None:
+    try:
+        return os.readlink(path)
+    except OSError:
+        return None
+
+
+def run_systemctl_result(action: str) -> dict[str, Any]:
+    proc = subprocess.run(
+        ["systemctl", action, SERVICE],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=30,
+    )
+    return {
+        "action": action,
+        "returncode": proc.returncode,
+        "stdout_tail": proc.stdout[-400:],
+        "stderr_tail": proc.stderr[-400:],
+    }
 
 
 def copy_public_health(src_dir: Path, dst_dir: Path) -> None:
@@ -156,6 +177,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
+    def raise_on_sigterm(signum: int, _frame: Any) -> None:
+        raise RuntimeError(f"received_signal:{signum}")
+
+    signal.signal(signal.SIGTERM, raise_on_sigterm)
+
     args = parse_args(argv)
     if not args.lab_only_persistent_trial or os.environ.get(LAB_ENV) != "1":
         print(f"player_runtime_persistent_trial_guard_required: pass --lab-only-persistent-trial and set {LAB_ENV}=1", file=sys.stderr)
@@ -199,142 +225,218 @@ def main(argv: list[str]) -> int:
     if release_gate.get("passed") is not True:
         raise RuntimeError("release gate did not pass")
 
-    run_systemctl("stop")
     apply_env = {
         **env_base,
         "C18_PLAYER_RUNTIME_LAB_APPLY": "1",
         DEVICE_DATA_ENV: "1",
     }
-    apply_json = run_json(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"),
-            "--lab-only-apply",
-            "--manifest",
-            str(args.manifest),
-            "--payload",
-            str(args.payload),
-            "--data-root",
-            str(args.data_root),
-            "--allow-device-data-root",
-            "--canary-media",
-            str(args.canary_media),
-            "--output-dir",
-            str(raw_dir / "apply"),
-            "--duration-sec",
-            str(args.duration_sec),
-            "--interval-sec",
-            str(args.interval_sec),
-            "--startup-wait-sec",
-            str(args.startup_wait_sec),
-            "--json",
-        ],
-        env=apply_env,
-        stdout_path=evidence_dir / "lab-apply.json",
-        timeout=1800,
-    )
-    if apply_json.get("passed") is not True:
-        raise RuntimeError("lab apply did not pass")
-    copy_public_health(raw_dir / "apply" / "candidate-health" / "health", evidence_dir / "candidate-health")
-    shutil.copy2(raw_dir / "apply" / "candidate-health" / "candidate-health-result.json", evidence_dir / "candidate-health-result.json")
-    current_marker = args.data_root / "player-runtime" / "current" / ".release_verified.json"
-    if not current_marker.is_file():
-        raise RuntimeError("verified marker missing after apply")
-    shutil.copy2(current_marker, evidence_dir / "verified-marker.json")
-
-    run_systemctl("restart")
-    adoption_cmd = [
-        sys.executable,
-        str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
-        "--data-root",
-        str(args.data_root),
-        "--expected-source",
-        "data",
-        "--expected-version",
-        version,
-        "--json",
-    ]
-    run_json(adoption_cmd, env=env_base, stdout_path=evidence_dir / "service-after-restart" / "launcher-adoption.json")
-    run_json(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"),
-            "--duration-sec",
-            str(args.duration_sec),
-            "--interval-sec",
-            str(args.interval_sec),
-            "--output-dir",
-            str(evidence_dir / "service-after-restart"),
-            "--json",
-        ],
-        env=env_base,
-        stdout_path=raw_dir / "service-after-restart.json",
-        timeout=1800,
-    )
-
     rollback_env = {
         **env_base,
         "C18_PLAYER_RUNTIME_LAB_ROLLBACK": "1",
         DEVICE_DATA_ENV: "1",
     }
-    rollback_json = run_json(
-        [
+    apply_completed = False
+    rollback_completed = False
+    trial_completed = False
+    service_stopped = False
+    cleanup_actions: list[dict[str, Any]] = []
+    current_link = args.data_root / "player-runtime" / "current"
+    pre_trial_current_target = read_symlink_target(current_link)
+    try:
+        stop_result = run_systemctl_result("stop")
+        if stop_result["returncode"] != 0:
+            raise RuntimeError("service_stop_failed")
+        service_stopped = True
+        apply_json = run_json(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"),
+                "--lab-only-apply",
+                "--manifest",
+                str(args.manifest),
+                "--payload",
+                str(args.payload),
+                "--data-root",
+                str(args.data_root),
+                "--allow-device-data-root",
+                "--canary-media",
+                str(args.canary_media),
+                "--output-dir",
+                str(raw_dir / "apply"),
+                "--duration-sec",
+                str(args.duration_sec),
+                "--interval-sec",
+                str(args.interval_sec),
+                "--startup-wait-sec",
+                str(args.startup_wait_sec),
+                "--json",
+            ],
+            env=apply_env,
+            stdout_path=evidence_dir / "lab-apply.json",
+            timeout=1800,
+        )
+        if apply_json.get("passed") is not True:
+            raise RuntimeError("lab apply did not pass")
+        apply_completed = True
+        copy_public_health(raw_dir / "apply" / "candidate-health" / "health", evidence_dir / "candidate-health")
+        shutil.copy2(raw_dir / "apply" / "candidate-health" / "candidate-health-result.json", evidence_dir / "candidate-health-result.json")
+        current_marker = args.data_root / "player-runtime" / "current" / ".release_verified.json"
+        if not current_marker.is_file():
+            raise RuntimeError("verified marker missing after apply")
+        shutil.copy2(current_marker, evidence_dir / "verified-marker.json")
+
+        restart_result = run_systemctl_result("restart")
+        if restart_result["returncode"] != 0:
+            raise RuntimeError("service_restart_failed_after_apply")
+        service_stopped = False
+        adoption_cmd = [
             sys.executable,
-            str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"),
-            "--lab-only-rollback",
-            "--action",
-            "rollback",
+            str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
             "--data-root",
             str(args.data_root),
-            "--allow-device-data-root",
-            "--quarantine-current",
-            "--output-dir",
-            str(raw_dir / "rollback"),
-            "--reason",
-            f"persistent_trial_rollback_{trial_id}",
+            "--expected-source",
+            "data",
+            "--expected-version",
+            version,
             "--json",
-        ],
-        env=rollback_env,
-        stdout_path=evidence_dir / "lab-rollback.json",
-    )
-    if rollback_json.get("passed") is not True:
-        raise RuntimeError("lab rollback did not pass")
+        ]
+        run_json(adoption_cmd, env=env_base, stdout_path=evidence_dir / "service-after-restart" / "launcher-adoption.json")
+        run_json(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"),
+                "--duration-sec",
+                str(args.duration_sec),
+                "--interval-sec",
+                str(args.interval_sec),
+                "--output-dir",
+                str(evidence_dir / "service-after-restart"),
+                "--json",
+            ],
+            env=env_base,
+            stdout_path=raw_dir / "service-after-restart.json",
+            timeout=1800,
+        )
 
-    run_systemctl("restart")
-    rolled_to = (((rollback_json.get("operation") or {}).get("rolled_back_to")) or "image_fallback")
-    expected_source = "fallback" if rolled_to == "image_fallback" else "data"
-    rollback_adoption_cmd = [
-        sys.executable,
-        str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
-        "--data-root",
-        str(args.data_root),
-        "--expected-source",
-        expected_source,
-        "--json",
-    ]
-    if expected_source == "data":
-        rollback_adoption_cmd.extend(["--expected-version", str(rolled_to)])
-    run_json(
-        rollback_adoption_cmd,
-        env=env_base,
-        stdout_path=evidence_dir / "service-after-rollback" / "launcher-adoption.json",
-    )
-    run_json(
-        [
+        rollback_json = run_json(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"),
+                "--lab-only-rollback",
+                "--action",
+                "rollback",
+                "--data-root",
+                str(args.data_root),
+                "--allow-device-data-root",
+                "--quarantine-current",
+                "--output-dir",
+                str(raw_dir / "rollback"),
+                "--reason",
+                f"persistent_trial_rollback_{trial_id}",
+                "--json",
+            ],
+            env=rollback_env,
+            stdout_path=evidence_dir / "lab-rollback.json",
+        )
+        if rollback_json.get("passed") is not True:
+            raise RuntimeError("lab rollback did not pass")
+        rollback_completed = True
+
+        restart_result = run_systemctl_result("restart")
+        if restart_result["returncode"] != 0:
+            raise RuntimeError("service_restart_failed_after_rollback")
+        service_stopped = False
+        rolled_to = (((rollback_json.get("operation") or {}).get("rolled_back_to")) or "image_fallback")
+        expected_source = "fallback" if rolled_to == "image_fallback" else "data"
+        rollback_adoption_cmd = [
             sys.executable,
-            str(REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"),
-            "--duration-sec",
-            str(args.duration_sec),
-            "--interval-sec",
-            str(args.interval_sec),
-            "--output-dir",
-            str(evidence_dir / "service-after-rollback"),
+            str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
+            "--data-root",
+            str(args.data_root),
+            "--expected-source",
+            expected_source,
             "--json",
-        ],
-        env=env_base,
-        stdout_path=raw_dir / "service-after-rollback.json",
-        timeout=1800,
-    )
+        ]
+        if expected_source == "data":
+            rollback_adoption_cmd.extend(["--expected-version", str(rolled_to)])
+        run_json(
+            rollback_adoption_cmd,
+            env=env_base,
+            stdout_path=evidence_dir / "service-after-rollback" / "launcher-adoption.json",
+        )
+        run_json(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"),
+                "--duration-sec",
+                str(args.duration_sec),
+                "--interval-sec",
+                str(args.interval_sec),
+                "--output-dir",
+                str(evidence_dir / "service-after-rollback"),
+                "--json",
+            ],
+            env=env_base,
+            stdout_path=raw_dir / "service-after-rollback.json",
+            timeout=1800,
+        )
+        trial_completed = True
+    finally:
+        post_trial_current_target = read_symlink_target(current_link)
+        current_changed = (
+            post_trial_current_target is not None
+            and post_trial_current_target != pre_trial_current_target
+        )
+        current_is_trial_version = post_trial_current_target in {
+            f"releases/{version}",
+            str((args.data_root / "player-runtime" / "releases" / version).resolve()),
+        }
+        if not trial_completed and not rollback_completed and (apply_completed or current_changed or current_is_trial_version):
+            cleanup_cmd = [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"),
+                "--lab-only-rollback",
+                "--action",
+                "rollback",
+                "--data-root",
+                str(args.data_root),
+                "--allow-device-data-root",
+                "--quarantine-current",
+                "--output-dir",
+                str(raw_dir / "abort-rollback"),
+                "--reason",
+                f"persistent_trial_abort_{trial_id}",
+                "--json",
+            ]
+            proc = subprocess.run(
+                cleanup_cmd,
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=rollback_env,
+                timeout=120,
+            )
+            cleanup_actions.append({
+                "action": "abort_rollback",
+                "returncode": proc.returncode,
+                "pre_trial_current_target": pre_trial_current_target,
+                "post_trial_current_target": post_trial_current_target,
+                "stdout_tail": proc.stdout[-1200:],
+                "stderr_tail": proc.stderr[-1200:],
+            })
+        if not trial_completed and (service_stopped or apply_completed or current_changed):
+            cleanup_actions.append(run_systemctl_result("restart"))
+        if cleanup_actions:
+            write_json(
+                evidence_dir / "abort-cleanup.json",
+                {
+                    "schema": "dadooh.c18.player_runtime.persistent_trial.abort_cleanup.v1",
+                    "apply_completed": apply_completed,
+                    "rollback_completed": rollback_completed,
+                    "actions": cleanup_actions,
+                },
+            )
 
     write_json(evidence_dir / "README.md", {
         "schema": "dadooh.c18.player_runtime.trial_readme.v1",

@@ -100,6 +100,9 @@ Na linha C18 atual, progresso de frame estimado e evidencia obrigatoria para
 aprovar playback de video. Se uma classe futura de midia legitima nao expuser
 `estimated-frame-number`, ela deve ganhar health contract proprio; nao voltar ao
 criterio inseguro de aprovar apenas por `time_pos`.
+Em playlists com multiplos itens, cada segmento avaliavel precisa demonstrar
+progresso de frame; um ultimo item saudavel nao pode mascarar stall em item
+anterior.
 
 `soak` e endurance, nao smoke test. Para producao/batch, o soak esperado e uma
 janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
@@ -175,6 +178,13 @@ Antes de qualquer thaw de laboratorio:
   fallback/previous esperado apos rollback; para trial persistente, o rollback
   deve usar quarentena do `current` testado para impedir readocao automatica do
   candidato revertido;
+- o trial persistente deve ter caminho de aborto explicito: se for
+  interrompido depois do stop do servico ou depois de promover um candidato em
+  `/data`, o harness precisa comparar o `current` pre/post, executar rollback
+  lab-only com `--quarantine-current` quando houver `current` novo, reiniciar
+  `kiosky-player.service` e escrever `abort-cleanup.json`; boot reconcile nao
+  substitui essa limpeza, pois um candidato valido e marcado pode ser adotado
+  corretamente pelo launcher;
 - antes de commitar essa evidencia, rodar
   `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>` para aplicar
   allowlist de arquivos, scan de vazamento, hashes e validacao semantica dos

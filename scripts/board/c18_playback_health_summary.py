@@ -149,6 +149,19 @@ def playback_item_key(row: dict[str, str]) -> str:
     return f"mpv:{row.get('current_alias') or '__unknown__'}"
 
 
+def status_item_key(row: dict[str, str]) -> str:
+    status_alias = row.get("status_current_alias") or row.get("status_path_alias")
+    status_index = row.get("status_current_index") or ""
+    if status_alias or status_index:
+        return f"status:{status_alias or '__unknown__'}:{status_index}"
+    return ""
+
+
+def mpv_item_key(row: dict[str, str]) -> str:
+    alias = row.get("current_alias") or row.get("path_alias") or row.get("filename_alias")
+    return f"mpv:{alias}" if alias else ""
+
+
 def frame_progress_segments(rows: list[dict[str, str]]) -> list[list[float | None]]:
     segments: list[list[float | None]] = []
     current_key: str | None = None
@@ -211,6 +224,8 @@ def evaluate(
     vo_configured_true_samples = 0
     vo_configured_unexpected_samples = 0
     aliases = set()
+    status_aliases = set()
+    mpv_aliases = set()
     time_values: list[float | None] = []
     frame_values: list[float | None] = []
     status_failure_samples = 0
@@ -218,6 +233,12 @@ def evaluate(
 
     for row in rows:
         aliases.add(playback_item_key(row))
+        status_key = status_item_key(row)
+        if status_key:
+            status_aliases.add(status_key)
+        mpv_key = mpv_item_key(row)
+        if mpv_key:
+            mpv_aliases.add(mpv_key)
 
         if row.get("ipc_result") == "success":
             hwdec = row.get("hwdec_current") or ""
@@ -261,6 +282,8 @@ def evaluate(
     playlist_size = max_playlist_size(rows)
     transition_required = playlist_size >= 2
     unique_aliases = len(aliases)
+    status_unique_aliases = len(status_aliases)
+    mpv_unique_aliases = len(mpv_aliases)
     transition_ok = not transition_required or unique_aliases >= 2
     time_pos_progressed = progressed(time_values)
     estimated_frame_present = present_count(frame_values) >= 2
@@ -269,11 +292,19 @@ def evaluate(
     if frame_segments:
         segment_stats = [sustained_progress_stats(values) for values in frame_segments]
         evaluable_segment_stats = [stats for stats in segment_stats if int(stats["sample_count"]) >= 3]
-        best_segment = evaluable_segment_stats[-1] if evaluable_segment_stats else segment_stats[-1]
-        frame_progressed = bool(best_segment["passed"])
+        if evaluable_segment_stats:
+            failed_segment_stats = [stats for stats in evaluable_segment_stats if not bool(stats["passed"])]
+            best_segment = failed_segment_stats[0] if failed_segment_stats else evaluable_segment_stats[-1]
+            frame_progressed = not failed_segment_stats
+        else:
+            best_segment = segment_stats[-1]
+            failed_segment_stats = [best_segment]
+            frame_progressed = False
     else:
         frame_progressed = bool(frame_progress_stats["passed"])
         best_segment = frame_progress_stats
+        evaluable_segment_stats = []
+        failed_segment_stats = [] if frame_progressed else [frame_progress_stats]
 
     checks = {
         "samples_present": len(rows) > 0,
@@ -324,6 +355,10 @@ def evaluate(
             "ipc_timeout_after_first_success": ipc_timeout_after_success,
             "ipc_error_after_first_success": ipc_error_after_success,
             "unique_aliases": unique_aliases,
+            "status_unique_aliases": status_unique_aliases,
+            "mpv_unique_aliases": mpv_unique_aliases,
+            "status_transitions_observed": status_unique_aliases >= 2,
+            "mpv_media_transitions_observed": mpv_unique_aliases >= 2,
             "playlist_size_max": playlist_size,
             "hwdec_expected_samples": hwdec_expected_samples,
             "hwdec_unexpected_samples": hwdec_unexpected_samples,
@@ -334,6 +369,8 @@ def evaluate(
             "estimated_frame_positive_steps": best_segment["positive_steps"],
             "estimated_frame_required_steps": best_segment["required_steps"],
             "estimated_frame_trailing_nonprogress_steps": best_segment["trailing_nonprogress_steps"],
+            "estimated_frame_evaluable_segments": len(evaluable_segment_stats),
+            "estimated_frame_failed_segments": len(failed_segment_stats),
             "status_failure_samples": status_failure_samples,
             "nrestarts_delta": nrestarts_delta,
             "mpv_count": mpv_count,
