@@ -555,32 +555,41 @@ def phase_resume(args: argparse.Namespace) -> int:
     )
     if player_gate.get("passed") is not True:
         raise RuntimeError("m6_player_runtime_evidence_gate_failed")
-    release_gate = run_json(
-        [
-            sys.executable,
-            str(QA_DIR / "c18_ota_release_gate.py"),
-            "--player-runtime-evidence-mode",
-            "decisive",
-            "--player-runtime-data-coldboot-evidence-dir",
-            str(coldboot_dir),
-            "--player-runtime-data-evidence-dir",
-            str(data_dir),
-            "--expect-image-tag",
-            args.image_tag,
-            "--expect-image-sha256",
-            args.image_sha256,
-            "--expect-image-marker-sha256",
-            sha256_file(args.image_marker_file),
-            "--json",
-        ],
-        env=env,
-        stdout_path=run_dir / "m6-release-gate.json",
-        timeout=240,
-    )
+    if args.defer_release_gate:
+        release_gate = {
+            "passed": None,
+            "status": "deferred",
+            "reason": "run c18_ota_release_gate.py on the host after copying evidence from the board",
+        }
+        write_json(run_dir / "m6-release-gate.json", release_gate)
+    else:
+        release_gate = run_json(
+            [
+                sys.executable,
+                str(QA_DIR / "c18_ota_release_gate.py"),
+                "--player-runtime-evidence-mode",
+                "decisive",
+                "--player-runtime-data-coldboot-evidence-dir",
+                str(coldboot_dir),
+                "--player-runtime-data-evidence-dir",
+                str(data_dir),
+                "--expect-image-tag",
+                args.image_tag,
+                "--expect-image-sha256",
+                args.image_sha256,
+                "--expect-image-marker-sha256",
+                sha256_file(args.image_marker_file),
+                "--json",
+            ],
+            env=env,
+            stdout_path=run_dir / "m6-release-gate.json",
+            timeout=240,
+        )
     summary = {
         "schema": SCHEMA,
         "phase": "resume",
-        "passed": release_gate.get("passed") is True,
+        "passed": (release_gate.get("passed") is True) or bool(args.defer_release_gate),
+        "release_gate_deferred": bool(args.defer_release_gate),
         "version_a": version_a,
         "version_b": version_b,
         "evidence_root": str(run_dir),
@@ -628,6 +637,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--image-marker-file", required=True, type=Path)
     parser.add_argument("--repo-identity-file", type=Path)
     parser.add_argument("--mechanical-action", default=MECHANICAL_ACTION)
+    parser.add_argument("--defer-release-gate", action="store_true")
     parser.add_argument("--duration-sec", type=float, default=45.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=8.0)

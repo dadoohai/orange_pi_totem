@@ -1142,6 +1142,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--repo-identity-file", m6_trial)
         self.assertIn("repo-identity.json", m6_trial)
         self.assertIn("validate_package_repo_identity", m6_trial)
+        self.assertIn("--defer-release-gate", m6_trial)
+        self.assertIn("release_gate_deferred", m6_trial)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
