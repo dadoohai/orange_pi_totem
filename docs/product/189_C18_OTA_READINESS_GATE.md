@@ -52,6 +52,40 @@ player-runtime` volta a ser congelado no comando publico, o boot usa manutencao
 explicitamente autorizada e a evidencia de deep-health passa a ser gate
 auditavel. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
+## Candidata 1p (offline, aguardando hardware)
+
+O commit `cbc51da` fecha a camada necessaria para um trial persistente
+auditavel de `player-runtime` em `/data`, sem descongelar o CLI publico:
+
+- health de candidato iniciado como root passa a executar o `kiosk.py` candidato
+  como usuario nao-root (`totem` por padrao);
+- `totem_updatectl.py` recompila a identidade do release depois do deep-health e
+  antes do marker/promote, rejeitando mutacao pos-health;
+- rollback lab pode quarentenar o `current` testado para impedir readocao
+  automatica do candidato revertido;
+- novo `c18_player_runtime_adoption_probe.py` prova se o servico adotou
+  `/data/player-runtime/current` ou fallback `/opt`;
+- novo `c18_player_runtime_persistent_trial.py` orquestra apply local,
+  deep-health do candidato, restart, prova de adocao, rollback, prova
+  pos-rollback e manifesto de evidencia;
+- `c18_player_runtime_evidence_gate.py` passou a validar semantica dos
+  artefatos, hashes e privacidade, nao apenas allowlist de arquivos.
+
+Por tocar arquivos da imagem, foi gerada candidata offline:
+
+- **Imagem candidata:** `c18-hwdecode-lab-1p`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1p_minimal.img`;
+- **sha256:**
+  `4b772435fd7b32340f3db5a1d69ecd7f9ba843e6964a285077e4266298430008`;
+- **Tamanho:** `1971322880` bytes;
+- **Validacao offline:** `offline_validation_passed=true`,
+  `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
+  `totem_core_ota_ready=true`, `no_player_runtime_current_embedded=true`,
+  `no_legacy_kiosky_player_current_embedded=true`;
+- **Estado:** candidata de laboratorio; ainda nao e golden ate passar validacao
+  em hardware e registro de evidencia.
+
 ## Promocao 1m (offline + hardware)
 
 Os commits pós-golden `31b1245`, `93354fb` e `dc21a37` fecham follow-ups de

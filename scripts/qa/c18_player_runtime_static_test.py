@@ -80,11 +80,12 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")
-        self.assertIn('TAG = "c18-hwdecode-lab-1o"', derive)
-        self.assertIn('VERSION = "c18.image-lab.1o"', derive)
-        self.assertIn('MARKER = "/etc/dadooh/c18-hwdecode-lab-1o-image"', derive)
-        self.assertIn('"round": "C18.IMAGE-LAB.1o"', derive)
-        self.assertIn("=== C18.IMAGE-LAB.1o RESULT ===", derive)
+        self.assertIn('TAG = "c18-hwdecode-lab-1p"', derive)
+        self.assertIn('VERSION = "c18.image-lab.1p"', derive)
+        self.assertIn('MARKER = "/etc/dadooh/c18-hwdecode-lab-1p-image"', derive)
+        self.assertIn('"round": "C18.IMAGE-LAB.1p"', derive)
+        self.assertIn("=== C18.IMAGE-LAB.1p RESULT ===", derive)
+        self.assertIn("1o + audit-ready player-runtime persistent trial tooling", derive)
         self.assertIn('PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"', derive)
         self.assertIn("PLAYER_RUNTIME_KIOSK_SHA256", derive)
         self.assertIn("governed player-runtime kiosk.py", derive)
