@@ -141,6 +141,14 @@ def sustained_progressed(values: list[float | None]) -> bool:
     return bool(sustained_progress_stats(values)["passed"])
 
 
+def playback_item_key(row: dict[str, str]) -> str:
+    status_alias = row.get("status_current_alias") or row.get("status_path_alias")
+    status_index = row.get("status_current_index") or ""
+    if status_alias or status_index:
+        return f"status:{status_alias or '__unknown__'}:{status_index}"
+    return f"mpv:{row.get('current_alias') or '__unknown__'}"
+
+
 def frame_progress_segments(rows: list[dict[str, str]]) -> list[list[float | None]]:
     segments: list[list[float | None]] = []
     current_key: str | None = None
@@ -148,9 +156,7 @@ def frame_progress_segments(rows: list[dict[str, str]]) -> list[list[float | Non
     previous_frame: float | None = None
 
     for row in rows:
-        alias = row.get("current_alias") or row.get("status_current_alias") or row.get("status_path_alias") or "__unknown__"
-        index = row.get("status_current_index") or ""
-        key = f"{alias}:{index}"
+        key = playback_item_key(row)
         frame_value = as_float(row.get("estimated_frame_number"))
         reset = (
             frame_value is not None
@@ -211,9 +217,7 @@ def evaluate(
     target_mode = str(systemd.get("target_mode") or "service")
 
     for row in rows:
-        alias = row.get("current_alias") or row.get("status_current_alias") or row.get("status_path_alias")
-        if alias:
-            aliases.add(alias)
+        aliases.add(playback_item_key(row))
 
         if row.get("ipc_result") == "success":
             hwdec = row.get("hwdec_current") or ""

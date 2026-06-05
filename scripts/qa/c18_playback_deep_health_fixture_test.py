@@ -178,6 +178,20 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         fixture.write_json("process.json", process)
         self.assert_fails_with(fixture, "service_total_mpv_count_present")
 
+    def test_transition_uses_status_item_when_mpv_cache_path_repeats(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for index, row in enumerate(rows):
+            row["current_alias"] = "<media-path:same-cache>"
+            row["status_current_alias"] = "media-a" if index < 3 else "media-b"
+            row["status_current_index"] = "0" if index < 3 else "1"
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["failure_reasons"], [])
+        self.assertEqual(result["counters"]["unique_aliases"], 2)
+
     def test_candidate_mode_tolerates_polling_disabled_status_only(self) -> None:
         fixture = self.with_case()
         rows = fixture.rows()

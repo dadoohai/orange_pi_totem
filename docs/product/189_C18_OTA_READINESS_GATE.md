@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1o`.
+golden atual `1q`.
 
 ## Decisão
 
@@ -21,11 +21,11 @@ golden atual `1o`.
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1o`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1q`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1o_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1q_minimal.img`;
 - **sha256:**
-  `07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164`;
+  `d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -38,19 +38,20 @@ Marco de referência para continuidade C18/delivery:
   `vo-configured=true`, `NRestarts=0`;
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
-- **Evidencia hardware 1o:** `docs/evidence/c18-update-validation/20260605T003747Z-1o-service-deep-health/`,
+- **Evidencia hardware 1q:** `docs/evidence/c18-update-validation/20260605T025337Z-1q-service-deep-health/`,
   com deep-health de servico `passed=true` apos config real escrita do seed.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1o`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1q`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `1k`, `1l`, `1m` e `1n` permanecem como golden historicas anteriores. A
-`1o` valida em hardware o follow-up pos-1n: `reconcile --component
-player-runtime` volta a ser congelado no comando publico, o boot usa manutencao
-explicitamente autorizada e a evidencia de deep-health passa a ser gate
-auditavel. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
+Nota: `1k`, `1l`, `1m`, `1n` e `1o` permanecem como golden historicas
+anteriores. A `1q` valida em hardware o follow-up pos-1p: o reconcile de boot
+roda com privilegio suficiente para higienizar `/data/player-runtime`, o
+deep-health de servico passa com evidencia auditavel, e o avaliador agora usa a
+identidade sanitizada do item do status para transicoes quando o cache path do
+MPV se repete. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
 ## Candidata 1p (offline; descartada em hardware)
 
@@ -89,7 +90,7 @@ Por tocar arquivos da imagem, foi gerada candidata offline:
   Como a higiene de boot nao estava efetiva, `1p` nao vira golden e nao deve
   ser usada para trial persistente em `/data`.
 
-## Candidata 1q (offline, aguardando hardware)
+## Promocao 1q (offline + hardware)
 
 `1q` substitui `1p` sem abrir o fluxo publico de `player-runtime`: o drop-in do
 player agora usa `ExecStartPre=-+/usr/bin/env ... reconcile --component
@@ -109,8 +110,18 @@ travar esse detalhe para evitar regressao silenciosa.
   `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
   `totem_core_ota_ready=true`, `no_player_runtime_current_embedded=true`,
   `no_legacy_kiosky_player_current_embedded=true`;
-- **Estado:** candidata de laboratorio; ainda nao e golden ate passar validacao
-  em hardware, config real aplicada e deep-health com evidencia auditavel.
+- **Validacao hardware:** marker `1q`, policy restrita a `totem-core`, timer
+  desligado, service de update apontando para `totem-core`, drop-in do player
+  com `ExecStartPre=-+... reconcile --component player-runtime
+  --allow-player-runtime-maintenance`, reconcile de boot `noop` sem erro de
+  permissao, config real escrita via writer a partir do seed, player fallback de
+  imagem ativo, `kiosky-player` e `player-runtime` bloqueados com `rc=44` no
+  fluxo publico, e deep-health de servico `passed=true` com progresso de frame,
+  `hwdec-current=v4l2request-copy`, `media_load_failed=0`, `mpv_restart=0`,
+  `NRestarts_delta=0`, panfrost/mmc/ext4 `0`.
+- **Evidencia auditavel:** `docs/evidence/c18-update-validation/20260605T025337Z-1q-service-deep-health/`.
+- **Status:** promovida a golden de laboratorio/delivery; ainda
+  `final_image=false`, nao stable e nao batch de producao.
 
 ## Promocao 1m (offline + hardware)
 

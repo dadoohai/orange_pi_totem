@@ -4,7 +4,7 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 ## Estado C18 OTA
 
-Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1o` (C18 HW decode +
+Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1q` (C18 HW decode +
 OTA `totem-core` validado end-to-end + fundação segura para thaw futuro de
 `player-runtime`). O OTA C18 comum é manual/operator-triggered e restrito a
 `totem-core`; `kiosky-player`, `player-runtime`, launcher do player,
