@@ -209,7 +209,9 @@ def main(argv: list[str]) -> int:
         "PYTHONDONTWRITEBYTECODE": "1",
     }
 
-    shutil.copy2(args.manifest, evidence_dir / "package" / args.manifest.name)
+    package_evidence_dir = evidence_dir / "package"
+    package_evidence_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(args.manifest, package_evidence_dir / args.manifest.name)
     release_gate = run_json(
         [
             sys.executable,
@@ -289,6 +291,7 @@ def main(argv: list[str]) -> int:
         if restart_result["returncode"] != 0:
             raise RuntimeError("service_restart_failed_after_apply")
         service_stopped = False
+        time.sleep(max(args.startup_wait_sec, 0.0))
         adoption_cmd = [
             sys.executable,
             str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
@@ -346,6 +349,7 @@ def main(argv: list[str]) -> int:
         if restart_result["returncode"] != 0:
             raise RuntimeError("service_restart_failed_after_rollback")
         service_stopped = False
+        time.sleep(max(args.startup_wait_sec, 0.0))
         rolled_to = (((rollback_json.get("operation") or {}).get("rolled_back_to")) or "image_fallback")
         expected_source = "fallback" if rolled_to == "image_fallback" else "data"
         rollback_adoption_cmd = [

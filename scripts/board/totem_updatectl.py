@@ -337,6 +337,15 @@ def _sha256_file(path: Path) -> str:
 def _ensure_dirs() -> None:
     for d in (APP_BASE, RELEASES_DIR, UPDATES_DIR, INCOMING_DIR, LOG_DIR):
         d.mkdir(parents=True, exist_ok=True)
+    if COMPONENT in {"kiosky-player", "player-runtime"}:
+        # These components are launched by the non-root `totem` service user.
+        # Keep parent dirs traversable so a verified current -> releases/<v>
+        # symlink can actually be adopted without opening update/log roots.
+        for d in (APP_BASE, RELEASES_DIR):
+            try:
+                os.chmod(d, stat.S_IMODE(d.stat().st_mode) | 0o055)
+            except OSError:
+                pass
 
 
 def _cleanup_stage(stage: Path) -> None:
@@ -1643,6 +1652,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     started_at = _utcnow_iso()
     if COMPONENT != "player-runtime":
         raise RuntimeError("player-runtime apply path called for wrong component")
+    _ensure_dirs()
 
     try:
         with manifest_path.open("r", encoding="utf-8") as f:

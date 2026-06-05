@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import os
 import stat
 import tarfile
@@ -52,6 +53,132 @@ def _make_payload(path: Path) -> None:
 
 
 class ReleasePermsTest(unittest.TestCase):
+    def test_player_runtime_base_dirs_are_traversable_after_ensure_dirs(self) -> None:
+        old_umask = os.umask(0o077)
+        saved = {
+            "DATA_ROOT": updatectl.DATA_ROOT,
+            "UPDATES_DIR": updatectl.UPDATES_DIR,
+            "POLICY_FILE": updatectl.POLICY_FILE,
+            "LOG_DIR": updatectl.LOG_DIR,
+            "LOG_FILE": updatectl.LOG_FILE,
+            "TOKEN_FILE": updatectl.TOKEN_FILE,
+            "COMPONENT": updatectl.COMPONENT,
+            "APP_BASE": updatectl.APP_BASE,
+            "RELEASES_DIR": updatectl.RELEASES_DIR,
+            "CURRENT_LINK": updatectl.CURRENT_LINK,
+            "PREVIOUS_LINK": updatectl.PREVIOUS_LINK,
+            "STATE_FILE": updatectl.STATE_FILE,
+        }
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                updatectl.DATA_ROOT = root / "data"
+                updatectl.UPDATES_DIR = updatectl.DATA_ROOT / "updates"
+                updatectl.POLICY_FILE = updatectl.UPDATES_DIR / "policy.json"
+                updatectl.LOG_DIR = updatectl.DATA_ROOT / "logs"
+                updatectl.LOG_FILE = updatectl.LOG_DIR / "totem-update.log"
+                updatectl.TOKEN_FILE = updatectl.DATA_ROOT / "secrets" / "github-release-token"
+                updatectl.configure_component("player-runtime")
+
+                updatectl._ensure_dirs()
+
+                self.assertEqual(stat.S_IMODE(updatectl.APP_BASE.stat().st_mode) & 0o005, 0o005)
+                self.assertEqual(stat.S_IMODE(updatectl.RELEASES_DIR.stat().st_mode) & 0o005, 0o005)
+        finally:
+            os.umask(old_umask)
+            for key, value in saved.items():
+                setattr(updatectl, key, value)
+
+    def test_player_runtime_internal_apply_normalizes_base_dirs(self) -> None:
+        old_umask = os.umask(0o077)
+        saved = {
+            "DATA_ROOT": updatectl.DATA_ROOT,
+            "UPDATES_DIR": updatectl.UPDATES_DIR,
+            "POLICY_FILE": updatectl.POLICY_FILE,
+            "LOG_DIR": updatectl.LOG_DIR,
+            "LOG_FILE": updatectl.LOG_FILE,
+            "TOKEN_FILE": updatectl.TOKEN_FILE,
+            "COMPONENT": updatectl.COMPONENT,
+            "APP_BASE": updatectl.APP_BASE,
+            "RELEASES_DIR": updatectl.RELEASES_DIR,
+            "CURRENT_LINK": updatectl.CURRENT_LINK,
+            "PREVIOUS_LINK": updatectl.PREVIOUS_LINK,
+            "STATE_FILE": updatectl.STATE_FILE,
+            "PLAYER_RUNTIME_HEALTH_HOOK": updatectl.PLAYER_RUNTIME_HEALTH_HOOK,
+            "PLAYER_RUNTIME_LAB_THAW_ENABLED": updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED,
+        }
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                updatectl.DATA_ROOT = root / "data"
+                updatectl.UPDATES_DIR = updatectl.DATA_ROOT / "updates"
+                updatectl.POLICY_FILE = updatectl.UPDATES_DIR / "policy.json"
+                updatectl.LOG_DIR = updatectl.DATA_ROOT / "logs"
+                updatectl.LOG_FILE = updatectl.LOG_DIR / "totem-update.log"
+                updatectl.TOKEN_FILE = updatectl.DATA_ROOT / "secrets" / "github-release-token"
+                updatectl.configure_component("player-runtime")
+                updatectl.POLICY_FILE.parent.mkdir(parents=True, exist_ok=True)
+                updatectl.POLICY_FILE.write_text(json.dumps({
+                    "schema": "dadooh.totem.update.policy.v1",
+                    "device_channel": "homologation",
+                    "device_track": "c18-hwdecode",
+                    "allowed_components": ["player-runtime", "totem-core"],
+                    "allow_prerelease": True,
+                    "allow_downgrade": False,
+                }), encoding="utf-8")
+
+                payload = root / "dadooh-player-runtime-runtime-perms-test.tar.gz"
+                _make_payload(payload)
+                manifest = root / "manifest.json"
+                manifest.write_text(json.dumps({
+                    "schema": "dadooh.totem.update.v1",
+                    "component": "player-runtime",
+                    "version": "runtime-perms-test",
+                    "channel": "homologation",
+                    "created_at_utc": "2026-06-05T00:00:00Z",
+                    "source_repo": "dadoohai/orange_pi_totem",
+                    "source_branch": "foundation-v0.1",
+                    "source_commit": "1" * 40,
+                    "payload": payload.name,
+                    "payload_sha256": updatectl._sha256_file(payload),
+                    "payload_bytes": payload.stat().st_size,
+                    "requires": {
+                        "device": "orangepizero3",
+                        "base_image_min": "c17.4.2",
+                        "device_track": "c18-hwdecode",
+                        "media_stack_id": "c18-hwdecode-v4l2request-copy",
+                        "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+                        "hwdec": "v4l2request-copy",
+                        "vo": "gpu",
+                        "gpu_context": "drm",
+                        "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+                    },
+                    "entrypoint": "kiosk.py",
+                    "updates": ["kiosk.py"],
+                    "health_checks": ["playback_deep_health"],
+                }), encoding="utf-8")
+
+                updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+                updatectl.PLAYER_RUNTIME_HEALTH_HOOK = lambda _release_dir, _identity: {
+                    "passed": False,
+                    "failure_reasons": ["fixture_reject"],
+                }
+
+                rc = updatectl._apply_player_runtime_from_manifest_path_unfrozen(
+                    manifest,
+                    payload_url=None,
+                    source="fixture",
+                    payload_path_override=payload,
+                )
+
+                self.assertEqual(rc, 11)
+                self.assertEqual(stat.S_IMODE(updatectl.APP_BASE.stat().st_mode) & 0o005, 0o005)
+                self.assertEqual(stat.S_IMODE(updatectl.RELEASES_DIR.stat().st_mode) & 0o005, 0o005)
+        finally:
+            os.umask(old_umask)
+            for key, value in saved.items():
+                setattr(updatectl, key, value)
+
     def test_extracted_release_is_world_traversable_after_fix(self) -> None:
         old_umask = os.umask(0o077)  # reproduce the restrictive-umask condition
         try:

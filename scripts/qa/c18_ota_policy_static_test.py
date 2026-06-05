@@ -593,6 +593,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--quarantine-current", persistent_trial)
         self.assertIn("run_systemctl_result(\"stop\")", persistent_trial)
         self.assertIn("run_systemctl_result(\"restart\")", persistent_trial)
+        self.assertIn("time.sleep(max(args.startup_wait_sec, 0.0))", persistent_trial)
+        self.assertIn("package_evidence_dir.mkdir(parents=True, exist_ok=True)", persistent_trial)
         self.assertNotIn("def run_systemctl(", persistent_trial)
         self.assertNotIn("run_systemctl(\"restart\")", persistent_trial)
         self.assertIn("signal.SIGTERM", persistent_trial)
