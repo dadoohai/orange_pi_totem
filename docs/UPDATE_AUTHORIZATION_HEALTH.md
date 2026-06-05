@@ -163,16 +163,26 @@ Antes de qualquer thaw de laboratorio:
   `--allow-player-runtime-maintenance` e `C18_PLAYER_RUNTIME_RECONCILE=1`; o
   boot da imagem pode passar essa autorizacao explicitamente, mas o comando nao
   deve ficar solto como API publica mutavel;
-- o proximo ensaio persistente deve guardar `evidence-manifest.json`, manifest
-  do pacote, payload SHA, hashes dos artefatos, `playback-samples.tsv`,
-  sidecars `deep-health-*.json` e `playback-deep-health-public.json`
-  sanitizados, junto de um resumo que prove apply, adocao pelo launcher,
-  rollback real, links `current`/`previous` antes/depois e fallback esperado;
+- o proximo ensaio persistente deve ser orquestrado por
+  `scripts/qa/c18_player_runtime_persistent_trial.py`, mantendo o CLI publico
+  congelado, e deve guardar `evidence-manifest.json`, manifest do pacote,
+  payload SHA, hashes dos artefatos, `playback-samples.tsv`, sidecars
+  `deep-health-*.json`, `candidate-health-result.json`,
+  `launcher-adoption.json` e `playback-deep-health-public.json` sanitizados;
+- a evidencia precisa provar semanticamente apply, marker verificado, adocao
+  real de `/data/player-runtime/current` pelo launcher, deep-health do servico
+  apos restart, rollback real, links `current`/`previous` antes/depois e
+  fallback/previous esperado apos rollback; para trial persistente, o rollback
+  deve usar quarentena do `current` testado para impedir readocao automatica do
+  candidato revertido;
 - antes de commitar essa evidencia, rodar
   `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>` para aplicar
-  allowlist de arquivos e scan de vazamento;
+  allowlist de arquivos, scan de vazamento, hashes e validacao semantica dos
+  artefatos;
 - health de candidato deve usar runner lab-only isolado, sem GitHub, sem timer,
-  sem auto-pull e sem policy permanente;
+  sem auto-pull e sem policy permanente; se o harness for iniciado como root,
+  o candidato deve rodar como usuario nao-root (`totem` por padrao), nunca como
+  root;
 - quando nao houver API real no runner, o health de candidato deve usar canario
   offline explicito (`--canary-media`) sob `/tmp` ou `/data/media`, com playlist
   temporaria isolada e sem publicar o path em evidencia publica;

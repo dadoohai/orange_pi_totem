@@ -242,6 +242,43 @@ def current_user_name() -> str:
         return "root"
 
 
+def candidate_run_user() -> pwd.struct_passwd:
+    requested = os.environ.get("C18_PLAYER_RUNTIME_CANDIDATE_USER")
+    if not requested:
+        requested = "totem" if os.geteuid() == 0 else current_user_name()
+    try:
+        pw = pwd.getpwnam(requested)
+    except KeyError as exc:
+        raise RuntimeError(f"candidate run user not found: {requested}") from exc
+    if os.geteuid() == 0 and pw.pw_uid == 0:
+        raise RuntimeError("candidate health refuses to run candidate kiosk.py as root")
+    if os.geteuid() != 0 and pw.pw_uid != os.geteuid():
+        raise RuntimeError("candidate health can only switch users when started as root")
+    return pw
+
+
+def chown_tree(root: Path, uid: int, gid: int) -> None:
+    if os.geteuid() != 0:
+        return
+    for path in [root, *root.rglob("*")]:
+        try:
+            os.chown(path, uid, gid)
+        except OSError:
+            pass
+
+
+def drop_to_user_preexec(user_name: str, uid: int, gid: int):
+    if os.geteuid() != 0:
+        return None
+
+    def _drop() -> None:
+        os.initgroups(user_name, gid)
+        os.setgid(gid)
+        os.setuid(uid)
+
+    return _drop
+
+
 def run_candidate_health(
     release_dir: Path,
     identity: dict[str, Any] | None = None,
@@ -270,6 +307,8 @@ def run_candidate_health(
         write_canary_playlist(cfg, normalized_canary)
 
     env = minimal_candidate_env(work_root)
+    run_user = candidate_run_user()
+    chown_tree(work_root, run_user.pw_uid, run_user.pw_gid)
 
     proc = subprocess.Popen(
         [sys.executable, str(release_dir / "kiosk.py"), "--config", str(config_path)],
@@ -278,6 +317,7 @@ def run_candidate_health(
         text=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        preexec_fn=drop_to_user_preexec(run_user.pw_name, run_user.pw_uid, run_user.pw_gid),
     )
     try:
         time.sleep(max(startup_wait_sec, 0.0))
@@ -289,7 +329,7 @@ def run_candidate_health(
             target_mode="candidate",
             candidate_pid=proc.pid,
             service="kiosky-player.service",
-            app_user=current_user_name(),
+            app_user=run_user.pw_name,
             config=config_path,
             status=Path(str(cfg["status_file"])),
             match_process_ipc=True,
@@ -308,6 +348,8 @@ def run_candidate_health(
     result["observed_tree_sha256"] = identity.get("tree_sha256")
     result["candidate_version"] = identity.get("version")
     result["canary_media_used"] = normalized_canary is not None
+    result["candidate_run_user"] = run_user.pw_name
+    write_json(work_root / "candidate-health-result.json", result)
     return result
 
 

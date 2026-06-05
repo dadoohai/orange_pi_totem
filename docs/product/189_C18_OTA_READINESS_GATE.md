@@ -587,9 +587,14 @@ vir como nova imagem ou release ponte explicitamente homologada.
   preparar o proximo ensaio, mas nao deve ser usada sozinha para destravar thaw
   ou homologacao. O proximo ensaio persistente precisa preservar os artefatos
   sanitizados que lastreiam `passed=true` e exercitar rollback real sobre o
-  mesmo `data_root` que recebeu o candidato. A evidencia deve passar por
+  mesmo `data_root` que recebeu o candidato. A proxima rodada deve usar o
+  orquestrador lab-only `scripts/qa/c18_player_runtime_persistent_trial.py`
+  para produzir `candidate-health-result.json`, `launcher-adoption.json`,
+  `service-after-restart/`, `service-after-rollback/` e
+  `evidence-manifest.json`. A evidencia deve passar por
   `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>` antes de ser
-  versionada.
+  versionada; esse gate agora valida semantica, hashes e privacidade, nao
+  apenas presenca de arquivos.
 
 ## Fora de escopo
 

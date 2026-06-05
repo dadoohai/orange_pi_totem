@@ -229,6 +229,7 @@ def apply_player_runtime_offline(
     pass_health: bool = True,
     raise_health: bool = False,
     observed_identity: str = "candidate",
+    mutate_after_health: bool = False,
 ) -> tuple[bool, str]:
     configure_updatectl_paths(sandbox)
     release_gate.validate_release(manifest, payload)
@@ -258,6 +259,8 @@ def apply_player_runtime_offline(
                 "observed_tree_sha256": fallback_identity["tree_sha256"],
                 "artifact_id": "sandbox_fallback",
             }
+        if mutate_after_health:
+            (release_dir / "MUTATED_AFTER_HEALTH").write_text("changed\n", encoding="utf-8")
         return {
             "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
             "passed": True,
@@ -289,6 +292,8 @@ def apply_player_runtime_offline(
         return True, "applied"
     if observed_identity == "fallback":
         return False, "rejected_health_observed_fallback"
+    if mutate_after_health and status == "candidate_rejected":
+        return False, "rejected_identity_changed_after_health"
     if (not pass_health or raise_health) and status == "candidate_rejected":
         rolled_to = last.get("rolled_back_to") if isinstance(last, dict) else ""
         return False, "rolled_back_to_previous" if rolled_to == "previous" else "rolled_back_to_image_fallback"
@@ -391,6 +396,7 @@ def main() -> int:
     manifest_bad_no_prev, payload_bad_no_prev = build_player_runtime_package(sandbox, "sandbox-bad-no-prev", "bad-no-prev")
     manifest_bad_fallback, payload_bad_fallback = build_player_runtime_package(sandbox, "sandbox-bad-fallback", "bad-fallback")
     manifest_hook_error, payload_hook_error = build_player_runtime_package(sandbox, "sandbox-hook-error", "hook-error")
+    manifest_mutating, payload_mutating = build_player_runtime_package(sandbox, "sandbox-mutating", "mutating")
 
     apply_a_ok, apply_a_reason = apply_player_runtime_offline(sandbox, manifest=manifest_a, payload=payload_a)
     current_after_a = readlink(sandbox / "data" / "player-runtime" / "current")
@@ -457,6 +463,17 @@ def main() -> int:
     ).exists()
     state_after_hook_error = read_state(sandbox)
     hook_error_last = state_after_hook_error.get("last_operation", {})
+
+    mutating_ok, mutating_reason = apply_player_runtime_offline(
+        sandbox,
+        manifest=manifest_mutating,
+        payload=payload_mutating,
+        mutate_after_health=True,
+    )
+    current_after_mutating = readlink(sandbox / "data" / "player-runtime" / "current")
+    mutating_release_exists = (
+        sandbox / "data" / "player-runtime" / "releases" / "sandbox-mutating"
+    ).exists()
 
     safe_remove(sandbox / "data" / "player-runtime" / "current", sandbox)
     safe_remove(sandbox / "data" / "player-runtime" / "previous", sandbox)
@@ -552,6 +569,12 @@ def main() -> int:
             ),
             "health_hook_exception_cleans_release_and_stage": (
                 not hook_error_release_exists and not hook_error_stage_exists
+            ),
+            "post_health_identity_mutation_rejected": (
+                not mutating_ok
+                and mutating_reason == "rejected_identity_changed_after_health"
+                and current_after_mutating == expected_b
+                and not mutating_release_exists
             ),
             "failed_apply_without_previous_falls_back_to_image": (
                 not failed_without_previous_ok

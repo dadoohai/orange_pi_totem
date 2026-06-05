@@ -42,7 +42,9 @@ PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
+PLAYER_RUNTIME_ADOPTION_PROBE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"
 PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_evidence_gate.py"
+PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -518,6 +520,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("apply-github-latest", lab_apply)
         self.assertNotIn("gh release", lab_apply)
 
+        candidate_health = PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertIn("candidate health refuses to run candidate kiosk.py as root", candidate_health)
+        self.assertIn("candidate_run_user", candidate_health)
+        self.assertIn("candidate-health-result.json", candidate_health)
+
         lab_rollback = PLAYER_RUNTIME_LAB_ROLLBACK_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_ROLLBACK", lab_rollback)
         self.assertIn("C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT", lab_rollback)
@@ -530,14 +537,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("current_link", lab_rollback)
         self.assertIn("previous_link", lab_rollback)
         self.assertIn("rolled_back_to", lab_rollback)
+        self.assertIn("quarantine_current", lab_rollback)
         self.assertNotIn("apply-github-latest", lab_rollback)
         self.assertNotIn("gh release", lab_rollback)
+
+        adoption_probe = PLAYER_RUNTIME_ADOPTION_PROBE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.adoption.v1", adoption_probe)
+        self.assertIn("selected_source", adoption_probe)
+        self.assertIn("running_identity_matches_marker", adoption_probe)
+        self.assertNotIn("api_key", adoption_probe)
 
         evidence_gate = PLAYER_RUNTIME_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("ALLOWED_PATTERNS", evidence_gate)
         self.assertIn("evidence-manifest.json", evidence_gate)
         self.assertIn("sha256_file", evidence_gate)
         self.assertIn("validate_evidence_manifest", evidence_gate)
+        self.assertIn("validate_semantics", evidence_gate)
+        self.assertIn("validate_lab_apply", evidence_gate)
+        self.assertIn("validate_adoption", evidence_gate)
+        self.assertIn("lab_rollback_quarantine_current_required", evidence_gate)
         self.assertIn("playback-samples.tsv", evidence_gate)
         self.assertIn("service-after-rollback", evidence_gate)
         self.assertIn("status-samples.ndjson", evidence_gate)
@@ -546,6 +564,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("/data/media", evidence_gate)
         self.assertIn("api_key", evidence_gate)
         self.assertIn("--self-test", evidence_gate)
+
+        persistent_trial = PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_PERSISTENT_TRIAL", persistent_trial)
+        self.assertIn("c18_player_runtime_lab_apply.py", persistent_trial)
+        self.assertIn("c18_player_runtime_lab_rollback.py", persistent_trial)
+        self.assertIn("c18_player_runtime_adoption_probe.py", persistent_trial)
+        self.assertIn("c18_player_runtime_evidence_gate.py", persistent_trial)
+        self.assertIn("public_thaw", persistent_trial)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)

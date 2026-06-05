@@ -1790,6 +1790,52 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         return 11 if not old_current else 10
 
     try:
+        post_health_identity = _player_runtime_identity(release_dir, manifest)
+    except Exception as e:
+        reason = f"post_health_identity_failed:{e}"
+        _quarantine_player_runtime_identity(state, identity, reason)
+        if not old_current:
+            state["current"] = None
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous" if old_current else "image_fallback",
+        }
+        _write_state(state)
+        _cleanup_unpromoted_release(release_dir)
+        _cleanup_stage(stage)
+        return 48
+    if (
+        post_health_identity["kiosk_py_sha256"] != identity["kiosk_py_sha256"]
+        or post_health_identity["tree_sha256"] != identity["tree_sha256"]
+    ):
+        reason = "candidate_identity_changed_after_health"
+        _quarantine_player_runtime_identity(state, identity, reason)
+        _quarantine_player_runtime_identity(state, post_health_identity, reason)
+        if not old_current:
+            state["current"] = None
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous" if old_current else "image_fallback",
+        }
+        _write_state(state)
+        _cleanup_unpromoted_release(release_dir)
+        _cleanup_stage(stage)
+        return 48
+    identity = post_health_identity
+
+    try:
         marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
     except Exception as e:
         reason = f"marker_write_failed:{e}"
@@ -1906,7 +1952,8 @@ def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -
     return 10
 
 
-def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback") -> int:
+def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
+                                      quarantine_current: bool = False) -> int:
     """Rollback player-runtime current->previous, or fall back to image."""
     if COMPONENT != "player-runtime":
         raise RuntimeError("player-runtime rollback path called for wrong component")
@@ -1916,17 +1963,36 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback") -> int:
     state = _read_state()
     cur_link = _read_symlink_target(CURRENT_LINK)
     prev_link = _read_symlink_target(PREVIOUS_LINK)
+    cur_identity: Optional[Dict[str, Any]] = None
+    if quarantine_current and cur_link:
+        cur_dir = APP_BASE / cur_link
+        cur_ok, _cur_info, cur_marker = _validate_player_runtime_marker(cur_dir, state)
+        if cur_ok:
+            cur_identity = {
+                "version": cur_marker.get("version"),
+                "payload_sha256": cur_marker.get("payload_sha256"),
+                "kiosk_py_sha256": cur_marker.get("kiosk_py_sha256"),
+                "tree_sha256": cur_marker.get("tree_sha256"),
+            }
 
     if prev_link:
         prev_dir = APP_BASE / prev_link
         ok, info, marker = _validate_player_runtime_marker(prev_dir, state)
         if ok:
             _atomic_symlink(prev_link, CURRENT_LINK)
-            if cur_link and cur_link != prev_link:
+            if cur_link and cur_link != prev_link and not quarantine_current:
                 _atomic_symlink(cur_link, PREVIOUS_LINK)
+            elif quarantine_current:
+                try:
+                    if PREVIOUS_LINK.is_symlink() or PREVIOUS_LINK.exists():
+                        PREVIOUS_LINK.unlink()
+                except OSError:
+                    pass
+                if cur_identity:
+                    _quarantine_player_runtime_identity(state, cur_identity, reason)
             rolled_to_version = prev_link.split("/")[-1] if "/" in prev_link else prev_link
             previous_entry = state.get("previous")
-            state["previous"] = state.get("current")
+            state["previous"] = None if quarantine_current else state.get("current")
             if isinstance(previous_entry, dict) and previous_entry.get("version") == rolled_to_version:
                 state["current"] = previous_entry
             else:
@@ -1945,6 +2011,7 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback") -> int:
                 "finished_at_utc": _utcnow_iso(),
                 "rollback_reason": reason,
                 "rolled_back_to": rolled_to_version,
+                "quarantined_current": bool(quarantine_current and cur_identity),
             }
             _write_state(state)
             return 0
@@ -1955,6 +2022,8 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback") -> int:
             CURRENT_LINK.unlink()
     except OSError:
         pass
+    if quarantine_current and cur_identity:
+        _quarantine_player_runtime_identity(state, cur_identity, reason)
     state["current"] = None
     state["last_operation"] = {
         "type": "rollback",
@@ -1963,6 +2032,7 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback") -> int:
         "finished_at_utc": _utcnow_iso(),
         "rollback_reason": reason,
         "rolled_back_to": "image_fallback",
+        "quarantined_current": bool(quarantine_current and cur_identity),
     }
     _write_state(state)
     return 0
