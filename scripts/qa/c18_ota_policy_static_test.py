@@ -66,6 +66,9 @@ EVIDENCE_CURRENT_DEEP_HEALTH_DIR = (
 EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T052805Z-1r-player-runtime-data-trial"
 )
+EVIDENCE_CURRENT_PLAYER_RUNTIME_ABA_TRIAL_DIR = (
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T060200Z-1r-player-runtime-data-aba-trial"
+)
 EVIDENCE_CURRENT_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
@@ -464,6 +467,157 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertEqual(counters["mmc_timeout_reset"], 0)
             self.assertEqual(counters["ext4_errors"], 0)
             self.assertEqual(counters["total_mpv_count"], 1)
+
+    def test_c18_current_player_runtime_data_previous_trial_evidence_is_public_and_passing(self) -> None:
+        evidence_dir = EVIDENCE_CURRENT_PLAYER_RUNTIME_ABA_TRIAL_DIR
+        result = subprocess.run(
+            [
+                "python3",
+                str(PLAYER_RUNTIME_EVIDENCE_GATE_PATH),
+                "--run-dir",
+                str(evidence_dir),
+                "--json",
+            ],
+            cwd=REPO_ROOT,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        gate = json.loads(result.stdout)
+        self.assertTrue(gate["passed"])
+        self.assertEqual(gate["errors"], [])
+
+        manifest = json.loads((evidence_dir / "evidence-manifest.json").read_text(encoding="utf-8"))
+        readme = json.loads((evidence_dir / "README.md").read_text(encoding="utf-8"))
+        lab_apply = json.loads((evidence_dir / "lab-apply.json").read_text(encoding="utf-8"))
+        lab_rollback = json.loads((evidence_dir / "lab-rollback.json").read_text(encoding="utf-8"))
+        before_adoption = json.loads(
+            (evidence_dir / "service-before-apply" / "launcher-adoption.json").read_text(encoding="utf-8")
+        )
+        restart_adoption = json.loads(
+            (evidence_dir / "service-after-restart" / "launcher-adoption.json").read_text(encoding="utf-8")
+        )
+        rollback_adoption = json.loads(
+            (evidence_dir / "service-after-rollback" / "launcher-adoption.json").read_text(encoding="utf-8")
+        )
+        release_gate = json.loads((evidence_dir / "package" / "player-runtime-release-gate.json").read_text(encoding="utf-8"))
+        marker = json.loads((evidence_dir / "verified-marker.json").read_text(encoding="utf-8"))
+
+        version_a = "c18.player-runtime-ab-a-20260605T055913Z-8edcd1c"
+        version_b = "c18.player-runtime-ab-b-20260605T055913Z-8edcd1c"
+
+        self.assertEqual(manifest["artifact_scope"], "player-runtime-persistent-data-lab-trial")
+        self.assertEqual(manifest["component"], "player-runtime")
+        self.assertEqual(manifest["channel"], "homologation")
+        self.assertEqual(manifest["source_commit"], "8edcd1ce4a2f1d92513ba55b6288c8169165af91")
+        self.assertEqual(manifest["rollback_expectation"], "data-previous")
+        self.assertEqual(manifest["version"], version_b)
+        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1r")
+        self.assertEqual(manifest["image_sha256"], EVIDENCE_CURRENT_IMAGE_SHA256)
+        self.assertEqual(
+            manifest["payload_sha256"],
+            "4185d7059087d79ba3bb16e52b1b5a3bfe50e4d3f83eadb131b6e7a256f7fe59",
+        )
+        self.assertEqual(release_gate["payload"]["kiosk_py_sha256"], marker["kiosk_py_sha256"])
+        self.assertEqual(release_gate["payload"]["tree_sha256"], marker["tree_sha256"])
+        self.assertEqual(marker["version"], version_b)
+        self.assertEqual(marker["tree_sha256"], restart_adoption["marker_tree_sha256"])
+        self.assertEqual(marker["kiosk_py_sha256"], restart_adoption["marker_kiosk_py_sha256"])
+        self.assertNotEqual(before_adoption["marker_tree_sha256"], marker["tree_sha256"])
+        self.assertNotEqual(before_adoption["marker_kiosk_py_sha256"], marker["kiosk_py_sha256"])
+
+        self.assertIn("rollback_to_data_previous", readme["claims"])
+        self.assertNotIn("rollback_to_image_fallback", readme["claims"])
+        self.assertNotIn("public_thaw", readme["claims"])
+        self.assertIn("public_thaw", readme["non_claims"])
+        self.assertIn("github_publish", readme["non_claims"])
+        self.assertIn("auto_pull", readme["non_claims"])
+        self.assertIn("stable_or_production", readme["non_claims"])
+        self.assertIn("power_loss_safety", readme["non_claims"])
+
+        self.assertTrue(before_adoption["passed"])
+        self.assertEqual(before_adoption["selected_source"], "data")
+        self.assertEqual(before_adoption["selected_version"], version_a)
+        self.assertEqual(before_adoption["current_link"], f"releases/{version_a}")
+        self.assertTrue(before_adoption["marker_valid"])
+        self.assertTrue(before_adoption["running_identity_matches_marker"])
+        self.assertEqual(before_adoption["data_process_count"], 1)
+        self.assertEqual(before_adoption["fallback_process_count"], 0)
+
+        self.assertTrue(lab_apply["device_data_root"])
+        self.assertEqual(lab_apply["rc"], 0)
+        self.assertFalse(lab_apply["github_used"])
+        self.assertFalse(lab_apply["network_required"])
+        self.assertEqual(lab_apply["public_cli_apply_still_frozen"]["returncode"], 44)
+        self.assertEqual(lab_apply["public_cli_reconcile_still_frozen"]["returncode"], 44)
+        self.assertEqual(lab_apply["before"]["current_link"], f"releases/{version_a}")
+        self.assertFalse(lab_apply["before"]["previous_exists"])
+        self.assertEqual(lab_apply["after"]["current_link"], f"releases/{version_b}")
+        self.assertEqual(lab_apply["after"]["previous_link"], f"releases/{version_a}")
+        self.assertEqual(lab_apply["after"]["state_current_version"], version_b)
+        self.assertEqual(lab_apply["after"]["state_previous_version"], version_a)
+
+        self.assertTrue(restart_adoption["passed"])
+        self.assertEqual(restart_adoption["selected_source"], "data")
+        self.assertEqual(restart_adoption["selected_version"], version_b)
+        self.assertEqual(restart_adoption["previous_link"], f"releases/{version_a}")
+        self.assertTrue(restart_adoption["marker_valid"])
+        self.assertTrue(restart_adoption["running_identity_matches_marker"])
+        self.assertEqual(restart_adoption["data_process_count"], 1)
+        self.assertEqual(restart_adoption["fallback_process_count"], 0)
+
+        rollback_operation = lab_rollback["operation"]
+        self.assertEqual(rollback_operation["rc"], 0)
+        self.assertEqual(rollback_operation["expected_rolled_to"], version_a)
+        self.assertEqual(rollback_operation["rolled_back_to"], version_a)
+        self.assertNotEqual(rollback_operation["rolled_back_to"], "image_fallback")
+        self.assertTrue(rollback_operation["quarantine_current"])
+        self.assertEqual(rollback_operation["before"]["current_link"], f"releases/{version_b}")
+        self.assertEqual(rollback_operation["before"]["previous_link"], f"releases/{version_a}")
+        self.assertEqual(rollback_operation["after"]["current_link"], f"releases/{version_a}")
+        self.assertFalse(rollback_operation["after"]["previous_exists"])
+        self.assertEqual(rollback_operation["after"]["state_current_version"], version_a)
+        self.assertIsNone(rollback_operation["after"]["state_previous_version"])
+        self.assertEqual(lab_rollback["public_cli_apply_still_frozen"]["returncode"], 44)
+        self.assertEqual(lab_rollback["public_cli_reconcile_still_frozen"]["returncode"], 44)
+        self.assertEqual(lab_rollback["public_cli_rollback_still_frozen"]["returncode"], 44)
+
+        self.assertTrue(rollback_adoption["passed"])
+        self.assertEqual(rollback_adoption["selected_source"], "data")
+        self.assertEqual(rollback_adoption["selected_version"], version_a)
+        self.assertEqual(rollback_adoption["current_link"], f"releases/{version_a}")
+        self.assertTrue(rollback_adoption["marker_valid"])
+        self.assertTrue(rollback_adoption["running_identity_matches_marker"])
+        self.assertEqual(rollback_adoption["data_process_count"], 1)
+        self.assertEqual(rollback_adoption["fallback_process_count"], 0)
+
+        for relative in (
+            "candidate-health/playback-deep-health-public.json",
+            "service-before-apply/playback-deep-health-public.json",
+            "service-after-restart/playback-deep-health-public.json",
+            "service-after-rollback/playback-deep-health-public.json",
+        ):
+            public = json.loads((evidence_dir / relative).read_text(encoding="utf-8"))
+            self.assertTrue(public["passed"], relative)
+            counters = public["counters"]
+            checks = public["checks"]
+            self.assertGreaterEqual(counters["samples"], 20)
+            self.assertGreaterEqual(counters["estimated_frame_positive_steps"], counters["estimated_frame_required_steps"])
+            self.assertEqual(counters["estimated_frame_failed_segments"], 0)
+            self.assertEqual(counters["estimated_frame_trailing_nonprogress_steps"], 0)
+            self.assertEqual(counters["hwdec_unexpected_samples"], 0)
+            self.assertEqual(counters["media_load_failed"], 0)
+            self.assertEqual(counters["mpv_restart"], 0)
+            self.assertEqual(counters["panfrost_faults"], 0)
+            self.assertEqual(counters["mmc_timeout_reset"], 0)
+            self.assertEqual(counters["ext4_errors"], 0)
+            self.assertEqual(counters["total_mpv_count"], 1)
+            self.assertTrue(checks["hwdec_no_unexpected"], relative)
+            self.assertTrue(checks["estimated_frame_present"], relative)
+            self.assertTrue(checks["playback_progressed"], relative)
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:

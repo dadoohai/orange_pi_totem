@@ -132,6 +132,54 @@ o proximo ensaio deve usa-los junto com `--rollback-expectation data-previous`.
 O evidence gate passa a comparar o `tree_sha256` do release gate com o marker
 adotado e a rejeitar uma evidencia A->B que volte para `image_fallback`.
 
+## Trial A->B->A persistente de player-runtime em `/data` (1r)
+
+Depois do primeiro trial persistente, foi executado um ensaio lab-only A->B->A
+com duas releases locais de `player-runtime`, ainda sem descongelar o CLI
+publico:
+
+- **Release A ja ativa em `/data`:**
+  `c18.player-runtime-ab-a-20260605T055913Z-8edcd1c`;
+- **Release B candidata:**
+  `c18.player-runtime-ab-b-20260605T055913Z-8edcd1c`;
+- **Componente/canal:** `player-runtime`, `homologation`;
+- **source_commit dos pacotes:** `8edcd1ce4a2f1d92513ba55b6288c8169165af91`;
+- **payload_sha256 de B:**
+  `4185d7059087d79ba3bb16e52b1b5a3bfe50e4d3f83eadb131b6e7a256f7fe59`;
+- **tree_sha256 de A:**
+  `8297de825b75cdec494fa0a9ec37f538046a8d2c6568a6c6b6ff6628194e2ba2`;
+- **tree_sha256 de B:**
+  `2e8aeb5e8ec90cd0555c59275cb670b03ca25349410dd8bc57ff9d3037431edc`;
+- **Imagem de base registrada no manifest:** `c18-hwdecode-lab-1r`,
+  sha256
+  `23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c`;
+- **Evidencia auditavel:**
+  `docs/evidence/c18-update-validation/20260605T060200Z-1r-player-runtime-data-aba-trial/`;
+- **Gate da evidencia:** `c18_player_runtime_evidence_gate.py` passou sobre os
+  bytes versionados, e `c18_ota_policy_static_test.py` fixa as assercoes
+  especificas de A->B->A.
+
+O que foi provado:
+
+- antes do apply, A estava ativa em `/data/player-runtime/current`, com marker
+  valido, identidade do processo batendo com o marker e deep-health
+  `passed=true`;
+- o apply lab-only promoveu B, registrou `previous=A` no symlink e no state,
+  e manteve o CLI publico congelado com `rc=44`;
+- apos restart, o servico adotou B por `/data`, com marker/hash validos,
+  1 processo de `/data`, 0 de fallback e deep-health `passed=true`;
+- o rollback lab-only usou `expected_rolled_to=A`, quarentenou B e retornou
+  para A como `previous` real, nao para `image_fallback`;
+- apos rollback e restart, o servico readotou A por `/data`, com deep-health
+  `passed=true`;
+- depois da coleta, a placa foi limpa com rollback lab-only adicional para
+  `image_fallback`; o launcher voltou a logar `kiosk_source=fallback`.
+
+O que este marco **nao** afirma: thaw publico, GitHub publish, auto-pull,
+stable/producao, cold-boot adoption, durabilidade sob corte de energia,
+power-loss no meio do apply/rollback, soak/endurance ou gate server-side de
+publicacao.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente

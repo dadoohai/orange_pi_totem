@@ -301,6 +301,15 @@ artefatos publicos de deep-health (`playback-samples.tsv`,
 playlist com path de canario, `raw/`, `extracted/`, paths de midia/config e
 padroes de segredo/URL/IP/MAC.
 
+Para uma evidencia A->B->A ser aceita como rollback para `previous` real, ela
+precisa declarar `rollback_expectation=data-previous`, conter
+`service-before-apply`, provar que A estava ativa e verificada em `/data`,
+provar que B tem `tree_sha256` distinto de A, registrar `previous_link`/state
+apontando para A apos o apply de B, e registrar rollback com
+`expected_rolled_to=A`, `rolled_back_to=A` e servico readotando A por marker
+valido. Retorno para `image_fallback` e sucesso operacional, mas nao conta como
+A->B->A.
+
 O builder local `scripts/deploy/build_player_runtime_release_package.sh` cria
 um pacote lab-only de `player-runtime` a partir do snapshot governado e roda
 `scripts/qa/c18_player_runtime_release_gate.py` antes de promover payload e

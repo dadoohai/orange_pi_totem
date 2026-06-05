@@ -1,0 +1,18 @@
+{
+  "channel": "homologation",
+  "deep_health": {
+    "artifact_id": "health",
+    "observed_kiosk_py_sha256": "35bd908b94b7b124f6dfd1fda79675d612a112493c4d4500671bd283c8e11ada",
+    "observed_tree_sha256": "2e8aeb5e8ec90cd0555c59275cb670b03ca25349410dd8bc57ff9d3037431edc",
+    "passed": true,
+    "schema": "dadooh.c18.playback.deep_health.v1"
+  },
+  "kiosk_py_sha256": "35bd908b94b7b124f6dfd1fda79675d612a112493c4d4500671bd283c8e11ada",
+  "payload_sha256": "4185d7059087d79ba3bb16e52b1b5a3bfe50e4d3f83eadb131b6e7a256f7fe59",
+  "schema": "dadooh.c18.player_runtime.verified.v1",
+  "source_commit": "8edcd1ce4a2f1d92513ba55b6288c8169165af91",
+  "tree_sha256": "2e8aeb5e8ec90cd0555c59275cb670b03ca25349410dd8bc57ff9d3037431edc",
+  "verdict": "verified",
+  "version": "c18.player-runtime-ab-b-20260605T055913Z-8edcd1c",
+  "written_at_utc": "2026-06-05T06:03:45Z"
+}

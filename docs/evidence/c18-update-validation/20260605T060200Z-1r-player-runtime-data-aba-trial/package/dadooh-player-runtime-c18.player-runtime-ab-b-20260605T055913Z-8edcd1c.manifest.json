@@ -1,0 +1,35 @@
+{
+  "channel": "homologation",
+  "component": "player-runtime",
+  "created_at_utc": "2026-06-05T05:59:14Z",
+  "entrypoint": "kiosk.py",
+  "health_checks": [
+    "player_runtime_release_gate",
+    "playback_deep_health",
+    "marker_identity_match"
+  ],
+  "lab_variant": "B",
+  "payload": "dadooh-player-runtime-c18.player-runtime-ab-b-20260605T055913Z-8edcd1c.tar.gz",
+  "payload_bytes": 25889,
+  "payload_sha256": "4185d7059087d79ba3bb16e52b1b5a3bfe50e4d3f83eadb131b6e7a256f7fe59",
+  "requires": {
+    "base_image_min": "c17.4.2",
+    "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+    "device": "orangepizero3",
+    "device_track": "c18-hwdecode",
+    "gpu_context": "drm",
+    "hwdec": "v4l2request-copy",
+    "media_stack_id": "c18-hwdecode-v4l2request-copy",
+    "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+    "vo": "gpu"
+  },
+  "schema": "dadooh.totem.update.v1",
+  "source_branch": "foundation-v0.1",
+  "source_commit": "8edcd1ce4a2f1d92513ba55b6288c8169165af91",
+  "source_dirty": false,
+  "source_repo": "dadoohai/orange_pi_totem",
+  "updates": [
+    "kiosk.py"
+  ],
+  "version": "c18.player-runtime-ab-b-20260605T055913Z-8edcd1c"
+}

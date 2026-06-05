@@ -159,6 +159,21 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   `/data`; o manifest de evidencia deste primeiro trial tambem nao registra
   `image_tag`/`image_sha256`, entao a vinculacao com a `1r` fica registrada
   nos docs e no contexto operacional, nao dentro do manifest do trial.
+- ensaio lab-only A->B->A de `player-runtime` em `/data` validado na `1r` com
+  pacotes locais `homologation`
+  `c18.player-runtime-ab-a-20260605T055913Z-8edcd1c` e
+  `c18.player-runtime-ab-b-20260605T055913Z-8edcd1c`;
+- evidencia auditavel do trial A->B->A:
+  `docs/evidence/c18-update-validation/20260605T060200Z-1r-player-runtime-data-aba-trial/`;
+- esse trial provou A ja ativa e verificada em `/data`, apply local de B,
+  adocao real de B pelo servico, deep-health de B, rollback lab-only com
+  quarentena de B e retorno para A como `previous` real em `/data`, com
+  deep-health aprovado apos rollback; o CLI publico continuou congelado com
+  `rc=44` em apply, rollback e reconcile.
+- nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
+  cold-boot, power-loss, soak nem comportamento sob corte de energia; ao fim da
+  validacao, a placa foi limpa por rollback lab-only adicional para
+  `image_fallback`, e o launcher voltou a selecionar `/opt`.
 
 ## Gates Antes De Thaw Do Player-Runtime
 
@@ -222,14 +237,18 @@ Antes de qualquer thaw de laboratorio:
 Passar esses gates ainda nao libera producao; apenas permite teste controlado
 de laboratorio.
 
-Depois do primeiro trial persistente bem-sucedido em `/data`, o proximo gate de
-laboratorio e um ensaio A->B que tenha uma release persistente anterior
-verificada e prove rollback para essa `previous` real, nao apenas para o
-fallback de imagem. Esse ensaio deve usar `--rollback-expectation data-previous`
-e preencher `--image-tag`, `--image-sha256` e, quando disponivel,
-`--image-marker-file`; o evidence gate deve falhar se o rollback cair em
-`image_fallback`, se faltar `service-before-apply`, ou se os `tree_sha256` de A
-e B forem indistinguiveis.
+O gate de laboratorio A->B com release persistente anterior verificada foi
+satisfeito pela evidencia `20260605T060200Z-1r-player-runtime-data-aba-trial`.
+Qualquer repeticao desse ensaio deve usar `--rollback-expectation
+data-previous` e preencher `--image-tag`, `--image-sha256` e, quando
+disponivel, `--image-marker-file`; o evidence gate deve falhar se o rollback
+cair em `image_fallback`, se faltar `service-before-apply`, ou se os
+`tree_sha256` de A e B forem indistinguiveis.
+
+Os proximos gates de laboratorio antes de qualquer thaw publico sao cold-boot
+adoption, comportamento sob interrupcao/power-loss durante apply/rollback e
+decisao explicita de como o fluxo sera promovido para homologacao sem publicar
+stable nem ligar auto-pull.
 
 ## Gates Antes De Stable
 

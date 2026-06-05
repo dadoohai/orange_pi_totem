@@ -23,6 +23,13 @@ servico usando `/data`, rollback com quarentena e retorno ao fallback de
 imagem. Ainda nao e thaw publico, GitHub publish, auto-pull, stable/producao,
 cold-boot/power-loss nem rollback A->B entre duas releases de `/data`.
 
+Trial lab-only A->B->A de `player-runtime` em `/data`:
+`docs/evidence/c18-update-validation/20260605T060200Z-1r-player-runtime-data-aba-trial/`.
+Ele prova uma release A ja ativa em `/data`, apply local da release B, adocao
+real de B pelo servico, deep-health, rollback com quarentena de B e retorno para
+A como `previous` real em `/data`. Ainda nao e thaw publico, GitHub publish,
+auto-pull, stable/producao, cold-boot/power-loss ou soak.
+
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:
 [docs/UPDATE_AUTHORIZATION_HEALTH.md](docs/UPDATE_AUTHORIZATION_HEALTH.md).
