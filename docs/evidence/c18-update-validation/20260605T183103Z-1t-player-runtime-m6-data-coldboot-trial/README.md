@@ -32,3 +32,5 @@ Operational notes:
   payload content without clearing quarantine.
 - Raw logs and temporary runtime directories were intentionally not archived in
   this evidence directory.
+- After this evidence was archived, the lab board was cleaned back to image
+  fallback (`selected_source=fallback`) with the public CLI still frozen.
