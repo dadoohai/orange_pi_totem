@@ -21,7 +21,7 @@ def load_current_golden() -> dict[str, Any]:
         if not isinstance(value, str) or not value:
             raise RuntimeError(f"current golden missing {key}")
     marker_sha = data.get("image_marker_sha256")
-    if marker_sha is not None and (not isinstance(marker_sha, str) or len(marker_sha) != 64):
+    if not isinstance(marker_sha, str) or len(marker_sha) != 64:
         raise RuntimeError("current golden invalid image_marker_sha256")
     return data
 

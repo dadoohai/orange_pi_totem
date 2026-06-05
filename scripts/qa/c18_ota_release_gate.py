@@ -28,6 +28,7 @@ CURRENT_GOLDEN = load_current_golden()
 CURRENT_COLDBOOT_EVIDENCE_DIR = str(CURRENT_GOLDEN["coldboot_evidence_dir"])
 CURRENT_GOLDEN_IMAGE_TAG = str(CURRENT_GOLDEN["image_tag"])
 CURRENT_GOLDEN_IMAGE_SHA256 = str(CURRENT_GOLDEN["image_sha256"])
+CURRENT_GOLDEN_IMAGE_MARKER_SHA256 = str(CURRENT_GOLDEN["image_marker_sha256"])
 PY_COMPILE_TARGETS = (
     "scripts/board/totem_config_contract_validate.py",
     "scripts/board/totem_config_writer_real.py",
@@ -551,7 +552,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--player-runtime-evidence-mode", choices=("baseline", "decisive"), default="baseline")
     parser.add_argument("--expect-image-tag", default=CURRENT_GOLDEN_IMAGE_TAG)
     parser.add_argument("--expect-image-sha256", default=CURRENT_GOLDEN_IMAGE_SHA256)
-    parser.add_argument("--expect-image-marker-sha256", default=None)
+    parser.add_argument("--expect-image-marker-sha256", default=CURRENT_GOLDEN_IMAGE_MARKER_SHA256)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 

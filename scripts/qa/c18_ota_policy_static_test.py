@@ -342,6 +342,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(CURRENT_GOLDEN["schema"], "dadooh.c18.current_golden.v1")
         self.assertEqual(CURRENT_GOLDEN["image_tag"], manifest["image_tag"])
         self.assertEqual(CURRENT_GOLDEN["image_sha256"], manifest["image_sha256"])
+        self.assertRegex(CURRENT_GOLDEN["image_marker_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(REPO_ROOT / CURRENT_GOLDEN["coldboot_evidence_dir"], EVIDENCE_CURRENT_DEEP_HEALTH_DIR)
         self.assertEqual(CURRENT_GOLDEN["image_marker_path"], EVIDENCE_CURRENT_IMAGE_MARKER_PATH)
         qa_dir = REPO_ROOT / "scripts" / "qa"
@@ -353,7 +354,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         spec.loader.exec_module(module)
         self.assertEqual(module.CURRENT_GOLDEN_IMAGE_TAG, CURRENT_GOLDEN["image_tag"])
         self.assertEqual(module.CURRENT_GOLDEN_IMAGE_SHA256, CURRENT_GOLDEN["image_sha256"])
+        self.assertEqual(module.CURRENT_GOLDEN_IMAGE_MARKER_SHA256, CURRENT_GOLDEN["image_marker_sha256"])
         self.assertEqual(module.CURRENT_COLDBOOT_EVIDENCE_DIR, CURRENT_GOLDEN["coldboot_evidence_dir"])
+        previous_argv = sys.argv[:]
+        try:
+            sys.argv = ["c18_ota_release_gate.py"]
+            parsed = module.parse_args()
+        finally:
+            sys.argv = previous_argv
+        self.assertEqual(parsed.expect_image_marker_sha256, CURRENT_GOLDEN["image_marker_sha256"])
 
     def test_c18_release_gate_player_runtime_decisive_mode_is_explicit(self) -> None:
         qa_dir = REPO_ROOT / "scripts" / "qa"
@@ -363,6 +372,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         assert spec and spec.loader
         spec.loader.exec_module(module)
+        self.assertEqual(module.CURRENT_GOLDEN_IMAGE_MARKER_SHA256, CURRENT_GOLDEN["image_marker_sha256"])
         baseline_args = SimpleNamespace(
             player_runtime_evidence_mode="baseline",
             player_runtime_data_coldboot_evidence_dir=None,
