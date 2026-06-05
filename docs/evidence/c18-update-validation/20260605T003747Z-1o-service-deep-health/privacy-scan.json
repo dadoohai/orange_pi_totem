@@ -1,0 +1,50 @@
+{
+  "schema": "dadooh.c18.evidence.privacy_scan.v1",
+  "result": "passed",
+  "scan_counts": {
+    "api_key": 0,
+    "api_url": 0,
+    "environment_id": 0,
+    "token_secret_password_ssid": 0,
+    "url": 0,
+    "ipv4": 0,
+    "mac": 0
+  },
+  "files": [
+    {
+      "file": "deep-health-kernel.json",
+      "bytes": 73,
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274"
+    },
+    {
+      "file": "deep-health-player-counters.json",
+      "bytes": 49,
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "file": "deep-health-process.json",
+      "bytes": 114,
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "file": "deep-health-systemd.json",
+      "bytes": 115,
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
+    },
+    {
+      "file": "playback-deep-health-public.json",
+      "bytes": 2051,
+      "sha256": "3a7d62dc1eb16aa40ec6aa628dc901e153f04da40532f46697ddf71d8a27be12"
+    },
+    {
+      "file": "playback-samples.tsv",
+      "bytes": 28643,
+      "sha256": "970615265c872d24df2a849d769f0897b8ef1234cfb273376ca91bf81dd547ef"
+    },
+    {
+      "file": "status-samples.ndjson",
+      "bytes": 11640,
+      "sha256": "90d0dc45df11fad17fdffcc23057a1d35e840a962d927e3fb2386dc31118a120"
+    }
+  ]
+}

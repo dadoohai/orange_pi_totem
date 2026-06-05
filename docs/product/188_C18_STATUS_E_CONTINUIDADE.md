@@ -3,18 +3,18 @@
 Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém retome o trabalho **do zero**, após uma compactação de contexto, usando apenas fatos verificados.
 
 > **Nota de continuidade 2026-06-04:** a golden atual de laboratório/delivery
-> para C18 passou a ser **`c18-hwdecode-lab-1n`**,
-> sha256 `29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`.
+> para C18 passou a ser **`c18-hwdecode-lab-1o`**,
+> sha256 `07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164`.
 > O estado runtime de referência do marco aplica por cima a release OTA manual
 > `totem-core`
 > `c18.ota-core-config-missing-20260603T150429Z-2a7a327`.
 > Este doc preserva histórico da `1d`; para o baseline live/golden e contrato
 > OTA atual, consultar também `docs/product/189_C18_OTA_READINESS_GATE.md` e
 > `docs/UPDATE_CONTRACT.md`.
-> `1k`/`1l`/`1m` permanecem como golden historicas anteriores. A `1n` valida em hardware a
-> fundação de thaw seguro do `player-runtime` com reconcile no boot e gate
-> semantico endurecido, mas `player-runtime` continua congelado no fluxo publico
-> (`rc=44`).
+> `1k`/`1l`/`1m`/`1n` permanecem como golden historicas anteriores. A `1o`
+> valida em hardware o reconcile de manutencao autorizado no boot, o gate de
+> evidencia sanitizada e o playback/deep-health com config real; `player-runtime`
+> continua congelado no fluxo publico (`rc=44`).
 
 ---
 
@@ -200,9 +200,9 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 1. Continuar a frente de governanca de atualizacoes: `totem-core` OTA manual ja
    validado; `player-runtime` so avanca em thaw controlado, ainda congelado para
    producao;
-2. `c18-hwdecode-lab-1n` e a golden de laboratorio/delivery atual: mantem o
-   fechamento pre-thaw da `1l` e valida em hardware os follow-ups pos-auditoria
-   de deep-health, freeze simetrico de rollback e documentacao/gates;
+2. `c18-hwdecode-lab-1o` e a golden de laboratorio/delivery atual: mantem os
+   fechamentos pre-thaw anteriores e valida em hardware os follow-ups de
+   reconcile autorizado, evidencia sanitizada e deep-health com config real;
 3. **Rebuild GCC-12 de produção;**
 4. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 

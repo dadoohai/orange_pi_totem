@@ -57,6 +57,9 @@ DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md
 DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
 DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
 DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
+EVIDENCE_1O_DEEP_HEALTH_DIR = (
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T003747Z-1o-service-deep-health"
+)
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
     REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
@@ -265,9 +268,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
 
-    def test_c18_docs_keep_1n_as_current_golden(self) -> None:
-        current_tag = "c18-hwdecode-lab-1n"
-        current_sha = "29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c"
+    def test_c18_docs_keep_1o_as_current_golden(self) -> None:
+        current_tag = "c18-hwdecode-lab-1o"
+        current_sha = "07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164"
+        legacy_sha_1n = "29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c"
         legacy_sha_1m = "d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c"
         legacy_sha_1l = "146b430972b61523cf943f467b94ccf56697843a48147ec5b1839db3583b1ad3"
         legacy_sha_1j = "995d0a90e6449f8f8e8e58f788fb38ba9196dacb4312cb28ecbd6041cda1c152"
@@ -287,10 +291,34 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("partir da imagem `1l`", doc189)
         self.assertNotIn("Tratar `c18-hwdecode-lab-1m` como baseline", doc189)
         self.assertIn(legacy_sha_1m, doc189)
+        self.assertIn(legacy_sha_1n, doc189)
+        self.assertIn("20260605T003747Z-1o-service-deep-health", doc189)
         doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
         self.assertNotIn(legacy_sha_1l, doc188_top)
         doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]
         self.assertNotIn(legacy_sha_1j, doc190_top)
+
+    def test_c18_1o_hardware_evidence_is_public_and_passing(self) -> None:
+        public = json.loads((EVIDENCE_1O_DEEP_HEALTH_DIR / "playback-deep-health-public.json").read_text(encoding="utf-8"))
+        privacy = json.loads((EVIDENCE_1O_DEEP_HEALTH_DIR / "privacy-scan.json").read_text(encoding="utf-8"))
+        self.assertEqual(public["schema"], "dadooh.c18.playback.deep_health.v1")
+        self.assertTrue(public["passed"])
+        self.assertEqual(public["failure_reasons"], [])
+        counters = public["counters"]
+        self.assertGreaterEqual(counters["samples"], 20)
+        self.assertEqual(counters["hwdec_expected_samples"], counters["samples"])
+        self.assertEqual(counters["hwdec_unexpected_samples"], 0)
+        self.assertTrue(counters["estimated_frame_progressed"])
+        self.assertEqual(counters["media_load_failed"], 0)
+        self.assertEqual(counters["mpv_restart"], 0)
+        self.assertEqual(counters["nrestarts_delta"], 0)
+        self.assertEqual(counters["panfrost_faults"], 0)
+        self.assertEqual(counters["mmc_timeout_reset"], 0)
+        self.assertEqual(counters["ext4_errors"], 0)
+        self.assertEqual(counters["total_mpv_count"], 1)
+        self.assertEqual(privacy["schema"], "dadooh.c18.evidence.privacy_scan.v1")
+        self.assertEqual(privacy["result"], "passed")
+        self.assertTrue(all(value == 0 for value in privacy["scan_counts"].values()))
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:

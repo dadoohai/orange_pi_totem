@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1n`.
+golden atual `1o`.
 
 ## Decisão
 
@@ -17,15 +17,15 @@ golden atual `1n`.
   `apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem`
   e exige policy presente.
 
-## Golden atual (2026-06-04)
+## Golden atual (2026-06-05)
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1n`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1o`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1n_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1o_minimal.img`;
 - **sha256:**
-  `29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`;
+  `07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -38,16 +38,19 @@ Marco de referência para continuidade C18/delivery:
   `vo-configured=true`, `NRestarts=0`;
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
+- **Evidencia hardware 1o:** `docs/evidence/c18-update-validation/20260605T003747Z-1o-service-deep-health/`,
+  com deep-health de servico `passed=true` apos config real escrita do seed.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1n`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1o`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `1k`, `1l` e `1m` permanecem como golden historicas anteriores. A `1n`
-valida em hardware o follow-up pos-1m: excecao no health hook interno de
-`player-runtime` rejeita candidato, preserva `current` e limpa stage/release.
-O `player-runtime` continua congelado no fluxo publico (`rc=44`).
+Nota: `1k`, `1l`, `1m` e `1n` permanecem como golden historicas anteriores. A
+`1o` valida em hardware o follow-up pos-1n: `reconcile --component
+player-runtime` volta a ser congelado no comando publico, o boot usa manutencao
+explicitamente autorizada e a evidencia de deep-health passa a ser gate
+auditavel. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
 ## Promocao 1m (offline + hardware)
 
@@ -424,12 +427,14 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1n` como baseline de laboratorio validada para a
+1. Tratar `c18-hwdecode-lab-1o` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
 2. Fluxo manual de release GitHub `totem-core` validado na 1n com mudanca real
-   de aplicacao, rollback e reapply. Proximas mudancas de wizard/core devem
-   seguir este gate antes de aplicar em placa, mantendo auto-pull desligado e
-   `kiosky-player`/`player-runtime` congelados ate thaw explicito.
+   de aplicacao, rollback e reapply; a 1o herda esse contrato e adiciona a
+   validacao de imagem/deep-health com evidencia auditavel. Proximas mudancas de
+   wizard/core devem seguir este gate antes de aplicar em placa, mantendo
+   auto-pull desligado e `kiosky-player`/`player-runtime` congelados ate thaw
+   explicito.
 3. Proxima frente da jornada de delivery: preparar a liberacao controlada de
    `player-runtime` sem descongelar producao. Frentes de display, Wi-Fi aberta,
    cursor/UX de wizard e acesso de manutencao ficam adiadas ate o delivery estar
@@ -626,7 +631,7 @@ validacao em placa. A candidata offline gerada e validada em hardware foi:
 - **Status:** promovida a golden de laboratorio/delivery; ainda
   `final_image=false`, nao stable e nao batch de producao.
 
-## Candidata 1o (offline, pos-guard/evidence-gate)
+## Promocao 1o (offline + hardware, pos-guard/evidence-gate)
 
 Apos a golden `1n`, o commit `b766b4a` fechou a lacuna de governanca do
 `reconcile --component player-runtime`: o comando publico volta a ficar
@@ -636,8 +641,8 @@ congelado com `rc=44`, e a higiene de boot passa a exigir autorizacao explicita
 sanitizada para o proximo ensaio persistente de `player-runtime`.
 
 Por tocar `totem_updatectl.py`, drop-in systemd e scripts de deep-health, essa
-rodada exige nova imagem antes de validacao em placa. A candidata offline gerada
-foi:
+rodada exigiu nova imagem antes de validacao em placa. A candidata offline
+gerada e validada em hardware foi:
 
 - **Imagem candidata:** `c18-hwdecode-lab-1o`;
 - **Arquivo:**
@@ -648,6 +653,14 @@ foi:
   `artifact_promoted=true`, `totem_core_ota_ready=true`,
   `player_runtime_ota_still_frozen=true`, `player_runtime_release_gate_passed=true`,
   `player_runtime_sandbox_passed=true`, `ready_for_manual_card_flash=true`;
-- **Status:** candidata offline pronta para gravacao/validacao curta em placa.
-  Ainda nao e golden; a golden permanece `c18-hwdecode-lab-1n` ate a `1o`
-  passar hardware.
+- **Validacao hardware:** marker `1o`, policy restrita a `totem-core`, timer
+  desligado, service de update apontando para `totem-core`, `reconcile` no
+  `kiosky-player.service` com autorizacao explicita de manutencao, config real
+  escrita via writer a partir do seed, player fallback de imagem ativo,
+  `kiosky-player` e `player-runtime` bloqueados com `rc=44` no fluxo publico,
+  e deep-health de servico `passed=true` com progresso de frame,
+  `hwdec-current=v4l2request-copy`, `media_load_failed=0`, `mpv_restart=0`,
+  `NRestarts_delta=0`, panfrost/mmc/ext4 `0`.
+- **Evidencia auditavel:** `docs/evidence/c18-update-validation/20260605T003747Z-1o-service-deep-health/`.
+- **Status:** promovida a golden de laboratorio/delivery; ainda
+  `final_image=false`, nao stable e nao batch de producao.

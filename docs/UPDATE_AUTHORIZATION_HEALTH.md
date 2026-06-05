@@ -115,11 +115,11 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 ## Status Atual
 
-Baseline de laboratorio/delivery registrado em 2026-06-04:
+Baseline de laboratorio/delivery registrado em 2026-06-05:
 
-- imagem golden: `c18-hwdecode-lab-1n`;
+- imagem golden: `c18-hwdecode-lab-1o`;
 - sha256:
-  `29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c`;
+  `07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -129,9 +129,11 @@ Baseline de laboratorio/delivery registrado em 2026-06-04:
 - `kiosky-player` e `player-runtime` ainda congelados no fluxo publico;
 - player esperado pelo fallback da imagem, com HW decode
   `v4l2request-copy`, `vo-configured=true`, `NRestarts=0`;
-- deep-health real em hardware validado apos config real + OTA de core:
+- deep-health real em hardware validado apos config real:
   progresso de frame presente/avancando, `media_load_failed=0`,
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
+- evidencia auditavel da 1o:
+  `docs/evidence/c18-update-validation/20260605T003747Z-1o-service-deep-health/`.
 - ensaio lab-only de `player-runtime` em hardware validado com pacote local
   `homologation` do commit `3af11d4`, `data_root` temporario em `/tmp`,
   candidato isolado com canario local, `github_used=false`,
