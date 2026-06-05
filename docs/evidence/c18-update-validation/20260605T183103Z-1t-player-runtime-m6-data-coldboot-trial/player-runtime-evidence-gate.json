@@ -1,5 +1,10 @@
 {
-  "errors": [],
+  "current_contract_errors": [
+    "package_manifest_updater_features"
+  ],
+  "errors": [
+    "historical_old_contract_gate_result"
+  ],
   "files": [
     "README.md",
     "candidate-health/deep-health-kernel.json",
@@ -41,6 +46,8 @@
     "service-before-apply/status-samples.ndjson",
     "verified-marker.json"
   ],
-  "passed": true,
+  "historical_gate_passed": true,
+  "historical_note": "This file was produced by an older evidence gate before player-runtime manifests required c18-player-runtime-verify-then-promote-v1. It is retained as historical evidence only; rerun the current gate on player-runtime-data-evidence for current authorization.",
+  "passed": false,
   "schema": "dadooh.c18.player_runtime.evidence_gate.v1"
 }

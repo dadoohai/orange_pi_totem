@@ -75,6 +75,13 @@ EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
 EVIDENCE_CURRENT_PLAYER_RUNTIME_ABA_TRIAL_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T060200Z-1r-player-runtime-data-aba-trial"
 )
+EVIDENCE_CURRENT_PLAYER_RUNTIME_M6_TRIAL_DIR = (
+    REPO_ROOT
+    / "docs"
+    / "evidence"
+    / "c18-update-validation"
+    / "20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial"
+)
 EVIDENCE_CURRENT_IMAGE_SHA256 = str(CURRENT_GOLDEN["image_sha256"])
 EVIDENCE_CURRENT_IMAGE_TAG = str(CURRENT_GOLDEN["image_tag"])
 EVIDENCE_CURRENT_IMAGE_MARKER_PATH = str(CURRENT_GOLDEN["image_marker_path"])
@@ -869,6 +876,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         ):
             public = json.loads((evidence_dir / relative).read_text(encoding="utf-8"))
             self.assertTrue(public["passed"], relative)
+
             counters = public["counters"]
             checks = public["checks"]
             self.assertGreaterEqual(counters["samples"], 20)
@@ -885,6 +893,22 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertTrue(checks["hwdec_no_unexpected"], relative)
             self.assertTrue(checks["estimated_frame_present"], relative)
             self.assertTrue(checks["playback_progressed"], relative)
+
+    def test_c18_historical_m6_gate_artifact_is_fail_closed_for_current_contract(self) -> None:
+        evidence_dir = EVIDENCE_CURRENT_PLAYER_RUNTIME_M6_TRIAL_DIR
+        readme = (evidence_dir / "README.md").read_text(encoding="utf-8")
+        summary = json.loads((evidence_dir / "m6-summary.json").read_text(encoding="utf-8"))
+        archived_gate = json.loads((evidence_dir / "player-runtime-evidence-gate.json").read_text(encoding="utf-8"))
+
+        self.assertFalse(summary["passed"])
+        self.assertTrue(summary["m6_checks_passed"])
+        self.assertTrue(summary["release_gate_deferred"])
+        self.assertFalse(archived_gate["passed"])
+        self.assertTrue(archived_gate["historical_gate_passed"])
+        self.assertIn("historical_old_contract_gate_result", archived_gate["errors"])
+        self.assertIn("package_manifest_updater_features", archived_gate["current_contract_errors"])
+        self.assertIn("historical_gate_passed=true", readme)
+        self.assertIn("must not be reused as current", readme)
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:
@@ -1162,6 +1186,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"m6_checks_passed": True', m6_trial)
         self.assertIn('"passed": release_gate.get("passed") is True', m6_trial)
         self.assertIn("package_manifest_missing_player_runtime_updater_feature", m6_trial)
+        self.assertIn("package_manifest_unsupported_updater_features", m6_trial)
 
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)
@@ -1169,6 +1194,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("load_current_golden", lab_thaw)
         self.assertIn("lab_thaw_only_accepts_lab_or_homologation_channel", lab_thaw)
         self.assertIn("manifest_missing_player_runtime_verify_then_promote_feature", lab_thaw)
+        self.assertIn("manifest_unsupported_updater_features", lab_thaw)
         self.assertIn("release_gate_deferred", lab_thaw)
         self.assertIn('"public_cli_thawed": False', lab_thaw)
         self.assertIn('"github_used": False', lab_thaw)
@@ -1212,6 +1238,28 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             module.validate_package_repo_identity({"source_commit": source_commit}, repo_info, "manifest_b")
             with self.assertRaises(RuntimeError):
                 module.validate_package_repo_identity({"source_commit": "c" * 40}, repo_info, "manifest_b")
+            package_manifest = {
+                "component": "player-runtime",
+                "version": "runtime-m6-test",
+                "source_dirty": False,
+                "source_commit": source_commit,
+                "requires": {
+                    "updater_features": [
+                        "c18-freeze-kiosky-player-v1",
+                        "c18-rollback-reapply-v1",
+                        "c18-safe-payload-v1",
+                        "c18-track-v1",
+                        "c18-player-runtime-verify-then-promote-v1",
+                    ],
+                },
+            }
+            package_path = Path(tmp) / "package.manifest.json"
+            package_path.write_text(json.dumps(package_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            self.assertEqual(module.package_manifest(package_path)["version"], "runtime-m6-test")
+            package_manifest["requires"]["updater_features"].append("unknown-player-runtime-feature")
+            package_path.write_text(json.dumps(package_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "unsupported_updater_features"):
+                module.package_manifest(package_path)
 
     def test_lab_thaw_wrapper_rejects_unguarded_and_bad_manifests(self) -> None:
         spec = importlib.util.spec_from_file_location("c18_lab_thaw_policy_test", PLAYER_RUNTIME_LAB_THAW_PATH)
@@ -1267,6 +1315,13 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             manifest["requires"]["updater_features"] = []
             manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "verify_then_promote"):
+                module.load_manifest(manifest_path)
+            manifest["requires"]["updater_features"] = [
+                "c18-player-runtime-verify-then-promote-v1",
+                "unknown-player-runtime-feature",
+            ]
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "unsupported_updater_features"):
                 module.load_manifest(manifest_path)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:

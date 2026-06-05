@@ -32,6 +32,8 @@ LAB_ENV = "C18_PLAYER_RUNTIME_LAB_THAW"
 M6_ENV = "C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL"
 DEVICE_DATA_ENV = "C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT"
 SCHEMA = "dadooh.c18.player_runtime.lab_thaw.v1"
+REQUIRED_UPDATER_FEATURES = release_gate.REQUIRED_UPDATER_FEATURES
+SUPPORTED_UPDATER_FEATURES = release_gate.SUPPORTED_UPDATER_FEATURES
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -87,11 +89,15 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if not isinstance(requires, dict):
         raise RuntimeError("manifest_requires_missing")
     features = requires.get("updater_features")
-    if (
-        not isinstance(features, list)
-        or "c18-player-runtime-verify-then-promote-v1" not in features
-    ):
+    if not isinstance(features, list):
         raise RuntimeError("manifest_missing_player_runtime_verify_then_promote_feature")
+    feature_set = set(features)
+    missing_features = sorted(REQUIRED_UPDATER_FEATURES - feature_set)
+    if missing_features:
+        raise RuntimeError("manifest_missing_player_runtime_verify_then_promote_feature")
+    unsupported_features = sorted(feature_set - SUPPORTED_UPDATER_FEATURES)
+    if unsupported_features:
+        raise RuntimeError("manifest_unsupported_updater_features:" + ",".join(unsupported_features))
     return data
 
 

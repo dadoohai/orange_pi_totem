@@ -47,7 +47,16 @@ SCHEMA = "dadooh.c18.player_runtime.m6_coldboot_trial.v1"
 TRANSITION_FLOW = "C18-M6-PLAYER-RUNTIME-DATA-COLDBOOT"
 MECHANICAL_ACTION = "operator_controlled_reboot"
 REPO_IDENTITY_FILE = "repo-identity.json"
-REQUIRED_UPDATER_FEATURE = "c18-player-runtime-verify-then-promote-v1"
+SUPPORTED_UPDATER_FEATURES = {
+    "c18-freeze-kiosky-player-v1",
+    "c18-rollback-reapply-v1",
+    "c18-safe-payload-v1",
+    "c18-track-v1",
+    "c18-player-runtime-verify-then-promote-v1",
+}
+REQUIRED_UPDATER_FEATURES = {
+    "c18-player-runtime-verify-then-promote-v1",
+}
 
 
 def require_guard(args: argparse.Namespace) -> None:
@@ -118,11 +127,15 @@ def package_manifest(path: Path) -> dict[str, Any]:
         raise RuntimeError("package_manifest_source_dirty")
     requires = data.get("requires")
     features = requires.get("updater_features") if isinstance(requires, dict) else None
-    if (
-        not isinstance(features, list)
-        or REQUIRED_UPDATER_FEATURE not in features
-    ):
+    if not isinstance(features, list):
         raise RuntimeError("package_manifest_missing_player_runtime_updater_feature")
+    feature_set = set(features)
+    missing_features = sorted(REQUIRED_UPDATER_FEATURES - feature_set)
+    if missing_features:
+        raise RuntimeError("package_manifest_missing_player_runtime_updater_feature")
+    unsupported_features = sorted(feature_set - SUPPORTED_UPDATER_FEATURES)
+    if unsupported_features:
+        raise RuntimeError("package_manifest_unsupported_updater_features:" + ",".join(unsupported_features))
     return data
 
 
