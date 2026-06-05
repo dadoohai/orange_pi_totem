@@ -322,12 +322,15 @@ O cold-boot gate prova consistencia interna e cadeia de handoff dos artefatos,
 nao autenticidade criptografica contra operador malicioso. Sem pre-state
 mecanico, a evidencia pode continuar util como smoke de servico, mas nao deve
 ser usada como prova decisoria de cold-boot ou de adocao por `/data`.
-Evidencia que seleciona `/data` deve falhar fechado se tentar passar pelo modo
-fraco: o gate exige pre-state forte e uma identidade de imagem esperada
-(`--expect-image-tag` ou `--expect-image-marker-sha256`) antes de aceitar
-`selected_source=data`. Essa mesma evidencia cold-boot `/data` tambem deve
-trazer `source_commit`, `repo_commit`, `repo_tree` e `repo_dirty=false` no
-`evidence-manifest.json`; `repo_commit` deve casar com `source_commit`.
+Evidencia que seleciona ou demonstra `/data` deve falhar fechado se tentar
+passar pelo modo fraco: o gate deriva essa condicao de `selected_source=data`,
+do probe de adocao ou de `data_current_marker_verified=true`, mesmo quando a
+chamada usa `--expect-selected-source=any`. Nesse caso, o gate exige pre-state
+forte e uma identidade de imagem esperada (`--expect-image-tag` ou
+`--expect-image-marker-sha256`) antes de aceitar a evidencia. Essa mesma
+evidencia cold-boot `/data` tambem deve trazer `source_commit`, `repo_commit`,
+`repo_tree` e `repo_dirty=false` no `evidence-manifest.json`; `repo_commit`
+deve casar com `source_commit`.
 
 Se a evidencia reivindicar adocao de `/data/player-runtime/current`, ela tambem
 precisa incluir `launcher-adoption.json` do probe de adocao real, com processo
@@ -337,7 +340,17 @@ evidencia tambem deve registrar identidade do repo (`repo_commit`, `repo_tree`,
 para reduzir drift entre repo, imagem gerada e placa validada. Em trials novos,
 `repo_commit` deve casar com o `source_commit` do pacote sob teste; o gate de
 evidencia de `player-runtime` exige esses campos e tambem exige
-`image_tag`/`image_sha256`/marker `/etc/dadooh`.
+`image_tag`/`image_sha256`/marker `/etc/dadooh`. Em rodadas decisivas, o mesmo
+gate deve ser invocado com `--expect-image-tag`, `--expect-image-sha256` e/ou
+`--expect-image-marker-sha256` pinados a golden esperada; presenca/shape de
+imagem serve apenas para leitura historica ou trial warm nao decisivo.
+O `c18_ota_release_gate.py` possui um slot explicito para o M-6:
+`--player-runtime-data-coldboot-evidence-dir` roda o coldboot gate com
+`--expect-selected-source=data` e `--require-pre-state`, e
+`--player-runtime-data-evidence-dir` roda o gate de evidencia `player-runtime`
+com `--expect-image-*` pinado a golden do release gate. Sem esses diretorios,
+o release gate valida apenas o baseline/fallback historico, nao prova cold-boot
+`/data` decisivo.
 
 Interrupcao/power-loss durante apply/rollback de `player-runtime` deve ser
 provada em duas camadas. A camada offline usa fault-injection no caminho real do

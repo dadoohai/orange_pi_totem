@@ -370,16 +370,25 @@ def validate_boot_state(
     selected = player.get("selected_source")
     if expect_source != "any" and selected != expect_source:
         fail(errors, f"selected_source_mismatch:{selected}")
-    data_source_claimed = selected == "data" or expect_source == "data"
+    adoption_claims_data = isinstance(adoption, dict) and adoption.get("selected_source") == "data"
+    verified_data_current_present = player.get("data_current_marker_verified") is True
+    data_source_claimed = (
+        selected == "data"
+        or expect_source == "data"
+        or adoption_claims_data
+        or verified_data_current_present
+    )
     if data_source_claimed and not require_pre_state:
         fail(errors, "data_source_requires_pre_state")
     if data_source_claimed and not (expect_image_tag or expect_image_marker_sha256):
         fail(errors, "data_source_requires_expected_image_identity")
     if data_source_claimed:
         validate_data_source_repo_identity(evidence_manifest or {}, errors)
-    if expect_source == "data" and player.get("current_present") is not True:
+        if selected != "data":
+            fail(errors, f"data_source_label_mismatch:{selected}")
+    if data_source_claimed and player.get("current_present") is not True:
         fail(errors, "data_current_missing")
-    if expect_source == "data":
+    if data_source_claimed:
         if player.get("data_current_marker_verified") is not True:
             fail(errors, "data_current_marker_not_verified")
         if not isinstance(adoption, dict) or not adoption:
@@ -824,6 +833,35 @@ def self_test() -> int:
         if not result["passed"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
+
+        write_fixture(boot_path, source="fallback")
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad["player_runtime"]["current_present"] = True
+        bad["player_runtime"]["data_current_kiosk_present"] = True
+        bad["player_runtime"]["data_current_marker_verified"] = True
+        bad["player_runtime"]["data_current_marker_reason"] = "verified"
+        bad["player_runtime"]["selected_source"] = "fallback"
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        write_coldboot_manifest_fixture(root)
+        result = validate(root, None, expect_source="any")
+        if result["passed"] or "data_source_requires_pre_state" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        result = validate(root, None, expect_source="any", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
+        if result["passed"] or "data_source_label_mismatch:fallback" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_fixture(boot_path, source="fallback")
+        refresh_fixture_pre_state_hash(root)
+        write_adoption_fixture(root / "launcher-adoption.json")
+        write_coldboot_manifest_fixture(root)
+        result = validate(root, None, expect_source="any", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
+        if result["passed"] or "data_source_label_mismatch:fallback" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        (root / "launcher-adoption.json").unlink()
 
         write_fixture(boot_path, source="data")
         refresh_fixture_pre_state_hash(root)

@@ -23,6 +23,8 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CURRENT_COLDBOOT_EVIDENCE_DIR = "docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health"
+CURRENT_GOLDEN_IMAGE_TAG = "c18-hwdecode-lab-1t"
+CURRENT_GOLDEN_IMAGE_SHA256 = "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6"
 PY_COMPILE_TARGETS = (
     "scripts/board/totem_config_contract_validate.py",
     "scripts/board/totem_config_writer_real.py",
@@ -145,6 +147,47 @@ def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]
         "stdout_tail": proc.stdout[-4000:],
         "stderr_tail": proc.stderr[-4000:],
     }
+
+
+def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> list[dict[str, Any]]:
+    steps: list[dict[str, Any]] = []
+    image_marker_arg: list[str] = []
+    if args.expect_image_marker_sha256:
+        image_marker_arg = ["--expect-image-marker-sha256", args.expect_image_marker_sha256]
+    if args.player_runtime_data_coldboot_evidence_dir is not None:
+        steps.append(run_step(
+            "c18_player_runtime_data_coldboot_evidence",
+            [
+                "python3",
+                "scripts/qa/c18_coldboot_evidence_gate.py",
+                "--run-dir",
+                str(args.player_runtime_data_coldboot_evidence_dir),
+                "--expect-selected-source",
+                "data",
+                "--require-pre-state",
+                "--expect-image-tag",
+                args.expect_image_tag,
+                *image_marker_arg,
+                "--json",
+            ],
+        ))
+    if args.player_runtime_data_evidence_dir is not None:
+        steps.append(run_step(
+            "c18_player_runtime_data_evidence",
+            [
+                "python3",
+                "scripts/qa/c18_player_runtime_evidence_gate.py",
+                "--run-dir",
+                str(args.player_runtime_data_evidence_dir),
+                "--expect-image-tag",
+                args.expect_image_tag,
+                "--expect-image-sha256",
+                args.expect_image_sha256,
+                *image_marker_arg,
+                "--json",
+            ],
+        ))
+    return steps
 
 
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
@@ -377,6 +420,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-ref", default=os.environ.get("C18_OTA_BASE_REF") or None)
     parser.add_argument("--sandbox", type=Path, default=None)
     parser.add_argument("--evidence-dir", type=Path, default=None)
+    parser.add_argument("--player-runtime-data-coldboot-evidence-dir", type=Path, default=None)
+    parser.add_argument("--player-runtime-data-evidence-dir", type=Path, default=None)
+    parser.add_argument("--expect-image-tag", default=CURRENT_GOLDEN_IMAGE_TAG)
+    parser.add_argument("--expect-image-sha256", default=CURRENT_GOLDEN_IMAGE_SHA256)
+    parser.add_argument("--expect-image-marker-sha256", default=None)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -391,7 +439,11 @@ def main() -> int:
         steps.append(run_step(f"bash_syntax:{target}", ["bash", "-n", target]))
     steps.append(player_runtime_diff_guard(args.base_ref))
     for name, cmd in TEST_COMMANDS:
-        steps.append(run_step(name, cmd))
+        step_cmd = list(cmd)
+        if name == "player_runtime_sandbox":
+            step_cmd.extend(["--sandbox", tempfile.mkdtemp(prefix="c18-player-runtime-sandbox-")])
+        steps.append(run_step(name, step_cmd))
+    steps.extend(player_runtime_decisive_data_evidence_steps(args))
 
     steps.append(run_step("git_diff_check", ["git", "diff", "--check"]))
 

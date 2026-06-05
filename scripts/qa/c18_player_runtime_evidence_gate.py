@@ -170,7 +170,14 @@ def nested(data: dict[str, Any], *keys: str) -> Any:
     return value
 
 
-def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
+def validate_evidence_manifest(
+    run_dir: Path,
+    files: list[str],
+    *,
+    expect_image_tag: str | None = None,
+    expect_image_sha256: str | None = None,
+    expect_image_marker_sha256: str | None = None,
+) -> list[str]:
     errors: list[str] = []
     manifest_path = run_dir / "evidence-manifest.json"
     if not manifest_path.is_file():
@@ -250,6 +257,12 @@ def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
             errors.append("manifest_invalid_image_marker_bytes")
         if not is_sha256(marker_sha):
             errors.append("manifest_invalid_image_marker_sha256")
+    if expect_image_tag and manifest.get("image_tag") != expect_image_tag:
+        errors.append(f"manifest_image_tag_mismatch:{manifest.get('image_tag')}")
+    if expect_image_sha256 and manifest.get("image_sha256") != expect_image_sha256:
+        errors.append("manifest_image_sha256_mismatch")
+    if expect_image_marker_sha256 and manifest.get("image_marker_sha256") != expect_image_marker_sha256:
+        errors.append("manifest_image_marker_sha256_mismatch")
     for key in ("repo_commit", "repo_tree", "repo_dirty"):
         if key not in manifest:
             errors.append(f"manifest_missing_{key}")
@@ -591,7 +604,13 @@ def validate_semantics(run_dir: Path) -> list[str]:
     return errors
 
 
-def validate(run_dir: Path) -> dict[str, Any]:
+def validate(
+    run_dir: Path,
+    *,
+    expect_image_tag: str | None = None,
+    expect_image_sha256: str | None = None,
+    expect_image_marker_sha256: str | None = None,
+) -> dict[str, Any]:
     errors: list[str] = []
     files: list[str] = []
     if not run_dir.is_dir():
@@ -661,7 +680,13 @@ def validate(run_dir: Path) -> dict[str, Any]:
     present = set(files)
     for rel_path in sorted(required - present):
         errors.append(f"missing_required:{rel_path}")
-    errors.extend(validate_evidence_manifest(run_dir, files))
+    errors.extend(validate_evidence_manifest(
+        run_dir,
+        files,
+        expect_image_tag=expect_image_tag,
+        expect_image_sha256=expect_image_sha256,
+        expect_image_marker_sha256=expect_image_marker_sha256,
+    ))
     if not errors:
         errors.extend(validate_semantics(run_dir))
 
@@ -978,6 +1003,37 @@ def self_test() -> None:
         refresh_manifest("data-previous")
         good_previous = validate(run)
         assert good_previous["passed"], good_previous
+        good_expected_image = validate(
+            run,
+            expect_image_tag="c18-hwdecode-lab-self-test",
+            expect_image_sha256=image_sha,
+            expect_image_marker_sha256=image_marker_sha,
+        )
+        assert good_expected_image["passed"], good_expected_image
+        stale_expected_image = validate(
+            run,
+            expect_image_tag="c18-hwdecode-lab-stale",
+            expect_image_sha256=image_sha,
+            expect_image_marker_sha256=image_marker_sha,
+        )
+        assert not stale_expected_image["passed"], stale_expected_image
+        assert any("manifest_image_tag_mismatch" in item for item in stale_expected_image["errors"]), stale_expected_image
+        bogus_expected_image_sha = validate(
+            run,
+            expect_image_tag="c18-hwdecode-lab-self-test",
+            expect_image_sha256="3" * 64,
+            expect_image_marker_sha256=image_marker_sha,
+        )
+        assert not bogus_expected_image_sha["passed"], bogus_expected_image_sha
+        assert "manifest_image_sha256_mismatch" in bogus_expected_image_sha["errors"], bogus_expected_image_sha
+        bogus_expected_marker_sha = validate(
+            run,
+            expect_image_tag="c18-hwdecode-lab-self-test",
+            expect_image_sha256=image_sha,
+            expect_image_marker_sha256="4" * 64,
+        )
+        assert not bogus_expected_marker_sha["passed"], bogus_expected_marker_sha
+        assert "manifest_image_marker_sha256_mismatch" in bogus_expected_marker_sha["errors"], bogus_expected_marker_sha
         manifest_missing_image = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
         manifest_missing_image.pop("image_tag", None)
         (run / "evidence-manifest.json").write_text(
@@ -1052,6 +1108,9 @@ def self_test() -> None:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", type=Path)
+    parser.add_argument("--expect-image-tag")
+    parser.add_argument("--expect-image-sha256")
+    parser.add_argument("--expect-image-marker-sha256")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
@@ -1067,7 +1126,12 @@ def main(argv: list[str]) -> int:
     if args.run_dir is None:
         print("missing --run-dir", file=sys.stderr)
         return 2
-    result = validate(args.run_dir)
+    result = validate(
+        args.run_dir,
+        expect_image_tag=args.expect_image_tag,
+        expect_image_sha256=args.expect_image_sha256,
+        expect_image_marker_sha256=args.expect_image_marker_sha256,
+    )
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:

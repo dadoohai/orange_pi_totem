@@ -290,10 +290,18 @@ Follow-up repo-side apos a promocao da `1t`:
   (`repo_commit`, `repo_tree`, `repo_dirty=false`, tag se houver) para reduzir
   drift entre checkout, imagem e placa; para `player-runtime`, o gate exige que
   `repo_commit` case com o `source_commit` do pacote e que o manifesto traga
-  `image_tag`/`image_sha256`/marker `/etc/dadooh`;
-- evidencias cold-boot que selecionam `/data` nao podem usar o caminho fraco:
-  o gate falha fechado sem `--require-pre-state` e sem uma identidade de imagem
-  esperada (`--expect-image-tag` ou `--expect-image-marker-sha256`);
+  `image_tag`/`image_sha256`/marker `/etc/dadooh`; em rodadas decisivas, o gate
+  tambem deve comparar esses campos com a golden esperada via `--expect-image-*`;
+- evidencias cold-boot que selecionam ou demonstram `/data` nao podem usar o
+  caminho fraco: o gate deriva `/data` de `selected_source`, do adoption probe
+  ou de marker verificado, e falha fechado sem `--require-pre-state` e sem uma
+  identidade de imagem esperada (`--expect-image-tag` ou
+  `--expect-image-marker-sha256`);
+- o release gate possui entradas separadas para a futura rodada M-6
+  (`--player-runtime-data-coldboot-evidence-dir` e
+  `--player-runtime-data-evidence-dir`); quando usadas, elas chamam os gates
+  fortes com `/data`, pre-state e imagem golden pinada, sem transformar o trial
+  warm em prova de cold-boot;
 - quando a evidencia reivindicar `/data` como fonte adotada pelo servico, ela
   tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
   provando processo em execucao, marker valido e hash do `kiosk.py` rodando

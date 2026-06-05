@@ -321,12 +321,19 @@ identidade da imagem pelo marker em `/etc/dadooh`, e manifesto com
 usar `--forbid-controlled-reboot`.
 
 Nota pos-auditoria `d60661b`: para evidencia cold-boot que seleciona `/data`,
-o modo forte deixa de ser disciplina manual e passa a ser fail-closed: sem
-pre-state forte e sem identidade esperada de imagem, o gate reprova. O gate de
+ou demonstra `/data` por marker/probe, o modo forte deixa de ser disciplina
+manual e passa a ser fail-closed: sem pre-state forte e sem identidade esperada
+de imagem, o gate reprova mesmo sob `--expect-selected-source=any`. O gate de
 evidencia `player-runtime` tambem exige identidade de repo e imagem no manifesto
-e compara `repo_commit` com o `source_commit` do pacote. O runner persistente
-continua sendo um trial warm de apply/rollback; cold-boot `/data` decisivo deve
-ser uma rodada de duas fases com pre/post-state.
+e compara `repo_commit` com o `source_commit` do pacote; para rodada decisiva,
+ele deve receber `--expect-image-*` pinado a golden esperada. O runner
+persistente continua sendo um trial warm de apply/rollback; cold-boot `/data`
+decisivo deve ser uma rodada de duas fases com pre/post-state. O release gate
+agora tem um slot separado para essa rodada futura:
+`--player-runtime-data-coldboot-evidence-dir` e
+`--player-runtime-data-evidence-dir` executam os gates fortes com a golden
+pinada; sem esses diretorios, o gate segue validando apenas o baseline historico
+`fallback`.
 
 ## Candidata 1p (offline; descartada em hardware)
 
