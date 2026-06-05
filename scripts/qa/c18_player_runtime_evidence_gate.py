@@ -458,6 +458,22 @@ def validate_semantics(run_dir: Path) -> list[str]:
         or readme.get("rollback_expectation")
         or "image-fallback-or-previous"
     )
+    non_claims = readme.get("non_claims")
+    if not isinstance(non_claims, list):
+        errors.append("readme_non_claims_missing")
+        non_claims = []
+    for item in (
+        "public_thaw",
+        "github_publish",
+        "auto_pull",
+        "stable_or_production",
+        "power_loss_safety",
+        "cold_boot_adoption",
+        "server_side_gate",
+        "soak_endurance",
+    ):
+        if item not in non_claims:
+            errors.append(f"readme_non_claim_missing:{item}")
     if rollback_expectation not in {"image-fallback-or-previous", "image-fallback", "data-previous"}:
         errors.append("rollback_expectation_invalid")
         rollback_expectation = "image-fallback-or-previous"
@@ -709,6 +725,9 @@ def self_test() -> None:
                 "auto_pull",
                 "stable_or_production",
                 "power_loss_safety",
+                "cold_boot_adoption",
+                "server_side_gate",
+                "soak_endurance",
                 "rollback_A_to_B_previous_data_release",
             ],
         })
@@ -814,6 +833,9 @@ def self_test() -> None:
                     "auto_pull",
                     "stable_or_production",
                     "power_loss_safety",
+                    "cold_boot_adoption",
+                    "server_side_gate",
+                    "soak_endurance",
                 ]
             else:
                 readme["claims"] = [
@@ -829,6 +851,9 @@ def self_test() -> None:
                     "auto_pull",
                     "stable_or_production",
                     "power_loss_safety",
+                    "cold_boot_adoption",
+                    "server_side_gate",
+                    "soak_endurance",
                     "rollback_A_to_B_previous_data_release",
                 ]
             (run / "README.md").write_text(json.dumps(readme, indent=2, sort_keys=True) + "\n", encoding="utf-8")

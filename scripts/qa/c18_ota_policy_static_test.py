@@ -138,6 +138,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("while reconcile must manage /data/player-runtime", dropin)
         self.assertIn("root-owned state", dropin)
         self.assertIn("non-fatal, explicitly authorized player-runtime reconcile", dropin)
+        self.assertIn("RequiresMountsFor=/data", dropin)
+        self.assertIn("After=local-fs.target", dropin)
         self.assertNotIn("ExecStartPre=-/usr/bin/env C18_PLAYER_RUNTIME_RECONCILE=1", dropin)
         self.assertNotIn("/data/apps/kiosky-player/current", dropin)
         self.assertIn("/data/player-runtime", dirs)
@@ -228,6 +230,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--allow-player-runtime-maintenance", updatectl)
         self.assertIn("player_runtime_reconcile_guard_required", updatectl)
         self.assertIn("health did not observe candidate kiosk.py identity", updatectl)
+        self.assertIn("def _fsync_release_tree", updatectl)
+        self.assertIn("_fsync_release_tree(dest)", updatectl)
+        self.assertLess(
+            updatectl.index("_fsync_release_tree(release_dir)"),
+            updatectl.index("marker = _write_player_runtime_marker(release_dir, manifest, identity, health)"),
+        )
         self.assertIn('"created_at_utc"', updatectl)
         self.assertIn("manifest created_at_utc must be an ISO-8601 UTC timestamp", updatectl)
         self.assertNotIn('raw.get("allowed_components", ["kiosky-player", "totem-core"])', updatectl)
@@ -424,6 +432,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("public_thaw", readme["non_claims"])
         self.assertIn("stable_or_production", readme["non_claims"])
         self.assertIn("power_loss_safety", readme["non_claims"])
+        self.assertIn("cold_boot_adoption", readme["non_claims"])
+        self.assertIn("server_side_gate", readme["non_claims"])
+        self.assertIn("soak_endurance", readme["non_claims"])
 
         self.assertTrue(lab_apply["device_data_root"])
         self.assertEqual(lab_apply["rc"], 0)
@@ -537,6 +548,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("auto_pull", readme["non_claims"])
         self.assertIn("stable_or_production", readme["non_claims"])
         self.assertIn("power_loss_safety", readme["non_claims"])
+        self.assertIn("cold_boot_adoption", readme["non_claims"])
+        self.assertIn("server_side_gate", readme["non_claims"])
+        self.assertIn("soak_endurance", readme["non_claims"])
 
         self.assertTrue(before_adoption["passed"])
         self.assertEqual(before_adoption["selected_source"], "data")

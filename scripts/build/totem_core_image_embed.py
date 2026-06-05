@@ -358,6 +358,8 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
             and "prefixed with `+`" in player_dropin
             and "while reconcile must manage /data/player-runtime" in player_dropin
             and "root-owned state" in player_dropin
+            and "RequiresMountsFor=/data" in player_dropin
+            and "After=local-fs.target" in player_dropin
             and "ExecStartPre=-/usr/bin/env C18_PLAYER_RUNTIME_RECONCILE=1" not in player_dropin
         ),
         "image_fixed_player_dropin_routes_through_totem_launcher": (

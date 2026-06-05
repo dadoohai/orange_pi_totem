@@ -3,9 +3,9 @@
   "artifact_scope": "player-runtime-persistent-data-lab-trial",
   "artifacts": [
     {
-      "bytes": 734,
+      "bytes": 806,
       "file": "README.md",
-      "sha256": "df2f504bc3af59d5aae80063a09592d699e959115300c2c5d9baeb726f0b1c1b"
+      "sha256": "9255e829151f4f8d394c32e3acc8866cfdc7b00a7714fd0f6a333ada6d746a48"
     },
     {
       "bytes": 73,

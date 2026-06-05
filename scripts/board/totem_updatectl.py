@@ -428,6 +428,34 @@ def _fsync_dir(path: Path) -> None:
         os.close(fd)
 
 
+def _fsync_path_strict(path: Path, flags: int = os.O_RDONLY) -> None:
+    fd = os.open(str(path), flags)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _fsync_release_tree(root: Path) -> None:
+    """Durability barrier before a player-runtime release is marked verified."""
+    dirs: List[Path] = [root]
+    for path in sorted(root.rglob("*")):
+        st = path.lstat()
+        if stat.S_ISDIR(st.st_mode):
+            dirs.append(path)
+        elif stat.S_ISREG(st.st_mode):
+            _fsync_path_strict(path)
+        elif stat.S_ISLNK(st.st_mode):
+            raise RuntimeError(f"unsupported release member type during fsync: {path.relative_to(root)}")
+        else:
+            raise RuntimeError(f"unsupported release member type during fsync: {path.relative_to(root)}")
+    dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    for directory in sorted(dirs, key=lambda item: len(item.relative_to(root).parts), reverse=True):
+        _fsync_path_strict(directory, dir_flags)
+    _fsync_path_strict(root.parent, dir_flags)
+
+
+
 def _atomic_write_json(path: Path, data: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".__tmp__")
@@ -507,6 +535,7 @@ def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
         tf.extractall(path=str(dest), members=members)
     # Ensure the non-root service user can traverse/read the extracted release.
     _make_world_traversable(dest)
+    _fsync_release_tree(dest)
 
 
 def _tree_hash(root: Path) -> str:
@@ -1846,6 +1875,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     identity = post_health_identity
 
     try:
+        _fsync_release_tree(release_dir)
         marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
     except Exception as e:
         reason = f"marker_write_failed:{e}"

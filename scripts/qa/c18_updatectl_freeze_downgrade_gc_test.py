@@ -364,6 +364,45 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertFalse(ok)
             self.assertEqual(reason, "kiosk_sha_mismatch")
 
+    def test_player_runtime_torn_release_falls_back_on_reconcile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            release = root / "data" / "player-runtime" / "releases" / "runtime-a"
+            release.mkdir(parents=True)
+            (release / "kiosk.py").write_text('print("ok")\n', encoding="utf-8")
+            (release / "asset.txt").write_text("asset\n", encoding="utf-8")
+            raw_manifest = player_runtime_manifest("runtime-a")
+            identity = updatectl._player_runtime_identity(release, raw_manifest)
+            health = {
+                "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "passed": True,
+                "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                "observed_tree_sha256": identity["tree_sha256"],
+                "artifact_id": "unit",
+            }
+            updatectl._write_player_runtime_marker(release, raw_manifest, identity, health)
+            updatectl._atomic_symlink("releases/runtime-a", updatectl.CURRENT_LINK)
+            updatectl._write_state({
+                "component": "player-runtime",
+                "schema": updatectl.SCHEMA_STATE,
+                "current": dict(identity),
+            })
+
+            (release / "asset.txt").unlink()
+            rc, result = updatectl._reconcile_player_runtime_state(
+                "unit_torn_release",
+                allow_maintenance=True,
+            )
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(result["status"], "image_fallback")
+            self.assertIsNone(result["current_link"])
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), None)
+            state = updatectl._read_state()
+            self.assertIsNone(state["current"])
+            self.assertEqual(result["reject_reason"], "tree_sha_mismatch")
+
     def test_player_runtime_quarantine_is_content_based(self) -> None:
         state: dict = {}
         identity = {

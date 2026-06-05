@@ -14,7 +14,10 @@
     "auto_pull",
     "stable_or_production",
     "power_loss_safety",
-    "rollback_A_to_B_previous_data_release"
+    "rollback_A_to_B_previous_data_release",
+    "cold_boot_adoption",
+    "server_side_gate",
+    "soak_endurance"
   ],
   "rollback_expectation": "image-fallback",
   "schema": "dadooh.c18.player_runtime.trial_readme.v1",

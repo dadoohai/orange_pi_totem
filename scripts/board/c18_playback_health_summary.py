@@ -292,18 +292,28 @@ def evaluate(
     if frame_segments:
         segment_stats = [sustained_progress_stats(values) for values in frame_segments]
         evaluable_segment_stats = [stats for stats in segment_stats if int(stats["sample_count"]) >= 3]
+        short_segment_stats = [stats for stats in segment_stats if 0 < int(stats["sample_count"]) < 3]
+        short_failed_segment_stats = [
+            stats
+            for stats in short_segment_stats
+            if int(stats["pair_count"]) > 0 and int(stats["positive_steps"]) == 0
+        ]
         if evaluable_segment_stats:
-            failed_segment_stats = [stats for stats in evaluable_segment_stats if not bool(stats["passed"])]
+            failed_segment_stats = [
+                stats for stats in evaluable_segment_stats if not bool(stats["passed"])
+            ] + short_failed_segment_stats
             best_segment = failed_segment_stats[0] if failed_segment_stats else evaluable_segment_stats[-1]
             frame_progressed = not failed_segment_stats
         else:
             best_segment = segment_stats[-1]
-            failed_segment_stats = [best_segment]
+            failed_segment_stats = short_failed_segment_stats or [best_segment]
             frame_progressed = False
     else:
         frame_progressed = bool(frame_progress_stats["passed"])
         best_segment = frame_progress_stats
         evaluable_segment_stats = []
+        short_segment_stats = []
+        short_failed_segment_stats = []
         failed_segment_stats = [] if frame_progressed else [frame_progress_stats]
 
     checks = {
@@ -370,6 +380,7 @@ def evaluate(
             "estimated_frame_required_steps": best_segment["required_steps"],
             "estimated_frame_trailing_nonprogress_steps": best_segment["trailing_nonprogress_steps"],
             "estimated_frame_evaluable_segments": len(evaluable_segment_stats),
+            "estimated_frame_short_segments": len(short_segment_stats),
             "estimated_frame_failed_segments": len(failed_segment_stats),
             "status_failure_samples": status_failure_samples,
             "nrestarts_delta": nrestarts_delta,

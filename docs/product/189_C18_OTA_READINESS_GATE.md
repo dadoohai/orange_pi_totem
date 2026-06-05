@@ -180,6 +180,26 @@ stable/producao, cold-boot adoption, durabilidade sob corte de energia,
 power-loss no meio do apply/rollback, soak/endurance ou gate server-side de
 publicacao.
 
+## Hardening pre-cold-boot/power-loss apos ABA
+
+A auditoria critica do marco ABA aprovou a evidencia, mas apontou dois riscos
+que precisam estar na imagem antes de exercitar cold boot ou interrupcao fisica:
+
+- o `ExecStartPre` de reconcile roda como root e mexe em `/data`, entao o
+  drop-in do `kiosky-player.service` passa a exigir `RequiresMountsFor=/data`
+  e `After=local-fs.target`;
+- a release `player-runtime` extraida passa por fsync estrito de arquivos e
+  diretorios antes de ser marcada como verificada e promovida;
+- o reconcile ja rejeita release "torn" por `tree_sha_mismatch`; o teste
+  `test_player_runtime_torn_release_falls_back_on_reconcile` fixa esse
+  fail-closed;
+- o deep-health passa a rejeitar segmento final curto sem progresso comprovado,
+  fechando a cauda residual do caso multi-segmento.
+
+Essas mudancas ainda precisam ser embarcadas em uma nova imagem antes do teste
+fisico de cold-boot/power-loss. Elas nao descongelam o CLI publico e nao mudam
+as nao-afirmacoes do ABA.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente

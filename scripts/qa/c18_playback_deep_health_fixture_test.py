@@ -247,6 +247,55 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertGreaterEqual(result["counters"]["estimated_frame_evaluable_segments"], 2)
         self.assertEqual(result["counters"]["estimated_frame_failed_segments"], 1)
 
+    def test_rejects_short_final_segment_without_proven_progress(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = []
+        fieldnames = list(template.keys())
+        for field in ("status_current_alias", "status_current_index"):
+            if field not in fieldnames:
+                fieldnames.append(field)
+
+        for index, frame in enumerate(("10", "40", "70", "100"), start=1):
+            row = {field: "" for field in fieldnames}
+            row.update(template)
+            row["seq"] = str(index)
+            row["rel_sec"] = str(index - 1)
+            row["current_alias"] = "media-cache-a"
+            row["status_current_alias"] = "media-first"
+            row["status_current_index"] = "0"
+            row["time_pos"] = f"{index - 1}.10"
+            row["estimated_frame_number"] = frame
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["playlist_size"] = 2
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            rows.append(row)
+
+        for offset in range(2):
+            row = {field: "" for field in fieldnames}
+            row.update(template)
+            row["seq"] = str(5 + offset)
+            row["rel_sec"] = str(4 + offset)
+            row["current_alias"] = "media-cache-b"
+            row["status_current_alias"] = "media-second"
+            row["status_current_index"] = "1"
+            row["time_pos"] = f"{4 + offset}.10"
+            row["estimated_frame_number"] = "999"
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["playlist_size"] = 2
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            rows.append(row)
+
+        with fixture.path("playback-samples.tsv").open("w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(fh, delimiter="\t", fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        result = self.assert_fails_with(fixture, "playback_progressed")
+        self.assertEqual(result["counters"]["estimated_frame_evaluable_segments"], 1)
+        self.assertEqual(result["counters"]["estimated_frame_short_segments"], 1)
+        self.assertEqual(result["counters"]["estimated_frame_failed_segments"], 1)
+
     def test_candidate_mode_tolerates_polling_disabled_status_only(self) -> None:
         fixture = self.with_case()
         rows = fixture.rows()

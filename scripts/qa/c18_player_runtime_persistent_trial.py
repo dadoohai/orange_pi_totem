@@ -552,6 +552,9 @@ def main(argv: list[str]) -> int:
             "auto_pull",
             "stable_or_production",
             "power_loss_safety",
+            "cold_boot_adoption",
+            "server_side_gate",
+            "soak_endurance",
             *(
                 []
                 if args.rollback_expectation == "data-previous"

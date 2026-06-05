@@ -13,7 +13,10 @@
     "github_publish",
     "auto_pull",
     "stable_or_production",
-    "power_loss_safety"
+    "power_loss_safety",
+    "cold_boot_adoption",
+    "server_side_gate",
+    "soak_endurance"
   ],
   "rollback_expectation": "data-previous",
   "schema": "dadooh.c18.player_runtime.trial_readme.v1",

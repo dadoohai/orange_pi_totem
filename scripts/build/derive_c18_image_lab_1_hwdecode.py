@@ -416,6 +416,8 @@ def main():
             and "prefixed with `+`" in kiosky_dropin_now
             and "while reconcile must manage /data/player-runtime" in kiosky_dropin_now
             and "root-owned state" in kiosky_dropin_now
+            and "RequiresMountsFor=/data" in kiosky_dropin_now
+            and "After=local-fs.target" in kiosky_dropin_now
             and "ExecStartPre=-/usr/bin/env C18_PLAYER_RUNTIME_RECONCILE=1" not in kiosky_dropin_now
         ),
         "totem_kiosky_launcher_uses_player_runtime_path": (

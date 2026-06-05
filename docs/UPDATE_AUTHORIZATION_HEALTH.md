@@ -250,6 +250,16 @@ adoption, comportamento sob interrupcao/power-loss durante apply/rollback e
 decisao explicita de como o fluxo sera promovido para homologacao sem publicar
 stable nem ligar auto-pull.
 
+Antes de rodar cold-boot/power-loss em hardware, gerar nova imagem com:
+
+- `RequiresMountsFor=/data` no drop-in do `kiosky-player.service`, para o
+  reconcile de boot nao operar contra `/data` ausente;
+- fsync estrito da arvore de release antes de marker/current de
+  `player-runtime`;
+- deep-health falhando fechado tambem para segmento final curto sem progresso
+  comprovado;
+- evidencias com non-claims explicitos para cold boot, server-side gate e soak.
+
 ## Gates Antes De Stable
 
 Antes de qualquer stable ou batch:
