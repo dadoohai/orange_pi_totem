@@ -14,6 +14,7 @@ COMPONENT="player-runtime"
 VERSION_OVERRIDE="${VERSION:-}"
 MODE="build-package"
 ALLOW_DIRTY=0
+LAB_VARIANT="${LAB_VARIANT:-}"
 
 while [[ $# -gt 0 ]]; do
   arg="$1"
@@ -27,6 +28,8 @@ while [[ $# -gt 0 ]]; do
     --channel) shift; CHANNEL="${1:-}" ;;
     --out-base=*) OUT_BASE="${arg#*=}" ;;
     --out-base) shift; OUT_BASE="${1:-}" ;;
+    --lab-variant=*) LAB_VARIANT="${arg#*=}" ;;
+    --lab-variant) shift; LAB_VARIANT="${1:-}" ;;
     -h|--help)
       sed -n '2,18p' "$0"
       exit 0
@@ -71,6 +74,7 @@ else
   VERSION="$VERSION_OVERRIDE"
 fi
 [[ "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || die "unsafe version: $VERSION"
+[[ -z "$LAB_VARIANT" || "$LAB_VARIANT" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || die "unsafe lab variant: $LAB_VARIANT"
 
 case "$OUT_BASE" in
   /*) OUT_ROOT="$OUT_BASE" ;;
@@ -90,6 +94,7 @@ log "source_repo     = $SOURCE_REPO_FULL"
 log "source_branch   = $SOURCE_BRANCH"
 log "source_commit   = $SOURCE_COMMIT"
 log "dirty           = $DIRTY"
+log "lab_variant     = ${LAB_VARIANT:-none}"
 log "out_dir         = $OUT_DIR"
 log "mode            = $MODE"
 
@@ -109,6 +114,9 @@ trap cleanup EXIT
 
 install -d -m 0755 "$STAGE_DIR"
 install -m 0644 "$SNAPSHOT" "$STAGE_DIR/kiosk.py"
+if [[ -n "$LAB_VARIANT" ]]; then
+  printf '\n# c18_player_runtime_lab_variant=%s\n' "$LAB_VARIANT" >>"$STAGE_DIR/kiosk.py"
+fi
 
 tar -C "$STAGE_DIR" -czf "$TMP_PAYLOAD_PATH" kiosk.py
 PAYLOAD_SHA256="$(sha256sum "$TMP_PAYLOAD_PATH" | awk '{print $1}')"
@@ -128,6 +136,7 @@ manifest = {
     "source_branch": "${SOURCE_BRANCH}",
     "source_commit": "${SOURCE_COMMIT}",
     "source_dirty": bool(${DIRTY}),
+    "lab_variant": "${LAB_VARIANT}",
     "payload": "${PAYLOAD_NAME}",
     "payload_sha256": "${PAYLOAD_SHA256}",
     "payload_bytes": ${PAYLOAD_BYTES},

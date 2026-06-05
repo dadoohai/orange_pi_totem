@@ -225,8 +225,11 @@ de laboratorio.
 Depois do primeiro trial persistente bem-sucedido em `/data`, o proximo gate de
 laboratorio e um ensaio A->B que tenha uma release persistente anterior
 verificada e prove rollback para essa `previous` real, nao apenas para o
-fallback de imagem. Esse ensaio tambem deve preencher `image_tag`/`image_sha256`
-no manifest de evidencia ou registrar um artefato equivalente gateado.
+fallback de imagem. Esse ensaio deve usar `--rollback-expectation data-previous`
+e preencher `--image-tag`, `--image-sha256` e, quando disponivel,
+`--image-marker-file`; o evidence gate deve falhar se o rollback cair em
+`image_fallback`, se faltar `service-before-apply`, ou se os `tree_sha256` de A
+e B forem indistinguiveis.
 
 ## Gates Antes De Stable
 

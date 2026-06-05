@@ -82,6 +82,23 @@ def write_lab_policy(policy_path: Path, channel: str) -> None:
     )
 
 
+def runtime_snapshot() -> dict[str, Any]:
+    state: dict[str, Any] = {}
+    try:
+        state = updatectl._read_state()
+    except Exception:
+        state = {}
+    return {
+        "current_link": updatectl._read_symlink_target(updatectl.CURRENT_LINK),
+        "previous_link": updatectl._read_symlink_target(updatectl.PREVIOUS_LINK),
+        "current_exists": updatectl.CURRENT_LINK.exists() or updatectl.CURRENT_LINK.is_symlink(),
+        "previous_exists": updatectl.PREVIOUS_LINK.exists() or updatectl.PREVIOUS_LINK.is_symlink(),
+        "state_current_version": (state.get("current") or {}).get("version") if isinstance(state.get("current"), dict) else None,
+        "state_previous_version": (state.get("previous") or {}).get("version") if isinstance(state.get("previous"), dict) else None,
+        "last_operation": state.get("last_operation") if isinstance(state.get("last_operation"), dict) else None,
+    }
+
+
 def public_cli_freeze(data_root: Path, action: str) -> dict[str, Any]:
     missing = Path(tempfile.gettempdir()) / "c18-player-runtime-missing.manifest.json"
     env = {
@@ -174,6 +191,7 @@ def main(argv: list[str]) -> int:
     previous_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
     updatectl.PLAYER_RUNTIME_HEALTH_HOOK = health_hook
     updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+    before_snapshot = runtime_snapshot()
     try:
         rc = updatectl._apply_from_manifest_path_unfrozen(
             args.manifest,
@@ -182,6 +200,7 @@ def main(argv: list[str]) -> int:
             payload_path_override=args.payload,
         )
     finally:
+        after_snapshot = runtime_snapshot()
         updatectl.PLAYER_RUNTIME_HEALTH_HOOK = previous_hook
         updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = previous_thaw
 
@@ -196,6 +215,8 @@ def main(argv: list[str]) -> int:
         "passed": rc == 0 and public_apply["frozen"] and public_reconcile["frozen"],
         "public_cli_apply_still_frozen": public_apply,
         "public_cli_reconcile_still_frozen": public_reconcile,
+        "before": before_snapshot,
+        "after": after_snapshot,
         "data_root": str(data_root),
         "device_data_root": data_root.resolve() == Path("/data"),
         "output_dir": str(work_dir),

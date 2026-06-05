@@ -137,6 +137,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument("--allow-device-data-root", action="store_true")
     parser.add_argument("--quarantine-current", action="store_true")
+    parser.add_argument("--expect-rolled-to")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--reason", default="lab_player_runtime_rollback")
     parser.add_argument("--json", action="store_true")
@@ -175,6 +176,7 @@ def main(argv: list[str]) -> int:
                 "rc": rc,
                 "result": "ok" if rc == 0 else "failed",
                 "quarantine_current": bool(args.quarantine_current),
+                "expected_rolled_to": args.expect_rolled_to,
                 "before": before_snapshot,
                 "after": after_snapshot,
                 "rolled_back_to": (
@@ -205,6 +207,10 @@ def main(argv: list[str]) -> int:
         "component": COMPONENT,
         "passed": (
             rc == 0
+            and (
+                not args.expect_rolled_to
+                or operation.get("rolled_back_to") == args.expect_rolled_to
+            )
             and public_apply["frozen"]
             and public_rollback["frozen"]
             and public_reconcile["frozen"]

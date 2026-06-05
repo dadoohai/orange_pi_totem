@@ -7,7 +7,7 @@
   "passed": true,
   "payload": {
     "kiosk_py_sha256": "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167",
-    "tree_sha256": "ccb58959fd4e80d44b565a745afc8b1d58733881dbb2efcecadf3ad2002c1f67"
+    "tree_sha256": "c6ea5591191e32630f86ec1ef894312e50869d1e824d20163cb13462d12c7aa7"
   },
   "schema": "dadooh.c18.player_runtime.release_gate.v1"
 }

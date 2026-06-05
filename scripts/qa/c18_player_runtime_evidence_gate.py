@@ -40,6 +40,14 @@ ALLOWED_PATTERNS = (
     "service-after-restart/deep-health-process.json",
     "service-after-restart/deep-health-kernel.json",
     "service-after-restart/deep-health-player-counters.json",
+    "service-before-apply/launcher-adoption.json",
+    "service-before-apply/playback-deep-health-public.json",
+    "service-before-apply/playback-samples.tsv",
+    "service-before-apply/status-samples.ndjson",
+    "service-before-apply/deep-health-systemd.json",
+    "service-before-apply/deep-health-process.json",
+    "service-before-apply/deep-health-kernel.json",
+    "service-before-apply/deep-health-player-counters.json",
     "service-after-rollback/launcher-adoption.json",
     "service-after-rollback/playback-deep-health-public.json",
     "service-after-rollback/playback-samples.tsv",
@@ -223,6 +231,22 @@ def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
         errors.append("manifest_missing_verified_marker_artifact")
     if "lab-apply.json" not in declared or "lab-rollback.json" not in declared:
         errors.append("manifest_missing_trial_operation_artifacts")
+    if "image_tag" in manifest and (not isinstance(manifest.get("image_tag"), str) or not manifest.get("image_tag")):
+        errors.append("manifest_invalid_image_tag")
+    if "image_sha256" in manifest and not is_sha256(manifest.get("image_sha256")):
+        errors.append("manifest_invalid_image_sha256")
+    if ("image_tag" in manifest) != ("image_sha256" in manifest):
+        errors.append("manifest_image_tag_sha_must_be_paired")
+    if "image_marker_path" in manifest:
+        marker_path = manifest.get("image_marker_path")
+        marker_bytes = manifest.get("image_marker_bytes")
+        marker_sha = manifest.get("image_marker_sha256")
+        if not isinstance(marker_path, str) or not marker_path.startswith("/etc/dadooh/"):
+            errors.append("manifest_invalid_image_marker_path")
+        if not isinstance(marker_bytes, int) or marker_bytes <= 0:
+            errors.append("manifest_invalid_image_marker_bytes")
+        if not is_sha256(marker_sha):
+            errors.append("manifest_invalid_image_marker_sha256")
     return errors
 
 
@@ -263,6 +287,14 @@ def validate_package_contract(run_dir: Path) -> tuple[list[str], dict[str, Any]]
         errors.append("release_gate_schema")
     if gate.get("passed") is not True:
         errors.append("release_gate_not_passed")
+    gate_payload = gate.get("payload")
+    if not isinstance(gate_payload, dict):
+        errors.append("release_gate_payload_missing")
+    else:
+        if not is_sha256(gate_payload.get("kiosk_py_sha256")):
+            errors.append("release_gate_kiosk_py_sha256")
+        if not is_sha256(gate_payload.get("tree_sha256")):
+            errors.append("release_gate_tree_sha256")
     return errors, manifest
 
 
@@ -419,15 +451,65 @@ def validate_adoption(run_dir: Path,
 
 def validate_semantics(run_dir: Path) -> list[str]:
     errors: list[str] = []
+    evidence_manifest = load_json_object(run_dir / "evidence-manifest.json", "evidence_manifest", errors)
+    readme = load_json_object(run_dir / "README.md", "readme", errors)
+    rollback_expectation = (
+        evidence_manifest.get("rollback_expectation")
+        or readme.get("rollback_expectation")
+        or "image-fallback-or-previous"
+    )
+    if rollback_expectation not in {"image-fallback-or-previous", "image-fallback", "data-previous"}:
+        errors.append("rollback_expectation_invalid")
+        rollback_expectation = "image-fallback-or-previous"
     package_errors, package_manifest = validate_package_contract(run_dir)
     errors.extend(package_errors)
     marker_errors, marker = validate_marker(run_dir, package_manifest)
     errors.extend(marker_errors)
+    release_gate = load_json_object(run_dir / "package" / "player-runtime-release-gate.json", "release_gate", errors)
+    gate_payload = release_gate.get("payload") if isinstance(release_gate.get("payload"), dict) else {}
+    if gate_payload:
+        if gate_payload.get("kiosk_py_sha256") != marker.get("kiosk_py_sha256"):
+            errors.append("release_gate_marker_kiosk_sha_mismatch")
+        if gate_payload.get("tree_sha256") != marker.get("tree_sha256"):
+            errors.append("release_gate_marker_tree_sha_mismatch")
     errors.extend(validate_lab_apply(run_dir, package_manifest))
     rollback_errors, rollback = validate_lab_rollback(run_dir, package_manifest)
     errors.extend(rollback_errors)
     errors.extend(validate_candidate_result(run_dir, marker))
     errors.extend(validate_playback_summary(run_dir, "candidate-health/playback-deep-health-public.json", "candidate_health"))
+    before_adoption: dict[str, Any] = {}
+    before_version: str | None = None
+    before_tree: str | None = None
+    if rollback_expectation == "data-previous":
+        errors.extend(validate_playback_summary(run_dir, "service-before-apply/playback-deep-health-public.json", "service_before_apply"))
+        errors.extend(validate_adoption(
+            run_dir,
+            "service-before-apply/launcher-adoption.json",
+            "service_before_apply_adoption",
+            "data",
+            None,
+        ))
+        before_adoption = load_json_object(
+            run_dir / "service-before-apply" / "launcher-adoption.json",
+            "service_before_apply_adoption",
+            errors,
+        )
+        before_version = before_adoption.get("selected_version") if isinstance(before_adoption.get("selected_version"), str) else None
+        before_tree = before_adoption.get("marker_tree_sha256") if is_sha256(before_adoption.get("marker_tree_sha256")) else None
+        if not before_version or before_version == "image_fallback":
+            errors.append("data_previous_missing_before_version")
+        if not before_tree:
+            errors.append("data_previous_missing_before_tree_sha")
+        if before_tree and marker.get("tree_sha256") == before_tree:
+            errors.append("data_previous_candidate_tree_sha_matches_previous")
+        lab_apply = load_json_object(run_dir / "lab-apply.json", "lab_apply", errors)
+        apply_after = lab_apply.get("after") if isinstance(lab_apply.get("after"), dict) else {}
+        previous_link = str(apply_after.get("previous_link") or "")
+        state_previous_version = apply_after.get("state_previous_version")
+        if before_version and not previous_link.endswith(before_version):
+            errors.append("data_previous_apply_previous_link_mismatch")
+        if before_version and state_previous_version != before_version:
+            errors.append("data_previous_apply_previous_state_mismatch")
     errors.extend(validate_playback_summary(run_dir, "service-after-restart/playback-deep-health-public.json", "service_after_restart"))
     errors.extend(validate_playback_summary(run_dir, "service-after-rollback/playback-deep-health-public.json", "service_after_rollback"))
     expected_version = str(package_manifest.get("version")) if package_manifest else None
@@ -439,6 +521,16 @@ def validate_semantics(run_dir: Path) -> list[str]:
         expected_version,
     ))
     rolled_to = nested(rollback, "operation", "rolled_back_to")
+    if rollback_expectation == "image-fallback" and rolled_to != "image_fallback":
+        errors.append("image_fallback_rollback_expected")
+    if rollback_expectation == "data-previous":
+        if not before_version:
+            errors.append("data_previous_rollback_missing_before_version")
+        elif rolled_to != before_version:
+            errors.append("data_previous_rollback_target_mismatch")
+        expected_rolled_to = nested(rollback, "operation", "expected_rolled_to")
+        if expected_rolled_to != before_version:
+            errors.append("data_previous_rollback_expectation_missing")
     rollback_expected_source = "fallback" if rolled_to == "image_fallback" else "data"
     rollback_expected_version = None if rollback_expected_source == "fallback" else str(rolled_to)
     errors.extend(validate_adoption(
@@ -597,9 +689,38 @@ def self_test() -> None:
             },
         }
         freeze = {"returncode": 44, "frozen": True}
-        put("README.md", "C18 player-runtime self-test evidence\n")
+        put("README.md", {
+            "schema": "dadooh.c18.player_runtime.trial_readme.v1",
+            "artifact_id": "self-test",
+            "component": "player-runtime",
+            "version": version,
+            "scope": "lab-only persistent /data trial",
+            "rollback_expectation": "image-fallback",
+            "claims": [
+                "local_package_apply",
+                "verified_marker_adoption",
+                "service_deep_health_after_restart",
+                "rollback_to_image_fallback",
+                "service_deep_health_after_rollback",
+            ],
+            "non_claims": [
+                "public_thaw",
+                "github_publish",
+                "auto_pull",
+                "stable_or_production",
+                "power_loss_safety",
+                "rollback_A_to_B_previous_data_release",
+            ],
+        })
         put("package/dadooh-player-runtime-demo.manifest.json", package_manifest)
-        put("package/player-runtime-release-gate.json", {"schema": RELEASE_GATE_SCHEMA, "passed": True})
+        put("package/player-runtime-release-gate.json", {
+            "schema": RELEASE_GATE_SCHEMA,
+            "passed": True,
+            "payload": {
+                "kiosk_py_sha256": kiosk_sha,
+                "tree_sha256": tree_sha,
+            },
+        })
         put("lab-apply.json", {
             "schema": LAB_APPLY_SCHEMA,
             "component": "player-runtime",
@@ -676,7 +797,43 @@ def self_test() -> None:
             "qa/evidence-leak-scan.txt",
         ):
             put(rel_path, "{}\n")
-        def refresh_manifest() -> None:
+        def update_readme_expectation(expectation: str) -> None:
+            readme = json.loads((run / "README.md").read_text(encoding="utf-8"))
+            readme["rollback_expectation"] = expectation
+            if expectation == "data-previous":
+                readme["claims"] = [
+                    "local_package_apply",
+                    "verified_marker_adoption",
+                    "service_deep_health_after_restart",
+                    "rollback_to_data_previous",
+                    "service_deep_health_after_rollback",
+                ]
+                readme["non_claims"] = [
+                    "public_thaw",
+                    "github_publish",
+                    "auto_pull",
+                    "stable_or_production",
+                    "power_loss_safety",
+                ]
+            else:
+                readme["claims"] = [
+                    "local_package_apply",
+                    "verified_marker_adoption",
+                    "service_deep_health_after_restart",
+                    "rollback_to_image_fallback",
+                    "service_deep_health_after_rollback",
+                ]
+                readme["non_claims"] = [
+                    "public_thaw",
+                    "github_publish",
+                    "auto_pull",
+                    "stable_or_production",
+                    "power_loss_safety",
+                    "rollback_A_to_B_previous_data_release",
+                ]
+            (run / "README.md").write_text(json.dumps(readme, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+        def refresh_manifest(rollback_expectation: str | None = None) -> None:
             artifacts = []
             for path in sorted(run.rglob("*")):
                 if path.is_file() and rel(path, run) != "evidence-manifest.json":
@@ -685,31 +842,95 @@ def self_test() -> None:
                         "bytes": path.stat().st_size,
                         "sha256": sha256_file(path),
                     })
+            manifest_payload = {
+                "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
+                "artifact_id": "self-test",
+                "artifacts": artifacts,
+            }
+            if rollback_expectation:
+                manifest_payload["rollback_expectation"] = rollback_expectation
             (run / "evidence-manifest.json").write_text(
-                json.dumps(
-                    {
-                        "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
-                        "artifact_id": "self-test",
-                        "artifacts": artifacts,
-                    },
-                    indent=2,
-                    sort_keys=True,
-                )
+                json.dumps(manifest_payload, indent=2, sort_keys=True)
                 + "\n",
                 encoding="utf-8",
             )
 
-        refresh_manifest()
+        refresh_manifest("image-fallback")
         ok = validate(run)
         assert ok["passed"], ok
+        previous_version = "self-test-previous"
+        previous_tree_sha = "e" * 64
+        update_readme_expectation("data-previous")
+        for rel_path in (
+            "service-before-apply/playback-samples.tsv",
+            "service-before-apply/status-samples.ndjson",
+            "service-before-apply/deep-health-systemd.json",
+            "service-before-apply/deep-health-process.json",
+            "service-before-apply/deep-health-kernel.json",
+            "service-before-apply/deep-health-player-counters.json",
+        ):
+            put(rel_path, "{}\n")
+        put("service-before-apply/playback-deep-health-public.json", health_summary)
+        put("service-before-apply/launcher-adoption.json", {
+            "schema": PLAYER_RUNTIME_ADOPTION_SCHEMA,
+            "passed": True,
+            "selected_source": "data",
+            "selected_version": previous_version,
+            "marker_valid": True,
+            "marker_tree_sha256": previous_tree_sha,
+            "running_identity_matches_marker": True,
+        })
+        lab_apply = json.loads((run / "lab-apply.json").read_text(encoding="utf-8"))
+        lab_apply["after"] = {
+            "previous_link": f"releases/{previous_version}",
+            "state_previous_version": previous_version,
+        }
+        put("lab-apply.json", lab_apply)
+        lab_rollback = json.loads((run / "lab-rollback.json").read_text(encoding="utf-8"))
+        lab_rollback["operation"]["expected_rolled_to"] = previous_version
+        refresh_manifest("data-previous")
+        bad_previous = validate(run)
+        assert not bad_previous["passed"], bad_previous
+        assert any("data_previous_rollback_target_mismatch" in item for item in bad_previous["errors"]), bad_previous
+        lab_rollback["operation"]["rolled_back_to"] = previous_version
+        lab_rollback["operation"]["after"] = {
+            "current_link": f"releases/{previous_version}",
+            "previous_link": None,
+        }
+        put("lab-rollback.json", lab_rollback)
+        put("service-after-rollback/launcher-adoption.json", {
+            "schema": PLAYER_RUNTIME_ADOPTION_SCHEMA,
+            "passed": True,
+            "selected_source": "data",
+            "selected_version": previous_version,
+            "marker_valid": True,
+            "running_identity_matches_marker": True,
+        })
+        refresh_manifest("data-previous")
+        good_previous = validate(run)
+        assert good_previous["passed"], good_previous
+        update_readme_expectation("image-fallback")
+        lab_rollback["operation"]["rolled_back_to"] = "image_fallback"
+        lab_rollback["operation"]["expected_rolled_to"] = None
+        lab_rollback["operation"]["after"] = {"current_link": None, "previous_link": None}
+        put("lab-rollback.json", lab_rollback)
+        put("service-after-rollback/launcher-adoption.json", {
+            "schema": PLAYER_RUNTIME_ADOPTION_SCHEMA,
+            "passed": True,
+            "selected_source": "fallback",
+            "selected_version": "image_fallback",
+            "marker_valid": False,
+            "running_identity_matches_marker": False,
+        })
+        refresh_manifest("image-fallback")
         empty_health = run / "candidate-health" / "playback-deep-health-public.json"
         empty_health.write_text("{}\n", encoding="utf-8")
-        refresh_manifest()
+        refresh_manifest("image-fallback")
         empty_failed = validate(run)
         assert not empty_failed["passed"], empty_failed
         assert any("candidate_health_not_passed" in item or "candidate_health_schema" in item for item in empty_failed["errors"]), empty_failed
         empty_health.write_text(json.dumps(health_summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        refresh_manifest()
+        refresh_manifest("image-fallback")
         bad = run / "candidate-health" / "candidate-config.json"
         bad.write_text('{"api_key":"SECRET","media":"/data/media/private.mp4"}\n', encoding="utf-8")
         failed = validate(run)

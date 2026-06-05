@@ -130,7 +130,11 @@ def copy_public_health(src_dir: Path, dst_dir: Path) -> None:
 def write_evidence_manifest(evidence_dir: Path,
                             *,
                             package_manifest: dict[str, Any],
-                            trial_id: str) -> None:
+                            trial_id: str,
+                            rollback_expectation: str,
+                            image_tag: str | None = None,
+                            image_sha256: str | None = None,
+                            image_marker_file: Path | None = None) -> None:
     artifacts = []
     for path in sorted(evidence_dir.rglob("*")):
         if not path.is_file():
@@ -143,20 +147,29 @@ def write_evidence_manifest(evidence_dir: Path,
             "bytes": path.stat().st_size,
             "sha256": sha256_file(path),
         })
-    write_json(
-        evidence_dir / "evidence-manifest.json",
-        {
-            "schema": MANIFEST_SCHEMA,
-            "artifact_id": trial_id,
-            "artifact_scope": "player-runtime-persistent-data-lab-trial",
-            "component": "player-runtime",
-            "version": package_manifest.get("version"),
-            "channel": package_manifest.get("channel"),
-            "source_commit": package_manifest.get("source_commit"),
-            "payload_sha256": package_manifest.get("payload_sha256"),
-            "artifacts": artifacts,
-        },
-    )
+    manifest = {
+        "schema": MANIFEST_SCHEMA,
+        "artifact_id": trial_id,
+        "artifact_scope": "player-runtime-persistent-data-lab-trial",
+        "component": "player-runtime",
+        "version": package_manifest.get("version"),
+        "channel": package_manifest.get("channel"),
+        "source_commit": package_manifest.get("source_commit"),
+        "payload_sha256": package_manifest.get("payload_sha256"),
+        "rollback_expectation": rollback_expectation,
+        "artifacts": artifacts,
+    }
+    if image_tag:
+        manifest["image_tag"] = image_tag
+    if image_sha256:
+        manifest["image_sha256"] = image_sha256.lower()
+    if image_marker_file:
+        if not image_marker_file.is_file():
+            raise RuntimeError(f"image marker file not found: {image_marker_file}")
+        manifest["image_marker_path"] = str(image_marker_file)
+        manifest["image_marker_bytes"] = image_marker_file.stat().st_size
+        manifest["image_marker_sha256"] = sha256_file(image_marker_file)
+    write_json(evidence_dir / "evidence-manifest.json", manifest)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -172,6 +185,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--duration-sec", type=float, default=45.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=8.0)
+    parser.add_argument(
+        "--rollback-expectation",
+        choices=("image-fallback-or-previous", "image-fallback", "data-previous"),
+        default="image-fallback-or-previous",
+    )
+    parser.add_argument("--image-tag")
+    parser.add_argument("--image-sha256")
+    parser.add_argument("--image-marker-file", type=Path)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
@@ -244,7 +265,46 @@ def main(argv: list[str]) -> int:
     cleanup_actions: list[dict[str, Any]] = []
     current_link = args.data_root / "player-runtime" / "current"
     pre_trial_current_target = read_symlink_target(current_link)
+    pre_apply_data_version: str | None = None
+    pre_apply_tree_sha256: str | None = None
     try:
+        if args.rollback_expectation == "data-previous":
+            before_adoption = run_json(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
+                    "--data-root",
+                    str(args.data_root),
+                    "--expected-source",
+                    "data",
+                    "--json",
+                ],
+                env=env_base,
+                stdout_path=evidence_dir / "service-before-apply" / "launcher-adoption.json",
+            )
+            pre_apply_data_version = str(before_adoption.get("selected_version") or "")
+            pre_apply_tree_sha256 = str(before_adoption.get("marker_tree_sha256") or "")
+            if not pre_apply_data_version or pre_apply_data_version == "image_fallback":
+                raise RuntimeError("data_previous_rollback_requires_existing_data_current")
+            if not pre_apply_tree_sha256:
+                raise RuntimeError("data_previous_rollback_requires_existing_tree_sha")
+            run_json(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"),
+                    "--duration-sec",
+                    str(args.duration_sec),
+                    "--interval-sec",
+                    str(args.interval_sec),
+                    "--output-dir",
+                    str(evidence_dir / "service-before-apply"),
+                    "--json",
+                ],
+                env=env_base,
+                stdout_path=raw_dir / "service-before-apply.json",
+                timeout=1800,
+            )
+
         stop_result = run_systemctl_result("stop")
         if stop_result["returncode"] != 0:
             raise RuntimeError("service_stop_failed")
@@ -286,6 +346,17 @@ def main(argv: list[str]) -> int:
         if not current_marker.is_file():
             raise RuntimeError("verified marker missing after apply")
         shutil.copy2(current_marker, evidence_dir / "verified-marker.json")
+        applied_marker = read_json(current_marker)
+        if args.rollback_expectation == "data-previous":
+            after_snapshot = apply_json.get("after") if isinstance(apply_json.get("after"), dict) else {}
+            previous_link = str(after_snapshot.get("previous_link") or "")
+            state_previous_version = str(after_snapshot.get("state_previous_version") or "")
+            if not previous_link.endswith(pre_apply_data_version or ""):
+                raise RuntimeError("data_previous_apply_did_not_preserve_previous_link")
+            if state_previous_version != pre_apply_data_version:
+                raise RuntimeError("data_previous_apply_did_not_preserve_previous_state")
+            if applied_marker.get("tree_sha256") == pre_apply_tree_sha256:
+                raise RuntimeError("data_previous_trial_requires_distinct_tree_sha")
 
         restart_result = run_systemctl_result("restart")
         if restart_result["returncode"] != 0:
@@ -332,6 +403,13 @@ def main(argv: list[str]) -> int:
                 str(args.data_root),
                 "--allow-device-data-root",
                 "--quarantine-current",
+                *(
+                    ["--expect-rolled-to", pre_apply_data_version]
+                    if args.rollback_expectation == "data-previous" and pre_apply_data_version
+                    else ["--expect-rolled-to", "image_fallback"]
+                    if args.rollback_expectation == "image-fallback"
+                    else []
+                ),
                 "--output-dir",
                 str(raw_dir / "rollback"),
                 "--reason",
@@ -352,6 +430,12 @@ def main(argv: list[str]) -> int:
         time.sleep(max(args.startup_wait_sec, 0.0))
         rolled_to = (((rollback_json.get("operation") or {}).get("rolled_back_to")) or "image_fallback")
         expected_source = "fallback" if rolled_to == "image_fallback" else "data"
+        if args.rollback_expectation == "data-previous":
+            if rolled_to != pre_apply_data_version:
+                raise RuntimeError("data_previous_rollback_target_mismatch")
+            expected_source = "data"
+        elif args.rollback_expectation == "image-fallback" and rolled_to != "image_fallback":
+            raise RuntimeError("image_fallback_rollback_target_mismatch")
         rollback_adoption_cmd = [
             sys.executable,
             str(REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"),
@@ -448,11 +532,18 @@ def main(argv: list[str]) -> int:
         "component": "player-runtime",
         "version": version,
         "scope": "lab-only persistent /data trial",
+        "rollback_expectation": args.rollback_expectation,
         "claims": [
             "local_package_apply",
             "verified_marker_adoption",
             "service_deep_health_after_restart",
-            "rollback_to_previous_or_image",
+            (
+                "rollback_to_data_previous"
+                if args.rollback_expectation == "data-previous"
+                else "rollback_to_image_fallback"
+                if args.rollback_expectation == "image-fallback"
+                else "rollback_to_previous_or_image"
+            ),
             "service_deep_health_after_rollback",
         ],
         "non_claims": [
@@ -461,9 +552,22 @@ def main(argv: list[str]) -> int:
             "auto_pull",
             "stable_or_production",
             "power_loss_safety",
+            *(
+                []
+                if args.rollback_expectation == "data-previous"
+                else ["rollback_A_to_B_previous_data_release"]
+            ),
         ],
     })
-    write_evidence_manifest(evidence_dir, package_manifest=manifest, trial_id=trial_id)
+    write_evidence_manifest(
+        evidence_dir,
+        package_manifest=manifest,
+        trial_id=trial_id,
+        rollback_expectation=args.rollback_expectation,
+        image_tag=args.image_tag,
+        image_sha256=args.image_sha256,
+        image_marker_file=args.image_marker_file,
+    )
     evidence_gate = run_json(
         [
             sys.executable,

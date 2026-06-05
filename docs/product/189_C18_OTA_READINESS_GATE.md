@@ -127,8 +127,10 @@ stable/producao, durabilidade sob corte de energia, cold-boot adoption, ou
 rollback A->B entre duas releases persistentes em `/data`. Como foi o primeiro
 apply persistente, nao havia `previous` de `/data`; o rollback validado foi para
 o fallback de imagem. O manifest de evidencia deste trial tambem nao preenche
-`image_tag`/`image_sha256`; o proximo ensaio deve corrigir isso no harness ou
-incluir artefato equivalente gateado.
+`image_tag`/`image_sha256`; o harness posterior passa a aceitar esses campos e
+o proximo ensaio deve usa-los junto com `--rollback-expectation data-previous`.
+O evidence gate passa a comparar o `tree_sha256` do release gate com o marker
+adotado e a rejeitar uma evidencia A->B que volte para `image_fallback`.
 
 ## Candidata 1p (offline; descartada em hardware)
 

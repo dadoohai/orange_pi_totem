@@ -601,9 +601,9 @@ def validate_payload(payload: Path) -> dict[str, Any]:
                 raise GateError(f"expected exactly one kiosk.py, found {len(kiosk_members)}")
         kiosk_path = temp_root / "kiosk.py"
         source = kiosk_path.read_text(encoding="utf-8")
-        py_compile.compile(str(kiosk_path), doraise=True)
         validate_kiosk_source(source)
         tree = tree_hash(temp_root)
+        py_compile.compile(str(kiosk_path), doraise=True)
     return {
         "kiosk_py_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
         "tree_sha256": tree,

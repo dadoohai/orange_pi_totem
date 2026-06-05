@@ -3,9 +3,9 @@
   "artifact_scope": "player-runtime-persistent-data-lab-trial",
   "artifacts": [
     {
-      "bytes": 648,
+      "bytes": 734,
       "file": "README.md",
-      "sha256": "f31f46ef3969063e1ac8727363d4f58e0f5cd10273c408d5ab35c724312b4046"
+      "sha256": "df2f504bc3af59d5aae80063a09592d699e959115300c2c5d9baeb726f0b1c1b"
     },
     {
       "bytes": 73,
@@ -65,7 +65,7 @@
     {
       "bytes": 484,
       "file": "package/player-runtime-release-gate.json",
-      "sha256": "002f2df578ca6285f3d185d5ee40d4fd253bf66ccc58b0b96a5c5479e071da8a"
+      "sha256": "ea35017af90253e6f67b62100a16886cfc329b9b9ad083cc41f07b22ba377938"
     },
     {
       "bytes": 73,
@@ -156,6 +156,7 @@
   "channel": "homologation",
   "component": "player-runtime",
   "payload_sha256": "057d25e61e2876629145cd0bdabebe27bdf14d2699e595ca5de2da73f67ffafe",
+  "rollback_expectation": "image-fallback",
   "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
   "source_commit": "1562cd37ec933107c5ccf5bc363a156d0b7fb988",
   "version": "c18.player-runtime-lab-20260605T052721Z-1562cd3"
