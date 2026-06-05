@@ -22,6 +22,8 @@ KIOSK_PATH = PLAYER_DIR / "kiosk.py"
 SOURCE_PATH = PLAYER_DIR / "SOURCE.json"
 DERIVE_C18_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwdecode.py"
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
+CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
+CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 EXPECTED_SNAPSHOT_SHA256 = "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
@@ -80,9 +82,13 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")
-        self.assertIn('TAG = "c18-hwdecode-lab-1t"', derive)
-        self.assertIn('VERSION = "c18.image-lab.1t"', derive)
-        self.assertIn('MARKER = "/etc/dadooh/c18-hwdecode-lab-1t-image"', derive)
+        self.assertEqual(CURRENT_GOLDEN["image_tag"], "c18-hwdecode-lab-1t")
+        self.assertEqual(CURRENT_GOLDEN["image_version"], "c18.image-lab.1t")
+        self.assertEqual(CURRENT_GOLDEN["image_marker_path"], "/etc/dadooh/c18-hwdecode-lab-1t-image")
+        self.assertIn("CURRENT_GOLDEN_PATH", derive)
+        self.assertIn('TAG = str(CURRENT_GOLDEN["image_tag"])', derive)
+        self.assertIn('VERSION = str(CURRENT_GOLDEN["image_version"])', derive)
+        self.assertIn('MARKER = str(CURRENT_GOLDEN["image_marker_path"])', derive)
         self.assertIn('"round": "C18.IMAGE-LAB.1t"', derive)
         self.assertIn("=== C18.IMAGE-LAB.1t RESULT ===", derive)
         self.assertIn("1s + boot-state evidence and crash-boundary gates", derive)

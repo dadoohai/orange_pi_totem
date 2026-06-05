@@ -20,11 +20,14 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from c18_current_golden import load_current_golden
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CURRENT_COLDBOOT_EVIDENCE_DIR = "docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health"
-CURRENT_GOLDEN_IMAGE_TAG = "c18-hwdecode-lab-1t"
-CURRENT_GOLDEN_IMAGE_SHA256 = "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6"
+CURRENT_GOLDEN = load_current_golden()
+CURRENT_COLDBOOT_EVIDENCE_DIR = str(CURRENT_GOLDEN["coldboot_evidence_dir"])
+CURRENT_GOLDEN_IMAGE_TAG = str(CURRENT_GOLDEN["image_tag"])
+CURRENT_GOLDEN_IMAGE_SHA256 = str(CURRENT_GOLDEN["image_sha256"])
 PY_COMPILE_TARGETS = (
     "scripts/board/totem_config_contract_validate.py",
     "scripts/board/totem_config_writer_real.py",
@@ -46,9 +49,11 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_lab_apply.py",
     "scripts/qa/c18_player_runtime_lab_rollback.py",
     "scripts/qa/c18_player_runtime_adoption_probe.py",
+    "scripts/qa/c18_current_golden.py",
     "scripts/qa/c18_coldboot_evidence_gate.py",
     "scripts/qa/c18_player_runtime_evidence_gate.py",
     "scripts/qa/c18_player_runtime_persistent_trial.py",
+    "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
@@ -149,8 +154,118 @@ def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]
     }
 
 
-def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> list[dict[str, Any]]:
+def failed_internal_step(name: str, message: str) -> dict[str, Any]:
+    return {
+        "name": name,
+        "cmd": ["internal", name],
+        "returncode": 1,
+        "passed": False,
+        "stdout_tail": "",
+        "stderr_tail": message,
+    }
+
+
+def load_json_file(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise RuntimeError(f"expected JSON object: {path}")
+    return data
+
+
+def player_runtime_data_evidence_summary(args: argparse.Namespace) -> dict[str, Any]:
+    required = args.player_runtime_evidence_mode == "decisive"
+    return {
+        "required": required,
+        "decisive": False,
+        "status": "pending" if required else "not_requested",
+        "mode": args.player_runtime_evidence_mode,
+        "coldboot_evidence_dir": (
+            str(args.player_runtime_data_coldboot_evidence_dir)
+            if args.player_runtime_data_coldboot_evidence_dir is not None
+            else None
+        ),
+        "data_evidence_dir": (
+            str(args.player_runtime_data_evidence_dir)
+            if args.player_runtime_data_evidence_dir is not None
+            else None
+        ),
+        "expected_image_tag": args.expect_image_tag,
+        "expected_image_sha256": args.expect_image_sha256,
+        "expected_image_marker_sha256": args.expect_image_marker_sha256,
+        "non_claims": [] if required else [
+            "player_runtime_data_coldboot",
+            "player_runtime_data_release_adoption",
+            "player_runtime_public_thaw",
+            "stable_or_production",
+        ],
+        "errors": [],
+    }
+
+
+def link_player_runtime_data_evidence(coldboot_dir: Path, data_dir: Path) -> dict[str, Any]:
+    errors: list[str] = []
+    try:
+        marker = load_json_file(data_dir / "verified-marker.json")
+    except Exception as exc:
+        return failed_internal_step("c18_player_runtime_data_evidence_link", f"verified_marker_read_failed:{type(exc).__name__}")
+    try:
+        boot = load_json_file(coldboot_dir / "boot-state-public.json")
+    except Exception as exc:
+        return failed_internal_step("c18_player_runtime_data_evidence_link", f"boot_state_read_failed:{type(exc).__name__}")
+    player = boot.get("player_runtime")
+    if not isinstance(player, dict):
+        errors.append("coldboot_player_runtime_missing")
+        player = {}
+    checks = {
+        "version": (
+            marker.get("version"),
+            player.get("data_current_marker_version"),
+        ),
+        "tree_sha256": (
+            marker.get("tree_sha256"),
+            player.get("data_current_tree_sha256"),
+        ),
+        "kiosk_py_sha256": (
+            marker.get("kiosk_py_sha256"),
+            player.get("data_current_kiosk_py_sha256"),
+        ),
+    }
+    for key, (expected, actual) in checks.items():
+        if not expected or not actual:
+            errors.append(f"{key}_missing")
+        elif expected != actual:
+            errors.append(f"{key}_mismatch")
+    passed = not errors
+    return {
+        "name": "c18_player_runtime_data_evidence_link",
+        "cmd": ["internal", "link_player_runtime_data_evidence"],
+        "returncode": 0 if passed else 1,
+        "passed": passed,
+        "stdout_tail": json.dumps({
+            "version": checks["version"][0],
+            "tree_sha256": checks["tree_sha256"][0],
+            "kiosk_py_sha256": checks["kiosk_py_sha256"][0],
+        }, sort_keys=True),
+        "stderr_tail": ",".join(errors),
+    }
+
+
+def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     steps: list[dict[str, Any]] = []
+    summary = player_runtime_data_evidence_summary(args)
+    if args.player_runtime_evidence_mode == "decisive":
+        if args.player_runtime_data_coldboot_evidence_dir is None:
+            steps.append(failed_internal_step(
+                "c18_player_runtime_data_coldboot_evidence_required",
+                "missing --player-runtime-data-coldboot-evidence-dir",
+            ))
+            summary["errors"].append("missing_player_runtime_data_coldboot_evidence_dir")
+        if args.player_runtime_data_evidence_dir is None:
+            steps.append(failed_internal_step(
+                "c18_player_runtime_data_evidence_required",
+                "missing --player-runtime-data-evidence-dir",
+            ))
+            summary["errors"].append("missing_player_runtime_data_evidence_dir")
     image_marker_arg: list[str] = []
     if args.expect_image_marker_sha256:
         image_marker_arg = ["--expect-image-marker-sha256", args.expect_image_marker_sha256]
@@ -187,7 +302,18 @@ def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> lis
                 "--json",
             ],
         ))
-    return steps
+    if (
+        args.player_runtime_evidence_mode == "decisive"
+        and args.player_runtime_data_coldboot_evidence_dir is not None
+        and args.player_runtime_data_evidence_dir is not None
+    ):
+        steps.append(link_player_runtime_data_evidence(
+            args.player_runtime_data_coldboot_evidence_dir,
+            args.player_runtime_data_evidence_dir,
+        ))
+    if summary["errors"]:
+        summary["status"] = "failed"
+    return steps, summary
 
 
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
@@ -422,6 +548,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evidence-dir", type=Path, default=None)
     parser.add_argument("--player-runtime-data-coldboot-evidence-dir", type=Path, default=None)
     parser.add_argument("--player-runtime-data-evidence-dir", type=Path, default=None)
+    parser.add_argument("--player-runtime-evidence-mode", choices=("baseline", "decisive"), default="baseline")
     parser.add_argument("--expect-image-tag", default=CURRENT_GOLDEN_IMAGE_TAG)
     parser.add_argument("--expect-image-sha256", default=CURRENT_GOLDEN_IMAGE_SHA256)
     parser.add_argument("--expect-image-marker-sha256", default=None)
@@ -443,7 +570,18 @@ def main() -> int:
         if name == "player_runtime_sandbox":
             step_cmd.extend(["--sandbox", tempfile.mkdtemp(prefix="c18-player-runtime-sandbox-")])
         steps.append(run_step(name, step_cmd))
-    steps.extend(player_runtime_decisive_data_evidence_steps(args))
+    data_evidence_steps, data_evidence_summary = player_runtime_decisive_data_evidence_steps(args)
+    steps.extend(data_evidence_steps)
+    if data_evidence_steps:
+        failed_data_steps = [step["name"] for step in data_evidence_steps if not step["passed"]]
+        if failed_data_steps:
+            data_evidence_summary["status"] = "failed"
+            data_evidence_summary["errors"].extend(failed_data_steps)
+        elif args.player_runtime_evidence_mode == "decisive":
+            data_evidence_summary["status"] = "passed"
+            data_evidence_summary["decisive"] = True
+        else:
+            data_evidence_summary["status"] = "advisory_passed"
 
     steps.append(run_step("git_diff_check", ["git", "diff", "--check"]))
 
@@ -477,6 +615,8 @@ def main() -> int:
         "package": package_result,
         "sandbox": str(sandbox),
         "evidence_dir": str(evidence),
+        "current_golden": CURRENT_GOLDEN,
+        "player_runtime_data_evidence": data_evidence_summary,
         "guardrails": {
             "ssh_used": False,
             "github_used": False,

@@ -1,0 +1,9 @@
+{
+  "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health",
+  "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1t-image",
+  "image_marker_sha256": null,
+  "image_sha256": "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6",
+  "image_tag": "c18-hwdecode-lab-1t",
+  "image_version": "c18.image-lab.1t",
+  "schema": "dadooh.c18.current_golden.v1"
+}

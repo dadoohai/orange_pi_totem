@@ -297,11 +297,15 @@ Follow-up repo-side apos a promocao da `1t`:
   ou de marker verificado, e falha fechado sem `--require-pre-state` e sem uma
   identidade de imagem esperada (`--expect-image-tag` ou
   `--expect-image-marker-sha256`);
-- o release gate possui entradas separadas para a futura rodada M-6
-  (`--player-runtime-data-coldboot-evidence-dir` e
-  `--player-runtime-data-evidence-dir`); quando usadas, elas chamam os gates
-  fortes com `/data`, pre-state e imagem golden pinada, sem transformar o trial
-  warm em prova de cold-boot;
+- a golden atual e sua evidencia ficam em uma unica fonte canonica,
+  `docs/evidence/c18-update-validation/current-golden.json`; novos bumps de
+  golden devem atualizar essa fonte e deixar os gates compararem contra ela;
+- o release gate possui modo explicito de evidencia: `baseline` (default,
+  apenas baseline/fallback historico) e `decisive` (M-6). Em `decisive`,
+  `--player-runtime-data-coldboot-evidence-dir` e
+  `--player-runtime-data-evidence-dir` sao obrigatorios, os gates rodam com
+  `/data`, pre-state e imagem golden pinada, e o release gate cruza
+  version/tree/kiosk do marker entre a evidencia warm e a cold-boot;
 - quando a evidencia reivindicar `/data` como fonte adotada pelo servico, ela
   tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
   provando processo em execucao, marker valido e hash do `kiosk.py` rodando

@@ -344,13 +344,19 @@ evidencia de `player-runtime` exige esses campos e tambem exige
 gate deve ser invocado com `--expect-image-tag`, `--expect-image-sha256` e/ou
 `--expect-image-marker-sha256` pinados a golden esperada; presenca/shape de
 imagem serve apenas para leitura historica ou trial warm nao decisivo.
-O `c18_ota_release_gate.py` possui um slot explicito para o M-6:
-`--player-runtime-data-coldboot-evidence-dir` roda o coldboot gate com
-`--expect-selected-source=data` e `--require-pre-state`, e
-`--player-runtime-data-evidence-dir` roda o gate de evidencia `player-runtime`
-com `--expect-image-*` pinado a golden do release gate. Sem esses diretorios,
-o release gate valida apenas o baseline/fallback historico, nao prova cold-boot
-`/data` decisivo.
+O registro canônico da golden atual fica em
+`docs/evidence/c18-update-validation/current-golden.json`; gates e testes devem
+ler essa fonte em vez de duplicar tag/sha da imagem. O
+`c18_ota_release_gate.py` separa `--player-runtime-evidence-mode baseline`
+(default; valida baseline/fallback historico e declara non-claims de `/data`) de
+`--player-runtime-evidence-mode decisive` (M-6). No modo `decisive`,
+`--player-runtime-data-coldboot-evidence-dir` e
+`--player-runtime-data-evidence-dir` sao obrigatorios; o primeiro roda o
+coldboot gate com `--expect-selected-source=data` e `--require-pre-state`, o
+segundo roda o gate de evidencia `player-runtime` com `--expect-image-*` pinado
+a golden do release gate, e o release gate cruza o marker/version/tree/kiosk
+entre as duas evidencias. Sem modo `decisive`, o release gate nao prova
+cold-boot `/data`.
 
 Interrupcao/power-loss durante apply/rollback de `player-runtime` deve ser
 provada em duas camadas. A camada offline usa fault-injection no caminho real do

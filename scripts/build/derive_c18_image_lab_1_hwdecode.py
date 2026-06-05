@@ -31,10 +31,12 @@ import totem_core_image_embed
 
 ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
+CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
+CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1t"   # 1t = 1s + boot-state evidence and crash-boundary gates.
-VERSION = "c18.image-lab.1t"
+TAG = str(CURRENT_GOLDEN["image_tag"])   # 1t = 1s + boot-state evidence and crash-boundary gates.
+VERSION = str(CURRENT_GOLDEN["image_version"])
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
@@ -49,7 +51,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1t-image"
+MARKER = str(CURRENT_GOLDEN["image_marker_path"])
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"

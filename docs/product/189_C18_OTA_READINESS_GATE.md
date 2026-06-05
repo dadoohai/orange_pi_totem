@@ -325,15 +325,17 @@ ou demonstra `/data` por marker/probe, o modo forte deixa de ser disciplina
 manual e passa a ser fail-closed: sem pre-state forte e sem identidade esperada
 de imagem, o gate reprova mesmo sob `--expect-selected-source=any`. O gate de
 evidencia `player-runtime` tambem exige identidade de repo e imagem no manifesto
-e compara `repo_commit` com o `source_commit` do pacote; para rodada decisiva,
-ele deve receber `--expect-image-*` pinado a golden esperada. O runner
+e compara `repo_commit` com o `source_commit` do pacote. A golden corrente fica
+em `docs/evidence/c18-update-validation/current-golden.json`; gates e testes
+devem ler essa fonte unica para evitar drift no proximo bump. O runner
 persistente continua sendo um trial warm de apply/rollback; cold-boot `/data`
-decisivo deve ser uma rodada de duas fases com pre/post-state. O release gate
-agora tem um slot separado para essa rodada futura:
+decisivo usa o M-6 de duas fases. Para essa rodada, o release gate deve rodar
+com `--player-runtime-evidence-mode decisive`,
 `--player-runtime-data-coldboot-evidence-dir` e
-`--player-runtime-data-evidence-dir` executam os gates fortes com a golden
-pinada; sem esses diretorios, o gate segue validando apenas o baseline historico
-`fallback`.
+`--player-runtime-data-evidence-dir`; nesse modo os dois artefatos sao
+obrigatorios, a imagem e pinada contra a golden, e o marker/version/tree/kiosk
+sao cruzados entre warm e cold-boot. Sem modo `decisive`, o gate segue validando
+apenas o baseline historico `fallback`.
 
 ## Candidata 1p (offline; descartada em hardware)
 
