@@ -231,6 +231,9 @@ def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
         errors.append("manifest_missing_verified_marker_artifact")
     if "lab-apply.json" not in declared or "lab-rollback.json" not in declared:
         errors.append("manifest_missing_trial_operation_artifacts")
+    for key in ("image_tag", "image_sha256", "image_marker_path", "image_marker_bytes", "image_marker_sha256"):
+        if key not in manifest:
+            errors.append(f"manifest_missing_{key}")
     if "image_tag" in manifest and (not isinstance(manifest.get("image_tag"), str) or not manifest.get("image_tag")):
         errors.append("manifest_invalid_image_tag")
     if "image_sha256" in manifest and not is_sha256(manifest.get("image_sha256")):
@@ -247,6 +250,9 @@ def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
             errors.append("manifest_invalid_image_marker_bytes")
         if not is_sha256(marker_sha):
             errors.append("manifest_invalid_image_marker_sha256")
+    for key in ("repo_commit", "repo_tree", "repo_dirty"):
+        if key not in manifest:
+            errors.append(f"manifest_missing_{key}")
     if "repo_commit" in manifest and not is_hex(manifest.get("repo_commit"), 40):
         errors.append("manifest_invalid_repo_commit")
     if "repo_tree" in manifest and not is_hex(manifest.get("repo_tree"), 40):
@@ -678,6 +684,8 @@ def self_test() -> None:
         kiosk_sha = "b" * 64
         tree_sha = "c" * 64
         source_commit = "d" * 40
+        image_sha = "1" * 64
+        image_marker_sha = "2" * 64
 
         def put(rel_path: str, payload: Any) -> None:
             path = run / rel_path
@@ -897,6 +905,11 @@ def self_test() -> None:
                 "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
                 "artifact_id": "self-test",
                 "source_commit": source_commit,
+                "image_tag": "c18-hwdecode-lab-self-test",
+                "image_sha256": image_sha,
+                "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-self-test-image",
+                "image_marker_bytes": 128,
+                "image_marker_sha256": image_marker_sha,
                 "repo_commit": source_commit,
                 "repo_tree": "f" * 40,
                 "repo_dirty": False,
@@ -965,6 +978,26 @@ def self_test() -> None:
         refresh_manifest("data-previous")
         good_previous = validate(run)
         assert good_previous["passed"], good_previous
+        manifest_missing_image = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
+        manifest_missing_image.pop("image_tag", None)
+        (run / "evidence-manifest.json").write_text(
+            json.dumps(manifest_missing_image, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        missing_image = validate(run)
+        assert not missing_image["passed"], missing_image
+        assert "manifest_missing_image_tag" in missing_image["errors"], missing_image
+        refresh_manifest("data-previous")
+        manifest_missing_repo = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
+        manifest_missing_repo.pop("repo_commit", None)
+        (run / "evidence-manifest.json").write_text(
+            json.dumps(manifest_missing_repo, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        missing_repo = validate(run)
+        assert not missing_repo["passed"], missing_repo
+        assert "manifest_missing_repo_commit" in missing_repo["errors"], missing_repo
+        refresh_manifest("data-previous")
         manifest_with_repo_mismatch = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
         manifest_with_repo_mismatch["repo_commit"] = "f" * 40
         (run / "evidence-manifest.json").write_text(

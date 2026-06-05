@@ -91,15 +91,15 @@ def evidence_files(run_dir: Path) -> list[Path]:
     return sorted(path for path in run_dir.rglob("*") if path.is_file())
 
 
-def validate_manifest(run_dir: Path, errors: list[str]) -> None:
+def validate_manifest(run_dir: Path, errors: list[str]) -> dict[str, Any]:
     manifest_path = run_dir / "evidence-manifest.json"
     if not manifest_path.is_file():
-        return
+        return {}
     manifest = load_json(manifest_path, errors)
     items = manifest.get("artifacts", manifest.get("files", []))
     if not isinstance(items, list):
         fail(errors, "manifest_files_not_list")
-        return
+        return manifest
     for item in items:
         if not isinstance(item, dict) or not isinstance(item.get("file"), str):
             fail(errors, "manifest_file_entry_invalid")
@@ -117,6 +117,33 @@ def validate_manifest(run_dir: Path, errors: list[str]) -> None:
             fail(errors, f"manifest_file_size_mismatch:{rel}")
         if item.get("sha256") and sha256_file(path) != item["sha256"]:
             fail(errors, f"manifest_file_sha256_mismatch:{rel}")
+    return manifest
+
+
+def validate_data_source_repo_identity(manifest: dict[str, Any], errors: list[str]) -> None:
+    if not manifest:
+        fail(errors, "data_source_requires_evidence_manifest")
+        return
+    source_commit = manifest.get("source_commit")
+    repo_commit = manifest.get("repo_commit")
+    repo_tree = manifest.get("repo_tree")
+    repo_dirty = manifest.get("repo_dirty")
+    if not isinstance(source_commit, str) or not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        fail(errors, "manifest_invalid_source_commit")
+    if not isinstance(repo_commit, str) or not re.fullmatch(r"[0-9a-f]{40}", repo_commit):
+        fail(errors, "manifest_invalid_repo_commit")
+    if not isinstance(repo_tree, str) or not re.fullmatch(r"[0-9a-f]{40}", repo_tree):
+        fail(errors, "manifest_invalid_repo_tree")
+    if repo_dirty is not False:
+        fail(errors, "manifest_repo_dirty")
+    if (
+        isinstance(source_commit, str)
+        and isinstance(repo_commit, str)
+        and re.fullmatch(r"[0-9a-f]{40}", source_commit)
+        and re.fullmatch(r"[0-9a-f]{40}", repo_commit)
+        and source_commit != repo_commit
+    ):
+        fail(errors, "manifest_repo_commit_source_mismatch")
 
 
 def validate_boot_state(
@@ -125,6 +152,7 @@ def validate_boot_state(
     *,
     expect_source: str,
     adoption: dict[str, Any] | None = None,
+    evidence_manifest: dict[str, Any] | None = None,
     pre_state: dict[str, Any] | None = None,
     pre_state_path: Path | None = None,
     require_pre_state: bool = False,
@@ -342,6 +370,13 @@ def validate_boot_state(
     selected = player.get("selected_source")
     if expect_source != "any" and selected != expect_source:
         fail(errors, f"selected_source_mismatch:{selected}")
+    data_source_claimed = selected == "data" or expect_source == "data"
+    if data_source_claimed and not require_pre_state:
+        fail(errors, "data_source_requires_pre_state")
+    if data_source_claimed and not (expect_image_tag or expect_image_marker_sha256):
+        fail(errors, "data_source_requires_expected_image_identity")
+    if data_source_claimed:
+        validate_data_source_repo_identity(evidence_manifest or {}, errors)
     if expect_source == "data" and player.get("current_present") is not True:
         fail(errors, "data_current_missing")
     if expect_source == "data":
@@ -404,7 +439,7 @@ def validate(
     if run_dir is not None:
         boot_path = run_dir / DEFAULT_BOOT_STATE
         files = evidence_files(run_dir)
-        validate_manifest(run_dir, errors)
+        evidence_manifest = validate_manifest(run_dir, errors)
         adoption = {}
         for name in ("launcher-adoption.json", "adoption-probe.json", "player-runtime-adoption.json"):
             candidate = run_dir / name
@@ -417,6 +452,7 @@ def validate(
         boot_path = boot_state
         files = [boot_state]
         adoption = {}
+        evidence_manifest = {}
     if not boot_path.is_file():
         fail(errors, "boot_state_missing")
         data: dict[str, Any] = {}
@@ -440,6 +476,7 @@ def validate(
             errors,
             expect_source=expect_source,
             adoption=adoption,
+            evidence_manifest=evidence_manifest,
             pre_state=pre_state,
             pre_state_path=pre_state_path,
             require_pre_state=require_pre_state,
@@ -595,6 +632,28 @@ def refresh_fixture_pre_state_hash(root: Path) -> None:
     boot = json.loads(boot_path.read_text(encoding="utf-8"))
     boot["pre_state"]["sha256"] = sha256_file(pre_path)
     boot_path.write_text(json.dumps(boot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_coldboot_manifest_fixture(root: Path, *, repo_commit: str = "d" * 40) -> None:
+    artifacts = []
+    for name in (DEFAULT_BOOT_STATE, DEFAULT_PRE_STATE, "launcher-adoption.json"):
+        path = root / name
+        if path.is_file():
+            artifacts.append({
+                "file": name,
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            })
+    data = {
+        "schema": "dadooh.c18.hardware_evidence.v1",
+        "artifact_id": "self-test-coldboot-data",
+        "source_commit": "d" * 40,
+        "repo_commit": repo_commit,
+        "repo_tree": "e" * 40,
+        "repo_dirty": False,
+        "artifacts": artifacts,
+    }
+    (root / "evidence-manifest.json").write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def write_adoption_fixture(path: Path) -> None:
@@ -769,13 +828,31 @@ def self_test() -> int:
         write_fixture(boot_path, source="data")
         refresh_fixture_pre_state_hash(root)
         write_adoption_fixture(root / "launcher-adoption.json")
+        write_coldboot_manifest_fixture(root)
+        result = validate(root, None, expect_source="data")
+        if result["passed"] or "data_source_requires_pre_state" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
         result = validate(root, None, expect_source="data", require_pre_state=True)
+        if result["passed"] or "data_source_requires_expected_image_identity" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_coldboot_manifest_fixture(root, repo_commit="f" * 40)
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
+        if result["passed"] or "manifest_repo_commit_source_mismatch" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        write_coldboot_manifest_fixture(root)
+
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
         if not result["passed"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
         (root / "launcher-adoption.json").unlink()
-        result = validate(root, None, expect_source="data", require_pre_state=True)
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
         if result["passed"] or "adoption_probe_missing" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
@@ -784,21 +861,22 @@ def self_test() -> int:
         missing_pre = json.loads(boot_path.read_text(encoding="utf-8"))
         missing_pre["boot"]["pre_boot_id_sha256_12"] = None
         boot_path.write_text(json.dumps(missing_pre) + "\n", encoding="utf-8")
-        result = validate(root, None, expect_source="data", require_pre_state=True)
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
         if result["passed"] or "pre_boot_id_hash_missing" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
         write_fixture(boot_path, source="data")
         refresh_fixture_pre_state_hash(root)
+        write_coldboot_manifest_fixture(root)
 
         (root / "leak.txt").write_text("api_key=secret\n", encoding="utf-8")
-        result = validate(root, None, expect_source="data", require_pre_state=True)
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
         if result["passed"] or not any(item.startswith("privacy_leak") for item in result["errors"]):
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
         (root / "leak.txt").write_text("PARTUUID=abcd-1234 /dev/disk/by-uuid/private /dev/mmcblk0p2 12345678-1234-1234-1234-123456789abc\n", encoding="utf-8")
-        result = validate(root, None, expect_source="data", require_pre_state=True)
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
         if result["passed"] or not any("uuid_source" in item for item in result["errors"]):
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1

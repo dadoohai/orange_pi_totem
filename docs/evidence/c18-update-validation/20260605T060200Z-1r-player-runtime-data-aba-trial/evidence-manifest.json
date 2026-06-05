@@ -202,6 +202,10 @@
   "image_tag": "c18-hwdecode-lab-1r",
   "payload_sha256": "4185d7059087d79ba3bb16e52b1b5a3bfe50e4d3f83eadb131b6e7a256f7fe59",
   "rollback_expectation": "data-previous",
+  "repo_commit": "8edcd1ce4a2f1d92513ba55b6288c8169165af91",
+  "repo_dirty": false,
+  "repo_exact_tag": null,
+  "repo_tree": "5b8f2341feb41b7b93638bc888564a4e4f37c727",
   "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
   "source_commit": "8edcd1ce4a2f1d92513ba55b6288c8169165af91",
   "version": "c18.player-runtime-ab-b-20260605T055913Z-8edcd1c"

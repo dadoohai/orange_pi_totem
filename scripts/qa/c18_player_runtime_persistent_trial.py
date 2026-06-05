@@ -246,6 +246,8 @@ def main(argv: list[str]) -> int:
     ):
         print(f"device_data_root_guard_required: pass --allow-device-data-root and set {DEVICE_DATA_ENV}=1", file=sys.stderr)
         return 43
+    if not args.image_tag or not args.image_sha256 or args.image_marker_file is None:
+        raise RuntimeError("device_image_identity_required: pass --image-tag, --image-sha256, and --image-marker-file")
 
     repo_info = repo_identity()
     evidence_dir = args.evidence_dir

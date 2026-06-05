@@ -322,6 +322,12 @@ O cold-boot gate prova consistencia interna e cadeia de handoff dos artefatos,
 nao autenticidade criptografica contra operador malicioso. Sem pre-state
 mecanico, a evidencia pode continuar util como smoke de servico, mas nao deve
 ser usada como prova decisoria de cold-boot ou de adocao por `/data`.
+Evidencia que seleciona `/data` deve falhar fechado se tentar passar pelo modo
+fraco: o gate exige pre-state forte e uma identidade de imagem esperada
+(`--expect-image-tag` ou `--expect-image-marker-sha256`) antes de aceitar
+`selected_source=data`. Essa mesma evidencia cold-boot `/data` tambem deve
+trazer `source_commit`, `repo_commit`, `repo_tree` e `repo_dirty=false` no
+`evidence-manifest.json`; `repo_commit` deve casar com `source_commit`.
 
 Se a evidencia reivindicar adocao de `/data/player-runtime/current`, ela tambem
 precisa incluir `launcher-adoption.json` do probe de adocao real, com processo
@@ -329,7 +335,9 @@ em execucao, marker valido e identidade rodando batendo com o marker. A
 evidencia tambem deve registrar identidade do repo (`repo_commit`, `repo_tree`,
 `repo_dirty=false`, tag quando houver) e identidade da imagem/marker do device
 para reduzir drift entre repo, imagem gerada e placa validada. Em trials novos,
-`repo_commit` deve casar com o `source_commit` do pacote sob teste.
+`repo_commit` deve casar com o `source_commit` do pacote sob teste; o gate de
+evidencia de `player-runtime` exige esses campos e tambem exige
+`image_tag`/`image_sha256`/marker `/etc/dadooh`.
 
 Interrupcao/power-loss durante apply/rollback de `player-runtime` deve ser
 provada em duas camadas. A camada offline usa fault-injection no caminho real do

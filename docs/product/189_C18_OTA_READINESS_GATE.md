@@ -320,6 +320,14 @@ identidade da imagem pelo marker em `/etc/dadooh`, e manifesto com
 `--require-pre-state`; se a rodada reivindicar power-cycle fisico, tambem deve
 usar `--forbid-controlled-reboot`.
 
+Nota pos-auditoria `d60661b`: para evidencia cold-boot que seleciona `/data`,
+o modo forte deixa de ser disciplina manual e passa a ser fail-closed: sem
+pre-state forte e sem identidade esperada de imagem, o gate reprova. O gate de
+evidencia `player-runtime` tambem exige identidade de repo e imagem no manifesto
+e compara `repo_commit` com o `source_commit` do pacote. O runner persistente
+continua sendo um trial warm de apply/rollback; cold-boot `/data` decisivo deve
+ser uma rodada de duas fases com pre/post-state.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente

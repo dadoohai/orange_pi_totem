@@ -288,7 +288,12 @@ Follow-up repo-side apos a promocao da `1t`:
   journal bruto, UUID/particao em claro, IP, MAC, SSID, URL ou segredo;
 - manifestos de novas evidencias de trial devem registrar identidade de repo
   (`repo_commit`, `repo_tree`, `repo_dirty=false`, tag se houver) para reduzir
-  drift entre checkout, imagem e placa;
+  drift entre checkout, imagem e placa; para `player-runtime`, o gate exige que
+  `repo_commit` case com o `source_commit` do pacote e que o manifesto traga
+  `image_tag`/`image_sha256`/marker `/etc/dadooh`;
+- evidencias cold-boot que selecionam `/data` nao podem usar o caminho fraco:
+  o gate falha fechado sem `--require-pre-state` e sem uma identidade de imagem
+  esperada (`--expect-image-tag` ou `--expect-image-marker-sha256`);
 - quando a evidencia reivindicar `/data` como fonte adotada pelo servico, ela
   tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
   provando processo em execucao, marker valido e hash do `kiosk.py` rodando
