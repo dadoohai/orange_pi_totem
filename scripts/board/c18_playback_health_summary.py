@@ -16,6 +16,8 @@ EXPECTED_HWDEC = "v4l2request-copy"
 EXPECTED_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 EXPECTED_MPV_BINARY = "/opt/totem/hwdecode/bin/mpv"
 EXPECTED_MPV_PATHS = {EXPECTED_WRAPPER, EXPECTED_MPV_BINARY}
+MIN_FRAME_PROGRESS_DELTAS = 2
+MAX_TRAILING_NONPROGRESS_DELTAS = 1
 
 
 def read_json(path: Path | None, label: str) -> dict[str, Any]:
@@ -111,6 +113,62 @@ def progressed(values: list[float | None]) -> bool:
     return max(clean) > min(clean)
 
 
+def sustained_progress_stats(values: list[float | None]) -> dict[str, int | bool]:
+    clean = [value for value in values if value is not None]
+    pair_count = max(len(clean) - 1, 0)
+    deltas = [current - previous for previous, current in zip(clean, clean[1:])]
+    positive_steps = sum(1 for delta in deltas if delta > 0)
+    trailing_nonprogress_steps = 0
+    for delta in reversed(deltas):
+        if delta > 0:
+            break
+        trailing_nonprogress_steps += 1
+    return {
+        "sample_count": len(clean),
+        "pair_count": pair_count,
+        "positive_steps": positive_steps,
+        "required_steps": MIN_FRAME_PROGRESS_DELTAS,
+        "trailing_nonprogress_steps": trailing_nonprogress_steps,
+        "passed": (
+            len(clean) >= 3
+            and positive_steps >= MIN_FRAME_PROGRESS_DELTAS
+            and trailing_nonprogress_steps <= MAX_TRAILING_NONPROGRESS_DELTAS
+        ),
+    }
+
+
+def sustained_progressed(values: list[float | None]) -> bool:
+    return bool(sustained_progress_stats(values)["passed"])
+
+
+def frame_progress_segments(rows: list[dict[str, str]]) -> list[list[float | None]]:
+    segments: list[list[float | None]] = []
+    current_key: str | None = None
+    current_segment: list[float | None] = []
+    previous_frame: float | None = None
+
+    for row in rows:
+        alias = row.get("current_alias") or row.get("status_current_alias") or row.get("status_path_alias") or "__unknown__"
+        index = row.get("status_current_index") or ""
+        key = f"{alias}:{index}"
+        frame_value = as_float(row.get("estimated_frame_number"))
+        reset = (
+            frame_value is not None
+            and previous_frame is not None
+            and frame_value < previous_frame
+        )
+        if current_segment and (key != current_key or reset):
+            segments.append(current_segment)
+            current_segment = []
+        current_key = key
+        current_segment.append(frame_value)
+        previous_frame = frame_value
+
+    if current_segment:
+        segments.append(current_segment)
+    return segments
+
+
 def present_count(values: list[float | None]) -> int:
     return len([value for value in values if value is not None])
 
@@ -171,7 +229,8 @@ def evaluate(
                 vo_configured_unexpected_samples += 1
 
             time_values.append(as_float(row.get("time_pos")))
-            frame_values.append(as_float(row.get("estimated_frame_number")))
+            frame_value = as_float(row.get("estimated_frame_number"))
+            frame_values.append(frame_value)
 
         if status_has_failure(row, target_mode):
             status_failure_samples += 1
@@ -201,7 +260,16 @@ def evaluate(
     transition_ok = not transition_required or unique_aliases >= 2
     time_pos_progressed = progressed(time_values)
     estimated_frame_present = present_count(frame_values) >= 2
-    frame_progressed = progressed(frame_values)
+    frame_progress_stats = sustained_progress_stats(frame_values)
+    frame_segments = frame_progress_segments(success_rows)
+    if frame_segments:
+        segment_stats = [sustained_progress_stats(values) for values in frame_segments]
+        evaluable_segment_stats = [stats for stats in segment_stats if int(stats["sample_count"]) >= 3]
+        best_segment = evaluable_segment_stats[-1] if evaluable_segment_stats else segment_stats[-1]
+        frame_progressed = bool(best_segment["passed"])
+    else:
+        frame_progressed = bool(frame_progress_stats["passed"])
+        best_segment = frame_progress_stats
 
     checks = {
         "samples_present": len(rows) > 0,
@@ -259,6 +327,9 @@ def evaluate(
             "vo_configured_unexpected_samples": vo_configured_unexpected_samples,
             "time_pos_progressed": time_pos_progressed,
             "estimated_frame_progressed": frame_progressed,
+            "estimated_frame_positive_steps": best_segment["positive_steps"],
+            "estimated_frame_required_steps": best_segment["required_steps"],
+            "estimated_frame_trailing_nonprogress_steps": best_segment["trailing_nonprogress_steps"],
             "status_failure_samples": status_failure_samples,
             "nrestarts_delta": nrestarts_delta,
             "mpv_count": mpv_count,

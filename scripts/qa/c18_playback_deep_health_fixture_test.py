@@ -120,6 +120,28 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertTrue(result["counters"]["time_pos_progressed"])
         self.assertFalse(result["counters"]["estimated_frame_progressed"])
 
+    def test_rejects_short_frame_burst_then_stall(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        template = rows[0].copy()
+        snapshot = json.loads(template["status_snapshot_json"])
+        snapshot["playlist_size"] = 1
+        generated = []
+        for index, frame in enumerate(("100", "130", "160", "160", "160", "160", "160", "160"), start=1):
+            row = template.copy()
+            row["seq"] = str(index)
+            row["rel_sec"] = str(index - 1)
+            row["time_pos"] = f"{index - 1}.10"
+            row["current_alias"] = "media-a"
+            row["estimated_frame_number"] = frame
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            generated.append(row)
+        fixture.write_rows(generated)
+        result = self.assert_fails_with(fixture, "playback_progressed")
+        self.assertTrue(result["counters"]["time_pos_progressed"])
+        self.assertFalse(result["counters"]["estimated_frame_progressed"])
+        self.assertGreater(result["counters"]["estimated_frame_trailing_nonprogress_steps"], 1)
+
     def test_rejects_missing_frame_progress_evidence(self) -> None:
         fixture = self.with_case()
         rows = fixture.rows()

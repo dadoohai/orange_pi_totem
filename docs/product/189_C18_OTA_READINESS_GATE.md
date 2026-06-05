@@ -543,8 +543,9 @@ vir como nova imagem ou release ponte explicitamente homologada.
 - A rodada pos-1n acrescentou o escape simetrico
   `scripts/qa/c18_player_runtime_lab_rollback.py`: local-only, exige
   `C18_PLAYER_RUNTIME_LAB_ROLLBACK=1` + `--lab-only-rollback`, roda rollback ou
-  reconcile interno de `player-runtime`, confirma que o CLI publico continua
-  bloqueado com `rc=44`, e so toca `/data` com
+  reconcile interno de `player-runtime`, registra links `current`/`previous`
+  antes/depois, confirma que o CLI publico continua bloqueado com `rc=44`, e so
+  toca `/data` com
   `--allow-device-data-root` + `C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1`.
   Esse harness e pre-condicao antes de qualquer ensaio persistente em
   `/data/player-runtime/current`.

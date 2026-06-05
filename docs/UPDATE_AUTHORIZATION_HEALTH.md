@@ -163,10 +163,11 @@ Antes de qualquer thaw de laboratorio:
   `--allow-player-runtime-maintenance` e `C18_PLAYER_RUNTIME_RECONCILE=1`; o
   boot da imagem pode passar essa autorizacao explicitamente, mas o comando nao
   deve ficar solto como API publica mutavel;
-- o proximo ensaio persistente deve guardar manifest/payload SHA,
-  `playback-samples.tsv`, sidecars `deep-health-*.json` e
-  `playback-deep-health-public.json` sanitizados, junto de um resumo que prove
-  apply, adocao pelo launcher, rollback real e fallback esperado;
+- o proximo ensaio persistente deve guardar `evidence-manifest.json`, manifest
+  do pacote, payload SHA, hashes dos artefatos, `playback-samples.tsv`,
+  sidecars `deep-health-*.json` e `playback-deep-health-public.json`
+  sanitizados, junto de um resumo que prove apply, adocao pelo launcher,
+  rollback real, links `current`/`previous` antes/depois e fallback esperado;
 - antes de commitar essa evidencia, rodar
   `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>` para aplicar
   allowlist de arquivos e scan de vazamento;

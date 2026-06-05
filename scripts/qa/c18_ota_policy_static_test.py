@@ -8,6 +8,7 @@ operator-created policy file or on the legacy kiosky-player update service.
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import re
@@ -60,6 +61,7 @@ DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
 EVIDENCE_1O_DEEP_HEALTH_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T003747Z-1o-service-deep-health"
 )
+EVIDENCE_1O_IMAGE_SHA256 = "07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
     REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
@@ -301,6 +303,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
     def test_c18_1o_hardware_evidence_is_public_and_passing(self) -> None:
         public = json.loads((EVIDENCE_1O_DEEP_HEALTH_DIR / "playback-deep-health-public.json").read_text(encoding="utf-8"))
         privacy = json.loads((EVIDENCE_1O_DEEP_HEALTH_DIR / "privacy-scan.json").read_text(encoding="utf-8"))
+        manifest = json.loads((EVIDENCE_1O_DEEP_HEALTH_DIR / "evidence-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(public["schema"], "dadooh.c18.playback.deep_health.v1")
         self.assertTrue(public["passed"])
         self.assertEqual(public["failure_reasons"], [])
@@ -319,6 +322,31 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(privacy["schema"], "dadooh.c18.evidence.privacy_scan.v1")
         self.assertEqual(privacy["result"], "passed")
         self.assertTrue(all(value == 0 for value in privacy["scan_counts"].values()))
+        self.assertEqual(manifest["schema"], "dadooh.c18.update_validation.evidence_manifest.v1")
+        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1o")
+        self.assertEqual(manifest["image_sha256"], EVIDENCE_1O_IMAGE_SHA256)
+        manifest_files = {item["file"]: item for item in manifest["artifacts"]}
+        privacy_files = {item["file"]: item for item in privacy["files"]}
+        for file_name, metadata in manifest_files.items():
+            path = EVIDENCE_1O_DEEP_HEALTH_DIR / file_name
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            self.assertEqual(path.stat().st_size, metadata["bytes"])
+            self.assertEqual(digest, metadata["sha256"])
+            self.assertIn(file_name, privacy_files)
+        evidence_gate = importlib.util.spec_from_file_location("c18_player_runtime_evidence_gate", PLAYER_RUNTIME_EVIDENCE_GATE_PATH)
+        self.assertIsNotNone(evidence_gate)
+        module = importlib.util.module_from_spec(evidence_gate)
+        assert evidence_gate and evidence_gate.loader
+        evidence_gate.loader.exec_module(module)
+        leaks = []
+        for path in sorted(EVIDENCE_1O_DEEP_HEALTH_DIR.rglob("*")):
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for label, pattern in module.LEAK_PATTERNS:
+                if pattern.search(text):
+                    leaks.append(f"{label}:{path.relative_to(EVIDENCE_1O_DEEP_HEALTH_DIR).as_posix()}")
+        self.assertEqual(leaks, [])
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:
@@ -430,11 +458,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn('"time-pos"', script)
             self.assertIn('"estimated-frame-number"', script)
             self.assertIn("def progressed(values):", script)
-            self.assertIn("max(clean) > min(clean)", script)
             self.assertIn("time_pos_progressed", script)
             self.assertIn("estimated_frame_progressed", script)
             self.assertIn("status_failure_samples", script)
             self.assertIn("c18_decode_health_passed", script)
+
+        summary = (REPO_ROOT / "scripts" / "board" / "c18_playback_health_summary.py").read_text(encoding="utf-8")
+        self.assertIn("def sustained_progress_stats(", summary)
+        self.assertIn("def frame_progress_segments(", summary)
+        self.assertIn("MIN_FRAME_PROGRESS_DELTAS", summary)
+        self.assertIn("MAX_TRAILING_NONPROGRESS_DELTAS", summary)
+        self.assertIn("estimated_frame_trailing_nonprogress_steps", summary)
 
         service_observer = SERVICE_OBSERVER_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_playback_health_summary.py", service_observer)
@@ -493,12 +527,19 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("_reconcile_player_runtime_state", lab_rollback)
         self.assertIn("public_cli_rollback_still_frozen", lab_rollback)
         self.assertIn("public_cli_reconcile_still_frozen", lab_rollback)
+        self.assertIn("current_link", lab_rollback)
+        self.assertIn("previous_link", lab_rollback)
+        self.assertIn("rolled_back_to", lab_rollback)
         self.assertNotIn("apply-github-latest", lab_rollback)
         self.assertNotIn("gh release", lab_rollback)
 
         evidence_gate = PLAYER_RUNTIME_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("ALLOWED_PATTERNS", evidence_gate)
+        self.assertIn("evidence-manifest.json", evidence_gate)
+        self.assertIn("sha256_file", evidence_gate)
+        self.assertIn("validate_evidence_manifest", evidence_gate)
         self.assertIn("playback-samples.tsv", evidence_gate)
+        self.assertIn("service-after-rollback", evidence_gate)
         self.assertIn("status-samples.ndjson", evidence_gate)
         self.assertIn("candidate-config.json", evidence_gate)
         self.assertIn("LEAK_PATTERNS", evidence_gate)

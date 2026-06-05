@@ -1,5 +1,8 @@
 {
-  "files": [
+  "artifact_id": "c18-1o-deep-health-20260605T003747Z-service",
+  "artifact_schema": "dadooh.c18.playback.deep_health.v1",
+  "artifact_scope": "service-image-baseline",
+  "artifacts": [
     {
       "bytes": 73,
       "file": "deep-health-kernel.json",
@@ -21,11 +24,6 @@
       "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
     },
     {
-      "bytes": 1734,
-      "file": "evidence-manifest.json",
-      "sha256": "0e5cfa2f5917ad338a457a1ed39619f03c534fd74b58e90fe8fd2f3babce284b"
-    },
-    {
       "bytes": 2187,
       "file": "playback-deep-health-public.json",
       "sha256": "5cb1dc95c85ac05db45fcd9ca6d038da7caa3789f66ed46db974f36d028fb465"
@@ -41,15 +39,13 @@
       "sha256": "90d0dc45df11fad17fdffcc23057a1d35e840a962d927e3fb2386dc31118a120"
     }
   ],
-  "result": "passed",
-  "scan_counts": {
-    "api_key": 0,
-    "api_url": 0,
-    "environment_id": 0,
-    "ipv4": 0,
-    "mac": 0,
-    "token_secret_password_ssid": 0,
-    "url": 0
-  },
-  "schema": "dadooh.c18.evidence.privacy_scan.v1"
+  "golden_promotion_commit": "9bc580d",
+  "image_bytes": 1971322880,
+  "image_sha256": "07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164",
+  "image_tag": "c18-hwdecode-lab-1o",
+  "image_version": "c18.image-lab.1o",
+  "player_runtime_data_current": "absent",
+  "public_player_runtime_ota_state": "frozen_rc_44",
+  "round": "C18.IMAGE-LAB.1o",
+  "schema": "dadooh.c18.update_validation.evidence_manifest.v1"
 }

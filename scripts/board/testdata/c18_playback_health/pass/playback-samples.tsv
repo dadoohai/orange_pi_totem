@@ -1,4 +1,5 @@
 seq	rel_sec	ipc_result	current_alias	time_pos	estimated_frame_number	hwdec_current	vo_configured	status_playback_state	status_snapshot_json
 1	0.0	success	media-a	0.10	3	v4l2request-copy	true	playing	{"present":true,"playlist_size":2,"consecutive_failures":0,"blocked_media_count":0,"last_poll_error":"null","last_render_error":"null","black_screen_risk_reason":"null"}
 2	1.0	success	media-a	1.10	33	v4l2request-copy	true	playing	{"present":true,"playlist_size":2,"consecutive_failures":0,"blocked_media_count":0,"last_poll_error":"null","last_render_error":"null","black_screen_risk_reason":"null"}
-3	2.0	success	media-b	0.20	6	v4l2request-copy	true	playing	{"present":true,"playlist_size":2,"consecutive_failures":0,"blocked_media_count":0,"last_poll_error":"null","last_render_error":"null","black_screen_risk_reason":"null"}
+3	2.0	success	media-a	2.10	63	v4l2request-copy	true	playing	{"present":true,"playlist_size":2,"consecutive_failures":0,"blocked_media_count":0,"last_poll_error":"null","last_render_error":"null","black_screen_risk_reason":"null"}
+4	3.0	success	media-b	0.20	6	v4l2request-copy	true	playing	{"present":true,"playlist_size":2,"consecutive_failures":0,"blocked_media_count":0,"last_poll_error":"null","last_render_error":"null","black_screen_risk_reason":"null"}

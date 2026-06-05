@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import hashlib
 import json
 import re
 import sys
@@ -16,6 +17,7 @@ SCHEMA = "dadooh.c18.player_runtime.evidence_gate.v1"
 
 ALLOWED_PATTERNS = (
     "README.md",
+    "evidence-manifest.json",
     "package/*.manifest.json",
     "package/player-runtime-release-gate.json",
     "lab-apply.json",
@@ -37,6 +39,13 @@ ALLOWED_PATTERNS = (
     "service-after-restart/deep-health-process.json",
     "service-after-restart/deep-health-kernel.json",
     "service-after-restart/deep-health-player-counters.json",
+    "service-after-rollback/playback-deep-health-public.json",
+    "service-after-rollback/playback-samples.tsv",
+    "service-after-rollback/status-samples.ndjson",
+    "service-after-rollback/deep-health-systemd.json",
+    "service-after-rollback/deep-health-process.json",
+    "service-after-rollback/deep-health-kernel.json",
+    "service-after-rollback/deep-health-player-counters.json",
     "qa/evidence-leak-scan.txt",
 )
 
@@ -77,6 +86,61 @@ def allowed(rel_path: str) -> bool:
     return any(fnmatch.fnmatch(rel_path, pattern) for pattern in ALLOWED_PATTERNS)
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
+    errors: list[str] = []
+    manifest_path = run_dir / "evidence-manifest.json"
+    if not manifest_path.is_file():
+        return ["missing_required:evidence-manifest.json"]
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return [f"manifest_read_error:{type(exc).__name__}"]
+    if not isinstance(manifest, dict):
+        return ["manifest_not_object"]
+    if manifest.get("schema") not in {
+        "dadooh.c18.update_validation.evidence_manifest.v1",
+        "dadooh.c18.player_runtime.evidence_manifest.v1",
+    }:
+        errors.append("manifest_invalid_schema")
+    artifacts = manifest.get("artifacts")
+    if artifacts is None:
+        artifacts = manifest.get("files")
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append("manifest_missing_artifacts")
+        return errors
+    present = set(files)
+    for item in artifacts:
+        if not isinstance(item, dict):
+            errors.append("manifest_artifact_not_object")
+            continue
+        rel_path = str(item.get("file") or "")
+        if not rel_path:
+            errors.append("manifest_artifact_missing_file")
+            continue
+        if rel_path == "evidence-manifest.json":
+            errors.append("manifest_must_not_hash_itself")
+            continue
+        if rel_path not in present:
+            errors.append(f"manifest_artifact_missing:{rel_path}")
+            continue
+        path = run_dir / rel_path
+        expected_bytes = item.get("bytes")
+        expected_sha = item.get("sha256")
+        if expected_bytes != path.stat().st_size:
+            errors.append(f"manifest_artifact_bytes_mismatch:{rel_path}")
+        if expected_sha != sha256_file(path):
+            errors.append(f"manifest_artifact_sha_mismatch:{rel_path}")
+    return errors
+
+
 def validate(run_dir: Path) -> dict[str, Any]:
     errors: list[str] = []
     files: list[str] = []
@@ -115,15 +179,18 @@ def validate(run_dir: Path) -> dict[str, Any]:
 
     required = {
         "README.md",
+        "evidence-manifest.json",
         "lab-apply.json",
         "lab-rollback.json",
         "candidate-health/playback-deep-health-public.json",
         "candidate-health/playback-samples.tsv",
         "service-after-restart/playback-deep-health-public.json",
+        "service-after-rollback/playback-deep-health-public.json",
     }
     present = set(files)
     for rel_path in sorted(required - present):
         errors.append(f"missing_required:{rel_path}")
+    errors.extend(validate_evidence_manifest(run_dir, files))
 
     return {
         "schema": SCHEMA,
@@ -154,10 +221,33 @@ def self_test() -> None:
             "candidate-health/deep-health-player-counters.json",
             "service-after-restart/playback-deep-health-public.json",
             "service-after-restart/playback-samples.tsv",
+            "service-after-rollback/playback-deep-health-public.json",
+            "service-after-rollback/playback-samples.tsv",
         ):
             path = run / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{}\n", encoding="utf-8")
+        artifacts = []
+        for path in sorted(run.rglob("*")):
+            if path.is_file():
+                artifacts.append({
+                    "file": rel(path, run),
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                })
+        (run / "evidence-manifest.json").write_text(
+            json.dumps(
+                {
+                    "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
+                    "artifact_id": "self-test",
+                    "artifacts": artifacts,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         ok = validate(run)
         assert ok["passed"], ok
         bad = run / "candidate-health" / "candidate-config.json"

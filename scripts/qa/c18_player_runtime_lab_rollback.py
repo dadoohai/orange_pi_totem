@@ -68,6 +68,23 @@ def write_lab_policy(policy_path: Path) -> None:
     )
 
 
+def runtime_snapshot() -> dict[str, Any]:
+    state: dict[str, Any] = {}
+    try:
+        state = updatectl._read_state()
+    except Exception:
+        state = {}
+    return {
+        "current_link": updatectl._read_symlink_target(updatectl.CURRENT_LINK),
+        "previous_link": updatectl._read_symlink_target(updatectl.PREVIOUS_LINK),
+        "current_exists": updatectl.CURRENT_LINK.exists() or updatectl.CURRENT_LINK.is_symlink(),
+        "previous_exists": updatectl.PREVIOUS_LINK.exists() or updatectl.PREVIOUS_LINK.is_symlink(),
+        "state_current_version": (state.get("current") or {}).get("version") if isinstance(state.get("current"), dict) else None,
+        "state_previous_version": (state.get("previous") or {}).get("version") if isinstance(state.get("previous"), dict) else None,
+        "last_operation": state.get("last_operation") if isinstance(state.get("last_operation"), dict) else None,
+    }
+
+
 def public_cli_freeze(data_root: Path, action: str) -> dict[str, Any]:
     env = {
         "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -144,21 +161,33 @@ def main(argv: list[str]) -> int:
 
     previous_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
     updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+    before_snapshot = runtime_snapshot()
     try:
         if args.action == "rollback":
             rc = updatectl._rollback_player_runtime_unfrozen(reason=args.reason)
+            after_snapshot = runtime_snapshot()
             operation: dict[str, Any] = {
                 "action": "rollback",
                 "rc": rc,
                 "result": "ok" if rc == 0 else "failed",
+                "before": before_snapshot,
+                "after": after_snapshot,
+                "rolled_back_to": (
+                    (after_snapshot.get("current_link") or "").split("/")[-1]
+                    if after_snapshot.get("current_link")
+                    else "image_fallback"
+                ),
             }
         else:
             rc, reconcile = updatectl._reconcile_player_runtime_state(reason=args.reason)
+            after_snapshot = runtime_snapshot()
             operation = {
                 "action": "reconcile",
                 "rc": rc,
                 "result": reconcile.get("status"),
                 "reconcile": reconcile,
+                "before": before_snapshot,
+                "after": after_snapshot,
             }
     finally:
         updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = previous_thaw

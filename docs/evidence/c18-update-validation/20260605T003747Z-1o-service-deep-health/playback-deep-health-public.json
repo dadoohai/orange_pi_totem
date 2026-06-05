@@ -33,7 +33,10 @@
     "vo_configured_present": true
   },
   "counters": {
+    "estimated_frame_positive_steps": 17,
     "estimated_frame_progressed": true,
+    "estimated_frame_required_steps": 2,
+    "estimated_frame_trailing_nonprogress_steps": 0,
     "ext4_errors": 0,
     "hwdec_expected_samples": 22,
     "hwdec_unexpected_samples": 0,
