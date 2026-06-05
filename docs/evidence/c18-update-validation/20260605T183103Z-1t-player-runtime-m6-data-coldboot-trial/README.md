@@ -1,10 +1,13 @@
 # C18 player-runtime M6 data cold-boot trial
 
-This directory stores sanitized evidence for the first decisive C18 M6
+This directory stores sanitized historical evidence for the first C18 M6
 player-runtime `/data` cold-boot trial on golden image `c18-hwdecode-lab-1t`.
 
-Result: passed. The host-side C18 OTA release gate was run in decisive mode and
-reported `passed=true`.
+Historical result: the run passed the host-side C18 OTA release gate that
+existed at capture time. The current gate is stricter and requires
+`requires.updater_features` with `c18-player-runtime-verify-then-promote-v1`;
+this archived package predates that contract and must not be reused as current
+decisive authorization.
 
 Scope proven:
 

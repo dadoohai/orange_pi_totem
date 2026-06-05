@@ -22,6 +22,7 @@ KIOSK_PATH = PLAYER_DIR / "kiosk.py"
 SOURCE_PATH = PLAYER_DIR / "SOURCE.json"
 DERIVE_C18_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwdecode.py"
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
+LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
@@ -118,9 +119,21 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
     def test_common_ota_gate_tracks_player_runtime_boundary(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn('"scripts/qa/c18_player_runtime_static_test.py"', gate)
+        self.assertIn('"scripts/qa/c18_player_runtime_lab_thaw.py"', gate)
         self.assertIn('"player-runtime/kiosky-player/kiosk.py"', gate)
         self.assertIn('"player-runtime/kiosky-player/SOURCE.json"', gate)
         self.assertIn("c18_player_runtime_static", gate)
+
+    def test_lab_thaw_wrapper_is_guarded_and_m6_based(self) -> None:
+        thaw = LAB_THAW_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", thaw)
+        self.assertIn("C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL", thaw)
+        self.assertIn("c18_player_runtime_m6_coldboot_trial.py", thaw)
+        self.assertIn("load_current_golden", thaw)
+        self.assertIn("validate_release(args.manifest_a", thaw)
+        self.assertIn("validate_release(args.manifest_b", thaw)
+        self.assertIn('"public_cli_thawed": False', thaw)
+        self.assertIn('"stable_allowed": False', thaw)
 
 
 if __name__ == "__main__":

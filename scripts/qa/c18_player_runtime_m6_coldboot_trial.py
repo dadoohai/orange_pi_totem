@@ -47,6 +47,7 @@ SCHEMA = "dadooh.c18.player_runtime.m6_coldboot_trial.v1"
 TRANSITION_FLOW = "C18-M6-PLAYER-RUNTIME-DATA-COLDBOOT"
 MECHANICAL_ACTION = "operator_controlled_reboot"
 REPO_IDENTITY_FILE = "repo-identity.json"
+REQUIRED_UPDATER_FEATURE = "c18-player-runtime-verify-then-promote-v1"
 
 
 def require_guard(args: argparse.Namespace) -> None:
@@ -113,6 +114,15 @@ def package_manifest(path: Path) -> dict[str, Any]:
     version = data.get("version")
     if not isinstance(version, str) or not version:
         raise RuntimeError("package_manifest_version_missing")
+    if data.get("source_dirty") is not False:
+        raise RuntimeError("package_manifest_source_dirty")
+    requires = data.get("requires")
+    features = requires.get("updater_features") if isinstance(requires, dict) else None
+    if (
+        not isinstance(features, list)
+        or REQUIRED_UPDATER_FEATURE not in features
+    ):
+        raise RuntimeError("package_manifest_missing_player_runtime_updater_feature")
     return data
 
 
@@ -588,7 +598,8 @@ def phase_resume(args: argparse.Namespace) -> int:
     summary = {
         "schema": SCHEMA,
         "phase": "resume",
-        "passed": (release_gate.get("passed") is True) or bool(args.defer_release_gate),
+        "passed": release_gate.get("passed") is True,
+        "m6_checks_passed": True,
         "release_gate_deferred": bool(args.defer_release_gate),
         "version_a": version_a,
         "version_b": version_b,

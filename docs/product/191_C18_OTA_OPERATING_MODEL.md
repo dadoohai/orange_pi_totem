@@ -73,6 +73,32 @@ Qualquer mudanca em duracao, playlist, sync, decode, wrapper de MPV, flags de
 MPV, panfrost, path de player, service do player ou fallback `/opt` exige frente
 separada e imagem/homologacao apropriadas.
 
+## Player-runtime lab thaw
+
+Existe uma excecao governada para laboratorio: `player-runtime` pode ser
+ensaiado em `/data` pelo wrapper `scripts/qa/c18_player_runtime_lab_thaw.py`.
+Isso nao e OTA comum, nao remove `player-runtime` de `OTA_FROZEN_COMPONENTS`,
+nao habilita GitHub, URL, auto-pull, `stable` ou producao.
+
+O wrapper so aceita pacote local `lab|homologation` de arvore limpa
+(`source_dirty=false`), exige
+`C18_PLAYER_RUNTIME_LAB_THAW=1` + `--lab-only-thaw`, exige canario explicito,
+usa a golden atual de `docs/evidence/c18-update-validation/current-golden.json`
+e delega ao fluxo M6 duas-fases: `arm` deixa a release B verificada em
+`/data`, o operador faz reboot real, e `resume` valida adocao cold-boot,
+deep-health, rollback para A e release gate `decisive`.
+
+O CLI publico mutavel continua congelado: `apply-local`, `apply-manifest-url`,
+`apply-github-latest` real, `rollback` e `reconcile` para `player-runtime`
+devem continuar retornando `rc=44` sem as guardas lab/manutencao explicitas.
+Inspecoes read-only/dry-run de GitHub nao sao thaw e nao devem ser tratadas como
+autorizacao de apply.
+
+Antes de usar resultado de lab thaw como evidencia decisoria, o diretorio precisa
+passar no release gate em modo `decisive` e registrar `non_claims` para
+`public_thaw`, `github_publish`, `auto_pull`, `stable_or_production`,
+`power_loss_safety` e `soak_endurance`.
+
 ## Publicacao de totem-core
 
 Antes de publicar:

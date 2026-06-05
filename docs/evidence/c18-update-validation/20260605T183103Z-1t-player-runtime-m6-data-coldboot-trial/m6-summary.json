@@ -1,7 +1,8 @@
 {
   "coldboot_data_evidence_dir": "/data/state/c18-m6/20260605T183103Z-m6-695298f-retry2/coldboot-data-evidence",
   "evidence_root": "/data/state/c18-m6/20260605T183103Z-m6-695298f-retry2",
-  "passed": true,
+  "m6_checks_passed": true,
+  "passed": false,
   "phase": "resume",
   "player_runtime_data_evidence_dir": "/data/state/c18-m6/20260605T183103Z-m6-695298f-retry2/player-runtime-data-evidence",
   "release_gate": {

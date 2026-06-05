@@ -53,12 +53,16 @@ DEVICE_REQUIRED = "orangepizero3"
 DEVICE_TRACK_DEFAULT = "c18-hwdecode"
 SUPPORTED_DEVICE_TRACKS = ("c18-hwdecode",)
 SUPPORTED_BASE_IMAGE_LINES = ("c17.4.2",)
-UPDATER_FEATURES = frozenset({
+TOTEM_CORE_REQUIRED_UPDATER_FEATURES = frozenset({
     "c18-freeze-kiosky-player-v1",
     "c18-rollback-reapply-v1",
     "c18-safe-payload-v1",
     "c18-track-v1",
 })
+PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES = frozenset({
+    "c18-player-runtime-verify-then-promote-v1",
+})
+UPDATER_FEATURES = TOTEM_CORE_REQUIRED_UPDATER_FEATURES | PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES
 KNOWN_REQUIRES_KEYS = frozenset({
     "device",
     "base_image_min",
@@ -959,6 +963,10 @@ def _validate_manifest(m: Dict[str, Any],
     channel = m["channel"]
     if channel not in UPDATE_CHANNELS:
         raise RuntimeError(f"unsupported manifest channel: {channel!r}")
+    if expected_component == "player-runtime" and channel == "stable":
+        raise RuntimeError("player-runtime stable channel is blocked until production thaw gates exist")
+    if expected_component == "player-runtime" and m.get("source_dirty") is not False:
+        raise RuntimeError("player-runtime manifest source_dirty must be false")
     active_policy = policy or _load_update_policy()
     allowed, reason = _policy_allows_manifest(active_policy, expected_component, channel)
     if not allowed:
@@ -993,8 +1001,8 @@ def _validate_manifest(m: Dict[str, Any],
                 f"manifest device_track requirement not met: {device_track!r} != {policy_track!r}"
             )
     updater_features = req.get("updater_features")
-    if expected_component == "totem-core" and updater_features is None:
-        raise RuntimeError("totem-core manifest requires updater_features")
+    if expected_component in {"totem-core", "player-runtime"} and updater_features is None:
+        raise RuntimeError(f"{expected_component} manifest requires updater_features")
     if updater_features is not None:
         if (
             not isinstance(updater_features, list)
@@ -1002,9 +1010,17 @@ def _validate_manifest(m: Dict[str, Any],
             or not all(isinstance(item, str) and item for item in updater_features)
         ):
             raise RuntimeError("manifest updater_features requirement must be a non-empty string list")
-        missing_features = sorted(UPDATER_FEATURES - set(updater_features))
+        if expected_component == "totem-core":
+            required_features = TOTEM_CORE_REQUIRED_UPDATER_FEATURES
+        elif expected_component == "player-runtime":
+            required_features = PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES
+        else:
+            required_features = frozenset()
+        missing_features = sorted(required_features - set(updater_features))
         if expected_component == "totem-core" and missing_features:
             raise RuntimeError(f"totem-core manifest missing required updater features: {missing_features}")
+        if expected_component == "player-runtime" and missing_features:
+            raise RuntimeError(f"player-runtime manifest missing required updater features: {missing_features}")
         unsupported_features = sorted(set(updater_features) - UPDATER_FEATURES)
         if unsupported_features:
             raise RuntimeError(f"manifest requires unsupported updater features: {unsupported_features}")

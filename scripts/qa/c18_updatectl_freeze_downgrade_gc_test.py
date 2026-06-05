@@ -80,13 +80,19 @@ def manifest(
     return data
 
 
-def player_runtime_manifest(version: str, *, hwdec: str = "v4l2request-copy") -> dict:
+def player_runtime_manifest(
+    version: str,
+    *,
+    hwdec: str = "v4l2request-copy",
+    channel: str = "homologation",
+) -> dict:
     return {
         "schema": "dadooh.totem.update.v1",
         "component": "player-runtime",
         "version": version,
-        "channel": "stable",
+        "channel": channel,
         "created_at_utc": "2026-06-02T10:00:00Z",
+        "source_dirty": False,
         "payload": f"dadooh-player-runtime-{version}.tar.gz",
         "payload_sha256": "a" * 64,
         "payload_bytes": 1,
@@ -95,6 +101,13 @@ def player_runtime_manifest(version: str, *, hwdec: str = "v4l2request-copy") ->
             "device": "orangepizero3",
             "base_image_min": "c17.4.2",
             "device_track": "c18-hwdecode",
+            "updater_features": [
+                "c18-freeze-kiosky-player-v1",
+                "c18-rollback-reapply-v1",
+                "c18-safe-payload-v1",
+                "c18-track-v1",
+                "c18-player-runtime-verify-then-promote-v1",
+            ],
             "media_stack_id": "c18-hwdecode-v4l2request-copy",
             "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
             "hwdec": hwdec,
@@ -108,6 +121,8 @@ def player_runtime_manifest(version: str, *, hwdec: str = "v4l2request-copy") ->
 def player_runtime_policy(*, allow_downgrade: bool = False) -> dict:
     raw = policy(allow_downgrade=allow_downgrade)
     raw["allowed_components"] = ["player-runtime"]
+    raw["device_channel"] = "homologation"
+    raw["allow_prerelease"] = True
     return raw
 
 
@@ -318,6 +333,8 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
     def test_player_runtime_manifest_requires_media_stack_contract(self) -> None:
         raw_policy = policy()
         raw_policy["allowed_components"] = ["player-runtime"]
+        raw_policy["device_channel"] = "homologation"
+        raw_policy["allow_prerelease"] = True
         good_policy = updatectl._normalise_policy(raw_policy)
         updatectl._validate_manifest(
             player_runtime_manifest("player-good"),
@@ -327,6 +344,40 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "requires hwdec"):
             updatectl._validate_manifest(
                 player_runtime_manifest("player-bad", hwdec="no"),
+                policy=good_policy,
+                component="player-runtime",
+            )
+
+    def test_player_runtime_manifest_blocks_stable_on_device(self) -> None:
+        good_policy = updatectl._normalise_policy(player_runtime_policy())
+        with self.assertRaisesRegex(RuntimeError, "stable channel is blocked"):
+            updatectl._validate_manifest(
+                player_runtime_manifest("player-stable", channel="stable"),
+                policy=good_policy,
+                component="player-runtime",
+            )
+
+    def test_player_runtime_manifest_requires_runtime_updater_feature(self) -> None:
+        good_policy = updatectl._normalise_policy(player_runtime_policy())
+        candidate = player_runtime_manifest("player-missing-feature")
+        candidate["requires"]["updater_features"] = [
+            item for item in candidate["requires"]["updater_features"]
+            if item != "c18-player-runtime-verify-then-promote-v1"
+        ]
+        with self.assertRaisesRegex(RuntimeError, "player-runtime manifest missing required updater features"):
+            updatectl._validate_manifest(
+                candidate,
+                policy=good_policy,
+                component="player-runtime",
+            )
+
+    def test_player_runtime_manifest_rejects_dirty_source(self) -> None:
+        good_policy = updatectl._normalise_policy(player_runtime_policy())
+        candidate = player_runtime_manifest("player-dirty-source")
+        candidate["source_dirty"] = True
+        with self.assertRaisesRegex(RuntimeError, "source_dirty must be false"):
+            updatectl._validate_manifest(
+                candidate,
                 policy=good_policy,
                 component="player-runtime",
             )

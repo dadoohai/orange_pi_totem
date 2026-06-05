@@ -50,6 +50,7 @@ COLDBOOT_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_coldboot_evide
 PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_evidence_gate.py"
 PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
+PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -624,7 +625,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("manifest_invalid_repo_dirty", evidence_gate)
         self.assertIn("manifest_repo_dirty", evidence_gate)
 
-    def test_c18_current_player_runtime_data_trial_evidence_is_public_and_passing(self) -> None:
+    def test_c18_historical_player_runtime_data_trial_evidence_is_public_but_old_contract(self) -> None:
         evidence_dir = EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR
         result = subprocess.run(
             [
@@ -641,10 +642,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             text=True,
             env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         )
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
         gate = json.loads(result.stdout)
-        self.assertTrue(gate["passed"])
-        self.assertEqual(gate["errors"], [])
+        self.assertFalse(gate["passed"])
+        self.assertIn("package_manifest_updater_features", gate["errors"])
 
         manifest = json.loads((evidence_dir / "evidence-manifest.json").read_text(encoding="utf-8"))
         readme = json.loads((evidence_dir / "README.md").read_text(encoding="utf-8"))
@@ -728,7 +729,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertEqual(counters["ext4_errors"], 0)
             self.assertEqual(counters["total_mpv_count"], 1)
 
-    def test_c18_current_player_runtime_data_previous_trial_evidence_is_public_and_passing(self) -> None:
+    def test_c18_historical_player_runtime_data_previous_trial_evidence_is_public_but_old_contract(self) -> None:
         evidence_dir = EVIDENCE_CURRENT_PLAYER_RUNTIME_ABA_TRIAL_DIR
         result = subprocess.run(
             [
@@ -745,10 +746,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             text=True,
             env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         )
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
         gate = json.loads(result.stdout)
-        self.assertTrue(gate["passed"])
-        self.assertEqual(gate["errors"], [])
+        self.assertFalse(gate["passed"])
+        self.assertIn("package_manifest_updater_features", gate["errors"])
 
         manifest = json.loads((evidence_dir / "evidence-manifest.json").read_text(encoding="utf-8"))
         readme = json.loads((evidence_dir / "README.md").read_text(encoding="utf-8"))
@@ -923,6 +924,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("lab builder only supports lab or homologation", script)
         self.assertIn("--lab-variant", script)
         self.assertIn("c18_player_runtime_lab_variant", script)
+        self.assertIn("git ls-files --others --exclude-standard", script)
+        self.assertIn("--allow-dirty is not accepted for player-runtime", script)
+        self.assertIn('"source_dirty": bool(${DIRTY})', script)
+        self.assertIn("c18-player-runtime-verify-then-promote-v1", script)
         self.assertIn('BUILD_DIR="$(mktemp -d -t player-runtime-build-XXXXXX)"', script)
         self.assertIn('TMP_PAYLOAD_PATH="$BUILD_DIR/$PAYLOAD_NAME"', script)
         self.assertIn('TMP_MANIFEST_PATH="$BUILD_DIR/$MANIFEST_NAME"', script)
@@ -1154,6 +1159,20 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("validate_package_repo_identity", m6_trial)
         self.assertIn("--defer-release-gate", m6_trial)
         self.assertIn("release_gate_deferred", m6_trial)
+        self.assertIn('"m6_checks_passed": True', m6_trial)
+        self.assertIn('"passed": release_gate.get("passed") is True', m6_trial)
+        self.assertIn("package_manifest_missing_player_runtime_updater_feature", m6_trial)
+
+        lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)
+        self.assertIn("c18_player_runtime_m6_coldboot_trial.py", lab_thaw)
+        self.assertIn("load_current_golden", lab_thaw)
+        self.assertIn("lab_thaw_only_accepts_lab_or_homologation_channel", lab_thaw)
+        self.assertIn("manifest_missing_player_runtime_verify_then_promote_feature", lab_thaw)
+        self.assertIn("release_gate_deferred", lab_thaw)
+        self.assertIn('"public_cli_thawed": False', lab_thaw)
+        self.assertIn('"github_used": False', lab_thaw)
+        self.assertIn('"stable_allowed": False', lab_thaw)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
@@ -1194,12 +1213,72 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 module.validate_package_repo_identity({"source_commit": "c" * 40}, repo_info, "manifest_b")
 
+    def test_lab_thaw_wrapper_rejects_unguarded_and_bad_manifests(self) -> None:
+        spec = importlib.util.spec_from_file_location("c18_lab_thaw_policy_test", PLAYER_RUNTIME_LAB_THAW_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+
+        with tempfile.TemporaryDirectory(prefix="c18-lab-thaw-policy-") as tmp:
+            root = Path(tmp)
+            manifest = {
+                "schema": "dadooh.totem.update.v1",
+                "component": "player-runtime",
+                "version": "runtime-lab-thaw-test",
+                "channel": "homologation",
+                "created_at_utc": "2026-06-05T00:00:00Z",
+                "source_dirty": False,
+                "payload": "dadooh-player-runtime-runtime-lab-thaw-test.tar.gz",
+                "payload_sha256": "a" * 64,
+                "requires": {
+                    "device": "orangepizero3",
+                    "base_image_min": "c17.4.2",
+                    "device_track": "c18-hwdecode",
+                    "updater_features": ["c18-player-runtime-verify-then-promote-v1"],
+                    "media_stack_id": "c18-hwdecode-v4l2request-copy",
+                    "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+                    "hwdec": "v4l2request-copy",
+                    "vo": "gpu",
+                    "gpu_context": "drm",
+                    "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+                },
+            }
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            self.assertEqual(module.main(["--phase", "resume", "--evidence-root", str(root / "evidence")]), 44)
+            loaded = module.load_manifest(manifest_path)
+            self.assertEqual(loaded["channel"], "homologation")
+
+            manifest["channel"] = "stable"
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "lab_thaw_only_accepts_lab_or_homologation"):
+                module.load_manifest(manifest_path)
+
+            manifest["channel"] = "homologation"
+            manifest["source_dirty"] = True
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "source_dirty_must_be_false"):
+                module.load_manifest(manifest_path)
+
+            manifest["source_dirty"] = False
+            manifest["requires"]["updater_features"] = []
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "verify_then_promote"):
+                module.load_manifest(manifest_path)
+
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("totem_config_contract_self_test", gate)
         self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
         self.assertIn("player_runtime_diff_guard", gate)
+        self.assertIn("repo_clean_guard", gate)
+        self.assertIn("--porcelain", gate)
+        self.assertIn("--untracked-files=normal", gate)
+        self.assertIn("repository must be clean before claiming C18 release readiness", gate)
         self.assertIn("--base-ref", gate)
         self.assertIn("C18_OTA_BASE_REF", gate)
         self.assertIn("merge-base", gate)

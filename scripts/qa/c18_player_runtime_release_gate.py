@@ -31,6 +31,16 @@ BASE_IMAGE_LINE = "c17.4.2"
 EXPECTED_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 EXPECTED_HWDEC = "v4l2request-copy"
 EXPECTED_DEEP_HEALTH_SCHEMA = "dadooh.c18.playback.deep_health.v1"
+SUPPORTED_UPDATER_FEATURES = {
+    "c18-freeze-kiosky-player-v1",
+    "c18-rollback-reapply-v1",
+    "c18-safe-payload-v1",
+    "c18-track-v1",
+    "c18-player-runtime-verify-then-promote-v1",
+}
+REQUIRED_UPDATER_FEATURES = {
+    "c18-player-runtime-verify-then-promote-v1",
+}
 SAFE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 MARKER_NAME = ".release_verified.json"
 FORBIDDEN_RUNTIME_BASENAMES = {
@@ -131,6 +141,8 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
         raise GateError("payload_sha256 mismatch")
     if manifest.get("channel") == "stable":
         raise GateError("player-runtime stable releases are blocked until lab thaw and homologation gates exist")
+    if manifest.get("source_dirty") is not False:
+        raise GateError("source_dirty must be false for player-runtime lab evidence")
     parse_utc_timestamp(manifest["created_at_utc"])
 
     requires = manifest["requires"]
@@ -150,6 +162,19 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
     for key, expected in expected_requires.items():
         if requires.get(key) != expected:
             raise GateError(f"requires.{key} must be {expected!r}")
+    updater_features = requires.get("updater_features")
+    if (
+        not isinstance(updater_features, list)
+        or not updater_features
+        or not all(isinstance(item, str) and item for item in updater_features)
+    ):
+        raise GateError("requires.updater_features must be a non-empty string list")
+    missing_features = sorted(REQUIRED_UPDATER_FEATURES - set(updater_features))
+    if missing_features:
+        raise GateError(f"requires.updater_features missing required features: {missing_features}")
+    unsupported_features = sorted(set(updater_features) - SUPPORTED_UPDATER_FEATURES)
+    if unsupported_features:
+        raise GateError(f"requires.updater_features contains unsupported features: {unsupported_features}")
 
     return {
         "version": version,
@@ -647,12 +672,14 @@ def write_manifest(root: Path, version: str, payload: Path, mutate: dict[str, An
         "version": version,
         "channel": "homologation",
         "created_at_utc": "2026-06-03T00:00:00Z",
+        "source_dirty": False,
         "payload": payload.name,
         "payload_sha256": sha256_file(payload),
         "requires": {
             "device": DEVICE,
             "base_image_min": BASE_IMAGE_LINE,
             "device_track": DEVICE_TRACK,
+            "updater_features": sorted(SUPPORTED_UPDATER_FEATURES),
             "media_stack_id": "c18-hwdecode-v4l2request-copy",
             "mpv_wrapper": EXPECTED_WRAPPER,
             "hwdec": EXPECTED_HWDEC,
@@ -703,6 +730,36 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         data["channel"] = "stable"
         manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(GateError, "stable releases are blocked"):
+            validate_release(manifest, payload)
+
+    def test_rejects_dirty_source_manifest(self) -> None:
+        manifest, payload, tmp = self.with_case("dirty-source")
+        self.addCleanup(tmp.cleanup)
+        data = load_json(manifest)
+        data["source_dirty"] = True
+        manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "source_dirty must be false"):
+            validate_release(manifest, payload)
+
+    def test_rejects_missing_player_runtime_updater_feature(self) -> None:
+        manifest, payload, tmp = self.with_case("missing-runtime-feature")
+        self.addCleanup(tmp.cleanup)
+        data = load_json(manifest)
+        data["requires"]["updater_features"] = [
+            item for item in data["requires"]["updater_features"]
+            if item != "c18-player-runtime-verify-then-promote-v1"
+        ]
+        manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "missing required features"):
+            validate_release(manifest, payload)
+
+    def test_rejects_unsupported_player_runtime_updater_feature(self) -> None:
+        manifest, payload, tmp = self.with_case("unsupported-runtime-feature")
+        self.addCleanup(tmp.cleanup)
+        data = load_json(manifest)
+        data["requires"]["updater_features"].append("c18-unknown-future-feature")
+        manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "unsupported features"):
             validate_release(manifest, payload)
 
     def test_rejects_stock_mpv_default(self) -> None:

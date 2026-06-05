@@ -17,6 +17,17 @@ golden atual `1t`.
   `apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem`
   e exige policy presente.
 
+## Estado vivo / proximo gate
+
+| Item | Estado |
+| --- | --- |
+| Golden atual | `c18-hwdecode-lab-1t`, fonte canonica em `docs/evidence/c18-update-validation/current-golden.json` |
+| OTA comum | somente `totem-core`, manual/operator-triggered |
+| Freeze publico | `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos |
+| M6 historico | evidenciou apply A->B de `player-runtime` em `/data`, reboot real, adocao B por `/data`, deep-health e rollback B->A via previous em `/data` |
+| Proximo gate | `scripts/qa/c18_player_runtime_lab_thaw.py` como wrapper lab-only canonico para repetir M6 com o contrato atual (`source_dirty=false` + feature `verify-then-promote`) sem abrir CLI publico |
+| Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
+
 ## Golden atual (2026-06-05)
 
 Marco de referência para continuidade C18/delivery:
@@ -337,7 +348,7 @@ obrigatorios, a imagem e pinada contra a golden, e o marker/version/tree/kiosk
 sao cruzados entre warm e cold-boot. Sem modo `decisive`, o gate segue validando
 apenas o baseline historico `fallback`.
 
-## Marco M-6: `/data` cold-boot decisivo de player-runtime
+## Marco M-6 Historico: `/data` cold-boot de player-runtime
 
 O trial M-6 foi executado em hardware com a golden `c18-hwdecode-lab-1t`,
 sem descongelar o CLI publico de `player-runtime`.
@@ -347,7 +358,11 @@ sem descongelar o CLI publico de `player-runtime`.
 - **Pacote B:** `c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2`;
 - **Evidencia auditavel:**
   `docs/evidence/c18-update-validation/20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial/`;
-- **Resultado:** release gate host em modo `decisive` com `passed=true`;
+- **Resultado historico:** passou no release gate host em modo `decisive`
+  existente na captura. O gate atual e mais estrito e exige
+  `requires.updater_features` com
+  `c18-player-runtime-verify-then-promote-v1`; esta evidencia antiga nao deve
+  ser usada como autorizacao `decisive` atual;
 - **Prova:** apply A -> apply B, B adotado de
   `/data/player-runtime/current` apos reboot real, deep-health de B passado,
   rollback para A via `/data` previous, deep-health pos-rollback passado, e

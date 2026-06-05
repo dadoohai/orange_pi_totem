@@ -55,6 +55,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_evidence_gate.py",
     "scripts/qa/c18_player_runtime_persistent_trial.py",
     "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
+    "scripts/qa/c18_player_runtime_lab_thaw.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
@@ -163,6 +164,33 @@ def failed_internal_step(name: str, message: str) -> dict[str, Any]:
         "passed": False,
         "stdout_tail": "",
         "stderr_tail": message,
+    }
+
+
+def repo_clean_guard() -> dict[str, Any]:
+    cmd = ["git", "status", "--porcelain", "--untracked-files=normal"]
+    proc = subprocess.run(
+        cmd,
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    dirty = bool(proc.stdout.strip())
+    return {
+        "name": "repo_clean_guard",
+        "cmd": cmd,
+        "returncode": 1 if proc.returncode != 0 or dirty else 0,
+        "passed": proc.returncode == 0 and not dirty,
+        "stdout_tail": proc.stdout[-4000:],
+        "stderr_tail": (
+            proc.stderr[-4000:]
+            if proc.returncode != 0
+            else "repository must be clean before claiming C18 release readiness"
+            if dirty
+            else ""
+        ),
     }
 
 
@@ -562,6 +590,7 @@ def main() -> int:
     steps: list[dict[str, Any]] = []
     package_result: dict[str, Any] | None = None
 
+    steps.append(repo_clean_guard())
     steps.append(run_step("py_compile", ["python3", "-m", "py_compile", *PY_COMPILE_TARGETS]))
     for target in BASH_SYNTAX_TARGETS:
         steps.append(run_step(f"bash_syntax:{target}", ["bash", "-n", target]))

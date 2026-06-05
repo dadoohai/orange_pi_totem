@@ -188,8 +188,11 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   `docs/evidence/c18-update-validation/20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial/`;
 - esse trial provou apply A->B em `/data`, B adotado pelo launcher apos reboot
   real, deep-health de B pos-cold-boot, rollback de B para A como previous real
-  em `/data`, deep-health pos-rollback e release gate host em modo `decisive`
-  com `passed=true`; o CLI publico continuou congelado com `rc=44`;
+  em `/data` e deep-health pos-rollback; ele passou no release gate host
+  existente na captura, mas nao deve ser usado como `decisive` contra o gate
+  atual porque o pacote antecede a feature obrigatoria
+  `c18-player-runtime-verify-then-promote-v1`; o CLI publico continuou
+  congelado com `rc=44`;
 - nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
   power-loss fisico nem soak/endurance.
 
@@ -203,12 +206,19 @@ Antes de qualquer thaw de laboratorio:
   absolutos, symlinks, hardlinks, traversal ou arquivos com cara de segredo;
 - `kiosk.py` precisa compilar e preservar wrapper/HW decode no caminho efetivo
   ate `subprocess.Popen(args, ...)`;
-- apply lab-only deve usar
+- apply lab-only unitario deve usar
   `scripts/qa/c18_player_runtime_lab_apply.py` com flags e env vars lab-only;
 - rollback/reconcile lab-only deve usar
   `scripts/qa/c18_player_runtime_lab_rollback.py` com flags e env vars
   lab-only (`C18_PLAYER_RUNTIME_LAB_ROLLBACK=1` + `--lab-only-rollback`) antes
   de qualquer ensaio persistente em `/data`;
+- thaw de laboratorio decisivo deve usar
+  `scripts/qa/c18_player_runtime_lab_thaw.py`, que orquestra o fluxo M6
+  duas-fases (`arm` -> reboot real -> `resume`), le a golden atual de
+  `docs/evidence/c18-update-validation/current-golden.json`, exige
+  `C18_PLAYER_RUNTIME_LAB_THAW=1` + `--lab-only-thaw`, aceita apenas
+  `lab|homologation`, rejeita `source_dirty=true` e so autoriza a rodada se o
+  release gate rodar em modo `decisive`;
 - `reconcile --component player-runtime` de manutencao deve exigir
   `--allow-player-runtime-maintenance` e `C18_PLAYER_RUNTIME_RECONCILE=1`; o
   boot da imagem pode passar essa autorizacao explicitamente, mas o comando nao
@@ -263,10 +273,18 @@ disponivel, `--image-marker-file`; o evidence gate deve falhar se o rollback
 cair em `image_fallback`, se faltar `service-before-apply`, ou se os
 `tree_sha256` de A e B forem indistinguiveis.
 
-Os proximos gates de laboratorio antes de qualquer thaw publico sao cold-boot
-adoption com `/data/player-runtime/current` real, comportamento sob
-interrupcao/power-loss durante apply/rollback e decisao explicita de como o
-fluxo sera promovido para homologacao sem publicar stable nem ligar auto-pull.
+A evidencia historica
+`20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial` provou a mecanica
+M6: apply A->B, reboot real, B adotada de `/data`, deep-health, rollback para A
+por previous em `/data` e deep-health pos-rollback. Depois dela, o contrato de
+pacote foi endurecido para exigir `requires.updater_features` com
+`c18-player-runtime-verify-then-promote-v1`; portanto essa evidencia antiga nao
+deve ser usada como `decisive` contra o gate atual. O proximo gate de
+laboratorio e repetir esse fluxo pelo wrapper `c18_player_runtime_lab_thaw.py`,
+mantendo o CLI publico congelado. Os gates que ainda ficam para
+homologacao/producao sao interrupcao/power-loss fisico, soak/endurance,
+publish/server-side governado e decisao explicita de promocao sem `stable` nem
+auto-pull.
 
 A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
 
@@ -278,8 +296,8 @@ A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
   comprovado;
 - evidencias com non-claims explicitos para server-side gate, power-loss e soak.
 
-Isso ainda nao prova cold-boot com uma release de `player-runtime` em `/data`
-nem corte de energia no meio de apply/rollback.
+Isso prova cold-boot lab com uma release de `player-runtime` em `/data`, mas
+ainda nao prova corte de energia fisico no meio de apply/rollback nem soak.
 
 Follow-up repo-side apos a promocao da `1t`:
 

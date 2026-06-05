@@ -95,6 +95,16 @@ PLAYER_RUNTIME_ADOPTION_SCHEMA = "dadooh.c18.player_runtime.adoption.v1"
 RELEASE_GATE_SCHEMA = "dadooh.c18.player_runtime.release_gate.v1"
 LAB_APPLY_SCHEMA = "dadooh.c18.player_runtime.lab_apply.v1"
 LAB_ROLLBACK_SCHEMA = "dadooh.c18.player_runtime.lab_rollback.v1"
+SUPPORTED_UPDATER_FEATURES = {
+    "c18-freeze-kiosky-player-v1",
+    "c18-rollback-reapply-v1",
+    "c18-safe-payload-v1",
+    "c18-track-v1",
+    "c18-player-runtime-verify-then-promote-v1",
+}
+REQUIRED_UPDATER_FEATURES = {
+    "c18-player-runtime-verify-then-promote-v1",
+}
 
 REQUIRED_HEALTH_CHECKS = (
     "samples_present",
@@ -312,6 +322,8 @@ def validate_package_contract(run_dir: Path) -> tuple[list[str], dict[str, Any]]
         errors.append("package_manifest_payload_sha256")
     if not is_hex(manifest.get("source_commit"), 40):
         errors.append("package_manifest_source_commit")
+    if manifest.get("source_dirty") is not False:
+        errors.append("package_manifest_source_dirty")
     if not isinstance(manifest.get("created_at_utc"), str) or not manifest.get("created_at_utc"):
         errors.append("package_manifest_created_at_utc")
     requires = manifest.get("requires")
@@ -326,6 +338,20 @@ def validate_package_contract(run_dir: Path) -> tuple[list[str], dict[str, Any]]
             errors.append("package_manifest_mpv_wrapper")
         if requires.get("hwdec") != "v4l2request-copy":
             errors.append("package_manifest_hwdec")
+        updater_features = requires.get("updater_features")
+        if (
+            not isinstance(updater_features, list)
+            or not updater_features
+            or not all(isinstance(item, str) and item for item in updater_features)
+        ):
+            errors.append("package_manifest_updater_features")
+        else:
+            missing_features = sorted(REQUIRED_UPDATER_FEATURES - set(updater_features))
+            unsupported_features = sorted(set(updater_features) - SUPPORTED_UPDATER_FEATURES)
+            if missing_features:
+                errors.append("package_manifest_missing_required_updater_features")
+            if unsupported_features:
+                errors.append("package_manifest_unsupported_updater_features")
     gate = load_json_object(run_dir / "package" / "player-runtime-release-gate.json", "release_gate", errors)
     if gate.get("schema") != RELEASE_GATE_SCHEMA:
         errors.append("release_gate_schema")
@@ -741,10 +767,12 @@ def self_test() -> None:
             "channel": "homologation",
             "created_at_utc": "2026-06-05T00:00:00Z",
             "source_commit": source_commit,
+            "source_dirty": False,
             "payload": "dadooh-player-runtime-self-test.tar.gz",
             "payload_sha256": payload_sha,
             "requires": {
                 "device_track": "c18-hwdecode",
+                "updater_features": sorted(SUPPORTED_UPDATER_FEATURES),
                 "media_stack_id": "c18-hwdecode-v4l2request-copy",
                 "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
                 "hwdec": "v4l2request-copy",
@@ -949,6 +977,29 @@ def self_test() -> None:
                 encoding="utf-8",
             )
 
+        refresh_manifest("image-fallback")
+        ok = validate(run)
+        assert ok["passed"], ok
+        package_manifest_path = run / "package" / "dadooh-player-runtime-demo.manifest.json"
+        package_clean = json.loads(package_manifest_path.read_text(encoding="utf-8"))
+        package_missing_feature = json.loads(json.dumps(package_clean))
+        package_missing_feature["requires"]["updater_features"] = [
+            item for item in package_missing_feature["requires"]["updater_features"]
+            if item != "c18-player-runtime-verify-then-promote-v1"
+        ]
+        put("package/dadooh-player-runtime-demo.manifest.json", package_missing_feature)
+        refresh_manifest("image-fallback")
+        missing_feature = validate(run)
+        assert not missing_feature["passed"], missing_feature
+        assert "package_manifest_missing_required_updater_features" in missing_feature["errors"], missing_feature
+        package_dirty = json.loads(json.dumps(package_clean))
+        package_dirty["source_dirty"] = True
+        put("package/dadooh-player-runtime-demo.manifest.json", package_dirty)
+        refresh_manifest("image-fallback")
+        dirty_package = validate(run)
+        assert not dirty_package["passed"], dirty_package
+        assert "package_manifest_source_dirty" in dirty_package["errors"], dirty_package
+        put("package/dadooh-player-runtime-demo.manifest.json", package_clean)
         refresh_manifest("image-fallback")
         ok = validate(run)
         assert ok["passed"], ok

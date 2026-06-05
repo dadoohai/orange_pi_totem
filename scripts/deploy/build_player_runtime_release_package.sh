@@ -59,13 +59,16 @@ SOURCE_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 SOURCE_COMMIT="$(git rev-parse HEAD)"
 SOURCE_COMMIT_SHORT="$(git rev-parse --short=7 HEAD)"
 DIRTY=0
-if ! git diff --quiet || ! git diff --cached --quiet; then
+if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
   DIRTY=1
 fi
 popd >/dev/null
 
-if [[ "$DIRTY" -eq 1 && "$ALLOW_DIRTY" -eq 0 ]]; then
-  die "orange_pi_totem working tree is dirty (use --allow-dirty for lab package experiments)"
+if [[ "$DIRTY" -eq 1 ]]; then
+  if [[ "$ALLOW_DIRTY" -eq 1 ]]; then
+    die "--allow-dirty is not accepted for player-runtime lab evidence packages; commit or stash first"
+  fi
+  die "orange_pi_totem working tree is dirty"
 fi
 
 if [[ -z "$VERSION_OVERRIDE" ]]; then
@@ -144,6 +147,13 @@ manifest = {
         "device": "orangepizero3",
         "base_image_min": "c17.4.2",
         "device_track": "c18-hwdecode",
+        "updater_features": [
+            "c18-freeze-kiosky-player-v1",
+            "c18-rollback-reapply-v1",
+            "c18-safe-payload-v1",
+            "c18-track-v1",
+            "c18-player-runtime-verify-then-promote-v1",
+        ],
         "media_stack_id": "c18-hwdecode-v4l2request-copy",
         "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
         "hwdec": "v4l2request-copy",
