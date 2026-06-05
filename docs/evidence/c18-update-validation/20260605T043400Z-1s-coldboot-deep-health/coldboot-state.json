@@ -1,0 +1,24 @@
+{
+  "after_has_local_fs": true,
+  "config_present": true,
+  "config_values_published": false,
+  "marker_1s_present": true,
+  "mpv_exes": [
+    "/opt/totem/hwdecode/bin/mpv"
+  ],
+  "player_runtime_apply_rc": 44,
+  "player_runtime_paths_present": {
+    "/data/apps/kiosky-player/current": false,
+    "/data/apps/kiosky-player/previous": false,
+    "/data/player-runtime/current": false,
+    "/data/player-runtime/previous": false
+  },
+  "player_runtime_reconcile_rc": 44,
+  "player_runtime_rollback_rc": 44,
+  "private_values_published": false,
+  "requires_mounts_for": "/opt/totem/kiosky-player /data",
+  "schema": "dadooh.c18.1s.coldboot_state.v1",
+  "service_active": true,
+  "timer_active": "inactive",
+  "timer_enabled": "disabled"
+}

@@ -1,0 +1,13 @@
+{
+  "config_group": "totem",
+  "config_mode": "o640",
+  "config_owner": "root",
+  "config_present": true,
+  "config_values_published": false,
+  "post_status_valid": null,
+  "private_values_published": false,
+  "real_dry_run_valid": true,
+  "schema": "dadooh.c18.1s.config_write.public.v1",
+  "writer_real_write_enabled": null,
+  "writer_success": null
+}

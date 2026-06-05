@@ -1,0 +1,71 @@
+{
+  "after_has_local_fs": true,
+  "artifact_id": "c18-1s-coldboot-deep-health",
+  "board_touched": true,
+  "controlled_reboot_executed": true,
+  "deep_health_passed": true,
+  "files": [
+    {
+      "file": "coldboot-state.json",
+      "sha256": "6c876801618c0bc3a36a5ce61dbb905915c249170f6e5dee22422f60aa80ecc0",
+      "size": 737
+    },
+    {
+      "file": "deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274",
+      "size": 73
+    },
+    {
+      "file": "deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f",
+      "size": 49
+    },
+    {
+      "file": "deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b",
+      "size": 114
+    },
+    {
+      "file": "deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b",
+      "size": 115
+    },
+    {
+      "file": "playback-deep-health-public.json",
+      "sha256": "8380d56c353b0033fecfaa7b18691089887750552e17f4cdefaec8e9e7c5bf1f",
+      "size": 2444
+    },
+    {
+      "file": "playback-samples.tsv",
+      "sha256": "9a6c4324bbd7b191d3c5842076b3d765134355f4e8b2726fd1dfcfa611a802c4",
+      "size": 51558
+    },
+    {
+      "file": "status-samples.ndjson",
+      "sha256": "d5b8e877be88da787773183ac3d30cbed39a10c6f001c02e03875c7a2cccd423",
+      "size": 21146
+    }
+  ],
+  "image_sha256": "bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f",
+  "image_tag": "c18-hwdecode-lab-1s",
+  "image_version": "c18.image-lab.1s",
+  "marker_1s_present": true,
+  "non_claims": [
+    "stable_or_production",
+    "public_thaw",
+    "github_publish",
+    "auto_pull",
+    "power_loss_safety",
+    "soak_endurance",
+    "display_sink_recovery"
+  ],
+  "player_runtime_freeze_rc44": true,
+  "privacy_scan": {
+    "hits": [],
+    "passed": true
+  },
+  "requires_mounts_for_data": true,
+  "schema": "dadooh.c18.hardware_evidence.v1",
+  "source_commit": "8c4fed7",
+  "ssh_used": true
+}

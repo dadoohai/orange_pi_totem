@@ -9,8 +9,10 @@ This directory records the offline derivation evidence for
   gates before hardware flashing.
 - Does not prove hardware playback, HDMI output, cold-boot adoption, or
   power-loss behavior.
-- Does not promote `1s` to golden. The current golden remains `1r` until `1s`
-  passes hardware validation and is explicitly promoted.
+- This directory alone did not promote `1s`; promotion required the later
+  hardware evidence recorded in
+  `../20260605T043000Z-1s-service-deep-health/` and
+  `../20260605T043400Z-1s-coldboot-deep-health/`.
 
 ## Artifact
 

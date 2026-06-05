@@ -120,9 +120,9 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 Baseline de laboratorio/delivery registrado em 2026-06-05:
 
-- imagem golden: `c18-hwdecode-lab-1r`;
+- imagem golden: `c18-hwdecode-lab-1s`;
 - sha256:
-  `23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c`;
+  `bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -132,11 +132,18 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
 - `kiosky-player` e `player-runtime` ainda congelados no fluxo publico;
 - player esperado pelo fallback da imagem, com HW decode
   `v4l2request-copy`, `vo-configured=true`, `NRestarts=0`;
-- deep-health real em hardware validado apos config real:
+- deep-health real em hardware validado apos config real e apos cold-boot
+  controlado:
   progresso de frame presente/avancando, `media_load_failed=0`,
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
-- evidencia auditavel da 1r:
-  `docs/evidence/c18-update-validation/20260605T045500Z-1r-service-deep-health/`.
+- evidencia auditavel da 1s:
+  `docs/evidence/c18-update-validation/20260605T043000Z-1s-service-deep-health/`;
+  `docs/evidence/c18-update-validation/20260605T043400Z-1s-coldboot-deep-health/`.
+- a `1s` valida tambem `RequiresMountsFor=/data`, `After=local-fs.target`,
+  reconcile de boot explicitamente autorizado e nao fatal, timer off, policy
+  restrita a `totem-core`, ausencia de `/data/player-runtime/current` e
+  `player-runtime` publico congelado com `rc=44` em apply, rollback e
+  reconcile.
 - ensaio lab-only de `player-runtime` em hardware validado com pacote local
   `homologation` do commit `3af11d4`, `data_root` temporario em `/tmp`,
   candidato isolado com canario local, `github_used=false`,
@@ -246,11 +253,11 @@ cair em `image_fallback`, se faltar `service-before-apply`, ou se os
 `tree_sha256` de A e B forem indistinguiveis.
 
 Os proximos gates de laboratorio antes de qualquer thaw publico sao cold-boot
-adoption, comportamento sob interrupcao/power-loss durante apply/rollback e
-decisao explicita de como o fluxo sera promovido para homologacao sem publicar
-stable nem ligar auto-pull.
+adoption com `/data/player-runtime/current` real, comportamento sob
+interrupcao/power-loss durante apply/rollback e decisao explicita de como o
+fluxo sera promovido para homologacao sem publicar stable nem ligar auto-pull.
 
-Antes de rodar cold-boot/power-loss em hardware, gerar nova imagem com:
+A imagem `1s` ja embarca e valida em cold-boot do baseline/fallback:
 
 - `RequiresMountsFor=/data` no drop-in do `kiosky-player.service`, para o
   reconcile de boot nao operar contra `/data` ausente;
@@ -258,7 +265,10 @@ Antes de rodar cold-boot/power-loss em hardware, gerar nova imagem com:
   `player-runtime`;
 - deep-health falhando fechado tambem para segmento final curto sem progresso
   comprovado;
-- evidencias com non-claims explicitos para cold boot, server-side gate e soak.
+- evidencias com non-claims explicitos para server-side gate, power-loss e soak.
+
+Isso ainda nao prova cold-boot com uma release de `player-runtime` em `/data`
+nem corte de energia no meio de apply/rollback.
 
 ## Gates Antes De Stable
 

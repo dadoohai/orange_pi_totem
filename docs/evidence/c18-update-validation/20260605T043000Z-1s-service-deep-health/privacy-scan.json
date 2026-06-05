@@ -1,0 +1,70 @@
+{
+  "files": [
+    {
+      "bytes": 1367,
+      "file": "README.md",
+      "sha256": "11a533860298ebfba7cc28ac1840130125e51d853cffd0ec5f99c2b61892fcdb"
+    },
+    {
+      "bytes": 354,
+      "file": "config-write-public.json",
+      "sha256": "2f8f8bebaf5906c253cf2398a3496397c2530efaff4e662e84e171c158bb3d5b"
+    },
+    {
+      "bytes": 73,
+      "file": "deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274"
+    },
+    {
+      "bytes": 49,
+      "file": "deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 115,
+      "file": "deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
+    },
+    {
+      "bytes": 2015,
+      "file": "evidence-manifest.json",
+      "sha256": "d757652e841c47601e0bc7ad8ef7ff3a7ca17b417a768c862e10b6b00770daa1"
+    },
+    {
+      "bytes": 2443,
+      "file": "playback-deep-health-public.json",
+      "sha256": "480a83c667792ab43f0566d92ddc74b1d11413283fb3f0ae81244b34de82dfa7"
+    },
+    {
+      "bytes": 47801,
+      "file": "playback-samples.tsv",
+      "sha256": "c1621c2afea44719b7ce597f60175b87d0760595731194ed4e56cd2cf153a480"
+    },
+    {
+      "bytes": 19587,
+      "file": "status-samples.ndjson",
+      "sha256": "943b26b0dc611ef40fcc60e21b9dece5391e3f7b8690e0fa06ac34baacde58be"
+    }
+  ],
+  "result": "passed",
+  "scan_counts": {
+    "api_key": 0,
+    "authorization": 0,
+    "bearer": 0,
+    "data_config_path": 0,
+    "data_media_path": 0,
+    "environment_id": 0,
+    "ipv4": 0,
+    "mac": 0,
+    "password": 0,
+    "ssid": 0,
+    "tmp_media_path": 0,
+    "url": 0
+  },
+  "schema": "dadooh.c18.evidence.privacy_scan.v1"
+}

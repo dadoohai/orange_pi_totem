@@ -61,7 +61,7 @@ DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
 DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
 DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
 EVIDENCE_CURRENT_DEEP_HEALTH_DIR = (
-    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T045500Z-1r-service-deep-health"
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T043400Z-1s-coldboot-deep-health"
 )
 EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T052805Z-1r-player-runtime-data-trial"
@@ -69,7 +69,8 @@ EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
 EVIDENCE_CURRENT_PLAYER_RUNTIME_ABA_TRIAL_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T060200Z-1r-player-runtime-data-aba-trial"
 )
-EVIDENCE_CURRENT_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
+EVIDENCE_CURRENT_IMAGE_SHA256 = "bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f"
+EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
     REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
@@ -291,9 +292,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
 
-    def test_c18_docs_keep_1r_as_current_golden(self) -> None:
-        current_tag = "c18-hwdecode-lab-1r"
+    def test_c18_docs_keep_1s_as_current_golden(self) -> None:
+        current_tag = "c18-hwdecode-lab-1s"
         current_sha = EVIDENCE_CURRENT_IMAGE_SHA256
+        legacy_sha_1r = EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256
         legacy_sha_1q = "d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009"
         legacy_sha_1o = "07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164"
         legacy_sha_1n = "29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c"
@@ -319,7 +321,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn(legacy_sha_1n, doc189)
         self.assertIn(legacy_sha_1o, doc189)
         self.assertIn(legacy_sha_1q, doc189)
-        self.assertIn("20260605T045500Z-1r-service-deep-health", doc189)
+        self.assertIn(legacy_sha_1r, doc189)
+        self.assertIn("20260605T043000Z-1s-service-deep-health", doc189)
+        self.assertIn("20260605T043400Z-1s-coldboot-deep-health", doc189)
         doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
         self.assertNotIn(legacy_sha_1l, doc188_top)
         doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]
@@ -351,20 +355,39 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(counters["mmc_timeout_reset"], 0)
         self.assertEqual(counters["ext4_errors"], 0)
         self.assertEqual(counters["total_mpv_count"], 1)
-        self.assertEqual(privacy["schema"], "dadooh.c18.evidence.privacy_scan.v1")
-        self.assertEqual(privacy["result"], "passed")
-        self.assertTrue(all(value == 0 for value in privacy["scan_counts"].values()))
-        self.assertEqual(manifest["schema"], "dadooh.c18.update_validation.evidence_manifest.v1")
-        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1r")
+        self.assertTrue(privacy.get("passed", privacy.get("result") == "passed"))
+        if "scan_counts" in privacy:
+            self.assertTrue(all(value == 0 for value in privacy["scan_counts"].values()))
+        else:
+            self.assertEqual(privacy.get("hits"), [])
+        self.assertIn(
+            manifest["schema"],
+            {"dadooh.c18.update_validation.evidence_manifest.v1", "dadooh.c18.hardware_evidence.v1"},
+        )
+        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1s")
         self.assertEqual(manifest["image_sha256"], EVIDENCE_CURRENT_IMAGE_SHA256)
-        manifest_files = {item["file"]: item for item in manifest["artifacts"]}
-        privacy_files = {item["file"]: item for item in privacy["files"]}
+        manifest_items = manifest.get("artifacts", manifest.get("files", []))
+        manifest_files = {item["file"]: item for item in manifest_items}
+        privacy_files = {item["file"]: item for item in privacy.get("files", [])}
         for file_name, metadata in manifest_files.items():
             path = EVIDENCE_CURRENT_DEEP_HEALTH_DIR / file_name
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            self.assertEqual(path.stat().st_size, metadata["bytes"])
+            expected_size = metadata.get("bytes", metadata.get("size"))
+            self.assertEqual(path.stat().st_size, expected_size)
             self.assertEqual(digest, metadata["sha256"])
-            self.assertIn(file_name, privacy_files)
+            if privacy_files:
+                self.assertIn(file_name, privacy_files)
+        if EVIDENCE_CURRENT_DEEP_HEALTH_DIR.name.endswith("1s-coldboot-deep-health"):
+            coldboot = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "coldboot-state.json").read_text(encoding="utf-8"))
+            self.assertTrue(coldboot["marker_1s_present"])
+            self.assertEqual(coldboot["timer_enabled"], "disabled")
+            self.assertEqual(coldboot["timer_active"], "inactive")
+            self.assertIn("/data", coldboot["requires_mounts_for"])
+            self.assertTrue(coldboot["after_has_local_fs"])
+            self.assertEqual(coldboot["player_runtime_apply_rc"], 44)
+            self.assertEqual(coldboot["player_runtime_rollback_rc"], 44)
+            self.assertEqual(coldboot["player_runtime_reconcile_rc"], 44)
+            self.assertEqual(coldboot["mpv_exes"], ["/opt/totem/hwdecode/bin/mpv"])
         evidence_gate = importlib.util.spec_from_file_location("c18_player_runtime_evidence_gate", PLAYER_RUNTIME_EVIDENCE_GATE_PATH)
         self.assertIsNotNone(evidence_gate)
         module = importlib.util.module_from_spec(evidence_gate)
@@ -527,7 +550,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(manifest["rollback_expectation"], "data-previous")
         self.assertEqual(manifest["version"], version_b)
         self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1r")
-        self.assertEqual(manifest["image_sha256"], EVIDENCE_CURRENT_IMAGE_SHA256)
+        self.assertEqual(manifest["image_sha256"], EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256)
         self.assertEqual(
             manifest["payload_sha256"],
             "4185d7059087d79ba3bb16e52b1b5a3bfe50e4d3f83eadb131b6e7a256f7fe59",

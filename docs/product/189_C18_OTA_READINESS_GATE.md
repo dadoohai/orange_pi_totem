@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1r`.
+golden atual `1s`.
 
 ## Decisão
 
@@ -21,11 +21,11 @@ golden atual `1r`.
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1r`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1s`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1r_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img`;
 - **sha256:**
-  `23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c`;
+  `bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -38,19 +38,21 @@ Marco de referência para continuidade C18/delivery:
   `vo-configured=true`, `NRestarts=0`;
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
-- **Evidencia hardware 1r:** `docs/evidence/c18-update-validation/20260605T045500Z-1r-service-deep-health/`,
-  com deep-health de servico `passed=true` apos config real escrita do seed.
+- **Evidencia hardware 1s:** `docs/evidence/c18-update-validation/20260605T043000Z-1s-service-deep-health/`
+  e `docs/evidence/c18-update-validation/20260605T043400Z-1s-coldboot-deep-health/`,
+  com deep-health de servico `passed=true` apos config real escrita do seed e
+  apos cold-boot controlado.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1r`.
+Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1s`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
 release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
 sem nova validacao offline + hardware + registro neste doc.
 
-Nota: `1k`, `1l`, `1m`, `1n`, `1o` e `1q` permanecem como golden historicas
-anteriores. A `1r` valida em hardware o follow-up pos-1q: o deep-health exige
-progresso em todos os segmentos avaliaveis e o harness de trial persistente tem
-abort cleanup mais forte. O `player-runtime` continua congelado no fluxo
-publico (`rc=44`).
+Nota: `1k`, `1l`, `1m`, `1n`, `1o`, `1q` e `1r` permanecem como golden
+historicas anteriores. A `1s` valida em hardware o follow-up pos-1r: drop-in
+ordenado por `/data`, reconcile de boot autorizado, fsync de arvore antes de
+marker/promote e cold-boot com deep-health. O `player-runtime` continua
+congelado no fluxo publico (`rc=44`).
 
 ## Promocao 1r (offline + hardware)
 
@@ -92,7 +94,7 @@ arquivos da imagem, foi gerada uma nova candidata e validada em placa.
   `player-runtime`, e nao prova trial persistente de `player-runtime` em
   `/data`.
 
-## Candidata 1s (offline, nao promovida)
+## Promocao 1s (offline + hardware + cold-boot)
 
 O commit `8aa04b2` prepara a imagem `c18-hwdecode-lab-1s` a partir do
 hardening `02f3be7`, que fecha os gates pre-cold-boot/power-loss apontados apos
@@ -104,7 +106,7 @@ o trial A->B->A:
 - `reconcile` rejeita release "torn" por `tree_sha_mismatch` e cai para `/opt`;
 - o deep-health rejeita segmento final curto sem progresso comprovado.
 
-- **Imagem candidata:** `c18-hwdecode-lab-1s`;
+- **Imagem candidata/golden:** `c18-hwdecode-lab-1s`;
 - **Arquivo:**
   `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img`;
 - **Copia para gravacao no Windows:**
@@ -119,9 +121,29 @@ o trial A->B->A:
   `no_player_runtime_current_embedded=true`,
   `no_legacy_kiosky_player_current_embedded=true`, `fsck_clean=true`;
 - **Evidencia offline:** `docs/evidence/c18-update-validation/20260605T040600Z-1s-offline-build/`;
-- **Status:** candidata offline pronta para gravacao e validacao em hardware.
-  Nao e golden ate marker, policy, freeze, playback/deep-health, boot reconcile
-  e fallback serem reconfirmados na placa.
+- **Validacao hardware pos-config:** marker `1s`, policy restrita a
+  `totem-core`, timer desligado, config real escrita via
+  contract/handoff/writer a partir do seed de homologacao local, sem publicar
+  valores privados, player fallback de imagem ativo, sem
+  `/data/player-runtime/current` e sem `/data/apps/kiosky-player/current`,
+  `player-runtime` bloqueado com `rc=44` em apply, rollback e reconcile, e
+  deep-health de servico `passed=true` com `hwdec-current=v4l2request-copy`,
+  um MPV, `media_load_failed=0`, `mpv_restart=0`, `NRestarts_delta=0`,
+  panfrost/mmc/ext4 `0`;
+- **Evidencia hardware pos-config:**
+  `docs/evidence/c18-update-validation/20260605T043000Z-1s-service-deep-health/`;
+- **Validacao hardware cold-boot:** reboot controlado, service ativo com
+  `NRestarts=0`, drop-in efetivo com `RequiresMountsFor=/data` e
+  `After=local-fs.target`, boot reconcile autorizado antes do launcher,
+  launcher selecionando fallback `/opt`, policy/freeze/timer preservados,
+  ausencia de `/data/player-runtime/current` e deep-health pos-boot
+  `passed=true`;
+- **Evidencia hardware cold-boot:**
+  `docs/evidence/c18-update-validation/20260605T043400Z-1s-coldboot-deep-health/`;
+- **Status:** promovida a golden de laboratorio/delivery. Ainda
+  `final_image=false`, nao stable, nao batch de producao, nao thaw publico de
+  `player-runtime`, nao GitHub publish de player, nao auto-pull, nao soak e nao
+  prova corte de energia/power-loss durante apply ou rollback.
 
 ## Primeiro trial persistente de player-runtime em `/data` (1r)
 
@@ -227,9 +249,11 @@ que precisam estar na imagem antes de exercitar cold boot ou interrupcao fisica:
 - o deep-health passa a rejeitar segmento final curto sem progresso comprovado,
   fechando a cauda residual do caso multi-segmento.
 
-Essas mudancas ainda precisam ser embarcadas em uma nova imagem antes do teste
-fisico de cold-boot/power-loss. Elas nao descongelam o CLI publico e nao mudam
-as nao-afirmacoes do ABA.
+Essas mudancas foram embarcadas na `1s` e validadas em cold-boot do baseline de
+imagem/fallback. Isso ainda nao prova cold-boot com
+`/data/player-runtime/current` verificado nem interrupcao/power-loss no meio de
+apply/rollback. Elas nao descongelam o CLI publico e nao mudam as
+nao-afirmacoes do ABA.
 
 ## Candidata 1p (offline; descartada em hardware)
 
@@ -676,7 +700,7 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1r` como baseline de laboratorio validada para a
+1. Tratar `c18-hwdecode-lab-1s` como baseline de laboratorio validada para a
    frente OTA/manual, ainda `final_image=false`.
 2. Fluxo manual de release GitHub `totem-core` validado na 1n com mudanca real
    de aplicacao, rollback e reapply; as golden posteriores herdam esse contrato

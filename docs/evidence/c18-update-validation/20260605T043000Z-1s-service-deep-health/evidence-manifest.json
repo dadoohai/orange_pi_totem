@@ -1,0 +1,69 @@
+{
+  "artifact_id": "c18-1s-service-deep-health",
+  "board_touched": true,
+  "config_values_published": false,
+  "config_written_from_homologation_seed": true,
+  "deep_health_passed": true,
+  "files": [
+    {
+      "file": "config-write-public.json",
+      "sha256": "2f8f8bebaf5906c253cf2398a3496397c2530efaff4e662e84e171c158bb3d5b",
+      "size": 354
+    },
+    {
+      "file": "deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274",
+      "size": 73
+    },
+    {
+      "file": "deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f",
+      "size": 49
+    },
+    {
+      "file": "deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b",
+      "size": 114
+    },
+    {
+      "file": "deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b",
+      "size": 115
+    },
+    {
+      "file": "playback-deep-health-public.json",
+      "sha256": "480a83c667792ab43f0566d92ddc74b1d11413283fb3f0ae81244b34de82dfa7",
+      "size": 2443
+    },
+    {
+      "file": "playback-samples.tsv",
+      "sha256": "c1621c2afea44719b7ce597f60175b87d0760595731194ed4e56cd2cf153a480",
+      "size": 47801
+    },
+    {
+      "file": "status-samples.ndjson",
+      "sha256": "943b26b0dc611ef40fcc60e21b9dece5391e3f7b8690e0fa06ac34baacde58be",
+      "size": 19587
+    }
+  ],
+  "image_sha256": "bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f",
+  "image_tag": "c18-hwdecode-lab-1s",
+  "image_version": "c18.image-lab.1s",
+  "non_claims": [
+    "stable_or_production",
+    "public_thaw",
+    "github_publish",
+    "auto_pull",
+    "power_loss_safety",
+    "soak_endurance",
+    "display_sink_recovery"
+  ],
+  "privacy_scan": {
+    "hits": [],
+    "passed": true
+  },
+  "private_values_published": false,
+  "schema": "dadooh.c18.hardware_evidence.v1",
+  "source_commit": "8c4fed7",
+  "ssh_used": true
+}
