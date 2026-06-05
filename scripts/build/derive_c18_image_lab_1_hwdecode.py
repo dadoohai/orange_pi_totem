@@ -33,8 +33,8 @@ ARM = Path("/home/builder/totem-os/armbian-build-v25.11/output/images")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = "c18-hwdecode-lab-1s"   # 1s = 1r + cold-boot/power-loss pre-hardening gates.
-VERSION = "c18.image-lab.1s"
+TAG = "c18-hwdecode-lab-1t"   # 1t = 1s + boot-state evidence and crash-boundary gates.
+VERSION = "c18.image-lab.1t"
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
@@ -49,7 +49,7 @@ HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
-MARKER = "/etc/dadooh/c18-hwdecode-lab-1s-image"
+MARKER = "/etc/dadooh/c18-hwdecode-lab-1t-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -241,6 +241,9 @@ def main():
         "player_runtime_reconcile_available=true",
         "player_runtime_lab_thaw_guard=true",
         "player_runtime_gate_semantic_mpv_args=true",
+        "player_runtime_boot_state_evidence_gate=true",
+        "player_runtime_fault_injection_gate=true",
+        "player_runtime_reconcile_corrupt_state_fail_closed=true",
         "player_runtime_ota_still_frozen=true",
         "totem_core_excludes_kiosky_service_launcher=true",
         f"player_runtime_kiosk_source={PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)}",
@@ -248,7 +251,7 @@ def main():
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -490,7 +493,7 @@ def main():
 
     image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
     manifest = {
-        "round": "C18.IMAGE-LAB.1s", "image_tag": TAG, "image_version": VERSION,
+        "round": "C18.IMAGE-LAB.1t", "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": image_bytes,
         "artifact_promoted": artifact_promoted,
@@ -517,6 +520,9 @@ def main():
         "player_runtime_reconcile_available": v["player_runtime_updatectl_reconcile_available"],
         "player_runtime_lab_thaw_guard": v["player_runtime_lab_thaw_guard_present"],
         "player_runtime_ota_still_frozen": v["player_runtime_ota_still_frozen"],
+        "player_runtime_boot_state_evidence_gate": True,
+        "player_runtime_fault_injection_gate": True,
+        "player_runtime_reconcile_corrupt_state_fail_closed": True,
         "player_runtime_gate_semantic_mpv_args": v["player_runtime_release_gate_passed"],
         "player_runtime_release_gate_passed": v["player_runtime_release_gate_passed"],
         "player_runtime_sandbox_passed": v["player_runtime_sandbox_passed"],
@@ -531,13 +537,15 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1k (validated golden before pre-thaw hardening gap closure) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1k (validated golden before pre-thaw hardening gap closure) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
         "fix_c17_4_trace_dir": "kiosky-player drop-in moves optional C17.4 firstboot trace from /data to /run so mmc I/O stalls cannot block startup before kiosk.py",
         "fix_player_runtime_path": "totem-kiosky-launcher default now uses /data/player-runtime/current; legacy /data/apps/kiosky-player/current no longer shadows the image player on C18",
         "fix_player_runtime_thaw_foundation": "player-runtime remains frozen (rc=44) but image includes marker-bound launcher adoption, updatectl reconcile/state hygiene, lab thaw guard, quarantine and verify-then-promote primitives for future homologation",
+        "fix_player_runtime_boot_evidence": "cold-boot evidence requires boot-id/btime discriminators and /data adoption proof before any /data trial claim",
+        "fix_player_runtime_crash_boundary": "player-runtime apply/rollback fault-injection hooks prove fail-closed outcomes before physical power-loss testing",
         "panfrost_rebind_service": True,
         "kiosk_py_compiles": v["kiosk_py_compiles"],
         "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
@@ -546,7 +554,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1s RESULT ===")
+    print("\n=== C18.IMAGE-LAB.1t RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

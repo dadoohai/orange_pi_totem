@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
 import shutil
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -101,6 +103,69 @@ def player_runtime_manifest(version: str, *, hwdec: str = "v4l2request-copy") ->
             "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
         },
     }
+
+
+def player_runtime_policy(*, allow_downgrade: bool = False) -> dict:
+    raw = policy(allow_downgrade=allow_downgrade)
+    raw["allowed_components"] = ["player-runtime"]
+    return raw
+
+
+def write_player_runtime_policy(root: Path, *, allow_downgrade: bool = False) -> None:
+    updatectl.POLICY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    updatectl.POLICY_FILE.write_text(
+        json.dumps(player_runtime_policy(allow_downgrade=allow_downgrade), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_verified_player_runtime_release(version: str, *, kiosk_text: str | None = None) -> tuple[Path, dict, dict]:
+    release = updatectl.RELEASES_DIR / version
+    release.mkdir(parents=True, exist_ok=True)
+    (release / "kiosk.py").write_text(kiosk_text or f'print("{version}")\n', encoding="utf-8")
+    raw_manifest = player_runtime_manifest(version)
+    raw_manifest["payload_sha256"] = hashlib.sha256(version.encode("utf-8")).hexdigest()
+    identity = updatectl._player_runtime_identity(release, raw_manifest)
+    health = {
+        "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+        "passed": True,
+        "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+        "observed_tree_sha256": identity["tree_sha256"],
+        "artifact_id": f"unit-{version}",
+    }
+    updatectl._write_player_runtime_marker(release, raw_manifest, identity, health)
+    return release, raw_manifest, identity
+
+
+def write_player_runtime_payload(root: Path, version: str, *, kiosk_text: str | None = None) -> tuple[Path, Path]:
+    pkg = root / "pkg" / version
+    src = pkg / "src"
+    src.mkdir(parents=True, exist_ok=True)
+    (src / "kiosk.py").write_text(kiosk_text or f'print("{version}")\n', encoding="utf-8")
+    payload = pkg / f"dadooh-player-runtime-{version}.tar.gz"
+    with tarfile.open(payload, "w:gz") as tf:
+        tf.add(src / "kiosk.py", arcname="kiosk.py")
+    raw_manifest = player_runtime_manifest(version)
+    raw_manifest["payload_sha256"] = updatectl._sha256_file(payload)
+    raw_manifest["payload_bytes"] = payload.stat().st_size
+    manifest_path = pkg / f"dadooh-player-runtime-{version}.manifest.json"
+    manifest_path.write_text(json.dumps(raw_manifest, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest_path, payload
+
+
+def passing_player_runtime_health(release_dir: Path, identity: dict) -> dict:
+    return {
+        "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+        "passed": True,
+        "failure_reasons": [],
+        "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+        "observed_tree_sha256": identity["tree_sha256"],
+        "artifact_id": f"unit-health-{identity['version']}",
+    }
+
+
+class InjectedPowerCut(BaseException):
+    pass
 
 
 class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
@@ -402,6 +467,62 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             state = updatectl._read_state()
             self.assertIsNone(state["current"])
             self.assertEqual(result["reject_reason"], "tree_sha_mismatch")
+            self.assertFalse(release.exists())
+
+    def test_player_runtime_torn_current_adopts_verified_previous_and_discards_current(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            previous, _prev_manifest, _prev_identity = write_verified_player_runtime_release("runtime-a")
+            current, _cur_manifest, _cur_identity = write_verified_player_runtime_release("runtime-b")
+            (current / "asset.txt").write_text("asset\n", encoding="utf-8")
+            raw_manifest = player_runtime_manifest("runtime-b")
+            identity = updatectl._player_runtime_identity(current, raw_manifest)
+            health = {
+                "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "passed": True,
+                "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                "observed_tree_sha256": identity["tree_sha256"],
+                "artifact_id": "unit-runtime-b",
+            }
+            updatectl._write_player_runtime_marker(current, raw_manifest, identity, health)
+            updatectl._atomic_symlink("releases/runtime-a", updatectl.PREVIOUS_LINK)
+            updatectl._atomic_symlink("releases/runtime-b", updatectl.CURRENT_LINK)
+
+            (current / "asset.txt").unlink()
+            rc, result = updatectl._reconcile_player_runtime_state(
+                "unit_torn_current_with_previous",
+                allow_maintenance=True,
+            )
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(result["status"], "previous_adopted")
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/runtime-a")
+            self.assertTrue(previous.is_dir())
+            self.assertFalse(current.exists())
+
+    def test_player_runtime_corrupt_state_fails_closed_even_with_verified_current(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            current, _manifest, _identity = write_verified_player_runtime_release("runtime-a")
+            updatectl._atomic_symlink("releases/runtime-a", updatectl.CURRENT_LINK)
+            updatectl.STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            updatectl.STATE_FILE.write_text("{not-json", encoding="utf-8")
+
+            rc, result = updatectl._reconcile_player_runtime_state(
+                "unit_state_corruption",
+                allow_maintenance=True,
+            )
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(result["status"], "image_fallback")
+            self.assertEqual(result["reject_reason"], "state_file_corrupt_fail_closed")
+            self.assertIsNone(updatectl._read_symlink_target(updatectl.CURRENT_LINK))
+            self.assertFalse(current.exists())
+            state = updatectl._read_state()
+            self.assertIsNone(state["current"])
+            self.assertIsNone(state["previous"])
 
     def test_player_runtime_quarantine_is_content_based(self) -> None:
         state: dict = {}
@@ -417,6 +538,188 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
         ok, reason = updatectl._player_runtime_is_quarantined(same_content_new_version, state)
         self.assertTrue(ok)
         self.assertIn(reason, {"payload_sha256_quarantined", "tree_sha256_quarantined"})
+
+    def test_player_runtime_apply_fault_injection_never_adopts_unverified_release(self) -> None:
+        labels = [
+            "after_payload_staged",
+            "after_release_dir_created",
+            "after_extract",
+            "after_state_verifying",
+            "after_health_passed",
+            "after_release_tree_fsync",
+            "after_marker_written",
+            "after_previous_symlink",
+            "after_current_symlink",
+            "after_state_success",
+            "before_stage_cleanup",
+        ]
+        for label in labels:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "player-runtime")
+                write_player_runtime_policy(root)
+                write_verified_player_runtime_release("runtime-a")
+                updatectl._atomic_symlink("releases/runtime-a", updatectl.CURRENT_LINK)
+                updatectl._write_state({
+                    "component": "player-runtime",
+                    "schema": updatectl.SCHEMA_STATE,
+                    "current": {"version": "runtime-a"},
+                })
+                manifest_path, payload_path = write_player_runtime_payload(root, "runtime-b")
+                seen: list[str] = []
+
+                def fault_hook(observed: str, _context: dict) -> None:
+                    seen.append(observed)
+                    if observed == label:
+                        raise InjectedPowerCut(label)
+
+                old_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+                old_health = updatectl.PLAYER_RUNTIME_HEALTH_HOOK
+                old_fault = updatectl.PLAYER_RUNTIME_FAULT_HOOK
+                try:
+                    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+                    updatectl.PLAYER_RUNTIME_HEALTH_HOOK = passing_player_runtime_health
+                    updatectl.PLAYER_RUNTIME_FAULT_HOOK = fault_hook
+                    with self.assertRaises(InjectedPowerCut):
+                        updatectl._apply_from_manifest_path_unfrozen(
+                            manifest_path,
+                            payload_url=None,
+                            source="unit-fault",
+                            payload_path_override=payload_path,
+                        )
+                finally:
+                    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = old_thaw
+                    updatectl.PLAYER_RUNTIME_HEALTH_HOOK = old_health
+                    updatectl.PLAYER_RUNTIME_FAULT_HOOK = old_fault
+
+                self.assertIn(label, seen)
+                rc, _result = updatectl._reconcile_player_runtime_state(
+                    f"unit_apply_fault_{label}",
+                    allow_maintenance=True,
+                )
+                self.assertEqual(rc, 0)
+                current = updatectl._read_symlink_target(updatectl.CURRENT_LINK)
+                if current:
+                    ok, reason, _marker = updatectl._validate_player_runtime_marker(
+                        updatectl.APP_BASE / current,
+                        updatectl._read_state(),
+                    )
+                    self.assertTrue(ok, f"{label}: {reason}")
+
+    def test_player_runtime_rollback_fault_injection_never_keeps_quarantined_current(self) -> None:
+        labels = [
+            "rollback_after_identify_links",
+            "rollback_after_current_to_previous",
+            "rollback_after_previous_removed",
+            "rollback_after_quarantine",
+            "rollback_after_state_success",
+        ]
+        for label in labels:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "player-runtime")
+                write_verified_player_runtime_release("runtime-a")
+                _current, _manifest, current_identity = write_verified_player_runtime_release("runtime-b")
+                updatectl._atomic_symlink("releases/runtime-a", updatectl.PREVIOUS_LINK)
+                updatectl._atomic_symlink("releases/runtime-b", updatectl.CURRENT_LINK)
+                updatectl._write_state({
+                    "component": "player-runtime",
+                    "schema": updatectl.SCHEMA_STATE,
+                    "current": {"version": "runtime-b"},
+                    "previous": {"version": "runtime-a"},
+                })
+                seen: list[str] = []
+
+                def fault_hook(observed: str, _context: dict) -> None:
+                    seen.append(observed)
+                    if observed == label:
+                        raise InjectedPowerCut(label)
+
+                old_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+                old_fault = updatectl.PLAYER_RUNTIME_FAULT_HOOK
+                try:
+                    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+                    updatectl.PLAYER_RUNTIME_FAULT_HOOK = fault_hook
+                    with self.assertRaises(InjectedPowerCut):
+                        updatectl._rollback_player_runtime_unfrozen(
+                            reason="unit_fault",
+                            quarantine_current=True,
+                        )
+                finally:
+                    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = old_thaw
+                    updatectl.PLAYER_RUNTIME_FAULT_HOOK = old_fault
+
+                self.assertIn(label, seen)
+                rc, _result = updatectl._reconcile_player_runtime_state(
+                    f"unit_rollback_fault_{label}",
+                    allow_maintenance=True,
+                )
+                self.assertEqual(rc, 0)
+                current = updatectl._read_symlink_target(updatectl.CURRENT_LINK)
+                if current:
+                    ok, reason, _marker = updatectl._validate_player_runtime_marker(
+                        updatectl.APP_BASE / current,
+                        updatectl._read_state(),
+                    )
+                    self.assertTrue(ok, f"{label}: {reason}")
+                    self.assertNotEqual(current, "releases/runtime-b")
+                quarantined, _reason = updatectl._player_runtime_is_quarantined(
+                    current_identity,
+                    updatectl._read_state(),
+                )
+                self.assertTrue(quarantined)
+
+    def test_player_runtime_rollback_fault_without_previous_fails_closed_to_image(self) -> None:
+        for label in (
+            "rollback_after_identify_links",
+            "rollback_after_current_unlinked",
+            "rollback_after_quarantine",
+            "rollback_after_state_success",
+        ):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "player-runtime")
+                _current, _manifest, current_identity = write_verified_player_runtime_release("runtime-b")
+                updatectl._atomic_symlink("releases/runtime-b", updatectl.CURRENT_LINK)
+                updatectl._write_state({
+                    "component": "player-runtime",
+                    "schema": updatectl.SCHEMA_STATE,
+                    "current": {"version": "runtime-b"},
+                    "previous": None,
+                })
+                seen: list[str] = []
+
+                def fault_hook(observed: str, _context: dict) -> None:
+                    seen.append(observed)
+                    if observed == label:
+                        raise InjectedPowerCut(label)
+
+                old_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+                old_fault = updatectl.PLAYER_RUNTIME_FAULT_HOOK
+                try:
+                    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+                    updatectl.PLAYER_RUNTIME_FAULT_HOOK = fault_hook
+                    with self.assertRaises(InjectedPowerCut):
+                        updatectl._rollback_player_runtime_unfrozen(
+                            reason="unit_fault_no_previous",
+                            quarantine_current=True,
+                        )
+                finally:
+                    updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = old_thaw
+                    updatectl.PLAYER_RUNTIME_FAULT_HOOK = old_fault
+
+                self.assertIn(label, seen)
+                rc, _result = updatectl._reconcile_player_runtime_state(
+                    f"unit_rollback_no_previous_fault_{label}",
+                    allow_maintenance=True,
+                )
+                self.assertEqual(rc, 0)
+                self.assertIsNone(updatectl._read_symlink_target(updatectl.CURRENT_LINK))
+                quarantined, _reason = updatectl._player_runtime_is_quarantined(
+                    current_identity,
+                    updatectl._read_state(),
+                )
+                self.assertTrue(quarantined)
 
     def test_manifest_rejects_release_dir_version_hazards(self) -> None:
         for version in (".", "..", "-bad", "bad/name", "bad..name", ""):

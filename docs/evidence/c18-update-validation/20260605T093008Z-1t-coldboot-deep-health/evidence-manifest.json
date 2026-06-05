@@ -1,0 +1,84 @@
+{
+  "artifact_scope": "c18-image-1t-coldboot-baseline-validation",
+  "artifacts": [
+    {
+      "bytes": 2143,
+      "file": "boot-state-public.json",
+      "sha256": "a881ff2def3515fd313e01718d20d27108e5a3e412740d6da0e1c0a445257072"
+    },
+    {
+      "bytes": 109,
+      "file": "boot-state.out",
+      "sha256": "dead81614bf57e5f86b51ac82d5d6cb3037e053faa9e4853519f07b951b8de80"
+    },
+    {
+      "bytes": 109,
+      "file": "coldboot-gate.json",
+      "sha256": "25a35aec83e395a6abb07cb36ab426707caad8d0025116837e7292ab29cb231a"
+    },
+    {
+      "bytes": 73,
+      "file": "deep-health/deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274"
+    },
+    {
+      "bytes": 49,
+      "file": "deep-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "deep-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 115,
+      "file": "deep-health/deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
+    },
+    {
+      "bytes": 2429,
+      "file": "deep-health/playback-deep-health-public.json",
+      "sha256": "2471b6b261231bbce0f33779869d92cd6d2bc1b106b0c461aa7fbe3b46c68aa6"
+    },
+    {
+      "bytes": 29920,
+      "file": "deep-health/playback-samples.tsv",
+      "sha256": "f689268badb61a97f76e9e6d20d91136805c5ad84c846acdb9ca85788fffb071"
+    },
+    {
+      "bytes": 2429,
+      "file": "deep-health/public.json",
+      "sha256": "2471b6b261231bbce0f33779869d92cd6d2bc1b106b0c461aa7fbe3b46c68aa6"
+    },
+    {
+      "bytes": 12169,
+      "file": "deep-health/status-samples.ndjson",
+      "sha256": "2bc838c718e1eb096f662731f6c4d3a2b17ca488c134eae8cdc0c41cd56c39a8"
+    }
+  ],
+  "claims": [
+    "cold_boot_discriminators_changed",
+    "boot_reconcile_authorized_ok",
+    "public_player_runtime_freeze_rc44",
+    "public_kiosky_player_freeze_rc44",
+    "playback_deep_health_passed",
+    "hwdecode_v4l2request_copy",
+    "image_baseline_no_data_player_runtime_current"
+  ],
+  "component_scope": "image-baseline-fallback",
+  "image_sha256": "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6",
+  "image_tag": "c18-hwdecode-lab-1t",
+  "non_claims": [
+    "player_runtime_data_release_adoption",
+    "power_loss_physical_cut",
+    "public_thaw",
+    "github_publish",
+    "auto_pull",
+    "stable_or_production",
+    "server_side_gate",
+    "soak"
+  ],
+  "schema": "dadooh.c18.hardware_evidence.v1",
+  "selected_source_expected": "fallback"
+}

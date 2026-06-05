@@ -22,12 +22,14 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+CURRENT_COLDBOOT_EVIDENCE_DIR = "docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health"
 PY_COMPILE_TARGETS = (
     "scripts/board/totem_config_contract_validate.py",
     "scripts/board/totem_config_writer_real.py",
     "scripts/board/totem_visual_setup_writer_handoff.py",
     "scripts/board/totem_status_render_preview.py",
     "scripts/board/totem_updatectl.py",
+    "scripts/board/c18_coldboot_state_collect.py",
     "scripts/board/c18_playback_health_collect.py",
     "scripts/board/c18_playback_health_summary.py",
     "scripts/board/c18_player_runtime_candidate_health.py",
@@ -42,6 +44,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_lab_apply.py",
     "scripts/qa/c18_player_runtime_lab_rollback.py",
     "scripts/qa/c18_player_runtime_adoption_probe.py",
+    "scripts/qa/c18_coldboot_evidence_gate.py",
     "scripts/qa/c18_player_runtime_evidence_gate.py",
     "scripts/qa/c18_player_runtime_persistent_trial.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
@@ -57,6 +60,16 @@ TEST_COMMANDS = (
     ("c18_updatectl_freeze_downgrade_gc", ["python3", "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py"]),
     ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
     ("c18_player_runtime_release_gate", ["python3", "scripts/qa/c18_player_runtime_release_gate.py", "--self-test"]),
+    ("c18_coldboot_evidence_gate", ["python3", "scripts/qa/c18_coldboot_evidence_gate.py", "--self-test"]),
+    ("c18_coldboot_evidence_current", [
+        "python3",
+        "scripts/qa/c18_coldboot_evidence_gate.py",
+        "--run-dir",
+        CURRENT_COLDBOOT_EVIDENCE_DIR,
+        "--expect-selected-source",
+        "fallback",
+        "--json",
+    ]),
     ("c18_playback_deep_health_fixture", ["python3", "scripts/qa/c18_playback_deep_health_fixture_test.py"]),
     ("c17_9_update_channel_policy", ["python3", "scripts/qa/c17_9_update_channel_policy_test.py"]),
     ("c18_runtime_3_release_perms", ["python3", "scripts/qa/c18_runtime_3_release_perms_test.py"]),

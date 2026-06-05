@@ -38,11 +38,13 @@ MANUAL_KIOSKY_DOC_PATH = REPO_ROOT / "docs" / "app-integration" / "01_TESTE_MANU
 MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_playlist_probe.sh"
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
+COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_state_collect.py"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
 PLAYER_RUNTIME_ADOPTION_PROBE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"
+COLDBOOT_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_coldboot_evidence_gate.py"
 PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_evidence_gate.py"
 PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
@@ -61,7 +63,7 @@ DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
 DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
 DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
 EVIDENCE_CURRENT_DEEP_HEALTH_DIR = (
-    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T043400Z-1s-coldboot-deep-health"
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T093008Z-1t-coldboot-deep-health"
 )
 EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T052805Z-1r-player-runtime-data-trial"
@@ -69,7 +71,7 @@ EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
 EVIDENCE_CURRENT_PLAYER_RUNTIME_ABA_TRIAL_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T060200Z-1r-player-runtime-data-aba-trial"
 )
-EVIDENCE_CURRENT_IMAGE_SHA256 = "bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f"
+EVIDENCE_CURRENT_IMAGE_SHA256 = "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6"
 EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
@@ -292,9 +294,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
 
-    def test_c18_docs_keep_1s_as_current_golden(self) -> None:
-        current_tag = "c18-hwdecode-lab-1s"
+    def test_c18_docs_keep_1t_as_current_golden(self) -> None:
+        current_tag = "c18-hwdecode-lab-1t"
         current_sha = EVIDENCE_CURRENT_IMAGE_SHA256
+        legacy_sha_1s = "bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f"
         legacy_sha_1r = EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256
         legacy_sha_1q = "d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009"
         legacy_sha_1o = "07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164"
@@ -317,20 +320,23 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
         self.assertNotIn("Tratar `c18-hwdecode-lab-1m` como baseline", doc189)
+        self.assertIn(legacy_sha_1s, doc189)
         self.assertIn(legacy_sha_1m, doc189)
         self.assertIn(legacy_sha_1n, doc189)
         self.assertIn(legacy_sha_1o, doc189)
         self.assertIn(legacy_sha_1q, doc189)
         self.assertIn(legacy_sha_1r, doc189)
-        self.assertIn("20260605T043000Z-1s-service-deep-health", doc189)
-        self.assertIn("20260605T043400Z-1s-coldboot-deep-health", doc189)
+        self.assertIn("20260605T093008Z-1t-coldboot-deep-health", doc189)
         doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
         self.assertNotIn(legacy_sha_1l, doc188_top)
         doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]
         self.assertNotIn(legacy_sha_1j, doc190_top)
 
     def test_c18_current_hardware_evidence_is_public_and_passing(self) -> None:
-        public = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "playback-deep-health-public.json").read_text(encoding="utf-8"))
+        public_path = EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "playback-deep-health-public.json"
+        if not public_path.exists():
+            public_path = EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "deep-health" / "playback-deep-health-public.json"
+        public = json.loads(public_path.read_text(encoding="utf-8"))
         privacy = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "privacy-scan.json").read_text(encoding="utf-8"))
         manifest = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "evidence-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(public["schema"], "dadooh.c18.playback.deep_health.v1")
@@ -364,7 +370,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             manifest["schema"],
             {"dadooh.c18.update_validation.evidence_manifest.v1", "dadooh.c18.hardware_evidence.v1"},
         )
-        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1s")
+        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1t")
         self.assertEqual(manifest["image_sha256"], EVIDENCE_CURRENT_IMAGE_SHA256)
         manifest_items = manifest.get("artifacts", manifest.get("files", []))
         manifest_files = {item["file"]: item for item in manifest_items}
@@ -377,17 +383,24 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertEqual(digest, metadata["sha256"])
             if privacy_files:
                 self.assertIn(file_name, privacy_files)
-        if EVIDENCE_CURRENT_DEEP_HEALTH_DIR.name.endswith("1s-coldboot-deep-health"):
-            coldboot = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "coldboot-state.json").read_text(encoding="utf-8"))
-            self.assertTrue(coldboot["marker_1s_present"])
-            self.assertEqual(coldboot["timer_enabled"], "disabled")
-            self.assertEqual(coldboot["timer_active"], "inactive")
-            self.assertIn("/data", coldboot["requires_mounts_for"])
-            self.assertTrue(coldboot["after_has_local_fs"])
-            self.assertEqual(coldboot["player_runtime_apply_rc"], 44)
-            self.assertEqual(coldboot["player_runtime_rollback_rc"], 44)
-            self.assertEqual(coldboot["player_runtime_reconcile_rc"], 44)
-            self.assertEqual(coldboot["mpv_exes"], ["/opt/totem/hwdecode/bin/mpv"])
+        if EVIDENCE_CURRENT_DEEP_HEALTH_DIR.name.endswith("1t-coldboot-deep-health"):
+            coldboot = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "boot-state-public.json").read_text(encoding="utf-8"))
+            self.assertTrue(coldboot["boot"]["boot_id_changed"])
+            self.assertTrue(coldboot["boot"]["btime_changed"])
+            self.assertEqual(coldboot["boot"]["post_uptime_bucket"], "lt_5m")
+            self.assertTrue(coldboot["systemd"]["requires_data_mount"])
+            self.assertIn("/data", coldboot["systemd"]["requires_mounts_for"])
+            self.assertTrue(coldboot["systemd"]["after_contains_local_fs"])
+            self.assertTrue(coldboot["systemd"]["exec_start_pre_reconcile_present"])
+            self.assertEqual(coldboot["systemd"]["nrestarts"], 0)
+            self.assertEqual(coldboot["player_runtime"]["selected_source"], "fallback")
+            self.assertFalse(coldboot["player_runtime"]["current_present"])
+            self.assertEqual(coldboot["update_safety"]["public_player_runtime_rollback_rc"], 44)
+            self.assertEqual(coldboot["update_safety"]["public_player_runtime_reconcile_rc"], 44)
+            self.assertEqual(coldboot["update_safety"]["public_kiosky_player_rollback_rc"], 44)
+            self.assertEqual(coldboot["update_safety"]["boot_player_runtime_reconcile_rc"], 0)
+            self.assertFalse(coldboot["privacy"]["raw_boot_id_persisted"])
+            self.assertFalse(coldboot["privacy"]["raw_mount_source_persisted"])
         evidence_gate = importlib.util.spec_from_file_location("c18_player_runtime_evidence_gate", PLAYER_RUNTIME_EVIDENCE_GATE_PATH)
         self.assertIsNotNone(evidence_gate)
         module = importlib.util.module_from_spec(evidence_gate)
@@ -402,6 +415,73 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 if pattern.search(text):
                     leaks.append(f"{label}:{path.relative_to(EVIDENCE_CURRENT_DEEP_HEALTH_DIR).as_posix()}")
         self.assertEqual(leaks, [])
+
+    def test_c18_coldboot_evidence_collector_and_gate_are_wired(self) -> None:
+        collector = COLDBOOT_STATE_COLLECTOR_PATH.read_text(encoding="utf-8")
+        gate = COLDBOOT_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.coldboot_state.v2", collector)
+        self.assertIn("boot_id_changed", collector)
+        self.assertIn("post_uptime_seconds", collector)
+        self.assertIn("findmnt", collector)
+        self.assertIn("source_kind", collector)
+        self.assertIn("critical-chain", collector)
+        self.assertIn("raw_mount_source_persisted", collector)
+        self.assertIn("dadooh.c18.coldboot_state.v2", gate)
+        self.assertIn("pre_boot_id_hash_missing", gate)
+        self.assertIn("btime_not_changed", gate)
+        self.assertIn("boot_id_not_changed", gate)
+        self.assertIn("pre_hash == post_hash", gate)
+        self.assertIn("post_btime <= pre_btime", gate)
+        self.assertIn("boot_time_capture_inconsistent", gate)
+        self.assertIn("post_uptime_too_high", gate)
+        self.assertIn("requires_mounts_for_data_missing", gate)
+        self.assertIn("adoption_probe_missing", gate)
+        self.assertIn("running_identity_matches_marker", gate)
+        self.assertIn("uuid_source", gate)
+        self.assertIn("raw_uuid", gate)
+        self.assertIn("raw_block_device", gate)
+        self.assertIn("privacy_leak", gate)
+        self.assertIn("CURRENT_COLDBOOT_EVIDENCE_DIR", release_gate)
+        self.assertIn("c18_coldboot_evidence_current", release_gate)
+        self.assertIn("20260605T093008Z-1t-coldboot-deep-health", release_gate)
+        self.assertIn("c18_coldboot_evidence_gate.py", release_gate)
+        result = subprocess.run(
+            ["python3", str(COLDBOOT_EVIDENCE_GATE_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = subprocess.run(
+            [
+                "python3",
+                str(COLDBOOT_EVIDENCE_GATE_PATH),
+                "--run-dir",
+                str(EVIDENCE_CURRENT_DEEP_HEALTH_DIR),
+                "--expect-selected-source",
+                "fallback",
+                "--json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_c18_player_runtime_fault_hooks_and_corrupt_state_fail_closed_are_wired(self) -> None:
+        updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
+        self.assertIn("PLAYER_RUNTIME_FAULT_HOOK", updatectl)
+        self.assertIn("after_marker_written", updatectl)
+        self.assertIn("after_current_symlink", updatectl)
+        self.assertIn("rollback_after_current_to_previous", updatectl)
+        self.assertIn("state_file_corrupt_fail_closed", updatectl)
+        self.assertIn("_gc_player_runtime_invalid_orphan_releases", updatectl)
+        self.assertIn("_fsync_release_tree(release_dir)", updatectl)
 
     def test_c18_current_player_runtime_data_trial_evidence_is_public_and_passing(self) -> None:
         evidence_dir = EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR

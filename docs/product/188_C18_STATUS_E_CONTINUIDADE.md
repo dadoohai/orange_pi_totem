@@ -3,18 +3,18 @@
 Documento mestre de status e continuidade do C18. Objetivo: permitir que alguém retome o trabalho **do zero**, após uma compactação de contexto, usando apenas fatos verificados.
 
 > **Nota de continuidade 2026-06-05:** a golden atual de laboratório/delivery
-> para C18 passou a ser **`c18-hwdecode-lab-1s`**,
-> sha256 `bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f`.
+> para C18 passou a ser **`c18-hwdecode-lab-1t`**,
+> sha256 `7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6`.
 > O estado runtime de referência do marco aplica por cima a release OTA manual
 > `totem-core`
 > `c18.ota-core-config-missing-20260603T150429Z-2a7a327`.
 > Este doc preserva histórico da `1d`; para o baseline live/golden e contrato
 > OTA atual, consultar também `docs/product/189_C18_OTA_READINESS_GATE.md` e
 > `docs/UPDATE_CONTRACT.md`.
-> `1k`/`1l`/`1m`/`1n`/`1o`/`1q`/`1r` permanecem como golden historicas
-> anteriores. A `1s` valida em hardware o cold-boot com `/data` ordenado,
-> reconcile de boot autorizado, deep-health multi-segmento endurecido e mantem
-> `player-runtime` congelado no fluxo publico (`rc=44`).
+> `1k`/`1l`/`1m`/`1n`/`1o`/`1q`/`1r`/`1s` permanecem como golden historicas
+> anteriores. A `1t` valida em hardware boot-state auditavel, cold-boot com
+> `/data` ordenado, reconcile de boot autorizado, deep-health multi-segmento
+> endurecido e mantem `player-runtime` congelado no fluxo publico (`rc=44`).
 
 ---
 
@@ -200,8 +200,8 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 1. Continuar a frente de governanca de atualizacoes: `totem-core` OTA manual ja
    validado; `player-runtime` so avanca em thaw controlado, ainda congelado para
    producao;
-2. `c18-hwdecode-lab-1s` e a golden de laboratorio/delivery atual: mantem os
-   fechamentos pre-thaw anteriores e valida em hardware os follow-ups de
+2. `c18-hwdecode-lab-1t` e a golden de laboratorio/delivery atual: mantem os
+   fechamentos pre-thaw anteriores e valida em hardware boot-state auditavel,
    boot reconcile ordenado por `/data`, fsync de arvore antes de promote e
    cold-boot com deep-health;
 3. **Rebuild GCC-12 de produção;**

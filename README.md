@@ -4,18 +4,20 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 ## Estado C18 OTA
 
-Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1s` (C18 HW decode +
+Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1t` (C18 HW decode +
 OTA `totem-core` validado end-to-end + fundação segura para thaw futuro de
-`player-runtime`, com boot reconcile ordenado por `/data` e cold-boot
-revalidado). O OTA C18 comum é manual/operator-triggered e restrito a
+`player-runtime`, com boot reconcile ordenado por `/data`, boot-state auditavel
+e crash-boundary offline no caminho real de `player-runtime`). O OTA C18 comum é
+manual/operator-triggered e restrito a
 `totem-core`; `kiosky-player`, `player-runtime`, launcher do player,
 MPV/hwdecode, display, kernel, systemd e updater ficam fora desse fluxo e
 exigem imagem/homologação ou um pacote C18-aware explicitamente aprovado.
 
 Evidencia hardware da golden atual:
-`docs/evidence/c18-update-validation/20260605T043400Z-1s-coldboot-deep-health/`.
-Ela promove a imagem `1s`, mas nao valida thaw publico de `player-runtime`,
-power-loss, auto-pull, stable/producao ou soak.
+`docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health/`.
+Ela promove a imagem `1t`, mas nao valida thaw publico de `player-runtime`,
+adocao de release `/data`, power-loss fisico, auto-pull, stable/producao ou
+soak.
 
 Primeiro trial lab-only persistente de `player-runtime` em `/data`:
 `docs/evidence/c18-update-validation/20260605T052805Z-1r-player-runtime-data-trial/`.

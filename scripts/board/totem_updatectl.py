@@ -115,6 +115,7 @@ PLAYER_RUNTIME_MARKER_NAME = ".release_verified.json"
 PLAYER_RUNTIME_MARKER_SCHEMA = "dadooh.c18.player_runtime.verified.v1"
 PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 PLAYER_RUNTIME_HEALTH_HOOK: Optional[Callable[[Path, Dict[str, Any]], Any]] = None
+PLAYER_RUNTIME_FAULT_HOOK: Optional[Callable[[str, Dict[str, Any]], None]] = None
 PLAYER_RUNTIME_LAB_THAW_ENABLED = False
 PLAYER_RUNTIME_RECONCILE_ENV = "C18_PLAYER_RUNTIME_RECONCILE"
 
@@ -400,6 +401,13 @@ def _cleanup_unpromoted_release(release_dir: Path) -> None:
         log("INFO", "release_cleanup_ok", path=str(release_dir))
     except Exception as e:
         log("WARN", "release_cleanup_failed", path=str(release_dir), err=str(e))
+
+
+def _player_runtime_fault(label: str, **context: Any) -> None:
+    """Test-only crash boundary hook for player-runtime state-machine audits."""
+    hook = PLAYER_RUNTIME_FAULT_HOOK
+    if hook is not None:
+        hook(label, context)
 
 
 def _atomic_symlink(target_rel: str, link: Path) -> None:
@@ -1723,6 +1731,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         log("ERROR", "player_runtime_payload_stage_failed", err=str(e))
         _cleanup_stage(stage)
         return 6
+    _player_runtime_fault("after_payload_staged", version=version, stage=str(stage))
 
     release_dir = RELEASES_DIR / version
     linked_target = f"releases/{version}"
@@ -1748,6 +1757,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             _cleanup_stage(stage)
             return 7
     release_dir.mkdir(parents=True, exist_ok=True)
+    _player_runtime_fault("after_release_dir_created", version=version, release=str(release_dir))
     try:
         _safe_extract_tar(payload_local, release_dir)
     except Exception as e:
@@ -1758,6 +1768,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             pass
         _cleanup_stage(stage)
         return 7
+    _player_runtime_fault("after_extract", version=version, release=str(release_dir))
 
     try:
         identity = _player_runtime_identity(release_dir, manifest)
@@ -1786,6 +1797,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         "candidate_identity": identity,
     }
     _write_state(state)
+    _player_runtime_fault("after_state_verifying", version=version, identity=identity)
 
     try:
         health = _default_player_runtime_health_hook(release_dir, identity)
@@ -1827,6 +1839,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 11 if not old_current else 10
+    _player_runtime_fault("after_health_passed", version=version, identity=identity)
 
     try:
         post_health_identity = _player_runtime_identity(release_dir, manifest)
@@ -1876,7 +1889,9 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
 
     try:
         _fsync_release_tree(release_dir)
+        _player_runtime_fault("after_release_tree_fsync", version=version, identity=identity)
         marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
+        _player_runtime_fault("after_marker_written", version=version, identity=identity)
     except Exception as e:
         reason = f"marker_write_failed:{e}"
         _quarantine_player_runtime_identity(state, identity, reason)
@@ -1899,7 +1914,9 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
 
     if old_current and old_current != f"releases/{version}":
         _atomic_symlink(old_current, PREVIOUS_LINK)
+        _player_runtime_fault("after_previous_symlink", version=version, previous=old_current)
     _atomic_symlink(f"releases/{version}", CURRENT_LINK)
+    _player_runtime_fault("after_current_symlink", version=version, current=f"releases/{version}")
     state["previous"] = state.get("current")
     state["current"] = {
         "version": version,
@@ -1925,6 +1942,8 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         "source": source,
     }
     _write_state(state)
+    _player_runtime_fault("after_state_success", version=version, identity=identity)
+    _player_runtime_fault("before_stage_cleanup", version=version, stage=str(stage))
     _cleanup_stage(stage)
     return 0
 
@@ -2014,12 +2033,21 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
                 "kiosk_py_sha256": cur_marker.get("kiosk_py_sha256"),
                 "tree_sha256": cur_marker.get("tree_sha256"),
             }
+            _quarantine_player_runtime_identity(state, cur_identity, reason)
+            _write_state(state)
+    _player_runtime_fault(
+        "rollback_after_identify_links",
+        current=cur_link,
+        previous=prev_link,
+        quarantined_current=bool(cur_identity),
+    )
 
     if prev_link:
         prev_dir = APP_BASE / prev_link
         ok, info, marker = _validate_player_runtime_marker(prev_dir, state)
         if ok:
             _atomic_symlink(prev_link, CURRENT_LINK)
+            _player_runtime_fault("rollback_after_current_to_previous", current=prev_link, previous=cur_link)
             if cur_link and cur_link != prev_link and not quarantine_current:
                 _atomic_symlink(cur_link, PREVIOUS_LINK)
             elif quarantine_current:
@@ -2028,8 +2056,9 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
                         PREVIOUS_LINK.unlink()
                 except OSError:
                     pass
+                _player_runtime_fault("rollback_after_previous_removed", current=prev_link, previous=cur_link)
                 if cur_identity:
-                    _quarantine_player_runtime_identity(state, cur_identity, reason)
+                    _player_runtime_fault("rollback_after_quarantine", current=prev_link, quarantined=cur_identity)
             rolled_to_version = prev_link.split("/")[-1] if "/" in prev_link else prev_link
             previous_entry = state.get("previous")
             state["previous"] = None if quarantine_current else state.get("current")
@@ -2054,6 +2083,7 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
                 "quarantined_current": bool(quarantine_current and cur_identity),
             }
             _write_state(state)
+            _player_runtime_fault("rollback_after_state_success", current=prev_link)
             return 0
         log("WARN", "player_runtime_previous_not_adopted", reason=info, previous=prev_link)
 
@@ -2062,8 +2092,9 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
             CURRENT_LINK.unlink()
     except OSError:
         pass
+    _player_runtime_fault("rollback_after_current_unlinked", current=cur_link, previous=prev_link)
     if quarantine_current and cur_identity:
-        _quarantine_player_runtime_identity(state, cur_identity, reason)
+        _player_runtime_fault("rollback_after_quarantine", current=cur_link, quarantined=cur_identity)
     state["current"] = None
     state["last_operation"] = {
         "type": "rollback",
@@ -2075,6 +2106,7 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
         "quarantined_current": bool(quarantine_current and cur_identity),
     }
     _write_state(state)
+    _player_runtime_fault("rollback_after_state_success", current=None)
     return 0
 
 
@@ -2091,6 +2123,33 @@ def _player_runtime_state_entry_from_marker(link: str,
         "via": via,
         "applied_at_utc": _utcnow_iso(),
     }
+
+
+def _gc_player_runtime_invalid_orphan_releases(state: Dict[str, Any]) -> List[str]:
+    """Remove invalid unlinked player-runtime releases left by interrupted trials."""
+    removed: List[str] = []
+    try:
+        current = _read_symlink_target(CURRENT_LINK)
+        previous = _read_symlink_target(PREVIOUS_LINK)
+        protected = {item for item in (current, previous) if item}
+        if not RELEASES_DIR.is_dir():
+            return removed
+        for release in sorted(RELEASES_DIR.iterdir()):
+            if not release.is_dir() or release.is_symlink():
+                continue
+            rel_target = f"releases/{release.name}"
+            if rel_target in protected:
+                continue
+            ok, _info, _marker = _validate_player_runtime_marker(release, state)
+            if ok:
+                continue
+            before = release.exists()
+            _cleanup_unpromoted_release(release)
+            if before and not release.exists():
+                removed.append(release.name)
+    except Exception as e:
+        log("WARN", "player_runtime_orphan_gc_failed", err=str(e))
+    return removed
 
 
 def _reconcile_player_runtime_state(
@@ -2111,6 +2170,9 @@ def _reconcile_player_runtime_state(
     prev_link = _read_symlink_target(PREVIOUS_LINK)
 
     def finish(status: str, **extra: Any) -> Tuple[int, Dict[str, Any]]:
+        gc_removed = _gc_player_runtime_invalid_orphan_releases(state)
+        if gc_removed:
+            extra = {**extra, "gc_removed_releases": gc_removed}
         state["last_operation"] = {
             "type": "reconcile",
             "status": status,
@@ -2128,6 +2190,29 @@ def _reconcile_player_runtime_state(
         }
         return 0, result
 
+    if state.get("state_file_recovered_from_corruption"):
+        try:
+            if CURRENT_LINK.is_symlink() or CURRENT_LINK.exists():
+                CURRENT_LINK.unlink()
+        except OSError:
+            pass
+        try:
+            if PREVIOUS_LINK.is_symlink() or PREVIOUS_LINK.exists():
+                PREVIOUS_LINK.unlink()
+        except OSError:
+            pass
+        for link in (cur_link, prev_link):
+            if link:
+                _cleanup_unpromoted_release(APP_BASE / link)
+        state["current"] = None
+        state["previous"] = None
+        return finish(
+            "image_fallback",
+            reject_reason="state_file_corrupt_fail_closed",
+            rejected_current=cur_link,
+            rejected_previous=prev_link,
+        )
+
     if cur_link:
         ok, info, marker = _validate_player_runtime_marker(APP_BASE / cur_link, state)
         if ok:
@@ -2140,6 +2225,7 @@ def _reconcile_player_runtime_state(
             prev_ok, prev_info, prev_marker = _validate_player_runtime_marker(APP_BASE / prev_link, state)
             if prev_ok:
                 _atomic_symlink(prev_link, CURRENT_LINK)
+                _cleanup_unpromoted_release(APP_BASE / cur_link)
                 state["current"] = _player_runtime_state_entry_from_marker(
                     prev_link, prev_marker, "player_runtime_reconcile_previous"
                 )
@@ -2157,6 +2243,7 @@ def _reconcile_player_runtime_state(
                 CURRENT_LINK.unlink()
         except OSError:
             pass
+        _cleanup_unpromoted_release(APP_BASE / cur_link)
         state["current"] = None
         return finish("image_fallback", rejected_current=cur_link, reject_reason=info)
 

@@ -120,9 +120,9 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 Baseline de laboratorio/delivery registrado em 2026-06-05:
 
-- imagem golden: `c18-hwdecode-lab-1s`;
+- imagem golden: `c18-hwdecode-lab-1t`;
 - sha256:
-  `bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f`;
+  `7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -136,14 +136,13 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   controlado:
   progresso de frame presente/avancando, `media_load_failed=0`,
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
-- evidencia auditavel da 1s:
-  `docs/evidence/c18-update-validation/20260605T043000Z-1s-service-deep-health/`;
-  `docs/evidence/c18-update-validation/20260605T043400Z-1s-coldboot-deep-health/`.
-- a `1s` valida tambem `RequiresMountsFor=/data`, `After=local-fs.target`,
-  reconcile de boot explicitamente autorizado e nao fatal, timer off, policy
-  restrita a `totem-core`, ausencia de `/data/player-runtime/current` e
-  `player-runtime` publico congelado com `rc=44` em apply, rollback e
-  reconcile.
+- evidencia auditavel da 1t:
+  `docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health/`.
+- a `1t` valida tambem `RequiresMountsFor=/data`, `After=local-fs.target`,
+  reconcile de boot explicitamente autorizado e nao fatal, boot-state com
+  discriminadores pre/post, timer off, policy restrita a `totem-core`,
+  ausencia de `/data/player-runtime/current` e `player-runtime` publico
+  congelado com `rc=44` em apply, rollback e reconcile.
 - ensaio lab-only de `player-runtime` em hardware validado com pacote local
   `homologation` do commit `3af11d4`, `data_root` temporario em `/tmp`,
   candidato isolado com canario local, `github_used=false`,
@@ -257,7 +256,7 @@ adoption com `/data/player-runtime/current` real, comportamento sob
 interrupcao/power-loss durante apply/rollback e decisao explicita de como o
 fluxo sera promovido para homologacao sem publicar stable nem ligar auto-pull.
 
-A imagem `1s` ja embarca e valida em cold-boot do baseline/fallback:
+A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
 
 - `RequiresMountsFor=/data` no drop-in do `kiosky-player.service`, para o
   reconcile de boot nao operar contra `/data` ausente;
@@ -269,6 +268,29 @@ A imagem `1s` ja embarca e valida em cold-boot do baseline/fallback:
 
 Isso ainda nao prova cold-boot com uma release de `player-runtime` em `/data`
 nem corte de energia no meio de apply/rollback.
+
+Follow-up repo-side embarcado e validado na `1t`:
+
+- novas evidencias de cold-boot devem incluir `boot-state-public.json` no schema
+  `dadooh.c18.coldboot_state.v2`, coletado por
+  `scripts/board/c18_coldboot_state_collect.py` e validado por
+  `scripts/qa/c18_coldboot_evidence_gate.py`;
+- esse arquivo deve trazer discriminadores de boot (`boot_id` hasheado,
+  `btime`, uptime pos-boot), estado de mount de `/` e `/data`, contrato systemd
+  (`RequiresMountsFor=/data`, `After=local-fs.target`, `ExecStartPre` de
+  reconcile), fonte candidata do launcher (`fallback` ou `/data`) e flags de
+  privacidade; nao deve persistir journal bruto, UUID/particao em claro, IP,
+  MAC, SSID, URL ou segredo;
+- quando a evidencia reivindicar `/data` como fonte adotada pelo servico, ela
+  tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
+  provando processo em execucao, marker valido e hash do `kiosk.py` rodando
+  batendo com o marker;
+- o updater tem fault-injection offline no caminho real de apply/rollback de
+  `player-runtime`; isso prova fronteiras de crash em codigo real, mas ainda
+  nao e prova fisica de corte de energia;
+- reconcile de `player-runtime` deve falhar fechado para `/opt` se `state.json`
+  estiver corrompido e deve limpar releases invalidas/orfas quando nao forem
+  `current`/`previous` verificados.
 
 ## Gates Antes De Stable
 

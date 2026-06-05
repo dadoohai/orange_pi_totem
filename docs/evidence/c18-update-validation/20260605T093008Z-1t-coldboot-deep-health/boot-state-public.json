@@ -1,0 +1,80 @@
+{
+  "boot": {
+    "boot_id_changed": true,
+    "btime_changed": true,
+    "post_boot_id_sha256_12": "1c3b7474fc76",
+    "post_btime": 1780651593,
+    "post_uptime_bucket": "lt_5m",
+    "post_uptime_seconds": 110.18,
+    "pre_boot_id_sha256_12": "a2e0f902f99f",
+    "pre_btime": 1780650904
+  },
+  "captured_at_unix": 1780651703,
+  "mounts": {
+    "data": {
+      "found": true,
+      "fstype": "ext4",
+      "read_only": false,
+      "read_write": true,
+      "source_kind": "block",
+      "source_sha256_12": "c00b3e058eb3",
+      "target": "/"
+    },
+    "data_mount_claim": "rootfs_directory",
+    "data_same_device_as_root": true,
+    "root": {
+      "found": true,
+      "fstype": "ext4",
+      "read_only": false,
+      "read_write": true,
+      "source_kind": "block",
+      "source_sha256_12": "c00b3e058eb3",
+      "target": "/"
+    }
+  },
+  "player_runtime": {
+    "current_present": false,
+    "data_base_present": true,
+    "data_current_kiosk_present": false,
+    "data_current_marker_present": false,
+    "data_current_marker_reason": "no_data_current_kiosk",
+    "data_current_marker_verified": false,
+    "fallback_kiosk_present": false,
+    "previous_present": false,
+    "selected_source": "fallback"
+  },
+  "privacy": {
+    "raw_boot_id_persisted": false,
+    "raw_journal_persisted": false,
+    "raw_mount_source_persisted": false
+  },
+  "schema": "dadooh.c18.coldboot_state.v2",
+  "systemd": {
+    "active_state": "active",
+    "after_contains_local_fs": true,
+    "critical_chain": {
+      "collected": true,
+      "contains_data_mount": false,
+      "contains_local_fs": false,
+      "rc": 0
+    },
+    "dropin_count": 2,
+    "exec_start_pre_reconcile_present": true,
+    "nrestarts": 0,
+    "requires_data_mount": true,
+    "requires_mounts_for": [
+      "/opt/totem/kiosky-player",
+      "/data"
+    ],
+    "service": "kiosky-player.service",
+    "show_rc": 0,
+    "sub_state": "running"
+  },
+  "update_safety": {
+    "boot_player_runtime_reconcile_rc": 0,
+    "included": true,
+    "public_kiosky_player_rollback_rc": 44,
+    "public_player_runtime_reconcile_rc": 44,
+    "public_player_runtime_rollback_rc": 44
+  }
+}

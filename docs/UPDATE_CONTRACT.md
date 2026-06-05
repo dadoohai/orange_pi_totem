@@ -49,7 +49,7 @@ mudancas indiretas no runtime do player.
 O snapshot governado do player C18 fica em
 `player-runtime/kiosky-player/kiosk.py`, com provenance em
 `player-runtime/kiosky-player/SOURCE.json`. Esse arquivo nasceu do `kiosk.py`
-validado na imagem `c18-hwdecode-lab-1i` e segue validado na golden `1s`:
+validado na imagem `c18-hwdecode-lab-1i` e segue validado na golden `1t`:
 upstream `dadoohai/kiosky-player` em `c25659aff200d9aac1720e60e60794c432c79393`
 mais o patch C18 de `DEFAULT_CONFIG.mpv_path` para
 `/opt/totem/bin/totem-mpv-hwdecode`.
@@ -217,7 +217,8 @@ Contrato minimo para uma janela curta:
   `/opt/totem/bin/totem-mpv-hwdecode`);
 - `hwdec-current=v4l2request-copy`;
 - `vo-configured=true`;
-- `time-pos` ou `estimated-frame-number` avancando;
+- `estimated-frame-number` presente e avancando; `time-pos` sozinho nao aprova
+  playback C18;
 - pelo menos duas transicoes ou dois aliases de midia observados quando houver
   playlist suficiente;
 - `media_load_failed=0`;
@@ -300,6 +301,27 @@ artefatos publicos de deep-health (`playback-samples.tsv`,
 `playback-deep-health-public.json`). Ele rejeita tarballs, logs, config/seed,
 playlist com path de canario, `raw/`, `extracted/`, paths de midia/config e
 padroes de segredo/URL/IP/MAC.
+
+Evidencia que reivindica cold-boot precisa trazer um discriminador de boot
+auditavel. Para as proximas rodadas, incluir `boot-state-public.json` gerado por
+`scripts/board/c18_coldboot_state_collect.py` e validado por
+`scripts/qa/c18_coldboot_evidence_gate.py`. Esse artefato deve persistir apenas
+valores sanitizados: hash curto do `boot_id`, `btime`, uptime pos-boot, estado
+de mount de `/` e `/data`, contrato systemd do player (`RequiresMountsFor=/data`,
+`After=local-fs.target`, `ExecStartPre` de reconcile), fonte candidata do
+launcher e flags de privacidade. Se a evidencia reivindicar adocao de
+`/data/player-runtime/current`, ela tambem precisa incluir
+`launcher-adoption.json` do probe de adocao real, com processo em execucao,
+marker valido e identidade rodando batendo com o marker. Sem esses
+discriminadores, a evidencia pode continuar util como smoke de servico, mas nao
+deve ser usada como prova decisoria de cold-boot ou de adocao por `/data`.
+
+Interrupcao/power-loss durante apply/rollback de `player-runtime` deve ser
+provada em duas camadas. A camada offline usa fault-injection no caminho real do
+updater para matar apply/rollback em fronteiras conhecidas e exigir que
+reconcile termine em `current` verificado ou fallback `/opt`, nunca em release
+nao verificada. A camada fisica de power-cut continua gate de homologacao e nao
+fica satisfeita apenas pelo teste offline.
 
 Para uma evidencia A->B->A ser aceita como rollback para `previous` real, ela
 precisa declarar `rollback_expectation=data-previous`, conter
