@@ -92,6 +92,37 @@ arquivos da imagem, foi gerada uma nova candidata e validada em placa.
   `player-runtime`, e nao prova trial persistente de `player-runtime` em
   `/data`.
 
+## Candidata 1s (offline, nao promovida)
+
+O commit `8aa04b2` prepara a imagem `c18-hwdecode-lab-1s` a partir do
+hardening `02f3be7`, que fecha os gates pre-cold-boot/power-loss apontados apos
+o trial A->B->A:
+
+- `kiosky-player.service` passa a declarar `RequiresMountsFor=/data` e
+  `After=local-fs.target` antes do reconcile de boot;
+- `totem-updatectl` fsynca a arvore de release antes de escrever marker/promover;
+- `reconcile` rejeita release "torn" por `tree_sha_mismatch` e cai para `/opt`;
+- o deep-health rejeita segmento final curto sem progresso comprovado.
+
+- **Imagem candidata:** `c18-hwdecode-lab-1s`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img`;
+- **Copia para gravacao no Windows:**
+  `/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img`;
+- **sha256:**
+  `bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f`;
+- **Tamanho:** `1971322880` bytes;
+- **Validacao offline:** `OFFLINE_VALIDATION_PASSED=True`,
+  `artifact_promoted=true`, `totem_core_ota_ready=true`,
+  `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
+  `player_runtime_ota_still_frozen=true`,
+  `no_player_runtime_current_embedded=true`,
+  `no_legacy_kiosky_player_current_embedded=true`, `fsck_clean=true`;
+- **Evidencia offline:** `docs/evidence/c18-update-validation/20260605T040600Z-1s-offline-build/`;
+- **Status:** candidata offline pronta para gravacao e validacao em hardware.
+  Nao e golden ate marker, policy, freeze, playback/deep-health, boot reconcile
+  e fallback serem reconfirmados na placa.
+
 ## Primeiro trial persistente de player-runtime em `/data` (1r)
 
 Com a `1r` em hardware e a config real escrita via SSH a partir do seed, foi

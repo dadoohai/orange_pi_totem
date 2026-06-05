@@ -1,0 +1,11 @@
+base_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img
+out_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img
+copy base image -> temp output ...
+linux partition offset=4194304 length=1967128576
+debugfs commands: 160 (stack libs real=11 symlink=21)
+totem-core embedded version=c17.6-environment-input-20260514T211247Z files=16
+e2fsck rc=0 (clean)
+rootfs written back into temp output image
+sha256=bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f
+promoted_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img
+promoted_sha256=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1s_minimal.img.sha256
