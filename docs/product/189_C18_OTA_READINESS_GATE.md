@@ -310,6 +310,16 @@ laboratorio/delivery:
   `/data/player-runtime/current` verificado, corte de energia fisico durante
   apply/rollback, thaw publico, auto-pull, stable/producao e soak.
 
+Nota pos-auditoria: a `1t` segue golden de laboratorio, mas a evidencia
+cold-boot da `1t` prova consistencia interna dos discriminadores e nao
+autenticidade criptografica. Para o proximo trial `/data`, o repo agora exige um
+handoff mais forte: `pre-state-public.json` mecanico antes do reboot,
+`boot-state-public.json` referenciando esse pre-state por `sha256`/nonce,
+identidade da imagem pelo marker em `/etc/dadooh`, e manifesto com
+`repo_commit`/`repo_tree`/`repo_dirty=false`. O gate forte deve usar
+`--require-pre-state`; se a rodada reivindicar power-cycle fisico, tambem deve
+usar `--forbid-controlled-reboot`.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente

@@ -14,8 +14,11 @@ from typing import Any
 
 
 SCHEMA = "dadooh.c18.coldboot_state.v2"
+PRE_STATE_SCHEMA = "dadooh.c18.coldboot_pre_state.v1"
 DEFAULT_BOOT_STATE = "boot-state-public.json"
+DEFAULT_PRE_STATE = "pre-state-public.json"
 MAX_POST_BOOT_UPTIME_SECONDS = 900
+MAX_PRE_TO_POST_BOOT_SECONDS = 3600
 LEAK_PATTERNS = (
     ("ipv4", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
     ("mac", re.compile(r"\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b")),
@@ -52,6 +55,23 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def is_sha12(value: Any) -> bool:
+    return isinstance(value, str) and bool(re.fullmatch(r"[0-9a-f]{12}", value))
+
+
+def is_sha256(value: Any) -> bool:
+    return isinstance(value, str) and bool(re.fullmatch(r"[0-9a-f]{64}", value))
+
+
+def path_is_under(path: Path, root: Path) -> bool:
+    try:
+        resolved = path.resolve()
+        root_resolved = root.resolve()
+    except OSError:
+        return False
+    return resolved == root_resolved or root_resolved in resolved.parents
 
 
 def scan_leaks(paths: list[Path]) -> list[str]:
@@ -105,6 +125,14 @@ def validate_boot_state(
     *,
     expect_source: str,
     adoption: dict[str, Any] | None = None,
+    pre_state: dict[str, Any] | None = None,
+    pre_state_path: Path | None = None,
+    require_pre_state: bool = False,
+    expect_image_tag: str | None = None,
+    expect_image_marker_sha256: str | None = None,
+    expect_transition_flow: str | None = None,
+    expect_mechanical_action: str | None = None,
+    forbid_controlled_reboot: bool = False,
 ) -> None:
     if data.get("schema") != SCHEMA:
         fail(errors, "schema_mismatch")
@@ -114,15 +142,13 @@ def validate_boot_state(
         boot = {}
     post_hash = boot.get("post_boot_id_sha256_12")
     pre_hash = boot.get("pre_boot_id_sha256_12")
-    if not isinstance(pre_hash, str) or not re.fullmatch(r"[0-9a-f]{12}", pre_hash):
+    if not is_sha12(pre_hash):
         fail(errors, "pre_boot_id_hash_missing")
-    if not isinstance(post_hash, str) or not re.fullmatch(r"[0-9a-f]{12}", post_hash):
+    if not is_sha12(post_hash):
         fail(errors, "post_boot_id_hash_missing")
     if boot.get("boot_id_changed") is not True or (
-        isinstance(pre_hash, str)
-        and isinstance(post_hash, str)
-        and re.fullmatch(r"[0-9a-f]{12}", pre_hash)
-        and re.fullmatch(r"[0-9a-f]{12}", post_hash)
+        is_sha12(pre_hash)
+        and is_sha12(post_hash)
         and pre_hash == post_hash
     ):
         fail(errors, "boot_id_not_changed")
@@ -147,6 +173,138 @@ def validate_boot_state(
     if isinstance(captured_at, (int, float)) and isinstance(post_btime, int) and isinstance(uptime, (int, float)):
         if abs((post_btime + uptime) - captured_at) > MAX_POST_BOOT_UPTIME_SECONDS:
             fail(errors, "boot_time_capture_inconsistent")
+
+    transition = data.get("transition")
+    if expect_transition_flow or expect_mechanical_action or forbid_controlled_reboot:
+        if not isinstance(transition, dict):
+            fail(errors, "transition_missing")
+            transition = {}
+        if transition.get("phase") != "post":
+            fail(errors, "transition_phase_not_post")
+        if expect_transition_flow and transition.get("flow") != expect_transition_flow:
+            fail(errors, f"transition_flow_mismatch:{transition.get('flow')}")
+        if expect_mechanical_action and transition.get("mechanical_action") != expect_mechanical_action:
+            fail(errors, f"transition_action_mismatch:{transition.get('mechanical_action')}")
+        if forbid_controlled_reboot and transition.get("controlled_reboot_used") is not False:
+            fail(errors, "controlled_reboot_used")
+
+    pre_ref = data.get("pre_state")
+    if require_pre_state:
+        if not isinstance(pre_ref, dict):
+            fail(errors, "pre_state_missing")
+            pre_ref = {}
+        if pre_ref.get("source") != "artifact":
+            fail(errors, "pre_state_not_artifact")
+        if pre_state_path is None or pre_state is None:
+            fail(errors, "pre_state_file_missing")
+    if pre_state is not None:
+        if not isinstance(pre_ref, dict):
+            fail(errors, "pre_state_missing")
+            pre_ref = {}
+        if pre_state.get("schema") != PRE_STATE_SCHEMA:
+            fail(errors, "pre_state_schema")
+        if pre_ref.get("schema") != PRE_STATE_SCHEMA:
+            fail(errors, "pre_state_ref_schema")
+        if pre_state_path is not None and pre_ref.get("sha256") != sha256_file(pre_state_path):
+            fail(errors, "pre_state_sha256_mismatch")
+        if pre_ref.get("captured_at_unix") != pre_state.get("captured_at_unix"):
+            fail(errors, "pre_state_captured_at_mismatch")
+        nonce = pre_state.get("nonce")
+        if not isinstance(nonce, str) or not re.fullmatch(r"[0-9a-f]{32,64}", nonce):
+            fail(errors, "pre_state_nonce_invalid")
+        if pre_ref.get("nonce") != nonce:
+            fail(errors, "pre_state_nonce_mismatch")
+        pre_transition = pre_state.get("transition")
+        if expect_transition_flow or expect_mechanical_action or forbid_controlled_reboot:
+            if not isinstance(pre_transition, dict):
+                fail(errors, "pre_state_transition_missing")
+                pre_transition = {}
+            if pre_transition.get("phase") != "pre":
+                fail(errors, "pre_state_transition_phase_not_pre")
+            if expect_transition_flow and pre_transition.get("flow") != expect_transition_flow:
+                fail(errors, f"pre_state_transition_flow_mismatch:{pre_transition.get('flow')}")
+            if expect_mechanical_action and pre_transition.get("mechanical_action") != expect_mechanical_action:
+                fail(errors, f"pre_state_transition_action_mismatch:{pre_transition.get('mechanical_action')}")
+            if forbid_controlled_reboot and pre_transition.get("controlled_reboot_used") is not False:
+                fail(errors, "pre_state_controlled_reboot_used")
+        pre_boot = pre_state.get("boot")
+        if not isinstance(pre_boot, dict):
+            fail(errors, "pre_state_boot_missing")
+            pre_boot = {}
+        if pre_boot.get("boot_id_sha256_12") != pre_hash:
+            fail(errors, "pre_state_boot_id_mismatch")
+        if pre_boot.get("btime") != pre_btime:
+            fail(errors, "pre_state_btime_mismatch")
+        pre_captured_at = pre_state.get("captured_at_unix")
+        pre_uptime = pre_boot.get("uptime_seconds")
+        if not isinstance(pre_captured_at, (int, float)):
+            fail(errors, "pre_state_captured_at_missing")
+        if not isinstance(pre_uptime, (int, float)) or pre_uptime < 0:
+            fail(errors, "pre_state_uptime_invalid")
+        if (
+            isinstance(pre_captured_at, (int, float))
+            and isinstance(pre_btime, int)
+            and isinstance(pre_uptime, (int, float))
+            and abs((pre_btime + pre_uptime) - pre_captured_at) > MAX_POST_BOOT_UPTIME_SECONDS
+        ):
+            fail(errors, "pre_state_capture_time_inconsistent")
+        if (
+            isinstance(pre_captured_at, (int, float))
+            and isinstance(post_btime, int)
+            and (
+                pre_captured_at > post_btime
+                or post_btime - pre_captured_at > MAX_PRE_TO_POST_BOOT_SECONDS
+            )
+        ):
+            fail(errors, "pre_state_stale_or_after_post_boot")
+        pre_image = pre_state.get("image")
+        post_image = data.get("image")
+        if require_pre_state:
+            if not isinstance(pre_image, dict):
+                fail(errors, "pre_state_image_missing")
+                pre_image = {}
+            if not isinstance(post_image, dict):
+                fail(errors, "image_identity_missing")
+                post_image = {}
+            if pre_image.get("marker_present") is not True:
+                fail(errors, "pre_state_image_marker_missing")
+            if post_image.get("marker_present") is not True:
+                fail(errors, "image_marker_missing")
+            if not is_sha256(pre_image.get("marker_sha256")):
+                fail(errors, "pre_state_image_marker_sha256_missing")
+            if not is_sha256(post_image.get("marker_sha256")):
+                fail(errors, "image_marker_sha256_missing")
+            if not isinstance(pre_image.get("image_tag"), str) or not pre_image.get("image_tag"):
+                fail(errors, "pre_state_image_tag_missing")
+            if not isinstance(post_image.get("image_tag"), str) or not post_image.get("image_tag"):
+                fail(errors, "image_tag_missing")
+        if isinstance(pre_image, dict):
+            if pre_ref.get("pre_image_marker_sha256") != pre_image.get("marker_sha256"):
+                fail(errors, "pre_state_image_marker_ref_mismatch")
+            if pre_ref.get("pre_image_tag") != pre_image.get("image_tag"):
+                fail(errors, "pre_state_image_tag_ref_mismatch")
+            if isinstance(post_image, dict) and pre_image.get("marker_sha256") and post_image.get("marker_sha256"):
+                if pre_image.get("marker_sha256") != post_image.get("marker_sha256"):
+                    fail(errors, "image_marker_changed_across_boot")
+            if isinstance(post_image, dict) and pre_image.get("image_tag") and post_image.get("image_tag"):
+                if pre_image.get("image_tag") != post_image.get("image_tag"):
+                    fail(errors, "image_tag_changed_across_boot")
+        if require_pre_state:
+            for section in ("mounts", "systemd", "player_runtime", "privacy"):
+                if not isinstance(pre_state.get(section), dict):
+                    fail(errors, f"pre_state_{section}_missing")
+
+    image = data.get("image")
+    if expect_image_tag or expect_image_marker_sha256:
+        if not isinstance(image, dict):
+            fail(errors, "image_identity_missing")
+            image = {}
+        if image.get("marker_present") is not True:
+            fail(errors, "image_marker_missing")
+        if expect_image_tag and image.get("image_tag") != expect_image_tag:
+            fail(errors, f"image_tag_mismatch:{image.get('image_tag')}")
+        if expect_image_marker_sha256 and image.get("marker_sha256") != expect_image_marker_sha256:
+            fail(errors, "image_marker_sha256_mismatch")
 
     mounts = data.get("mounts")
     if not isinstance(mounts, dict):
@@ -202,8 +360,10 @@ def validate_boot_state(
                 fail(errors, "adoption_probe_marker_invalid")
             if adoption.get("running_identity_matches_marker") is not True:
                 fail(errors, "adoption_probe_identity_mismatch")
-    if expect_source == "fallback" and player.get("current_present") is True:
-        fail(errors, "unexpected_data_current")
+    if expect_source == "fallback" and player.get("data_current_marker_verified") is True:
+        fail(errors, "fallback_has_verified_data_current")
+    if require_pre_state and expect_source == "fallback" and player.get("fallback_kiosk_present") is not True:
+        fail(errors, "fallback_kiosk_missing")
 
     safety = data.get("update_safety")
     if isinstance(safety, dict) and safety.get("included") is True:
@@ -226,8 +386,21 @@ def validate_boot_state(
                 fail(errors, f"privacy_flag_not_false:{key}")
 
 
-def validate(run_dir: Path | None, boot_state: Path | None, *, expect_source: str) -> dict[str, Any]:
+def validate(
+    run_dir: Path | None,
+    boot_state: Path | None,
+    *,
+    expect_source: str,
+    require_pre_state: bool = False,
+    expect_image_tag: str | None = None,
+    expect_image_marker_sha256: str | None = None,
+    expect_transition_flow: str | None = None,
+    expect_mechanical_action: str | None = None,
+    forbid_controlled_reboot: bool = False,
+) -> dict[str, Any]:
     errors: list[str] = []
+    pre_state: dict[str, Any] | None = None
+    pre_state_path: Path | None = None
     if run_dir is not None:
         boot_path = run_dir / DEFAULT_BOOT_STATE
         files = evidence_files(run_dir)
@@ -249,7 +422,33 @@ def validate(run_dir: Path | None, boot_state: Path | None, *, expect_source: st
         data: dict[str, Any] = {}
     else:
         data = load_json(boot_path, errors)
-        validate_boot_state(data, errors, expect_source=expect_source, adoption=adoption)
+        if run_dir is not None:
+            pre_ref = data.get("pre_state") if isinstance(data.get("pre_state"), dict) else {}
+            pre_file = pre_ref.get("file") if isinstance(pre_ref.get("file"), str) else DEFAULT_PRE_STATE
+            if pre_file.startswith("/") or ".." in Path(pre_file).parts:
+                fail(errors, "pre_state_file_path_unsafe")
+                candidate = run_dir / DEFAULT_PRE_STATE
+            else:
+                candidate = run_dir / pre_file
+            if candidate.is_symlink() or not path_is_under(candidate, run_dir):
+                fail(errors, "pre_state_file_path_unsafe")
+            elif candidate.is_file():
+                pre_state_path = candidate
+                pre_state = load_json(candidate, errors)
+        validate_boot_state(
+            data,
+            errors,
+            expect_source=expect_source,
+            adoption=adoption,
+            pre_state=pre_state,
+            pre_state_path=pre_state_path,
+            require_pre_state=require_pre_state,
+            expect_image_tag=expect_image_tag,
+            expect_image_marker_sha256=expect_image_marker_sha256,
+            expect_transition_flow=expect_transition_flow,
+            expect_mechanical_action=expect_mechanical_action,
+            forbid_controlled_reboot=forbid_controlled_reboot,
+        )
     for hit in scan_leaks(files):
         fail(errors, f"privacy_leak:{hit}")
     return {
@@ -262,6 +461,24 @@ def validate(run_dir: Path | None, boot_state: Path | None, *, expect_source: st
 def write_fixture(path: Path, *, source: str = "fallback") -> None:
     data = {
         "schema": SCHEMA,
+        "captured_at_unix": 242,
+        "transition": {
+            "flow": "C18-COLDBOOT",
+            "phase": "post",
+            "mechanical_action": "operator_reboot",
+            "controlled_reboot_used": True,
+            "pre_state_required": True,
+        },
+        "pre_state": {
+            "source": "artifact",
+            "file": DEFAULT_PRE_STATE,
+            "schema": PRE_STATE_SCHEMA,
+            "sha256": "",
+            "nonce": "a" * 32,
+            "captured_at_unix": 100,
+            "pre_image_marker_sha256": "b" * 64,
+            "pre_image_tag": "c18-hwdecode-lab-test",
+        },
         "boot": {
             "pre_boot_id_sha256_12": "0" * 12,
             "post_boot_id_sha256_12": "1" * 12,
@@ -271,6 +488,13 @@ def write_fixture(path: Path, *, source: str = "fallback") -> None:
             "btime_changed": True,
             "post_uptime_seconds": 42.0,
             "post_uptime_bucket": "lt_5m",
+        },
+        "image": {
+            "marker_present": True,
+            "marker_path": "/etc/dadooh/c18-hwdecode-lab-test-image",
+            "marker_sha256": "b" * 64,
+            "image_tag": "c18-hwdecode-lab-test",
+            "image_version": "c18.image-lab.test",
         },
         "mounts": {
             "root": {"found": True, "target": "/", "fstype": "ext4", "source_kind": "block"},
@@ -313,6 +537,66 @@ def write_fixture(path: Path, *, source: str = "fallback") -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def write_pre_state_fixture(path: Path) -> None:
+    data = {
+        "schema": PRE_STATE_SCHEMA,
+        "transition": {
+            "flow": "C18-COLDBOOT",
+            "phase": "pre",
+            "mechanical_action": "operator_reboot",
+            "controlled_reboot_used": True,
+        },
+        "captured_at_unix": 100,
+        "nonce": "a" * 32,
+        "boot": {
+            "boot_id_sha256_12": "0" * 12,
+            "btime": 100,
+            "uptime_seconds": 12.0,
+            "uptime_bucket": "lt_5m",
+        },
+        "image": {
+            "marker_present": True,
+            "marker_path": "/etc/dadooh/c18-hwdecode-lab-test-image",
+            "marker_sha256": "b" * 64,
+            "image_tag": "c18-hwdecode-lab-test",
+            "image_version": "c18.image-lab.test",
+        },
+        "mounts": {
+            "root": {"found": True, "target": "/", "fstype": "ext4", "source_kind": "block"},
+            "data": {"found": True, "target": "/", "fstype": "ext4", "source_kind": "block"},
+            "data_same_device_as_root": True,
+            "data_mount_claim": "rootfs_directory",
+        },
+        "systemd": {
+            "active_state": "active",
+            "nrestarts": 0,
+            "requires_data_mount": True,
+            "after_contains_local_fs": True,
+            "exec_start_pre_reconcile_present": True,
+        },
+        "player_runtime": {
+            "current_present": False,
+            "previous_present": False,
+            "fallback_kiosk_present": True,
+            "selected_source": "fallback",
+        },
+        "privacy": {
+            "raw_boot_id_persisted": False,
+            "raw_mount_source_persisted": False,
+            "raw_journal_persisted": False,
+        },
+    }
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def refresh_fixture_pre_state_hash(root: Path) -> None:
+    boot_path = root / DEFAULT_BOOT_STATE
+    pre_path = root / DEFAULT_PRE_STATE
+    boot = json.loads(boot_path.read_text(encoding="utf-8"))
+    boot["pre_state"]["sha256"] = sha256_file(pre_path)
+    boot_path.write_text(json.dumps(boot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def write_adoption_fixture(path: Path) -> None:
     data = {
         "schema": "dadooh.c18.player_runtime.adoption.v1",
@@ -328,49 +612,170 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         boot_path = root / DEFAULT_BOOT_STATE
+        pre_path = root / DEFAULT_PRE_STATE
+        write_pre_state_fixture(pre_path)
         write_fixture(boot_path)
-        result = validate(root, None, expect_source="fallback")
+        refresh_fixture_pre_state_hash(root)
+        result = validate(
+            root,
+            None,
+            expect_source="fallback",
+            require_pre_state=True,
+            expect_image_tag="c18-hwdecode-lab-test",
+            expect_transition_flow="C18-COLDBOOT",
+            expect_mechanical_action="operator_reboot",
+        )
         if not result["passed"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        result = validate(root, None, expect_source="fallback", require_pre_state=True, forbid_controlled_reboot=True)
+        if result["passed"] or "controlled_reboot_used" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_pre_state_fixture(pre_path)
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad["transition"].pop("controlled_reboot_used", None)
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        bad_pre = json.loads(pre_path.read_text(encoding="utf-8"))
+        bad_pre["transition"].pop("controlled_reboot_used", None)
+        pre_path.write_text(json.dumps(bad_pre) + "\n", encoding="utf-8")
+        refresh_fixture_pre_state_hash(root)
+        result = validate(root, None, expect_source="fallback", require_pre_state=True, forbid_controlled_reboot=True)
+        if result["passed"] or "controlled_reboot_used" not in result["errors"] or "pre_state_controlled_reboot_used" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        write_pre_state_fixture(pre_path)
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad["pre_state"]["file"] = "../pre-state-public.json"
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if result["passed"] or "pre_state_file_path_unsafe" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        outside = root.parent / f"{root.name}-outside-pre-state.json"
+        outside.write_text(pre_path.read_text(encoding="utf-8"), encoding="utf-8")
+        pre_path.unlink()
+        pre_path.symlink_to(outside)
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if result["passed"] or "pre_state_file_path_unsafe" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        pre_path.unlink()
+        outside.unlink()
+        write_pre_state_fixture(pre_path)
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
         bad = json.loads(boot_path.read_text(encoding="utf-8"))
         bad["boot"]["boot_id_changed"] = False
         boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
-        result = validate(root, None, expect_source="fallback")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
         if result["passed"] or "boot_id_not_changed" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
         write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
         bad = json.loads(boot_path.read_text(encoding="utf-8"))
         bad["boot"]["pre_boot_id_sha256_12"] = bad["boot"]["post_boot_id_sha256_12"]
         bad["boot"]["boot_id_changed"] = True
         boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
-        result = validate(root, None, expect_source="fallback")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
         if result["passed"] or "boot_id_not_changed" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
         write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
         bad = json.loads(boot_path.read_text(encoding="utf-8"))
         bad["boot"]["pre_btime"] = bad["boot"]["post_btime"]
         bad["boot"]["btime_changed"] = True
         boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
-        result = validate(root, None, expect_source="fallback")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
         if result["passed"] or "btime_not_changed" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad["captured_at_unix"] = 5042
+        bad["boot"]["post_btime"] = 5000
+        bad["boot"]["post_uptime_seconds"] = 42.0
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if result["passed"] or "pre_state_stale_or_after_post_boot" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad["pre_state"]["nonce"] = "c" * 32
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if result["passed"] or "pre_state_nonce_mismatch" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad_pre = json.loads(pre_path.read_text(encoding="utf-8"))
+        bad_pre["image"]["marker_sha256"] = "c" * 64
+        pre_path.write_text(json.dumps(bad_pre) + "\n", encoding="utf-8")
+        refresh_fixture_pre_state_hash(root)
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if result["passed"] or "image_marker_changed_across_boot" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        write_pre_state_fixture(pre_path)
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad.pop("image", None)
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if result["passed"] or "image_identity_missing" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_fixture(boot_path)
+        refresh_fixture_pre_state_hash(root)
+        bad = json.loads(boot_path.read_text(encoding="utf-8"))
+        bad["player_runtime"]["current_present"] = True
+        bad["player_runtime"]["data_current_kiosk_present"] = True
+        bad["player_runtime"]["data_current_marker_verified"] = False
+        bad["player_runtime"]["data_current_marker_reason"] = "tree_sha_mismatch"
+        bad["player_runtime"]["selected_source"] = "fallback"
+        boot_path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+        result = validate(root, None, expect_source="fallback", require_pre_state=True)
+        if not result["passed"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
         write_fixture(boot_path, source="data")
+        refresh_fixture_pre_state_hash(root)
         write_adoption_fixture(root / "launcher-adoption.json")
-        result = validate(root, None, expect_source="data")
+        result = validate(root, None, expect_source="data", require_pre_state=True)
         if not result["passed"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
         (root / "launcher-adoption.json").unlink()
-        result = validate(root, None, expect_source="data")
+        result = validate(root, None, expect_source="data", require_pre_state=True)
         if result["passed"] or "adoption_probe_missing" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
@@ -379,20 +784,21 @@ def self_test() -> int:
         missing_pre = json.loads(boot_path.read_text(encoding="utf-8"))
         missing_pre["boot"]["pre_boot_id_sha256_12"] = None
         boot_path.write_text(json.dumps(missing_pre) + "\n", encoding="utf-8")
-        result = validate(root, None, expect_source="data")
+        result = validate(root, None, expect_source="data", require_pre_state=True)
         if result["passed"] or "pre_boot_id_hash_missing" not in result["errors"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
         write_fixture(boot_path, source="data")
+        refresh_fixture_pre_state_hash(root)
 
         (root / "leak.txt").write_text("api_key=secret\n", encoding="utf-8")
-        result = validate(root, None, expect_source="data")
+        result = validate(root, None, expect_source="data", require_pre_state=True)
         if result["passed"] or not any(item.startswith("privacy_leak") for item in result["errors"]):
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
         (root / "leak.txt").write_text("PARTUUID=abcd-1234 /dev/disk/by-uuid/private /dev/mmcblk0p2 12345678-1234-1234-1234-123456789abc\n", encoding="utf-8")
-        result = validate(root, None, expect_source="data")
+        result = validate(root, None, expect_source="data", require_pre_state=True)
         if result["passed"] or not any("uuid_source" in item for item in result["errors"]):
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
@@ -405,6 +811,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--run-dir")
     parser.add_argument("--boot-state")
     parser.add_argument("--expect-selected-source", choices=("any", "fallback", "data"), default="any")
+    parser.add_argument("--require-pre-state", action="store_true")
+    parser.add_argument("--expect-image-tag")
+    parser.add_argument("--expect-image-marker-sha256")
+    parser.add_argument("--expect-transition-flow")
+    parser.add_argument("--expect-mechanical-action")
+    parser.add_argument("--forbid-controlled-reboot", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(argv)
@@ -416,6 +828,12 @@ def main(argv: list[str]) -> int:
         Path(args.run_dir) if args.run_dir else None,
         Path(args.boot_state) if args.boot_state else None,
         expect_source=args.expect_selected_source,
+        require_pre_state=args.require_pre_state,
+        expect_image_tag=args.expect_image_tag,
+        expect_image_marker_sha256=args.expect_image_marker_sha256,
+        expect_transition_flow=args.expect_transition_flow,
+        expect_mechanical_action=args.expect_mechanical_action,
+        forbid_controlled_reboot=args.forbid_controlled_reboot,
     )
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))

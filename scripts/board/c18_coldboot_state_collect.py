@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
 import time
@@ -21,9 +22,15 @@ from typing import Any
 
 
 SCHEMA = "dadooh.c18.coldboot_state.v2"
+PRE_STATE_SCHEMA = "dadooh.c18.coldboot_pre_state.v1"
 DEFAULT_SERVICE = "kiosky-player.service"
 DEFAULT_UPDATECTL = "/opt/totem/bin/totem-updatectl"
 DEFAULT_OUTPUT = "boot-state-public.json"
+DEFAULT_PRE_STATE_OUTPUT = "pre-state-public.json"
+DEFAULT_IMAGE_MARKER_GLOB = "c18-hwdecode-lab-*-image"
+DEFAULT_TRANSITION_FLOW = "C18-COLDBOOT"
+DEFAULT_MECHANICAL_ACTION = "operator_reboot"
+FALLBACK_KIOSK = Path("/opt/totem/kiosky-player/kiosk.py")
 PLAYER_RUNTIME_MARKER_NAME = ".release_verified.json"
 PLAYER_RUNTIME_MARKER_SCHEMA = "dadooh.c18.player_runtime.verified.v1"
 
@@ -55,6 +62,16 @@ def read_text(path: Path) -> str | None:
         return path.read_text(encoding="utf-8").strip()
     except OSError:
         return None
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"json_read_failed:{type(exc).__name__}") from exc
+    if not isinstance(data, dict):
+        raise RuntimeError("json_not_object")
+    return data
 
 
 def boot_id() -> str | None:
@@ -134,6 +151,61 @@ def safe_mount_entry(target: str) -> dict[str, Any]:
         "read_write": "rw" in option_set,
     })
     return entry
+
+
+def parse_kv_marker(text: str | None) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if not text:
+        return out
+    for line in text.splitlines():
+        if not line or line.lstrip().startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if re.fullmatch(r"[A-Za-z0-9_.-]+", key):
+            out[key] = value.strip()
+    return out
+
+
+def default_image_marker() -> Path | None:
+    marker_dir = Path("/etc/dadooh")
+    try:
+        candidates = sorted(
+            path for path in marker_dir.glob(DEFAULT_IMAGE_MARKER_GLOB)
+            if path.is_file()
+        )
+    except OSError:
+        return None
+    return candidates[-1] if candidates else None
+
+
+def image_identity(marker_arg: str | None) -> dict[str, Any]:
+    marker_path = Path(marker_arg) if marker_arg else default_image_marker()
+    out: dict[str, Any] = {
+        "marker_present": False,
+        "marker_path": str(marker_path) if marker_path else None,
+    }
+    if marker_path is None:
+        out["marker_reason"] = "not_found"
+        return out
+    try:
+        raw = marker_path.read_text(encoding="utf-8")
+    except OSError:
+        out["marker_reason"] = "read_failed"
+        return out
+    marker = parse_kv_marker(raw)
+    out.update({
+        "marker_present": True,
+        "marker_path": str(marker_path),
+        "marker_bytes": len(raw.encode("utf-8")),
+        "marker_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+        "image_tag": marker.get("image_tag"),
+        "image_version": marker.get("image_version"),
+        "final_image": marker.get("final_image"),
+        "not_for_production": marker.get("not_for_production"),
+        "player_runtime_ota_still_frozen": marker.get("player_runtime_ota_still_frozen"),
+    })
+    return out
 
 
 def sha256_file(path: Path) -> str:
@@ -276,7 +348,6 @@ def player_runtime_paths() -> dict[str, Any]:
     base = Path("/data/player-runtime")
     current = base / "current"
     previous = base / "previous"
-    opt = Path("/opt/totem/player-runtime/kiosk.py")
     current_kiosk_present = (current / "kiosk.py").is_file()
     marker = verify_player_runtime_marker(current) if current_kiosk_present else {
         "data_current_marker_present": False,
@@ -289,7 +360,7 @@ def player_runtime_paths() -> dict[str, Any]:
         "previous_present": previous.exists() or previous.is_symlink(),
         "data_current_kiosk_present": current_kiosk_present,
         **marker,
-        "fallback_kiosk_present": opt.is_file(),
+        "fallback_kiosk_present": FALLBACK_KIOSK.is_file(),
         "selected_source": "data" if marker.get("data_current_marker_verified") else "fallback",
     }
 
@@ -324,7 +395,7 @@ def freeze_probe(updatectl_path: str) -> dict[str, Any]:
     return out
 
 
-def build_report(args: argparse.Namespace) -> dict[str, Any]:
+def build_pre_state(args: argparse.Namespace) -> dict[str, Any]:
     current_boot = boot_id()
     current_uptime = uptime_seconds()
     current_btime = boot_time()
@@ -337,21 +408,112 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         data_claim = "separate_mount"
     else:
         data_claim = "unknown"
-    pre_boot_hash = sha12(args.pre_boot_id)
+    transition = {
+        "flow": args.transition_flow,
+        "phase": "pre",
+        "mechanical_action": args.mechanical_action,
+        "controlled_reboot_used": args.controlled_reboot,
+    }
+    return {
+        "schema": PRE_STATE_SCHEMA,
+        "transition": transition,
+        "captured_at_unix": int(time.time()),
+        "nonce": secrets.token_hex(16),
+        "boot": {
+            "boot_id_sha256_12": sha12(current_boot),
+            "btime": current_btime,
+            "uptime_seconds": current_uptime,
+            "uptime_bucket": uptime_bucket(current_uptime),
+        },
+        "image": image_identity(args.image_marker),
+        "mounts": {
+            "root": root_mount,
+            "data": data_mount,
+            "data_same_device_as_root": data_same_device,
+            "data_mount_claim": data_claim,
+        },
+        "systemd": systemctl_show(args.service),
+        "player_runtime": player_runtime_paths(),
+        "update_safety": freeze_probe(args.updatectl) if args.include_freeze_probes else {"included": False},
+        "privacy": {
+            "raw_boot_id_persisted": False,
+            "raw_mount_source_persisted": False,
+            "raw_journal_persisted": False,
+        },
+    }
+
+
+def pre_state_reference(pre_state_path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    pre_state = load_json(pre_state_path)
+    boot = pre_state.get("boot") if isinstance(pre_state.get("boot"), dict) else {}
+    image = pre_state.get("image") if isinstance(pre_state.get("image"), dict) else {}
+    ref = {
+        "source": "artifact",
+        "file": pre_state_path.name,
+        "schema": pre_state.get("schema"),
+        "sha256": sha256_file(pre_state_path),
+        "nonce": pre_state.get("nonce"),
+        "captured_at_unix": pre_state.get("captured_at_unix"),
+        "pre_image_marker_sha256": image.get("marker_sha256"),
+        "pre_image_tag": image.get("image_tag"),
+    }
+    return ref, {
+        "pre_boot_hash": boot.get("boot_id_sha256_12"),
+        "pre_btime": boot.get("btime"),
+    }
+
+
+def build_report(args: argparse.Namespace) -> dict[str, Any]:
+    current_boot = boot_id()
+    current_uptime = uptime_seconds()
+    current_btime = boot_time()
+    current_image = image_identity(args.image_marker)
+    root_mount = safe_mount_entry("/")
+    data_mount = safe_mount_entry("/data")
+    data_same_device = same_device(Path("/"), Path("/data"))
+    if data_mount.get("target") == "/" or data_same_device is True:
+        data_claim = "rootfs_directory"
+    elif data_mount.get("target") == "/data":
+        data_claim = "separate_mount"
+    else:
+        data_claim = "unknown"
+    pre_ref: dict[str, Any]
+    if args.pre_state:
+        pre_ref, pre_values = pre_state_reference(Path(args.pre_state))
+        pre_boot_hash = pre_values["pre_boot_hash"]
+        pre_btime = pre_values["pre_btime"]
+    else:
+        pre_boot_hash = sha12(args.pre_boot_id)
+        pre_btime = args.pre_btime
+        pre_ref = {
+            "source": "cli" if args.pre_boot_id or args.pre_btime is not None else "none",
+            "schema": None,
+            "sha256": None,
+            "nonce": None,
+        }
     post_boot_hash = sha12(current_boot)
     report = {
         "schema": SCHEMA,
+        "transition": {
+            "flow": args.transition_flow,
+            "phase": "post",
+            "mechanical_action": args.mechanical_action,
+            "controlled_reboot_used": args.controlled_reboot,
+            "pre_state_required": bool(args.pre_state),
+        },
         "captured_at_unix": int(time.time()),
+        "pre_state": pre_ref,
         "boot": {
             "pre_boot_id_sha256_12": pre_boot_hash,
             "post_boot_id_sha256_12": post_boot_hash,
             "boot_id_changed": None if pre_boot_hash is None else pre_boot_hash != post_boot_hash,
-            "pre_btime": args.pre_btime,
+            "pre_btime": pre_btime,
             "post_btime": current_btime,
-            "btime_changed": None if args.pre_btime is None or current_btime is None else args.pre_btime != current_btime,
+            "btime_changed": None if pre_btime is None or current_btime is None else pre_btime != current_btime,
             "post_uptime_seconds": current_uptime,
             "post_uptime_bucket": uptime_bucket(current_uptime),
         },
+        "image": current_image,
         "mounts": {
             "root": root_mount,
             "data": data_mount,
@@ -382,16 +544,28 @@ def write_report(report: dict[str, Any], output: Path) -> None:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default=DEFAULT_OUTPUT)
+    parser.add_argument("--output")
     parser.add_argument("--service", default=DEFAULT_SERVICE)
+    parser.add_argument("--capture-pre-state", action="store_true")
+    parser.add_argument("--pre-state")
     parser.add_argument("--pre-boot-id")
     parser.add_argument("--pre-btime", type=int)
+    parser.add_argument("--image-marker")
+    parser.add_argument("--transition-flow", default=DEFAULT_TRANSITION_FLOW)
+    parser.add_argument("--mechanical-action", default=DEFAULT_MECHANICAL_ACTION)
+    parser.add_argument("--controlled-reboot", action="store_true")
     parser.add_argument("--include-freeze-probes", action="store_true")
     parser.add_argument("--updatectl", default=DEFAULT_UPDATECTL)
     args = parser.parse_args(argv)
+    output = Path(args.output or (DEFAULT_PRE_STATE_OUTPUT if args.capture_pre_state else DEFAULT_OUTPUT))
+    if args.capture_pre_state:
+        report = build_pre_state(args)
+        write_report(report, output)
+        print(json.dumps({"output": str(output), "schema": PRE_STATE_SCHEMA}, sort_keys=True))
+        return 0
     report = build_report(args)
-    write_report(report, Path(args.output))
-    print(json.dumps({"output": args.output, "schema": SCHEMA}, sort_keys=True))
+    write_report(report, output)
+    print(json.dumps({"output": str(output), "schema": SCHEMA}, sort_keys=True))
     return 0
 
 

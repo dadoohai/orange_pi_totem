@@ -54,6 +54,38 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def git_value(args: list[str]) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def repo_identity() -> dict[str, Any]:
+    commit = git_value(["rev-parse", "HEAD"])
+    tree = git_value(["rev-parse", "HEAD^{tree}"])
+    status = git_value(["status", "--porcelain", "--untracked-files=normal"])
+    dirty = None if status is None else bool(status)
+    tag = git_value(["describe", "--tags", "--exact-match", "HEAD"])
+    return {
+        "repo_commit": commit,
+        "repo_tree": tree,
+        "repo_dirty": dirty,
+        "repo_exact_tag": tag,
+    }
+
+
 def path_is_under(path: Path, root: Path) -> bool:
     resolved = path.resolve()
     root_resolved = root.resolve()
@@ -132,6 +164,7 @@ def write_evidence_manifest(evidence_dir: Path,
                             package_manifest: dict[str, Any],
                             trial_id: str,
                             rollback_expectation: str,
+                            repo_info: dict[str, Any] | None = None,
                             image_tag: str | None = None,
                             image_sha256: str | None = None,
                             image_marker_file: Path | None = None) -> None:
@@ -158,6 +191,7 @@ def write_evidence_manifest(evidence_dir: Path,
         "payload_sha256": package_manifest.get("payload_sha256"),
         "rollback_expectation": rollback_expectation,
         "artifacts": artifacts,
+        **(repo_info if repo_info is not None else repo_identity()),
     }
     if image_tag:
         manifest["image_tag"] = image_tag
@@ -213,6 +247,7 @@ def main(argv: list[str]) -> int:
         print(f"device_data_root_guard_required: pass --allow-device-data-root and set {DEVICE_DATA_ENV}=1", file=sys.stderr)
         return 43
 
+    repo_info = repo_identity()
     evidence_dir = args.evidence_dir
     if evidence_dir.exists() and any(evidence_dir.iterdir()):
         raise RuntimeError(f"evidence dir must be empty: {evidence_dir}")
@@ -567,6 +602,7 @@ def main(argv: list[str]) -> int:
         package_manifest=manifest,
         trial_id=trial_id,
         rollback_expectation=args.rollback_expectation,
+        repo_info=repo_info,
         image_tag=args.image_tag,
         image_sha256=args.image_sha256,
         image_marker_file=args.image_marker_file,

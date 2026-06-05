@@ -247,6 +247,31 @@ def validate_evidence_manifest(run_dir: Path, files: list[str]) -> list[str]:
             errors.append("manifest_invalid_image_marker_bytes")
         if not is_sha256(marker_sha):
             errors.append("manifest_invalid_image_marker_sha256")
+    if "repo_commit" in manifest and not is_hex(manifest.get("repo_commit"), 40):
+        errors.append("manifest_invalid_repo_commit")
+    if "repo_tree" in manifest and not is_hex(manifest.get("repo_tree"), 40):
+        errors.append("manifest_invalid_repo_tree")
+    if "repo_dirty" in manifest:
+        if not isinstance(manifest.get("repo_dirty"), bool):
+            errors.append("manifest_invalid_repo_dirty")
+        elif manifest.get("repo_dirty") is not False:
+            errors.append("manifest_repo_dirty")
+    if "repo_exact_tag" in manifest and manifest.get("repo_exact_tag") is not None and not isinstance(manifest.get("repo_exact_tag"), str):
+        errors.append("manifest_invalid_repo_exact_tag")
+    return errors
+
+
+def validate_repo_identity(evidence_manifest: dict[str, Any], package_manifest: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    repo_commit = evidence_manifest.get("repo_commit")
+    if not is_hex(repo_commit, 40):
+        return errors
+    evidence_source_commit = evidence_manifest.get("source_commit")
+    package_source_commit = package_manifest.get("source_commit")
+    if is_hex(evidence_source_commit, 40) and repo_commit != evidence_source_commit:
+        errors.append("manifest_repo_commit_evidence_source_mismatch")
+    if is_hex(package_source_commit, 40) and repo_commit != package_source_commit:
+        errors.append("manifest_repo_commit_package_source_mismatch")
     return errors
 
 
@@ -479,6 +504,7 @@ def validate_semantics(run_dir: Path) -> list[str]:
         rollback_expectation = "image-fallback-or-previous"
     package_errors, package_manifest = validate_package_contract(run_dir)
     errors.extend(package_errors)
+    errors.extend(validate_repo_identity(evidence_manifest, package_manifest))
     marker_errors, marker = validate_marker(run_dir, package_manifest)
     errors.extend(marker_errors)
     release_gate = load_json_object(run_dir / "package" / "player-runtime-release-gate.json", "release_gate", errors)
@@ -870,6 +896,11 @@ def self_test() -> None:
             manifest_payload = {
                 "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
                 "artifact_id": "self-test",
+                "source_commit": source_commit,
+                "repo_commit": source_commit,
+                "repo_tree": "f" * 40,
+                "repo_dirty": False,
+                "repo_exact_tag": None,
                 "artifacts": artifacts,
             }
             if rollback_expectation:
@@ -934,6 +965,27 @@ def self_test() -> None:
         refresh_manifest("data-previous")
         good_previous = validate(run)
         assert good_previous["passed"], good_previous
+        manifest_with_repo_mismatch = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
+        manifest_with_repo_mismatch["repo_commit"] = "f" * 40
+        (run / "evidence-manifest.json").write_text(
+            json.dumps(manifest_with_repo_mismatch, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        repo_mismatch = validate(run)
+        assert not repo_mismatch["passed"], repo_mismatch
+        assert "manifest_repo_commit_package_source_mismatch" in repo_mismatch["errors"], repo_mismatch
+        refresh_manifest("data-previous")
+        manifest_with_dirty_repo = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
+        manifest_with_dirty_repo["repo_commit"] = "f" * 40
+        manifest_with_dirty_repo["repo_tree"] = "1" * 40
+        manifest_with_dirty_repo["repo_dirty"] = True
+        (run / "evidence-manifest.json").write_text(
+            json.dumps(manifest_with_dirty_repo, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        dirty_repo = validate(run)
+        assert not dirty_repo["passed"], dirty_repo
+        assert "manifest_repo_dirty" in dirty_repo["errors"], dirty_repo
         update_readme_expectation("image-fallback")
         lab_rollback["operation"]["rolled_back_to"] = "image_fallback"
         lab_rollback["operation"]["expected_rolled_to"] = None

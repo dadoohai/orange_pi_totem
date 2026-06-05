@@ -269,18 +269,26 @@ A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
 Isso ainda nao prova cold-boot com uma release de `player-runtime` em `/data`
 nem corte de energia no meio de apply/rollback.
 
-Follow-up repo-side embarcado e validado na `1t`:
+Follow-up repo-side apos a promocao da `1t`:
 
-- novas evidencias de cold-boot devem incluir `boot-state-public.json` no schema
-  `dadooh.c18.coldboot_state.v2`, coletado por
-  `scripts/board/c18_coldboot_state_collect.py` e validado por
-  `scripts/qa/c18_coldboot_evidence_gate.py`;
-- esse arquivo deve trazer discriminadores de boot (`boot_id` hasheado,
-  `btime`, uptime pos-boot), estado de mount de `/` e `/data`, contrato systemd
-  (`RequiresMountsFor=/data`, `After=local-fs.target`, `ExecStartPre` de
-  reconcile), fonte candidata do launcher (`fallback` ou `/data`) e flags de
-  privacidade; nao deve persistir journal bruto, UUID/particao em claro, IP,
-  MAC, SSID, URL ou segredo;
+- novas evidencias decisorias de cold-boot devem incluir
+  `pre-state-public.json` (`dadooh.c18.coldboot_pre_state.v1`) antes do reboot e
+  `boot-state-public.json` depois do reboot, coletados por
+  `scripts/board/c18_coldboot_state_collect.py` e validados por
+  `scripts/qa/c18_coldboot_evidence_gate.py --require-pre-state`;
+- o post-state deve referenciar o pre-state por `sha256` e nonce. O gate pode
+  exigir `--expect-transition-flow`, `--expect-mechanical-action` e
+  `--forbid-controlled-reboot` quando a rodada quiser afirmar uma acao fisica,
+  e nao apenas reboot controlado;
+- esses arquivos devem trazer discriminadores de boot (`boot_id` hasheado,
+  `btime`, uptime), identidade da imagem via marker em `/etc/dadooh`, estado de
+  mount de `/` e `/data`, contrato systemd (`RequiresMountsFor=/data`,
+  `After=local-fs.target`, `ExecStartPre` de reconcile), fonte candidata do
+  launcher (`fallback` ou `/data`) e flags de privacidade; nao devem persistir
+  journal bruto, UUID/particao em claro, IP, MAC, SSID, URL ou segredo;
+- manifestos de novas evidencias de trial devem registrar identidade de repo
+  (`repo_commit`, `repo_tree`, `repo_dirty=false`, tag se houver) para reduzir
+  drift entre checkout, imagem e placa;
 - quando a evidencia reivindicar `/data` como fonte adotada pelo servico, ela
   tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
   provando processo em execucao, marker valido e hash do `kiosk.py` rodando

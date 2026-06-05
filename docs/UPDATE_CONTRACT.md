@@ -303,18 +303,33 @@ playlist com path de canario, `raw/`, `extracted/`, paths de midia/config e
 padroes de segredo/URL/IP/MAC.
 
 Evidencia que reivindica cold-boot precisa trazer um discriminador de boot
-auditavel. Para as proximas rodadas, incluir `boot-state-public.json` gerado por
-`scripts/board/c18_coldboot_state_collect.py` e validado por
-`scripts/qa/c18_coldboot_evidence_gate.py`. Esse artefato deve persistir apenas
-valores sanitizados: hash curto do `boot_id`, `btime`, uptime pos-boot, estado
-de mount de `/` e `/data`, contrato systemd do player (`RequiresMountsFor=/data`,
-`After=local-fs.target`, `ExecStartPre` de reconcile), fonte candidata do
-launcher e flags de privacidade. Se a evidencia reivindicar adocao de
-`/data/player-runtime/current`, ela tambem precisa incluir
-`launcher-adoption.json` do probe de adocao real, com processo em execucao,
-marker valido e identidade rodando batendo com o marker. Sem esses
-discriminadores, a evidencia pode continuar util como smoke de servico, mas nao
-deve ser usada como prova decisoria de cold-boot ou de adocao por `/data`.
+auditavel. Para as proximas rodadas, incluir `pre-state-public.json` antes do
+reboot e `boot-state-public.json` depois do reboot, ambos gerados por
+`scripts/board/c18_coldboot_state_collect.py` e validados por
+`scripts/qa/c18_coldboot_evidence_gate.py`. O pre-state deve ser artefato
+mecanico: schema `dadooh.c18.coldboot_pre_state.v1`, nonce, hash sanitizado do
+`boot_id`, `btime`, identidade de imagem via marker em `/etc/dadooh`, mount de
+`/` e `/data`, contrato systemd, fonte do launcher e flags de privacidade. O
+post-state deve referenciar esse pre-state por `sha256` e nonce. O gate forte
+para uma evidencia nova deve usar `--require-pre-state` e, quando a rodada
+reivindicar acao fisica especifica, `--expect-transition-flow`,
+`--expect-mechanical-action` e/ou `--forbid-controlled-reboot`. Com
+`--require-pre-state`, o gate tambem precisa falhar fechado se o pre-state nao
+estiver temporalmente proximo ao reboot, se o marker de imagem estiver ausente
+ou divergir entre pre/post, ou se o fallback `/opt` nao estiver presente.
+
+O cold-boot gate prova consistencia interna e cadeia de handoff dos artefatos,
+nao autenticidade criptografica contra operador malicioso. Sem pre-state
+mecanico, a evidencia pode continuar util como smoke de servico, mas nao deve
+ser usada como prova decisoria de cold-boot ou de adocao por `/data`.
+
+Se a evidencia reivindicar adocao de `/data/player-runtime/current`, ela tambem
+precisa incluir `launcher-adoption.json` do probe de adocao real, com processo
+em execucao, marker valido e identidade rodando batendo com o marker. A
+evidencia tambem deve registrar identidade do repo (`repo_commit`, `repo_tree`,
+`repo_dirty=false`, tag quando houver) e identidade da imagem/marker do device
+para reduzir drift entre repo, imagem gerada e placa validada. Em trials novos,
+`repo_commit` deve casar com o `source_commit` do pacote sob teste.
 
 Interrupcao/power-loss durante apply/rollback de `player-runtime` deve ser
 provada em duas camadas. A camada offline usa fault-injection no caminho real do
