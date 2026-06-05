@@ -52,7 +52,7 @@ player-runtime` volta a ser congelado no comando publico, o boot usa manutencao
 explicitamente autorizada e a evidencia de deep-health passa a ser gate
 auditavel. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
-## Candidata 1p (offline, aguardando hardware)
+## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente
 auditavel de `player-runtime` em `/data`, sem descongelar o CLI publico:
@@ -83,8 +83,34 @@ Por tocar arquivos da imagem, foi gerada candidata offline:
   `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
   `totem_core_ota_ready=true`, `no_player_runtime_current_embedded=true`,
   `no_legacy_kiosky_player_current_embedded=true`;
+- **Validacao hardware:** NO-GO. A placa confirmou marker/policy/timer/freeze,
+  mas o `ExecStartPre` de reconcile rodava sob `User=totem` e falhava com
+  permissao em `/data/player-runtime`, mascarado pelo prefixo nao-fatal `-`.
+  Como a higiene de boot nao estava efetiva, `1p` nao vira golden e nao deve
+  ser usada para trial persistente em `/data`.
+
+## Candidata 1q (offline, aguardando hardware)
+
+`1q` substitui `1p` sem abrir o fluxo publico de `player-runtime`: o drop-in do
+player agora usa `ExecStartPre=-+/usr/bin/env ... reconcile --component
+player-runtime ...`, mantendo o comando nao-fatal, mas executando a higiene de
+estado com privilegio suficiente para gerenciar `/data/player-runtime`, que e
+root-owned na imagem. Os testes estaticos e a validacao offline passaram a
+travar esse detalhe para evitar regressao silenciosa.
+
+- **Imagem candidata:** `c18-hwdecode-lab-1q`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1q_minimal.img`;
+- **sha256:**
+  `d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009`;
+- **Tamanho:** `1971322880` bytes;
+- **Validacao offline:** `offline_validation_passed=true`,
+  `image_fixed_player_dropin_reconciles_player_runtime=true`,
+  `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
+  `totem_core_ota_ready=true`, `no_player_runtime_current_embedded=true`,
+  `no_legacy_kiosky_player_current_embedded=true`;
 - **Estado:** candidata de laboratorio; ainda nao e golden ate passar validacao
-  em hardware e registro de evidencia.
+  em hardware, config real aplicada e deep-health com evidencia auditavel.
 
 ## Promocao 1m (offline + hardware)
 
