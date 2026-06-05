@@ -180,6 +180,18 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   cold-boot, power-loss, soak nem comportamento sob corte de energia; ao fim da
   validacao, a placa foi limpa por rollback lab-only adicional para
   `image_fallback`, e o launcher voltou a selecionar `/opt`.
+- ensaio M-6 lab-only de `player-runtime` em `/data` com cold-boot real
+  validado na golden `1t` com pacotes locais `homologation`
+  `c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2` e
+  `c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2`;
+- evidencia auditavel do M-6:
+  `docs/evidence/c18-update-validation/20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial/`;
+- esse trial provou apply A->B em `/data`, B adotado pelo launcher apos reboot
+  real, deep-health de B pos-cold-boot, rollback de B para A como previous real
+  em `/data`, deep-health pos-rollback e release gate host em modo `decisive`
+  com `passed=true`; o CLI publico continuou congelado com `rc=44`;
+- nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
+  power-loss fisico nem soak/endurance.
 
 ## Gates Antes De Thaw Do Player-Runtime
 

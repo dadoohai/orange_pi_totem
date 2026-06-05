@@ -337,6 +337,31 @@ obrigatorios, a imagem e pinada contra a golden, e o marker/version/tree/kiosk
 sao cruzados entre warm e cold-boot. Sem modo `decisive`, o gate segue validando
 apenas o baseline historico `fallback`.
 
+## Marco M-6: `/data` cold-boot decisivo de player-runtime
+
+O trial M-6 foi executado em hardware com a golden `c18-hwdecode-lab-1t`,
+sem descongelar o CLI publico de `player-runtime`.
+
+- **Commit do runner/pacotes:** `695298f`;
+- **Pacote A:** `c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2`;
+- **Pacote B:** `c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2`;
+- **Evidencia auditavel:**
+  `docs/evidence/c18-update-validation/20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial/`;
+- **Resultado:** release gate host em modo `decisive` com `passed=true`;
+- **Prova:** apply A -> apply B, B adotado de
+  `/data/player-runtime/current` apos reboot real, deep-health de B passado,
+  rollback para A via `/data` previous, deep-health pos-rollback passado, e
+  freeze publico `rc=44` preservado;
+- **Nao-afirmacao:** ainda nao e thaw publico, nao publica em GitHub, nao
+  habilita auto-pull/stable/producao, nao prova corte fisico de energia e nao
+  substitui soak/endurance.
+
+Aprendizados operacionais do M-6: o candidate-health rejeitou corretamente
+canario fora do contrato (`/data/state/...`, aceito apenas em `/tmp` ou
+`/data/media`); e a quarentena por `tree_sha256` bloqueou reuso de B com mesmo
+conteudo, exigindo payloads A/B unicos para novas rodadas sem limpar
+quarentena.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente

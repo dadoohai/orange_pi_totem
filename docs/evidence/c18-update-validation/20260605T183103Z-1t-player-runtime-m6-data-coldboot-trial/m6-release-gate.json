@@ -1,0 +1,5 @@
+{
+  "passed": null,
+  "reason": "run c18_ota_release_gate.py on the host after copying evidence from the board",
+  "status": "deferred"
+}

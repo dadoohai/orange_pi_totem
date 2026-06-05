@@ -1,0 +1,53 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2",
+    "last_operation": {
+      "finished_at_utc": "2026-06-05T18:35:02Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2.manifest.json",
+      "started_at_utc": "2026-06-05T18:34:08Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2",
+    "state_current_version": "c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2",
+    "state_previous_version": "c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2",
+    "last_operation": {
+      "finished_at_utc": "2026-06-05T18:33:11Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-05T18:33:11Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260605T182524Z-m6-695298f",
+    "state_current_version": "c18.player-runtime-m6-a-20260605T183103Z-m6-695298f-retry2",
+    "state_previous_version": "c18.player-runtime-m6-a-20260605T182524Z-m6-695298f"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/state/c18-m6/20260605T183103Z-m6-695298f-retry2/raw/apply-b",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2"
+}
