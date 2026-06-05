@@ -53,6 +53,36 @@ deep-health de servico passa com evidencia auditavel, e o avaliador agora usa a
 identidade sanitizada do item do status para transicoes quando o cache path do
 MPV se repete. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
 
+## Candidata 1r (offline; aguardando hardware)
+
+O commit `86e8fa0` fecha o follow-up da auditoria sobre falso-positivo
+multi-segmento do deep-health e abort-safety do trial persistente. Por tocar
+arquivos da imagem, foi gerada uma nova candidata offline. Ela **nao substitui
+`1q` como golden** ate passar validacao em placa.
+
+- **Imagem candidata:** `c18-hwdecode-lab-1r`;
+- **Arquivo:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1r_minimal.img`;
+- **Copia para gravacao no Windows:**
+  `/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1r_minimal.img`;
+- **sha256:**
+  `23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c`;
+- **Tamanho:** `1971322880` bytes;
+- **Validacao offline:** `OFFLINE_VALIDATION_PASSED=True`,
+  `artifact_promoted=true`, `totem_core_ota_ready=true`,
+  `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
+  `player_runtime_ota_still_frozen=true`,
+  `no_player_runtime_current_embedded=true`,
+  `no_legacy_kiosky_player_current_embedded=true`, `fsck_clean=true`;
+- **Evidencia offline:** `docs/evidence/c18-update-validation/20260605T011600Z-1r-offline-build/`;
+- **Mudanca load-bearing:** deep-health exige progresso em todos os segmentos
+  avaliaveis, e o harness de trial persistente registra `current` pre/post,
+  faz rollback lab com `--quarantine-current` em aborto apos promote e reinicia
+  `kiosky-player.service`;
+- **Status:** candidata offline pronta para gravacao/validacao curta. Ainda
+  `final_image=false`, nao stable, nao batch de producao, nao thaw publico de
+  `player-runtime`.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente
@@ -498,12 +528,14 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1o` como baseline de laboratorio validada para a
-   frente OTA/manual, ainda `final_image=false`.
+1. Tratar `c18-hwdecode-lab-1q` como baseline de laboratorio validada para a
+   frente OTA/manual, ainda `final_image=false`; a `1r` e apenas candidata
+   offline ate passar validacao de hardware.
 2. Fluxo manual de release GitHub `totem-core` validado na 1n com mudanca real
-   de aplicacao, rollback e reapply; a 1o herda esse contrato e adiciona a
-   validacao de imagem/deep-health com evidencia auditavel. Proximas mudancas de
-   wizard/core devem seguir este gate antes de aplicar em placa, mantendo
+   de aplicacao, rollback e reapply; as golden posteriores herdam esse contrato
+   e adicionam validacao de imagem/deep-health com evidencia auditavel.
+   Proximas mudancas de wizard/core devem seguir este gate antes de aplicar em
+   placa, mantendo
    auto-pull desligado e `kiosky-player`/`player-runtime` congelados ate thaw
    explicito.
 3. Proxima frente da jornada de delivery: preparar a liberacao controlada de

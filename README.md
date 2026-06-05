@@ -11,6 +11,11 @@ OTA `totem-core` validado end-to-end + fundação segura para thaw futuro de
 MPV/hwdecode, display, kernel, systemd e updater ficam fora desse fluxo e
 exigem imagem/homologação ou um pacote C18-aware explicitamente aprovado.
 
+Candidata offline mais recente: `c18-hwdecode-lab-1r`, gerada após o hardening
+do deep-health multi-segmento e do abort cleanup do trial persistente. Ela só
+substitui a `1q` como golden depois de validação em hardware registrada em
+`docs/product/189_C18_OTA_READINESS_GATE.md`.
+
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:
 [docs/UPDATE_AUTHORIZATION_HEALTH.md](docs/UPDATE_AUTHORIZATION_HEALTH.md).
