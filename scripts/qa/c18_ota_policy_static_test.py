@@ -60,10 +60,10 @@ DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md
 DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
 DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
 DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
-EVIDENCE_1Q_DEEP_HEALTH_DIR = (
-    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T025337Z-1q-service-deep-health"
+EVIDENCE_CURRENT_DEEP_HEALTH_DIR = (
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T045500Z-1r-service-deep-health"
 )
-EVIDENCE_1Q_IMAGE_SHA256 = "d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009"
+EVIDENCE_CURRENT_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
     REPO_ROOT / "scripts" / "remote" / "bootstrap_c14_1_1_on_board.sh",
@@ -277,9 +277,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
 
-    def test_c18_docs_keep_1q_as_current_golden(self) -> None:
-        current_tag = "c18-hwdecode-lab-1q"
-        current_sha = "d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009"
+    def test_c18_docs_keep_1r_as_current_golden(self) -> None:
+        current_tag = "c18-hwdecode-lab-1r"
+        current_sha = EVIDENCE_CURRENT_IMAGE_SHA256
+        legacy_sha_1q = "d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009"
         legacy_sha_1o = "07f9ee4f3f870f0fdb083eba7992a24b166939c768fc962e44a18d781117b164"
         legacy_sha_1n = "29fac35be322416ddd2e93caddb50396bff325e2fba5d219309c2f37f6349f7c"
         legacy_sha_1m = "d932eadba28f8fac5b737bed750d6dba2732064b79877601ceb0ed3f113a7d8c"
@@ -303,16 +304,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn(legacy_sha_1m, doc189)
         self.assertIn(legacy_sha_1n, doc189)
         self.assertIn(legacy_sha_1o, doc189)
-        self.assertIn("20260605T025337Z-1q-service-deep-health", doc189)
+        self.assertIn(legacy_sha_1q, doc189)
+        self.assertIn("20260605T045500Z-1r-service-deep-health", doc189)
         doc188_top = DOC188_PATH.read_text(encoding="utf-8").split("---", 1)[0]
         self.assertNotIn(legacy_sha_1l, doc188_top)
         doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]
         self.assertNotIn(legacy_sha_1j, doc190_top)
 
-    def test_c18_1q_hardware_evidence_is_public_and_passing(self) -> None:
-        public = json.loads((EVIDENCE_1Q_DEEP_HEALTH_DIR / "playback-deep-health-public.json").read_text(encoding="utf-8"))
-        privacy = json.loads((EVIDENCE_1Q_DEEP_HEALTH_DIR / "privacy-scan.json").read_text(encoding="utf-8"))
-        manifest = json.loads((EVIDENCE_1Q_DEEP_HEALTH_DIR / "evidence-manifest.json").read_text(encoding="utf-8"))
+    def test_c18_current_hardware_evidence_is_public_and_passing(self) -> None:
+        public = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "playback-deep-health-public.json").read_text(encoding="utf-8"))
+        privacy = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "privacy-scan.json").read_text(encoding="utf-8"))
+        manifest = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "evidence-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(public["schema"], "dadooh.c18.playback.deep_health.v1")
         self.assertTrue(public["passed"])
         self.assertEqual(public["failure_reasons"], [])
@@ -325,9 +327,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(counters["estimated_frame_failed_segments"], 0)
         self.assertGreaterEqual(counters["unique_aliases"], 2)
         self.assertGreaterEqual(counters["status_unique_aliases"], 2)
-        self.assertEqual(counters["mpv_unique_aliases"], 1)
+        self.assertGreaterEqual(counters["mpv_unique_aliases"], 2)
         self.assertTrue(counters["status_transitions_observed"])
-        self.assertFalse(counters["mpv_media_transitions_observed"])
+        self.assertTrue(counters["mpv_media_transitions_observed"])
         self.assertEqual(counters["media_load_failed"], 0)
         self.assertEqual(counters["mpv_restart"], 0)
         self.assertEqual(counters["nrestarts_delta"], 0)
@@ -339,12 +341,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(privacy["result"], "passed")
         self.assertTrue(all(value == 0 for value in privacy["scan_counts"].values()))
         self.assertEqual(manifest["schema"], "dadooh.c18.update_validation.evidence_manifest.v1")
-        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1q")
-        self.assertEqual(manifest["image_sha256"], EVIDENCE_1Q_IMAGE_SHA256)
+        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-1r")
+        self.assertEqual(manifest["image_sha256"], EVIDENCE_CURRENT_IMAGE_SHA256)
         manifest_files = {item["file"]: item for item in manifest["artifacts"]}
         privacy_files = {item["file"]: item for item in privacy["files"]}
         for file_name, metadata in manifest_files.items():
-            path = EVIDENCE_1Q_DEEP_HEALTH_DIR / file_name
+            path = EVIDENCE_CURRENT_DEEP_HEALTH_DIR / file_name
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             self.assertEqual(path.stat().st_size, metadata["bytes"])
             self.assertEqual(digest, metadata["sha256"])
@@ -355,13 +357,13 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         assert evidence_gate and evidence_gate.loader
         evidence_gate.loader.exec_module(module)
         leaks = []
-        for path in sorted(EVIDENCE_1Q_DEEP_HEALTH_DIR.rglob("*")):
+        for path in sorted(EVIDENCE_CURRENT_DEEP_HEALTH_DIR.rglob("*")):
             if not path.is_file():
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
             for label, pattern in module.LEAK_PATTERNS:
                 if pattern.search(text):
-                    leaks.append(f"{label}:{path.relative_to(EVIDENCE_1Q_DEEP_HEALTH_DIR).as_posix()}")
+                    leaks.append(f"{label}:{path.relative_to(EVIDENCE_CURRENT_DEEP_HEALTH_DIR).as_posix()}")
         self.assertEqual(leaks, [])
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:

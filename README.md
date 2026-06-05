@@ -4,17 +4,17 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 ## Estado C18 OTA
 
-Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1q` (C18 HW decode +
+Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1r` (C18 HW decode +
 OTA `totem-core` validado end-to-end + fundação segura para thaw futuro de
 `player-runtime`). O OTA C18 comum é manual/operator-triggered e restrito a
 `totem-core`; `kiosky-player`, `player-runtime`, launcher do player,
 MPV/hwdecode, display, kernel, systemd e updater ficam fora desse fluxo e
 exigem imagem/homologação ou um pacote C18-aware explicitamente aprovado.
 
-Candidata offline mais recente: `c18-hwdecode-lab-1r`, gerada após o hardening
-do deep-health multi-segmento e do abort cleanup do trial persistente. Ela só
-substitui a `1q` como golden depois de validação em hardware registrada em
-`docs/product/189_C18_OTA_READINESS_GATE.md`.
+Evidencia hardware da golden atual:
+`docs/evidence/c18-update-validation/20260605T045500Z-1r-service-deep-health/`.
+Ela promove a imagem `1r`, mas nao valida thaw persistente de
+`player-runtime` em `/data`.
 
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:

@@ -120,9 +120,9 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 Baseline de laboratorio/delivery registrado em 2026-06-05:
 
-- imagem golden: `c18-hwdecode-lab-1q`;
+- imagem golden: `c18-hwdecode-lab-1r`;
 - sha256:
-  `d487bf33737d5af4ba4bbf7859163cf21f0762ef4c5180f2aed3685e4aa5c009`;
+  `23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -135,8 +135,8 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
 - deep-health real em hardware validado apos config real:
   progresso de frame presente/avancando, `media_load_failed=0`,
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
-- evidencia auditavel da 1q:
-  `docs/evidence/c18-update-validation/20260605T025337Z-1q-service-deep-health/`.
+- evidencia auditavel da 1r:
+  `docs/evidence/c18-update-validation/20260605T045500Z-1r-service-deep-health/`.
 - ensaio lab-only de `player-runtime` em hardware validado com pacote local
   `homologation` do commit `3af11d4`, `data_root` temporario em `/tmp`,
   candidato isolado com canario local, `github_used=false`,

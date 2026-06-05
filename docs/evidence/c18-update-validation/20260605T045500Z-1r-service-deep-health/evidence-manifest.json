@@ -1,0 +1,53 @@
+{
+  "artifact_id": "c18-1r-service-deep-health",
+  "artifact_schema": "dadooh.c18.playback.deep_health.v1",
+  "artifact_scope": "service-image-baseline",
+  "artifacts": [
+    {
+      "bytes": 73,
+      "file": "deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274"
+    },
+    {
+      "bytes": 49,
+      "file": "deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 115,
+      "file": "deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
+    },
+    {
+      "bytes": 2403,
+      "file": "playback-deep-health-public.json",
+      "sha256": "588308d48fc4facf0beca7c5dd2c3e0aa98d8f0322fd500edd9b60e2117d9442"
+    },
+    {
+      "bytes": 57837,
+      "file": "playback-samples.tsv",
+      "sha256": "c3d4dc6d218b82074f87a5c4b1fc9c73692609870d6f050485f1ede089dbdb22"
+    },
+    {
+      "bytes": 23861,
+      "file": "status-samples.ndjson",
+      "sha256": "5b07ba24e1d5138c487f962854a6d0cf286bdeb4645f5f738c0db63c8ca9b14a"
+    }
+  ],
+  "config_source": "real config written from private seed through guarded writer path; private values are not included",
+  "deep_health_evaluator_note": "uses 1r evaluator behavior: every evaluable frame segment must progress, so a healthy last item cannot mask a stalled earlier item",
+  "image_bytes": 1971322880,
+  "image_sha256": "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c",
+  "image_tag": "c18-hwdecode-lab-1r",
+  "image_version": "c18.image-lab.1r",
+  "player_runtime_data_current": "absent",
+  "public_player_runtime_ota_state": "frozen_rc_44",
+  "repo_head_at_validation": "c5b024b",
+  "round": "C18.IMAGE-LAB.1r",
+  "schema": "dadooh.c18.update_validation.evidence_manifest.v1"
+}
