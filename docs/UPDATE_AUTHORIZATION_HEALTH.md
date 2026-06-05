@@ -145,6 +145,20 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   aprovado apos restart. Esse marco foi registrado como resumo operacional da
   sessao; antes de qualquer ensaio persistente em `/data`, a evidencia deve ser
   preservada em artefatos sanitizados e auditaveis, nao apenas em prosa.
+- primeiro ensaio lab-only persistente de `player-runtime` em `/data` validado
+  na `1r` com pacote local `homologation`
+  `c18.player-runtime-lab-20260605T052721Z-1562cd3`;
+- evidencia auditavel do trial persistente:
+  `docs/evidence/c18-update-validation/20260605T052805Z-1r-player-runtime-data-trial/`;
+- esse trial provou apply local em `/data/player-runtime`, marker verificado,
+  adocao real do servico por `/data`, deep-health pos-restart, rollback com
+  quarentena do candidato testado e retorno ao fallback de imagem com
+  deep-health aprovado; o CLI publico continuou congelado com `rc=44`.
+- nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
+  cold-boot, power-loss nem rollback A->B entre duas releases persistentes em
+  `/data`; o manifest de evidencia deste primeiro trial tambem nao registra
+  `image_tag`/`image_sha256`, entao a vinculacao com a `1r` fica registrada
+  nos docs e no contexto operacional, nao dentro do manifest do trial.
 
 ## Gates Antes De Thaw Do Player-Runtime
 
@@ -207,6 +221,12 @@ Antes de qualquer thaw de laboratorio:
 
 Passar esses gates ainda nao libera producao; apenas permite teste controlado
 de laboratorio.
+
+Depois do primeiro trial persistente bem-sucedido em `/data`, o proximo gate de
+laboratorio e um ensaio A->B que tenha uma release persistente anterior
+verificada e prove rollback para essa `previous` real, nao apenas para o
+fallback de imagem. Esse ensaio tambem deve preencher `image_tag`/`image_sha256`
+no manifest de evidencia ou registrar um artefato equivalente gateado.
 
 ## Gates Antes De Stable
 

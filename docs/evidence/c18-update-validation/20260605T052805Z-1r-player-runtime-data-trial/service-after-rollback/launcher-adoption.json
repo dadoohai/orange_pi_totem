@@ -1,0 +1,23 @@
+{
+  "component": "player-runtime",
+  "current_link": null,
+  "data_process_count": 0,
+  "expected_source": "fallback",
+  "expected_version": null,
+  "fallback_process_count": 1,
+  "marker_kiosk_py_sha256": null,
+  "marker_reason": "no_current",
+  "marker_tree_sha256": null,
+  "marker_valid": false,
+  "marker_version": null,
+  "passed": true,
+  "previous_link": null,
+  "process_count": 1,
+  "running_identity_matches_marker": false,
+  "running_kiosk_py_sha256": "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167",
+  "schema": "dadooh.c18.player_runtime.adoption.v1",
+  "selected_source": "fallback",
+  "selected_version": "image_fallback",
+  "state_current_version": null,
+  "state_previous_version": null
+}

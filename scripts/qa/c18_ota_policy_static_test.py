@@ -63,6 +63,9 @@ DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
 EVIDENCE_CURRENT_DEEP_HEALTH_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T045500Z-1r-service-deep-health"
 )
+EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR = (
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260605T052805Z-1r-player-runtime-data-trial"
+)
 EVIDENCE_CURRENT_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
@@ -365,6 +368,95 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 if pattern.search(text):
                     leaks.append(f"{label}:{path.relative_to(EVIDENCE_CURRENT_DEEP_HEALTH_DIR).as_posix()}")
         self.assertEqual(leaks, [])
+
+    def test_c18_current_player_runtime_data_trial_evidence_is_public_and_passing(self) -> None:
+        evidence_dir = EVIDENCE_CURRENT_PLAYER_RUNTIME_TRIAL_DIR
+        result = subprocess.run(
+            [
+                "python3",
+                str(PLAYER_RUNTIME_EVIDENCE_GATE_PATH),
+                "--run-dir",
+                str(evidence_dir),
+                "--json",
+            ],
+            cwd=REPO_ROOT,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        gate = json.loads(result.stdout)
+        self.assertTrue(gate["passed"])
+        self.assertEqual(gate["errors"], [])
+
+        manifest = json.loads((evidence_dir / "evidence-manifest.json").read_text(encoding="utf-8"))
+        readme = json.loads((evidence_dir / "README.md").read_text(encoding="utf-8"))
+        lab_apply = json.loads((evidence_dir / "lab-apply.json").read_text(encoding="utf-8"))
+        lab_rollback = json.loads((evidence_dir / "lab-rollback.json").read_text(encoding="utf-8"))
+        restart_adoption = json.loads(
+            (evidence_dir / "service-after-restart" / "launcher-adoption.json").read_text(encoding="utf-8")
+        )
+        rollback_adoption = json.loads(
+            (evidence_dir / "service-after-rollback" / "launcher-adoption.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(manifest["artifact_scope"], "player-runtime-persistent-data-lab-trial")
+        self.assertEqual(manifest["component"], "player-runtime")
+        self.assertEqual(manifest["channel"], "homologation")
+        self.assertEqual(manifest["source_commit"], "1562cd37ec933107c5ccf5bc363a156d0b7fb988")
+        self.assertEqual(
+            manifest["payload_sha256"],
+            "057d25e61e2876629145cd0bdabebe27bdf14d2699e595ca5de2da73f67ffafe",
+        )
+        self.assertNotIn("public_thaw", readme["claims"])
+        self.assertIn("public_thaw", readme["non_claims"])
+        self.assertIn("stable_or_production", readme["non_claims"])
+        self.assertIn("power_loss_safety", readme["non_claims"])
+
+        self.assertTrue(lab_apply["device_data_root"])
+        self.assertEqual(lab_apply["rc"], 0)
+        self.assertFalse(lab_apply["github_used"])
+        self.assertFalse(lab_apply["network_required"])
+        self.assertEqual(lab_apply["public_cli_apply_still_frozen"]["returncode"], 44)
+        self.assertEqual(lab_apply["public_cli_reconcile_still_frozen"]["returncode"], 44)
+
+        self.assertTrue(restart_adoption["passed"])
+        self.assertEqual(restart_adoption["selected_source"], "data")
+        self.assertEqual(restart_adoption["selected_version"], manifest["version"])
+        self.assertTrue(restart_adoption["marker_valid"])
+        self.assertTrue(restart_adoption["running_identity_matches_marker"])
+        self.assertEqual(restart_adoption["data_process_count"], 1)
+        self.assertEqual(restart_adoption["fallback_process_count"], 0)
+
+        rollback_operation = lab_rollback["operation"]
+        self.assertEqual(rollback_operation["rc"], 0)
+        self.assertEqual(rollback_operation["rolled_back_to"], "image_fallback")
+        self.assertTrue(rollback_operation["quarantine_current"])
+        self.assertFalse(rollback_operation["after"]["current_exists"])
+        self.assertFalse(rollback_operation["after"]["previous_exists"])
+        self.assertTrue(rollback_adoption["passed"])
+        self.assertEqual(rollback_adoption["selected_source"], "fallback")
+        self.assertEqual(rollback_adoption["selected_version"], "image_fallback")
+
+        for relative in (
+            "candidate-health/playback-deep-health-public.json",
+            "service-after-restart/playback-deep-health-public.json",
+            "service-after-rollback/playback-deep-health-public.json",
+        ):
+            public = json.loads((evidence_dir / relative).read_text(encoding="utf-8"))
+            self.assertTrue(public["passed"], relative)
+            counters = public["counters"]
+            self.assertGreaterEqual(counters["samples"], 20)
+            self.assertEqual(counters["estimated_frame_failed_segments"], 0)
+            self.assertEqual(counters["hwdec_unexpected_samples"], 0)
+            self.assertEqual(counters["media_load_failed"], 0)
+            self.assertEqual(counters["mpv_restart"], 0)
+            self.assertEqual(counters["panfrost_faults"], 0)
+            self.assertEqual(counters["mmc_timeout_reset"], 0)
+            self.assertEqual(counters["ext4_errors"], 0)
+            self.assertEqual(counters["total_mpv_count"], 1)
 
     def test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-stable-") as tmp:

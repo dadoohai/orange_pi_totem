@@ -16,6 +16,13 @@ Evidencia hardware da golden atual:
 Ela promove a imagem `1r`, mas nao valida thaw persistente de
 `player-runtime` em `/data`.
 
+Primeiro trial lab-only persistente de `player-runtime` em `/data`:
+`docs/evidence/c18-update-validation/20260605T052805Z-1r-player-runtime-data-trial/`.
+Ele prova apply local, adocao temporaria por marker/hash, deep-health com o
+servico usando `/data`, rollback com quarentena e retorno ao fallback de
+imagem. Ainda nao e thaw publico, GitHub publish, auto-pull, stable/producao,
+cold-boot/power-loss nem rollback A->B entre duas releases de `/data`.
+
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:
 [docs/UPDATE_AUTHORIZATION_HEALTH.md](docs/UPDATE_AUTHORIZATION_HEALTH.md).

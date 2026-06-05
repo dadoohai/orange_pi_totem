@@ -92,6 +92,44 @@ arquivos da imagem, foi gerada uma nova candidata e validada em placa.
   `player-runtime`, e nao prova trial persistente de `player-runtime` em
   `/data`.
 
+## Primeiro trial persistente de player-runtime em `/data` (1r)
+
+Com a `1r` em hardware e a config real escrita via SSH a partir do seed, foi
+executado o primeiro ensaio lab-only persistente de `player-runtime` em
+`/data`, ainda sem descongelar o CLI publico:
+
+- **Pacote local:** `c18.player-runtime-lab-20260605T052721Z-1562cd3`;
+- **Componente/canal:** `player-runtime`, `homologation`;
+- **source_commit do pacote:** `1562cd37ec933107c5ccf5bc363a156d0b7fb988`;
+- **payload_sha256:**
+  `057d25e61e2876629145cd0bdabebe27bdf14d2699e595ca5de2da73f67ffafe`;
+- **Evidencia auditavel:**
+  `docs/evidence/c18-update-validation/20260605T052805Z-1r-player-runtime-data-trial/`;
+- **Gate da evidencia:** `c18_player_runtime_evidence_gate.py` passou sobre os
+  bytes versionados, com allowlist, hashes, scan de vazamento e validacao
+  semantica dos artefatos;
+- **Adocao:** apos apply e restart do servico, o probe registrou
+  `selected_source=data`, `current_link` apontando para a release testada,
+  marker valido, `running_identity_matches_marker=true` e 1 processo de
+  `/data`;
+- **Deep-health pos-restart:** `passed=true`, 45 amostras, 6 segmentos
+  avaliaveis, 0 segmentos falhos, `hwdec-current=v4l2request-copy`,
+  `media_load_failed=0`, `mpv_restart=0`, `NRestarts_delta=0`,
+  panfrost/mmc/ext4 `0`;
+- **Rollback:** rollback lab-only com `quarantine_current=true`, retorno para
+  `image_fallback`, sem `current`/`previous` persistentes restantes e
+  deep-health pos-rollback `passed=true`;
+- **Freeze publico:** apply/rollback/reconcile publicos de `player-runtime` e
+  `kiosky-player` continuam bloqueados com `rc=44`.
+
+O que este marco **nao** afirma: thaw publico, GitHub publish, auto-pull,
+stable/producao, durabilidade sob corte de energia, cold-boot adoption, ou
+rollback A->B entre duas releases persistentes em `/data`. Como foi o primeiro
+apply persistente, nao havia `previous` de `/data`; o rollback validado foi para
+o fallback de imagem. O manifest de evidencia deste trial tambem nao preenche
+`image_tag`/`image_sha256`; o proximo ensaio deve corrigir isso no harness ou
+incluir artefato equivalente gateado.
+
 ## Candidata 1p (offline; descartada em hardware)
 
 O commit `cbc51da` fecha a camada necessaria para um trial persistente
