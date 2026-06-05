@@ -1139,6 +1139,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--player-runtime-evidence-mode", m6_trial)
         self.assertIn("decisive", m6_trial)
         self.assertIn("cross_check_marker", m6_trial)
+        self.assertIn("--repo-identity-file", m6_trial)
+        self.assertIn("repo-identity.json", m6_trial)
+        self.assertIn("validate_package_repo_identity", m6_trial)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
@@ -1146,6 +1149,38 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("c18_player_runtime_evidence_gate.py", update_auth)
         self.assertIn("abort-cleanup.json", update_auth)
         self.assertIn("boot reconcile nao", update_auth)
+
+    def test_m6_trial_accepts_clean_repo_identity_file(self) -> None:
+        spec = importlib.util.spec_from_file_location("c18_m6_trial_policy_test", PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "repo-identity.json"
+            source_commit = "a" * 40
+            path.write_text(
+                json.dumps(
+                    {
+                        "repo_commit": source_commit,
+                        "repo_tree": "b" * 40,
+                        "repo_dirty": False,
+                        "repo_exact_tag": None,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            repo_info = module.load_repo_identity(path)
+            self.assertEqual(repo_info["repo_commit"], source_commit)
+            self.assertFalse(repo_info["repo_dirty"])
+            module.validate_package_repo_identity({"source_commit": source_commit}, repo_info, "manifest_b")
+            with self.assertRaises(RuntimeError):
+                module.validate_package_repo_identity({"source_commit": "c" * 40}, repo_info, "manifest_b")
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")

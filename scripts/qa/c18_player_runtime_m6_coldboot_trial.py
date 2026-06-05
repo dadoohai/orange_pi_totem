@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -45,6 +46,7 @@ LAB_ENV = "C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL"
 SCHEMA = "dadooh.c18.player_runtime.m6_coldboot_trial.v1"
 TRANSITION_FLOW = "C18-M6-PLAYER-RUNTIME-DATA-COLDBOOT"
 MECHANICAL_ACTION = "operator_controlled_reboot"
+REPO_IDENTITY_FILE = "repo-identity.json"
 
 
 def require_guard(args: argparse.Namespace) -> None:
@@ -63,6 +65,45 @@ def env_base() -> dict[str, str]:
         "LC_ALL": "C.UTF-8",
         "PYTHONDONTWRITEBYTECODE": "1",
     }
+
+
+def load_repo_identity(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return repo_identity()
+    data = read_json(path)
+    repo_commit = data.get("repo_commit")
+    repo_tree = data.get("repo_tree")
+    repo_dirty = data.get("repo_dirty")
+    repo_exact_tag = data.get("repo_exact_tag")
+    if not isinstance(repo_commit, str) or not re.fullmatch(r"[0-9a-f]{40}", repo_commit):
+        raise RuntimeError("repo_identity_invalid_repo_commit")
+    if not isinstance(repo_tree, str) or not re.fullmatch(r"[0-9a-f]{40}", repo_tree):
+        raise RuntimeError("repo_identity_invalid_repo_tree")
+    if repo_dirty is not False:
+        raise RuntimeError("repo_identity_must_be_clean")
+    if repo_exact_tag is not None and not isinstance(repo_exact_tag, str):
+        raise RuntimeError("repo_identity_invalid_repo_exact_tag")
+    return {
+        "repo_commit": repo_commit,
+        "repo_tree": repo_tree,
+        "repo_dirty": False,
+        "repo_exact_tag": repo_exact_tag,
+    }
+
+
+def repo_identity_for_phase(args: argparse.Namespace, run_dir: Path) -> dict[str, Any]:
+    path = args.repo_identity_file
+    if path is None:
+        persisted = run_dir / REPO_IDENTITY_FILE
+        if persisted.is_file():
+            path = persisted
+    return load_repo_identity(path)
+
+
+def validate_package_repo_identity(manifest: dict[str, Any], repo_info: dict[str, Any], label: str) -> None:
+    source_commit = manifest.get("source_commit")
+    if source_commit != repo_info.get("repo_commit"):
+        raise RuntimeError(f"{label}_source_commit_repo_mismatch")
 
 
 def package_manifest(path: Path) -> dict[str, Any]:
@@ -214,7 +255,7 @@ def collect_post_state(args: argparse.Namespace, pre_state: Path, output: Path, 
     )
 
 
-def write_coldboot_manifest(run_dir: Path, *, package_manifest_b: dict[str, Any]) -> None:
+def write_coldboot_manifest(run_dir: Path, *, package_manifest_b: dict[str, Any], repo_info: dict[str, Any]) -> None:
     artifacts = []
     for path in sorted(run_dir.rglob("*")):
         if not path.is_file():
@@ -234,7 +275,7 @@ def write_coldboot_manifest(run_dir: Path, *, package_manifest_b: dict[str, Any]
         "source_commit": package_manifest_b.get("source_commit"),
         "version": package_manifest_b.get("version"),
         "artifacts": artifacts,
-        **repo_identity(),
+        **repo_info,
     }
     write_json(run_dir / "evidence-manifest.json", manifest)
 
@@ -347,8 +388,11 @@ def phase_arm(args: argparse.Namespace) -> int:
     if args.evidence_root.exists() and any(args.evidence_root.iterdir()):
         raise RuntimeError(f"evidence_root_must_be_empty:{args.evidence_root}")
     env = env_base()
+    repo_info = repo_identity_for_phase(args, args.evidence_root)
     manifest_a = package_manifest(args.manifest_a)
     manifest_b = package_manifest(args.manifest_b)
+    validate_package_repo_identity(manifest_a, repo_info, "manifest_a")
+    validate_package_repo_identity(manifest_b, repo_info, "manifest_b")
     version_a = str(manifest_a["version"])
     version_b = str(manifest_b["version"])
     if version_a == version_b:
@@ -361,6 +405,7 @@ def phase_arm(args: argparse.Namespace) -> int:
     package_dir.mkdir(parents=True, exist_ok=True)
     coldboot_dir.mkdir(parents=True, exist_ok=True)
     raw_dir.mkdir(parents=True, exist_ok=True)
+    write_json(run_dir / REPO_IDENTITY_FILE, repo_info)
     copy_package_manifest(args.manifest_b, package_dir)
     run_release_gate(args.manifest_b, args.payload_b, package_dir / "player-runtime-release-gate.json", env)
 
@@ -405,6 +450,7 @@ def phase_arm(args: argparse.Namespace) -> int:
         "image_tag": args.image_tag,
         "image_sha256": args.image_sha256,
         "image_marker_file": str(args.image_marker_file),
+        "repo_identity_file": str(run_dir / REPO_IDENTITY_FILE),
         "player_runtime_data_evidence_dir": str(data_dir),
         "coldboot_data_evidence_dir": str(coldboot_dir),
         "armed_at_unix": int(time.time()),
@@ -427,6 +473,7 @@ def phase_resume(args: argparse.Namespace) -> int:
     require_guard(args)
     env = env_base()
     run_dir = args.evidence_root
+    repo_info = repo_identity_for_phase(args, run_dir)
     state = read_json(run_dir / "m6-run-state.json")
     version_a = str(state["version_a"])
     version_b = str(state["version_b"])
@@ -437,6 +484,7 @@ def phase_resume(args: argparse.Namespace) -> int:
     if len(manifest_b_files) != 1:
         raise RuntimeError("m6_package_manifest_b_count")
     manifest_b = package_manifest(manifest_b_files[0])
+    validate_package_repo_identity(manifest_b, repo_info, "manifest_b")
     collect_post_state(args, coldboot_dir / "pre-state-public.json", coldboot_dir / "boot-state-public.json", env)
     run_adoption(args, "data", version_b, coldboot_dir / "launcher-adoption.json", env)
     collect_health(args, coldboot_dir / "service-after-coldboot", raw_dir / "service-after-coldboot.json", env)
@@ -444,7 +492,7 @@ def phase_resume(args: argparse.Namespace) -> int:
     write_json(coldboot_dir / "marker-link.json", marker_link)
     if marker_link["passed"] is not True:
         raise RuntimeError("m6_marker_link_failed")
-    write_coldboot_manifest(coldboot_dir, package_manifest_b=manifest_b)
+    write_coldboot_manifest(coldboot_dir, package_manifest_b=manifest_b, repo_info=repo_info)
     coldboot_gate = run_json(
         [
             sys.executable,
@@ -483,7 +531,7 @@ def phase_resume(args: argparse.Namespace) -> int:
         package_manifest=manifest_b,
         trial_id=f"c18-player-runtime-m6-coldboot-{version_b}",
         rollback_expectation="data-previous",
-        repo_info=repo_identity(),
+        repo_info=repo_info,
         image_tag=args.image_tag,
         image_sha256=args.image_sha256,
         image_marker_file=args.image_marker_file,
@@ -578,6 +626,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--image-tag", required=True)
     parser.add_argument("--image-sha256", required=True)
     parser.add_argument("--image-marker-file", required=True, type=Path)
+    parser.add_argument("--repo-identity-file", type=Path)
     parser.add_argument("--mechanical-action", default=MECHANICAL_ACTION)
     parser.add_argument("--duration-sec", type=float, default=45.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
