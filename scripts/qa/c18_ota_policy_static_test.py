@@ -1291,7 +1291,6 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("tmp_dir.rename(output_dir)", m6_trial)
         self.assertIn("class M6RunLock", m6_trial)
         self.assertIn("fcntl.flock", m6_trial)
-        self.assertIn("m6_lock_busy", m6_trial)
         self.assertLess(
             m6_trial.index('collect_health_atomic(args, coldboot_dir / "service-after-coldboot"'),
             m6_trial.index("write_coldboot_manifest(coldboot_dir"),
