@@ -23,7 +23,7 @@ golden atual `1t`.
 | --- | --- |
 | Golden atual | `c18-hwdecode-lab-1t`, fonte canonica em `docs/evidence/c18-update-validation/current-golden.json` |
 | OTA comum | somente `totem-core`, manual/operator-triggered |
-| Freeze publico | `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos |
+| Freeze publico | contrato repo HEAD: `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1t` ja gravada, o hardening de `kiosky-player reconcile` ainda nao esta embarcado/provado em hardware |
 | M6 historico | evidenciou apply A->B de `player-runtime` em `/data`, reboot real, adocao B por `/data`, deep-health e rollback B->A via previous em `/data` |
 | Proximo gate | `scripts/qa/c18_player_runtime_lab_thaw.py` como wrapper lab-only canonico para repetir M6 com o contrato atual (`source_dirty=false` + feature `verify-then-promote`) sem abrir CLI publico |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
@@ -53,6 +53,11 @@ Marco de referência para continuidade C18/delivery:
   com discriminadores pre/post boot, gate cold-boot `passed=true`, freeze
   publico `rc=44`, reconcile de boot autorizado `rc=0` e deep-health
   `passed=true` apos config real C18-safe.
+
+Nota de escopo pos-M6: o contrato repo HEAD tambem congela
+`reconcile --component kiosky-player` com `rc=44`, mas esse hardening foi
+feito depois da evidencia hardware da `1t`; deve ser reprovado em placa na
+proxima imagem/coleta antes de ser citado como fato de hardware.
 
 Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1t`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
