@@ -77,10 +77,7 @@ def env_base() -> dict[str, str]:
     }
 
 
-def load_repo_identity(path: Path | None) -> dict[str, Any]:
-    if path is None:
-        return repo_identity()
-    data = read_json(path)
+def validate_repo_identity_data(data: dict[str, Any]) -> dict[str, Any]:
     repo_commit = data.get("repo_commit")
     repo_tree = data.get("repo_tree")
     repo_dirty = data.get("repo_dirty")
@@ -99,6 +96,11 @@ def load_repo_identity(path: Path | None) -> dict[str, Any]:
         "repo_dirty": False,
         "repo_exact_tag": repo_exact_tag,
     }
+
+
+def load_repo_identity(path: Path | None) -> dict[str, Any]:
+    data = repo_identity() if path is None else read_json(path)
+    return validate_repo_identity_data(data)
 
 
 def repo_identity_for_phase(args: argparse.Namespace, run_dir: Path) -> dict[str, Any]:
