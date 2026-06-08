@@ -1,0 +1,58 @@
+{
+  "captured_at_utc": "2026-06-08T03:56:12Z",
+  "commands": [
+    {
+      "expected_rc": 44,
+      "name": "player-runtime:apply-local",
+      "passed": true,
+      "rc": 44,
+      "stderr_first_line": "2026-06-08T03:56:09Z WARN apply_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware",
+      "stdout_line_count": 0
+    },
+    {
+      "expected_rc": 44,
+      "name": "player-runtime:rollback",
+      "passed": true,
+      "rc": 44,
+      "stderr_first_line": "component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware",
+      "stdout_line_count": 0
+    },
+    {
+      "expected_rc": 44,
+      "name": "player-runtime:reconcile",
+      "passed": true,
+      "rc": 44,
+      "stderr_first_line": "player_runtime_reconcile_guard_required: pass --allow-player-runtime-maintenance and set C18_PLAYER_RUNTIME_RECONCILE=1",
+      "stdout_line_count": 0
+    },
+    {
+      "expected_rc": 44,
+      "name": "kiosky-player:apply-local",
+      "passed": true,
+      "rc": 44,
+      "stderr_first_line": "2026-06-08T03:56:11Z WARN apply_blocked_component_frozen component=kiosky-player reason=kiosky-player OTA is frozen until a C18-aware player/hwdecode package exists",
+      "stdout_line_count": 0
+    },
+    {
+      "expected_rc": 44,
+      "name": "kiosky-player:rollback",
+      "passed": true,
+      "rc": 44,
+      "stderr_first_line": "component_frozen_for_ota: kiosky-player: kiosky-player OTA is frozen until a C18-aware player/hwdecode package exists",
+      "stdout_line_count": 0
+    },
+    {
+      "expected_rc": 44,
+      "name": "kiosky-player:reconcile",
+      "passed": true,
+      "rc": 44,
+      "stderr_first_line": "component_frozen_for_ota: kiosky-player: kiosky-player OTA is frozen until a C18-aware player/hwdecode package exists",
+      "stdout_line_count": 0
+    }
+  ],
+  "passed": true,
+  "private_values_published": false,
+  "public_freeze_expected_rc": 44,
+  "raw_config_published": false,
+  "schema": "dadooh.c18.1u.freeze_probes.public.v1"
+}

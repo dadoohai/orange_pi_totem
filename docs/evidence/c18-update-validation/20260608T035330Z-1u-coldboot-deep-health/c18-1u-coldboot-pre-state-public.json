@@ -1,0 +1,84 @@
+{
+  "boot": {
+    "boot_id_sha256_12": "de1a8de9bca9",
+    "btime": 1780890769,
+    "uptime_bucket": "lt_5m",
+    "uptime_seconds": 84.8
+  },
+  "captured_at_unix": 1780890854,
+  "image": {
+    "final_image": "false",
+    "image_tag": "c18-hwdecode-lab-1u",
+    "image_version": "c18.image-lab.1u",
+    "marker_bytes": 2473,
+    "marker_path": "/etc/dadooh/c18-hwdecode-lab-1u-image",
+    "marker_present": true,
+    "marker_sha256": "b1a37c793f7a085a025f9cd448e0d36caecc75d7823980cb9f8ad0199ea68cbd",
+    "not_for_production": "true",
+    "player_runtime_ota_still_frozen": "true"
+  },
+  "mounts": {
+    "data": {
+      "found": true,
+      "fstype": "ext4",
+      "read_only": false,
+      "read_write": true,
+      "source_kind": "block",
+      "source_sha256_12": "c00b3e058eb3",
+      "target": "/"
+    },
+    "data_mount_claim": "rootfs_directory",
+    "data_same_device_as_root": true,
+    "root": {
+      "found": true,
+      "fstype": "ext4",
+      "read_only": false,
+      "read_write": true,
+      "source_kind": "block",
+      "source_sha256_12": "c00b3e058eb3",
+      "target": "/"
+    }
+  },
+  "nonce": "9950044ae5bee8d57bb5a492fc3d66b7",
+  "player_runtime": {
+    "current_present": false,
+    "data_base_present": true,
+    "data_current_kiosk_present": false,
+    "data_current_marker_present": false,
+    "data_current_marker_reason": "no_data_current_kiosk",
+    "data_current_marker_verified": false,
+    "fallback_kiosk_present": true,
+    "previous_present": false,
+    "selected_source": "fallback"
+  },
+  "privacy": {
+    "raw_boot_id_persisted": false,
+    "raw_journal_persisted": false,
+    "raw_mount_source_persisted": false
+  },
+  "schema": "dadooh.c18.coldboot_pre_state.v1",
+  "systemd": {
+    "active_state": "active",
+    "after_contains_local_fs": true,
+    "dropin_count": 2,
+    "exec_start_pre_reconcile_present": true,
+    "nrestarts": 0,
+    "requires_data_mount": true,
+    "requires_mounts_for": [
+      "/data",
+      "/opt/totem/kiosky-player"
+    ],
+    "service": "kiosky-player.service",
+    "show_rc": 0,
+    "sub_state": "running"
+  },
+  "transition": {
+    "controlled_reboot_used": true,
+    "flow": "C18-1U-COLDBOOT-BASELINE",
+    "mechanical_action": "operator_controlled_reboot",
+    "phase": "pre"
+  },
+  "update_safety": {
+    "included": false
+  }
+}

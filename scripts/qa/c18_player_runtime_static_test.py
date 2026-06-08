@@ -83,9 +83,11 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")
-        self.assertEqual(CURRENT_GOLDEN["image_tag"], "c18-hwdecode-lab-1t")
-        self.assertEqual(CURRENT_GOLDEN["image_version"], "c18.image-lab.1t")
-        self.assertEqual(CURRENT_GOLDEN["image_marker_path"], "/etc/dadooh/c18-hwdecode-lab-1t-image")
+        current_tag = CURRENT_GOLDEN["image_tag"]
+        current_suffix = current_tag.rsplit("-", maxsplit=1)[-1]
+        self.assertTrue(current_tag.startswith("c18-hwdecode-lab-1"))
+        self.assertEqual(CURRENT_GOLDEN["image_version"], f"c18.image-lab.{current_suffix}")
+        self.assertEqual(CURRENT_GOLDEN["image_marker_path"], f"/etc/dadooh/{current_tag}-image")
         self.assertIn("CURRENT_GOLDEN_PATH", derive)
         self.assertIn('TAG = str(CURRENT_GOLDEN["image_tag"])', derive)
         self.assertIn('VERSION = str(CURRENT_GOLDEN["image_version"])', derive)
@@ -98,6 +100,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn("=== {round_name} RESULT ===", derive)
         self.assertIn("1s (golden delivery before boot-state evidence and crash-boundary gates)", derive)
         self.assertIn("1t (golden delivery before post-M6 reconcile freeze hardware proof)", derive)
+        self.assertIn("1u (golden delivery before physical power-loss/soak/server-side gates)", derive)
         self.assertIn("1p (boot reconcile ran as totem", derive)
         self.assertIn("1q (golden delivery before multi-segment deep-health gate", derive)
         self.assertIn("1r (golden delivery before cold-boot/power-loss pre-hardening gates", derive)

@@ -1,9 +1,9 @@
 {
-  "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health",
-  "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1t-image",
-  "image_marker_sha256": "e2f927e173c12aa6637ca78db89675c9eedbf19649613824d8f994c775f4cf6d",
-  "image_sha256": "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6",
-  "image_tag": "c18-hwdecode-lab-1t",
-  "image_version": "c18.image-lab.1t",
+  "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health",
+  "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1u-image",
+  "image_marker_sha256": "b1a37c793f7a085a025f9cd448e0d36caecc75d7823980cb9f8ad0199ea68cbd",
+  "image_sha256": "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd",
+  "image_tag": "c18-hwdecode-lab-1u",
+  "image_version": "c18.image-lab.1u",
   "schema": "dadooh.c18.current_golden.v1"
 }

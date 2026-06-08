@@ -314,7 +314,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIsNone(mac.search(doc))
         self.assertIn("<board-ip-redacted>", doc)
 
-    def test_c18_docs_keep_1t_as_current_golden(self) -> None:
+    def test_c18_docs_keep_current_golden_in_sync(self) -> None:
         current_tag = EVIDENCE_CURRENT_IMAGE_TAG
         current_sha = EVIDENCE_CURRENT_IMAGE_SHA256
         legacy_sha_1s = "bc0a39cf0cc4502acb7f9b4726589449288783fa4d44821593ab15c4c2c1967f"
@@ -379,7 +379,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             sys.argv = previous_argv
         self.assertEqual(parsed.expect_image_marker_sha256, CURRENT_GOLDEN["image_marker_sha256"])
 
-    def test_c18_1u_offline_candidate_is_not_current_golden(self) -> None:
+    def test_c18_1u_offline_build_matches_promoted_current_golden(self) -> None:
         manifest = json.loads((EVIDENCE_1U_OFFLINE_BUILD_DIR / "build_manifest.json").read_text(encoding="utf-8"))
         validation = json.loads((EVIDENCE_1U_OFFLINE_BUILD_DIR / "offline_validation.json").read_text(encoding="utf-8"))
         readme = (EVIDENCE_1U_OFFLINE_BUILD_DIR / "README.md").read_text(encoding="utf-8")
@@ -405,13 +405,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn(EVIDENCE_1U_IMAGE_SHA256, readme)
         self.assertIn(EVIDENCE_1U_REPO_COMMIT, readme)
         self.assertIn(EVIDENCE_1U_REPO_TREE, readme)
-        self.assertIn("Does not promote `1u` to golden", readme)
-        self.assertIn("current golden remains `1t`", readme)
+        self.assertIn("This directory alone did not promote `1u` to golden", readme)
+        self.assertIn("20260608T035330Z-1u-coldboot-deep-health", readme)
         self.assertIn("hardware_validation_required=true", readme)
         self.assertIn("build_manifest.json", sha_lines)
-        self.assertEqual(CURRENT_GOLDEN["image_tag"], "c18-hwdecode-lab-1t")
-        self.assertNotEqual(CURRENT_GOLDEN["image_tag"], manifest["image_tag"])
-        self.assertNotEqual(CURRENT_GOLDEN["image_sha256"], manifest["image_sha256"])
+        self.assertEqual(CURRENT_GOLDEN["image_tag"], manifest["image_tag"])
+        self.assertEqual(CURRENT_GOLDEN["image_sha256"], manifest["image_sha256"])
 
     def test_c18_release_gate_player_runtime_decisive_mode_is_explicit(self) -> None:
         qa_dir = REPO_ROOT / "scripts" / "qa"

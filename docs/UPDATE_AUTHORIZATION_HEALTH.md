@@ -118,11 +118,11 @@ janela longa, tipicamente 24h, com a mesma config candidata, aprovando:
 
 ## Status Atual
 
-Baseline de laboratorio/delivery registrado em 2026-06-05:
+Baseline de laboratorio/delivery registrado em 2026-06-08:
 
-- imagem golden: `c18-hwdecode-lab-1t`;
+- imagem golden: `c18-hwdecode-lab-1u`;
 - sha256:
-  `7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6`;
+  `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
 - estado: `final_image=false`, nao stable, nao batch de producao;
 - OTA manual de `totem-core` validado com apply, rollback e reapply;
 - release de referencia aplicada:
@@ -136,13 +136,14 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   controlado:
   progresso de frame presente/avancando, `media_load_failed=0`,
   `mpv_restart=0`, panfrost/mmc/ext4 `0`.
-- evidencia auditavel da 1t:
-  `docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health/`.
-- a `1t` valida tambem `RequiresMountsFor=/data`, `After=local-fs.target`,
+- evidencia auditavel da 1u:
+  `docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health/`.
+- a `1u` valida tambem `RequiresMountsFor=/data`, `After=local-fs.target`,
   reconcile de boot explicitamente autorizado e nao fatal, boot-state com
   discriminadores pre/post, timer off, policy restrita a `totem-core`,
   ausencia de `/data/player-runtime/current` e `player-runtime` publico
-  congelado com `rc=44` em apply, rollback e reconcile.
+  congelado com `rc=44` em apply, rollback e reconcile; alem disso prova em
+  hardware `reconcile --component kiosky-player` publico com `rc=44`.
 - ensaio lab-only de `player-runtime` em hardware validado com pacote local
   `homologation` do commit `3af11d4`, `data_root` temporario em `/tmp`,
   candidato isolado com canario local, `github_used=false`,
@@ -207,14 +208,12 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   evidencia em modo `decisive`; o CLI publico continuou congelado com `rc=44`;
 - nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
   power-loss fisico nem soak/endurance.
-- imagem candidata pos-M6 `c18-hwdecode-lab-1u` derivada offline para a proxima
-  validacao em placa, com evidencia em
+- imagem `c18-hwdecode-lab-1u` foi derivada offline com evidencia em
   `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`;
   sha256
   `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
-  ainda nao substitui a golden `1t` e nao prova hardware playback, HDMI,
-  `kiosky-player reconcile` on-device, power-loss, soak, thaw publico, stable
-  ou producao.
+  depois foi validada em HW e substitui a golden `1t` para laboratorio/delivery;
+  ainda nao prova power-loss fisico, soak, thaw publico, stable ou producao.
 
 ## Gates Antes De Thaw Do Player-Runtime
 

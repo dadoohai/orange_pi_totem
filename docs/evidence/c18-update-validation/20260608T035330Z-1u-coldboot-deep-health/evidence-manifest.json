@@ -1,0 +1,121 @@
+{
+  "artifact_scope": "c18-image-1u-coldboot-baseline-validation",
+  "artifacts": [
+    {
+      "bytes": 1169,
+      "file": "README.md",
+      "sha256": "f0a0ff65339f588b30ed278b5259d42b34debaa9792e6b7bde7feef037373164"
+    },
+    {
+      "bytes": 3040,
+      "file": "boot-state-public.json",
+      "sha256": "37e74139788e33f0b6f945608c621bc3e3eadf7a8808165e2873e78646b79635"
+    },
+    {
+      "bytes": 2307,
+      "file": "c18-1u-coldboot-pre-state-public.json",
+      "sha256": "5dc39f755033af640cbf1209bff7f45162767fdc36c4b45fab4c705a333c8b64"
+    },
+    {
+      "bytes": 720,
+      "file": "config-write-public.json",
+      "sha256": "17e3d231106a99397d8677cdd38784ae77bd80a2e85b253a7e21841b646055a7"
+    },
+    {
+      "bytes": 73,
+      "file": "deep-health/deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274"
+    },
+    {
+      "bytes": 49,
+      "file": "deep-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "deep-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 115,
+      "file": "deep-health/deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
+    },
+    {
+      "bytes": 2445,
+      "file": "deep-health/playback-deep-health-public.json",
+      "sha256": "e18f00460cfda704fab6e5136b50eab128b9e5b23d30922fd916bf3c65c14e03"
+    },
+    {
+      "bytes": 49034,
+      "file": "deep-health/playback-samples.tsv",
+      "sha256": "71ed845d72fe90bdc65587f92d23eeed29d68bd626ada26f49a372f0b63bdffe"
+    },
+    {
+      "bytes": 2445,
+      "file": "deep-health/public.json",
+      "sha256": "e18f00460cfda704fab6e5136b50eab128b9e5b23d30922fd916bf3c65c14e03"
+    },
+    {
+      "bytes": 20092,
+      "file": "deep-health/status-samples.ndjson",
+      "sha256": "31774fa2ba0b43cc14ddf6f0dfc66eb813b776184f5cce1ff61008f2066ecb3a"
+    },
+    {
+      "bytes": 2143,
+      "file": "freeze-probes-public.json",
+      "sha256": "f0098edeacfa36e1da456adf5a82196a280967ea8419254e8d9126496886cf72"
+    },
+    {
+      "bytes": 726,
+      "file": "launcher-adoption.json",
+      "sha256": "91b1f0db58e45e8a691a9b8a90854fc600a01ae7a70dcab9a00ed28060058482"
+    }
+  ],
+  "board_touched": true,
+  "claims": [
+    "cold_boot_discriminators_changed",
+    "public_player_runtime_freeze_rc44",
+    "public_kiosky_player_freeze_rc44",
+    "playback_deep_health_passed",
+    "hwdecode_v4l2request_copy",
+    "image_baseline_no_data_player_runtime_current",
+    "kiosky_player_reconcile_public_rc44_on_hw",
+    "config_written_from_homologation_seed_via_governed_writer"
+  ],
+  "cold_boot": {
+    "boot_id_changed": true,
+    "btime_changed": true,
+    "controlled_reboot_used": true,
+    "post_uptime_bucket": "lt_5m"
+  },
+  "component_scope": "image-baseline-fallback",
+  "config_values_published": false,
+  "config_write_passed": true,
+  "config_written_from_homologation_seed": true,
+  "deep_health_passed": true,
+  "freeze_public_passed": true,
+  "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1u-image",
+  "image_marker_sha256": "b1a37c793f7a085a025f9cd448e0d36caecc75d7823980cb9f8ad0199ea68cbd",
+  "image_sha256": "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd",
+  "image_tag": "c18-hwdecode-lab-1u",
+  "image_version": "c18.image-lab.1u",
+  "launcher_adoption_passed": true,
+  "non_claims": [
+    "player_runtime_data_release_adoption",
+    "power_loss_physical_cut",
+    "public_thaw",
+    "github_publish",
+    "auto_pull",
+    "stable_or_production",
+    "server_side_gate",
+    "soak",
+    "display_sink_recovery"
+  ],
+  "private_values_published": false,
+  "schema": "dadooh.c18.hardware_evidence.v1",
+  "selected_source_expected": "fallback",
+  "source_commit": "58457740661b557877e06f53b932b133d62838cb",
+  "source_repo_tree": "0713c9c61893d0c049425bf72d2714f83fc3e1ff",
+  "ssh_used": true
+}

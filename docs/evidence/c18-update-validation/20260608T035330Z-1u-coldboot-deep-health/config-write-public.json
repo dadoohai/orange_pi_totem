@@ -1,0 +1,22 @@
+{
+  "config_group": "totem",
+  "config_mode": "640",
+  "config_owner": "root",
+  "config_present": true,
+  "config_values_published": false,
+  "handoff_private_real_dry_run_passed": true,
+  "handoff_result": "passed",
+  "homologation_seed_used": true,
+  "private_values_published": false,
+  "raw_config_copied_to_public_artifacts": false,
+  "schema": "dadooh.c18.1u.config_write.public.v1",
+  "source_allow_mock_valid": true,
+  "source_candidate_private": true,
+  "writer_atomic_rename_completed": true,
+  "writer_fsync_directory_completed": true,
+  "writer_fsync_file_completed": true,
+  "writer_post_write_valid": true,
+  "writer_pre_write_valid": true,
+  "writer_real_write_enabled": true,
+  "writer_success": true
+}

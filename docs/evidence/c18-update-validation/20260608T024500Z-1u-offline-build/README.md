@@ -7,13 +7,14 @@ This directory records the offline derivation evidence for
 
 - Proves the image was derived offline from the governed C18 deriver and passed
   repository validation gates before hardware flashing.
-- Proves the candidate uses a distinct image identity from the current golden
-  `1t`, so post-M6 hardware validation is traceable.
+- Proves the candidate uses a distinct image identity from the then-current
+  golden `1t`, so post-M6 hardware validation is traceable.
 - Does not prove hardware playback, HDMI output, `kiosky-player reconcile`
   behavior on-device, physical power-loss, soak, public thaw, stable, or
   production readiness.
-- Does not promote `1u` to golden. The current golden remains `1t` until `1u`
-  passes hardware validation and is explicitly promoted.
+- This directory alone did not promote `1u` to golden. `1u` was promoted only
+  after the hardware evidence in
+  `20260608T035330Z-1u-coldboot-deep-health`.
 
 ## Artifact
 
@@ -34,8 +35,8 @@ This directory records the offline derivation evidence for
 - `artifact_promoted=true`
 - `hardware_validation_required=true`
 - `card_written=false`
-- `board_touched=false`
-- `ssh_used=false`
+- `board_touched=false` for this offline-only directory.
+- `ssh_used=false` for this offline-only directory.
 
 Load-bearing checks include `totem_core_ota_ready=true`,
 `player_runtime_sandbox_passed=true`, `player_runtime_release_gate_passed=true`,
@@ -45,9 +46,11 @@ Load-bearing checks include `totem_core_ota_ready=true`,
 
 ## Next Hardware Check
 
-The hardware validation for this candidate must prove the post-M6 repo delta,
+Hardware validation for this candidate proved the post-M6 repo delta,
 especially `reconcile --component kiosky-player` returning `rc=44`, while
-preserving playback deep-health and the public freeze posture.
+preserving playback deep-health and the public freeze posture. See:
+
+- `docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health/`
 
 ## Files
 

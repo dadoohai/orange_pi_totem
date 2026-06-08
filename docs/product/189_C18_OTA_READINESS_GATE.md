@@ -2,7 +2,7 @@
 
 Rodada de proteção do OTA C18. Objetivo: permitir evolução rápida do wizard/core
 sem criar um caminho acidental para regredir o playback/hwdecode validado na
-golden atual `1t`.
+golden atual `1u`.
 
 ## Decisão
 
@@ -21,23 +21,23 @@ golden atual `1t`.
 
 | Item | Estado |
 | --- | --- |
-| Golden atual | `c18-hwdecode-lab-1t`, fonte canonica em `docs/evidence/c18-update-validation/current-golden.json` |
+| Golden atual | `c18-hwdecode-lab-1u`, fonte canonica em `docs/evidence/c18-update-validation/current-golden.json` |
 | OTA comum | somente `totem-core`, manual/operator-triggered |
-| Freeze publico | contrato repo HEAD: `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1t` ja gravada, o hardening de `kiosky-player reconcile` ainda nao esta embarcado/provado em hardware |
+| Freeze publico | `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1u`, o hardening de `kiosky-player reconcile` foi provado em hardware com `rc=44` |
 | M6 decisivo atual | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A; release gate atual aceitou em modo `decisive` |
-| Candidata offline pos-M6 | `c18-hwdecode-lab-1u`, evidencia `20260608T024500Z-1u-offline-build`, sha256 `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`; ainda nao e golden |
-| Proximo gate | gravar/validar a `1u` em HW para provar o delta repo HEAD (`kiosky-player reconcile rc=44`) sem regredir playback; depois power-loss fisico, soak/endurance e governanca server-side |
+| Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
+| Proximo gate | power-loss fisico/torn-write, soak/endurance e governanca server-side antes de qualquer caminho `stable`/producao |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
 
-## Golden atual (2026-06-05)
+## Golden atual (2026-06-08)
 
 Marco de referência para continuidade C18/delivery:
 
-- **Imagem gravável golden:** `c18-hwdecode-lab-1t`;
+- **Imagem gravável golden:** `c18-hwdecode-lab-1u`;
 - **Arquivo:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1t_minimal.img`;
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`;
 - **sha256:**
-  `7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6`;
+  `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
 - **Tamanho:** `1971322880` bytes;
 - **Estado:** golden de laboratorio/delivery, ainda `final_image=false` e nao
   `stable`/batch de producao;
@@ -50,15 +50,17 @@ Marco de referência para continuidade C18/delivery:
   `vo-configured=true`, `NRestarts=0`;
 - **Update posture:** OTA manual somente para `totem-core`; auto-pull desligado;
   `kiosky-player` e `player-runtime` bloqueados com `rc=44` ate thaw explicito.
-- **Evidencia hardware 1t:** `docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health/`,
-  com discriminadores pre/post boot, gate cold-boot `passed=true`, freeze
-  publico `rc=44`, reconcile de boot autorizado `rc=0` e deep-health
-  `passed=true` apos config real C18-safe.
+- **Evidencia hardware 1u cold-boot:**
+  `docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health/`,
+  com discriminadores pre/post boot, `boot_id_changed=true`,
+  `btime_changed=true`, config real escrita via handoff/writer, service ativo,
+  `NRestarts=0`, fallback `/opt`, freeze publico `rc=44` para
+  `player-runtime` e `kiosky-player`, e deep-health `passed=true`.
 
-Nota de escopo pos-M6: o contrato repo HEAD tambem congela
-`reconcile --component kiosky-player` com `rc=44`, mas esse hardening foi
-feito depois da evidencia hardware da `1t`; deve ser reprovado em placa na
-proxima imagem/coleta antes de ser citado como fato de hardware.
+Nota de escopo pos-M6: a `1u` prova em hardware o follow-up de governanca que
+faltava apos a `1t`: `reconcile --component kiosky-player` publico retorna
+`rc=44`. Isso nao abre thaw publico de `player-runtime` nem muda o canal de
+producao.
 
 Marco M6 decisivo atual: a evidencia
 `docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`
@@ -68,31 +70,14 @@ B adotada de `/data/player-runtime/current`, deep-health do candidato B e
 rollback para A real em `/data`. Esse marco nao abre thaw publico, publish
 GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
 
-Ou seja: para recovery/baseline validado de laboratorio, partir da imagem `1t`.
-Para o ensaio pos-M6 que valida o delta repo HEAD, gravar a candidata `1u`
-abaixo. Depois, se a validacao desejada for o marco mais recente de delivery,
-aplicar a release OTA de homologacao acima. Nao substituir a golden `1t` por
-uma imagem nova sem nova validacao offline + hardware + registro neste doc.
+Ou seja: para recovery/baseline validado de laboratorio, partir da imagem `1u`.
+A `1t` permanece como golden historica e como base do M6 decisivo A->B->A; a
+`1u` substitui a `1t` para delivery/lab porque embarca e prova o hardening
+pos-M6 de reconcile publico sem regredir playback.
 
-Imagem candidata pos-M6 para a proxima coleta hardware: `c18-hwdecode-lab-1u`.
-Ela foi derivada offline com identidade propria para tornar rastreavel o delta
-apos o M6 decisivo, mas ainda nao substitui a golden `1t`.
-
-- **Arquivo WSL:**
-  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`;
-- **Copia para gravacao:**
-  `/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`;
-- **SHA-256:** `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
-- **Evidencia offline:**
-  `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`;
-- **Nao-afirmacao:** ainda nao prova hardware playback, HDMI, `kiosky-player
-  reconcile` on-device, power-loss, soak, thaw publico, stable ou producao.
-
-Nota: `1k`, `1l`, `1m`, `1n`, `1o`, `1q`, `1r` e `1s` permanecem como golden
-historicas anteriores. A `1t` valida em hardware o follow-up pos-1s: boot-state
-auditavel, drop-in ordenado por `/data`, reconcile de boot autorizado,
-crash-boundary offline no caminho real de `player-runtime` e cold-boot com
-deep-health. O `player-runtime` continua congelado no fluxo publico (`rc=44`).
+Nota: `1k`, `1l`, `1m`, `1n`, `1o`, `1q`, `1r`, `1s` e `1t` permanecem como
+golden historicas anteriores. O `player-runtime` continua congelado no fluxo
+publico (`rc=44`).
 
 ## Promocao 1r (offline + hardware)
 
