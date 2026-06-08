@@ -283,6 +283,24 @@ def collect_health(args: argparse.Namespace, output_dir: Path, stdout_path: Path
     )
 
 
+def collect_health_atomic(args: argparse.Namespace, output_dir: Path, stdout_path: Path, env: dict[str, str]) -> dict[str, Any]:
+    if output_dir.exists():
+        raise RuntimeError(f"health_output_dir_already_exists:{output_dir}")
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    tmp_dir = output_dir.parent / f".{output_dir.name}.tmp-{os.getpid()}-{int(time.time() * 1000)}"
+    if tmp_dir.exists():
+        shutil.rmtree(tmp_dir)
+    try:
+        result = collect_health(args, tmp_dir, stdout_path, env)
+        wait_for_evidence_tree_stable(tmp_dir)
+        tmp_dir.rename(output_dir)
+        wait_for_evidence_tree_stable(output_dir)
+        return result
+    except Exception:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
+
+
 def evidence_tree_snapshot(root: Path) -> dict[str, tuple[int, int]]:
     snapshot: dict[str, tuple[int, int]] = {}
     for path in sorted(root.rglob("*")):
@@ -512,7 +530,7 @@ def phase_arm(args: argparse.Namespace) -> int:
         raise RuntimeError("service_restart_failed_after_apply_a")
     time.sleep(max(args.startup_wait_sec, 0.0))
     run_adoption(args, "data", version_a, data_dir / "service-before-apply" / "launcher-adoption.json", env)
-    collect_health(args, data_dir / "service-before-apply", raw_dir / "service-before-apply.json", env)
+    collect_health_atomic(args, data_dir / "service-before-apply", raw_dir / "service-before-apply.json", env)
 
     apply_b = run_lab_apply_with_service_held(args, args.manifest_b, args.payload_b, raw_dir / "apply-b", data_dir / "lab-apply.json", env)
     if apply_b.get("passed") is not True:
@@ -528,7 +546,7 @@ def phase_arm(args: argparse.Namespace) -> int:
         raise RuntimeError("service_restart_failed_after_apply_b")
     time.sleep(max(args.startup_wait_sec, 0.0))
     run_adoption(args, "data", version_b, data_dir / "service-after-restart" / "launcher-adoption.json", env)
-    collect_health(args, data_dir / "service-after-restart", raw_dir / "service-after-restart.json", env)
+    collect_health_atomic(args, data_dir / "service-after-restart", raw_dir / "service-after-restart.json", env)
     collect_pre_state(args, coldboot_dir / "pre-state-public.json", env)
     write_json(run_dir / "m6-run-state.json", {
         "schema": SCHEMA,
@@ -576,8 +594,7 @@ def phase_resume(args: argparse.Namespace) -> int:
     validate_package_repo_identity(manifest_b, repo_info, "manifest_b")
     collect_post_state(args, coldboot_dir / "pre-state-public.json", coldboot_dir / "boot-state-public.json", env)
     run_adoption(args, "data", version_b, coldboot_dir / "launcher-adoption.json", env)
-    collect_health(args, coldboot_dir / "service-after-coldboot", raw_dir / "service-after-coldboot.json", env)
-    wait_for_evidence_tree_stable(coldboot_dir / "service-after-coldboot")
+    collect_health_atomic(args, coldboot_dir / "service-after-coldboot", raw_dir / "service-after-coldboot.json", env)
     marker_link = cross_check_marker(data_dir, coldboot_dir, coldboot_dir / "launcher-adoption.json")
     write_json(coldboot_dir / "marker-link.json", marker_link)
     if marker_link["passed"] is not True:
@@ -612,8 +629,7 @@ def phase_resume(args: argparse.Namespace) -> int:
         raise RuntimeError("service_restart_failed_after_rollback")
     time.sleep(max(args.startup_wait_sec, 0.0))
     run_adoption(args, "data", version_a, data_dir / "service-after-rollback" / "launcher-adoption.json", env)
-    collect_health(args, data_dir / "service-after-rollback", raw_dir / "service-after-rollback.json", env)
-    wait_for_evidence_tree_stable(data_dir / "service-after-rollback")
+    collect_health_atomic(args, data_dir / "service-after-rollback", raw_dir / "service-after-rollback.json", env)
     reconcile = run_lab_reconcile(args, raw_dir / "reconcile", run_dir / "lab-reconcile.json", env)
     if reconcile.get("passed") is not True:
         raise RuntimeError("m6_reconcile_failed")

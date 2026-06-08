@@ -1280,12 +1280,16 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("package_manifest_missing_player_runtime_updater_feature", m6_trial)
         self.assertIn("package_manifest_unsupported_updater_features", m6_trial)
         self.assertIn("def wait_for_evidence_tree_stable", m6_trial)
+        self.assertIn("def collect_health_atomic", m6_trial)
+        self.assertIn("health_output_dir_already_exists", m6_trial)
+        self.assertIn(".tmp-", m6_trial)
+        self.assertIn("tmp_dir.rename(output_dir)", m6_trial)
         self.assertLess(
-            m6_trial.index('wait_for_evidence_tree_stable(coldboot_dir / "service-after-coldboot")'),
+            m6_trial.index('collect_health_atomic(args, coldboot_dir / "service-after-coldboot"'),
             m6_trial.index("write_coldboot_manifest(coldboot_dir"),
         )
         self.assertLess(
-            m6_trial.index('wait_for_evidence_tree_stable(data_dir / "service-after-rollback")'),
+            m6_trial.index('collect_health_atomic(args, data_dir / "service-after-rollback"'),
             m6_trial.index("write_evidence_manifest("),
         )
 

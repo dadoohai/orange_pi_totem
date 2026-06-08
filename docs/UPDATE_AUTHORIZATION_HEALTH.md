@@ -372,6 +372,11 @@ Follow-up repo-side apos a promocao da `1t`:
   tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
   provando processo em execucao, marker valido e hash do `kiosk.py` rodando
   batendo com o marker;
+- os subdiretorios de deep-health do M6 devem ser escritos primeiro em um
+  diretorio temporario local ao evidence-root e promovidos por rename somente
+  depois de o coletor terminar e a arvore estabilizar. Se o diretorio final ja
+  existir, a rodada deve falhar fechado. Isso evita assinar manifestos sobre
+  amostras ainda em escrita ou sobre uma rodada concorrente/reusada;
 - o updater tem fault-injection offline no caminho real de apply/rollback de
   `player-runtime`; isso prova fronteiras de crash em codigo real, mas ainda
   nao e prova fisica de corte de energia;
