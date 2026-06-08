@@ -1,0 +1,78 @@
+{
+  "artifact_scope": "player-runtime-data-coldboot-lab-trial",
+  "artifacts": [
+    {
+      "bytes": 3491,
+      "file": "boot-state-public.json",
+      "sha256": "bf84cc6f2bac64e1e629ace44cdc1d72b002e812da0941ca51e01a77fbf283e9"
+    },
+    {
+      "bytes": 1236,
+      "file": "launcher-adoption.json",
+      "sha256": "5b9d80e5e1d10bf4300e7afc4ce7417aefd9812c525650caaaeed314853a81ec"
+    },
+    {
+      "bytes": 843,
+      "file": "marker-link.json",
+      "sha256": "25a59ac8b2d9941ee3d42dbd42ccf4148191dfcd287fefccf117a690d60e0535"
+    },
+    {
+      "bytes": 162,
+      "file": "post-state-collect.json",
+      "sha256": "07ffc8c27897f0d1219d999227a6e8b46496ee8e7652bc952e971014ca47ff4f"
+    },
+    {
+      "bytes": 165,
+      "file": "pre-state-collect.json",
+      "sha256": "85c25d8bdac1f3599fd74f9d2ce7b539d3b87acc7e2cc1dc4eb6368f50744bc8"
+    },
+    {
+      "bytes": 2779,
+      "file": "pre-state-public.json",
+      "sha256": "18d3df80c627b175c13934fbc3b983f80b9e794fa4d7082bb3d7eac435d174e8"
+    },
+    {
+      "bytes": 73,
+      "file": "service-after-coldboot/deep-health-kernel.json",
+      "sha256": "8fd51bce6f52698c9990d002c4177b0b38a5eaf6395dfade280724fa73849274"
+    },
+    {
+      "bytes": 49,
+      "file": "service-after-coldboot/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "service-after-coldboot/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 115,
+      "file": "service-after-coldboot/deep-health-systemd.json",
+      "sha256": "ba4a42d7d8f76bd626b4a725e09d9030c0b7b89116bbc46e8f0cae58d8dfe92b"
+    },
+    {
+      "bytes": 2440,
+      "file": "service-after-coldboot/playback-deep-health-public.json",
+      "sha256": "a0ea7c562925af61fa8e74b66dcba175451ff7a6865ce4cf887a9e4234d73bbe"
+    },
+    {
+      "bytes": 57836,
+      "file": "service-after-coldboot/playback-samples.tsv",
+      "sha256": "eda5a6b20fb0a00bc19ac55e067cbc15ad31744374763f6f94b29c58436c27eb"
+    },
+    {
+      "bytes": 23806,
+      "file": "service-after-coldboot/status-samples.ndjson",
+      "sha256": "35e57ae4bb07c7c24c0b51ef0861704537b523047a1a7288febcb89a7ddc80f2"
+    }
+  ],
+  "component": "player-runtime",
+  "repo_commit": "ac59f7f1fe887fe694fe41e5c0896ef2ecf63ca2",
+  "repo_dirty": false,
+  "repo_exact_tag": null,
+  "repo_tree": "6e6d4654fe91e601af1c6a45b97307b1948f3617",
+  "schema": "dadooh.c18.coldboot_data_evidence_manifest.v1",
+  "source_commit": "ac59f7f1fe887fe694fe41e5c0896ef2ecf63ca2",
+  "version": "c18.player-runtime-m6-b-20260608T011301Z-m6-ac59f7f-retry1"
+}

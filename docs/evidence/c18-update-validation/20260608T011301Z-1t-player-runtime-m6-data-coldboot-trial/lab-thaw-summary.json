@@ -1,0 +1,18 @@
+{
+  "evidence_root": "/data/state/c18-m6/20260608T011301Z-m6-ac59f7f-retry1",
+  "final_authorization": true,
+  "github_used": false,
+  "image_marker_sha256": "e2f927e173c12aa6637ca78db89675c9eedbf19649613824d8f994c775f4cf6d",
+  "image_sha256": "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6",
+  "image_tag": "c18-hwdecode-lab-1t",
+  "m6_passed": true,
+  "passed": true,
+  "phase": "resume",
+  "public_cli_thawed": false,
+  "release_gate_deferred": false,
+  "requires_real_reboot": false,
+  "schema": "dadooh.c18.player_runtime.lab_thaw.v1",
+  "stable_allowed": false,
+  "version_a": "c18.player-runtime-m6-a-20260608T011301Z-m6-ac59f7f-retry1",
+  "version_b": "c18.player-runtime-m6-b-20260608T011301Z-m6-ac59f7f-retry1"
+}
