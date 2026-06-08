@@ -4,20 +4,22 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 ## Estado C18 OTA
 
-Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1t` (C18 HW decode +
+Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1u` (C18 HW decode +
 OTA `totem-core` validado end-to-end + fundação segura para thaw futuro de
-`player-runtime`, com boot reconcile ordenado por `/data`, boot-state auditavel
-e crash-boundary offline no caminho real de `player-runtime`). O OTA C18 comum é
+`player-runtime`, com boot reconcile ordenado por `/data`, boot-state auditavel,
+crash-boundary offline no caminho real de `player-runtime` e hardening pos-M6 de
+`kiosky-player reconcile` validado em hardware). O OTA C18 comum é
 manual/operator-triggered e restrito a
 `totem-core`; `kiosky-player`, `player-runtime`, launcher do player,
 MPV/hwdecode, display, kernel, systemd e updater ficam fora desse fluxo e
 exigem imagem/homologação ou um pacote C18-aware explicitamente aprovado.
 
 Evidencia hardware da golden atual:
-`docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health/`.
-Ela promove a imagem `1t`, mas nao valida thaw publico de `player-runtime`,
-adocao de release `/data`, power-loss fisico, auto-pull, stable/producao ou
-soak.
+`docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health/`.
+Ela promove a imagem `1u` como golden lab/delivery e valida o baseline/fallback
+da imagem com config real, freeze publico e deep-health em hardware. Nao valida
+thaw publico de `player-runtime`, adocao de release `/data`, power-loss fisico,
+auto-pull, stable/producao ou soak.
 
 Primeiro trial lab-only persistente de `player-runtime` em `/data`:
 `docs/evidence/c18-update-validation/20260605T052805Z-1r-player-runtime-data-trial/`.
@@ -33,21 +35,24 @@ real de B pelo servico, deep-health, rollback com quarentena de B e retorno para
 A como `previous` real em `/data`. Ainda nao e thaw publico, GitHub publish,
 auto-pull, stable/producao, cold-boot/power-loss ou soak.
 
-M6 decisivo lab-only de `player-runtime` em `/data`:
+M6 lab-only histórico de `player-runtime` em `/data`:
 `docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`.
 Ele prova A->B->A em `/data` com reboot controlado, B adotada de
 `/data/player-runtime/current`, marker verificado, deep-health do candidato B
-apos cold-boot e rollback para A real em `/data`. O release gate atual aceita
-essa evidencia em modo `decisive`. Ainda nao e thaw publico, GitHub publish,
-auto-pull, stable/producao, power-loss fisico ou soak.
+apos cold-boot e rollback para A real em `/data`, sob a golden `1t` usada na
+captura. Apos o bump para golden `1u`, essa evidencia fica image-pinned a `1t`
+e nao e autorizacao `decisive` atual; um M6 re-rodado contra a golden corrente
+e o caminho para uma autorizacao decisiva viva. Ainda nao e thaw publico,
+GitHub publish, auto-pull, stable/producao, power-loss fisico ou soak.
 
-Candidata pos-M6 para proxima validacao hardware: `c18-hwdecode-lab-1u`.
+Golden pos-M6 validada em hardware: `c18-hwdecode-lab-1u`.
 Evidencia offline:
 `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`.
 Imagem para gravacao:
 `/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`
 (`sha256=57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`).
-Ela ainda nao substitui a golden `1t`; precisa ser gravada e validada em placa.
+Ela substitui a `1t` como golden de laboratorio/delivery. A `1t` permanece
+historica e como a imagem na qual o marco M6 A->B->A foi capturado.
 
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:

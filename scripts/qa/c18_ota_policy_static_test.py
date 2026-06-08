@@ -82,6 +82,13 @@ EVIDENCE_CURRENT_PLAYER_RUNTIME_M6_TRIAL_DIR = (
     / "c18-update-validation"
     / "20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial"
 )
+EVIDENCE_1T_PLAYER_RUNTIME_M6_RETRY_DIR = (
+    REPO_ROOT
+    / "docs"
+    / "evidence"
+    / "c18-update-validation"
+    / "20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial"
+)
 EVIDENCE_1U_OFFLINE_BUILD_DIR = (
     REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260608T024500Z-1u-offline-build"
 )
@@ -328,9 +335,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         for path in (README_PATH, UPDATE_AUTHORIZATION_HEALTH_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
             text = path.read_text(encoding="utf-8")
             self.assertIn(current_tag, text)
+        readme = README_PATH.read_text(encoding="utf-8")
+        self.assertRegex(
+            readme,
+            rf"Baseline atual de laborat.rio/delivery: `{re.escape(current_tag)}`",
+        )
+        self.assertNotIn("Ela ainda nao substitui a golden `1t`", readme)
+        self.assertNotIn("O release gate atual aceita", readme)
+        self.assertIn("nao e autorizacao `decisive` atual", readme)
         for path in (UPDATE_AUTHORIZATION_HEALTH_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
             text = path.read_text(encoding="utf-8")
             self.assertIn(current_sha, text)
+        doc189 = DOC189_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("M6 decisivo atual", doc189)
+        self.assertNotIn("release gate atual aceitou", doc189)
+        self.assertIn(f"gate atual e image-pinned a `{current_tag[-2:]}`", doc189)
+        latest_m6_readme = (EVIDENCE_1T_PLAYER_RUNTIME_M6_RETRY_DIR / "README.md").read_text(encoding="utf-8")
+        latest_m6_readme_words = " ".join(latest_m6_readme.split())
+        self.assertNotIn("Result: passed under the current C18 OTA release gate", latest_m6_readme)
+        self.assertIn("must not be reused as current decisive authorization", latest_m6_readme_words)
         index = DOC_INDEX_PATH.read_text(encoding="utf-8")
         self.assertIn("docs/product/189_C18_OTA_READINESS_GATE.md", index)
         self.assertIn("baseline live continua em `189`", index)

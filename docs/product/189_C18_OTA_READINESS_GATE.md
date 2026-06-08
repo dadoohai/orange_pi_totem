@@ -24,7 +24,7 @@ golden atual `1u`.
 | Golden atual | `c18-hwdecode-lab-1u`, fonte canonica em `docs/evidence/c18-update-validation/current-golden.json` |
 | OTA comum | somente `totem-core`, manual/operator-triggered |
 | Freeze publico | `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1u`, o hardening de `kiosky-player reconcile` foi provado em hardware com `rc=44` |
-| M6 decisivo atual | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A; release gate atual aceitou em modo `decisive` |
+| M6 `/data` historico | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A sob golden `1t`; apos o bump para `1u`, nao e autorizacao `decisive` atual |
 | Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
 | Proximo gate | power-loss fisico/torn-write, soak/endurance e governanca server-side antes de qualquer caminho `stable`/producao |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
@@ -62,13 +62,16 @@ faltava apos a `1t`: `reconcile --component kiosky-player` publico retorna
 `rc=44`. Isso nao abre thaw publico de `player-runtime` nem muda o canal de
 producao.
 
-Marco M6 decisivo atual: a evidencia
+Marco M6 historico de `/data`: a evidencia
 `docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`
-foi aceita pelo release gate em modo `decisive` sob o contrato atual. Ela prova
-o fluxo lab-only A->B->A de `player-runtime` em `/data`, com reboot controlado,
-B adotada de `/data/player-runtime/current`, deep-health do candidato B e
-rollback para A real em `/data`. Esse marco nao abre thaw publico, publish
-GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
+foi aceita pelo release gate em modo `decisive` na rodada em que a golden era
+`1t`. Ela prova o fluxo lab-only A->B->A de `player-runtime` em `/data`, com
+reboot controlado, B adotada de `/data/player-runtime/current`, deep-health do
+candidato B e rollback para A real em `/data`. Apos o bump para golden `1u`, o
+gate atual e image-pinned a `1u` e rejeita essa evidencia `1t` como autorizacao
+`decisive` corrente; um M6 re-rodado contra a golden atual e o caminho para
+restaurar uma autorizacao decisiva viva. Esse marco nao abre thaw publico,
+publish GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
 
 Ou seja: para recovery/baseline validado de laboratorio, partir da imagem `1u`.
 A `1t` permanece como golden historica e como base do M6 decisivo A->B->A; a
@@ -335,7 +338,7 @@ laboratorio/delivery:
   `/data/player-runtime/current` verificado, corte de energia fisico durante
   apply/rollback, thaw publico, auto-pull, stable/producao e soak.
 
-Nota pos-auditoria: a `1t` segue golden de laboratorio, mas a evidencia
+Nota pos-auditoria: a `1t` segue como golden historica de laboratorio, mas a evidencia
 cold-boot da `1t` prova consistencia interna dos discriminadores e nao
 autenticidade criptografica. Para o proximo trial `/data`, o repo agora exige um
 handoff mais forte: `pre-state-public.json` mecanico antes do reboot,
