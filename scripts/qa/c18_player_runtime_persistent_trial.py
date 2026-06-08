@@ -69,7 +69,7 @@ def git_value(args: list[str]) -> str | None:
         return None
     if proc.returncode != 0:
         return None
-    return proc.stdout.strip() or None
+    return proc.stdout.strip()
 
 
 def repo_identity() -> dict[str, Any]:

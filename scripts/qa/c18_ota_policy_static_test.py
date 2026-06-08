@@ -1283,6 +1283,33 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "unsupported_updater_features"):
                 module.package_manifest(package_path)
 
+    def test_persistent_trial_repo_identity_treats_empty_git_status_as_clean(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "c18_persistent_trial_repo_identity_test",
+            PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH,
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+
+        def fake_git_value(args: list[str]) -> str | None:
+            mapping = {
+                ("rev-parse", "HEAD"): "a" * 40,
+                ("rev-parse", "HEAD^{tree}"): "b" * 40,
+                ("status", "--porcelain", "--untracked-files=normal"): "",
+                ("describe", "--tags", "--exact-match", "HEAD"): None,
+            }
+            return mapping[tuple(args)]
+
+        module.git_value = fake_git_value
+        repo_info = module.repo_identity()
+        self.assertEqual(repo_info["repo_commit"], "a" * 40)
+        self.assertEqual(repo_info["repo_tree"], "b" * 40)
+        self.assertFalse(repo_info["repo_dirty"])
+        self.assertIsNone(repo_info["repo_exact_tag"])
+
     def test_lab_thaw_wrapper_rejects_unguarded_and_bad_manifests(self) -> None:
         spec = importlib.util.spec_from_file_location("c18_lab_thaw_policy_test", PLAYER_RUNTIME_LAB_THAW_PATH)
         self.assertIsNotNone(spec)
