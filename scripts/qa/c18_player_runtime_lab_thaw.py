@@ -112,8 +112,6 @@ def current_golden_defaults(args: argparse.Namespace) -> tuple[str, str, Path]:
 def require_lab_guard(args: argparse.Namespace) -> None:
     if not args.lab_only_thaw or os.environ.get(LAB_ENV) != "1":
         raise RuntimeError(f"lab_thaw_guard_required:set {LAB_ENV}=1 and pass --lab-only-thaw")
-    if args.phase == "resume" and args.defer_release_gate:
-        raise RuntimeError("lab_thaw_resume_requires_release_gate")
     touches_device_data = path_is_under(args.data_root, Path("/data")) or path_is_under(args.evidence_root, Path("/data"))
     if touches_device_data and (
         not args.allow_device_data_root or os.environ.get(DEVICE_DATA_ENV) != "1"
@@ -192,7 +190,14 @@ def run_m6(args: argparse.Namespace, image_tag: str, image_sha256: str, marker_f
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"m6_json_failed rc={proc.returncode} stderr_tail={proc.stderr[-800:]}") from exc
     write_json(args.evidence_root / f"lab-thaw-{args.phase}.json", data)
-    if proc.returncode != 0:
+    deferred_resume = (
+        args.phase == "resume"
+        and args.defer_release_gate
+        and data.get("m6_checks_passed") is True
+        and data.get("release_gate_deferred") is True
+        and data.get("passed") is False
+    )
+    if proc.returncode != 0 and not deferred_resume:
         raise RuntimeError(f"m6_failed rc={proc.returncode} phase={args.phase} stderr_tail={proc.stderr[-800:]}")
     return data
 
@@ -234,7 +239,11 @@ def main(argv: list[str]) -> int:
         if args.phase == "arm":
             manifest_a, manifest_b = validate_arm_inputs(args)
         result = run_m6(args, image_tag, image_sha256, marker_file)
-        m6_passed = result.get("passed") is True
+        m6_passed = result.get("passed") is True or (
+            args.phase == "resume"
+            and bool(result.get("release_gate_deferred"))
+            and result.get("m6_checks_passed") is True
+        )
         final_authorization = (
             args.phase == "resume"
             and m6_passed

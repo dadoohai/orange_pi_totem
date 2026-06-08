@@ -1301,9 +1301,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("manifest_missing_player_runtime_verify_then_promote_feature", lab_thaw)
         self.assertIn("manifest_unsupported_updater_features", lab_thaw)
         self.assertIn("release_gate_deferred", lab_thaw)
+        self.assertIn("deferred_resume", lab_thaw)
+        self.assertIn('result.get("m6_checks_passed") is True', lab_thaw)
         self.assertIn('"public_cli_thawed": False', lab_thaw)
         self.assertIn('"github_used": False', lab_thaw)
         self.assertIn('"stable_allowed": False', lab_thaw)
+        self.assertIn('"final_authorization": final_authorization', lab_thaw)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)

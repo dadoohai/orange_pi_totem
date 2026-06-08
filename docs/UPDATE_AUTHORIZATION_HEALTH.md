@@ -368,6 +368,11 @@ Follow-up repo-side apos a promocao da `1t`:
   `--player-runtime-data-evidence-dir` sao obrigatorios, os gates rodam com
   `/data`, pre-state e imagem golden pinada, e o release gate cruza
   version/tree/kiosk do marker entre a evidencia warm e a cold-boot;
+- em placa minima sem `git`, a fase `resume` do wrapper pode usar
+  `--defer-release-gate`: isso permite concluir os checks M6 no board, mas
+  continua `final_authorization=false` ate a evidencia ser copiada e o
+  `c18_ota_release_gate.py --player-runtime-evidence-mode decisive` passar no
+  host em arvore limpa;
 - quando a evidencia reivindicar `/data` como fonte adotada pelo servico, ela
   tambem precisa incluir `launcher-adoption.json` do probe de adocao real,
   provando processo em execucao, marker valido e hash do `kiosk.py` rodando
