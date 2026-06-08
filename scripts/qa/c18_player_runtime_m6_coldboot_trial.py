@@ -208,6 +208,7 @@ def run_lab_apply(args: argparse.Namespace,
                   output_dir: Path,
                   stdout_path: Path,
                   env: dict[str, str]) -> dict[str, Any]:
+    duration_sec = args.candidate_duration_sec if args.candidate_duration_sec is not None else args.duration_sec
     return run_json(
         [
             sys.executable,
@@ -225,7 +226,7 @@ def run_lab_apply(args: argparse.Namespace,
             "--output-dir",
             str(output_dir),
             "--duration-sec",
-            str(args.duration_sec),
+            str(duration_sec),
             "--interval-sec",
             str(args.interval_sec),
             "--startup-wait-sec",
@@ -305,12 +306,13 @@ def run_adoption(args: argparse.Namespace,
 
 
 def collect_health(args: argparse.Namespace, output_dir: Path, stdout_path: Path, env: dict[str, str]) -> dict[str, Any]:
+    duration_sec = args.service_duration_sec if args.service_duration_sec is not None else args.duration_sec
     return run_json(
         [
             sys.executable,
             str(BOARD_DIR / "c18_playback_health_collect.py"),
             "--duration-sec",
-            str(args.duration_sec),
+            str(duration_sec),
             "--interval-sec",
             str(args.interval_sec),
             "--output-dir",
@@ -821,6 +823,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--mechanical-action", default=MECHANICAL_ACTION)
     parser.add_argument("--defer-release-gate", action="store_true")
     parser.add_argument("--duration-sec", type=float, default=45.0)
+    parser.add_argument("--candidate-duration-sec", type=float)
+    parser.add_argument("--service-duration-sec", type=float)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=8.0)
     parser.add_argument("--json", action="store_true")

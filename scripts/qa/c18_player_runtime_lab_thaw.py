@@ -165,6 +165,10 @@ def run_m6(args: argparse.Namespace, image_tag: str, image_sha256: str, marker_f
     ]
     if args.repo_identity_file is not None:
         cmd.extend(["--repo-identity-file", str(args.repo_identity_file)])
+    if args.candidate_duration_sec is not None:
+        cmd.extend(["--candidate-duration-sec", str(args.candidate_duration_sec)])
+    if args.service_duration_sec is not None:
+        cmd.extend(["--service-duration-sec", str(args.service_duration_sec)])
     if args.defer_release_gate:
         cmd.append("--defer-release-gate")
     if args.phase == "arm":
@@ -221,6 +225,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--mechanical-action", default="operator_controlled_reboot")
     parser.add_argument("--defer-release-gate", action="store_true")
     parser.add_argument("--duration-sec", type=float, default=45.0)
+    parser.add_argument("--candidate-duration-sec", type=float)
+    parser.add_argument("--service-duration-sec", type=float)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=8.0)
     parser.add_argument("--json", action="store_true")
