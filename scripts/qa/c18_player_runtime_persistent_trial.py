@@ -106,6 +106,13 @@ def run_json(cmd: list[str],
         env=env,
         timeout=timeout,
     )
+    if stdout_path is not None and proc.stdout:
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict):
+            write_json(stdout_path, data)
     if proc.returncode != 0:
         raise RuntimeError(f"command_failed rc={proc.returncode} cmd={cmd[0]} stderr_tail={proc.stderr[-400:]}")
     try:

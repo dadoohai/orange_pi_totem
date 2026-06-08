@@ -125,6 +125,7 @@ REQUIRED_HEALTH_CHECKS = (
     "mpv_restart_zero",
     "panfrost_faults_present",
     "panfrost_faults_zero",
+    "panfrost_faults_delta_zero",
     "mmc_timeout_reset_present",
     "mmc_timeout_reset_zero",
     "ext4_errors_present",

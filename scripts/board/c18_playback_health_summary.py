@@ -271,10 +271,17 @@ def evaluate(
     mpv_path_ok = mpv_path in EXPECTED_MPV_PATHS
     panfrost_faults_present = "panfrost_faults" in kernel
     panfrost_faults = as_int(kernel.get("panfrost_faults"))
+    panfrost_faults_start = as_int(kernel.get("panfrost_faults_start"))
+    panfrost_faults_delta_present = "panfrost_faults_delta" in kernel
+    panfrost_faults_delta = as_int(kernel.get("panfrost_faults_delta"))
     mmc_timeout_reset_present = "mmc_timeout_reset" in kernel
     mmc_timeout_reset = as_int(kernel.get("mmc_timeout_reset"))
+    mmc_timeout_reset_start = as_int(kernel.get("mmc_timeout_reset_start"))
+    mmc_timeout_reset_delta = as_int(kernel.get("mmc_timeout_reset_delta"))
     ext4_errors_present = "ext4_errors" in kernel
     ext4_errors = as_int(kernel.get("ext4_errors"))
+    ext4_errors_start = as_int(kernel.get("ext4_errors_start"))
+    ext4_errors_delta = as_int(kernel.get("ext4_errors_delta"))
     media_load_failed_present = "media_load_failed" in player_counters
     media_load_failed = as_int(player_counters.get("media_load_failed"))
     mpv_restart_present = "mpv_restart" in player_counters
@@ -343,6 +350,7 @@ def evaluate(
         "mpv_restart_zero": mpv_restart == 0,
         "panfrost_faults_present": panfrost_faults_present,
         "panfrost_faults_zero": panfrost_faults == 0,
+        "panfrost_faults_delta_zero": not panfrost_faults_delta_present or panfrost_faults_delta == 0,
         "mmc_timeout_reset_present": mmc_timeout_reset_present,
         "mmc_timeout_reset_zero": mmc_timeout_reset == 0,
         "ext4_errors_present": ext4_errors_present,
@@ -388,9 +396,15 @@ def evaluate(
             "total_mpv_count": total_mpv_count,
             "media_load_failed": media_load_failed,
             "mpv_restart": mpv_restart,
+            "panfrost_faults_start": panfrost_faults_start,
             "panfrost_faults": panfrost_faults,
+            "panfrost_faults_delta": panfrost_faults_delta,
+            "mmc_timeout_reset_start": mmc_timeout_reset_start,
             "mmc_timeout_reset": mmc_timeout_reset,
+            "mmc_timeout_reset_delta": mmc_timeout_reset_delta,
+            "ext4_errors_start": ext4_errors_start,
             "ext4_errors": ext4_errors,
+            "ext4_errors_delta": ext4_errors_delta,
         },
     }
 

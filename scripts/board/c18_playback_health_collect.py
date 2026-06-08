@@ -450,13 +450,42 @@ def write_process_sidecar(out_dir: Path, app_user: str, process_ipc_path: Path |
     })
 
 
-def write_kernel_sidecar(out_dir: Path) -> None:
+def kernel_event_counts() -> dict[str, int]:
     kernel_text = run(["journalctl", "-k", "-b", "--no-pager", "--output=cat"]).stdout
-    write_json(out_dir / "deep-health-kernel.json", {
+    return {
         "panfrost_faults": len(re.findall(r"panfrost.*(fault|hang|reset|error)", kernel_text, re.I)),
         "mmc_timeout_reset": len(re.findall(r"mmc.*(timeout|timed out|reset|I/O error)", kernel_text, re.I)),
         "ext4_errors": len(re.findall(r"EXT4-fs error|Aborting journal|Remounting filesystem read-only", kernel_text, re.I)),
-    })
+    }
+
+
+def kernel_boot_id() -> str:
+    try:
+        return Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+def uptime_sec() -> float:
+    try:
+        return float(Path("/proc/uptime").read_text(encoding="utf-8").split()[0])
+    except Exception:
+        return 0.0
+
+
+def write_kernel_sidecar(out_dir: Path, start_counts: dict[str, int], start_uptime_sec: float) -> None:
+    end_counts = kernel_event_counts()
+    payload: dict[str, Any] = {
+        **end_counts,
+        "boot_id_present": bool(kernel_boot_id()),
+        "uptime_start_sec": round(start_uptime_sec, 3),
+        "uptime_end_sec": round(uptime_sec(), 3),
+    }
+    for key, end_value in end_counts.items():
+        start_value = int(start_counts.get(key, 0))
+        payload[f"{key}_start"] = start_value
+        payload[f"{key}_delta"] = max(int(end_value) - start_value, 0)
+    write_json(out_dir / "deep-health-kernel.json", payload)
 
 
 def count_player_log_counters(mpv_log: Path, generation_dir: Path) -> dict[str, int]:
@@ -532,6 +561,8 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
         process_ipc_path = ipc_path
 
     nrestarts_start = service_nrestarts(args.service) if args.target_mode == "service" else 0
+    kernel_start_counts = kernel_event_counts()
+    kernel_start_uptime_sec = uptime_sec()
     collect_samples(
         out_dir,
         config_path=args.config,
@@ -548,7 +579,7 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
         candidate_pid=args.candidate_pid,
     )
     write_process_sidecar(out_dir, args.app_user, process_ipc_path)
-    write_kernel_sidecar(out_dir)
+    write_kernel_sidecar(out_dir, kernel_start_counts, kernel_start_uptime_sec)
     write_player_counter_sidecar(out_dir, args.mpv_log, args.mpv_generation_dir)
     result = evaluate_artifacts(out_dir, out_dir.name)
     write_json(out_dir / "playback-deep-health-public.json", result)

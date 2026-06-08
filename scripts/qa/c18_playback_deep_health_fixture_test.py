@@ -344,6 +344,13 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertIn("mmc_timeout_reset_zero", result["failure_reasons"])
         self.assertIn("ext4_errors_zero", result["failure_reasons"])
 
+    def test_rejects_panfrost_fault_delta(self) -> None:
+        fixture = self.with_case()
+        fixture.mutate_json("kernel.json", panfrost_faults=0, panfrost_faults_start=0, panfrost_faults_delta=1)
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertIn("panfrost_faults_delta_zero", result["failure_reasons"])
+
     def test_rejects_missing_ext4_counter(self) -> None:
         fixture = self.with_case()
         kernel = fixture.read_json("kernel.json")

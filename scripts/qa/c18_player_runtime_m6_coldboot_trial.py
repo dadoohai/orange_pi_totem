@@ -350,6 +350,7 @@ def collect_health_atomic(args: argparse.Namespace, output_dir: Path, stdout_pat
         wait_for_evidence_tree_stable(output_dir)
         return result
     except Exception:
+        preserve_failed_health_tree(tmp_dir, output_dir)
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
 
@@ -374,6 +375,24 @@ def wait_for_evidence_tree_stable(root: Path, *, settle_sec: float = 0.75, attem
             return
         previous = current
     raise RuntimeError(f"evidence_tree_not_stable:{root}")
+
+
+def preserve_failed_health_tree(tmp_dir: Path, output_dir: Path) -> None:
+    if not tmp_dir.exists():
+        return
+    files = [path for path in sorted(tmp_dir.rglob("*")) if path.is_file()]
+    if not files:
+        return
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for path in files:
+        rel = path.relative_to(tmp_dir)
+        dst = output_dir / rel
+        if dst.exists():
+            failed_dir = output_dir.parent / f".{output_dir.name}.failed-{os.getpid()}-{int(time.time() * 1000)}"
+            tmp_dir.rename(failed_dir)
+            return
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        path.rename(dst)
 
 
 def collect_pre_state(args: argparse.Namespace, output: Path, env: dict[str, str]) -> dict[str, Any]:
