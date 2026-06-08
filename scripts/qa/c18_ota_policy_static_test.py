@@ -1279,6 +1279,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"passed": release_gate.get("passed") is True', m6_trial)
         self.assertIn("package_manifest_missing_player_runtime_updater_feature", m6_trial)
         self.assertIn("package_manifest_unsupported_updater_features", m6_trial)
+        self.assertIn("def wait_for_evidence_tree_stable", m6_trial)
+        self.assertLess(
+            m6_trial.index('wait_for_evidence_tree_stable(coldboot_dir / "service-after-coldboot")'),
+            m6_trial.index("write_coldboot_manifest(coldboot_dir"),
+        )
+        self.assertLess(
+            m6_trial.index('wait_for_evidence_tree_stable(data_dir / "service-after-rollback")'),
+            m6_trial.index("write_evidence_manifest("),
+        )
 
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)

@@ -283,6 +283,28 @@ def collect_health(args: argparse.Namespace, output_dir: Path, stdout_path: Path
     )
 
 
+def evidence_tree_snapshot(root: Path) -> dict[str, tuple[int, int]]:
+    snapshot: dict[str, tuple[int, int]] = {}
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root).as_posix()
+        stat = path.stat()
+        snapshot[rel] = (stat.st_size, stat.st_mtime_ns)
+    return snapshot
+
+
+def wait_for_evidence_tree_stable(root: Path, *, settle_sec: float = 0.75, attempts: int = 8) -> None:
+    previous = evidence_tree_snapshot(root)
+    for _ in range(attempts):
+        time.sleep(settle_sec)
+        current = evidence_tree_snapshot(root)
+        if current == previous:
+            return
+        previous = current
+    raise RuntimeError(f"evidence_tree_not_stable:{root}")
+
+
 def collect_pre_state(args: argparse.Namespace, output: Path, env: dict[str, str]) -> dict[str, Any]:
     return run_json(
         [
@@ -555,10 +577,12 @@ def phase_resume(args: argparse.Namespace) -> int:
     collect_post_state(args, coldboot_dir / "pre-state-public.json", coldboot_dir / "boot-state-public.json", env)
     run_adoption(args, "data", version_b, coldboot_dir / "launcher-adoption.json", env)
     collect_health(args, coldboot_dir / "service-after-coldboot", raw_dir / "service-after-coldboot.json", env)
+    wait_for_evidence_tree_stable(coldboot_dir / "service-after-coldboot")
     marker_link = cross_check_marker(data_dir, coldboot_dir, coldboot_dir / "launcher-adoption.json")
     write_json(coldboot_dir / "marker-link.json", marker_link)
     if marker_link["passed"] is not True:
         raise RuntimeError("m6_marker_link_failed")
+    wait_for_evidence_tree_stable(coldboot_dir)
     write_coldboot_manifest(coldboot_dir, package_manifest_b=manifest_b, repo_info=repo_info)
     coldboot_gate = run_json(
         [
@@ -589,10 +613,12 @@ def phase_resume(args: argparse.Namespace) -> int:
     time.sleep(max(args.startup_wait_sec, 0.0))
     run_adoption(args, "data", version_a, data_dir / "service-after-rollback" / "launcher-adoption.json", env)
     collect_health(args, data_dir / "service-after-rollback", raw_dir / "service-after-rollback.json", env)
+    wait_for_evidence_tree_stable(data_dir / "service-after-rollback")
     reconcile = run_lab_reconcile(args, raw_dir / "reconcile", run_dir / "lab-reconcile.json", env)
     if reconcile.get("passed") is not True:
         raise RuntimeError("m6_reconcile_failed")
     write_trial_readme(data_dir, version_b=version_b)
+    wait_for_evidence_tree_stable(data_dir)
     write_evidence_manifest(
         data_dir,
         package_manifest=manifest_b,
