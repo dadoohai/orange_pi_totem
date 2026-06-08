@@ -1286,9 +1286,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("package_manifest_unsupported_updater_features", m6_trial)
         self.assertIn("def wait_for_evidence_tree_stable", m6_trial)
         self.assertIn("def collect_health_atomic", m6_trial)
+        self.assertIn("ALLOWED_EXISTING_HEALTH_DIR_FILES", m6_trial)
+        self.assertIn('"launcher-adoption.json"', m6_trial)
         self.assertIn("health_output_dir_already_exists", m6_trial)
+        self.assertIn("health_output_file_already_exists", m6_trial)
         self.assertIn(".tmp-", m6_trial)
-        self.assertIn("tmp_dir.rename(output_dir)", m6_trial)
+        self.assertIn("path.rename(dst)", m6_trial)
         self.assertIn("class M6RunLock", m6_trial)
         self.assertIn("fcntl.flock", m6_trial)
         self.assertLess(

@@ -379,9 +379,11 @@ Follow-up repo-side apos a promocao da `1t`:
   batendo com o marker;
 - os subdiretorios de deep-health do M6 devem ser escritos primeiro em um
   diretorio temporario local ao evidence-root e promovidos por rename somente
-  depois de o coletor terminar e a arvore estabilizar. Se o diretorio final ja
-  existir, a rodada deve falhar fechado. Isso evita assinar manifestos sobre
-  amostras ainda em escrita ou sobre uma rodada concorrente/reusada;
+  depois de o coletor terminar e a arvore estabilizar. O diretorio final pode
+  conter apenas metadado preexistente do probe (`launcher-adoption.json`); se
+  qualquer artefato de health ja existir, a rodada deve falhar fechado. Isso
+  evita assinar manifestos sobre amostras ainda em escrita ou sobre uma rodada
+  concorrente/reusada;
 - o harness M6 deve usar lock exclusivo de processo para impedir duas fases
   `arm`/`resume`/`rollback-only` concorrentes na mesma placa. Concorrencia deve
   virar `m6_lock_busy`, nao dois coletores escrevendo no mesmo evidence-root;

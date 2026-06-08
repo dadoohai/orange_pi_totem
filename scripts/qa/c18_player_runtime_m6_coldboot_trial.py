@@ -50,6 +50,16 @@ MECHANICAL_ACTION = "operator_controlled_reboot"
 REPO_IDENTITY_FILE = "repo-identity.json"
 SERVICE = "kiosky-player.service"
 M6_LOCK_PATH = Path("/run/lock/c18-player-runtime-m6.lock")
+HEALTH_ARTIFACT_FILES = {
+    "deep-health-kernel.json",
+    "deep-health-player-counters.json",
+    "deep-health-process.json",
+    "deep-health-systemd.json",
+    "playback-deep-health-public.json",
+    "playback-samples.tsv",
+    "status-samples.ndjson",
+}
+ALLOWED_EXISTING_HEALTH_DIR_FILES = {"launcher-adoption.json"}
 SUPPORTED_UPDATER_FEATURES = {
     "c18-freeze-kiosky-player-v1",
     "c18-rollback-reapply-v1",
@@ -315,7 +325,11 @@ def collect_health(args: argparse.Namespace, output_dir: Path, stdout_path: Path
 
 def collect_health_atomic(args: argparse.Namespace, output_dir: Path, stdout_path: Path, env: dict[str, str]) -> dict[str, Any]:
     if output_dir.exists():
-        raise RuntimeError(f"health_output_dir_already_exists:{output_dir}")
+        existing = {path.relative_to(output_dir).as_posix() for path in output_dir.rglob("*") if path.is_file()}
+        unexpected = sorted(existing - ALLOWED_EXISTING_HEALTH_DIR_FILES)
+        health_collision = sorted(existing & HEALTH_ARTIFACT_FILES)
+        if unexpected or health_collision:
+            raise RuntimeError(f"health_output_dir_already_exists:{output_dir}")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     tmp_dir = output_dir.parent / f".{output_dir.name}.tmp-{os.getpid()}-{int(time.time() * 1000)}"
     if tmp_dir.exists():
@@ -323,7 +337,16 @@ def collect_health_atomic(args: argparse.Namespace, output_dir: Path, stdout_pat
     try:
         result = collect_health(args, tmp_dir, stdout_path, env)
         wait_for_evidence_tree_stable(tmp_dir)
-        tmp_dir.rename(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for path in sorted(tmp_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(tmp_dir)
+            dst = output_dir / rel
+            if dst.exists():
+                raise RuntimeError(f"health_output_file_already_exists:{dst}")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            path.rename(dst)
         wait_for_evidence_tree_stable(output_dir)
         return result
     except Exception:
