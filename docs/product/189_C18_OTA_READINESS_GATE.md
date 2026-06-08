@@ -25,7 +25,8 @@ golden atual `1t`.
 | OTA comum | somente `totem-core`, manual/operator-triggered |
 | Freeze publico | contrato repo HEAD: `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1t` ja gravada, o hardening de `kiosky-player reconcile` ainda nao esta embarcado/provado em hardware |
 | M6 decisivo atual | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A; release gate atual aceitou em modo `decisive` |
-| Proximo gate | imagem candidata pos-M6 com identidade nova e coleta HW curta para provar o delta repo HEAD (`kiosky-player reconcile rc=44`) sem regredir playback; depois power-loss fisico, soak/endurance e governanca server-side |
+| Candidata offline pos-M6 | `c18-hwdecode-lab-1u`, evidencia `20260608T024500Z-1u-offline-build`, sha256 `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`; ainda nao e golden |
+| Proximo gate | gravar/validar a `1u` em HW para provar o delta repo HEAD (`kiosky-player reconcile rc=44`) sem regredir playback; depois power-loss fisico, soak/endurance e governanca server-side |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
 
 ## Golden atual (2026-06-05)
@@ -67,10 +68,25 @@ B adotada de `/data/player-runtime/current`, deep-health do candidato B e
 rollback para A real em `/data`. Esse marco nao abre thaw publico, publish
 GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
 
-Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1t`.
-Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
-release OTA de homologacao acima. Nao substituir essa golden por uma imagem nova
-sem nova validacao offline + hardware + registro neste doc.
+Ou seja: para recovery/baseline validado de laboratorio, partir da imagem `1t`.
+Para o ensaio pos-M6 que valida o delta repo HEAD, gravar a candidata `1u`
+abaixo. Depois, se a validacao desejada for o marco mais recente de delivery,
+aplicar a release OTA de homologacao acima. Nao substituir a golden `1t` por
+uma imagem nova sem nova validacao offline + hardware + registro neste doc.
+
+Imagem candidata pos-M6 para a proxima coleta hardware: `c18-hwdecode-lab-1u`.
+Ela foi derivada offline com identidade propria para tornar rastreavel o delta
+apos o M6 decisivo, mas ainda nao substitui a golden `1t`.
+
+- **Arquivo WSL:**
+  `/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`;
+- **Copia para gravacao:**
+  `/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`;
+- **SHA-256:** `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
+- **Evidencia offline:**
+  `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`;
+- **Nao-afirmacao:** ainda nao prova hardware playback, HDMI, `kiosky-player
+  reconcile` on-device, power-loss, soak, thaw publico, stable ou producao.
 
 Nota: `1k`, `1l`, `1m`, `1n`, `1o`, `1q`, `1r` e `1s` permanecem como golden
 historicas anteriores. A `1t` valida em hardware o follow-up pos-1s: boot-state

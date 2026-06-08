@@ -41,6 +41,14 @@ apos cold-boot e rollback para A real em `/data`. O release gate atual aceita
 essa evidencia em modo `decisive`. Ainda nao e thaw publico, GitHub publish,
 auto-pull, stable/producao, power-loss fisico ou soak.
 
+Candidata pos-M6 para proxima validacao hardware: `c18-hwdecode-lab-1u`.
+Evidencia offline:
+`docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`.
+Imagem para gravacao:
+`/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`
+(`sha256=57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`).
+Ela ainda nao substitui a golden `1t`; precisa ser gravada e validada em placa.
+
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:
 [docs/UPDATE_AUTHORIZATION_HEALTH.md](docs/UPDATE_AUTHORIZATION_HEALTH.md).

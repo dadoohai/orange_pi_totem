@@ -207,6 +207,14 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   evidencia em modo `decisive`; o CLI publico continuou congelado com `rc=44`;
 - nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
   power-loss fisico nem soak/endurance.
+- imagem candidata pos-M6 `c18-hwdecode-lab-1u` derivada offline para a proxima
+  validacao em placa, com evidencia em
+  `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`;
+  sha256
+  `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
+  ainda nao substitui a golden `1t` e nao prova hardware playback, HDMI,
+  `kiosky-player reconcile` on-device, power-loss, soak, thaw publico, stable
+  ou producao.
 
 ## Gates Antes De Thaw Do Player-Runtime
 

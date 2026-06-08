@@ -82,9 +82,16 @@ EVIDENCE_CURRENT_PLAYER_RUNTIME_M6_TRIAL_DIR = (
     / "c18-update-validation"
     / "20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial"
 )
+EVIDENCE_1U_OFFLINE_BUILD_DIR = (
+    REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "20260608T024500Z-1u-offline-build"
+)
 EVIDENCE_CURRENT_IMAGE_SHA256 = str(CURRENT_GOLDEN["image_sha256"])
 EVIDENCE_CURRENT_IMAGE_TAG = str(CURRENT_GOLDEN["image_tag"])
 EVIDENCE_CURRENT_IMAGE_MARKER_PATH = str(CURRENT_GOLDEN["image_marker_path"])
+EVIDENCE_1U_IMAGE_TAG = "c18-hwdecode-lab-1u"
+EVIDENCE_1U_IMAGE_SHA256 = "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd"
+EVIDENCE_1U_REPO_COMMIT = "58457740661b557877e06f53b932b133d62838cb"
+EVIDENCE_1U_REPO_TREE = "0713c9c61893d0c049425bf72d2714f83fc3e1ff"
 EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
@@ -371,6 +378,40 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         finally:
             sys.argv = previous_argv
         self.assertEqual(parsed.expect_image_marker_sha256, CURRENT_GOLDEN["image_marker_sha256"])
+
+    def test_c18_1u_offline_candidate_is_not_current_golden(self) -> None:
+        manifest = json.loads((EVIDENCE_1U_OFFLINE_BUILD_DIR / "build_manifest.json").read_text(encoding="utf-8"))
+        validation = json.loads((EVIDENCE_1U_OFFLINE_BUILD_DIR / "offline_validation.json").read_text(encoding="utf-8"))
+        readme = (EVIDENCE_1U_OFFLINE_BUILD_DIR / "README.md").read_text(encoding="utf-8")
+        sha_lines = (EVIDENCE_1U_OFFLINE_BUILD_DIR / "SHA256SUMS").read_text(encoding="utf-8")
+
+        self.assertEqual(manifest["image_tag"], EVIDENCE_1U_IMAGE_TAG)
+        self.assertEqual(manifest["image_sha256"], EVIDENCE_1U_IMAGE_SHA256)
+        self.assertEqual(manifest["repo_commit"], EVIDENCE_1U_REPO_COMMIT)
+        self.assertEqual(manifest["repo_tree"], EVIDENCE_1U_REPO_TREE)
+        self.assertFalse(manifest["repo_dirty"])
+        self.assertEqual(manifest["repo_dirty_entry_count"], 0)
+        self.assertEqual(manifest["image_bytes"], 1971322880)
+        self.assertTrue(manifest["artifact_promoted"])
+        self.assertFalse(manifest["final_image"])
+        self.assertTrue(manifest["not_for_production"])
+        self.assertTrue(manifest["player_runtime_ota_still_frozen"])
+        self.assertTrue(manifest["player_runtime_release_gate_passed"])
+        self.assertTrue(manifest["player_runtime_sandbox_passed"])
+        self.assertTrue(validation["fsck_clean"])
+        self.assertTrue(validation["no_player_runtime_current_embedded"])
+        self.assertTrue(validation["no_legacy_kiosky_player_current_embedded"])
+        self.assertIn(EVIDENCE_1U_IMAGE_TAG, readme)
+        self.assertIn(EVIDENCE_1U_IMAGE_SHA256, readme)
+        self.assertIn(EVIDENCE_1U_REPO_COMMIT, readme)
+        self.assertIn(EVIDENCE_1U_REPO_TREE, readme)
+        self.assertIn("Does not promote `1u` to golden", readme)
+        self.assertIn("current golden remains `1t`", readme)
+        self.assertIn("hardware_validation_required=true", readme)
+        self.assertIn("build_manifest.json", sha_lines)
+        self.assertEqual(CURRENT_GOLDEN["image_tag"], "c18-hwdecode-lab-1t")
+        self.assertNotEqual(CURRENT_GOLDEN["image_tag"], manifest["image_tag"])
+        self.assertNotEqual(CURRENT_GOLDEN["image_sha256"], manifest["image_sha256"])
 
     def test_c18_release_gate_player_runtime_decisive_mode_is_explicit(self) -> None:
         qa_dir = REPO_ROOT / "scripts" / "qa"
