@@ -1583,23 +1583,57 @@ class MPVController:
                 )
             self._close_ipc_locked()
 
+    def _request_quit(self, reason: str) -> bool:
+        if self._proc is None or self._proc.poll() is not None or self._ipc is None:
+            return False
+        ok = bool(self._send({"command": ["quit"]}, command_name="quit"))
+        if ok:
+            logging.info(
+                "MPV IPC quit requested reason=%s generation=%d pid=%s log_file=%s",
+                reason,
+                self._generation,
+                self.pid() or "none",
+                self._current_log_file or "none",
+            )
+        return ok
+
     def _stop_locked(self, reason: str = "stop") -> None:
-        self._close_ipc(reason=reason, log_context=True)
+        quit_requested = self._request_quit(reason)
         if self._proc and self._proc.poll() is None:
-            try:
-                if os.name != "nt" and self._proc.pid:
-                    os.killpg(self._proc.pid, signal.SIGTERM)
-                else:
-                    self._proc.terminate()
-                self._proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
+            if quit_requested:
+                try:
+                    self._proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    logging.warning(
+                        "MPV IPC quit timeout; falling back to SIGTERM reason=%s generation=%d pid=%s log_file=%s",
+                        reason,
+                        self._generation,
+                        self.pid() or "none",
+                        self._current_log_file or "none",
+                    )
+            if self._proc and self._proc.poll() is None:
                 try:
                     if os.name != "nt" and self._proc.pid:
-                        os.killpg(self._proc.pid, signal.SIGKILL)
+                        os.killpg(self._proc.pid, signal.SIGTERM)
                     else:
-                        self._proc.kill()
+                        self._proc.terminate()
                 except Exception:
                     pass
+                try:
+                    self._proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    try:
+                        if os.name != "nt" and self._proc.pid:
+                            os.killpg(self._proc.pid, signal.SIGKILL)
+                        else:
+                            self._proc.kill()
+                    except Exception:
+                        pass
+                    try:
+                        self._proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        pass
+        self._close_ipc(reason=reason, log_context=True)
         self._proc = None
         self._cleanup_ipc_path()
 
@@ -3334,7 +3368,7 @@ def main() -> int:
         logging.warning("API polling disabled; player running with local media only.")
 
     def _force_kill_after_delay() -> None:
-        time.sleep(5)
+        time.sleep(20)
         if not force_exit.is_set():
             return
         try:

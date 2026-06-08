@@ -10,7 +10,8 @@
   },
   "notes": [
     "Governed C18 baseline snapshot only; not an OTA player release.",
-    "Runtime behavior matches the 1i image: upstream kiosk.py plus C18 mpv_path wrapper patch.",
+    "Runtime behavior starts from the 1i image: upstream kiosk.py plus C18 mpv_path wrapper patch.",
+    "C18 teardown hardening requests MPV IPC quit before falling back to process signals to avoid panfrost faults on relaunch.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -18,12 +19,17 @@
       "field": "DEFAULT_CONFIG.mpv_path",
       "from": "mpv",
       "to": "/opt/totem/bin/totem-mpv-hwdecode"
+    },
+    {
+      "field": "MPVController._stop_locked",
+      "from": "close IPC then signal MPV process group",
+      "to": "request MPV IPC quit before signal fallback"
     }
   ],
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167"
+    "sha256": "90dbd46e0581767d239a035f33e00e1156c3388673c438667b883c39dc7c219c"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

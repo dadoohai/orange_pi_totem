@@ -8,9 +8,11 @@ enable player OTA and must stay separate from the ordinary totem-core OTA path.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import py_compile
 import re
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,7 +28,7 @@ LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167"
+EXPECTED_SNAPSHOT_SHA256 = "90dbd46e0581767d239a035f33e00e1156c3388673c438667b883c39dc7c219c"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -40,6 +42,40 @@ def sha256_file(path: Path) -> str:
 
 def source() -> dict:
     return json.loads(SOURCE_PATH.read_text(encoding="utf-8"))
+
+
+def load_kiosk_module():
+    spec = importlib.util.spec_from_file_location("c18_kiosk_under_test", KIOSK_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("failed to load kiosk.py spec")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class FakeProc:
+    def __init__(self, wait_results: list[object]) -> None:
+        self.pid = 1234
+        self.wait_results = list(wait_results)
+        self.wait_timeouts: list[float] = []
+        self._poll: int | None = None
+
+    def poll(self) -> int | None:
+        return self._poll
+
+    def wait(self, timeout: float) -> int:
+        self.wait_timeouts.append(timeout)
+        result = self.wait_results.pop(0)
+        if result == "timeout":
+            raise subprocess.TimeoutExpired(["mpv"], timeout)
+        self._poll = int(result)
+        return self._poll
+
+    def terminate(self) -> None:
+        self._poll = -15
+
+    def kill(self) -> None:
+        self._poll = -9
 
 
 class C18PlayerRuntimeStaticTest(unittest.TestCase):
@@ -80,6 +116,48 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         text = KIOSK_PATH.read_text(encoding="utf-8")
         defaults = re.findall(r'"mpv_path"\s*:\s*"([^"]+)"', text)
         self.assertEqual(defaults, [C18_WRAPPER])
+
+    def test_mpv_stop_uses_ipc_quit_with_signal_fallbacks(self) -> None:
+        kiosk = load_kiosk_module()
+
+        def make_controller(proc: FakeProc, send_result: bool, *, ipc: object | None = object()):
+            controller = kiosk.MPVController({"ipc_path": "/tmp/c18-fake.sock", "mpv_log_file": "/tmp/c18-fake.log"})
+            controller._proc = proc
+            controller._ipc = ipc
+            sent: list[dict] = []
+            controller._send = lambda payload, **_kwargs: sent.append(payload) or send_result
+            closed: list[str] = []
+            controller._close_ipc = lambda reason="cleanup", log_context=False: closed.append(reason)
+            return controller, sent, closed
+
+        original_killpg = kiosk.os.killpg
+        signals: list[tuple[int, int]] = []
+        kiosk.os.killpg = lambda pid, sig: signals.append((pid, sig))
+        try:
+            clean_proc = FakeProc([0])
+            clean, sent, closed = make_controller(clean_proc, True)
+            clean._stop_locked(reason="clean")
+            self.assertEqual(sent, [{"command": ["quit"]}])
+            self.assertEqual(signals, [])
+            self.assertEqual(clean_proc.wait_timeouts, [5])
+            self.assertEqual(closed, ["clean"])
+
+            no_ipc_proc = FakeProc([0])
+            no_ipc, sent, _closed = make_controller(no_ipc_proc, True, ipc=None)
+            no_ipc._stop_locked(reason="no_ipc")
+            self.assertEqual(sent, [])
+            self.assertEqual(signals, [(1234, kiosk.signal.SIGTERM)])
+            self.assertEqual(no_ipc_proc.wait_timeouts, [5])
+
+            signals.clear()
+            stuck_proc = FakeProc(["timeout", "timeout", -9])
+            stuck, sent, _closed = make_controller(stuck_proc, True)
+            stuck._stop_locked(reason="stuck")
+            self.assertEqual(sent, [{"command": ["quit"]}])
+            self.assertEqual(signals, [(1234, kiosk.signal.SIGTERM), (1234, kiosk.signal.SIGKILL)])
+            self.assertEqual(stuck_proc.wait_timeouts, [5, 5, 5])
+        finally:
+            kiosk.os.killpg = original_killpg
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")

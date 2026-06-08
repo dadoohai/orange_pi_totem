@@ -51,6 +51,7 @@ PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_r
 PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
+PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -293,6 +294,18 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("MPV_CONTROLLER_PROBE_MPV_PATH", probe)
         self.assertIn("/opt/totem/bin/totem-mpv-hwdecode", probe)
         self.assertNotIn('"mpv_path": "mpv"', probe)
+
+    def test_player_runtime_mpv_stop_requests_ipc_quit_before_signals(self) -> None:
+        kiosk = PLAYER_RUNTIME_KIOSK_PATH.read_text(encoding="utf-8")
+        self.assertIn('{"command": ["quit"]}', kiosk)
+        self.assertIn("def _request_quit", kiosk)
+        stop_start = kiosk.index("def _stop_locked")
+        stop_end = kiosk.index("def _start_locked", stop_start)
+        stop_body = kiosk[stop_start:stop_end]
+        self.assertLess(stop_body.index("_request_quit(reason)"), stop_body.index("_close_ipc(reason=reason"))
+        self.assertLess(stop_body.index("_request_quit(reason)"), stop_body.index("os.killpg(self._proc.pid, signal.SIGTERM)"))
+        self.assertIn("self._proc.wait(timeout=5)", stop_body)
+        self.assertLess(stop_body.index("os.killpg(self._proc.pid, signal.SIGKILL)"), stop_body.rindex("self._proc.wait(timeout=5)"))
 
     def test_player_release_scripts_are_frozen_by_default(self) -> None:
         for path in (BUILD_PLAYER_PATH, PUBLISH_PLAYER_PATH):

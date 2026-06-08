@@ -60,7 +60,7 @@ HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
-PLAYER_RUNTIME_KIOSK_SHA256 = "ee1e24c34108c05aac1d92b4759f2c504d4158656b1f6ae010d93558e3892167"
+PLAYER_RUNTIME_KIOSK_SHA256 = "90dbd46e0581767d239a035f33e00e1156c3388673c438667b883c39dc7c219c"
 
 # Workaround for the H618 panfrost boot deferred-probe race (-110): bind the GPU before the
 # player if the render node is missing. Userspace only — no kernel/DTB/cmdline change.
