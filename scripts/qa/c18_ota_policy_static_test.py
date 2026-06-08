@@ -408,6 +408,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(decisive_summary["status"], "failed")
         self.assertIn("missing_player_runtime_data_coldboot_evidence_dir", decisive_summary["errors"])
         self.assertIn("missing_player_runtime_data_evidence_dir", decisive_summary["errors"])
+        dirty_manifest_step = module.player_runtime_decisive_dirty_manifest_guard(SimpleNamespace(
+            player_runtime_evidence_mode="decisive",
+            allow_dirty_manifest=True,
+        ))
+        self.assertIsNotNone(dirty_manifest_step)
+        self.assertFalse(dirty_manifest_step["passed"])
+        self.assertIn("--allow-dirty-manifest is not allowed", dirty_manifest_step["stderr_tail"])
+        self.assertIsNone(module.player_runtime_decisive_dirty_manifest_guard(SimpleNamespace(
+            player_runtime_evidence_mode="baseline",
+            allow_dirty_manifest=True,
+        )))
 
     def test_c18_current_hardware_evidence_is_public_and_passing(self) -> None:
         public_path = EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "playback-deep-health-public.json"
@@ -899,6 +910,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         readme = (evidence_dir / "README.md").read_text(encoding="utf-8")
         summary = json.loads((evidence_dir / "m6-summary.json").read_text(encoding="utf-8"))
         archived_gate = json.loads((evidence_dir / "player-runtime-evidence-gate.json").read_text(encoding="utf-8"))
+        archived_release_gate = json.loads((evidence_dir / "m6-release-gate-host.json").read_text(encoding="utf-8"))
+        archived_coldboot_gate = json.loads((evidence_dir / "coldboot-evidence-gate.json").read_text(encoding="utf-8"))
 
         self.assertFalse(summary["passed"])
         self.assertTrue(summary["m6_checks_passed"])
@@ -907,6 +920,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertTrue(archived_gate["historical_gate_passed"])
         self.assertIn("historical_old_contract_gate_result", archived_gate["errors"])
         self.assertIn("package_manifest_updater_features", archived_gate["current_contract_errors"])
+        self.assertFalse(archived_release_gate["passed"])
+        self.assertTrue(archived_release_gate["historical_gate_passed"])
+        self.assertEqual(archived_release_gate["current_contract_errors"], ["package_manifest_updater_features"])
+        self.assertFalse(archived_release_gate["player_runtime_data_evidence"]["decisive"])
+        self.assertTrue(archived_release_gate["player_runtime_data_evidence"]["historical_decisive"])
+        self.assertEqual(archived_release_gate["player_runtime_data_evidence"]["status"], "historical_old_contract")
+        self.assertFalse(archived_coldboot_gate["passed"])
+        self.assertTrue(archived_coldboot_gate["historical_gate_passed"])
+        self.assertEqual(archived_coldboot_gate["current_contract_status"], "supporting_historical_only")
         self.assertIn("historical_gate_passed=true", readme)
         self.assertIn("must not be reused as current", readme)
 

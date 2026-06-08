@@ -1,5 +1,8 @@
 {
   "boot_state": "/data/state/c18-m6/20260605T183103Z-m6-695298f-retry2/coldboot-data-evidence/boot-state-public.json",
+  "current_contract_status": "supporting_historical_only",
   "errors": [],
-  "passed": true
+  "historical_gate_passed": true,
+  "historical_note": "Produced during the historical M6 run. Retained as supporting historical evidence only; the M6 directory is not current decisive authorization under the player-runtime updater_features contract.",
+  "passed": false
 }

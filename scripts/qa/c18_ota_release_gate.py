@@ -345,6 +345,15 @@ def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> tup
     return steps, summary
 
 
+def player_runtime_decisive_dirty_manifest_guard(args: argparse.Namespace) -> dict[str, Any] | None:
+    if args.player_runtime_evidence_mode == "decisive" and args.allow_dirty_manifest:
+        return failed_internal_step(
+            "player_runtime_decisive_dirty_manifest_guard",
+            "--allow-dirty-manifest is not allowed for player-runtime decisive evidence",
+        )
+    return None
+
+
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
     names: set[str] = set()
     for cmd in (
@@ -591,6 +600,9 @@ def main() -> int:
     package_result: dict[str, Any] | None = None
 
     steps.append(repo_clean_guard())
+    dirty_manifest_guard = player_runtime_decisive_dirty_manifest_guard(args)
+    if dirty_manifest_guard is not None:
+        steps.append(dirty_manifest_guard)
     steps.append(run_step("py_compile", ["python3", "-m", "py_compile", *PY_COMPILE_TARGETS]))
     for target in BASH_SYNTAX_TARGETS:
         steps.append(run_step(f"bash_syntax:{target}", ["bash", "-n", target]))

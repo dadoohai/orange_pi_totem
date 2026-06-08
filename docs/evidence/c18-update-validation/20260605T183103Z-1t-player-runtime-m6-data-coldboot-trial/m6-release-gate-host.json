@@ -1,4 +1,7 @@
 {
+  "current_contract_errors": [
+    "package_manifest_updater_features"
+  ],
   "current_golden": {
     "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260605T093008Z-1t-coldboot-deep-health",
     "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1t-image",
@@ -17,20 +20,26 @@
     "secrets_read": false,
     "ssh_used": false
   },
+  "historical_gate_passed": true,
+  "historical_note": "Produced by an older host release gate before player-runtime manifests required c18-player-runtime-verify-then-promote-v1. Retained as historical evidence only; not current decisive authorization.",
   "package": null,
-  "passed": true,
+  "passed": false,
   "player_runtime_data_evidence": {
     "coldboot_evidence_dir": "/tmp/c18-m6-evidence-20260605T183103Z-m6-695298f-retry2/coldboot-data-evidence",
     "data_evidence_dir": "/tmp/c18-m6-evidence-20260605T183103Z-m6-695298f-retry2/player-runtime-data-evidence",
-    "decisive": true,
-    "errors": [],
+    "decisive": false,
+    "errors": [
+      "package_manifest_updater_features"
+    ],
     "expected_image_marker_sha256": "e2f927e173c12aa6637ca78db89675c9eedbf19649613824d8f994c775f4cf6d",
     "expected_image_sha256": "7ab5a582f2ce51f13338be8ad4a68a15cb736007f617a49456704c5c45cefec6",
     "expected_image_tag": "c18-hwdecode-lab-1t",
+    "historical_decisive": true,
+    "historical_status": "passed",
     "mode": "decisive",
     "non_claims": [],
     "required": true,
-    "status": "passed"
+    "status": "historical_old_contract"
   },
   "sandbox": "/tmp/c18-ota-gate-sandbox-0uyznhm2",
   "schema": "dadooh.c18.ota.release_gate.v1",

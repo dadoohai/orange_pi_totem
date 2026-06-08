@@ -9,10 +9,10 @@ existed at capture time. The current gate is stricter and requires
 this archived package predates that contract and must not be reused as current
 decisive authorization.
 
-The top-level `player-runtime-evidence-gate.json` is therefore marked
-`passed=false` with `historical_gate_passed=true`: it records that the legacy
-gate accepted the run, while making the current-contract status fail-closed for
-manual readers and tools.
+The top-level legacy gate JSON files are therefore marked `passed=false` with
+`historical_gate_passed=true`: they record that the legacy gates accepted the
+run, while making the current-contract status fail-closed for manual readers
+and tools.
 
 Scope proven:
 
