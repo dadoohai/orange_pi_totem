@@ -204,8 +204,10 @@ Baseline de laboratorio/delivery registrado em 2026-06-08:
   `docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`;
 - esse trial provou apply A->B em `/data`, B adotado pelo launcher apos reboot
   controlado, deep-health de B pos-cold-boot, rollback de B para A como previous
-  real em `/data` e deep-health pos-rollback; o release gate atual aceitou essa
-  evidencia em modo `decisive`; o CLI publico continuou congelado com `rc=44`;
+  real em `/data` e deep-health pos-rollback; o release gate aceitou essa
+  evidencia em modo `decisive` na rodada em que a golden era `1t`. Apos o bump
+  para `1u`, essa evidencia fica image-pinned a `1t` e nao e autorizacao
+  `decisive` atual; o CLI publico continuou congelado com `rc=44`;
 - nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
   power-loss fisico nem soak/endurance.
 - imagem `c18-hwdecode-lab-1u` foi derivada offline com evidencia em
@@ -300,14 +302,17 @@ pacote foi endurecido para exigir `requires.updater_features` com
 `c18-player-runtime-verify-then-promote-v1`; portanto essa evidencia antiga nao
 deve ser usada como `decisive` contra o gate atual.
 
-A evidencia atual
+A evidencia `20260608T011301Z`
 `20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial` repetiu esse fluxo
 pelo wrapper `c18_player_runtime_lab_thaw.py`, com pacote contendo
-`c18-player-runtime-verify-then-promote-v1`, repo limpo e release gate atual em
-modo `decisive`. Esse e o marco decisivo de laboratorio para adocao
-`player-runtime` em `/data`; os gates que ainda ficam para homologacao/producao
-sao interrupcao/power-loss fisico, soak/endurance, publish/server-side
-governado e decisao explicita de promocao sem `stable` nem auto-pull.
+`c18-player-runtime-verify-then-promote-v1`, repo limpo e release gate em modo
+`decisive` quando a golden era `1t`. Com a golden atual `1u`, ela permanece
+como marco historico de laboratorio para adocao `player-runtime` em `/data`,
+mas nao como autorizacao `decisive` corrente. Para restaurar uma autorizacao
+decisiva viva, o M6 deve ser re-rodado e pinado na golden atual; os gates que
+ainda ficam para homologacao/producao sao interrupcao/power-loss fisico,
+soak/endurance, publish/server-side governado e decisao explicita de promocao
+sem `stable` nem auto-pull.
 
 A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
 

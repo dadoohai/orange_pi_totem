@@ -346,6 +346,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         for path in (UPDATE_AUTHORIZATION_HEALTH_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
             text = path.read_text(encoding="utf-8")
             self.assertIn(current_sha, text)
+        authorization_health = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("release gate atual aceitou essa evidencia", authorization_health)
+        self.assertNotIn("Esse e o marco decisivo de laboratorio para adocao", authorization_health)
+        self.assertIn("nao como autorizacao `decisive` corrente", authorization_health)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("M6 decisivo atual", doc189)
         self.assertNotIn("release gate atual aceitou", doc189)
