@@ -18,6 +18,7 @@
     "server_side_gate",
     "soak_endurance"
   ],
+  "scope_note": "This sub-gate covers the player-runtime data segment. Cold-boot adoption is proven by the companion coldboot-data-evidence directory and by the aggregate M6 release gate.",
   "rollback_expectation": "data-previous",
   "schema": "dadooh.c18.player_runtime.trial_readme.v1",
   "scope": "lab-only persistent /data coldboot trial",

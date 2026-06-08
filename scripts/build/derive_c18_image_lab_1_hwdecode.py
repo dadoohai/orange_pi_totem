@@ -35,7 +35,7 @@ CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" 
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 BASE_IMAGE = ARM / ("Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                     "6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img")
-TAG = str(CURRENT_GOLDEN["image_tag"])   # 1t = 1s + boot-state evidence and crash-boundary gates.
+TAG = str(CURRENT_GOLDEN["image_tag"])   # default golden; override only for explicit candidate builds.
 VERSION = str(CURRENT_GOLDEN["image_version"])
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
@@ -135,10 +135,47 @@ def sh(cmd):
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
 
+def image_round_name(tag: str) -> str:
+    suffix = tag.removeprefix("c18-hwdecode-lab-")
+    return f"C18.IMAGE-LAB.{suffix}"
+
+
+def image_version_for_tag(tag: str) -> str:
+    suffix = tag.removeprefix("c18-hwdecode-lab-")
+    return f"c18.image-lab.{suffix}"
+
+
+def validate_candidate_identity(tag: str, version: str, marker: str) -> None:
+    if "/" in tag or tag.startswith(".") or ".." in Path(tag).parts:
+        raise SystemExit(f"BLOCKED: unsafe image tag {tag!r}")
+    if not tag.startswith("c18-hwdecode-lab-"):
+        raise SystemExit("BLOCKED: image tag must start with c18-hwdecode-lab-")
+    if not version.startswith("c18.image-lab."):
+        raise SystemExit("BLOCKED: image version must start with c18.image-lab.")
+    if not marker.startswith("/etc/dadooh/") or "/" in marker.removeprefix("/etc/dadooh/"):
+        raise SystemExit("BLOCKED: image marker must be an /etc/dadooh/<file> path")
+
+
 def main():
+    global TAG, VERSION, OUT_IMAGE, OUT_SHA, MARKER
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--image-tag", help="explicit candidate image tag; defaults to current-golden.json")
+    ap.add_argument("--image-version", help="explicit candidate image version; defaults from --image-tag")
+    ap.add_argument("--image-marker", help="explicit candidate marker path; defaults to /etc/dadooh/<image-tag>-image")
     args = ap.parse_args()
+
+    if args.image_tag:
+        TAG = args.image_tag
+        VERSION = args.image_version or image_version_for_tag(TAG)
+        MARKER = args.image_marker or f"/etc/dadooh/{TAG}-image"
+        validate_candidate_identity(TAG, VERSION, MARKER)
+        OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
+                           f"6.12.58-{TAG}_minimal.img")
+        OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
+    elif args.image_version or args.image_marker:
+        raise SystemExit("BLOCKED: --image-version/--image-marker require --image-tag")
+    round_name = image_round_name(TAG)
 
     log = []
     def L(m): print(m); log.append(m)
@@ -253,7 +290,7 @@ def main():
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
-        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates)",
+        "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates) & 1t (golden delivery before post-M6 reconcile freeze hardware proof)",
         "hardware_validation_required=true",
     ]) + "\n", encoding="utf-8")
 
@@ -495,7 +532,7 @@ def main():
 
     image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
     manifest = {
-        "round": "C18.IMAGE-LAB.1t", "image_tag": TAG, "image_version": VERSION,
+        "round": round_name, "image_tag": TAG, "image_version": VERSION,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": image_bytes,
         "artifact_promoted": artifact_promoted,
@@ -539,7 +576,7 @@ def main():
         "offline_validation_detail": v,
         "stack_lib_count": len(real_files), "stack_symlink_count": len(symlinks),
         "sources": SOURCES,
-        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1k (validated golden before pre-thaw hardening gap closure) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates)",
+        "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1k (validated golden before pre-thaw hardening gap closure) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates) & 1t (golden delivery before post-M6 reconcile freeze hardware proof)",
         "fix_kiosk_read": "read via debugfs dump (cat appended the stderr banner -> SyntaxError); + py_compile added to validation",
         "fix_wrapper_no_osc": "wrapper strips --no-osc (no-Lua mpv has no OSC option -> would fatal-exit before IPC)",
         "fix_wrapper_hwdec_copy": "wrapper forces v4l2request-copy to avoid the runtime panfrost js faults observed on the zero-copy drm_prime path for some portrait media",
@@ -556,7 +593,7 @@ def main():
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
-    print("\n=== C18.IMAGE-LAB.1t RESULT ===")
+    print(f"\n=== {round_name} RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
     (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

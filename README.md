@@ -33,6 +33,14 @@ real de B pelo servico, deep-health, rollback com quarentena de B e retorno para
 A como `previous` real em `/data`. Ainda nao e thaw publico, GitHub publish,
 auto-pull, stable/producao, cold-boot/power-loss ou soak.
 
+M6 decisivo lab-only de `player-runtime` em `/data`:
+`docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`.
+Ele prova A->B->A em `/data` com reboot controlado, B adotada de
+`/data/player-runtime/current`, marker verificado, deep-health do candidato B
+apos cold-boot e rollback para A real em `/data`. O release gate atual aceita
+essa evidencia em modo `decisive`. Ainda nao e thaw publico, GitHub publish,
+auto-pull, stable/producao, power-loss fisico ou soak.
+
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).
 Guia curto de autorização e health gates:
 [docs/UPDATE_AUTHORIZATION_HEALTH.md](docs/UPDATE_AUTHORIZATION_HEALTH.md).

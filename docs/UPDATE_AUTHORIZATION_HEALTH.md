@@ -195,6 +195,18 @@ Baseline de laboratorio/delivery registrado em 2026-06-05:
   congelado com `rc=44`;
 - nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
   power-loss fisico nem soak/endurance.
+- ensaio M-6 decisivo lab-only de `player-runtime` em `/data` validado na
+  golden `1t` com pacotes locais `homologation`
+  `c18.player-runtime-m6-a-20260608T011301Z-m6-ac59f7f-retry1` e
+  `c18.player-runtime-m6-b-20260608T011301Z-m6-ac59f7f-retry1`;
+- evidencia auditavel decisiva:
+  `docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`;
+- esse trial provou apply A->B em `/data`, B adotado pelo launcher apos reboot
+  controlado, deep-health de B pos-cold-boot, rollback de B para A como previous
+  real em `/data` e deep-health pos-rollback; o release gate atual aceitou essa
+  evidencia em modo `decisive`; o CLI publico continuou congelado com `rc=44`;
+- nao provou thaw publico, GitHub publish, auto-pull, stable/producao,
+  power-loss fisico nem soak/endurance.
 
 ## Gates Antes De Thaw Do Player-Runtime
 
@@ -279,12 +291,16 @@ M6: apply A->B, reboot real, B adotada de `/data`, deep-health, rollback para A
 por previous em `/data` e deep-health pos-rollback. Depois dela, o contrato de
 pacote foi endurecido para exigir `requires.updater_features` com
 `c18-player-runtime-verify-then-promote-v1`; portanto essa evidencia antiga nao
-deve ser usada como `decisive` contra o gate atual. O proximo gate de
-laboratorio e repetir esse fluxo pelo wrapper `c18_player_runtime_lab_thaw.py`,
-mantendo o CLI publico congelado. Os gates que ainda ficam para
-homologacao/producao sao interrupcao/power-loss fisico, soak/endurance,
-publish/server-side governado e decisao explicita de promocao sem `stable` nem
-auto-pull.
+deve ser usada como `decisive` contra o gate atual.
+
+A evidencia atual
+`20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial` repetiu esse fluxo
+pelo wrapper `c18_player_runtime_lab_thaw.py`, com pacote contendo
+`c18-player-runtime-verify-then-promote-v1`, repo limpo e release gate atual em
+modo `decisive`. Esse e o marco decisivo de laboratorio para adocao
+`player-runtime` em `/data`; os gates que ainda ficam para homologacao/producao
+sao interrupcao/power-loss fisico, soak/endurance, publish/server-side
+governado e decisao explicita de promocao sem `stable` nem auto-pull.
 
 A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
 

@@ -24,8 +24,8 @@ golden atual `1t`.
 | Golden atual | `c18-hwdecode-lab-1t`, fonte canonica em `docs/evidence/c18-update-validation/current-golden.json` |
 | OTA comum | somente `totem-core`, manual/operator-triggered |
 | Freeze publico | contrato repo HEAD: `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1t` ja gravada, o hardening de `kiosky-player reconcile` ainda nao esta embarcado/provado em hardware |
-| M6 historico | evidenciou apply A->B de `player-runtime` em `/data`, reboot real, adocao B por `/data`, deep-health e rollback B->A via previous em `/data` |
-| Proximo gate | `scripts/qa/c18_player_runtime_lab_thaw.py` como wrapper lab-only canonico para repetir M6 com o contrato atual (`source_dirty=false` + feature `verify-then-promote`) sem abrir CLI publico |
+| M6 decisivo atual | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A; release gate atual aceitou em modo `decisive` |
+| Proximo gate | imagem candidata pos-M6 com identidade nova e coleta HW curta para provar o delta repo HEAD (`kiosky-player reconcile rc=44`) sem regredir playback; depois power-loss fisico, soak/endurance e governanca server-side |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
 
 ## Golden atual (2026-06-05)
@@ -58,6 +58,14 @@ Nota de escopo pos-M6: o contrato repo HEAD tambem congela
 `reconcile --component kiosky-player` com `rc=44`, mas esse hardening foi
 feito depois da evidencia hardware da `1t`; deve ser reprovado em placa na
 proxima imagem/coleta antes de ser citado como fato de hardware.
+
+Marco M6 decisivo atual: a evidencia
+`docs/evidence/c18-update-validation/20260608T011301Z-1t-player-runtime-m6-data-coldboot-trial/`
+foi aceita pelo release gate em modo `decisive` sob o contrato atual. Ela prova
+o fluxo lab-only A->B->A de `player-runtime` em `/data`, com reboot controlado,
+B adotada de `/data/player-runtime/current`, deep-health do candidato B e
+rollback para A real em `/data`. Esse marco nao abre thaw publico, publish
+GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
 
 Ou seja: para regravar uma placa de laboratorio hoje, partir da imagem `1t`.
 Depois, se a validacao desejada for o marco mais recente de delivery, aplicar a
@@ -353,7 +361,7 @@ obrigatorios, a imagem e pinada contra a golden, e o marker/version/tree/kiosk
 sao cruzados entre warm e cold-boot. Sem modo `decisive`, o gate segue validando
 apenas o baseline historico `fallback`.
 
-## Marco M-6 Historico: `/data` cold-boot de player-runtime
+## Marco M-6 antigo: `/data` cold-boot de player-runtime
 
 O trial M-6 foi executado em hardware com a golden `c18-hwdecode-lab-1t`,
 sem descongelar o CLI publico de `player-runtime`.
@@ -363,8 +371,8 @@ sem descongelar o CLI publico de `player-runtime`.
 - **Pacote B:** `c18.player-runtime-m6-b-20260605T183103Z-m6-695298f-retry2`;
 - **Evidencia auditavel:**
   `docs/evidence/c18-update-validation/20260605T183103Z-1t-player-runtime-m6-data-coldboot-trial/`;
-- **Resultado historico:** passou no release gate host em modo `decisive`
-  existente na captura. O gate atual e mais estrito e exige
+- **Resultado historico:** o gate legado aceitou a evidencia em modo `decisive`
+  na epoca. O gate atual e mais estrito e exige
   `requires.updater_features` com
   `c18-player-runtime-verify-then-promote-v1`; esta evidencia antiga nao deve
   ser usada como autorizacao `decisive` atual;
