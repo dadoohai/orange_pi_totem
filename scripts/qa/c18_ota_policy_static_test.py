@@ -1273,6 +1273,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--repo-identity-file", m6_trial)
         self.assertIn("repo-identity.json", m6_trial)
         self.assertIn("validate_package_repo_identity", m6_trial)
+        self.assertIn("M6_LOCK_PATH", m6_trial)
+        self.assertIn("/run/lock/c18-player-runtime-m6.lock", m6_trial)
+        self.assertIn("fcntl.LOCK_EX | fcntl.LOCK_NB", m6_trial)
+        self.assertIn("m6_lock_busy", m6_trial)
+        self.assertIn("with M6RunLock()", m6_trial)
         self.assertIn("--defer-release-gate", m6_trial)
         self.assertIn("release_gate_deferred", m6_trial)
         self.assertIn('"m6_checks_passed": True', m6_trial)
@@ -1284,6 +1289,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("health_output_dir_already_exists", m6_trial)
         self.assertIn(".tmp-", m6_trial)
         self.assertIn("tmp_dir.rename(output_dir)", m6_trial)
+        self.assertIn("class M6RunLock", m6_trial)
+        self.assertIn("fcntl.flock", m6_trial)
+        self.assertIn("m6_lock_busy", m6_trial)
         self.assertLess(
             m6_trial.index('collect_health_atomic(args, coldboot_dir / "service-after-coldboot"'),
             m6_trial.index("write_coldboot_manifest(coldboot_dir"),

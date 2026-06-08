@@ -382,6 +382,9 @@ Follow-up repo-side apos a promocao da `1t`:
   depois de o coletor terminar e a arvore estabilizar. Se o diretorio final ja
   existir, a rodada deve falhar fechado. Isso evita assinar manifestos sobre
   amostras ainda em escrita ou sobre uma rodada concorrente/reusada;
+- o harness M6 deve usar lock exclusivo de processo para impedir duas fases
+  `arm`/`resume`/`rollback-only` concorrentes na mesma placa. Concorrencia deve
+  virar `m6_lock_busy`, nao dois coletores escrevendo no mesmo evidence-root;
 - o updater tem fault-injection offline no caminho real de apply/rollback de
   `player-runtime`; isso prova fronteiras de crash em codigo real, mas ainda
   nao e prova fisica de corte de energia;

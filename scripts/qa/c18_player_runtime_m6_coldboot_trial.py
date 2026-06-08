@@ -12,6 +12,7 @@ release gate decisive mode.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import re
@@ -48,6 +49,7 @@ TRANSITION_FLOW = "C18-M6-PLAYER-RUNTIME-DATA-COLDBOOT"
 MECHANICAL_ACTION = "operator_controlled_reboot"
 REPO_IDENTITY_FILE = "repo-identity.json"
 SERVICE = "kiosky-player.service"
+M6_LOCK_PATH = Path("/run/lock/c18-player-runtime-m6.lock")
 SUPPORTED_UPDATER_FEATURES = {
     "c18-freeze-kiosky-player-v1",
     "c18-rollback-reapply-v1",
@@ -76,6 +78,34 @@ def env_base() -> dict[str, str]:
         "LC_ALL": "C.UTF-8",
         "PYTHONDONTWRITEBYTECODE": "1",
     }
+
+
+class M6RunLock:
+    def __init__(self, path: Path = M6_LOCK_PATH) -> None:
+        self.path = path
+        self._fh: Any | None = None
+
+    def __enter__(self) -> "M6RunLock":
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._fh = self.path.open("w", encoding="utf-8")
+        try:
+            fcntl.flock(self._fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            self._fh.close()
+            self._fh = None
+            raise RuntimeError("m6_lock_busy") from exc
+        self._fh.write(f"pid={os.getpid()} phase=locked\n")
+        self._fh.flush()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        if self._fh is None:
+            return
+        try:
+            fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
+        finally:
+            self._fh.close()
+            self._fh = None
 
 
 def validate_repo_identity_data(data: dict[str, Any]) -> dict[str, Any]:
@@ -758,14 +788,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     try:
-        if args.phase == "arm":
-            for key in ("manifest_a", "payload_a", "manifest_b", "payload_b", "canary_media"):
-                if getattr(args, key) is None:
-                    raise RuntimeError(f"missing_required_for_arm:{key}")
-            return phase_arm(args)
-        if args.phase == "resume":
-            return phase_resume(args)
-        return phase_rollback_only(args)
+        with M6RunLock():
+            if args.phase == "arm":
+                for key in ("manifest_a", "payload_a", "manifest_b", "payload_b", "canary_media"):
+                    if getattr(args, key) is None:
+                        raise RuntimeError(f"missing_required_for_arm:{key}")
+                return phase_arm(args)
+            if args.phase == "resume":
+                return phase_resume(args)
+            return phase_rollback_only(args)
     except RuntimeError as exc:
         message = str(exc)
         print(message, file=sys.stderr)
