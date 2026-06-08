@@ -47,6 +47,7 @@ SCHEMA = "dadooh.c18.player_runtime.m6_coldboot_trial.v1"
 TRANSITION_FLOW = "C18-M6-PLAYER-RUNTIME-DATA-COLDBOOT"
 MECHANICAL_ACTION = "operator_controlled_reboot"
 REPO_IDENTITY_FILE = "repo-identity.json"
+SERVICE = "kiosky-player.service"
 SUPPORTED_UPDATER_FEATURES = {
     "c18-freeze-kiosky-player-v1",
     "c18-rollback-reapply-v1",
@@ -195,6 +196,53 @@ def run_lab_apply(args: argparse.Namespace,
         stdout_path=stdout_path,
         timeout=1800,
     )
+
+
+def run_systemctl_service(*args: str) -> dict[str, Any]:
+    proc = subprocess.run(
+        ["systemctl", *args, SERVICE],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=30,
+    )
+    return {
+        "action": " ".join(args),
+        "returncode": proc.returncode,
+        "stdout_tail": proc.stdout[-400:],
+        "stderr_tail": proc.stderr[-400:],
+    }
+
+
+def require_systemctl(result: dict[str, Any], label: str) -> None:
+    if result["returncode"] != 0:
+        raise RuntimeError(f"{label}_failed:{result['stderr_tail'] or result['stdout_tail']}")
+
+
+def restart_service_best_effort() -> None:
+    run_systemctl_service("unmask")
+    run_systemctl_service("start")
+
+
+def run_lab_apply_with_service_held(args: argparse.Namespace,
+                                    manifest: Path,
+                                    payload: Path,
+                                    output_dir: Path,
+                                    stdout_path: Path,
+                                    env: dict[str, str]) -> dict[str, Any]:
+    require_systemctl(run_systemctl_service("stop"), "service_stop_before_apply")
+    require_systemctl(run_systemctl_service("mask", "--runtime"), "service_runtime_mask_before_apply")
+    try:
+        result = run_lab_apply(args, manifest, payload, output_dir, stdout_path, env)
+    except Exception:
+        restart_service_best_effort()
+        raise
+    finally:
+        run_systemctl_service("unmask")
+    if result.get("passed") is not True:
+        restart_service_best_effort()
+    return result
 
 
 def run_adoption(args: argparse.Namespace,
@@ -434,10 +482,7 @@ def phase_arm(args: argparse.Namespace) -> int:
     copy_package_manifest(args.manifest_b, package_dir)
     run_release_gate(args.manifest_b, args.payload_b, package_dir / "player-runtime-release-gate.json", env)
 
-    stop_result = run_systemctl_result("stop")
-    if stop_result["returncode"] != 0:
-        raise RuntimeError("service_stop_failed_before_apply_a")
-    apply_a = run_lab_apply(args, args.manifest_a, args.payload_a, raw_dir / "apply-a", raw_dir / "apply-a.json", env)
+    apply_a = run_lab_apply_with_service_held(args, args.manifest_a, args.payload_a, raw_dir / "apply-a", raw_dir / "apply-a.json", env)
     if apply_a.get("passed") is not True:
         raise RuntimeError("apply_a_failed")
     restart_result = run_systemctl_result("restart")
@@ -447,10 +492,7 @@ def phase_arm(args: argparse.Namespace) -> int:
     run_adoption(args, "data", version_a, data_dir / "service-before-apply" / "launcher-adoption.json", env)
     collect_health(args, data_dir / "service-before-apply", raw_dir / "service-before-apply.json", env)
 
-    stop_result = run_systemctl_result("stop")
-    if stop_result["returncode"] != 0:
-        raise RuntimeError("service_stop_failed_before_apply_b")
-    apply_b = run_lab_apply(args, args.manifest_b, args.payload_b, raw_dir / "apply-b", data_dir / "lab-apply.json", env)
+    apply_b = run_lab_apply_with_service_held(args, args.manifest_b, args.payload_b, raw_dir / "apply-b", data_dir / "lab-apply.json", env)
     if apply_b.get("passed") is not True:
         raise RuntimeError("apply_b_failed")
     copy_public_health(raw_dir / "apply-b" / "candidate-health" / "health", data_dir / "candidate-health")

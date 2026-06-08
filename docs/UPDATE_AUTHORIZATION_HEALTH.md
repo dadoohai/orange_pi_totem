@@ -240,6 +240,10 @@ Antes de qualquer thaw de laboratorio:
   `C18_PLAYER_RUNTIME_LAB_THAW=1` + `--lab-only-thaw`, aceita apenas
   `lab|homologation`, rejeita `source_dirty=true` e so autoriza a rodada se o
   release gate rodar em modo `decisive`;
+- durante o `arm`, o harness M6 deve manter `kiosky-player.service` parado e
+  mascarado apenas em runtime enquanto cada apply lab executa health do
+  candidato, para evitar que `Restart=always`/`ExecStartPre reconcile` readote
+  fallback e limpe a release ainda em verificacao;
 - `reconcile --component player-runtime` de manutencao deve exigir
   `--allow-player-runtime-maintenance` e `C18_PLAYER_RUNTIME_RECONCILE=1`; o
   boot da imagem pode passar essa autorizacao explicitamente, mas o comando nao
