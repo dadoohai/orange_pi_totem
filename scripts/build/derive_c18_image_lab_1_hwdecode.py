@@ -43,7 +43,7 @@ OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
 
 BUNDLE = Path("/tmp/ffbuild/bundle")
 FFMPEG_CLI = Path("/tmp/ffbuild/ffmpeg.stripped")
-R4_UPDATECTL = Path("/home/builder/totem-os/orange_pi_totem/scripts/board/totem_updatectl.py")
+R4_UPDATECTL = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
 PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 PLAYER_RUNTIME_SOURCE = REPO_ROOT / "player-runtime" / "kiosky-player" / "SOURCE.json"
 
@@ -135,6 +135,28 @@ def sh(cmd):
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
 
+def git_text(*args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def repo_identity() -> dict:
+    status = git_text("status", "--porcelain", "--untracked-files=all")
+    return {
+        "repo_commit": git_text("rev-parse", "HEAD"),
+        "repo_tree": git_text("rev-parse", "HEAD^{tree}"),
+        "repo_dirty": bool(status),
+        "repo_dirty_entry_count": len([line for line in status.splitlines() if line.strip()]),
+    }
+
+
 def image_round_name(tag: str) -> str:
     suffix = tag.removeprefix("c18-hwdecode-lab-")
     return f"C18.IMAGE-LAB.{suffix}"
@@ -163,7 +185,11 @@ def main():
     ap.add_argument("--image-tag", help="explicit candidate image tag; defaults to current-golden.json")
     ap.add_argument("--image-version", help="explicit candidate image version; defaults from --image-tag")
     ap.add_argument("--image-marker", help="explicit candidate marker path; defaults to /etc/dadooh/<image-tag>-image")
+    ap.add_argument("--allow-dirty", action="store_true", help="allow exploratory builds from a dirty repo")
     args = ap.parse_args()
+    repo = repo_identity()
+    if repo["repo_dirty"] and not args.allow_dirty:
+        raise SystemExit("BLOCKED: source repo dirty; commit first or pass --allow-dirty for exploratory builds")
 
     if args.image_tag:
         TAG = args.image_tag
@@ -533,6 +559,7 @@ def main():
     image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
     manifest = {
         "round": round_name, "image_tag": TAG, "image_version": VERSION,
+        **repo,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": image_bytes,
         "artifact_promoted": artifact_promoted,
@@ -596,9 +623,11 @@ def main():
     print(f"\n=== {round_name} RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
-    (work / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    (work / "offline_validation.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
-    (work / "build.log").write_text("\n".join(log) + "\n", encoding="utf-8")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for target in {work, out_dir}:
+        (target / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        (target / "offline_validation.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
+        (target / "build.log").write_text("\n".join(log) + "\n", encoding="utf-8")
     print(f"\nWORKDIR={work}")
     print(f"OFFLINE_VALIDATION_PASSED={offline_ok}")
     return 0 if offline_ok else 3
