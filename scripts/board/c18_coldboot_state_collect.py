@@ -387,6 +387,7 @@ def freeze_probe(updatectl_path: str) -> dict[str, Any]:
             "--allow-player-runtime-maintenance",
         ],
         "public_kiosky_player_rollback_rc": [str(updatectl), "rollback", "--component", "kiosky-player"],
+        "public_kiosky_player_reconcile_rc": [str(updatectl), "reconcile", "--component", "kiosky-player"],
     }
     out: dict[str, Any] = {"included": True}
     for key, cmd in probes.items():

@@ -2663,6 +2663,11 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         rc, result = _reconcile_player_runtime_state(allow_maintenance=True)
         print(json.dumps(result, indent=2, sort_keys=True))
         return rc
+    frozen_reason = _apply_frozen_reason()
+    if frozen_reason:
+        print(f"component_frozen_for_ota: {COMPONENT}: {frozen_reason}", file=sys.stderr)
+        log("WARN", "reconcile_blocked_component_frozen", component=COMPONENT, reason=frozen_reason)
+        return 44
     _ensure_dirs()
     result = {
         "component": COMPONENT,

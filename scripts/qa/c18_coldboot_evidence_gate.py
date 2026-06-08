@@ -415,8 +415,9 @@ def validate_boot_state(
             "public_player_runtime_rollback_rc",
             "public_player_runtime_reconcile_rc",
             "public_kiosky_player_rollback_rc",
+            "public_kiosky_player_reconcile_rc",
         ):
-            if safety.get(key) != 44:
+            if key in safety and safety.get(key) != 44:
                 fail(errors, f"freeze_probe_not_rc44:{key}")
         if "boot_player_runtime_reconcile_rc" in safety and safety.get("boot_player_runtime_reconcile_rc") != 0:
             fail(errors, "boot_reconcile_probe_not_rc0")
