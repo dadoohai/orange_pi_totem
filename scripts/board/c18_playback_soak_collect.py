@@ -325,7 +325,8 @@ def main(argv: list[str]) -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
     else:
         print(f"output_dir={summary['output_dir']}")
-        print(f"soak_passed={str(bool(summary.get('passed'))).lower()}")
+        print(f"evidence_scope={summary['evidence_scope']}")
+        print(f"collection_policy_passed={str(bool(summary.get('passed'))).lower()}")
     return 0 if summary.get("passed") else 1
 
 
