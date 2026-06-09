@@ -67,6 +67,7 @@ SUPPORTED_CHECKPOINTS = {
     "rollback_after_current_to_previous",
     "rollback_after_previous_removed",
     "rollback_after_quarantine",
+    "rollback_after_state_success",
 }
 POSTCHECK_REQUIRED_CHECKPOINTS = {
     "rollback_after_previous_removed",
@@ -380,6 +381,58 @@ def validate_rollback_after_quarantine(run_dir: Path,
             errors.append(f"post_reconcile_state_quarantine_{key}_mismatch")
 
 
+def validate_rollback_after_state_success(run_dir: Path,
+                                          checkpoint: dict[str, Any],
+                                          summary: dict[str, Any],
+                                          manifest: dict[str, Any],
+                                          errors: list[str]) -> None:
+    expected = manifest.get("expected_active_version")
+    candidate = manifest.get("setup_candidate_version")
+    runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+    context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+    last_operation = runtime.get("last_operation") if isinstance(runtime.get("last_operation"), dict) else {}
+    if link_version(runtime.get("current_link")) != expected:
+        errors.append("checkpoint_current_not_expected_active")
+    if runtime.get("previous_link") is not None:
+        errors.append("checkpoint_previous_link_should_be_absent")
+    if runtime.get("state_current_version") != expected:
+        errors.append("checkpoint_state_current_not_expected")
+    if runtime.get("state_previous_version") is not None:
+        errors.append("checkpoint_state_previous_should_be_absent")
+    if link_version(context.get("current")) != expected:
+        errors.append("checkpoint_context_current_not_expected")
+    if last_operation.get("type") != "rollback" or last_operation.get("status") != "success":
+        errors.append("checkpoint_last_operation_not_successful_rollback")
+    if last_operation.get("rolled_back_to") != expected:
+        errors.append("checkpoint_last_operation_rolled_to_mismatch")
+    if last_operation.get("quarantined_current") is not True:
+        errors.append("checkpoint_last_operation_missing_quarantine")
+    if manifest.get("rollback_expectation") != "data-current-after-state-success":
+        errors.append("manifest_rollback_expectation")
+    if summary.get("restore_rollback") is not None:
+        errors.append("summary_restore_rollback_unexpected")
+
+    post_state = load_json(
+        run_dir / "trial" / "resume" / "post-reconcile-state.json",
+        errors,
+        "post_reconcile_state",
+    )
+    if post_state.get("schema") != POST_RECONCILE_STATE_SCHEMA:
+        errors.append("post_reconcile_state_schema")
+    if post_state.get("current_version") != expected:
+        errors.append("post_reconcile_state_current")
+    if post_state.get("expected_quarantine_version") != candidate:
+        errors.append("post_reconcile_state_expected_quarantine")
+    if post_state.get("quarantine_match_present") is not True:
+        errors.append("post_reconcile_state_quarantine_missing")
+    quarantine_match = post_state.get("quarantine_match") if isinstance(post_state.get("quarantine_match"), dict) else {}
+    if quarantine_match.get("version") != candidate:
+        errors.append("post_reconcile_state_quarantine_version")
+    for key in ("payload_sha256", "tree_sha256", "kiosk_py_sha256"):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(quarantine_match.get(key, ""))):
+            errors.append(f"post_reconcile_state_quarantine_{key}_missing")
+
+
 def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str]) -> None:
     checkpoint = load_json(run_dir / "trial" / "powerloss-checkpoint" / "checkpoint.json", errors, "checkpoint")
     summary = load_json(run_dir / "trial" / "powerloss-summary.json", errors, "powerloss_summary")
@@ -453,6 +506,8 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         validate_rollback_previous_removed(checkpoint, summary, manifest, errors)
     elif manifest.get("checkpoint") == "rollback_after_quarantine":
         validate_rollback_after_quarantine(run_dir, checkpoint, summary, manifest, errors)
+    elif manifest.get("checkpoint") == "rollback_after_state_success":
+        validate_rollback_after_state_success(run_dir, checkpoint, summary, manifest, errors)
 
     postcheck = run_dir / "postcheck.txt"
     if not postcheck.is_file():
@@ -642,15 +697,15 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             write_fixture(root)
             manifest_path = root / "evidence-manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["checkpoint"] = "rollback_after_state_success"
+            manifest["checkpoint"] = "rollback_after_future_unknown"
             write_json(manifest_path, manifest)
             checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
             checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
-            checkpoint["checkpoint"] = "rollback_after_state_success"
+            checkpoint["checkpoint"] = "rollback_after_future_unknown"
             write_json(checkpoint_path, checkpoint)
             result = validate(root)
             self.assertFalse(result["passed"])
-            self.assertIn("unsupported_checkpoint:rollback_after_state_success", result["errors"])
+            self.assertIn("unsupported_checkpoint:rollback_after_future_unknown", result["errors"])
 
     def test_required_postcheck_fails_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -747,6 +802,64 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("post_reconcile_state_quarantine_tree_sha256_mismatch", result["errors"])
+
+    def test_rollback_after_state_success_requires_final_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint["checkpoint"] = "rollback_after_state_success"
+            checkpoint["context"] = {"current": "releases/runtime-a"}
+            checkpoint["runtime_snapshot"] = {
+                "current_link": "releases/runtime-a",
+                "previous_link": None,
+                "state_current_version": "runtime-a",
+                "state_previous_version": None,
+                "last_operation": {
+                    "type": "rollback",
+                    "status": "success",
+                    "rolled_back_to": "runtime-a",
+                    "quarantined_current": True,
+                },
+            }
+            write_json(checkpoint_path, checkpoint)
+            summary_path = root / "trial/powerloss-summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["checkpoint"] = checkpoint
+            write_json(summary_path, summary)
+            write_json(root / "trial/resume/post-reconcile-state.json", {
+                "schema": POST_RECONCILE_STATE_SCHEMA,
+                "current_version": "runtime-a",
+                "expected_quarantine_version": "runtime-b",
+                "quarantine_match_present": True,
+                "quarantine_match": {
+                    "version": "runtime-b",
+                    "payload_sha256": "b" * 64,
+                    "tree_sha256": "c" * 64,
+                    "kiosk_py_sha256": "d" * 64,
+                },
+            })
+            manifest_path = root / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["checkpoint"] = "rollback_after_state_success"
+            manifest["rollback_expectation"] = "data-current-after-state-success"
+            manifest["files"] = []
+            for path in sorted(root.rglob("*")):
+                if path.is_file() and path.name != "evidence-manifest.json":
+                    manifest["files"].append({
+                        "file": path.relative_to(root).as_posix(),
+                        "bytes": path.stat().st_size,
+                        "sha256": sha256_file(path),
+                    })
+            write_json(manifest_path, manifest)
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint["runtime_snapshot"]["last_operation"]["quarantined_current"] = False
+            write_json(checkpoint_path, checkpoint)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_last_operation_missing_quarantine", result["errors"])
 
 
 def parse_args() -> argparse.Namespace:
