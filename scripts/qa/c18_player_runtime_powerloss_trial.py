@@ -129,6 +129,40 @@ def env_base(extra: dict[str, str] | None = None) -> dict[str, str]:
     return env
 
 
+def run_systemctl_service(*args: str) -> dict[str, Any]:
+    proc = subprocess.run(
+        ["systemctl", *args, SERVICE],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=30,
+    )
+    return {
+        "action": "systemctl " + " ".join([*args, SERVICE]),
+        "returncode": proc.returncode,
+        "stdout_tail": proc.stdout[-400:],
+        "stderr_tail": proc.stderr[-400:],
+        "passed": proc.returncode == 0,
+    }
+
+
+def require_systemctl(result: dict[str, Any], label: str) -> None:
+    if result.get("returncode") != 0:
+        raise RuntimeError(f"{label}_failed:{result.get('stderr_tail') or result.get('stdout_tail')}")
+
+
+def restart_service_best_effort(evidence_root: Path, label: str) -> None:
+    unmask = run_systemctl_service("unmask")
+    start = run_systemctl_service("start")
+    write_json_fsync(evidence_root / f"{label}-service-restore.json", {
+        "schema": SCHEMA,
+        "phase": label,
+        "unmask": unmask,
+        "start": start,
+    })
+
+
 def safe_context(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(k): safe_context(v) for k, v in value.items()}
@@ -206,6 +240,26 @@ def run_apply_arm(args: argparse.Namespace) -> int:
         "data_root": str(args.data_root),
         "armed_at_utc": utcnow(),
     })
+    service_held = False
+    stop_result = run_systemctl_service("stop")
+    write_json_fsync(args.evidence_root / "service-stop-before-apply.json", {
+        "schema": SCHEMA,
+        "phase": "arm-apply",
+        "result": stop_result,
+    })
+    require_systemctl(stop_result, "service_stop_before_powerloss_apply")
+    try:
+        mask_result = run_systemctl_service("mask", "--runtime")
+        write_json_fsync(args.evidence_root / "service-runtime-mask-before-apply.json", {
+            "schema": SCHEMA,
+            "phase": "arm-apply",
+            "result": mask_result,
+        })
+        require_systemctl(mask_result, "service_runtime_mask_before_powerloss_apply")
+        service_held = True
+    except Exception:
+        restart_service_best_effort(args.evidence_root, "arm-apply-mask-failed")
+        raise
     previous_hook = updatectl.PLAYER_RUNTIME_FAULT_HOOK
     updatectl.PLAYER_RUNTIME_FAULT_HOOK = checkpoint_hook(args, "apply")
     old_apply_env = os.environ.get(APPLY_ENV)
@@ -213,29 +267,30 @@ def run_apply_arm(args: argparse.Namespace) -> int:
     os.environ[APPLY_ENV] = "1"
     os.environ[DEVICE_DATA_ENV] = "1"
     try:
-        rc = lab_apply.main([
-            "--lab-only-apply",
-            "--manifest", str(args.manifest),
-            "--payload", str(args.payload),
-            "--data-root", str(args.data_root),
-            "--allow-device-data-root",
-            "--canary-media", str(args.canary_media),
-            "--output-dir", str(args.evidence_root / "raw" / "apply"),
-            "--duration-sec", str(args.duration_sec),
-            "--interval-sec", str(args.interval_sec),
-            "--startup-wait-sec", str(args.startup_wait_sec),
-            "--json",
-        ])
-    except CheckpointWaitExpired as exc:
-        write_json_fsync(args.evidence_root / "arm-timeout.json", {
-            "schema": SCHEMA,
-            "phase": "arm-apply",
-            "passed": False,
-            "checkpoint_reached": True,
-            "reason": str(exc),
-            "resume_required": True,
-        })
-        return 75
+        try:
+            rc = lab_apply.main([
+                "--lab-only-apply",
+                "--manifest", str(args.manifest),
+                "--payload", str(args.payload),
+                "--data-root", str(args.data_root),
+                "--allow-device-data-root",
+                "--canary-media", str(args.canary_media),
+                "--output-dir", str(args.evidence_root / "raw" / "apply"),
+                "--duration-sec", str(args.duration_sec),
+                "--interval-sec", str(args.interval_sec),
+                "--startup-wait-sec", str(args.startup_wait_sec),
+                "--json",
+            ])
+        except CheckpointWaitExpired as exc:
+            write_json_fsync(args.evidence_root / "arm-timeout.json", {
+                "schema": SCHEMA,
+                "phase": "arm-apply",
+                "passed": False,
+                "checkpoint_reached": True,
+                "reason": str(exc),
+                "resume_required": True,
+            })
+            return 75
     finally:
         updatectl.PLAYER_RUNTIME_FAULT_HOOK = previous_hook
         if old_apply_env is None:
@@ -246,6 +301,8 @@ def run_apply_arm(args: argparse.Namespace) -> int:
             os.environ.pop(DEVICE_DATA_ENV, None)
         else:
             os.environ[DEVICE_DATA_ENV] = old_device_env
+        if service_held:
+            restart_service_best_effort(args.evidence_root, "arm-apply")
     write_json_fsync(args.evidence_root / "arm-result.json", {
         "schema": SCHEMA,
         "phase": "arm-apply",
@@ -506,6 +563,15 @@ def self_test() -> None:
     missing_rollback = sorted({"rollback_after_current_to_previous", "rollback_after_state_success"} - ROLLBACK_CHECKPOINTS)
     if missing_rollback:
         raise AssertionError(f"missing rollback checkpoints: {missing_rollback}")
+    source = Path(__file__).read_text(encoding="utf-8")
+    for token in (
+        'run_systemctl_service("stop")',
+        'run_systemctl_service("mask", "--runtime")',
+        "restart_service_best_effort",
+        "service-runtime-mask-before-apply.json",
+    ):
+        if token not in source:
+            raise AssertionError(f"missing service-hold token: {token}")
     payload = {"schema": SCHEMA, "ok": True}
     tmp = Path(os.environ.get("TMPDIR", "/tmp")) / f"c18-powerloss-self-test-{os.getpid()}.json"
     try:
