@@ -71,7 +71,7 @@ TEST_COMMANDS = (
     ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
     ("c18_player_runtime_release_gate", ["python3", "scripts/qa/c18_player_runtime_release_gate.py", "--self-test"]),
     ("c18_coldboot_evidence_gate", ["python3", "scripts/qa/c18_coldboot_evidence_gate.py", "--self-test"]),
-    ("c18_playback_soak_collect", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
+    ("c18_playback_soak_collect_self_test", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
     ("c18_coldboot_evidence_current", [
         "python3",
         "scripts/qa/c18_coldboot_evidence_gate.py",
