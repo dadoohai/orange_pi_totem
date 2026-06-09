@@ -58,6 +58,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
     "scripts/qa/c18_player_runtime_lab_thaw.py",
     "scripts/qa/c18_player_runtime_powerloss_trial.py",
+    "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
@@ -73,6 +74,7 @@ TEST_COMMANDS = (
     ("c18_player_runtime_release_gate", ["python3", "scripts/qa/c18_player_runtime_release_gate.py", "--self-test"]),
     ("c18_coldboot_evidence_gate", ["python3", "scripts/qa/c18_coldboot_evidence_gate.py", "--self-test"]),
     ("c18_player_runtime_powerloss_trial_self_test", ["python3", "scripts/qa/c18_player_runtime_powerloss_trial.py", "--self-test"]),
+    ("c18_player_runtime_powerloss_evidence_gate_self_test", ["python3", "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py", "--self-test"]),
     ("c18_playback_soak_collect_self_test", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
     ("c18_coldboot_evidence_current", [
         "python3",
@@ -590,6 +592,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evidence-dir", type=Path, default=None)
     parser.add_argument("--player-runtime-data-coldboot-evidence-dir", type=Path, default=None)
     parser.add_argument("--player-runtime-data-evidence-dir", type=Path, default=None)
+    parser.add_argument("--player-runtime-powerloss-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--player-runtime-evidence-mode", choices=("baseline", "decisive"), default="baseline")
     parser.add_argument("--expect-image-tag", default=CURRENT_GOLDEN_IMAGE_TAG)
     parser.add_argument("--expect-image-sha256", default=CURRENT_GOLDEN_IMAGE_SHA256)
@@ -618,6 +621,17 @@ def main() -> int:
         steps.append(run_step(name, step_cmd))
     data_evidence_steps, data_evidence_summary = player_runtime_decisive_data_evidence_steps(args)
     steps.extend(data_evidence_steps)
+    for index, powerloss_dir in enumerate(args.player_runtime_powerloss_evidence_dir or [], 1):
+        steps.append(run_step(
+            f"c18_player_runtime_powerloss_evidence:{index}",
+            [
+                "python3",
+                "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
+                "--run-dir",
+                str(powerloss_dir),
+                "--json",
+            ],
+        ))
     if data_evidence_steps:
         failed_data_steps = [step["name"] for step in data_evidence_steps if not step["passed"]]
         if failed_data_steps:
