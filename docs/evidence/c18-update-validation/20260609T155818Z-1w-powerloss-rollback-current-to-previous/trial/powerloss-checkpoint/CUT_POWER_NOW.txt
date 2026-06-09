@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=rollback_after_current_to_previous action=rollback evidence=/data/e/rb-b8-cut/powerloss-checkpoint

@@ -1,0 +1,33 @@
+{
+  "action": "rollback",
+  "checkpoint": "rollback_after_current_to_previous",
+  "context": {
+    "current": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "previous": "releases/c18.player-runtime-powerloss-b8-20260609T155522Z-b8691b7"
+  },
+  "data_root": "/data",
+  "hit_at_utc": "2026-06-09T15:58:18Z",
+  "non_claims": [
+    "power_loss_observed_until_board_boots_and_resume_phase_passes",
+    "public_player_runtime_thaw",
+    "stable_or_production"
+  ],
+  "operator_instruction": "CUT_POWER_NOW",
+  "phase": "armed",
+  "runtime_snapshot": {
+    "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "last_operation": {
+      "finished_at_utc": "2026-06-09T15:57:10Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-09T15:57:10Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-powerloss-b8-20260609T155522Z-b8691b7"
+    },
+    "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_current_version": "c18.player-runtime-powerloss-b8-20260609T155522Z-b8691b7",
+    "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+  },
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1",
+  "wait_sec": 600.0
+}

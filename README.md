@@ -58,6 +58,15 @@ baseline/fallback propria da `1w`. Ainda nao e thaw publico, OTA de
 `kiosky-player`, GitHub publish, auto-pull, stable/producao, power-loss fisico
 ou soak.
 
+Power-loss fisico lab-only de `player-runtime`:
+`docs/evidence/c18-update-validation/20260609T150327Z-1w-powerloss-after-current-symlink/`
+e
+`docs/evidence/c18-update-validation/20260609T155818Z-1w-powerloss-rollback-current-to-previous/`.
+Essas evidencias cobrem, respectivamente, corte apos `current -> B` no apply e
+corte no rollback apos `current -> A`, com deep-health e reconcile verdes no
+resume. Elas ampliam a matriz fisica de power-loss, mas nao provam todos os
+checkpoints restantes, long soak, stable/producao, auto-pull ou thaw publico.
+
 Golden pos-M6 validada em hardware: `c18-hwdecode-lab-1u`.
 Evidencia offline:
 `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`.
