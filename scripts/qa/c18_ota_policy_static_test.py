@@ -52,6 +52,7 @@ PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_r
 PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
+PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
@@ -1390,6 +1391,29 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             m6_trial.index('collect_health_atomic(args, data_dir / "service-after-rollback"'),
             m6_trial.index("write_evidence_manifest("),
         )
+
+        powerloss = PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH.read_text(encoding="utf-8")
+        self.assertIn("C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL", powerloss)
+        self.assertIn("C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT", powerloss)
+        self.assertIn("PLAYER_RUNTIME_FAULT_HOOK", powerloss)
+        self.assertIn("APPLY_CHECKPOINTS", powerloss)
+        self.assertIn("ROLLBACK_CHECKPOINTS", powerloss)
+        self.assertIn('"after_current_symlink"', powerloss)
+        self.assertIn('"after_marker_written"', powerloss)
+        self.assertIn('"rollback_after_current_to_previous"', powerloss)
+        self.assertIn("CUT_POWER_NOW", powerloss)
+        self.assertIn("write_json_fsync", powerloss)
+        self.assertIn("fsync_dir", powerloss)
+        self.assertIn("power_cut_not_observed_before_timeout", powerloss)
+        self.assertIn("c18_player_runtime_lab_apply", powerloss)
+        self.assertIn("c18_player_runtime_lab_rollback", powerloss)
+        self.assertIn("c18_player_runtime_adoption_probe.py", powerloss)
+        self.assertIn("c18_playback_health_collect.py", powerloss)
+        self.assertIn("--self-test", powerloss)
+        self.assertIn("public_player_runtime_thaw", powerloss)
+        self.assertIn("stable_or_production", powerloss)
+        self.assertNotIn("apply-github", powerloss)
+        self.assertNotIn("apply-manifest-url", powerloss)
 
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)

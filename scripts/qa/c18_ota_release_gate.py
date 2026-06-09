@@ -57,6 +57,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_persistent_trial.py",
     "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
     "scripts/qa/c18_player_runtime_lab_thaw.py",
+    "scripts/qa/c18_player_runtime_powerloss_trial.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
@@ -71,6 +72,7 @@ TEST_COMMANDS = (
     ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
     ("c18_player_runtime_release_gate", ["python3", "scripts/qa/c18_player_runtime_release_gate.py", "--self-test"]),
     ("c18_coldboot_evidence_gate", ["python3", "scripts/qa/c18_coldboot_evidence_gate.py", "--self-test"]),
+    ("c18_player_runtime_powerloss_trial_self_test", ["python3", "scripts/qa/c18_player_runtime_powerloss_trial.py", "--self-test"]),
     ("c18_playback_soak_collect_self_test", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
     ("c18_coldboot_evidence_current", [
         "python3",
