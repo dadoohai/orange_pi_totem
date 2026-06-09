@@ -1,0 +1,14 @@
+{
+  "fingerprint": "c18-candidate-canary",
+  "playlist": [
+    {
+      "campaign_id": "c18-canary",
+      "campaign_name": "C18 canary",
+      "duration_ms": 10000,
+      "path": "/data/media/kiosky-player/63e22e276fb97546ed792f36d157f6e006893a95.mp4",
+      "url": ""
+    }
+  ],
+  "saved_at": "2026-06-09T17:07:59Z",
+  "version": 1
+}

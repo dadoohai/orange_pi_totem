@@ -65,11 +65,14 @@ e
 e
 `docs/evidence/c18-update-validation/20260609T162328Z-1w-powerloss-after-marker-written/`
 e
-`docs/evidence/c18-update-validation/20260609T164448Z-1w-powerloss-after-previous-symlink/`.
+`docs/evidence/c18-update-validation/20260609T164448Z-1w-powerloss-after-previous-symlink/`
+e
+`docs/evidence/c18-update-validation/20260609T171013Z-1w-powerloss-rollback-after-previous-removed/`.
 Essas evidencias cobrem, respectivamente, corte apos `current -> B` no apply,
 corte no rollback apos `current -> A`, corte apos marker verificado mas antes
 de `current -> B`, e corte apos `previous -> A` mas antes de `current -> B`,
-com deep-health e reconcile verdes no resume. Elas ampliam a matriz fisica de
+e corte no rollback apos remocao de `previous` mas antes do state final, com
+deep-health e reconcile verdes no resume. Elas ampliam a matriz fisica de
 power-loss, mas nao provam todos os checkpoints restantes, long soak,
 stable/producao, auto-pull ou thaw publico.
 
