@@ -314,6 +314,7 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
     updatectl = base.cat_file(rootfs, "/opt/totem/bin/totem-updatectl") or ""
     splash_service = base.cat_file(rootfs, "/etc/systemd/system/dadooh-visual-splash.service") or ""
     update_agent_service = _dump_text(rootfs, UPDATE_AGENT_SERVICE_TARGET)
+    player_service_launcher = _dump_text(rootfs, "/opt/totem/bin/kiosky_service_launcher.sh")
     player_dropin = _dump_text(rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf")
     policy_text = _dump_text(rootfs, UPDATE_POLICY_TARGET)
     try:
@@ -360,10 +361,21 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
             and "root-owned state" in player_dropin
             and "RequiresMountsFor=/data" in player_dropin
             and "After=local-fs.target" in player_dropin
+            and "KillMode=mixed" in player_dropin
+            and "TimeoutStopSec=90s" in player_dropin
+            and "SendSIGKILL=yes" in player_dropin
+            and "mpv to quit over IPC before falling back" in player_dropin
+            and "KillMode=control-group" not in player_dropin
             and "ExecStartPre=-/usr/bin/env C18_PLAYER_RUNTIME_RECONCILE=1" not in player_dropin
         ),
         "image_fixed_player_dropin_routes_through_totem_launcher": (
             "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in player_dropin
+        ),
+        "image_fixed_player_launcher_waits_for_child_shutdown": (
+            "wait_child_after_stop()" in player_service_launcher
+            and "shutdown_waiting_for_child" in player_service_launcher
+            and "shutdown_child_exited" in player_service_launcher
+            and 'wait_child_after_stop "$child_pid" "$rc"' in player_service_launcher
         ),
     }
     for core_file in CORE_FILES:

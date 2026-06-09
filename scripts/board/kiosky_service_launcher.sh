@@ -642,8 +642,32 @@ request_stop() {
   fi
 }
 
+wait_child_after_stop() {
+  local pid="$1"
+  local rc="$2"
+
+  if [ -z "$pid" ]; then
+    return "$rc"
+  fi
+
+  if [ "$STOP_REQUESTED" -ne 0 ] && process_alive "$pid"; then
+    log "shutdown_waiting_for_child pid=$pid"
+    while process_alive "$pid"; do
+      wait "$pid" 2>/dev/null
+      rc="$?"
+      if process_alive "$pid"; then
+        sleep 0.2
+      fi
+    done
+    log "shutdown_child_exited pid=$pid rc=$rc"
+  fi
+
+  return "$rc"
+}
+
 run_app_once() {
   local rc=0
+  local child_pid=""
 
   if settings_session_active; then
     c17_4_trace "app_start_blocked_by_settings_session"
@@ -665,11 +689,14 @@ run_app_once() {
 
   "${APP_CMD[@]}" &
   CHILD_PID="$!"
+  child_pid="$CHILD_PID"
   LAST_SPLASH_MODE="player_running"
   write_status "running" "true"
   start_status_refresh "$LAST_STATUS_FILE"
 
-  wait "$CHILD_PID"
+  wait "$child_pid"
+  rc="$?"
+  wait_child_after_stop "$child_pid" "$rc"
   rc="$?"
   stop_status_refresh
   CHILD_PID=""

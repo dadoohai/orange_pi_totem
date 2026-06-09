@@ -134,6 +134,9 @@ REQUIRED_HEALTH_CHECKS = (
     "nrestarts_stable",
     "status_no_failures",
 )
+REQUIRED_SERVICE_KILL_MODE = "mixed"
+REQUIRED_SERVICE_TIMEOUT_STOP_SEC_MIN = 40.0
+REQUIRED_SERVICE_SEND_SIGKILL = "yes"
 
 
 def rel(path: Path, root: Path) -> str:
@@ -401,6 +404,26 @@ def validate_playback_summary(run_dir: Path, rel_path: str, label: str) -> list[
     return errors
 
 
+def validate_service_lifecycle(run_dir: Path, rel_path: str, label: str) -> list[str]:
+    errors: list[str] = []
+    data = load_json_object(run_dir / rel_path, label, errors)
+    if data.get("target_mode") != "service":
+        errors.append(f"{label}_target_mode")
+    if data.get("kill_mode") != REQUIRED_SERVICE_KILL_MODE:
+        errors.append(f"{label}_kill_mode")
+    try:
+        timeout_stop_sec = float(data.get("timeout_stop_sec"))
+    except (TypeError, ValueError):
+        timeout_stop_sec = -1.0
+    if timeout_stop_sec < REQUIRED_SERVICE_TIMEOUT_STOP_SEC_MIN:
+        errors.append(f"{label}_timeout_stop_sec")
+    if data.get("send_sigkill") != REQUIRED_SERVICE_SEND_SIGKILL:
+        errors.append(f"{label}_send_sigkill")
+    if data.get("service_lifecycle_show_rc") not in (0, None):
+        errors.append(f"{label}_service_lifecycle_show_rc")
+    return errors
+
+
 def validate_marker(run_dir: Path, package_manifest: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
     errors: list[str] = []
     marker = load_json_object(run_dir / "verified-marker.json", "verified_marker", errors)
@@ -570,6 +593,7 @@ def validate_semantics(run_dir: Path) -> list[str]:
     before_tree: str | None = None
     if rollback_expectation == "data-previous":
         errors.extend(validate_playback_summary(run_dir, "service-before-apply/playback-deep-health-public.json", "service_before_apply"))
+        errors.extend(validate_service_lifecycle(run_dir, "service-before-apply/deep-health-systemd.json", "service_before_apply_systemd"))
         errors.extend(validate_adoption(
             run_dir,
             "service-before-apply/launcher-adoption.json",
@@ -600,6 +624,8 @@ def validate_semantics(run_dir: Path) -> list[str]:
             errors.append("data_previous_apply_previous_state_mismatch")
     errors.extend(validate_playback_summary(run_dir, "service-after-restart/playback-deep-health-public.json", "service_after_restart"))
     errors.extend(validate_playback_summary(run_dir, "service-after-rollback/playback-deep-health-public.json", "service_after_rollback"))
+    errors.extend(validate_service_lifecycle(run_dir, "service-after-restart/deep-health-systemd.json", "service_after_restart_systemd"))
+    errors.extend(validate_service_lifecycle(run_dir, "service-after-rollback/deep-health-systemd.json", "service_after_rollback_systemd"))
     expected_version = str(package_manifest.get("version")) if package_manifest else None
     errors.extend(validate_adoption(
         run_dir,
@@ -761,6 +787,22 @@ def self_test() -> None:
             "checks": checks,
             "counters": counters,
         }
+        service_systemd_sidecar = {
+            "target_mode": "service",
+            "service_active": True,
+            "nrestarts_delta": 0,
+            "candidate_pid_present": False,
+            "service_lifecycle_show_rc": 0,
+            "kill_mode": REQUIRED_SERVICE_KILL_MODE,
+            "timeout_stop_usec": "1min 30s",
+            "timeout_stop_sec": 90.0,
+            "send_sigkill": REQUIRED_SERVICE_SEND_SIGKILL,
+        }
+        candidate_systemd_sidecar = {
+            **service_systemd_sidecar,
+            "target_mode": "candidate",
+            "candidate_pid_present": True,
+        }
         package_manifest = {
             "schema": UPDATE_MANIFEST_SCHEMA,
             "component": "player-runtime",
@@ -903,7 +945,12 @@ def self_test() -> None:
             "service-after-rollback/deep-health-player-counters.json",
             "qa/evidence-leak-scan.txt",
         ):
-            put(rel_path, "{}\n")
+            if rel_path == "candidate-health/deep-health-systemd.json":
+                put(rel_path, candidate_systemd_sidecar)
+            elif rel_path.endswith("/deep-health-systemd.json"):
+                put(rel_path, service_systemd_sidecar)
+            else:
+                put(rel_path, "{}\n")
         def update_readme_expectation(expectation: str) -> None:
             readme = json.loads((run / "README.md").read_text(encoding="utf-8"))
             readme["rollback_expectation"] = expectation
@@ -981,6 +1028,16 @@ def self_test() -> None:
         refresh_manifest("image-fallback")
         ok = validate(run)
         assert ok["passed"], ok
+        bad_systemd = {**service_systemd_sidecar, "kill_mode": "control-group"}
+        put("service-after-restart/deep-health-systemd.json", bad_systemd)
+        refresh_manifest("image-fallback")
+        bad_lifecycle = validate(run)
+        assert not bad_lifecycle["passed"], bad_lifecycle
+        assert "service_after_restart_systemd_kill_mode" in bad_lifecycle["errors"], bad_lifecycle
+        put("service-after-restart/deep-health-systemd.json", service_systemd_sidecar)
+        refresh_manifest("image-fallback")
+        ok = validate(run)
+        assert ok["passed"], ok
         package_manifest_path = run / "package" / "dadooh-player-runtime-demo.manifest.json"
         package_clean = json.loads(package_manifest_path.read_text(encoding="utf-8"))
         package_missing_feature = json.loads(json.dumps(package_clean))
@@ -1015,7 +1072,10 @@ def self_test() -> None:
             "service-before-apply/deep-health-kernel.json",
             "service-before-apply/deep-health-player-counters.json",
         ):
-            put(rel_path, "{}\n")
+            if rel_path.endswith("/deep-health-systemd.json"):
+                put(rel_path, service_systemd_sidecar)
+            else:
+                put(rel_path, "{}\n")
         put("service-before-apply/playback-deep-health-public.json", health_summary)
         put("service-before-apply/launcher-adoption.json", {
             "schema": PLAYER_RUNTIME_ADOPTION_SCHEMA,

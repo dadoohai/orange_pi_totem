@@ -381,6 +381,57 @@ def service_nrestarts(service: str) -> int:
     return as_int(run(["systemctl", "show", service, "-p", "NRestarts", "--value"]).stdout)
 
 
+def parse_systemd_duration_sec(value: str | None) -> float | None:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.lower() in {"infinity", "infinityus"}:
+        return None
+    parts = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z]+)?", text)
+    if not parts:
+        return None
+    total = 0.0
+    matched = False
+    for number, unit in parts:
+        matched = True
+        value_float = float(number)
+        unit_lower = (unit or "s").lower()
+        if unit_lower in {"us", "usec"}:
+            total += value_float / 1_000_000.0
+        elif unit_lower in {"ms", "msec"}:
+            total += value_float / 1_000.0
+        elif unit_lower in {"s", "sec", "secs", "second", "seconds"}:
+            total += value_float
+        elif unit_lower in {"min", "mins", "minute", "minutes"}:
+            total += value_float * 60.0
+        elif unit_lower in {"h", "hr", "hour", "hours"}:
+            total += value_float * 3600.0
+        else:
+            return None
+    return total if matched else None
+
+
+def service_lifecycle_properties(service: str) -> dict[str, Any]:
+    keys = ("KillMode", "TimeoutStopUSec", "SendSIGKILL")
+    proc = run(["systemctl", "show", service, *sum([["-p", key] for key in keys], [])])
+    raw: dict[str, str] = {}
+    for line in proc.stdout.splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            raw[key] = value
+    timeout_stop = raw.get("TimeoutStopUSec", "")
+    timeout_stop_sec = parse_systemd_duration_sec(timeout_stop)
+    return {
+        "service_lifecycle_show_rc": proc.returncode,
+        "kill_mode": raw.get("KillMode", ""),
+        "timeout_stop_usec": timeout_stop,
+        "timeout_stop_sec": timeout_stop_sec,
+        "send_sigkill": raw.get("SendSIGKILL", ""),
+    }
+
+
 def write_systemd_sidecar(out_dir: Path,
                           service: str,
                           nrestarts_start: int,
@@ -394,12 +445,14 @@ def write_systemd_sidecar(out_dir: Path,
         active = run(["systemctl", "is-active", service]).stdout.strip() == "active"
         nrestarts_end = service_nrestarts(service)
         nrestarts_delta = max(nrestarts_end - nrestarts_start, 0)
-    write_json(out_dir / "deep-health-systemd.json", {
+    payload = {
         "target_mode": target_mode,
         "service_active": active,
         "nrestarts_delta": nrestarts_delta,
         "candidate_pid_present": bool(candidate_pid) if target_mode == "candidate" else False,
-    })
+    }
+    payload.update(service_lifecycle_properties(service))
+    write_json(out_dir / "deep-health-systemd.json", payload)
 
 
 def argv_matches_ipc(argv: list[str], ipc_path: Path) -> bool:

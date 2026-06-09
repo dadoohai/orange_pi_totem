@@ -52,6 +52,7 @@ PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_playe
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
+KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
@@ -171,12 +172,30 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("non-fatal, explicitly authorized player-runtime reconcile", dropin)
         self.assertIn("RequiresMountsFor=/data", dropin)
         self.assertIn("After=local-fs.target", dropin)
+        self.assertIn("KillMode=mixed", dropin)
+        self.assertIn("TimeoutStopSec=90s", dropin)
+        self.assertIn("SendSIGKILL=yes", dropin)
+        self.assertIn("mpv to quit over IPC before falling back", dropin)
         self.assertNotIn("ExecStartPre=-/usr/bin/env C18_PLAYER_RUNTIME_RECONCILE=1", dropin)
+        self.assertNotIn("KillMode=control-group", dropin)
         self.assertNotIn("/data/apps/kiosky-player/current", dropin)
         self.assertIn("/data/player-runtime", dirs)
         self.assertIn("/data/player-runtime/releases", dirs)
         self.assertNotIn("/data/apps/kiosky-player", dirs)
         self.assertNotIn("/data/apps/kiosky-player/releases", dirs)
+
+    def test_kiosky_service_launcher_waits_for_child_on_shutdown(self) -> None:
+        launcher = KIOSKY_SERVICE_LAUNCHER_PATH.read_text(encoding="utf-8")
+        subprocess.run(["bash", "-n", str(KIOSKY_SERVICE_LAUNCHER_PATH)], check=True)
+        self.assertIn("wait_child_after_stop()", launcher)
+        self.assertIn("shutdown_waiting_for_child", launcher)
+        self.assertIn("shutdown_child_exited", launcher)
+        self.assertIn('wait_child_after_stop "$child_pid" "$rc"', launcher)
+        wait_start = launcher.index('wait "$child_pid"')
+        wait_after_stop = launcher.index('wait_child_after_stop "$child_pid" "$rc"')
+        clear_child = launcher.index('CHILD_PID=""', wait_after_stop)
+        self.assertLess(wait_start, wait_after_stop)
+        self.assertLess(wait_after_stop, clear_child)
 
     def test_image_embed_writes_policy_service_and_disables_timer(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")

@@ -417,6 +417,7 @@ def main():
     upd_now = base.cat_file(vroot, UPDATECTL) or ""
     marker_now = base.cat_file(vroot, MARKER) or ""
     panfrost_unit_now = base.cat_file(vroot, PANFROST_UNIT) or ""
+    service_launcher_now = base.cat_file(vroot, "/opt/totem/bin/kiosky_service_launcher.sh") or ""
     totem_launcher_now = base.cat_file(vroot, "/opt/totem/bin/totem-kiosky-launcher.sh") or ""
     kiosky_dropin_now = base.cat_file(vroot, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf") or ""
     seed_verify_file = work / "private-values.seed.verify.json"
@@ -476,6 +477,12 @@ def main():
             "ExecStart=" in kiosky_dropin_now
             and "ExecStart=/usr/bin/env bash /opt/totem/bin/totem-kiosky-launcher.sh" in kiosky_dropin_now
         ),
+        "kiosky_service_launcher_waits_for_child_shutdown": (
+            "wait_child_after_stop()" in service_launcher_now
+            and "shutdown_waiting_for_child" in service_launcher_now
+            and "shutdown_child_exited" in service_launcher_now
+            and 'wait_child_after_stop "$child_pid" "$rc"' in service_launcher_now
+        ),
         "kiosky_service_reconciles_player_runtime_state": (
             "C18_PLAYER_RUNTIME_RECONCILE=1" in kiosky_dropin_now
             and "--allow-player-runtime-maintenance" in kiosky_dropin_now
@@ -486,6 +493,11 @@ def main():
             and "root-owned state" in kiosky_dropin_now
             and "RequiresMountsFor=/data" in kiosky_dropin_now
             and "After=local-fs.target" in kiosky_dropin_now
+            and "KillMode=mixed" in kiosky_dropin_now
+            and "TimeoutStopSec=90s" in kiosky_dropin_now
+            and "SendSIGKILL=yes" in kiosky_dropin_now
+            and "mpv to quit over IPC before falling back" in kiosky_dropin_now
+            and "KillMode=control-group" not in kiosky_dropin_now
             and "ExecStartPre=-/usr/bin/env C18_PLAYER_RUNTIME_RECONCILE=1" not in kiosky_dropin_now
         ),
         "totem_kiosky_launcher_uses_player_runtime_path": (
