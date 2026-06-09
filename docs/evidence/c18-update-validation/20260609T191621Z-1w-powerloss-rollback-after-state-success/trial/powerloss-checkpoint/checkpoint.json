@@ -1,0 +1,161 @@
+{
+  "action": "rollback",
+  "boot_state_at_checkpoint": {
+    "boot_id": "f743f1cc-9547-4322-8d07-14a789e82648",
+    "btime": 1781032106,
+    "captured_at_utc": "2026-06-09T19:16:21Z",
+    "uptime_sec": 475.27
+  },
+  "checkpoint": "rollback_after_state_success",
+  "context": {
+    "current": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+  },
+  "data_root": "/data",
+  "hit_at_utc": "2026-06-09T19:16:21Z",
+  "non_claims": [
+    "power_loss_observed_until_board_boots_and_resume_phase_passes",
+    "public_player_runtime_thaw",
+    "stable_or_production"
+  ],
+  "operator_instruction": "CUT_POWER_NOW",
+  "phase": "armed",
+  "runtime_snapshot": {
+    "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "last_operation": {
+      "finished_at_utc": "2026-06-09T19:16:21Z",
+      "quarantined_current": true,
+      "rollback_reason": "physical_powerloss_trial",
+      "rolled_back_to": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+      "started_at_utc": "2026-06-09T19:16:21Z",
+      "status": "success",
+      "type": "rollback"
+    },
+    "previous_link": null,
+    "quarantine": [
+      {
+        "kiosk_py_sha256": "d63cfd9d31700823d93c7b3c238c4bc8c86330f386f184d2b62bd025f4e221f7",
+        "payload_sha256": "d767cb61bc56eda7cad3515c6a4af852713384c0d46111cd9abee381dbb5230b",
+        "quarantined_at_utc": "2026-06-09T04:11:49Z",
+        "reason": "ipc_success_present,hwdec_expected_present,vo_configured_present,estimated_frame_present,playback_progressed,service_active,single_mpv,mpv_path_c18_stack,candidate_teardown_process_stopped_cleanly",
+        "tree_sha256": "e8359959d7bb8b2e03f500cad07798d562085a921947b4f5f269421896179d91",
+        "version": "c18.player-runtime-m6-a-20260609T0410Z-7107a55"
+      },
+      {
+        "kiosk_py_sha256": "3b23dc17f518279e3c5e7ce9c715a7972025c447f99b326b3d02bdd7bb1ecca6",
+        "payload_sha256": "237809c623d12f37956a3294c22c8f11e04296b85331a85ac032f10455de5240",
+        "quarantined_at_utc": "2026-06-09T04:24:32Z",
+        "reason": "m6_coldboot_trial_rollback",
+        "tree_sha256": "28282dacae18e6b1f72a6fa9ae1b7d0259f995f63f469fbb3bd7a148ebe27140",
+        "version": "c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2"
+      },
+      {
+        "kiosk_py_sha256": "59c15217f50b4954eb36e426b87592efe171aab5a552ef7884aa4f7cd290ab03",
+        "payload_sha256": "8cc9d084566616ac5bac417ac6b1f221a6c4a896caf28747f47d8e9b76f2f872",
+        "quarantined_at_utc": "2026-06-09T14:51:47Z",
+        "reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+        "tree_sha256": "584a5e9db94ad22886f695e3af3d68502dcde547881a84ae8052700837493331",
+        "version": "c18.player-runtime-powerloss-b-20260609T144336Z-693e4cc"
+      },
+      {
+        "kiosk_py_sha256": "fc244f37f2c183b268275e589412441795ab83b64eecac556b04812f698d9df3",
+        "payload_sha256": "0646f32ba41676dbf7fe24af9ae3edffdec0a6fe7aa4406792fc157dbeed3f9e",
+        "quarantined_at_utc": "2026-06-09T14:56:25Z",
+        "reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+        "tree_sha256": "5d762129de2a1b7cc7d34940c1a169e296cecff47c7beca2d981d5244c3e8657",
+        "version": "c18.player-runtime-powerloss-b2-20260609T145241Z-693e4cc"
+      },
+      {
+        "kiosk_py_sha256": "cb352949807b002680f2732e3a408f46d06ed3a3464adf6b8dd57a796dec38a7",
+        "payload_sha256": "9bddf0efc8bbbafb8de7ba68bd8be6683673cf725deee028024664ed22878b4b",
+        "quarantined_at_utc": "2026-06-09T15:11:27Z",
+        "reason": "physical_powerloss_trial_restore",
+        "tree_sha256": "09b06a3c50067fa1edf134bb7f61a351b60184a4adcf29ca1bbb65457717193f",
+        "version": "c18.player-runtime-powerloss-b3-20260609T150100Z-5c4f09d"
+      },
+      {
+        "kiosk_py_sha256": "44f9c35bcf95267cbffcd702ee48812d88b8e582acc95635abb51e2772a54f40",
+        "payload_sha256": "9a9646535450435f26b33adafb4ab60898657b2beb65e6d5d3496824e2a1a576",
+        "quarantined_at_utc": "2026-06-09T15:41:46Z",
+        "reason": "ipc_success_present,hwdec_expected_present,vo_configured_present,estimated_frame_present,playback_progressed,status_no_failures,service_active,single_mpv,mpv_path_c18_stack,candidate_teardown_process_stopped_cleanly",
+        "tree_sha256": "a2c336e24df5ac6ec055e983699bd71628888955c1361456f7faacb67c6eadb6",
+        "version": "c18.player-runtime-powerloss-b5-20260609T153715Z-b8691b7"
+      },
+      {
+        "kiosk_py_sha256": "7704bfcb8dc06b371647afe9492a23143b0917316e035434889b8f5c1b7679a3",
+        "payload_sha256": "97a9558c6188965c3e6a590b16bf2112692b91443aa87d59719af2162b0f60d7",
+        "quarantined_at_utc": "2026-06-09T15:46:03Z",
+        "reason": "ipc_success_present,hwdec_expected_present,vo_configured_present,estimated_frame_present,playback_progressed,status_no_failures,service_active,single_mpv,mpv_path_c18_stack,candidate_teardown_process_stopped_cleanly",
+        "tree_sha256": "b37a0d2b679bedfe466c99759d226dfee70acdb087999091394154a338a2fda3",
+        "version": "c18.player-runtime-powerloss-b6-20260609T154419Z-b8691b7"
+      },
+      {
+        "kiosk_py_sha256": "52c5cba9c7376f67557f71a4f264cf1cc7bf604cc2399083f12c3c05c792c498",
+        "payload_sha256": "56b60f335d75b773097e11b8efc5776ef2cb2526dba4e72998c47895885d88f5",
+        "quarantined_at_utc": "2026-06-09T15:48:48Z",
+        "reason": "panfrost_faults_zero,panfrost_faults_clean_for_policy",
+        "tree_sha256": "9fb26908ffd0d9172569db765d6f984b8cddc163bc34c14224925820eb128bb9",
+        "version": "c18.player-runtime-powerloss-b7-20260609T154703Z-b8691b7"
+      },
+      {
+        "kiosk_py_sha256": "67d96fa6655b84119856d681b1c4d7d1b54fcb783164beaeb1264ec92e91eb89",
+        "payload_sha256": "9fb6852e27bdab2125dcae78572ddacc32b93d073e504a60ceb9bda6d895d021",
+        "quarantined_at_utc": "2026-06-09T17:10:13Z",
+        "reason": "physical_powerloss_trial",
+        "tree_sha256": "58e5e754d580e353f7a2dea33c53c2282e75c95f61bdae821469f1f7f6d1d0a6",
+        "version": "c18.player-runtime-powerloss-b11-20260609T170453Z-c522d61"
+      },
+      {
+        "kiosk_py_sha256": "1fa8f398a8a66b143414e1c815057104320e4c724d9b01dc4cfdebf823d50292",
+        "payload_sha256": "bf5f46fa099d46ec2544e0778065d11a8476987fe0327a851b3bf420cd18fa7d",
+        "quarantined_at_utc": "2026-06-09T17:43:03Z",
+        "reason": "ipc_success_present,hwdec_expected_present,vo_configured_present,estimated_frame_present,playback_progressed,service_active,single_mpv,mpv_path_c18_stack,candidate_teardown_process_stopped_cleanly",
+        "tree_sha256": "acf6b4c159f300ba09a6eb270b17f87e99fd7d9d90a94c874134a3f24b8d11cc",
+        "version": "c18.player-runtime-powerloss-b12-20260609T173856Z-fe04918"
+      },
+      {
+        "kiosk_py_sha256": "d52cde3b0aab399719df18f25ffaf055de6f782be497fc906d39ab5c6f663db4",
+        "payload_sha256": "50349e2fc3e6d755c3111b004b407bf44d78f367eb4ae5d791cf382ca4fb6b0e",
+        "quarantined_at_utc": "2026-06-09T17:46:21Z",
+        "reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+        "tree_sha256": "00b1eb7d1cddebfb58b5eb29720d3278b45b815efde6b98b5318871758767a2e",
+        "version": "c18.player-runtime-powerloss-b13-20260609T174435Z-fe04918"
+      },
+      {
+        "kiosk_py_sha256": "993e2a79bc384428b38098e9c2c73f6beb43d271439644cafa4e28c3076d0d63",
+        "payload_sha256": "bc5f55a9750cd98ad4c7bdf198f1c4a1a439cb8eb469cf9ddcfab456cbcbb5b5",
+        "quarantined_at_utc": "2026-06-09T17:51:09Z",
+        "reason": "physical_powerloss_trial",
+        "tree_sha256": "0af8d832b59a26e46222d996eb44c74413371f6beb904b024ba4fdd622f1f588",
+        "version": "c18.player-runtime-powerloss-b14-20260609T174704Z-fe04918"
+      },
+      {
+        "kiosk_py_sha256": "2d873c6c41e742c06561775275b273435be0537abc6a99f1cc05c4318f4f7d7c",
+        "payload_sha256": "008df5d3419b967f1ccbf973054fd22b67a7b965d843f143052de44d654d5ce2",
+        "quarantined_at_utc": "2026-06-09T18:31:19Z",
+        "reason": "status_no_failures",
+        "tree_sha256": "67b9d73e14644807befc2bc6c8b0e1016c3a0d4f60af9fcecb87832639f5b55b",
+        "version": "c18.player-runtime-lab-20260609T182559Z-bbf14f4"
+      },
+      {
+        "kiosk_py_sha256": "a530957c0c1c4426eef859ae8295f19932fa371e5f082bb0f682b7b57540238c",
+        "payload_sha256": "1aa62e11603410f26c5ede45f745e5468a20b7dd8058a4078fef4ae3c652ba42",
+        "quarantined_at_utc": "2026-06-09T18:46:10Z",
+        "reason": "physical_powerloss_trial",
+        "tree_sha256": "922a526b3c9535d207dadcfabfc5368b689df753da2b40fc0411f06e806dcfc8",
+        "version": "c18.player-runtime-lab-20260609T184019Z-57a552e"
+      },
+      {
+        "kiosk_py_sha256": "074e89ff224f96641611ecfbb15a46170277eed0a11595a3f926d3295d2b1b11",
+        "payload_sha256": "788fa595c60dbef3c02b55121a016a3df59fecfefa154ac44a8e993c6718a11e",
+        "quarantined_at_utc": "2026-06-09T19:16:21Z",
+        "reason": "physical_powerloss_trial",
+        "tree_sha256": "e6cf129cf7ad8788f07a942599ec420007f91c0bc479e2fa73b2dfb08511e147",
+        "version": "c18.player-runtime-lab-20260609T191239Z-57a552e"
+      }
+    ],
+    "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_previous_version": null
+  },
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1",
+  "wait_sec": 1800.0
+}

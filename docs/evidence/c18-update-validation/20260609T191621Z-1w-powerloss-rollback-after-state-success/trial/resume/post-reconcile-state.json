@@ -1,0 +1,17 @@
+{
+  "current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+  "expected_quarantine_version": "c18.player-runtime-lab-20260609T191239Z-57a552e",
+  "previous_version": null,
+  "quarantine_count": 15,
+  "quarantine_match": {
+    "kiosk_py_sha256": "074e89ff224f96641611ecfbb15a46170277eed0a11595a3f926d3295d2b1b11",
+    "payload_sha256": "788fa595c60dbef3c02b55121a016a3df59fecfefa154ac44a8e993c6718a11e",
+    "quarantined_at_utc": "2026-06-09T19:16:21Z",
+    "reason": "physical_powerloss_trial",
+    "tree_sha256": "e6cf129cf7ad8788f07a942599ec420007f91c0bc479e2fa73b2dfb08511e147",
+    "version": "c18.player-runtime-lab-20260609T191239Z-57a552e"
+  },
+  "quarantine_match_present": true,
+  "schema": "dadooh.c18.player_runtime.powerloss.post_reconcile_state.v1",
+  "state_sha256": "820f8188736265412990c969cc4d0ad857868d20187d7dad5f8b692e33e3e45b"
+}

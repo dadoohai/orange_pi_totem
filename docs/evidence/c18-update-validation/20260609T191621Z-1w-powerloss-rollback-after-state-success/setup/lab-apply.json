@@ -1,0 +1,56 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-lab-20260609T191239Z-57a552e",
+    "last_operation": {
+      "finished_at_utc": "2026-06-09T19:14:25Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-lab-20260609T191239Z-57a552e.manifest.json",
+      "started_at_utc": "2026-06-09T19:13:40Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-lab-20260609T191239Z-57a552e"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_current_version": "c18.player-runtime-lab-20260609T191239Z-57a552e",
+    "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "last_operation": {
+      "finished_at_utc": "2026-06-09T18:17:08Z",
+      "gc_removed_releases": [
+        "c18.player-runtime-lab-20260609T184019Z-57a552e"
+      ],
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-09T18:17:08Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/e/rb18s/apply",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-lab-20260609T191239Z-57a552e"
+}

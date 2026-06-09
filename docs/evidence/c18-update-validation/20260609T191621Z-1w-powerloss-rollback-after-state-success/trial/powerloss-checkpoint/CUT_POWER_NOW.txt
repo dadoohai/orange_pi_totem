@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=rollback_after_state_success action=rollback evidence=/data/e/rb18ss/powerloss-checkpoint
