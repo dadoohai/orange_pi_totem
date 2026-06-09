@@ -60,6 +60,18 @@ HEALTH_CHECKS = (
     "nrestarts_stable",
     "status_no_failures",
 )
+SUPPORTED_CHECKPOINTS = {
+    "after_current_symlink",
+    "after_marker_written",
+    "after_previous_symlink",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+}
+POSTCHECK_REQUIRED_CHECKPOINTS = {
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+}
 
 
 def rel(path: Path, root: Path) -> str:
@@ -245,8 +257,24 @@ def validate_health(data: dict[str, Any], label: str, errors: list[str]) -> None
         errors.append(f"{label}_checks_missing")
         return
     for check in HEALTH_CHECKS:
-        if check in checks and checks.get(check) is not True:
+        if check not in checks:
+            errors.append(f"{label}_check_missing:{check}")
+        elif checks.get(check) is not True:
             errors.append(f"{label}_check_failed:{check}")
+
+
+def validate_adoption_sidecar(run_dir: Path,
+                              rel_path: str,
+                              summary_data: dict[str, Any],
+                              label: str,
+                              errors: list[str],
+                              *,
+                              expected_source: str,
+                              expected_version: str | None) -> None:
+    sidecar = load_json(run_dir / rel_path, errors, label)
+    validate_adoption(sidecar, label, errors, expected_source=expected_source, expected_version=expected_version)
+    if sidecar != summary_data:
+        errors.append(f"{label}_summary_sidecar_mismatch")
 
 
 def validate_setup(run_dir: Path, manifest: dict[str, Any], errors: list[str]) -> None:
@@ -362,6 +390,8 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("trial_schema")
     if checkpoint.get("checkpoint") != manifest.get("checkpoint"):
         errors.append("checkpoint_manifest_mismatch")
+    if manifest.get("checkpoint") not in SUPPORTED_CHECKPOINTS:
+        errors.append(f"unsupported_checkpoint:{manifest.get('checkpoint')}")
     if checkpoint.get("operator_instruction") != "CUT_POWER_NOW":
         errors.append("checkpoint_operator_instruction")
     if summary.get("passed") is not True:
@@ -370,6 +400,24 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
     after = summary.get("after_reconcile") if isinstance(summary.get("after_reconcile"), dict) else {}
     validate_adoption(before, "before_reconcile", errors, expected_source="data", expected_version=expected)
     validate_adoption(after, "after_reconcile", errors, expected_source="data", expected_version=expected)
+    validate_adoption_sidecar(
+        run_dir,
+        "trial/resume/before-reconcile-adoption.json",
+        before,
+        "before_reconcile_adoption_sidecar",
+        errors,
+        expected_source="data",
+        expected_version=expected,
+    )
+    validate_adoption_sidecar(
+        run_dir,
+        "trial/resume/after-reconcile-adoption.json",
+        after,
+        "after_reconcile_adoption_sidecar",
+        errors,
+        expected_source="data",
+        expected_version=expected,
+    )
     if before.get("previous_link") is not None or after.get("previous_link") is not None:
         errors.append("summary_previous_link_should_be_absent")
     if summary.get("before_reconcile_health_passed") is not True:
@@ -407,9 +455,14 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         validate_rollback_after_quarantine(run_dir, checkpoint, summary, manifest, errors)
 
     postcheck = run_dir / "postcheck.txt"
-    if postcheck.is_file():
+    if not postcheck.is_file():
+        if manifest.get("checkpoint") in POSTCHECK_REQUIRED_CHECKPOINTS:
+            errors.append("postcheck_missing")
+    else:
         text = postcheck.read_text(encoding="utf-8", errors="replace")
         for required in (
+            "BOOT_ID=",
+            "UPTIME=",
             "SERVICE_ACTIVE=active",
             "TIMER_ENABLED=disabled",
             "STRICT_GPU_FAULTS=0",
@@ -516,6 +569,7 @@ def write_fixture(root: Path) -> None:
     }
     write_json(root / "trial/powerloss-summary.json", summary)
     (root / "postcheck.txt").write_text(
+        "BOOT_ID=00000000-0000-4000-8000-000000000000\nUPTIME=42.0\n"
         "SERVICE_ACTIVE=active\nTIMER_ENABLED=disabled\nSTRICT_GPU_FAULTS=0\n"
         "PUBLIC_PLAYER_RUNTIME_APPLY_LOCAL_RC=44\nPUBLIC_PLAYER_RUNTIME_ROLLBACK_RC=44\n"
         "PUBLIC_PLAYER_RUNTIME_RECONCILE_RC=44\n",
@@ -581,6 +635,62 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("sensitive_json_value:setup/secret.json:api_key", result["errors"])
+
+    def test_unknown_checkpoint_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            manifest_path = root / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["checkpoint"] = "rollback_after_state_success"
+            write_json(manifest_path, manifest)
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint["checkpoint"] = "rollback_after_state_success"
+            write_json(checkpoint_path, checkpoint)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("unsupported_checkpoint:rollback_after_state_success", result["errors"])
+
+    def test_required_postcheck_fails_when_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            (root / "postcheck.txt").unlink()
+            manifest_path = root / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["files"] = [
+                item for item in manifest["files"] if item.get("file") != "postcheck.txt"
+            ]
+            write_json(manifest_path, manifest)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("postcheck_missing", result["errors"])
+
+    def test_adoption_sidecar_mismatch_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            path = root / "trial/resume/before-reconcile-adoption.json"
+            sidecar = json.loads(path.read_text(encoding="utf-8"))
+            sidecar["selected_version"] = "runtime-other"
+            write_json(path, sidecar)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("before_reconcile_adoption_sidecar_version", result["errors"])
+            self.assertIn("before_reconcile_adoption_sidecar_summary_sidecar_mismatch", result["errors"])
+
+    def test_missing_health_check_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            path = root / "trial/resume/before-reconcile-health/playback-deep-health-public.json"
+            health = json.loads(path.read_text(encoding="utf-8"))
+            del health["checks"]["panfrost_faults_delta_zero"]
+            write_json(path, health)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("before_reconcile_health_check_missing:panfrost_faults_delta_zero", result["errors"])
 
     def test_rollback_after_quarantine_requires_post_state_match(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
