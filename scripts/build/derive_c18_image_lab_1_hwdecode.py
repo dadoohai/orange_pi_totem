@@ -61,6 +61,20 @@ HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
 PLAYER_RUNTIME_KIOSK_SHA256 = "90dbd46e0581767d239a035f33e00e1156c3388673c438667b883c39dc7c219c"
+PLAYER_RUNTIME_REQUIRED_PATCHES = {
+    "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
+    "MPVController._stop_locked": (
+        "close IPC then signal MPV process group",
+        "request MPV IPC quit before signal fallback",
+    ),
+}
+PLAYER_RUNTIME_TEARDOWN_TOKENS = (
+    "def _request_quit",
+    '{"command": ["quit"]}',
+    "MPV IPC quit timeout; falling back to SIGTERM",
+    "os.killpg(self._proc.pid, signal.SIGTERM)",
+    "os.killpg(self._proc.pid, signal.SIGKILL)",
+)
 
 # Workaround for the H618 panfrost boot deferred-probe race (-110): bind the GPU before the
 # player if the render node is missing. Userspace only — no kernel/DTB/cmdline change.
@@ -167,6 +181,30 @@ def image_version_for_tag(tag: str) -> str:
     return f"c18.image-lab.{suffix}"
 
 
+def source_declares_patch(source_data: dict, field: str, from_value: str, to_value: str) -> bool:
+    for patch in source_data.get("patches", []):
+        if not isinstance(patch, dict):
+            continue
+        if patch.get("field") == field and patch.get("from") == from_value and patch.get("to") == to_value:
+            return True
+    return False
+
+
+def validate_player_runtime_snapshot(source_data: dict, kiosk_snapshot: str, kiosk_snapshot_sha: str) -> None:
+    if source_data.get("snapshot", {}).get("sha256") != PLAYER_RUNTIME_KIOSK_SHA256:
+        raise SystemExit("BLOCKED: player-runtime SOURCE.json snapshot sha mismatch")
+    if kiosk_snapshot_sha != PLAYER_RUNTIME_KIOSK_SHA256:
+        raise SystemExit(f"BLOCKED: player-runtime kiosk.py sha mismatch {kiosk_snapshot_sha}")
+    for field, (from_value, to_value) in PLAYER_RUNTIME_REQUIRED_PATCHES.items():
+        if not source_declares_patch(source_data, field, from_value, to_value):
+            raise SystemExit(f"BLOCKED: player-runtime SOURCE.json missing required patch {field}")
+    if MPV_PATH_NEW not in kiosk_snapshot or MPV_PATH_OLD in kiosk_snapshot:
+        raise SystemExit("BLOCKED: player-runtime kiosk.py mpv_path governance mismatch")
+    missing_tokens = [token for token in PLAYER_RUNTIME_TEARDOWN_TOKENS if token not in kiosk_snapshot]
+    if missing_tokens:
+        raise SystemExit("BLOCKED: player-runtime kiosk.py teardown governance mismatch")
+
+
 def validate_candidate_identity(tag: str, version: str, marker: str) -> None:
     if "/" in tag or tag.startswith(".") or ".." in Path(tag).parts:
         raise SystemExit(f"BLOCKED: unsafe image tag {tag!r}")
@@ -245,7 +283,7 @@ def main():
     L(f"linux partition offset={off} length={length}")
     base.copy_range(build_image, rootfs, offset=off, length=length)
 
-    # ---- read + patch kiosk.py (point player at the wrapper) ----
+    # ---- read image kiosk.py, then install the governed C18 player-runtime snapshot ----
     # Read via `debugfs dump` (binary-faithful: the file's exact bytes go to a local file,
     # debugfs's version banner goes to stderr — NOT into the content). NOTE: cat_file()
     # concatenates stdout+stderr, which appended the "debugfs 1.47.0 ..." banner to the file
@@ -258,16 +296,10 @@ def main():
     n = kiosk_src.count(MPV_PATH_OLD)
     if n != 1:
         raise SystemExit(f"BLOCKED: kiosk.py mpv_path default occurs {n}x (expected 1)")
-    kiosk_patched = kiosk_src.replace(MPV_PATH_OLD, MPV_PATH_NEW, 1)
     kiosk_snapshot = PLAYER_RUNTIME_KIOSK.read_text(encoding="utf-8")
     kiosk_snapshot_sha = base.file_sha256(PLAYER_RUNTIME_KIOSK)
     source_data = json.loads(PLAYER_RUNTIME_SOURCE.read_text(encoding="utf-8"))
-    if source_data.get("snapshot", {}).get("sha256") != PLAYER_RUNTIME_KIOSK_SHA256:
-        raise SystemExit("BLOCKED: player-runtime SOURCE.json snapshot sha mismatch")
-    if kiosk_snapshot_sha != PLAYER_RUNTIME_KIOSK_SHA256:
-        raise SystemExit(f"BLOCKED: player-runtime kiosk.py sha mismatch {kiosk_snapshot_sha}")
-    if kiosk_snapshot != kiosk_patched:
-        raise SystemExit("BLOCKED: governed player-runtime kiosk.py no longer matches C18 base-image patch")
+    validate_player_runtime_snapshot(source_data, kiosk_snapshot, kiosk_snapshot_sha)
     kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_snapshot, encoding="utf-8")
 
     seed_orig = work / "private-values.seed.orig.json"

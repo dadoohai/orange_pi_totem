@@ -90,6 +90,12 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertEqual(data["upstream"]["sha256_before_c18_patch"], EXPECTED_UPSTREAM_SHA256)
         self.assertEqual(data["image_source"]["image_tag"], "c18-hwdecode-lab-1i")
         self.assertIn("not an OTA player release", " ".join(data["notes"]))
+        patches = {patch["field"]: patch for patch in data["patches"]}
+        self.assertEqual(patches["DEFAULT_CONFIG.mpv_path"]["to"], C18_WRAPPER)
+        self.assertEqual(
+            patches["MPVController._stop_locked"]["to"],
+            "request MPV IPC quit before signal fallback",
+        )
 
     def test_snapshot_sha_matches_source_metadata(self) -> None:
         self.assertEqual(sha256_file(KIOSK_PATH), source()["snapshot"]["sha256"])
@@ -188,7 +194,10 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn("player_runtime_reconcile_corrupt_state_fail_closed", derive)
         self.assertIn('PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"', derive)
         self.assertIn("PLAYER_RUNTIME_KIOSK_SHA256", derive)
-        self.assertIn("governed player-runtime kiosk.py", derive)
+        self.assertIn("PLAYER_RUNTIME_REQUIRED_PATCHES", derive)
+        self.assertIn("PLAYER_RUNTIME_TEARDOWN_TOKENS", derive)
+        self.assertIn("validate_player_runtime_snapshot", derive)
+        self.assertIn("player-runtime kiosk.py teardown governance mismatch", derive)
         self.assertIn("player_runtime_snapshot_governed", derive)
 
     def test_c18_deriver_promotes_artifacts_only_after_offline_validation(self) -> None:
