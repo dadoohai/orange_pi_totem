@@ -27,8 +27,9 @@ golden atual `1u`.
 | M6 `/data` historico | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A sob golden `1t`; apos o bump para `1u`, nao e autorizacao `decisive` atual |
 | M6 `/data` decisivo atual | `20260609T041709Z`: evidenciou A->B->cold-boot->A de `player-runtime` em `/data` na imagem `1w`, com B adotada de `/data`, deep-health, teardown sem delta panfrost, rollback para A real e release gate host `decisive` verde |
 | Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
-| Proximo gate | power-loss fisico/torn-write, soak/endurance e governanca server-side antes de qualquer caminho `stable`/producao |
-| Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
+| Power-loss fisico | Parcialmente provado em laboratorio na imagem `1w`: `after_marker_written`, `after_previous_symlink`, `after_current_symlink` e `rollback_after_current_to_previous` |
+| Proximo gate | checkpoints restantes de power-loss/torn-write, soak/endurance e governanca server-side antes de qualquer caminho `stable`/producao |
+| Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, matriz completa de power-loss fisico e soak/endurance |
 
 ## Golden atual (2026-06-08)
 

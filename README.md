@@ -63,12 +63,15 @@ Power-loss fisico lab-only de `player-runtime`:
 e
 `docs/evidence/c18-update-validation/20260609T155818Z-1w-powerloss-rollback-current-to-previous/`
 e
-`docs/evidence/c18-update-validation/20260609T162328Z-1w-powerloss-after-marker-written/`.
+`docs/evidence/c18-update-validation/20260609T162328Z-1w-powerloss-after-marker-written/`
+e
+`docs/evidence/c18-update-validation/20260609T164448Z-1w-powerloss-after-previous-symlink/`.
 Essas evidencias cobrem, respectivamente, corte apos `current -> B` no apply,
-corte no rollback apos `current -> A`, e corte apos marker verificado mas antes
-de `current -> B`, com deep-health e reconcile verdes no resume. Elas ampliam a
-matriz fisica de power-loss, mas nao provam todos os checkpoints restantes,
-long soak, stable/producao, auto-pull ou thaw publico.
+corte no rollback apos `current -> A`, corte apos marker verificado mas antes
+de `current -> B`, e corte apos `previous -> A` mas antes de `current -> B`,
+com deep-health e reconcile verdes no resume. Elas ampliam a matriz fisica de
+power-loss, mas nao provam todos os checkpoints restantes, long soak,
+stable/producao, auto-pull ou thaw publico.
 
 Golden pos-M6 validada em hardware: `c18-hwdecode-lab-1u`.
 Evidencia offline:

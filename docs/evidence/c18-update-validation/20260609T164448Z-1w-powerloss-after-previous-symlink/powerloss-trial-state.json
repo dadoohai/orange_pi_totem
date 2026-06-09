@@ -1,0 +1,9 @@
+{
+  "armed_at_utc": "2026-06-09T16:43:48Z",
+  "checkpoint": "after_previous_symlink",
+  "data_root": "/data",
+  "manifest": "/data/c18-lab-tools/powerloss-repo/packages/c18-powerloss-packages-20260609T164158Z/c18.player-runtime-powerloss-b10-20260609T164158Z-3519319/dadooh-player-runtime-c18.player-runtime-powerloss-b10-20260609T164158Z-3519319.manifest.json",
+  "payload": "/data/c18-lab-tools/powerloss-repo/packages/c18-powerloss-packages-20260609T164158Z/c18.player-runtime-powerloss-b10-20260609T164158Z-3519319/dadooh-player-runtime-c18.player-runtime-powerloss-b10-20260609T164158Z-3519319.tar.gz",
+  "phase": "arm-apply",
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}
