@@ -1673,6 +1673,73 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             finally:
                 gate.REPO_ROOT = old_root
 
+    def test_release_gate_powerloss_evidence_guard_rejects_untracked_or_ignored_files(self) -> None:
+        spec = importlib.util.spec_from_file_location("c18_ota_release_gate_powerloss_guard_test", RELEASE_GATE_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        gate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gate)  # type: ignore[union-attr]
+
+        with tempfile.TemporaryDirectory(prefix="c18-powerloss-git-guard-") as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=root, check=True)
+            evidence = root / "docs" / "evidence" / "run"
+            evidence.mkdir(parents=True)
+            readme = evidence / "README.md"
+            readme.write_text("tracked evidence\n", encoding="utf-8")
+            manifest = {
+                "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
+                "files": [{
+                    "file": "README.md",
+                    "bytes": readme.stat().st_size,
+                    "sha256": hashlib.sha256(readme.read_bytes()).hexdigest(),
+                }],
+            }
+            (evidence / "evidence-manifest.json").write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            (root / ".gitignore").write_text("docs/evidence/run/home/\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "evidence"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            old_root = gate.REPO_ROOT
+            try:
+                gate.REPO_ROOT = root
+                clean = gate.player_runtime_powerloss_evidence_git_guard(evidence, index=1)
+                self.assertTrue(clean["passed"], clean)
+
+                ignored = evidence / "home" / ".cache" / "mpv" / "ignored-cache"
+                ignored.parent.mkdir(parents=True)
+                ignored.write_text("cache\n", encoding="utf-8")
+                ignored_result = gate.player_runtime_powerloss_evidence_git_guard(evidence, index=1)
+                self.assertFalse(ignored_result["passed"])
+                self.assertIn("evidence_ignored_files_present", ignored_result["stderr_tail"])
+                ignored.unlink()
+
+                extra = evidence / "extra.txt"
+                extra.write_text("untracked\n", encoding="utf-8")
+                extra_result = gate.player_runtime_powerloss_evidence_git_guard(evidence, index=1)
+                self.assertFalse(extra_result["passed"])
+                self.assertIn("evidence_untracked_files_present", extra_result["stderr_tail"])
+
+                manifest["files"].append({
+                    "file": "extra.txt",
+                    "bytes": extra.stat().st_size,
+                    "sha256": hashlib.sha256(extra.read_bytes()).hexdigest(),
+                })
+                (evidence / "evidence-manifest.json").write_text(
+                    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                manifest_result = gate.player_runtime_powerloss_evidence_git_guard(evidence, index=1)
+                self.assertFalse(manifest_result["passed"])
+                self.assertIn("evidence_manifest_entries_not_tracked", manifest_result["stderr_tail"])
+            finally:
+                gate.REPO_ROOT = old_root
+
     def test_player_runtime_lab_apply_guards_are_executable(self) -> None:
         missing_manifest = Path(tempfile.gettempdir()) / "c18-missing-player-runtime.manifest.json"
         missing_payload = Path(tempfile.gettempdir()) / "c18-missing-player-runtime.tar.gz"

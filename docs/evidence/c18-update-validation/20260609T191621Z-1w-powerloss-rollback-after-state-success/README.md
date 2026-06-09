@@ -13,6 +13,7 @@ This evidence records an operator-attended physical power-loss trial for the C18
 - The operator cut physical power after `CUT_POWER_NOW`; `boot_state_at_checkpoint.boot_id` differs from `boot_state_at_resume.boot_id`.
 - After power returned, the board adopted A from `/data/player-runtime/current`, with `previous` absent, passed deep-health before reconcile, passed reconcile as current-verified, and passed deep-health after reconcile.
 - `trial/resume/post-reconcile-state.json` proves the B18 quarantine entry survived reboot and reconcile, with the same version and hashes captured at the checkpoint.
+- `trial/resume/boot-journal-monotonic.txt` shows the boot-time maintenance reconcile/cleanup of B18 happened at monotonic `+14s` in the resume boot, before chrony stepped the clock by about 376s. The apparent `19:17:09Z` wall-clock on that reconcile is therefore pre-NTP boot time, not a pre-cut mutation.
 - Public `player-runtime` apply/rollback/reconcile remained frozen (`rc=44`) in the lab reconcile sidecar and in the final board post-check.
 
 ## Expected final rollback state
@@ -34,6 +35,7 @@ This checkpoint proves the most complete rollback interruption point currently c
 - `trial/powerloss-checkpoint/checkpoint.json`: persisted rollback checkpoint, boot-state-at-cut, runtime snapshot and B18 quarantine record.
 - `trial/powerloss-summary.json`: resume verdict, boot-state-at-resume, adoption and reconcile summaries.
 - `trial/resume/post-reconcile-state.json`: filtered state sidecar proving the B18 quarantine entry after reconcile.
+- `trial/resume/boot-journal-monotonic.txt`: monotonic boot journal excerpt proving the B18 cleanup ran after the physical reboot.
 - `trial/resume/*-health/playback-deep-health-public.json`: deep-health summaries before and after reconcile.
 - `trial/resume/*-adoption.json`: launcher adoption identity checks for A.
 - `trial/resume/reconcile.json`: lab reconcile result and freeze sidecars.

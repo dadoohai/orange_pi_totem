@@ -1,0 +1,24 @@
+# C18 rollback_after_state_success resume boot journal excerpt
+# Purpose: prove the B18 cleanup/manual_reconcile happened after the physical power-loss reboot.
+# Format: journalctl -b -o short-monotonic filtered to time/reconcile/player startup lines.
+[    0.857562] orangepizero3 kernel: sun6i-rtc 7000000.rtc: setting system clock to 1970-01-02T00:00:07 UTC (86407)
+[    8.086151] orangepizero3 armbian-ramlog[432]: chrony/
+[   11.153308] orangepizero3 systemd[1]: Starting chrony.service - chrony, an NTP client/server...
+[   11.350145] orangepizero3 chronyd[957]: chronyd version 4.3 starting (+CMDMON +NTP +REFCLOCK +RTC +PRIVDROP +SCFILTER +SIGND +ASYNCDNS +NTS +SECHASH +IPV6 -DEBUG)
+[   11.475131] orangepizero3 chronyd[957]: Frequency -0.639 +/- 0.478 ppm read from /var/lib/chrony/chrony.drift
+[   11.572517] orangepizero3 chronyd[957]: Using right/UTC timezone to obtain leap second data
+[   11.575623] orangepizero3 chronyd[957]: Loaded seccomp filter (level 1)
+[   11.659318] orangepizero3 systemd[1]: Started chrony.service - chrony, an NTP client/server.
+[   11.664078] orangepizero3 systemd[1]: Reached target time-sync.target - System Time Synchronized.
+[   13.236312] orangepizero3 systemd[1]: Starting kiosky-player.service - Kiosky Player...
+[   14.075281] orangepizero3 env[1062]: 2026-06-09T19:17:09Z INFO release_cleanup_ok path=/data/player-runtime/releases/c18.player-runtime-lab-20260609T191239Z-57a552e
+[   14.129445] orangepizero3 env[1062]:   "status": "current_verified",
+[   14.261109] orangepizero3 systemd[1]: Started kiosky-player.service - Kiosky Player.
+[   14.503921] orangepizero3 env[1063]: 2026-06-09T16:17:10-0300 totem-kiosky-launcher[1063]: kiosk_source=data:c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2 kiosk_dir=/data/player-runtime/current
+[   26.666866] orangepizero3 chronyd[957]: Selected source 143.107.229.210 (2.debian.pool.ntp.org)
+[   26.667981] orangepizero3 chronyd[957]: System clock wrong by 376.451867 seconds
+[   26.668683] orangepizero3 chronyd[957]: System clock was stepped by 376.451867 seconds
+[   26.668777] orangepizero3 chronyd[957]: System clock TAI offset set to 37 seconds
+[   28.727272] orangepizero3 chronyd[957]: Selected source 200.160.7.193 (2.debian.pool.ntp.org)
+[   93.111280] orangepizero3 chronyd[957]: Selected source 143.107.229.210 (2.debian.pool.ntp.org)
+[  480.987138] orangepizero3 chronyd[957]: Selected source 200.160.7.193 (2.debian.pool.ntp.org)

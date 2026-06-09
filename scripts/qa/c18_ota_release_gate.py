@@ -360,6 +360,108 @@ def player_runtime_decisive_dirty_manifest_guard(args: argparse.Namespace) -> di
     return None
 
 
+def git_lines(cmd: list[str]) -> tuple[int, list[str], str]:
+    proc = subprocess.run(
+        cmd,
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    return proc.returncode, [line for line in proc.stdout.splitlines() if line], proc.stderr
+
+
+def repo_relative_path(path: Path) -> str | None:
+    try:
+        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def player_runtime_powerloss_evidence_git_guard(evidence_dir: Path, *, index: int) -> dict[str, Any]:
+    name = f"c18_player_runtime_powerloss_evidence_git_guard:{index}"
+    rel_dir = repo_relative_path(evidence_dir)
+    errors: list[str] = []
+    details: dict[str, Any] = {
+        "evidence_dir": str(evidence_dir),
+        "repo_relative_dir": rel_dir,
+        "ignored_files": [],
+        "untracked_files": [],
+        "manifest_untracked_entries": [],
+    }
+    if rel_dir is None:
+        errors.append("evidence_dir_not_under_repo")
+    else:
+        ignored_rc, ignored_files, ignored_err = git_lines([
+            "git",
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "--",
+            rel_dir,
+        ])
+        untracked_rc, untracked_files, untracked_err = git_lines([
+            "git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            rel_dir,
+        ])
+        tracked_rc, tracked_files, tracked_err = git_lines(["git", "ls-files", "--", rel_dir])
+        if ignored_rc != 0:
+            errors.append("git_ignored_scan_failed")
+            details["ignored_scan_stderr"] = ignored_err[-1000:]
+        if untracked_rc != 0:
+            errors.append("git_untracked_scan_failed")
+            details["untracked_scan_stderr"] = untracked_err[-1000:]
+        if tracked_rc != 0:
+            errors.append("git_tracked_scan_failed")
+            details["tracked_scan_stderr"] = tracked_err[-1000:]
+        if ignored_files:
+            errors.append("evidence_ignored_files_present")
+            details["ignored_files"] = ignored_files[:20]
+        if untracked_files:
+            errors.append("evidence_untracked_files_present")
+            details["untracked_files"] = untracked_files[:20]
+
+        tracked_set = set(tracked_files)
+        manifest_path = evidence_dir / "evidence-manifest.json"
+        manifest_rel = f"{rel_dir}/evidence-manifest.json"
+        if manifest_rel not in tracked_set:
+            errors.append("evidence_manifest_not_tracked")
+            details["manifest_path"] = manifest_rel
+        try:
+            manifest = load_json_file(manifest_path)
+            manifest_files = manifest.get("files")
+            if not isinstance(manifest_files, list):
+                errors.append("evidence_manifest_files_missing")
+            else:
+                missing_entries: list[str] = []
+                for item in manifest_files:
+                    if not isinstance(item, dict) or not isinstance(item.get("file"), str):
+                        continue
+                    rel_file = f"{rel_dir}/{item['file']}"
+                    if rel_file not in tracked_set:
+                        missing_entries.append(rel_file)
+                if missing_entries:
+                    errors.append("evidence_manifest_entries_not_tracked")
+                    details["manifest_untracked_entries"] = missing_entries[:20]
+        except Exception as exc:
+            errors.append(f"evidence_manifest_read_failed:{type(exc).__name__}")
+
+    return {
+        "name": name,
+        "cmd": ["internal", "player_runtime_powerloss_evidence_git_guard", str(evidence_dir)],
+        "returncode": 1 if errors else 0,
+        "passed": not errors,
+        "stdout_tail": json.dumps(details, sort_keys=True),
+        "stderr_tail": ",".join(errors),
+    }
+
+
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
     names: set[str] = set()
     for cmd in (
@@ -622,6 +724,7 @@ def main() -> int:
     data_evidence_steps, data_evidence_summary = player_runtime_decisive_data_evidence_steps(args)
     steps.extend(data_evidence_steps)
     for index, powerloss_dir in enumerate(args.player_runtime_powerloss_evidence_dir or [], 1):
+        steps.append(player_runtime_powerloss_evidence_git_guard(powerloss_dir, index=index))
         steps.append(run_step(
             f"c18_player_runtime_powerloss_evidence:{index}",
             [
