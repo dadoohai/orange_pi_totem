@@ -59,6 +59,9 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_lab_thaw.py",
     "scripts/qa/c18_player_runtime_powerloss_trial.py",
     "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
+    "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+    "scripts/qa/c18_player_runtime_teardown_static_test.py",
+    "scripts/board/c18_player_runtime_teardown_trial.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
@@ -75,6 +78,9 @@ TEST_COMMANDS = (
     ("c18_coldboot_evidence_gate", ["python3", "scripts/qa/c18_coldboot_evidence_gate.py", "--self-test"]),
     ("c18_player_runtime_powerloss_trial_self_test", ["python3", "scripts/qa/c18_player_runtime_powerloss_trial.py", "--self-test"]),
     ("c18_player_runtime_powerloss_evidence_gate_self_test", ["python3", "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py", "--self-test"]),
+    ("c18_player_runtime_teardown_evidence_gate_self_test", ["python3", "scripts/qa/c18_player_runtime_teardown_evidence_gate.py", "--self-test"]),
+    ("c18_player_runtime_teardown_static", ["python3", "scripts/qa/c18_player_runtime_teardown_static_test.py"]),
+    ("c18_player_runtime_teardown_trial_self_test", ["python3", "scripts/board/c18_player_runtime_teardown_trial.py", "--self-test"]),
     ("c18_playback_soak_collect_self_test", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
     ("c18_coldboot_evidence_current", [
         "python3",
@@ -379,8 +385,8 @@ def repo_relative_path(path: Path) -> str | None:
         return None
 
 
-def player_runtime_powerloss_evidence_git_guard(evidence_dir: Path, *, index: int) -> dict[str, Any]:
-    name = f"c18_player_runtime_powerloss_evidence_git_guard:{index}"
+def _evidence_git_guard(evidence_dir: Path, *, index: int, step_name: str, internal_name: str) -> dict[str, Any]:
+    name = f"{step_name}:{index}"
     rel_dir = repo_relative_path(evidence_dir)
     errors: list[str] = []
     details: dict[str, Any] = {
@@ -454,12 +460,30 @@ def player_runtime_powerloss_evidence_git_guard(evidence_dir: Path, *, index: in
 
     return {
         "name": name,
-        "cmd": ["internal", "player_runtime_powerloss_evidence_git_guard", str(evidence_dir)],
+        "cmd": ["internal", internal_name, str(evidence_dir)],
         "returncode": 1 if errors else 0,
         "passed": not errors,
         "stdout_tail": json.dumps(details, sort_keys=True),
         "stderr_tail": ",".join(errors),
     }
+
+
+def player_runtime_powerloss_evidence_git_guard(evidence_dir: Path, *, index: int) -> dict[str, Any]:
+    return _evidence_git_guard(
+        evidence_dir,
+        index=index,
+        step_name="c18_player_runtime_powerloss_evidence_git_guard",
+        internal_name="player_runtime_powerloss_evidence_git_guard",
+    )
+
+
+def player_runtime_teardown_evidence_git_guard(evidence_dir: Path, *, index: int) -> dict[str, Any]:
+    return _evidence_git_guard(
+        evidence_dir,
+        index=index,
+        step_name="c18_player_runtime_teardown_evidence_git_guard",
+        internal_name="player_runtime_teardown_evidence_git_guard",
+    )
 
 
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
@@ -695,6 +719,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--player-runtime-data-coldboot-evidence-dir", type=Path, default=None)
     parser.add_argument("--player-runtime-data-evidence-dir", type=Path, default=None)
     parser.add_argument("--player-runtime-powerloss-evidence-dir", type=Path, action="append", default=[])
+    parser.add_argument("--player-runtime-teardown-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--player-runtime-evidence-mode", choices=("baseline", "decisive"), default="baseline")
     parser.add_argument("--expect-image-tag", default=CURRENT_GOLDEN_IMAGE_TAG)
     parser.add_argument("--expect-image-sha256", default=CURRENT_GOLDEN_IMAGE_SHA256)
@@ -732,6 +757,26 @@ def main() -> int:
                 "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
                 "--run-dir",
                 str(powerloss_dir),
+                "--json",
+            ],
+        ))
+    # HW teardown/panfrost evidence: required in decisive mode (fail closed if absent),
+    # git-guarded and validated per dir. See docs/c18-player-runtime-teardown-gate-design.md.
+    teardown_dirs = args.player_runtime_teardown_evidence_dir or []
+    if args.player_runtime_evidence_mode == "decisive" and not teardown_dirs:
+        steps.append(failed_internal_step(
+            "c18_player_runtime_teardown_evidence_required",
+            "missing --player-runtime-teardown-evidence-dir (required for decisive player-runtime evidence)",
+        ))
+    for index, teardown_dir in enumerate(teardown_dirs, 1):
+        steps.append(player_runtime_teardown_evidence_git_guard(teardown_dir, index=index))
+        steps.append(run_step(
+            f"c18_player_runtime_teardown_evidence:{index}",
+            [
+                "python3",
+                "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+                "--run-dir",
+                str(teardown_dir),
                 "--json",
             ],
         ))
