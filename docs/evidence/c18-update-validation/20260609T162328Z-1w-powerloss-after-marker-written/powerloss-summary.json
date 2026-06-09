@@ -1,0 +1,173 @@
+{
+  "after_reconcile": {
+    "component": "player-runtime",
+    "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "data_process_count": 1,
+    "expected_source": "data",
+    "expected_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "fallback_process_count": 0,
+    "marker_kiosk_py_sha256": "1ada8a64ca2c86693a5a5b7ed7131a1df143b9682c0c907d5bcb69337357b7ad",
+    "marker_reason": "verified",
+    "marker_tree_sha256": "1a81c96d7476e041e1a845bf25959108643c27f389bc576f506a90c9613eafa6",
+    "marker_valid": true,
+    "marker_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "passed": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "process_count": 1,
+    "returncode": 0,
+    "running_identity_matches_marker": true,
+    "running_kiosk_py_sha256": "1ada8a64ca2c86693a5a5b7ed7131a1df143b9682c0c907d5bcb69337357b7ad",
+    "schema": "dadooh.c18.player_runtime.adoption.v1",
+    "selected_source": "data",
+    "selected_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+  },
+  "after_reconcile_health_passed": true,
+  "before_reconcile": {
+    "component": "player-runtime",
+    "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "data_process_count": 1,
+    "expected_source": "data",
+    "expected_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "fallback_process_count": 0,
+    "marker_kiosk_py_sha256": "1ada8a64ca2c86693a5a5b7ed7131a1df143b9682c0c907d5bcb69337357b7ad",
+    "marker_reason": "verified",
+    "marker_tree_sha256": "1a81c96d7476e041e1a845bf25959108643c27f389bc576f506a90c9613eafa6",
+    "marker_valid": true,
+    "marker_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "passed": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "process_count": 1,
+    "returncode": 0,
+    "running_identity_matches_marker": true,
+    "running_kiosk_py_sha256": "1ada8a64ca2c86693a5a5b7ed7131a1df143b9682c0c907d5bcb69337357b7ad",
+    "schema": "dadooh.c18.player_runtime.adoption.v1",
+    "selected_source": "data",
+    "selected_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+    "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+  },
+  "before_reconcile_health_passed": true,
+  "checkpoint": {
+    "action": "apply",
+    "checkpoint": "after_marker_written",
+    "context": {
+      "identity": {
+        "kiosk_py_sha256": "50fb938b5b734aef38653a5b51f4289460a7f699f1be1178940b4df495cf315b",
+        "payload_sha256": "a47b3fe2ecd0bb52b021f4e05bff2b12b80d3d47efe48e8dac3e768e687ad332",
+        "tree_sha256": "bceb9b98838820cefa02c50e30f7d4d2cccc6a8b7de0a26ef10686cfc690899a",
+        "version": "c18.player-runtime-powerloss-b9-20260609T162147Z-8e8ab86"
+      },
+      "version": "c18.player-runtime-powerloss-b9-20260609T162147Z-8e8ab86"
+    },
+    "data_root": "/data",
+    "hit_at_utc": "2026-06-09T16:23:28Z",
+    "non_claims": [
+      "power_loss_observed_until_board_boots_and_resume_phase_passes",
+      "public_player_runtime_thaw",
+      "stable_or_production"
+    ],
+    "operator_instruction": "CUT_POWER_NOW",
+    "phase": "armed",
+    "runtime_snapshot": {
+      "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+      "last_operation": {
+        "candidate_identity": {
+          "kiosk_py_sha256": "50fb938b5b734aef38653a5b51f4289460a7f699f1be1178940b4df495cf315b",
+          "payload_sha256": "a47b3fe2ecd0bb52b021f4e05bff2b12b80d3d47efe48e8dac3e768e687ad332",
+          "tree_sha256": "bceb9b98838820cefa02c50e30f7d4d2cccc6a8b7de0a26ef10686cfc690899a",
+          "version": "c18.player-runtime-powerloss-b9-20260609T162147Z-8e8ab86"
+        },
+        "source": "lab-local:dadooh-player-runtime-c18.player-runtime-powerloss-b9-20260609T162147Z-8e8ab86.manifest.json",
+        "started_at_utc": "2026-06-09T16:22:40Z",
+        "status": "verifying",
+        "type": "apply",
+        "version": "c18.player-runtime-powerloss-b9-20260609T162147Z-8e8ab86"
+      },
+      "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+      "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+      "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+    },
+    "schema": "dadooh.c18.player_runtime.powerloss_trial.v1",
+    "wait_sec": 600.0
+  },
+  "non_claims": [
+    "covers_only_the_named_checkpoint",
+    "public_player_runtime_thaw",
+    "stable_or_production"
+  ],
+  "passed": true,
+  "phase": "resume",
+  "reconcile": {
+    "component": "player-runtime",
+    "data_root": "/data",
+    "device_data_root": true,
+    "github_used": false,
+    "network_required": false,
+    "operation": {
+      "action": "reconcile",
+      "after": {
+        "current_exists": true,
+        "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "last_operation": {
+          "finished_at_utc": "2026-06-09T16:27:28Z",
+          "reason": "physical_powerloss_trial_resume",
+          "started_at_utc": "2026-06-09T16:27:28Z",
+          "status": "current_verified",
+          "type": "reconcile",
+          "verified": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+        },
+        "previous_exists": true,
+        "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+      },
+      "before": {
+        "current_exists": true,
+        "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "last_operation": {
+          "finished_at_utc": "2026-06-09T16:17:09Z",
+          "reason": "manual_reconcile",
+          "started_at_utc": "2026-06-09T16:17:09Z",
+          "status": "current_verified",
+          "type": "reconcile",
+          "verified": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+        },
+        "previous_exists": true,
+        "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "state_current_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+      },
+      "rc": 0,
+      "reconcile": {
+        "component": "player-runtime",
+        "current_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+        "status": "current_verified",
+        "verified": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+      },
+      "result": "current_verified"
+    },
+    "output_dir": "/data/e/mk-b9-cut/resume/reconcile",
+    "passed": true,
+    "public_cli_apply_still_frozen": {
+      "frozen": true,
+      "returncode": 44
+    },
+    "public_cli_reconcile_still_frozen": {
+      "frozen": true,
+      "returncode": 44
+    },
+    "public_cli_rollback_still_frozen": {
+      "frozen": true,
+      "returncode": 44
+    },
+    "returncode": 0,
+    "schema": "dadooh.c18.player_runtime.lab_rollback.v1"
+  },
+  "restore_adoption": null,
+  "restore_health_passed": null,
+  "restore_restart": null,
+  "restore_rollback": null,
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}

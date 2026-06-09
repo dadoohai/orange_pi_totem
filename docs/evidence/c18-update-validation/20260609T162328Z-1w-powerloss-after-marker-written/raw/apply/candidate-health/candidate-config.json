@@ -1,0 +1,22 @@
+{
+  "api_key": "",
+  "api_url": "https://api.example.invalid/search",
+  "cache_dir": "/data/e/mk-b9-cut/raw/apply/candidate-health/media_cache",
+  "config_ui_enabled": false,
+  "default_duration_ms": 10000,
+  "environment_id": "",
+  "hwdec": "auto",
+  "ipc_path": "/data/e/mk-b9-cut/raw/apply/candidate-health/mpv.sock",
+  "log_file": "/data/e/mk-b9-cut/raw/apply/candidate-health/kiosk.log",
+  "mpv_debug_events": true,
+  "mpv_log_file": "/data/e/mk-b9-cut/raw/apply/candidate-health/mpv.log",
+  "mpv_path": "/opt/totem/bin/totem-mpv-hwdecode",
+  "runtime_dir": "/data/e/mk-b9-cut/raw/apply/candidate-health/runtime",
+  "startup_feedback_enabled": false,
+  "state_dir": "/data/e/mk-b9-cut/raw/apply/candidate-health/state",
+  "status_file": "/data/e/mk-b9-cut/raw/apply/candidate-health/status.json",
+  "sync_enabled": false,
+  "telemetry_enabled": false,
+  "telemetry_token": "",
+  "telemetry_url": "https://telemetry.example.invalid/telemetry"
+}

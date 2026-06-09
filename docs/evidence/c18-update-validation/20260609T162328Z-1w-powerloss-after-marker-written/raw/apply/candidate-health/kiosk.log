@@ -1,0 +1,41 @@
+2026-06-09 13:22:41,117 WARNING API credentials missing; startup will run in offline-only mode if local media is available.
+2026-06-09 13:22:41,118 INFO Loaded offline playlist: 1 items
+2026-06-09 13:22:41,119 WARNING API polling disabled; player running with local media only.
+2026-06-09 13:22:41,122 INFO MPV process started pid=2540 generation=1 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,122 INFO MPV IPC startup wait begin generation=1 pid=2540 timeout_sec=10.00 ipc_path=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv.sock log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,154 INFO MPV IPC startup wait complete transport=socket generation=1 pid=2540 duration_sec=0.03 timeout_sec=10.00 ipc_path=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv.sock log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,159 INFO MPV loadfile sent alias=media-0390d22b62 media_path=<media-path:c406539999> generation=1 pid=2540 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,871 INFO MPV IPC command ok command=ping alias=none generation=1 pid=2540 duration_sec=0.714 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,872 INFO MPV IPC ping ok generation=1 pid=2540 duration_sec=0.715 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,880 INFO MPV IPC command ok command=loadfile alias=media-0390d22b62 generation=1 pid=2540 duration_sec=0.720 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,880 INFO MPV loadfile result alias=media-0390d22b62 result=success media_path=<media-path:c406539999> generation=1 pid=2540 duration_sec=0.721 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:41,882 INFO Playing media alias=media-0390d22b62 path=<media-path:c406539999> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=2540
+2026-06-09 13:22:51,880 INFO MPV IPC command ok command=ping alias=none generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:51,881 INFO MPV IPC ping ok generation=1 pid=2540 duration_sec=0.002 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:51,891 INFO MPV loadfile sent alias=media-0390d22b62 media_path=<media-path:c406539999> generation=1 pid=2540 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:51,892 INFO MPV IPC command ok command=loadfile alias=media-0390d22b62 generation=1 pid=2540 duration_sec=0.000 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:51,893 INFO MPV loadfile result alias=media-0390d22b62 result=success media_path=<media-path:c406539999> generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:22:51,895 INFO Playing media alias=media-0390d22b62 path=<media-path:c406539999> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=2540
+2026-06-09 13:23:01,888 INFO MPV IPC command ok command=ping alias=none generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:01,888 INFO MPV IPC ping ok generation=1 pid=2540 duration_sec=0.001 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:01,906 INFO MPV loadfile sent alias=media-0390d22b62 media_path=<media-path:c406539999> generation=1 pid=2540 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:01,907 INFO MPV IPC command ok command=loadfile alias=media-0390d22b62 generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:01,908 INFO MPV loadfile result alias=media-0390d22b62 result=success media_path=<media-path:c406539999> generation=1 pid=2540 duration_sec=0.002 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:01,910 INFO Playing media alias=media-0390d22b62 path=<media-path:c406539999> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=2540
+2026-06-09 13:23:11,896 INFO MPV IPC command ok command=ping alias=none generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:11,897 INFO MPV IPC ping ok generation=1 pid=2540 duration_sec=0.001 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:11,921 INFO MPV loadfile sent alias=media-0390d22b62 media_path=<media-path:c406539999> generation=1 pid=2540 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:11,923 INFO MPV IPC command ok command=loadfile alias=media-0390d22b62 generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:11,923 INFO MPV loadfile result alias=media-0390d22b62 result=success media_path=<media-path:c406539999> generation=1 pid=2540 duration_sec=0.002 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:11,926 INFO Playing media alias=media-0390d22b62 path=<media-path:c406539999> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=2540
+2026-06-09 13:23:21,905 INFO MPV IPC command ok command=ping alias=none generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:21,905 INFO MPV IPC ping ok generation=1 pid=2540 duration_sec=0.001 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:21,937 INFO MPV loadfile sent alias=media-0390d22b62 media_path=<media-path:c406539999> generation=1 pid=2540 timeout_sec=2.00 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:21,938 INFO MPV IPC command ok command=loadfile alias=media-0390d22b62 generation=1 pid=2540 duration_sec=0.001 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:21,939 INFO MPV loadfile result alias=media-0390d22b62 result=success media_path=<media-path:c406539999> generation=1 pid=2540 duration_sec=0.002 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:21,941 INFO Playing media alias=media-0390d22b62 path=<media-path:c406539999> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=2540
+2026-06-09 13:23:25,736 INFO Signal 15 received, stopping...
+2026-06-09 13:23:25,909 INFO MPV IPC command sent command=quit alias=none generation=1 pid=2540 duration_sec=0.000 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:25,910 INFO MPV IPC quit requested reason=stop generation=1 pid=2540 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:26,125 INFO MPV IPC close waiting for IPC critical section reason=stop generation=1 pid=2540 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
+2026-06-09 13:23:26,126 INFO MPV IPC close entered IPC critical section reason=stop generation=1 pid=2540 log_file=/data/e/mk-b9-cut/raw/apply/candidate-health/mpv-g001.log
