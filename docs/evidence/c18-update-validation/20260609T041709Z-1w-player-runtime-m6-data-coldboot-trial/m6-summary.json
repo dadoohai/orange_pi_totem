@@ -1,0 +1,17 @@
+{
+  "coldboot_data_evidence_dir": "/data/c18-evidence/c18-m6-1w-20260609T041709Z/coldboot-data-evidence",
+  "evidence_root": "/data/c18-evidence/c18-m6-1w-20260609T041709Z",
+  "m6_checks_passed": true,
+  "passed": false,
+  "phase": "resume",
+  "player_runtime_data_evidence_dir": "/data/c18-evidence/c18-m6-1w-20260609T041709Z/player-runtime-data-evidence",
+  "release_gate": {
+    "passed": null,
+    "reason": "run c18_ota_release_gate.py on the host after copying evidence from the board",
+    "status": "deferred"
+  },
+  "release_gate_deferred": true,
+  "schema": "dadooh.c18.player_runtime.m6_coldboot_trial.v1",
+  "version_a": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+  "version_b": "c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2"
+}

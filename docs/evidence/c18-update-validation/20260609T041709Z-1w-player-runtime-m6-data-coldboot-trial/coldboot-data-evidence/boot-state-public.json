@@ -1,0 +1,112 @@
+{
+  "boot": {
+    "boot_id_changed": true,
+    "btime_changed": true,
+    "post_boot_id_sha256_12": "15ce664bd6df",
+    "post_btime": 1780978937,
+    "post_uptime_bucket": "lt_5m",
+    "post_uptime_seconds": 94.23,
+    "pre_boot_id_sha256_12": "d7b7a27b1cb9",
+    "pre_btime": 1780976037
+  },
+  "captured_at_unix": 1780979032,
+  "image": {
+    "final_image": "false",
+    "image_tag": "c18-hwdecode-lab-1w",
+    "image_version": "c18.image-lab.1w",
+    "marker_bytes": 2546,
+    "marker_path": "/etc/dadooh/c18-hwdecode-lab-1w-image",
+    "marker_present": true,
+    "marker_sha256": "74701b5a91b74b067aa3434802b61d4f4fa5ea4dce5db7e60ca99989ecf077cf",
+    "not_for_production": "true",
+    "player_runtime_ota_still_frozen": "true"
+  },
+  "mounts": {
+    "data": {
+      "found": true,
+      "fstype": "ext4",
+      "read_only": false,
+      "read_write": true,
+      "source_kind": "block",
+      "source_sha256_12": "c00b3e058eb3",
+      "target": "/"
+    },
+    "data_mount_claim": "rootfs_directory",
+    "data_same_device_as_root": true,
+    "root": {
+      "found": true,
+      "fstype": "ext4",
+      "read_only": false,
+      "read_write": true,
+      "source_kind": "block",
+      "source_sha256_12": "c00b3e058eb3",
+      "target": "/"
+    }
+  },
+  "player_runtime": {
+    "current_present": true,
+    "data_base_present": true,
+    "data_current_kiosk_present": true,
+    "data_current_kiosk_py_sha256": "3b23dc17f518279e3c5e7ce9c715a7972025c447f99b326b3d02bdd7bb1ecca6",
+    "data_current_marker_present": true,
+    "data_current_marker_reason": "verified",
+    "data_current_marker_verified": true,
+    "data_current_marker_version": "c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2",
+    "data_current_tree_sha256": "28282dacae18e6b1f72a6fa9ae1b7d0259f995f63f469fbb3bd7a148ebe27140",
+    "fallback_kiosk_present": true,
+    "previous_present": true,
+    "selected_source": "data"
+  },
+  "pre_state": {
+    "captured_at_unix": 1780978801,
+    "file": "pre-state-public.json",
+    "nonce": "13ec16148bd2a029723e013bf243e1fc",
+    "pre_image_marker_sha256": "74701b5a91b74b067aa3434802b61d4f4fa5ea4dce5db7e60ca99989ecf077cf",
+    "pre_image_tag": "c18-hwdecode-lab-1w",
+    "schema": "dadooh.c18.coldboot_pre_state.v1",
+    "sha256": "de876ba5aceb936a39280681763e08ef9e0a386fbeb29a969f8f5ed56dfb1b68",
+    "source": "artifact"
+  },
+  "privacy": {
+    "raw_boot_id_persisted": false,
+    "raw_journal_persisted": false,
+    "raw_mount_source_persisted": false
+  },
+  "schema": "dadooh.c18.coldboot_state.v2",
+  "systemd": {
+    "active_state": "active",
+    "after_contains_local_fs": true,
+    "critical_chain": {
+      "collected": true,
+      "contains_data_mount": false,
+      "contains_local_fs": false,
+      "rc": 0
+    },
+    "dropin_count": 2,
+    "exec_start_pre_reconcile_present": true,
+    "nrestarts": 0,
+    "requires_data_mount": true,
+    "requires_mounts_for": [
+      "/data",
+      "/opt/totem/kiosky-player"
+    ],
+    "service": "kiosky-player.service",
+    "show_rc": 0,
+    "sub_state": "running"
+  },
+  "transition": {
+    "controlled_reboot_used": true,
+    "flow": "C18-M6-PLAYER-RUNTIME-DATA-COLDBOOT",
+    "mechanical_action": "operator_controlled_reboot",
+    "phase": "post",
+    "pre_state_required": true
+  },
+  "update_safety": {
+    "boot_player_runtime_reconcile_rc": 0,
+    "included": true,
+    "public_kiosky_player_reconcile_rc": 44,
+    "public_kiosky_player_rollback_rc": 44,
+    "public_player_runtime_reconcile_rc": 44,
+    "public_player_runtime_rollback_rc": 44
+  }
+}

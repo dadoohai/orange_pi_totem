@@ -1,0 +1,10 @@
+{
+  "evidence_root": "/data/c18-evidence/c18-m6-1w-20260609T041709Z",
+  "next_phase": "resume",
+  "passed": true,
+  "phase": "arm",
+  "requires_reboot": true,
+  "schema": "dadooh.c18.player_runtime.m6_coldboot_trial.v1",
+  "version_a": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+  "version_b": "c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2"
+}

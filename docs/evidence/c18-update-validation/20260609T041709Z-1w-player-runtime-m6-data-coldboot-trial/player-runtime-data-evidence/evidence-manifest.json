@@ -1,0 +1,217 @@
+{
+  "artifact_id": "c18-player-runtime-m6-coldboot-c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2",
+  "artifact_scope": "player-runtime-persistent-data-lab-trial",
+  "artifacts": [
+    {
+      "bytes": 756,
+      "file": "README.md",
+      "sha256": "65b02807673bd1af9bac724edc4158cb2c10dd9f3074a0d6b4ed29235c7a16d2"
+    },
+    {
+      "bytes": 336,
+      "file": "candidate-health/deep-health-kernel.json",
+      "sha256": "429c0f16b525094cd5c6af99322aaca2460f9a79bd72f53f3566e111a61ca883"
+    },
+    {
+      "bytes": 49,
+      "file": "candidate-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 130,
+      "file": "candidate-health/deep-health-process.json",
+      "sha256": "9d9cfb6b12f1ad70cb5191f990b331246b460840266cd009b382fc7650a838e7"
+    },
+    {
+      "bytes": 262,
+      "file": "candidate-health/deep-health-systemd.json",
+      "sha256": "5ce729fba6d798676557a30e2d68c0f3420bffdbf13ba72b3507f6390ef8ea30"
+    },
+    {
+      "bytes": 2824,
+      "file": "candidate-health/playback-deep-health-public.json",
+      "sha256": "ae902d6c0789b7a7f2b709003585b4135e5db0acbd45197cc4ccdb8875d70ff9"
+    },
+    {
+      "bytes": 30287,
+      "file": "candidate-health/playback-samples.tsv",
+      "sha256": "ead1d572e82f68462c11a3af467a6e243dba6841c6d70dd1e1ecf1acbd64424d"
+    },
+    {
+      "bytes": 11399,
+      "file": "candidate-health/status-samples.ndjson",
+      "sha256": "ab5a7cef9df42442e7b675e529ff2676bcf92e0de6fc612ef174713c1442e62d"
+    },
+    {
+      "bytes": 3802,
+      "file": "candidate-health-result.json",
+      "sha256": "679af922fbf49a923cee17270d92cc1e9f894f8634fbe5daa1557251a35d939a"
+    },
+    {
+      "bytes": 360,
+      "file": "candidate-teardown-kernel.json",
+      "sha256": "95aab586daf1728fc0c00579a42074b023ef9a902e090ed368ae9aedb9c79106"
+    },
+    {
+      "bytes": 1941,
+      "file": "lab-apply.json",
+      "sha256": "4e9f9d12f1c6b208a70b61328c9c53f4428fe069dc42fb221747023233cd23bc"
+    },
+    {
+      "bytes": 2242,
+      "file": "lab-rollback.json",
+      "sha256": "345ddbfad03794b60220139e5e3160eafc00fbd382b275317b7a901f7a724bd0"
+    },
+    {
+      "bytes": 1375,
+      "file": "package/dadooh-player-runtime-c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2.manifest.json",
+      "sha256": "5cde7ca910c2e8a31dbd4343becbe02ed944107b10c42a42e9ffc432a4cc2f90"
+    },
+    {
+      "bytes": 486,
+      "file": "package/player-runtime-release-gate.json",
+      "sha256": "2e040c22c67a7a33c8eecf78f25f5f475662f841f26892c1c6111351366f689f"
+    },
+    {
+      "bytes": 336,
+      "file": "service-after-restart/deep-health-kernel.json",
+      "sha256": "f4961ceef4a37419352ef5cd09b911f5f33f2eed5f9db0199c03823f7f7621c7"
+    },
+    {
+      "bytes": 49,
+      "file": "service-after-restart/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "service-after-restart/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "service-after-restart/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 1173,
+      "file": "service-after-restart/launcher-adoption.json",
+      "sha256": "61322c226977aa00439e963986ce333503f25bf39d98f79231bff486d4c4fc3d"
+    },
+    {
+      "bytes": 2861,
+      "file": "service-after-restart/playback-deep-health-public.json",
+      "sha256": "7f5b6d1a018f71aa3d04d8d9693d91aa6d901556342be710302ee553ed8b07c3"
+    },
+    {
+      "bytes": 38678,
+      "file": "service-after-restart/playback-samples.tsv",
+      "sha256": "5286a27ea10779eb171f42fca7fe4c854c02fd2863ffdd56c9f3f6b4d56fea2f"
+    },
+    {
+      "bytes": 15873,
+      "file": "service-after-restart/status-samples.ndjson",
+      "sha256": "0117f8113665f7056bc97d9f8f9df7f0a27e077076aa4b89ee8ced1eedafe4d5"
+    },
+    {
+      "bytes": 334,
+      "file": "service-after-rollback/deep-health-kernel.json",
+      "sha256": "462f42115dc9959916650afa56972e4c05413891490f9cb0dbcda96fa780588b"
+    },
+    {
+      "bytes": 49,
+      "file": "service-after-rollback/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "service-after-rollback/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "service-after-rollback/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 1070,
+      "file": "service-after-rollback/launcher-adoption.json",
+      "sha256": "97d305cd8577fb5ad076ea3b63ebe38b87843127280ba0deeda6e7ce3962541a"
+    },
+    {
+      "bytes": 2862,
+      "file": "service-after-rollback/playback-deep-health-public.json",
+      "sha256": "3da2511e8fadc0898797ac48236cb584bcc09623673b9c6ffab8e455cd69284b"
+    },
+    {
+      "bytes": 38664,
+      "file": "service-after-rollback/playback-samples.tsv",
+      "sha256": "6fcd96a5d97b4c6f7765597f11407bca74235537ba1d4007b04df77cf54f813b"
+    },
+    {
+      "bytes": 15874,
+      "file": "service-after-rollback/status-samples.ndjson",
+      "sha256": "96316ab14cb7043d3feb8e219f18a1bb3d4a949db5aa546432cc47c477ebf390"
+    },
+    {
+      "bytes": 336,
+      "file": "service-before-apply/deep-health-kernel.json",
+      "sha256": "e275a078f230ead4bf3961c9520cb0e4a0cc379961412a018e31b7b52b9339db"
+    },
+    {
+      "bytes": 49,
+      "file": "service-before-apply/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "service-before-apply/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "service-before-apply/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 1070,
+      "file": "service-before-apply/launcher-adoption.json",
+      "sha256": "97d305cd8577fb5ad076ea3b63ebe38b87843127280ba0deeda6e7ce3962541a"
+    },
+    {
+      "bytes": 2860,
+      "file": "service-before-apply/playback-deep-health-public.json",
+      "sha256": "60efea3b0152723815fd603abbcc9a164561d2d8bc6a93c26ffcab4511321256"
+    },
+    {
+      "bytes": 38709,
+      "file": "service-before-apply/playback-samples.tsv",
+      "sha256": "dc67b364aa357900e2cd0dacb06b01ea9cde3be495c76ede28a7710d1370b961"
+    },
+    {
+      "bytes": 15868,
+      "file": "service-before-apply/status-samples.ndjson",
+      "sha256": "bcb8c6d33bedc12e58d8fc5fc2fde69f266423e3ef89b50c98cbd7b73ede8e0c"
+    },
+    {
+      "bytes": 865,
+      "file": "verified-marker.json",
+      "sha256": "799f6f0b9efa81341d8862ad036cb3c1d83ecc95b53608af5155f8869a8ce4fc"
+    }
+  ],
+  "channel": "homologation",
+  "component": "player-runtime",
+  "image_marker_bytes": 2546,
+  "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1w-image",
+  "image_marker_sha256": "74701b5a91b74b067aa3434802b61d4f4fa5ea4dce5db7e60ca99989ecf077cf",
+  "image_sha256": "0070561e3a714eeb4543beb9930f9801c344161f9123c57a78a92431713bc39e",
+  "image_tag": "c18-hwdecode-lab-1w",
+  "payload_sha256": "237809c623d12f37956a3294c22c8f11e04296b85331a85ac032f10455de5240",
+  "repo_commit": "7107a55933497a7c60bb0ebad5f978249d3b16f2",
+  "repo_dirty": false,
+  "repo_exact_tag": null,
+  "repo_tree": "05c880c6c3b52d01abdaa5b34e9d0db0f8a8a66c",
+  "rollback_expectation": "data-previous",
+  "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
+  "source_commit": "7107a55933497a7c60bb0ebad5f978249d3b16f2",
+  "version": "c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2"
+}
