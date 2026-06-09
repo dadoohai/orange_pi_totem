@@ -1584,15 +1584,27 @@ class MPVController:
             self._close_ipc_locked()
 
     def _request_quit(self, reason: str) -> bool:
-        if self._proc is None or self._proc.poll() is not None or self._ipc is None:
+        if self._proc is None or self._proc.poll() is not None:
             return False
-        ok = bool(self._send({"command": ["quit"]}, command_name="quit"))
+        if self._ipc is not None:
+            ok = bool(self._send({"command": ["quit"]}, command_name="quit"))
+        else:
+            ok = bool(self._fresh_ipc_command(["quit"], command_name="quit"))
         if ok:
             logging.info(
                 "MPV IPC quit requested reason=%s generation=%d pid=%s log_file=%s",
                 reason,
                 self._generation,
                 self.pid() or "none",
+                self._current_log_file or "none",
+            )
+        else:
+            logging.warning(
+                "MPV IPC quit unavailable; falling back to process signal reason=%s generation=%d pid=%s ipc_connected=%s log_file=%s",
+                reason,
+                self._generation,
+                self.pid() or "none",
+                self._ipc is not None,
                 self._current_log_file or "none",
             )
         return ok
@@ -1924,6 +1936,53 @@ class MPVController:
             sock.close()
             raise
         return sock, True
+
+    def _fresh_ipc_command(
+        self,
+        command: List[object],
+        command_name: str,
+        timeout: Optional[float] = None,
+    ) -> bool:
+        if timeout is None:
+            timeout = self._ipc_timeout()
+        data = (json.dumps({"command": command}) + "\n").encode("utf-8")
+        start = time.monotonic()
+        ipc = None
+        try:
+            ipc, ipc_socket = self._open_fresh_ipc(timeout)
+            if ipc_socket:
+                ipc.sendall(data)
+            else:
+                ipc.write(data)
+                ipc.flush()
+            logging.info(
+                "MPV IPC fresh command sent command=%s generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s",
+                command_name,
+                self._generation,
+                self.pid() or "none",
+                time.monotonic() - start,
+                timeout,
+                self._current_log_file or "none",
+            )
+            return True
+        except Exception as exc:
+            logging.warning(
+                "MPV IPC fresh command failed command=%s generation=%d pid=%s duration_sec=%.3f timeout_sec=%.2f log_file=%s error=%s",
+                command_name,
+                self._generation,
+                self.pid() or "none",
+                time.monotonic() - start,
+                timeout,
+                self._current_log_file or "none",
+                exc,
+            )
+            return False
+        finally:
+            if ipc is not None:
+                try:
+                    ipc.close()
+                except Exception:
+                    pass
 
     def _fresh_ipc_query(
         self,

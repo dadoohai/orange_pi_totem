@@ -60,17 +60,19 @@ HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
-PLAYER_RUNTIME_KIOSK_SHA256 = "90dbd46e0581767d239a035f33e00e1156c3388673c438667b883c39dc7c219c"
+PLAYER_RUNTIME_KIOSK_SHA256 = "06e1aadfe15f76d7284d2692dfe5987c9e3c8efd44e8486469b50cf309c246d4"
 PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
     "MPVController._stop_locked": (
         "close IPC then signal MPV process group",
-        "request MPV IPC quit before signal fallback",
+        "request MPV IPC quit, including fresh IPC fallback, before signal fallback",
     ),
 }
 PLAYER_RUNTIME_TEARDOWN_TOKENS = (
     "def _request_quit",
+    "def _fresh_ipc_command",
     '{"command": ["quit"]}',
+    "MPV IPC fresh command sent",
     "MPV IPC quit timeout; falling back to SIGTERM",
     "os.killpg(self._proc.pid, signal.SIGTERM)",
     "os.killpg(self._proc.pid, signal.SIGKILL)",

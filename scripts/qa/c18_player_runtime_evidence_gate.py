@@ -373,7 +373,13 @@ def validate_package_contract(run_dir: Path) -> tuple[list[str], dict[str, Any]]
     return errors, manifest
 
 
-def validate_playback_summary(run_dir: Path, rel_path: str, label: str) -> list[str]:
+def validate_playback_summary(
+    run_dir: Path,
+    rel_path: str,
+    label: str,
+    *,
+    allow_delta_panfrost_policy: bool = False,
+) -> list[str]:
     errors: list[str] = []
     data = load_json_object(run_dir / rel_path, label, errors)
     if data.get("schema") != PLAYBACK_SCHEMA:
@@ -393,6 +399,18 @@ def validate_playback_summary(run_dir: Path, rel_path: str, label: str) -> list[
     if not isinstance(counters, dict):
         errors.append(f"{label}_counters_missing")
     else:
+        expected = data.get("expected") if isinstance(data.get("expected"), dict) else {}
+        expected_policy = expected.get("panfrost_fault_policy")
+        counter_policy = counters.get("panfrost_fault_policy")
+        if expected_policy is None or counter_policy is None:
+            errors.append(f"{label}_panfrost_fault_policy_missing")
+        policies = [policy for policy in (expected_policy, counter_policy) if policy is not None]
+        if len(set(policies)) > 1:
+            errors.append(f"{label}_panfrost_fault_policy_mismatch")
+        if policies and policies[0] not in {"absolute", "delta"}:
+            errors.append(f"{label}_panfrost_fault_policy_invalid")
+        if policies and policies[0] == "delta" and not allow_delta_panfrost_policy:
+            errors.append(f"{label}_panfrost_fault_policy_delta_not_allowed")
         if int(counters.get("samples") or 0) <= 0:
             errors.append(f"{label}_samples_empty")
         positive_steps = int(counters.get("estimated_frame_positive_steps") if counters.get("estimated_frame_positive_steps") is not None else 0)
@@ -524,6 +542,16 @@ def validate_candidate_result(run_dir: Path, marker: dict[str, Any]) -> list[str
             errors.append("candidate_health_teardown_not_passed")
         if teardown.get("gpu_faults_delta") != 0:
             errors.append("candidate_health_teardown_gpu_fault_delta")
+        if teardown.get("process_stopped_cleanly") is not True:
+            errors.append("candidate_health_teardown_process_not_clean")
+        stop = teardown.get("stop")
+        if not isinstance(stop, dict):
+            errors.append("candidate_health_teardown_stop_missing")
+        else:
+            if stop.get("method") not in {"none", "sigterm"}:
+                errors.append("candidate_health_teardown_stop_escalated")
+            if stop.get("returncode") != 0:
+                errors.append("candidate_health_teardown_stop_returncode")
         if teardown_sidecar and teardown_sidecar != teardown:
             errors.append("candidate_health_teardown_sidecar_mismatch")
     if marker:
@@ -795,11 +823,15 @@ def self_test() -> None:
             "estimated_frame_positive_steps": 3,
             "estimated_frame_required_steps": 2,
             "estimated_frame_trailing_nonprogress_steps": 0,
+            "panfrost_fault_policy": "absolute",
         }
         health_summary = {
             "schema": PLAYBACK_SCHEMA,
             "passed": True,
             "failure_reasons": [],
+            "expected": {
+                "panfrost_fault_policy": "absolute",
+            },
             "checks": checks,
             "counters": counters,
         }
@@ -927,6 +959,7 @@ def self_test() -> None:
                 "gpu_faults_before": 0,
                 "gpu_faults_after": 0,
                 "gpu_faults_delta": 0,
+                "process_stopped_cleanly": True,
                 "stop": {
                     "method": "sigterm",
                     "returncode": 0,
@@ -943,6 +976,7 @@ def self_test() -> None:
             "gpu_faults_before": 0,
             "gpu_faults_after": 0,
             "gpu_faults_delta": 0,
+            "process_stopped_cleanly": True,
             "stop": {
                 "method": "sigterm",
                 "returncode": 0,
@@ -1094,6 +1128,35 @@ def self_test() -> None:
         assert not mismatched_teardown["passed"], mismatched_teardown
         assert "candidate_health_teardown_sidecar_mismatch" in mismatched_teardown["errors"], mismatched_teardown
         put("candidate-teardown-kernel.json", teardown_sidecar_clean)
+        candidate_result_sigkill = json.loads(json.dumps(candidate_result_clean))
+        candidate_result_sigkill["candidate_teardown"]["process_stopped_cleanly"] = False
+        candidate_result_sigkill["candidate_teardown"]["stop"] = {
+            "method": "sigkill",
+            "returncode": -9,
+            "elapsed_ms": 45000,
+        }
+        put("candidate-health-result.json", candidate_result_sigkill)
+        put("candidate-teardown-kernel.json", candidate_result_sigkill["candidate_teardown"])
+        refresh_manifest("image-fallback")
+        sigkill_teardown = validate(run)
+        assert not sigkill_teardown["passed"], sigkill_teardown
+        assert "candidate_health_teardown_process_not_clean" in sigkill_teardown["errors"], sigkill_teardown
+        assert "candidate_health_teardown_stop_escalated" in sigkill_teardown["errors"], sigkill_teardown
+        assert "candidate_health_teardown_stop_returncode" in sigkill_teardown["errors"], sigkill_teardown
+        put("candidate-health-result.json", candidate_result_clean)
+        put("candidate-teardown-kernel.json", teardown_sidecar_clean)
+        refresh_manifest("image-fallback")
+        ok = validate(run)
+        assert ok["passed"], ok
+        delta_policy_health = json.loads(json.dumps(health_summary))
+        delta_policy_health["expected"] = {"panfrost_fault_policy": "delta"}
+        delta_policy_health["counters"]["panfrost_fault_policy"] = "delta"
+        put("service-after-restart/playback-deep-health-public.json", delta_policy_health)
+        refresh_manifest("image-fallback")
+        delta_policy = validate(run)
+        assert not delta_policy["passed"], delta_policy
+        assert "service_after_restart_panfrost_fault_policy_delta_not_allowed" in delta_policy["errors"], delta_policy
+        put("service-after-restart/playback-deep-health-public.json", health_summary)
         refresh_manifest("image-fallback")
         ok = validate(run)
         assert ok["passed"], ok

@@ -239,7 +239,7 @@ def sanitize_kernel_line(line: str) -> str:
     return line
 
 
-def terminate_process(proc: subprocess.Popen[str], timeout_sec: float = 5.0) -> dict[str, Any]:
+def terminate_process(proc: subprocess.Popen[str], timeout_sec: float = 45.0) -> dict[str, Any]:
     started = time.monotonic()
     stop: dict[str, Any] = {
         "method": "none",
@@ -392,15 +392,24 @@ def run_candidate_health(
         after_faults = kernel_gpu_fault_lines()
         delta_lines = after_faults[len(before_faults):] if len(after_faults) >= len(before_faults) else after_faults
         fault_delta = max(0, len(after_faults) - len(before_faults))
+        stop_method = str(stop.get("method") or "")
+        stop_returncode = stop.get("returncode")
+        stop_clean = stop_method in {"none", "sigterm"} and stop_returncode == 0
+        failure_reasons = []
+        if fault_delta != 0:
+            failure_reasons.append("candidate_teardown_gpu_fault_delta_zero")
+        if not stop_clean:
+            failure_reasons.append("candidate_teardown_process_stopped_cleanly")
         teardown = {
             "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
             "measured": True,
-            "passed": fault_delta == 0,
-            "failure_reasons": [] if fault_delta == 0 else ["candidate_teardown_gpu_fault_delta_zero"],
+            "passed": not failure_reasons,
+            "failure_reasons": failure_reasons,
             "gpu_faults_before": len(before_faults),
             "gpu_faults_after": len(after_faults),
             "gpu_faults_delta": fault_delta,
             "stop": stop,
+            "process_stopped_cleanly": stop_clean,
             "new_fault_lines_sanitized": [sanitize_kernel_line(line) for line in delta_lines[-20:]],
         }
         write_json(work_root / "candidate-teardown-kernel.json", teardown)
@@ -413,12 +422,14 @@ def run_candidate_health(
     result["canary_media_used"] = normalized_canary is not None
     result["candidate_run_user"] = run_user.pw_name
     result["candidate_teardown"] = teardown
-    result.setdefault("checks", {})["candidate_teardown_gpu_fault_delta_zero"] = teardown.get("passed") is True
+    result.setdefault("checks", {})["candidate_teardown_gpu_fault_delta_zero"] = teardown.get("gpu_faults_delta") == 0
+    result.setdefault("checks", {})["candidate_teardown_process_stopped_cleanly"] = teardown.get("process_stopped_cleanly") is True
     result.setdefault("counters", {})["candidate_teardown_gpu_faults_delta"] = teardown.get("gpu_faults_delta")
     if teardown.get("passed") is not True:
         reasons = result.setdefault("failure_reasons", [])
-        if "candidate_teardown_gpu_fault_delta_zero" not in reasons:
-            reasons.append("candidate_teardown_gpu_fault_delta_zero")
+        for reason in teardown.get("failure_reasons") or ["candidate_teardown_failed"]:
+            if reason not in reasons:
+                reasons.append(reason)
         result["passed"] = False
     write_json(work_root / "candidate-health-result.json", result)
     return result

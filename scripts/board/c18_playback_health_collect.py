@@ -563,13 +563,14 @@ def write_player_counter_sidecar(out_dir: Path, mpv_log: Path, generation_dir: P
     write_json(out_dir / "deep-health-player-counters.json", count_player_log_counters(mpv_log, generation_dir))
 
 
-def evaluate_artifacts(out_dir: Path, artifact_id: str) -> dict[str, Any]:
+def evaluate_artifacts(out_dir: Path, artifact_id: str, *, panfrost_fault_policy: str = "absolute") -> dict[str, Any]:
     result = health.evaluate(
         samples_path=out_dir / "playback-samples.tsv",
         systemd_path=out_dir / "deep-health-systemd.json",
         process_path=out_dir / "deep-health-process.json",
         kernel_path=out_dir / "deep-health-kernel.json",
         player_counters_path=out_dir / "deep-health-player-counters.json",
+        panfrost_fault_policy=panfrost_fault_policy,
     )
     result["artifact_id"] = artifact_id
     return result
@@ -596,6 +597,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--process-ipc-path", type=Path, default=None, help="count only the mpv process using this IPC socket")
     parser.add_argument("--mpv-log", type=Path, default=DEFAULT_MPV_LOG)
     parser.add_argument("--mpv-generation-dir", type=Path, default=DEFAULT_MPV_GENERATION_DIR)
+    parser.add_argument("--panfrost-fault-policy", choices=sorted(health.PANFROST_FAULT_POLICIES), default="absolute")
     parser.add_argument("--json", action="store_true", help="print sanitized public summary JSON to stdout")
     return parser.parse_args(argv)
 
@@ -634,7 +636,7 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     write_process_sidecar(out_dir, args.app_user, process_ipc_path)
     write_kernel_sidecar(out_dir, kernel_start_counts, kernel_start_uptime_sec)
     write_player_counter_sidecar(out_dir, args.mpv_log, args.mpv_generation_dir)
-    result = evaluate_artifacts(out_dir, out_dir.name)
+    result = evaluate_artifacts(out_dir, out_dir.name, panfrost_fault_policy=args.panfrost_fault_policy)
     write_json(out_dir / "playback-deep-health-public.json", result)
     return out_dir, result
 

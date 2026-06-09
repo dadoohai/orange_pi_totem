@@ -66,6 +66,16 @@ class Fixture:
             player_counters_path=self.path("player-counters.json"),
         )
 
+    def result_with_panfrost_policy(self, policy: str) -> dict:
+        return health.evaluate(
+            samples_path=self.path("playback-samples.tsv"),
+            systemd_path=self.path("systemd.json"),
+            process_path=self.path("process.json"),
+            kernel_path=self.path("kernel.json"),
+            player_counters_path=self.path("player-counters.json"),
+            panfrost_fault_policy=policy,
+        )
+
 
 class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
     def with_case(self) -> Fixture:
@@ -348,6 +358,25 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         fixture = self.with_case()
         fixture.mutate_json("kernel.json", panfrost_faults=0, panfrost_faults_start=0, panfrost_faults_delta=1)
         result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertIn("panfrost_faults_delta_zero", result["failure_reasons"])
+
+    def test_delta_policy_allows_prior_attributed_panfrost_faults(self) -> None:
+        fixture = self.with_case()
+        fixture.mutate_json("kernel.json", panfrost_faults=2, panfrost_faults_start=2, panfrost_faults_delta=0)
+        absolute = fixture.result()
+        self.assertFalse(absolute["passed"])
+        self.assertIn("panfrost_faults_zero", absolute["failure_reasons"])
+
+        delta = fixture.result_with_panfrost_policy("delta")
+        self.assertTrue(delta["passed"])
+        self.assertEqual(delta["failure_reasons"], [])
+        self.assertEqual(delta["expected"]["panfrost_fault_policy"], "delta")
+
+    def test_delta_policy_still_rejects_new_panfrost_faults(self) -> None:
+        fixture = self.with_case()
+        fixture.mutate_json("kernel.json", panfrost_faults=3, panfrost_faults_start=2, panfrost_faults_delta=1)
+        result = fixture.result_with_panfrost_policy("delta")
         self.assertFalse(result["passed"])
         self.assertIn("panfrost_faults_delta_zero", result["failure_reasons"])
 

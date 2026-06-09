@@ -18,6 +18,7 @@ EXPECTED_MPV_BINARY = "/opt/totem/hwdecode/bin/mpv"
 EXPECTED_MPV_PATHS = {EXPECTED_WRAPPER, EXPECTED_MPV_BINARY}
 MIN_FRAME_PROGRESS_DELTAS = 2
 MAX_TRAILING_NONPROGRESS_DELTAS = 1
+PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 
 
 def read_json(path: Path | None, label: str) -> dict[str, Any]:
@@ -199,7 +200,10 @@ def evaluate(
     process_path: Path | None,
     kernel_path: Path | None,
     player_counters_path: Path | None,
+    panfrost_fault_policy: str = "absolute",
 ) -> dict[str, Any]:
+    if panfrost_fault_policy not in PANFROST_FAULT_POLICIES:
+        raise ValueError(f"unsupported panfrost fault policy: {panfrost_fault_policy}")
     rows = load_samples(samples_path)
     systemd = read_json(systemd_path, "systemd")
     process = read_json(process_path, "process")
@@ -323,6 +327,15 @@ def evaluate(
         short_failed_segment_stats = []
         failed_segment_stats = [] if frame_progressed else [frame_progress_stats]
 
+    panfrost_faults_zero = panfrost_faults == 0
+    panfrost_faults_delta_required = panfrost_fault_policy == "delta"
+    panfrost_faults_delta_zero = (
+        panfrost_faults_delta_present and panfrost_faults_delta == 0
+        if panfrost_faults_delta_required
+        else not panfrost_faults_delta_present or panfrost_faults_delta == 0
+    )
+    panfrost_faults_clean = panfrost_faults_zero if panfrost_fault_policy == "absolute" else panfrost_faults_delta_zero
+
     checks = {
         "samples_present": len(rows) > 0,
         "ipc_success_present": len(success_rows) > 0,
@@ -349,13 +362,17 @@ def evaluate(
         "mpv_restart_present": mpv_restart_present,
         "mpv_restart_zero": mpv_restart == 0,
         "panfrost_faults_present": panfrost_faults_present,
-        "panfrost_faults_zero": panfrost_faults == 0,
-        "panfrost_faults_delta_zero": not panfrost_faults_delta_present or panfrost_faults_delta == 0,
+        "panfrost_faults_zero": panfrost_faults_zero,
+        "panfrost_faults_delta_present": not panfrost_faults_delta_required or panfrost_faults_delta_present,
+        "panfrost_faults_delta_zero": panfrost_faults_delta_zero,
+        "panfrost_faults_clean_for_policy": panfrost_faults_clean,
         "mmc_timeout_reset_present": mmc_timeout_reset_present,
         "mmc_timeout_reset_zero": mmc_timeout_reset == 0,
         "ext4_errors_present": ext4_errors_present,
         "ext4_errors_zero": ext4_errors == 0,
     }
+    if panfrost_fault_policy == "delta":
+        checks["panfrost_faults_zero"] = True
     failure_reasons = [key for key, passed in checks.items() if not passed]
 
     return {
@@ -365,6 +382,7 @@ def evaluate(
         "expected": {
             "hwdec_current": EXPECTED_HWDEC,
             "mpv_paths": sorted(EXPECTED_MPV_PATHS),
+            "panfrost_fault_policy": panfrost_fault_policy,
         },
         "checks": checks,
         "counters": {
@@ -399,6 +417,7 @@ def evaluate(
             "panfrost_faults_start": panfrost_faults_start,
             "panfrost_faults": panfrost_faults,
             "panfrost_faults_delta": panfrost_faults_delta,
+            "panfrost_fault_policy": panfrost_fault_policy,
             "mmc_timeout_reset_start": mmc_timeout_reset_start,
             "mmc_timeout_reset": mmc_timeout_reset,
             "mmc_timeout_reset_delta": mmc_timeout_reset_delta,
@@ -416,6 +435,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--process", required=True, type=Path)
     parser.add_argument("--kernel", required=True, type=Path)
     parser.add_argument("--player-counters", required=True, type=Path)
+    parser.add_argument("--panfrost-fault-policy", choices=sorted(PANFROST_FAULT_POLICIES), default="absolute")
     parser.add_argument("--output", type=Path)
     return parser.parse_args(argv)
 
@@ -428,6 +448,7 @@ def main(argv: list[str]) -> int:
         process_path=args.process,
         kernel_path=args.kernel,
         player_counters_path=args.player_counters,
+        panfrost_fault_policy=args.panfrost_fault_policy,
     )
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:

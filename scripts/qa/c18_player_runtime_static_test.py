@@ -28,7 +28,7 @@ LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "90dbd46e0581767d239a035f33e00e1156c3388673c438667b883c39dc7c219c"
+EXPECTED_SNAPSHOT_SHA256 = "06e1aadfe15f76d7284d2692dfe5987c9e3c8efd44e8486469b50cf309c246d4"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -94,7 +94,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertEqual(patches["DEFAULT_CONFIG.mpv_path"]["to"], C18_WRAPPER)
         self.assertEqual(
             patches["MPVController._stop_locked"]["to"],
-            "request MPV IPC quit before signal fallback",
+            "request MPV IPC quit, including fresh IPC fallback, before signal fallback",
         )
 
     def test_snapshot_sha_matches_source_metadata(self) -> None:
@@ -126,40 +126,60 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
     def test_mpv_stop_uses_ipc_quit_with_signal_fallbacks(self) -> None:
         kiosk = load_kiosk_module()
 
-        def make_controller(proc: FakeProc, send_result: bool, *, ipc: object | None = object()):
+        def make_controller(
+            proc: FakeProc,
+            send_result: bool,
+            *,
+            fresh_result: bool = True,
+            ipc: object | None = object(),
+        ):
             controller = kiosk.MPVController({"ipc_path": "/tmp/c18-fake.sock", "mpv_log_file": "/tmp/c18-fake.log"})
             controller._proc = proc
             controller._ipc = ipc
             sent: list[dict] = []
             controller._send = lambda payload, **_kwargs: sent.append(payload) or send_result
+            fresh_sent: list[list[object]] = []
+            controller._fresh_ipc_command = lambda command, **_kwargs: fresh_sent.append(command) or fresh_result
             closed: list[str] = []
             controller._close_ipc = lambda reason="cleanup", log_context=False: closed.append(reason)
-            return controller, sent, closed
+            return controller, sent, fresh_sent, closed
 
         original_killpg = kiosk.os.killpg
         signals: list[tuple[int, int]] = []
         kiosk.os.killpg = lambda pid, sig: signals.append((pid, sig))
         try:
             clean_proc = FakeProc([0])
-            clean, sent, closed = make_controller(clean_proc, True)
+            clean, sent, fresh_sent, closed = make_controller(clean_proc, True)
             clean._stop_locked(reason="clean")
             self.assertEqual(sent, [{"command": ["quit"]}])
+            self.assertEqual(fresh_sent, [])
             self.assertEqual(signals, [])
             self.assertEqual(clean_proc.wait_timeouts, [5])
             self.assertEqual(closed, ["clean"])
 
             no_ipc_proc = FakeProc([0])
-            no_ipc, sent, _closed = make_controller(no_ipc_proc, True, ipc=None)
+            no_ipc, sent, fresh_sent, _closed = make_controller(no_ipc_proc, True, ipc=None)
             no_ipc._stop_locked(reason="no_ipc")
             self.assertEqual(sent, [])
-            self.assertEqual(signals, [(1234, kiosk.signal.SIGTERM)])
+            self.assertEqual(fresh_sent, [["quit"]])
+            self.assertEqual(signals, [])
             self.assertEqual(no_ipc_proc.wait_timeouts, [5])
 
             signals.clear()
+            no_ipc_fail_proc = FakeProc([0])
+            no_ipc_fail, sent, fresh_sent, _closed = make_controller(no_ipc_fail_proc, True, fresh_result=False, ipc=None)
+            no_ipc_fail._stop_locked(reason="no_ipc_fail")
+            self.assertEqual(sent, [])
+            self.assertEqual(fresh_sent, [["quit"]])
+            self.assertEqual(signals, [(1234, kiosk.signal.SIGTERM)])
+            self.assertEqual(no_ipc_fail_proc.wait_timeouts, [5])
+
+            signals.clear()
             stuck_proc = FakeProc(["timeout", "timeout", -9])
-            stuck, sent, _closed = make_controller(stuck_proc, True)
+            stuck, sent, fresh_sent, _closed = make_controller(stuck_proc, True)
             stuck._stop_locked(reason="stuck")
             self.assertEqual(sent, [{"command": ["quit"]}])
+            self.assertEqual(fresh_sent, [])
             self.assertEqual(signals, [(1234, kiosk.signal.SIGTERM), (1234, kiosk.signal.SIGKILL)])
             self.assertEqual(stuck_proc.wait_timeouts, [5, 5, 5])
         finally:
