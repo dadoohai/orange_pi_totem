@@ -45,6 +45,19 @@ e nao e autorizacao `decisive` atual; um M6 re-rodado contra a golden corrente
 e o caminho para uma autorizacao decisiva viva. Ainda nao e thaw publico,
 GitHub publish, auto-pull, stable/producao, power-loss fisico ou soak.
 
+M6 lab-only decisivo atual de `player-runtime` em `/data`:
+`docs/evidence/c18-update-validation/20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial/`.
+Ele prova A->B->cold-boot->A em `/data` na imagem `c18-hwdecode-lab-1w`,
+com B adotada de `/data/player-runtime/current`, deep-health do candidato B,
+teardown sem delta panfrost, reboot controlado, rollback para A real em `/data`
+e release gate host aceitando a evidencia em modo `decisive`. Esse marco
+restaura a autorizacao decisiva lab para `player-runtime`, mas nao promove a
+`1w` como golden baseline/fallback geral: a fonte canonica de recovery/delivery
+continua sendo `current-golden.json` enquanto nao houver uma evidencia
+baseline/fallback propria da `1w`. Ainda nao e thaw publico, OTA de
+`kiosky-player`, GitHub publish, auto-pull, stable/producao, power-loss fisico
+ou soak.
+
 Golden pos-M6 validada em hardware: `c18-hwdecode-lab-1u`.
 Evidencia offline:
 `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`.

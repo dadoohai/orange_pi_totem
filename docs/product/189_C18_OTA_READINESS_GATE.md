@@ -25,6 +25,7 @@ golden atual `1u`.
 | OTA comum | somente `totem-core`, manual/operator-triggered |
 | Freeze publico | `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1u`, o hardening de `kiosky-player reconcile` foi provado em hardware com `rc=44` |
 | M6 `/data` historico | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A sob golden `1t`; apos o bump para `1u`, nao e autorizacao `decisive` atual |
+| M6 `/data` decisivo atual | `20260609T041709Z`: evidenciou A->B->cold-boot->A de `player-runtime` em `/data` na imagem `1w`, com B adotada de `/data`, deep-health, teardown sem delta panfrost, rollback para A real e release gate host `decisive` verde |
 | Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
 | Proximo gate | power-loss fisico/torn-write, soak/endurance e governanca server-side antes de qualquer caminho `stable`/producao |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, power-loss fisico e soak/endurance |
@@ -74,9 +75,21 @@ restaurar uma autorizacao decisiva viva. Esse marco nao abre thaw publico,
 publish GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
 
 Ou seja: para recovery/baseline validado de laboratorio, partir da imagem `1u`.
-A `1t` permanece como golden historica e como base do M6 decisivo A->B->A; a
+A `1t` permanece como golden historica e como base do M6 A->B->A anterior; a
 `1u` substitui a `1t` para delivery/lab porque embarca e prova o hardening
-pos-M6 de reconcile publico sem regredir playback.
+pos-M6 de reconcile publico sem regredir playback, enquanto a M6 decisiva
+corrente de `player-runtime` esta pinada a `1w`.
+
+Marco M6 decisivo atual de `/data`: a evidencia
+`docs/evidence/c18-update-validation/20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial/`
+foi aceita pelo release gate host em modo `decisive` pinado a
+`c18-hwdecode-lab-1w`. Ela prova o fluxo lab-only A->B->cold-boot->A de
+`player-runtime` em `/data`, com B adotada de `/data/player-runtime/current`,
+deep-health do candidato B, teardown sem delta panfrost, reboot controlado,
+rollback para A real em `/data` e deep-health pos-rollback. Esse marco restaura
+a autorizacao decisiva lab de `player-runtime`; ele nao muda a fonte canonica
+de recovery/delivery (`current-golden.json`, hoje `1u`) sem uma evidencia
+baseline/fallback propria da `1w`.
 
 Nota: `1k`, `1l`, `1m`, `1n`, `1o`, `1q`, `1r`, `1s` e `1t` permanecem como
 golden historicas anteriores. O `player-runtime` continua congelado no fluxo
