@@ -15,10 +15,40 @@ from typing import Any
 
 SCHEMA = "dadooh.c18.coldboot_state.v2"
 PRE_STATE_SCHEMA = "dadooh.c18.coldboot_pre_state.v1"
+PLAYBACK_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 DEFAULT_BOOT_STATE = "boot-state-public.json"
 DEFAULT_PRE_STATE = "pre-state-public.json"
+DATA_COLDBOOT_SERVICE_HEALTH = "service-after-coldboot/playback-deep-health-public.json"
 MAX_POST_BOOT_UPTIME_SECONDS = 900
 MAX_PRE_TO_POST_BOOT_SECONDS = 3600
+COLD_BOOT_REQUIRED_HEALTH_CHECKS = (
+    "samples_present",
+    "service_active",
+    "single_mpv",
+    "mpv_path_c18_stack",
+    "hwdec_expected_present",
+    "hwdec_no_unexpected",
+    "vo_configured_present",
+    "vo_configured_no_unexpected",
+    "ipc_success_present",
+    "ipc_stable_after_success",
+    "estimated_frame_present",
+    "playback_progressed",
+    "media_load_failed_present",
+    "media_load_failed_zero",
+    "mpv_restart_present",
+    "mpv_restart_zero",
+    "panfrost_faults_present",
+    "panfrost_faults_zero",
+    "panfrost_faults_delta_zero",
+    "mmc_timeout_reset_present",
+    "mmc_timeout_reset_zero",
+    "ext4_errors_present",
+    "ext4_errors_zero",
+    "nrestarts_delta_present",
+    "nrestarts_stable",
+    "status_no_failures",
+)
 LEAK_PATTERNS = (
     ("ipv4", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
     ("mac", re.compile(r"\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b")),
@@ -144,6 +174,74 @@ def validate_data_source_repo_identity(manifest: dict[str, Any], errors: list[st
         and source_commit != repo_commit
     ):
         fail(errors, "manifest_repo_commit_source_mismatch")
+
+
+def data_source_claimed(data: dict[str, Any], adoption: dict[str, Any], expect_source: str) -> bool:
+    player = data.get("player_runtime")
+    if not isinstance(player, dict):
+        return expect_source == "data"
+    selected = player.get("selected_source")
+    return (
+        selected == "data"
+        or expect_source == "data"
+        or (isinstance(adoption, dict) and adoption.get("selected_source") == "data")
+        or player.get("data_current_marker_verified") is True
+    )
+
+
+def validate_playback_summary(run_dir: Path, rel_path: str, label: str, errors: list[str]) -> None:
+    path = run_dir / rel_path
+    if not path.is_file():
+        fail(errors, f"{label}_missing")
+        return
+    data = load_json(path, errors)
+    if data.get("schema") != PLAYBACK_SCHEMA:
+        fail(errors, f"{label}_schema")
+    if data.get("passed") is not True:
+        fail(errors, f"{label}_not_passed")
+    if data.get("failure_reasons") not in ([], None):
+        fail(errors, f"{label}_failure_reasons_not_empty")
+    checks = data.get("checks")
+    if not isinstance(checks, dict):
+        fail(errors, f"{label}_checks_missing")
+    else:
+        for key in COLD_BOOT_REQUIRED_HEALTH_CHECKS:
+            if checks.get(key) is not True:
+                fail(errors, f"{label}_check_failed:{key}")
+    counters = data.get("counters")
+    if not isinstance(counters, dict):
+        fail(errors, f"{label}_counters_missing")
+        return
+    expected = data.get("expected") if isinstance(data.get("expected"), dict) else {}
+    expected_policy = expected.get("panfrost_fault_policy")
+    counter_policy = counters.get("panfrost_fault_policy")
+    if expected_policy is None or counter_policy is None:
+        fail(errors, f"{label}_panfrost_fault_policy_missing")
+    elif expected_policy != counter_policy:
+        fail(errors, f"{label}_panfrost_fault_policy_mismatch")
+    elif expected_policy != "absolute":
+        fail(errors, f"{label}_panfrost_fault_policy_not_absolute")
+    if int(counters.get("samples") or 0) <= 0:
+        fail(errors, f"{label}_samples_empty")
+    positive_steps = int(
+        counters.get("estimated_frame_positive_steps")
+        if counters.get("estimated_frame_positive_steps") is not None
+        else 0
+    )
+    required_steps = int(
+        counters.get("estimated_frame_required_steps")
+        if counters.get("estimated_frame_required_steps") is not None
+        else 2
+    )
+    trailing_steps = int(
+        counters.get("estimated_frame_trailing_nonprogress_steps")
+        if counters.get("estimated_frame_trailing_nonprogress_steps") is not None
+        else 999
+    )
+    if positive_steps < required_steps:
+        fail(errors, f"{label}_frame_steps_insufficient")
+    if trailing_steps > 1:
+        fail(errors, f"{label}_frame_trailing_stall")
 
 
 def validate_boot_state(
@@ -496,6 +594,16 @@ def validate(
             expect_mechanical_action=expect_mechanical_action,
             forbid_controlled_reboot=forbid_controlled_reboot,
         )
+        if data_source_claimed(data, adoption, expect_source):
+            if run_dir is None:
+                fail(errors, "data_coldboot_service_health_requires_run_dir")
+            else:
+                validate_playback_summary(
+                    run_dir,
+                    DATA_COLDBOOT_SERVICE_HEALTH,
+                    "data_coldboot_service_health",
+                    errors,
+                )
     for hit in scan_leaks(files):
         fail(errors, f"privacy_leak:{hit}")
     return {
@@ -646,9 +754,9 @@ def refresh_fixture_pre_state_hash(root: Path) -> None:
 
 def write_coldboot_manifest_fixture(root: Path, *, repo_commit: str = "d" * 40) -> None:
     artifacts = []
-    for name in (DEFAULT_BOOT_STATE, DEFAULT_PRE_STATE, "launcher-adoption.json"):
-        path = root / name
-        if path.is_file():
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.name != "evidence-manifest.json":
+            name = path.relative_to(root).as_posix()
             artifacts.append({
                 "file": name,
                 "bytes": path.stat().st_size,
@@ -674,6 +782,41 @@ def write_adoption_fixture(path: Path) -> None:
         "marker_valid": True,
         "running_identity_matches_marker": True,
     }
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_playback_summary_fixture(path: Path) -> None:
+    checks = {key: True for key in COLD_BOOT_REQUIRED_HEALTH_CHECKS}
+    checks.update({
+        "panfrost_faults_clean_for_policy": True,
+        "panfrost_faults_delta_present": True,
+        "service_process_unfiltered": True,
+        "service_single_total_mpv": True,
+        "service_total_mpv_count_present": True,
+        "transitions_observed_when_required": True,
+    })
+    data = {
+        "schema": PLAYBACK_SCHEMA,
+        "passed": True,
+        "failure_reasons": [],
+        "expected": {
+            "hwdec_current": "v4l2request-copy",
+            "mpv_paths": ["/opt/totem/bin/totem-mpv-hwdecode", "/opt/totem/hwdecode/bin/mpv"],
+            "panfrost_fault_policy": "absolute",
+        },
+        "checks": checks,
+        "counters": {
+            "samples": 6,
+            "estimated_frame_positive_steps": 3,
+            "estimated_frame_required_steps": 2,
+            "estimated_frame_trailing_nonprogress_steps": 0,
+            "panfrost_fault_policy": "absolute",
+            "panfrost_faults": 0,
+            "panfrost_faults_start": 0,
+            "panfrost_faults_delta": 0,
+        },
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -878,6 +1021,13 @@ def self_test() -> int:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
 
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
+        if result["passed"] or "data_coldboot_service_health_missing" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+
+        write_playback_summary_fixture(root / DATA_COLDBOOT_SERVICE_HEALTH)
+
         write_coldboot_manifest_fixture(root, repo_commit="f" * 40)
         result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
         if result["passed"] or "manifest_repo_commit_source_mismatch" not in result["errors"]:
@@ -889,6 +1039,17 @@ def self_test() -> int:
         if not result["passed"]:
             print(json.dumps(result, indent=2, sort_keys=True))
             return 1
+
+        health_path = root / DATA_COLDBOOT_SERVICE_HEALTH
+        health = json.loads(health_path.read_text(encoding="utf-8"))
+        health["passed"] = False
+        health_path.write_text(json.dumps(health, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
+        if result["passed"] or "data_coldboot_service_health_not_passed" not in result["errors"]:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 1
+        write_playback_summary_fixture(health_path)
+        write_coldboot_manifest_fixture(root)
 
         (root / "launcher-adoption.json").unlink()
         result = validate(root, None, expect_source="data", require_pre_state=True, expect_image_tag="c18-hwdecode-lab-test")
