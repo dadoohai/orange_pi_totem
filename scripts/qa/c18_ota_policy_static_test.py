@@ -1419,6 +1419,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("apply-github", powerloss)
         self.assertNotIn("apply-manifest-url", powerloss)
 
+        powerloss_gate = (REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_evidence_gate.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("validate_rollback_after_quarantine", powerloss_gate)
+        self.assertIn("POST_RECONCILE_STATE_SCHEMA", powerloss_gate)
+        self.assertIn("post-reconcile-state.json", powerloss_gate)
+        self.assertIn("post_reconcile_state_quarantine_tree_sha256_mismatch", powerloss_gate)
+
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)
         self.assertIn("c18_player_runtime_m6_coldboot_trial.py", lab_thaw)

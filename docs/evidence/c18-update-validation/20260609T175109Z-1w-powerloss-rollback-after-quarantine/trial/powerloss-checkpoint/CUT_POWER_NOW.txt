@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=rollback_after_quarantine action=rollback evidence=/data/e/rb14q/powerloss-checkpoint

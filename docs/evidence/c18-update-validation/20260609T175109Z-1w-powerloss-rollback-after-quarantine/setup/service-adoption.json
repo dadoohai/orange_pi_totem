@@ -1,0 +1,23 @@
+{
+  "component": "player-runtime",
+  "current_link": "releases/c18.player-runtime-powerloss-b14-20260609T174704Z-fe04918",
+  "data_process_count": 1,
+  "expected_source": "data",
+  "expected_version": "c18.player-runtime-powerloss-b14-20260609T174704Z-fe04918",
+  "fallback_process_count": 0,
+  "marker_kiosk_py_sha256": "993e2a79bc384428b38098e9c2c73f6beb43d271439644cafa4e28c3076d0d63",
+  "marker_reason": "verified",
+  "marker_tree_sha256": "0af8d832b59a26e46222d996eb44c74413371f6beb904b024ba4fdd622f1f588",
+  "marker_valid": true,
+  "marker_version": "c18.player-runtime-powerloss-b14-20260609T174704Z-fe04918",
+  "passed": true,
+  "previous_link": "releases/c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2",
+  "process_count": 1,
+  "running_identity_matches_marker": true,
+  "running_kiosk_py_sha256": "993e2a79bc384428b38098e9c2c73f6beb43d271439644cafa4e28c3076d0d63",
+  "schema": "dadooh.c18.player_runtime.adoption.v1",
+  "selected_source": "data",
+  "selected_version": "c18.player-runtime-powerloss-b14-20260609T174704Z-fe04918",
+  "state_current_version": "c18.player-runtime-powerloss-b14-20260609T174704Z-fe04918",
+  "state_previous_version": "c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2"
+}

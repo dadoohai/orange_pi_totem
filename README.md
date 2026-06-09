@@ -67,11 +67,14 @@ e
 e
 `docs/evidence/c18-update-validation/20260609T164448Z-1w-powerloss-after-previous-symlink/`
 e
-`docs/evidence/c18-update-validation/20260609T171013Z-1w-powerloss-rollback-after-previous-removed/`.
+`docs/evidence/c18-update-validation/20260609T171013Z-1w-powerloss-rollback-after-previous-removed/`
+e
+`docs/evidence/c18-update-validation/20260609T175109Z-1w-powerloss-rollback-after-quarantine/`.
 Essas evidencias cobrem, respectivamente, corte apos `current -> B` no apply,
 corte no rollback apos `current -> A`, corte apos marker verificado mas antes
 de `current -> B`, e corte apos `previous -> A` mas antes de `current -> B`,
-e corte no rollback apos remocao de `previous` mas antes do state final, com
+corte no rollback apos remocao de `previous` mas antes do state final, e corte
+no rollback apos quarentena duravel de B mas antes do state final, com
 deep-health e reconcile verdes no resume. Elas ampliam a matriz fisica de
 power-loss, mas nao provam todos os checkpoints restantes, long soak,
 stable/producao, auto-pull ou thaw publico.
