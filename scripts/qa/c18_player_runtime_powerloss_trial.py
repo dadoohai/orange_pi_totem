@@ -179,13 +179,39 @@ def runtime_snapshot() -> dict[str, Any]:
         state = updatectl._read_state()
     except Exception:
         state = {}
+    quarantine = state.get("quarantine") or state.get("quarantined_identities") or []
+    if not isinstance(quarantine, list):
+        quarantine = []
     return {
         "current_link": updatectl._read_symlink_target(updatectl.CURRENT_LINK),
         "previous_link": updatectl._read_symlink_target(updatectl.PREVIOUS_LINK),
         "state_current_version": (state.get("current") or {}).get("version") if isinstance(state.get("current"), dict) else None,
         "state_previous_version": (state.get("previous") or {}).get("version") if isinstance(state.get("previous"), dict) else None,
         "last_operation": state.get("last_operation") if isinstance(state.get("last_operation"), dict) else None,
+        "quarantine": [entry for entry in quarantine if isinstance(entry, dict)],
     }
+
+
+def boot_state() -> dict[str, Any]:
+    state: dict[str, Any] = {"captured_at_utc": utcnow()}
+    try:
+        state["boot_id"] = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip()
+    except OSError:
+        state["boot_id"] = None
+    try:
+        state["uptime_sec"] = float(Path("/proc/uptime").read_text(encoding="utf-8").split()[0])
+    except (OSError, ValueError, IndexError):
+        state["uptime_sec"] = None
+    try:
+        for line in Path("/proc/stat").read_text(encoding="utf-8").splitlines():
+            if line.startswith("btime "):
+                state["btime"] = int(line.split()[1])
+                break
+        else:
+            state["btime"] = None
+    except (OSError, ValueError, IndexError):
+        state["btime"] = None
+    return state
 
 
 def checkpoint_hook(args: argparse.Namespace, action: str):
@@ -203,6 +229,7 @@ def checkpoint_hook(args: argparse.Namespace, action: str):
             "data_root": str(args.data_root),
             "context": safe_context(context),
             "runtime_snapshot": runtime_snapshot(),
+            "boot_state_at_checkpoint": boot_state(),
             "operator_instruction": "CUT_POWER_NOW",
             "non_claims": [
                 "power_loss_observed_until_board_boots_and_resume_phase_passes",
@@ -495,6 +522,7 @@ def run_resume(args: argparse.Namespace) -> int:
     if not checkpoint_path.is_file():
         raise RuntimeError(f"checkpoint_artifact_missing:{checkpoint_path}")
     checkpoint = read_json(checkpoint_path)
+    resume_boot_state = boot_state()
     resume_dir = args.evidence_root / "resume"
     resume_dir.mkdir(parents=True, exist_ok=True)
     before = collect_adoption(args, "before-reconcile", args.expected_source, args.expected_version)
@@ -535,6 +563,7 @@ def run_resume(args: argparse.Namespace) -> int:
         "phase": "resume",
         "passed": passed,
         "checkpoint": checkpoint,
+        "boot_state_at_resume": resume_boot_state,
         "before_reconcile": before,
         "before_reconcile_health_passed": before_health.get("passed") is True,
         "reconcile": reconcile,
