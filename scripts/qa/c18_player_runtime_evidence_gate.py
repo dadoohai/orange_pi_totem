@@ -24,6 +24,7 @@ ALLOWED_PATTERNS = (
     "lab-rollback.json",
     "lab-reconcile.json",
     "candidate-health-result.json",
+    "candidate-teardown-kernel.json",
     "candidate-health/playback-deep-health-public.json",
     "candidate-health/playback-samples.tsv",
     "candidate-health/status-samples.ndjson",
@@ -510,6 +511,21 @@ def validate_candidate_result(run_dir: Path, marker: dict[str, Any]) -> list[str
         errors.append("candidate_health_result_candidate_schema")
     if data.get("passed") is not True:
         errors.append("candidate_health_result_not_passed")
+    teardown = data.get("candidate_teardown")
+    teardown_sidecar = load_json_object(run_dir / "candidate-teardown-kernel.json", "candidate_teardown", errors)
+    if not isinstance(teardown, dict):
+        errors.append("candidate_health_teardown_missing")
+    else:
+        if teardown.get("schema") != "dadooh.c18.player_runtime.candidate_teardown.v1":
+            errors.append("candidate_health_teardown_schema")
+        if teardown.get("measured") is not True:
+            errors.append("candidate_health_teardown_not_measured")
+        if teardown.get("passed") is not True:
+            errors.append("candidate_health_teardown_not_passed")
+        if teardown.get("gpu_faults_delta") != 0:
+            errors.append("candidate_health_teardown_gpu_fault_delta")
+        if teardown_sidecar and teardown_sidecar != teardown:
+            errors.append("candidate_health_teardown_sidecar_mismatch")
     if marker:
         if data.get("observed_kiosk_py_sha256") != marker.get("kiosk_py_sha256"):
             errors.append("candidate_health_result_kiosk_mismatch")
@@ -903,6 +919,36 @@ def self_test() -> None:
             "observed_kiosk_py_sha256": kiosk_sha,
             "observed_tree_sha256": tree_sha,
             "candidate_run_user": "totem",
+            "candidate_teardown": {
+                "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
+                "measured": True,
+                "passed": True,
+                "failure_reasons": [],
+                "gpu_faults_before": 0,
+                "gpu_faults_after": 0,
+                "gpu_faults_delta": 0,
+                "stop": {
+                    "method": "sigterm",
+                    "returncode": 0,
+                    "elapsed_ms": 100,
+                },
+                "new_fault_lines_sanitized": [],
+            },
+        })
+        put("candidate-teardown-kernel.json", {
+            "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
+            "measured": True,
+            "passed": True,
+            "failure_reasons": [],
+            "gpu_faults_before": 0,
+            "gpu_faults_after": 0,
+            "gpu_faults_delta": 0,
+            "stop": {
+                "method": "sigterm",
+                "returncode": 0,
+                "elapsed_ms": 100,
+            },
+            "new_fault_lines_sanitized": [],
         })
         put("candidate-health/playback-deep-health-public.json", health_summary)
         put("service-after-restart/playback-deep-health-public.json", health_summary)
@@ -1025,6 +1071,29 @@ def self_test() -> None:
                 encoding="utf-8",
             )
 
+        refresh_manifest("image-fallback")
+        ok = validate(run)
+        assert ok["passed"], ok
+        candidate_result_path = run / "candidate-health-result.json"
+        candidate_result_clean = json.loads(candidate_result_path.read_text(encoding="utf-8"))
+        candidate_result_missing_teardown = json.loads(json.dumps(candidate_result_clean))
+        candidate_result_missing_teardown.pop("candidate_teardown", None)
+        put("candidate-health-result.json", candidate_result_missing_teardown)
+        refresh_manifest("image-fallback")
+        missing_teardown = validate(run)
+        assert not missing_teardown["passed"], missing_teardown
+        assert "candidate_health_teardown_missing" in missing_teardown["errors"], missing_teardown
+        put("candidate-health-result.json", candidate_result_clean)
+        teardown_sidecar_path = run / "candidate-teardown-kernel.json"
+        teardown_sidecar_clean = json.loads(teardown_sidecar_path.read_text(encoding="utf-8"))
+        teardown_sidecar_bad = json.loads(json.dumps(teardown_sidecar_clean))
+        teardown_sidecar_bad["gpu_faults_delta"] = 1
+        put("candidate-teardown-kernel.json", teardown_sidecar_bad)
+        refresh_manifest("image-fallback")
+        mismatched_teardown = validate(run)
+        assert not mismatched_teardown["passed"], mismatched_teardown
+        assert "candidate_health_teardown_sidecar_mismatch" in mismatched_teardown["errors"], mismatched_teardown
+        put("candidate-teardown-kernel.json", teardown_sidecar_clean)
         refresh_manifest("image-fallback")
         ok = validate(run)
         assert ok["passed"], ok

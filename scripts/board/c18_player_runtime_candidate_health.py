@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import pwd
+import re
 import shutil
 import signal
 import subprocess
@@ -32,6 +33,10 @@ import totem_updatectl as updatectl
 LAB_ENV = "C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY"
 SCHEMA = "dadooh.c18.player_runtime.candidate_health.v1"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
+GPU_FAULT_RE = re.compile(
+    r"panfrost.*(fault|hang|reset|error)|gpu sched timeout|JOB_BUS_FAULT|Unhandled Page fault|BO has no sgt",
+    re.IGNORECASE,
+)
 SAFE_TEMPLATE_KEYS = {
     "allow_empty_playlist_from_api",
     "cache_max_bytes",
@@ -216,23 +221,57 @@ def minimal_candidate_env(work_root: Path) -> dict[str, str]:
     }
 
 
-def terminate_process(proc: subprocess.Popen[str], timeout_sec: float = 5.0) -> None:
+def kernel_gpu_fault_lines() -> list[str]:
+    proc = subprocess.run(
+        ["journalctl", "-k", "-b", "--no-pager", "--output=short-monotonic"],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=20,
+    )
+    return [line for line in (proc.stdout or "").splitlines() if GPU_FAULT_RE.search(line)]
+
+
+def sanitize_kernel_line(line: str) -> str:
+    line = re.sub(r"0x[0-9A-Fa-f]+", "0x<hex>", line)
+    line = re.sub(r"\b[A-Fa-f0-9]{12,}\b", "<hex>", line)
+    return line
+
+
+def terminate_process(proc: subprocess.Popen[str], timeout_sec: float = 5.0) -> dict[str, Any]:
+    started = time.monotonic()
+    stop: dict[str, Any] = {
+        "method": "none",
+        "returncode": proc.poll(),
+        "elapsed_ms": 0,
+    }
     if proc.poll() is not None:
-        return
+        return stop
+    stop["method"] = "sigterm"
     proc.terminate()
     try:
         proc.wait(timeout=timeout_sec)
-        return
+        stop["returncode"] = proc.poll()
+        stop["elapsed_ms"] = int((time.monotonic() - started) * 1000)
+        return stop
     except subprocess.TimeoutExpired:
         pass
+    stop["method"] = "sigkill"
     try:
         proc.send_signal(signal.SIGKILL)
     except ProcessLookupError:
-        return
+        stop["returncode"] = proc.poll()
+        stop["elapsed_ms"] = int((time.monotonic() - started) * 1000)
+        return stop
     try:
         proc.wait(timeout=timeout_sec)
     except subprocess.TimeoutExpired:
+        stop["method"] = "sigkill_timeout"
         pass
+    stop["returncode"] = proc.poll()
+    stop["elapsed_ms"] = int((time.monotonic() - started) * 1000)
+    return stop
 
 
 def current_user_name() -> str:
@@ -310,6 +349,12 @@ def run_candidate_health(
     run_user = candidate_run_user()
     chown_tree(work_root, run_user.pw_uid, run_user.pw_gid)
 
+    teardown: dict[str, Any] = {
+        "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
+        "measured": False,
+        "passed": False,
+        "failure_reasons": ["candidate_teardown_not_measured"],
+    }
     proc = subprocess.Popen(
         [sys.executable, str(release_dir / "kiosk.py"), "--config", str(config_path)],
         cwd=str(release_dir),
@@ -340,7 +385,25 @@ def run_candidate_health(
         )
         _out_dir, result = collector.collect(ns)
     finally:
-        terminate_process(proc)
+        before_faults = kernel_gpu_fault_lines()
+        stop = terminate_process(proc)
+        # GPU faults can be emitted just after the userspace process exits.
+        time.sleep(2.0)
+        after_faults = kernel_gpu_fault_lines()
+        delta_lines = after_faults[len(before_faults):] if len(after_faults) >= len(before_faults) else after_faults
+        fault_delta = max(0, len(after_faults) - len(before_faults))
+        teardown = {
+            "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
+            "measured": True,
+            "passed": fault_delta == 0,
+            "failure_reasons": [] if fault_delta == 0 else ["candidate_teardown_gpu_fault_delta_zero"],
+            "gpu_faults_before": len(before_faults),
+            "gpu_faults_after": len(after_faults),
+            "gpu_faults_delta": fault_delta,
+            "stop": stop,
+            "new_fault_lines_sanitized": [sanitize_kernel_line(line) for line in delta_lines[-20:]],
+        }
+        write_json(work_root / "candidate-teardown-kernel.json", teardown)
 
     result["schema"] = updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA
     result["candidate_health_schema"] = SCHEMA
@@ -349,6 +412,14 @@ def run_candidate_health(
     result["candidate_version"] = identity.get("version")
     result["canary_media_used"] = normalized_canary is not None
     result["candidate_run_user"] = run_user.pw_name
+    result["candidate_teardown"] = teardown
+    result.setdefault("checks", {})["candidate_teardown_gpu_fault_delta_zero"] = teardown.get("passed") is True
+    result.setdefault("counters", {})["candidate_teardown_gpu_faults_delta"] = teardown.get("gpu_faults_delta")
+    if teardown.get("passed") is not True:
+        reasons = result.setdefault("failure_reasons", [])
+        if "candidate_teardown_gpu_fault_delta_zero" not in reasons:
+            reasons.append("candidate_teardown_gpu_fault_delta_zero")
+        result["passed"] = False
     write_json(work_root / "candidate-health-result.json", result)
     return result
 

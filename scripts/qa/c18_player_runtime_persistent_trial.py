@@ -386,6 +386,7 @@ def main(argv: list[str]) -> int:
         apply_completed = True
         copy_public_health(raw_dir / "apply" / "candidate-health" / "health", evidence_dir / "candidate-health")
         shutil.copy2(raw_dir / "apply" / "candidate-health" / "candidate-health-result.json", evidence_dir / "candidate-health-result.json")
+        shutil.copy2(raw_dir / "apply" / "candidate-health" / "candidate-teardown-kernel.json", evidence_dir / "candidate-teardown-kernel.json")
         current_marker = args.data_root / "player-runtime" / "current" / ".release_verified.json"
         if not current_marker.is_file():
             raise RuntimeError("verified marker missing after apply")

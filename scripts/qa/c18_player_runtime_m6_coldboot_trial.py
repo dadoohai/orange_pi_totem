@@ -611,6 +611,7 @@ def phase_arm(args: argparse.Namespace) -> int:
         raise RuntimeError("apply_b_failed")
     copy_public_health(raw_dir / "apply-b" / "candidate-health" / "health", data_dir / "candidate-health")
     shutil.copy2(raw_dir / "apply-b" / "candidate-health" / "candidate-health-result.json", data_dir / "candidate-health-result.json")
+    shutil.copy2(raw_dir / "apply-b" / "candidate-health" / "candidate-teardown-kernel.json", data_dir / "candidate-teardown-kernel.json")
     marker_path = args.data_root / "player-runtime" / "current" / ".release_verified.json"
     if not marker_path.is_file():
         raise RuntimeError("verified_marker_missing_after_apply_b")
