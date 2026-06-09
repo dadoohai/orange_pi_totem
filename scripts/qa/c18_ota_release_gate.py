@@ -37,6 +37,7 @@ PY_COMPILE_TARGETS = (
     "scripts/board/totem_updatectl.py",
     "scripts/board/c18_coldboot_state_collect.py",
     "scripts/board/c18_playback_health_collect.py",
+    "scripts/board/c18_playback_soak_collect.py",
     "scripts/board/c18_playback_health_summary.py",
     "scripts/board/c18_player_runtime_candidate_health.py",
     "scripts/build/totem_core_image_embed.py",
@@ -70,6 +71,7 @@ TEST_COMMANDS = (
     ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
     ("c18_player_runtime_release_gate", ["python3", "scripts/qa/c18_player_runtime_release_gate.py", "--self-test"]),
     ("c18_coldboot_evidence_gate", ["python3", "scripts/qa/c18_coldboot_evidence_gate.py", "--self-test"]),
+    ("c18_playback_soak_collect", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
     ("c18_coldboot_evidence_current", [
         "python3",
         "scripts/qa/c18_coldboot_evidence_gate.py",

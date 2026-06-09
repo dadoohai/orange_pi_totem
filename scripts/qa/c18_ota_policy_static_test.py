@@ -42,6 +42,7 @@ PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_obse
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
 COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_state_collect.py"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
+PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -1204,6 +1205,20 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("systemctl stop", collector)
         self.assertNotIn("systemctl restart", collector)
         self.assertNotIn("systemctl start", collector)
+
+        soak = PLAYBACK_SOAK_COLLECTOR_PATH.read_text(encoding="utf-8")
+        self.assertIn("c18_playback_health_collect", soak)
+        self.assertIn("dadooh.c18.playback.soak.v1", soak)
+        self.assertIn("cycle-", soak)
+        self.assertIn("soak-summary.json", soak)
+        self.assertIn("physical_power_loss", soak)
+        self.assertIn("public_player_runtime_thaw", soak)
+        self.assertIn("stable_or_production", soak)
+        self.assertIn("panfrost_faults_delta_nonzero", soak)
+        self.assertIn("--self-test", soak)
+        self.assertNotIn("systemctl stop", soak)
+        self.assertNotIn("systemctl restart", soak)
+        self.assertNotIn("systemctl start", soak)
 
         candidate = PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY", candidate)
