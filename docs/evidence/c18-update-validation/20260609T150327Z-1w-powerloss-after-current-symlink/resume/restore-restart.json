@@ -1,0 +1,8 @@
+{
+  "action": "systemctl restart kiosky-player.service",
+  "passed": true,
+  "returncode": 0,
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1",
+  "stderr_tail": "",
+  "stdout_tail": ""
+}
