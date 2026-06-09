@@ -381,6 +381,7 @@ def run_candidate_health(
             process_ipc_path=Path(str(cfg["ipc_path"])),
             mpv_log=Path(str(cfg["mpv_log_file"])),
             mpv_generation_dir=Path(str(cfg["runtime_dir"])),
+            panfrost_fault_policy="absolute",
             json=False,
         )
         _out_dir, result = collector.collect(ns)

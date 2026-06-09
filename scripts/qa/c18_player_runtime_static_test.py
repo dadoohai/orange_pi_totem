@@ -25,6 +25,7 @@ SOURCE_PATH = PLAYER_DIR / "SOURCE.json"
 DERIVE_C18_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwdecode.py"
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
 LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
+CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
@@ -248,6 +249,10 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn('"player-runtime/kiosky-player/kiosk.py"', gate)
         self.assertIn('"player-runtime/kiosky-player/SOURCE.json"', gate)
         self.assertIn("c18_player_runtime_static", gate)
+
+    def test_candidate_health_sets_explicit_panfrost_fault_policy(self) -> None:
+        candidate_health = CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertIn('panfrost_fault_policy="absolute"', candidate_health)
 
     def test_lab_thaw_wrapper_is_guarded_and_m6_based(self) -> None:
         thaw = LAB_THAW_PATH.read_text(encoding="utf-8")
