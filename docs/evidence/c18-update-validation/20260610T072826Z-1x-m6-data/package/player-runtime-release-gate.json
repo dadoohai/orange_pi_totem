@@ -1,0 +1,13 @@
+{
+  "component": "player-runtime",
+  "manifest": {
+    "payload_sha256": "23b18fed5d6199575e353a45bb8621de6870ec94a383301d6cb031730694cb27",
+    "version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+  },
+  "passed": true,
+  "payload": {
+    "kiosk_py_sha256": "aed11086fcde3054f0c4360d0075cc2ac64499e073d5f350cac6279abd45a88c",
+    "tree_sha256": "b23ca25b6553a380a7edc811110112c918510cace4ee4c3b5383e359eec36d70"
+  },
+  "schema": "dadooh.c18.player_runtime.release_gate.v1"
+}

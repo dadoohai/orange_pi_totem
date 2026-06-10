@@ -1,0 +1,63 @@
+{
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "operation": {
+    "action": "rollback",
+    "after": {
+      "current_exists": true,
+      "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "last_operation": {
+        "finished_at_utc": "2026-06-10T07:51:11Z",
+        "quarantined_current": true,
+        "rollback_reason": "m6_coldboot_trial_rollback",
+        "rolled_back_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+        "started_at_utc": "2026-06-10T07:51:11Z",
+        "status": "success",
+        "type": "rollback"
+      },
+      "previous_exists": false,
+      "previous_link": null,
+      "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "state_previous_version": null
+    },
+    "before": {
+      "current_exists": true,
+      "current_link": "releases/c18.player-runtime-m6-b2-20260610T072826Z-29ff33b",
+      "last_operation": {
+        "finished_at_utc": "2026-06-10T07:50:20Z",
+        "reason": "manual_reconcile",
+        "started_at_utc": "2026-06-10T07:50:20Z",
+        "status": "current_verified",
+        "type": "reconcile",
+        "verified": "releases/c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+      },
+      "previous_exists": true,
+      "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "state_current_version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b",
+      "state_previous_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+    },
+    "expected_rolled_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "quarantine_current": true,
+    "rc": 0,
+    "result": "ok",
+    "rolled_back_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "output_dir": "/data/totem-diag/m6-1x-run4/raw/rollback",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "schema": "dadooh.c18.player_runtime.lab_rollback.v1"
+}

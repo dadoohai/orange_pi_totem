@@ -1,0 +1,53 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-b2-20260610T072826Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-10T07:33:01Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-m6-b2-20260610T072826Z-29ff33b.manifest.json",
+      "started_at_utc": "2026-06-10T07:32:04Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_current_version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b",
+    "state_previous_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-10T07:31:05Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-10T07:31:05Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/totem-diag/m6-1x-run4/raw/apply-b",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+}

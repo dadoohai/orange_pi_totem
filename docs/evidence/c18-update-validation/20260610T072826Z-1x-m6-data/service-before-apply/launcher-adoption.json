@@ -1,0 +1,23 @@
+{
+  "component": "player-runtime",
+  "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "data_process_count": 1,
+  "expected_source": "data",
+  "expected_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "fallback_process_count": 0,
+  "marker_kiosk_py_sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310",
+  "marker_reason": "verified",
+  "marker_tree_sha256": "b2f44a4931b0f0d9229350a8114b18862abf2c1d7a22c47d0359d3022994d019",
+  "marker_valid": true,
+  "marker_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "passed": true,
+  "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "process_count": 1,
+  "running_identity_matches_marker": true,
+  "running_kiosk_py_sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310",
+  "schema": "dadooh.c18.player_runtime.adoption.v1",
+  "selected_source": "data",
+  "selected_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "state_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+}

@@ -1,0 +1,36 @@
+{
+  "boot_id": "9fc91fe4-dc1e-44f2-ac64-dff9689662c1",
+  "btime": 1781062898,
+  "cycles": [
+    {
+      "gpu_faults_delta": 0,
+      "index": 0,
+      "kind": "service_restart",
+      "passed": true
+    },
+    {
+      "gpu_faults_delta": 0,
+      "index": 1,
+      "kind": "relaunch",
+      "passed": true
+    },
+    {
+      "gpu_faults_delta": 0,
+      "index": 2,
+      "kind": "relaunch",
+      "passed": true
+    }
+  ],
+  "cycles_count": 3,
+  "gr4_secondary_present": false,
+  "non_claims": [
+    "GR4b fresh-IPC quit SUCCESS against a live socket is NOT claimed (secondary _ipc-None corner).",
+    "Soak/endurance, torn-write power-loss, server-side publish, and public thaw are NOT claimed.",
+    "A green run proves teardown only for the cycles captured here; the runtime panfrost fix is the wrapper."
+  ],
+  "passed": true,
+  "schema": "dadooh.c18.player_runtime.teardown_trial.v1",
+  "service_restart_cycle_indices": [
+    0
+  ]
+}

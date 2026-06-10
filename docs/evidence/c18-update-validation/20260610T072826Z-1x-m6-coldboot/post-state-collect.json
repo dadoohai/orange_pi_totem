@@ -1,0 +1,4 @@
+{
+  "output": "/data/totem-diag/m6-1x-run4/coldboot-data-evidence/boot-state-public.json",
+  "schema": "dadooh.c18.coldboot_state.v2"
+}

@@ -1,0 +1,179 @@
+{
+  "artifact_id": "c18-player-runtime-teardown-9fc91fe4-dc1",
+  "board_image_marker": "c18-hwdecode-lab-1x",
+  "component": "player-runtime",
+  "files": [
+    {
+      "bytes": 186,
+      "file": "README.md",
+      "sha256": "b30079780c440f073ea0a1434646d50598859299ba6b579518ba0ade2cda2fe4"
+    },
+    {
+      "bytes": 598,
+      "file": "cycles/cycle-00/cycle.json",
+      "sha256": "02e97288a3d58c70822b7b2bcb4cf8e88db436453d2db98b5240c1f57e56d76f"
+    },
+    {
+      "bytes": 335,
+      "file": "cycles/cycle-00/health/deep-health-kernel.json",
+      "sha256": "5accd338b74964a490bb18e521a2f7c4a9a42b06138011c1270b0cc7b2cfeafa"
+    },
+    {
+      "bytes": 49,
+      "file": "cycles/cycle-00/health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "cycles/cycle-00/health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "cycles/cycle-00/health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 2822,
+      "file": "cycles/cycle-00/health/playback-deep-health-public.json",
+      "sha256": "f3b966ed771c91d1ba674e34c86defe5d8a87d57671eb0b3110079e9eec4bf95"
+    },
+    {
+      "bytes": 31039,
+      "file": "cycles/cycle-00/health/playback-samples.tsv",
+      "sha256": "a5f7b01238ce2fba2fd91712e4dfbed306bbb6c92ce917a9a01fa6cff0dfc19f"
+    },
+    {
+      "bytes": 12718,
+      "file": "cycles/cycle-00/health/status-samples.ndjson",
+      "sha256": "67d2d05c26a3e970c1df07ff2aa937da6af47c7b8a25ce82fa1963c7bb7dd93b"
+    },
+    {
+      "bytes": 69,
+      "file": "cycles/cycle-00/kernel-after.txt",
+      "sha256": "c398f44c82c073eaa8fe5866ae53231e94adc434d63e86da0a3ba184edddbc0e"
+    },
+    {
+      "bytes": 69,
+      "file": "cycles/cycle-00/kernel-before.txt",
+      "sha256": "c398f44c82c073eaa8fe5866ae53231e94adc434d63e86da0a3ba184edddbc0e"
+    },
+    {
+      "bytes": 591,
+      "file": "cycles/cycle-01/cycle.json",
+      "sha256": "c8cb0684ee2cd682a25d4aa6cc63a3d2b015804e04aaafa89b2433a9904649c2"
+    },
+    {
+      "bytes": 335,
+      "file": "cycles/cycle-01/health/deep-health-kernel.json",
+      "sha256": "2d8137440d52f57eb6155a88dd115dc1b20dee443a054155ddb4c71206a37fbf"
+    },
+    {
+      "bytes": 49,
+      "file": "cycles/cycle-01/health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "cycles/cycle-01/health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "cycles/cycle-01/health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 2823,
+      "file": "cycles/cycle-01/health/playback-deep-health-public.json",
+      "sha256": "f062850aec593990b0160cb7636f2d4e696095e7a90c6fc8e862289b2445e278"
+    },
+    {
+      "bytes": 38618,
+      "file": "cycles/cycle-01/health/playback-samples.tsv",
+      "sha256": "58d498d19726dd7551a45a77da77934e290b9609945d1358a8ee4cda51c92f6f"
+    },
+    {
+      "bytes": 15873,
+      "file": "cycles/cycle-01/health/status-samples.ndjson",
+      "sha256": "4671df78a118ec9dc816e9fc9665e44a806e5b1185642fe3b0f81fe816e5912a"
+    },
+    {
+      "bytes": 69,
+      "file": "cycles/cycle-01/kernel-after.txt",
+      "sha256": "c398f44c82c073eaa8fe5866ae53231e94adc434d63e86da0a3ba184edddbc0e"
+    },
+    {
+      "bytes": 69,
+      "file": "cycles/cycle-01/kernel-before.txt",
+      "sha256": "c398f44c82c073eaa8fe5866ae53231e94adc434d63e86da0a3ba184edddbc0e"
+    },
+    {
+      "bytes": 591,
+      "file": "cycles/cycle-02/cycle.json",
+      "sha256": "10e26eb11bd5382d18d2a3121ad3d5fd77277610e462c576ef7e6399157ec637"
+    },
+    {
+      "bytes": 336,
+      "file": "cycles/cycle-02/health/deep-health-kernel.json",
+      "sha256": "a27741081e0cfbb79b71212f65064ddfd08521bb11b131ed6fc6aace988ea974"
+    },
+    {
+      "bytes": 49,
+      "file": "cycles/cycle-02/health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "cycles/cycle-02/health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "cycles/cycle-02/health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 2822,
+      "file": "cycles/cycle-02/health/playback-deep-health-public.json",
+      "sha256": "4c638b2353936ebdc8975d3435adc5ff189746b12f41edb49d88d05d384eaaba"
+    },
+    {
+      "bytes": 38740,
+      "file": "cycles/cycle-02/health/playback-samples.tsv",
+      "sha256": "67a848ece6473b9af9aab79dbefc83706497ba0d2f67d2bd326364efe564cf9a"
+    },
+    {
+      "bytes": 15889,
+      "file": "cycles/cycle-02/health/status-samples.ndjson",
+      "sha256": "0acacb99191d302eb500c8003bbbe7b572ff96c3f970b01dc644e2e44a70c269"
+    },
+    {
+      "bytes": 69,
+      "file": "cycles/cycle-02/kernel-after.txt",
+      "sha256": "c398f44c82c073eaa8fe5866ae53231e94adc434d63e86da0a3ba184edddbc0e"
+    },
+    {
+      "bytes": 69,
+      "file": "cycles/cycle-02/kernel-before.txt",
+      "sha256": "c398f44c82c073eaa8fe5866ae53231e94adc434d63e86da0a3ba184edddbc0e"
+    },
+    {
+      "bytes": 240,
+      "file": "postcheck.txt",
+      "sha256": "26651efd6d0b5afe056fae843fa0255424dfc2cf8ab1f2fd7f2f14bca51b5bd5"
+    },
+    {
+      "bytes": 55,
+      "file": "setup/service-state-before.json",
+      "sha256": "bfcb2511b62190ee61c2ad1169dc97108b654f22ec5094a1f35ea70befa4605a"
+    },
+    {
+      "bytes": 940,
+      "file": "teardown-summary.json",
+      "sha256": "4e1f07a07e4c209c3e4f339f314c9718b0ede6638e520c9ed2b54ab789e5e78f"
+    }
+  ],
+  "schema": "dadooh.c18.teardown.evidence_manifest.v1",
+  "source_commit": "29ff33bce5fad4a3326fec98168550c18adaf36a"
+}
