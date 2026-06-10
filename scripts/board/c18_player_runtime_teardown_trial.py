@@ -159,8 +159,17 @@ def build_summary(boot_id: str, btime: int, cycles: list[dict[str, Any]],
     }
 
 
-def classify_fresh_ipc(kiosk_log_text: str) -> dict[str, Any]:
-    """Inspect a kiosk.log for the fresh-IPC quit outcome (GR4 secondary)."""
+def classify_fresh_ipc(kiosk_log_text: str, *,
+                       forced_ipc_none: bool = False,
+                       forcing_method: str = "none",
+                       probe: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Inspect a kiosk.log for the fresh-IPC quit outcome (GR4 secondary).
+
+    ``forced_ipc_none`` MUST reflect whether the caller actually staged the
+    corner (short ``mpv_startup_timeout_sec``). It defaults to False so an
+    un-staged probe can never claim forcing: the gate then fails closed with
+    ``fresh_ipc_probe_not_forced`` instead of trusting a no-op probe.
+    """
     sent = FRESH_SENT_LOG in kiosk_log_text
     failed = FRESH_FAILED_LOG in kiosk_log_text
     reached = sent or failed
@@ -173,16 +182,19 @@ def classify_fresh_ipc(kiosk_log_text: str) -> dict[str, Any]:
         # Do not claim a log line that is not in the journal. code_path_reached is
         # False below, so the gate fails this probe (the operator must re-force it).
         outcome, observed = "fresh_failed_fallback_sigterm", ""
-    return {
+    result: dict[str, Any] = {
         "schema": FRESH_IPC_SCHEMA,
-        "forced_ipc_none": True,
-        "forcing_method": "short_mpv_startup_timeout_sec",
+        "forced_ipc_none": bool(forced_ipc_none),
+        "forcing_method": forcing_method,
         "code_path_reached": reached,
         "observed_log": observed,
         "outcome": outcome,
         "process_exited": True,
         "non_claim": "GR4b (fresh-IPC quit SUCCESS vs a live socket) is NOT proven; secondary corner only.",
     }
+    if probe:
+        result["probe"] = probe
+    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -386,36 +398,184 @@ def _collect_deep_health(cycle_dir: Path, *, duration_sec: float, interval_sec: 
     }
 
 
-def _read_kiosk_log(config_path: Path) -> str:
-    """Read the live kiosk.log (for the optional fresh-IPC probe classification)."""
-    log_path = DEFAULT_KIOSK_LOG
-    try:
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and data.get("log_file"):
-            log_path = Path(str(data["log_file"]))
-    except Exception:
-        pass
-    try:
-        return log_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return ""
+def _resolve_probe_kiosk() -> Path:
+    """The kiosk source the fresh-IPC probe must exercise: the ADOPTED /data
+    runtime when present (that is what H1 is about), else the /opt fallback."""
+    data_kiosk = Path("/data/player-runtime/current/kiosk.py")
+    if data_kiosk.is_file():
+        return data_kiosk
+    return Path("/opt/totem/kiosky-player/kiosk.py")
 
 
-def _run_fresh_ipc_probe(config_path: Path) -> str:
-    """Drive the start_ipc_timeout corner and return the resulting kiosk.log text.
+def _kill_probe_orphans(ws: Path) -> int:
+    """Best-effort SIGKILL of anything still referencing the probe workspace.
 
-    On the board this forces ``self._ipc is None`` (short
-    ``mpv_startup_timeout_sec``) so the fresh-IPC quit path is reached during the
-    next teardown, then returns the live kiosk.log for ``classify_fresh_ipc``.
-    The honest outcome of this corner is ALWAYS the SIGTERM fallback (the gate
-    rejects ``fresh_sent``); we never synthesize a success log.
+    The kiosk starts mpv in its OWN session (``start_new_session=True``), so
+    terminating the kiosk does NOT reach a hung mpv -- an orphan would keep
+    /dev/dri busy. The mkdtemp workspace path is unique, so the pgrep -f pattern
+    cannot match unrelated processes."""
+    proc = _run(["pgrep", "-f", str(ws)], timeout=10.0)
+    killed = 0
+    for token in (proc.stdout or "").split():
+        try:
+            pid = int(token)
+        except ValueError:
+            continue
+        if pid == os.getpid():
+            continue
+        try:
+            os.kill(pid, 9)
+            killed += 1
+        except (ProcessLookupError, PermissionError):
+            continue
+    return killed
+
+
+def _run_fresh_ipc_probe(args: argparse.Namespace, run_root: Path) -> tuple[str, dict[str, Any]]:
+    """Force the start_ipc_timeout corner END-TO-END; return (kiosk_log_text, classify kwargs).
+
+    Stages, on an ISOLATED kiosk instance of the adopted runtime (the production
+    service is NOT touched; the probe runs AFTER all cycles, so any probe-induced
+    kernel noise lands outside the cycles' fault windows):
+    - the workspace dirs PRE-CREATED before the access preflight (a missing dir
+      reads as inaccessible and would abort staging);
+    - an OFFLINE CANARY PLAYLIST (without content the kiosk exits ``no_content``
+      rc=2 BEFORE ``mpv.start()`` and the corner is unreachable) -- requires
+      ``--fresh-ipc-probe-canary-media`` (a real video under /tmp or /data/media);
+    - a short ``mpv_startup_timeout_sec`` (default 0.05s -- far below the time
+      mpv needs to expose its IPC socket on this board).
+    The kiosk then launches mpv, ``_open_ipc`` times out, and
+    ``_stop_locked("start_ipc_timeout")`` drives the C1 fresh-IPC quit (proc
+    alive + ``_ipc is None``). Honest expected outcome:
+    ``fresh_failed_fallback_sigterm``; a genuine ``fresh_sent`` is REJECTED by
+    the gate pending an explicit operator policy decision. Whenever staging
+    could not actually happen this returns ``forced_ipc_none=False`` (gate fails
+    closed with ``fresh_ipc_probe_not_forced``) and persists a probe-error
+    artifact -- the forcing is never faked.
     """
-    # A real driver of the corner would stage a short mpv_startup_timeout_sec
-    # config + relaunch; we restart the service to provoke a fresh start and then
-    # read whatever the player actually logged. No log content is fabricated.
-    _service_restart()
-    time.sleep(2.0)
-    return _read_kiosk_log(config_path)
+    import shutil as _shutil
+
+    import c18_player_runtime_candidate_health as ch
+
+    timeout_sec = float(getattr(args, "fresh_ipc_probe_startup_timeout_sec", None) or 0.05)
+    attempts_max = max(1, int(getattr(args, "fresh_ipc_probe_attempts", None) or 3))
+    canary_arg = getattr(args, "fresh_ipc_probe_canary_media", None)
+    not_forced: dict[str, Any] = {"forced_ipc_none": False, "forcing_method": "none"}
+    artifacts = run_root / "fresh-ipc-probe"
+
+    def _early(error: str, **extra: Any) -> tuple[str, dict[str, Any]]:
+        info: dict[str, Any] = {"error": error, **extra}
+        artifacts.mkdir(parents=True, exist_ok=True)
+        (artifacts / "probe-error.txt").write_text(
+            json.dumps(info, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        return "", {**not_forced, "probe": info}
+
+    kiosk_path = _resolve_probe_kiosk()
+    if not kiosk_path.is_file():
+        return _early("probe_kiosk_missing", kiosk_path=str(kiosk_path))
+    try:
+        canary = ch.normalize_canary_media(Path(canary_arg) if canary_arg else None)
+    except RuntimeError as exc:
+        return _early("probe_canary_invalid", detail=str(exc))
+    if canary is None:
+        return _early(
+            "probe_canary_missing",
+            hint="pass --fresh-ipc-probe-canary-media (video under /tmp or /data/media); "
+                 "without offline content the kiosk exits no_content before mpv.start()",
+        )
+
+    # Workspace in tmp (traversable by the run_user) -- the sealed run_root is
+    # root-0700, so the probe instance cannot live under it; sanitized artifacts
+    # are copied into run_root afterwards so the manifest still seals them.
+    ws = Path(tempfile.mkdtemp(prefix="c18-fresh-ipc-probe-"))
+    try:
+        cfg = ch.candidate_config(None, ws)
+        cfg["mpv_startup_timeout_sec"] = timeout_sec
+        config_path = ws / "probe-config.json"
+        write_json(config_path, cfg)
+        ch.write_canary_playlist(cfg, canary)
+        # Pre-create derived dirs so the preflight (and chown) act on a concrete
+        # tree (mirrors candidate_health; os.access on a missing dir reads False).
+        for sub in ("runtime_dir", "state_dir", "cache_dir"):
+            Path(str(cfg[sub])).mkdir(parents=True, exist_ok=True)
+        env = ch.minimal_candidate_env(ws)
+        run_user = ch.candidate_run_user()
+        ch.chown_tree(ws, run_user.pw_uid, run_user.pw_gid)
+        inaccessible = ch.access_failures_as_user(
+            ch.access_check_targets(cfg, kiosk_path.parent, ws, config_path, canary),
+            run_user,
+        )
+        if inaccessible:
+            return _early("probe_workspace_inaccessible_to_run_user",
+                          inaccessible_targets=sorted(set(inaccessible)))
+
+        log_path = Path(str(cfg["log_file"]))
+        log_text = ""
+        attempts = 0
+        orphans_killed = 0
+        for attempts in range(1, attempts_max + 1):
+            try:
+                log_path.unlink()
+            except OSError:
+                pass
+            with open(ws / "probe-stdout.txt", "a", encoding="utf-8") as so, \
+                 open(ws / "probe-stderr.txt", "a", encoding="utf-8") as se:
+                proc = subprocess.Popen(
+                    [sys.executable, str(kiosk_path), "--config", str(config_path)],
+                    cwd=str(kiosk_path.parent), env=env, text=True,
+                    stdout=so, stderr=se,
+                    preexec_fn=ch.drop_to_user_preexec(
+                        run_user.pw_name, run_user.pw_uid, run_user.pw_gid),
+                )
+            deadline = time.monotonic() + 8.0
+            while time.monotonic() < deadline:
+                try:
+                    log_text = log_path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    log_text = ""
+                if FRESH_SENT_LOG in log_text or FRESH_FAILED_LOG in log_text:
+                    break
+                if proc.poll() is not None:
+                    break  # kiosk already exited (e.g. crashed): stop burning the window
+                time.sleep(0.2)
+            ch.terminate_process(proc)
+            orphans_killed += _kill_probe_orphans(ws)
+            try:
+                log_text = log_path.read_text(encoding="utf-8", errors="replace") or log_text
+            except OSError:
+                pass
+            if FRESH_SENT_LOG in log_text or FRESH_FAILED_LOG in log_text:
+                break
+
+        # Persist sanitized probe artifacts inside the sealed run dir so the
+        # probe outcome stays re-derivable from committed evidence.
+        artifacts.mkdir(parents=True, exist_ok=True)
+        tail = "\n".join(ch.sanitize_lines(log_text)[-120:])
+        (artifacts / "probe-kiosk-log-tail.txt").write_text(tail + "\n", encoding="utf-8")
+        for name in ("probe-stderr.txt", "probe-stdout.txt"):
+            try:
+                lines = ch.sanitize_lines((ws / name).read_text(encoding="utf-8", errors="replace"))
+                (artifacts / name).write_text("\n".join(lines[-40:]) + "\n", encoding="utf-8")
+            except OSError:
+                pass
+
+        return log_text, {
+            "forced_ipc_none": True,
+            "forcing_method": "short_mpv_startup_timeout_sec",
+            "probe": {
+                "isolated_instance": True,
+                "service_untouched": True,
+                "canary_staged": True,
+                "kiosk_path": str(kiosk_path),
+                "kiosk_py_sha256": sha256_file(kiosk_path),
+                "mpv_startup_timeout_sec": timeout_sec,
+                "attempts": attempts,
+                "orphans_killed": orphans_killed,
+                "run_user": run_user.pw_name,
+            },
+        }
+    finally:
+        _shutil.rmtree(ws, ignore_errors=True)
 
 
 def _freeze_postcheck(updatectl: str, manifest_path: str) -> dict[str, int]:
@@ -563,11 +723,20 @@ def run_trial(args: argparse.Namespace) -> int:
                 kernel_after=_kernel_window_text(after_text),
             )
 
-        # Optional fresh-IPC probe (honest; the gate rejects "fresh_sent").
+        # Optional fresh-IPC probe (honest; the gate rejects "fresh_sent"). A probe
+        # failure must NEVER lose the cycles' evidence: any exception degrades to an
+        # honest not-forced artifact (gate REDs the probe; cycles/manifest survive).
         gr4_secondary_present = bool(getattr(args, "with_fresh_ipc_probe", False))
         if gr4_secondary_present:
-            kiosk_log = _run_fresh_ipc_probe(config_path)
-            write_json(run_root / "fresh_ipc_probe.json", classify_fresh_ipc(kiosk_log))
+            try:
+                kiosk_log, probe_kwargs = _run_fresh_ipc_probe(args, run_root)
+            except Exception as exc:
+                kiosk_log, probe_kwargs = "", {
+                    "forced_ipc_none": False, "forcing_method": "none",
+                    "probe": {"error": f"probe_exception:{type(exc).__name__}"},
+                }
+            write_json(run_root / "fresh_ipc_probe.json",
+                       classify_fresh_ipc(kiosk_log, **probe_kwargs))
 
         # Setup/state breadcrumb (informational; sanitized).
         write_json(run_root / "setup/service-state-before.json", {
@@ -651,7 +820,10 @@ def _build_clean_fixture(root: Path) -> None:
         cycles.append(cycle)
         write_cycle_dir(root, cycle, health=_make_health(),
                         kernel_before=clean_text, kernel_after=clean_text)
-    fresh = classify_fresh_ipc("... MPV IPC fresh command failed command=quit ...")
+    fresh = classify_fresh_ipc(
+        "... MPV IPC fresh command failed command=quit ...",
+        forced_ipc_none=True, forcing_method="short_mpv_startup_timeout_sec",
+    )
     write_json(root / "fresh_ipc_probe.json", fresh)
     write_json(root / "setup/service-state-before.json", {"is_active": "active", "is_enabled": "enabled"})
     summary = build_summary(boot_id, 1700000000, cycles, gr4_secondary_present=True)
@@ -698,6 +870,132 @@ class TeardownTrialSelfTest(unittest.TestCase):
         none = classify_fresh_ipc("no fresh log here")
         self.assertEqual(none["outcome"], "fresh_failed_fallback_sigterm")
         self.assertFalse(none["code_path_reached"])
+
+    def test_fresh_ipc_classify_defaults_to_not_forced(self) -> None:
+        # REGRESSION (convergence 2026-06-10): forced_ipc_none was hardcoded True,
+        # claiming a staged corner even when nothing forced it. The default MUST be
+        # False so an un-staged probe is rejected by the gate, never trusted.
+        probe = classify_fresh_ipc(FRESH_FAILED_LOG)
+        self.assertIs(probe["forced_ipc_none"], False)
+        self.assertEqual(probe["forcing_method"], "none")
+
+    def test_unforced_probe_rejected_by_gate(self) -> None:
+        # Gate round-trip: a probe artifact whose staging did NOT happen
+        # (forced_ipc_none=False) must RED the real gate.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_clean_fixture(root)
+            write_json(root / "fresh_ipc_probe.json",
+                       classify_fresh_ipc("... MPV IPC fresh command failed command=quit ..."))
+            seal_manifest(root, artifact_id="selftest", board_image_marker="c18-selftest",
+                          source_commit="a" * 40)
+            proc = subprocess.run(
+                [sys.executable, str(GATE), "--run-dir", str(root), "--json"],
+                capture_output=True, text=True, check=False)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("fresh_ipc_probe_not_forced", proc.stdout + proc.stderr)
+
+    def test_probe_without_fresh_line_rejected_by_gate(self) -> None:
+        # The PRE-FIX probe behavior (service restart only): on a healthy board the
+        # IPC connects, no fresh line is logged, and the corner is NOT reached. The
+        # gate must RED that, so a no-op probe can never read as exercised.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_clean_fixture(root)
+            write_json(root / "fresh_ipc_probe.json",
+                       classify_fresh_ipc("service restarted; ipc connected fine",
+                                          forced_ipc_none=True,
+                                          forcing_method="short_mpv_startup_timeout_sec"))
+            seal_manifest(root, artifact_id="selftest", board_image_marker="c18-selftest",
+                          source_commit="a" * 40)
+            proc = subprocess.run(
+                [sys.executable, str(GATE), "--run-dir", str(root), "--json"],
+                capture_output=True, text=True, check=False)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("fresh_ipc_probe_code_path_not_reached", proc.stdout + proc.stderr)
+
+    def test_probe_real_driver_stages_corner_end_to_end(self) -> None:
+        """Run the REAL _run_fresh_ipc_probe off-board against a FAKE kiosk.
+
+        REGRESSION (audit 2026-06-10, C1a/C1b): the fake kiosk emits the fresh
+        line ONLY IF the staging is complete -- workspace dirs pre-created,
+        offline canary playlist present, short mpv_startup_timeout_sec staged.
+        The old probe (service restart only) and a probe that skips dir
+        pre-creation or content staging both fail this test.
+        """
+        fake_kiosk = (
+            "import json, sys, time\n"
+            "from pathlib import Path\n"
+            "cfg = json.loads(Path(sys.argv[sys.argv.index('--config') + 1]).read_text())\n"
+            "state = Path(cfg['state_dir']); runtime = Path(cfg['runtime_dir'])\n"
+            "playlist = state / 'playlist_last.json'\n"
+            "ok = (state.is_dir() and runtime.is_dir() and playlist.is_file()\n"
+            "      and float(cfg.get('mpv_startup_timeout_sec', 10.0)) <= 0.05)\n"
+            "log = Path(cfg['log_file'])\n"
+            "if ok:\n"
+            "    log.write_text('MPV IPC fresh command failed command=quit error=probe\\n')\n"
+            "else:\n"
+            "    log.write_text('staging incomplete; no_content path\\n')\n"
+            "time.sleep(30)\n"
+        )
+        mod = sys.modules[__name__]
+        orig_resolve = mod._resolve_probe_kiosk
+        with tempfile.TemporaryDirectory() as tmp:
+            kiosk_path = Path(tmp) / "kiosk.py"
+            kiosk_path.write_text(fake_kiosk, encoding="utf-8")
+            canary = Path(tempfile.gettempdir()) / "c18-probe-selftest-canary.mp4"
+            canary.write_bytes(b"x")
+            run_root = Path(tmp) / "run"
+            run_root.mkdir()
+            args = argparse.Namespace(
+                fresh_ipc_probe_startup_timeout_sec=0.05,
+                fresh_ipc_probe_attempts=2,
+                fresh_ipc_probe_canary_media=canary,
+            )
+            try:
+                mod._resolve_probe_kiosk = lambda: kiosk_path
+                log_text, kwargs = _run_fresh_ipc_probe(args, run_root)
+            finally:
+                mod._resolve_probe_kiosk = orig_resolve
+                try:
+                    canary.unlink()
+                except OSError:
+                    pass
+            self.assertIs(kwargs["forced_ipc_none"], True)
+            self.assertEqual(kwargs["forcing_method"], "short_mpv_startup_timeout_sec")
+            self.assertIs(kwargs["probe"]["canary_staged"], True)
+            self.assertEqual(kwargs["probe"]["attempts"], 1)
+            probe_json = classify_fresh_ipc(log_text, **kwargs)
+            self.assertIs(probe_json["code_path_reached"], True)
+            self.assertEqual(probe_json["outcome"], "fresh_failed_fallback_sigterm")
+            tail = (run_root / "fresh-ipc-probe" / "probe-kiosk-log-tail.txt").read_text(encoding="utf-8")
+            self.assertIn("MPV IPC fresh command failed command=quit", tail)
+
+    def test_probe_real_driver_without_canary_is_not_forced(self) -> None:
+        # No canary -> the kiosk would exit no_content before mpv.start(); the
+        # probe must refuse to claim forcing AND persist a probe-error artifact.
+        mod = sys.modules[__name__]
+        orig_resolve = mod._resolve_probe_kiosk
+        with tempfile.TemporaryDirectory() as tmp:
+            kiosk_path = Path(tmp) / "kiosk.py"
+            kiosk_path.write_text("print('fake')\n", encoding="utf-8")
+            run_root = Path(tmp) / "run"
+            run_root.mkdir()
+            args = argparse.Namespace(
+                fresh_ipc_probe_startup_timeout_sec=0.05,
+                fresh_ipc_probe_attempts=1,
+                fresh_ipc_probe_canary_media=None,
+            )
+            try:
+                mod._resolve_probe_kiosk = lambda: kiosk_path
+                log_text, kwargs = _run_fresh_ipc_probe(args, run_root)
+            finally:
+                mod._resolve_probe_kiosk = orig_resolve
+            self.assertEqual(log_text, "")
+            self.assertIs(kwargs["forced_ipc_none"], False)
+            self.assertEqual(kwargs["probe"]["error"], "probe_canary_missing")
+            err = (run_root / "fresh-ipc-probe" / "probe-error.txt").read_text(encoding="utf-8")
+            self.assertIn("probe_canary_missing", err)
 
     def test_producer_output_passes_gate(self) -> None:
         # The strongest check: evidence this harness emits must pass the real gate.
@@ -751,10 +1049,12 @@ class TeardownTrialSelfTest(unittest.TestCase):
             (cycle_dir / "health").mkdir(parents=True, exist_ok=True)
             return _make_health()
 
-        def fake_fresh_ipc_probe(config_path: Path) -> str:
+        def fake_fresh_ipc_probe(args_: argparse.Namespace, run_root_: Path) -> tuple[str, dict[str, Any]]:
             state["fresh_probe_calls"] += 1
             # Honest forced-corner log: SIGTERM fallback, never "fresh_sent".
-            return "... MPV IPC fresh command failed command=quit ...\n"
+            return ("... MPV IPC fresh command failed command=quit ...\n",
+                    {"forced_ipc_none": True,
+                     "forcing_method": "short_mpv_startup_timeout_sec"})
 
         def fake_freeze_postcheck(updatectl: str, manifest_path: str) -> dict[str, int]:
             state["freeze_calls"] += 1
@@ -817,6 +1117,11 @@ class TeardownTrialSelfTest(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
 
+            # And the probe artifact records REAL staging (no hardcoded forcing).
+            probe_written = json.loads((root / "fresh_ipc_probe.json").read_text(encoding="utf-8"))
+            self.assertIs(probe_written["forced_ipc_none"], True)
+            self.assertEqual(probe_written["forcing_method"], "short_mpv_startup_timeout_sec")
+
     def test_run_trial_lab_guard_blocks_without_env(self) -> None:
         os.environ.pop(LAB_GUARD_ENV, None)
         with self.assertRaises(SystemExit) as ctx:
@@ -872,6 +1177,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-root", type=Path, default=Path("/root/totem-diag"))
     parser.add_argument("--cycles", type=int, default=2)
     parser.add_argument("--with-fresh-ipc-probe", action="store_true")
+    parser.add_argument("--fresh-ipc-probe-startup-timeout-sec", type=float, default=0.05,
+                        help="staged mpv_startup_timeout_sec used by the probe to force the "
+                             "start_ipc_timeout corner on an ISOLATED kiosk instance")
+    parser.add_argument("--fresh-ipc-probe-attempts", type=int, default=3)
+    parser.add_argument("--fresh-ipc-probe-canary-media", type=Path, default=None,
+                        help="REQUIRED with --with-fresh-ipc-probe: a real video under /tmp or "
+                             "/data/media staged as the probe's offline playlist (the kiosk "
+                             "exits no_content before mpv.start() without content)")
     parser.add_argument("--source-commit", default=None)
     parser.add_argument("--board-image-marker", default=None)
     parser.add_argument("--updatectl", default=DEFAULT_UPDATECTL)
