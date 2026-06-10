@@ -44,6 +44,12 @@ C18_PLAYER_RUNTIME_TEARDOWN_TRIAL=1 python3 scripts/board/c18_player_runtime_tea
 Produces a teardown run-dir (cycle-00 = `service_restart`, rest `relaunch`), per-cycle
 kernel-before/after + deep-health + the freeze postcheck (`rc=44`).
 
+**`--board-image-marker "$IMAGE_TAG"` is REQUIRED** and must be the exact image tag (or the
+`<tag>-image` form). The decisive gate's `teardown_evidence_image_guard` binds the teardown
+evidence to the same image as the coldboot/data evidence and **fails closed** if it diverges,
+shares only a prefix (`...-1u` vs `...-1u9`), or is omitted (the harness default marker has no
+version suffix and is rejected on purpose).
+
 ### Step 2 — Clean-board GPU-fault corpus + EYEBALL (matcher recall is the weak link)
 ```sh
 journalctl -k -b --no-pager --output=short-monotonic > /root/totem-diag/clean-board-kernel.txt

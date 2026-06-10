@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import unittest
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +90,11 @@ TEST_COMMANDS = (
         CURRENT_COLDBOOT_EVIDENCE_DIR,
         "--expect-selected-source",
         "fallback",
+        # Pin the golden coldboot dir's image identity so this previously-unpinned
+        # seam asserts the same image the decisive coldboot/data gates pin to. The
+        # golden dir records this exact tag (verified), so the baseline stays green.
+        "--expect-image-tag",
+        CURRENT_GOLDEN_IMAGE_TAG,
         "--json",
     ]),
     ("c18_playback_deep_health_fixture", ["python3", "scripts/qa/c18_playback_deep_health_fixture_test.py"]),
@@ -486,6 +492,61 @@ def player_runtime_teardown_evidence_git_guard(evidence_dir: Path, *, index: int
     )
 
 
+def teardown_evidence_image_guard(evidence_dir: Path, expected_image_tag: str, *, index: int) -> dict[str, Any]:
+    """Bind a teardown evidence dir to the expected image identity.
+
+    The teardown gate is measurement-based and IMAGE-AGNOSTIC by design: it only
+    checks that ``board_image_marker`` is a non-empty string, never that it is the
+    SAME image the coldboot/data evidence is pinned to. So a teardown captured on a
+    different board image could be combined with coldboot/data from the right image
+    and slip through. This guard closes that seam by asserting the teardown
+    manifest's ``board_image_marker`` carries the expected image tag.
+
+    The marker is operator-supplied free text. Per the decisive board run-book it is
+    ``$IMAGE_TAG`` (e.g. ``c18-hwdecode-lab-1u``), but real evidence also records the
+    marker-path basename form (``c18-hwdecode-lab-1u-image``). Both embed the tag, so
+    the check is substring containment of the EXACT expected tag, which still rejects
+    a different image's marker (``c18-hwdecode-lab-1w-image``). Fails closed on a
+    missing/unreadable manifest or an absent/empty ``board_image_marker``.
+    """
+    name = f"c18_player_runtime_teardown_evidence_image_guard:{index}"
+    internal = "teardown_evidence_image_mismatch"
+    manifest_path = evidence_dir / "evidence-manifest.json"
+    details: dict[str, Any] = {
+        "evidence_dir": str(evidence_dir),
+        "expected_image_tag": expected_image_tag,
+        "board_image_marker": None,
+    }
+    errors: list[str] = []
+    if not expected_image_tag:
+        errors.append("expected_image_tag_empty")
+    try:
+        manifest = load_json_file(manifest_path)
+    except Exception as exc:
+        errors.append(f"teardown_manifest_read_failed:{type(exc).__name__}")
+        manifest = None
+    if manifest is not None and not errors:
+        marker = manifest.get("board_image_marker")
+        details["board_image_marker"] = marker if isinstance(marker, str) else None
+        if not isinstance(marker, str) or not marker:
+            errors.append("board_image_marker_missing")
+        # Exact-tag-token match (not substring): accept the bare tag form
+        # (operator passes --board-image-marker "$IMAGE_TAG") or any tag-prefixed
+        # form like "<tag>-image" / "<tag>-<suffix>". Reject a different image
+        # whose tag merely SHARES the prefix (e.g. expected "...-1u" vs "...-1u9"),
+        # which a plain substring check would have false-passed.
+        elif not (marker == expected_image_tag or marker.startswith(expected_image_tag + "-")):
+            errors.append(f"teardown_evidence_image_mismatch:{marker}!~{expected_image_tag}")
+    return {
+        "name": name,
+        "cmd": ["internal", internal, str(evidence_dir)],
+        "returncode": 1 if errors else 0,
+        "passed": not errors,
+        "stdout_tail": json.dumps(details, sort_keys=True),
+        "stderr_tail": ",".join(errors),
+    }
+
+
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
     names: set[str] = set()
     for cmd in (
@@ -708,8 +769,99 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
     return result
 
 
+# --------------------------------------------------------------------------- #
+# Self-test: unit coverage for the in-process release-gate guards. Opt-in via   #
+# --self-test; the default (no-arg) invocation runs the full gate unchanged.    #
+# --------------------------------------------------------------------------- #
+class TeardownEvidenceImageGuardSelfTest(unittest.TestCase):
+    EXPECTED_TAG = "c18-hwdecode-lab-1u"
+
+    def _write_teardown(self, tmp: str, marker: Any) -> Path:
+        root = Path(tmp)
+        manifest: dict[str, Any] = {
+            "schema": "dadooh.c18.teardown.evidence_manifest.v1",
+            "artifact_id": "selftest",
+            "component": "player-runtime",
+            "source_commit": "a" * 40,
+            "files": [],
+        }
+        if marker is not _OMIT:
+            manifest["board_image_marker"] = marker
+        (root / "evidence-manifest.json").write_text(
+            json.dumps(manifest, sort_keys=True), encoding="utf-8"
+        )
+        return root
+
+    def test_matching_marker_tag_form_passes(self) -> None:
+        # Run-book $IMAGE_TAG form: marker == expected tag.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, self.EXPECTED_TAG)
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=1)
+            self.assertTrue(step["passed"], msg=step["stderr_tail"])
+
+    def test_matching_marker_basename_form_passes(self) -> None:
+        # Marker-path basename form (the convention real evidence records): the
+        # marker is "<tag>-image", matched via the "<tag>-" prefix rule.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, f"{self.EXPECTED_TAG}-image")
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=1)
+            self.assertTrue(step["passed"], msg=step["stderr_tail"])
+
+    def test_mismatching_marker_fails(self) -> None:
+        # A teardown captured on a DIFFERENT board image must be rejected.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, "c18-hwdecode-lab-1w-image")
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=2)
+            self.assertFalse(step["passed"])
+            self.assertIn("teardown_evidence_image_mismatch", step["stderr_tail"])
+
+    def test_prefix_collision_marker_fails(self) -> None:
+        # A different image whose tag merely SHARES the expected prefix (e.g.
+        # expected "...-1u" vs marker "...-1u9") must be rejected — a plain
+        # substring check would have false-passed it.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, f"{self.EXPECTED_TAG}9-image")
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=3)
+            self.assertFalse(step["passed"])
+            self.assertIn("teardown_evidence_image_mismatch", step["stderr_tail"])
+
+    def test_missing_marker_fails_closed(self) -> None:
+        # An absent board_image_marker must fail closed, not slip through.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, _OMIT)
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=1)
+            self.assertFalse(step["passed"])
+            self.assertIn("board_image_marker_missing", step["stderr_tail"])
+
+    def test_empty_marker_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, "")
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=1)
+            self.assertFalse(step["passed"])
+            self.assertIn("board_image_marker_missing", step["stderr_tail"])
+
+    def test_non_string_marker_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write_teardown(tmp, 1234)
+            step = teardown_evidence_image_guard(root, self.EXPECTED_TAG, index=1)
+            self.assertFalse(step["passed"])
+            self.assertIn("board_image_marker_missing", step["stderr_tail"])
+
+    def test_unreadable_manifest_fails_closed(self) -> None:
+        # No manifest file at all -> read failure -> fail closed.
+        with tempfile.TemporaryDirectory() as tmp:
+            step = teardown_evidence_image_guard(Path(tmp), self.EXPECTED_TAG, index=1)
+            self.assertFalse(step["passed"])
+            self.assertIn("teardown_manifest_read_failed", step["stderr_tail"])
+
+
+_OMIT = object()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the offline C18 OTA release gate.")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run the in-process guard unit tests and exit (does not run the full gate)")
     parser.add_argument("--package-manifest", type=Path, default=None)
     parser.add_argument("--package-payload", type=Path, default=None)
     parser.add_argument("--allow-dirty-manifest", action="store_true")
@@ -730,6 +882,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.self_test:
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(TeardownEvidenceImageGuardSelfTest)
+        result = unittest.TextTestRunner(verbosity=2).run(suite)
+        return 0 if result.wasSuccessful() else 1
     steps: list[dict[str, Any]] = []
     package_result: dict[str, Any] | None = None
 
@@ -770,6 +926,10 @@ def main() -> int:
         ))
     for index, teardown_dir in enumerate(teardown_dirs, 1):
         steps.append(player_runtime_teardown_evidence_git_guard(teardown_dir, index=index))
+        # The teardown gate is image-agnostic; bind this dir to the same image identity
+        # the coldboot/data evidence is pinned to so a teardown captured on a different
+        # board image cannot be smuggled into a "decisive" bundle (fail closed).
+        steps.append(teardown_evidence_image_guard(teardown_dir, args.expect_image_tag, index=index))
         steps.append(run_step(
             f"c18_player_runtime_teardown_evidence:{index}",
             [
