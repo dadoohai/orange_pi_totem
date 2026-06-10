@@ -4,7 +4,10 @@ Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline: HEAD `
 tree clean. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
 (no evidence args) = 37/37; DECISIVE `--player-runtime-evidence-mode decisive` with the 3
 evidence dirs + the image-`1x` triple = 43/43 (the 6 extra steps are the decisive-evidence
-validation). Freeze `rc=44` intact. Golden = `1u`; the decisive evidence is image `1x`
+validation; 43/43 is the CANONICAL communication number). Each ADDITIONAL teardown dir adds
+3 validation steps: with BOTH committed teardown dirs (original + fresh-ipc-probe) the same
+invocation is 46/46. The probe itself adds ZERO steps (a teardown dir with or without
+`fresh_ipc_probe.json` validates at the same step count). Freeze `rc=44` intact. Golden = `1u`; the decisive evidence is image `1x`
 (the H2 split below). Canonical claim while req#4 is open: "main path proven on HW;
 fresh-IPC corner deferred (non-claim)" -- NEVER "H1 closed". Off-board critical path
 A1/A2/A3/A5 committed; decisive bundle committed at `f1aa879`.
@@ -57,7 +60,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | HW teardown/panfrost detector (the gate) | **RUN + PASS on HW** (image `1x`, bundle at `f1aa879`; 3 same-boot cycles, real restart, delta 0) | H1 main path — DONE |
 | Teardown harness `run_trial()` capture path | **DONE** (landed + HW-run) | H1 main path — DONE |
 | M6 ↔ teardown ↔ decisive-release-gate integration | **DONE** (decisive gate 43/43 at `f1aa879`: M6 A2→B2 arm/controlled-reboot/resume/rollback on `1x`) | H1 main path — DONE |
-| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2); teardown gate green on-board; evidence `…185956Z-1x-teardown-fresh-ipc-probe`. GR4b (fresh SUCCESS) stays NON-CLAIM by policy — operator decision (c) still pending for any success-path probing | **H1 teardown/panfrost front — req#4 DONE (pending external-auditor ratification)** |
+| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2); teardown gate green on-board; evidence `…185956Z-1x-teardown-fresh-ipc-probe`. GR4b (fresh SUCCESS) stays NON-CLAIM by policy — operator decision (c) still pending for any success-path probing. OPEN GAP: the corner's own SIGTERM teardown has NO kernel window of its own (see Front #1 item 5) | **H1 — req#4 EXERCISED (reachability + honest fallback; NOT "fix proven"); corner panfrost window = open gap; pending external-auditor ratification** |
 | GPU-fault matcher recall calibration vs real board | **OPEN (needs board corpus)** | H1 — adjacent |
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
 | H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **LATENT/UNRESOLVED** (`1w` superseded by the fresh `1x` bundle) | evidence-integrity precondition |
@@ -114,14 +117,35 @@ Work order:
    panfrost delta=0, teardown gate green end-to-end. Evidence committed:
    `docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe`.
    Empirical implication for decision (c): the live race band is ~10–30ms after the staged
-   deadline — a deliberate success-path probe is now KNOWN to be feasible (timeout ≈0.02s),
-   and remains gate-rejected by policy until the operator decides. For PRODUCTION (10s
-   timeout) the same datum NARROWS the late-but-up band (healthy mpv is far inside 10s;
-   a 10s-stalled mpv likely never exposes the socket) — inference from one datum, not proof.
-   With req#4 exercised, the H1 teardown/panfrost front is closed AT THE EVIDENCE LEVEL;
-   the claim upgrade beyond "main path proven + req#4 exercised (GR4b non-claim)" awaits
-   the external auditor's ratification. Closing H1 is NOT thaw: H2 + the future gates
+   deadline — a deliberate success-path probe APPEARS feasible (single-datum estimate,
+   timeout ≈0.02s; socket-up jitter uncharacterized), and remains gate-rejected by policy
+   until the operator decides. For PRODUCTION (10s timeout) the same datum NARROWS the
+   late-but-up band (healthy mpv is far inside 10s; a 10s-stalled mpv likely never exposes
+   the socket) — inference from one datum, not proof.
+   **SCOPE NOTE (external audit 2026-06-10):** the `panfrost delta=0` above covers the 3
+   `ipc_quit` cycles ONLY. The corner's own SIGTERM teardown has NO kernel window of its
+   own (the probe runs after the cycles by design; its mpv is embryonic — tens of ms old,
+   no decoder/VO active — so a zero delta is the expected-by-construction outcome, but it
+   is REASONING + the wrapper thesis, NOT a measured claim). `probe-kiosk-log-tail.txt` is
+   a producer-copied excerpt of the probe kiosk.log (same producer-attested class as the
+   placeholder kernel windows). What the probe PROVES: req#4 reachability + honest SIGTERM
+   fallback. What it does NOT prove: GR4b (fix efficacy) — structurally out of this probe's
+   reach at 0.01s AND under the current gate policy — nor corner GPU-cleanliness.
+   What this closes: milestone (a) — the corner-never-exercised blocker is RETIRED. The
+   claim beyond "main path proven + req#4 exercised (GR4b non-claim)" awaits the external
+   auditor's ratification AND item 5 below. Closing H1 is NOT thaw: H2 + the future gates
    (physical power-loss, soak, server-side) still stand.
+5. **[OPERATOR DECISION — wrapper×quit-path tension + corner panfrost window]** No current
+   harness measures a SIGTERM against a DECODING mpv anywhere (cycles are `ipc_quit`; the
+   candidate teardown SIGTERMs the KIOSK, which quits mpv cleanly; the corner SIGTERM hits
+   an embryonic mpv). Options: (a) wrapper carries the panfrost thesis → measure panfrost
+   around BOTH teardown kinds (ipc_quit + a real mid-decode SIGTERM) and retire GR4b as
+   panfrost-irrelevant; (b) the quit method matters → add kernel-before/after capture to
+   the probe (decision-neutral, cheap) + resolve real GR4b reachability (live socket) under
+   an authorized gate evolution; (c) LAYERED reading — wrapper = primary fix (measured),
+   quit-path = defense-in-depth at a rare corner → capture the probe kernel window (cheap)
+   and keep GR4b non-claim. The kernel-window capture in the probe serves (a), (b) AND (c);
+   it is implemented only after the operator picks, to avoid rework if (a) widens scope.
 
 ### A. OFF-BOARD (completed this cycle; kept for the record)
 1. **Implement teardown harness `run_trial()` capture** (currently a stub): drive N≥2
