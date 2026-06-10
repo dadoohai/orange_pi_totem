@@ -504,10 +504,12 @@ def teardown_evidence_image_guard(evidence_dir: Path, expected_image_tag: str, *
 
     The marker is operator-supplied free text. Per the decisive board run-book it is
     ``$IMAGE_TAG`` (e.g. ``c18-hwdecode-lab-1u``), but real evidence also records the
-    marker-path basename form (``c18-hwdecode-lab-1u-image``). Both embed the tag, so
-    the check is substring containment of the EXACT expected tag, which still rejects
-    a different image's marker (``c18-hwdecode-lab-1w-image``). Fails closed on a
-    missing/unreadable manifest or an absent/empty ``board_image_marker``.
+    marker-path basename form (``c18-hwdecode-lab-1u-image``). The check is an EXACT
+    tag-token match: ``marker == tag`` OR ``marker.startswith(tag + "-")``. This accepts
+    both forms while rejecting a different image (``c18-hwdecode-lab-1w-image``) AND a
+    prefix-collision tag (``c18-hwdecode-lab-1u9`` vs expected ``...-1u``) that a plain
+    substring check would have false-passed. Fails closed on a missing/unreadable
+    manifest or an absent/empty ``board_image_marker``.
     """
     name = f"c18_player_runtime_teardown_evidence_image_guard:{index}"
     internal = "teardown_evidence_image_mismatch"

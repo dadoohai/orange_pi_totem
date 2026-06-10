@@ -1,7 +1,8 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: PLANNING (no thaw, no stable/publish). Baseline: HEAD `1845e6d`, tree clean,
-release gate 37/37. Freeze `rc=44` intact. Golden = `1u`.
+Status: PLANNING (no thaw, no stable/publish). Baseline: HEAD `62f60cd`, tree clean,
+release gate 37/37. Freeze `rc=44` intact. Golden = `1u`. Off-board critical path
+A1/A2/A3/A5 committed (see commits `83e3228`/`e875e21`/`4ed4829`/`62f60cd`).
 
 This is the single authoritative ledger of what stands between the committed
 teardown/panfrost detector and a safe player-runtime thaw, plus the ordered
@@ -93,8 +94,9 @@ The two core invariants hold **by construction** and were re-verified this round
    `--defer-release-gate`** (else M6 red-fails demanding the teardown dir) → capture the
    clean-board `journalctl -k -b` corpus AND eyeball it for any `panfrost|lima|mali` line
    the matcher did NOT flag (recall is the gate's weakest link) → copy evidence into the
-   repo tree → `git add` → run ONE host-side `c18_ota_release_gate.py --…-mode decisive`
-   with all three evidence dirs from a CLEAN tree.
+   repo tree → **COMMIT it** (not just `git add` — `repo_clean_guard` reds on staged files and
+   the git-guard reds on untracked, so only a commit yields a clean, git-tracked tree) → run ONE
+   host-side `c18_ota_release_gate.py --…-mode decisive` with all three evidence dirs.
 7. *(Parallel/FUTURE — NOT H1; do not spend critical-path effort here)* extend the offline
    power-loss matrix + launcher torn-tree negative test + matrix-scope doc. Power-loss
    evidence is NOT required by the decisive gate (`c18_ota_release_gate.py:751`, optional);

@@ -26,6 +26,10 @@ tree, ALL of:
      image marker). **This is the D2 decision** — these three values are the contract between
      the board image and every gate invocation below. (The repo golden is `1u`; if the board
      runs a different image, pass its real triple here — do NOT rely on the `1u` defaults.)
+2. **Build the two DISTINCT A/B player-runtime packages** that M6 `arm` consumes
+   (`--manifest-a/-b` + `--payload-a/-b`, versions MUST differ) via
+   `scripts/deploy/build_player_runtime_release_package.sh` (lab-only; runs the player-runtime
+   release gate; does not publish or thaw). Pick a local canary video for `--canary-media`.
 3. **Dry-run the gate wiring** off-board with synthetic fixtures to confirm GREEN end-to-end
    before spending board time: build a teardown run-dir via the harness self-test path and run
    `c18_player_runtime_teardown_evidence_gate.py --self-test` (31/31) and the harness
@@ -60,21 +64,40 @@ Confirm a genuinely clean teardown produced ZERO real GPU-fault lines, AND that 
 switch to deny-by-default before trusting GREEN — this is the D1 calibration).
 
 ### Step 3 — M6 coldboot trial, DEFERRED gate (one operator reboot)
+`--defer-release-gate` is MANDATORY in both phases: without it M6 runs its own gate WITHOUT the
+teardown dir and red-fails with `c18_player_runtime_teardown_evidence_required`. The always-required
+args are `--phase`, `--evidence-root`, `--image-tag`, `--image-sha256`, `--image-marker-file`; `arm`
+additionally requires the two DISTINCT A/B packages and a canary video (built in pre-flight).
+
+Arm (captures pre-state, writes the deferred marker, applies A→B in `/data`):
 ```sh
 C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL=1 python3 scripts/qa/c18_player_runtime_m6_coldboot_trial.py \
-  --defer-release-gate  <...arm args...>      # arm phase: captures pre-state, writes deferred marker
-# --- operator performs the real power-cycle / reboot when instructed ---
-#   resume phase validates boot_id/btime changed + /data adoption, writes coldboot + data evidence
+  --phase arm --defer-release-gate --allow-device-data-root --data-root /data \
+  --evidence-root /root/totem-diag/m6 \
+  --image-tag "$IMAGE_TAG" --image-sha256 "$IMAGE_SHA256" --image-marker-file /etc/dadooh/<image-marker> \
+  --manifest-a <A.manifest.json> --payload-a <A.tar.gz> \
+  --manifest-b <B.manifest.json> --payload-b <B.tar.gz> \
+  --canary-media <local-video-under-/tmp-or-/data> --json
 ```
-`--defer-release-gate` is MANDATORY: without it M6 runs its own gate WITHOUT the teardown dir and
-red-fails with `c18_player_runtime_teardown_evidence_required`.
+`--- operator performs the real power-cycle / reboot when instructed ---`
+
+Resume (validates boot_id/btime changed + `/data` adoption; writes the coldboot + data evidence dirs):
+```sh
+C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL=1 python3 scripts/qa/c18_player_runtime_m6_coldboot_trial.py \
+  --phase resume --defer-release-gate --allow-device-data-root --data-root /data \
+  --evidence-root /root/totem-diag/m6 \
+  --image-tag "$IMAGE_TAG" --image-sha256 "$IMAGE_SHA256" --image-marker-file /etc/dadooh/<image-marker> --json
+```
 
 ## Off-board — assemble and run the single decisive gate
 4. Copy the three evidence dirs (teardown, M6 coldboot, M6 data) into the repo tree under
-   `docs/evidence/c18-update-validation/`, then **`git add`** them (the git-guard rejects any
-   untracked / `.gitignore`d file and requires every manifest entry tracked). Keep the tree
-   otherwise clean.
-5. Run ONE combined decisive gate from the CLEAN tree:
+   `docs/evidence/c18-update-validation/`, sanitize-check, and **COMMIT them** (not just
+   `git add`). The git-guard requires every evidence file git-TRACKED, AND `repo_clean_guard`
+   reds on staged-but-uncommitted files — so a `git add` alone leaves the tree "dirty" and the
+   gate cannot go green. Only a COMMIT satisfies both; committed/reproducible evidence IS the
+   anti-fabrication backstop (the gate cannot prove the journal was HW-captured). Committing
+   first does NOT bless the evidence — the gate below is what validates it.
+5. Run ONE combined decisive gate from the now-clean tree:
 ```sh
 python3 scripts/qa/c18_ota_release_gate.py --player-runtime-evidence-mode decisive \
   --player-runtime-data-coldboot-evidence-dir docs/evidence/c18-update-validation/<m6-coldboot> \
@@ -83,9 +106,11 @@ python3 scripts/qa/c18_ota_release_gate.py --player-runtime-evidence-mode decisi
   --expect-image-tag "$IMAGE_TAG" --expect-image-sha256 "$IMAGE_SHA256" \
   --expect-image-marker-sha256 "$MARKER_SHA256" --json
 ```
-6. Only if **GREEN**, commit the evidence. A failure here is the gate doing its job — read the
-   `errors`, fix the cause (image-triple mismatch, an untracked file, a real panfrost fault, a
-   non-`service_restart` cycle, etc.), re-run; do NOT relax the gate.
+6. A **GREEN** gate is the decisive proof — treat the run as decisive ONLY on green. A **RED**
+   gate is the gate doing its job: the committed evidence failed validation (image-triple
+   mismatch, a real panfrost fault, a non-`service_restart` cycle, an untracked/zero-size sidecar,
+   etc.). Do NOT relax the gate — read the `errors`, fix the cause, re-capture if needed, amend or
+   replace the evidence commit, and re-run.
 
 ## What this session does and does NOT establish
 - DOES: a fresh, image-pinned decisive bundle proving repeated teardown/relaunch + a real service
