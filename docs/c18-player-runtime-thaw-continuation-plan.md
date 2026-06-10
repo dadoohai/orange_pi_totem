@@ -1,6 +1,6 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline ANCHOR: `024ce67`
+Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish); (a)-NARROW ROUND OPEN. Baseline ANCHOR: `1464f0e`
 — by construction this ledger commits AT-OR-AFTER its anchor, so the anchor may sit one
 commit behind the live HEAD; ALWAYS resolve the real HEAD via `git rev-parse` (the resume
 rituals do). Tree clean at anchor time. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
@@ -138,17 +138,19 @@ Work order:
    claim beyond "main path proven + req#4 exercised (GR4b non-claim)" awaits the external
    auditor's ratification AND item 5 below. Closing H1 is NOT thaw: H2 + the future gates
    (physical power-loss, soak, server-side) still stand.
-5. **[OPERATOR DECISION — wrapper×quit-path tension + corner panfrost window]** No current
-   harness measures a SIGTERM against a DECODING mpv anywhere (cycles are `ipc_quit`; the
-   candidate teardown SIGTERMs the KIOSK, which quits mpv cleanly; the corner SIGTERM hits
-   an embryonic mpv). Options: (a) wrapper carries the panfrost thesis → measure panfrost
-   around BOTH teardown kinds (ipc_quit + a real mid-decode SIGTERM) and retire GR4b as
-   panfrost-irrelevant; (b) the quit method matters → add kernel-before/after capture to
-   the probe (decision-neutral, cheap) + resolve real GR4b reachability (live socket) under
-   an authorized gate evolution; (c) LAYERED reading — wrapper = primary fix (measured),
-   quit-path = defense-in-depth at a rare corner → capture the probe kernel window (cheap)
-   and keep GR4b non-claim. The kernel-window capture in the probe serves (a), (b) AND (c);
-   it is implemented only after the operator picks, to avoid rework if (a) widens scope.
+5. **[DECIDED 2026-06-10 — option (a)-NARROW ratified by the operator]** The operator
+   opened this round in direct response to the (a)-narrow proposal ("vamos abrir a
+   próxima rodada então", 2026-06-10) — recorded as ratification; an operator correction
+   reverts this. Scope: measure panfrost around a REAL mid-decode SIGTERM (lab-only,
+   production service stopped/restored), keeping GR4b a NON-CLAIM. Plan CONSOLIDATED by
+   a 5-front investigation + 2 adversarial red-teams (both APPROVE_WITH_CHANGES,
+   incorporated): **docs/c18-mid-decode-probe-round-spec.md** is the implementation
+   contract (producer contract §2 — hybrid pinned by the guardian, operator veto window
+   open; single decode-confirm contract §3; add-only gate extension §5; pin-semantics
+   reading §6 recorded BEFORE landing for external-auditor ratification; landing = ONE
+   commit §7). Remaining operator items (ONE decision message, spec §8): (a) design
+   veto, (b) fresh_sent Option I (pre-session MANDATORY), (c) N attempts pin (rec. 2),
+   (d) D2 Option B. Implementation does NOT wait on these; the board session DOES.
 
 ### A. OFF-BOARD (completed this cycle; kept for the record)
 1. **Implement teardown harness `run_trial()` capture** (currently a stub): drive N≥2
@@ -216,10 +218,13 @@ Work order:
 | server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
 | power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
 
-Estado (na âncora `024ce67`; HEAD real = git): árvore limpa; placa estável; nenhuma
-execução em andamento; próxima frente definida = janela panfrost do corner (opção
-(a)-estreita: SIGTERM mid-decode medido — aguardando ratificação do operador).
-Funil: janela panfrost → H2 → decisão de thaw.
+Estado (na âncora `1464f0e`; HEAD real = git): árvore limpa; placa estável; nenhuma
+execução em andamento; rodada (a)-estreita ABERTA (ratificada 2026-06-10) — plano
+consolidado em docs/c18-mid-decode-probe-round-spec.md (5 frentes + 2 red-teams,
+APPROVE_WITH_CHANGES incorporados); próxima ação = Track A (implementação em 1 commit:
+harness + gate add-only + self-tests + runbook) — NÃO depende do operador; sessão de
+placa SÓ após as ratificações da mensagem de decisão (spec §8; fresh_sent Option I é
+mandatória pré-sessão). Funil: janela panfrost → H2 → decisão de thaw.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the
