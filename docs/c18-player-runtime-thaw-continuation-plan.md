@@ -1,6 +1,6 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline: HEAD `f1aa879`,
+Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline: HEAD `2c96a72`,
 tree clean. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
 (no evidence args) = 37/37; DECISIVE `--player-runtime-evidence-mode decisive` with the 3
 evidence dirs + the image-`1x` triple = 43/43 (the 6 extra steps are the decisive-evidence
@@ -8,8 +8,9 @@ validation; 43/43 is the CANONICAL communication number). Each ADDITIONAL teardo
 3 validation steps: with BOTH committed teardown dirs (original + fresh-ipc-probe) the same
 invocation is 46/46. The probe itself adds ZERO steps (a teardown dir with or without
 `fresh_ipc_probe.json` validates at the same step count). Freeze `rc=44` intact. Golden = `1u`; the decisive evidence is image `1x`
-(the H2 split below). Canonical claim while req#4 is open: "main path proven on HW;
-fresh-IPC corner deferred (non-claim)" -- NEVER "H1 closed". Off-board critical path
+(the H2 split below). Canonical claim NOW: "main path proven on HW; req#4 corner
+EXERCISED (reachability + honest SIGTERM fallback -- NOT 'fix proven'); GR4b non-claim;
+corner panfrost window OPEN (Front #1 item 5)" -- NEVER "H1 closed". Off-board critical path
 A1/A2/A3/A5 committed; decisive bundle committed at `f1aa879`.
 
 This is the single authoritative ledger of what stands between the committed
@@ -207,14 +208,15 @@ Work order:
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados | Hardening de produção/stable (incl. `created_at` obrigatório) |
-| player-runtime | Caminho principal provado em HW: apply A2/B2, coldboot, rollback, teardown sem panfrost | fresh-IPC req#4 (Front #1 acima), H2 golden 1u×1x, depois decisão de thaw |
+| player-runtime | Caminho principal provado em HW (apply A2/B2, coldboot, rollback, teardown sem panfrost); req#4 corner exercitado (GR4b non-claim) | Janela panfrost do corner + decisão wrapper×quit (Front #1 item 5); política GR4b/`fresh_sent`; H2 golden 1u×1x; depois decisão de thaw |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
 | server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
 | power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
 
-Estado: `f1aa879` limpo; placa estável; nenhuma execução em andamento; próxima frente
-definida = fresh-IPC (aguardando OK do operador). Funil: fresh-IPC → H2 → decisão de thaw.
+Estado: `2c96a72` limpo; placa estável; nenhuma execução em andamento; próxima frente
+definida = janela panfrost do corner (opção (a)-estreita: SIGTERM mid-decode medido —
+aguardando ratificação do operador). Funil: janela panfrost → H2 → decisão de thaw.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the
