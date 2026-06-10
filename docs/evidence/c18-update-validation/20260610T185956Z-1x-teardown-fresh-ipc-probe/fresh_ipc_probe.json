@@ -1,0 +1,21 @@
+{
+  "code_path_reached": true,
+  "forced_ipc_none": true,
+  "forcing_method": "short_mpv_startup_timeout_sec",
+  "non_claim": "GR4b (fresh-IPC quit SUCCESS vs a live socket) is NOT proven; secondary corner only.",
+  "observed_log": "MPV IPC fresh command failed command=quit",
+  "outcome": "fresh_failed_fallback_sigterm",
+  "probe": {
+    "attempts": 1,
+    "canary_staged": true,
+    "isolated_instance": true,
+    "kiosk_path": "/data/player-runtime/current/kiosk.py",
+    "kiosk_py_sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310",
+    "mpv_startup_timeout_sec": 0.01,
+    "orphans_killed": 0,
+    "run_user": "totem",
+    "service_untouched": true
+  },
+  "process_exited": true,
+  "schema": "dadooh.c18.player_runtime.teardown_fresh_ipc_probe.v1"
+}

@@ -1,0 +1,20 @@
+2026-06-10 16:02:00,448 WARNING API credentials missing; startup will run in offline-only mode if local media is available.
+2026-06-10 16:02:00,450 INFO Loaded offline playlist: 1 items
+2026-06-10 16:02:00,451 WARNING API polling disabled; player running with local media only.
+2026-06-10 16:02:00,453 INFO MPV process started pid=34388 generation=1 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log
+2026-06-10 16:02:00,454 INFO MPV IPC startup wait begin generation=1 pid=34388 timeout_sec=0.01 ipc_path=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv.sock log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log
+2026-06-10 16:02:00,464 WARNING MPV IPC startup timeout generation=1 pid=34388 duration_sec=0.01 timeout_sec=0.01 ipc_path=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv.sock log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log last_error=none
+2026-06-10 16:02:00,466 WARNING MPV IPC not available after launch; will retry. generation=1 pid=34388 timeout_sec=0.01 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log
+2026-06-10 16:02:00,469 WARNING MPV IPC fresh command failed command=quit generation=1 pid=34388 duration_sec=0.001 timeout_sec=2.00 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log error=[Errno 2] No such file or directory
+2026-06-10 16:02:00,471 WARNING MPV IPC quit unavailable; falling back to process signal reason=start_ipc_timeout generation=1 pid=34388 ipc_connected=False log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log
+2026-06-10 16:02:00,475 INFO MPV IPC close waiting for IPC critical section reason=start_ipc_timeout generation=1 pid=34388 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log
+2026-06-10 16:02:00,476 INFO MPV IPC close entered IPC critical section reason=start_ipc_timeout generation=1 pid=34388 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g001.log
+2026-06-10 16:02:00,532 INFO Signal 15 received, stopping...
+2026-06-10 16:02:01,479 INFO MPV process started pid=34393 generation=2 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log
+2026-06-10 16:02:01,479 INFO MPV IPC startup wait begin generation=2 pid=34393 timeout_sec=0.01 ipc_path=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv.sock log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log
+2026-06-10 16:02:01,490 WARNING MPV IPC startup timeout generation=2 pid=34393 duration_sec=0.01 timeout_sec=0.01 ipc_path=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv.sock log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log last_error=none
+2026-06-10 16:02:01,491 WARNING MPV IPC not available after launch; will retry. generation=2 pid=34393 timeout_sec=0.01 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log
+2026-06-10 16:02:01,492 WARNING MPV IPC fresh command failed command=quit generation=2 pid=34393 duration_sec=0.000 timeout_sec=2.00 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log error=[Errno 2] No such file or directory
+2026-06-10 16:02:01,493 WARNING MPV IPC quit unavailable; falling back to process signal reason=start_ipc_timeout generation=2 pid=34393 ipc_connected=False log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log
+2026-06-10 16:02:01,497 INFO MPV IPC close waiting for IPC critical section reason=start_ipc_timeout generation=2 pid=34393 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log
+2026-06-10 16:02:01,497 INFO MPV IPC close entered IPC critical section reason=start_ipc_timeout generation=2 pid=34393 log_file=/tmp/c18-fresh-ipc-probe-gp2ndv42/mpv-g002.log
