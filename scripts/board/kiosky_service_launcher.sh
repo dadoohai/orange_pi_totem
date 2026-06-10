@@ -5,6 +5,12 @@ umask 077
 
 CONFIG_PATH="${KIOSKY_CONFIG_PATH:-/data/config/config.json}"
 KIOSKY_APP_DIR="${KIOSKY_APP_DIR:-/opt/totem/kiosky-player}"
+# C18 baseline guard: the effective config must not lower HW decode by pointing
+# mpv_path at a non-wrapper binary. Reuse the contract validator shipped in the
+# image; the inline fallback in config_valid() keeps this fail-closed if the
+# validator is absent. See docs/UPDATE_CONTRACT.md (Contrato De Config C18).
+TOTEM_CONFIG_CONTRACT_VALIDATOR="${TOTEM_CONFIG_CONTRACT_VALIDATOR:-/opt/totem/bin/totem_config_contract_validate.py}"
+TOTEM_C18_HWDECODE_WRAPPER="${TOTEM_C18_HWDECODE_WRAPPER:-/opt/totem/bin/totem-mpv-hwdecode}"
 APP_CMD=(/usr/bin/python3 "$KIOSKY_APP_DIR/kiosk.py" --config "$CONFIG_PATH")
 RUNTIME_DIR="${KIOSKY_RUNTIME_DIR:-/tmp/kiosky}"
 STATE_DIR="${KIOSKY_LAUNCHER_STATE_DIR:-/data/state/kiosky-player}"
@@ -402,7 +408,8 @@ config_valid() {
   [ -f "$CONFIG_PATH" ] || return 1
   [ -r "$CONFIG_PATH" ] || return 1
 
-  python3 - "$CONFIG_PATH" >/dev/null 2>&1 <<'PY'
+  python3 - "$CONFIG_PATH" "$TOTEM_CONFIG_CONTRACT_VALIDATOR" "$TOTEM_C18_HWDECODE_WRAPPER" >/dev/null 2>&1 <<'PY'
+import importlib.util
 import json
 import sys
 
@@ -420,6 +427,7 @@ try:
     with open(sys.argv[1], "r", encoding="utf-8") as handle:
         config = json.load(handle)
 except Exception:
+    # Unreadable / invalid config -> fail closed (do not start the player).
     sys.exit(1)
 
 if not isinstance(config, dict):
@@ -429,6 +437,37 @@ for key in required_non_empty_strings:
     value = config.get(key)
     if not isinstance(value, str) or not value.strip():
         sys.exit(1)
+
+
+def _c18_mpv_path_violation(cfg, validator_path, wrapper):
+    """Return True if the effective mpv_path lowers the C18 HW-decode baseline.
+
+    Reuses validate_c18_mpv_path_contract from the shipped config-contract
+    validator (the same logic the config WRITER enforces). If that module
+    cannot be loaded for any reason, fall back to the equivalent inline rule
+    so this guard stays fail-closed.
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "totem_config_contract_validate", validator_path
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError("validator_unavailable")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _finding, invalid = module.validate_c18_mpv_path_contract(cfg)
+        return invalid is not None
+    except Exception:
+        # Inline mirror of validate_c18_mpv_path_contract: absent is OK,
+        # otherwise it must be exactly the C18 HW-decode wrapper.
+        if "mpv_path" not in cfg:
+            return False
+        value = cfg.get("mpv_path")
+        return not (isinstance(value, str) and value == wrapper)
+
+
+if _c18_mpv_path_violation(config, sys.argv[2], sys.argv[3]):
+    sys.exit(1)
 PY
 }
 

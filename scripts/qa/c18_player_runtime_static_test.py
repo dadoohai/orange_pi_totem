@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import py_compile
 import re
 import subprocess
@@ -26,6 +27,8 @@ DERIVE_C18_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwde
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
 LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
+INNER_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
+CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config_contract_validate.py"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
@@ -264,6 +267,106 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn("validate_release(args.manifest_b", thaw)
         self.assertIn('"public_cli_thawed": False', thaw)
         self.assertIn('"stable_allowed": False', thaw)
+
+
+class C18LauncherConfigBaselineGuardTest(unittest.TestCase):
+    """Boot-time fail-closed guard: the EFFECTIVE config must not lower HW decode.
+
+    Exercises the real config_valid() from kiosky_service_launcher.sh end-to-end
+    so a field config ("config-real") that overrides mpv_path to a non-wrapper
+    binary is REJECTED (player does not start), while an absent mpv_path or the
+    C18 HW-decode wrapper is ACCEPTED. This closes the baseline-regression vector
+    that hit "1h" without going through the release path.
+    """
+
+    BASE_CONFIG = {
+        "api_url": "https://api.example.invalid/search",
+        "api_key": "replace-with-api-key",
+        "environment_id": "replace-with-environment-id",
+        "cache_dir": "/data/media/kiosky-player",
+        "state_dir": "/data/state/kiosky-player",
+        "status_file": "/tmp/kiosky-status.json",
+        "ipc_path": "/tmp/kiosky/mpv.sock",
+    }
+
+    def _config_valid_rc(self, config_text: str, *, with_validator: bool = True) -> int:
+        with tempfile.TemporaryDirectory(prefix="c18-config-valid-guard-") as tmp:
+            config_path = Path(tmp) / "config.json"
+            config_path.write_text(config_text, encoding="utf-8")
+            validator = (
+                str(CONFIG_CONTRACT_VALIDATOR_PATH)
+                if with_validator
+                else str(Path(tmp) / "absent-validator.py")
+            )
+            env = os.environ.copy()
+            env.update(
+                {
+                    "KIOSKY_LAUNCHER_SOURCE_ONLY": "1",
+                    "KIOSKY_CONFIG_PATH": str(config_path),
+                    "TOTEM_CONFIG_CONTRACT_VALIDATOR": validator,
+                    "TOTEM_C18_HWDECODE_WRAPPER": C18_WRAPPER,
+                    "PYTHONDONTWRITEBYTECODE": "1",
+                }
+            )
+            script = f'. "{INNER_LAUNCHER_PATH}"; config_valid; exit "$?"'
+            proc = subprocess.run(
+                ["bash", "-c", script],
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+                check=False,
+            )
+            return proc.returncode
+
+    def _config_with(self, **overrides: object) -> str:
+        config = dict(self.BASE_CONFIG)
+        config.update(overrides)
+        return json.dumps(config, indent=2, sort_keys=True)
+
+    def test_absent_mpv_path_is_accepted(self) -> None:
+        self.assertEqual(self._config_valid_rc(self._config_with()), 0)
+
+    def test_wrapper_mpv_path_is_accepted(self) -> None:
+        self.assertEqual(self._config_valid_rc(self._config_with(mpv_path=C18_WRAPPER)), 0)
+
+    def test_baseline_lowering_mpv_path_is_rejected(self) -> None:
+        for bad in ("mpv", "/usr/bin/mpv", "relative/mpv", "", "/opt/totem/bin/totem-mpv-hwdecode-x"):
+            with self.subTest(mpv_path=bad):
+                self.assertEqual(
+                    self._config_valid_rc(self._config_with(mpv_path=bad)),
+                    1,
+                    f"mpv_path {bad!r} must be rejected (fail-closed)",
+                )
+
+    def test_non_string_mpv_path_is_rejected(self) -> None:
+        # A non-string mpv_path is a contract violation, not a benign absence.
+        self.assertEqual(self._config_valid_rc('{"mpv_path": 123}'), 1)
+
+    def test_unreadable_config_fails_closed(self) -> None:
+        self.assertEqual(self._config_valid_rc("{ not valid json"), 1)
+
+    def test_guard_is_fail_closed_when_validator_is_absent(self) -> None:
+        # The inline fallback must still enforce the contract if the shipped
+        # validator cannot be loaded, so the guard never fails open.
+        self.assertEqual(
+            self._config_valid_rc(self._config_with(mpv_path="mpv"), with_validator=False),
+            1,
+        )
+        self.assertEqual(
+            self._config_valid_rc(self._config_with(mpv_path=C18_WRAPPER), with_validator=False),
+            0,
+        )
+        self.assertEqual(
+            self._config_valid_rc(self._config_with(), with_validator=False),
+            0,
+        )
+
+    def test_launcher_reuses_shipped_contract_validator(self) -> None:
+        text = INNER_LAUNCHER_PATH.read_text(encoding="utf-8")
+        self.assertIn("validate_c18_mpv_path_contract", text)
+        self.assertIn("TOTEM_CONFIG_CONTRACT_VALIDATOR", text)
 
 
 if __name__ == "__main__":
