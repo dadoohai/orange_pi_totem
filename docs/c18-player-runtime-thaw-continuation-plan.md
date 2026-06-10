@@ -57,7 +57,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | HW teardown/panfrost detector (the gate) | **RUN + PASS on HW** (image `1x`, bundle at `f1aa879`; 3 same-boot cycles, real restart, delta 0) | H1 main path — DONE |
 | Teardown harness `run_trial()` capture path | **DONE** (landed + HW-run) | H1 main path — DONE |
 | M6 ↔ teardown ↔ decisive-release-gate integration | **DONE** (decisive gate 43/43 at `f1aa879`: M6 A2→B2 arm/controlled-reboot/resume/rollback on `1x`) | H1 main path — DONE |
-| **fresh-IPC corner (req#4) exercised on HW** | **OPEN — front #1.** Call-site production-reachability CONFIRMED by static analysis (2026-06-10); SUCCESS outcome is the untested hedge. Probe forcing landed off-board; operator policy decision pending (see Front #1) | **H1 — the remaining item** |
+| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2); teardown gate green on-board; evidence `…185956Z-1x-teardown-fresh-ipc-probe`. GR4b (fresh SUCCESS) stays NON-CLAIM by policy — operator decision (c) still pending for any success-path probing | **H1 teardown/panfrost front — req#4 DONE (pending external-auditor ratification)** |
 | GPU-fault matcher recall calibration vs real board | **OPEN (needs board corpus)** | H1 — adjacent |
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
 | H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **LATENT/UNRESOLVED** (`1w` superseded by the fresh `1x` bundle) | evidence-integrity precondition |
@@ -106,9 +106,21 @@ Work order:
    yields a genuine success, the gate REDs and a human decides. Pre-agree the protocol
    (recommended: keep fail-closed; treat a success as a NEW fact → preserve evidence as
    diagnostic → authorized gate evolution) so a success does not stall the session.
-4. **[BOARD — one short session]** Run the teardown trial with `--with-fresh-ipc-probe`.
-   Honest expected outcome: `fresh_failed_fallback_sigterm` (gate-green). Closing this item
-   closes H1 (teardown/panfrost front). Closing H1 is NOT thaw: H2 + the future gates
+4. **[DONE on board 2026-06-10 — pending external-auditor ratification]** Trial ran with
+   `--with-fresh-ipc-probe`: attempt #1 (0.05s) revealed a HEALTHY mpv exposes its IPC
+   socket in ~0.03s (corner not fired — gate honestly REDed; kept on-board as diagnostic);
+   attempt #2 (0.01s) forced the corner deterministically — `code_path_reached=true`,
+   `fresh_failed_fallback_sigterm` with the real ENOENT log (generations 1 AND 2), 3 cycles
+   panfrost delta=0, teardown gate green end-to-end. Evidence committed:
+   `docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe`.
+   Empirical implication for decision (c): the live race band is ~10–30ms after the staged
+   deadline — a deliberate success-path probe is now KNOWN to be feasible (timeout ≈0.02s),
+   and remains gate-rejected by policy until the operator decides. For PRODUCTION (10s
+   timeout) the same datum NARROWS the late-but-up band (healthy mpv is far inside 10s;
+   a 10s-stalled mpv likely never exposes the socket) — inference from one datum, not proof.
+   With req#4 exercised, the H1 teardown/panfrost front is closed AT THE EVIDENCE LEVEL;
+   the claim upgrade beyond "main path proven + req#4 exercised (GR4b non-claim)" awaits
+   the external auditor's ratification. Closing H1 is NOT thaw: H2 + the future gates
    (physical power-loss, soak, server-side) still stand.
 
 ### A. OFF-BOARD (completed this cycle; kept for the record)

@@ -457,7 +457,10 @@ def _run_fresh_ipc_probe(args: argparse.Namespace, run_root: Path) -> tuple[str,
 
     import c18_player_runtime_candidate_health as ch
 
-    timeout_sec = float(getattr(args, "fresh_ipc_probe_startup_timeout_sec", None) or 0.05)
+    # Default calibrated on HW (2026-06-10): a HEALTHY mpv exposes its IPC socket in
+    # ~0.03s on this board, so 0.05s let _open_ipc SUCCEED and the corner never fired;
+    # 0.01s forces it deterministically (fresh attempt ~11ms -> socket absent -> ENOENT).
+    timeout_sec = float(getattr(args, "fresh_ipc_probe_startup_timeout_sec", None) or 0.01)
     attempts_max = max(1, int(getattr(args, "fresh_ipc_probe_attempts", None) or 3))
     canary_arg = getattr(args, "fresh_ipc_probe_canary_media", None)
     not_forced: dict[str, Any] = {"forced_ipc_none": False, "forcing_method": "none"}
@@ -1177,9 +1180,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-root", type=Path, default=Path("/root/totem-diag"))
     parser.add_argument("--cycles", type=int, default=2)
     parser.add_argument("--with-fresh-ipc-probe", action="store_true")
-    parser.add_argument("--fresh-ipc-probe-startup-timeout-sec", type=float, default=0.05,
+    parser.add_argument("--fresh-ipc-probe-startup-timeout-sec", type=float, default=0.01,
                         help="staged mpv_startup_timeout_sec used by the probe to force the "
-                             "start_ipc_timeout corner on an ISOLATED kiosk instance")
+                             "start_ipc_timeout corner on an ISOLATED kiosk instance "
+                             "(HW-calibrated: healthy mpv exposes the socket in ~0.03s)")
     parser.add_argument("--fresh-ipc-probe-attempts", type=int, default=3)
     parser.add_argument("--fresh-ipc-probe-canary-media", type=Path, default=None,
                         help="REQUIRED with --with-fresh-ipc-probe: a real video under /tmp or "
