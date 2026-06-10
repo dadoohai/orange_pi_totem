@@ -428,8 +428,12 @@ def _freeze_postcheck(updatectl: str, manifest_path: str) -> dict[str, int]:
     """
     rollback = _run([updatectl, "rollback", "--component", "player-runtime"], timeout=30.0).returncode
     reconcile = _run([updatectl, "reconcile", "--component", "player-runtime"], timeout=30.0).returncode
+    # `apply-local` takes the manifest as a POSITIONAL arg (the CLI usage is
+    # `apply-local [--component X] [--payload P] manifest`). Passing it as
+    # `--manifest <p>` makes argparse fail with "unrecognized arguments" -> rc=2,
+    # which the HW run exposed. Keep the manifest trailing-positional.
     apply_local = _run(
-        [updatectl, "apply-local", "--component", "player-runtime", "--manifest", manifest_path],
+        [updatectl, "apply-local", "--component", "player-runtime", manifest_path],
         timeout=30.0,
     ).returncode
     return {
@@ -832,6 +836,34 @@ class TeardownTrialSelfTest(unittest.TestCase):
             self.assertIn("journalctl_kernel_capture_failed", str(ctx.exception))
         finally:
             mod._run = orig
+
+    def test_freeze_postcheck_apply_local_manifest_is_positional(self) -> None:
+        # REGRESSION (HW-exposed): the public `apply-local` CLI takes the manifest
+        # as a POSITIONAL arg (`apply-local [--component X] [--payload P] manifest`).
+        # Passing `--manifest <p>` made argparse fail with "unrecognized arguments"
+        # -> rc=2 -> postcheck APPLY_LOCAL_RC != 44 -> gate FAIL. The prior self-test
+        # shimmed the whole freeze seam, masking the command FORM; this asserts the
+        # exact argv so the mistake can never slip through off-board again.
+        mod = sys.modules[__name__]
+        orig = mod._run
+        captured: list[list[str]] = []
+
+        def fake_run(cmd, *, timeout=30.0):
+            captured.append(list(cmd))
+            return subprocess.CompletedProcess(cmd, 44, stdout="", stderr="")
+
+        try:
+            mod._run = fake_run
+            _freeze_postcheck("/opt/totem/bin/totem-updatectl", "/tmp/x.manifest.json")
+        finally:
+            mod._run = orig
+        apply_cmds = [c for c in captured if "apply-local" in c]
+        self.assertEqual(len(apply_cmds), 1, "apply-local must be invoked exactly once")
+        cmd = apply_cmds[0]
+        self.assertNotIn("--manifest", cmd, "manifest must be POSITIONAL, not --manifest")
+        self.assertEqual(cmd[-1], "/tmp/x.manifest.json", "manifest must be the trailing positional arg")
+        self.assertIn("--component", cmd)
+        self.assertIn("player-runtime", cmd)
 
 
 def parse_args() -> argparse.Namespace:
