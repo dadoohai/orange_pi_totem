@@ -87,6 +87,14 @@ CANARY_MEDIA_ALLOWED_ROOTS = (Path("/tmp"), Path("/data/media"))
 CANARY_MEDIA_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi"}
 
 
+class CandidateSetupInaccessibleError(RuntimeError):
+    """Raised when the candidate workspace/release is unreachable by the run_user — a SETUP error,
+    not a candidate health failure. Propagated to the apply path so it aborts via the
+    deep_health_exception route (fail-closed: no promotion) WITHOUT quarantining the candidate
+    identity. An environment problem (e.g. a work_root under 0700 /root) must never permanently
+    poison a good release's tree_sha256."""
+
+
 def read_json_object(path: Path | None) -> dict[str, Any]:
     if path is None:
         return {}
@@ -318,6 +326,114 @@ def drop_to_user_preexec(user_name: str, uid: int, gid: int):
     return _drop
 
 
+def access_check_targets(
+    cfg: dict[str, Any],
+    release_dir: Path,
+    work_root: Path,
+    config_path: Path,
+    canary: Path | None,
+) -> list[tuple[str, Path, int]]:
+    """Distinct (label, path, mode) the candidate process — running AS run_user — must reach.
+    Ancestor traversal is implied: os.access() resolves the full path under the dropped
+    credentials, so a work_root beneath a 0700 ancestor (e.g. /root) surfaces here."""
+    targets: list[tuple[str, Path, int]] = [
+        ("release_dir_traverse", release_dir, os.X_OK),
+        ("release_kiosk_py_read", release_dir / "kiosk.py", os.R_OK),
+        ("work_root_write", work_root, os.W_OK | os.X_OK),
+        ("config_path_read", config_path, os.R_OK),
+        ("state_dir_write", Path(str(cfg["state_dir"])), os.W_OK | os.X_OK),
+        ("runtime_dir_write", Path(str(cfg["runtime_dir"])), os.W_OK | os.X_OK),
+        ("ipc_dir_write", Path(str(cfg["ipc_path"])).parent, os.W_OK | os.X_OK),
+        ("log_dir_write", Path(str(cfg["log_file"])).parent, os.W_OK | os.X_OK),
+        ("mpv_log_dir_write", Path(str(cfg["mpv_log_file"])).parent, os.W_OK | os.X_OK),
+        ("status_dir_write", Path(str(cfg["status_file"])).parent, os.W_OK | os.X_OK),
+    ]
+    if canary is not None:
+        targets.append(("canary_media_read", canary, os.R_OK))
+    return targets
+
+
+def access_failures_as_user(
+    targets: list[tuple[str, Path, int]],
+    run_user: pwd.struct_passwd,
+) -> list[str]:
+    """Labels the run_user CANNOT access. As root, the probe runs in a forked child that drops
+    to run_user EXACTLY like the launch preexec (initgroups+setgid+setuid), so supplementary
+    groups and ancestor traversal are evaluated as the candidate will actually see them."""
+
+    def _run_checks() -> list[str]:
+        return [label for (label, path, mode) in targets if not os.access(str(path), mode)]
+
+    if os.geteuid() != 0:
+        return _run_checks()
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # child: drop privileges, probe, report, never return
+        try:
+            os.close(read_fd)
+            os.initgroups(run_user.pw_name, run_user.pw_gid)
+            os.setgid(run_user.pw_gid)
+            os.setuid(run_user.pw_uid)
+            os.write(write_fd, "\n".join(_run_checks()).encode("utf-8"))
+        except BaseException:
+            try:
+                os.write(write_fd, b"run_user_privilege_drop_failed")
+            except Exception:
+                pass
+        finally:
+            os._exit(0)
+    os.close(write_fd)
+    chunks: list[bytes] = []
+    while True:
+        chunk = os.read(read_fd, 4096)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    os.close(read_fd)
+    _pid, status = os.waitpid(pid, 0)
+    text = b"".join(chunks).decode("utf-8", "replace")
+    if text.strip() == "run_user_privilege_drop_failed":
+        return ["run_user_privilege_drop_failed"]
+    # Empty report with a clean exit means "all accessible". But if the child died before writing
+    # (e.g. killed by a signal — not a Python exception, so the except above cannot catch it), do
+    # NOT conclude "all accessible": fail closed so a real setup problem can't slip back through as
+    # a generic health failure.
+    if not text and (os.WIFSIGNALED(status) or (os.WIFEXITED(status) and os.WEXITSTATUS(status) != 0)):
+        return ["run_user_privilege_drop_failed"]
+    return [line for line in text.splitlines() if line]
+
+
+def sanitize_lines(text: str) -> list[str]:
+    return [sanitize_kernel_line(line) for line in text.splitlines()]
+
+
+def setup_failure_result(
+    identity: dict[str, Any],
+    run_user: pwd.struct_passwd,
+    canary_used: bool,
+    inaccessible: list[str],
+) -> dict[str, Any]:
+    """Hook-compatible result for a SETUP failure (the candidate workspace is unreachable by the
+    run_user). Distinct from a health failure: it names candidate_setup_inaccessible_to_run_user so
+    the cause is obvious instead of a generic all-checks-failed health-fail."""
+    distinct = sorted(set(inaccessible))
+    return {
+        "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+        "candidate_health_schema": SCHEMA,
+        "passed": False,
+        "failure_reasons": ["candidate_setup_inaccessible_to_run_user"],
+        "setup_error": "candidate_setup_inaccessible_to_run_user",
+        "inaccessible_targets": distinct,
+        "candidate_run_user": run_user.pw_name,
+        "observed_kiosk_py_sha256": identity.get("kiosk_py_sha256"),
+        "observed_tree_sha256": identity.get("tree_sha256"),
+        "candidate_version": identity.get("version"),
+        "canary_media_used": canary_used,
+        "checks": {"candidate_setup_accessible_to_run_user": False},
+        "counters": {"candidate_setup_inaccessible_target_count": len(distinct)},
+    }
+
+
 def run_candidate_health(
     release_dir: Path,
     identity: dict[str, Any] | None = None,
@@ -347,7 +463,31 @@ def run_candidate_health(
 
     env = minimal_candidate_env(work_root)
     run_user = candidate_run_user()
+    # Pre-create derived workspace dirs so the preflight (and chown) act on a concrete tree.
+    for sub in ("runtime_dir", "state_dir", "cache_dir"):
+        Path(str(cfg[sub])).mkdir(parents=True, exist_ok=True)
     chown_tree(work_root, run_user.pw_uid, run_user.pw_gid)
+
+    # PREFLIGHT — the candidate kiosk.py runs as run_user via setuid. If any path it must
+    # read/write (including ancestor traversal) is unreachable by that user — e.g. a work_root
+    # beneath 0700 /root — it dies before it can open its own log, which previously looked like a
+    # generic health failure. Detect it HERE and fail with an explicit SETUP error.
+    inaccessible = access_failures_as_user(
+        access_check_targets(cfg, release_dir, work_root, config_path, normalized_canary),
+        run_user,
+    )
+    if inaccessible:
+        result = setup_failure_result(
+            identity, run_user, normalized_canary is not None, inaccessible
+        )
+        write_json(work_root / "candidate-health-result.json", result)
+        # Raise (not return passed=False): the apply path then aborts via deep_health_exception
+        # (fail-closed, no promotion) WITHOUT quarantining the identity. The result artifact above
+        # keeps the explicit setup_error/inaccessible_targets for diagnosis.
+        raise CandidateSetupInaccessibleError(
+            f"candidate workspace unreachable by run_user {run_user.pw_name}: "
+            + ",".join(sorted(set(inaccessible)))
+        )
 
     teardown: dict[str, Any] = {
         "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
@@ -355,15 +495,21 @@ def run_candidate_health(
         "passed": False,
         "failure_reasons": ["candidate_teardown_not_measured"],
     }
-    proc = subprocess.Popen(
-        [sys.executable, str(release_dir / "kiosk.py"), "--config", str(config_path)],
-        cwd=str(release_dir),
-        env=env,
-        text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        preexec_fn=drop_to_user_preexec(run_user.pw_name, run_user.pw_uid, run_user.pw_gid),
-    )
+    candidate_stdout_path = work_root / "candidate-stdout.txt"
+    candidate_stderr_path = work_root / "candidate-stderr.txt"
+    # Capture the candidate's stdout/stderr (was DEVNULL) so an early death the preflight could
+    # not foresee leaves a sanitized artifact instead of a silent, undiagnosable failure.
+    with open(candidate_stdout_path, "w", encoding="utf-8") as _so, \
+         open(candidate_stderr_path, "w", encoding="utf-8") as _se:
+        proc = subprocess.Popen(
+            [sys.executable, str(release_dir / "kiosk.py"), "--config", str(config_path)],
+            cwd=str(release_dir),
+            env=env,
+            text=True,
+            stdout=_so,
+            stderr=_se,
+            preexec_fn=drop_to_user_preexec(run_user.pw_name, run_user.pw_uid, run_user.pw_gid),
+        )
     try:
         time.sleep(max(startup_wait_sec, 0.0))
         ns = argparse.Namespace(
@@ -414,6 +560,13 @@ def run_candidate_health(
             "new_fault_lines_sanitized": [sanitize_kernel_line(line) for line in delta_lines[-20:]],
         }
         write_json(work_root / "candidate-teardown-kernel.json", teardown)
+        # Sanitize the captured candidate launch logs so the committed evidence is clean.
+        for _cap in (candidate_stdout_path, candidate_stderr_path):
+            try:
+                _lines = sanitize_lines(_cap.read_text(encoding="utf-8", errors="replace"))
+                _cap.write_text("\n".join(_lines) + ("\n" if _lines else ""), encoding="utf-8")
+            except OSError:
+                pass
 
     result["schema"] = updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA
     result["candidate_health_schema"] = SCHEMA
@@ -422,6 +575,12 @@ def run_candidate_health(
     result["candidate_version"] = identity.get("version")
     result["canary_media_used"] = normalized_canary is not None
     result["candidate_run_user"] = run_user.pw_name
+    try:
+        result["candidate_launch_stderr_tail"] = sanitize_lines(
+            candidate_stderr_path.read_text(encoding="utf-8", errors="replace")
+        )[-40:]
+    except OSError:
+        result["candidate_launch_stderr_tail"] = []
     result["candidate_teardown"] = teardown
     result.setdefault("checks", {})["candidate_teardown_gpu_fault_delta_zero"] = teardown.get("gpu_faults_delta") == 0
     result.setdefault("checks", {})["candidate_teardown_process_stopped_cleanly"] = teardown.get("process_stopped_cleanly") is True

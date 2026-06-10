@@ -369,5 +369,138 @@ class C18LauncherConfigBaselineGuardTest(unittest.TestCase):
         self.assertIn("TOTEM_CONFIG_CONTRACT_VALIDATOR", text)
 
 
+def load_candidate_health_module():
+    spec = importlib.util.spec_from_file_location(
+        "c18_candidate_health_under_test", CANDIDATE_HEALTH_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("failed to load candidate_health spec")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class CandidateHealthAccessPreflightTest(unittest.TestCase):
+    """Regression for the 2026-06-10 board A/B diagnosis: the candidate-health runner must
+    (a) capture the candidate's stdout/stderr instead of DEVNULL, and (b) fail with an explicit
+    SETUP error when the run_user cannot reach the candidate workspace (the /root-0700 trap that
+    previously surfaced as a generic all-checks-failed health failure)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        import pwd
+
+        cls.ch = load_candidate_health_module()
+        cls.run_user = pwd.getpwuid(os.getuid())
+
+    def test_targets_cover_required_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            work_root = Path(td) / "wr"
+            work_root.mkdir()
+            cfg = self.ch.candidate_config(None, work_root)
+            release_dir = Path(td) / "release"
+            release_dir.mkdir()
+            (release_dir / "kiosk.py").write_text("print('x')\n", encoding="utf-8")
+            config_path = work_root / "candidate-config.json"
+            config_path.write_text("{}", encoding="utf-8")
+            canary = Path(td) / "c.mp4"
+            canary.write_text("x", encoding="utf-8")
+            labels = {
+                label
+                for (label, _p, _m) in self.ch.access_check_targets(
+                    cfg, release_dir, work_root, config_path, canary
+                )
+            }
+            for required in (
+                "release_dir_traverse",
+                "release_kiosk_py_read",
+                "work_root_write",
+                "config_path_read",
+                "state_dir_write",
+                "runtime_dir_write",
+                "ipc_dir_write",
+                "log_dir_write",
+                "mpv_log_dir_write",
+                "status_dir_write",
+                "canary_media_read",
+            ):
+                self.assertIn(required, labels)
+            labels_no_canary = {
+                label
+                for (label, _p, _m) in self.ch.access_check_targets(
+                    cfg, release_dir, work_root, config_path, None
+                )
+            }
+            self.assertNotIn("canary_media_read", labels_no_canary)
+
+    def test_all_accessible_returns_empty(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            kiosk = base / "kiosk.py"
+            kiosk.write_text("print('x')\n", encoding="utf-8")
+            cfg_path = base / "config.json"
+            cfg_path.write_text("{}", encoding="utf-8")
+            targets = [
+                ("release_dir_traverse", base, os.X_OK),
+                ("release_kiosk_py_read", kiosk, os.R_OK),
+                ("work_root_write", base, os.W_OK | os.X_OK),
+                ("config_path_read", cfg_path, os.R_OK),
+            ]
+            self.assertEqual(self.ch.access_failures_as_user(targets, self.run_user), [])
+
+    def test_nonexistent_target_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            bogus = Path(td) / "nope" / "kiosk.py"
+            failures = self.ch.access_failures_as_user(
+                [("release_kiosk_py_read", bogus, os.R_OK)], self.run_user
+            )
+            self.assertIn("release_kiosk_py_read", failures)
+
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "root traverses 0700 dirs; the non-traversable case is meaningful only unprivileged",
+    )
+    def test_workdir_under_nontraversable_dir_reported(self) -> None:
+        # Reproduce the board trap: a work_root beneath a non-traversable directory.
+        with tempfile.TemporaryDirectory() as td:
+            blocked = Path(td) / "blocked"
+            inner = blocked / "work"
+            inner.mkdir(parents=True)
+            os.chmod(blocked, 0o000)
+            try:
+                failures = self.ch.access_failures_as_user(
+                    [("work_root_write", inner, os.W_OK | os.X_OK)], self.run_user
+                )
+                self.assertIn("work_root_write", failures)
+            finally:
+                os.chmod(blocked, 0o755)
+
+    def test_setup_failure_result_names_setup_error(self) -> None:
+        identity = {"kiosk_py_sha256": "a", "tree_sha256": "b", "version": "v"}
+        result = self.ch.setup_failure_result(
+            identity, self.run_user, True, ["work_root_write", "work_root_write"]
+        )
+        self.assertIs(result["passed"], False)
+        self.assertEqual(
+            result["failure_reasons"], ["candidate_setup_inaccessible_to_run_user"]
+        )
+        self.assertEqual(result["setup_error"], "candidate_setup_inaccessible_to_run_user")
+        self.assertEqual(result["inaccessible_targets"], ["work_root_write"])
+        self.assertIs(result["checks"]["candidate_setup_accessible_to_run_user"], False)
+
+    def test_source_captures_candidate_streams_not_devnull(self) -> None:
+        text = CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertIn("candidate-stderr.txt", text)
+        self.assertIn("candidate-stdout.txt", text)
+        self.assertNotIn("stdout=subprocess.DEVNULL", text)
+        self.assertNotIn("stderr=subprocess.DEVNULL", text)
+        self.assertIn("candidate_setup_inaccessible_to_run_user", text)
+        self.assertIn("access_failures_as_user", text)
+        # The setup failure must RAISE (so the apply path aborts via deep_health_exception without
+        # quarantining the identity), not return passed=False (which would quarantine).
+        self.assertIn("class CandidateSetupInaccessibleError", text)
+        self.assertIn("raise CandidateSetupInaccessibleError", text)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

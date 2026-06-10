@@ -35,6 +35,19 @@ tree, ALL of:
    `c18_player_runtime_teardown_evidence_gate.py --self-test` (31/31) and the harness
    `--self-test` (9/9).
 
+## Evidence root — CRITICAL (board A/B diagnosis 2026-06-10)
+Use a single persistent evidence root the **`totem` user can traverse**:
+`EVID=/data/totem-diag/<run-id>` (run `install -d -m 0755 /data/totem-diag` first; pick a `<run-id>`
+like the image tag + timestamp).
+- **Never use `/root/totem-diag` for M6/candidate-health.** `/root` is `0700`: the candidate-health
+  runner drops to `totem` (setuid), so a work-dir under `/root` is unreachable — the candidate dies
+  before it can even open its log, which previously surfaced as a generic all-checks-failed health
+  failure. The runner now PRE-FLIGHTS run_user accessibility and fails fast with
+  `candidate_setup_inaccessible_to_run_user` (and captures the candidate's stdout/stderr as evidence
+  instead of DEVNULL) — but the real fix is to place the evidence root where `totem` can reach it.
+  `/data` is `0755` and persists the reboot (M6 `arm`→`resume` both need it).
+- `/root` stays acceptable ONLY for root-only diagnostics never executed as `totem`.
+
 ## On the board (single session; mind panfrost baseline cross-contamination)
 Order matters: run the **teardown trial first (no reboot)**, then M6 (which reboots).
 
@@ -43,7 +56,7 @@ Order matters: run the **teardown trial first (no reboot)**, then M6 (which rebo
 C18_PLAYER_RUNTIME_TEARDOWN_TRIAL=1 python3 scripts/board/c18_player_runtime_teardown_trial.py \
   --cycles 3 --with-fresh-ipc-probe \
   --board-image-marker "$IMAGE_TAG" --source-commit "$(git -C <repo> rev-parse HEAD)" \
-  --run-root /root/totem-diag
+  --run-root "$EVID"
 ```
 Produces a teardown run-dir (cycle-00 = `service_restart`, rest `relaunch`), per-cycle
 kernel-before/after + deep-health + the freeze postcheck (`rc=44`).
@@ -56,8 +69,8 @@ version suffix and is rejected on purpose).
 
 ### Step 2 — Clean-board GPU-fault corpus + EYEBALL (matcher recall is the weak link)
 ```sh
-journalctl -k -b --no-pager --output=short-monotonic > /root/totem-diag/clean-board-kernel.txt
-grep -iE 'panfrost|lima|mali' /root/totem-diag/clean-board-kernel.txt   # inspect by hand
+journalctl -k -b --no-pager --output=short-monotonic > "$EVID/clean-board-kernel.txt"
+grep -iE 'panfrost|lima|mali' "$EVID/clean-board-kernel.txt"   # inspect by hand
 ```
 Confirm a genuinely clean teardown produced ZERO real GPU-fault lines, AND that no
 `panfrost|lima|mali` fault wording slipped past `GPU_FAULT_RE` (if one did, widen the matcher /
@@ -73,7 +86,7 @@ Arm (captures pre-state, writes the deferred marker, applies A→B in `/data`):
 ```sh
 C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL=1 python3 scripts/qa/c18_player_runtime_m6_coldboot_trial.py \
   --phase arm --defer-release-gate --allow-device-data-root --data-root /data \
-  --evidence-root /root/totem-diag/m6 \
+  --evidence-root "$EVID/m6" \
   --image-tag "$IMAGE_TAG" --image-sha256 "$IMAGE_SHA256" --image-marker-file /etc/dadooh/<image-marker> \
   --manifest-a <A.manifest.json> --payload-a <A.tar.gz> \
   --manifest-b <B.manifest.json> --payload-b <B.tar.gz> \
@@ -85,7 +98,7 @@ Resume (validates boot_id/btime changed + `/data` adoption; writes the coldboot 
 ```sh
 C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL=1 python3 scripts/qa/c18_player_runtime_m6_coldboot_trial.py \
   --phase resume --defer-release-gate --allow-device-data-root --data-root /data \
-  --evidence-root /root/totem-diag/m6 \
+  --evidence-root "$EVID/m6" \
   --image-tag "$IMAGE_TAG" --image-sha256 "$IMAGE_SHA256" --image-marker-file /etc/dadooh/<image-marker> --json
 ```
 

@@ -961,5 +961,106 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertFalse((updatectl.INCOMING_DIR / "core-bad").exists())
 
 
+def _load_candidate_health():
+    ch_path = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
+    spec_ch = importlib.util.spec_from_file_location("c18_candidate_health_quar_test", ch_path)
+    assert spec_ch and spec_ch.loader
+    mod = importlib.util.module_from_spec(spec_ch)
+    spec_ch.loader.exec_module(mod)
+    return mod
+
+
+class C18CandidateSetupFailNoQuarantineTest(unittest.TestCase):
+    """Regression (2026-06-10 board A/B): a candidate-health SETUP failure (workspace unreachable
+    by the run_user) must abort the apply FAIL-CLOSED via deep_health_exception (rc=13) WITHOUT
+    quarantining the candidate identity — while a REAL health failure (passed=False) must still
+    quarantine. The setup error must also be persisted to candidate-health-result.json."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.ch = _load_candidate_health()
+
+    def _apply_with_hook(self, root: Path, version: str, hook):
+        configure_temp(root, "player-runtime")
+        write_player_runtime_policy(root)
+        manifest_path, payload_path = write_player_runtime_payload(root, version)
+        old_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+        old_health = updatectl.PLAYER_RUNTIME_HEALTH_HOOK
+        try:
+            updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+            updatectl.PLAYER_RUNTIME_HEALTH_HOOK = hook
+            return updatectl._apply_from_manifest_path_unfrozen(
+                manifest_path,
+                payload_url=None,
+                source="unit-setupfail-test",
+                payload_path_override=payload_path,
+            )
+        finally:
+            updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = old_thaw
+            updatectl.PLAYER_RUNTIME_HEALTH_HOOK = old_health
+
+    def test_setup_fail_aborts_rc13_without_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def setup_fail_hook(release_dir, identity):
+                raise self.ch.CandidateSetupInaccessibleError("unit setup inaccessible")
+
+            rc = self._apply_with_hook(root, "runtime-setupfail", setup_fail_hook)
+            # deep_health_exception path → fail-closed abort, no promotion.
+            self.assertEqual(rc, 13)
+            state = updatectl._read_state()
+            # The candidate identity MUST NOT be quarantined for an environment problem.
+            self.assertEqual(updatectl._quarantine_entries(state), [])
+            self.assertFalse(updatectl._read_symlink_target(updatectl.CURRENT_LINK))
+
+    def test_real_health_fail_still_quarantines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def health_fail_hook(release_dir, identity):
+                return {
+                    "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                    "passed": False,
+                    "failure_reasons": ["playback_progressed"],
+                    "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                    "observed_tree_sha256": identity["tree_sha256"],
+                }
+
+            rc = self._apply_with_hook(root, "runtime-healthfail", health_fail_hook)
+            # A genuine health failure still quarantines (no current → rc=11).
+            self.assertEqual(rc, 11)
+            state = updatectl._read_state()
+            self.assertEqual(len(updatectl._quarantine_entries(state)), 1)
+
+    def test_run_candidate_health_setup_fail_writes_artifact_and_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            release = root / "release"
+            release.mkdir()
+            (release / "kiosk.py").write_text('print("x")\n', encoding="utf-8")
+            work = root / "work"
+            identity = {"kiosk_py_sha256": "k", "tree_sha256": "t", "version": "v"}
+            orig = self.ch.access_failures_as_user
+            self.ch.access_failures_as_user = lambda targets, run_user: [
+                "release_kiosk_py_read",
+                "work_root_write",
+            ]
+            try:
+                with self.assertRaises(self.ch.CandidateSetupInaccessibleError):
+                    self.ch.run_candidate_health(release, identity, output_dir=work)
+            finally:
+                self.ch.access_failures_as_user = orig
+            result_path = work / "candidate-health-result.json"
+            self.assertTrue(result_path.exists())
+            data = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertIs(data["passed"], False)
+            self.assertEqual(data["setup_error"], "candidate_setup_inaccessible_to_run_user")
+            self.assertEqual(
+                sorted(data["inaccessible_targets"]),
+                ["release_kiosk_py_read", "work_root_write"],
+            )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
