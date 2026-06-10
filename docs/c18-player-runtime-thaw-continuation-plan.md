@@ -1,7 +1,9 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline: HEAD `2c96a72`,
-tree clean. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
+Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline ANCHOR: `024ce67`
+— by construction this ledger commits AT-OR-AFTER its anchor, so the anchor may sit one
+commit behind the live HEAD; ALWAYS resolve the real HEAD via `git rev-parse` (the resume
+rituals do). Tree clean at anchor time. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
 (no evidence args) = 37/37; DECISIVE `--player-runtime-evidence-mode decisive` with the 3
 evidence dirs + the image-`1x` triple = 43/43 (the 6 extra steps are the decisive-evidence
 validation; 43/43 is the CANONICAL communication number). Each ADDITIONAL teardown dir adds
@@ -214,9 +216,10 @@ Work order:
 | server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
 | power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
 
-Estado: `2c96a72` limpo; placa estável; nenhuma execução em andamento; próxima frente
-definida = janela panfrost do corner (opção (a)-estreita: SIGTERM mid-decode medido —
-aguardando ratificação do operador). Funil: janela panfrost → H2 → decisão de thaw.
+Estado (na âncora `024ce67`; HEAD real = git): árvore limpa; placa estável; nenhuma
+execução em andamento; próxima frente definida = janela panfrost do corner (opção
+(a)-estreita: SIGTERM mid-decode medido — aguardando ratificação do operador).
+Funil: janela panfrost → H2 → decisão de thaw.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the

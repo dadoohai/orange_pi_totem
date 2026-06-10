@@ -33,7 +33,7 @@ tree, ALL of:
 3. **Dry-run the gate wiring** off-board with synthetic fixtures to confirm GREEN end-to-end
    before spending board time: build a teardown run-dir via the harness self-test path and run
    `c18_player_runtime_teardown_evidence_gate.py --self-test` (31/31) and the harness
-   `--self-test` (9/9).
+   `--self-test` (15/15 since the staged fresh-IPC probe landed).
 
 ## Evidence root — CRITICAL (board A/B diagnosis 2026-06-10)
 Use a single persistent evidence root the **`totem` user can traverse**:
