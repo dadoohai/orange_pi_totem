@@ -161,3 +161,21 @@ rather than papered over:
 - `scripts/qa/c18_player_runtime_teardown_static_test.py` — kiosk.py `_ipc` invariant static check.
 - `scripts/board/c18_player_runtime_teardown_trial.py` — HW producer harness (+ `--self-test` for pure logic).
 - `scripts/qa/c18_ota_release_gate.py` — wire git-guard + gate; decisive-mode required.
+
+## Addendum 2026-06-10 — fresh-IPC reachability (convergence note; history above unchanged)
+
+Static analysis (external-auditor refutation + 3 independent verifiers, HEAD `f1aa879`)
+CONFIRMED the fresh-IPC quit CALL-SITE is production-reachable via the `start_ipc_timeout`
+corner (production callers: boot `start()`, watchdog `ensure_running`/`restart
+ipc_unresponsive`, playback `media_load_failed` restarts; `mpv_query_uses_fresh_ipc` gates
+QUERIES only — the quit fallback is unconditional). This MATCHES this design (the corner was
+always described as reachable above); what remains scoped + hedged is the SUCCESS outcome
+("effectively unreachable … today"), i.e. a fresh quit against a late-but-up socket. That
+hedge is now explicitly the thing the HW probe must test (continuation-plan Front #1), so
+req#4 is PROVE, not retire-as-dead-code. The harness probe now stages the corner END-TO-END
+(workspace pre-create + offline canary playlist + short `mpv_startup_timeout_sec`, isolated
+instance of the adopted runtime; production service untouched) — off-board-tested against a
+fake kiosk; the REAL kiosk reaching the corner is what the board session validates — and
+`forced_ipc_none` reflects real staging (an un-staged probe REDs
+`fresh_ipc_probe_not_forced`). Gate policy UNCHANGED: a genuine `fresh_sent` still REDs
+(`fresh_ipc_probe_success_path_unreachable_claim`) pending an explicit operator decision.

@@ -55,11 +55,23 @@ Order matters: run the **teardown trial first (no reboot)**, then M6 (which rebo
 ```sh
 C18_PLAYER_RUNTIME_TEARDOWN_TRIAL=1 python3 scripts/board/c18_player_runtime_teardown_trial.py \
   --cycles 3 --with-fresh-ipc-probe \
+  --fresh-ipc-probe-canary-media /tmp/canary/canary-h264.mp4 \
   --board-image-marker "$IMAGE_TAG" --source-commit "$(git -C <repo> rev-parse HEAD)" \
   --run-root "$EVID"
 ```
 Produces a teardown run-dir (cycle-00 = `service_restart`, rest `relaunch`), per-cycle
 kernel-before/after + deep-health + the freeze postcheck (`rc=44`).
+
+**Fresh-IPC probe (`--with-fresh-ipc-probe`):** the probe stages the `start_ipc_timeout`
+corner END-TO-END on an ISOLATED instance of the adopted runtime (pre-created workspace +
+offline canary playlist + staged short `mpv_startup_timeout_sec`; the production service is
+untouched). It REQUIRES `--fresh-ipc-probe-canary-media` (a real video under /tmp or
+/data/media) — without offline content the kiosk exits `no_content` before `mpv.start()` and
+the corner is unreachable. Expected outcome once validated on board:
+`fresh_failed_fallback_sigterm` (gate-green). A genuine `fresh_sent` REDs the gate by policy
+(`fresh_ipc_probe_success_path_unreachable_claim`) — that is a NEW fact for the operator, NOT
+a reason to relax the gate; pre-agree the protocol before the session (continuation-plan
+Front #1, item 3).
 
 **`--board-image-marker "$IMAGE_TAG"` is REQUIRED** and must be the exact image tag (or the
 `<tag>-image` form). The decisive gate's `teardown_evidence_image_guard` binds the teardown

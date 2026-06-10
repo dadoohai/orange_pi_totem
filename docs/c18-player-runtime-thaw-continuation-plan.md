@@ -1,8 +1,13 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: PLANNING (no thaw, no stable/publish). Baseline: HEAD `62f60cd`, tree clean,
-release gate 37/37. Freeze `rc=44` intact. Golden = `1u`. Off-board critical path
-A1/A2/A3/A5 committed (see commits `83e3228`/`e875e21`/`4ed4829`/`62f60cd`).
+Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish). Baseline: HEAD `f1aa879`,
+tree clean. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
+(no evidence args) = 37/37; DECISIVE `--player-runtime-evidence-mode decisive` with the 3
+evidence dirs + the image-`1x` triple = 43/43 (the 6 extra steps are the decisive-evidence
+validation). Freeze `rc=44` intact. Golden = `1u`; the decisive evidence is image `1x`
+(the H2 split below). Canonical claim while req#4 is open: "main path proven on HW;
+fresh-IPC corner deferred (non-claim)" -- NEVER "H1 closed". Off-board critical path
+A1/A2/A3/A5 committed; decisive bundle committed at `f1aa879`.
 
 This is the single authoritative ledger of what stands between the committed
 teardown/panfrost detector and a safe player-runtime thaw, plus the ordered
@@ -34,7 +39,11 @@ The two core invariants hold **by construction** and were re-verified this round
   step, not a second gate. Invariants (i)/(ii) still hold by construction (verify-then-
   promote + the launcher). (This corrects the stale "launcher only `-f`" note — the
   launcher IS fail-closed now.)
-- Freeze `rc=44` symmetric across apply/rollback/reconcile for both components.
+- Freeze `rc=44` for both components: symmetric across apply/rollback; reconcile has an
+  EXPLICIT authorized-maintenance escape (`--allow-player-runtime-maintenance` + env,
+  pre-existing since `b766b4a`) that performs state-hygiene only (adopts only
+  marker-verified releases or falls back to the image; installs no code). The public
+  no-flag reconcile stays rc=44. ("Symmetric" tout court was imprecise.)
 - Deep-health evaluator + lab-thaw M6 mechanics + decisive release-gate cross-link: proven.
 
 ## Gate ledger
@@ -45,12 +54,13 @@ The two core invariants hold **by construction** and were re-verified this round
 | Launcher fail-closed adoption (sha/tree/deep_health/quarantine) | **PROVEN** | foundation |
 | Freeze `rc=44` symmetric; lab-thaw M6; decisive cross-link; deep-health eval | **PROVEN** | foundation |
 | Baseline image deep-health on HW (`1u`) | **PROVEN** | foundation |
-| HW teardown/panfrost detector (the gate) | **BUILT-NOT-RUN** | **H1 — ON (nearest)** |
-| Teardown harness `run_trial()` capture path | **ABSENT (off-board gap)** | H1 — ON |
-| M6 ↔ teardown ↔ decisive-release-gate integration | **ABSENT (off-board gap)** | H1 — ON |
+| HW teardown/panfrost detector (the gate) | **RUN + PASS on HW** (image `1x`, bundle at `f1aa879`; 3 same-boot cycles, real restart, delta 0) | H1 main path — DONE |
+| Teardown harness `run_trial()` capture path | **DONE** (landed + HW-run) | H1 main path — DONE |
+| M6 ↔ teardown ↔ decisive-release-gate integration | **DONE** (decisive gate 43/43 at `f1aa879`: M6 A2→B2 arm/controlled-reboot/resume/rollback on `1x`) | H1 main path — DONE |
+| **fresh-IPC corner (req#4) exercised on HW** | **OPEN — front #1.** Call-site production-reachability CONFIRMED by static analysis (2026-06-10); SUCCESS outcome is the untested hedge. Probe forcing landed off-board; operator policy decision pending (see Front #1) | **H1 — the remaining item** |
 | GPU-fault matcher recall calibration vs real board | **OPEN (needs board corpus)** | H1 — adjacent |
-| `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **ABSENT** | H1 — adjacent (baseline) |
-| H2 image-identity split (`1u` golden vs `1w` decisive pin) | **LATENT/UNRESOLVED** | evidence-integrity precondition |
+| `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
+| H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **LATENT/UNRESOLVED** (`1w` superseded by the fresh `1x` bundle) | evidence-integrity precondition |
 | Offline power-loss matrix (7/17 boundaries) | **PARTIAL (by design)** | PARALLEL/FUTURE |
 | Physical power-cut (apply/rollback) | **ABSENT** | LATER (homologation) |
 | 24h soak/endurance | **ABSENT** | LATER (production) |
@@ -60,7 +70,48 @@ The two core invariants hold **by construction** and were re-verified this round
 
 ## Critical path
 
-### A. OFF-BOARD now (parallelizable; converts the scarce board trip into a thin, decisive step)
+### Front #1 — fresh-IPC corner (req#4): the remaining H1 item
+
+Converged statement (2026-06-10; auditor refutation + 3 independent static verifiers, HEAD
+`f1aa879`): the `_fresh_ipc_command(["quit"])` CALL-SITE **is production-reachable** via the
+`start_ipc_timeout` corner — `_start_locked` → Popen ok → `_open_ipc` timeout →
+`_stop_locked` → `_request_quit` with proc alive + `_ipc is None`. Production callers: boot
+`start()`, watchdog `ensure_running`/`restart ipc_unresponsive`, playback `media_load_failed`
+restarts. No config gate: `mpv_query_uses_fresh_ipc` gates QUERIES only; the quit fallback is
+unconditional. What remains scoped + hedged (and is exactly what the HW probe tests) is the
+SUCCESS outcome — a fresh quit against a late-but-up socket. **Therefore req#4 is PROVE, not
+retire-as-dead-code.** The probe answers whether the C1 fix (`3cd3586`) avoids the SIGTERM
+fallback in the `start_ipc_timeout` scenario.
+
+Work order:
+1. **[LANDED off-board — board validation PENDING]** The probe now stages the corner
+   END-TO-END on an ISOLATED kiosk instance of the adopted runtime (production service
+   untouched; probe runs after all cycles so its noise lands outside the fault windows):
+   workspace dirs PRE-CREATED before the access preflight, an OFFLINE CANARY PLAYLIST
+   (REQUIRED — `--fresh-ipc-probe-canary-media`, video under /tmp or /data/media; without
+   content the kiosk exits `no_content` rc=2 BEFORE `mpv.start()` and the corner is
+   unreachable), and a staged short `mpv_startup_timeout_sec` (default 0.05s). Sanitized
+   probe artifacts are sealed inside the run dir (re-derivable). Off-board-tested against a
+   fake kiosk that only emits the fresh line when staging is complete; the REAL kiosk
+   reaching the corner is exactly what the board session validates. Previously the probe
+   only restarted the service: on a healthy board the corner was never reached and the gate
+   red-failed (`fresh_ipc_probe_code_path_not_reached`).
+2. **[LANDED off-board]** `forced_ipc_none` is no longer hardcoded: it reflects REAL staging
+   (regression-tested); staging failures (kiosk/canary missing, workspace inaccessible,
+   probe exception) degrade to an honest not-forced artifact + probe-error file, WITHOUT
+   losing the cycles' evidence. An un-staged probe REDs the gate (`fresh_ipc_probe_not_forced`).
+3. **[OPERATOR DECISION — required BEFORE the board session]** Gate policy for a GENUINE
+   `fresh_sent`: today it is rejected by design (`fresh_ipc_probe_success_path_unreachable_claim`,
+   test-locked) so a success can never be silently read as "GR4b proven". If the board ever
+   yields a genuine success, the gate REDs and a human decides. Pre-agree the protocol
+   (recommended: keep fail-closed; treat a success as a NEW fact → preserve evidence as
+   diagnostic → authorized gate evolution) so a success does not stall the session.
+4. **[BOARD — one short session]** Run the teardown trial with `--with-fresh-ipc-probe`.
+   Honest expected outcome: `fresh_failed_fallback_sigterm` (gate-green). Closing this item
+   closes H1 (teardown/panfrost front). Closing H1 is NOT thaw: H2 + the future gates
+   (physical power-loss, soak, server-side) still stand.
+
+### A. OFF-BOARD (completed this cycle; kept for the record)
 1. **Implement teardown harness `run_trial()` capture** (currently a stub): drive N≥2
    same-boot cycles + ≥1 real `systemctl restart kiosky-player`, capture per-cycle
    `journalctl -k -b --output=short-monotonic` GPU-fault windows + boot_id/monotonic
@@ -114,6 +165,20 @@ The two core invariants hold **by construction** and were re-verified this round
 - server-side publish gate / signature / auto-pull hardening.
 - DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked
   condition, not a hand-flip. Landing is a separate authorized step.
+
+## OTA responsibility snapshot (2026-06-10 — converged with the external auditor)
+
+| Frente OTA | Estado atual | Falta |
+| --- | --- | --- |
+| totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados | Hardening de produção/stable (incl. `created_at` obrigatório) |
+| player-runtime | Caminho principal provado em HW: apply A2/B2, coldboot, rollback, teardown sem panfrost | fresh-IPC req#4 (Front #1 acima), H2 golden 1u×1x, depois decisão de thaw |
+| kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
+| media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
+| server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
+| power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
+
+Estado: `f1aa879` limpo; placa estável; nenhuma execução em andamento; próxima frente
+definida = fresh-IPC (aguardando OK do operador). Funil: fresh-IPC → H2 → decisão de thaw.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the
