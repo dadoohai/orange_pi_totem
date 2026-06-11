@@ -1647,6 +1647,10 @@ class TeardownTrialSelfTest(unittest.TestCase):
         mod = sys.modules[__name__]
         orig_resolve = mod._resolve_probe_kiosk
         with tempfile.TemporaryDirectory() as tmp:
+            # On-board self-tests run as root while the candidate probe drops to
+            # the service user; keep the fake kiosk traversable like real /data
+            # runtime paths.
+            os.chmod(tmp, 0o755)
             kiosk_path = Path(tmp) / "kiosk.py"
             kiosk_path.write_text(fake_kiosk, encoding="utf-8")
             canary = Path(tempfile.gettempdir()) / "c18-probe-selftest-canary.mp4"
@@ -1683,6 +1687,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
         mod = sys.modules[__name__]
         orig_resolve = mod._resolve_probe_kiosk
         with tempfile.TemporaryDirectory() as tmp:
+            os.chmod(tmp, 0o755)
             kiosk_path = Path(tmp) / "kiosk.py"
             kiosk_path.write_text("print('fake')\n", encoding="utf-8")
             run_root = Path(tmp) / "run"
