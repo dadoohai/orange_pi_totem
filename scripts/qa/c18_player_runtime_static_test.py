@@ -32,7 +32,7 @@ CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "06e1aadfe15f76d7284d2692dfe5987c9e3c8efd44e8486469b50cf309c246d4"
+EXPECTED_SNAPSHOT_SHA256 = "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -100,6 +100,10 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             patches["MPVController._stop_locked"]["to"],
             "request MPV IPC quit, including fresh IPC fallback, before signal fallback",
         )
+        self.assertEqual(
+            patches["MPVController.load_file/preload_next"]["to"],
+            "fresh IPC path verification before trusting loadfile or preloaded playlist-next",
+        )
 
     def test_snapshot_sha_matches_source_metadata(self) -> None:
         self.assertEqual(sha256_file(KIOSK_PATH), source()["snapshot"]["sha256"])
@@ -121,6 +125,9 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn('"--hwdec-codecs=h264,mpeg4,mpeg2video"', text)
         self.assertIn('"--no-osc"', text)
         self.assertIn('"loadfile", path, "replace"', text)
+        self.assertIn("def wait_for_current_path", text)
+        self.assertIn("MPV loadfile verification failed", text)
+        self.assertIn("MPV playlist-next verification failed", text)
 
     def test_snapshot_has_single_default_mpv_path_assignment(self) -> None:
         text = KIOSK_PATH.read_text(encoding="utf-8")

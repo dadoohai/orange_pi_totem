@@ -18,7 +18,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from logging.handlers import RotatingFileHandler
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 try:
     import requests
@@ -70,6 +70,7 @@ DEFAULT_CONFIG = {
     "mpv_msg_level": "",
     "mpv_ipc_timeout_sec": 2.0,
     "mpv_startup_timeout_sec": 10.0,
+    "mpv_load_verify_timeout_sec": 2.0,
     "mpv_debug_events": False,
     "mpv_query_uses_fresh_ipc": False,
     "mpv_vo": "",
@@ -1099,6 +1100,24 @@ def watchdog_grace_seconds(cfg: Dict, key: str) -> float:
     return positive_float_config(cfg, key, 0.0)
 
 
+def normalize_mpv_media_path(path: object) -> str:
+    if path is None:
+        return ""
+    value = str(path)
+    if value.startswith("file://"):
+        parsed = urlparse(value)
+        value = unquote(parsed.path)
+    if not value:
+        return ""
+    return os.path.normcase(os.path.abspath(value))
+
+
+def mpv_media_paths_match(expected: str, observed: object) -> bool:
+    expected_path = normalize_mpv_media_path(expected)
+    observed_path = normalize_mpv_media_path(observed)
+    return bool(expected_path and observed_path and expected_path == observed_path)
+
+
 def media_alias(path: str, url: str = "") -> str:
     source = url or path or "unknown"
     return f"media-{sha1_hex(source)[:10]}"
@@ -1125,6 +1144,19 @@ def media_load_log_context(item: MediaItem, index: int, duration_ms: int, mpv: "
         f"mpv_generation={mpv.generation()} "
         f"mpv_pid={mpv.pid() or 'none'}"
     )
+
+
+def advance_to_preloaded_media(mpv: "MPVController", item: MediaItem, index: int, duration_ms: int) -> bool:
+    if not mpv.playlist_next():
+        return False
+    if not mpv.wait_for_current_path(item.path):
+        logging.warning(
+            "MPV playlist-next verification failed; falling back to explicit loadfile: %s",
+            media_load_log_context(item, index, duration_ms, mpv),
+        )
+        return False
+    mpv.playlist_remove(0)
+    return True
 
 
 def free_space_bytes(path: str) -> int:
@@ -1451,6 +1483,9 @@ class MPVController:
 
     def _startup_timeout(self) -> float:
         return positive_float_config(self._cfg, "mpv_startup_timeout_sec", 10.0)
+
+    def _load_verify_timeout(self) -> float:
+        return positive_float_config(self._cfg, "mpv_load_verify_timeout_sec", 2.0)
 
     def _debug_events(self) -> bool:
         return bool(self._cfg.get("mpv_debug_events"))
@@ -2079,6 +2114,39 @@ class MPVController:
     def _fresh_ipc_get_property(self, name: str, timeout: Optional[float] = None) -> Optional[Dict]:
         return self._fresh_ipc_query(["get_property", name], command_name="get_property", timeout=timeout)
 
+    def current_path(self, timeout: Optional[float] = None) -> Optional[str]:
+        if timeout is None:
+            timeout = self._ipc_timeout()
+        payload = self._fresh_ipc_get_property("path", timeout=timeout)
+        if isinstance(payload, dict) and payload.get("error") == "success":
+            data = payload.get("data")
+            if data is not None:
+                return str(data)
+        return None
+
+    def wait_for_current_path(self, path: str, timeout: Optional[float] = None) -> bool:
+        if timeout is None:
+            timeout = self._load_verify_timeout()
+        deadline = time.monotonic() + max(float(timeout), 0.0)
+        last_observed = None
+        while True:
+            observed = self.current_path(timeout=min(self._ipc_timeout(), 0.5))
+            last_observed = observed
+            if mpv_media_paths_match(path, observed):
+                return True
+            if time.monotonic() >= deadline:
+                logging.warning(
+                    "MPV current path mismatch expected=%s observed=%s generation=%d pid=%s timeout_sec=%.2f log_file=%s",
+                    safe_media_path_for_log(path),
+                    safe_media_path_for_log(str(last_observed or "")),
+                    self._generation,
+                    self.pid() or "none",
+                    timeout,
+                    self._current_log_file or "none",
+                )
+                return False
+            time.sleep(0.05)
+
     def load_file(self, path: str, alias: str = "") -> bool:
         alias_value = alias or media_alias(path)
         safe_path = safe_media_path_for_log(path)
@@ -2120,6 +2188,17 @@ class MPVController:
                 time.monotonic() - start,
                 self._current_log_file or "none",
             )
+        elif not self.wait_for_current_path(path):
+            logging.warning(
+                "MPV loadfile verification failed alias=%s media_path=%s generation=%d pid=%s duration_sec=%.3f log_file=%s",
+                alias_value,
+                safe_path,
+                self._generation,
+                self.pid() or "none",
+                time.monotonic() - start,
+                self._current_log_file or "none",
+            )
+            return False
         elif self._debug_events():
             logging.info(
                 "MPV loadfile result alias=%s result=success media_path=%s generation=%d pid=%s duration_sec=%.3f log_file=%s",
@@ -3325,12 +3404,14 @@ def playback_loop(
             continue
 
         if next_item is not None and cfg_snapshot.get("preload_next"):
-            if mpv.playlist_next():
-                mpv.playlist_remove(0)
+            next_index = (idx + 1) % len(items)
+            if advance_to_preloaded_media(mpv, next_item, next_index, durations_ms[next_index]):
                 preloaded_path = next_item.path
-                idx += 1
-                offset_ms = 0
-                continue
+            else:
+                preloaded_path = None
+            idx += 1
+            offset_ms = 0
+            continue
 
         idx += 1
         offset_ms = 0

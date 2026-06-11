@@ -95,7 +95,9 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["failure_reasons"], [])
         self.assertEqual(result["counters"]["unique_aliases"], 2)
         self.assertEqual(result["counters"]["mpv_unique_aliases"], 2)
-        self.assertEqual(result["counters"]["status_unique_aliases"], 0)
+        self.assertEqual(result["counters"]["status_unique_aliases"], 2)
+        self.assertGreater(result["counters"]["status_mpv_comparable_samples"], 0)
+        self.assertEqual(result["counters"]["status_mpv_mismatch_samples"], 0)
 
     def test_rejects_bad_hwdec(self) -> None:
         fixture = self.with_case()
@@ -190,23 +192,88 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         fixture.write_json("process.json", process)
         self.assert_fails_with(fixture, "service_total_mpv_count_present")
 
-    def test_transition_uses_status_item_when_mpv_cache_path_repeats(self) -> None:
+    def test_rejects_status_transition_when_mpv_path_repeats(self) -> None:
         fixture = self.with_case()
         rows = fixture.rows()
         for index, row in enumerate(rows):
             row["current_alias"] = "<media-path:same-cache>"
+            row["path_alias"] = "<media-path:same-cache>"
             row["status_current_alias"] = "media-a" if index < 3 else "media-b"
+            row["status_path_alias"] = "<media-path:a>" if index < 3 else "<media-path:b>"
             row["status_current_index"] = "0" if index < 3 else "1"
         fixture.write_rows(rows)
 
-        result = fixture.result()
-        self.assertTrue(result["passed"])
-        self.assertEqual(result["failure_reasons"], [])
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
         self.assertEqual(result["counters"]["unique_aliases"], 2)
         self.assertEqual(result["counters"]["mpv_unique_aliases"], 1)
         self.assertEqual(result["counters"]["status_unique_aliases"], 2)
         self.assertFalse(result["counters"]["mpv_media_transitions_observed"])
         self.assertTrue(result["counters"]["status_transitions_observed"])
+        self.assertGreater(result["counters"]["status_mpv_max_consecutive_mismatches"], 2)
+
+    def test_rejects_transition_required_without_status_mpv_comparable_samples(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            row["status_current_alias"] = ""
+            row["status_path_alias"] = ""
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_comparable_samples"], 0)
+        self.assertEqual(result["counters"]["mpv_unique_aliases"], 2)
+
+    def test_current_alias_status_fallback_is_not_mpv_alignment_evidence(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            row["path_alias"] = ""
+            row["filename_alias"] = ""
+            row["current_alias"] = row["status_path_alias"]
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_comparable_samples"], 0)
+
+    def test_rejects_repeated_short_status_mpv_mismatches(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        statuses = [
+            ("media-a", "<media-path:a>", "0"),
+            ("media-a", "<media-path:a>", "0"),
+            ("media-a", "<media-path:a>", "0"),
+            ("media-b", "<media-path:b>", "1"),
+            ("media-b", "<media-path:b>", "1"),
+            ("media-a", "<media-path:a>", "0"),
+            ("media-a", "<media-path:a>", "0"),
+            ("media-a", "<media-path:a>", "0"),
+            ("media-b", "<media-path:b>", "1"),
+            ("media-b", "<media-path:b>", "1"),
+        ]
+        rows = []
+        for index, (status_alias, status_path_alias, status_index) in enumerate(statuses, start=1):
+            row = template.copy()
+            row["seq"] = str(index)
+            row["rel_sec"] = str(index - 1)
+            row["time_pos"] = f"{index - 1}.10"
+            row["estimated_frame_number"] = str(index * 30)
+            row["current_alias"] = "<media-path:a>"
+            row["path_alias"] = "<media-path:a>"
+            row["status_current_alias"] = status_alias
+            row["status_path_alias"] = status_path_alias
+            row["status_current_index"] = status_index
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["playlist_size"] = 2
+            snapshot["current_index"] = int(status_index)
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            rows.append(row)
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_comparable_samples"], 10)
+        self.assertEqual(result["counters"]["status_mpv_mismatch_samples"], 4)
+        self.assertEqual(result["counters"]["status_mpv_max_consecutive_mismatches"], 2)
+        self.assertEqual(result["counters"]["status_mpv_max_allowed_mismatch_samples"], 2)
 
     def test_rejects_multisegment_stall_even_when_last_segment_progresses(self) -> None:
         fixture = self.with_case()
@@ -531,6 +598,10 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         rows = fixture.rows()
         for row in rows:
             row["current_alias"] = "media-a"
+            row["path_alias"] = "<media-path:a>"
+            row["status_current_alias"] = "media-a"
+            row["status_path_alias"] = "<media-path:a>"
+            row["status_current_index"] = "0"
         rows[1]["status_playback_state"] = "error"
         fixture.write_rows(rows)
         result = fixture.result()
