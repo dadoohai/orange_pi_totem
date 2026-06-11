@@ -1,0 +1,23 @@
+{
+  "boot_id": "e3df0efd-9a53-4fed-880c-f5bd7f80a8f1",
+  "gpu_faults_after": 0,
+  "gpu_faults_before": 0,
+  "gpu_faults_delta": 0,
+  "gpu_faults_delta_anomalous": false,
+  "index": 0,
+  "kind": "service_restart",
+  "new_fault_lines_sanitized": [],
+  "passed": true,
+  "process_exited": true,
+  "schema": "dadooh.c18.player_runtime.teardown_cycle.v1",
+  "stop": {
+    "elapsed_ms": 6742,
+    "method": "ipc_quit",
+    "returncode": 0
+  },
+  "window_anchor": {
+    "boot_id": "e3df0efd-9a53-4fed-880c-f5bd7f80a8f1",
+    "monotonic_after": 72621.213738395,
+    "monotonic_before": 72611.369732695
+  }
+}

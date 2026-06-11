@@ -1,0 +1,12 @@
+2026-06-11 00:53:54,409 WARNING API credentials missing; startup will run in offline-only mode if local media is available.
+2026-06-11 00:53:54,410 INFO Loaded offline playlist: 1 items
+2026-06-11 00:53:54,411 WARNING API polling disabled; player running with local media only.
+2026-06-11 00:53:54,413 INFO MPV process started pid=61716 generation=1 log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:54,414 INFO MPV IPC startup wait begin generation=1 pid=61716 timeout_sec=10.00 ipc_path=/tmp/c18-mid-decode-00-y2btqk3k/mpv.sock log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:54,445 INFO MPV IPC startup wait complete transport=socket generation=1 pid=61716 duration_sec=0.03 timeout_sec=10.00 ipc_path=/tmp/c18-mid-decode-00-y2btqk3k/mpv.sock log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:54,450 INFO MPV loadfile sent alias=media-322037501d media_path=<media-path:4657c81bf9> generation=1 pid=61716 timeout_sec=2.00 log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:55,167 INFO MPV IPC command ok command=ping alias=none generation=1 pid=61716 duration_sec=0.720 log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:55,168 INFO MPV IPC ping ok generation=1 pid=61716 duration_sec=0.721 timeout_sec=2.00 log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:55,176 INFO MPV IPC command ok command=loadfile alias=media-322037501d generation=1 pid=61716 duration_sec=0.725 log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:55,177 INFO MPV loadfile result alias=media-322037501d result=success media_path=<media-path:4657c81bf9> generation=1 pid=61716 duration_sec=0.727 log_file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log
+2026-06-11 00:53:55,179 INFO Playing media alias=media-322037501d path=<media-path:4657c81bf9> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=61716

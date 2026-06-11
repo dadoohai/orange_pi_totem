@@ -1,0 +1,678 @@
+Jun 10 04:41:25 orangepizero3 kernel: Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+Jun 10 04:41:25 orangepizero3 kernel: Linux version 6.12.58-current-sunxi64 (build@armbian) (aarch64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #1 SMP Thu Nov 13 20:34:41 UTC 2025
+Jun 10 04:41:25 orangepizero3 kernel: KASLR disabled due to lack of seed
+Jun 10 04:41:25 orangepizero3 kernel: Machine model: OrangePi Zero3
+Jun 10 04:41:25 orangepizero3 kernel: OF: reserved mem: 0x0000000040000000..0x000000004007ffff (512 KiB) nomap non-reusable secmon@40000000
+Jun 10 04:41:25 orangepizero3 kernel: NUMA: Faking a node at [mem 0x0000000040000000-0x00000000bfffffff]
+Jun 10 04:41:25 orangepizero3 kernel: NODE_DATA(0) allocated [mem 0xbfbcf3c0-0xbfbd147f]
+Jun 10 04:41:25 orangepizero3 kernel: Zone ranges:
+Jun 10 04:41:25 orangepizero3 kernel:   DMA      [mem 0x0000000040000000-0x00000000bfffffff]
+Jun 10 04:41:25 orangepizero3 kernel:   DMA32    empty
+Jun 10 04:41:25 orangepizero3 kernel:   Normal   empty
+Jun 10 04:41:25 orangepizero3 kernel: Movable zone start for each node
+Jun 10 04:41:25 orangepizero3 kernel: Early memory node ranges
+Jun 10 04:41:25 orangepizero3 kernel:   node   0: [mem 0x0000000040000000-0x000000004007ffff]
+Jun 10 04:41:25 orangepizero3 kernel:   node   0: [mem 0x0000000040080000-0x00000000bfffffff]
+Jun 10 04:41:25 orangepizero3 kernel: Initmem setup node 0 [mem 0x0000000040000000-0x00000000bfffffff]
+Jun 10 04:41:25 orangepizero3 kernel: cma: Reserved 128 MiB at 0x00000000b5a00000 on node -1
+Jun 10 04:41:25 orangepizero3 kernel: psci: probing for conduit method from DT.
+Jun 10 04:41:25 orangepizero3 kernel: psci: PSCIv1.1 detected in firmware.
+Jun 10 04:41:25 orangepizero3 kernel: psci: Using standard PSCI v0.2 function IDs
+Jun 10 04:41:25 orangepizero3 kernel: psci: MIGRATE_INFO_TYPE not supported.
+Jun 10 04:41:25 orangepizero3 kernel: psci: SMC Calling Convention v1.5
+Jun 10 04:41:25 orangepizero3 kernel: percpu: Embedded 33 pages/cpu s96792 r8192 d30184 u135168
+Jun 10 04:41:25 orangepizero3 kernel: pcpu-alloc: s96792 r8192 d30184 u135168 alloc=33*4096
+Jun 10 04:41:25 orangepizero3 kernel: pcpu-alloc: [0] 0 [0] 1 [0] 2 [0] 3 
+Jun 10 04:41:25 orangepizero3 kernel: Detected VIPT I-cache on CPU0
+Jun 10 04:41:25 orangepizero3 kernel: CPU features: detected: ARM erratum 845719
+Jun 10 04:41:25 orangepizero3 kernel: alternatives: applying boot alternatives
+Jun 10 04:41:25 orangepizero3 kernel: Kernel command line: root=UUID=9a1b9474-56bd-4064-b25a-606174ec6a19 rootwait rootfstype=ext4 splash=verbose console=ttyS0,115200 consoleblank=0 loglevel=0 ubootpart=b023c9b3-01 usb-storage.quirks=0x2537:0x1066:u,0x2537:0x1068:u quiet loglevel=0 systemd.show_status=false rd.systemd.show_status=false logo.nologo vt.global_cursor_default=0 overlayroot=tmpfs  cgroup_enable=memory
+Jun 10 04:41:25 orangepizero3 kernel: Unknown kernel command line parameters "splash=verbose ubootpart=b023c9b3-01 overlayroot=tmpfs cgroup_enable=memory", will be passed to user space.
+Jun 10 04:41:25 orangepizero3 kernel: Dentry cache hash table entries: 262144 (order: 9, 2097152 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: Inode-cache hash table entries: 131072 (order: 8, 1048576 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: Fallback order for Node 0: 0 
+Jun 10 04:41:25 orangepizero3 kernel: Built 1 zonelists, mobility grouping on.  Total pages: 524288
+Jun 10 04:41:25 orangepizero3 kernel: Policy zone: DMA
+Jun 10 04:41:25 orangepizero3 kernel: mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+Jun 10 04:41:25 orangepizero3 kernel: software IO TLB: SWIOTLB bounce buffer size adjusted to 2MB
+Jun 10 04:41:25 orangepizero3 kernel: software IO TLB: area num 4.
+Jun 10 04:41:25 orangepizero3 kernel: software IO TLB: mapped [mem 0x00000000b5600000-0x00000000b5800000] (2MB)
+Jun 10 04:41:25 orangepizero3 kernel: SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=4, Nodes=1
+Jun 10 04:41:25 orangepizero3 kernel: ftrace: allocating 53201 entries in 208 pages
+Jun 10 04:41:25 orangepizero3 kernel: ftrace: allocated 208 pages with 3 groups
+Jun 10 04:41:25 orangepizero3 kernel: rcu: Hierarchical RCU implementation.
+Jun 10 04:41:25 orangepizero3 kernel: rcu:         RCU event tracing is enabled.
+Jun 10 04:41:25 orangepizero3 kernel: rcu:         RCU restricting CPUs from NR_CPUS=8 to nr_cpu_ids=4.
+Jun 10 04:41:25 orangepizero3 kernel:         Rude variant of Tasks RCU enabled.
+Jun 10 04:41:25 orangepizero3 kernel:         Tracing variant of Tasks RCU enabled.
+Jun 10 04:41:25 orangepizero3 kernel: rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+Jun 10 04:41:25 orangepizero3 kernel: rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=4
+Jun 10 04:41:25 orangepizero3 kernel: RCU Tasks Rude: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+Jun 10 04:41:25 orangepizero3 kernel: RCU Tasks Trace: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+Jun 10 04:41:25 orangepizero3 kernel: NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+Jun 10 04:41:25 orangepizero3 kernel: Root IRQ handler: gic_handle_irq
+Jun 10 04:41:25 orangepizero3 kernel: GIC: Using split EOI/Deactivate mode
+Jun 10 04:41:25 orangepizero3 kernel: rcu: srcu_init: Setting srcu_struct sizes based on contention.
+Jun 10 04:41:25 orangepizero3 kernel: arch_timer: cp15 timer(s) running at 24.00MHz (phys).
+Jun 10 04:41:25 orangepizero3 kernel: clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x588fe9dc0, max_idle_ns: 440795202592 ns
+Jun 10 04:41:25 orangepizero3 kernel: sched_clock: 56 bits at 24MHz, resolution 41ns, wraps every 4398046511097ns
+Jun 10 04:41:25 orangepizero3 kernel: Console: colour dummy device 80x25
+Jun 10 04:41:25 orangepizero3 kernel: Calibrating delay loop (skipped), value calculated using timer frequency.. 48.00 BogoMIPS (lpj=96000)
+Jun 10 04:41:25 orangepizero3 kernel: pid_max: default: 32768 minimum: 301
+Jun 10 04:41:25 orangepizero3 kernel: LSM: initializing lsm=capability,yama,apparmor,ima,evm
+Jun 10 04:41:25 orangepizero3 kernel: Yama: becoming mindful.
+Jun 10 04:41:25 orangepizero3 kernel: AppArmor: AppArmor initialized
+Jun 10 04:41:25 orangepizero3 kernel: Mount-cache hash table entries: 4096 (order: 3, 32768 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: Mountpoint-cache hash table entries: 4096 (order: 3, 32768 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: rcu: Hierarchical SRCU implementation.
+Jun 10 04:41:25 orangepizero3 kernel: rcu:         Max phase no-delay instances is 1000.
+Jun 10 04:41:25 orangepizero3 kernel: Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+Jun 10 04:41:25 orangepizero3 kernel: smp: Bringing up secondary CPUs ...
+Jun 10 04:41:25 orangepizero3 kernel: Detected VIPT I-cache on CPU1
+Jun 10 04:41:25 orangepizero3 kernel: CPU1: Booted secondary processor 0x0000000001 [0x410fd034]
+Jun 10 04:41:25 orangepizero3 kernel: Detected VIPT I-cache on CPU2
+Jun 10 04:41:25 orangepizero3 kernel: CPU2: Booted secondary processor 0x0000000002 [0x410fd034]
+Jun 10 04:41:25 orangepizero3 kernel: Detected VIPT I-cache on CPU3
+Jun 10 04:41:25 orangepizero3 kernel: CPU3: Booted secondary processor 0x0000000003 [0x410fd034]
+Jun 10 04:41:25 orangepizero3 kernel: smp: Brought up 1 node, 4 CPUs
+Jun 10 04:41:25 orangepizero3 kernel: SMP: Total of 4 processors activated.
+Jun 10 04:41:25 orangepizero3 kernel: CPU: All CPU(s) started at EL2
+Jun 10 04:41:25 orangepizero3 kernel: CPU features: detected: 32-bit EL0 Support
+Jun 10 04:41:25 orangepizero3 kernel: CPU features: detected: 32-bit EL1 Support
+Jun 10 04:41:25 orangepizero3 kernel: CPU features: detected: CRC32 instructions
+Jun 10 04:41:25 orangepizero3 kernel: alternatives: applying system-wide alternatives
+Jun 10 04:41:25 orangepizero3 kernel: Memory: 1864836K/2097152K available (17792K kernel code, 2560K rwdata, 11076K rodata, 6592K init, 870K bss, 95936K reserved, 131072K cma-reserved)
+Jun 10 04:41:25 orangepizero3 kernel: devtmpfs: initialized
+Jun 10 04:41:25 orangepizero3 kernel: clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+Jun 10 04:41:25 orangepizero3 kernel: futex hash table entries: 1024 (order: 4, 65536 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: 22992 pages in range for non-PLT usage
+Jun 10 04:41:25 orangepizero3 kernel: 514512 pages in range for PLT usage
+Jun 10 04:41:25 orangepizero3 kernel: pinctrl core: initialized pinctrl subsystem
+Jun 10 04:41:25 orangepizero3 kernel: NET: Registered PF_NETLINK/PF_ROUTE protocol family
+Jun 10 04:41:25 orangepizero3 kernel: DMA: preallocated 256 KiB GFP_KERNEL pool for atomic allocations
+Jun 10 04:41:25 orangepizero3 kernel: DMA: preallocated 256 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+Jun 10 04:41:25 orangepizero3 kernel: DMA: preallocated 256 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+Jun 10 04:41:25 orangepizero3 kernel: audit: initializing netlink subsys (disabled)
+Jun 10 04:41:25 orangepizero3 kernel: audit: type=2000 audit(0.024:1): state=initialized audit_enabled=0 res=1
+Jun 10 04:41:25 orangepizero3 kernel: thermal_sys: Registered thermal governor 'fair_share'
+Jun 10 04:41:25 orangepizero3 kernel: thermal_sys: Registered thermal governor 'bang_bang'
+Jun 10 04:41:25 orangepizero3 kernel: thermal_sys: Registered thermal governor 'step_wise'
+Jun 10 04:41:25 orangepizero3 kernel: thermal_sys: Registered thermal governor 'user_space'
+Jun 10 04:41:25 orangepizero3 kernel: cpuidle: using governor menu
+Jun 10 04:41:25 orangepizero3 kernel: hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+Jun 10 04:41:25 orangepizero3 kernel: ASID allocator initialised with 65536 entries
+Jun 10 04:41:25 orangepizero3 kernel: Serial: AMBA PL011 UART driver
+Jun 10 04:41:25 orangepizero3 kernel: /soc/bus@1000000/mixer@100000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/clock@3001000: Fixed dependency cycle(s) with /soc/rtc@7000000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/interrupt-controller@3021000: Fixed dependency cycle(s) with /soc/interrupt-controller@3021000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/hdmi@6000000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/hdmi@6000000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/lcd-controller@6515000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/bus@1000000/mixer@100000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/lcd-controller@6515000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/rtc@7000000: Fixed dependency cycle(s) with /soc/clock@3001000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/rtc@7000000: Fixed dependency cycle(s) with /soc/clock@7010000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/clock@7010000: Fixed dependency cycle(s) with /soc/clock@3001000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/clock@7010000: Fixed dependency cycle(s) with /soc/rtc@7000000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/bus@1000000/mixer@100000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/clock@3001000: Fixed dependency cycle(s) with /soc/rtc@7000000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/hdmi@6000000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/hdmi@6000000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/bus@1000000/mixer@100000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/hdmi@6000000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/lcd-controller@6515000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/bus@1000000/mixer@100000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/tcon-top@6510000: Fixed dependency cycle(s) with /soc/lcd-controller@6515000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/lcd-controller@6515000: Fixed dependency cycle(s) with /soc/tcon-top@6510000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/rtc@7000000: Fixed dependency cycle(s) with /soc/clock@7010000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/rtc@7000000: Fixed dependency cycle(s) with /soc/clock@7010000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/clock@7010000: Fixed dependency cycle(s) with /soc/rtc@7000000
+Jun 10 04:41:25 orangepizero3 kernel: /soc/hdmi@6000000: Fixed dependency cycle(s) with /connector
+Jun 10 04:41:25 orangepizero3 kernel: /connector: Fixed dependency cycle(s) with /soc/hdmi@6000000
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: 0 KiB vmemmap can be freed for a 1.00 GiB page
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: registered 32.0 MiB page size, pre-allocated 0 pages
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: 0 KiB vmemmap can be freed for a 32.0 MiB page
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: 0 KiB vmemmap can be freed for a 2.00 MiB page
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: registered 64.0 KiB page size, pre-allocated 0 pages
+Jun 10 04:41:25 orangepizero3 kernel: HugeTLB: 0 KiB vmemmap can be freed for a 64.0 KiB page
+Jun 10 04:41:25 orangepizero3 kernel: cryptd: max_cpu_qlen set to 1000
+Jun 10 04:41:25 orangepizero3 kernel: raid6: neonx8   gen()  1906 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: neonx4   gen()  1866 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: neonx2   gen()  1786 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: neonx1   gen()  1533 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: int64x8  gen()  1187 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: int64x4  gen()  1319 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: int64x2  gen()  1176 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: int64x1  gen()   870 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: using algorithm neonx8 gen() 1906 MB/s
+Jun 10 04:41:25 orangepizero3 kernel: raid6: .... xor() 1389 MB/s, rmw enabled
+Jun 10 04:41:25 orangepizero3 kernel: raid6: using neon recovery algorithm
+Jun 10 04:41:25 orangepizero3 kernel: iommu: Default domain type: Translated
+Jun 10 04:41:25 orangepizero3 kernel: iommu: DMA domain TLB invalidation policy: strict mode
+Jun 10 04:41:25 orangepizero3 kernel: SCSI subsystem initialized
+Jun 10 04:41:25 orangepizero3 kernel: usbcore: registered new interface driver usbfs
+Jun 10 04:41:25 orangepizero3 kernel: usbcore: registered new interface driver hub
+Jun 10 04:41:25 orangepizero3 kernel: usbcore: registered new device driver usb
+Jun 10 04:41:25 orangepizero3 kernel: pps_core: LinuxPPS API ver. 1 registered
+Jun 10 04:41:25 orangepizero3 kernel: pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+Jun 10 04:41:25 orangepizero3 kernel: PTP clock support registered
+Jun 10 04:41:25 orangepizero3 kernel: scmi_core: SCMI protocol bus registered
+Jun 10 04:41:25 orangepizero3 kernel: Advanced Linux Sound Architecture Driver Initialized.
+Jun 10 04:41:25 orangepizero3 kernel: NetLabel: Initializing
+Jun 10 04:41:25 orangepizero3 kernel: NetLabel:  domain hash size = 128
+Jun 10 04:41:25 orangepizero3 kernel: NetLabel:  protocols = UNLABELED CIPSOv4 CALIPSO
+Jun 10 04:41:25 orangepizero3 kernel: NetLabel:  unlabeled traffic allowed by default
+Jun 10 04:41:25 orangepizero3 kernel: mctp: management component transport protocol core
+Jun 10 04:41:25 orangepizero3 kernel: NET: Registered PF_MCTP protocol family
+Jun 10 04:41:25 orangepizero3 kernel: clocksource: Switched to clocksource arch_sys_counter
+Jun 10 04:41:25 orangepizero3 kernel: VFS: Disk quotas dquot_6.6.0
+Jun 10 04:41:25 orangepizero3 kernel: VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+Jun 10 04:41:25 orangepizero3 kernel: netfs: FS-Cache loaded
+Jun 10 04:41:25 orangepizero3 kernel: AppArmor: AppArmor Filesystem Enabled
+Jun 10 04:41:25 orangepizero3 kernel: NET: Registered PF_INET protocol family
+Jun 10 04:41:25 orangepizero3 kernel: IP idents hash table entries: 32768 (order: 6, 262144 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: tcp_listen_portaddr_hash hash table entries: 1024 (order: 2, 16384 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: TCP established hash table entries: 16384 (order: 5, 131072 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: TCP bind hash table entries: 16384 (order: 7, 524288 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: TCP: Hash tables configured (established 16384 bind 16384)
+Jun 10 04:41:25 orangepizero3 kernel: UDP hash table entries: 1024 (order: 3, 32768 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: UDP-Lite hash table entries: 1024 (order: 3, 32768 bytes, linear)
+Jun 10 04:41:25 orangepizero3 kernel: NET: Registered PF_UNIX/PF_LOCAL protocol family
+Jun 10 04:41:25 orangepizero3 kernel: ARM FF-A: FFA_VERSION returned not supported
+Jun 10 04:41:25 orangepizero3 kernel: Trying to unpack rootfs image as initramfs...
+Jun 10 04:41:25 orangepizero3 kernel: kvm [1]: nv: 554 coarse grained trap handlers
+Jun 10 04:41:25 orangepizero3 kernel: kvm [1]: IPA Size Limit: 40 bits
+Jun 10 04:41:25 orangepizero3 kernel: kvm [1]: vgic interrupt IRQ9
+Jun 10 04:41:25 orangepizero3 kernel: kvm [1]: Hyp nVHE mode initialized successfully
+Jun 10 04:41:25 orangepizero3 kernel: Initialise system trusted keyrings
+Jun 10 04:41:25 orangepizero3 kernel: Key type blacklist registered
+Jun 10 04:41:25 orangepizero3 kernel: workingset: timestamp_bits=44 max_order=19 bucket_order=0
+Jun 10 04:41:25 orangepizero3 kernel: zbud: loaded
+Jun 10 04:41:25 orangepizero3 kernel: squashfs: version 4.0 (2009/01/31) Phillip Lougher
+Jun 10 04:41:25 orangepizero3 kernel: integrity: Platform Keyring initialized
+Jun 10 04:41:25 orangepizero3 kernel: xor: automatically using best checksumming function   32regs    
+Jun 10 04:41:25 orangepizero3 kernel: async_tx: api initialized (async)
+Jun 10 04:41:25 orangepizero3 kernel: Key type asymmetric registered
+Jun 10 04:41:25 orangepizero3 kernel: Asymmetric key parser 'x509' registered
+Jun 10 04:41:25 orangepizero3 kernel: Block layer SCSI generic (bsg) driver version 0.4 loaded (major 246)
+Jun 10 04:41:25 orangepizero3 kernel: io scheduler mq-deadline registered
+Jun 10 04:41:25 orangepizero3 kernel: io scheduler kyber registered
+Jun 10 04:41:25 orangepizero3 kernel: io scheduler bfq registered
+Jun 10 04:41:25 orangepizero3 kernel: ledtrig-cpu: registered to indicate activity on CPUs
+Jun 10 04:41:25 orangepizero3 kernel: Serial: 8250/16550 driver, 6 ports, IRQ sharing disabled
+Jun 10 04:41:25 orangepizero3 kernel: loop: module loaded
+Jun 10 04:41:25 orangepizero3 kernel: usbcore: registered new interface driver usb-storage
+Jun 10 04:41:25 orangepizero3 kernel: mousedev: PS/2 mouse device common for all mice
+Jun 10 04:41:25 orangepizero3 kernel: sun6i-rtc 7000000.rtc: registered as rtc0
+Jun 10 04:41:25 orangepizero3 kernel: sun6i-rtc 7000000.rtc: setting system clock to 2026-06-10T07:39:59 UTC (1781077199)
+Jun 10 04:41:25 orangepizero3 kernel: i2c_dev: i2c /dev entries driver
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-wdt 30090a0.watchdog: Watchdog enabled (timeout=16 sec, nowayout=0)
+Jun 10 04:41:25 orangepizero3 kernel: sdhci: Secure Digital Host Controller Interface driver
+Jun 10 04:41:25 orangepizero3 kernel: sdhci: Copyright(c) Pierre Ossman
+Jun 10 04:41:25 orangepizero3 kernel: Synopsys Designware Multimedia Card Interface Driver
+Jun 10 04:41:25 orangepizero3 kernel: sdhci-pltfm: SDHCI platform and OF driver helper
+Jun 10 04:41:25 orangepizero3 kernel: SMCCC: SOC_ID: ID = jep106:091e:1823 Revision = 0x00000002
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: will run requests pump with realtime priority
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: will run requests pump with realtime priority
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: will run requests pump with realtime priority
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: will run requests pump with realtime priority
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register cbc(aes)
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register ecb(aes)
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register cbc(des3_ede)
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register ecb(des3_ede)
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register md5
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register sha1
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register sha224
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register sha256
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register sha384
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register sha512
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: Register stdrng
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-ce 1904000.crypto: CryptoEngine Die ID 0
+Jun 10 04:41:25 orangepizero3 kernel: hid: raw HID events driver (C) Jiri Kosina
+Jun 10 04:41:25 orangepizero3 kernel: usbcore: registered new interface driver usbhid
+Jun 10 04:41:25 orangepizero3 kernel: usbhid: USB HID core driver
+Jun 10 04:41:25 orangepizero3 kernel: random: crng init done
+Jun 10 04:41:25 orangepizero3 kernel: hw perfevents: enabled with armv8_cortex_a53 PMU driver, 7 (0,8000003f) counters available
+Jun 10 04:41:25 orangepizero3 kernel: NET: Registered PF_INET6 protocol family
+Jun 10 04:41:25 orangepizero3 kernel: Freeing initrd memory: 13456K
+Jun 10 04:41:25 orangepizero3 kernel: Segment Routing with IPv6
+Jun 10 04:41:25 orangepizero3 kernel: In-situ OAM (IOAM) with IPv6
+Jun 10 04:41:25 orangepizero3 kernel: NET: Registered PF_PACKET protocol family
+Jun 10 04:41:25 orangepizero3 kernel: bridge: filtering via arp/ip/ip6tables is no longer available by default. Update your scripts to load br_netfilter if you need this.
+Jun 10 04:41:25 orangepizero3 kernel: 8021q: 802.1Q VLAN Support v1.8
+Jun 10 04:41:25 orangepizero3 kernel: 9pnet: Installing 9P2000 support
+Jun 10 04:41:25 orangepizero3 kernel: Key type dns_resolver registered
+Jun 10 04:41:25 orangepizero3 kernel: registered taskstats version 1
+Jun 10 04:41:25 orangepizero3 kernel: Loading compiled-in X.509 certificates
+Jun 10 04:41:25 orangepizero3 kernel: zswap: loaded using pool zstd/zbud
+Jun 10 04:41:25 orangepizero3 kernel: Demotion targets for Node 0: null
+Jun 10 04:41:25 orangepizero3 kernel: Key type .fscrypt registered
+Jun 10 04:41:25 orangepizero3 kernel: Key type fscrypt-provisioning registered
+Jun 10 04:41:25 orangepizero3 kernel: Btrfs loaded, zoned=yes, fsverity=no
+Jun 10 04:41:25 orangepizero3 kernel: Key type encrypted registered
+Jun 10 04:41:25 orangepizero3 kernel: AppArmor: AppArmor sha256 policy hashing enabled
+Jun 10 04:41:25 orangepizero3 kernel: ima: No TPM chip found, activating TPM-bypass!
+Jun 10 04:41:25 orangepizero3 kernel: ima: Allocated hash algorithm: sha1
+Jun 10 04:41:25 orangepizero3 kernel: ima: No architecture policies found
+Jun 10 04:41:25 orangepizero3 kernel: evm: Initialising EVM extended attributes:
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.selinux
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.SMACK64
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.SMACK64EXEC
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.SMACK64TRANSMUTE
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.SMACK64MMAP
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.apparmor
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.ima
+Jun 10 04:41:25 orangepizero3 kernel: evm: security.capability
+Jun 10 04:41:25 orangepizero3 kernel: evm: HMAC attrs: 0x1
+Jun 10 04:41:25 orangepizero3 kernel: gpio gpiochip0: Static allocation of GPIO base is deprecated, use dynamic allocation.
+Jun 10 04:41:25 orangepizero3 kernel: sun50i-h616-r-pinctrl 7022000.pinctrl: initialized sunXi PIO driver
+Jun 10 04:41:25 orangepizero3 kernel: sun4i-drm display-engine: bound 1100000.mixer (ops 0xffff80008128ebc8)
+Jun 10 04:41:25 orangepizero3 kernel: sun4i-drm display-engine: bound 6510000.tcon-top (ops 0xffff800081293998)
+Jun 10 04:41:25 orangepizero3 kernel: sun4i-drm display-engine: bound 6515000.lcd-controller (ops 0xffff80008128b7e8)
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-dw-hdmi 6000000.hdmi: supply hvcc not found, using dummy regulator
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-dw-hdmi 6000000.hdmi: Detected HDMI TX controller v2.12a with HDCP (DWC HDMI 2.0 TX PHY)
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-dw-hdmi 6000000.hdmi: EVENT=plugin
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-dw-hdmi 6000000.hdmi: registered DesignWare HDMI I2C bus driver
+Jun 10 04:41:25 orangepizero3 kernel: sun4i-drm display-engine: bound 6000000.hdmi (ops 0xffff80008128dc90)
+Jun 10 04:41:25 orangepizero3 kernel: [drm] Initialized sun4i-drm 1.0.0 for display-engine on minor 0
+Jun 10 04:41:25 orangepizero3 kernel: sun8i-dw-hdmi 6000000.hdmi: read_hpd result: 1
+Jun 10 04:41:25 orangepizero3 kernel: Console: switching to colour frame buffer device 170x48
+Jun 10 04:41:25 orangepizero3 kernel: sun4i-drm display-engine: [drm] fb0: sun4i-drmdrmfb frame buffer device
+Jun 10 04:41:25 orangepizero3 kernel: sun50i-h616-r-pinctrl 7022000.pinctrl: supply vcc-pl not found, using dummy regulator
+Jun 10 04:41:25 orangepizero3 kernel: /soc/i2c@7081400/pmic@36: Fixed dependency cycle(s) with /soc/pinctrl@300b000
+Jun 10 04:41:25 orangepizero3 kernel: sun50i_cpufreq_nvmem: Using CPU speed bin speed0
+Jun 10 04:41:25 orangepizero3 kernel: gpio gpiochip1: Static allocation of GPIO base is deprecated, use dynamic allocation.
+Jun 10 04:41:25 orangepizero3 kernel: sun50i-h616-pinctrl 300b000.pinctrl: initialized sunXi PIO driver
+Jun 10 04:41:25 orangepizero3 kernel: dw-apb-uart 5000000.serial: Error applying setting, reverse things back
+Jun 10 04:41:25 orangepizero3 kernel: sun6i-spi 5010000.spi: Error applying setting, reverse things back
+Jun 10 04:41:25 orangepizero3 kernel: axp20x-i2c 1-0036: AXP20x variant AXP313a found
+Jun 10 04:41:25 orangepizero3 kernel: axp20x-i2c 1-0036: AXP20X driver loaded
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-mmc 4020000.mmc: Error applying setting, reverse things back
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-mmc 4021000.mmc: Error applying setting, reverse things back
+Jun 10 04:41:25 orangepizero3 kernel: dw-apb-uart 5000000.serial: Error applying setting, reverse things back
+Jun 10 04:41:25 orangepizero3 kernel: sun6i-spi 5010000.spi: Error applying setting, reverse things back
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-mmc 4020000.mmc: Got CD GPIO
+Jun 10 04:41:25 orangepizero3 kernel: printk: legacy console [ttyS0] disabled
+Jun 10 04:41:25 orangepizero3 kernel: 5000000.serial: ttyS0 at MMIO 0x5000000 (irq = 300, base_baud = 1500000) is a 16550A
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-mmc 4021000.mmc: allocated mmc-pwrseq
+Jun 10 04:41:25 orangepizero3 kernel: printk: legacy console [ttyS0] enabled
+Jun 10 04:41:25 orangepizero3 kernel: spi-nor spi0.0: supply vdd not found, using dummy regulator
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-mmc 4020000.mmc: initialized, max. request size: 16384 KB, uses new timings mode
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5200000.usb: EHCI Host Controller
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5310000.usb: EHCI Host Controller
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5200000.usb: new USB bus registered, assigned bus number 1
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5310000.usb: new USB bus registered, assigned bus number 2
+Jun 10 04:41:25 orangepizero3 kernel: usb_phy_generic usb_phy_generic.3.auto: dummy supplies not allowed for exclusive requests (id=vbus)
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5310000.usb: irq 304, io mem 0x05310000
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5200000.usb: irq 303, io mem 0x05200000
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5311000.usb: EHCI Host Controller
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5311000.usb: new USB bus registered, assigned bus number 3
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5311000.usb: irq 306, io mem 0x05311000
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5200400.usb: Generic Platform OHCI controller
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5200400.usb: new USB bus registered, assigned bus number 4
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5200400.usb: irq 307, io mem 0x05200400
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5310400.usb: Generic Platform OHCI controller
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5310400.usb: new USB bus registered, assigned bus number 5
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5310400.usb: irq 308, io mem 0x05310400
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5311400.usb: Generic Platform OHCI controller
+Jun 10 04:41:25 orangepizero3 kernel: of_cfs_init
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5311400.usb: new USB bus registered, assigned bus number 6
+Jun 10 04:41:25 orangepizero3 kernel: ohci-platform 5311400.usb: irq 309, io mem 0x05311400
+Jun 10 04:41:25 orangepizero3 kernel: of_cfs_init: OK
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5310000.usb: USB 2.0 started, EHCI 1.00
+Jun 10 04:41:25 orangepizero3 kernel: usb usb2: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 6.12
+Jun 10 04:41:25 orangepizero3 kernel: usb usb2: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb2: Product: EHCI Host Controller
+Jun 10 04:41:25 orangepizero3 kernel: usb usb2: Manufacturer: Linux 6.12.58-current-sunxi64 ehci_hcd
+Jun 10 04:41:25 orangepizero3 kernel: usb usb2: SerialNumber: 5310000.usb
+Jun 10 04:41:25 orangepizero3 kernel: hub 2-0:1.0: USB hub found
+Jun 10 04:41:25 orangepizero3 kernel: hub 2-0:1.0: 1 port detected
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5200000.usb: USB 2.0 started, EHCI 1.00
+Jun 10 04:41:25 orangepizero3 kernel: usb usb1: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 6.12
+Jun 10 04:41:25 orangepizero3 kernel: usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb1: Product: EHCI Host Controller
+Jun 10 04:41:25 orangepizero3 kernel: usb usb1: Manufacturer: Linux 6.12.58-current-sunxi64 ehci_hcd
+Jun 10 04:41:25 orangepizero3 kernel: usb usb1: SerialNumber: 5200000.usb
+Jun 10 04:41:25 orangepizero3 kernel: hub 1-0:1.0: USB hub found
+Jun 10 04:41:25 orangepizero3 kernel: hub 1-0:1.0: 1 port detected
+Jun 10 04:41:25 orangepizero3 kernel: mmc0: host does not support reading read-only switch, assuming write-enable
+Jun 10 04:41:25 orangepizero3 kernel: ehci-platform 5311000.usb: USB 2.0 started, EHCI 1.00
+Jun 10 04:41:25 orangepizero3 kernel: usb usb3: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 6.12
+Jun 10 04:41:25 orangepizero3 kernel: usb usb3: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb3: Product: EHCI Host Controller
+Jun 10 04:41:25 orangepizero3 kernel: usb usb3: Manufacturer: Linux 6.12.58-current-sunxi64 ehci_hcd
+Jun 10 04:41:25 orangepizero3 kernel: usb usb3: SerialNumber: 5311000.usb
+Jun 10 04:41:25 orangepizero3 kernel: hub 3-0:1.0: USB hub found
+Jun 10 04:41:25 orangepizero3 kernel: hub 3-0:1.0: 1 port detected
+Jun 10 04:41:25 orangepizero3 kernel: mmc0: new high speed SDHC card at address 5048
+Jun 10 04:41:25 orangepizero3 kernel: mmcblk0: mmc0:5048 SD32G 29.7 GiB
+Jun 10 04:41:25 orangepizero3 kernel:  mmcblk0: p1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb5: New USB device found, idVendor=1d6b, idProduct=0001, bcdDevice= 6.12
+Jun 10 04:41:25 orangepizero3 kernel: usb usb5: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb5: Product: Generic Platform OHCI controller
+Jun 10 04:41:25 orangepizero3 kernel: usb usb5: Manufacturer: Linux 6.12.58-current-sunxi64 ohci_hcd
+Jun 10 04:41:25 orangepizero3 kernel: usb usb5: SerialNumber: 5310400.usb
+Jun 10 04:41:25 orangepizero3 kernel: hub 5-0:1.0: USB hub found
+Jun 10 04:41:25 orangepizero3 kernel: hub 5-0:1.0: 1 port detected
+Jun 10 04:41:25 orangepizero3 kernel: usb usb4: New USB device found, idVendor=1d6b, idProduct=0001, bcdDevice= 6.12
+Jun 10 04:41:25 orangepizero3 kernel: usb usb4: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb4: Product: Generic Platform OHCI controller
+Jun 10 04:41:25 orangepizero3 kernel: usb usb4: Manufacturer: Linux 6.12.58-current-sunxi64 ohci_hcd
+Jun 10 04:41:25 orangepizero3 kernel: usb usb4: SerialNumber: 5200400.usb
+Jun 10 04:41:25 orangepizero3 kernel: hub 4-0:1.0: USB hub found
+Jun 10 04:41:25 orangepizero3 kernel: hub 4-0:1.0: 1 port detected
+Jun 10 04:41:25 orangepizero3 kernel: usb usb6: New USB device found, idVendor=1d6b, idProduct=0001, bcdDevice= 6.12
+Jun 10 04:41:25 orangepizero3 kernel: usb usb6: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+Jun 10 04:41:25 orangepizero3 kernel: usb usb6: Product: Generic Platform OHCI controller
+Jun 10 04:41:25 orangepizero3 kernel: usb usb6: Manufacturer: Linux 6.12.58-current-sunxi64 ohci_hcd
+Jun 10 04:41:25 orangepizero3 kernel: usb usb6: SerialNumber: 5311400.usb
+Jun 10 04:41:25 orangepizero3 kernel: hub 6-0:1.0: USB hub found
+Jun 10 04:41:25 orangepizero3 kernel: hub 6-0:1.0: 1 port detected
+Jun 10 04:41:25 orangepizero3 kernel: clk: Disabling unused clocks
+Jun 10 04:41:25 orangepizero3 kernel: PM: genpd: Disabling unused power domains
+Jun 10 04:41:25 orangepizero3 kernel: ALSA device list:
+Jun 10 04:41:25 orangepizero3 kernel:   No soundcards found.
+Jun 10 04:41:25 orangepizero3 kernel: sunxi-mmc 4021000.mmc: initialized, max. request size: 16384 KB, uses new timings mode
+Jun 10 04:41:25 orangepizero3 kernel: Freeing unused kernel memory: 6592K
+Jun 10 04:41:25 orangepizero3 kernel: Run /init as init process
+Jun 10 04:41:25 orangepizero3 kernel:   with arguments:
+Jun 10 04:41:25 orangepizero3 kernel:     /init
+Jun 10 04:41:25 orangepizero3 kernel:   with environment:
+Jun 10 04:41:25 orangepizero3 kernel:     HOME=/
+Jun 10 04:41:25 orangepizero3 kernel:     TERM=linux
+Jun 10 04:41:25 orangepizero3 kernel:     splash=verbose
+Jun 10 04:41:25 orangepizero3 kernel:     ubootpart=b023c9b3-01
+Jun 10 04:41:25 orangepizero3 kernel:     overlayroot=tmpfs
+Jun 10 04:41:25 orangepizero3 kernel:     cgroup_enable=memory
+Jun 10 04:41:25 orangepizero3 kernel: mmc1: new high speed SDIO card at address 8800
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: IRQ eth_wake_irq not found
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: IRQ eth_lpi not found
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: IRQ sfty not found
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: supply phy-io not found, using dummy regulator
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: PTP uses main clock
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: Current syscon value is not the default 51c06 (expect 0)
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: No HW DMA feature register supported
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: RX Checksum Offload Engine supported
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: COE Type 2
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: TX Checksum insertion supported
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: Normal descriptors
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet: Chain mode enabled
+Jun 10 04:41:25 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: renamed from eth0
+Jun 10 04:41:25 orangepizero3 kernel: EXT4-fs (mmcblk0p1): mounted filesystem 9a1b9474-56bd-4064-b25a-606174ec6a19 ro with writeback data mode. Quota mode: none.
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd 252.39-1~deb12u1 running in system mode (+PAM +AUDIT +SELINUX +APPARMOR +IMA +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD -BPF_FRAMEWORK -XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified)
+Jun 10 04:41:25 orangepizero3 systemd[1]: Detected architecture arm64.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Hostname set to <orangepizero3>.
+Jun 10 04:41:25 orangepizero3 systemd[1]: /lib/systemd/system/aw859a-wifi.service:9: Support for option SysVStartPriority= has been removed and it is ignored
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found ordering cycle on dadooh-visual-splash.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on totem-firstboot-gate.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on totem-lab-firstboot-autoconfig.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on NetworkManager.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on basic.target/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Job dadooh-visual-splash.service/start deleted to break ordering cycle starting with basic.target/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: Queued start job for default target graphical.target.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Created slice system-modprobe.slice - Slice /system/modprobe.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Created slice system-serial\x2dgetty.slice - Slice /system/serial-getty.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Created slice user.slice - User and Session Slice.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Started systemd-ask-password-console.path - Dispatch Password Requests to Console Directory Watch.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Started systemd-ask-password-wall.path - Forward Password Requests to Wall Directory Watch.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Set up automount proc-sys-fs-binfmt_misc.automount - Arbitrary Executable File Formats File System Automount Point.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Expecting device dev-ttyS0.device - /dev/ttyS0...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target cryptsetup.target - Local Encrypted Volumes.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target integritysetup.target - Local Integrity Protected Volumes.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target paths.target - Path Units.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target remote-fs.target - Remote File Systems.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target slices.target - Slice Units.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target swap.target - Swaps.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target time-set.target - System Time Set.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target veritysetup.target - Local Verity Protected Volumes.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on syslog.socket - Syslog Socket.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-fsckd.socket - fsck to fsckd communication Socket.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-initctl.socket - initctl Compatibility Named Pipe.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-journald-audit.socket - Journal Audit Socket.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-journald-dev-log.socket - Journal Socket (/dev/log).
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-journald.socket - Journal Socket.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-udevd-control.socket - udev Control Socket.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-udevd-kernel.socket - udev Kernel Socket.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting dev-hugepages.mount - Huge Pages File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting dev-mqueue.mount - POSIX Message Queue File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting sys-kernel-debug.mount - Kernel Debug File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting sys-kernel-tracing.mount - Kernel Trace File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting fake-hwclock.service - Restore / save the current clock...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting keyboard-setup.service - Set the console keyboard layout...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting kmod-static-nodes.service - Create List of Static Device Nodes...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@configfs.service - Load Kernel Module configfs...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@dm_mod.service - Load Kernel Module dm_mod...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@drm.service - Load Kernel Module drm...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@efi_pstore.service - Load Kernel Module efi_pstore...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@fuse.service - Load Kernel Module fuse...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@loop.service - Load Kernel Module loop...
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-fsck-root.service - File System Check on Root Device was skipped because of an unmet condition check (ConditionPathExists=!/run/initramfs/fsck-root).
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-modules-load.service - Load Kernel Modules...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-remount-fs.service - Remount Root and Kernel File Systems...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-udev-trigger.service - Coldplug All udev Devices...
+Jun 10 04:41:25 orangepizero3 kernel: device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled. Duplicate IMA measurements will not be recorded in the IMA log.
+Jun 10 04:41:25 orangepizero3 kernel: device-mapper: ioctl: 4.48.0-ioctl (2023-03-01) initialised: dm-devel@lists.linux.dev
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted dev-hugepages.mount - Huge Pages File System.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted dev-mqueue.mount - POSIX Message Queue File System.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted sys-kernel-debug.mount - Kernel Debug File System.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted sys-kernel-tracing.mount - Kernel Trace File System.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished fake-hwclock.service - Restore / save the current clock.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished kmod-static-nodes.service - Create List of Static Device Nodes.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@configfs.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@configfs.service - Load Kernel Module configfs.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@dm_mod.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@dm_mod.service - Load Kernel Module dm_mod.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@drm.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@drm.service - Load Kernel Module drm.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@efi_pstore.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@efi_pstore.service - Load Kernel Module efi_pstore.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@loop.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@loop.service - Load Kernel Module loop.
+Jun 10 04:41:25 orangepizero3 kernel: fuse: init (API version 7.41)
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting sys-kernel-config.mount - Kernel Configuration File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-repart.service - Repartition Root Disk was skipped because no trigger condition checks were met.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@fuse.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@fuse.service - Load Kernel Module fuse.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting sys-fs-fuse-connections.mount - FUSE Control File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted sys-kernel-config.mount - Kernel Configuration File System.
+Jun 10 04:41:25 orangepizero3 kernel: EXT4-fs (mmcblk0p1): re-mounted 9a1b9474-56bd-4064-b25a-606174ec6a19 r/w.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-remount-fs.service - Remount Root and Kernel File Systems.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted sys-fs-fuse-connections.mount - FUSE Control File System.
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-pstore.service - Platform Persistent Storage Archival was skipped because of an unmet condition check (ConditionDirectoryNotEmpty=/sys/fs/pstore).
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-random-seed.service - Load/Save Random Seed...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-sysusers.service - Create System Users...
+Jun 10 04:41:25 orangepizero3 kernel: 
+Jun 10 04:41:25 orangepizero3 kernel: **********************************************************
+Jun 10 04:41:25 orangepizero3 kernel: **   NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE   **
+Jun 10 04:41:25 orangepizero3 kernel: **                                                      **
+Jun 10 04:41:25 orangepizero3 kernel: ** trace_printk() being used. Allocating extra memory.  **
+Jun 10 04:41:25 orangepizero3 kernel: **                                                      **
+Jun 10 04:41:25 orangepizero3 kernel: ** This means that this is a DEBUG kernel and it is     **
+Jun 10 04:41:25 orangepizero3 kernel: ** unsafe for production use.                           **
+Jun 10 04:41:25 orangepizero3 kernel: **                                                      **
+Jun 10 04:41:25 orangepizero3 kernel: ** If you see this message and you are not debugging    **
+Jun 10 04:41:25 orangepizero3 kernel: ** the kernel, report this immediately to your vendor!  **
+Jun 10 04:41:25 orangepizero3 kernel: **                                                      **
+Jun 10 04:41:25 orangepizero3 kernel: **   NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE   **
+Jun 10 04:41:25 orangepizero3 kernel: **********************************************************
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-random-seed.service - Load/Save Random Seed.
+Jun 10 04:41:25 orangepizero3 systemd[1]: first-boot-complete.target - First Boot Complete was skipped because of an unmet condition check (ConditionFirstBoot=yes).
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-sysusers.service - Create System Users.
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_init entry!
+Jun 10 04:41:25 orangepizero3 kernel: WCN: wcn config bt wake host
+Jun 10 04:41:25 orangepizero3 kernel: WCN_ERR: dts node for bt_wake not found
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin2 parse_dt some para not config
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:sdiohal_parse_dt adma_tx:1, adma_rx:1, pwrseq:0, irq type:data, gpio_num:0, blksize:840
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:sdiohal_init ok
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_probe ok!
+Jun 10 04:41:25 orangepizero3 kernel: mtty_probe init device addr: 0x00000000d9ac9a49
+Jun 10 04:41:25 orangepizero3 kernel: -->rfkill_bluetooth_init
+Jun 10 04:41:25 orangepizero3 kernel: bluetooth_set_power: start_block=1
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin power state:0, subsys: [MARLIN_BLUETOOTH] power 0
+Jun 10 04:41:25 orangepizero3 kernel: bluetooth_set_power: end_block=1
+Jun 10 04:41:25 orangepizero3 kernel: <--rfkill_bluetooth_init
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-tmpfiles-setup-dev.service - Create Static Device Nodes in /dev...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-modules-load.service - Load Kernel Modules.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-sysctl.service - Apply Kernel Variables...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting totem-panfrost-rebind.service - Dadooh totem: bind panfrost GPU (boot deferred-probe race workaround)...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-sysctl.service - Apply Kernel Variables.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-tmpfiles-setup-dev.service - Create Static Device Nodes in /dev.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-udevd.service - Rule-based Manager for Device Events and Files...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished keyboard-setup.service - Set the console keyboard layout.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target local-fs-pre.target - Preparation for Local File Systems.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-udev-trigger.service - Coldplug All udev Devices.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Started systemd-udevd.service - Rule-based Manager for Device Events and Files.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Listening on systemd-rfkill.socket - Load/Save RF Kill Switch Status /dev/rfkill Watch.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-rfkill.service - Load/Save RF Kill Switch Status...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Found device dev-ttyS0.device - /dev/ttyS0.
+Jun 10 04:41:25 orangepizero3 kernel: bluetooth_set_power: start_block=0
+Jun 10 04:41:25 orangepizero3 kernel: WCN: start_marlin [MARLIN_BLUETOOTH]
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin power state:0, subsys: [MARLIN_BLUETOOTH] power 1
+Jun 10 04:41:25 orangepizero3 kernel: WCN: the first power on start
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin chip en dummy pull up -- need manually set GPIO 
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:sdiohal_scan_card
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:sdiohal_probe: func->class=0, vendor=0x0000, device=0x0000, func_num=0x0001, clock=50000000
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_get_wcn_chipid: chipid: 0x2355b001
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_scan_finish!
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:probe ok
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:scan end!
+Jun 10 04:41:25 orangepizero3 kernel: WCN: then marlin start to download
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_request_firmware from /lib/firmware/uwe5622/wcnmodem.bin start!
+Jun 10 04:41:25 orangepizero3 kernel: mc: Linux media interface: v0.10
+Jun 10 04:41:25 orangepizero3 kernel: videodev: Linux video capture interface: v2.00
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target usb-gadget.target - Hardware activated USB gadget.
+Jun 10 04:41:25 orangepizero3 kernel: panfrost 1800000.gpu: clock rate = 432000000
+Jun 10 04:41:25 orangepizero3 kernel: panfrost 1800000.gpu: bus_clock rate = 200000000
+Jun 10 04:41:25 orangepizero3 kernel: panfrost 1800000.gpu: mali-g31 id 0x7093 major 0x0 minor 0x0 status 0x0
+Jun 10 04:41:25 orangepizero3 kernel: panfrost 1800000.gpu: features: 00000000,000027f7, issues: 00000000,00000400
+Jun 10 04:41:25 orangepizero3 kernel: panfrost 1800000.gpu: Features: L2:0x07100206 Shader:0x00000000 Tiler:0x00000209 Mem:0x1 MMU:0x00002821 AS:0xff JS:0x7
+Jun 10 04:41:25 orangepizero3 kernel: panfrost 1800000.gpu: shader_present=0x1 l2_present=0x1
+Jun 10 04:41:25 orangepizero3 kernel: [drm] Initialized panfrost 1.2.0 for 1800000.gpu on minor 1
+Jun 10 04:41:25 orangepizero3 kernel: sunxi_cedrus: module is from the staging directory, the quality is unknown, you have been warned.
+Jun 10 04:41:25 orangepizero3 kernel: cedrus 1c0e000.video-codec: Device registered as /dev/video0
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting tmp.mount - /tmp...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted tmp.mount - /tmp.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Reached target local-fs.target - Local File Systems.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting armbian-zram-config.service - Armbian ZRAM config...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting console-setup.service - Set console font and keymap...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-binfmt.service - Set Up Additional Binary Formats...
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-machine-id-commit.service - Commit a transient machine-id on disk was skipped because of an unmet condition check (ConditionPathIsMountPoint=/etc/machine-id).
+Jun 10 04:41:25 orangepizero3 systemd[1]: Started totem-visual-tty-guard.service - Dadooh Visual TTY Guard.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished console-setup.service - Set console font and keymap.
+Jun 10 04:41:25 orangepizero3 systemd[1]: proc-sys-fs-binfmt_misc.automount: Got automount request for /proc/sys/fs/binfmt_misc, triggered by 309 (systemd-binfmt)
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounting proc-sys-fs-binfmt_misc.mount - Arbitrary Executable File Formats File System...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished totem-panfrost-rebind.service - Dadooh totem: bind panfrost GPU (boot deferred-probe race workaround).
+Jun 10 04:41:25 orangepizero3 systemd[1]: Mounted proc-sys-fs-binfmt_misc.mount - Arbitrary Executable File Formats File System.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished systemd-binfmt.service - Set Up Additional Binary Formats.
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found ordering cycle on dadooh-visual-splash.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on totem-firstboot-gate.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on totem-lab-firstboot-autoconfig.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on NetworkManager.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on basic.target/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Job dadooh-visual-splash.service/start deleted to break ordering cycle starting with basic.target/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found ordering cycle on dadooh-visual-splash.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on totem-firstboot-gate.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on totem-lab-firstboot-autoconfig.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on NetworkManager.service/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Found dependency on basic.target/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: basic.target: Job dadooh-visual-splash.service/start deleted to break ordering cycle starting with basic.target/start
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@dm_mod.service - Load Kernel Module dm_mod...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@efi_pstore.service - Load Kernel Module efi_pstore...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting modprobe@loop.service - Load Kernel Module loop...
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-machine-id-commit.service - Commit a transient machine-id on disk was skipped because of an unmet condition check (ConditionPathIsMountPoint=/etc/machine-id).
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@dm_mod.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@dm_mod.service - Load Kernel Module dm_mod.
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@efi_pstore.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@efi_pstore.service - Load Kernel Module efi_pstore.
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-pstore.service - Platform Persistent Storage Archival was skipped because of an unmet condition check (ConditionDirectoryNotEmpty=/sys/fs/pstore).
+Jun 10 04:41:25 orangepizero3 systemd[1]: modprobe@loop.service: Deactivated successfully.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished modprobe@loop.service - Load Kernel Module loop.
+Jun 10 04:41:25 orangepizero3 systemd[1]: systemd-repart.service - Repartition Root Disk was skipped because no trigger condition checks were met.
+Jun 10 04:41:25 orangepizero3 kernel: zram: Added device: zram0
+Jun 10 04:41:25 orangepizero3 kernel: zram: Added device: zram1
+Jun 10 04:41:25 orangepizero3 kernel: zram: Added device: zram2
+Jun 10 04:41:25 orangepizero3 kernel: zram0: detected capacity change from 0 to 2021264
+Jun 10 04:41:25 orangepizero3 kernel: WCN: combin_img 0 marlin_firmware_write finish and successful
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_start_run read reset reg val:0x1
+Jun 10 04:41:25 orangepizero3 kernel: WCN: after do marlin_start_run reset reg val:0x0
+Jun 10 04:41:25 orangepizero3 kernel: WCN: s_marlin_bootup_time=6673424723
+Jun 10 04:41:25 orangepizero3 kernel: WCN: clock mode: TSX
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_write_cali_data sync init_state:0x113
+Jun 10 04:41:25 orangepizero3 kernel: Adding 1010628k swap on /dev/zram0.  Priority:5 extents:1 across:1010628k SS
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_write_cali_data sync init_state:0x113
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_write_cali_data sync init_state:0xf0f0f0f1
+Jun 10 04:41:25 orangepizero3 kernel: WCN: sdio_config bt_wake_host trigger:[high]
+Jun 10 04:41:25 orangepizero3 kernel: WCN: sdio_config irq:[inband]
+Jun 10 04:41:25 orangepizero3 kernel: WCN: sdio_config wake_host_level_duration_time:[20ms]
+Jun 10 04:41:25 orangepizero3 kernel: WCN: sdio_config wake_host_data_separation:[bt/wifi reuse]
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_send_sdio_config_to_cp sdio_config:0x80f01 (enable config)
+Jun 10 04:41:25 orangepizero3 kernel: WCN: marlin_write_cali_data finish
+Jun 10 04:41:25 orangepizero3 kernel: WCN: check_cp_ready sync val:0xf0f0f0f2, prj_type val:0x0
+Jun 10 04:41:25 orangepizero3 kernel: zram1: detected capacity change from 0 to 102400
+Jun 10 04:41:25 orangepizero3 kernel: WCN: check_cp_ready sync val:0xf0f0f0f2, prj_type val:0x0
+Jun 10 04:41:25 orangepizero3 kernel: WCN: check_cp_ready sync val:0xf0f0f0f2, prj_type val:0x0
+Jun 10 04:41:25 orangepizero3 kernel: WCN: check_cp_ready sync val:0xf0f0f0f2, prj_type val:0x0
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished armbian-zram-config.service - Armbian ZRAM config.
+Jun 10 04:41:25 orangepizero3 kernel: WCN: check_cp_ready sync val:0xf0f0f0f2, prj_type val:0x0
+Jun 10 04:41:25 orangepizero3 kernel: WCN: check_cp_ready sync val:0xf0f0f0ff, prj_type val:0x0
+Jun 10 04:41:25 orangepizero3 kernel: sdiohal:sdiohal_runtime_get entry
+Jun 10 04:41:25 orangepizero3 kernel: WCN: get_cp2_version entry!
+Jun 10 04:41:25 orangepizero3 kernel: WCN: WCND at cmd read:WCN_VER:Platform Version:MARLIN3_19B_W21.05.3~Project Version:sc2355_marlin3_lite_ott~12-15-2021 11:26:33~
+Jun 10 04:41:25 orangepizero3 kernel: WCN: switch_cp2_log - close entry!
+Jun 10 04:41:25 orangepizero3 kernel: WCN: WCND at cmd read:OK
+Jun 10 04:41:25 orangepizero3 kernel: WCN: then marlin download finished and run ok
+Jun 10 04:41:25 orangepizero3 kernel: WCN: start_loopcheck
+Jun 10 04:41:25 orangepizero3 kernel: bluetooth_set_power: end_block=0
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting armbian-ramlog.service - Armbian memory supported logging...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Started systemd-rfkill.service - Load/Save RF Kill Switch Status.
+Jun 10 04:41:25 orangepizero3 kernel: EXT4-fs (zram1): mounted filesystem 8300b803-e536-48da-b535-d67a14df9ffb r/w without journal. Quota mode: none.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Finished armbian-ramlog.service - Armbian memory supported logging.
+Jun 10 04:41:25 orangepizero3 systemd[1]: Starting systemd-journald.service - Journal Service...
+Jun 10 04:41:25 orangepizero3 systemd[1]: Started systemd-journald.service - Journal Service.
+Jun 10 04:41:25 orangepizero3 systemd-journald[457]: Received client request to flush runtime journal.
+Jun 10 04:41:26 orangepizero3 kernel: bluetooth_set_power: start_block=0
+Jun 10 04:41:26 orangepizero3 kernel: WCN: start_marlin [MARLIN_BLUETOOTH]
+Jun 10 04:41:26 orangepizero3 kernel: WCN: marlin power state:1, subsys: [MARLIN_BLUETOOTH] power 1
+Jun 10 04:41:26 orangepizero3 kernel: WCN: marlin have open, GNSS is closed
+Jun 10 04:41:26 orangepizero3 kernel: bluetooth_set_power: end_block=0
+Jun 10 04:41:26 orangepizero3 kernel: mtty_open device success!
+Jun 10 04:41:26 orangepizero3 kernel: cfg80211: Loading compiled-in X.509 certificates for regulatory database
+Jun 10 04:41:26 orangepizero3 kernel: Loaded X.509 cert 'sforshee: 00b28ddf47aef9cea7'
+Jun 10 04:41:26 orangepizero3 kernel: Loaded X.509 cert 'wens: 61c038651aabdcf94bd0ac7ff06c7248db18c600'
+Jun 10 04:41:26 orangepizero3 kernel: mtty_close device success !
+Jun 10 04:41:26 orangepizero3 kernel: [ADDR_MGT] addr_mgt_probe: module version: v1.0.9
+Jun 10 04:41:26 orangepizero3 kernel: [ADDR_MGT] addr_mgt_probe: success.
+Jun 10 04:41:26 orangepizero3 kernel: WCN: start_marlin [MARLIN_WIFI]
+Jun 10 04:41:26 orangepizero3 kernel: WCN: marlin power state:1, subsys: [MARLIN_WIFI] power 1
+Jun 10 04:41:26 orangepizero3 kernel: WCN: marlin have open, GNSS is closed
+Jun 10 04:41:27 orangepizero3 kernel: WCN: get_board_ant_num [one_ant]
+Jun 10 04:41:27 orangepizero3 kernel: wifi ini path = /lib/firmware/wifi_2355b001_1ant.ini
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:sprdwl_get_fw_info length mismatch: len_count=83, r_len=89
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:sprdwl_get_fw_info, drv_version=1, fw_version=2, compat_ver=0
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:chip_model:0x2355, chip_ver:0x0
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:fw_ver:0, fw_std:0x7f, fw_capa:0x120f7f
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:mac_addr:1c:79:2d:6d:ea:2b
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:credit_capa:TX_WITH_CREDIT
+Jun 10 04:41:27 orangepizero3 kernel: sprdwl:ott support:0
+Jun 10 04:41:27 orangepizero3 kernel: unisoc_wifi unisoc_wifi wlan0: mixed HW and IP checksum settings.
+Jun 10 04:41:30 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: Register MEM_TYPE_PAGE_POOL RxQ-0
+Jun 10 04:41:30 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: PHY [stmmac-0:01] driver [YT8531 Gigabit Ethernet] (irq=POLL)
+Jun 10 04:41:30 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: No Safety Features support found
+Jun 10 04:41:30 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: No MAC Management Counters available
+Jun 10 04:41:30 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: PTP not supported by HW
+Jun 10 04:41:30 orangepizero3 kernel: dwmac-sun8i 5020000.ethernet end0: configuring for phy/rgmii-rxid link mode
+Jun 11 00:00:00 orangepizero3 systemd-journald[457]: Received client request to flush runtime journal.
+Jun 11 00:00:00 orangepizero3 systemd-journald[457]: Received client request to relinquish /var/log/journal/b0ac2d5fa1614d0caf8949a9292c1cf9 access.
+Jun 11 00:53:57 orangepizero3 kernel: panfrost 1800000.gpu: Unhandled Page fault in AS0 at VA 0x000000000A001200
+                                      Reason: TODO
+                                      raw fault status: 0x1C3
+                                      decoded fault status: SLAVE FAULT
+                                      exception type 0xC3: TRANSLATION_FAULT_3
+                                      access type 0x1: EXECUTE
+                                      source id 0x0
+Jun 11 00:53:57 orangepizero3 kernel: panfrost 1800000.gpu: js fault, js=0, status=JOB_BUS_FAULT, head=0xb1c48c0, tail=0xb1c48c0
+Jun 11 00:53:57 orangepizero3 kernel: panfrost 1800000.gpu: gpu sched timeout, js=0, config=0x7300, status=0x8, head=0xc990880, tail=0xc990880, sched_job=0000000034d6ad5e
+Jun 11 00:53:58 orangepizero3 kernel: panfrost 1800000.gpu: Panfrost Dump: BO has no sgt, cannot dump

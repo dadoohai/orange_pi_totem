@@ -1,0 +1,11 @@
+{
+  "active": true,
+  "deep_health_passed": false,
+  "pre_start_barrier_passed": true,
+  "pre_start_fuser_dri": "",
+  "pre_start_mpv_pids": [],
+  "probe_orphans_killed": 0,
+  "reset_failed_used": false,
+  "service": "kiosky-player.service",
+  "start_rc": 0
+}

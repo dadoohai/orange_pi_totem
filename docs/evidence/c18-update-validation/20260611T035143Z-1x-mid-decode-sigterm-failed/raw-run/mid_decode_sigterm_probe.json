@@ -1,0 +1,119 @@
+{
+  "attempts": [
+    {
+      "decode_confirm": {
+        "confirmed": true,
+        "duration": 30.0,
+        "errors": [],
+        "frame_first": 1.0,
+        "frame_last": 50.0,
+        "hwdec_current": "v4l2request-copy",
+        "last_sample_monotonic": 72744.681460341,
+        "last_sample_to_signal_sec": 0.0011542930005816743,
+        "mid_decode_margin_sec": 28.333333,
+        "samples_n": 4,
+        "time_pos_first": 0.033333,
+        "time_pos_last": 1.666667
+      },
+      "failure_reasons": [
+        "mid_decode_probe_gpu_faults_delta_nonzero",
+        "mid_decode_probe_panfrost_faults_present"
+      ],
+      "gpu_faults_after": 4,
+      "gpu_faults_before": 0,
+      "gpu_faults_delta": 4,
+      "gpu_faults_delta_anomalous": false,
+      "index": 0,
+      "kiosk_killed_before_signal": true,
+      "last_cycle_after": 72703.06337734,
+      "mpv_exit": {
+        "escalated": false,
+        "exited": true,
+        "waited_ms": 0
+      },
+      "new_fault_lines_sanitized": [
+        "[72744.633276] orangepizero3 kernel: panfrost 1800000.gpu: Unhandled Page fault in AS0 at VA 0xADDR",
+        "[72744.633355] orangepizero3 kernel: panfrost 1800000.gpu: js fault, js=0, status=JOB_BUS_FAULT, head=0xADDR, tail=0xADDR",
+        "[72745.142575] orangepizero3 kernel: panfrost 1800000.gpu: gpu sched timeout, js=0, config=0xADDR, status=0xADDR, head=0xADDR, tail=0xADDR, sched_job=0000000034d6ad5e",
+        "[72745.353611] orangepizero3 kernel: panfrost 1800000.gpu: Panfrost Dump: BO has no sgt, cannot dump"
+      ],
+      "passed": false,
+      "pid_chain": {
+        "after_kiosk_kill": {
+          "cmdline": "/opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/c18-mid-decode-00-y2btqk3k/mpv.sock --log-file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/c18-mid-decode-00-y2btqk3k/runtime/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy",
+          "cmdline_contains_ipc_path": true,
+          "exe": "/opt/totem/hwdecode/bin/mpv",
+          "exe_matches": true,
+          "exists": true,
+          "expected_exe": "/opt/totem/hwdecode/bin/mpv",
+          "pgid": 61716,
+          "pgid_is_pid": true,
+          "pid": 61716,
+          "starttime": 7274177,
+          "state": "R"
+        },
+        "initial": {
+          "cmdline": "/opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/c18-mid-decode-00-y2btqk3k/mpv.sock --log-file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/c18-mid-decode-00-y2btqk3k/runtime/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy",
+          "cmdline_contains_ipc_path": true,
+          "exe": "/opt/totem/hwdecode/bin/mpv",
+          "exe_matches": true,
+          "exists": true,
+          "expected_exe": "/opt/totem/hwdecode/bin/mpv",
+          "log_pid": 61716,
+          "pgid": 61716,
+          "pgid_is_pid": true,
+          "pid": 61716,
+          "starttime": 7274177,
+          "state": "S"
+        },
+        "pre_signal": {
+          "cmdline": "/opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/c18-mid-decode-00-y2btqk3k/mpv.sock --log-file=/tmp/c18-mid-decode-00-y2btqk3k/mpv-g001.log --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/c18-mid-decode-00-y2btqk3k/runtime/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy",
+          "cmdline_contains_ipc_path": true,
+          "exe": "/opt/totem/hwdecode/bin/mpv",
+          "exe_matches": true,
+          "exists": true,
+          "expected_exe": "/opt/totem/hwdecode/bin/mpv",
+          "pgid": 61716,
+          "pgid_is_pid": true,
+          "pid": 61716,
+          "starttime": 7274177,
+          "state": "S"
+        }
+      },
+      "signal": {
+        "delivered": true,
+        "monotonic": 72744.682614634,
+        "name": "SIGTERM",
+        "target": "mpv_pgid"
+      },
+      "window_anchor": {
+        "boot_id": "e3df0efd-9a53-4fed-880c-f5bd7f80a8f1",
+        "monotonic_after": 72747.916873488,
+        "monotonic_before": 72744.230883996
+      }
+    }
+  ],
+  "cfg_hwdec": "auto",
+  "claim": "mid_decode_sigterm_panfrost_window_measured",
+  "kiosk_killed_before_signal": true,
+  "non_claims": [
+    "GR4b fresh-IPC quit SUCCESS against a live socket is NOT claimed.",
+    "healthy-not-wedged: this probe measures a healthy decoding mpv, not a wedged ipc_unresponsive mpv.",
+    "no-kiosk-alive: the isolated kiosk is SIGKILLed before the signal; IPC quit, watchdog, waitpid, and auto-relaunch are NOT in this probe window.",
+    "production-timing-unmeasured: exact production timing is NOT claimed.",
+    "N=1 single-image"
+  ],
+  "passed": false,
+  "production_service": {
+    "deep_health_passed": false,
+    "residual_mpv_pids_after_stop": [],
+    "restored": true,
+    "stop_rc": 0,
+    "stopped": true
+  },
+  "schema": "dadooh.c18.player_runtime.teardown_mid_decode_sigterm_probe.v1",
+  "wrapper": {
+    "path": "/opt/totem/bin/totem-mpv-hwdecode",
+    "sha256": "d58ae39348ea3d982ca95f4a01f5eb9fec71af029197c8fa938f5fdcb4f631de"
+  }
+}

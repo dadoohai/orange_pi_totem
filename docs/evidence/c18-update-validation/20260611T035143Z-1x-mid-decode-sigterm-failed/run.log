@@ -1,0 +1,79 @@
+RUN_ID=c18-hwdecode-lab-1x-mid-decode-20260611T035143Z
+EVID=/data/totem-diag/c18-hwdecode-lab-1x-mid-decode-20260611T035143Z
+marker_sha=59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e
+service_before=active
+tmp_mode=1777
+run_trial: gate REJECTED the produced evidence at /data/totem-diag/c18-hwdecode-lab-1x-mid-decode-20260611T035143Z
+{
+  "errors": [
+    "mid_decode_probe_not_passed",
+    "mid_decode_probe_production_service_deep_health_passed_not_true",
+    "mid_decode_attempt00_not_passed",
+    "mid_decode_attempt00_recomputed_gpu_faults_delta_nonzero:4",
+    "mid_decode_attempt00_panfrost_faults_present_after:4",
+    "mid_decode_post_restore_health_not_passed",
+    "mid_decode_post_restore_health_failure_reasons",
+    "mid_decode_post_restore_health_check_failed:panfrost_faults_zero",
+    "mid_decode_post_restore_health_check_failed:status_no_failures",
+    "mid_decode_probe_restore_deep_health_not_passed"
+  ],
+  "files": [
+    "README.md",
+    "cycles/cycle-00/cycle.json",
+    "cycles/cycle-00/health/deep-health-kernel.json",
+    "cycles/cycle-00/health/deep-health-player-counters.json",
+    "cycles/cycle-00/health/deep-health-process.json",
+    "cycles/cycle-00/health/deep-health-systemd.json",
+    "cycles/cycle-00/health/playback-deep-health-public.json",
+    "cycles/cycle-00/health/playback-samples.tsv",
+    "cycles/cycle-00/health/status-samples.ndjson",
+    "cycles/cycle-00/kernel-after.txt",
+    "cycles/cycle-00/kernel-before.txt",
+    "cycles/cycle-01/cycle.json",
+    "cycles/cycle-01/health/deep-health-kernel.json",
+    "cycles/cycle-01/health/deep-health-player-counters.json",
+    "cycles/cycle-01/health/deep-health-process.json",
+    "cycles/cycle-01/health/deep-health-systemd.json",
+    "cycles/cycle-01/health/playback-deep-health-public.json",
+    "cycles/cycle-01/health/playback-samples.tsv",
+    "cycles/cycle-01/health/status-samples.ndjson",
+    "cycles/cycle-01/kernel-after.txt",
+    "cycles/cycle-01/kernel-before.txt",
+    "cycles/cycle-02/cycle.json",
+    "cycles/cycle-02/health/deep-health-kernel.json",
+    "cycles/cycle-02/health/deep-health-player-counters.json",
+    "cycles/cycle-02/health/deep-health-process.json",
+    "cycles/cycle-02/health/deep-health-systemd.json",
+    "cycles/cycle-02/health/playback-deep-health-public.json",
+    "cycles/cycle-02/health/playback-samples.tsv",
+    "cycles/cycle-02/health/status-samples.ndjson",
+    "cycles/cycle-02/kernel-after.txt",
+    "cycles/cycle-02/kernel-before.txt",
+    "evidence-manifest.json",
+    "mid-decode-sigterm-probe/attempt-00/decode-samples.ndjson",
+    "mid-decode-sigterm-probe/attempt-00/kernel-after.txt",
+    "mid-decode-sigterm-probe/attempt-00/kernel-before.txt",
+    "mid-decode-sigterm-probe/attempt-00/probe-kiosk-log-tail.txt",
+    "mid-decode-sigterm-probe/attempt-00/probe-stderr.txt",
+    "mid-decode-sigterm-probe/attempt-00/probe-stdout.txt",
+    "mid-decode-sigterm-probe/post-restore-health/deep-health-kernel.json",
+    "mid-decode-sigterm-probe/post-restore-health/deep-health-player-counters.json",
+    "mid-decode-sigterm-probe/post-restore-health/deep-health-process.json",
+    "mid-decode-sigterm-probe/post-restore-health/deep-health-systemd.json",
+    "mid-decode-sigterm-probe/post-restore-health/playback-deep-health-public.json",
+    "mid-decode-sigterm-probe/post-restore-health/playback-samples.tsv",
+    "mid-decode-sigterm-probe/post-restore-health/status-samples.ndjson",
+    "mid-decode-sigterm-probe/service-restore.json",
+    "mid_decode_sigterm_probe.json",
+    "postcheck.txt",
+    "setup/service-state-before.json",
+    "teardown-summary.json"
+  ],
+  "passed": false,
+  "run_dir": "/data/totem-diag/c18-hwdecode-lab-1x-mid-decode-20260611T035143Z",
+  "schema": "dadooh.c18.player_runtime.teardown_evidence_gate.v1"
+}
+TRIAL_RC=1
+service_after=active
+mpv_after=61818 /opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/kiosky/mpv.sock --vo=gpu --gpu-context=drm --ao=null --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/kiosky/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy
+corpus=/data/totem-diag/c18-hwdecode-lab-1x-mid-decode-20260611T035143Z-clean-board-kernel.txt
