@@ -945,7 +945,8 @@ def _collect_deep_health_output(output_dir: Path, *, duration_sec: float, interv
 
 
 def _restore_after_mid_decode_probe(probe_dir: Path, workspaces: list[Path], *,
-                                    duration_sec: float, interval_sec: float) -> dict[str, Any]:
+                                    duration_sec: float, interval_sec: float,
+                                    startup_wait_sec: float) -> dict[str, Any]:
     killed = 0
     for ws in workspaces:
         killed += _kill_probe_orphans(ws)
@@ -983,6 +984,8 @@ def _restore_after_mid_decode_probe(probe_dir: Path, workspaces: list[Path], *,
                 active = True
                 break
             time.sleep(1.0)
+    if active:
+        time.sleep(max(startup_wait_sec, 0.0))
     health = _collect_deep_health_output(
         probe_dir / "post-restore-health",
         duration_sec=duration_sec,
@@ -1302,6 +1305,7 @@ def _run_mid_decode_sigterm_probe(args: argparse.Namespace, run_root: Path,
                 probe_dir, workspaces,
                 duration_sec=float(getattr(args, "health_duration_sec", 30.0)),
                 interval_sec=float(getattr(args, "health_interval_sec", 1.0)),
+                startup_wait_sec=float(getattr(args, "startup_wait_sec", 5.0)),
             )
             production_service["restored"] = bool(restore.get("active"))
             production_service["deep_health_passed"] = bool(restore.get("deep_health_passed"))
@@ -1693,6 +1697,41 @@ class TeardownTrialSelfTest(unittest.TestCase):
         confirm = _decode_confirm(samples, signal_monotonic=2.71)
         self.assertFalse(confirm["confirmed"])
         self.assertIn("last_sample_not_decoding", confirm["errors"])
+
+    def test_mid_decode_restore_honors_startup_wait_before_health(self) -> None:
+        mod = sys.modules[__name__]
+        saved = {
+            "_wait_for_no_mpv_or_dri": mod._wait_for_no_mpv_or_dri,
+            "_run": mod._run,
+            "_service_active": mod._service_active,
+            "_collect_deep_health_output": mod._collect_deep_health_output,
+        }
+        saved_sleep = time.sleep
+        calls: list[Any] = []
+
+        def fake_health(output_dir: Path, *, duration_sec: float, interval_sec: float) -> dict[str, Any]:
+            calls.append(("health", duration_sec, interval_sec))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            return {"passed": True}
+
+        try:
+            mod._wait_for_no_mpv_or_dri = lambda timeout_sec=10.0: (True, [], "")
+            mod._run = lambda cmd, *, timeout=30.0: subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            mod._service_active = lambda: True
+            mod._collect_deep_health_output = fake_health
+            time.sleep = lambda seconds: calls.append(("sleep", seconds))  # type: ignore[assignment]
+            with tempfile.TemporaryDirectory() as tmp:
+                restore = _restore_after_mid_decode_probe(
+                    Path(tmp) / "probe", [], duration_sec=0.1,
+                    interval_sec=0.1, startup_wait_sec=7.0,
+                )
+        finally:
+            for name, fn in saved.items():
+                setattr(mod, name, fn)
+            time.sleep = saved_sleep  # type: ignore[assignment]
+        self.assertTrue(restore["deep_health_passed"])
+        self.assertIn(("sleep", 7.0), calls)
+        self.assertEqual(calls[-1], ("health", 0.1, 0.1))
 
     def test_fresh_ipc_classify_honesty(self) -> None:
         self.assertEqual(classify_fresh_ipc(FRESH_SENT_LOG)["outcome"], "fresh_sent")
