@@ -1,0 +1,53 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "last_operation": {
+      "finished_at_utc": "2026-06-11T18:45:50Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+      "started_at_utc": "2026-06-11T18:45:05Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_current_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "state_previous_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-11T18:40:21Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-11T18:40:21Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/tmp/c18-lab-apply-c16fb3e-retry12-20260611T184500Z",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+}

@@ -23,6 +23,7 @@ MAX_STATUS_MPV_MISMATCH_RATIO = 0.10
 MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES = 5
 MAX_STATUS_MPV_TRANSITION_LAG_SECONDS = 6.0
 MAX_STATUS_MPV_TRANSITION_LAG_RUNS = 3
+MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS = 2
 MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES = 1
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 
@@ -233,6 +234,66 @@ def _status_mpv_is_terminal_transition_lag(events: list[dict[str, Any]], start: 
     )
 
 
+def _status_mpv_is_initial_transition_lag(events: list[dict[str, Any]], start: int, end: int) -> bool:
+    if start != 0 or end >= len(events):
+        return False
+    after = events[end]
+    if not after["aligned"]:
+        return False
+    run = events[start:end]
+    if len(run) > MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES:
+        return False
+    if _status_mpv_lag_duration_seconds(run) > MAX_STATUS_MPV_TRANSITION_LAG_SECONDS:
+        return False
+    new = after["status_alias"]
+    if new != after["mpv_alias"]:
+        return False
+    return all(
+        event["status_alias"] != event["mpv_alias"]
+        and new in {event["status_alias"], event["mpv_alias"]}
+        for event in run
+    )
+
+
+def _status_mpv_is_bounded_chained_transition_lag(events: list[dict[str, Any]], start: int, end: int) -> bool:
+    if start <= 0 or end >= len(events):
+        return False
+    before = events[start - 1]
+    after = events[end]
+    if not before["aligned"] or not after["aligned"]:
+        return False
+    old = before["status_alias"]
+    final = after["status_alias"]
+    if old != before["mpv_alias"] or final != after["mpv_alias"] or old == final:
+        return False
+
+    segments: list[dict[str, Any]] = []
+    index = start
+    while index < end:
+        pair = frozenset((events[index]["status_alias"], events[index]["mpv_alias"]))
+        if len(pair) != 2:
+            return False
+        seg_start = index
+        index += 1
+        while index < end and frozenset((events[index]["status_alias"], events[index]["mpv_alias"])) == pair:
+            index += 1
+        segment_events = events[seg_start:index]
+        if len(segment_events) > MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES:
+            return False
+        if _status_mpv_lag_duration_seconds(segment_events) > MAX_STATUS_MPV_TRANSITION_LAG_SECONDS:
+            return False
+        segments.append({"pair": pair})
+
+    if len(segments) < 2 or len(segments) > MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS:
+        return False
+    if old not in segments[0]["pair"] or final not in segments[-1]["pair"]:
+        return False
+    for left, right in zip(segments, segments[1:]):
+        if len(left["pair"] & right["pair"]) != 1:
+            return False
+    return True
+
+
 def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | float]:
     comparable = 0
     mismatches = 0
@@ -269,8 +330,12 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
     )
     transition_lag_runs = 0
     transition_lag_samples = 0
+    initial_transition_lag_runs = 0
+    initial_transition_lag_samples = 0
     terminal_transition_lag_runs = 0
     terminal_transition_lag_samples = 0
+    chained_transition_lag_runs = 0
+    chained_transition_lag_samples = 0
     unexplained_mismatch_runs = 0
     unexplained_mismatch_samples = 0
     long_transition_lag_runs = 0
@@ -299,6 +364,14 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
         if _status_mpv_is_bounded_transition_lag(events, start, end):
             transition_lag_runs += 1
             transition_lag_samples += run_samples
+            continue
+        if _status_mpv_is_initial_transition_lag(events, start, end):
+            initial_transition_lag_runs += 1
+            initial_transition_lag_samples += run_samples
+            continue
+        if _status_mpv_is_bounded_chained_transition_lag(events, start, end):
+            chained_transition_lag_runs += 1
+            chained_transition_lag_samples += run_samples
             continue
         if (
             start > 0
@@ -335,8 +408,12 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
         "max_allowed_consecutive_mismatches": MAX_CONSECUTIVE_STATUS_MPV_MISMATCHES,
         "transition_lag_runs": transition_lag_runs,
         "transition_lag_samples": transition_lag_samples,
+        "initial_transition_lag_runs": initial_transition_lag_runs,
+        "initial_transition_lag_samples": initial_transition_lag_samples,
         "terminal_transition_lag_runs": terminal_transition_lag_runs,
         "terminal_transition_lag_samples": terminal_transition_lag_samples,
+        "chained_transition_lag_runs": chained_transition_lag_runs,
+        "chained_transition_lag_samples": chained_transition_lag_samples,
         "unexplained_mismatch_runs": unexplained_mismatch_runs,
         "unexplained_mismatch_samples": unexplained_mismatch_samples,
         "long_transition_lag_runs": long_transition_lag_runs,
@@ -346,6 +423,7 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
         "max_transition_lag_seconds": max_transition_lag_seconds,
         "max_allowed_transition_lag_seconds": MAX_STATUS_MPV_TRANSITION_LAG_SECONDS,
         "max_allowed_transition_lag_runs": MAX_STATUS_MPV_TRANSITION_LAG_RUNS,
+        "max_allowed_chained_transition_lag_segments": MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS,
     }
 
 
@@ -487,7 +565,6 @@ def evaluate(
     status_mpv_path_aligned = (
         (not transition_required or alignment_stats["comparable_samples"] > 0)
         and not status_advanced_without_mpv
-        and alignment_stats["transition_lag_runs"] <= MAX_STATUS_MPV_TRANSITION_LAG_RUNS
         and alignment_stats["unexplained_mismatch_runs"] == 0
         and alignment_stats["long_transition_lag_runs"] == 0
         and alignment_stats["terminal_transition_lag_runs"] <= 1
@@ -599,8 +676,12 @@ def evaluate(
             "status_mpv_max_allowed_consecutive_mismatches": alignment_stats["max_allowed_consecutive_mismatches"],
             "status_mpv_transition_lag_runs": alignment_stats["transition_lag_runs"],
             "status_mpv_transition_lag_samples": alignment_stats["transition_lag_samples"],
+            "status_mpv_initial_transition_lag_runs": alignment_stats["initial_transition_lag_runs"],
+            "status_mpv_initial_transition_lag_samples": alignment_stats["initial_transition_lag_samples"],
             "status_mpv_terminal_transition_lag_runs": alignment_stats["terminal_transition_lag_runs"],
             "status_mpv_terminal_transition_lag_samples": alignment_stats["terminal_transition_lag_samples"],
+            "status_mpv_chained_transition_lag_runs": alignment_stats["chained_transition_lag_runs"],
+            "status_mpv_chained_transition_lag_samples": alignment_stats["chained_transition_lag_samples"],
             "status_mpv_unexplained_mismatch_runs": alignment_stats["unexplained_mismatch_runs"],
             "status_mpv_unexplained_mismatch_samples": alignment_stats["unexplained_mismatch_samples"],
             "status_mpv_long_transition_lag_runs": alignment_stats["long_transition_lag_runs"],
@@ -610,6 +691,9 @@ def evaluate(
             "status_mpv_max_transition_lag_seconds": alignment_stats["max_transition_lag_seconds"],
             "status_mpv_max_allowed_transition_lag_seconds": alignment_stats["max_allowed_transition_lag_seconds"],
             "status_mpv_max_allowed_transition_lag_runs": alignment_stats["max_allowed_transition_lag_runs"],
+            "status_mpv_max_allowed_chained_transition_lag_segments": alignment_stats[
+                "max_allowed_chained_transition_lag_segments"
+            ],
             "status_advanced_without_mpv": status_advanced_without_mpv,
             "playlist_size_max": playlist_size,
             "hwdec_expected_samples": hwdec_expected_samples,

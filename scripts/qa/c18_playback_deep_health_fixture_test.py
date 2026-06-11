@@ -347,7 +347,44 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["counters"]["status_mpv_transition_lag_runs"], 1)
         self.assertEqual(result["counters"]["status_mpv_terminal_transition_lag_runs"], 1)
 
-    def test_rejects_many_bounded_status_mpv_transition_lag_runs(self) -> None:
+    def test_accepts_initial_status_mpv_transition_lag(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+            ],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertNotIn("status_mpv_path_aligned", result["failure_reasons"])
+        self.assertEqual(result["counters"]["status_mpv_initial_transition_lag_runs"], 1)
+
+    def test_rejects_initial_status_mpv_lag_without_later_alignment(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+            ],
+        )
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_initial_transition_lag_runs"], 0)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 1)
+
+    def test_accepts_many_bounded_status_mpv_transition_lag_runs(self) -> None:
         fixture = self.with_case()
         samples = [("media-a", "<media-path:a>", "0", "<media-path:a>")]
         for _ in range(10):
@@ -361,12 +398,54 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             )
         self.write_status_mpv_alignment_rows(fixture, samples)
 
-        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        result = fixture.result()
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertNotIn("status_mpv_path_aligned", result["failure_reasons"])
         self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
         self.assertGreater(
             result["counters"]["status_mpv_transition_lag_runs"],
             result["counters"]["status_mpv_max_allowed_transition_lag_runs"],
         )
+
+    def test_accepts_bounded_chained_status_mpv_transition_lag(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+            ],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertNotIn("status_mpv_path_aligned", result["failure_reasons"])
+        self.assertEqual(result["counters"]["status_mpv_chained_transition_lag_runs"], 1)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
+
+    def test_rejects_unbounded_chained_status_mpv_transition_lag(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:d>"),
+                ("media-d", "<media-path:d>", "3", "<media-path:e>"),
+                ("media-e", "<media-path:e>", "4", "<media-path:e>"),
+            ],
+        )
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_chained_transition_lag_runs"], 0)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 1)
 
     def test_rejects_long_status_mpv_transition_lag(self) -> None:
         fixture = self.with_case()

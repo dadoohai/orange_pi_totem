@@ -1,0 +1,24 @@
+{
+  "active": true,
+  "current_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "mpv_count": 1,
+  "mpv_processes": [
+    {
+      "comm": "mpv",
+      "pid": "47975",
+      "user": "totem"
+    }
+  ],
+  "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "quarantine_count": 1,
+  "schema": "dadooh.c18.service_restore_after_apply.v1",
+  "state_current_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "state_previous_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "substate_running": true,
+  "systemctl_show": [
+    "NRestarts=0",
+    "ExecMainPID=47910",
+    "ActiveState=active",
+    "SubState=running"
+  ]
+}

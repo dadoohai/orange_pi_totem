@@ -1,0 +1,143 @@
+{
+  "collected_at_utc": "2026-06-11T19:04:35Z",
+  "device_hash": "sha256:fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+  "evidence": {
+    "apply": "lab-apply-retry12-success.json",
+    "freeze": "post-apply-freeze-probes.json",
+    "health": "post-apply-health-rereevaluated.json",
+    "service_restore": "service-restore-after-apply.json"
+  },
+  "image": {
+    "image_sha256_source": "h1_decisive_bundle_expected_for_observed_marker",
+    "marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "observed_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "observed_marker_tag": "c18-hwdecode-lab-1x",
+    "sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "tag": "c18-hwdecode-lab-1x"
+  },
+  "non_claims": [
+    "homologation_pilot_preflight_only",
+    "does_not_promote_stable",
+    "does_not_authorize_production",
+    "does_not_complete_p0_powerloss"
+  ],
+  "passed": true,
+  "player_runtime": {
+    "checks": {
+      "candidate_process_filtered": true,
+      "estimated_frame_present": true,
+      "ext4_errors_present": true,
+      "ext4_errors_zero": true,
+      "hwdec_expected_present": true,
+      "hwdec_no_unexpected": true,
+      "ipc_stable_after_success": true,
+      "ipc_success_present": true,
+      "media_load_failed_present": true,
+      "media_load_failed_zero": true,
+      "mmc_timeout_reset_present": true,
+      "mmc_timeout_reset_zero": true,
+      "mpv_path_c18_stack": true,
+      "mpv_restart_present": true,
+      "mpv_restart_zero": true,
+      "nrestarts_delta_present": true,
+      "nrestarts_stable": true,
+      "panfrost_faults_clean_for_policy": true,
+      "panfrost_faults_delta_present": true,
+      "panfrost_faults_delta_zero": true,
+      "panfrost_faults_present": true,
+      "panfrost_faults_zero": true,
+      "playback_progressed": true,
+      "samples_present": true,
+      "service_active": true,
+      "service_process_unfiltered": true,
+      "service_single_total_mpv": true,
+      "service_total_mpv_count_present": true,
+      "single_mpv": true,
+      "status_mpv_path_aligned": true,
+      "status_no_failures": true,
+      "transitions_observed_when_required": true,
+      "vo_configured_no_unexpected": true,
+      "vo_configured_present": true
+    },
+    "current_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "current_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "health_counters": {
+      "ext4_errors_delta": 0,
+      "media_load_failed": 0,
+      "mmc_timeout_reset_delta": 0,
+      "mpv_count": 1,
+      "mpv_restart": 0,
+      "mpv_unique_aliases": 9,
+      "nrestarts_delta": 0,
+      "panfrost_faults_delta": 0,
+      "samples": 112,
+      "status_mpv_chained_transition_lag_runs": 1,
+      "status_mpv_initial_transition_lag_runs": 1,
+      "status_mpv_transition_lag_runs": 6,
+      "status_mpv_unexplained_mismatch_runs": 0,
+      "status_unique_aliases": 9,
+      "total_mpv_count": 1,
+      "unique_aliases": 9
+    },
+    "health_failure_reasons": [],
+    "health_passed": true,
+    "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "previous_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "schema": "dadooh.totem.update.policy.v1"
+  },
+  "preflight_checks": {
+    "allow_prerelease": true,
+    "current_is_target": true,
+    "image_marker_sha256_match": true,
+    "image_tag_match": true,
+    "playback_health_passed": true,
+    "policy_homologation": true,
+    "previous_available": true,
+    "public_apply_local_frozen": true,
+    "public_reconcile_frozen": true,
+    "public_rollback_frozen": true,
+    "service_active": true,
+    "timer_disabled": true,
+    "timer_inactive": true
+  },
+  "public_freeze": {
+    "apply_local": {
+      "data_root": "/tmp/c18-player-runtime-freeze-probe-post-apply-*",
+      "frozen": true,
+      "output_sha256": "cfc1e2c2786c72fda9854d7f44911202b38bb9ba4babde6e53a7ee18db1d11c8",
+      "returncode": 44,
+      "summary": "2026-06-11T19:04:34Z WARN apply_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback _ playback deep-health are "
+    },
+    "reconcile": {
+      "data_root": "/tmp/c18-player-runtime-freeze-probe-post-apply-*",
+      "frozen": true,
+      "output_sha256": "ddb67a16362d6db68548613909b83d3bee68462fad328235f5f77933d363ee7a",
+      "returncode": 44,
+      "summary": "player_runtime_reconcile_guard_required: pass --allow-player-runtime-maintenance and set C18_PLAYER_RUNTIME_RECONCILE=1 2026-06-11T19:04:35Z WARN reconcile_bloc"
+    },
+    "rollback": {
+      "data_root": "/tmp/c18-player-runtime-freeze-probe-post-apply-*",
+      "frozen": true,
+      "output_sha256": "12911f19c1a8aa2e1f2ae88091262340ac92c7df2eb36120e8a537fdc0cfb8d6",
+      "returncode": 44,
+      "summary": "component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback _ playback deep-health are validated on hardware 2026-06-11T19:04:35Z WARN"
+    }
+  },
+  "schema": "dadooh.c18.homologation_pilot_preflight.v1",
+  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "timer": {
+    "active": false,
+    "active_raw": "inactive",
+    "enabled": false,
+    "enabled_raw": "disabled"
+  }
+}
