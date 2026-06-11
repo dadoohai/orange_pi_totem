@@ -76,7 +76,7 @@ The two core invariants hold **by construction** and were re-verified this round
 
 ## Critical path
 
-### Front #1 — fresh-IPC corner (req#4): the remaining H1 item
+### Front #1 — mid-decode SIGTERM panfrost window (remaining H1 item)
 
 Converged statement (2026-06-10; auditor refutation + 3 independent static verifiers, HEAD
 `f1aa879`): the `_fresh_ipc_command(["quit"])` CALL-SITE **is production-reachable** via the
@@ -84,10 +84,10 @@ Converged statement (2026-06-10; auditor refutation + 3 independent static verif
 `_stop_locked` → `_request_quit` with proc alive + `_ipc is None`. Production callers: boot
 `start()`, watchdog `ensure_running`/`restart ipc_unresponsive`, playback `media_load_failed`
 restarts. No config gate: `mpv_query_uses_fresh_ipc` gates QUERIES only; the quit fallback is
-unconditional. What remains scoped + hedged (and is exactly what the HW probe tests) is the
-SUCCESS outcome — a fresh quit against a late-but-up socket. **Therefore req#4 is PROVE, not
-retire-as-dead-code.** The probe answers whether the C1 fix (`3cd3586`) avoids the SIGTERM
-fallback in the `start_ipc_timeout` scenario.
+unconditional. That reachability question is now answered on HW: req#4 is EXERCISED, not
+"fix proven." What remains for H1 is narrower and different: measure the panfrost window
+for a real SIGTERM delivered to an MPV that is actively decoding, with GR4b still a
+non-claim.
 
 Work order:
 1. **[LANDED off-board — board validation PENDING]** The probe now stages the corner
@@ -231,7 +231,7 @@ mandatória pré-sessão). Funil: janela panfrost → H2 → decisão de thaw.
   first decisive run vs block until a deny-by-default allowlist from a real clean-board
   corpus. Bears on invariant (i). *Default: greedy-now + build the tunable tooling; revisit
   on the board.*
-- **D2 — H2 end-state:** (A) bump golden→`1w` [board], (B) keep `1u` + formalize split
+- **D2 — H2 end-state:** (A) bump golden→`1x` [board], (B) keep `1u` + formalize split
   [off-board, cheapest], (C) supersede with a new unified image [board]. *Default: do B
   groundwork now; final A/B/C deferred to board-session planning.*
 - **D3 — `mpv_path` boot gate as hard thaw-prereq vs parallel hardening.** *Default: build

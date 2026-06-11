@@ -40,9 +40,11 @@ in §8 are DRAFT until the operator ratifies (they change nothing until then).
   (DRM/V4L2/GEM under active decode — the panfrost thesis surface) untouched. Recorded
   honestly: `kiosk_killed_before_signal=true` + non-claim that the kiosk-alive production
   sequence (incl. auto-relaunch) is covered by the trial cycles, not by this probe.
-- **Window placement:** kernel-before captured AFTER decode-confirm + freshness recheck
-  (last-sample-to-signal ≤1s; `/proc/<pid>` alive + `os.getpgid(pid)==pid`), immediately
-  before the signal; signal = `os.killpg(mpv_pgid, SIGTERM)` (production parity `:1629`);
+- **Window placement:** kernel-before captured AFTER decode-confirm, then a FINAL
+  IPC re-sample/freshness check immediately before the signal (or equivalent timing proof);
+  `last-sample-to-signal` MUST be ≤1s and the gate must RED if the kernel-before capture
+  made the sample stale. Also re-check `/proc/<pid>` alive + `os.getpgid(pid)==pid`
+  immediately before signal. Signal = `os.killpg(mpv_pgid, SIGTERM)` (production parity `:1629`);
   mirror the 5s escalation — **escalation to SIGKILL = outcome
   `mpv_did_not_exit_after_sigterm` → gate RED** (an escalation IS the dangerous-class
   signal, never silently tolerated); settle ≥ `--settle-sec`; kernel-after; delta
@@ -51,8 +53,9 @@ in §8 are DRAFT until the operator ratifies (they change nothing until then).
 - **PID chain (no `get_property('pid')` dependency — removes the last on-board unknown):**
   kiosk.log `MPV process started pid=` (`kiosk.py:1685-1690`) + `/proc/<pid>/exe ==
   /opt/totem/hwdecode/bin/mpv` (wrapper execs mpv, PID preserved) + `/proc/<pid>/cmdline`
-  contains the unique `--input-ipc-server` path + `os.getpgid(pid)==pid`. The IPC `pid`
-  property is opportunistic corroboration only.
+  contains the unique `--input-ipc-server` path + `os.getpgid(pid)==pid` + `/proc/<pid>/stat`
+  starttime stable from decode-confirm through the signal. The IPC `pid` property is
+  opportunistic corroboration only.
 - **Attempts:** artifact is attempts-ARRAY-shaped (each attempt its own non-overlapping
   window) so N is a runbook pin, not a schema change. Recommended N=2 (~+90s board time;
   pre-empts the predictable "one sample is thin" audit round-trip). Operator pins N.
@@ -85,6 +88,8 @@ CONFIRMED iff ALL of:
   the non-copy mode this project moved AWAY from);
 - `vo-configured == true`; `idle-active`/`pause`/`eof-reached` all false;
 - freshness: last sample ≤1s before the signal.
+- mid-decode margin: the final sample must not be at EOF/loop boundary (`duration - time-pos`
+  margin, or equivalent long-canary proof).
 All samples persisted to `decode-samples.ndjson` (single format), each bound to
 boot_id + monotonic, coherent with `window_anchor` and signal monotonic. The gate
 RECOMPUTES the predicate from the samples and REDs on attestation/recompute mismatch
@@ -109,7 +114,9 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
   `mid_decode_sigterm_panfrost_window_measured`), `non_claims` MUST contain pinned
   strings: `GR4b`; healthy-not-wedged disclaimer (probe = HEALTHY decoding mpv; the
   production fallback typically fires on a wedged/`ipc_unresponsive` mpv whose
-  kernel-side state may differ); `N=<n>` single-image; production-timing unmeasured.
+  kernel-side state may differ); no-kiosk-alive disclaimer (no IPC-quit prelude,
+  watchdog/ensure_running, auto-relaunch, or kiosk-mediated waitpid in the probe window);
+  `N=<n>` single-image; production-timing unmeasured.
 - `summary` gains `mid_decode_probe_present:true` — **NEW RUNS ONLY; never backfill
   committed dirs** (manifest sha binding forbids it).
 - Producer-attested vs recomputed fields labeled in-artifact (same trust classes as the
@@ -129,7 +136,8 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
   attestation (`target` must be mpv_pgid, NEVER kiosk; `delivered=true`); mpv exited
   WITHOUT escalation; closed claim enum (anything else →
   `mid_decode_probe_unknown_claim`); pinned non-claim strings present; service restored
-  + post-restore deep-health passed.
+  + post-restore deep-health passed. JSON/NDJSON parsing must reject NaN/Infinity and all
+  non-finite numeric values with the same fail-closed policy as the existing gate loader.
 - Untouched: `validate_fresh_ipc_probe` (`:415-451`), the decisive-required check
   (`release_gate:923-928`), and the release gate file (ZERO diff — steps are per-dir).
 - Regression locks (same commit): fixture lock asserting BOTH committed dirs

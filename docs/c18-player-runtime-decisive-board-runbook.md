@@ -4,6 +4,12 @@ Status: OPERATOR RUN-BOOK (board-session mechanics only). Produces the fresh dec
 evidence that the release gate requires to consider player-runtime lab→homologation.
 No thaw is performed by this run-book; freeze stays `rc=44`.
 
+**Current caveat (2026-06-10, HEAD `c82fad3`):** this run-book still documents the
+previous decisive session. Do NOT use it for the next H1 board session until Track A
+lands; the next session must omit the already-evidenced fresh-IPC probe and run the
+mid-decode SIGTERM panfrost probe defined in
+`docs/c18-mid-decode-probe-round-spec.md`.
+
 This run-book makes the scarce board session **decisive on first capture**. Do NOT skip the
 pre-flight: a wrong image-identity triple or an uncommitted evidence file silently red-fails
 the decisive gate and forces a second board trip.
