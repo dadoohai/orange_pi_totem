@@ -138,7 +138,7 @@ Work order:
    claim beyond "main path proven + req#4 exercised (GR4b non-claim)" awaits the external
    auditor's ratification AND item 5 below. Closing H1 is NOT thaw: H2 + the future gates
    (physical power-loss, soak, server-side) still stand.
-5. **[DECIDED 2026-06-10 — option (a)-NARROW ratified by the operator]** The operator
+5. **[IMPLEMENTED off-board — board validation PENDING]** The operator
    opened this round in direct response to the (a)-narrow proposal ("vamos abrir a
    próxima rodada então", 2026-06-10) — recorded as ratification; an operator correction
    reverts this. Scope: measure panfrost around a REAL mid-decode SIGTERM (lab-only,
@@ -148,7 +148,9 @@ Work order:
    contract (producer contract §2 — hybrid pinned by the guardian, operator veto window
    open; single decode-confirm contract §3; add-only gate extension §5; pin-semantics
    reading §6 recorded BEFORE landing for external-auditor ratification; landing = ONE
-   commit §7). Remaining operator items (ONE decision message, spec §8): (a) design
+   commit §7). The off-board landing adds `--with-mid-decode-sigterm-probe`, a strict
+   add-only gate extension, self-tests, and a Track A runbook; it proves detector logic,
+   not hardware behavior. Remaining operator items (ONE decision message, spec §8): (a) design
    veto, (b) fresh_sent Option I (pre-session MANDATORY), (c) N attempts pin (rec. 2),
    (d) D2 Option B. Implementation does NOT wait on these; the board session DOES.
 
@@ -181,24 +183,27 @@ Work order:
    The prior `1w` "decisive authorization" is STALE vs the current gate (it predates the
    teardown requirement); the board run produces FRESH decisive evidence.
 6. **This ledger doc** (done) + write the **operator run-book** (board-session mechanics
-   ONLY — a broad production run-book is H2 overscope). The run-book MUST sequence:
-   teardown trial (≥2 same-boot cycles, no reboot) → M6 arm/reboot/resume **with
-   `--defer-release-gate`** (else M6 red-fails demanding the teardown dir) → capture the
-   clean-board `journalctl -k -b` corpus AND eyeball it for any `panfrost|lima|mali` line
-   the matcher did NOT flag (recall is the gate's weakest link) → copy evidence into the
-   repo tree → **COMMIT it** (not just `git add` — `repo_clean_guard` reds on staged files and
-   the git-guard reds on untracked, so only a commit yields a clean, git-tracked tree) → run ONE
-   host-side `c18_ota_release_gate.py --…-mode decisive` with all three evidence dirs.
+   ONLY — a broad production run-book is H2 overscope). Track A immediate session MUST
+   sequence: teardown trial (≥2 same-boot cycles + mid-decode SIGTERM probe, no reboot) →
+   capture the clean-board `journalctl -k -b` corpus outside the sealed run-dir AND eyeball it
+   for any `panfrost|lima|mali` line the matcher did NOT flag (recall is the gate's weakest
+   link) → copy evidence into the repo tree → **COMMIT it** (not just `git add` —
+   `repo_clean_guard` reds on staged files and the git-guard reds on untracked, so only a
+   commit yields a clean, git-tracked tree) → run ONE host-side
+   `c18_ota_release_gate.py --…-mode decisive` reusing the committed `1x` M6 dirs and all
+   three `1x` teardown dirs. M6 arm/reboot/resume is only for an explicitly authorized full
+   image recapture and must use `--defer-release-gate`.
 7. *(Parallel/FUTURE — NOT H1; do not spend critical-path effort here)* extend the offline
    power-loss matrix + launcher torn-tree negative test + matrix-scope doc. Power-loss
    evidence is NOT required by the decisive gate (`c18_ota_release_gate.py:751`, optional);
    the launcher is already proven fail-closed.
 
-### B. BOARD (single amortized session, when available)
-- M6 (one operator reboot) + teardown (≥2 same-boot cycles + real service restart) +
-  capture the clean-board journal corpus → evidence that passes the decisive release gate
-  from a clean tree. Sequencing: teardown needs ≥2 cycles with NO reboot between; M6 needs
-  one reboot — script the session so panfrost baselines don't cross-contaminate.
+### B. BOARD (Track A immediate session, when available)
+- Teardown only: ≥2 same-boot cycles + real service restart + mid-decode SIGTERM probe +
+  clean-board journal corpus outside the sealed run-dir → committed evidence that passes the
+  decisive release gate from a clean tree together with the existing `1x` M6 dirs.
+- M6 recapture is not part of the immediate Track A session. If a new image is baked, recapture
+  M6 and every image-pinned teardown dir instead of mixing with `1x` evidence.
 - *(batch)* physical power-cut + 24h soak.
 
 ### C. LATER (production / H2, gated on H1)

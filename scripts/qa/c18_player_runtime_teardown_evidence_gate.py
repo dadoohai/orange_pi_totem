@@ -33,11 +33,17 @@ MANIFEST_SCHEMA = "dadooh.c18.teardown.evidence_manifest.v1"
 TRIAL_SCHEMA = "dadooh.c18.player_runtime.teardown_trial.v1"
 CYCLE_SCHEMA = "dadooh.c18.player_runtime.teardown_cycle.v1"
 FRESH_IPC_SCHEMA = "dadooh.c18.player_runtime.teardown_fresh_ipc_probe.v1"
+MID_DECODE_SCHEMA = "dadooh.c18.player_runtime.teardown_mid_decode_sigterm_probe.v1"
 PLAYBACK_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 
 MIN_CYCLES = 2
 CYCLE_KINDS = {"relaunch", "service_restart"}
 GRACEFUL_STOP_METHODS = {"none", "ipc_quit", "sigterm"}
+EXPECTED_HWDEC = "v4l2request-copy"
+EXPECTED_MPV_EXE = "/opt/totem/hwdecode/bin/mpv"
+EXPECTED_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
+MID_DECODE_MAX_SAMPLE_TO_SIGNAL_SEC = 1.0
+MID_DECODE_EOF_MARGIN_SEC = 2.0
 
 PRIVATE_IP_RE = re.compile(
     r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
@@ -151,6 +157,19 @@ def _finite_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
+def _nonfinite_paths(value: Any, *, path: str = "$") -> list[str]:
+    hits: list[str] = []
+    if isinstance(value, float) and not math.isfinite(value):
+        hits.append(path)
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            hits.extend(_nonfinite_paths(child, path=f"{path}.{key}"))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            hits.extend(_nonfinite_paths(child, path=f"{path}[{index}]"))
+    return hits
+
+
 def load_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_nonfinite)
@@ -160,6 +179,8 @@ def load_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         errors.append(f"{label}_not_object")
         return {}
+    for hit in _nonfinite_paths(data):
+        errors.append(f"{label}_non_finite:{hit}")
     return data
 
 
@@ -210,10 +231,12 @@ def validate_files(run_dir: Path, errors: list[str]) -> list[str]:
                 if not line.strip():
                     continue
                 try:
-                    json.loads(line)
+                    row = json.loads(line, parse_constant=_reject_nonfinite)
                 except Exception as exc:
                     errors.append(f"ndjson_parse_error:{rel_path}:{line_no}:{type(exc).__name__}")
                     break
+                for hit in _nonfinite_paths(row):
+                    errors.append(f"ndjson_non_finite:{rel_path}:{line_no}:{hit}")
     return files
 
 
@@ -451,6 +474,307 @@ def validate_fresh_ipc_probe(run_dir: Path, summary: dict[str, Any], errors: lis
     # This probe NEVER contributes a pass for GR4b; it is informational only.
 
 
+def load_ndjson(path: Path, errors: list[str], label: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if not path.is_file():
+        errors.append(f"missing_required:{rel(path, path.parents[2]) if len(path.parents) > 2 else path.name}")
+        return rows
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        errors.append(f"{label}_read_error:{type(exc).__name__}")
+        return rows
+    for line_no, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line, parse_constant=_reject_nonfinite)
+        except Exception as exc:
+            errors.append(f"{label}_ndjson_error:{line_no}:{type(exc).__name__}")
+            continue
+        if not isinstance(row, dict):
+            errors.append(f"{label}_ndjson_row_not_object:{line_no}")
+            continue
+        for hit in _nonfinite_paths(row):
+            errors.append(f"{label}_ndjson_non_finite:{line_no}:{hit}")
+        rows.append(row)
+    return rows
+
+
+def _as_number(value: Any) -> float | None:
+    if _finite_number(value):
+        return float(value)
+    return None
+
+
+def recompute_mid_decode(samples: list[dict[str, Any]], *,
+                         summary_boot_id: str,
+                         signal_monotonic: float | None) -> dict[str, Any]:
+    errs: list[str] = []
+    good = [s for s in samples if s.get("ipc_result") == "success"]
+    if len(good) < 3:
+        errs.append("too_few_samples")
+    for sample in good:
+        if sample.get("boot_id") != summary_boot_id:
+            errs.append("sample_boot_id_mismatch")
+            break
+    for prev, cur in zip(good, good[1:]):
+        pm, cm = _as_number(prev.get("monotonic")), _as_number(cur.get("monotonic"))
+        if pm is None or cm is None or cm <= pm:
+            errs.append("sample_monotonic_not_increasing")
+        elif cm - pm < 0.5:
+            errs.append("sample_spacing_too_short")
+    frames = [_as_number(s.get("estimated_frame_number")) for s in good]
+    times = [_as_number(s.get("time_pos")) for s in good]
+    duration = _as_number(good[-1].get("duration")) if good else None
+    if any(v is None for v in frames) or any(v is None for v in times):
+        errs.append("sample_missing_frame_or_time")
+    elif any(cur <= prev for prev, cur in zip(frames, frames[1:])):  # type: ignore[arg-type]
+        errs.append("frames_not_strictly_increasing")
+    elif (times[-1] - times[0]) < 0.2:  # type: ignore[operator]
+        errs.append("time_pos_not_advancing")
+    if good:
+        last = good[-1]
+        if last.get("hwdec_current") != EXPECTED_HWDEC:
+            errs.append("hwdec_current_not_expected")
+        if last.get("vo_configured") is not True:
+            errs.append("vo_not_configured")
+        for key in ("idle_active", "pause", "eof_reached"):
+            if last.get(key) is not False:
+                errs.append(f"{key}_not_false")
+        if duration is None or times[-1] is None:  # type: ignore[index]
+            errs.append("duration_or_time_missing")
+        elif duration - times[-1] < MID_DECODE_EOF_MARGIN_SEC:  # type: ignore[operator]
+            errs.append("eof_margin_too_small")
+        if signal_monotonic is not None:
+            last_m = _as_number(last.get("monotonic"))
+            if last_m is None or signal_monotonic - last_m > MID_DECODE_MAX_SAMPLE_TO_SIGNAL_SEC:
+                errs.append("last_sample_stale_for_signal")
+            elif signal_monotonic < last_m:
+                errs.append("signal_before_last_sample")
+    return {
+        "confirmed": not errs,
+        "errors": errs,
+        "samples_n": len(good),
+        "frame_first": frames[0] if frames and frames[0] is not None else None,
+        "frame_last": frames[-1] if frames and frames[-1] is not None else None,
+        "time_pos_first": times[0] if times and times[0] is not None else None,
+        "time_pos_last": times[-1] if times and times[-1] is not None else None,
+        "duration": duration,
+        "hwdec_current": good[-1].get("hwdec_current") if good else None,
+        "last_sample_monotonic": good[-1].get("monotonic") if good else None,
+        "last_sample_to_signal_sec": (
+            signal_monotonic - float(good[-1]["monotonic"])
+            if signal_monotonic is not None and good and _finite_number(good[-1].get("monotonic"))
+            else None
+        ),
+        "mid_decode_margin_sec": (
+            duration - times[-1]  # type: ignore[operator]
+            if duration is not None and times and times[-1] is not None else None
+        ),
+    }
+
+
+def _rounded_match(expected: Any, observed: Any) -> bool:
+    if isinstance(expected, float) and isinstance(observed, (int, float)) and not isinstance(observed, bool):
+        return abs(expected - float(observed)) < 0.001
+    return expected == observed
+
+
+def validate_mid_decode_probe(run_dir: Path, summary: dict[str, Any],
+                              cycle_windows: list[tuple[int, Any, Any]],
+                              summary_boot_id: str,
+                              errors: list[str]) -> None:
+    path = run_dir / "mid_decode_sigterm_probe.json"
+    present = path.is_file()
+    attested = summary.get("mid_decode_probe_present") is True
+    if present != attested:
+        errors.append("mid_decode_probe_presence_mismatch")
+    if not present and not attested:
+        return
+    probe = load_json(path, errors, "mid_decode_probe")
+    if probe.get("schema") != MID_DECODE_SCHEMA:
+        errors.append("mid_decode_probe_schema")
+    if probe.get("passed") is not True:
+        errors.append("mid_decode_probe_not_passed")
+    if probe.get("claim") != "mid_decode_sigterm_panfrost_window_measured":
+        errors.append("mid_decode_probe_unknown_claim")
+    if probe.get("kiosk_killed_before_signal") is not True:
+        errors.append("mid_decode_probe_kiosk_not_killed_before_signal")
+    if probe.get("cfg_hwdec") != "auto":
+        errors.append("mid_decode_probe_cfg_hwdec")
+    wrapper = probe.get("wrapper")
+    if not isinstance(wrapper, dict):
+        errors.append("mid_decode_probe_wrapper_missing")
+    else:
+        if wrapper.get("path") != EXPECTED_WRAPPER:
+            errors.append("mid_decode_probe_wrapper_path")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(wrapper.get("sha256", ""))):
+            errors.append("mid_decode_probe_wrapper_sha256")
+    non_claims = probe.get("non_claims")
+    non_claim_text = "\n".join(str(item) for item in non_claims) if isinstance(non_claims, list) else ""
+    for token in ("GR4b", "healthy-not-wedged", "no-kiosk-alive", "production-timing-unmeasured", "single-image"):
+        if token not in non_claim_text:
+            errors.append(f"mid_decode_probe_non_claim_missing:{token}")
+    prod = probe.get("production_service")
+    if not isinstance(prod, dict):
+        errors.append("mid_decode_probe_production_service_missing")
+    else:
+        for key in ("stopped", "restored", "deep_health_passed"):
+            if prod.get(key) is not True:
+                errors.append(f"mid_decode_probe_production_service_{key}_not_true")
+    attempts = probe.get("attempts")
+    if not isinstance(attempts, list) or not attempts:
+        errors.append("mid_decode_probe_attempts_missing")
+        attempts = []
+    probe_root = run_dir / "mid-decode-sigterm-probe"
+    present_attempt_dirs = sorted(
+        p.name for p in probe_root.iterdir()
+        if probe_root.is_dir() and p.is_dir() and p.name.startswith("attempt-")
+    ) if probe_root.is_dir() else []
+    expected_attempt_dirs = [f"attempt-{i:02d}" for i in range(len(attempts))]
+    if present_attempt_dirs != expected_attempt_dirs:
+        errors.append(f"mid_decode_probe_attempt_dirs_mismatch:{present_attempt_dirs}!={expected_attempt_dirs}")
+    last_cycle_after = None
+    finite_cycle_ends = [ma for (_i, _mb, ma) in cycle_windows if _finite_number(ma)]
+    if finite_cycle_ends:
+        last_cycle_after = max(finite_cycle_ends)
+    previous_after = last_cycle_after
+    for index, attempt in enumerate(attempts):
+        label = f"mid_decode_attempt{index:02d}"
+        if not isinstance(attempt, dict):
+            errors.append(f"{label}_not_object")
+            continue
+        if attempt.get("index") != index:
+            errors.append(f"{label}_index_mismatch")
+        if attempt.get("passed") is not True:
+            errors.append(f"{label}_not_passed")
+        anchor = attempt.get("window_anchor")
+        mb = ma = None
+        if not isinstance(anchor, dict):
+            errors.append(f"{label}_window_anchor_missing")
+        else:
+            if anchor.get("boot_id") != summary_boot_id:
+                errors.append(f"{label}_window_anchor_boot_mismatch")
+            mb, ma = anchor.get("monotonic_before"), anchor.get("monotonic_after")
+            if not _finite_number(mb):
+                errors.append(f"{label}_window_anchor_monotonic_before_missing")
+            if not _finite_number(ma):
+                errors.append(f"{label}_window_anchor_monotonic_after_missing")
+            if _finite_number(mb) and _finite_number(ma):
+                if ma <= mb:
+                    errors.append(f"{label}_window_anchor_zero_or_negative_width")
+                if previous_after is not None and previous_after >= mb:
+                    errors.append("mid_decode_probe_window_overlaps_cycles" if index == 0 else "mid_decode_probe_attempt_windows_overlap")
+                previous_after = ma
+        signal = attempt.get("signal")
+        signal_m = None
+        if not isinstance(signal, dict):
+            errors.append(f"{label}_signal_missing")
+        else:
+            if signal.get("name") != "SIGTERM":
+                errors.append(f"{label}_signal_name")
+            if signal.get("target") != "mpv_pgid":
+                errors.append(f"{label}_signal_target")
+            if signal.get("delivered") is not True:
+                errors.append(f"{label}_signal_not_delivered")
+            signal_m = signal.get("monotonic")
+            if not _finite_number(signal_m):
+                errors.append(f"{label}_signal_monotonic_missing")
+            elif _finite_number(mb) and _finite_number(ma) and not (mb <= signal_m <= ma):
+                errors.append(f"{label}_signal_monotonic_outside_window")
+        attempt_dir = run_dir / "mid-decode-sigterm-probe" / f"attempt-{index:02d}"
+        before_path = attempt_dir / "kernel-before.txt"
+        after_path = attempt_dir / "kernel-after.txt"
+        samples_path = attempt_dir / "decode-samples.ndjson"
+        for tag, file_path in (
+            ("kernel-before.txt", before_path),
+            ("kernel-after.txt", after_path),
+            ("decode-samples.ndjson", samples_path),
+        ):
+            if not file_path.is_file():
+                errors.append(f"missing_required:mid-decode-sigterm-probe/attempt-{index:02d}/{tag}")
+        before_faults = fault_lines(before_path.read_text(encoding="utf-8", errors="replace")) if before_path.is_file() else []
+        after_faults = fault_lines(after_path.read_text(encoding="utf-8", errors="replace")) if after_path.is_file() else []
+        for key in ("gpu_faults_before", "gpu_faults_after", "gpu_faults_delta"):
+            if not isinstance(attempt.get(key), int) or isinstance(attempt.get(key), bool):
+                errors.append(f"{label}_{key}_not_int")
+        if isinstance(attempt.get("gpu_faults_before"), int) and len(before_faults) != attempt.get("gpu_faults_before"):
+            errors.append(f"{label}_gpu_faults_before_text_mismatch")
+        if isinstance(attempt.get("gpu_faults_after"), int) and len(after_faults) != attempt.get("gpu_faults_after"):
+            errors.append(f"{label}_gpu_faults_after_text_mismatch")
+        if after_faults[:len(before_faults)] != before_faults:
+            errors.append(f"{label}_kernel_window_not_superset")
+        recomputed_delta = len(after_faults) - len(before_faults)
+        if recomputed_delta != 0:
+            errors.append(f"{label}_recomputed_gpu_faults_delta_nonzero:{recomputed_delta}")
+        if before_faults:
+            errors.append(f"{label}_panfrost_faults_present_before:{len(before_faults)}")
+        if after_faults:
+            errors.append(f"{label}_panfrost_faults_present_after:{len(after_faults)}")
+        if attempt.get("gpu_faults_delta") != recomputed_delta:
+            errors.append(f"{label}_gpu_faults_delta_text_mismatch")
+        expected_new = [sanitize_kernel_line(ln) for ln in after_faults[len(before_faults):]][:20]
+        if attempt.get("new_fault_lines_sanitized") != expected_new:
+            errors.append(f"{label}_new_fault_lines_sanitized_mismatch")
+        samples = load_ndjson(samples_path, errors, f"{label}_decode_samples")
+        recomputed = recompute_mid_decode(samples, summary_boot_id=summary_boot_id,
+                                          signal_monotonic=signal_m if _finite_number(signal_m) else None)
+        observed = attempt.get("decode_confirm")
+        if not isinstance(observed, dict):
+            errors.append(f"{label}_decode_confirm_missing")
+        else:
+            for key in ("confirmed", "samples_n", "frame_first", "frame_last",
+                        "time_pos_first", "time_pos_last", "hwdec_current",
+                        "last_sample_monotonic", "last_sample_to_signal_sec",
+                        "mid_decode_margin_sec"):
+                if not _rounded_match(recomputed.get(key), observed.get(key)):
+                    errors.append("mid_decode_probe_decode_claim_text_mismatch")
+                    break
+            if observed.get("confirmed") is not True:
+                errors.append(f"{label}_decode_not_confirmed")
+        pid_chain = attempt.get("pid_chain")
+        if not isinstance(pid_chain, dict):
+            errors.append(f"{label}_pid_chain_missing")
+        else:
+            presignal = pid_chain.get("pre_signal")
+            if not isinstance(presignal, dict):
+                errors.append(f"{label}_pid_chain_pre_signal_missing")
+            else:
+                if presignal.get("exe") != EXPECTED_MPV_EXE:
+                    errors.append(f"{label}_pid_chain_exe_mismatch")
+                if presignal.get("cmdline_contains_ipc_path") is not True:
+                    errors.append(f"{label}_pid_chain_cmdline_ipc_missing")
+                if presignal.get("pgid_is_pid") is not True:
+                    errors.append(f"{label}_pid_chain_pgid_not_pid")
+        mpv_exit = attempt.get("mpv_exit")
+        if not isinstance(mpv_exit, dict):
+            errors.append(f"{label}_mpv_exit_missing")
+        else:
+            if mpv_exit.get("exited") is not True:
+                errors.append(f"{label}_mpv_not_exited")
+            if mpv_exit.get("escalated") is not False:
+                errors.append("mid_decode_probe_mpv_escalated_after_sigterm")
+        if attempt.get("kiosk_killed_before_signal") is not True:
+            errors.append(f"{label}_kiosk_not_killed_before_signal")
+    validate_health(
+        load_json(
+            run_dir / "mid-decode-sigterm-probe" / "post-restore-health" / "playback-deep-health-public.json",
+            errors,
+            "mid_decode_post_restore_health",
+        ),
+        "mid_decode_post_restore_health",
+        errors,
+    )
+    restore = load_json(run_dir / "mid-decode-sigterm-probe" / "service-restore.json", errors, "mid_decode_service_restore")
+    if restore.get("active") is not True:
+        errors.append("mid_decode_probe_service_not_active_after_restore")
+    if restore.get("deep_health_passed") is not True:
+        errors.append("mid_decode_probe_restore_deep_health_not_passed")
+    if restore.get("pre_start_barrier_passed") is not True:
+        errors.append("mid_decode_probe_restore_barrier_not_passed")
+
+
 def validate_postcheck(run_dir: Path, errors: list[str]) -> None:
     postcheck = run_dir / "postcheck.txt"
     if not postcheck.is_file():
@@ -548,6 +872,7 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
             errors.append(f"cycle_windows_overlap_or_reversed:{i_a}->{i_b}")
 
     validate_fresh_ipc_probe(run_dir, summary, errors)
+    validate_mid_decode_probe(run_dir, summary, cycle_windows, summary_boot_id, errors)
     validate_postcheck(run_dir, errors)
 
     non_claims = summary.get("non_claims")
@@ -679,6 +1004,130 @@ def write_fixture(root: Path, *, with_fresh_ipc: bool = True) -> None:
     })
 
 
+def add_mid_decode_fixture(root: Path) -> None:
+    summary = json.loads((root / "teardown-summary.json").read_text(encoding="utf-8"))
+    summary["mid_decode_probe_present"] = True
+    write_json(root / "teardown-summary.json", summary)
+    probe_dir = root / "mid-decode-sigterm-probe"
+    attempt_dir = probe_dir / "attempt-00"
+    samples = [
+        {
+            "boot_id": summary["boot_id"],
+            "monotonic": 130.0,
+            "ipc_result": "success",
+            "ipc_error": "",
+            "ipc_elapsed_ms": 2,
+            "estimated_frame_number": 100,
+            "time_pos": 10.0,
+            "duration": 60.0,
+            "hwdec_current": EXPECTED_HWDEC,
+            "vo_configured": True,
+            "idle_active": False,
+            "pause": False,
+            "eof_reached": False,
+        },
+        {
+            "boot_id": summary["boot_id"],
+            "monotonic": 130.6,
+            "ipc_result": "success",
+            "ipc_error": "",
+            "ipc_elapsed_ms": 2,
+            "estimated_frame_number": 120,
+            "time_pos": 10.7,
+            "duration": 60.0,
+            "hwdec_current": EXPECTED_HWDEC,
+            "vo_configured": True,
+            "idle_active": False,
+            "pause": False,
+            "eof_reached": False,
+        },
+        {
+            "boot_id": summary["boot_id"],
+            "monotonic": 131.2,
+            "ipc_result": "success",
+            "ipc_error": "",
+            "ipc_elapsed_ms": 2,
+            "estimated_frame_number": 140,
+            "time_pos": 11.4,
+            "duration": 60.0,
+            "hwdec_current": EXPECTED_HWDEC,
+            "vo_configured": True,
+            "idle_active": False,
+            "pause": False,
+            "eof_reached": False,
+        },
+    ]
+    attempt_dir.mkdir(parents=True, exist_ok=True)
+    with (attempt_dir / "decode-samples.ndjson").open("w", encoding="utf-8") as fh:
+        for row in samples:
+            fh.write(json.dumps(row, sort_keys=True) + "\n")
+    (attempt_dir / "kernel-before.txt").write_text("boot clean\n", encoding="utf-8")
+    (attempt_dir / "kernel-after.txt").write_text("boot clean\n", encoding="utf-8")
+    (attempt_dir / "probe-kiosk-log-tail.txt").write_text("MPV process started pid=123\n", encoding="utf-8")
+    signal_m = 131.4
+    recomputed = recompute_mid_decode(samples, summary_boot_id=summary["boot_id"], signal_monotonic=signal_m)
+    write_json(root / "mid_decode_sigterm_probe.json", {
+        "schema": MID_DECODE_SCHEMA,
+        "passed": True,
+        "claim": "mid_decode_sigterm_panfrost_window_measured",
+        "kiosk_killed_before_signal": True,
+        "cfg_hwdec": "auto",
+        "wrapper": {"path": EXPECTED_WRAPPER, "sha256": "b" * 64},
+        "production_service": {"stopped": True, "restored": True, "deep_health_passed": True},
+        "attempts": [
+            {
+                "index": 0,
+                "passed": True,
+                "failure_reasons": [],
+                "window_anchor": {
+                    "boot_id": summary["boot_id"],
+                    "monotonic_before": 131.3,
+                    "monotonic_after": 134.0,
+                },
+                "pid_chain": {
+                    "pre_signal": {
+                        "pid": 123,
+                        "exe": EXPECTED_MPV_EXE,
+                        "cmdline_contains_ipc_path": True,
+                        "pgid_is_pid": True,
+                        "starttime": 999,
+                    }
+                },
+                "decode_confirm": recomputed,
+                "signal": {
+                    "name": "SIGTERM",
+                    "target": "mpv_pgid",
+                    "delivered": True,
+                    "monotonic": signal_m,
+                },
+                "mpv_exit": {"exited": True, "waited_ms": 500, "escalated": False},
+                "kiosk_killed_before_signal": True,
+                "gpu_faults_before": 0,
+                "gpu_faults_after": 0,
+                "gpu_faults_delta": 0,
+                "gpu_faults_delta_anomalous": False,
+                "new_fault_lines_sanitized": [],
+            }
+        ],
+        "non_claims": [
+            "GR4b fresh-IPC quit SUCCESS against a live socket is NOT claimed.",
+            "healthy-not-wedged: this probe measures a healthy decoding mpv.",
+            "no-kiosk-alive: IPC quit, watchdog, waitpid, and auto-relaunch are NOT in this probe window.",
+            "production-timing-unmeasured: exact production timing is NOT claimed.",
+            "N=1 single-image",
+        ],
+    })
+    write_json(probe_dir / "service-restore.json", {
+        "active": True,
+        "deep_health_passed": True,
+        "pre_start_barrier_passed": True,
+        "probe_orphans_killed": 0,
+        "reset_failed_used": False,
+    })
+    write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", make_health())
+    _reseal_manifest(root)
+
+
 def _reseal_manifest(root: Path) -> None:
     """Re-hash all files into the manifest (used by tamper tests that legitimately edit a file)."""
     files = []
@@ -709,6 +1158,78 @@ class TeardownEvidenceGateSelfTest(unittest.TestCase):
             root = Path(tmp)
             write_fixture(root, with_fresh_ipc=False)
             self.assertTrue(validate(root)["passed"])
+
+    def test_fixture_with_mid_decode_probe_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            result = validate(root)
+            self.assertTrue(result["passed"], msg=result["errors"])
+
+    def test_mid_decode_presence_xor_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            summary = json.loads((root / "teardown-summary.json").read_text())
+            summary.pop("mid_decode_probe_present", None)
+            write_json(root / "teardown-summary.json", summary)
+            self._assert_fails(root, "mid_decode_probe_presence_mismatch")
+
+    def test_mid_decode_extra_attempt_dir_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            extra = root / "mid-decode-sigterm-probe/attempt-01"
+            extra.mkdir(parents=True)
+            (extra / "kernel-before.txt").write_text("boot clean\n", encoding="utf-8")
+            (extra / "kernel-after.txt").write_text("panfrost gpu fault: Unhandled Page fault\n", encoding="utf-8")
+            (extra / "decode-samples.ndjson").write_text("", encoding="utf-8")
+            self._assert_fails(root, "mid_decode_probe_attempt_dirs_mismatch")
+
+    def test_mid_decode_signal_outside_window_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            probe = json.loads((root / "mid_decode_sigterm_probe.json").read_text())
+            probe["attempts"][0]["signal"]["monotonic"] = 140.0
+            write_json(root / "mid_decode_sigterm_probe.json", probe)
+            self._assert_fails(root, "signal_monotonic_outside_window")
+
+    def test_mid_decode_ndjson_nan_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            samples = root / "mid-decode-sigterm-probe/attempt-00/decode-samples.ndjson"
+            text = samples.read_text(encoding="utf-8").replace("10.7", "NaN", 1)
+            samples.write_text(text, encoding="utf-8")
+            self._assert_fails(root, "ndjson")
+
+    def test_mid_decode_hwdec_substring_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            samples = root / "mid-decode-sigterm-probe/attempt-00/decode-samples.ndjson"
+            text = samples.read_text(encoding="utf-8").replace(EXPECTED_HWDEC, "v4l2request")
+            samples.write_text(text, encoding="utf-8")
+            self._assert_fails(root, "mid_decode_probe_decode_claim_text_mismatch")
+
+    def test_mid_decode_escalation_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            probe = json.loads((root / "mid_decode_sigterm_probe.json").read_text())
+            probe["attempts"][0]["mpv_exit"]["escalated"] = True
+            write_json(root / "mid_decode_sigterm_probe.json", probe)
+            self._assert_fails(root, "mid_decode_probe_mpv_escalated_after_sigterm")
+
+    def test_mid_decode_restore_barrier_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            restore = json.loads((root / "mid-decode-sigterm-probe/service-restore.json").read_text())
+            restore["pre_start_barrier_passed"] = False
+            write_json(root / "mid-decode-sigterm-probe/service-restore.json", restore)
+            self._assert_fails(root, "mid_decode_probe_restore_barrier_not_passed")
 
     def _assert_fails(self, root: Path, needle: str) -> None:
         _reseal_manifest(root)

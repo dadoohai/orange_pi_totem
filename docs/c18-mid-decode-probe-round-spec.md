@@ -2,8 +2,9 @@
 
 Status: CONSOLIDATED IMPLEMENTATION CONTRACT (round opened by the operator 2026-06-10).
 Produced by a 5-front investigation + 2 adversarial red-teams (robustness, productivity),
-both APPROVE_WITH_CHANGES — all blockers incorporated below. Findings verified at HEAD
-`1464f0e`. No thaw; freeze `rc=44` intact; gate extension STRICTLY ADD-ONLY. Policy memos
+both APPROVE_WITH_CHANGES — all blockers incorporated below. Findings verified through
+HEAD `aa33576` before implementation landing; live HEAD must still be resolved by git.
+No thaw; freeze `rc=44` intact; gate extension STRICTLY ADD-ONLY. Policy memos
 in §8 are DRAFT until the operator ratifies (they change nothing until then).
 
 ## 1. The gap (verified, with the decisive datum)
@@ -47,7 +48,8 @@ in §8 are DRAFT until the operator ratifies (they change nothing until then).
   immediately before signal. Signal = `os.killpg(mpv_pgid, SIGTERM)` (production parity `:1629`);
   mirror the 5s escalation — **escalation to SIGKILL = outcome
   `mpv_did_not_exit_after_sigterm` → gate RED** (an escalation IS the dangerous-class
-  signal, never silently tolerated); settle ≥ `--settle-sec`; kernel-after; delta
+  signal, never silently tolerated); settle ≥ `--settle-sec`; kernel-after; `signal.monotonic`
+  must fall inside `[monotonic_before, monotonic_after]`; delta
   recomputed from kernel TEXT (signed; ABSOLUTE-zero both windows); window strictly AFTER
   the last cycle window (gate-enforced, `mid_decode_probe_window_overlaps_cycles`).
 - **PID chain (no `get_property('pid')` dependency — removes the last on-board unknown):**
@@ -120,7 +122,8 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
 - `summary` gains `mid_decode_probe_present:true` — **NEW RUNS ONLY; never backfill
   committed dirs** (manifest sha binding forbids it).
 - Producer-attested vs recomputed fields labeled in-artifact (same trust classes as the
-  kernel windows: the gate proves internal consistency, commits prove provenance).
+  kernel windows: the gate proves internal consistency; commits provide repo provenance and
+  immutability, not proof that the journal was HW-captured).
 
 ## 5. Gate extension (STRICTLY ADD-ONLY)
 
@@ -133,11 +136,14 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
   same-boot, finite positive width, strictly after last cycle window); delta==0
   RECOMPUTED from text mirroring `:356-380` (scalar/text binding, superset anchoring,
   absolute-zero both windows); decode confirmed AND recomputed from ndjson; SIGTERM
-  attestation (`target` must be mpv_pgid, NEVER kiosk; `delivered=true`); mpv exited
+  attestation (`target` must be mpv_pgid, NEVER kiosk; `delivered=true`;
+  `signal.monotonic` inside the kernel window); attempts must be strictly non-overlapping;
+  mpv exited
   WITHOUT escalation; closed claim enum (anything else →
   `mid_decode_probe_unknown_claim`); pinned non-claim strings present; service restored
   + post-restore deep-health passed. JSON/NDJSON parsing must reject NaN/Infinity and all
-  non-finite numeric values with the same fail-closed policy as the existing gate loader.
+  non-finite numeric values with the same fail-closed policy as the existing gate loader
+  (including `decode-samples.ndjson`, not only JSON sidecars).
 - Untouched: `validate_fresh_ipc_probe` (`:415-451`), the decisive-required check
   (`release_gate:923-928`), and the release gate file (ZERO diff — steps are per-dir).
 - Regression locks (same commit): fixture lock asserting BOTH committed dirs
@@ -162,8 +168,8 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
 
 - ONE commit: trial flag + gate extension + self-tests + runbook updates (probe
   invocation line, preflight block, manual-recovery line, surprise-RED protocol,
-  pre-written post-session decisive command with all three teardown dirs + the 1x
-  triple, new self-test counts replacing 31/31+15/15 at `runbook:33-36`, eyeball step
+	  pre-written post-session decisive command with all three teardown dirs + the 1x
+	  triple, new self-test counts replacing 39/39+15/15 at `runbook`, eyeball step
   EXTENDED to the probe windows) + ledger pointer update. A harness-only landing is
   FORBIDDEN: the trial self-validates with the real gate (`trial:787-794`), so probe
   artifacts would seal "green" without semantic validation.
