@@ -1,0 +1,39 @@
+{
+  "allowlisted_devices": [
+    {
+      "device_hash": "sha256:fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "label": "pilot-board-01"
+    }
+  ],
+  "approval_basis": "user_delegated_autonomous_validation_direction_2026-06-11",
+  "approved": true,
+  "channel": "homologation",
+  "claims": [
+    "operator_assisted_homologation_pilot_only",
+    "rollback_ready_lab_validation"
+  ],
+  "delivery_mode": "operator_assisted",
+  "expected_h1_repo_head": "55305c9011ff1b101531e352d356d89f520662c1",
+  "expected_package_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "non_claims": [
+    "no_production",
+    "no_stable",
+    "no_auto_pull",
+    "no_24h_soak",
+    "no_powerloss_17_17",
+    "no_signature_or_attestation",
+    "no_public_thaw"
+  ],
+  "operator": "codex-central-operator",
+  "operator_assisted_delivery": true,
+  "revision_reason": "refresh_h1_repo_head_after_gate_governance_update",
+  "ring": "pilot",
+  "rollback_owner": "codex-central-rollback",
+  "rollback_ready": true,
+  "schema": "dadooh.c18.homologation_pilot_authorization.v1",
+  "supersedes_authorization": "docs/evidence/c18-update-validation/20260611T181618Z-board-readonly-preflight/pilot-authorization.json",
+  "window": {
+    "end_utc": "2026-06-12T07:30:18Z",
+    "start_utc": "2026-06-11T19:25:18Z"
+  }
+}
