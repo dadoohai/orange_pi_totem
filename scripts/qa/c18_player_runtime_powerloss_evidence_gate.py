@@ -60,7 +60,26 @@ HEALTH_CHECKS = (
     "nrestarts_stable",
     "status_no_failures",
 )
-SUPPORTED_CHECKPOINTS = {
+ALL_MATRIX_CHECKPOINTS = {
+    "after_payload_staged",
+    "after_release_dir_created",
+    "after_extract",
+    "after_state_verifying",
+    "after_health_passed",
+    "after_release_tree_fsync",
+    "after_current_symlink",
+    "after_marker_written",
+    "after_previous_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_current_unlinked",
+    "rollback_after_state_success",
+}
+SEMANTICALLY_VALIDATED_CHECKPOINTS = {
     "after_current_symlink",
     "after_marker_written",
     "after_previous_symlink",
@@ -485,8 +504,10 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("trial_schema")
     if checkpoint.get("checkpoint") != manifest.get("checkpoint"):
         errors.append("checkpoint_manifest_mismatch")
-    if manifest.get("checkpoint") not in SUPPORTED_CHECKPOINTS:
+    if manifest.get("checkpoint") not in ALL_MATRIX_CHECKPOINTS:
         errors.append(f"unsupported_checkpoint:{manifest.get('checkpoint')}")
+    elif manifest.get("checkpoint") not in SEMANTICALLY_VALIDATED_CHECKPOINTS:
+        errors.append(f"checkpoint_semantics_not_implemented:{manifest.get('checkpoint')}")
     if checkpoint.get("operator_instruction") != "CUT_POWER_NOW":
         errors.append("checkpoint_operator_instruction")
     if summary.get("passed") is not True:
@@ -749,6 +770,23 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("unsupported_checkpoint:rollback_after_future_unknown", result["errors"])
+
+    def test_known_matrix_checkpoint_without_semantics_fails_explicitly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            manifest_path = root / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["checkpoint"] = "after_extract"
+            write_json(manifest_path, manifest)
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint["checkpoint"] = "after_extract"
+            write_json(checkpoint_path, checkpoint)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertNotIn("unsupported_checkpoint:after_extract", result["errors"])
+            self.assertIn("checkpoint_semantics_not_implemented:after_extract", result["errors"])
 
     def test_required_postcheck_fails_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

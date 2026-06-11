@@ -1486,6 +1486,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("validate_rollback_after_quarantine", powerloss_gate)
+        self.assertIn("ALL_MATRIX_CHECKPOINTS", powerloss_gate)
+        self.assertIn("SEMANTICALLY_VALIDATED_CHECKPOINTS", powerloss_gate)
+        self.assertIn("checkpoint_semantics_not_implemented", powerloss_gate)
+        self.assertIn('"after_payload_staged"', powerloss_gate)
+        self.assertIn('"rollback_after_current_unlinked"', powerloss_gate)
         self.assertIn("POST_RECONCILE_STATE_SCHEMA", powerloss_gate)
         self.assertIn("post-reconcile-state.json", powerloss_gate)
         self.assertIn("post_reconcile_state_quarantine_tree_sha256_mismatch", powerloss_gate)
