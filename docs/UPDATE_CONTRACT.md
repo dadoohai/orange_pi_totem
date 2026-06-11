@@ -451,5 +451,12 @@ Os builders/publishers C18 devem falhar fechados para `stable` sem
 `dadooh.c18.stable_promotion.v1`. O publisher de `totem-core` deve preservar
 `c18-ota-release-gate.json` junto da release para manter a trilha de auditoria.
 
+Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
+por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e
+off-board e falha fechado enquanto faltar qualquer familia requerida: bundle H1
+decisivo, matriz fisica power-loss 17/17, soak 24h, governanca server-side com
+assinatura/attestation, evidencia de promocao stable e decisao explicita do
+operador. Ele nao altera o freeze `rc=44` e nao publica releases.
+
 CI, assinatura/attestation, bridge de updater e A/B de imagem sao hardening
 futuro; nao fazem parte do OTA manual imediato.

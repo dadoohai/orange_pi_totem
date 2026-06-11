@@ -75,6 +75,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | 24h soak/endurance | **ABSENT** | LATER (production) |
 | player-runtime stable-promotion authorization | **ABSENT** | LATER (production) |
 | Server-side publish gate / signature / auto-pull | **ABSENT** | LATER (production) |
+| H2 readiness evaluator | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_h2_readiness_gate.py` aggregates H1 decisive evidence, 17/17 physical power-loss checkpoints, 24h soak, server-side publish/signature governance, stable-promotion evidence, and explicit operator thaw decision. It reports blockers; it does not thaw. | H2 planning / governance |
 | Thaw barriers (`:123` toggle + `:967` stable block) → evidence-bound gate | **DESIGN-ONLY** | gating mechanism |
 
 ## Critical path
@@ -203,6 +204,10 @@ Work order:
 - Next board work belongs to H2: physical power-cut/torn-write and 24h soak.
 
 ### C. LATER (production / H2, gated on H1)
+- H2 readiness gate is available off-board and fails closed until every required family
+  is present: full 17/17 power-loss matrix, 24h soak, server-side publish/signature
+  governance, stable-promotion approval, and explicit operator thaw decision. It is an
+  evaluator, not a public thaw mechanism.
 - player-runtime stable-promotion authorization schema (analog of `stable_promotion.v1`).
 - server-side publish gate / signature / auto-pull hardening.
 - DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked

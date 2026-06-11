@@ -52,6 +52,7 @@ PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_r
 PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
+PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
@@ -1505,6 +1506,35 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"github_used": False', lab_thaw)
         self.assertIn('"stable_allowed": False', lab_thaw)
         self.assertIn('"final_authorization": final_authorization', lab_thaw)
+
+        h2_gate = PLAYER_RUNTIME_H2_READINESS_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.h2_readiness.v1", h2_gate)
+        self.assertIn("missing_operator_thaw_decision", h2_gate)
+        self.assertIn("missing_server_side_publish_governance", h2_gate)
+        self.assertIn("missing_24h_soak_summary", h2_gate)
+        self.assertIn("powerloss_matrix_incomplete", h2_gate)
+        self.assertIn("REQUIRED_POWERLOSS_CHECKPOINTS", h2_gate)
+        self.assertIn('"after_payload_staged"', h2_gate)
+        self.assertIn('"rollback_after_current_unlinked"', h2_gate)
+        self.assertIn("MIN_SOAK_DURATION_SEC = 24 * 60 * 60", h2_gate)
+        self.assertIn("dadooh.c18.stable_promotion.v1", h2_gate)
+        self.assertIn("dadooh.c18.server_side_publish_governance.v1", h2_gate)
+        self.assertIn("dadooh.c18.player_runtime.thaw_decision.v1", h2_gate)
+        self.assertIn("this_gate_does_not_thaw_player_runtime", h2_gate)
+        self.assertIn("this_gate_does_not_publish_or_fetch_releases", h2_gate)
+        self.assertIn("this_gate_does_not_override_freeze_rc_44", h2_gate)
+        self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", h2_gate)
+        self.assertNotIn("apply-github", h2_gate)
+        self.assertNotIn("gh release", h2_gate)
+        result = subprocess.run(
+            ["python3", str(PLAYER_RUNTIME_H2_READINESS_GATE_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
