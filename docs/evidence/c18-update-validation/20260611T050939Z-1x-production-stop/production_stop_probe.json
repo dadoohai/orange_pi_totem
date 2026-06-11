@@ -1,0 +1,117 @@
+{
+  "attempts": [
+    {
+      "decode_confirm": {
+        "confirmed": true,
+        "duration": 30.0,
+        "errors": [],
+        "frame_first": 1.0,
+        "frame_last": 51.0,
+        "hwdec_current": "v4l2request-copy",
+        "last_sample_monotonic": 472.034415014,
+        "last_sample_to_signal_sec": 0.0009607520000258774,
+        "mid_decode_margin_sec": 28.3,
+        "samples_n": 4,
+        "time_pos_first": 0.033333,
+        "time_pos_last": 1.7
+      },
+      "failure_reasons": [],
+      "gpu_faults_after": 0,
+      "gpu_faults_before": 0,
+      "gpu_faults_delta": 0,
+      "gpu_faults_delta_anomalous": false,
+      "index": 0,
+      "kiosk_exit": {
+        "escalated": false,
+        "exited": true,
+        "returncode": 0,
+        "waited_ms": 515
+      },
+      "last_cycle_after": 420.30843937,
+      "new_fault_lines_sanitized": [],
+      "passed": true,
+      "pid_chain": {
+        "initial_mpv": {
+          "cmdline": "/opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/c18-mid-decode-00-swzu04af/mpv.sock --log-file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/c18-mid-decode-00-swzu04af/runtime/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy",
+          "cmdline_contains_ipc_path": true,
+          "exe": "/opt/totem/hwdecode/bin/mpv",
+          "exe_matches": true,
+          "exists": true,
+          "expected_exe": "/opt/totem/hwdecode/bin/mpv",
+          "log_pid": 2844,
+          "pgid": 2844,
+          "pgid_is_pid": true,
+          "pid": 2844,
+          "starttime": 46911,
+          "state": "S"
+        },
+        "post_kiosk_exit_mpv": {
+          "cmdline": "",
+          "cmdline_contains_ipc_path": false,
+          "exe": "",
+          "exe_matches": false,
+          "exists": false,
+          "expected_exe": "/opt/totem/hwdecode/bin/mpv",
+          "pgid": null,
+          "pgid_is_pid": false,
+          "pid": 2844,
+          "starttime": null,
+          "state": ""
+        },
+        "pre_signal_mpv": {
+          "cmdline": "/opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/c18-mid-decode-00-swzu04af/mpv.sock --log-file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/c18-mid-decode-00-swzu04af/runtime/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy",
+          "cmdline_contains_ipc_path": true,
+          "exe": "/opt/totem/hwdecode/bin/mpv",
+          "exe_matches": true,
+          "exists": true,
+          "expected_exe": "/opt/totem/hwdecode/bin/mpv",
+          "pgid": 2844,
+          "pgid_is_pid": true,
+          "pid": 2844,
+          "starttime": 46911,
+          "state": "S"
+        }
+      },
+      "signal": {
+        "delivered": true,
+        "monotonic": 472.035375766,
+        "name": "SIGTERM",
+        "target": "kiosk_pid"
+      },
+      "stop_path": {
+        "fresh_ipc_used": false,
+        "ipc_quit_requested": true,
+        "ipc_quit_unavailable": false,
+        "mpv_sigterm_fallback_logged": false,
+        "signal_received": true
+      },
+      "window_anchor": {
+        "boot_id": "9247c5ba-076b-4a58-872d-70d4597279ea",
+        "monotonic_after": 475.801343931,
+        "monotonic_before": 471.581281868
+      }
+    }
+  ],
+  "cfg_hwdec": "auto",
+  "claim": "production_kiosk_sigterm_panfrost_window_measured",
+  "non_claims": [
+    "mpv-sigterm-fallback: fallback SIGTERM to mpv is only claimed if explicitly logged in stop_path.",
+    "systemd-cgroup-cleanup: systemd KillMode/SendSIGKILL cleanup after TimeoutStopSec is NOT measured.",
+    "healthy-not-wedged: this probe measures a healthy decoding kiosk/mpv path.",
+    "single-image: this probe is bound to one image/run only.",
+    "N=1 single-image"
+  ],
+  "passed": true,
+  "production_service": {
+    "deep_health_passed": true,
+    "residual_mpv_pids_after_stop": [],
+    "restored": true,
+    "stop_rc": 0,
+    "stopped": true
+  },
+  "schema": "dadooh.c18.player_runtime.teardown_production_stop_probe.v1",
+  "wrapper": {
+    "path": "/opt/totem/bin/totem-mpv-hwdecode",
+    "sha256": "d58ae39348ea3d982ca95f4a01f5eb9fec71af029197c8fa938f5fdcb4f631de"
+  }
+}

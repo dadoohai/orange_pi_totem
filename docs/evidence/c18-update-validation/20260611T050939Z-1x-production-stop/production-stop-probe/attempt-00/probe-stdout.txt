@@ -1,0 +1,17 @@
+2026-06-11 02:12:15,715 WARNING API credentials missing; startup will run in offline-only mode if local media is available.
+2026-06-11 02:12:15,717 INFO Loaded offline playlist: 1 items
+2026-06-11 02:12:15,717 WARNING API polling disabled; player running with local media only.
+2026-06-11 02:12:15,720 INFO MPV process started pid=2844 generation=1 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:15,720 INFO MPV IPC startup wait begin generation=1 pid=2844 timeout_sec=10.00 ipc_path=/tmp/c18-mid-decode-00-swzu04af/mpv.sock log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:15,751 INFO MPV IPC startup wait complete transport=socket generation=1 pid=2844 duration_sec=0.03 timeout_sec=10.00 ipc_path=/tmp/c18-mid-decode-00-swzu04af/mpv.sock log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:15,757 INFO MPV loadfile sent alias=media-8f9b4dd194 media_path=<media-path:3322c8296f> generation=1 pid=2844 timeout_sec=2.00 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:16,475 INFO MPV IPC command ok command=ping alias=none generation=1 pid=2844 duration_sec=0.721 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:16,476 INFO MPV IPC ping ok generation=1 pid=2844 duration_sec=0.722 timeout_sec=2.00 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:16,483 INFO MPV IPC command ok command=loadfile alias=media-8f9b4dd194 generation=1 pid=2844 duration_sec=0.726 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:16,484 INFO MPV loadfile result alias=media-8f9b4dd194 result=success media_path=<media-path:3322c8296f> generation=1 pid=2844 duration_sec=0.727 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:16,486 INFO Playing media alias=media-8f9b4dd194 path=<media-path:3322c8296f> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=2844
+2026-06-11 02:12:18,640 INFO Signal 15 received, stopping...
+2026-06-11 02:12:18,759 INFO MPV IPC command sent command=quit alias=none generation=1 pid=2844 duration_sec=0.000 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:18,760 INFO MPV IPC quit requested reason=stop generation=1 pid=2844 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:18,925 INFO MPV IPC close waiting for IPC critical section reason=stop generation=1 pid=2844 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
+2026-06-11 02:12:18,926 INFO MPV IPC close entered IPC critical section reason=stop generation=1 pid=2844 log_file=/tmp/c18-mid-decode-00-swzu04af/mpv-g001.log
