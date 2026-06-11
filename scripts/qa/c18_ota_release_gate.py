@@ -40,6 +40,7 @@ PY_COMPILE_TARGETS = (
     "scripts/board/c18_playback_health_collect.py",
     "scripts/board/c18_playback_soak_collect.py",
     "scripts/board/c18_playback_health_summary.py",
+    "scripts/board/c18_playback_incident_collect.py",
     "scripts/board/c18_player_runtime_candidate_health.py",
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
@@ -58,6 +59,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_persistent_trial.py",
     "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
     "scripts/qa/c18_player_runtime_lab_thaw.py",
+    "scripts/qa/c18_player_runtime_pilot_readiness_gate.py",
     "scripts/qa/c18_player_runtime_h2_readiness_gate.py",
     "scripts/qa/c18_player_runtime_powerloss_trial.py",
     "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
@@ -211,6 +213,42 @@ def repo_clean_guard() -> dict[str, Any]:
             else ""
         ),
     }
+
+
+def repo_identity() -> dict[str, Any]:
+    identity: dict[str, Any] = {
+        "head": None,
+        "tree": None,
+        "dirty": None,
+        "exact_tag": None,
+    }
+    commands = {
+        "head": ["git", "rev-parse", "HEAD"],
+        "tree": ["git", "rev-parse", "HEAD^{tree}"],
+        "exact_tag": ["git", "describe", "--tags", "--exact-match", "HEAD"],
+    }
+    for key, cmd in commands.items():
+        proc = subprocess.run(
+            cmd,
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if proc.returncode == 0:
+            identity[key] = proc.stdout.strip()
+    status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if status.returncode == 0:
+        identity["dirty"] = bool(status.stdout.strip())
+    return identity
 
 
 def load_json_file(path: Path) -> dict[str, Any]:
@@ -1037,6 +1075,7 @@ def main() -> int:
         "sandbox": str(sandbox),
         "evidence_dir": str(evidence),
         "current_golden": CURRENT_GOLDEN,
+        "repo": repo_identity(),
         "player_runtime_data_evidence": data_evidence_summary,
         "guardrails": {
             "ssh_used": False,

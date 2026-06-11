@@ -99,6 +99,35 @@ passar no release gate em modo `decisive` e registrar `non_claims` para
 `public_thaw`, `github_publish`, `auto_pull`, `stable_or_production`,
 `power_loss_safety` e `soak_endurance`.
 
+## Player-runtime homologation pilot
+
+Entre H1 e H2 existe uma etapa controlada de piloto/homologacao. Ela nao cria
+canal tecnico `pilot`: o manifest continua em `channel=homologation`, e
+`pilot` e apenas o ring operacional autorizado.
+
+O piloto so pode avancar com
+`scripts/qa/c18_player_runtime_pilot_readiness_gate.py` verde. Esse gate exige:
+
+- H1 decisivo verde e pinado a mesma imagem;
+- autorizacao formal `dadooh.c18.homologation_pilot_authorization.v1` com
+  `ring=pilot`, `channel=homologation`, operador, janela, rollback owner e
+  devices allowlisted por hash;
+- preflight de placa `dadooh.c18.homologation_pilot_preflight.v1` com policy
+  homologation, `allow_prerelease=true`, timer desligado, public freeze
+  `rc=44`, marker/imagem esperados e stack MPV C18;
+- P0 power-loss seletivo:
+  `after_current_symlink`, `rollback_after_current_to_previous`,
+  `rollback_after_previous_removed`, `rollback_after_quarantine` e
+  `rollback_after_state_success`;
+- arvore Git limpa e evidencias versionadas.
+
+O piloto e entrega assistida por operador. Ele nao habilita auto-pull, nao
+publica release, nao muda o freeze publico, nao permite `stable`, nao conta
+como producao, nao substitui soak 24h, nao fecha matriz power-loss 17/17, nao
+substitui assinatura/attestation e nao abre public thaw.
+
+Runbook: `docs/c18-player-runtime-homologation-pilot-runbook.md`.
+
 ## Publicacao de totem-core
 
 Antes de publicar:

@@ -26,9 +26,10 @@ golden atual `1u`.
 | Freeze publico | `kiosky-player` e `player-runtime` seguem `rc=44` em apply/rollback/reconcile publicos; na imagem `1u`, o hardening de `kiosky-player reconcile` foi provado em hardware com `rc=44` |
 | M6 `/data` historico | `20260608T011301Z`: evidenciou A->B->A de `player-runtime` em `/data`, reboot controlado, adocao B por `/data`, deep-health e rollback para A sob golden `1t`; apos o bump para `1u`, nao e autorizacao `decisive` atual |
 | M6 `/data` decisivo atual | Bundle `1x`: `20260610T072826Z` evidenciou A2->B2->cold-boot->A2 de `player-runtime` em `/data`; teardown dirs `20260610T052324Z`, `20260610T185956Z` e `20260611T050939Z` cobrem teardown/relaunch repetido, req#4 fresh-IPC exercitado e parada SIGTERM saudavel do Python-kiosk; release gate host `decisive` verde com a tripla explicita da imagem `1x` |
+| H1.5 homologation pilot | Novo caminho intermediario controlado por `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`: `channel=homologation`, `ring=pilot`, entrega assistida, autorizacao formal, preflight com public freeze `rc=44`, pacote alvo e P0 power-loss seletivo; nao e `stable`/producao |
 | Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
 | Power-loss fisico | Parcialmente provado em laboratorio na imagem `1w`: `after_marker_written`, `after_previous_symlink`, `after_current_symlink`, `rollback_after_current_to_previous`, `rollback_after_previous_removed`, `rollback_after_quarantine` e `rollback_after_state_success` |
-| Proximo gate | checkpoints restantes de power-loss/torn-write, soak/endurance e governanca server-side antes de qualquer caminho `stable`/producao |
+| Proximo gate H2 | checkpoints restantes de power-loss/torn-write, soak/endurance, server-side/signature, promocao stable e decisao final antes de qualquer caminho `stable`/producao |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, matriz completa de power-loss fisico e soak/endurance |
 
 ## Golden atual (2026-06-08)

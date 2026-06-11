@@ -458,5 +458,13 @@ decisivo, matriz fisica power-loss 17/17, soak 24h, governanca server-side com
 assinatura/attestation, evidencia de promocao stable e decisao explicita do
 operador. Ele nao altera o freeze `rc=44` e nao publica releases.
 
+Entre H1 e H2 existe somente um caminho intermediario controlado:
+`scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido
+com `channel=homologation` e `ring=pilot`. Esse gate exige autorizacao formal,
+preflight da placa com public freeze `rc=44`, pacote homologation alvo, H1
+decisivo image-bound e P0 power-loss seletivo. Ele nao autoriza producao,
+`stable`, auto-pull, thaw publico, soak 24h, power-loss 17/17 ou
+assinatura/attestation.
+
 CI, assinatura/attestation, bridge de updater e A/B de imagem sao hardening
 futuro; nao fazem parte do OTA manual imediato.

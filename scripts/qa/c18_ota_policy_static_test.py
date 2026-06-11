@@ -43,6 +43,7 @@ SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observ
 COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_state_collect.py"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
+PLAYBACK_INCIDENT_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_incident_collect.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -52,6 +53,7 @@ PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_r
 PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_persistent_trial.py"
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
+PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_pilot_readiness_gate.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
@@ -1293,6 +1295,33 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("systemctl restart", soak)
         self.assertNotIn("systemctl start", soak)
 
+        incident = PLAYBACK_INCIDENT_COLLECTOR_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.playback.incident.v1", incident)
+        self.assertIn("c18_playback_health_collect", incident)
+        self.assertIn("incident-summary.json", incident)
+        self.assertIn("journal-signatures.ndjson", incident)
+        self.assertIn("make_run_dir", incident)
+        self.assertIn('"runs"', incident)
+        self.assertIn("operator-events.tsv", incident)
+        self.assertIn("operator-observed-label", incident)
+        self.assertIn("observed_label_hash", incident)
+        self.assertIn("media_load_failed", incident)
+        self.assertIn("MPV IPC unresponsive", incident)
+        self.assertIn("Restarting MPV", incident)
+        self.assertIn("public_player_runtime_thaw", incident)
+        self.assertNotIn("systemctl stop", incident)
+        self.assertNotIn("systemctl restart", incident)
+        self.assertNotIn("systemctl start", incident)
+        result = subprocess.run(
+            ["python3", str(PLAYBACK_INCIDENT_COLLECTOR_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
         candidate = PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY", candidate)
         self.assertIn("--lab-only-candidate-runner", candidate)
@@ -1531,8 +1560,37 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", h2_gate)
         self.assertNotIn("apply-github", h2_gate)
         self.assertNotIn("gh release", h2_gate)
+
+        pilot_gate = PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.homologation_pilot_readiness.v1", pilot_gate)
+        self.assertIn("dadooh.c18.homologation_pilot_authorization.v1", pilot_gate)
+        self.assertIn("dadooh.c18.homologation_pilot_preflight.v1", pilot_gate)
+        self.assertIn('"ring") != "pilot"', pilot_gate)
+        self.assertIn('"channel") != "homologation"', pilot_gate)
+        self.assertIn("PILOT_POWERLOSS_CHECKPOINTS", pilot_gate)
+        self.assertIn('"after_current_symlink"', pilot_gate)
+        self.assertIn('"rollback_after_current_to_previous"', pilot_gate)
+        self.assertIn('"rollback_after_previous_removed"', pilot_gate)
+        self.assertIn('"rollback_after_quarantine"', pilot_gate)
+        self.assertIn('"rollback_after_state_success"', pilot_gate)
+        self.assertIn("H2_POWERLOSS_CHECKPOINTS", pilot_gate)
+        self.assertIn("no_powerloss_17_17", pilot_gate)
+        self.assertIn("this_gate_does_not_promote_stable", pilot_gate)
+        self.assertIn("this_gate_does_not_thaw_public_player_runtime", pilot_gate)
+        self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", pilot_gate)
+        self.assertNotIn("apply-github", pilot_gate)
+        self.assertNotIn("gh release", pilot_gate)
         result = subprocess.run(
             ["python3", str(PLAYER_RUNTIME_H2_READINESS_GATE_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = subprocess.run(
+            ["python3", str(PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH), "--self-test"],
             cwd=REPO_ROOT,
             text=True,
             stdout=subprocess.PIPE,

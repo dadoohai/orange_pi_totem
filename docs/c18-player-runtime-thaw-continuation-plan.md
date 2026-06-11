@@ -75,6 +75,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | 24h soak/endurance | **ABSENT** | LATER (production) |
 | player-runtime stable-promotion authorization | **ABSENT** | LATER (production) |
 | Server-side publish gate / signature / auto-pull | **ABSENT** | LATER (production) |
+| Homologation pilot readiness (H1.5) | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_pilot_readiness_gate.py` authorizes only `ring=pilot`, `channel=homologation`, operator-assisted delivery, allowlisted hashed devices, board preflight, and P0 power-loss subset. It keeps `stable`, auto-pull, public thaw, 24h soak, 17/17 power-loss, and signature/attestation as non-claims. | H1.5 controlled pilot / governance |
 | H2 readiness evaluator | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_h2_readiness_gate.py` aggregates H1 decisive evidence, 17/17 physical power-loss checkpoints, 24h soak, server-side publish/signature governance, stable-promotion evidence, and explicit operator thaw decision. It reports blockers; it does not thaw. | H2 planning / governance |
 | Thaw barriers (`:123` toggle + `:967` stable block) → evidence-bound gate | **DESIGN-ONLY** | gating mechanism |
 
@@ -201,7 +202,24 @@ Work order:
 ### B. BOARD (Track A completed; next board work is H2)
 - Track A teardown evidence is committed and gate-passing. If a new image is baked, recapture
   M6 and every image-pinned teardown dir instead of mixing with `1x` evidence.
-- Next board work belongs to H2: physical power-cut/torn-write and 24h soak.
+- Next board work can be either the H1.5 pilot below, if explicitly authorized,
+  or H2: physical power-cut/torn-write and 24h soak.
+
+### B2. HOMOLOGATION PILOT (H1.5, controlled, not production)
+
+An intermediate pilot can run before H2 only when the new pilot gate is green.
+Scope: `channel=homologation`, operational `ring=pilot`, operator-assisted
+delivery, hashed allowlisted devices, explicit rollback owner/window, board
+preflight with policy homologation + `allow_prerelease=true`, timer off, public
+freeze `rc=44`, expected image/marker identity, and P0 power-loss subset:
+`after_current_symlink`, `rollback_after_current_to_previous`,
+`rollback_after_previous_removed`, `rollback_after_quarantine`, and
+`rollback_after_state_success`.
+
+Runbook: `docs/c18-player-runtime-homologation-pilot-runbook.md`.
+
+Non-claims remain explicit: no production, no stable, no auto-pull, no 24h soak,
+no 17/17 power-loss, no signature/attestation, and no public thaw.
 
 ### C. LATER (production / H2, gated on H1)
 - H2 readiness gate is available off-board and fails closed until every required family
