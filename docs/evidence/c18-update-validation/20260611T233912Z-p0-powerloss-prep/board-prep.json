@@ -1,0 +1,44 @@
+{
+  "board": {
+    "canary_media_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "hostname": "orangepizero3",
+    "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "quarantine_count": 1,
+    "service_active": "active",
+    "state_current": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "state_previous": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "bundle": {
+    "archive": "/data/c18-p0-bundle-a0dcb13fd78d.tar.gz",
+    "dir": "/data/c18-p0-bundle-a0dcb13fd78d",
+    "sha256": "e4ed9293e6fa8ac53a08509b091e8428cf413ac99dd6ea2185774dea488436ea"
+  },
+  "captured_at_utc": "2026-06-11T23:39:15Z",
+  "component": "player-runtime",
+  "non_claims": [
+    "no_p0_powerloss_claim",
+    "no_pilot_readiness_claim",
+    "no_h2_or_stable_or_production_claim",
+    "no_public_thaw",
+    "no_auto_pull"
+  ],
+  "physical_power_cut_required": true,
+  "prepared_checkpoints": [
+    "after_current_symlink",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_state_success"
+  ],
+  "repo_head": "a0dcb13fd78da826be2b33820bd11d254ba72368",
+  "schema": "dadooh.c18.p0_powerloss_prep.v1",
+  "self_tests": {
+    "powerloss_evidence_gate": true,
+    "powerloss_trial": true
+  },
+  "target_package": {
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  }
+}
