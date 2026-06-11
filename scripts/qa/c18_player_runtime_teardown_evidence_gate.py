@@ -17,6 +17,7 @@ A green ``--self-test`` proves the gate logic only, NOT teardown on hardware.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import hashlib
 import json
 import math
@@ -26,6 +27,15 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+HEALTH_SUMMARY_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_summary.py"
+_HEALTH_SPEC = importlib.util.spec_from_file_location("c18_playback_health_summary", HEALTH_SUMMARY_PATH)
+if _HEALTH_SPEC is None or _HEALTH_SPEC.loader is None:
+    raise RuntimeError(f"cannot load health summary module: {HEALTH_SUMMARY_PATH}")
+health_summary = importlib.util.module_from_spec(_HEALTH_SPEC)
+_HEALTH_SPEC.loader.exec_module(health_summary)
 
 
 SCHEMA = "dadooh.c18.player_runtime.teardown_evidence_gate.v1"
@@ -304,6 +314,28 @@ def validate_health(data: dict[str, Any], label: str, errors: list[str]) -> None
             errors.append(f"{label}_check_failed:{check}")
 
 
+def validate_health_dir(health_dir: Path, label: str, errors: list[str]) -> None:
+    """Validate public health and recompute it from manifest-bound sidecars."""
+    public_path = health_dir / "playback-deep-health-public.json"
+    public = load_json(public_path, errors, label)
+    validate_health(public, label, errors)
+    try:
+        recomputed = health_summary.evaluate(
+            samples_path=health_dir / "playback-samples.tsv",
+            systemd_path=health_dir / "deep-health-systemd.json",
+            process_path=health_dir / "deep-health-process.json",
+            kernel_path=health_dir / "deep-health-kernel.json",
+            player_counters_path=health_dir / "deep-health-player-counters.json",
+        )
+    except Exception as exc:
+        errors.append(f"{label}_recompute_error:{type(exc).__name__}")
+        return
+    validate_health(recomputed, f"{label}_recomputed", errors)
+    for key in ("passed", "failure_reasons", "checks"):
+        if public.get(key) != recomputed.get(key):
+            errors.append(f"{label}_public_recomputed_{key}_mismatch")
+
+
 # --------------------------------------------------------------------------- #
 # Teardown-specific semantics.                                                 #
 # --------------------------------------------------------------------------- #
@@ -431,11 +463,7 @@ def validate_cycle(run_dir: Path,
             if summary_cycle.get(key) != cycle.get(key):
                 errors.append(f"{label}_summary_cycle_{key}_mismatch")
     # Per-cycle deep-health (independent GR2 corroboration incl. panfrost_faults_delta_zero).
-    validate_health(
-        load_json(run_dir / cycle_dir / "health" / "playback-deep-health-public.json", errors, f"{label}_health"),
-        f"{label}_health",
-        errors,
-    )
+    validate_health_dir(run_dir / cycle_dir / "health", f"{label}_health", errors)
     return result
 
 
@@ -822,12 +850,8 @@ def validate_mid_decode_probe(run_dir: Path, summary: dict[str, Any],
                 errors.append(f"{label}_post_attempt_barrier_missing")
             elif barrier.get("passed") is not True:
                 errors.append(f"{label}_post_attempt_barrier_not_passed")
-    validate_health(
-        load_json(
-            run_dir / "mid-decode-sigterm-probe" / "post-restore-health" / "playback-deep-health-public.json",
-            errors,
-            "mid_decode_post_restore_health",
-        ),
+    validate_health_dir(
+        run_dir / "mid-decode-sigterm-probe" / "post-restore-health",
         "mid_decode_post_restore_health",
         errors,
     )
@@ -1099,12 +1123,8 @@ def validate_production_stop_probe(run_dir: Path, summary: dict[str, Any],
                 errors.append(f"{label}_post_attempt_barrier_missing")
             elif barrier.get("passed") is not True:
                 errors.append(f"{label}_post_attempt_barrier_not_passed")
-    validate_health(
-        load_json(
-            run_dir / "production-stop-probe" / "post-restore-health" / "playback-deep-health-public.json",
-            errors,
-            "production_stop_post_restore_health",
-        ),
+    validate_health_dir(
+        run_dir / "production-stop-probe" / "post-restore-health",
         "production_stop_post_restore_health",
         errors,
     )
@@ -1261,6 +1281,65 @@ def make_health() -> dict[str, Any]:
     }
 
 
+def write_health_artifacts(health_dir: Path) -> None:
+    health_dir.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "ipc_result": "success",
+            "hwdec_current": EXPECTED_HWDEC,
+            "vo_configured": "true",
+            "time_pos": str(index),
+            "estimated_frame_number": str(index * 30),
+            "status_playback_state": "playing",
+            "status_snapshot_json": json.dumps({"playlist_size": 1}, sort_keys=True),
+            "status_playlist_size": "1",
+            "status_current_alias": "fixture",
+            "status_current_index": "0",
+            "current_alias": "fixture",
+        }
+        for index in range(1, 5)
+    ]
+    columns = sorted({key for row in rows for key in row})
+    with (health_dir / "playback-samples.tsv").open("w", encoding="utf-8") as fh:
+        fh.write("\t".join(columns) + "\n")
+        for row in rows:
+            fh.write("\t".join(str(row.get(column, "")) for column in columns) + "\n")
+    write_json(health_dir / "deep-health-systemd.json", {
+        "service_active": True,
+        "nrestarts_delta": 0,
+        "target_mode": "service",
+    })
+    write_json(health_dir / "deep-health-process.json", {
+        "mpv_count": 1,
+        "total_mpv_count": 1,
+        "process_filter": "",
+        "mpv_path": EXPECTED_WRAPPER,
+    })
+    write_json(health_dir / "deep-health-kernel.json", {
+        "panfrost_faults": 0,
+        "panfrost_faults_start": 0,
+        "panfrost_faults_delta": 0,
+        "mmc_timeout_reset": 0,
+        "mmc_timeout_reset_start": 0,
+        "mmc_timeout_reset_delta": 0,
+        "ext4_errors": 0,
+        "ext4_errors_start": 0,
+        "ext4_errors_delta": 0,
+    })
+    write_json(health_dir / "deep-health-player-counters.json", {
+        "media_load_failed": 0,
+        "mpv_restart": 0,
+    })
+    public = health_summary.evaluate(
+        samples_path=health_dir / "playback-samples.tsv",
+        systemd_path=health_dir / "deep-health-systemd.json",
+        process_path=health_dir / "deep-health-process.json",
+        kernel_path=health_dir / "deep-health-kernel.json",
+        player_counters_path=health_dir / "deep-health-player-counters.json",
+    )
+    write_json(health_dir / "playback-deep-health-public.json", public)
+
+
 def make_cycle(index: int, kind: str, boot_id: str) -> dict[str, Any]:
     return {
         "schema": CYCLE_SCHEMA,
@@ -1290,7 +1369,7 @@ def write_fixture(root: Path, *, with_fresh_ipc: bool = True) -> None:
     for index, kind in cycle_defs:
         cycle = make_cycle(index, kind, boot_id)
         write_json(root / f"cycles/cycle-{index:02d}/cycle.json", cycle)
-        write_json(root / f"cycles/cycle-{index:02d}/health/playback-deep-health-public.json", make_health())
+        write_health_artifacts(root / f"cycles/cycle-{index:02d}/health")
         (root / f"cycles/cycle-{index:02d}/kernel-before.txt").write_text("boot start\n", encoding="utf-8")
         (root / f"cycles/cycle-{index:02d}/kernel-after.txt").write_text("boot start\n", encoding="utf-8")
         cycles_summary.append({k: cycle[k] for k in ("index", "kind", "gpu_faults_delta", "passed")})
@@ -1489,7 +1568,7 @@ def add_mid_decode_fixture(root: Path) -> None:
         "probe_orphans_killed": 0,
         "reset_failed_used": False,
     })
-    write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", make_health())
+    write_health_artifacts(probe_dir / "post-restore-health")
     _reseal_manifest(root)
 
 
@@ -1616,7 +1695,7 @@ def add_production_stop_fixture(root: Path) -> None:
         "probe_orphans_killed": 0,
         "reset_failed_used": False,
     })
-    write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", make_health())
+    write_health_artifacts(probe_dir / "post-restore-health")
     _reseal_manifest(root)
 
 
@@ -2017,6 +2096,25 @@ class TeardownEvidenceGateSelfTest(unittest.TestCase):
             health["checks"]["panfrost_faults_delta_zero"] = False
             write_json(root / "cycles/cycle-00/health/playback-deep-health-public.json", health)
             self._assert_fails(root, "check_failed:panfrost_faults_delta_zero")
+
+    def test_health_sidecar_tamper_fails_even_if_public_json_stays_green(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            process_path = root / "cycles/cycle-00/health/deep-health-process.json"
+            process = json.loads(process_path.read_text(encoding="utf-8"))
+            process["mpv_count"] = 2
+            write_json(process_path, process)
+            self._assert_fails(root, "cycle00_health_recomputed_check_failed:single_mpv")
+
+    def test_production_stop_post_restore_health_sidecar_tamper_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_production_stop_fixture(root)
+            process_path = root / "production-stop-probe/post-restore-health/deep-health-process.json"
+            process = json.loads(process_path.read_text(encoding="utf-8"))
+            process["mpv_count"] = 2
+            write_json(process_path, process)
+            self._assert_fails(root, "production_stop_post_restore_health_recomputed_check_failed:single_mpv")
 
     def test_summary_cycle_binding_mismatch_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

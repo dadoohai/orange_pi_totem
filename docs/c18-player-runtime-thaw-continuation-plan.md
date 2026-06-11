@@ -1,19 +1,21 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: H1 MAIN PATH PROVEN ON HW (no thaw, no stable/publish); (a)-NARROW ROUND OPEN. Baseline ANCHOR: `1464f0e`
+Status: H1 TEARDOWN/PANFROST EVIDENCE COMPLETE FOR THE CURRENT LAB SCOPE (no thaw,
+no stable/publish). Baseline ANCHOR: `02e4380`
 — by construction this ledger commits AT-OR-AFTER its anchor, so the anchor may sit one
 commit behind the live HEAD; ALWAYS resolve the real HEAD via `git rev-parse` (the resume
 rituals do). Tree clean at anchor time. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
-(no evidence args) = 37/37; DECISIVE `--player-runtime-evidence-mode decisive` with the 3
-evidence dirs + the image-`1x` triple = 43/43 (the 6 extra steps are the decisive-evidence
-validation; 43/43 is the CANONICAL communication number). Each ADDITIONAL teardown dir adds
-3 validation steps: with BOTH committed teardown dirs (original + fresh-ipc-probe) the same
-invocation is 46/46. The probe itself adds ZERO steps (a teardown dir with or without
-`fresh_ipc_probe.json` validates at the same step count). Freeze `rc=44` intact. Golden = `1u`; the decisive evidence is image `1x`
-(the H2 split below). Canonical claim NOW: "main path proven on HW; req#4 corner
-EXERCISED (reachability + honest SIGTERM fallback -- NOT 'fix proven'); GR4b non-claim;
-corner panfrost window OPEN (Front #1 item 5)" -- NEVER "H1 closed". Off-board critical path
-A1/A2/A3/A5 committed; decisive bundle committed at `f1aa879`.
+(no evidence args) = 37/37. After the production-stop hardening, DECISIVE
+`--player-runtime-evidence-mode decisive` requires at least one teardown dir with a
+`production_stop_probe`; the minimum decisive invocation (M6 coldboot + data + one
+production-stop teardown dir + the image-`1x` triple) is 44/44, and the current full bundle
+with all three committed teardown dirs is 50/50. Freeze `rc=44` intact. Golden = `1u`; the
+decisive evidence is image `1x` (the H2 split below). Canonical claim NOW: "H1 lab-scope
+evidence is complete for the measured paths: main teardown/M6 path + req#4 reachability +
+healthy Python-kiosk SIGTERM stop via IPC quit, all image-bound to `1x` and panfrost-delta
+clean under the matcher." Inline caveats: GR4b fresh-IPC success, mpv-SIGTERM fallback,
+wedged/ipc_unresponsive cleanup, full launcher/systemd cgroup cleanup, power-loss/soak,
+server-side publish, stable promotion, and public thaw remain NON-CLAIMS.
 
 This is the single authoritative ledger of what stands between the committed
 teardown/panfrost detector and a safe player-runtime thaw, plus the ordered
@@ -63,8 +65,9 @@ The two core invariants hold **by construction** and were re-verified this round
 | HW teardown/panfrost detector (the gate) | **RUN + PASS on HW** (image `1x`, bundle at `f1aa879`; 3 same-boot cycles, real restart, delta 0) | H1 main path — DONE |
 | Teardown harness `run_trial()` capture path | **DONE** (landed + HW-run) | H1 main path — DONE |
 | M6 ↔ teardown ↔ decisive-release-gate integration | **DONE** (decisive gate 43/43 at `f1aa879`: M6 A2→B2 arm/controlled-reboot/resume/rollback on `1x`) | H1 main path — DONE |
-| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2); teardown gate green on-board; evidence `…185956Z-1x-teardown-fresh-ipc-probe`. GR4b (fresh SUCCESS) stays NON-CLAIM by policy — operator decision (c) still pending for any success-path probing. OPEN GAP: the corner's own SIGTERM teardown has NO kernel window of its own (see Front #1 item 5) | **H1 — req#4 EXERCISED (reachability + honest fallback; NOT "fix proven"); corner panfrost window = open gap; pending external-auditor ratification** |
-| GPU-fault matcher recall calibration vs real board | **OPEN (needs board corpus)** | H1 — adjacent |
+| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2); teardown gate green on-board; evidence `…185956Z-1x-teardown-fresh-ipc-probe`. GR4b (fresh SUCCESS) stays NON-CLAIM by policy. | **H1 — req#4 EXERCISED (reachability + honest fallback; NOT "fix proven")** |
+| **Healthy Python-kiosk SIGTERM stop while decoding** | **PROVEN on HW (2026-06-11)**: `production_stop_probe` confirms mpv decoding with `v4l2request-copy`, SIGTERM delivered to `kiosk_pid`, kiosk used IPC quit, no mpv SIGTERM/SIGKILL fallback, `panfrost_delta=0`, mpv gone after kiosk exit, service restored, post-restore deep-health re-derived from sidecars. Evidence `…050939Z-1x-production-stop`, archived at `02e4380`; release gate now requires at least one production-stop teardown dir in decisive mode. | **H1 measured stop path — DONE for the healthy Python-kiosk/IPC-quit path** |
+| GPU-fault matcher recall calibration vs real board | **OPEN/ADJACENT**: green means no matcher-covered fault wording appeared in the captured windows; unknown future wording still needs corpus calibration before production claims. | H1-adjacent / H2 hardening |
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
 | H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **LATENT/UNRESOLVED** (`1w` superseded by the fresh `1x` bundle) | evidence-integrity precondition |
 | Offline power-loss matrix (7/17 boundaries) | **PARTIAL (by design)** | PARALLEL/FUTURE |
@@ -76,7 +79,7 @@ The two core invariants hold **by construction** and were re-verified this round
 
 ## Critical path
 
-### Front #1 — mid-decode SIGTERM panfrost window (remaining H1 item)
+### Front #1 — mid-decode / production-stop panfrost window (H1 lab scope closed)
 
 Converged statement (2026-06-10; auditor refutation + 3 independent static verifiers, HEAD
 `f1aa879`): the `_fresh_ipc_command(["quit"])` CALL-SITE **is production-reachable** via the
@@ -85,12 +88,11 @@ Converged statement (2026-06-10; auditor refutation + 3 independent static verif
 `start()`, watchdog `ensure_running`/`restart ipc_unresponsive`, playback `media_load_failed`
 restarts. No config gate: `mpv_query_uses_fresh_ipc` gates QUERIES only; the quit fallback is
 unconditional. That reachability question is now answered on HW: req#4 is EXERCISED, not
-"fix proven." What remains for H1 is narrower and different: measure the panfrost window
-for a real SIGTERM delivered to an MPV that is actively decoding, with GR4b still a
-non-claim.
+"fix proven." The follow-up H1 window was narrowed and measured as the healthy Python-kiosk
+SIGTERM path while mpv was actively decoding; GR4b remains a non-claim.
 
 Work order:
-1. **[LANDED off-board — board validation PENDING]** The probe now stages the corner
+1. **[DONE on board 2026-06-10]** The probe staged the corner
    END-TO-END on an ISOLATED kiosk instance of the adopted runtime (production service
    untouched; probe runs after all cycles so its noise lands outside the fault windows):
    workspace dirs PRE-CREATED before the access preflight, an OFFLINE CANARY PLAYLIST
@@ -98,21 +100,21 @@ Work order:
    content the kiosk exits `no_content` rc=2 BEFORE `mpv.start()` and the corner is
    unreachable), and a staged short `mpv_startup_timeout_sec` (default 0.05s). Sanitized
    probe artifacts are sealed inside the run dir (re-derivable). Off-board-tested against a
-   fake kiosk that only emits the fresh line when staging is complete; the REAL kiosk
-   reaching the corner is exactly what the board session validates. Previously the probe
+   fake kiosk that only emits the fresh line when staging is complete; the board run
+   validated the REAL kiosk reaching the corner. Previously the probe
    only restarted the service: on a healthy board the corner was never reached and the gate
    red-failed (`fresh_ipc_probe_code_path_not_reached`).
 2. **[LANDED off-board]** `forced_ipc_none` is no longer hardcoded: it reflects REAL staging
    (regression-tested); staging failures (kiosk/canary missing, workspace inaccessible,
    probe exception) degrade to an honest not-forced artifact + probe-error file, WITHOUT
    losing the cycles' evidence. An un-staged probe REDs the gate (`fresh_ipc_probe_not_forced`).
-3. **[OPERATOR DECISION — required BEFORE the board session]** Gate policy for a GENUINE
+3. **[POLICY STILL FAIL-CLOSED]** Gate policy for a GENUINE
    `fresh_sent`: today it is rejected by design (`fresh_ipc_probe_success_path_unreachable_claim`,
    test-locked) so a success can never be silently read as "GR4b proven". If the board ever
-   yields a genuine success, the gate REDs and a human decides. Pre-agree the protocol
-   (recommended: keep fail-closed; treat a success as a NEW fact → preserve evidence as
-   diagnostic → authorized gate evolution) so a success does not stall the session.
-4. **[DONE on board 2026-06-10 — pending external-auditor ratification]** Trial ran with
+   yields a genuine success, the gate REDs and a human decides. Current protocol: keep
+   fail-closed; treat a success as a NEW fact → preserve evidence as diagnostic →
+   authorized gate evolution.
+4. **[DONE on board 2026-06-10]** Trial ran with
    `--with-fresh-ipc-probe`: attempt #1 (0.05s) revealed a HEALTHY mpv exposes its IPC
    socket in ~0.03s (corner not fired — gate honestly REDed; kept on-board as diagnostic);
    attempt #2 (0.01s) forced the corner deterministically — `code_path_reached=true`,
@@ -135,24 +137,25 @@ Work order:
    fallback. What it does NOT prove: GR4b (fix efficacy) — structurally out of this probe's
    reach at 0.01s AND under the current gate policy — nor corner GPU-cleanliness.
    What this closes: milestone (a) — the corner-never-exercised blocker is RETIRED. The
-   claim beyond "main path proven + req#4 exercised (GR4b non-claim)" awaits the external
-   auditor's ratification AND item 5 below. Closing H1 is NOT thaw: H2 + the future gates
+   claim beyond "main path proven + req#4 exercised (GR4b non-claim)" awaited the external
+   auditor's ratification AND item 5 below. Closing the H1 lab-scope evidence is NOT thaw:
+   H2 + the future gates
    (physical power-loss, soak, server-side) still stand.
-5. **[IMPLEMENTED off-board — board validation PENDING]** The operator
+5. **[DONE on board 2026-06-11 — evidence committed at `02e4380`]** The operator
    opened this round in direct response to the (a)-narrow proposal ("vamos abrir a
-   próxima rodada então", 2026-06-10) — recorded as ratification; an operator correction
-   reverts this. Scope: measure panfrost around a REAL mid-decode SIGTERM (lab-only,
-   production service stopped/restored), keeping GR4b a NON-CLAIM. Plan CONSOLIDATED by
+   próxima rodada então", 2026-06-10). Scope was narrowed after the diagnostic hybrid RED:
+   measure the healthy Python-kiosk stop path that production ultimately signals, with mpv
+   already decoding, production service stopped/restored by the harness, and GR4b kept a
+   NON-CLAIM. Plan CONSOLIDATED by
    a 5-front investigation + 2 adversarial red-teams (both APPROVE_WITH_CHANGES,
-   incorporated): **docs/c18-mid-decode-probe-round-spec.md** is the implementation
-   contract (producer contract §2 — hybrid pinned by the guardian, operator veto window
-   open; single decode-confirm contract §3; add-only gate extension §5; pin-semantics
-   reading §6 recorded BEFORE landing for external-auditor ratification; landing = ONE
-   commit §7). The off-board landing adds `--with-mid-decode-sigterm-probe`, a strict
-   add-only gate extension, self-tests, and a Track A runbook; it proves detector logic,
-   not hardware behavior. Remaining operator items (ONE decision message, spec §8): (a) design
-   veto, (b) fresh_sent Option I (pre-session MANDATORY), (c) N attempts pin (rec. 2),
-   (d) D2 Option B. Implementation does NOT wait on these; the board session DOES.
+   incorporated): **docs/c18-mid-decode-probe-round-spec.md** records the detector contract
+   and the 2026-06-11 addendum. Board run `20260611T050939Z-1x-production-stop` passed:
+   decode confirmed (`v4l2request-copy`, frames advancing), SIGTERM to `kiosk_pid`, IPC quit
+   requested, no mpv SIGTERM fallback, no escalation, `panfrost_delta=0`, mpv no longer
+   alive after kiosk exit, service restored, post-restore deep-health green. Subsequent gate
+   hardening made this production-stop evidence mandatory in decisive mode and re-derives
+   post-restore health from sidecars. Non-claims: mpv-SIGTERM fallback, wedged/IPC-unresponsive
+   cleanup, launcher/systemd cgroup cleanup, GR4b success, H2/thaw.
 
 ### A. OFF-BOARD (completed this cycle; kept for the record)
 1. **Implement teardown harness `run_trial()` capture** (currently a stub): drive N≥2
@@ -183,28 +186,20 @@ Work order:
    The prior `1w` "decisive authorization" is STALE vs the current gate (it predates the
    teardown requirement); the board run produces FRESH decisive evidence.
 6. **This ledger doc** (done) + write the **operator run-book** (board-session mechanics
-   ONLY — a broad production run-book is H2 overscope). Track A immediate session MUST
-   sequence: teardown trial (≥2 same-boot cycles + mid-decode SIGTERM probe, no reboot) →
-   capture the clean-board `journalctl -k -b` corpus outside the sealed run-dir AND eyeball it
-   for any `panfrost|lima|mali` line the matcher did NOT flag (recall is the gate's weakest
-   link) → copy evidence into the repo tree → **COMMIT it** (not just `git add` —
-   `repo_clean_guard` reds on staged files and the git-guard reds on untracked, so only a
-   commit yields a clean, git-tracked tree) → run ONE host-side
-   `c18_ota_release_gate.py --…-mode decisive` reusing the committed `1x` M6 dirs and all
-   three `1x` teardown dirs. M6 arm/reboot/resume is only for an explicitly authorized full
-   image recapture and must use `--defer-release-gate`.
+   ONLY — a broad production run-book is H2 overscope). Track A completed: teardown trial
+   (same-boot cycles + production-stop probe, no reboot), committed evidence, clean-tree
+   decisive release gate reusing the committed `1x` M6 dirs and all three `1x` teardown dirs.
+   M6 arm/reboot/resume is only for an explicitly authorized full image recapture and must
+   use `--defer-release-gate`.
 7. *(Parallel/FUTURE — NOT H1; do not spend critical-path effort here)* extend the offline
    power-loss matrix + launcher torn-tree negative test + matrix-scope doc. Power-loss
    evidence is NOT required by the decisive gate (`c18_ota_release_gate.py:751`, optional);
    the launcher is already proven fail-closed.
 
-### B. BOARD (Track A immediate session, when available)
-- Teardown only: ≥2 same-boot cycles + real service restart + mid-decode SIGTERM probe +
-  clean-board journal corpus outside the sealed run-dir → committed evidence that passes the
-  decisive release gate from a clean tree together with the existing `1x` M6 dirs.
-- M6 recapture is not part of the immediate Track A session. If a new image is baked, recapture
+### B. BOARD (Track A completed; next board work is H2)
+- Track A teardown evidence is committed and gate-passing. If a new image is baked, recapture
   M6 and every image-pinned teardown dir instead of mixing with `1x` evidence.
-- *(batch)* physical power-cut + 24h soak.
+- Next board work belongs to H2: physical power-cut/torn-write and 24h soak.
 
 ### C. LATER (production / H2, gated on H1)
 - player-runtime stable-promotion authorization schema (analog of `stable_promotion.v1`).
@@ -217,19 +212,16 @@ Work order:
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados | Hardening de produção/stable (incl. `created_at` obrigatório) |
-| player-runtime | Caminho principal provado em HW (apply A2/B2, coldboot, rollback, teardown sem panfrost); req#4 corner exercitado (GR4b non-claim) | Janela panfrost do corner + decisão wrapper×quit (Front #1 item 5); política GR4b/`fresh_sent`; H2 golden 1u×1x; depois decisão de thaw |
+| player-runtime | H1 lab-scope evidence complete for measured paths: apply A2/B2, coldboot, rollback, repeated teardown, req#4 reachability, and healthy Python-kiosk SIGTERM stop via IPC quit; freeze still rc=44 | H2 golden 1u×1x; power-loss/soak; server-side publish/signature; explicit thaw decision. Non-claims remain for GR4b success, mpv-SIGTERM fallback/wedged cleanup, full launcher/systemd cgroup cleanup |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
 | server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
 | power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
 
-Estado (na âncora `1464f0e`; HEAD real = git): árvore limpa; placa estável; nenhuma
-execução em andamento; rodada (a)-estreita ABERTA (ratificada 2026-06-10) — plano
-consolidado em docs/c18-mid-decode-probe-round-spec.md (5 frentes + 2 red-teams,
-APPROVE_WITH_CHANGES incorporados); próxima ação = Track A (implementação em 1 commit:
-harness + gate add-only + self-tests + runbook) — NÃO depende do operador; sessão de
-placa SÓ após as ratificações da mensagem de decisão (spec §8; fresh_sent Option I é
-mandatória pré-sessão). Funil: janela panfrost → H2 → decisão de thaw.
+Estado (na âncora `02e4380`; HEAD real = git): production-stop evidence committed and
+gate-hardened; freeze rc=44; no thaw/stable/publish; no execution in progress. Funil:
+external ratification of this range if desired → H2 golden split (`1u` vs evidence `1x`) →
+power-loss/soak/server-side → explicit thaw decision.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the

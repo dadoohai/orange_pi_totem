@@ -4,9 +4,9 @@
   "component": "player-runtime",
   "files": [
     {
-      "bytes": 186,
+      "bytes": 764,
       "file": "README.md",
-      "sha256": "b30079780c440f073ea0a1434646d50598859299ba6b579518ba0ade2cda2fe4"
+      "sha256": "6f1d00b4e1baa9dfe3e5d1362cbf629e4f9bf0104fc5e85256c81f8e358466ec"
     },
     {
       "bytes": 596,

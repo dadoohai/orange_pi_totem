@@ -549,6 +549,32 @@ def teardown_evidence_image_guard(evidence_dir: Path, expected_image_tag: str, *
     }
 
 
+def production_stop_teardown_required_step(teardown_dirs: list[Path]) -> dict[str, Any]:
+    """Require at least one production-stop teardown artifact in decisive mode."""
+    details: dict[str, Any] = {
+        "teardown_dirs": [str(path) for path in teardown_dirs],
+        "matched_dirs": [],
+    }
+    errors: list[str] = []
+    for evidence_dir in teardown_dirs:
+        try:
+            summary = load_json_file(evidence_dir / "teardown-summary.json")
+        except Exception:
+            summary = {}
+        if summary.get("production_stop_probe_present") is True and (evidence_dir / "production_stop_probe.json").is_file():
+            details["matched_dirs"].append(str(evidence_dir))
+    if not details["matched_dirs"]:
+        errors.append("missing_production_stop_teardown_evidence")
+    return {
+        "name": "c18_player_runtime_production_stop_teardown_required",
+        "cmd": ["internal", "player_runtime_production_stop_teardown_required", *details["teardown_dirs"]],
+        "returncode": 1 if errors else 0,
+        "passed": not errors,
+        "stdout_tail": json.dumps(details, sort_keys=True),
+        "stderr_tail": ",".join(errors),
+    }
+
+
 def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
     names: set[str] = set()
     for cmd in (
@@ -856,6 +882,28 @@ class TeardownEvidenceImageGuardSelfTest(unittest.TestCase):
             self.assertFalse(step["passed"])
             self.assertIn("teardown_manifest_read_failed", step["stderr_tail"])
 
+    def test_production_stop_required_accepts_declared_probe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "teardown-summary.json").write_text(
+                json.dumps({"production_stop_probe_present": True}),
+                encoding="utf-8",
+            )
+            (root / "production_stop_probe.json").write_text(json.dumps({"passed": True}), encoding="utf-8")
+            step = production_stop_teardown_required_step([root])
+            self.assertTrue(step["passed"], msg=step["stderr_tail"])
+
+    def test_production_stop_required_rejects_legacy_teardown_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "teardown-summary.json").write_text(
+                json.dumps({"production_stop_probe_present": False}),
+                encoding="utf-8",
+            )
+            step = production_stop_teardown_required_step([root])
+            self.assertFalse(step["passed"])
+            self.assertIn("missing_production_stop_teardown_evidence", step["stderr_tail"])
+
 
 _OMIT = object()
 
@@ -926,6 +974,8 @@ def main() -> int:
             "c18_player_runtime_teardown_evidence_required",
             "missing --player-runtime-teardown-evidence-dir (required for decisive player-runtime evidence)",
         ))
+    elif args.player_runtime_evidence_mode == "decisive":
+        steps.append(production_stop_teardown_required_step(teardown_dirs))
     for index, teardown_dir in enumerate(teardown_dirs, 1):
         steps.append(player_runtime_teardown_evidence_git_guard(teardown_dir, index=index))
         # The teardown gate is image-agnostic; bind this dir to the same image identity

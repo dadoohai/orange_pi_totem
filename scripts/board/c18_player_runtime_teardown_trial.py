@@ -1931,6 +1931,68 @@ def _make_health() -> dict[str, Any]:
     }
 
 
+def _write_selftest_health_artifacts(health_dir: Path) -> dict[str, Any]:
+    import c18_playback_health_summary as health_summary
+
+    health_dir.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "ipc_result": "success",
+            "hwdec_current": EXPECTED_HWDEC,
+            "vo_configured": "true",
+            "time_pos": str(index),
+            "estimated_frame_number": str(index * 30),
+            "status_playback_state": "playing",
+            "status_snapshot_json": json.dumps({"playlist_size": 1}, sort_keys=True),
+            "status_playlist_size": "1",
+            "status_current_alias": "fixture",
+            "status_current_index": "0",
+            "current_alias": "fixture",
+        }
+        for index in range(1, 5)
+    ]
+    columns = sorted({key for row in rows for key in row})
+    with (health_dir / "playback-samples.tsv").open("w", encoding="utf-8") as fh:
+        fh.write("\t".join(columns) + "\n")
+        for row in rows:
+            fh.write("\t".join(str(row.get(column, "")) for column in columns) + "\n")
+    write_json(health_dir / "deep-health-systemd.json", {
+        "service_active": True,
+        "nrestarts_delta": 0,
+        "target_mode": "service",
+    })
+    write_json(health_dir / "deep-health-process.json", {
+        "mpv_count": 1,
+        "total_mpv_count": 1,
+        "process_filter": "",
+        "mpv_path": EXPECTED_WRAPPER,
+    })
+    write_json(health_dir / "deep-health-kernel.json", {
+        "panfrost_faults": 0,
+        "panfrost_faults_start": 0,
+        "panfrost_faults_delta": 0,
+        "mmc_timeout_reset": 0,
+        "mmc_timeout_reset_start": 0,
+        "mmc_timeout_reset_delta": 0,
+        "ext4_errors": 0,
+        "ext4_errors_start": 0,
+        "ext4_errors_delta": 0,
+    })
+    write_json(health_dir / "deep-health-player-counters.json", {
+        "media_load_failed": 0,
+        "mpv_restart": 0,
+    })
+    public = health_summary.evaluate(
+        samples_path=health_dir / "playback-samples.tsv",
+        systemd_path=health_dir / "deep-health-systemd.json",
+        process_path=health_dir / "deep-health-process.json",
+        kernel_path=health_dir / "deep-health-kernel.json",
+        player_counters_path=health_dir / "deep-health-player-counters.json",
+    )
+    write_json(health_dir / "playback-deep-health-public.json", public)
+    return public
+
+
 def _build_clean_fixture(root: Path) -> None:
     boot_id = "00000000-0000-4000-8000-000000000000"
     before: list[str] = []  # clean board -> zero panfrost faults in any window
@@ -1947,6 +2009,7 @@ def _build_clean_fixture(root: Path) -> None:
         cycles.append(cycle)
         write_cycle_dir(root, cycle, health=_make_health(),
                         kernel_before=clean_text, kernel_after=clean_text)
+        _write_selftest_health_artifacts(root / f"cycles/cycle-{index:02d}/health")
     fresh = classify_fresh_ipc(
         "... MPV IPC fresh command failed command=quit ...",
         forced_ipc_none=True, forcing_method="short_mpv_startup_timeout_sec",
@@ -2292,8 +2355,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
         def fake_collect_deep_health(cycle_dir: Path, *, duration_sec: float,
                                      interval_sec: float) -> dict[str, Any]:
             state["health_calls"] += 1
-            (cycle_dir / "health").mkdir(parents=True, exist_ok=True)
-            return _make_health()
+            return _write_selftest_health_artifacts(cycle_dir / "health")
 
         def fake_fresh_ipc_probe(args_: argparse.Namespace, run_root_: Path) -> tuple[str, dict[str, Any]]:
             state["fresh_probe_calls"] += 1
@@ -2377,7 +2439,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
             write_json(probe_dir / "service-restore.json",
                        {"active": True, "deep_health_passed": True,
                         "pre_start_barrier_passed": True, "reset_failed_used": False})
-            write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", _make_health())
+            _write_selftest_health_artifacts(probe_dir / "post-restore-health")
             return artifact
 
         def fake_production_stop_probe(args_: argparse.Namespace, run_root_: Path,
@@ -2470,7 +2532,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
             write_json(probe_dir / "service-restore.json",
                        {"active": True, "deep_health_passed": True,
                         "pre_start_barrier_passed": True, "reset_failed_used": False})
-            write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", _make_health())
+            _write_selftest_health_artifacts(probe_dir / "post-restore-health")
             return artifact
 
         def fake_freeze_postcheck(updatectl: str, manifest_path: str) -> dict[str, int]:
