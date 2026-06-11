@@ -1,0 +1,120 @@
+{
+  "blockers": [
+    "board_preflight:preflight_not_passed",
+    "pilot_powerloss_p0:pilot_powerloss_p0_incomplete"
+  ],
+  "channel": "homologation",
+  "checks": {
+    "authorization_preflight_link": {
+      "authorized_device": "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "blockers": [],
+      "passed": true,
+      "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+    },
+    "board_preflight": {
+      "blockers": [
+        "preflight_not_passed"
+      ],
+      "device_hash": "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "passed": false,
+      "preflight_path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260611T181618Z-board-readonly-preflight/board-preflight.json",
+      "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+    },
+    "h1_decisive_bundle": {
+      "blockers": [],
+      "h1_repo_head": "b551e7faa87064934d76885cb168e507ca5e288f",
+      "passed": true,
+      "step_count": 44,
+      "summary_path": "docs/evidence/c18-update-validation/20260611T175435Z-1x-h1-decisive-release-gate/h1-release-gate.json"
+    },
+    "incident_evidence": {
+      "blockers": [],
+      "incident_count": 0,
+      "passed": true,
+      "results": {}
+    },
+    "pilot_authorization": {
+      "authorization_path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260611T181618Z-board-readonly-preflight/pilot-authorization.json",
+      "blockers": [],
+      "device_hashes": [
+        "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104"
+      ],
+      "h1_repo_head": "b551e7faa87064934d76885cb168e507ca5e288f",
+      "passed": true,
+      "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+    },
+    "pilot_powerloss_p0": {
+      "blockers": [
+        "pilot_powerloss_p0_incomplete"
+      ],
+      "duplicate_checkpoints": [],
+      "gate_results": {},
+      "h2_only_observed": [],
+      "missing_checkpoints": [
+        "after_current_symlink",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ],
+      "observed_checkpoints": [],
+      "passed": false,
+      "required_checkpoints": [
+        "after_current_symlink",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ]
+    },
+    "repo_clean": {
+      "blockers": [],
+      "passed": true,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    "source_expectation": {
+      "authorization_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+      "blockers": [],
+      "expect_source_commit": null,
+      "passed": true
+    },
+    "target_package": {
+      "blockers": [],
+      "channel": "homologation",
+      "manifest_path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+      "passed": true,
+      "payload_path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+      "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+      "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "tracked_inputs": {
+      "blockers": [],
+      "ignored": [],
+      "manifest_untracked_entries": [],
+      "outside_repo": [],
+      "passed": true,
+      "paths": [
+        "docs/evidence/c18-update-validation/20260611T175435Z-1x-h1-decisive-release-gate/h1-release-gate.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+        "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260611T181618Z-board-readonly-preflight/pilot-authorization.json",
+        "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260611T181618Z-board-readonly-preflight/board-preflight.json"
+      ],
+      "untracked": []
+    }
+  },
+  "non_claims": [
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_require_or_claim_signature_attestation",
+    "this_gate_does_not_thaw_public_player_runtime"
+  ],
+  "passed": false,
+  "result_claim": "homologation_pilot_blocked",
+  "ring": "pilot",
+  "schema": "dadooh.c18.homologation_pilot_readiness.v1"
+}
