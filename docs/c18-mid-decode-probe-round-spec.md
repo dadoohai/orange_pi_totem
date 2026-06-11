@@ -223,3 +223,29 @@ dependency. Open-question inflation resolved: converged items (gate form, escala
 Carry-overs unchanged: D1 matcher deny-by-default + clean-board corpus; raw journal
 slice preservation; candidate-health catch-all except (boundary — explicit authorization
 required); server-side hardening (LATER).
+
+## 10. 2026-06-11 addendum: production-faithful follow-up
+
+The first hardware execution of the hybrid probe produced real panfrost faults
+and was archived as
+`docs/evidence/c18-update-validation/20260611T035143Z-1x-mid-decode-sigterm-failed/`.
+The run is diagnostic, not decisive: the first kernel fault appeared after the
+isolated kiosk was SIGKILLed and before the explicit SIGTERM was delivered to
+the orphaned mpv process. It proves a real GPU fault in an orphaned mid-decode
+lab window, but it must not be read as proof that the production kiosk stop path
+causes the same fault.
+
+The follow-up contract is now `--with-production-stop-probe`:
+
+- keep the kiosk/controller alive;
+- confirm mpv is actively decoding with `v4l2request-copy`;
+- open the panfrost window;
+- deliver SIGTERM directly to the Python kiosk process, matching the signal that
+  the production launcher ultimately forwards to its child;
+- let `kiosk.py` run `_stop_locked()`, recording whether it used IPC quit or
+  reached the mpv SIGTERM fallback;
+- treat mpv SIGTERM fallback as a subclaim only when explicitly logged.
+
+This does not replace the historical hybrid probe; it narrows the next claim to
+the direct Python kiosk healthy stop path. The full launcher/systemd cgroup
+cleanup path remains a non-claim unless a later probe exercises it explicitly.

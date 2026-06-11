@@ -56,6 +56,7 @@ TRIAL_SCHEMA = "dadooh.c18.player_runtime.teardown_trial.v1"
 CYCLE_SCHEMA = "dadooh.c18.player_runtime.teardown_cycle.v1"
 FRESH_IPC_SCHEMA = "dadooh.c18.player_runtime.teardown_fresh_ipc_probe.v1"
 MID_DECODE_SCHEMA = "dadooh.c18.player_runtime.teardown_mid_decode_sigterm_probe.v1"
+PRODUCTION_STOP_SCHEMA = "dadooh.c18.player_runtime.teardown_production_stop_probe.v1"
 PLAYBACK_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 MANIFEST_SCHEMA = "dadooh.c18.teardown.evidence_manifest.v1"
 
@@ -103,6 +104,13 @@ MID_DECODE_NON_CLAIMS = [
     "healthy-not-wedged: this probe measures a healthy decoding mpv, not a wedged ipc_unresponsive mpv.",
     "no-kiosk-alive: the isolated kiosk is SIGKILLed before the signal; IPC quit, watchdog, waitpid, and auto-relaunch are NOT in this probe window.",
     "production-timing-unmeasured: exact production timing is NOT claimed.",
+]
+
+PRODUCTION_STOP_NON_CLAIMS = [
+    "mpv-sigterm-fallback: fallback SIGTERM to mpv is only claimed if explicitly logged in stop_path.",
+    "systemd-cgroup-cleanup: systemd KillMode/SendSIGKILL cleanup after TimeoutStopSec is NOT measured.",
+    "healthy-not-wedged: this probe measures a healthy decoding kiosk/mpv path.",
+    "single-image: this probe is bound to one image/run only.",
 ]
 
 
@@ -162,7 +170,8 @@ def build_cycle_record(index: int, kind: str, boot_id: str, *,
 
 def build_summary(boot_id: str, btime: int, cycles: list[dict[str, Any]],
                   *, gr4_secondary_present: bool,
-                  mid_decode_probe_present: bool = False) -> dict[str, Any]:
+                  mid_decode_probe_present: bool = False,
+                  production_stop_probe_present: bool = False) -> dict[str, Any]:
     restart_indices = [c["index"] for c in cycles if c["kind"] == "service_restart"]
     summary = {
         "schema": TRIAL_SCHEMA,
@@ -177,6 +186,8 @@ def build_summary(boot_id: str, btime: int, cycles: list[dict[str, Any]],
     }
     if mid_decode_probe_present:
         summary["mid_decode_probe_present"] = True
+    if production_stop_probe_present:
+        summary["production_stop_probe_present"] = True
     return summary
 
 
@@ -1343,6 +1354,329 @@ def _run_mid_decode_sigterm_probe(args: argparse.Namespace, run_root: Path,
     return artifact
 
 
+def _kiosk_stop_path_from_log(log_text: str, *, expected_pid: int | None = None) -> dict[str, Any]:
+    signal_index = log_text.rfind("Signal 15 received")
+    relevant = log_text[signal_index:] if signal_index >= 0 else ""
+
+    def line_matches(line: str, marker: str) -> bool:
+        if marker not in line or "reason=stop" not in line:
+            return False
+        if expected_pid is not None and not re.search(rf"\bpid={re.escape(str(expected_pid))}(?!\d)", line):
+            return False
+        return True
+
+    lines = relevant.splitlines()
+    return {
+        "signal_received": signal_index >= 0,
+        "ipc_quit_requested": any(line_matches(line, "MPV IPC quit requested") for line in lines),
+        "ipc_quit_unavailable": any(line_matches(line, "MPV IPC quit unavailable") for line in lines),
+        "mpv_sigterm_fallback_logged": any(line_matches(line, "falling back to SIGTERM") for line in lines),
+        "fresh_ipc_used": any(
+            (FRESH_SENT_LOG in line or FRESH_FAILED_LOG in line)
+            and (
+                expected_pid is None
+                or re.search(rf"\bpid={re.escape(str(expected_pid))}(?!\d)", line)
+            )
+            for line in lines
+        ),
+    }
+
+
+def _run_one_production_stop_attempt(index: int, *, args: argparse.Namespace,
+                                     probe_dir: Path, boot_id: str,
+                                     setup: dict[str, Any]) -> dict[str, Any]:
+    import c18_player_runtime_candidate_health as ch
+
+    attempt_dir = probe_dir / f"attempt-{index:02d}"
+    attempt_dir.mkdir(parents=True, exist_ok=True)
+    kiosk_path = Path(str(setup["kiosk_path"]))
+    cfg = setup["cfg"]
+    config_path = Path(str(setup["config_path"]))
+    env = setup["env"]
+    run_user = setup["run_user"]
+
+    stdout_path = attempt_dir / "probe-stdout.txt"
+    stderr_path = attempt_dir / "probe-stderr.txt"
+    proc: subprocess.Popen[str] | None = None
+    samples: list[dict[str, Any]] = []
+    kernel_before_text = ""
+    kernel_after_text = ""
+    monotonic_before = time.monotonic()
+    monotonic_after = monotonic_before + 0.001
+    signal_info: dict[str, Any] = {"name": "SIGTERM", "target": "kiosk_pid", "delivered": False}
+    kiosk_exit: dict[str, Any] = {"exited": False, "waited_ms": 0, "escalated": False, "returncode": None}
+    pid_chain: dict[str, Any] = {}
+    stop_path: dict[str, Any] = {}
+    failure_reasons: list[str] = []
+    starttime: int | None = None
+    mpv_pid: int | None = None
+    ipc_path: Path | None = None
+    try:
+        with stdout_path.open("w", encoding="utf-8") as so, stderr_path.open("w", encoding="utf-8") as se:
+            proc = subprocess.Popen(
+                [sys.executable, str(kiosk_path), "--config", str(config_path)],
+                cwd=str(kiosk_path.parent), env=env, text=True,
+                stdout=so, stderr=se,
+                preexec_fn=ch.drop_to_user_preexec(run_user.pw_name, run_user.pw_uid, run_user.pw_gid),
+            )
+        ipc_path = Path(str(cfg["ipc_path"]))
+        identity = _wait_for_mpv_identity(Path(str(cfg["log_file"])), ipc_path=ipc_path)
+        pid_chain["initial_mpv"] = identity
+        if "error" in identity or not _proc_identity_ok(identity):
+            failure_reasons.append("mpv_identity_not_verified")
+            return {
+                "index": index, "passed": False, "failure_reasons": failure_reasons,
+                "pid_chain": pid_chain,
+            }
+        mpv_pid = int(identity["pid"])
+        starttime = int(identity["starttime"])
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            samples.append(_decode_sample(ipc_path, boot_id=boot_id))
+            if _decode_confirm(samples)["confirmed"]:
+                break
+            time.sleep(0.5)
+        if not _decode_confirm(samples)["confirmed"]:
+            failure_reasons.append("decode_not_confirmed")
+            return {
+                "index": index, "passed": False, "failure_reasons": failure_reasons,
+                "pid_chain": pid_chain, "decode_confirm": _decode_confirm(samples),
+            }
+        kernel_before_text = _capture_kernel_fault_lines()
+        monotonic_before = time.monotonic()
+        if samples and isinstance(samples[-1].get("monotonic"), (int, float)):
+            age = time.monotonic() - float(samples[-1]["monotonic"])
+            if age < 0.55:
+                time.sleep(0.55 - age)
+        final_sample = _decode_sample(ipc_path, boot_id=boot_id)
+        samples.append(final_sample)
+        presignal = _read_proc_identity(mpv_pid, ipc_path=str(ipc_path))
+        pid_chain["pre_signal_mpv"] = presignal
+        signal_monotonic = time.monotonic()
+        confirm = _decode_confirm(samples, signal_monotonic=signal_monotonic)
+        if not confirm["confirmed"] or not _proc_identity_ok(presignal, starttime=starttime):
+            failure_reasons.append("decode_not_confirmed_at_signal")
+            return {
+                "index": index, "passed": False, "failure_reasons": failure_reasons,
+                "pid_chain": pid_chain, "decode_confirm": confirm,
+            }
+        os.kill(proc.pid, signal.SIGTERM)
+        signal_info = {
+            "name": "SIGTERM",
+            "target": "kiosk_pid",
+            "delivered": True,
+            "monotonic": signal_monotonic,
+        }
+        started = time.monotonic()
+        exited = False
+        try:
+            proc.wait(timeout=35.0)
+            exited = True
+        except subprocess.TimeoutExpired:
+            try:
+                os.kill(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
+            failure_reasons.append("kiosk_did_not_exit_after_sigterm")
+        waited_ms = int((time.monotonic() - started) * 1000)
+        escalated = not exited
+        kiosk_exit = {
+            "exited": exited,
+            "waited_ms": waited_ms,
+            "escalated": escalated,
+            "returncode": proc.returncode,
+        }
+        post_mpv = _read_proc_identity(mpv_pid, ipc_path=str(ipc_path))
+        pid_chain["post_kiosk_exit_mpv"] = post_mpv
+        if _proc_identity_ok(post_mpv, starttime=starttime):
+            failure_reasons.append("mpv_alive_after_kiosk_exit")
+        if proc.returncode not in (0, None):
+            failure_reasons.append(f"kiosk_returncode_nonzero:{proc.returncode}")
+        time.sleep(max(float(getattr(args, "settle_sec", 3.0)), 0.0))
+        kernel_after_text = _capture_kernel_fault_lines()
+        monotonic_after = time.monotonic()
+    except Exception as exc:
+        failure_reasons.append(f"production_stop_probe_exception:{type(exc).__name__}")
+    finally:
+        if proc is not None and proc.poll() is None:
+            try:
+                os.kill(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=5.0)
+            except Exception:
+                pass
+        try:
+            log_text = Path(str(cfg["log_file"])).read_text(encoding="utf-8", errors="replace")
+            stop_path = _kiosk_stop_path_from_log(log_text, expected_pid=mpv_pid)
+            tail = "\n".join(ch.sanitize_lines(log_text)[-160:])
+            (attempt_dir / "probe-kiosk-log-tail.txt").write_text(tail + "\n", encoding="utf-8")
+        except Exception:
+            pass
+        for src, dest in ((stdout_path, attempt_dir / "probe-stdout.txt"), (stderr_path, attempt_dir / "probe-stderr.txt")):
+            try:
+                lines = ch.sanitize_lines(src.read_text(encoding="utf-8", errors="replace"))
+                dest.write_text("\n".join(lines[-120:]) + ("\n" if lines else ""), encoding="utf-8")
+            except OSError:
+                pass
+        _write_ndjson(attempt_dir / "decode-samples.ndjson", samples)
+        (attempt_dir / "kernel-before.txt").write_text(_kernel_window_text(kernel_before_text), encoding="utf-8")
+        (attempt_dir / "kernel-after.txt").write_text(_kernel_window_text(kernel_after_text), encoding="utf-8")
+    before_faults, after_faults = fault_lines(kernel_before_text), fault_lines(kernel_after_text)
+    before, after, delta, anomalous = compute_window_delta(before_faults, after_faults)
+    confirm = _decode_confirm(samples, signal_monotonic=signal_info.get("monotonic"))
+    if delta != 0:
+        failure_reasons.append("production_stop_probe_gpu_faults_delta_nonzero")
+    if before_faults or after_faults:
+        failure_reasons.append("production_stop_probe_panfrost_faults_present")
+    if kiosk_exit.get("escalated"):
+        failure_reasons.append("production_stop_probe_kiosk_escalated")
+    if not confirm.get("confirmed"):
+        failure_reasons.append("production_stop_probe_decode_not_confirmed")
+    if not (
+        stop_path.get("ipc_quit_requested")
+        or stop_path.get("ipc_quit_unavailable")
+        or stop_path.get("mpv_sigterm_fallback_logged")
+    ):
+        failure_reasons.append("production_stop_path_not_observed")
+    passed = not failure_reasons and kiosk_exit.get("exited") is True
+    return {
+        "index": index,
+        "passed": passed,
+        "failure_reasons": sorted(set(failure_reasons)),
+        "window_anchor": {
+            "boot_id": boot_id,
+            "monotonic_before": monotonic_before,
+            "monotonic_after": monotonic_after if monotonic_after > monotonic_before else monotonic_before + 0.001,
+        },
+        "pid_chain": pid_chain,
+        "decode_confirm": confirm,
+        "signal": signal_info,
+        "kiosk_exit": kiosk_exit,
+        "stop_path": stop_path,
+        "gpu_faults_before": before,
+        "gpu_faults_after": after,
+        "gpu_faults_delta": delta,
+        "gpu_faults_delta_anomalous": anomalous,
+        "new_fault_lines_sanitized": [sanitize_kernel_line(ln) for ln in after_faults[len(before_faults):]][:20],
+    }
+
+
+def _run_production_stop_probe(args: argparse.Namespace, run_root: Path,
+                               boot_state: dict[str, Any],
+                               last_cycle_after: float | None) -> dict[str, Any]:
+    import c18_player_runtime_candidate_health as ch
+
+    probe_dir = run_root / "production-stop-probe"
+    probe_dir.mkdir(parents=True, exist_ok=True)
+    attempts_n = max(1, int(getattr(args, "production_stop_probe_attempts", None) or 1))
+    workspaces: list[Path] = []
+    service_stopped = False
+    attempts: list[dict[str, Any]] = []
+    production_service: dict[str, Any] = {
+        "stopped": False,
+        "restored": False,
+        "deep_health_passed": False,
+    }
+    failure_reasons: list[str] = []
+    try:
+        if Path("/run/totem/settings-session.lock").exists():
+            failure_reasons.append("settings_session_lock_present")
+            raise RuntimeError("settings_session_lock_present")
+        canary_arg = getattr(args, "production_stop_probe_canary_media", None)
+        canary = ch.normalize_canary_media(Path(canary_arg) if canary_arg else None)
+        if canary is None:
+            failure_reasons.append("production_stop_probe_canary_missing")
+            raise RuntimeError("production_stop_probe_canary_missing")
+        try:
+            setups = _prepare_mid_decode_attempt_setups(attempts_n, canary=canary, workspaces=workspaces)
+        except RuntimeError as exc:
+            failure_reasons.append(str(exc))
+            raise
+        stop = _run(["systemctl", "stop", SERVICE_NAME], timeout=60.0)
+        production_service["stop_rc"] = stop.returncode
+        production_service["stopped"] = stop.returncode == 0
+        service_stopped = True
+        time.sleep(1.0)
+        residual = _pgrep_mpv()
+        production_service["residual_mpv_pids_after_stop"] = residual
+        if residual:
+            failure_reasons.append("production_mpv_still_running")
+            raise RuntimeError("production_mpv_still_running")
+        for index in range(attempts_n):
+            attempt = _run_one_production_stop_attempt(
+                index, args=args, probe_dir=probe_dir,
+                boot_id=str(boot_state.get("boot_id") or ""), setup=setups[index],
+            )
+            if last_cycle_after is not None:
+                attempt["last_cycle_after"] = last_cycle_after
+            attempts.append(attempt)
+            if attempt.get("passed") is not True:
+                break
+            if index + 1 < attempts_n:
+                barrier_passed, mpv_pids, fuser_dri = _wait_for_no_mpv_or_dri(timeout_sec=10.0)
+                attempt["post_attempt_barrier"] = {
+                    "passed": barrier_passed,
+                    "mpv_pids": mpv_pids,
+                    "fuser_dri": fuser_dri,
+                }
+                if not barrier_passed:
+                    attempt["passed"] = False
+                    attempt["failure_reasons"] = sorted(set(
+                        list(attempt.get("failure_reasons") or [])
+                        + ["production_stop_probe_post_attempt_barrier_failed"]
+                    ))
+                    failure_reasons.append("production_stop_probe_post_attempt_barrier_failed")
+                    break
+    except Exception as exc:
+        if not failure_reasons:
+            failure_reasons.append(f"production_stop_probe_exception:{type(exc).__name__}")
+    finally:
+        if service_stopped:
+            restore = _restore_after_mid_decode_probe(
+                probe_dir, workspaces,
+                duration_sec=float(getattr(args, "health_duration_sec", 30.0)),
+                interval_sec=float(getattr(args, "health_interval_sec", 1.0)),
+                startup_wait_sec=float(getattr(args, "startup_wait_sec", 5.0)),
+            )
+            production_service["restored"] = bool(restore.get("active"))
+            production_service["deep_health_passed"] = bool(restore.get("deep_health_passed"))
+        else:
+            production_service["restored"] = _service_active()
+            production_service["deep_health_passed"] = production_service["restored"]
+        for ws in workspaces:
+            shutil.rmtree(ws, ignore_errors=True)
+    if not attempts:
+        attempts.append({
+            "index": 0,
+            "passed": False,
+            "failure_reasons": sorted(set(failure_reasons or ["production_stop_probe_not_attempted"])),
+        })
+    non_claims = list(PRODUCTION_STOP_NON_CLAIMS)
+    non_claims.append(f"N={len(attempts)} single-image")
+    wrapper_path = Path(EXPECTED_WRAPPER)
+    artifact = {
+        "schema": PRODUCTION_STOP_SCHEMA,
+        "passed": all(a.get("passed") is True for a in attempts)
+        and production_service.get("restored") is True
+        and production_service.get("deep_health_passed") is True,
+        "claim": "production_kiosk_sigterm_panfrost_window_measured",
+        "cfg_hwdec": "auto",
+        "wrapper": {
+            "path": EXPECTED_WRAPPER,
+            "sha256": sha256_file(wrapper_path) if wrapper_path.is_file() else "",
+        },
+        "production_service": production_service,
+        "attempts": attempts,
+        "non_claims": non_claims,
+    }
+    if failure_reasons:
+        artifact["setup_failure_reasons"] = sorted(set(failure_reasons))
+    write_json(run_root / "production_stop_probe.json", artifact)
+    return artifact
+
+
 def _freeze_postcheck(updatectl: str, manifest_path: str) -> dict[str, int]:
     """Re-attest the player-runtime freeze via the PUBLIC updater verbs.
 
@@ -1516,6 +1850,19 @@ def run_trial(args: argparse.Namespace) -> int:
                 max(finite_cycle_ends) if finite_cycle_ends else None,
             )
 
+        production_stop_probe_present = bool(getattr(args, "with_production_stop_probe", False))
+        if production_stop_probe_present:
+            finite_cycle_ends = [
+                c.get("window_anchor", {}).get("monotonic_after")
+                for c in cycles
+                if isinstance(c.get("window_anchor"), dict)
+                and isinstance(c.get("window_anchor", {}).get("monotonic_after"), (int, float))
+            ]
+            _run_production_stop_probe(
+                args, run_root, boot_state,
+                max(finite_cycle_ends) if finite_cycle_ends else None,
+            )
+
         # Setup/state breadcrumb (informational; sanitized).
         write_json(run_root / "setup/service-state-before.json", {
             "is_active": "active" if _service_active() else "inactive",
@@ -1543,6 +1890,7 @@ def run_trial(args: argparse.Namespace) -> int:
             boot_id, int(boot_state["btime"]), cycles,
             gr4_secondary_present=gr4_secondary_present,
             mid_decode_probe_present=mid_decode_probe_present,
+            production_stop_probe_present=production_stop_probe_present,
         )
         write_json(run_root / "teardown-summary.json", summary)
 
@@ -1748,6 +2096,29 @@ class TeardownTrialSelfTest(unittest.TestCase):
         self.assertIs(probe["forced_ipc_none"], False)
         self.assertEqual(probe["forcing_method"], "none")
 
+    def test_production_stop_path_classification(self) -> None:
+        clean = _kiosk_stop_path_from_log(
+            "MPV IPC quit requested reason=restart pid=123\n"
+            "Signal 15 received, stopping...\n"
+            "MPV IPC quit requested reason=stop generation=1 pid=123 log_file=x\n",
+            expected_pid=123,
+        )
+        self.assertTrue(clean["signal_received"])
+        self.assertTrue(clean["ipc_quit_requested"])
+        self.assertFalse(clean["mpv_sigterm_fallback_logged"])
+        fallback = _kiosk_stop_path_from_log(
+            "Signal 15 received, stopping...\n"
+            "MPV IPC quit timeout; falling back to SIGTERM reason=stop generation=1 pid=123 log_file=x\n",
+            expected_pid=123,
+        )
+        self.assertTrue(fallback["mpv_sigterm_fallback_logged"])
+        wrong_pid = _kiosk_stop_path_from_log(
+            "Signal 15 received, stopping...\n"
+            "MPV IPC quit requested reason=stop generation=1 pid=1234 log_file=x\n",
+            expected_pid=123,
+        )
+        self.assertFalse(wrong_pid["ipc_quit_requested"])
+
     def test_unforced_probe_rejected_by_gate(self) -> None:
         # Gate round-trip: a probe artifact whose staging did NOT happen
         # (forced_ipc_none=False) must RED the real gate.
@@ -1895,7 +2266,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
 
         state = {"monotonic": 1000.0, "restarts": 0, "relaunches": 0,
                  "health_calls": 0, "fresh_probe_calls": 0, "mid_probe_calls": 0,
-                 "freeze_calls": 0}
+                 "production_probe_calls": 0, "freeze_calls": 0}
 
         def fake_monotonic() -> float:
             state["monotonic"] += 5.0  # strictly increasing -> non-overlapping windows
@@ -2009,6 +2380,99 @@ class TeardownTrialSelfTest(unittest.TestCase):
             write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", _make_health())
             return artifact
 
+        def fake_production_stop_probe(args_: argparse.Namespace, run_root_: Path,
+                                       boot_state_: dict[str, Any],
+                                       last_cycle_after: float | None) -> dict[str, Any]:
+            state["production_probe_calls"] += 1
+            probe_dir = run_root_ / "production-stop-probe"
+            attempt_dir = probe_dir / "attempt-00"
+            attempt_dir.mkdir(parents=True, exist_ok=True)
+            base = (last_cycle_after or 1100.0) + 30.0
+            samples = [
+                {"boot_id": boot_state_["boot_id"], "monotonic": base + 0.1,
+                 "ipc_result": "success", "ipc_error": "", "ipc_elapsed_ms": 1,
+                 "estimated_frame_number": 200, "time_pos": 20.0, "duration": 60.0,
+                 "hwdec_current": EXPECTED_HWDEC, "vo_configured": True,
+                 "idle_active": False, "pause": False, "eof_reached": False},
+                {"boot_id": boot_state_["boot_id"], "monotonic": base + 0.7,
+                 "ipc_result": "success", "ipc_error": "", "ipc_elapsed_ms": 1,
+                 "estimated_frame_number": 220, "time_pos": 20.7, "duration": 60.0,
+                 "hwdec_current": EXPECTED_HWDEC, "vo_configured": True,
+                 "idle_active": False, "pause": False, "eof_reached": False},
+                {"boot_id": boot_state_["boot_id"], "monotonic": base + 1.3,
+                 "ipc_result": "success", "ipc_error": "", "ipc_elapsed_ms": 1,
+                 "estimated_frame_number": 240, "time_pos": 21.4, "duration": 60.0,
+                 "hwdec_current": EXPECTED_HWDEC, "vo_configured": True,
+                 "idle_active": False, "pause": False, "eof_reached": False},
+            ]
+            _write_ndjson(attempt_dir / "decode-samples.ndjson", samples)
+            (attempt_dir / "kernel-before.txt").write_text("boot clean\n", encoding="utf-8")
+            (attempt_dir / "kernel-after.txt").write_text("boot clean\n", encoding="utf-8")
+            log_tail = (
+                "Signal 15 received, stopping...\n"
+                "MPV IPC quit requested reason=stop generation=1 pid=456 log_file=x\n"
+            )
+            (attempt_dir / "probe-kiosk-log-tail.txt").write_text(log_tail, encoding="utf-8")
+            (attempt_dir / "probe-stdout.txt").write_text(log_tail, encoding="utf-8")
+            (attempt_dir / "probe-stderr.txt").write_text("", encoding="utf-8")
+            signal_m = base + 1.5
+            confirm = _decode_confirm(samples, signal_monotonic=signal_m)
+            artifact = {
+                "schema": PRODUCTION_STOP_SCHEMA,
+                "passed": True,
+                "claim": "production_kiosk_sigterm_panfrost_window_measured",
+                "cfg_hwdec": "auto",
+                "wrapper": {"path": EXPECTED_WRAPPER, "sha256": "b" * 64},
+                "production_service": {
+                    "stopped": True,
+                    "restored": True,
+                    "deep_health_passed": True,
+                    "residual_mpv_pids_after_stop": [],
+                },
+                "attempts": [{
+                    "index": 0,
+                    "passed": True,
+                    "failure_reasons": [],
+                    "window_anchor": {"boot_id": boot_state_["boot_id"],
+                                      "monotonic_before": base + 1.4,
+                                      "monotonic_after": base + 4.0},
+                    "pid_chain": {
+                        "pre_signal_mpv": {"pid": 456, "exe": EXPECTED_MPV_EXE,
+                                           "cmdline_contains_ipc_path": True,
+                                           "pgid_is_pid": True,
+                                           "starttime": 1999},
+                        "post_kiosk_exit_mpv": {"pid": 456, "exists": False,
+                                                "starttime": 1999},
+                    },
+                    "decode_confirm": confirm,
+                    "signal": {"name": "SIGTERM", "target": "kiosk_pid",
+                               "delivered": True, "monotonic": signal_m},
+                    "kiosk_exit": {"exited": True, "waited_ms": 500,
+                                   "escalated": False, "returncode": 0},
+                    "stop_path": {"ipc_quit_requested": True,
+                                  "ipc_quit_unavailable": False,
+                                  "mpv_sigterm_fallback_logged": False,
+                                  "fresh_ipc_used": False},
+                    "gpu_faults_before": 0,
+                    "gpu_faults_after": 0,
+                    "gpu_faults_delta": 0,
+                    "gpu_faults_delta_anomalous": False,
+                    "new_fault_lines_sanitized": [],
+                }],
+                "non_claims": [
+                    "mpv-sigterm-fallback: fallback SIGTERM to mpv is only claimed if explicitly logged in stop_path.",
+                    "systemd-cgroup-cleanup: systemd KillMode/SendSIGKILL cleanup after TimeoutStopSec is NOT measured.",
+                    "healthy-not-wedged: this probe measures a healthy decoding kiosk/mpv path.",
+                    "N=1 single-image",
+                ],
+            }
+            write_json(run_root_ / "production_stop_probe.json", artifact)
+            write_json(probe_dir / "service-restore.json",
+                       {"active": True, "deep_health_passed": True,
+                        "pre_start_barrier_passed": True, "reset_failed_used": False})
+            write_json(probe_dir / "post-restore-health" / "playback-deep-health-public.json", _make_health())
+            return artifact
+
         def fake_freeze_postcheck(updatectl: str, manifest_path: str) -> dict[str, int]:
             state["freeze_calls"] += 1
             return {"apply_local_rc": 44, "rollback_rc": 44, "reconcile_rc": 44}
@@ -2022,8 +2486,11 @@ class TeardownTrialSelfTest(unittest.TestCase):
             args = argparse.Namespace(
                 run_root=root, cycles=3, with_fresh_ipc_probe=True,
                 with_mid_decode_sigterm_probe=True,
+                with_production_stop_probe=True,
                 mid_decode_probe_attempts=1,
                 mid_decode_probe_canary_media=None,
+                production_stop_probe_attempts=1,
+                production_stop_probe_canary_media=None,
                 source_commit="b" * 40, board_image_marker="c18-selftest",
                 updatectl="/fake/totem-updatectl", config=Path("/fake/config.json"),
                 freeze_manifest="/fake/manifest.json", timer="kiosky-player-update.timer",
@@ -2039,6 +2506,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
                 "_collect_deep_health": fake_collect_deep_health,
                 "_run_fresh_ipc_probe": fake_fresh_ipc_probe,
                 "_run_mid_decode_sigterm_probe": fake_mid_decode_probe,
+                "_run_production_stop_probe": fake_production_stop_probe,
                 "_freeze_postcheck": fake_freeze_postcheck,
                 "_service_active": lambda: True,
                 "_timer_enabled": lambda timer: False,
@@ -2067,6 +2535,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
             self.assertEqual(state["freeze_calls"], 1)
             self.assertEqual(state["fresh_probe_calls"], 1)
             self.assertEqual(state["mid_probe_calls"], 1)
+            self.assertEqual(state["production_probe_calls"], 1)
 
             # The strongest check: the produced run-dir passes the REAL gate.
             proc = subprocess.run(
@@ -2081,6 +2550,7 @@ class TeardownTrialSelfTest(unittest.TestCase):
             self.assertEqual(probe_written["forcing_method"], "short_mpv_startup_timeout_sec")
             summary_written = json.loads((root / "teardown-summary.json").read_text(encoding="utf-8"))
             self.assertIs(summary_written["mid_decode_probe_present"], True)
+            self.assertIs(summary_written["production_stop_probe_present"], True)
 
     def test_run_trial_lab_guard_blocks_without_env(self) -> None:
         os.environ.pop(LAB_GUARD_ENV, None)
@@ -2153,6 +2623,15 @@ def parse_args() -> argparse.Namespace:
                         help="number of mid-decode SIGTERM attempts; operator-recommended N=2")
     parser.add_argument("--mid-decode-probe-canary-media", type=Path, default=None,
                         help="REQUIRED with --with-mid-decode-sigterm-probe: a real video "
+                             "under /tmp or /data/media")
+    parser.add_argument("--with-production-stop-probe", action="store_true",
+                        help="run the direct Python kiosk SIGTERM probe after the teardown "
+                             "cycles; the kiosk remains alive and performs mpv.stop() "
+                             "(launcher/systemd cgroup cleanup is a non-claim)")
+    parser.add_argument("--production-stop-probe-attempts", type=int, default=1,
+                        help="number of production-stop attempts")
+    parser.add_argument("--production-stop-probe-canary-media", type=Path, default=None,
+                        help="REQUIRED with --with-production-stop-probe: a real video "
                              "under /tmp or /data/media")
     parser.add_argument("--source-commit", default=None)
     parser.add_argument("--board-image-marker", default=None)
