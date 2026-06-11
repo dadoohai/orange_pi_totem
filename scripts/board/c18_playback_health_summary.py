@@ -22,6 +22,7 @@ MAX_CONSECUTIVE_STATUS_MPV_MISMATCHES = 2
 MAX_STATUS_MPV_MISMATCH_RATIO = 0.10
 MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES = 5
 MAX_STATUS_MPV_TRANSITION_LAG_SECONDS = 6.0
+MAX_STATUS_MPV_TRANSITION_LAG_RUNS = 3
 MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES = 1
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 
@@ -344,6 +345,7 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
         "max_allowed_transition_lag_samples": MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES,
         "max_transition_lag_seconds": max_transition_lag_seconds,
         "max_allowed_transition_lag_seconds": MAX_STATUS_MPV_TRANSITION_LAG_SECONDS,
+        "max_allowed_transition_lag_runs": MAX_STATUS_MPV_TRANSITION_LAG_RUNS,
     }
 
 
@@ -485,6 +487,7 @@ def evaluate(
     status_mpv_path_aligned = (
         (not transition_required or alignment_stats["comparable_samples"] > 0)
         and not status_advanced_without_mpv
+        and alignment_stats["transition_lag_runs"] <= MAX_STATUS_MPV_TRANSITION_LAG_RUNS
         and alignment_stats["unexplained_mismatch_runs"] == 0
         and alignment_stats["long_transition_lag_runs"] == 0
         and alignment_stats["terminal_transition_lag_runs"] <= 1
@@ -606,6 +609,7 @@ def evaluate(
             "status_mpv_max_allowed_transition_lag_samples": alignment_stats["max_allowed_transition_lag_samples"],
             "status_mpv_max_transition_lag_seconds": alignment_stats["max_transition_lag_seconds"],
             "status_mpv_max_allowed_transition_lag_seconds": alignment_stats["max_allowed_transition_lag_seconds"],
+            "status_mpv_max_allowed_transition_lag_runs": alignment_stats["max_allowed_transition_lag_runs"],
             "status_advanced_without_mpv": status_advanced_without_mpv,
             "playlist_size_max": playlist_size,
             "hwdec_expected_samples": hwdec_expected_samples,
