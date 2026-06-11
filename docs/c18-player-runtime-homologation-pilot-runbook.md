@@ -51,7 +51,8 @@ Minimum required fields:
   "rollback_ready": true,
   "operator": "operator-pilot-01",
   "rollback_owner": "rollback-owner-01",
-  "expected_source_commit": "<40-hex-commit>",
+  "expected_package_source_commit": "<40-hex-package-source-commit>",
+  "expected_h1_repo_head": "<40-hex-h1-release-gate-repo-head>",
   "window": {
     "start_utc": "2026-06-11T12:00:00Z",
     "end_utc": "2026-06-11T14:00:00Z"
@@ -93,7 +94,7 @@ Required facts:
 - `mpv_path=/opt/totem/bin/totem-mpv-hwdecode`;
 - `hwdec=v4l2request-copy`;
 - sanitized `device_hash`;
-- source commit matches the authorization.
+- source commit matches the authorized package source commit.
 
 Suggested preflight JSON schema:
 

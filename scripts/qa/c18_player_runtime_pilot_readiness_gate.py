@@ -349,7 +349,7 @@ def evaluate_target_package(
     )
 
 
-def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_source_commit: str | None) -> dict[str, Any]:
+def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_h1_repo_head: str | None) -> dict[str, Any]:
     blockers: list[str] = []
     if summary_path is None:
         return step(False, ["missing_h1_release_gate_summary"])
@@ -397,9 +397,9 @@ def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_so
         if not any(str(name).startswith(prefix) for name in step_names):
             blockers.append(blocker)
     repo = summary.get("repo") if isinstance(summary.get("repo"), dict) else {}
-    if expected_source_commit:
-        if repo.get("head") != expected_source_commit:
-            blockers.append("h1_source_commit_mismatch_or_missing")
+    if expected_h1_repo_head:
+        if repo.get("head") != expected_h1_repo_head:
+            blockers.append("h1_repo_head_mismatch_or_missing")
     return step(
         not blockers,
         blockers,
@@ -432,9 +432,17 @@ def evaluate_authorization(path: Path | None) -> tuple[dict[str, Any], dict[str,
         blockers.append("authorization_operator_not_sanitized")
     if not sanitized_id(data.get("rollback_owner")):
         blockers.append("authorization_rollback_owner_not_sanitized")
-    source_commit = data.get("expected_source_commit") or data.get("source_commit")
+    source_commit = (
+        data.get("expected_package_source_commit")
+        or data.get("package_source_commit")
+        or data.get("expected_source_commit")
+        or data.get("source_commit")
+    )
     if not is_git_sha(source_commit):
         blockers.append("authorization_expected_source_commit_missing_or_invalid")
+    h1_repo_head = data.get("expected_h1_repo_head") or data.get("h1_repo_head")
+    if h1_repo_head is not None and not is_git_sha(h1_repo_head):
+        blockers.append("authorization_expected_h1_repo_head_invalid")
     window = data.get("window") if isinstance(data.get("window"), dict) else {}
     start = parse_utc(window.get("start_utc") or data.get("window_start_utc"))
     end = parse_utc(window.get("end_utc") or data.get("window_end_utc"))
@@ -476,6 +484,7 @@ def evaluate_authorization(path: Path | None) -> tuple[dict[str, Any], dict[str,
         blockers,
         authorization_path=str(path),
         source_commit=source_commit,
+        h1_repo_head=h1_repo_head,
         device_hashes=device_hashes,
     ), data
 
@@ -795,12 +804,13 @@ def evaluate_powerloss(
 def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> dict[str, Any]:
     auth_result, auth_data = evaluate_authorization(args.authorization)
     expected_source_commit = auth_result.get("source_commit")
+    expected_h1_repo_head = auth_result.get("h1_repo_head")
     preflight_result, _preflight_data = evaluate_preflight(args.preflight, args)
     target_package = evaluate_target_package(args.package_manifest, args.package_payload, expected_source_commit)
     checks: dict[str, dict[str, Any]] = {
         "source_expectation": evaluate_source_expectation(args, auth_result),
         "target_package": target_package,
-        "h1_decisive_bundle": evaluate_h1(args.h1_release_gate_summary, args, expected_source_commit),
+        "h1_decisive_bundle": evaluate_h1(args.h1_release_gate_summary, args, expected_h1_repo_head),
         "pilot_authorization": auth_result,
         "board_preflight": preflight_result,
         "authorization_preflight_link": evaluate_authorization_preflight_link(auth_result, preflight_result),
@@ -870,7 +880,8 @@ def complete_args(root: Path) -> argparse.Namespace:
     image_tag = "c18-hwdecode-lab-pilot"
     image_sha = "1" * 64
     marker_sha = "2" * 64
-    source = "a" * 40
+    package_source = "a" * 40
+    h1_repo_head = "b" * 40
     h1 = root / "h1-release-gate.json"
     write_json(h1, {
         "schema": H1_RELEASE_GATE_SCHEMA,
@@ -882,7 +893,7 @@ def complete_args(root: Path) -> argparse.Namespace:
             "secrets_read": False,
             "media_read": False,
         },
-        "repo": {"head": source, "tree": "b" * 40},
+        "repo": {"head": h1_repo_head, "tree": "c" * 40},
         "player_runtime_data_evidence": {
             "mode": "decisive",
             "status": "passed",
@@ -910,7 +921,8 @@ def complete_args(root: Path) -> argparse.Namespace:
         "rollback_ready": True,
         "operator": "operator-pilot-01",
         "rollback_owner": "rollback-owner-01",
-        "expected_source_commit": source,
+        "expected_package_source_commit": package_source,
+        "expected_h1_repo_head": h1_repo_head,
         "window": {
             "start_utc": "2026-06-11T12:00:00Z",
             "end_utc": "2026-06-11T14:00:00Z",
@@ -924,14 +936,14 @@ def complete_args(root: Path) -> argparse.Namespace:
         "schema": PREFLIGHT_SCHEMA,
         "passed": True,
         "device_hash": device_hash,
-        "source_commit": source,
+        "source_commit": package_source,
         "policy": {"device_channel": "homologation", "allow_prerelease": True},
         "timer": {"enabled": False, "active": False},
         "public_freeze": {"apply_local": freeze, "rollback": freeze, "reconcile": freeze},
         "image": {"tag": image_tag, "sha256": image_sha, "marker_sha256": marker_sha},
         "player_runtime": {"mpv_path": EXPECTED_WRAPPER, "hwdec": EXPECTED_HWDEC},
     })
-    version = f"c18.player-runtime-pilot-{source[:7]}"
+    version = f"c18.player-runtime-pilot-{package_source[:7]}"
     payload = root / f"dadooh-player-runtime-{version}.tar.gz"
     payload.write_bytes(b"pilot payload fixture\n")
     payload_sha256 = sha256_file(payload)
@@ -942,7 +954,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         "version": version,
         "channel": "homologation",
         "created_at_utc": "2026-06-11T12:00:00Z",
-        "source_commit": source,
+        "source_commit": package_source,
         "source_dirty": False,
         "payload": payload.name,
         "payload_sha256": payload_sha256,
@@ -966,7 +978,7 @@ def complete_args(root: Path) -> argparse.Namespace:
             image_tag=image_tag,
             image_sha=image_sha,
             marker_sha=marker_sha,
-            source=source,
+            source=package_source,
             package_version=version,
             payload_sha256=payload_sha256,
         )
@@ -1078,6 +1090,17 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
                 result = evaluate(args, require_repo_clean=False)
         self.assertFalse(result["passed"])
         self.assertIn("h1_decisive_bundle:h1_image_tag_mismatch", result["blockers"])
+
+    def test_h1_repo_head_mismatch_denies_when_authorized(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.h1_release_gate_summary.read_text(encoding="utf-8"))
+            data["repo"]["head"] = "d" * 40
+            write_json(args.h1_release_gate_summary, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("h1_decisive_bundle:h1_repo_head_mismatch_or_missing", result["blockers"])
 
     def test_source_mismatch_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
