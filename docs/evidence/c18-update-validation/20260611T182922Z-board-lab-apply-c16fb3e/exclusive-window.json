@@ -1,0 +1,18 @@
+{
+  "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "mpv_process_count": 0,
+  "mpv_processes": [],
+  "passed": true,
+  "previous_link": null,
+  "quarantine_count": 1,
+  "runtime_mask_present": true,
+  "schema": "dadooh.c18.exclusive_lab_window.v1",
+  "service_active_raw": "inactive",
+  "service_enabled_raw": "enabled",
+  "systemctl_show": [
+    "NRestarts=0",
+    "ExecMainPID=2881",
+    "ActiveState=inactive",
+    "SubState=dead"
+  ]
+}

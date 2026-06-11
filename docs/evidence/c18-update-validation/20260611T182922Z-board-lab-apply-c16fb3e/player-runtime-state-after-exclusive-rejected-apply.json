@@ -1,0 +1,52 @@
+{
+  "current": {
+    "applied_at_utc": "2026-06-11T18:40:21Z",
+    "kiosk_py_sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310",
+    "path": "/data/player-runtime/releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "payload_sha256": "f8861315a7c849a585cbcc150e61846eb039ac61cb42a1802ad1be5ff6b41ea1",
+    "tree_sha256": "b2f44a4931b0f0d9229350a8114b18862abf2c1d7a22c47d0359d3022994d019",
+    "version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "via": "player_runtime_reconcile"
+  },
+  "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "last_operation": {
+    "finished_at_utc": "2026-06-11T18:40:21Z",
+    "reason": "manual_reconcile",
+    "started_at_utc": "2026-06-11T18:40:21Z",
+    "status": "current_verified",
+    "type": "reconcile",
+    "verified": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "last_quarantine_pardon": {
+    "backup": "state.json.c18-pardon-20260611T183728Z",
+    "kiosk_py_sha256": "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c",
+    "pardon_at_utc": "2026-06-11T18:37:28Z",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "reason": "environment_contended_candidate_health_total_mpv_count_2",
+    "schema": "dadooh.c18.quarantine_pardon.v1",
+    "tree_sha256": "64bc45403c557d5cddfedaa8d1ee58f8ed2ccbe35cff2154de25d37a46b2ff71",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  },
+  "previous": null,
+  "previous_link": null,
+  "quarantine_count": 2,
+  "quarantine_tail": [
+    {
+      "kiosk_py_sha256": "aed11086fcde3054f0c4360d0075cc2ac64499e073d5f350cac6279abd45a88c",
+      "payload_sha256": "23b18fed5d6199575e353a45bb8621de6870ec94a383301d6cb031730694cb27",
+      "quarantined_at_utc": "2026-06-10T07:51:11Z",
+      "reason": "m6_coldboot_trial_rollback",
+      "tree_sha256": "b23ca25b6553a380a7edc811110112c918510cace4ee4c3b5383e359eec36d70",
+      "version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    },
+    {
+      "kiosk_py_sha256": "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c",
+      "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+      "quarantined_at_utc": "2026-06-11T18:39:58Z",
+      "reason": "status_no_failures",
+      "tree_sha256": "64bc45403c557d5cddfedaa8d1ee58f8ed2ccbe35cff2154de25d37a46b2ff71",
+      "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    }
+  ],
+  "schema": "dadooh.c18.player_runtime.state_sanitized.v1"
+}

@@ -1,0 +1,29 @@
+{
+  "evidence": {
+    "candidate_health_passed": false,
+    "estimated_frame_progressed": true,
+    "failure_reasons": [
+      "status_no_failures"
+    ],
+    "first_failure_reasons": [
+      "black_screen_risk_reason"
+    ],
+    "first_failure_rel_sec": "0.001",
+    "hwdec_expected_samples": 30,
+    "lab_apply_rc": 10,
+    "mpv_count": 1,
+    "status_failure_samples": 1,
+    "total_mpv_count": 1,
+    "vo_configured_true_samples": 30
+  },
+  "guardrails_for_retry": [
+    "remove_only_matching_quarantine_entry_by_exact_hashes_again",
+    "keep_service_inactive_and_runtime_masked",
+    "verify_zero_mpv_before_retry",
+    "increase_startup_wait_sec_to_12",
+    "do_not_repeat_if_status_no_failures_persists"
+  ],
+  "retry_allowed_with_longer_startup_wait": true,
+  "schema": "dadooh.c18.lab_apply.exclusive_reject_classification.v1",
+  "verdict": "startup_status_transient_in_candidate_health"
+}

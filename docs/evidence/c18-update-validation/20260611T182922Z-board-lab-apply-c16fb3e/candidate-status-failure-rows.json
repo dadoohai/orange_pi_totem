@@ -1,0 +1,35 @@
+{
+  "failure_row_count": 1,
+  "failure_rows": [
+    {
+      "failure_reasons": [
+        "black_screen_risk_reason"
+      ],
+      "hwdec_current": "v4l2request-copy",
+      "ipc_result": "success",
+      "mpv_path_alias": "<media-path:fee4d36eb4>",
+      "rel_sec": "0.001",
+      "seq": "1",
+      "snapshot": {
+        "black_screen_risk_reason": "present",
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_state": null,
+        "current_index": null,
+        "last_poll_error": "polling_disabled",
+        "last_render_error_present": true,
+        "mpv_running": null,
+        "playback_state": "player_starting",
+        "player_state": null,
+        "playlist_size": 1,
+        "startup_phase": null
+      },
+      "status_current_alias": "",
+      "status_path_alias": "",
+      "status_playback_state": "player_starting",
+      "time_pos": "3.233333",
+      "vo_configured": "true"
+    }
+  ],
+  "schema": "dadooh.c18.candidate_status_failure_rows.v1"
+}
