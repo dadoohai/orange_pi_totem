@@ -44,6 +44,7 @@ COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
 PLAYBACK_INCIDENT_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_incident_collect.py"
+PLAYBACK_INCIDENT_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_playback_incident_evidence_gate.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -1322,6 +1323,27 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+        incident_gate = PLAYBACK_INCIDENT_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.playback.incident_evidence_gate.v1", incident_gate)
+        self.assertIn("evidence_valid", incident_gate)
+        self.assertIn("pilot_hold", incident_gate)
+        self.assertIn("recurrent_loop_observed", incident_gate)
+        self.assertIn("root_cause_proven_without_log_review", incident_gate)
+        self.assertIn("public_player_runtime_thaw", incident_gate)
+        self.assertNotIn("--no-manifest", incident_gate)
+        self.assertNotIn("systemctl stop", incident_gate)
+        self.assertNotIn("systemctl restart", incident_gate)
+        self.assertNotIn("systemctl start", incident_gate)
+        result = subprocess.run(
+            ["python3", str(PLAYBACK_INCIDENT_EVIDENCE_GATE_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
         candidate = PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY", candidate)
         self.assertIn("--lab-only-candidate-runner", candidate)
@@ -1574,6 +1596,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"rollback_after_quarantine"', pilot_gate)
         self.assertIn('"rollback_after_state_success"', pilot_gate)
         self.assertIn("H2_POWERLOSS_CHECKPOINTS", pilot_gate)
+        self.assertIn("--incident-evidence-dir", pilot_gate)
+        self.assertIn("--require-recurrent", pilot_gate)
+        self.assertIn("incident_pilot_hold", pilot_gate)
         self.assertIn("no_powerloss_17_17", pilot_gate)
         self.assertIn("this_gate_does_not_promote_stable", pilot_gate)
         self.assertIn("this_gate_does_not_thaw_public_player_runtime", pilot_gate)

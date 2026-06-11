@@ -19,6 +19,7 @@ python3 scripts/qa/c18_player_runtime_pilot_readiness_gate.py \
   --h1-release-gate-summary <committed-h1-decisive-release-gate.json> \
   --authorization <committed-pilot-authorization.json> \
   --preflight <committed-board-preflight.json> \
+  --incident-evidence-dir <optional-committed-incident-evidence-dir> \
   --powerloss-evidence-dir <committed-powerloss-after_current_symlink> \
   --powerloss-evidence-dir <committed-powerloss-rollback_after_current_to_previous> \
   --powerloss-evidence-dir <committed-powerloss-rollback_after_previous_removed> \
@@ -155,6 +156,20 @@ If the same media recovers and later re-enters the loop, rerun against the same
 `operator-events.tsv`, and each relevant run's `incident-summary.json`,
 `journal-signatures.ndjson`, and `deep-health/`; keep private artifacts off the
 public evidence path unless a private audit explicitly requests them.
+
+Before using incident evidence in the pilot decision, create a sanitized
+`evidence-manifest.json` for the committed subset and run:
+
+```sh
+python3 scripts/qa/c18_playback_incident_evidence_gate.py \
+  --run-dir <committed-incident-evidence-dir> \
+  --require-recurrent \
+  --json
+```
+
+The incident gate separates `evidence_valid` from `pilot_hold`. Valid evidence
+with `pilot_hold=true` blocks the pilot path until an explicit disposition is
+recorded. It does not prove root cause or playback readiness.
 
 ## Dry-run
 

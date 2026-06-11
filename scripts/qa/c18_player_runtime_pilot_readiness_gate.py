@@ -670,6 +670,56 @@ def run_powerloss_gate(run_dir: Path) -> dict[str, Any]:
     }
 
 
+def run_incident_gate(run_dir: Path) -> dict[str, Any]:
+    proc = subprocess.run(
+        [
+            "python3",
+            "scripts/qa/c18_playback_incident_evidence_gate.py",
+            "--run-dir",
+            str(run_dir),
+            "--require-recurrent",
+            "--json",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=120,
+        check=False,
+    )
+    payload: dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = json.loads(proc.stdout)
+            if isinstance(parsed, dict):
+                payload = parsed
+        except json.JSONDecodeError:
+            payload = {}
+    return {
+        "passed": proc.returncode == 0 and payload.get("evidence_valid") is True and payload.get("pilot_hold") is not True,
+        "evidence_valid": payload.get("evidence_valid"),
+        "pilot_hold": payload.get("pilot_hold"),
+        "hold_reasons": payload.get("hold_reasons") if isinstance(payload.get("hold_reasons"), list) else [],
+        "errors": payload.get("errors") if isinstance(payload.get("errors"), list) else [],
+        "returncode": proc.returncode,
+        "stdout_tail": proc.stdout[-800:],
+        "stderr_tail": proc.stderr[-800:],
+    }
+
+
+def evaluate_incidents(args: argparse.Namespace) -> dict[str, Any]:
+    blockers: list[str] = []
+    results: dict[str, Any] = {}
+    for run_dir in args.incident_evidence_dir or []:
+        result = run_incident_gate(run_dir)
+        results[str(run_dir)] = result
+        if result.get("evidence_valid") is not True:
+            blockers.append(f"incident_evidence_invalid:{run_dir}")
+        if result.get("pilot_hold") is True:
+            blockers.append(f"incident_pilot_hold:{run_dir}")
+    return step(not blockers, blockers, incident_count=len(args.incident_evidence_dir or []), results=results)
+
+
 def evaluate_powerloss(
     args: argparse.Namespace,
     expected_source_commit: str | None,
@@ -754,6 +804,7 @@ def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> di
         "pilot_authorization": auth_result,
         "board_preflight": preflight_result,
         "authorization_preflight_link": evaluate_authorization_preflight_link(auth_result, preflight_result),
+        "incident_evidence": evaluate_incidents(args),
         "pilot_powerloss_p0": evaluate_powerloss(args, expected_source_commit, target_package),
     }
     if require_repo_clean:
@@ -764,6 +815,7 @@ def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> di
                 args.package_payload,
                 args.authorization,
                 args.preflight,
+                *(args.incident_evidence_dir or []),
                 *(args.powerloss_evidence_dir or []),
             ) if path is not None
         ]
@@ -926,6 +978,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         h1_release_gate_summary=h1,
         authorization=auth,
         preflight=preflight,
+        incident_evidence_dir=[],
         powerloss_evidence_dir=powerloss_dirs,
         expect_image_tag=image_tag,
         expect_image_sha256=image_sha,
@@ -942,6 +995,7 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
             package_payload=None,
             authorization=None,
             preflight=None,
+            incident_evidence_dir=[],
             powerloss_evidence_dir=[],
             expect_image_tag=None,
             expect_image_sha256=None,
@@ -1157,6 +1211,47 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
         self.assertIn("input_dir_untracked_files_present", result["blockers"])
         self.assertIn("input_manifest_entries_not_tracked", result["blockers"])
 
+    def test_incident_evidence_hold_blocks_pilot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            incident = Path(tmp) / "incident"
+            incident.mkdir()
+            args.incident_evidence_dir = [incident]
+            with (
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+                mock.patch(__name__ + ".run_incident_gate", return_value={
+                    "passed": False,
+                    "evidence_valid": True,
+                    "pilot_hold": True,
+                    "hold_reasons": ["recurrent_loop_observed"],
+                    "errors": [],
+                    "returncode": 1,
+                    "stdout_tail": "",
+                    "stderr_tail": "",
+                }),
+            ):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn(f"incident_evidence:incident_pilot_hold:{incident}", result["blockers"])
+
+    def test_incident_gate_wrapper_requires_recurrent_mode(self) -> None:
+        payload = {
+            "evidence_valid": False,
+            "pilot_hold": False,
+            "errors": ["recurrent_events_missing"],
+            "hold_reasons": [],
+        }
+        with mock.patch(
+            __name__ + ".subprocess.run",
+            return_value=subprocess.CompletedProcess(args=[], returncode=1, stdout=json.dumps(payload), stderr=""),
+        ) as run:
+            result = run_incident_gate(Path("/tmp/incident-evidence"))
+        argv = run.call_args.args[0]
+        self.assertIn("--require-recurrent", argv)
+        self.assertIn("--json", argv)
+        self.assertFalse(result["passed"])
+        self.assertIn("recurrent_events_missing", result["errors"])
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate C18 player-runtime homologation pilot readiness.")
@@ -1166,6 +1261,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--h1-release-gate-summary", type=Path, default=None)
     parser.add_argument("--authorization", type=Path, default=None)
     parser.add_argument("--preflight", type=Path, default=None)
+    parser.add_argument("--incident-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--expect-image-tag", default=None)
     parser.add_argument("--expect-image-sha256", default=None)

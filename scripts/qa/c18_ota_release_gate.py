@@ -59,6 +59,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_persistent_trial.py",
     "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
     "scripts/qa/c18_player_runtime_lab_thaw.py",
+    "scripts/qa/c18_playback_incident_evidence_gate.py",
     "scripts/qa/c18_player_runtime_pilot_readiness_gate.py",
     "scripts/qa/c18_player_runtime_h2_readiness_gate.py",
     "scripts/qa/c18_player_runtime_powerloss_trial.py",
