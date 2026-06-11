@@ -754,6 +754,54 @@ def _decode_sample(ipc_path: Path, *, boot_id: str) -> dict[str, Any]:
     }
 
 
+def _sample_is_decoding(sample: dict[str, Any]) -> bool:
+    if _number(sample.get("estimated_frame_number")) is None:
+        return False
+    if _number(sample.get("time_pos")) is None:
+        return False
+    if _number(sample.get("duration")) is None:
+        return False
+    if sample.get("hwdec_current") != EXPECTED_HWDEC:
+        return False
+    if sample.get("vo_configured") is not True:
+        return False
+    for key in ("idle_active", "pause", "eof_reached"):
+        if sample.get(key) is not False:
+            return False
+    return True
+
+
+def _latest_decode_run(samples: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    current: list[dict[str, Any]] = []
+    prev_frame: float | None = None
+    prev_time: float | None = None
+    prev_monotonic: float | None = None
+    for sample in samples:
+        if not _sample_is_decoding(sample):
+            current = []
+            prev_frame = prev_time = prev_monotonic = None
+            continue
+        frame = _number(sample.get("estimated_frame_number"))
+        pos = _number(sample.get("time_pos"))
+        mono = _number(sample.get("monotonic"))
+        if frame is None or pos is None or mono is None:
+            current = []
+            prev_frame = prev_time = prev_monotonic = None
+            continue
+        if (
+            current
+            and prev_frame is not None and frame > prev_frame
+            and prev_time is not None and pos > prev_time
+            and prev_monotonic is not None and mono > prev_monotonic
+            and mono - prev_monotonic >= 0.5
+        ):
+            current.append(sample)
+        else:
+            current = [sample]
+        prev_frame, prev_time, prev_monotonic = frame, pos, mono
+    return current
+
+
 def _decode_confirm(samples: list[dict[str, Any]], *, signal_monotonic: float | None = None) -> dict[str, Any]:
     errors: list[str] = []
     good = [s for s in samples if s.get("ipc_result") == "success"]
@@ -765,17 +813,16 @@ def _decode_confirm(samples: list[dict[str, Any]], *, signal_monotonic: float | 
             errors.append("sample_monotonic_not_increasing")
         elif cm - pm < 0.5:
             errors.append("sample_spacing_too_short")
-    frames = [_number(s.get("estimated_frame_number")) for s in good]
-    times = [_number(s.get("time_pos")) for s in good]
-    duration = _number(good[-1].get("duration")) if good else None
-    if any(v is None for v in frames) or any(v is None for v in times):
-        errors.append("sample_missing_frame_or_time")
-    elif any(cur <= prev for prev, cur in zip(frames, frames[1:])):  # type: ignore[arg-type]
-        errors.append("frames_not_strictly_increasing")
+    decode_run = _latest_decode_run(good)
+    frames = [_number(s.get("estimated_frame_number")) for s in decode_run]
+    times = [_number(s.get("time_pos")) for s in decode_run]
+    duration = _number(decode_run[-1].get("duration")) if decode_run else None
+    if len(decode_run) < 3:
+        errors.append("too_few_decode_samples")
     elif (times[-1] - times[0]) < 0.2:  # type: ignore[operator]
         errors.append("time_pos_not_advancing")
     if good:
-        last = good[-1]
+        last = decode_run[-1] if decode_run else good[-1]
         if last.get("hwdec_current") != EXPECTED_HWDEC:
             errors.append("hwdec_current_not_expected")
         if last.get("vo_configured") is not True:
@@ -788,6 +835,11 @@ def _decode_confirm(samples: list[dict[str, Any]], *, signal_monotonic: float | 
         elif duration - times[-1] < MID_DECODE_EOF_MARGIN_SEC:  # type: ignore[operator]
             errors.append("eof_margin_too_small")
         if signal_monotonic is not None:
+            physical_last = samples[-1] if samples else None
+            if physical_last is not last:
+                errors.append("last_sample_not_decoding")
+            elif physical_last.get("ipc_result") != "success":
+                errors.append("last_sample_ipc_not_success")
             last_m = _number(last.get("monotonic"))
             if last_m is None or signal_monotonic - last_m > MID_DECODE_MAX_SAMPLE_TO_SIGNAL_SEC:
                 errors.append("last_sample_stale_for_signal")
@@ -796,7 +848,7 @@ def _decode_confirm(samples: list[dict[str, Any]], *, signal_monotonic: float | 
     return {
         "confirmed": not errors,
         "errors": errors,
-        "samples_n": len(good),
+        "samples_n": len(decode_run),
         "frame_first": frames[0] if frames and frames[0] is not None else None,
         "frame_last": frames[-1] if frames and frames[-1] is not None else None,
         "time_pos_first": times[0] if times and times[0] is not None else None,
@@ -1224,6 +1276,23 @@ def _run_mid_decode_sigterm_probe(args: argparse.Namespace, run_root: Path,
             if last_cycle_after is not None:
                 attempt["last_cycle_after"] = last_cycle_after
             attempts.append(attempt)
+            if attempt.get("passed") is not True:
+                break
+            if index + 1 < attempts_n:
+                barrier_passed, mpv_pids, fuser_dri = _wait_for_no_mpv_or_dri(timeout_sec=10.0)
+                attempt["post_attempt_barrier"] = {
+                    "passed": barrier_passed,
+                    "mpv_pids": mpv_pids,
+                    "fuser_dri": fuser_dri,
+                }
+                if not barrier_passed:
+                    attempt["passed"] = False
+                    attempt["failure_reasons"] = sorted(set(
+                        list(attempt.get("failure_reasons") or [])
+                        + ["mid_decode_probe_post_attempt_barrier_failed"]
+                    ))
+                    failure_reasons.append("mid_decode_probe_post_attempt_barrier_failed")
+                    break
     except Exception as exc:
         if not failure_reasons:
             failure_reasons.append(f"mid_decode_probe_exception:{type(exc).__name__}")
@@ -1570,6 +1639,61 @@ class TeardownTrialSelfTest(unittest.TestCase):
         self.assertEqual(cycle["gpu_faults_delta"], 1)
         self.assertFalse(cycle["passed"])
 
+    def test_mid_decode_confirm_ignores_initial_embryonic_sample(self) -> None:
+        samples = [
+            {"ipc_result": "success", "monotonic": 1.0, "estimated_frame_number": None,
+             "time_pos": None, "duration": None, "hwdec_current": None,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": None},
+            {"ipc_result": "success", "monotonic": 1.6, "estimated_frame_number": 10,
+             "time_pos": 1.0, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "success", "monotonic": 2.2, "estimated_frame_number": 30,
+             "time_pos": 1.7, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "success", "monotonic": 2.8, "estimated_frame_number": 50,
+             "time_pos": 2.4, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+        ]
+        confirm = _decode_confirm(samples, signal_monotonic=3.0)
+        self.assertTrue(confirm["confirmed"], msg=confirm)
+        self.assertEqual(confirm["samples_n"], 3)
+        self.assertEqual(confirm["frame_first"], 10.0)
+
+    def test_mid_decode_confirm_requires_trailing_progress(self) -> None:
+        samples = [
+            {"ipc_result": "success", "monotonic": 1.0, "estimated_frame_number": 10,
+             "time_pos": 1.0, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "success", "monotonic": 1.6, "estimated_frame_number": 20,
+             "time_pos": 1.6, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "success", "monotonic": 2.2, "estimated_frame_number": 20,
+             "time_pos": 1.6, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+        ]
+        confirm = _decode_confirm(samples, signal_monotonic=2.4)
+        self.assertFalse(confirm["confirmed"])
+        self.assertIn("too_few_decode_samples", confirm["errors"])
+
+    def test_mid_decode_confirm_rejects_final_ipc_error(self) -> None:
+        samples = [
+            {"ipc_result": "success", "monotonic": 1.0, "estimated_frame_number": 10,
+             "time_pos": 1.0, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "success", "monotonic": 1.6, "estimated_frame_number": 30,
+             "time_pos": 1.6, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "success", "monotonic": 2.2, "estimated_frame_number": 50,
+             "time_pos": 2.2, "duration": 30.0, "hwdec_current": EXPECTED_HWDEC,
+             "vo_configured": True, "idle_active": False, "pause": False, "eof_reached": False},
+            {"ipc_result": "error", "monotonic": 2.7, "estimated_frame_number": None,
+             "time_pos": None, "duration": None, "hwdec_current": None,
+             "vo_configured": None, "idle_active": None, "pause": None, "eof_reached": None},
+        ]
+        confirm = _decode_confirm(samples, signal_monotonic=2.71)
+        self.assertFalse(confirm["confirmed"])
+        self.assertIn("last_sample_not_decoding", confirm["errors"])
+
     def test_fresh_ipc_classify_honesty(self) -> None:
         self.assertEqual(classify_fresh_ipc(FRESH_SENT_LOG)["outcome"], "fresh_sent")
         self.assertEqual(classify_fresh_ipc(FRESH_FAILED_LOG)["outcome"], "fresh_failed_fallback_sigterm")
@@ -1797,6 +1921,8 @@ class TeardownTrialSelfTest(unittest.TestCase):
             (attempt_dir / "kernel-before.txt").write_text("boot clean\n", encoding="utf-8")
             (attempt_dir / "kernel-after.txt").write_text("boot clean\n", encoding="utf-8")
             (attempt_dir / "probe-kiosk-log-tail.txt").write_text("MPV process started pid=123\n", encoding="utf-8")
+            (attempt_dir / "probe-stdout.txt").write_text("MPV process started pid=123\n", encoding="utf-8")
+            (attempt_dir / "probe-stderr.txt").write_text("", encoding="utf-8")
             signal_m = base + 1.5
             confirm = _decode_confirm(samples, signal_monotonic=signal_m)
             artifact = {

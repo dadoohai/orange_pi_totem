@@ -58,6 +58,7 @@ SECRET_TEXT_PATTERNS = (
     ("password_value", re.compile(r"\bpassword\s*[:=]\s*['\"]?[^'\"\s,}]+", re.I)),
 )
 SENSITIVE_KEY_PARTS = ("api_key", "token", "password", "secret", "ssid", "environment_id")
+ALLOW_EMPTY_FILE_RE = re.compile(r"^mid-decode-sigterm-probe/attempt-\d{2}/probe-stderr\.txt$")
 
 HEALTH_CHECKS = (
     "samples_present",
@@ -210,7 +211,7 @@ def validate_files(run_dir: Path, errors: list[str]) -> list[str]:
         if path.is_dir():
             continue
         files.append(rel_path)
-        if path.stat().st_size == 0:
+        if path.stat().st_size == 0 and not ALLOW_EMPTY_FILE_RE.fullmatch(rel_path):
             errors.append(f"zero_size_file:{rel_path}")
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -507,6 +508,54 @@ def _as_number(value: Any) -> float | None:
     return None
 
 
+def _sample_is_decoding(sample: dict[str, Any]) -> bool:
+    if _as_number(sample.get("estimated_frame_number")) is None:
+        return False
+    if _as_number(sample.get("time_pos")) is None:
+        return False
+    if _as_number(sample.get("duration")) is None:
+        return False
+    if sample.get("hwdec_current") != EXPECTED_HWDEC:
+        return False
+    if sample.get("vo_configured") is not True:
+        return False
+    for key in ("idle_active", "pause", "eof_reached"):
+        if sample.get(key) is not False:
+            return False
+    return True
+
+
+def _latest_decode_run(samples: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    current: list[dict[str, Any]] = []
+    prev_frame: float | None = None
+    prev_time: float | None = None
+    prev_monotonic: float | None = None
+    for sample in samples:
+        if not _sample_is_decoding(sample):
+            current = []
+            prev_frame = prev_time = prev_monotonic = None
+            continue
+        frame = _as_number(sample.get("estimated_frame_number"))
+        pos = _as_number(sample.get("time_pos"))
+        mono = _as_number(sample.get("monotonic"))
+        if frame is None or pos is None or mono is None:
+            current = []
+            prev_frame = prev_time = prev_monotonic = None
+            continue
+        if (
+            current
+            and prev_frame is not None and frame > prev_frame
+            and prev_time is not None and pos > prev_time
+            and prev_monotonic is not None and mono > prev_monotonic
+            and mono - prev_monotonic >= 0.5
+        ):
+            current.append(sample)
+        else:
+            current = [sample]
+        prev_frame, prev_time, prev_monotonic = frame, pos, mono
+    return current
+
+
 def recompute_mid_decode(samples: list[dict[str, Any]], *,
                          summary_boot_id: str,
                          signal_monotonic: float | None) -> dict[str, Any]:
@@ -524,17 +573,16 @@ def recompute_mid_decode(samples: list[dict[str, Any]], *,
             errs.append("sample_monotonic_not_increasing")
         elif cm - pm < 0.5:
             errs.append("sample_spacing_too_short")
-    frames = [_as_number(s.get("estimated_frame_number")) for s in good]
-    times = [_as_number(s.get("time_pos")) for s in good]
-    duration = _as_number(good[-1].get("duration")) if good else None
-    if any(v is None for v in frames) or any(v is None for v in times):
-        errs.append("sample_missing_frame_or_time")
-    elif any(cur <= prev for prev, cur in zip(frames, frames[1:])):  # type: ignore[arg-type]
-        errs.append("frames_not_strictly_increasing")
+    decode_run = _latest_decode_run(good)
+    frames = [_as_number(s.get("estimated_frame_number")) for s in decode_run]
+    times = [_as_number(s.get("time_pos")) for s in decode_run]
+    duration = _as_number(decode_run[-1].get("duration")) if decode_run else None
+    if len(decode_run) < 3:
+        errs.append("too_few_decode_samples")
     elif (times[-1] - times[0]) < 0.2:  # type: ignore[operator]
         errs.append("time_pos_not_advancing")
     if good:
-        last = good[-1]
+        last = decode_run[-1] if decode_run else good[-1]
         if last.get("hwdec_current") != EXPECTED_HWDEC:
             errs.append("hwdec_current_not_expected")
         if last.get("vo_configured") is not True:
@@ -547,6 +595,11 @@ def recompute_mid_decode(samples: list[dict[str, Any]], *,
         elif duration - times[-1] < MID_DECODE_EOF_MARGIN_SEC:  # type: ignore[operator]
             errs.append("eof_margin_too_small")
         if signal_monotonic is not None:
+            physical_last = samples[-1] if samples else None
+            if physical_last is not last:
+                errs.append("last_sample_not_decoding")
+            elif physical_last.get("ipc_result") != "success":
+                errs.append("last_sample_ipc_not_success")
             last_m = _as_number(last.get("monotonic"))
             if last_m is None or signal_monotonic - last_m > MID_DECODE_MAX_SAMPLE_TO_SIGNAL_SEC:
                 errs.append("last_sample_stale_for_signal")
@@ -555,7 +608,7 @@ def recompute_mid_decode(samples: list[dict[str, Any]], *,
     return {
         "confirmed": not errs,
         "errors": errs,
-        "samples_n": len(good),
+        "samples_n": len(decode_run),
         "frame_first": frames[0] if frames and frames[0] is not None else None,
         "frame_last": frames[-1] if frames and frames[-1] is not None else None,
         "time_pos_first": times[0] if times and times[0] is not None else None,
@@ -691,6 +744,9 @@ def validate_mid_decode_probe(run_dir: Path, summary: dict[str, Any],
             ("kernel-before.txt", before_path),
             ("kernel-after.txt", after_path),
             ("decode-samples.ndjson", samples_path),
+            ("probe-stdout.txt", attempt_dir / "probe-stdout.txt"),
+            ("probe-stderr.txt", attempt_dir / "probe-stderr.txt"),
+            ("probe-kiosk-log-tail.txt", attempt_dir / "probe-kiosk-log-tail.txt"),
         ):
             if not file_path.is_file():
                 errors.append(f"missing_required:mid-decode-sigterm-probe/attempt-{index:02d}/{tag}")
@@ -757,6 +813,12 @@ def validate_mid_decode_probe(run_dir: Path, summary: dict[str, Any],
                 errors.append("mid_decode_probe_mpv_escalated_after_sigterm")
         if attempt.get("kiosk_killed_before_signal") is not True:
             errors.append(f"{label}_kiosk_not_killed_before_signal")
+        if index + 1 < len(attempts):
+            barrier = attempt.get("post_attempt_barrier")
+            if not isinstance(barrier, dict):
+                errors.append(f"{label}_post_attempt_barrier_missing")
+            elif barrier.get("passed") is not True:
+                errors.append(f"{label}_post_attempt_barrier_not_passed")
     validate_health(
         load_json(
             run_dir / "mid-decode-sigterm-probe" / "post-restore-health" / "playback-deep-health-public.json",
@@ -1013,6 +1075,21 @@ def add_mid_decode_fixture(root: Path) -> None:
     samples = [
         {
             "boot_id": summary["boot_id"],
+            "monotonic": 129.4,
+            "ipc_result": "success",
+            "ipc_error": "",
+            "ipc_elapsed_ms": 20,
+            "estimated_frame_number": None,
+            "time_pos": None,
+            "duration": None,
+            "hwdec_current": None,
+            "vo_configured": True,
+            "idle_active": False,
+            "pause": False,
+            "eof_reached": None,
+        },
+        {
+            "boot_id": summary["boot_id"],
             "monotonic": 130.0,
             "ipc_result": "success",
             "ipc_error": "",
@@ -1064,6 +1141,8 @@ def add_mid_decode_fixture(root: Path) -> None:
     (attempt_dir / "kernel-before.txt").write_text("boot clean\n", encoding="utf-8")
     (attempt_dir / "kernel-after.txt").write_text("boot clean\n", encoding="utf-8")
     (attempt_dir / "probe-kiosk-log-tail.txt").write_text("MPV process started pid=123\n", encoding="utf-8")
+    (attempt_dir / "probe-stdout.txt").write_text("MPV process started pid=123\n", encoding="utf-8")
+    (attempt_dir / "probe-stderr.txt").write_text("", encoding="utf-8")
     signal_m = 131.4
     recomputed = recompute_mid_decode(samples, summary_boot_id=summary["boot_id"], signal_monotonic=signal_m)
     write_json(root / "mid_decode_sigterm_probe.json", {
@@ -1212,6 +1291,58 @@ class TeardownEvidenceGateSelfTest(unittest.TestCase):
             text = samples.read_text(encoding="utf-8").replace(EXPECTED_HWDEC, "v4l2request")
             samples.write_text(text, encoding="utf-8")
             self._assert_fails(root, "mid_decode_probe_decode_claim_text_mismatch")
+
+    def test_mid_decode_trailing_wedged_samples_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            samples_path = root / "mid-decode-sigterm-probe/attempt-00/decode-samples.ndjson"
+            rows = [json.loads(line) for line in samples_path.read_text(encoding="utf-8").splitlines()]
+            rows[-2]["estimated_frame_number"] = rows[-3]["estimated_frame_number"]
+            rows[-2]["time_pos"] = rows[-3]["time_pos"]
+            rows[-1]["estimated_frame_number"] = rows[-3]["estimated_frame_number"]
+            rows[-1]["time_pos"] = rows[-3]["time_pos"]
+            with samples_path.open("w", encoding="utf-8") as fh:
+                for row in rows:
+                    fh.write(json.dumps(row, sort_keys=True) + "\n")
+            self._assert_fails(root, "mid_decode_probe_decode_claim_text_mismatch")
+
+    def test_mid_decode_final_ipc_error_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            samples_path = root / "mid-decode-sigterm-probe/attempt-00/decode-samples.ndjson"
+            with samples_path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({
+                    "boot_id": json.loads((root / "teardown-summary.json").read_text())["boot_id"],
+                    "monotonic": 131.39,
+                    "ipc_result": "error",
+                    "ipc_error": "timeout",
+                    "ipc_elapsed_ms": 1000,
+                    "estimated_frame_number": None,
+                    "time_pos": None,
+                    "duration": None,
+                    "hwdec_current": None,
+                    "vo_configured": None,
+                    "idle_active": None,
+                    "pause": None,
+                    "eof_reached": None,
+                }, sort_keys=True) + "\n")
+            self._assert_fails(root, "mid_decode_probe_decode_claim_text_mismatch")
+
+    def test_mid_decode_attempt_logs_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            (root / "mid-decode-sigterm-probe/attempt-00/probe-stdout.txt").unlink()
+            self._assert_fails(root, "missing_required:mid-decode-sigterm-probe/attempt-00/probe-stdout.txt")
+
+    def test_mid_decode_non_stderr_empty_file_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._fixture(tmp)
+            add_mid_decode_fixture(root)
+            (root / "mid-decode-sigterm-probe/attempt-00/probe-stdout.txt").write_text("", encoding="utf-8")
+            self._assert_fails(root, "zero_size_file:mid-decode-sigterm-probe/attempt-00/probe-stdout.txt")
 
     def test_mid_decode_escalation_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
