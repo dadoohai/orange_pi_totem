@@ -179,6 +179,25 @@ def status_item_alias(row: dict[str, str]) -> str:
     return row.get("status_path_alias") or row.get("status_current_alias") or ""
 
 
+def _status_snapshot_item_alias(item: Any) -> str:
+    if not isinstance(item, dict):
+        return ""
+    return str(item.get("path_alias") or item.get("alias") or "")
+
+
+def status_next_item_alias(row: dict[str, str]) -> str:
+    raw = row.get("status_snapshot_json") or ""
+    if not raw:
+        return ""
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    return _status_snapshot_item_alias(data.get("next_item"))
+
+
 def _status_mpv_alias_pair_is_transition(status_alias: str, mpv_alias: str, old: str, new: str) -> bool:
     return (
         status_alias != mpv_alias
@@ -294,6 +313,63 @@ def _status_mpv_is_bounded_chained_transition_lag(events: list[dict[str, Any]], 
     return True
 
 
+def _status_mpv_is_forward_status_lag(events: list[dict[str, Any]], start: int, end: int) -> bool:
+    """Accept short runs where MPV has reached the status-declared next item.
+
+    This covers fast media transitions where the MPV IPC sample is already on
+    the next playlist entry while the public status snapshot still reports the
+    previous current item. It deliberately does not cover the opposite failure
+    mode, where status advances while MPV remains stuck on an older item.
+    """
+
+    if start <= 0:
+        return False
+    before = events[start - 1]
+    if not before["aligned"]:
+        return False
+    if end < len(events):
+        after = events[end]
+        if not after["aligned"]:
+            return False
+        if after["status_alias"] == before["status_alias"]:
+            return False
+
+    segments: list[dict[str, Any]] = []
+    index = start
+    while index < end:
+        status_alias = events[index]["status_alias"]
+        mpv_alias = events[index]["mpv_alias"]
+        if not mpv_alias or events[index].get("status_next_alias") != mpv_alias:
+            return False
+        if status_alias == mpv_alias:
+            return False
+        seg_start = index
+        index += 1
+        while (
+            index < end
+            and events[index]["status_alias"] == status_alias
+            and events[index]["mpv_alias"] == mpv_alias
+        ):
+            if events[index].get("status_next_alias") != mpv_alias:
+                return False
+            index += 1
+        segment_events = events[seg_start:index]
+        if len(segment_events) > MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES:
+            return False
+        if _status_mpv_lag_duration_seconds(segment_events) > MAX_STATUS_MPV_TRANSITION_LAG_SECONDS:
+            return False
+        segments.append({"status_alias": status_alias, "mpv_alias": mpv_alias})
+
+    if not segments or len(segments) > MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS:
+        return False
+    if segments[0]["status_alias"] != before["status_alias"]:
+        return False
+    for left, right in zip(segments, segments[1:]):
+        if left["mpv_alias"] != right["status_alias"]:
+            return False
+    return True
+
+
 def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | float]:
     comparable = 0
     mismatches = 0
@@ -314,6 +390,7 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
             "row_index": row_index,
             "status_alias": status_alias,
             "mpv_alias": mpv_alias,
+            "status_next_alias": status_next_item_alias(row),
             "aligned": status_alias == mpv_alias,
             "rel_sec": as_float(row.get("rel_sec")),
         }
@@ -336,6 +413,8 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
     terminal_transition_lag_samples = 0
     chained_transition_lag_runs = 0
     chained_transition_lag_samples = 0
+    forward_status_lag_runs = 0
+    forward_status_lag_samples = 0
     unexplained_mismatch_runs = 0
     unexplained_mismatch_samples = 0
     long_transition_lag_runs = 0
@@ -373,6 +452,14 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
             chained_transition_lag_runs += 1
             chained_transition_lag_samples += run_samples
             continue
+        if _status_mpv_is_terminal_transition_lag(events, start, end):
+            terminal_transition_lag_runs += 1
+            terminal_transition_lag_samples += run_samples
+            continue
+        if _status_mpv_is_forward_status_lag(events, start, end):
+            forward_status_lag_runs += 1
+            forward_status_lag_samples += run_samples
+            continue
         if (
             start > 0
             and end < len(events)
@@ -394,10 +481,6 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
             long_transition_lag_runs += 1
             long_transition_lag_samples += run_samples
             continue
-        if _status_mpv_is_terminal_transition_lag(events, start, end):
-            terminal_transition_lag_runs += 1
-            terminal_transition_lag_samples += run_samples
-            continue
         unexplained_mismatch_runs += 1
         unexplained_mismatch_samples += run_samples
     return {
@@ -414,6 +497,8 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
         "terminal_transition_lag_samples": terminal_transition_lag_samples,
         "chained_transition_lag_runs": chained_transition_lag_runs,
         "chained_transition_lag_samples": chained_transition_lag_samples,
+        "forward_status_lag_runs": forward_status_lag_runs,
+        "forward_status_lag_samples": forward_status_lag_samples,
         "unexplained_mismatch_runs": unexplained_mismatch_runs,
         "unexplained_mismatch_samples": unexplained_mismatch_samples,
         "long_transition_lag_runs": long_transition_lag_runs,
@@ -682,6 +767,8 @@ def evaluate(
             "status_mpv_terminal_transition_lag_samples": alignment_stats["terminal_transition_lag_samples"],
             "status_mpv_chained_transition_lag_runs": alignment_stats["chained_transition_lag_runs"],
             "status_mpv_chained_transition_lag_samples": alignment_stats["chained_transition_lag_samples"],
+            "status_mpv_forward_status_lag_runs": alignment_stats["forward_status_lag_runs"],
+            "status_mpv_forward_status_lag_samples": alignment_stats["forward_status_lag_samples"],
             "status_mpv_unexplained_mismatch_runs": alignment_stats["unexplained_mismatch_runs"],
             "status_mpv_unexplained_mismatch_samples": alignment_stats["unexplained_mismatch_samples"],
             "status_mpv_long_transition_lag_runs": alignment_stats["long_transition_lag_runs"],

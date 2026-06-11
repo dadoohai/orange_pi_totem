@@ -95,8 +95,26 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         samples: list[tuple[str, str, str, str]],
     ) -> None:
         template = fixture.rows()[0]
+        item_by_index: dict[int, tuple[str, str]] = {}
+        for status_alias, status_path_alias, status_index, _mpv_path_alias in samples:
+            item_by_index.setdefault(int(status_index), (status_alias, status_path_alias))
+        item_by_path = {status_path_alias: (status_alias, status_path_alias) for status_alias, status_path_alias in item_by_index.values()}
+        forward_next_by_index: dict[int, tuple[str, str]] = {}
+        for _status_alias, status_path_alias, status_index, mpv_path_alias in samples:
+            if mpv_path_alias and mpv_path_alias != status_path_alias:
+                forward_next_by_index.setdefault(
+                    int(status_index),
+                    item_by_path.get(mpv_path_alias, ("", mpv_path_alias)),
+                )
+        ordered_indexes = sorted(item_by_index)
+        next_by_index: dict[int, tuple[str, str]] = {}
+        if ordered_indexes:
+            for offset, status_index in enumerate(ordered_indexes):
+                next_index = ordered_indexes[(offset + 1) % len(ordered_indexes)]
+                next_by_index[status_index] = forward_next_by_index.get(status_index, item_by_index[next_index])
         rows = []
         for index, (status_alias, status_path_alias, status_index, mpv_path_alias) in enumerate(samples, start=1):
+            status_index_int = int(status_index)
             row = template.copy()
             row["seq"] = str(index)
             row["rel_sec"] = str(index - 1)
@@ -109,8 +127,21 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             row["status_path_alias"] = status_path_alias
             row["status_current_index"] = status_index
             snapshot = json.loads(row["status_snapshot_json"])
-            snapshot["playlist_size"] = 3
-            snapshot["current_index"] = int(status_index)
+            snapshot["playlist_size"] = max(len(ordered_indexes), 1)
+            snapshot["current_index"] = status_index_int
+            snapshot["current_item"] = {
+                "alias": status_alias,
+                "path_alias": status_path_alias,
+                "duration_ms": 10000,
+                "offset_ms": 0,
+                "started_at_present": True,
+            }
+            next_alias, next_path_alias = next_by_index.get(status_index_int, ("", ""))
+            snapshot["next_item"] = {
+                "alias": next_alias,
+                "path_alias": next_path_alias,
+                "duration_ms": 10000,
+            }
             row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
             rows.append(row)
         fixture.write_rows(rows)
@@ -429,6 +460,57 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["counters"]["status_mpv_chained_transition_lag_runs"], 1)
         self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
 
+    def test_accepts_forward_status_lag_to_later_alignment(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:d>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:d>"),
+                ("media-g", "<media-path:g>", "3", "<media-path:g>"),
+                ("media-g", "<media-path:g>", "3", "<media-path:g>"),
+            ],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertNotIn("status_mpv_path_aligned", result["failure_reasons"])
+        self.assertGreaterEqual(result["counters"]["status_mpv_forward_status_lag_runs"], 1)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
+
+    def test_accepts_terminal_chained_forward_status_lag(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:d>"),
+            ],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertNotIn("status_mpv_path_aligned", result["failure_reasons"])
+        self.assertEqual(result["counters"]["status_mpv_forward_status_lag_runs"], 1)
+        self.assertEqual(result["counters"]["status_mpv_forward_status_lag_samples"], 6)
+
     def test_rejects_unbounded_chained_status_mpv_transition_lag(self) -> None:
         fixture = self.with_case()
         self.write_status_mpv_alignment_rows(
@@ -445,6 +527,43 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
 
         result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
         self.assertEqual(result["counters"]["status_mpv_chained_transition_lag_runs"], 0)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 1)
+
+    def test_rejects_forward_status_lag_without_next_item_proof(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+            ],
+        )
+        rows = fixture.rows()
+        for row in rows:
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot.pop("next_item", None)
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_forward_status_lag_runs"], 0)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 1)
+
+    def test_rejects_too_many_terminal_forward_status_lag_segments(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:d>"),
+            ],
+        )
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_forward_status_lag_runs"], 0)
         self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 1)
 
     def test_rejects_long_status_mpv_transition_lag(self) -> None:

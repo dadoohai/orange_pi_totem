@@ -34,6 +34,7 @@ POWERLOSS_MANIFEST_SCHEMA = "dadooh.c18.powerloss.evidence_manifest.v1"
 
 EXPECTED_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 EXPECTED_HWDEC = "v4l2request-copy"
+PREFLIGHT_STAGES = {"pre_apply", "post_apply_observation"}
 
 PILOT_POWERLOSS_CHECKPOINTS = (
     "after_current_symlink",
@@ -117,6 +118,10 @@ def parse_utc(raw: Any) -> dt.datetime | None:
     if parsed.tzinfo is None:
         return None
     return parsed.astimezone(dt.timezone.utc)
+
+
+def format_utc(value: dt.datetime) -> str:
+    return value.astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def is_sha256(value: Any) -> bool:
@@ -386,20 +391,37 @@ def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_h1
             if expected and data_evidence.get(key) != expected:
                 blockers.append(blocker)
     steps = summary.get("steps")
-    step_names = [item.get("name") for item in steps if isinstance(item, dict)] if isinstance(steps, list) else []
-    for prefix, blocker in (
-        ("c18_player_runtime_data_coldboot_evidence", "h1_data_coldboot_step_missing"),
-        ("c18_player_runtime_data_evidence", "h1_data_evidence_step_missing"),
-        ("c18_player_runtime_data_evidence_link", "h1_data_evidence_link_step_missing"),
-        ("c18_player_runtime_teardown_evidence:", "h1_teardown_evidence_step_missing"),
-        ("c18_player_runtime_production_stop_teardown_required", "h1_production_stop_teardown_step_missing"),
+    step_items = [item for item in steps if isinstance(item, dict)] if isinstance(steps, list) else []
+    step_names = [item.get("name") for item in step_items]
+    for prefix, missing_blocker, not_passed_blocker in (
+        (
+            "c18_player_runtime_data_coldboot_evidence",
+            "h1_data_coldboot_step_missing",
+            "h1_data_coldboot_step_not_passed",
+        ),
+        ("c18_player_runtime_data_evidence", "h1_data_evidence_step_missing", "h1_data_evidence_step_not_passed"),
+        (
+            "c18_player_runtime_data_evidence_link",
+            "h1_data_evidence_link_step_missing",
+            "h1_data_evidence_link_step_not_passed",
+        ),
+        ("c18_player_runtime_teardown_evidence:", "h1_teardown_evidence_step_missing", "h1_teardown_evidence_step_not_passed"),
+        (
+            "c18_player_runtime_production_stop_teardown_required",
+            "h1_production_stop_teardown_step_missing",
+            "h1_production_stop_teardown_step_not_passed",
+        ),
     ):
-        if not any(str(name).startswith(prefix) for name in step_names):
-            blockers.append(blocker)
+        matching_steps = [item for item in step_items if str(item.get("name")).startswith(prefix)]
+        if not matching_steps:
+            blockers.append(missing_blocker)
+        elif not any(item.get("passed") is True for item in matching_steps):
+            blockers.append(not_passed_blocker)
     repo = summary.get("repo") if isinstance(summary.get("repo"), dict) else {}
-    if expected_h1_repo_head:
-        if repo.get("head") != expected_h1_repo_head:
-            blockers.append("h1_repo_head_mismatch_or_missing")
+    if not expected_h1_repo_head:
+        blockers.append("h1_expected_repo_head_missing")
+    elif repo.get("head") != expected_h1_repo_head:
+        blockers.append("h1_repo_head_mismatch_or_missing")
     return step(
         not blockers,
         blockers,
@@ -409,7 +431,7 @@ def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_h1
     )
 
 
-def evaluate_authorization(path: Path | None) -> tuple[dict[str, Any], dict[str, Any]]:
+def evaluate_authorization(path: Path | None, now_utc: dt.datetime | None) -> tuple[dict[str, Any], dict[str, Any]]:
     blockers: list[str] = []
     if path is None:
         return step(False, ["missing_pilot_authorization"]), {}
@@ -441,8 +463,10 @@ def evaluate_authorization(path: Path | None) -> tuple[dict[str, Any], dict[str,
     if not is_git_sha(source_commit):
         blockers.append("authorization_expected_source_commit_missing_or_invalid")
     h1_repo_head = data.get("expected_h1_repo_head") or data.get("h1_repo_head")
-    if h1_repo_head is not None and not is_git_sha(h1_repo_head):
-        blockers.append("authorization_expected_h1_repo_head_invalid")
+    if h1_repo_head is None:
+        blockers.append("authorization_expected_h1_repo_head_missing_or_invalid")
+    elif not is_git_sha(h1_repo_head):
+        blockers.append("authorization_expected_h1_repo_head_missing_or_invalid")
     window = data.get("window") if isinstance(data.get("window"), dict) else {}
     start = parse_utc(window.get("start_utc") or data.get("window_start_utc"))
     end = parse_utc(window.get("end_utc") or data.get("window_end_utc"))
@@ -450,6 +474,13 @@ def evaluate_authorization(path: Path | None) -> tuple[dict[str, Any], dict[str,
         blockers.append("authorization_window_invalid")
     elif end <= start:
         blockers.append("authorization_window_not_positive")
+    elif now_utc is None:
+        blockers.append("authorization_now_invalid")
+    else:
+        if now_utc < start:
+            blockers.append("authorization_window_not_started")
+        if now_utc > end:
+            blockers.append("authorization_window_expired")
     devices = data.get("allowlisted_devices") or data.get("devices")
     device_hashes: list[str] = []
     if not isinstance(devices, list) or not devices:
@@ -485,6 +516,9 @@ def evaluate_authorization(path: Path | None) -> tuple[dict[str, Any], dict[str,
         authorization_path=str(path),
         source_commit=source_commit,
         h1_repo_head=h1_repo_head,
+        window_start_utc=format_utc(start) if start else None,
+        window_end_utc=format_utc(end) if end else None,
+        evaluated_at_utc=format_utc(now_utc) if now_utc else None,
         device_hashes=device_hashes,
     ), data
 
@@ -516,6 +550,12 @@ def evaluate_preflight(path: Path | None, args: argparse.Namespace) -> tuple[dic
         blockers.append("preflight_schema")
     if data.get("passed") is not True:
         blockers.append("preflight_not_passed")
+    stage = data.get("stage") or data.get("operation_stage")
+    expected_stage = getattr(args, "preflight_stage", None) or "pre_apply"
+    if stage not in PREFLIGHT_STAGES:
+        blockers.append("preflight_stage_missing_or_invalid")
+    elif stage != expected_stage:
+        blockers.append("preflight_stage_mismatch")
     policy = data.get("policy") if isinstance(data.get("policy"), dict) else {}
     if policy.get("device_channel") != "homologation":
         blockers.append("preflight_policy_not_homologation")
@@ -570,6 +610,8 @@ def evaluate_preflight(path: Path | None, args: argparse.Namespace) -> tuple[dic
         not blockers,
         blockers,
         preflight_path=str(path),
+        stage=stage,
+        expected_stage=expected_stage,
         device_hash=device_hash,
         source_commit=source_commit,
     ), data
@@ -801,8 +843,16 @@ def evaluate_powerloss(
     )
 
 
+def now_from_args(args: argparse.Namespace) -> dt.datetime | None:
+    raw = getattr(args, "now_utc", None)
+    if raw:
+        return parse_utc(raw)
+    return dt.datetime.now(dt.timezone.utc)
+
+
 def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> dict[str, Any]:
-    auth_result, auth_data = evaluate_authorization(args.authorization)
+    now_utc = now_from_args(args)
+    auth_result, auth_data = evaluate_authorization(args.authorization, now_utc)
     expected_source_commit = auth_result.get("source_commit")
     expected_h1_repo_head = auth_result.get("h1_repo_head")
     preflight_result, _preflight_data = evaluate_preflight(args.preflight, args)
@@ -935,6 +985,7 @@ def complete_args(root: Path) -> argparse.Namespace:
     write_json(preflight, {
         "schema": PREFLIGHT_SCHEMA,
         "passed": True,
+        "stage": "pre_apply",
         "device_hash": device_hash,
         "source_commit": package_source,
         "policy": {"device_channel": "homologation", "allow_prerelease": True},
@@ -992,6 +1043,8 @@ def complete_args(root: Path) -> argparse.Namespace:
         preflight=preflight,
         incident_evidence_dir=[],
         powerloss_evidence_dir=powerloss_dirs,
+        preflight_stage="pre_apply",
+        now_utc="2026-06-11T13:00:00Z",
         expect_image_tag=image_tag,
         expect_image_sha256=image_sha,
         expect_image_marker_sha256=marker_sha,
@@ -1012,6 +1065,8 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
             expect_image_tag=None,
             expect_image_sha256=None,
             expect_image_marker_sha256=None,
+            preflight_stage="pre_apply",
+            now_utc="2026-06-11T13:00:00Z",
             expect_source_commit=None,
         )
         with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
@@ -1101,6 +1156,70 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
                 result = evaluate(args, require_repo_clean=False)
         self.assertFalse(result["passed"])
         self.assertIn("h1_decisive_bundle:h1_repo_head_mismatch_or_missing", result["blockers"])
+
+    def test_authorization_h1_repo_head_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.authorization.read_text(encoding="utf-8"))
+            data.pop("expected_h1_repo_head")
+            write_json(args.authorization, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "pilot_authorization:authorization_expected_h1_repo_head_missing_or_invalid",
+            result["blockers"],
+        )
+        self.assertIn("h1_decisive_bundle:h1_expected_repo_head_missing", result["blockers"])
+
+    def test_authorization_window_must_be_current(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.authorization.read_text(encoding="utf-8"))
+            data["window"] = {
+                "start_utc": "2020-01-01T00:00:00Z",
+                "end_utc": "2020-01-01T01:00:00Z",
+            }
+            write_json(args.authorization, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("pilot_authorization:authorization_window_expired", result["blockers"])
+
+    def test_h1_required_steps_must_be_passed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.h1_release_gate_summary.read_text(encoding="utf-8"))
+            for item in data["steps"]:
+                if item["name"].startswith("c18_player_runtime_teardown_evidence:"):
+                    item["passed"] = False
+            write_json(args.h1_release_gate_summary, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("h1_decisive_bundle:h1_teardown_evidence_step_not_passed", result["blockers"])
+
+    def test_preflight_stage_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.preflight.read_text(encoding="utf-8"))
+            data.pop("stage")
+            write_json(args.preflight, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("board_preflight:preflight_stage_missing_or_invalid", result["blockers"])
+
+    def test_preflight_stage_must_match_expected_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.preflight.read_text(encoding="utf-8"))
+            data["stage"] = "post_apply_observation"
+            write_json(args.preflight, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("board_preflight:preflight_stage_mismatch", result["blockers"])
 
     def test_source_mismatch_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1290,6 +1409,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expect-image-sha256", default=None)
     parser.add_argument("--expect-image-marker-sha256", default=None)
     parser.add_argument("--expect-source-commit", default=None)
+    parser.add_argument("--preflight-stage", choices=sorted(PREFLIGHT_STAGES), default="pre_apply")
+    parser.add_argument("--now-utc", default=None, help="UTC instant for authorization-window evaluation; defaults to current time.")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 

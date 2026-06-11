@@ -82,7 +82,10 @@ the hash plus a sanitized label.
 ## Board preflight
 
 Collect preflight after the target board is configured for pilot and before any
-apply.
+apply. The JSON must explicitly declare `stage=pre_apply`; post-apply health or
+observation evidence can be committed separately, but it is not a substitute for
+this pre-apply readiness check unless the gate is intentionally run with a
+different expected preflight stage.
 
 Required facts:
 
@@ -102,6 +105,7 @@ Suggested preflight JSON schema:
 {
   "schema": "dadooh.c18.homologation_pilot_preflight.v1",
   "passed": true,
+  "stage": "pre_apply",
   "device_hash": "sha256:<64-hex-hash>",
   "source_commit": "<40-hex-commit>",
   "policy": {
@@ -264,5 +268,8 @@ Commit all sanitized evidence:
 
 Then run the final pilot gate from a clean tree. A green result means only:
 operator-assisted homologation pilot is ready for the allowlisted board(s) in
-the approved window. It does not mean production, stable, public thaw, auto-pull,
-24h soak, 17/17 power-loss, or signature/attestation readiness.
+the approved window. The gate requires `expected_h1_repo_head` in the
+authorization and compares the current UTC instant with the approved window; an
+expired or not-yet-started window is red. It does not mean production, stable,
+public thaw, auto-pull, 24h soak, 17/17 power-loss, or signature/attestation
+readiness.
