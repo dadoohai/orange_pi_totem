@@ -1,0 +1,145 @@
+{
+  "collected_at_utc": "2026-06-11T18:16:21Z",
+  "device_hash": "sha256:fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+  "evidence": {
+    "facts": "board-readonly-facts.json",
+    "freeze": "freeze-probes.tmp-root.json",
+    "health": "playback-health-public-current.json"
+  },
+  "image": {
+    "image_sha256_source": "h1_decisive_bundle_expected_for_observed_marker",
+    "marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "observed_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "observed_marker_tag": "c18-hwdecode-lab-1x",
+    "sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "tag": "c18-hwdecode-lab-1x"
+  },
+  "non_claims": [
+    "read_only_preflight_does_not_apply_package",
+    "read_only_preflight_does_not_promote_stable",
+    "read_only_preflight_does_not_public_thaw"
+  ],
+  "passed": false,
+  "player_runtime": {
+    "checks": {
+      "candidate_process_filtered": true,
+      "estimated_frame_present": true,
+      "ext4_errors_present": true,
+      "ext4_errors_zero": true,
+      "hwdec_expected_present": true,
+      "hwdec_no_unexpected": true,
+      "ipc_stable_after_success": true,
+      "ipc_success_present": true,
+      "media_load_failed_present": true,
+      "media_load_failed_zero": true,
+      "mmc_timeout_reset_present": true,
+      "mmc_timeout_reset_zero": true,
+      "mpv_path_c18_stack": true,
+      "mpv_restart_present": true,
+      "mpv_restart_zero": true,
+      "nrestarts_delta_present": true,
+      "nrestarts_stable": true,
+      "panfrost_faults_clean_for_policy": true,
+      "panfrost_faults_delta_present": true,
+      "panfrost_faults_delta_zero": true,
+      "panfrost_faults_present": true,
+      "panfrost_faults_zero": true,
+      "playback_progressed": true,
+      "samples_present": true,
+      "service_active": true,
+      "service_process_unfiltered": true,
+      "service_single_total_mpv": true,
+      "service_total_mpv_count_present": true,
+      "single_mpv": true,
+      "status_mpv_path_aligned": false,
+      "status_no_failures": true,
+      "transitions_observed_when_required": true,
+      "vo_configured_no_unexpected": true,
+      "vo_configured_present": true
+    },
+    "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "health_failure_reasons": [
+      "status_mpv_path_aligned"
+    ],
+    "health_passed": false,
+    "status_summary": {
+      "blocked_media_count": 0,
+      "consecutive_failures": 0,
+      "content_state": "playing",
+      "current_index": 4,
+      "current_item": {
+        "campaign_id_sha1_12": "05ce8736f133",
+        "duration_ms": 7200,
+        "path_sha1_12": "3662a4e88626",
+        "started_at": "2026-06-11T18:16:12Z",
+        "url_sha1_12": "8e4d41f6c24b"
+      },
+      "last_render_error_present": false,
+      "mpv_running": true,
+      "next_item": {
+        "campaign_id_sha1_12": "56df08af3015",
+        "duration_ms": 5100,
+        "path_sha1_12": "97100fcdae42",
+        "url_sha1_12": "fba32b00557f"
+      },
+      "playback_state": "playing",
+      "player_state": "playing",
+      "playlist_size": 9,
+      "status_schema_version": "kiosky-player-status.v2",
+      "uptime_sec": 47033
+    }
+  },
+  "policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "schema": "dadooh.totem.update.policy.v1"
+  },
+  "preflight_checks": {
+    "allow_prerelease": true,
+    "image_marker_sha256_match": true,
+    "image_tag_match": true,
+    "playback_health_passed": false,
+    "policy_homologation": true,
+    "public_apply_local_frozen": true,
+    "public_reconcile_frozen": true,
+    "public_rollback_frozen": true,
+    "timer_disabled": true,
+    "timer_inactive": true
+  },
+  "public_freeze": {
+    "apply_local": {
+      "data_root": "/tmp/c18-player-runtime-freeze-probe-*",
+      "frozen": true,
+      "output_sha256": "899bfdc6141e1843a71f07e0a0bff0ee58b5427ffc15994ff907d3cfbe7fa72f",
+      "returncode": 44,
+      "summary": "2026-06-11T18:18:49Z WARN apply_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback _ playback deep-health are "
+    },
+    "reconcile": {
+      "data_root": "/tmp/c18-player-runtime-freeze-probe-*",
+      "frozen": true,
+      "output_sha256": "9b99bf9fb93159e61dbc4c4784413b5904943a0b51b3eec1abab55094f1d611b",
+      "returncode": 44,
+      "summary": "player_runtime_reconcile_guard_required: pass --allow-player-runtime-maintenance and set C18_PLAYER_RUNTIME_RECONCILE=1 2026-06-11T18:18:50Z WARN reconcile_bloc"
+    },
+    "rollback": {
+      "data_root": "/tmp/c18-player-runtime-freeze-probe-*",
+      "frozen": true,
+      "output_sha256": "827c319c6473dcbacd00e8db36642cb5783b65f3fdb9bf99d6a0dbc9da21a012",
+      "returncode": 44,
+      "summary": "component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback _ playback deep-health are validated on hardware 2026-06-11T18:18:50Z WARN"
+    }
+  },
+  "schema": "dadooh.c18.homologation_pilot_preflight.v1",
+  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "timer": {
+    "active": false,
+    "active_raw": "inactive",
+    "enabled": false,
+    "enabled_raw": "disabled"
+  }
+}
