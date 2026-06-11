@@ -179,8 +179,7 @@ the intended local package path off-board:
 ```sh
 python3 scripts/qa/c18_player_runtime_release_gate.py \
   --manifest <B.manifest.json> \
-  --payload <B.tar.gz> \
-  --json
+  --payload <B.tar.gz>
 ```
 
 On board, keep the public updater frozen. Do not use GitHub, manifest URLs, or

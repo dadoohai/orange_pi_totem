@@ -8,8 +8,10 @@ rituals do). Tree clean at anchor time. Gates, ALWAYS pinned to their invocation
 (no evidence args) = 37/37. After the production-stop hardening, DECISIVE
 `--player-runtime-evidence-mode decisive` requires at least one teardown dir with a
 `production_stop_probe`; the minimum decisive invocation (M6 coldboot + data + one
-production-stop teardown dir + the image-`1x` triple) is 44/44, and the current full bundle
-with all three committed teardown dirs is 50/50. Freeze `rc=44` intact. Golden = `1u`; the
+production-stop teardown dir + the image-`1x` triple) is the current H1 gate target. The two
+older non-production-stop teardown dirs remain historical/diagnostic inputs and are not part
+of the current decisive H1 bundle because the stricter status/MPV alignment recomputation
+rejects their long or unexplained transition lags. Freeze `rc=44` intact. Golden = `1u`; the
 decisive evidence is image `1x` (the H2 split below). Canonical claim NOW: "H1 lab-scope
 evidence is complete for the measured paths: main teardown/M6 path + req#4 reachability +
 healthy Python-kiosk SIGTERM stop via IPC quit, all image-bound to `1x` and panfrost-delta
@@ -65,7 +67,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | HW teardown/panfrost detector (the gate) | **RUN + PASS on HW** (image `1x`, bundle at `f1aa879`; 3 same-boot cycles, real restart, delta 0) | H1 main path — DONE |
 | Teardown harness `run_trial()` capture path | **DONE** (landed + HW-run) | H1 main path — DONE |
 | M6 ↔ teardown ↔ decisive-release-gate integration | **DONE** (decisive gate 43/43 at `f1aa879`: M6 A2→B2 arm/controlled-reboot/resume/rollback on `1x`) | H1 main path — DONE |
-| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2); teardown gate green on-board; evidence `…185956Z-1x-teardown-fresh-ipc-probe`. GR4b (fresh SUCCESS) stays NON-CLAIM by policy. | **H1 — req#4 EXERCISED (reachability + honest fallback; NOT "fix proven")** |
+| **fresh-IPC corner (req#4) exercised on HW** | **EXERCISED on HW (2026-06-10)**: probe forced the corner on the adopted runtime (staged 0.01s; healthy-mpv socket-up ≈0.03s); C1 fresh quit ran (proc alive + `_ipc=None`) and honestly fell back to SIGTERM (`fresh_failed_fallback_sigterm`, gens 1+2). Evidence `…185956Z-1x-teardown-fresh-ipc-probe` remains diagnostic for reachability; under the stricter current status/MPV alignment recomputation it is not part of the green decisive H1 bundle. GR4b (fresh SUCCESS) stays NON-CLAIM by policy. | **H1 — req#4 EXERCISED (reachability + honest fallback; NOT "fix proven")** |
 | **Healthy Python-kiosk SIGTERM stop while decoding** | **PROVEN on HW (2026-06-11)**: `production_stop_probe` confirms mpv decoding with `v4l2request-copy`, SIGTERM delivered to `kiosk_pid`, kiosk used IPC quit, no mpv SIGTERM/SIGKILL fallback, `panfrost_delta=0`, mpv gone after kiosk exit, service restored, post-restore deep-health re-derived from sidecars. Evidence `…050939Z-1x-production-stop`, archived at `02e4380`; release gate now requires at least one production-stop teardown dir in decisive mode. | **H1 measured stop path — DONE for the healthy Python-kiosk/IPC-quit path** |
 | GPU-fault matcher recall calibration vs real board | **OPEN/ADJACENT**: green means no matcher-covered fault wording appeared in the captured windows; unknown future wording still needs corpus calibration before production claims. | H1-adjacent / H2 hardening |
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
@@ -121,7 +123,7 @@ Work order:
    socket in ~0.03s (corner not fired — gate honestly REDed; kept on-board as diagnostic);
    attempt #2 (0.01s) forced the corner deterministically — `code_path_reached=true`,
    `fresh_failed_fallback_sigterm` with the real ENOENT log (generations 1 AND 2), 3 cycles
-   panfrost delta=0, teardown gate green end-to-end. Evidence committed:
+   panfrost delta=0 under the then-current teardown gate. Evidence committed:
    `docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe`.
    Empirical implication for decision (c): the live race band is ~10–30ms after the staged
    deadline — a deliberate success-path probe APPEARS feasible (single-datum estimate,
@@ -191,7 +193,8 @@ Work order:
 6. **This ledger doc** (done) + write the **operator run-book** (board-session mechanics
    ONLY — a broad production run-book is H2 overscope). Track A completed: teardown trial
    (same-boot cycles + production-stop probe, no reboot), committed evidence, clean-tree
-   decisive release gate reusing the committed `1x` M6 dirs and all three `1x` teardown dirs.
+   decisive release gate reusing the committed `1x` M6 dirs and the current valid
+   production-stop teardown dir.
    M6 arm/reboot/resume is only for an explicitly authorized full image recapture and must
    use `--defer-release-gate`.
 7. *(Parallel/FUTURE — NOT H1; do not spend critical-path effort here)* extend the offline

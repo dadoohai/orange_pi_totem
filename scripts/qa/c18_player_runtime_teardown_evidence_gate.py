@@ -91,6 +91,9 @@ HEALTH_CHECKS = (
     "nrestarts_stable",
     "status_no_failures",
 )
+CURRENT_HEALTH_CHECKS = HEALTH_CHECKS + (
+    "status_mpv_path_aligned",
+)
 
 # Parsed as exact KEY=VALUE pairs (a substring test would let "STRICT_GPU_FAULTS=05"
 # or "...RC=440" poison the attestation). None means "any non-empty value".
@@ -296,7 +299,13 @@ def validate_manifest(run_dir: Path, files: list[str], errors: list[str]) -> dic
     return manifest
 
 
-def validate_health(data: dict[str, Any], label: str, errors: list[str]) -> None:
+def validate_health(
+    data: dict[str, Any],
+    label: str,
+    errors: list[str],
+    *,
+    required_checks: tuple[str, ...] = HEALTH_CHECKS,
+) -> None:
     if data.get("schema") != PLAYBACK_SCHEMA:
         errors.append(f"{label}_schema")
     if data.get("passed") is not True:
@@ -307,11 +316,28 @@ def validate_health(data: dict[str, Any], label: str, errors: list[str]) -> None
     if not isinstance(checks, dict):
         errors.append(f"{label}_checks_missing")
         return
-    for check in HEALTH_CHECKS:
+    for check in required_checks:
         if check not in checks:
             errors.append(f"{label}_check_missing:{check}")
         elif checks.get(check) is not True:
             errors.append(f"{label}_check_failed:{check}")
+
+
+def compare_public_recomputed_health_checks(
+    public: dict[str, Any],
+    recomputed: dict[str, Any],
+    label: str,
+    errors: list[str],
+) -> None:
+    public_checks = public.get("checks")
+    recomputed_checks = recomputed.get("checks")
+    if not isinstance(public_checks, dict) or not isinstance(recomputed_checks, dict):
+        errors.append(f"{label}_public_recomputed_checks_mismatch")
+        return
+    for key, value in public_checks.items():
+        if recomputed_checks.get(key) != value:
+            errors.append(f"{label}_public_recomputed_checks_mismatch")
+            return
 
 
 def validate_health_dir(health_dir: Path, label: str, errors: list[str]) -> None:
@@ -330,10 +356,11 @@ def validate_health_dir(health_dir: Path, label: str, errors: list[str]) -> None
     except Exception as exc:
         errors.append(f"{label}_recompute_error:{type(exc).__name__}")
         return
-    validate_health(recomputed, f"{label}_recomputed", errors)
-    for key in ("passed", "failure_reasons", "checks"):
+    validate_health(recomputed, f"{label}_recomputed", errors, required_checks=CURRENT_HEALTH_CHECKS)
+    for key in ("passed", "failure_reasons"):
         if public.get(key) != recomputed.get(key):
             errors.append(f"{label}_public_recomputed_{key}_mismatch")
+    compare_public_recomputed_health_checks(public, recomputed, label, errors)
 
 
 # --------------------------------------------------------------------------- #

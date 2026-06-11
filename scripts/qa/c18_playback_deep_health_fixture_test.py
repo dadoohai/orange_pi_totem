@@ -89,6 +89,32 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertIn(reason, result["failure_reasons"])
         return result
 
+    def write_status_mpv_alignment_rows(
+        self,
+        fixture: Fixture,
+        samples: list[tuple[str, str, str, str]],
+    ) -> None:
+        template = fixture.rows()[0]
+        rows = []
+        for index, (status_alias, status_path_alias, status_index, mpv_path_alias) in enumerate(samples, start=1):
+            row = template.copy()
+            row["seq"] = str(index)
+            row["rel_sec"] = str(index - 1)
+            row["time_pos"] = f"{index - 1}.10"
+            row["estimated_frame_number"] = str(index * 30)
+            row["current_alias"] = mpv_path_alias
+            row["path_alias"] = mpv_path_alias
+            row["filename_alias"] = ""
+            row["status_current_alias"] = status_alias
+            row["status_path_alias"] = status_path_alias
+            row["status_current_index"] = status_index
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["playlist_size"] = 3
+            snapshot["current_index"] = int(status_index)
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            rows.append(row)
+        fixture.write_rows(rows)
+
     def test_pass_fixture(self) -> None:
         result = self.with_case().result()
         self.assertTrue(result["passed"])
@@ -274,6 +300,95 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["counters"]["status_mpv_mismatch_samples"], 4)
         self.assertEqual(result["counters"]["status_mpv_max_consecutive_mismatches"], 2)
         self.assertEqual(result["counters"]["status_mpv_max_allowed_mismatch_samples"], 2)
+        self.assertGreater(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
+
+    def test_accepts_bounded_status_mpv_transition_lag(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+            ],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["failure_reasons"], [])
+        self.assertEqual(result["counters"]["status_mpv_mismatch_samples"], 2)
+        self.assertEqual(result["counters"]["status_mpv_transition_lag_runs"], 1)
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
+
+    def test_accepts_single_terminal_status_mpv_transition_lag_sample(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+            ],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["failure_reasons"], [])
+        self.assertEqual(result["counters"]["status_mpv_transition_lag_runs"], 1)
+        self.assertEqual(result["counters"]["status_mpv_terminal_transition_lag_runs"], 1)
+
+    def test_rejects_long_status_mpv_transition_lag(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+            ],
+        )
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_mismatch_samples"], 6)
+        self.assertEqual(result["counters"]["status_mpv_long_transition_lag_runs"], 1)
+
+    def test_rejects_status_mpv_mismatch_outside_transition_edge(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:b>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+            ],
+        )
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 1)
 
     def test_rejects_multisegment_stall_even_when_last_segment_progresses(self) -> None:
         fixture = self.with_case()
