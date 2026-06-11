@@ -1,0 +1,13 @@
+{
+  "canary_exists": true,
+  "canary_path_sha1_12": "fee4d36eb477",
+  "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "previous_link": null,
+  "schema": "dadooh.c18.lab_apply.pre_snapshot.v1",
+  "service": {
+    "activestate": "active",
+    "execmainpid": "2881",
+    "nrestarts": "0",
+    "substate": "running"
+  }
+}

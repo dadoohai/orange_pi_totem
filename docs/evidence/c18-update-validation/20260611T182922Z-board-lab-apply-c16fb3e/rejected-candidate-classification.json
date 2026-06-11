@@ -1,0 +1,31 @@
+{
+  "candidate_identity": {
+    "kiosk_py_sha256": "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "tree_sha256": "64bc45403c557d5cddfedaa8d1ee58f8ed2ccbe35cff2154de25d37a46b2ff71",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  },
+  "evidence": {
+    "candidate_health_passed": false,
+    "candidate_process_filtered": true,
+    "candidate_quarantined_in_state": true,
+    "candidate_teardown_passed": true,
+    "current_preserved": true,
+    "gpu_fault_delta": 0,
+    "lab_apply_rc": 10,
+    "lab_apply_status": "candidate_rejected",
+    "service_active_during_candidate_health": true,
+    "total_mpv_count": 2
+  },
+  "guardrails_for_retry": [
+    "remove_only_matching_quarantine_entry_by_payload_tree_and_kiosk_hash",
+    "backup_state_before_edit",
+    "stop_kiosky_player_service_before_candidate_health",
+    "verify_zero_live_mpv_before_retry_or_abort",
+    "restart_service_after_successful_promote",
+    "rollback_and_restart_if_post_apply_health_fails"
+  ],
+  "retry_allowed_with_guardrails": true,
+  "schema": "dadooh.c18.lab_apply.rejected_candidate_classification.v1",
+  "verdict": "environment_contended_candidate_health"
+}
