@@ -144,25 +144,26 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
   + post-restore deep-health passed. JSON/NDJSON parsing must reject NaN/Infinity and all
   non-finite numeric values with the same fail-closed policy as the existing gate loader
   (including `decode-samples.ndjson`, not only JSON sidecars).
-- Untouched: `validate_fresh_ipc_probe` (`:415-451`), the decisive-required check
-  (`release_gate:923-928`), and the release gate file (ZERO diff — steps are per-dir).
-- Regression locks (same commit): fixture lock asserting BOTH committed dirs
+- Historical note: this was true for the original mid-decode landing. The follow-up
+  production-stop hardening now changes the release gate: decisive mode requires at least one
+  teardown dir with `production_stop_probe`, so production-stop is no longer optional.
+- Historical regression locks (same commit): fixture lock asserting BOTH committed dirs
   (`20260610T052324Z-1x-teardown`, `20260610T185956Z-1x-teardown-fresh-ipc-probe`)
   validate `errors==[]` with byte-identical evidence-gate output; `write_fixture` gains
   `with_mid_decode=False` default (all existing fixtures byte-identical); baseline
-  37/37 and decisive 46/46 re-run locally.
+  37/37 and decisive 46/46 re-run locally at that historical point.
 
 ## 6. Pin semantics (recorded HERE before landing; for external-auditor ratification)
 
-- "Existing invocations stay byte-identical" — operational reading, ratified wording:
+- Historical "existing invocations stay byte-identical" — operational reading, ratified wording:
   **evidence-gate stdout byte-identical for the existing committed dirs + release-gate
   step NAMES/COUNTS/VERDICTS identical per invocation (37/37, 43/43, 46/46).** Self-test
   stdout tails ("Ran N tests") re-pin at the landing commit — unavoidable for ANY tested
   change, because the trial/gate/static self-tests are TEST_COMMANDS steps INSIDE the
   baseline 37 (verified by import).
-- Predicted pins after landing: 37/37, 43/43, 46/46 UNCHANGED; the closure invocation
-  with the new third teardown dir appended = **49/49** (+3, per-dir precedent). New
-  self-test totals pinned at the landing commit, per invocation, as always.
+- Current post-production-stop-hardening pins: baseline 37/37; decisive minimum with the
+  production-stop teardown dir is 44/44; current full 1x bundle with all three teardown dirs
+  is 50/50. Decisive invocations without production-stop now fail closed.
 
 ## 7. Landing plan (ONE commit) + verification + board session shape
 
@@ -173,10 +174,10 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
   EXTENDED to the probe windows) + ledger pointer update. A harness-only landing is
   FORBIDDEN: the trial self-validates with the real gate (`trial:787-794`), so probe
   artifacts would seal "green" without semantic validation.
-- Off-board verification checklist (all before any board time): both self-tests green;
+- Historical off-board verification checklist (before that board time): both self-tests green;
   NEW gate vs both committed dirs → `errors==[]` byte-identical; baseline 37/37;
-  decisive 46/46 with the 1x triple; `py_compile` (both files already in
-  `PY_COMPILE_TARGETS` → zero release-gate diff by construction).
+  decisive 46/46 with the 1x triple at that point. Current post-production-stop hardening
+  counts are recorded in §6 above.
 - Board session (ONLY after the operator's pre-session ratifications, §8): ONE new
   trial run = 3 cycles + mid-decode probe; **OMIT `--with-fresh-ipc-probe`** (corner
   already evidenced in the committed 185956Z dir; a re-run adds time + failure surface,

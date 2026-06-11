@@ -4,23 +4,20 @@ Status: OPERATOR RUN-BOOK (board-session mechanics only). Produces the fresh dec
 evidence that the release gate requires to consider player-runtime lab→homologation.
 No thaw is performed by this run-book; freeze stays `rc=44`.
 
-**Current Track A scope (2026-06-10):** the next H1 board session is the
-mid-decode SIGTERM panfrost probe only. It must omit the already-evidenced
-fresh-IPC probe and must not re-run M6 unless the existing 1x bundle is being
-recaptured for a separate reason. The new probe is defined in
-`docs/c18-mid-decode-probe-round-spec.md`.
+**Track A status (2026-06-11):** completed and committed. The current H1 lab-scope
+evidence uses the existing 1x M6 bundle plus three teardown dirs: main teardown,
+fresh-IPC reachability, and the healthy Python-kiosk production-stop probe. This
+run-book is historical mechanics for recapture; the live state is in
+`docs/c18-player-runtime-thaw-continuation-plan.md`.
 
 This run-book makes the scarce board session **decisive on first capture**. Do NOT skip the
 pre-flight: a wrong image-identity triple or an uncommitted evidence file silently red-fails
 the decisive gate and forces a second board trip.
 
 ## Operator ratification gate
-Do not run the Track A board session until the operator has explicitly ratified:
-- the hybrid mid-decode SIGTERM design (or no veto);
-- `fresh_sent` Option I (success-surprise remains RED diagnostic; the session continues only after preserving it);
-- `--mid-decode-probe-attempts` (recommended `2`);
-- D2/H2 Option B for this session: keep the existing `1x` board image and formalize the
-  `1u` golden / `1x` evidence split separately.
+Historical for Track A: ratification happened before the board session. For any recapture,
+use the same rule: keep success-surprise/fresh-IPC fail-closed, pin the image identity
+triple first, and do not mix evidence from different images.
 
 ## What the decisive gate demands (so the session is sufficient)
 `c18_ota_release_gate.py --player-runtime-evidence-mode decisive` requires, from a CLEAN repo
@@ -51,8 +48,8 @@ tree, ALL of:
    reuses the committed `1x` M6 evidence.
 3. **Dry-run the gate wiring** off-board with synthetic fixtures to confirm GREEN end-to-end
    before spending board time: build a teardown run-dir via the harness self-test path and run
-   `c18_player_runtime_teardown_evidence_gate.py --self-test` (39/39) and the harness
-   `--self-test` (15/15).
+   `c18_player_runtime_teardown_evidence_gate.py --self-test` and the harness
+   `--self-test`.
 
 ## Evidence root — CRITICAL (board A/B diagnosis 2026-06-10)
 Use a single persistent evidence root the **`totem` user can traverse**:
@@ -67,35 +64,33 @@ Use a single persistent evidence root the **`totem` user can traverse**:
   `/data` is `0755` and persists the reboot (M6 `arm`→`resume` both need it).
 - `/root` stays acceptable ONLY for root-only diagnostics never executed as `totem`.
 
-## On the board (Track A session; mind panfrost baseline cross-contamination)
-Order matters: run the **teardown trial only** for Track A. M6 already exists for the
-1x bundle; do not reboot or power-cut during this session unless a separate recapture is
-explicitly authorized.
+## On the board (historical Track A session; mind panfrost baseline cross-contamination)
+Order matters for recapture: run the **teardown trial only** unless a full image/M6
+recapture is explicitly authorized.
 
-### Step 1 — Teardown trial + mid-decode SIGTERM probe
+### Step 1 — Teardown trial + production-stop probe
 Use a local H.264 canary long enough to leave at least 2s before EOF at signal time;
 the safe default is 30s or longer. Regenerate `/tmp` canaries after every reboot.
 
 ```sh
-SOURCE_COMMIT=<landing-commit-containing-the-mid-decode-probe>
+SOURCE_COMMIT=<landing-commit-containing-the-production-stop-probe>
 C18_PLAYER_RUNTIME_TEARDOWN_TRIAL=1 python3 /data/totem-diag/scripts/board/c18_player_runtime_teardown_trial.py \
-  --cycles 3 --with-mid-decode-sigterm-probe \
-  --mid-decode-probe-attempts 2 \
-  --mid-decode-probe-canary-media /tmp/canary/canary-h264.mp4 \
+  --cycles 3 --with-production-stop-probe \
+  --production-stop-probe-attempts 1 \
+  --production-stop-probe-canary-media /data/media/c18-canary-h264.mp4 \
   --board-image-marker "$IMAGE_TAG" --source-commit "$SOURCE_COMMIT" \
   --run-root "$EVID"
 ```
 Produces a teardown run-dir (cycle-00 = `service_restart`, rest `relaunch`), per-cycle
 kernel-before/after + deep-health + the freeze postcheck (`rc=44`) plus
-`mid_decode_sigterm_probe.json`.
+`production_stop_probe.json`.
 
-**Mid-decode SIGTERM probe:** stages an isolated kiosk instance of the adopted runtime,
-confirms a healthy MPV is actively decoding (`hwdec-current == v4l2request-copy`), SIGKILLs
-the isolated kiosk so it cannot issue IPC quit or relaunch, then measures the kernel window
-around one SIGTERM delivered to the MPV pgroup. A green run means panfrost delta is zero in
-that window and the production service was restored with post-restore deep-health green.
-It does NOT claim GR4b fresh-IPC success, kiosk-alive production timing, a wedged MPV, soak,
-or thaw.
+**Production-stop probe:** starts an isolated healthy kiosk instance of the adopted runtime,
+confirms MPV is actively decoding (`hwdec-current == v4l2request-copy`), delivers SIGTERM to
+the Python kiosk process, and lets `kiosk.py` stop MPV. The committed green run observed IPC
+quit, no MPV SIGTERM/SIGKILL fallback, `panfrost_delta=0`, MPV gone after kiosk exit, and
+post-restore deep-health green. It does NOT claim GR4b fresh-IPC success, fallback SIGTERM to
+MPV, wedged/ipc_unresponsive cleanup, full launcher/systemd cgroup cleanup, soak, or thaw.
 
 **Do not pass `--with-fresh-ipc-probe` in this session.** The fresh-IPC reachability corner is
 already evidenced by `20260610T185956Z-1x-teardown-fresh-ipc-probe`; re-running it adds board
@@ -158,7 +153,7 @@ C18_PLAYER_RUNTIME_M6_COLDBOOT_TRIAL=1 python3 scripts/qa/c18_player_runtime_m6_
    anti-fabrication backstop (the gate cannot prove the journal was HW-captured). Committing
    first does NOT bless the evidence — the gate below is what validates it.
 5. Run ONE combined decisive gate from the now-clean tree, using the existing 1x M6 dirs and
-   all three teardown dirs (main teardown, fresh-IPC reachability, new mid-decode SIGTERM).
+   all three teardown dirs (main teardown, fresh-IPC reachability, production-stop).
    This command is **only** for the immediate Track A path (`IMAGE_*` = `1x`). If a new image
    was baked, do not use this command shape with any `1x` evidence dir; recapture and substitute
    every image-pinned evidence dir that participates in the decisive bundle.
@@ -168,7 +163,7 @@ python3 scripts/qa/c18_ota_release_gate.py --player-runtime-evidence-mode decisi
   --player-runtime-data-evidence-dir          docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data \
   --player-runtime-teardown-evidence-dir      docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown \
   --player-runtime-teardown-evidence-dir      docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe \
-  --player-runtime-teardown-evidence-dir      docs/evidence/c18-update-validation/<new-mid-decode-teardown> \
+  --player-runtime-teardown-evidence-dir      docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop \
   --expect-image-tag "$IMAGE_TAG" --expect-image-sha256 "$IMAGE_SHA256" \
   --expect-image-marker-sha256 "$MARKER_SHA256" --json
 ```
@@ -183,8 +178,8 @@ start the service explicitly with `systemctl start kiosky-player.service`, verif
 and run deep-health before any retry. Do not edit `current`/`previous` manually.
 
 ## What this session does and does NOT establish
-- DOES: a fresh Track A teardown artifact proving the mid-decode SIGTERM window is
-  panfrost-clean for a healthy isolated MPV, and a combined image-pinned decisive bundle
+- DOES: a fresh Track A teardown artifact proving the healthy Python-kiosk stop path is
+  panfrost-clean for an actively decoding MPV, and a combined image-pinned decisive bundle
   reusing the existing 1x M6 evidence plus all teardown dirs. Supersedes the stale `1w`
   decisive authorization (which predates the teardown requirement).
 - DOES NOT: physical power-cut durability, 24h soak, or any thaw. Those are later gates. Thaw
