@@ -103,6 +103,16 @@ EVIDENCE_1U_IMAGE_TAG = "c18-hwdecode-lab-1u"
 EVIDENCE_1U_IMAGE_SHA256 = "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd"
 EVIDENCE_1U_REPO_COMMIT = "58457740661b557877e06f53b932b133d62838cb"
 EVIDENCE_1U_REPO_TREE = "0713c9c61893d0c049425bf72d2714f83fc3e1ff"
+EVIDENCE_1X_IMAGE_TAG = "c18-hwdecode-lab-1x"
+EVIDENCE_1X_IMAGE_SHA256 = "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2"
+EVIDENCE_1X_IMAGE_MARKER_SHA256 = "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e"
+EVIDENCE_1X_M6_COLDBOOT_DIR_NAME = "20260610T072826Z-1x-m6-coldboot"
+EVIDENCE_1X_M6_DATA_DIR_NAME = "20260610T072826Z-1x-m6-data"
+EVIDENCE_1X_TEARDOWN_DIR_NAMES = (
+    "20260610T052324Z-1x-teardown",
+    "20260610T185956Z-1x-teardown-fresh-ipc-probe",
+    "20260611T050939Z-1x-production-stop",
+)
 EVIDENCE_PLAYER_RUNTIME_TRIAL_IMAGE_SHA256 = "23ef26b4cdbd6c35643fdc41d8666da33dd259b387af05864c8f063506f7711c"
 LEGACY_C14_REMOTE_SCRIPTS = (
     REPO_ROOT / "scripts" / "remote" / "deploy_kiosky_player.sh",
@@ -378,9 +388,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("O release gate atual aceita", readme)
         self.assertIn("nao e autorizacao `decisive` atual", readme)
         self.assertIn("M6 lab-only decisivo atual de `player-runtime` em `/data`", readme)
-        self.assertIn("20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial", readme)
+        self.assertIn(EVIDENCE_1X_M6_COLDBOOT_DIR_NAME, readme)
+        self.assertIn(EVIDENCE_1X_M6_DATA_DIR_NAME, readme)
+        self.assertIn("release gate host aceitando a evidencia em modo `decisive` com a tripla", readme)
         self.assertIn("nao promove a", readme)
-        self.assertIn("1w` como golden baseline/fallback geral", readme)
+        self.assertIn("1x` como golden baseline/fallback geral", readme)
         for path in (UPDATE_AUTHORIZATION_HEALTH_PATH, DOC188_PATH, DOC189_PATH, DOC190_PATH):
             text = path.read_text(encoding="utf-8")
             self.assertIn(current_sha, text)
@@ -388,19 +400,22 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("release gate atual aceitou essa evidencia", authorization_health)
         self.assertNotIn("Esse e o marco decisivo de laboratorio para adocao", authorization_health)
         self.assertIn("nao como autorizacao `decisive` corrente", authorization_health)
-        self.assertIn("M-6 decisivo lab-only atual de `player-runtime` em `/data`", authorization_health)
-        self.assertIn("20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial", authorization_health)
-        self.assertIn("pinada a\n`c18-hwdecode-lab-1w`", authorization_health)
+        self.assertIn("bundle M-6 decisivo lab-only atual de `player-runtime` em `/data`", authorization_health)
+        self.assertIn(EVIDENCE_1X_M6_COLDBOOT_DIR_NAME, authorization_health)
+        self.assertIn(EVIDENCE_1X_M6_DATA_DIR_NAME, authorization_health)
+        self.assertIn("pinado a `c18-hwdecode-lab-1x`", authorization_health)
         self.assertIn("autorizacao decisiva lab\ncorrente foi restaurada", authorization_health)
-        self.assertIn("nao promove a `1w` como golden baseline/fallback geral", authorization_health)
+        self.assertIn("nao promove a `1x` como golden baseline/fallback geral", authorization_health)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("release gate atual aceitou", doc189)
         self.assertIn(f"gate atual e image-pinned a `{current_tag[-2:]}`", doc189)
         self.assertIn("M6 `/data` decisivo atual", doc189)
-        self.assertIn("20260609T041709Z", doc189)
-        self.assertIn("pinado a\n`c18-hwdecode-lab-1w`", doc189)
-        self.assertIn("nao muda a fonte canonica\nde recovery/delivery", doc189)
-        self.assertIn("M6 decisiva\ncorrente de `player-runtime` esta pinada a `1w`", doc189)
+        self.assertIn(EVIDENCE_1X_M6_COLDBOOT_DIR_NAME, doc189)
+        self.assertIn(EVIDENCE_1X_M6_DATA_DIR_NAME, doc189)
+        self.assertIn("pinado a `c18-hwdecode-lab-1x`", doc189)
+        doc189_words = " ".join(doc189.split())
+        self.assertIn("nao muda a fonte canonica de recovery/delivery", doc189_words)
+        self.assertIn("M6 decisiva corrente de `player-runtime` esta pinada ao bundle `1x`", doc189_words)
         latest_m6_readme = (EVIDENCE_1T_PLAYER_RUNTIME_M6_RETRY_DIR / "README.md").read_text(encoding="utf-8")
         latest_m6_readme_words = " ".join(latest_m6_readme.split())
         self.assertNotIn("Result: passed under the current C18 OTA release gate", latest_m6_readme)
@@ -425,6 +440,53 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn(legacy_sha_1l, doc188_top)
         doc190_top = DOC190_PATH.read_text(encoding="utf-8").split("## Baseline", 1)[0]
         self.assertNotIn(legacy_sha_1j, doc190_top)
+
+    def test_c18_h2_image_identity_split_is_formalized(self) -> None:
+        self.assertEqual(CURRENT_GOLDEN["image_tag"], EVIDENCE_1U_IMAGE_TAG)
+        self.assertEqual(CURRENT_GOLDEN["image_sha256"], EVIDENCE_1U_IMAGE_SHA256)
+        self.assertNotEqual(CURRENT_GOLDEN["image_tag"], EVIDENCE_1X_IMAGE_TAG)
+        self.assertNotEqual(CURRENT_GOLDEN["image_sha256"], EVIDENCE_1X_IMAGE_SHA256)
+
+        docs = {
+            "readme": README_PATH.read_text(encoding="utf-8"),
+            "authorization": UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8"),
+            "doc189": DOC189_PATH.read_text(encoding="utf-8"),
+            "contract": UPDATE_CONTRACT_PATH.read_text(encoding="utf-8"),
+            "ledger": (REPO_ROOT / "docs" / "c18-player-runtime-thaw-continuation-plan.md").read_text(
+                encoding="utf-8"
+            ),
+            "teardown_design": (
+                REPO_ROOT / "docs" / "c18-player-runtime-teardown-gate-design.md"
+            ).read_text(encoding="utf-8"),
+        }
+        combined = "\n".join(docs.values())
+        ledger_words = " ".join(docs["ledger"].split())
+        contract_words = " ".join(docs["contract"].split())
+
+        self.assertIn("current-golden.json` (`1u`)", docs["readme"])
+        self.assertIn("Golden = `1u`; the decisive evidence is image `1x`", ledger_words)
+        self.assertIn("**FORMALIZED (Option B)**", docs["ledger"])
+        self.assertIn("Golden baseline = `1u`", docs["teardown_design"])
+        self.assertIn("current decisive player-runtime H1 evidence is pinned to `1x`", docs["teardown_design"])
+        self.assertIn("hoje a golden de recovery/delivery permanece `c18-hwdecode-lab-1u`", contract_words)
+        self.assertIn("esta pinada explicitamente ao bundle `c18-hwdecode-lab-1x`", docs["contract"])
+        self.assertIn(EVIDENCE_1X_IMAGE_SHA256, docs["contract"])
+        self.assertIn(EVIDENCE_1X_IMAGE_MARKER_SHA256, docs["contract"])
+
+        for name in (EVIDENCE_1X_M6_COLDBOOT_DIR_NAME, EVIDENCE_1X_M6_DATA_DIR_NAME):
+            self.assertIn(name, combined)
+        for name in EVIDENCE_1X_TEARDOWN_DIR_NAMES:
+            self.assertIn(name, combined)
+
+        stale_current_claims = (
+            "M6 lab-only decisivo atual de `player-runtime` em `/data`:\n"
+            "`docs/evidence/c18-update-validation/20260609T041709Z-1w",
+            "M6 `/data` decisivo atual | `20260609T041709Z`",
+            "decisive player-runtime M6 evidence is pinned to `1w`",
+            "H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **LATENT/UNRESOLVED**",
+        )
+        for stale in stale_current_claims:
+            self.assertNotIn(stale, combined)
 
     def test_c18_current_golden_registry_is_single_source_for_gates(self) -> None:
         manifest = json.loads((EVIDENCE_CURRENT_DEEP_HEALTH_DIR / "evidence-manifest.json").read_text(encoding="utf-8"))

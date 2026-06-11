@@ -46,17 +46,24 @@ e o caminho para uma autorizacao decisiva viva. Ainda nao e thaw publico,
 GitHub publish, auto-pull, stable/producao, power-loss fisico ou soak.
 
 M6 lab-only decisivo atual de `player-runtime` em `/data`:
-`docs/evidence/c18-update-validation/20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial/`.
-Ele prova A->B->cold-boot->A em `/data` na imagem `c18-hwdecode-lab-1w`,
-com B adotada de `/data/player-runtime/current`, deep-health do candidato B,
-teardown sem delta panfrost, reboot controlado, rollback para A real em `/data`
-e release gate host aceitando a evidencia em modo `decisive`. Esse marco
-restaura a autorizacao decisiva lab para `player-runtime`, mas nao promove a
-`1w` como golden baseline/fallback geral: a fonte canonica de recovery/delivery
-continua sendo `current-golden.json` enquanto nao houver uma evidencia
-baseline/fallback propria da `1w`. Ainda nao e thaw publico, OTA de
-`kiosky-player`, GitHub publish, auto-pull, stable/producao, power-loss fisico
-ou soak.
+`docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot/` e
+`docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data/`, combinados
+com as evidencias de teardown `1x`
+`docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown/`,
+`docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe/`
+e
+`docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop/`.
+Esse bundle prova A2->B2->cold-boot->A2 em `/data` na imagem
+`c18-hwdecode-lab-1x`, com B2 adotada de `/data/player-runtime/current`,
+deep-health, teardown/relaunch repetido, req#4 fresh-IPC exercitado, parada
+SIGTERM saudavel do Python-kiosk via IPC quit, rollback para A2 real em `/data`
+e release gate host aceitando a evidencia em modo `decisive` com a tripla
+explicita da imagem `1x`. Esse marco restaura a autorizacao decisiva lab para
+`player-runtime`, mas nao promove a `1x` como golden baseline/fallback geral: a
+fonte canonica de recovery/delivery continua sendo `current-golden.json` (`1u`)
+enquanto nao houver uma promocao propria de baseline/fallback da `1x`. Ainda nao
+e thaw publico, OTA de `kiosky-player`, GitHub publish, auto-pull,
+stable/producao, power-loss fisico ou soak.
 
 Power-loss fisico lab-only de `player-runtime`:
 `docs/evidence/c18-update-validation/20260609T150327Z-1w-powerloss-after-current-symlink/`

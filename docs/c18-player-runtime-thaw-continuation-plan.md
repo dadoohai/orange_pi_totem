@@ -1,7 +1,7 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
 Status: H1 TEARDOWN/PANFROST EVIDENCE COMPLETE FOR THE CURRENT LAB SCOPE (no thaw,
-no stable/publish). Baseline ANCHOR: `02e4380`
+no stable/publish). Baseline ANCHOR: `6871f21`
 — by construction this ledger commits AT-OR-AFTER its anchor, so the anchor may sit one
 commit behind the live HEAD; ALWAYS resolve the real HEAD via `git rev-parse` (the resume
 rituals do). Tree clean at anchor time. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
@@ -69,7 +69,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | **Healthy Python-kiosk SIGTERM stop while decoding** | **PROVEN on HW (2026-06-11)**: `production_stop_probe` confirms mpv decoding with `v4l2request-copy`, SIGTERM delivered to `kiosk_pid`, kiosk used IPC quit, no mpv SIGTERM/SIGKILL fallback, `panfrost_delta=0`, mpv gone after kiosk exit, service restored, post-restore deep-health re-derived from sidecars. Evidence `…050939Z-1x-production-stop`, archived at `02e4380`; release gate now requires at least one production-stop teardown dir in decisive mode. | **H1 measured stop path — DONE for the healthy Python-kiosk/IPC-quit path** |
 | GPU-fault matcher recall calibration vs real board | **OPEN/ADJACENT**: green means no matcher-covered fault wording appeared in the captured windows; unknown future wording still needs corpus calibration before production claims. | H1-adjacent / H2 hardening |
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
-| H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **LATENT/UNRESOLVED** (`1w` superseded by the fresh `1x` bundle) | evidence-integrity precondition |
+| H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **FORMALIZED (Option B)**: `current-golden.json` remains `1u` for recovery/delivery baseline; H1 decisive player-runtime evidence is image-bound to `1x` and does not promote baseline/fallback | evidence-integrity precondition — DONE for H1 |
 | Offline power-loss matrix (7/17 boundaries) | **PARTIAL (by design)** | PARALLEL/FUTURE |
 | Physical power-cut (apply/rollback) | **ABSENT** | LATER (homologation) |
 | 24h soak/endurance | **ABSENT** | LATER (production) |
@@ -181,10 +181,11 @@ Work order:
    `image_tag_mismatch` — a mismatch silently red-fails the decisive run and forces a
    SECOND board trip. Off-board fix: thread the explicit triple + add a release-gate
    cross-check that the decisive bundle (coldboot + data + teardown + powerloss markers)
-   is internally image-consistent. NOTE: *building a new image to reconcile the `1u`/`1w`
-   label (D2 options A/C) is OVERSCOPED for H1* — only the triple needs to be right.
-   The prior `1w` "decisive authorization" is STALE vs the current gate (it predates the
-   teardown requirement); the board run produces FRESH decisive evidence.
+   is internally image-consistent. NOTE: *building a new image to unify the `1u` golden with
+   the `1x` decisive evidence (D2 options A/C) is OVERSCOPED for H1* — only the explicit
+   evidence triple needs to be right. The prior `1w` "decisive authorization" is STALE vs
+   the current gate (it predates the production-stop teardown requirement); the `1x` board
+   bundle is the FRESH decisive H1 evidence.
 6. **This ledger doc** (done) + write the **operator run-book** (board-session mechanics
    ONLY — a broad production run-book is H2 overscope). Track A completed: teardown trial
    (same-boot cycles + production-stop probe, no reboot), committed evidence, clean-tree
@@ -212,25 +213,26 @@ Work order:
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados | Hardening de produção/stable (incl. `created_at` obrigatório) |
-| player-runtime | H1 lab-scope evidence complete for measured paths: apply A2/B2, coldboot, rollback, repeated teardown, req#4 reachability, and healthy Python-kiosk SIGTERM stop via IPC quit; freeze still rc=44 | H2 golden 1u×1x; power-loss/soak; server-side publish/signature; explicit thaw decision. Non-claims remain for GR4b success, mpv-SIGTERM fallback/wedged cleanup, full launcher/systemd cgroup cleanup |
+| player-runtime | H1 lab-scope evidence complete for measured paths: apply A2/B2, coldboot, rollback, repeated teardown, req#4 reachability, and healthy Python-kiosk SIGTERM stop via IPC quit; freeze still rc=44; H2-A split formalized (`1u` golden, `1x` decisive evidence) | power-loss/soak; server-side publish/signature; explicit thaw decision. Non-claims remain for GR4b success, mpv-SIGTERM fallback/wedged cleanup, full launcher/systemd cgroup cleanup |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
 | server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
 | power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
 
-Estado (na âncora `02e4380`; HEAD real = git): production-stop evidence committed and
+Estado (na âncora `6871f21`; HEAD real = git): production-stop evidence committed and
 gate-hardened; freeze rc=44; no thaw/stable/publish; no execution in progress. Funil:
-external ratification of this range if desired → H2 golden split (`1u` vs evidence `1x`) →
-power-loss/soak/server-side → explicit thaw decision.
+external ratification of this range if desired → power-loss/soak/server-side →
+explicit thaw decision.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the
   first decisive run vs block until a deny-by-default allowlist from a real clean-board
   corpus. Bears on invariant (i). *Default: greedy-now + build the tunable tooling; revisit
   on the board.*
-- **D2 — H2 end-state:** (A) bump golden→`1x` [board], (B) keep `1u` + formalize split
-  [off-board, cheapest], (C) supersede with a new unified image [board]. *Default: do B
-  groundwork now; final A/B/C deferred to board-session planning.*
+- **D2 — H2 end-state:** **Option B formalized for H1** — keep `1u` as the
+  recovery/delivery golden in `current-golden.json`, and treat `1x` as the current decisive
+  player-runtime evidence bundle only. Future options remain explicit board work: (A) bump
+  golden→`1x` or (C) supersede with a new unified image.
 - **D3 — `mpv_path` boot gate as hard thaw-prereq vs parallel hardening.** *Default: build
   it now (protects the baseline); labeling is the operator's call but building doesn't block.*
 - **D4 — Board availability** + whether to batch teardown + power-cut + soak in one session.

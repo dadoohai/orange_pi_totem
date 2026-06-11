@@ -216,21 +216,25 @@ Baseline de laboratorio/delivery registrado em 2026-06-08:
   `57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`;
   depois foi validada em HW e substitui a golden `1t` para laboratorio/delivery;
   ainda nao prova power-loss fisico, soak, thaw publico, stable ou producao.
-- ensaio M-6 decisivo lab-only atual de `player-runtime` em `/data` validado
-  na imagem `c18-hwdecode-lab-1w` com pacotes locais `homologation`
-  `c18.player-runtime-m6-a-20260609T0418Z-7107a55-r2` e
-  `c18.player-runtime-m6-b-20260609T0418Z-7107a55-r2`;
-- evidencia auditavel decisiva atual:
-  `docs/evidence/c18-update-validation/20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial/`;
-- esse trial provou A->B->cold-boot->A em `/data`, com B adotado de
-  `/data/player-runtime/current`, deep-health de B no candidato, deep-health
-  do servico B apos cold-boot, teardown do candidato com delta panfrost `0`,
-  rollback para A real em `/data` e release gate host em modo `decisive`
-  pinado a `c18-hwdecode-lab-1w`;
+- bundle M-6 decisivo lab-only atual de `player-runtime` em `/data` validado
+  na imagem `c18-hwdecode-lab-1x`, com pacotes locais `homologation`
+  `c18.player-runtime-m6-a2-20260610T072826Z-29ff33b` e
+  `c18.player-runtime-m6-b2-20260610T072826Z-29ff33b`;
+- evidencias auditaveis decisivas atuais:
+  `docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot/`,
+  `docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data/` e os
+  teardown dirs `20260610T052324Z-1x-teardown`,
+  `20260610T185956Z-1x-teardown-fresh-ipc-probe` e
+  `20260611T050939Z-1x-production-stop`;
+- esse bundle provou A2->B2->cold-boot->A2 em `/data`, com B2 adotado de
+  `/data/player-runtime/current`, deep-health, teardown/relaunch repetido,
+  req#4 fresh-IPC exercitado, parada SIGTERM saudavel do Python-kiosk via IPC
+  quit, rollback para A2 real em `/data` e release gate host em modo
+  `decisive` pinado a `c18-hwdecode-lab-1x`;
 - essa evidencia restaura a autorizacao decisiva lab de `player-runtime`, mas
-  nao promove a `1w` como golden baseline/fallback geral. A fonte canonica de
+  nao promove a `1x` como golden baseline/fallback geral. A fonte canonica de
   recovery/delivery continua sendo `current-golden.json` (`1u`) enquanto nao
-  houver evidencia baseline/fallback propria da `1w`;
+  houver promocao propria de baseline/fallback da `1x`;
 - nao provou thaw publico, OTA de `kiosky-player`, GitHub publish, auto-pull,
   stable/producao, power-loss fisico nem soak/endurance.
 
@@ -330,9 +334,10 @@ pelo wrapper `c18_player_runtime_lab_thaw.py`, com pacote contendo
 `decisive` quando a golden era `1t`. Com a golden atual `1u`, ela permanece
 como marco historico de laboratorio para adocao `player-runtime` em `/data`,
 mas nao como autorizacao `decisive` corrente. A autorizacao decisiva lab
-corrente foi restaurada pela evidencia
-`20260609T041709Z-1w-player-runtime-m6-data-coldboot-trial`, pinada a
-`c18-hwdecode-lab-1w`, sem promover a `1w` como golden baseline/fallback geral.
+corrente foi restaurada pelo bundle `1x`
+`20260610T072826Z-1x-m6-coldboot` + `20260610T072826Z-1x-m6-data` + teardown
+dirs `1x`, pinado a `c18-hwdecode-lab-1x`, sem promover a `1x` como golden
+baseline/fallback geral.
 Os gates que ainda ficam para homologacao/producao sao
 interrupcao/power-loss fisico, soak/endurance, publish/server-side governado e
 decisao explicita de promocao sem `stable` nem auto-pull.

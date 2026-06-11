@@ -199,19 +199,17 @@ HW-measured rate (+0.83s time-pos, +25 frames per ~1.2s @30fps, committed 1v sam
   biased retry-until-race protocol against an embryonic (non-decoding) mpv — irrelevant
   to the dangerous class — and drags II in anyway. **Ratification is MANDATORY before
   the next board session** (`plan.md:109-114`).
-- **D2/H2 golden split — recommend Option B (doc-only, ~1h):** keep `1u` golden;
-  formalize the split: ledger row `:69` LATENT→RESOLVED-BY-POLICY(B), fix stale `:229`
-  "(A) bump golden→`1w`"→`1x`, pin the full 1x triple VALUES in the ledger, add ONE
-  additive README image-roles line; run `c18_ota_policy_static_test` before committing
-  (doc-sync web). LOUD: any unconditional new release-gate step bumps 37→38 — forbidden
-  without operator re-pin (and unnecessary: the decisive trio is already mutually
-  image-bound through the shared explicit triple). Deadline: BEFORE H1-closure claim
-  drafting. Carry-over opened: 1x image FILE + SHA256SUMS-class provenance lives only in
-  one evidence manifest — needed before 1x carries any golden/H2 claim.
-- **Operator decision message (exactly 4 items, one message):** (a) probe design — the
+- **D2/H2 golden split — Option B formalized:** keep `1u` golden for
+  recovery/delivery and treat `1x` as the current decisive player-runtime evidence bundle
+  only. The ledger row is no longer LATENT, stale `1w` current-decisive wording is
+  rejected by `c18_ota_policy_static_test`, and the full `1x` triple is pinned in the
+  contract. LOUD: no unconditional release-gate step was added, so baseline 37/37 stays
+  stable. Carry-over remains: 1x image FILE + SHA256SUMS-class provenance is required
+  before `1x` carries any golden/H2 baseline claim.
+- **Operator decision message (remaining board items):** (a) probe design — the
   hybrid in §2 is PINNED by the guardian with the 1v 3/5-launch-fault datum; veto window
   open; (b) fresh_sent Option I ratification (pre-session MANDATORY); (c) N attempts pin
-  (recommended 2); (d) D2 Option B ratification (parallel doc-only track).
+  (recommended 2). D2 Option B is already formalized.
 
 ## 9. Cut from this round (productivity, zero robustness loss)
 

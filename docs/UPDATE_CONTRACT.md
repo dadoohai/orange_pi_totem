@@ -354,9 +354,24 @@ ler essa fonte em vez de duplicar tag/sha da imagem. O
 `--player-runtime-data-evidence-dir` sao obrigatorios; o primeiro roda o
 coldboot gate com `--expect-selected-source=data` e `--require-pre-state`, o
 segundo roda o gate de evidencia `player-runtime` com `--expect-image-*` pinado
-a golden do release gate, e o release gate cruza o marker/version/tree/kiosk
-entre as duas evidencias. Sem modo `decisive`, o release gate nao prova
-cold-boot `/data`.
+a identidade de imagem esperada da invocacao (por default a golden corrente,
+mas sobrescrevivel por uma tripla explicita), e o release gate cruza o
+marker/version/tree/kiosk entre as duas evidencias. Sem modo `decisive`, o
+release gate nao prova cold-boot `/data`.
+
+O registro `current-golden.json` e a autorizacao decisiva de `player-runtime`
+podem divergir durante H1/H2: hoje a golden de recovery/delivery permanece
+`c18-hwdecode-lab-1u`, enquanto a evidencia decisiva lab de `player-runtime`
+esta pinada explicitamente ao bundle `c18-hwdecode-lab-1x`. Essa divergencia
+nao promove a `1x` como baseline/fallback geral e nao abre thaw; ela apenas
+exige que invocacoes decisivas usem a tripla explicita da imagem validada
+(`--expect-image-tag`, `--expect-image-sha256`, `--expect-image-marker-sha256`)
+em vez de depender do default da golden corrente. A tripla H1 atual e
+`c18-hwdecode-lab-1x`,
+`1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2`,
+`59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e`.
+Promover/unificar a golden requer evidencia propria de baseline/fallback e
+atualizacao de `current-golden.json`.
 
 Interrupcao/power-loss durante apply/rollback de `player-runtime` deve ser
 provada em duas camadas. A camada offline usa fault-injection no caminho real do

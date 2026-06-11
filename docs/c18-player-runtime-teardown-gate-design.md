@@ -2,7 +2,7 @@
 
 Status: DESIGN (lab-only, fail-closed). No public thaw, stable/prod, GitHub auto-pull,
 or server-side publish is granted or implied by this document. Golden baseline = `1u`;
-decisive player-runtime M6 evidence is pinned to `1w`. player-runtime and kiosky-player
+current decisive player-runtime H1 evidence is pinned to `1x`. player-runtime and kiosky-player
 public update verbs remain frozen (`rc=44`).
 
 ## Why this gate exists (grounded, not inferred)
@@ -152,8 +152,9 @@ rather than papered over:
   today); a `fresh_sent` outcome is rejected outright so it can never read as proven.
 - Soak/endurance; torn-write/full power-loss matrix; server-side publish/signature; public thaw.
 - A green gate **schema/self-test** off-board proves the gate logic, NOT teardown on hardware.
-  Teardown/panfrost is proven only by a real HW run committed under this gate (a NEW image + M6),
-  which remains a board-blocked future step.
+  Teardown/panfrost is proven only by a real HW run committed under this gate. The current
+  committed H1 evidence satisfies that for image `1x`; any future image recapture must re-run
+  M6 and every image-pinned teardown dir instead of reusing the `1x` evidence.
 
 ## Artifacts
 
