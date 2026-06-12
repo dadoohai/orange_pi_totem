@@ -1,0 +1,6 @@
+TARGET=c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e
+PREVIOUS=c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+CURRENT_BEFORE=/data/player-runtime/releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+PREVIOUS_LINK_BEFORE=/data/player-runtime/previous
+SERVICE_BEFORE=active
+TIMER_BEFORE=
