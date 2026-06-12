@@ -1,0 +1,6 @@
+boot_id=e29cfb55-a1d3-460b-8605-561c51359a9d
+current_link=releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+previous_link=releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+state_current=c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+state_previous=c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+quarantine_count=1
