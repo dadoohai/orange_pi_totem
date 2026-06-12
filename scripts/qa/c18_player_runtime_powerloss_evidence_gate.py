@@ -591,6 +591,8 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("checkpoint_operator_instruction")
     if summary.get("passed") is not True:
         errors.append("summary_not_passed")
+    if manifest.get("checkpoint") in SEMANTICALLY_VALIDATED_CHECKPOINTS:
+        validate_boot_transition(checkpoint, summary, errors)
     before = summary.get("before_reconcile") if isinstance(summary.get("before_reconcile"), dict) else {}
     after = summary.get("after_reconcile") if isinstance(summary.get("after_reconcile"), dict) else {}
     validate_adoption(before, "before_reconcile", errors, expected_source="data", expected_version=expected)
@@ -665,7 +667,6 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
     elif manifest.get("checkpoint") == "rollback_after_quarantine":
         validate_rollback_after_quarantine(run_dir, checkpoint, summary, manifest, errors)
     elif manifest.get("checkpoint") == "rollback_after_state_success":
-        validate_boot_transition(checkpoint, summary, errors)
         validate_rollback_after_state_success(run_dir, checkpoint, summary, manifest, errors)
 
     postcheck = run_dir / "postcheck.txt"
@@ -747,6 +748,11 @@ def write_fixture(root: Path) -> None:
         "action": "rollback",
         "checkpoint": "rollback_after_previous_removed",
         "operator_instruction": "CUT_POWER_NOW",
+        "boot_state_at_checkpoint": {
+            "boot_id": "00000000-0000-4000-8000-000000000001",
+            "btime": 1000,
+            "uptime_sec": 120.0,
+        },
         "context": {"current": f"releases/{expected}", "previous": f"releases/{candidate}"},
         "runtime_snapshot": {
             "current_link": f"releases/{expected}",
@@ -774,6 +780,11 @@ def write_fixture(root: Path) -> None:
         "schema": TRIAL_SCHEMA,
         "passed": True,
         "checkpoint": checkpoint,
+        "boot_state_at_resume": {
+            "boot_id": "00000000-0000-4000-8000-000000000002",
+            "btime": 1010,
+            "uptime_sec": 12.0,
+        },
         "before_reconcile": a_adoption,
         "after_reconcile": a_adoption,
         "before_reconcile_health_passed": True,
@@ -1001,6 +1012,52 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("checkpoint_state_current_should_still_be_candidate", result["errors"])
+
+    def test_rollback_after_current_to_previous_requires_boot_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            expected = "runtime-a"
+            candidate = "runtime-b"
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint.update({
+                "action": "rollback",
+                "checkpoint": "rollback_after_current_to_previous",
+                "context": {
+                    "current": f"releases/{expected}",
+                    "previous": f"releases/{candidate}",
+                },
+                "runtime_snapshot": {
+                    "current_link": f"releases/{expected}",
+                    "previous_link": f"releases/{expected}",
+                    "state_current_version": candidate,
+                    "state_previous_version": expected,
+                },
+            })
+            write_json(checkpoint_path, checkpoint)
+            summary_path = root / "trial/powerloss-summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["checkpoint"] = checkpoint
+            summary["boot_state_at_resume"] = dict(checkpoint["boot_state_at_checkpoint"])
+            for label in ("before_reconcile", "after_reconcile"):
+                summary[label]["previous_link"] = f"releases/{expected}"
+            write_json(summary_path, summary)
+            for rel_path in (
+                "trial/resume/before-reconcile-adoption.json",
+                "trial/resume/after-reconcile-adoption.json",
+            ):
+                sidecar = json.loads((root / rel_path).read_text(encoding="utf-8"))
+                sidecar["previous_link"] = f"releases/{expected}"
+                write_json(root / rel_path, sidecar)
+            manifest_path = root / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["checkpoint"] = "rollback_after_current_to_previous"
+            write_json(manifest_path, manifest)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("boot_state_boot_id_not_changed", result["errors"])
 
     def test_required_postcheck_fails_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
