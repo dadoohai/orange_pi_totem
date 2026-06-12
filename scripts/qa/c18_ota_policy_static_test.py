@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -59,6 +60,7 @@ PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_p
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
 SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
 SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_asset_collect.py"
+TOTEM_CORE_PUBLISH_ASSET_LIST_PATH = REPO_ROOT / "scripts" / "qa" / "c18_totem_core_publish_asset_list.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
@@ -284,7 +286,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--trust-anchor-evidence", publish)
         self.assertIn("--expected-release-gate-sha256", publish)
         self.assertIn("STABLE_SERVER_SIDE_ASSETS", publish)
-        self.assertIn("append_unique_asset", publish)
+        self.assertIn("c18_totem_core_publish_asset_list.py", publish)
+        self.assertIn("PUBLISH_ASSET_CMD", publish)
+        self.assertIn("--stable-server-side-asset", publish)
+        self.assertIn("publish assets could not be assembled from validated evidence", publish)
+        self.assertIn("publish_assets  =", publish)
         self.assertIn("stable release gate summary sha256 mismatch after generation", publish)
         self.assertIn("stable_server_side_assets =", publish)
         self.assertIn('log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"', publish)
@@ -296,6 +302,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("server_side_release_gate_sha256_mismatch", asset_collect)
         self.assertIn("test_signed_fixture_collects_proofs_signatures_and_trust_anchor", asset_collect)
         self.assertIn("test_release_gate_hash_mismatch_fails", asset_collect)
+        asset_list = TOTEM_CORE_PUBLISH_ASSET_LIST_PATH.read_text(encoding="utf-8")
+        self.assertIn("publish_asset_stable_server_side_assets_missing", asset_list)
+        self.assertIn("publish_asset_stable_assets_on_non_stable_channel", asset_list)
+        self.assertIn("test_stable_list_includes_base_stable_and_server_side_assets_once", asset_list)
+        self.assertIn("test_missing_asset_fails_closed", asset_list)
+        self.assertIn("test_symlink_asset_fails_closed", asset_list)
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("c18_totem_core_publish_asset_list.py", release_gate)
+        self.assertIn("c18_totem_core_publish_asset_list", release_gate)
         stable_gate = STABLE_PROMOTION_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.stable_promotion.v1", stable_gate)
         self.assertIn("h2_readiness_passed", stable_gate)
@@ -313,6 +328,194 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("--expected-h2-readiness-sha256", stable_gate)
         self.assertIn("stable_promotion_auto_pull_enabled", stable_gate)
         self.assertIn("stable_promotion_public_player_runtime_thaw_enabled", stable_gate)
+
+    def test_totem_core_stable_publisher_passes_validated_assets_to_gh(self) -> None:
+        if shutil.which("openssl") is None:
+            self.skipTest("openssl missing")
+        real_python3 = shutil.which("python3")
+        real_git = shutil.which("git")
+        self.assertIsNotNone(real_python3)
+        self.assertIsNotNone(real_git)
+
+        spec = importlib.util.spec_from_file_location(
+            "c18_server_side_publish_governance_gate_policy_test",
+            SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH,
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+
+        collect_spec = importlib.util.spec_from_file_location(
+            "c18_server_side_publish_asset_collect_policy_test",
+            SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH,
+        )
+        self.assertIsNotNone(collect_spec)
+        self.assertIsNotNone(collect_spec.loader)
+        collect_module = importlib.util.module_from_spec(collect_spec)
+        sys.modules[collect_spec.name] = collect_module
+        collect_spec.loader.exec_module(collect_module)
+
+        with tempfile.TemporaryDirectory(prefix="c18-totem-core-publish-assets-") as tmp:
+            root = Path(tmp)
+            release_dir = root / "release"
+            evidence_path, public_key = module.write_signed_fixture_release(release_dir, component="totem-core")
+            trust_anchor = module.write_trust_anchor_for_key(root / "trust-anchor.json", public_key)
+            release_gate = release_dir / "c18-ota-release-gate.json"
+            stable_evidence = release_dir / "c18-stable-promotion-evidence.json"
+            stable_evidence.write_text(
+                json.dumps({"schema": "dadooh.c18.stable_promotion.v1"}, sort_keys=True),
+                encoding="utf-8",
+            )
+            manifest_path = next(release_dir.glob("dadooh-totem-core-*.manifest.json"))
+            payload_path = next(release_dir.glob("dadooh-totem-core-*.tar.gz"))
+            head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=REPO_ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.update({
+                "channel": "stable",
+                "source_commit": head,
+                "source_branch": "foundation-v0.1",
+                "source_dirty": False,
+                "stable_promotion_evidence_sha256": hashlib.sha256(stable_evidence.read_bytes()).hexdigest(),
+            })
+            manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            powerloss_dir = root / "powerloss"
+            powerloss_dir.mkdir()
+            soak = root / "soak.json"
+            thaw = root / "thaw.json"
+            soak.write_text("{}", encoding="utf-8")
+            thaw.write_text("{}", encoding="utf-8")
+
+            stub_dir = root / "stubs"
+            stub_dir.mkdir()
+            gh_capture = root / "gh-argv.bin"
+            (stub_dir / "gh").write_text(
+                """#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-} ${2:-}" == "auth status" ]]; then
+  exit 0
+fi
+if [[ "${1:-} ${2:-}" == "release view" ]]; then
+  exit 1
+fi
+if [[ "${1:-} ${2:-}" == "release create" ]]; then
+  python3 - "$C18_GH_CAPTURE" "$@" <<'PY'
+import sys
+from pathlib import Path
+Path(sys.argv[1]).write_bytes(b"\\0".join(arg.encode() for arg in sys.argv[2:]) + b"\\0")
+PY
+  printf '%s\\n' 'https://example.invalid/c18-test-release'
+  exit 0
+fi
+exit 2
+""",
+                encoding="utf-8",
+            )
+            (stub_dir / "git").write_text(
+                """#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "ls-remote" ]]; then
+  exit 0
+fi
+exec "$C18_REAL_GIT" "$@"
+""",
+                encoding="utf-8",
+            )
+            (stub_dir / "python3").write_text(
+                """#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+  */scripts/qa/c18_stable_promotion_gate.py)
+    exit 0
+    ;;
+  */scripts/qa/c18_ota_release_gate.py)
+    cat "$C18_RELEASE_GATE_FIXTURE"
+    exit 0
+    ;;
+esac
+exec "$C18_REAL_PYTHON3" "$@"
+""",
+                encoding="utf-8",
+            )
+            for stub in ("gh", "git", "python3"):
+                (stub_dir / stub).chmod(0o755)
+
+            env = os.environ.copy()
+            env.update({
+                "ALLOW_C18_STABLE_PROMOTION": "1",
+                "C18_GH_CAPTURE": str(gh_capture),
+                "C18_REAL_GIT": str(real_git),
+                "C18_REAL_PYTHON3": str(real_python3),
+                "C18_RELEASE_GATE_FIXTURE": str(release_gate),
+                "PATH": f"{stub_dir}:{env.get('PATH', '')}",
+                "PYTHONDONTWRITEBYTECODE": "1",
+            })
+            result = subprocess.run(
+                [
+                    str(PUBLISH_CORE_PATH),
+                    "--release-dir",
+                    str(release_dir),
+                    "--publish",
+                    "--base-ref",
+                    "HEAD",
+                    "--repo",
+                    "example.invalid/repo",
+                    "--stable-release-gate-summary",
+                    str(release_gate),
+                    "--stable-server-side-evidence",
+                    str(evidence_path),
+                    "--stable-server-side-trusted-key-pem",
+                    str(public_key),
+                    "--stable-server-side-trust-anchor-evidence",
+                    str(trust_anchor),
+                    "--stable-soak-summary",
+                    str(soak),
+                    "--stable-powerloss-evidence-dir",
+                    str(powerloss_dir),
+                    "--stable-operator-thaw-decision",
+                    str(thaw),
+                    "--stable-expect-image-tag",
+                    EVIDENCE_1X_IMAGE_TAG,
+                    "--stable-expect-image-sha256",
+                    EVIDENCE_1X_IMAGE_SHA256,
+                    "--stable-expect-image-marker-sha256",
+                    EVIDENCE_1X_IMAGE_MARKER_SHA256,
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+            self.assertTrue(gh_capture.is_file(), msg=result.stdout + result.stderr)
+
+            argv = [part.decode() for part in gh_capture.read_bytes().split(b"\0") if part]
+            self.assertEqual(argv[:2], ["release", "create"])
+            separator = argv.index("--")
+            actual_assets = argv[separator + 1:]
+
+            collected = collect_module.collect_assets(
+                evidence_path,
+                trust_anchor,
+                expected_release_gate_sha256=hashlib.sha256(release_gate.read_bytes()).hexdigest(),
+            )
+            expected_paths: list[Path] = []
+            for path in [manifest_path, payload_path, release_gate, stable_evidence, *collected]:
+                resolved = path.resolve(strict=True)
+                if resolved not in expected_paths:
+                    expected_paths.append(resolved)
+            self.assertEqual(actual_assets, [str(path) for path in expected_paths])
+            self.assertEqual(len(actual_assets), len(set(actual_assets)))
 
     def test_image_embed_keeps_player_launcher_fixed_to_image(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")

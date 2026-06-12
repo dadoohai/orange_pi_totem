@@ -30,6 +30,7 @@ STABLE_RELEASE_GATE_SUMMARY_SHA=""
 STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS=()
 STABLE_POWERLOSS_EVIDENCE_DIRS=()
 STABLE_SERVER_SIDE_ASSETS=()
+ASSETS=()
 
 while [[ $# -gt 0 ]]; do
   arg="$1"
@@ -114,15 +115,6 @@ for part in key.split('.'):
     val = val[part]
 print(val)
 " "$1" "$2"
-}
-
-append_unique_asset() {
-  local candidate="$1"
-  local existing
-  for existing in "${ASSETS[@]}"; do
-    [[ "$existing" == "$candidate" ]] && return 0
-  done
-  ASSETS+=( "$candidate" )
 }
 
 VERSION="$(read_json "$MANIFEST" version)"
@@ -226,6 +218,26 @@ if [[ "$CHANNEL" == "stable" ]]; then
   done <<< "$STABLE_SERVER_SIDE_ASSET_LIST"
 fi
 
+PUBLISH_ASSET_CMD=(
+  python3 "$REPO_ROOT/scripts/qa/c18_totem_core_publish_asset_list.py"
+  --manifest "$MANIFEST"
+  --payload "$PAYLOAD"
+  --gate-evidence "$GATE_EVIDENCE"
+  --channel "$CHANNEL"
+)
+if [[ "$CHANNEL" == "stable" ]]; then
+  PUBLISH_ASSET_CMD+=( --stable-evidence "$STABLE_EVIDENCE" )
+  for asset in "${STABLE_SERVER_SIDE_ASSETS[@]}"; do
+    PUBLISH_ASSET_CMD+=( --stable-server-side-asset "$asset" )
+  done
+fi
+PUBLISH_ASSET_LIST="$(PYTHONDONTWRITEBYTECODE=1 "${PUBLISH_ASSET_CMD[@]}")" \
+  || die "publish assets could not be assembled from validated evidence"
+while IFS= read -r asset; do
+  [[ -n "$asset" ]] && ASSETS+=( "$asset" )
+done <<< "$PUBLISH_ASSET_LIST"
+(( ${#ASSETS[@]} > 0 )) || die "publish asset list is empty"
+
 if [[ -n "$TAG_OVERRIDE" ]]; then
   TAG="$TAG_OVERRIDE"
 else
@@ -279,6 +291,7 @@ if [[ "$CHANNEL" == "stable" ]]; then
   log "stable_server_side_trust_anchor = $STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE"
   log "stable_server_side_assets = ${#STABLE_SERVER_SIDE_ASSETS[@]}"
 fi
+log "publish_assets  = ${#ASSETS[@]}"
 log "payload_sha256  = $MANIFEST_SHA"
 log "version         = $VERSION"
 log "channel         = $CHANNEL"
@@ -327,13 +340,6 @@ fi
 [[ "$PRERELEASE" == "yes" ]] && GH_ARGS+=( --prerelease )
 [[ "$DRAFT" -eq 1 ]] && GH_ARGS+=( --draft )
 
-ASSETS=( "$MANIFEST" "$PAYLOAD" "$GATE_EVIDENCE" )
-if [[ "$CHANNEL" == "stable" ]]; then
-  append_unique_asset "$STABLE_EVIDENCE"
-  for asset in "${STABLE_SERVER_SIDE_ASSETS[@]}"; do
-    append_unique_asset "$asset"
-  done
-fi
 log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"
 RELEASE_URL="$(gh "${GH_ARGS[@]}" -- "${ASSETS[@]}")"
 log "release_url=${RELEASE_URL}"

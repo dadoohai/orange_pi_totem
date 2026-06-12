@@ -503,7 +503,11 @@ publisher deve anexar a familia server-side validada: evidence JSON,
 manifest/payload/release-gate/audit-log apontados por `release_assets`, provas
 ou assinaturas apontadas por `asset_attestations`, e a trust-anchor evidence
 externa. A chave publica confiavel continua entrada externa de validacao; ela
-nao e promovida como payload de updater.
+nao e promovida como payload de updater. A lista final de assets entregue ao
+GitHub Release e montada por `scripts/qa/c18_totem_core_publish_asset_list.py`
+apos esses gates, exigindo `c18-stable-promotion-evidence.json` e ao menos um
+asset server-side em `stable`, rejeitando anexos stable em canais nao-stable e
+deduplicando sem remover os artefatos obrigatorios.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e
