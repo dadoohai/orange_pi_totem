@@ -93,15 +93,7 @@ APPLY_CHECKPOINTS = {
     "after_state_success",
     "before_stage_cleanup",
 }
-SEMANTICALLY_VALIDATED_CHECKPOINTS = {
-    "after_current_symlink",
-    "after_marker_written",
-    "after_previous_symlink",
-    "rollback_after_current_to_previous",
-    "rollback_after_previous_removed",
-    "rollback_after_quarantine",
-    "rollback_after_state_success",
-}
+SEMANTICALLY_VALIDATED_CHECKPOINTS = set(ALL_MATRIX_CHECKPOINTS)
 POSTCHECK_REQUIRED_CHECKPOINTS = {
     "rollback_after_previous_removed",
     "rollback_after_quarantine",
@@ -111,6 +103,9 @@ SUMMARY_PREVIOUS_LINK_ALLOWED_CHECKPOINTS = {
     "after_current_symlink",
     "after_marker_written",
     "after_previous_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
     "rollback_after_current_to_previous",
 }
 
@@ -322,7 +317,7 @@ def validate_setup(run_dir: Path, manifest: dict[str, Any], errors: list[str]) -
     if manifest.get("checkpoint") in APPLY_CHECKPOINTS and not (run_dir / "setup" / "lab-apply.json").exists():
         return
     candidate = manifest.get("setup_candidate_version")
-    expected = manifest.get("expected_active_version")
+    expected = manifest.get("setup_expected_active_version") or manifest.get("expected_active_version")
     apply_data = load_json(run_dir / "setup" / "lab-apply.json", errors, "setup_lab_apply")
     if apply_data.get("schema") != LAB_APPLY_SCHEMA:
         errors.append("setup_lab_apply_schema")
@@ -370,6 +365,147 @@ def validate_rollback_previous_removed(checkpoint: dict[str, Any],
         errors.append("manifest_rollback_expectation")
     if summary.get("restore_rollback") is not None:
         errors.append("summary_restore_rollback_unexpected")
+
+
+def candidate_version(manifest: dict[str, Any], checkpoint: dict[str, Any] | None = None) -> str | None:
+    for key in ("setup_candidate_version", "target_package_version", "candidate_version"):
+        value = manifest.get(key)
+        if isinstance(value, str) and value:
+            return value
+    if checkpoint is not None:
+        context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+        value = context.get("version")
+        if isinstance(value, str) and value:
+            return value
+        runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+        last_operation = runtime.get("last_operation") if isinstance(runtime.get("last_operation"), dict) else {}
+        value = last_operation.get("version")
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def expected_active_version(manifest: dict[str, Any]) -> str | None:
+    value = manifest.get("expected_active_version")
+    return value if isinstance(value, str) and value else None
+
+
+def setup_expected_active_version(manifest: dict[str, Any]) -> str | None:
+    value = manifest.get("setup_expected_active_version")
+    if isinstance(value, str) and value:
+        return value
+    return expected_active_version(manifest)
+
+
+def identity_errors(prefix: str, observed: Any, expected: Any, errors: list[str]) -> None:
+    if not isinstance(observed, dict) or not isinstance(expected, dict):
+        errors.append(f"{prefix}_identity_missing")
+        return
+    for key in ("version", "payload_sha256", "tree_sha256", "kiosk_py_sha256"):
+        if key in expected and observed.get(key) != expected.get(key):
+            errors.append(f"{prefix}_{key}_mismatch")
+
+
+def require_hash_identity(prefix: str, identity: dict[str, Any], version: str | None, errors: list[str]) -> None:
+    if version is not None and identity.get("version") != version:
+        errors.append(f"{prefix}_version_mismatch")
+    for key in ("payload_sha256", "tree_sha256", "kiosk_py_sha256"):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(identity.get(key, ""))):
+            errors.append(f"{prefix}_{key}_missing")
+
+
+def quarantine_entry(runtime: dict[str, Any], version: str | None) -> dict[str, Any]:
+    for entry in runtime.get("quarantine") if isinstance(runtime.get("quarantine"), list) else []:
+        if isinstance(entry, dict) and entry.get("version") == version:
+            return entry
+    return {}
+
+
+def require_verifying_apply(checkpoint: dict[str, Any],
+                            manifest: dict[str, Any],
+                            errors: list[str]) -> tuple[dict[str, Any], dict[str, Any], str | None, str | None]:
+    runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+    context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+    last_operation = runtime.get("last_operation") if isinstance(runtime.get("last_operation"), dict) else {}
+    candidate = candidate_version(manifest, checkpoint)
+    expected = expected_active_version(manifest)
+    if checkpoint.get("action") != "apply":
+        errors.append("checkpoint_action_not_apply")
+    if not isinstance(candidate, str) or not candidate:
+        errors.append("checkpoint_candidate_version_missing")
+    if not isinstance(expected, str) or not expected:
+        errors.append("manifest_expected_active_version_missing")
+    if context.get("version") is not None and context.get("version") != candidate:
+        errors.append("checkpoint_context_version_not_candidate")
+    if expected and link_version(runtime.get("current_link")) != expected:
+        errors.append("checkpoint_current_not_expected_active")
+    if link_version(runtime.get("previous_link")) == candidate:
+        errors.append("checkpoint_previous_already_candidate")
+    if expected and runtime.get("state_current_version") != expected:
+        errors.append("checkpoint_state_current_not_expected_active")
+    if runtime.get("state_previous_version") == candidate:
+        errors.append("checkpoint_state_previous_already_candidate")
+    if last_operation.get("type") != "apply" or last_operation.get("status") != "verifying":
+        errors.append("checkpoint_last_operation_not_verifying_apply")
+    if candidate and last_operation.get("version") != candidate:
+        errors.append("checkpoint_last_operation_version_mismatch")
+    if not isinstance(context.get("identity"), dict):
+        errors.append("checkpoint_identity_missing")
+    identity_errors("checkpoint_last_operation_candidate", last_operation.get("candidate_identity"), context.get("identity"), errors)
+    return runtime, context, candidate, expected
+
+
+def validate_apply_pre_state_checkpoint(checkpoint: dict[str, Any],
+                                        manifest: dict[str, Any],
+                                        errors: list[str]) -> None:
+    runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+    context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+    candidate = candidate_version(manifest, checkpoint)
+    expected = expected_active_version(manifest)
+    if checkpoint.get("action") != "apply":
+        errors.append("checkpoint_action_not_apply")
+    if not isinstance(candidate, str) or not candidate:
+        errors.append("checkpoint_candidate_version_missing")
+    if not isinstance(expected, str) or not expected:
+        errors.append("manifest_expected_active_version_missing")
+    if context.get("version") != candidate:
+        errors.append("checkpoint_context_version_not_candidate")
+    if expected and link_version(runtime.get("current_link")) != expected:
+        errors.append("checkpoint_current_not_expected_active")
+    if link_version(runtime.get("previous_link")) == candidate:
+        errors.append("checkpoint_previous_already_candidate")
+    if expected and runtime.get("state_current_version") != expected:
+        errors.append("checkpoint_state_current_not_expected_active")
+    if runtime.get("state_previous_version") == candidate:
+        errors.append("checkpoint_state_previous_already_candidate")
+    checkpoint_name = checkpoint.get("checkpoint")
+    if checkpoint_name == "after_payload_staged":
+        if link_version(context.get("stage")) != candidate:
+            errors.append("checkpoint_stage_not_candidate")
+    elif checkpoint_name in {"after_release_dir_created", "after_extract"}:
+        if link_version(context.get("release")) != candidate:
+            errors.append("checkpoint_release_not_candidate")
+
+
+def validate_apply_verifying_checkpoint(checkpoint: dict[str, Any],
+                                        manifest: dict[str, Any],
+                                        errors: list[str]) -> None:
+    checkpoint_name = checkpoint.get("checkpoint")
+    runtime, context, candidate, expected = require_verifying_apply(
+        checkpoint,
+        manifest,
+        errors,
+    )
+    if checkpoint_name == "after_previous_symlink":
+        previous = context.get("previous")
+        if not isinstance(previous, str) or not previous:
+            errors.append("checkpoint_context_previous_missing")
+        if runtime.get("previous_link") != previous:
+            errors.append("checkpoint_previous_link_not_context_previous")
+        if expected and link_version(previous) != expected:
+            errors.append("checkpoint_context_previous_not_expected")
+        if runtime.get("current_link") != previous:
+            errors.append("checkpoint_current_link_not_old_current")
 
 
 def validate_after_current_symlink(checkpoint: dict[str, Any],
@@ -422,6 +558,127 @@ def validate_rollback_current_to_previous(checkpoint: dict[str, Any],
         errors.append("checkpoint_context_current_not_expected")
     if link_version(context.get("previous")) != candidate:
         errors.append("checkpoint_context_previous_not_candidate")
+
+
+def validate_apply_after_state_success(checkpoint: dict[str, Any],
+                                       manifest: dict[str, Any],
+                                       errors: list[str]) -> None:
+    runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+    context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+    last_operation = runtime.get("last_operation") if isinstance(runtime.get("last_operation"), dict) else {}
+    candidate = candidate_version(manifest, checkpoint)
+    old_active = manifest.get("setup_expected_active_version")
+    if checkpoint.get("action") != "apply":
+        errors.append("checkpoint_action_not_apply")
+    if not isinstance(candidate, str) or not candidate:
+        errors.append("checkpoint_candidate_version_missing")
+    if context.get("version") != candidate:
+        errors.append("checkpoint_context_version_not_candidate")
+    if link_version(runtime.get("current_link")) != candidate:
+        errors.append("checkpoint_current_not_candidate")
+    if runtime.get("state_current_version") != candidate:
+        errors.append("checkpoint_state_current_not_candidate")
+    if last_operation.get("type") != "apply" or last_operation.get("status") != "success":
+        errors.append("checkpoint_last_operation_not_successful_apply")
+    if last_operation.get("version") != candidate:
+        errors.append("checkpoint_last_operation_version_mismatch")
+    if isinstance(old_active, str) and old_active:
+        if link_version(runtime.get("previous_link")) != old_active:
+            errors.append("checkpoint_previous_link_not_old_active")
+        if runtime.get("state_previous_version") != old_active:
+            errors.append("checkpoint_state_previous_not_old_active")
+    if checkpoint.get("checkpoint") == "after_state_success":
+        identity = context.get("identity") if isinstance(context.get("identity"), dict) else {}
+        if not identity:
+            errors.append("checkpoint_identity_missing")
+        else:
+            require_hash_identity("checkpoint_identity", identity, candidate, errors)
+    if checkpoint.get("checkpoint") == "before_stage_cleanup" and link_version(context.get("stage")) != candidate:
+        errors.append("checkpoint_stage_not_candidate")
+
+
+def validate_rollback_after_identify_links(checkpoint: dict[str, Any],
+                                           manifest: dict[str, Any],
+                                           errors: list[str]) -> None:
+    runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+    context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+    last_operation = runtime.get("last_operation") if isinstance(runtime.get("last_operation"), dict) else {}
+    expected = expected_active_version(manifest)
+    candidate = manifest.get("setup_candidate_version")
+    if checkpoint.get("action") != "rollback":
+        errors.append("checkpoint_action_not_rollback")
+    if not isinstance(expected, str) or not expected:
+        errors.append("manifest_expected_active_version_missing")
+    if not isinstance(candidate, str) or not candidate:
+        errors.append("manifest_setup_candidate_version_missing")
+    if link_version(context.get("current")) != candidate:
+        errors.append("checkpoint_context_current_not_candidate")
+    if link_version(context.get("previous")) != expected:
+        errors.append("checkpoint_context_previous_not_expected")
+    if runtime.get("current_link") != context.get("current"):
+        errors.append("checkpoint_current_link_not_context_current")
+    if runtime.get("previous_link") != context.get("previous"):
+        errors.append("checkpoint_previous_link_not_context_previous")
+    if candidate and link_version(runtime.get("current_link")) != candidate:
+        errors.append("checkpoint_current_not_candidate")
+    if expected and link_version(runtime.get("previous_link")) != expected:
+        errors.append("checkpoint_previous_not_expected")
+    if runtime.get("state_current_version") != candidate:
+        errors.append("checkpoint_state_current_should_still_be_candidate")
+    if runtime.get("state_previous_version") != expected:
+        errors.append("checkpoint_state_previous_should_still_be_expected")
+    if context.get("quarantined_current") is not True:
+        errors.append("checkpoint_quarantined_current_not_true")
+    quarantine = quarantine_entry(runtime, candidate if isinstance(candidate, str) else None)
+    if not quarantine:
+        errors.append("checkpoint_quarantine_candidate_missing")
+    else:
+        require_hash_identity("checkpoint_quarantine", quarantine, candidate if isinstance(candidate, str) else None, errors)
+    if last_operation.get("type") == "rollback" or last_operation.get("rolled_back_to") is not None:
+        errors.append("checkpoint_already_rollback_operation")
+    if runtime.get("state_current_version") == expected:
+        errors.append("checkpoint_state_already_rolled_back")
+    if manifest.get("rollback_expectation") != "data-current-after-identify-links":
+        errors.append("manifest_rollback_expectation")
+
+
+def validate_rollback_after_current_unlinked(checkpoint: dict[str, Any],
+                                             manifest: dict[str, Any],
+                                             errors: list[str]) -> None:
+    runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
+    context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
+    candidate = manifest.get("setup_candidate_version") or candidate_version(manifest, checkpoint)
+    if checkpoint.get("action") != "rollback":
+        errors.append("checkpoint_action_not_rollback")
+    if not isinstance(candidate, str) or not candidate:
+        errors.append("manifest_setup_candidate_version_missing")
+    if link_version(context.get("current")) != candidate:
+        errors.append("checkpoint_context_current_not_candidate")
+    if context.get("previous") is not None:
+        errors.append("checkpoint_context_previous_should_be_absent")
+    if runtime.get("previous_link") is not None:
+        errors.append("checkpoint_previous_link_should_be_absent")
+    if runtime.get("state_previous_version") is not None:
+        errors.append("checkpoint_state_previous_should_be_absent")
+    if runtime.get("state_current_version") != candidate:
+        errors.append("checkpoint_state_current_should_still_be_candidate")
+    if not isinstance(context.get("current"), str) or not context.get("current"):
+        errors.append("checkpoint_context_current_missing")
+    if runtime.get("current_link") is not None:
+        errors.append("checkpoint_current_link_should_be_absent")
+    if manifest.get("rollback_expectation") != "image-fallback-after-current-unlinked":
+        errors.append("manifest_rollback_expectation")
+
+
+def resume_contract(checkpoint_name: Any,
+                    expected: str | None) -> tuple[str, str | None, str, str | None, str]:
+    if checkpoint_name == "rollback_after_identify_links":
+        return "fallback", None, "data", expected, "previous_adopted"
+    if checkpoint_name == "rollback_after_current_unlinked":
+        return "fallback", None, "fallback", None, "image_fallback"
+    return "data", expected, "data", expected, "current_verified"
+
+
 def validate_rollback_after_quarantine(run_dir: Path,
                                        checkpoint: dict[str, Any],
                                        summary: dict[str, Any],
@@ -593,18 +850,23 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("summary_not_passed")
     if manifest.get("checkpoint") in SEMANTICALLY_VALIDATED_CHECKPOINTS:
         validate_boot_transition(checkpoint, summary, errors)
+    checkpoint_name = manifest.get("checkpoint")
+    before_source, before_version, after_source, after_version, expected_reconcile_result = resume_contract(
+        checkpoint_name,
+        expected if isinstance(expected, str) and expected else None,
+    )
     before = summary.get("before_reconcile") if isinstance(summary.get("before_reconcile"), dict) else {}
     after = summary.get("after_reconcile") if isinstance(summary.get("after_reconcile"), dict) else {}
-    validate_adoption(before, "before_reconcile", errors, expected_source="data", expected_version=expected)
-    validate_adoption(after, "after_reconcile", errors, expected_source="data", expected_version=expected)
+    validate_adoption(before, "before_reconcile", errors, expected_source=before_source, expected_version=before_version)
+    validate_adoption(after, "after_reconcile", errors, expected_source=after_source, expected_version=after_version)
     validate_adoption_sidecar(
         run_dir,
         f"{trial_prefix + '/' if trial_prefix else ''}resume/before-reconcile-adoption.json",
         before,
         "before_reconcile_adoption_sidecar",
         errors,
-        expected_source="data",
-        expected_version=expected,
+        expected_source=before_source,
+        expected_version=before_version,
     )
     validate_adoption_sidecar(
         run_dir,
@@ -612,10 +874,9 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         after,
         "after_reconcile_adoption_sidecar",
         errors,
-        expected_source="data",
-        expected_version=expected,
+        expected_source=after_source,
+        expected_version=after_version,
     )
-    checkpoint_name = manifest.get("checkpoint")
     if (
         checkpoint_name not in SUMMARY_PREVIOUS_LINK_ALLOWED_CHECKPOINTS
         and (before.get("previous_link") is not None or after.get("previous_link") is not None)
@@ -629,7 +890,7 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("resume_reconcile_schema")
     if reconcile.get("passed") is not True:
         errors.append("resume_reconcile_not_passed")
-    if nested(reconcile, "operation", "result") != "current_verified":
+    if nested(reconcile, "operation", "result") != expected_reconcile_result:
         errors.append("resume_reconcile_result")
     validate_freeze(reconcile, "resume_reconcile", errors)
     validate_health(
@@ -658,14 +919,34 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         "after_reconcile_health",
         errors,
     )
-    if manifest.get("checkpoint") == "after_current_symlink":
+    if manifest.get("checkpoint") in {
+        "after_payload_staged",
+        "after_release_dir_created",
+        "after_extract",
+    }:
+        validate_apply_pre_state_checkpoint(checkpoint, manifest, errors)
+    elif manifest.get("checkpoint") in {
+        "after_state_verifying",
+        "after_health_passed",
+        "after_release_tree_fsync",
+        "after_marker_written",
+        "after_previous_symlink",
+    }:
+        validate_apply_verifying_checkpoint(checkpoint, manifest, errors)
+    elif manifest.get("checkpoint") == "after_current_symlink":
         validate_after_current_symlink(checkpoint, manifest, errors)
+    elif manifest.get("checkpoint") in {"after_state_success", "before_stage_cleanup"}:
+        validate_apply_after_state_success(checkpoint, manifest, errors)
+    elif manifest.get("checkpoint") == "rollback_after_identify_links":
+        validate_rollback_after_identify_links(checkpoint, manifest, errors)
     elif manifest.get("checkpoint") == "rollback_after_current_to_previous":
         validate_rollback_current_to_previous(checkpoint, manifest, errors)
     elif manifest.get("checkpoint") == "rollback_after_previous_removed":
         validate_rollback_previous_removed(checkpoint, summary, manifest, errors)
     elif manifest.get("checkpoint") == "rollback_after_quarantine":
         validate_rollback_after_quarantine(run_dir, checkpoint, summary, manifest, errors)
+    elif manifest.get("checkpoint") == "rollback_after_current_unlinked":
+        validate_rollback_after_current_unlinked(checkpoint, manifest, errors)
     elif manifest.get("checkpoint") == "rollback_after_state_success":
         validate_rollback_after_state_success(run_dir, checkpoint, summary, manifest, errors)
 
@@ -837,6 +1118,163 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
                 })
         write_json(manifest_path, manifest)
 
+    def set_resume_adoption_label(self,
+                                  root: Path,
+                                  label: str,
+                                  *,
+                                  source: str,
+                                  version: str | None,
+                                  previous_link: str | None = None) -> None:
+        summary_path = root / "trial/powerloss-summary.json"
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary[label]["selected_source"] = source
+        if version is None:
+            summary[label].pop("selected_version", None)
+        else:
+            summary[label]["selected_version"] = version
+        if previous_link is None:
+            summary[label].pop("previous_link", None)
+        else:
+            summary[label]["previous_link"] = previous_link
+        write_json(summary_path, summary)
+
+        sidecar_name = "before-reconcile-adoption.json" if label == "before_reconcile" else "after-reconcile-adoption.json"
+        sidecar_path = root / "trial/resume" / sidecar_name
+        sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        sidecar["selected_source"] = source
+        if version is None:
+            sidecar.pop("selected_version", None)
+        else:
+            sidecar["selected_version"] = version
+        if previous_link is None:
+            sidecar.pop("previous_link", None)
+        else:
+            sidecar["previous_link"] = previous_link
+        write_json(sidecar_path, sidecar)
+
+    def set_resume_adoption(self, root: Path, *, source: str, version: str | None, previous_link: str | None = None) -> None:
+        for label in ("before_reconcile", "after_reconcile"):
+            self.set_resume_adoption_label(
+                root,
+                label,
+                source=source,
+                version=version,
+                previous_link=previous_link,
+            )
+
+    def set_reconcile_result(self, root: Path, result: str) -> None:
+        summary_path = root / "trial/powerloss-summary.json"
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary["reconcile"]["operation"]["result"] = result
+        write_json(summary_path, summary)
+        reconcile_path = root / "trial/resume/reconcile.json"
+        reconcile = json.loads(reconcile_path.read_text(encoding="utf-8"))
+        reconcile["operation"]["result"] = result
+        write_json(reconcile_path, reconcile)
+
+    def set_manifest_checkpoint(self,
+                                root: Path,
+                                checkpoint: str,
+                                *,
+                                expected: str | None = "runtime-a",
+                                candidate: str | None = "runtime-b",
+                                setup_expected: str | None = None,
+                                rollback_expectation: str | None = None) -> None:
+        manifest_path = root / "evidence-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["checkpoint"] = checkpoint
+        if expected is None:
+            manifest.pop("expected_active_version", None)
+        else:
+            manifest["expected_active_version"] = expected
+        if candidate is None:
+            manifest.pop("target_package_version", None)
+        else:
+            manifest["target_package_version"] = candidate
+        if setup_expected is None:
+            manifest.pop("setup_expected_active_version", None)
+        else:
+            manifest["setup_expected_active_version"] = setup_expected
+        if rollback_expectation is None:
+            manifest.pop("rollback_expectation", None)
+        else:
+            manifest["rollback_expectation"] = rollback_expectation
+        write_json(manifest_path, manifest)
+
+    def set_apply_checkpoint(self, root: Path, checkpoint_name: str) -> None:
+        expected = "runtime-a"
+        candidate = "runtime-b"
+        identity = {
+            "version": candidate,
+            "payload_sha256": "b" * 64,
+            "tree_sha256": "c" * 64,
+            "kiosk_py_sha256": "d" * 64,
+        }
+        context: dict[str, Any] = {"version": candidate}
+        runtime: dict[str, Any] = {
+            "current_link": f"releases/{expected}",
+            "previous_link": None,
+            "state_current_version": expected,
+            "state_previous_version": None,
+            "last_operation": None,
+        }
+        if checkpoint_name == "after_payload_staged":
+            context["stage"] = f"/data/updates/incoming/player-runtime/{candidate}"
+        elif checkpoint_name in {"after_release_dir_created", "after_extract"}:
+            context["release"] = f"/data/player-runtime/releases/{candidate}"
+        elif checkpoint_name in {
+            "after_state_verifying",
+            "after_health_passed",
+            "after_release_tree_fsync",
+            "after_marker_written",
+            "after_previous_symlink",
+        }:
+            runtime["last_operation"] = {
+                "type": "apply",
+                "status": "verifying",
+                "version": candidate,
+                "candidate_identity": identity,
+            }
+            context["identity"] = identity
+            if checkpoint_name == "after_previous_symlink":
+                context["previous"] = f"releases/{expected}"
+                runtime["previous_link"] = f"releases/{expected}"
+        elif checkpoint_name in {"after_state_success", "before_stage_cleanup"}:
+            runtime.update({
+                "current_link": f"releases/{candidate}",
+                "previous_link": f"releases/{expected}",
+                "state_current_version": candidate,
+                "state_previous_version": expected,
+                "last_operation": {
+                    "type": "apply",
+                    "status": "success",
+                    "version": candidate,
+                },
+            })
+            if checkpoint_name == "after_state_success":
+                context["identity"] = identity
+            if checkpoint_name == "before_stage_cleanup":
+                context["stage"] = f"/data/updates/incoming/player-runtime/{candidate}"
+            self.set_resume_adoption(root, source="data", version=candidate, previous_link=f"releases/{expected}")
+            self.set_manifest_checkpoint(root, checkpoint_name, expected=candidate, candidate=candidate, setup_expected=expected)
+        checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        checkpoint.update({
+            "action": "apply",
+            "checkpoint": checkpoint_name,
+            "context": context,
+            "runtime_snapshot": runtime,
+        })
+        write_json(checkpoint_path, checkpoint)
+        summary_path = root / "trial/powerloss-summary.json"
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary["checkpoint"] = checkpoint
+        write_json(summary_path, summary)
+        if checkpoint_name not in {"after_state_success", "before_stage_cleanup"}:
+            self.set_resume_adoption(root, source="data", version=expected)
+            self.set_manifest_checkpoint(root, checkpoint_name, expected=expected, candidate=candidate)
+        self.refresh_manifest_files(root)
+
     def test_fixture_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -890,22 +1328,195 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             self.assertFalse(result["passed"])
             self.assertIn("unsupported_checkpoint:rollback_after_future_unknown", result["errors"])
 
-    def test_known_matrix_checkpoint_without_semantics_fails_explicitly(self) -> None:
+    def test_apply_checkpoint_semantics_pass_and_reject_premature_promotion(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_fixture(root)
-            manifest_path = root / "evidence-manifest.json"
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["checkpoint"] = "after_extract"
-            write_json(manifest_path, manifest)
+            self.set_apply_checkpoint(root, "after_extract")
+            self.assertTrue(validate(root)["passed"])
+
             checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
             checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
-            checkpoint["checkpoint"] = "after_extract"
+            checkpoint["runtime_snapshot"]["state_current_version"] = "runtime-b"
             write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
             result = validate(root)
             self.assertFalse(result["passed"])
-            self.assertNotIn("unsupported_checkpoint:after_extract", result["errors"])
-            self.assertIn("checkpoint_semantics_not_implemented:after_extract", result["errors"])
+            self.assertIn("checkpoint_state_current_not_expected_active", result["errors"])
+
+    def test_all_apply_checkpoint_semantics_pass(self) -> None:
+        for checkpoint_name in sorted(APPLY_CHECKPOINTS - {"after_current_symlink"}):
+            with self.subTest(checkpoint=checkpoint_name):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    write_fixture(root)
+                    self.set_apply_checkpoint(root, checkpoint_name)
+                    self.assertTrue(validate(root)["passed"])
+
+    def test_apply_verifying_checkpoint_semantics_pass_and_reject_bad_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "after_health_passed")
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint["context"]["identity"]["tree_sha256"] = "e" * 64
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_last_operation_candidate_tree_sha256_mismatch", result["errors"])
+
+    def test_after_state_verifying_requires_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "after_state_verifying")
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            del checkpoint["context"]["identity"]
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_identity_missing", result["errors"])
+
+    def test_apply_success_checkpoint_semantics_pass_and_reject_non_success_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "before_stage_cleanup")
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint["runtime_snapshot"]["last_operation"]["status"] = "verifying"
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_last_operation_not_successful_apply", result["errors"])
+
+    def test_rollback_identify_links_semantics_pass_and_reject_link_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            candidate = "runtime-b"
+            expected = "runtime-a"
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint.update({
+                "action": "rollback",
+                "checkpoint": "rollback_after_identify_links",
+                "context": {
+                    "current": f"releases/{candidate}",
+                    "previous": f"releases/{expected}",
+                    "quarantined_current": True,
+                },
+                "runtime_snapshot": {
+                    "current_link": f"releases/{candidate}",
+                    "previous_link": f"releases/{expected}",
+                    "state_current_version": candidate,
+                    "state_previous_version": expected,
+                    "last_operation": {
+                        "type": "apply",
+                        "status": "success",
+                        "version": candidate,
+                    },
+                    "quarantine": [{
+                        "version": candidate,
+                        "payload_sha256": "b" * 64,
+                        "tree_sha256": "c" * 64,
+                        "kiosk_py_sha256": "d" * 64,
+                    }],
+                },
+            })
+            write_json(checkpoint_path, checkpoint)
+            summary_path = root / "trial/powerloss-summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["checkpoint"] = checkpoint
+            write_json(summary_path, summary)
+            self.set_resume_adoption_label(
+                root,
+                "before_reconcile",
+                source="fallback",
+                version=None,
+                previous_link=f"releases/{expected}",
+            )
+            self.set_resume_adoption_label(
+                root,
+                "after_reconcile",
+                source="data",
+                version=expected,
+                previous_link=f"releases/{expected}",
+            )
+            self.set_reconcile_result(root, "previous_adopted")
+            self.set_manifest_checkpoint(
+                root,
+                "rollback_after_identify_links",
+                expected=expected,
+                candidate=candidate,
+                setup_expected=expected,
+                rollback_expectation="data-current-after-identify-links",
+            )
+            self.refresh_manifest_files(root)
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint["runtime_snapshot"]["previous_link"] = None
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_previous_link_not_context_previous", result["errors"])
+
+    def test_rollback_current_unlinked_semantics_pass_and_reject_data_adoption(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            candidate = "runtime-b"
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint.update({
+                "action": "rollback",
+                "checkpoint": "rollback_after_current_unlinked",
+                "context": {"current": f"releases/{candidate}", "previous": None},
+                "runtime_snapshot": {
+                    "current_link": None,
+                    "previous_link": None,
+                    "state_current_version": candidate,
+                    "state_previous_version": None,
+                },
+            })
+            write_json(checkpoint_path, checkpoint)
+            summary_path = root / "trial/powerloss-summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["checkpoint"] = checkpoint
+            summary["reconcile"]["operation"]["result"] = "image_fallback"
+            write_json(summary_path, summary)
+            reconcile_path = root / "trial/resume/reconcile.json"
+            reconcile = json.loads(reconcile_path.read_text(encoding="utf-8"))
+            reconcile["operation"]["result"] = "image_fallback"
+            write_json(reconcile_path, reconcile)
+            self.set_resume_adoption(root, source="fallback", version=None)
+            self.set_manifest_checkpoint(
+                root,
+                "rollback_after_current_unlinked",
+                expected=None,
+                candidate=candidate,
+                rollback_expectation="image-fallback-after-current-unlinked",
+            )
+            self.refresh_manifest_files(root)
+            self.assertTrue(validate(root)["passed"])
+
+            self.set_resume_adoption(root, source="data", version=candidate)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("before_reconcile_source", result["errors"])
 
     def test_after_current_symlink_requires_cut_before_state_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -72,8 +72,8 @@ The two core invariants hold **by construction** and were re-verified this round
 | GPU-fault matcher recall calibration vs real board | **OPEN/ADJACENT**: green means no matcher-covered fault wording appeared in the captured windows; unknown future wording still needs corpus calibration before production claims. | H1-adjacent / H2 hardening |
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
 | H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **FORMALIZED (Option B)**: `current-golden.json` remains `1u` for recovery/delivery baseline; H1 decisive player-runtime evidence is image-bound to `1x` and does not promote baseline/fallback | evidence-integrity precondition — DONE for H1 |
-| Offline power-loss matrix (7/17 boundaries) | **PARTIAL (by design)**: producer arms 17/17; evidence gate distinguishes unknown checkpoints from known-matrix checkpoints whose approval semantics are not implemented yet (`checkpoint_semantics_not_implemented`); H2 now reports a semantics ledger and stays red while any required checkpoint lacks implemented semantics. | H2 — expand semantic validators before full matrix capture |
-| Physical power-cut (apply/rollback) | **ABSENT** | LATER (homologation) |
+| Offline power-loss semantics matrix (17/17) | **DONE (off-board)**: producer arms 17/17; evidence gate has semantic validators for every required checkpoint and H2 reports an empty `semantics_not_implemented_checkpoints` ledger. This does not replace physical evidence. | H2 governance foundation — DONE |
+| Physical power-cut (apply/rollback) | **PARTIAL**: P0 selective set is complete for pilot (5/17); H2 still requires the remaining 12 physical checkpoints. | H2 physical validation |
 | 24h soak/endurance | **ABSENT** | LATER (production) |
 | player-runtime stable-promotion authorization | **ABSENT** | LATER (production) |
 | Server-side publish gate / signature / auto-pull | **ABSENT** | LATER (production) |
@@ -246,7 +246,7 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
 | server-side/publish | Gate offline adicionado para evidencia de governanca; auto-pull/stable continuam off | Evidencia real de publish/signature/attestation, canais, allowlist/staged rollout e auditoria |
-| power-loss/soak | P0 seletivo fisico completo para piloto; H2 gate ainda vermelho e agora separa lacuna de evidencia de lacuna de semantica | 12 checkpoints restantes da matriz 17/17, validadores semanticos para os checkpoints ainda nao cobertos e soak 24h |
+| power-loss/soak | P0 seletivo fisico completo para piloto; semantica 17/17 implementada no gate; H2 gate ainda vermelho por lacuna de evidencia fisica e soak | 12 checkpoints fisicos restantes da matriz 17/17 e soak 24h |
 
 Estado: Homologation RC de `player-runtime` pronta para piloto assistido, com
 freeze publico `rc=44`, pacote `homologation`, P0 seletivo completo, pilot

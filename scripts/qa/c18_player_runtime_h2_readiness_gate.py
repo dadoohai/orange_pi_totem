@@ -503,7 +503,11 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
     def test_incomplete_powerloss_semantics_denies_even_with_all_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             args = complete_args(Path(tmp))
-            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+            incomplete = set(REQUIRED_POWERLOSS_CHECKPOINTS) - {"after_extract"}
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", incomplete),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn(
