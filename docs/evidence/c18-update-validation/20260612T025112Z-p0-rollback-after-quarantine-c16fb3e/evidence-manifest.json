@@ -1,0 +1,323 @@
+{
+  "artifact_id": "c18-p0-c16fb3e-rollback-after-quarantine-20260612T025112Z",
+  "board_image_marker": "c18-hwdecode-lab-1x",
+  "checkpoint": "rollback_after_quarantine",
+  "component": "player-runtime",
+  "expected_active_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "files": [
+    {
+      "bytes": 1301,
+      "file": "README.md",
+      "sha256": "83958333e69bb115396800bfc63c9720c88927c4c58ddbd922cca657566ab199"
+    },
+    {
+      "bytes": 239,
+      "file": "postcheck.txt",
+      "sha256": "8dc820d2f2d2843b90ce31e10d6482a3aa5fc3c465ff7da91864026d00f1bc30"
+    },
+    {
+      "bytes": 1229,
+      "file": "setup/apply/candidate-health/candidate-config.json",
+      "sha256": "d690f1526d62f0d89d91d87cbadd0ac25f0d72283a3a8b41c03c0cd92df6b2a4"
+    },
+    {
+      "bytes": 5167,
+      "file": "setup/apply/candidate-health/candidate-health-result.json",
+      "sha256": "7f42cccf70186445c0592de4f3dfea09c5c81094fed4573c8725a2b092e8b3f2"
+    },
+    {
+      "bytes": 13034,
+      "file": "setup/apply/candidate-health/candidate-stdout.txt",
+      "sha256": "678759f0e3e2203287e74a66e1785231ed46ee58702d7a96d574d0203f4a0fc2"
+    },
+    {
+      "bytes": 360,
+      "file": "setup/apply/candidate-health/candidate-teardown-kernel.json",
+      "sha256": "e95ce17ec6c94d9edce3bfe6322aedbd48809b4aa1074f9b49934ac70271aa8f"
+    },
+    {
+      "bytes": 336,
+      "file": "setup/apply/candidate-health/health/deep-health-kernel.json",
+      "sha256": "bab3787b9c4cd18ba3fb8043220d2e91c133431e824881fb55e60ca06f7cb07e"
+    },
+    {
+      "bytes": 49,
+      "file": "setup/apply/candidate-health/health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 130,
+      "file": "setup/apply/candidate-health/health/deep-health-process.json",
+      "sha256": "9d9cfb6b12f1ad70cb5191f990b331246b460840266cd009b382fc7650a838e7"
+    },
+    {
+      "bytes": 262,
+      "file": "setup/apply/candidate-health/health/deep-health-systemd.json",
+      "sha256": "5ce729fba6d798676557a30e2d68c0f3420bffdbf13ba72b3507f6390ef8ea30"
+    },
+    {
+      "bytes": 4141,
+      "file": "setup/apply/candidate-health/health/playback-deep-health-public.json",
+      "sha256": "966aad5156ce8f30e4dec77f9b210d93a3811e095e1e489878fc7e0b49d327d4"
+    },
+    {
+      "bytes": 52702,
+      "file": "setup/apply/candidate-health/health/playback-samples.tsv",
+      "sha256": "b2033bbc3498f84257d91c840ba829bc3484d5708d053d4d297b9c6259ecae95"
+    },
+    {
+      "bytes": 20081,
+      "file": "setup/apply/candidate-health/health/status-samples.ndjson",
+      "sha256": "1c0648fcdb3b7eeeb51cae3de70b7df16a663490e6c58cc206404506c3f31560"
+    },
+    {
+      "bytes": 5473,
+      "file": "setup/apply/candidate-health/home/.cache/mpv/955B8A68885D3743C2E5D991F0B74AEB6E8D734DA13BBF14FFDCF122D9EB976B",
+      "sha256": "afb26229ed3c76c5d11238fb5a52a3ad5454d1d3c732e85b875704a1dda44d47"
+    },
+    {
+      "bytes": 6145,
+      "file": "setup/apply/candidate-health/home/.cache/mpv/9AD1C12CA1752EED332B466B6E5A7C04C1F797D74454D5FC8F7A3AF53778E205",
+      "sha256": "d5221d489e620ae15a6edf357dbbbbc878c2ad35a109556f4c835ef021313974"
+    },
+    {
+      "bytes": 6173,
+      "file": "setup/apply/candidate-health/home/.cache/mpv/B1E34AB76B17662FBF7240EE4E167F270D88169350937530F32DF17823CC5E04",
+      "sha256": "df9855a5b1e2fedf105d124da970fb04a5cff1cb141fb0097c48bf6465740227"
+    },
+    {
+      "bytes": 5621,
+      "file": "setup/apply/candidate-health/home/.cache/mpv/BA5FB4C3449ECA625EC50DBBB65472FB4104A4BD66EF89616844E3F2D5B5DAB8",
+      "sha256": "cbad4e2a051b80122063eb59c7f13dd6b4326b3c24c0629e12fa6b1b43ca3529"
+    },
+    {
+      "bytes": 5453,
+      "file": "setup/apply/candidate-health/home/.cache/mpv/D1B95DE1436160C51F46A584DA81D219D646BD6506F7235F76A05287D4F77D41",
+      "sha256": "aad0e107ebcaacc8dcc04e72ab2e2dd27095ac690b0a84c26f650afe2c3a8f3c"
+    },
+    {
+      "bytes": 5453,
+      "file": "setup/apply/candidate-health/home/.cache/mpv/D683AAC24DF9D59935CF2662437127DD6583BBC016E90CBCF9F9FE75F658FE2B",
+      "sha256": "b458e59c90ad415abf3621b24ebdea82a03184c6a024e694ea354532d6cdb132"
+    },
+    {
+      "bytes": 13034,
+      "file": "setup/apply/candidate-health/kiosk.log",
+      "sha256": "678759f0e3e2203287e74a66e1785231ed46ee58702d7a96d574d0203f4a0fc2"
+    },
+    {
+      "bytes": 100660,
+      "file": "setup/apply/candidate-health/mpv-g001.log",
+      "sha256": "af21c1fe71483521fc5fc82fb656cbb061098056386575934eda06c9b9a13972"
+    },
+    {
+      "bytes": 100660,
+      "file": "setup/apply/candidate-health/mpv.log",
+      "sha256": "af21c1fe71483521fc5fc82fb656cbb061098056386575934eda06c9b9a13972"
+    },
+    {
+      "bytes": 46,
+      "file": "setup/apply/candidate-health/runtime/hotkeys.conf",
+      "sha256": "2afff3523b2026427a17bbe2b3ecbd5d4ee76f9f3f5211c1d277e6114a157704"
+    },
+    {
+      "bytes": 331,
+      "file": "setup/apply/candidate-health/state/cache_index.json",
+      "sha256": "4e770ef8b37f4ccaf16494012289972e467aaca939c5ce520b039c5db7377047"
+    },
+    {
+      "bytes": 296,
+      "file": "setup/apply/candidate-health/state/playlist_last.json",
+      "sha256": "8539acc5c5d9d6f4e4e6f2e2ef4d50e366545f7b3e9b5a59724dad5dcfcba7b4"
+    },
+    {
+      "bytes": 1339,
+      "file": "setup/apply/candidate-health/status.json",
+      "sha256": "aafbe49812d1eb28e3ba64b889ac678888731db1cbc5425699af86468821dc65"
+    },
+    {
+      "bytes": 244,
+      "file": "setup/apply/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 2508,
+      "file": "setup/lab-apply.json",
+      "sha256": "cad35b44456418e205f9c095de6514b7acc5962729967501422c6b8516688036"
+    },
+    {
+      "bytes": 308,
+      "file": "setup/precheck.txt",
+      "sha256": "baaf70b7161111232d6a20dfc0eafa730492e4863089ce9e17acd5adf0ce2e3c"
+    },
+    {
+      "bytes": 1223,
+      "file": "setup/service-adoption.json",
+      "sha256": "597f6865f7aa27aad5b26b423808b56b51ffa4b5de6ce1395a594fa137cf176f"
+    },
+    {
+      "bytes": 336,
+      "file": "setup/service-health/deep-health-kernel.json",
+      "sha256": "2a5f0c37a87a7a2fbfd185ae1f531f028d9b14cdfa3e3d309f624f57bf3e6fd6"
+    },
+    {
+      "bytes": 49,
+      "file": "setup/service-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "setup/service-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "setup/service-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4163,
+      "file": "setup/service-health/playback-deep-health-public.json",
+      "sha256": "b62000861426b54d05f43a179b11e445793677d68fcb888d917f85607bab18a3"
+    },
+    {
+      "bytes": 57799,
+      "file": "setup/service-health/playback-samples.tsv",
+      "sha256": "7d084787eae731b26dd9684035fef502dde8cf5bc5786ffd3ca8d25c4d5dbc1e"
+    },
+    {
+      "bytes": 23822,
+      "file": "setup/service-health/status-samples.ndjson",
+      "sha256": "3ed2b0d970cd2b0b1f95317a0870991cbad006b9a1541d066c7cfbe9ac55840f"
+    },
+    {
+      "bytes": 4163,
+      "file": "setup/service-health.json",
+      "sha256": "b62000861426b54d05f43a179b11e445793677d68fcb888d917f85607bab18a3"
+    },
+    {
+      "bytes": 2702,
+      "file": "trial/powerloss-checkpoint/checkpoint.json",
+      "sha256": "fd9b874ba5d3311717ae3218293e83b7bd4a6e79a51ae24598a6863390df1d04"
+    },
+    {
+      "bytes": 8464,
+      "file": "trial/powerloss-summary.json",
+      "sha256": "2cf73d49f4b7e53ea3733e4a62fb0c5d2c30a2a245134ac716a41833b0032c04"
+    },
+    {
+      "bytes": 201,
+      "file": "trial/powerloss-trial-state.json",
+      "sha256": "839f1a908d8f6f752732c2d4ff6c68a94ce0842af611d293b5734bfdb8acb004"
+    },
+    {
+      "bytes": 1136,
+      "file": "trial/resume/after-reconcile-adoption.json",
+      "sha256": "8518c2436d66069e9210cfa3b0310e2da0d500bca09fd8ba60cd2144849d5833"
+    },
+    {
+      "bytes": 334,
+      "file": "trial/resume/after-reconcile-health/deep-health-kernel.json",
+      "sha256": "af0163965d5e734f1938f13ad1a35e162fde498110ca2504b06f79bc5b484fa3"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/after-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/after-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/after-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4169,
+      "file": "trial/resume/after-reconcile-health/playback-deep-health-public.json",
+      "sha256": "9a41adf90ed840f0fc496b808ddf4a143c49acd679d0d2a4f5ef5325d6886ce3"
+    },
+    {
+      "bytes": 55456,
+      "file": "trial/resume/after-reconcile-health/playback-samples.tsv",
+      "sha256": "3e9f436c48dd4ec95b60a5a29c219925ce76822a02d38984acbd09daa75e74b1"
+    },
+    {
+      "bytes": 22799,
+      "file": "trial/resume/after-reconcile-health/status-samples.ndjson",
+      "sha256": "72d56fc066eba44138ebea7a56452835d67cbd7cb6373ff8d8cf413780b1cef5"
+    },
+    {
+      "bytes": 4188,
+      "file": "trial/resume/after-reconcile-health.json",
+      "sha256": "c055c814fc1aa1633ed128348af73785026f6537743a5b688aa136228fd112d5"
+    },
+    {
+      "bytes": 1136,
+      "file": "trial/resume/before-reconcile-adoption.json",
+      "sha256": "8518c2436d66069e9210cfa3b0310e2da0d500bca09fd8ba60cd2144849d5833"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/resume/before-reconcile-health/deep-health-kernel.json",
+      "sha256": "b927b3d1df984e9f59dd63a87afe85c40a6084918a204ece8e853ead3d98d3ca"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/before-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/before-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/before-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4173,
+      "file": "trial/resume/before-reconcile-health/playback-deep-health-public.json",
+      "sha256": "a7729949105c6818025f88f21b66f9d6dc81d382309283ad361d857d2f7197a9"
+    },
+    {
+      "bytes": 57912,
+      "file": "trial/resume/before-reconcile-health/playback-samples.tsv",
+      "sha256": "5e8732f1a40f34f6ff98a69bcdab08fc04abec62d66a6538c0b7ee43c5846f6a"
+    },
+    {
+      "bytes": 23913,
+      "file": "trial/resume/before-reconcile-health/status-samples.ndjson",
+      "sha256": "c1b915c1514808e2daee0a154d9410af7160862ae488843eee65145a25bfbc15"
+    },
+    {
+      "bytes": 4192,
+      "file": "trial/resume/before-reconcile-health.json",
+      "sha256": "65cee11c9be2ac3b2683518c8831cb0b80484bf2d57b37e23b55469d509145ee"
+    },
+    {
+      "bytes": 970,
+      "file": "trial/resume/post-reconcile-state.json",
+      "sha256": "4741f803e12303b336eb0cd34576f8e31081ab021f03198f99b9b3ddd17d0d87"
+    },
+    {
+      "bytes": 244,
+      "file": "trial/resume/reconcile/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 2452,
+      "file": "trial/resume/reconcile.json",
+      "sha256": "56ff8ebabb81c893f5f35a4e9b4399052f02e90104868d3f83d287f8efe0a8b0"
+    }
+  ],
+  "rollback_expectation": "data-current-after-quarantine",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
+  "setup_candidate_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+}
