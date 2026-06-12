@@ -376,6 +376,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("validate_powerloss_inputs", decision_draft)
         self.assertIn("powerloss_matrix_incomplete", decision_draft)
         self.assertIn("powerloss_dir_missing", decision_draft)
+        self.assertIn("stable_thaw_decision_drafts_written_fail_closed", decision_draft)
+        self.assertIn('"authorization_passed": False', decision_draft)
+        self.assertIn('"stable_authorized": False', decision_draft)
+        self.assertIn('"thaw_authorized": False', decision_draft)
+        self.assertIn('"drafts_are_expected_to_fail_gates": validation["passed"]', decision_draft)
         self.assertIn("this_tool_does_not_authorize_stable", decision_draft)
         self.assertIn("this_tool_does_not_thaw_player_runtime", decision_draft)
         self.assertIn("this_tool_does_not_publish_releases", decision_draft)
@@ -2286,6 +2291,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("abort-cleanup.json", update_auth)
         self.assertIn("boot reconcile nao", update_auth)
         update_auth_words = " ".join(update_auth.split())
+        update_contract_words = " ".join(update_contract.split())
         h2_stable_runbook_words = " ".join(h2_stable_runbook.split())
         self.assertIn(
             "C18 Homologation RC esta pronta para piloto assistido, nao para producao.",
@@ -2313,6 +2319,8 @@ exec "$C18_REAL_PYTHON3" "$@"
             "C18 Homologation RC",
             "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
             "20260612T040055Z-pilot-readiness-final-c16fb3e",
+            "20260612T101300Z-pilot-authorization-refresh",
+            "20260612T101300Z-pilot-readiness-refresh-c16fb3e",
             "20260612T125127Z-server-side-governance-c16fb3e",
             "channel=homologation",
             "ring=pilot",
@@ -2342,6 +2350,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "h2-readiness-final.json",
         ):
             self.assertIn(token, update_contract)
+        self.assertIn("`passed=true` nesse builder significa apenas", update_contract_words)
         for token in (
             "C18 Player-Runtime H2 Stable/Thaw Runbook",
             "nao gerar manifest `player-runtime channel=stable`",

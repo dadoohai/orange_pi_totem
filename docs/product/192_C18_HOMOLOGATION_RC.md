@@ -56,11 +56,13 @@ Evidencia principal:
 
 - H1 decisivo:
   `docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json`;
-- autorizacao:
-  `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/pilot-authorization-h1-refresh.json`;
+- autorizacao vigente/refrescada para a janela operacional:
+  `docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json`;
+- gate de piloto rerodado com a autorizacao refrescada:
+  `docs/evidence/c18-update-validation/20260612T101300Z-pilot-readiness-refresh-c16fb3e/pilot-readiness-with-refreshed-authorization.json`;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
-- fechamento final:
+- fechamento original da RC:
   `docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/pilot-readiness-final.json`.
 
 P0 power-loss seletivo contado para piloto:
@@ -200,4 +202,6 @@ release e nao habilita auto-pull.
 O scaffold operacional desses dois JSONs finais existe em
 `scripts/qa/c18_player_runtime_stable_decision_draft_build.py`: ele apenas gera
 rascunhos fail-closed, com hashes reais quando os artefatos forem fornecidos, e
-nao substitui H2 verde nem decisao humana.
+nao substitui H2 verde nem decisao humana. `passed=true` nesse builder significa
+somente que os rascunhos foram escritos e continuam reprovando nos gates como
+esperado; nao significa stable autorizado, thaw autorizado ou publish liberado.

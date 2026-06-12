@@ -189,6 +189,9 @@ def blocked_result(args: argparse.Namespace, blockers: list[str]) -> dict[str, A
     return {
         "schema": "dadooh.c18.player_runtime.stable_decision_draft_build.v1",
         "passed": False,
+        "authorization_passed": False,
+        "stable_authorized": False,
+        "thaw_authorized": False,
         "result_claim": "stable_thaw_decision_drafts_blocked",
         "output_dir": str(args.output_dir),
         "blockers": blockers,
@@ -271,6 +274,10 @@ These drafts must fail their gates until an operator fills the decision fields
 after H2 is genuinely green. Do not flip booleans without rerunning the gates
 over the real evidence paths.
 
+`passed=true` from this builder only means the drafts were written and confirmed
+fail-closed. It is not stable authorization, thaw authorization, publish
+authorization, or permission to enable auto-pull.
+
 Required sequence:
 
 1. Complete and commit the full 17/17 physical power-loss matrix.
@@ -326,7 +333,15 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "schema": "dadooh.c18.player_runtime.stable_decision_draft_build.v1",
         "passed": validation["passed"],
-        "result_claim": "stable_thaw_decision_drafts_written" if validation["passed"] else "stable_thaw_decision_drafts_invalid",
+        "authorization_passed": False,
+        "stable_authorized": False,
+        "thaw_authorized": False,
+        "drafts_are_expected_to_fail_gates": validation["passed"],
+        "result_claim": (
+            "stable_thaw_decision_drafts_written_fail_closed"
+            if validation["passed"]
+            else "stable_thaw_decision_drafts_invalid"
+        ),
         "output_dir": str(output_dir),
         "stable_promotion_draft": str(stable_path),
         "stable_promotion_draft_sha256": stable_sha,
@@ -408,6 +423,11 @@ class StableDecisionDraftBuildSelfTest(unittest.TestCase):
             args = write_fixture_inputs(Path(tmp))
             result = build(args)
             self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+            self.assertEqual(result["result_claim"], "stable_thaw_decision_drafts_written_fail_closed")
+            self.assertFalse(result["authorization_passed"])
+            self.assertFalse(result["stable_authorized"])
+            self.assertFalse(result["thaw_authorized"])
+            self.assertTrue(result["drafts_are_expected_to_fail_gates"])
             stable = json.loads(Path(result["stable_promotion_draft"]).read_text(encoding="utf-8"))
             thaw = json.loads(Path(result["thaw_decision_draft"]).read_text(encoding="utf-8"))
             self.assertFalse(stable["approved"])
@@ -486,6 +506,9 @@ def main(argv: list[str]) -> int:
         result = {
             "schema": "dadooh.c18.player_runtime.stable_decision_draft_build.v1",
             "passed": False,
+            "authorization_passed": False,
+            "stable_authorized": False,
+            "thaw_authorized": False,
             "result_claim": "stable_thaw_decision_drafts_blocked",
             "blockers": [f"missing_{name}" for name in missing],
         }
@@ -496,13 +519,20 @@ def main(argv: list[str]) -> int:
             result = {
                 "schema": "dadooh.c18.player_runtime.stable_decision_draft_build.v1",
                 "passed": False,
+                "authorization_passed": False,
+                "stable_authorized": False,
+                "thaw_authorized": False,
                 "result_claim": "stable_thaw_decision_drafts_blocked",
                 "blockers": [f"{type(exc).__name__}:{exc}"],
             }
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
-        print(f"passed={str(result['passed']).lower()} result={result['result_claim']}")
+        print(
+            f"passed={str(result['passed']).lower()} "
+            f"authorization_passed={str(result.get('authorization_passed', False)).lower()} "
+            f"result={result['result_claim']}"
+        )
         for blocker in result.get("blockers", []):
             print(f"- {blocker}")
         if result.get("output_dir"):

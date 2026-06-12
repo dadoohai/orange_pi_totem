@@ -544,7 +544,9 @@ offline, calcula os hashes dos artefatos reais e deriva pacote/source/payload da
 evidencia server-side, mas escreve `approved=false`, campos de operador vazios e
 janela de thaw invalida. A saida deve falhar nos gates ate que H2 esteja verde e
 um operador preencha a decisao real; o script nao publica release, nao habilita
-auto-pull, nao executa thaw e nao remove o freeze publico `rc=44`.
+auto-pull, nao executa thaw e nao remove o freeze publico `rc=44`. `passed=true`
+nesse builder significa apenas que os rascunhos foram escritos e continuam
+fail-closed; nao significa autorizacao de stable, thaw ou publish.
 O diretorio final de evidencia deve versionar, no minimo,
 `c18-stable-promotion-evidence.json`, `c18-player-runtime-thaw-decision.json`,
 `h2-readiness-final.json` e README com non-claims/hashes.

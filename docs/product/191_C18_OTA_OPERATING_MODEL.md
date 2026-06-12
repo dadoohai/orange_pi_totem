@@ -271,7 +271,8 @@ manter estas regras:
   thaw;
 - `scripts/qa/c18_player_runtime_stable_decision_draft_build.py` pode gerar
   rascunhos fail-closed, mas eles nao autorizam `stable`, thaw publico,
-  publish nem auto-pull;
+  publish nem auto-pull; `passed=true` nesse builder significa apenas que os
+  rascunhos foram escritos e continuam fail-closed;
 - `scripts/qa/c18_player_runtime_thaw_decision_gate.py` valida a decisao formal
   de thaw com janela UTC ativa de no maximo 4h;
 - o diretorio final de evidencia deve versionar

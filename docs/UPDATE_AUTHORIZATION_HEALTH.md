@@ -11,7 +11,11 @@ C18 Homologation RC esta pronta para piloto assistido, nao para producao. O
 alvo corrente e
 `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, em
 `channel=homologation` e `ring=pilot`, com evidencia final em
-`docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/`.
+`docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/`
+e autorizacao operacional refrescada em
+`docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json`,
+rerodada no gate em
+`docs/evidence/c18-update-validation/20260612T101300Z-pilot-readiness-refresh-c16fb3e/pilot-readiness-with-refreshed-authorization.json`.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
@@ -397,7 +401,8 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
 - `scripts/qa/c18_player_runtime_stable_decision_draft_build.py` pode gerar
   rascunhos fail-closed dos JSONs finais, hash-bound aos artefatos reais, mas
   esses rascunhos nao aprovam stable nem thaw ate serem preenchidos por operador
-  depois de H2 verde;
+  depois de H2 verde; `passed=true` nesse builder significa apenas que os
+  rascunhos foram escritos e continuam reprovando nos gates como esperado;
 - `scripts/qa/c18_server_side_publish_governance_gate.py` precisa validar a
   familia server-side/signature e trust anchor;
 - a matriz fisica power-loss precisa estar 17/17;
