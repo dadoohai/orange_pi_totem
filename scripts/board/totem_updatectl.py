@@ -141,6 +141,14 @@ TOTEM_CORE_REQUIRED_BIN = (
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
 )
+TOTEM_CORE_ALLOWED_TAR_DIRS = frozenset(("", "bin", "health", "manifest-fragment"))
+TOTEM_CORE_ALLOWED_TAR_FILES = (
+    frozenset(f"bin/{name}" for name in TOTEM_CORE_REQUIRED_BIN)
+    | frozenset({
+        "health/totem-core-health.json",
+        "manifest-fragment/totem-core.json",
+    })
+)
 
 
 def configure_component(component: str) -> None:
@@ -526,7 +534,15 @@ def _make_world_traversable(root: Path) -> None:
                 pass
 
 
-def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
+def _normalise_tar_member_name(name: str) -> str:
+    normalised = name
+    while normalised.startswith("./"):
+        normalised = normalised[2:]
+    normalised = normalised.rstrip("/")
+    return "" if normalised == "." else normalised
+
+
+def _safe_extract_tar(tar_path: Path, dest: Path, *, component: Optional[str] = None) -> None:
     """Tar extraction that rejects traversal and anything except regular files/dirs."""
     dest.mkdir(parents=True, exist_ok=True)
     dest_abs = dest.resolve()
@@ -537,6 +553,12 @@ def _safe_extract_tar(tar_path: Path, dest: Path) -> None:
                 raise RuntimeError(f"unsafe tar member rejected: {m.name}")
             if not (m.isreg() or m.isdir()):
                 raise RuntimeError(f"unsupported tar member type: {m.name}")
+            normalised = _normalise_tar_member_name(m.name)
+            if component == "totem-core":
+                if m.isdir() and normalised not in TOTEM_CORE_ALLOWED_TAR_DIRS:
+                    raise RuntimeError(f"totem-core payload entry outside allowlist: {m.name}")
+                if m.isreg() and normalised not in TOTEM_CORE_ALLOWED_TAR_FILES:
+                    raise RuntimeError(f"totem-core payload entry outside allowlist: {m.name}")
             # ensure resolved target is inside dest
             target_abs = (dest_abs / m.name).resolve()
             try:
@@ -1767,7 +1789,7 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
         shutil.rmtree(release_dir)
     release_dir.mkdir(parents=True, exist_ok=True)
     try:
-        _safe_extract_tar(payload_local, release_dir)
+        _safe_extract_tar(payload_local, release_dir, component=COMPONENT)
     except Exception as e:
         log("ERROR", "extract_failed", err=str(e))
         try:

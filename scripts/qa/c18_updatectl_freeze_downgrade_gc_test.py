@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -1116,6 +1117,49 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
 
             self.assertEqual(rc, 6)
             self.assertFalse((updatectl.INCOMING_DIR / "core-bad").exists())
+
+    def test_totem_core_apply_rejects_payload_outside_device_allowlist(self) -> None:
+        forbidden = [
+            "bin/kiosky_service_launcher.sh",
+            "bin/totem-kiosky-launcher.sh",
+            "data/media/playlist.json",
+            "opt/totem/bin/totem-mpv-hwdecode",
+            "health/extra.json",
+            "manifest-fragment/extra.json",
+        ]
+        for index, forbidden_name in enumerate(forbidden):
+            with self.subTest(forbidden_name=forbidden_name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "totem-core")
+                updatectl.POLICY_FILE.parent.mkdir(parents=True)
+                updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+                pkg_dir = root / "pkg"
+                pkg_dir.mkdir()
+                version = f"core-bad-scope-{index}"
+                payload_path = pkg_dir / f"dadooh-totem-core-{version}.tar.gz"
+                with tarfile.open(payload_path, "w:gz") as tf:
+                    for name, content in {
+                        "bin/totem_setup_visual_wizard.py": b"print('ok')\n",
+                        forbidden_name: b"forbidden\n",
+                    }.items():
+                        info = tarfile.TarInfo(name)
+                        info.size = len(content)
+                        tf.addfile(info, fileobj=io.BytesIO(content))
+                raw_manifest = manifest(version, sha=updatectl._sha256_file(payload_path))
+                manifest_path = pkg_dir / f"dadooh-totem-core-{version}.manifest.json"
+                manifest_path.write_text(json.dumps(raw_manifest, sort_keys=True) + "\n", encoding="utf-8")
+
+                rc = updatectl._apply_from_manifest_path(
+                    manifest_path,
+                    payload_url=None,
+                    source="local-test",
+                    payload_path_override=payload_path,
+                )
+
+                self.assertEqual(rc, 7)
+                self.assertFalse((updatectl.INCOMING_DIR / version).exists())
+                self.assertFalse((updatectl.RELEASES_DIR / version).exists())
+                self.assertIsNone(updatectl._read_symlink_target(updatectl.CURRENT_LINK))
 
 
 def _load_candidate_health():
