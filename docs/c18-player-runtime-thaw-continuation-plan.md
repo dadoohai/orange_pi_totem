@@ -240,7 +240,9 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   SPKI DER da chave publica, `release_set_sha256`, chave publica externa via
   `--trusted-key-pem` e evidencia `dadooh.c18.server_side_trust_anchor.v1` via
   `--trust-anchor-evidence`; H2/stable carregam o hash dessa evidencia para
-  impedir troca silenciosa da chave. Essa evidencia nao afirma cadeia PKI.
+  impedir troca silenciosa da chave. Essa evidencia nao afirma cadeia PKI,
+  rejeita campos extras que afirmem PKI e rejeita symlink em qualquer componente
+  do caminho da chave ou do trust anchor.
   Producao ainda exige evidencia real assinada com chave operacional. Ele nao
   publica release, nao liga auto-pull e nao promove stable.
 - DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked
@@ -254,7 +256,7 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 | player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde | H2/prod: matriz power-loss 17/17, soak 24h, server-side publish/signature, stable promotion e decisao explicita de thaw |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
-| server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; fixture nao passa fora de self-test | Evidencia real de publish/signature com trust anchor operacional a ser produzida antes do H2 |
+| server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test | Evidencia real de publish/signature com trust anchor operacional a ser produzida antes do H2 |
 | power-loss/soak | P0 seletivo fisico completo para piloto; semantica 17/17 implementada no gate; H2 gate ainda vermelho por lacuna de evidencia fisica e soak | 12 checkpoints fisicos restantes da matriz 17/17 e soak 24h |
 
 Estado: Homologation RC de `player-runtime` pronta para piloto assistido, com

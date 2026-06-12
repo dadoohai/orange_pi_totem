@@ -152,11 +152,15 @@ rollout, rollback e auditoria. Assinatura destacada e verificada offline com
 prova JSON canonica, fingerprint SPKI DER da chave publica, `release_set_sha256`,
 chave publica externa via `--trusted-key-pem` e evidencia de trust anchor
 separada via `--trust-anchor-evidence`; H2/stable carregam o hash dessa
-evidencia. Essa evidencia nao afirma cadeia PKI. Fixture nao passa fora de
-self-test; producao ainda exige evidencia real assinada com chave operacional.
+evidencia. Essa evidencia nao afirma cadeia PKI, rejeita claims PKI extras e
+rejeita symlink em qualquer componente do caminho da chave ou do trust anchor.
+Fixture nao passa fora de self-test; producao ainda exige evidencia real
+assinada com chave operacional.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12
 checkpoints fisicos restantes.
 Stable tambem fica atras de `scripts/qa/c18_stable_promotion_gate.py`; evidencia
 minima com apenas `approved=true` nao autoriza build nem publish stable, e no H2
-os hashes declarados precisam bater com as evidencias consumidas.
+os hashes declarados precisam bater com as evidencias consumidas. Nos scripts de
+build/publish stable, o gate deve receber os caminhos dos artefatos reais; usar
+somente `--evidence` falha fechado.

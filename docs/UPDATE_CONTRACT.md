@@ -461,7 +461,10 @@ power-loss e bundle H2 pre-stable); hashes arbitrarios ou stale nao fecham a
 promocao. O publisher de
 `totem-core` deve preservar `c18-ota-release-gate.json` junto da release para
 manter a trilha de auditoria. O stable gate tambem aceita esses caminhos como
-argumentos para validar os hashes em modo artifact-bound fora do H2.
+argumentos para validar os hashes em modo artifact-bound fora do H2. No caminho
+CLI/build/publish de `stable`, esses argumentos sao obrigatorios; chamar o gate
+somente com `--evidence` falha fechado para impedir promocao baseada em hashes
+declarados sem arquivos reais.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e
@@ -491,9 +494,12 @@ evidencia operacional separada `dadooh.c18.server_side_trust_anchor.v1`
 passada por `--trust-anchor-evidence`. Essa evidencia registra
 `trusted_key_spki_sha256`, algoritmo, escopo de componentes/canais,
 `selected_by`, `selected_at_utc`, ausencia de material privado e non-claim de
-cadeia PKI; ela tambem deve ficar fora do diretorio da release. H2 e stable
-carregam `server_side_trust_anchor_evidence_sha256` para impedir troca silenciosa
-da chave entre readiness e promocao.
+cadeia PKI; ela tambem deve ficar fora do diretorio da release. Caminhos de
+trust key e trust anchor nao podem conter symlink em nenhum componente, e o JSON
+de trust anchor e fechado a campos conhecidos: claims PKI extras, mesmo
+positivos, bloqueiam a evidencia. H2 e stable carregam
+`server_side_trust_anchor_evidence_sha256` para impedir troca silenciosa da
+chave entre readiness e promocao.
 Tambem deve trazer politica de canal, auto-pull, allowlist, rollout, rollback e
 eventos de auditoria obrigatorios. Fora de self-test, fixture e evidencia sem
 trust anchor/signature verificada continuam bloqueadas; o gate nao publica

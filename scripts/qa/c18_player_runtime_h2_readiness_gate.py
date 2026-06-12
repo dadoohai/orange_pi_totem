@@ -370,7 +370,11 @@ def evaluate_soak(summary_path: Path | None) -> dict[str, Any]:
 def evaluate_stable_promotion(path: Path | None, *, expected_hashes: dict[str, str]) -> dict[str, Any]:
     if path is None:
         return step(False, ["missing_stable_promotion_evidence"])
-    result = evaluate_stable_promotion_gate(path, expected_hashes=expected_hashes)
+    result = evaluate_stable_promotion_gate(
+        path,
+        expected_hashes=expected_hashes,
+        require_expected_hashes=True,
+    )
     blockers = list(result.get("blockers", []))
     return step(
         not blockers,

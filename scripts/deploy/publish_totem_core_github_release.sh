@@ -2,6 +2,11 @@
 # C17.5 - Publish a totem-core release package to GitHub Releases.
 #
 # Uses gh on the builder only. Never prints or persists tokens.
+#
+# Stable publishes are production-gated. They require
+# ALLOW_C18_STABLE_PROMOTION=1 plus artifact paths for release gate,
+# server-side evidence, server-side trust anchor, soak, power-loss matrix,
+# operator thaw decision, and expected image identity.
 
 set -euo pipefail
 
@@ -13,6 +18,15 @@ PRERELEASE=""
 BASE_REF="${C18_OTA_BASE_REF:-}"
 DRAFT=0
 MODE="publish"
+STABLE_RELEASE_GATE_SUMMARY=""
+STABLE_SERVER_SIDE_EVIDENCE=""
+STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE=""
+STABLE_SOAK_SUMMARY=""
+STABLE_OPERATOR_THAW_DECISION=""
+STABLE_EXPECT_IMAGE_TAG=""
+STABLE_EXPECT_IMAGE_SHA256=""
+STABLE_EXPECT_IMAGE_MARKER_SHA256=""
+STABLE_POWERLOSS_EVIDENCE_DIRS=()
 
 while [[ $# -gt 0 ]]; do
   arg="$1"
@@ -27,6 +41,24 @@ while [[ $# -gt 0 ]]; do
     --title) shift; TITLE_OVERRIDE="${1:-}" ;;
     --base-ref=*) BASE_REF="${arg#*=}" ;;
     --base-ref) shift; BASE_REF="${1:-}" ;;
+    --stable-release-gate-summary=*) STABLE_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
+    --stable-release-gate-summary) shift; STABLE_RELEASE_GATE_SUMMARY="${1:-}" ;;
+    --stable-server-side-evidence=*) STABLE_SERVER_SIDE_EVIDENCE="${arg#*=}" ;;
+    --stable-server-side-evidence) shift; STABLE_SERVER_SIDE_EVIDENCE="${1:-}" ;;
+    --stable-server-side-trust-anchor-evidence=*) STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${arg#*=}" ;;
+    --stable-server-side-trust-anchor-evidence) shift; STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${1:-}" ;;
+    --stable-soak-summary=*) STABLE_SOAK_SUMMARY="${arg#*=}" ;;
+    --stable-soak-summary) shift; STABLE_SOAK_SUMMARY="${1:-}" ;;
+    --stable-powerloss-evidence-dir=*) STABLE_POWERLOSS_EVIDENCE_DIRS+=( "${arg#*=}" ) ;;
+    --stable-powerloss-evidence-dir) shift; STABLE_POWERLOSS_EVIDENCE_DIRS+=( "${1:-}" ) ;;
+    --stable-operator-thaw-decision=*) STABLE_OPERATOR_THAW_DECISION="${arg#*=}" ;;
+    --stable-operator-thaw-decision) shift; STABLE_OPERATOR_THAW_DECISION="${1:-}" ;;
+    --stable-expect-image-tag=*) STABLE_EXPECT_IMAGE_TAG="${arg#*=}" ;;
+    --stable-expect-image-tag) shift; STABLE_EXPECT_IMAGE_TAG="${1:-}" ;;
+    --stable-expect-image-sha256=*) STABLE_EXPECT_IMAGE_SHA256="${arg#*=}" ;;
+    --stable-expect-image-sha256) shift; STABLE_EXPECT_IMAGE_SHA256="${1:-}" ;;
+    --stable-expect-image-marker-sha256=*) STABLE_EXPECT_IMAGE_MARKER_SHA256="${arg#*=}" ;;
+    --stable-expect-image-marker-sha256) shift; STABLE_EXPECT_IMAGE_MARKER_SHA256="${1:-}" ;;
     --prerelease) PRERELEASE="yes" ;;
     --no-prerelease) PRERELEASE="no" ;;
     --draft) DRAFT=1 ;;
@@ -98,9 +130,39 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1)"
   [[ -f "$STABLE_EVIDENCE" ]] \
     || die "stable channel requires $STABLE_EVIDENCE"
-  if ! python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py" \
+  [[ -n "$STABLE_RELEASE_GATE_SUMMARY" && -f "$STABLE_RELEASE_GATE_SUMMARY" ]] \
+    || die "stable channel requires --stable-release-gate-summary=<json>"
+  [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
+    || die "stable channel requires --stable-server-side-evidence=<json>"
+  [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
+    || die "stable channel requires --stable-server-side-trust-anchor-evidence=<json>"
+  [[ -n "$STABLE_SOAK_SUMMARY" && -f "$STABLE_SOAK_SUMMARY" ]] \
+    || die "stable channel requires --stable-soak-summary=<json>"
+  [[ -n "$STABLE_OPERATOR_THAW_DECISION" && -f "$STABLE_OPERATOR_THAW_DECISION" ]] \
+    || die "stable channel requires --stable-operator-thaw-decision=<json>"
+  [[ -n "$STABLE_EXPECT_IMAGE_TAG" ]] || die "stable channel requires --stable-expect-image-tag"
+  [[ -n "$STABLE_EXPECT_IMAGE_SHA256" ]] || die "stable channel requires --stable-expect-image-sha256"
+  [[ -n "$STABLE_EXPECT_IMAGE_MARKER_SHA256" ]] || die "stable channel requires --stable-expect-image-marker-sha256"
+  (( ${#STABLE_POWERLOSS_EVIDENCE_DIRS[@]} > 0 )) \
+    || die "stable channel requires at least one --stable-powerloss-evidence-dir=<dir>"
+  STABLE_GATE_CMD=(
+    python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py"
     --evidence "$STABLE_EVIDENCE" \
-    --json >/dev/null
+    --release-gate-summary "$STABLE_RELEASE_GATE_SUMMARY" \
+    --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
+    --server-side-trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
+    --soak-summary "$STABLE_SOAK_SUMMARY" \
+    --operator-thaw-decision "$STABLE_OPERATOR_THAW_DECISION" \
+    --expect-image-tag "$STABLE_EXPECT_IMAGE_TAG" \
+    --expect-image-sha256 "$STABLE_EXPECT_IMAGE_SHA256" \
+    --expect-image-marker-sha256 "$STABLE_EXPECT_IMAGE_MARKER_SHA256" \
+    --json
+  )
+  for run_dir in "${STABLE_POWERLOSS_EVIDENCE_DIRS[@]}"; do
+    [[ -d "$run_dir" ]] || die "stable powerloss evidence dir not found: $run_dir"
+    STABLE_GATE_CMD+=( --powerloss-evidence-dir "$run_dir" )
+  done
+  if ! "${STABLE_GATE_CMD[@]}" >/dev/null
   then
     die "stable promotion evidence failed scripts/qa/c18_stable_promotion_gate.py"
   fi

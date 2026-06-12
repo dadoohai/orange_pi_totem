@@ -78,6 +78,20 @@ TRUST_ANCHOR_SCHEMA = "dadooh.c18.server_side_trust_anchor.v1"
 SIGNATURE_ALGORITHM = "openssl-dgst-sha256-rsa-pkcs1-v1_5"
 TRUST_ANCHOR_PURPOSE = "c18_server_side_release_signing"
 TRUST_ANCHOR_PUBLIC_KEY_ALGORITHM = "rsa"
+TRUST_ANCHOR_ALLOWED_FIELDS = (
+    "schema",
+    "purpose",
+    "trusted_key_spki_sha256",
+    "public_key_algorithm",
+    "signature_algorithm",
+    "scope",
+    "selected_by",
+    "key_owner",
+    "selected_at_utc",
+    "private_key_material_present",
+    "non_claims",
+)
+TRUST_ANCHOR_SCOPE_FIELDS = ("components", "channels")
 REQUIRED_TRUST_ANCHOR_NON_CLAIMS = (
     "this_evidence_does_not_assert_pki_chain",
     "this_evidence_does_not_publish_releases",
@@ -351,6 +365,18 @@ def has_symlink_component(path: Path, root: Path) -> bool:
     return False
 
 
+def has_any_symlink_component(path: Path) -> bool:
+    candidate = path if path.is_absolute() else Path.cwd() / path
+    current = Path(candidate.anchor) if candidate.anchor else Path()
+    for part in candidate.parts:
+        if part == candidate.anchor or not part:
+            continue
+        current = current / part
+        if current.is_symlink():
+            return True
+    return False
+
+
 def resolve_release_file(raw: Any,
                          *,
                          release_dir: Path,
@@ -446,7 +472,7 @@ def trusted_key_map(paths: list[Path] | None,
     out: dict[str, Path] = {}
     release_root = release_dir.resolve(strict=True) if release_dir is not None and release_dir.exists() else None
     for path in paths or []:
-        if path.is_symlink():
+        if has_any_symlink_component(path):
             if blockers is not None:
                 blockers.append(f"server_side_trusted_key_symlink:{path}")
             continue
@@ -476,7 +502,7 @@ def validate_trust_anchor_evidence(path: Path | None,
     if path is None:
         blockers.append("server_side_trust_anchor_evidence_missing")
         return None
-    if path.is_symlink():
+    if has_any_symlink_component(path):
         blockers.append(f"server_side_trust_anchor_evidence_symlink:{path}")
         return None
     if not path.is_file():
@@ -503,6 +529,8 @@ def validate_trust_anchor_evidence(path: Path | None,
         blockers.append("server_side_trust_anchor_schema")
     if data.get("purpose") != TRUST_ANCHOR_PURPOSE:
         blockers.append("server_side_trust_anchor_purpose")
+    if sorted(data) != sorted(TRUST_ANCHOR_ALLOWED_FIELDS):
+        blockers.append("server_side_trust_anchor_unexpected_fields")
     key_sha = data.get("trusted_key_spki_sha256")
     if not is_hash(key_sha):
         blockers.append("server_side_trust_anchor_key_spki_sha256_missing_or_invalid")
@@ -515,6 +543,8 @@ def validate_trust_anchor_evidence(path: Path | None,
     scope = data.get("scope") if isinstance(data.get("scope"), dict) else {}
     if not scope:
         blockers.append("server_side_trust_anchor_scope_missing")
+    elif sorted(scope) != sorted(TRUST_ANCHOR_SCOPE_FIELDS):
+        blockers.append("server_side_trust_anchor_scope_unexpected_fields")
     allowed_components = scope.get("components")
     if allowed_components != list(EXPECTED_COMPONENT_SCOPE):
         blockers.append("server_side_trust_anchor_scope_components")
@@ -1452,6 +1482,20 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertIn("server_side_asset_signature_untrusted_key:manifest", result["blockers"])
 
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trusted_key_parent_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            path, public_key = write_signed_fixture_release(tmp_path / "release")
+            trust_anchor = write_trust_anchor_for_key(tmp_path / "trust-anchor.json", public_key)
+            symlink_parent = tmp_path / "key-parent-link"
+            symlink_parent.symlink_to(public_key.parent, target_is_directory=True)
+            symlink_key = symlink_parent / public_key.name
+            result = evaluate(path, trusted_key_pems=[symlink_key], trust_anchor_evidence=trust_anchor)
+        self.assertFalse(result["passed"])
+        self.assertIn(f"server_side_trusted_key_symlink:{symlink_key}", result["blockers"])
+        self.assertIn("server_side_asset_signature_untrusted_key:manifest", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_signed_fixture_denies_trust_anchor_inside_release_dir(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "release"
@@ -1460,6 +1504,34 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
             result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
         self.assertFalse(result["passed"])
         self.assertIn(f"server_side_trust_anchor_evidence_inside_release_dir:{trust_anchor}", result["blockers"])
+        self.assertIn("server_side_trust_anchor_evidence_missing_or_invalid", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trust_anchor_parent_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            path, public_key = write_signed_fixture_release(tmp_path / "release")
+            trust_anchor = write_trust_anchor_for_key(tmp_path / "trust-anchor.json", public_key)
+            symlink_parent = tmp_path / "anchor-parent-link"
+            symlink_parent.symlink_to(trust_anchor.parent, target_is_directory=True)
+            symlink_anchor = symlink_parent / trust_anchor.name
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=symlink_anchor)
+        self.assertFalse(result["passed"])
+        self.assertIn(f"server_side_trust_anchor_evidence_symlink:{symlink_anchor}", result["blockers"])
+        self.assertIn("server_side_trust_anchor_evidence_missing_or_invalid", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trust_anchor_pki_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            path, public_key = write_signed_fixture_release(tmp_path / "release")
+            trust_anchor = write_trust_anchor_for_key(tmp_path / "trust-anchor.json", public_key)
+            payload = json.loads(trust_anchor.read_text(encoding="utf-8"))
+            payload["pki_chain_verified"] = True
+            write_json(trust_anchor, payload)
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_trust_anchor_unexpected_fields", result["blockers"])
         self.assertIn("server_side_trust_anchor_evidence_missing_or_invalid", result["blockers"])
 
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")

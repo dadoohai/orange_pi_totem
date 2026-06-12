@@ -9,6 +9,11 @@
 # It does not include secrets, config, logs, media, NetworkManager profiles,
 # systemd units, kernel/BSP artifacts, player launchers, or the updater as a
 # self-update.
+#
+# Stable builds are production-gated. They require ALLOW_C18_STABLE_PROMOTION=1
+# plus --stable-promotion-evidence and artifact paths for release gate,
+# server-side evidence, server-side trust anchor, soak, power-loss matrix,
+# operator thaw decision, and expected image identity.
 
 set -euo pipefail
 
@@ -20,9 +25,18 @@ SOURCE_REPO_FULL="${SOURCE_REPO_FULL:-dadoohai/orange_pi_totem}"
 REQUIRED_BASE_IMAGE_MIN="${REQUIRED_BASE_IMAGE_MIN:-c17.4.2}"
 REQUIRED_DEVICE_TRACK="${REQUIRED_DEVICE_TRACK:-c18-hwdecode}"
 STABLE_PROMOTION_EVIDENCE="${STABLE_PROMOTION_EVIDENCE:-}"
+STABLE_RELEASE_GATE_SUMMARY="${STABLE_RELEASE_GATE_SUMMARY:-}"
+STABLE_SERVER_SIDE_EVIDENCE="${STABLE_SERVER_SIDE_EVIDENCE:-}"
+STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE:-}"
+STABLE_SOAK_SUMMARY="${STABLE_SOAK_SUMMARY:-}"
+STABLE_OPERATOR_THAW_DECISION="${STABLE_OPERATOR_THAW_DECISION:-}"
+STABLE_EXPECT_IMAGE_TAG="${STABLE_EXPECT_IMAGE_TAG:-}"
+STABLE_EXPECT_IMAGE_SHA256="${STABLE_EXPECT_IMAGE_SHA256:-}"
+STABLE_EXPECT_IMAGE_MARKER_SHA256="${STABLE_EXPECT_IMAGE_MARKER_SHA256:-}"
 MODE="build-package"
 ALLOW_DIRTY=0
 VERSION_OVERRIDE="${VERSION:-}"
+STABLE_POWERLOSS_EVIDENCE_DIRS=()
 
 CORE_FILES=(
   totem_setup_visual_wizard.py
@@ -53,6 +67,15 @@ for arg in "$@"; do
     --out-base=*) OUT_BASE="${arg#*=}" ;;
     --channel=*) CHANNEL="${arg#*=}" ;;
     --stable-promotion-evidence=*) STABLE_PROMOTION_EVIDENCE="${arg#*=}" ;;
+    --stable-release-gate-summary=*) STABLE_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
+    --stable-server-side-evidence=*) STABLE_SERVER_SIDE_EVIDENCE="${arg#*=}" ;;
+    --stable-server-side-trust-anchor-evidence=*) STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${arg#*=}" ;;
+    --stable-soak-summary=*) STABLE_SOAK_SUMMARY="${arg#*=}" ;;
+    --stable-powerloss-evidence-dir=*) STABLE_POWERLOSS_EVIDENCE_DIRS+=( "${arg#*=}" ) ;;
+    --stable-operator-thaw-decision=*) STABLE_OPERATOR_THAW_DECISION="${arg#*=}" ;;
+    --stable-expect-image-tag=*) STABLE_EXPECT_IMAGE_TAG="${arg#*=}" ;;
+    --stable-expect-image-sha256=*) STABLE_EXPECT_IMAGE_SHA256="${arg#*=}" ;;
+    --stable-expect-image-marker-sha256=*) STABLE_EXPECT_IMAGE_MARKER_SHA256="${arg#*=}" ;;
     -h|--help)
       sed -n '2,21p' "$0"
       exit 0
@@ -111,9 +134,39 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1 and provide --stable-promotion-evidence)"
   [[ -n "$STABLE_PROMOTION_EVIDENCE" && -f "$STABLE_PROMOTION_EVIDENCE" ]] \
     || die "stable channel requires --stable-promotion-evidence=<json>"
-  if ! python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py" \
+  [[ -n "$STABLE_RELEASE_GATE_SUMMARY" && -f "$STABLE_RELEASE_GATE_SUMMARY" ]] \
+    || die "stable channel requires --stable-release-gate-summary=<json>"
+  [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
+    || die "stable channel requires --stable-server-side-evidence=<json>"
+  [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
+    || die "stable channel requires --stable-server-side-trust-anchor-evidence=<json>"
+  [[ -n "$STABLE_SOAK_SUMMARY" && -f "$STABLE_SOAK_SUMMARY" ]] \
+    || die "stable channel requires --stable-soak-summary=<json>"
+  [[ -n "$STABLE_OPERATOR_THAW_DECISION" && -f "$STABLE_OPERATOR_THAW_DECISION" ]] \
+    || die "stable channel requires --stable-operator-thaw-decision=<json>"
+  [[ -n "$STABLE_EXPECT_IMAGE_TAG" ]] || die "stable channel requires --stable-expect-image-tag"
+  [[ -n "$STABLE_EXPECT_IMAGE_SHA256" ]] || die "stable channel requires --stable-expect-image-sha256"
+  [[ -n "$STABLE_EXPECT_IMAGE_MARKER_SHA256" ]] || die "stable channel requires --stable-expect-image-marker-sha256"
+  (( ${#STABLE_POWERLOSS_EVIDENCE_DIRS[@]} > 0 )) \
+    || die "stable channel requires at least one --stable-powerloss-evidence-dir=<dir>"
+  STABLE_GATE_CMD=(
+    python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py"
     --evidence "$STABLE_PROMOTION_EVIDENCE" \
-    --json >/dev/null
+    --release-gate-summary "$STABLE_RELEASE_GATE_SUMMARY" \
+    --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
+    --server-side-trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
+    --soak-summary "$STABLE_SOAK_SUMMARY" \
+    --operator-thaw-decision "$STABLE_OPERATOR_THAW_DECISION" \
+    --expect-image-tag "$STABLE_EXPECT_IMAGE_TAG" \
+    --expect-image-sha256 "$STABLE_EXPECT_IMAGE_SHA256" \
+    --expect-image-marker-sha256 "$STABLE_EXPECT_IMAGE_MARKER_SHA256" \
+    --json
+  )
+  for run_dir in "${STABLE_POWERLOSS_EVIDENCE_DIRS[@]}"; do
+    [[ -d "$run_dir" ]] || die "stable powerloss evidence dir not found: $run_dir"
+    STABLE_GATE_CMD+=( --powerloss-evidence-dir "$run_dir" )
+  done
+  if ! "${STABLE_GATE_CMD[@]}" >/dev/null
   then
     die "stable promotion evidence failed scripts/qa/c18_stable_promotion_gate.py"
   fi

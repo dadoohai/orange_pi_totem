@@ -123,9 +123,7 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
         hashes["soak_summary_sha256"] = sha256_file(args.soak_summary)
     if args.powerloss_evidence_dir:
         hashes["powerloss_matrix_sha256"] = powerloss_matrix_sha256(list(args.powerloss_evidence_dir))
-    if args.expected_h2_readiness_sha256 is not None:
-        hashes["h2_readiness_sha256"] = args.expected_h2_readiness_sha256
-    elif {
+    if {
         "release_gate_sha256",
         "server_side_evidence_sha256",
         "server_side_trust_anchor_evidence_sha256",
@@ -139,8 +137,10 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
 def validate_data(data: dict[str, Any],
                   *,
                   evidence_path: str | None = None,
-                  expected_hashes: dict[str, str] | None = None) -> dict[str, Any]:
+                  expected_hashes: dict[str, str] | None = None,
+                  require_expected_hashes: bool = False) -> dict[str, Any]:
     blockers: list[str] = []
+    resolved_expected_hashes = expected_hashes or {}
     if data.get("schema") != SCHEMA:
         blockers.append("stable_promotion_schema")
     if data.get("component") != "totem-core":
@@ -160,7 +160,12 @@ def validate_data(data: dict[str, Any],
         blockers.append("stable_promotion_auto_pull_enabled")
     if data.get("public_player_runtime_thaw") is True:
         blockers.append("stable_promotion_public_player_runtime_thaw_enabled")
-    for field, expected in (expected_hashes or {}).items():
+    if require_expected_hashes:
+        missing_expected = sorted(set(REQUIRED_SHA256_FIELDS) - set(resolved_expected_hashes))
+        if missing_expected:
+            blockers.append("stable_promotion_expected_hashes_missing")
+            blockers.extend(f"stable_promotion_expected_hash_missing:{field}" for field in missing_expected)
+    for field, expected in resolved_expected_hashes.items():
         if data.get(field) != expected:
             blockers.append(f"stable_promotion_{field}_mismatch")
     return {
@@ -168,13 +173,16 @@ def validate_data(data: dict[str, Any],
         "passed": not blockers,
         "result_claim": "stable_promotion_evidence_ready" if not blockers else "stable_promotion_evidence_blocked",
         "evidence_path": evidence_path,
-        "expected_hashes": expected_hashes or {},
+        "expected_hashes": resolved_expected_hashes,
         "blockers": blockers,
         "non_claims": list(NON_CLAIMS),
     }
 
 
-def evaluate(path: Path | None, *, expected_hashes: dict[str, str] | None = None) -> dict[str, Any]:
+def evaluate(path: Path | None,
+             *,
+             expected_hashes: dict[str, str] | None = None,
+             require_expected_hashes: bool = False) -> dict[str, Any]:
     if path is None:
         return {
             "schema": GATE_SCHEMA,
@@ -194,7 +202,12 @@ def evaluate(path: Path | None, *, expected_hashes: dict[str, str] | None = None
             "blockers": errors,
             "non_claims": list(NON_CLAIMS),
         }
-    return validate_data(data, evidence_path=str(path), expected_hashes=expected_hashes)
+    return validate_data(
+        data,
+        evidence_path=str(path),
+        expected_hashes=expected_hashes,
+        require_expected_hashes=require_expected_hashes,
+    )
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -264,6 +277,13 @@ class StablePromotionGateSelfTest(unittest.TestCase):
             result = evaluate(path)
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
 
+    def test_artifact_binding_required_when_requested(self) -> None:
+        data = valid_fixture()
+        result = validate_data(data, require_expected_hashes=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("stable_promotion_expected_hashes_missing", result["blockers"])
+        self.assertIn("stable_promotion_expected_hash_missing:server_side_evidence_sha256", result["blockers"])
+
     def test_hash_binding_denies_stale_evidence(self) -> None:
         data = valid_fixture()
         result = validate_data(
@@ -292,6 +312,35 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         )
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
 
+    def test_h2_readiness_hash_is_derived_from_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            release_gate = tmp_path / "release-gate.json"
+            server_side = tmp_path / "server-side.json"
+            trust_anchor = tmp_path / "trust-anchor.json"
+            soak = tmp_path / "soak.json"
+            powerloss_dir = tmp_path / "powerloss"
+            powerloss_dir.mkdir()
+            write_json(release_gate, {"release": True})
+            write_json(server_side, {"server_side": True})
+            write_json(trust_anchor, {"trust_anchor": True})
+            write_json(soak, {"duration": "24h"})
+            write_json(powerloss_dir / "manifest.json", {"checkpoint": "after_current_symlink"})
+            args = argparse.Namespace(
+                release_gate_summary=release_gate,
+                server_side_evidence=server_side,
+                server_side_trust_anchor_evidence=trust_anchor,
+                soak_summary=soak,
+                powerloss_evidence_dir=[powerloss_dir],
+                operator_thaw_decision=None,
+                expect_image_tag="c18-hwdecode-lab-1x",
+                expect_image_sha256="1" * 64,
+                expect_image_marker_sha256="2" * 64,
+            )
+            hashes = expected_hashes_from_args(args)
+        self.assertIn("h2_readiness_sha256", hashes)
+        self.assertEqual(hashes["h2_readiness_sha256"], h2_input_bundle_sha256(args, hashes))
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate C18 stable promotion evidence.")
@@ -306,7 +355,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expect-image-tag", default=None)
     parser.add_argument("--expect-image-sha256", default=None)
     parser.add_argument("--expect-image-marker-sha256", default=None)
-    parser.add_argument("--expected-h2-readiness-sha256", default=None)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -317,7 +365,11 @@ def main() -> int:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(StablePromotionGateSelfTest)
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
-    result = evaluate(args.evidence, expected_hashes=expected_hashes_from_args(args))
+    result = evaluate(
+        args.evidence,
+        expected_hashes=expected_hashes_from_args(args),
+        require_expected_hashes=True,
+    )
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
