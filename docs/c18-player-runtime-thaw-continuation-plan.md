@@ -29,10 +29,12 @@ investigation (2026-06-09).
 - **H1 — player-runtime lab→homologation:** prove, on hardware, that a governed
   `/data/player-runtime/current` release decodes (v4l2request-copy), tears down
   clean (panfrost zero), and adopts/rolls back correctly. The nearest milestone.
-- **H2 — stable/production thaw:** strictly higher bar — `ALLOW_C18_STABLE_PROMOTION=1`
-  + approved `dadooh.c18.stable_promotion.v1`, stable policy, physical homologation,
-  defined rollback. Gated on H1. CI / signing / image-A-B are explicitly
-  "hardening futuro" (`UPDATE_CONTRACT.md:439-440`), off the immediate path.
+- **H2 — stable/production thaw:** strictly higher bar — H1 green plus full
+  17/17 physical power-loss matrix, 24h soak, explicit operator thaw,
+  approved `dadooh.c18.stable_promotion.v1`, stable policy, server-side
+  publish/signature governance with operational trust evidence, physical
+  homologation, and defined rollback. CI expansion and image-A/B remain future
+  hardening; signing/server-side governance is an H2 blocker before `stable`/prod.
 
 ## Structural foundation (PROVEN — not open work)
 

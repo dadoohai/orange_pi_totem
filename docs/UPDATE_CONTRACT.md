@@ -211,8 +211,9 @@ O gate deve provar, no minimo:
   nunca do default branch implicito do `gh`;
 - policy/service/timer C18 coerentes;
 - freeze de `kiosky-player` preservado;
-- scripts historicos de release de `kiosky-player` falhando por padrao, salvo
-  override explicito para release `player-runtime` C18-aware homologada;
+- scripts historicos de release de `kiosky-player` falhando por padrao; qualquer
+  bypass legado exige flag explicito, continua boundary-scanned e nao aprova
+  release/thaw `player-runtime` C18-aware;
 - diff OTA comum sem arquivos de frentes fora de `totem-core` operacional
   (`player-runtime`, `system-image`, `media-system` ou `field-data`);
 - sandbox apply/rollback de `totem-core` passando.
@@ -533,5 +534,6 @@ decisivo image-bound e P0 power-loss seletivo. Ele nao autoriza producao,
 `stable`, auto-pull, thaw publico, soak 24h, power-loss 17/17 ou
 assinatura/attestation.
 
-CI, assinatura/attestation, bridge de updater e A/B de imagem sao hardening
-futuro; nao fazem parte do OTA manual imediato.
+CI ampliado, bridge de updater e A/B de imagem sao hardening futuro. Ja
+assinatura/attestation operacional nao e futuro para producao: continua requisito
+H2/server-side antes de `stable`; apenas fica fora do piloto manual imediato.
