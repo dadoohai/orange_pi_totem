@@ -27,10 +27,10 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 
 | Frente | Responsabilidade | Estado da RC |
 | --- | --- | --- |
-| `totem-core` | OTA C18 comum: wizard, splash, status, writer, validadores, helpers e settings | Funcional como OTA manual/operator-triggered; policy, timer, freeze, downgrade e rollback cobertos pelo release gate |
-| `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Funcional somente como piloto assistido em `homologation`; nao e public thaw |
-| `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; qualquer mudanca exige imagem/homologacao propria |
-| `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; nao e release de software |
+| `totem-core` | OTA C18 comum: wizard, splash, status, writer, validadores, helpers e settings | Funcional como OTA manual/operator-triggered; policy, timer, freeze, downgrade, rollback e allowlist de payload cobertos no gate e no device-side |
+| `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Funcional somente como piloto assistido em `homologation`; payload C18-aware restrito a `kiosk.py`; nao e public thaw |
+| `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; guardrails executaveis bloqueiam vazamento para OTA comum; qualquer mudanca exige imagem/homologacao propria |
+| `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software |
 
 ## Evidencia de fechamento
 
@@ -114,6 +114,15 @@ esperados:
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
 checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica
 dos 12 checkpoints restantes.
+
+Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
+profundidade para payloads:
+
+- `player-runtime` so aceita `kiosk.py` no release gate;
+- build/publish legado de `kiosky-player` seguem congelados e recusam conteudo
+  de media/data/system mesmo com bypass lab;
+- `totem-core` tem allowlist exata no release gate e no `totem_updatectl.py`,
+  antes de extrair/promover no device.
 
 ## Limites da RC
 

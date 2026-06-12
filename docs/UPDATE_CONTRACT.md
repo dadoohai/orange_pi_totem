@@ -61,10 +61,13 @@ bloquear o gate OTA comum de `totem-core` e exigir gate separado de
 
 Qualquer pacote futuro de `player-runtime` deve passar antes por
 `scripts/qa/c18_player_runtime_release_gate.py`. Esse gate abre o payload,
-confere o SHA do manifest, rejeita path traversal, symlink/hardlink, config,
-seed, marker pre-forjado, arquivos de controle/imagem e arquivos com cara de
-segredo, e exige `kiosk.py` compilavel preservando o wrapper e o HW decode C18
-nos defaults, em `build_mpv_args` e no caminho efetivo ate
+confere o SHA do manifest e aplica allowlist exata: o payload governado de
+`player-runtime` contem somente `kiosk.py`. Extras como cache, playlist, estado,
+MPV/ffmpeg, modulos de kernel, helpers genericos, config, seed, marker
+pre-forjado, arquivos de controle/imagem e arquivos com cara de segredo devem
+falhar fechados. O gate tambem rejeita path traversal, symlink/hardlink e exige
+`kiosk.py` compilavel preservando o wrapper e o HW decode C18 nos defaults, em
+`build_mpv_args` e no caminho efetivo ate
 `subprocess.Popen(args, ...)`. O gate rejeita argumentos MPV perigosos, inclusive
 construcao dinamica simples, builder alternativo, mutacao de `args` depois do
 builder e mutacao de `cfg["hwdec"]` fora do caminho controlado. Passar nesse
@@ -128,6 +131,15 @@ Updater C18 deve rejeitar manifest sem esses campos, com track errado, feature
 desconhecida, feature ausente, canal incompatível, policy ausente/invalida ou
 payload inseguro.
 
+O payload C18 de `totem-core` tambem e allowlist exata no gate e no device-side:
+diretorios raiz, `bin`, `health` e `manifest-fragment`; arquivos
+`bin/<TOTEM_CORE_REQUIRED_BIN>`, `health/totem-core-health.json` e
+`manifest-fragment/totem-core.json`. O `totem_updatectl.py` valida essa allowlist
+antes de extrair/promover o release. Portanto um pacote com SHA correto mas com
+launcher de player, arquivos de midia/dados, `/opt`, systemd, extras de health ou
+extras de manifest deve falhar fechado no proprio device, alem de falhar no
+release gate.
+
 ## Policy Do Device
 
 Policy C18 deve existir em `/data/updates/policy.json` e restringir:
@@ -189,9 +201,12 @@ junto ao manifest/payload.
 O gate deve provar, no minimo:
 
 - `totem-core` sem `bin/kiosky_service_launcher.sh` no payload;
+- `totem-core` sem `bin/totem-kiosky-launcher.sh` no payload;
 - manifest com contrato C18 completo;
 - payload com SHA correto, allowlist estrita de conteudo `totem-core`, e sem
-  path traversal, symlink, hardlink ou segredo;
+  path traversal, symlink, hardlink, segredo, config real ou field-data;
+- device-side `totem_updatectl.py` recusando pacote `totem-core` fora da mesma
+  allowlist antes de trocar `current`/`previous`;
 - release GitHub publicada a partir do `source_commit` declarado no manifest,
   nunca do default branch implicito do `gh`;
 - policy/service/timer C18 coerentes;
