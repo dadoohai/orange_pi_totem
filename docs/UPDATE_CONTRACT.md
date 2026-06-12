@@ -450,8 +450,13 @@ promocao proprio, homologacao fisica, policy stable, `allow_prerelease=false`,
 rollback definido, evidencia sanitizada e decisao explicita sobre imagem final.
 Os builders/publishers C18 devem falhar fechados para `stable` sem
 `ALLOW_C18_STABLE_PROMOTION=1` e uma evidencia JSON aprovada
-`dadooh.c18.stable_promotion.v1`. O publisher de `totem-core` deve preservar
-`c18-ota-release-gate.json` junto da release para manter a trilha de auditoria.
+`dadooh.c18.stable_promotion.v1` validada por
+`scripts/qa/c18_stable_promotion_gate.py`. Esse gate exige H2 readiness,
+power-loss 17/17, semantica power-loss completa, soak 24h, governanca
+server-side, release gate, operador, rollback owner e hashes das evidencias; um
+JSON minimo com `approved=true` nao e suficiente. O publisher de `totem-core`
+deve preservar `c18-ota-release-gate.json` junto da release para manter a trilha
+de auditoria.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e

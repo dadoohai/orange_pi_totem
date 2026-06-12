@@ -24,6 +24,7 @@ from c18_player_runtime_powerloss_evidence_gate import (
     ALL_MATRIX_CHECKPOINTS as EVIDENCE_GATE_POWERLOSS_CHECKPOINTS,
     SEMANTICALLY_VALIDATED_CHECKPOINTS as SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS,
 )
+from c18_stable_promotion_gate import evaluate as evaluate_stable_promotion_gate
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 
 
@@ -144,10 +145,19 @@ def evaluate_h1(summary_path: Path | None) -> dict[str, Any]:
         if data_evidence.get("status") != "passed":
             blockers.append("h1_player_runtime_data_evidence_not_passed")
     steps = summary.get("steps")
-    step_names = [item.get("name") for item in steps if isinstance(item, dict)] if isinstance(steps, list) else []
-    if not any(str(name).startswith("c18_player_runtime_teardown_evidence:") for name in step_names):
+    step_items = [item for item in steps if isinstance(item, dict)] if isinstance(steps, list) else []
+    step_names = [item.get("name") for item in step_items]
+    if not any(
+        str(item.get("name")).startswith("c18_player_runtime_teardown_evidence:")
+        and item.get("passed") is True
+        for item in step_items
+    ):
         blockers.append("h1_teardown_evidence_step_missing")
-    if not any(str(name).startswith("c18_player_runtime_data_evidence") for name in step_names):
+    if not any(
+        str(item.get("name")).startswith("c18_player_runtime_data_evidence")
+        and item.get("passed") is True
+        for item in step_items
+    ):
         blockers.append("h1_data_evidence_step_missing")
     return step(not blockers, blockers, summary_path=str(summary_path), step_count=len(step_names))
 
@@ -191,6 +201,12 @@ def evaluate_powerloss(args: argparse.Namespace) -> dict[str, Any]:
     gate_results: dict[str, dict[str, Any]] = {}
     duplicate_checkpoints: list[str] = []
     semantics_ledger = powerloss_semantics_ledger()
+    if args.expect_image_tag is None:
+        blockers.append("powerloss_expected_image_tag_required")
+    if args.expect_image_sha256 is None:
+        blockers.append("powerloss_expected_image_sha256_required")
+    if args.expect_image_marker_sha256 is None:
+        blockers.append("powerloss_expected_image_marker_sha256_required")
     if semantics_ledger["evidence_gate_contract_mismatch"]:
         blockers.append("powerloss_matrix_contract_mismatch")
     if semantics_ledger["semantics_not_implemented_checkpoints"]:
@@ -288,20 +304,11 @@ def evaluate_soak(summary_path: Path | None) -> dict[str, Any]:
 
 
 def evaluate_stable_promotion(path: Path | None) -> dict[str, Any]:
-    blockers: list[str] = []
     if path is None:
         return step(False, ["missing_stable_promotion_evidence"])
-    errors: list[str] = []
-    data = read_json(path, errors, "stable_promotion_evidence")
-    blockers.extend(errors)
-    if data.get("schema") != STABLE_PROMOTION_SCHEMA:
-        blockers.append("stable_promotion_schema")
-    if data.get("approved") is not True:
-        blockers.append("stable_promotion_not_approved")
-    for key in ("physical_homologation_passed", "powerloss_matrix_passed", "soak_endurance_passed", "server_side_governance_passed"):
-        if data.get(key) is not True:
-            blockers.append(f"stable_promotion_{key}_missing_or_false")
-    return step(not blockers, blockers, evidence_path=str(path))
+    result = evaluate_stable_promotion_gate(path)
+    blockers = list(result.get("blockers", []))
+    return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
 
 
 def evaluate_server_side(path: Path | None) -> dict[str, Any]:
@@ -380,8 +387,8 @@ def complete_args(root: Path) -> argparse.Namespace:
         "passed": True,
         "player_runtime_data_evidence": {"mode": "decisive", "status": "passed"},
         "steps": [
-            {"name": "c18_player_runtime_data_evidence"},
-            {"name": "c18_player_runtime_teardown_evidence:1"},
+            {"name": "c18_player_runtime_data_evidence", "passed": True},
+            {"name": "c18_player_runtime_teardown_evidence:1", "passed": True},
         ],
     })
     soak = root / "soak-summary.json"
@@ -398,11 +405,26 @@ def complete_args(root: Path) -> argparse.Namespace:
     stable = root / "stable.json"
     write_json(stable, {
         "schema": STABLE_PROMOTION_SCHEMA,
+        "component": "totem-core",
+        "channel": "stable",
         "approved": True,
         "physical_homologation_passed": True,
         "powerloss_matrix_passed": True,
+        "powerloss_semantics_complete": True,
         "soak_endurance_passed": True,
         "server_side_governance_passed": True,
+        "release_gate_passed": True,
+        "h2_readiness_passed": True,
+        "explicit_operator_decision": True,
+        "operator": "operator-prod-01",
+        "rollback_owner": "rollback-owner-01",
+        "release_gate_sha256": "d" * 64,
+        "h2_readiness_sha256": "e" * 64,
+        "server_side_evidence_sha256": "f" * 64,
+        "soak_summary_sha256": "1" * 64,
+        "powerloss_matrix_sha256": "2" * 64,
+        "auto_pull_enabled": False,
+        "public_player_runtime_thaw": False,
     })
     server = root / "server.json"
     write_json(server, {
@@ -503,6 +525,38 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn("full_physical_powerloss_matrix:powerloss_matrix_incomplete", result["blockers"])
+
+    def test_powerloss_image_expectations_are_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            args.expect_image_tag = None
+            args.expect_image_sha256 = None
+            args.expect_image_marker_sha256 = None
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn("full_physical_powerloss_matrix:powerloss_expected_image_tag_required", result["blockers"])
+        self.assertIn("full_physical_powerloss_matrix:powerloss_expected_image_sha256_required", result["blockers"])
+        self.assertIn("full_physical_powerloss_matrix:powerloss_expected_image_marker_sha256_required", result["blockers"])
+
+    def test_h1_failed_decisive_steps_deny(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            h1 = json.loads(args.h1_release_gate_summary.read_text(encoding="utf-8"))
+            for item in h1["steps"]:
+                item["passed"] = False
+            write_json(args.h1_release_gate_summary, h1)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn("h1_decisive_bundle:h1_teardown_evidence_step_missing", result["blockers"])
+        self.assertIn("h1_decisive_bundle:h1_data_evidence_step_missing", result["blockers"])
 
     def test_short_soak_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

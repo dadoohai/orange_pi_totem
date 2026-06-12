@@ -252,6 +252,8 @@ Antes de `stable` ou batch:
 
 - promocao passou por `lab` e `homologation`;
 - homologacao fisica passou;
+- `scripts/qa/c18_stable_promotion_gate.py` passou sobre evidencia completa,
+  nao apenas `approved=true`;
 - gates de producao aplicaveis de C18 permanecem obrigatorios, incluindo soak
   quando a frente for promover imagem/batch;
 - se a mudanca exigir nova baseline de imagem, seguir o fluxo de imagem, nao OTA.

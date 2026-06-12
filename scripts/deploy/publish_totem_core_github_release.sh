@@ -53,6 +53,8 @@ die() { printf '[publish_totem_core_github_release] FATAL: %s\n' "$*" >&2; exit 
 
 [[ -n "$RELEASE_DIR" ]] || die "missing --release-dir"
 [[ -d "$RELEASE_DIR" ]] || die "release dir not found: $RELEASE_DIR"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 shopt -s nullglob
 MANIFESTS=( "$RELEASE_DIR"/dadooh-totem-core-*.manifest.json )
@@ -96,20 +98,11 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1)"
   [[ -f "$STABLE_EVIDENCE" ]] \
     || die "stable channel requires $STABLE_EVIDENCE"
-  if ! python3 - "$STABLE_EVIDENCE" <<'PY'
-import json
-import sys
-
-data = json.load(open(sys.argv[1], encoding="utf-8"))
-if not isinstance(data, dict):
-    raise SystemExit(1)
-if data.get("schema") != "dadooh.c18.stable_promotion.v1":
-    raise SystemExit(1)
-if data.get("approved") is not True:
-    raise SystemExit(1)
-PY
+  if ! python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py" \
+    --evidence "$STABLE_EVIDENCE" \
+    --json >/dev/null
   then
-    die "stable promotion evidence must be JSON with schema=dadooh.c18.stable_promotion.v1 and approved=true"
+    die "stable promotion evidence failed scripts/qa/c18_stable_promotion_gate.py"
   fi
   [[ "$STABLE_EVIDENCE_SHA" =~ ^[0-9a-f]{64}$ ]] \
     || die "stable manifest must include stable_promotion_evidence_sha256"
@@ -122,8 +115,6 @@ ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 [[ "$ACTUAL_SHA" == "$MANIFEST_SHA" ]] \
   || die "payload sha256 mismatch: actual=$ACTUAL_SHA manifest=$MANIFEST_SHA"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" ]] \
   || die "c18 OTA release gate not found; run from orange_pi_totem checkout"
 [[ -n "$BASE_REF" ]] \

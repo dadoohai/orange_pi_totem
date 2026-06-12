@@ -21,6 +21,11 @@ SCHEMA = "dadooh.c18.server_side_publish_governance.v1"
 ALLOWED_CHANNELS = ("lab", "homologation", "stable")
 EXPECTED_COMPONENT_SCOPE = ("totem-core", "player-runtime")
 FORBIDDEN_COMPONENT_SCOPES = ("kiosky-player", "media-system", "field-data")
+REQUIRED_SIGNED_OR_ATTESTED_ASSETS = (
+    "manifest",
+    "payload",
+    "c18-ota-release-gate",
+)
 REQUIRED_TRUE_FIELDS = (
     "publish_gate_enforced",
     "release_assets_verified",
@@ -60,12 +65,11 @@ def validate_data(data: dict[str, Any], *, evidence_path: str | None = None) -> 
     for key in REQUIRED_TRUE_FIELDS:
         if data.get(key) is not True:
             blockers.append(f"server_side_{key}_missing_or_false")
-    if data.get("auto_pull_enabled") is True:
+    if data.get("auto_pull_enabled") is not False:
         blockers.append("server_side_auto_pull_enabled")
     channels = data.get("channels")
-    if channels is not None:
-        if channels != list(ALLOWED_CHANNELS):
-            blockers.append("server_side_channels_not_exact")
+    if channels != list(ALLOWED_CHANNELS):
+        blockers.append("server_side_channels_not_exact")
     if data.get("channel_inheritance_allowed") is True:
         blockers.append("server_side_channel_inheritance_allowed")
     component_scope = data.get("component_scope")
@@ -77,9 +81,8 @@ def validate_data(data: dict[str, Any], *, evidence_path: str | None = None) -> 
     if forbidden_scopes != list(FORBIDDEN_COMPONENT_SCOPES):
         blockers.append("server_side_forbidden_component_scopes_not_exact")
     signed_assets = data.get("signed_or_attested_assets")
-    if signed_assets is not None:
-        if not isinstance(signed_assets, list) or len(signed_assets) < 3:
-            blockers.append("server_side_signed_or_attested_assets_incomplete")
+    if signed_assets != list(REQUIRED_SIGNED_OR_ATTESTED_ASSETS):
+        blockers.append("server_side_signed_or_attested_assets_incomplete")
     return {
         "schema": "dadooh.c18.server_side_publish_governance_gate.v1",
         "passed": not blockers,
@@ -137,11 +140,7 @@ def valid_fixture() -> dict[str, Any]:
         "public_player_runtime_thaw_requires_h2": True,
         "component_scope": list(EXPECTED_COMPONENT_SCOPE),
         "forbidden_component_scopes": list(FORBIDDEN_COMPONENT_SCOPES),
-        "signed_or_attested_assets": [
-            "manifest",
-            "payload",
-            "c18-ota-release-gate",
-        ],
+        "signed_or_attested_assets": list(REQUIRED_SIGNED_OR_ATTESTED_ASSETS),
     }
 
 
@@ -170,12 +169,31 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("server_side_auto_pull_enabled", result["blockers"])
 
+        data = valid_fixture()
+        del data["auto_pull_enabled"]
+        result = validate_data(data)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_auto_pull_enabled", result["blockers"])
+
     def test_channel_inheritance_denies(self) -> None:
         data = valid_fixture()
         data["channel_inheritance_allowed"] = True
         result = validate_data(data)
         self.assertFalse(result["passed"])
         self.assertIn("server_side_channel_inheritance_allowed", result["blockers"])
+
+    def test_channels_and_signed_assets_are_required_exactly(self) -> None:
+        data = valid_fixture()
+        del data["channels"]
+        result = validate_data(data)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_channels_not_exact", result["blockers"])
+
+        data = valid_fixture()
+        del data["signed_or_attested_assets"]
+        result = validate_data(data)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_signed_or_attested_assets_incomplete", result["blockers"])
 
     def test_component_scope_must_be_exact_and_forbid_legacy_scopes(self) -> None:
         data = valid_fixture()

@@ -145,3 +145,5 @@ pelo H2. Esse gate e offline e nao publica releases nem habilita auto-pull.
 O H2 tambem reporta um ledger de semantica da matriz power-loss; portanto nao
 basta coletar os 17 cortes fisicos, cada checkpoint precisa ter validador
 semantico implementado antes de qualquer leitura de producao.
+Stable tambem fica atras de `scripts/qa/c18_stable_promotion_gate.py`; evidencia
+minima com apenas `approved=true` nao autoriza build nem publish stable.
