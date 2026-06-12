@@ -30,6 +30,12 @@ de pacote continua sendo o release homologation validado, por exemplo
 nos artefatos de promocao, decisao e policy, nao como manifest stable do
 `player-runtime`.
 
+Tambem nao usar `releases/app-updates` como alternativa para atualizar
+`kiosky-player` ou `player-runtime`: esse root e historico C14/kiosky e nao e
+caminho C18 corrente. Mudancas nesses roots devem ser tratadas como frente
+`player-runtime` governada, com release gate proprio, H2/stable/thaw quando
+aplicavel, e nunca como OTA comum de `totem-core`.
+
 ## Soak 24h
 
 Na placa, com o player real rodando a configuracao candidata:

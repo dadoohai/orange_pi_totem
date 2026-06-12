@@ -195,6 +195,8 @@ TOTEM_CORE_ALLOWED_TAR_FILES = {
     "manifest-fragment/totem-core.json",
 }
 PLAYER_RUNTIME_DIFF_PATHS = {
+    "releases/player-runtime/",
+    "releases/app-updates/",
     "scripts/board/kiosky_service_launcher.sh",
     "scripts/board/totem-kiosky-launcher.sh",
     "scripts/board/kiosky-player.service",
@@ -203,6 +205,8 @@ PLAYER_RUNTIME_DIFF_PATHS = {
     "player-runtime/kiosky-player/SOURCE.json",
 }
 SYSTEM_IMAGE_DIFF_PATHS = {
+    "releases/image-lab-readonly/",
+    "releases/installable-rc/",
     "scripts/board/totem_updatectl.py",
     "scripts/board/totem_update_policy.json",
     "scripts/board/totem_appliance_manifest.json",

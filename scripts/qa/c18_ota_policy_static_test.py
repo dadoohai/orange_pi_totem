@@ -2607,6 +2607,10 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("SYSTEM_IMAGE_DIFF_PATHS", gate)
         self.assertIn("MEDIA_SYSTEM_DIFF_PATHS", gate)
         self.assertIn("FIELD_DATA_DIFF_PATHS", gate)
+        self.assertIn('"releases/player-runtime/"', gate)
+        self.assertIn('"releases/app-updates/"', gate)
+        self.assertIn('"releases/image-lab-readonly/"', gate)
+        self.assertIn('"releases/installable-rc/"', gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
         self.assertIn('"scripts/board/totem_updatectl.py"', gate)
         self.assertIn('"scripts/board/mpv_"', gate)
@@ -2638,11 +2642,15 @@ exec "$C18_REAL_PYTHON3" "$@"
             ordinary = root / "scripts" / "board" / "totem_status_render_preview.py"
             ordinary.parent.mkdir(parents=True)
             ordinary.write_text("print('base')\n", encoding="utf-8")
+            core_release = root / "releases" / "core-updates" / "candidate" / "manifest.json"
+            core_release.parent.mkdir(parents=True)
+            core_release.write_text("{}\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=root, check=True)
             subprocess.run(["git", "commit", "-m", "base"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
 
             ordinary.write_text("print('ordinary')\n", encoding="utf-8")
+            core_release.write_text('{"version":"c18"}\n', encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=root, check=True)
             subprocess.run(["git", "commit", "-m", "ordinary"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -2657,8 +2665,20 @@ exec "$C18_REAL_PYTHON3" "$@"
                 self.assertFalse(result["passed"])
                 self.assertIn("player-runtime:player-runtime/kiosky-player/kiosk.py", result["stdout_tail"])
 
+                player_release = root / "releases" / "player-runtime" / "candidate" / "manifest.json"
+                player_release.parent.mkdir(parents=True, exist_ok=True)
+                player_release.write_text("{}\n", encoding="utf-8")
+                legacy_app_release = root / "releases" / "app-updates" / "legacy" / "manifest.json"
+                legacy_app_release.parent.mkdir(parents=True, exist_ok=True)
+                legacy_app_release.write_text("{}\n", encoding="utf-8")
                 image_path = root / "scripts" / "board" / "totem_updatectl.py"
                 image_path.write_text("print('image')\n", encoding="utf-8")
+                image_release = root / "releases" / "image-lab-readonly" / "image.txt"
+                image_release.parent.mkdir(parents=True, exist_ok=True)
+                image_release.write_text("image\n", encoding="utf-8")
+                installable_release = root / "releases" / "installable-rc" / "image.txt"
+                installable_release.parent.mkdir(parents=True, exist_ok=True)
+                installable_release.write_text("image\n", encoding="utf-8")
                 media_path = root / "scripts" / "board" / "mpv_manual_probe.sh"
                 media_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 field_path = root / "docs" / "app-integration" / "config.homologation-v0.1.example.json"
@@ -2668,7 +2688,11 @@ exec "$C18_REAL_PYTHON3" "$@"
                 subprocess.run(["git", "commit", "-m", "matrix"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 result = gate.responsibility_matrix_diff_guard(base)
                 self.assertFalse(result["passed"])
+                self.assertIn("player-runtime:releases/player-runtime/candidate/manifest.json", result["stdout_tail"])
+                self.assertIn("player-runtime:releases/app-updates/legacy/manifest.json", result["stdout_tail"])
                 self.assertIn("system-image:scripts/board/totem_updatectl.py", result["stdout_tail"])
+                self.assertIn("system-image:releases/image-lab-readonly/image.txt", result["stdout_tail"])
+                self.assertIn("system-image:releases/installable-rc/image.txt", result["stdout_tail"])
                 self.assertIn("media-system:scripts/board/mpv_manual_probe.sh", result["stdout_tail"])
                 self.assertIn("field-data:docs/app-integration/config.homologation-v0.1.example.json", result["stdout_tail"])
             finally:

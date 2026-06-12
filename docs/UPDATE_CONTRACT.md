@@ -30,6 +30,7 @@ nao entram no OTA comum.
 | `player-runtime` | `releases/player-runtime` | Root do pacote C18-aware e da familia server-side do `player-runtime`; nao e OTA comum e continua atras dos gates de homologacao/H2. |
 | `totem-core` | `releases/totem-core` | Nao e root canonico nesta linha; nao usar para C18. |
 | `kiosky-player` legado | `releases/app-updates` | Historico C14/kiosky; nao usar como C18 OTA, `player-runtime`, `stable` ou producao. |
+| `system-image` | `releases/image-lab-readonly`, `releases/installable-rc` | Artefatos de imagem/lab nao sao OTA comum; qualquer uso corrente precisa seguir a trilha de imagem/homologacao. |
 
 ## Contrato De Config C18
 
@@ -555,6 +556,9 @@ fail-closed; nao significa autorizacao de stable, thaw ou publish.
 O diretorio final de evidencia deve versionar, no minimo,
 `c18-stable-promotion-evidence.json`, `c18-player-runtime-thaw-decision.json`,
 `h2-readiness-final.json` e README com non-claims/hashes.
+No desenho atual, a decisao `stable` para `player-runtime` continua apontando
+para o pacote homologation hash-bound validado em `releases/player-runtime`;
+nao se cria um manifest `player-runtime channel=stable` para contornar o freeze.
 
 A familia de governanca server-side deve ser validada antes de entrar no H2 por
 `scripts/qa/c18_server_side_publish_governance_gate.py`, com schema
