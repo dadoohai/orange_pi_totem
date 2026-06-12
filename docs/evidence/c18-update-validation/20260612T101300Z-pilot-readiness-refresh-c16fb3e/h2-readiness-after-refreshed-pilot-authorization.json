@@ -1,0 +1,196 @@
+{
+  "blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "server_side_publish_governance:missing_server_side_publish_governance",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "checks": {
+    "explicit_operator_thaw_decision": {
+      "blockers": [
+        "missing_operator_thaw_decision"
+      ],
+      "passed": false
+    },
+    "full_physical_powerloss_matrix": {
+      "blockers": [
+        "powerloss_matrix_incomplete"
+      ],
+      "duplicate_checkpoints": [],
+      "extra_checkpoints": [],
+      "gate_results": {
+        "after_current_symlink": {
+          "dir": "docs/evidence/c18-update-validation/20260612T001436Z-p0-after-current-symlink-c16fb3e",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_current_to_previous": {
+          "dir": "docs/evidence/c18-update-validation/20260612T010313Z-p0-rollback-current-to-previous-c16fb3e",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_previous_removed": {
+          "dir": "docs/evidence/c18-update-validation/20260612T012322Z-p0-rollback-after-previous-removed-c16fb3e",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_quarantine": {
+          "dir": "docs/evidence/c18-update-validation/20260612T025112Z-p0-rollback-after-quarantine-c16fb3e",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_state_success": {
+          "dir": "docs/evidence/c18-update-validation/20260612T035520Z-p0-rollback-after-state-success-c16fb3e",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        }
+      },
+      "missing_checkpoints": [
+        "after_extract",
+        "after_health_passed",
+        "after_marker_written",
+        "after_payload_staged",
+        "after_previous_symlink",
+        "after_release_dir_created",
+        "after_release_tree_fsync",
+        "after_state_success",
+        "after_state_verifying",
+        "before_stage_cleanup",
+        "rollback_after_current_unlinked",
+        "rollback_after_identify_links"
+      ],
+      "observed_checkpoints": [
+        "after_current_symlink",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ],
+      "passed": false,
+      "required_checkpoints": [
+        "after_payload_staged",
+        "after_release_dir_created",
+        "after_extract",
+        "after_state_verifying",
+        "after_health_passed",
+        "after_release_tree_fsync",
+        "after_marker_written",
+        "after_previous_symlink",
+        "after_current_symlink",
+        "after_state_success",
+        "before_stage_cleanup",
+        "rollback_after_identify_links",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_current_unlinked",
+        "rollback_after_state_success"
+      ],
+      "semantics_ledger": {
+        "evidence_gate_contract_mismatch": [],
+        "evidence_gate_matrix_checkpoints": [
+          "after_current_symlink",
+          "after_extract",
+          "after_health_passed",
+          "after_marker_written",
+          "after_payload_staged",
+          "after_previous_symlink",
+          "after_release_dir_created",
+          "after_release_tree_fsync",
+          "after_state_success",
+          "after_state_verifying",
+          "before_stage_cleanup",
+          "rollback_after_current_to_previous",
+          "rollback_after_current_unlinked",
+          "rollback_after_identify_links",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_state_success"
+        ],
+        "required_checkpoints": [
+          "after_payload_staged",
+          "after_release_dir_created",
+          "after_extract",
+          "after_state_verifying",
+          "after_health_passed",
+          "after_release_tree_fsync",
+          "after_marker_written",
+          "after_previous_symlink",
+          "after_current_symlink",
+          "after_state_success",
+          "before_stage_cleanup",
+          "rollback_after_identify_links",
+          "rollback_after_current_to_previous",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_current_unlinked",
+          "rollback_after_state_success"
+        ],
+        "semantically_validated_checkpoints": [
+          "after_current_symlink",
+          "after_extract",
+          "after_health_passed",
+          "after_marker_written",
+          "after_payload_staged",
+          "after_previous_symlink",
+          "after_release_dir_created",
+          "after_release_tree_fsync",
+          "after_state_success",
+          "after_state_verifying",
+          "before_stage_cleanup",
+          "rollback_after_current_to_previous",
+          "rollback_after_current_unlinked",
+          "rollback_after_identify_links",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_state_success"
+        ],
+        "semantics_not_implemented_checkpoints": []
+      }
+    },
+    "h1_decisive_bundle": {
+      "blockers": [],
+      "passed": true,
+      "step_count": 50,
+      "summary_path": "docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json"
+    },
+    "server_side_publish_governance": {
+      "blockers": [
+        "missing_server_side_publish_governance"
+      ],
+      "passed": false
+    },
+    "soak_endurance_24h": {
+      "blockers": [
+        "missing_24h_soak_summary"
+      ],
+      "passed": false
+    },
+    "stable_promotion_authorization": {
+      "blockers": [
+        "missing_stable_promotion_evidence"
+      ],
+      "passed": false
+    }
+  },
+  "non_claims": [
+    "this_gate_does_not_thaw_player_runtime",
+    "this_gate_does_not_publish_or_fetch_releases",
+    "this_gate_does_not_override_freeze_rc_44",
+    "this_gate_does_not_promote_stable_without_operator_decision"
+  ],
+  "passed": false,
+  "result_claim": "h2_readiness_blocked",
+  "schema": "dadooh.c18.player_runtime.h2_readiness.v1"
+}
