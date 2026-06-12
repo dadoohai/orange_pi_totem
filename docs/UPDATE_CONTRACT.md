@@ -497,6 +497,13 @@ recebidos nesse caminho: release gate precisa estar verde, matriz power-loss
 precisa estar completa e passar seus subgates, soak precisa cobrir 24h,
 server-side precisa passar com chave publica confiavel externa + trust anchor, e
 a decisao do operador precisa estar aprovada.
+No publish de `totem-core` stable, o release gate final gerado deve manter o
+mesmo SHA do `--stable-release-gate-summary` validado pela stable evidence, e o
+publisher deve anexar a familia server-side validada: evidence JSON,
+manifest/payload/release-gate/audit-log apontados por `release_assets`, provas
+ou assinaturas apontadas por `asset_attestations`, e a trust-anchor evidence
+externa. A chave publica confiavel continua entrada externa de validacao; ela
+nao e promovida como payload de updater.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e
