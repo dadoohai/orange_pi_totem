@@ -295,6 +295,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("connected_active_count", collector)
         self.assertIn("scanout_indeterminate", collector)
         self.assertIn("test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled", collector)
+        self.assertIn("test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled", collector)
         self.assertIn("test_visible_ok_with_mode_file_unavailable_can_classify_display_ok", collector)
         self.assertIn('"reads_edid": False', collector)
         self.assertIn('"reads_framebuffer": False', collector)

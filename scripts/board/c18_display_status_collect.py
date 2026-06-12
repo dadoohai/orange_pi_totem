@@ -440,6 +440,22 @@ class DisplayStatusCollectSelfTest(unittest.TestCase):
         self.assertEqual(result["drm"]["connected_active_count"], 1)
         self.assertEqual(result["classification"], "unknown")
 
+    def test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "drm"
+            status = Path(tmp) / "status.json"
+            self.write_connector(root, "card0-HDMI-A-1", status="connected")
+            (root / "card0-HDMI-A-1" / "mode").write_text("", encoding="utf-8")
+            status.write_text(json.dumps({"playback_state": "playing", "mpv_running": True}), encoding="utf-8")
+            result = build_result(make_args(drm_root=root, status_file=status))
+            result["service"]["active_state"] = "active"
+            result["classification"] = classify(result["drm"], result["service"], result["player_status"], "unknown")
+        self.assertEqual(result["drm"]["connected_ready_count"], 0)
+        self.assertEqual(result["drm"]["connected_active_count"], 1)
+        self.assertEqual(result["classification"], "unknown")
+
     def test_visible_ok_with_mode_file_unavailable_can_classify_display_ok(self) -> None:
         import tempfile
 
