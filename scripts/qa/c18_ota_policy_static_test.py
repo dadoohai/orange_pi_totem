@@ -1946,6 +1946,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("target-current-without-previous-link-or-state", powerloss_plan)
         self.assertIn("requires --quarantine-current", powerloss_plan)
         self.assertIn("fresh apply path is required", powerloss_plan)
+        self.assertIn("rollback result is expected to be image_fallback, not previous", powerloss_plan)
         self.assertIn("CUT_POWER_NOW", powerloss_plan)
         self.assertIn("remote reboot is not acceptable evidence", powerloss_plan)
         self.assertIn("previous_version_required_for_rollback_commands", powerloss_plan)

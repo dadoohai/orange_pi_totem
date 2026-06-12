@@ -387,8 +387,10 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
             "requires target as current with previous symlink absent and state previous absent before arm",
             "generic target-over-previous setup is intentionally not emitted for this checkpoint",
             "arm command is reachable only when rollback has no previous runtime to adopt",
+            "rollback result is expected to be image_fallback, not previous",
             "prepare only on a lab image or after backing up device state",
         ])
+    expected_rolled_to = "image_fallback" if checkpoint == "rollback_after_current_unlinked" else previous
     return {
         "checkpoint": checkpoint,
         "phase": "rollback",
@@ -404,7 +406,7 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
         "resume_after_power_restore": command_block(resume_lines),
         "expected_before_resume_source": before_source,
         "expected_after_reconcile_source": after_source,
-        "expected_rolled_to": previous,
+        "expected_rolled_to": expected_rolled_to,
         "notes": notes,
     }
 
@@ -499,6 +501,7 @@ class PowerlossMatrixPlanSelfTest(unittest.TestCase):
         self.assertTrue(rollback["requires_custom_setup"])
         self.assertEqual(rollback["expected_before_resume_source"], "fallback")
         self.assertEqual(rollback["expected_after_reconcile_source"], "fallback")
+        self.assertEqual(rollback["expected_rolled_to"], "image_fallback")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

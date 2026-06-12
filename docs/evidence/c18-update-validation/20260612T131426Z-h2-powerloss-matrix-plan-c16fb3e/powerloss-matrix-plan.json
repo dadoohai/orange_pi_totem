@@ -524,13 +524,14 @@
       "checkpoint": "rollback_after_current_unlinked",
       "expected_after_reconcile_source": "fallback",
       "expected_before_resume_source": "fallback",
-      "expected_rolled_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "expected_rolled_to": "image_fallback",
       "notes": [
         "physical power must be removed only after CUT_POWER_NOW is printed and persisted",
         "remote reboot is not acceptable evidence",
         "requires target as current with previous symlink absent and state previous absent before arm",
         "generic target-over-previous setup is intentionally not emitted for this checkpoint",
         "arm command is reachable only when rollback has no previous runtime to adopt",
+        "rollback result is expected to be image_fallback, not previous",
         "prepare only on a lab image or after backing up device state"
       ],
       "phase": "rollback",
