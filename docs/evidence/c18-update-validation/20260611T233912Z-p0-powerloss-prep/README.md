@@ -66,6 +66,7 @@ python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --data-root /data \
   --allow-device-data-root \
   --evidence-root /data/c18-evidence/p0-c16fb3e-after_current_symlink/trial \
+  --allow-reapply-linked-previous \
   --startup-wait-sec 12 \
   --json
 ```
@@ -103,6 +104,7 @@ python3 scripts/qa/c18_player_runtime_lab_apply.py \
   --allow-device-data-root \
   --canary-media "$CANARY" \
   --output-dir "/data/c18-evidence/p0-c16fb3e-$CP/setup/apply" \
+  --allow-reapply-linked-previous \
   --startup-wait-sec 12 \
   --json > "/data/c18-evidence/p0-c16fb3e-$CP/setup/lab-apply.json"
 

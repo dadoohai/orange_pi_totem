@@ -295,7 +295,7 @@ def run_apply_arm(args: argparse.Namespace) -> int:
     os.environ[DEVICE_DATA_ENV] = "1"
     try:
         try:
-            rc = lab_apply.main([
+            apply_argv = [
                 "--lab-only-apply",
                 "--manifest", str(args.manifest),
                 "--payload", str(args.payload),
@@ -307,7 +307,10 @@ def run_apply_arm(args: argparse.Namespace) -> int:
                 "--interval-sec", str(args.interval_sec),
                 "--startup-wait-sec", str(args.startup_wait_sec),
                 "--json",
-            ])
+            ]
+            if args.allow_reapply_linked_previous:
+                apply_argv.append("--allow-reapply-linked-previous")
+            rc = lab_apply.main(apply_argv)
         except CheckpointWaitExpired as exc:
             write_json_fsync(args.evidence_root / "arm-timeout.json", {
                 "schema": SCHEMA,
@@ -598,6 +601,7 @@ def self_test() -> None:
         'run_systemctl_service("mask", "--runtime")',
         "restart_service_best_effort",
         "service-runtime-mask-before-apply.json",
+        "--allow-reapply-linked-previous",
     ):
         if token not in source:
             raise AssertionError(f"missing service-hold token: {token}")
@@ -623,6 +627,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--canary-media", type=Path)
     parser.add_argument("--data-root", type=Path, default=Path("/data"))
     parser.add_argument("--allow-device-data-root", action="store_true")
+    parser.add_argument("--allow-reapply-linked-previous", action="store_true")
     parser.add_argument("--evidence-root", type=Path, default=Path("/data/c18-evidence/powerloss-trial"))
     parser.add_argument("--wait-for-power-cut-sec", type=float, default=600.0)
     parser.add_argument("--duration-sec", type=float, default=45.0)

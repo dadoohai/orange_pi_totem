@@ -916,6 +916,183 @@ def _downgrade_policy_allows_manifest(policy: Dict[str, Any],
     return True, "not_a_known_downgrade"
 
 
+def _apply_player_runtime_linked_previous_unfrozen(
+    manifest: Dict[str, Any],
+    *,
+    source: str = "lab-reapply-linked-previous",
+) -> int:
+    """Lab-only promotion of the exact verified player-runtime currently in previous."""
+    started_at = _utcnow_iso()
+    if COMPONENT != "player-runtime":
+        raise RuntimeError("player-runtime linked-previous apply called for wrong component")
+    if not PLAYER_RUNTIME_LAB_THAW_ENABLED:
+        raise RuntimeError("player-runtime linked-previous apply requires explicit lab thaw guard")
+    version = str(manifest.get("version") or "")
+    sha = str(manifest.get("payload_sha256") or "").lower()
+    if not version or not sha:
+        raise RuntimeError("player-runtime linked-previous apply requires manifest version and payload sha")
+
+    linked_target = f"releases/{version}"
+    state = _read_state()
+    current_target = _read_symlink_target(CURRENT_LINK)
+    previous_target = _read_symlink_target(PREVIOUS_LINK)
+    candidate_identity = (version, sha)
+    current_identity = _state_entry_identity(state.get("current"))
+    previous_identity = _state_entry_identity(state.get("previous"))
+
+    if current_target == linked_target or current_identity == candidate_identity:
+        log("ERROR", "player_runtime_reapply_candidate_already_current", version=version)
+        return 46
+    if previous_target != linked_target:
+        log("ERROR", "player_runtime_reapply_previous_link_mismatch",
+            version=version, previous=previous_target)
+        return 46
+    if current_identity and current_identity[0] == version and current_identity[1] != sha:
+        log("ERROR", "player_runtime_reapply_current_version_payload_sha256_mismatch",
+            version=version)
+        return 45
+    if previous_identity != candidate_identity:
+        log("ERROR", "player_runtime_reapply_previous_identity_mismatch", version=version)
+        return 45
+
+    release_dir = APP_BASE / linked_target
+    ok, info, marker = _validate_player_runtime_marker(release_dir, state)
+    marker_identity = (
+        marker.get("version") if isinstance(marker, dict) else None,
+        str(marker.get("payload_sha256") or "").lower() if isinstance(marker, dict) else None,
+    )
+    if not ok or marker_identity != candidate_identity:
+        log("ERROR", "player_runtime_reapply_previous_marker_invalid", reason=info, version=version)
+        return 47
+
+    identity = {
+        "version": version,
+        "payload_sha256": sha,
+        "kiosk_py_sha256": marker.get("kiosk_py_sha256"),
+        "tree_sha256": marker.get("tree_sha256"),
+    }
+    quarantined, quarantine_reason = _player_runtime_is_quarantined(identity, state)
+    if quarantined:
+        log("ERROR", "player_runtime_reapply_candidate_quarantined", reason=quarantine_reason)
+        return 47
+
+    state["component"] = COMPONENT
+    state["schema"] = SCHEMA_STATE
+    state["last_operation"] = {
+        "type": "apply",
+        "status": "verifying",
+        "started_at_utc": started_at,
+        "version": version,
+        "source": source,
+        "candidate_identity": identity,
+        "lab_reapply_linked_previous": True,
+    }
+    _write_state(state)
+    _player_runtime_fault("after_state_verifying", version=version, identity=identity)
+
+    try:
+        health = _default_player_runtime_health_hook(release_dir, identity)
+    except Exception as e:
+        reason = f"deep_health_exception:{type(e).__name__}"
+        log("ERROR", "player_runtime_reapply_deep_health_exception", err_type=type(e).__name__)
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous",
+            "lab_reapply_linked_previous": True,
+        }
+        _write_state(state)
+        return 13
+    if not bool(health.get("passed")):
+        reason = ",".join(str(item) for item in health.get("failure_reasons", [])) or "deep_health_failed"
+        _quarantine_player_runtime_identity(state, identity, reason)
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous",
+            "lab_reapply_linked_previous": True,
+        }
+        _write_state(state)
+        return 10
+    _player_runtime_fault("after_health_passed", version=version, identity=identity)
+
+    try:
+        post_health_identity = _player_runtime_identity(release_dir, manifest)
+        if (
+            post_health_identity["kiosk_py_sha256"] != identity["kiosk_py_sha256"]
+            or post_health_identity["tree_sha256"] != identity["tree_sha256"]
+        ):
+            raise RuntimeError("candidate_identity_changed_after_health")
+        identity = post_health_identity
+        _fsync_release_tree(release_dir)
+        _player_runtime_fault("after_release_tree_fsync", version=version, identity=identity)
+        marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
+        _player_runtime_fault("after_marker_written", version=version, identity=identity)
+    except Exception as e:
+        reason = f"linked_previous_reverify_failed:{e}"
+        log("ERROR", "player_runtime_reapply_reverify_failed", reason=reason)
+        _quarantine_player_runtime_identity(state, identity, reason)
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "candidate_rejected",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "rollback_reason": reason,
+            "rolled_back_to": "previous",
+            "lab_reapply_linked_previous": True,
+        }
+        _write_state(state)
+        return 48
+
+    old_current = current_target
+    if old_current and old_current != linked_target:
+        _atomic_symlink(old_current, PREVIOUS_LINK)
+        _player_runtime_fault("after_previous_symlink", version=version, previous=old_current)
+    _atomic_symlink(linked_target, CURRENT_LINK)
+    _player_runtime_fault("after_current_symlink", version=version, current=linked_target)
+    state["previous"] = state.get("current")
+    state["current"] = {
+        "version": version,
+        "applied_at_utc": _utcnow_iso(),
+        "source": source,
+        "source_repo": manifest.get("source_repo"),
+        "source_branch": manifest.get("source_branch"),
+        "source_commit": manifest.get("source_commit"),
+        "channel": manifest.get("channel"),
+        "payload_sha256": sha,
+        "manifest_created_at_utc": manifest.get("created_at_utc"),
+        "path": str(release_dir),
+        "kiosk_py_sha256": identity["kiosk_py_sha256"],
+        "tree_sha256": identity["tree_sha256"],
+        "verified_marker": marker,
+        "lab_reapply_linked_previous": True,
+    }
+    state["last_operation"] = {
+        "type": "apply",
+        "status": "success",
+        "started_at_utc": started_at,
+        "finished_at_utc": _utcnow_iso(),
+        "version": version,
+        "source": source,
+        "lab_reapply_linked_previous": True,
+    }
+    _write_state(state)
+    _player_runtime_fault("after_state_success", version=version, identity=identity)
+    return 0
+
+
 def _validate_release_version(version: Any) -> str:
     if not isinstance(version, str) or not SAFE_RELEASE_VERSION_RE.fullmatch(version):
         raise RuntimeError(f"unsafe version string: {version!r}")

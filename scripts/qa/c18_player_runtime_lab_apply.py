@@ -149,6 +149,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--config-template", type=Path)
     parser.add_argument("--canary-media", type=Path)
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--allow-reapply-linked-previous", action="store_true")
     parser.add_argument("--duration-sec", type=float, default=30.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=5.0)
@@ -193,12 +194,18 @@ def main(argv: list[str]) -> int:
     updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
     before_snapshot = runtime_snapshot()
     try:
-        rc = updatectl._apply_from_manifest_path_unfrozen(
-            args.manifest,
-            payload_url=None,
-            source=f"lab-local:{args.manifest.name}",
-            payload_path_override=args.payload,
-        )
+        if args.allow_reapply_linked_previous:
+            rc = updatectl._apply_player_runtime_linked_previous_unfrozen(
+                manifest,
+                source=f"lab-local:{args.manifest.name}:linked-previous",
+            )
+        else:
+            rc = updatectl._apply_from_manifest_path_unfrozen(
+                args.manifest,
+                payload_url=None,
+                source=f"lab-local:{args.manifest.name}",
+                payload_path_override=args.payload,
+            )
     finally:
         after_snapshot = runtime_snapshot()
         updatectl.PLAYER_RUNTIME_HEALTH_HOOK = previous_hook
@@ -217,6 +224,7 @@ def main(argv: list[str]) -> int:
         "public_cli_reconcile_still_frozen": public_reconcile,
         "before": before_snapshot,
         "after": after_snapshot,
+        "reapply_linked_previous": bool(args.allow_reapply_linked_previous),
         "data_root": str(data_root),
         "device_data_root": data_root.resolve() == Path("/data"),
         "output_dir": str(work_dir),
