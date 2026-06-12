@@ -71,36 +71,6 @@
       "sha256": "1c0648fcdb3b7eeeb51cae3de70b7df16a663490e6c58cc206404506c3f31560"
     },
     {
-      "bytes": 5473,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/955B8A68885D3743C2E5D991F0B74AEB6E8D734DA13BBF14FFDCF122D9EB976B",
-      "sha256": "afb26229ed3c76c5d11238fb5a52a3ad5454d1d3c732e85b875704a1dda44d47"
-    },
-    {
-      "bytes": 6145,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/9AD1C12CA1752EED332B466B6E5A7C04C1F797D74454D5FC8F7A3AF53778E205",
-      "sha256": "d5221d489e620ae15a6edf357dbbbbc878c2ad35a109556f4c835ef021313974"
-    },
-    {
-      "bytes": 6173,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/B1E34AB76B17662FBF7240EE4E167F270D88169350937530F32DF17823CC5E04",
-      "sha256": "df9855a5b1e2fedf105d124da970fb04a5cff1cb141fb0097c48bf6465740227"
-    },
-    {
-      "bytes": 5621,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/BA5FB4C3449ECA625EC50DBBB65472FB4104A4BD66EF89616844E3F2D5B5DAB8",
-      "sha256": "cbad4e2a051b80122063eb59c7f13dd6b4326b3c24c0629e12fa6b1b43ca3529"
-    },
-    {
-      "bytes": 5453,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/D1B95DE1436160C51F46A584DA81D219D646BD6506F7235F76A05287D4F77D41",
-      "sha256": "aad0e107ebcaacc8dcc04e72ab2e2dd27095ac690b0a84c26f650afe2c3a8f3c"
-    },
-    {
-      "bytes": 5453,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/D683AAC24DF9D59935CF2662437127DD6583BBC016E90CBCF9F9FE75F658FE2B",
-      "sha256": "b458e59c90ad415abf3621b24ebdea82a03184c6a024e694ea354532d6cdb132"
-    },
-    {
       "bytes": 13034,
       "file": "setup/apply/candidate-health/kiosk.log",
       "sha256": "678759f0e3e2203287e74a66e1785231ed46ee58702d7a96d574d0203f4a0fc2"
@@ -316,8 +286,13 @@
       "sha256": "56ff8ebabb81c893f5f35a4e9b4399052f02e90104868d3f83d287f8efe0a8b0"
     }
   ],
+  "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+  "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+  "image_tag": "c18-hwdecode-lab-1x",
   "rollback_expectation": "data-current-after-quarantine",
   "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
   "setup_candidate_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
-  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "target_package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "target_payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
 }
