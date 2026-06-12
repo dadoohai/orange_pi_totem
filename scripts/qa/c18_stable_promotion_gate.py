@@ -40,6 +40,7 @@ REQUIRED_SHA256_FIELDS = (
     "release_gate_sha256",
     "h2_readiness_sha256",
     "server_side_evidence_sha256",
+    "server_side_trust_anchor_evidence_sha256",
     "soak_summary_sha256",
     "powerloss_matrix_sha256",
 )
@@ -95,6 +96,7 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
         "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
+        "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
         "operator_thaw_decision_sha256": (
             sha256_file(args.operator_thaw_decision)
@@ -114,6 +116,9 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
         hashes["release_gate_sha256"] = sha256_file(args.release_gate_summary)
     if args.server_side_evidence is not None and args.server_side_evidence.is_file():
         hashes["server_side_evidence_sha256"] = sha256_file(args.server_side_evidence)
+    trust_anchor = getattr(args, "server_side_trust_anchor_evidence", None)
+    if trust_anchor is not None and trust_anchor.is_file():
+        hashes["server_side_trust_anchor_evidence_sha256"] = sha256_file(trust_anchor)
     if args.soak_summary is not None and args.soak_summary.is_file():
         hashes["soak_summary_sha256"] = sha256_file(args.soak_summary)
     if args.powerloss_evidence_dir:
@@ -123,6 +128,7 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
     elif {
         "release_gate_sha256",
         "server_side_evidence_sha256",
+        "server_side_trust_anchor_evidence_sha256",
         "soak_summary_sha256",
         "powerloss_matrix_sha256",
     }.issubset(hashes):
@@ -214,6 +220,7 @@ def valid_fixture() -> dict[str, Any]:
         "release_gate_sha256": "a" * 64,
         "h2_readiness_sha256": "b" * 64,
         "server_side_evidence_sha256": "c" * 64,
+        "server_side_trust_anchor_evidence_sha256": "f" * 64,
         "soak_summary_sha256": "d" * 64,
         "powerloss_matrix_sha256": "e" * 64,
         "auto_pull_enabled": False,
@@ -266,11 +273,22 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("stable_promotion_server_side_evidence_sha256_mismatch", result["blockers"])
 
+        data = valid_fixture()
+        result = validate_data(
+            data,
+            expected_hashes={"server_side_trust_anchor_evidence_sha256": "0" * 64},
+        )
+        self.assertFalse(result["passed"])
+        self.assertIn("stable_promotion_server_side_trust_anchor_evidence_sha256_mismatch", result["blockers"])
+
     def test_hash_binding_passes_when_expected_matches(self) -> None:
         data = valid_fixture()
         result = validate_data(
             data,
-            expected_hashes={"server_side_evidence_sha256": data["server_side_evidence_sha256"]},
+            expected_hashes={
+                "server_side_evidence_sha256": data["server_side_evidence_sha256"],
+                "server_side_trust_anchor_evidence_sha256": data["server_side_trust_anchor_evidence_sha256"],
+            },
         )
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
 
@@ -281,6 +299,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evidence", type=Path, default=None)
     parser.add_argument("--release-gate-summary", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
+    parser.add_argument("--server-side-trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--soak-summary", type=Path, default=None)
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--operator-thaw-decision", type=Path, default=None)

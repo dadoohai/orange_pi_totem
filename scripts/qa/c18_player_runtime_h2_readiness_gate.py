@@ -125,6 +125,7 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
         "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
+        "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
         "operator_thaw_decision_sha256": (
             sha256_file(args.operator_thaw_decision)
@@ -144,6 +145,9 @@ def stable_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
         hashes["release_gate_sha256"] = sha256_file(args.h1_release_gate_summary)
     if args.server_side_evidence is not None and args.server_side_evidence.is_file():
         hashes["server_side_evidence_sha256"] = sha256_file(args.server_side_evidence)
+    trust_anchor = getattr(args, "server_side_trust_anchor_evidence", None)
+    if trust_anchor is not None and trust_anchor.is_file():
+        hashes["server_side_trust_anchor_evidence_sha256"] = sha256_file(trust_anchor)
     if args.soak_summary is not None and args.soak_summary.is_file():
         hashes["soak_summary_sha256"] = sha256_file(args.soak_summary)
     if args.powerloss_evidence_dir:
@@ -380,13 +384,15 @@ def evaluate_stable_promotion(path: Path | None, *, expected_hashes: dict[str, s
 def evaluate_server_side(path: Path | None,
                          *,
                          allow_test_fixtures: bool = False,
-                         trusted_key_pems: list[Path] | None = None) -> dict[str, Any]:
+                         trusted_key_pems: list[Path] | None = None,
+                         trust_anchor_evidence: Path | None = None) -> dict[str, Any]:
     if path is None:
         return step(False, ["missing_server_side_publish_governance"])
     result = evaluate_server_side_gate(
         path,
         allow_test_fixtures=allow_test_fixtures,
         trusted_key_pems=trusted_key_pems,
+        trust_anchor_evidence=trust_anchor_evidence,
     )
     blockers = list(result.get("blockers", []))
     return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
@@ -423,6 +429,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             args.server_side_evidence,
             allow_test_fixtures=allow_test_fixtures,
             trusted_key_pems=getattr(args, "server_side_trusted_key_pem", []),
+            trust_anchor_evidence=getattr(args, "server_side_trust_anchor_evidence", None),
         ),
         "explicit_operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
     }
@@ -485,6 +492,29 @@ def complete_args(root: Path) -> argparse.Namespace:
         },
     })
     server = write_server_side_fixture_release(root / "server-side-release")
+    trust_anchor = root / "server-side-trust-anchor.json"
+    write_json(trust_anchor, {
+        "schema": "dadooh.c18.server_side_trust_anchor.v1",
+        "purpose": "c18_server_side_release_signing",
+        "trusted_key_spki_sha256": "f" * 64,
+        "public_key_algorithm": "rsa",
+        "signature_algorithm": "openssl-dgst-sha256-rsa-pkcs1-v1_5",
+        "scope": {
+            "components": ["totem-core", "player-runtime"],
+            "channels": ["homologation", "stable"],
+        },
+        "selected_by": "operator-release-01",
+        "key_owner": "release-security-01",
+        "selected_at_utc": "2026-06-12T00:00:00Z",
+        "private_key_material_present": False,
+        "non_claims": [
+            "this_evidence_does_not_assert_pki_chain",
+            "this_evidence_does_not_publish_releases",
+            "this_evidence_does_not_enable_auto_pull",
+            "this_evidence_does_not_promote_stable",
+            "this_evidence_does_not_thaw_player_runtime",
+        ],
+    })
     operator = root / "operator.json"
     write_json(operator, {
         "schema": THAW_DECISION_SCHEMA,
@@ -499,6 +529,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         soak_summary=soak,
         stable_promotion_evidence=stable,
         server_side_evidence=server,
+        server_side_trust_anchor_evidence=trust_anchor,
         operator_thaw_decision=operator,
         expect_image_tag="c18-hwdecode-lab-test",
         expect_image_sha256="a" * 64,
@@ -525,6 +556,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         "release_gate_sha256": hashes["release_gate_sha256"],
         "h2_readiness_sha256": hashes["h2_readiness_sha256"],
         "server_side_evidence_sha256": hashes["server_side_evidence_sha256"],
+        "server_side_trust_anchor_evidence_sha256": hashes["server_side_trust_anchor_evidence_sha256"],
         "soak_summary_sha256": hashes["soak_summary_sha256"],
         "powerloss_matrix_sha256": hashes["powerloss_matrix_sha256"],
         "auto_pull_enabled": False,
@@ -682,6 +714,22 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
             result["blockers"],
         )
 
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            stable = json.loads(args.stable_promotion_evidence.read_text(encoding="utf-8"))
+            stable["server_side_trust_anchor_evidence_sha256"] = "0" * 64
+            write_json(args.stable_promotion_evidence, stable)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "stable_promotion_authorization:stable_promotion_server_side_trust_anchor_evidence_sha256_mismatch",
+            result["blockers"],
+        )
+
     def test_failed_powerloss_subgate_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             args = complete_args(Path(tmp))
@@ -700,6 +748,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stable-promotion-evidence", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
     parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
+    parser.add_argument("--server-side-trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--operator-thaw-decision", type=Path, default=None)
     parser.add_argument("--expect-image-tag", default=None)
     parser.add_argument("--expect-image-sha256", default=None)

@@ -149,8 +149,10 @@ agora rejeita evidencia apenas declaratoria: exige artefatos reais no diretorio
 da release, sem symlink/out-of-dir, provas de attestation/assinatura com hashes
 conferidos, audit-log hash-bound, canal, auto-pull off, allowlist, staged
 rollout, rollback e auditoria. Assinatura destacada e verificada offline com
-prova JSON canonica, fingerprint SPKI DER da chave publica, `release_set_sha256`
-e trust anchor externo via `--trusted-key-pem`. Fixture nao passa fora de
+prova JSON canonica, fingerprint SPKI DER da chave publica, `release_set_sha256`,
+chave publica externa via `--trusted-key-pem` e evidencia de trust anchor
+separada via `--trust-anchor-evidence`; H2/stable carregam o hash dessa
+evidencia. Essa evidencia nao afirma cadeia PKI. Fixture nao passa fora de
 self-test; producao ainda exige evidencia real assinada com chave operacional.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12

@@ -74,7 +74,17 @@ SIGNED_FIXTURE_MANIFEST_NAME = "dadooh-totem-core-signed-release.manifest.json"
 SIGNED_FIXTURE_PAYLOAD_NAME = "dadooh-totem-core-signed-release.tar.gz"
 SIGNATURE_SCHEMA = "dadooh.c18.asset_signature.v1"
 ATTESTATION_SCHEMA = "dadooh.c18.asset_attestation.v1"
+TRUST_ANCHOR_SCHEMA = "dadooh.c18.server_side_trust_anchor.v1"
 SIGNATURE_ALGORITHM = "openssl-dgst-sha256-rsa-pkcs1-v1_5"
+TRUST_ANCHOR_PURPOSE = "c18_server_side_release_signing"
+TRUST_ANCHOR_PUBLIC_KEY_ALGORITHM = "rsa"
+REQUIRED_TRUST_ANCHOR_NON_CLAIMS = (
+    "this_evidence_does_not_assert_pki_chain",
+    "this_evidence_does_not_publish_releases",
+    "this_evidence_does_not_enable_auto_pull",
+    "this_evidence_does_not_promote_stable",
+    "this_evidence_does_not_thaw_player_runtime",
+)
 REQUIRED_TRUE_FIELDS = (
     "publish_gate_enforced",
     "release_assets_verified",
@@ -96,10 +106,16 @@ NON_CLAIMS = (
     "this_gate_does_not_thaw_player_runtime",
 )
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$")
+PRIVATE_KEY_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
 
 
 def is_hash(value: Any) -> bool:
     return isinstance(value, str) and bool(HASH_RE.fullmatch(value))
+
+
+def safe_id(value: Any) -> bool:
+    return isinstance(value, str) and bool(SAFE_ID_RE.fullmatch(value))
 
 
 def require_true(data: dict[str, Any], key: str, blockers: list[str], prefix: str) -> None:
@@ -452,6 +468,81 @@ def trusted_key_map(paths: list[Path] | None,
     return out
 
 
+def validate_trust_anchor_evidence(path: Path | None,
+                                   *,
+                                   release_dir: Path | None,
+                                   trusted_keys: dict[str, Path],
+                                   blockers: list[str]) -> dict[str, Any] | None:
+    if path is None:
+        blockers.append("server_side_trust_anchor_evidence_missing")
+        return None
+    if path.is_symlink():
+        blockers.append(f"server_side_trust_anchor_evidence_symlink:{path}")
+        return None
+    if not path.is_file():
+        blockers.append(f"server_side_trust_anchor_evidence_missing:{path}")
+        return None
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError:
+        blockers.append(f"server_side_trust_anchor_evidence_missing:{path}")
+        return None
+    if release_dir is not None and release_dir.exists():
+        release_root = release_dir.resolve(strict=True)
+        if is_relative_to(resolved, release_root):
+            blockers.append(f"server_side_trust_anchor_evidence_inside_release_dir:{path}")
+            return None
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    if PRIVATE_KEY_RE.search(raw):
+        blockers.append("server_side_trust_anchor_private_key_material_present")
+    data, errors = read_json(path)
+    if errors:
+        blockers.extend(f"server_side_trust_anchor_{error}" for error in errors)
+        return None
+    if data.get("schema") != TRUST_ANCHOR_SCHEMA:
+        blockers.append("server_side_trust_anchor_schema")
+    if data.get("purpose") != TRUST_ANCHOR_PURPOSE:
+        blockers.append("server_side_trust_anchor_purpose")
+    key_sha = data.get("trusted_key_spki_sha256")
+    if not is_hash(key_sha):
+        blockers.append("server_side_trust_anchor_key_spki_sha256_missing_or_invalid")
+    elif key_sha not in trusted_keys:
+        blockers.append("server_side_trust_anchor_key_not_trusted")
+    if data.get("public_key_algorithm") != TRUST_ANCHOR_PUBLIC_KEY_ALGORITHM:
+        blockers.append("server_side_trust_anchor_public_key_algorithm")
+    if data.get("signature_algorithm") != SIGNATURE_ALGORITHM:
+        blockers.append("server_side_trust_anchor_signature_algorithm")
+    scope = data.get("scope") if isinstance(data.get("scope"), dict) else {}
+    if not scope:
+        blockers.append("server_side_trust_anchor_scope_missing")
+    allowed_components = scope.get("components")
+    if allowed_components != list(EXPECTED_COMPONENT_SCOPE):
+        blockers.append("server_side_trust_anchor_scope_components")
+    allowed_channels = scope.get("channels")
+    if (
+        not isinstance(allowed_channels, list)
+        or not allowed_channels
+        or any(channel not in ALLOWED_CHANNELS for channel in allowed_channels)
+    ):
+        blockers.append("server_side_trust_anchor_scope_channels")
+    for key in ("selected_by", "key_owner"):
+        if not safe_id(data.get(key)):
+            blockers.append(f"server_side_trust_anchor_{key}")
+    if not isinstance(data.get("selected_at_utc"), str) or not data["selected_at_utc"].endswith("Z"):
+        blockers.append("server_side_trust_anchor_selected_at_utc")
+    if data.get("private_key_material_present") is not False:
+        blockers.append("server_side_trust_anchor_private_key_material_not_false")
+    if data.get("non_claims") != list(REQUIRED_TRUST_ANCHOR_NON_CLAIMS):
+        blockers.append("server_side_trust_anchor_non_claims")
+    if any(blocker.startswith("server_side_trust_anchor_") for blocker in blockers):
+        return None
+    return {
+        "trusted_key_sha256": key_sha,
+        "allowed_components": list(allowed_components),
+        "allowed_channels": list(allowed_channels),
+    }
+
+
 def signature_payload(proof: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": SIGNATURE_SCHEMA,
@@ -522,6 +613,7 @@ def validate_signature_proof_file(item: dict[str, Any],
                                   proof: dict[str, Any],
                                   release_dir: Path,
                                   trusted_keys: dict[str, Path],
+                                  trust_anchor: dict[str, Any] | None,
                                   blockers: list[str]) -> None:
     asset = str(item.get("asset"))
     proof_hash = item.get("proof_sha256")
@@ -550,6 +642,13 @@ def validate_signature_proof_file(item: dict[str, Any],
     if key_path is None:
         blockers.append(f"server_side_asset_signature_untrusted_key:{asset}")
         return
+    if trust_anchor is not None:
+        if key_sha != trust_anchor.get("trusted_key_sha256"):
+            blockers.append(f"server_side_asset_signature_key_not_trust_anchor:{asset}")
+        if proof.get("component") not in trust_anchor.get("allowed_components", []):
+            blockers.append(f"server_side_asset_signature_component_not_allowed:{asset}")
+        if proof.get("channel") not in trust_anchor.get("allowed_channels", []):
+            blockers.append(f"server_side_asset_signature_channel_not_allowed:{asset}")
     if shutil.which("openssl") is None:
         blockers.append(f"server_side_asset_signature_openssl_missing:{asset}")
         return
@@ -567,6 +666,7 @@ def validate_attestation_proof_file(item: dict[str, Any],
                                     manifest: dict[str, Any],
                                     expected_release_set_sha256: str,
                                     trusted_keys: dict[str, Path],
+                                    trust_anchor: dict[str, Any] | None,
                                     allow_test_fixtures: bool,
                                     blockers: list[str]) -> None:
     asset = item.get("asset")
@@ -601,6 +701,7 @@ def validate_attestation_proof_file(item: dict[str, Any],
             proof=proof,
             release_dir=release_dir,
             trusted_keys=trusted_keys,
+            trust_anchor=trust_anchor,
             blockers=blockers,
         )
         return
@@ -724,6 +825,7 @@ def validate_release_artifacts(data: dict[str, Any],
                                release_dir: Path | None,
                                allow_test_fixtures: bool,
                                trusted_keys: dict[str, Path],
+                               trust_anchor: dict[str, Any] | None,
                                blockers: list[str]) -> None:
     if release_dir is None:
         blockers.append("server_side_release_dir_missing")
@@ -774,6 +876,7 @@ def validate_release_artifacts(data: dict[str, Any],
             manifest=manifest,
             expected_release_set_sha256=expected_release_set_sha256,
             trusted_keys=trusted_keys,
+            trust_anchor=trust_anchor,
             allow_test_fixtures=allow_test_fixtures,
             blockers=blockers,
         )
@@ -795,9 +898,12 @@ def validate_data(data: dict[str, Any],
                   release_dir: Path | None = None,
                   allow_test_fixtures: bool = False,
                   trusted_keys: dict[str, Path] | None = None,
-                  trusted_key_errors: list[str] | None = None) -> dict[str, Any]:
+                  trusted_key_errors: list[str] | None = None,
+                  trust_anchor: dict[str, Any] | None = None,
+                  trust_anchor_errors: list[str] | None = None) -> dict[str, Any]:
     blockers: list[str] = []
     blockers.extend(trusted_key_errors or [])
+    blockers.extend(trust_anchor_errors or [])
     resolved_trusted_keys = trusted_keys or {}
     if data.get("schema") != SCHEMA:
         blockers.append("server_side_schema")
@@ -830,12 +936,15 @@ def validate_data(data: dict[str, Any],
     validate_audit_trail(data, blockers)
     if not allow_test_fixtures and not resolved_trusted_keys:
         blockers.append("server_side_trusted_signature_verification_missing")
+    if not allow_test_fixtures and trust_anchor is None:
+        blockers.append("server_side_trust_anchor_evidence_missing_or_invalid")
     validate_release_artifacts(
         data,
         evidence_path=evidence_path,
         release_dir=release_dir,
         allow_test_fixtures=allow_test_fixtures,
         trusted_keys=resolved_trusted_keys,
+        trust_anchor=trust_anchor,
         blockers=blockers,
     )
     return {
@@ -851,7 +960,8 @@ def validate_data(data: dict[str, Any],
 def evaluate(path: Path | None,
              *,
              allow_test_fixtures: bool = False,
-             trusted_key_pems: list[Path] | None = None) -> dict[str, Any]:
+             trusted_key_pems: list[Path] | None = None,
+             trust_anchor_evidence: Path | None = None) -> dict[str, Any]:
     if path is None:
         return {
             "schema": "dadooh.c18.server_side_publish_governance_gate.v1",
@@ -877,6 +987,15 @@ def evaluate(path: Path | None,
         release_dir=path.parent,
         blockers=trusted_key_errors,
     )
+    trust_anchor_errors: list[str] = []
+    trust_anchor = None
+    if not allow_test_fixtures:
+        trust_anchor = validate_trust_anchor_evidence(
+            trust_anchor_evidence,
+            release_dir=path.parent,
+            trusted_keys=trusted_keys,
+            blockers=trust_anchor_errors,
+        )
     return validate_data(
         data,
         evidence_path=str(path),
@@ -884,6 +1003,8 @@ def evaluate(path: Path | None,
         allow_test_fixtures=allow_test_fixtures,
         trusted_keys=trusted_keys,
         trusted_key_errors=trusted_key_errors,
+        trust_anchor=trust_anchor,
+        trust_anchor_errors=trust_anchor_errors,
     )
 
 
@@ -1230,6 +1351,36 @@ def write_signed_fixture_release(root: Path) -> tuple[Path, Path]:
     return evidence_path, public_key
 
 
+def write_trust_anchor_evidence(path: Path,
+                                *,
+                                trusted_key_spki_sha256: str,
+                                allowed_channels: list[str] | None = None) -> Path:
+    write_json(path, {
+        "schema": TRUST_ANCHOR_SCHEMA,
+        "purpose": TRUST_ANCHOR_PURPOSE,
+        "trusted_key_spki_sha256": trusted_key_spki_sha256,
+        "public_key_algorithm": TRUST_ANCHOR_PUBLIC_KEY_ALGORITHM,
+        "signature_algorithm": SIGNATURE_ALGORITHM,
+        "scope": {
+            "components": list(EXPECTED_COMPONENT_SCOPE),
+            "channels": allowed_channels or ["homologation", "stable"],
+        },
+        "selected_by": "operator-release-01",
+        "key_owner": "release-security-01",
+        "selected_at_utc": "2026-06-12T00:00:00Z",
+        "private_key_material_present": False,
+        "non_claims": list(REQUIRED_TRUST_ANCHOR_NON_CLAIMS),
+    })
+    return path
+
+
+def write_trust_anchor_for_key(path: Path, public_key: Path) -> Path:
+    key_hash = public_key_spki_sha256(public_key)
+    if key_hash is None:
+        raise RuntimeError("openssl could not derive public key fingerprint")
+    return write_trust_anchor_evidence(path, trusted_key_spki_sha256=key_hash)
+
+
 class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
     def test_complete_fixture_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1247,9 +1398,20 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_signed_fixture_passes_with_external_trusted_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, public_key = write_signed_fixture_release(root / "release")
+            trust_anchor = write_trust_anchor_for_key(root / "trust-anchor.json", public_key)
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_without_trust_anchor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
             path, public_key = write_signed_fixture_release(Path(tmp) / "release")
             result = evaluate(path, trusted_key_pems=[public_key])
-        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_trust_anchor_evidence_missing", result["blockers"])
+        self.assertIn("server_side_trust_anchor_evidence_missing_or_invalid", result["blockers"])
 
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_signed_fixture_denies_without_external_trusted_key(self) -> None:
@@ -1264,13 +1426,15 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
     def test_signed_fixture_denies_untrusted_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            path, _public_key = write_signed_fixture_release(root / "release")
+            path, public_key = write_signed_fixture_release(root / "release")
+            trust_anchor = write_trust_anchor_for_key(root / "trust-anchor.json", public_key)
             other_private = root / "other-private.pem"
             other_public = root / "other-public.pem"
             run_openssl(["genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(other_private)])
             run_openssl(["rsa", "-pubout", "-in", str(other_private), "-out", str(other_public)])
-            result = evaluate(path, trusted_key_pems=[other_public])
+            result = evaluate(path, trusted_key_pems=[other_public], trust_anchor_evidence=trust_anchor)
         self.assertFalse(result["passed"])
+        self.assertIn("server_side_trust_anchor_key_not_trusted", result["blockers"])
         self.assertIn("server_side_asset_signature_untrusted_key:manifest", result["blockers"])
 
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
@@ -1278,20 +1442,67 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "release"
             path, public_key = write_signed_fixture_release(root)
+            trust_anchor = write_trust_anchor_for_key(root.parent / "trust-anchor.json", public_key)
             inside_key = root / public_key.name
             shutil.copyfile(public_key, inside_key)
-            result = evaluate(path, trusted_key_pems=[inside_key])
+            result = evaluate(path, trusted_key_pems=[inside_key], trust_anchor_evidence=trust_anchor)
         self.assertFalse(result["passed"])
         self.assertIn(f"server_side_trusted_key_inside_release_dir:{inside_key}", result["blockers"])
+        self.assertIn("server_side_trust_anchor_key_not_trusted", result["blockers"])
         self.assertIn("server_side_asset_signature_untrusted_key:manifest", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trust_anchor_inside_release_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "release"
+            path, public_key = write_signed_fixture_release(root)
+            trust_anchor = write_trust_anchor_for_key(root / "trust-anchor.json", public_key)
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
+        self.assertFalse(result["passed"])
+        self.assertIn(f"server_side_trust_anchor_evidence_inside_release_dir:{trust_anchor}", result["blockers"])
+        self.assertIn("server_side_trust_anchor_evidence_missing_or_invalid", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trust_anchor_key_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, public_key = write_signed_fixture_release(root / "release")
+            other_private = root / "other-private.pem"
+            other_public = root / "other-public.pem"
+            run_openssl(["genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(other_private)])
+            run_openssl(["rsa", "-pubout", "-in", str(other_private), "-out", str(other_public)])
+            other_hash = public_key_spki_sha256(other_public)
+            self.assertIsNotNone(other_hash)
+            trust_anchor = write_trust_anchor_evidence(root / "trust-anchor.json", trusted_key_spki_sha256=str(other_hash))
+            result = evaluate(path, trusted_key_pems=[public_key, other_public], trust_anchor_evidence=trust_anchor)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_signature_key_not_trust_anchor:manifest", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trust_anchor_channel_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, public_key = write_signed_fixture_release(root / "release")
+            key_hash = public_key_spki_sha256(public_key)
+            self.assertIsNotNone(key_hash)
+            trust_anchor = write_trust_anchor_evidence(
+                root / "trust-anchor.json",
+                trusted_key_spki_sha256=str(key_hash),
+                allowed_channels=["stable"],
+            )
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_signature_channel_not_allowed:manifest", result["blockers"])
 
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_signed_fixture_denies_tampered_signature(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "release"
+            tmp_path = Path(tmp)
+            root = tmp_path / "release"
             path, public_key = write_signed_fixture_release(root)
+            trust_anchor = write_trust_anchor_for_key(tmp_path / "trust-anchor.json", public_key)
             (root / "signatures" / "payload.sig").write_bytes(b"tampered")
-            result = evaluate(path, trusted_key_pems=[public_key])
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
         self.assertFalse(result["passed"])
         self.assertIn("server_side_asset_signature_hash_mismatch:payload", result["blockers"])
         self.assertIn("server_side_asset_signature_verify_failed:payload", result["blockers"])
@@ -1299,13 +1510,15 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_signed_fixture_denies_tampered_release_set(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "release"
+            tmp_path = Path(tmp)
+            root = tmp_path / "release"
             path, public_key = write_signed_fixture_release(root)
+            trust_anchor = write_trust_anchor_for_key(tmp_path / "trust-anchor.json", public_key)
             proof_path = root / "signatures" / "payload.signature.json"
             proof = json.loads(proof_path.read_text(encoding="utf-8"))
             proof["release_set_sha256"] = "0" * 64
             write_json(proof_path, proof)
-            result = evaluate(path, trusted_key_pems=[public_key])
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
         self.assertFalse(result["passed"])
         self.assertIn("server_side_asset_attestation_proof_release_set_sha256:payload", result["blockers"])
         self.assertIn("server_side_asset_signature_proof_hash_mismatch:payload", result["blockers"])
@@ -1314,13 +1527,15 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_signed_fixture_denies_tampered_proof_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "release"
+            tmp_path = Path(tmp)
+            root = tmp_path / "release"
             path, public_key = write_signed_fixture_release(root)
+            trust_anchor = write_trust_anchor_for_key(tmp_path / "trust-anchor.json", public_key)
             proof_path = root / "signatures" / "payload.signature.json"
             proof = json.loads(proof_path.read_text(encoding="utf-8"))
             proof["channel"] = "stable"
             write_json(proof_path, proof)
-            result = evaluate(path, trusted_key_pems=[public_key])
+            result = evaluate(path, trusted_key_pems=[public_key], trust_anchor_evidence=trust_anchor)
         self.assertFalse(result["passed"])
         self.assertIn("server_side_asset_attestation_proof_channel:payload", result["blockers"])
         self.assertIn("server_side_asset_signature_proof_hash_mismatch:payload", result["blockers"])
@@ -1558,6 +1773,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate C18 server-side publish governance evidence.")
     parser.add_argument("--evidence", type=Path, default=None)
     parser.add_argument("--trusted-key-pem", type=Path, action="append", default=[])
+    parser.add_argument("--trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
@@ -1569,7 +1785,11 @@ def main() -> int:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ServerSidePublishGovernanceGateSelfTest)
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
-    result = evaluate(args.evidence, trusted_key_pems=args.trusted_key_pem)
+    result = evaluate(
+        args.evidence,
+        trusted_key_pems=args.trusted_key_pem,
+        trust_anchor_evidence=args.trust_anchor_evidence,
+    )
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     elif not result["passed"]:

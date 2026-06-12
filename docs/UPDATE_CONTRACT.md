@@ -456,8 +456,9 @@ power-loss 17/17, semantica power-loss completa, soak 24h, governanca
 server-side, release gate, operador, rollback owner e hashes das evidencias; um
 JSON minimo com `approved=true` nao e suficiente. Quando consumido pelo H2,
 esses hashes devem bater com os arquivos de evidencia efetivamente passados ao
-avaliador (`release_gate`, server-side, soak, matriz power-loss e bundle H2
-pre-stable); hashes arbitrarios ou stale nao fecham a promocao. O publisher de
+avaliador (`release_gate`, server-side, trust anchor server-side, soak, matriz
+power-loss e bundle H2 pre-stable); hashes arbitrarios ou stale nao fecham a
+promocao. O publisher de
 `totem-core` deve preservar `c18-ota-release-gate.json` junto da release para
 manter a trilha de auditoria. O stable gate tambem aceita esses caminhos como
 argumentos para validar os hashes em modo artifact-bound fora do H2.
@@ -484,8 +485,15 @@ diretorio da release, sem symlink/out-of-dir, com hashes conferidos contra os
 arquivos; o log de auditoria tambem precisa ser hash-bound/attested. Para
 assinatura real, o gate verifica uma prova JSON canonica assinada por OpenSSL
 RSA-SHA256, com fingerprint SHA256 do SPKI DER da chave publica, `release_set`
-hash-bound cobrindo manifest, payload, release gate e audit-log, e trust anchor
-passado explicitamente por `--trusted-key-pem` fora do diretorio da release.
+hash-bound cobrindo manifest, payload, release gate e audit-log, chave publica
+passada explicitamente por `--trusted-key-pem` fora do diretorio da release, e
+evidencia operacional separada `dadooh.c18.server_side_trust_anchor.v1`
+passada por `--trust-anchor-evidence`. Essa evidencia registra
+`trusted_key_spki_sha256`, algoritmo, escopo de componentes/canais,
+`selected_by`, `selected_at_utc`, ausencia de material privado e non-claim de
+cadeia PKI; ela tambem deve ficar fora do diretorio da release. H2 e stable
+carregam `server_side_trust_anchor_evidence_sha256` para impedir troca silenciosa
+da chave entre readiness e promocao.
 Tambem deve trazer politica de canal, auto-pull, allowlist, rollout, rollback e
 eventos de auditoria obrigatorios. Fora de self-test, fixture e evidencia sem
 trust anchor/signature verificada continuam bloqueadas; o gate nao publica
