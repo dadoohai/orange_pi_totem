@@ -1,0 +1,28 @@
+{
+  "collected_at_utc": "2026-06-12T19:53:36Z",
+  "expected_h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
+  "files": [
+    {
+      "bytes": 484,
+      "file": "README.md",
+      "sha256": "e8e5ce2c016569ad3f9772f4ff9774d54b3c64193405be19428587c8eeed228c"
+    },
+    {
+      "bytes": 1337,
+      "file": "pilot-authorization.json",
+      "sha256": "ed6457b19b7b3da80a9f1aed5f43ee3094c75cf9436f4eca1e1ed11a077915af"
+    }
+  ],
+  "non_claims": [
+    "no_production",
+    "no_stable",
+    "no_auto_pull",
+    "no_24h_soak",
+    "no_powerloss_17_17",
+    "no_signature_or_attestation",
+    "no_public_thaw"
+  ],
+  "result_claim": "pilot_authorization_refreshed_to_traceable_h1",
+  "schema": "dadooh.c18.pilot_authorization_traceability_refresh.v1",
+  "supersedes_authorization": "docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json"
+}
