@@ -19,6 +19,13 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from c18_player_runtime_release_gate import (
+    SNAPSHOT_KIOSK,
+    validate_release as validate_player_runtime_release,
+    write_manifest as write_player_runtime_manifest,
+    write_payload as write_player_runtime_payload,
+)
+
 
 SCHEMA = "dadooh.c18.server_side_publish_governance.v1"
 ALLOWED_CHANNELS = ("lab", "homologation", "stable")
@@ -128,10 +135,77 @@ NON_CLAIMS = (
     "this_gate_does_not_promote_stable",
     "this_gate_does_not_thaw_player_runtime",
 )
+ALLOWED_TOP_LEVEL_FIELDS = (
+    "schema",
+    "test_fixture",
+    "publish_gate_enforced",
+    "release_assets_verified",
+    "signature_or_attestation_present",
+    "auto_pull_policy_defined",
+    "auto_pull_default_disabled",
+    "auto_pull_enabled",
+    "channel_governance_defined",
+    "channels",
+    "channel_inheritance_allowed",
+    "stable_requires_promotion",
+    "allowlist_controls_defined",
+    "staged_rollout_defined",
+    "rollback_policy_defined",
+    "audit_trail_defined",
+    "public_player_runtime_thaw_requires_h2",
+    "component_scope",
+    "forbidden_component_scopes",
+    "signed_or_attested_assets",
+    "release_assets",
+    "publish_gate",
+    "asset_attestations",
+    "channel_policy",
+    "auto_pull_policy",
+    "component_policy",
+    "allowlist_policy",
+    "staged_rollout_policy",
+    "rollback_policy",
+    "audit_trail",
+)
+AUDIT_FORBIDDEN_POSITIVE_CLAIMS = (
+    "promotion_performed",
+    "auto_pull_enabled",
+    "public_player_runtime_thaw",
+)
+ATTESTATION_PROOF_ALLOWED_FIELDS = (
+    "schema",
+    "subject_asset",
+    "subject_sha256",
+    "release_set_sha256",
+    "source_commit",
+    "component",
+    "channel",
+    "created_at_utc",
+    "covers",
+    "signer",
+)
+SIGNATURE_PROOF_ALLOWED_FIELDS = (
+    "schema",
+    "subject_asset",
+    "subject_sha256",
+    "release_set_sha256",
+    "source_commit",
+    "component",
+    "channel",
+    "created_at_utc",
+    "covers",
+    "signature_algorithm",
+    "trusted_key_sha256",
+    "signature_file",
+)
+ALLOWED_SECRET_FIELD_PATHS = frozenset({
+    "$.audit_trail.secret_redaction_required",
+})
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$")
 PRIVATE_KEY_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
+SECRET_FIELD_RE = re.compile(r"(secret|token|private_key)", re.I)
 
 
 def is_hash(value: Any) -> bool:
@@ -144,6 +218,25 @@ def is_git_sha(value: Any) -> bool:
 
 def safe_id(value: Any) -> bool:
     return isinstance(value, str) and bool(SAFE_ID_RE.fullmatch(value))
+
+
+def secret_json_paths(value: Any, path: str = "$") -> list[str]:
+    if isinstance(value, str):
+        return [path] if PRIVATE_KEY_RE.search(value) else []
+    if isinstance(value, dict):
+        hits: list[str] = []
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if SECRET_FIELD_RE.search(str(key)) and child_path not in ALLOWED_SECRET_FIELD_PATHS:
+                hits.append(child_path)
+            hits.extend(secret_json_paths(child, child_path))
+        return hits
+    if isinstance(value, list):
+        hits = []
+        for index, child in enumerate(value):
+            hits.extend(secret_json_paths(child, f"{path}[{index}]"))
+        return hits
+    return []
 
 
 def require_true(data: dict[str, Any], key: str, blockers: list[str], prefix: str) -> None:
@@ -735,7 +828,11 @@ def validate_attestation_proof_file(item: dict[str, Any],
     if errors:
         blockers.append(f"server_side_asset_attestation_proof_json:{asset}")
         return
+    for hit in secret_json_paths(proof):
+        blockers.append(f"server_side_asset_attestation_proof_secret_material:{asset}:{hit}")
     if item.get("attestation_type") == "signature":
+        if sorted(proof) != sorted(SIGNATURE_PROOF_ALLOWED_FIELDS):
+            blockers.append(f"server_side_asset_signature_proof_unexpected_fields:{asset}")
         validate_common_proof_fields(
             item,
             proof=proof,
@@ -753,6 +850,8 @@ def validate_attestation_proof_file(item: dict[str, Any],
             blockers=blockers,
         )
         return
+    if sorted(proof) != sorted(ATTESTATION_PROOF_ALLOWED_FIELDS):
+        blockers.append(f"server_side_asset_attestation_proof_unexpected_fields:{asset}")
     if proof_hash != item.get("attestation_sha256"):
         blockers.append(f"server_side_asset_attestation_proof_hash_mismatch:{asset}")
     validate_common_proof_fields(
@@ -802,6 +901,63 @@ def validate_release_gate_artifact(gate_path: Path,
         blockers.append("server_side_release_gate_component_mismatch")
     if package.get("channel") != manifest.get("channel"):
         blockers.append("server_side_release_gate_channel_mismatch")
+    component = str(manifest.get("component"))
+    if component == "player-runtime":
+        validate_player_runtime_release_gate_artifact(
+            gate,
+            manifest_path=manifest_path,
+            payload_path=payload_path,
+            manifest=manifest,
+            blockers=blockers,
+        )
+    elif component == "totem-core":
+        validate_totem_core_release_gate_artifact(gate, blockers)
+
+
+def validate_player_runtime_release_gate_artifact(gate: dict[str, Any],
+                                                  *,
+                                                  manifest_path: Path,
+                                                  payload_path: Path,
+                                                  manifest: dict[str, Any],
+                                                  blockers: list[str]) -> None:
+    if manifest.get("channel") == "stable":
+        blockers.append("server_side_player_runtime_stable_release_gate_forbidden")
+    try:
+        recomputed = validate_player_runtime_release(manifest_path, payload_path)
+    except Exception:
+        blockers.append("server_side_player_runtime_release_gate_recompute_failed")
+        return
+    if sorted(gate) != sorted(recomputed):
+        blockers.append("server_side_player_runtime_release_gate_unexpected_fields")
+    if gate.get("component") != recomputed.get("component"):
+        blockers.append("server_side_player_runtime_release_gate_component")
+    if gate.get("manifest") != recomputed.get("manifest"):
+        blockers.append("server_side_player_runtime_release_gate_manifest_summary_mismatch")
+    if gate.get("payload") != recomputed.get("payload"):
+        blockers.append("server_side_player_runtime_release_gate_payload_summary_mismatch")
+    for key, value in recomputed.get("package", {}).items():
+        package = gate.get("package") if isinstance(gate.get("package"), dict) else {}
+        if package.get(key) != value:
+            blockers.append(f"server_side_player_runtime_release_gate_package_{key}_mismatch")
+
+
+def validate_totem_core_release_gate_artifact(gate: dict[str, Any], blockers: list[str]) -> None:
+    repo = gate.get("repo") if isinstance(gate.get("repo"), dict) else {}
+    if repo.get("dirty") is not False:
+        blockers.append("server_side_totem_core_release_gate_repo_dirty")
+    guardrails = gate.get("guardrails") if isinstance(gate.get("guardrails"), dict) else {}
+    if guardrails.get("github_used") is not False:
+        blockers.append("server_side_totem_core_release_gate_github_used")
+    steps = gate.get("steps")
+    if not isinstance(steps, list) or not steps:
+        blockers.append("server_side_totem_core_release_gate_steps_missing")
+    elif any(not isinstance(step, dict) or step.get("passed") is not True for step in steps):
+        blockers.append("server_side_totem_core_release_gate_steps_not_all_passed")
+    checks = gate.get("package", {}).get("checks") if isinstance(gate.get("package"), dict) else {}
+    if not isinstance(checks, dict) or not checks:
+        blockers.append("server_side_totem_core_release_gate_package_checks_missing")
+    elif any(value is not True for value in checks.values()):
+        blockers.append("server_side_totem_core_release_gate_package_checks_not_all_passed")
 
 
 def package_path_matches(value: Any, *, expected_path: Path, release_dir: Path) -> bool:
@@ -855,6 +1011,11 @@ def validate_audit_log(log_path: Path, data: dict[str, Any], blockers: list[str]
                 blockers.append(f"server_side_audit_log_event_unexpected:{event}")
         else:
             blockers.append(f"server_side_audit_log_event_missing_value:{index}")
+        for hit in secret_json_paths(item):
+            blockers.append(f"server_side_audit_log_secret_material:{index}:{hit}")
+        for key in AUDIT_FORBIDDEN_POSITIVE_CLAIMS:
+            if item.get(key) is True:
+                blockers.append(f"server_side_audit_log_forbidden_positive_claim:{event}:{key}")
         if not isinstance(item.get("actor"), str) or not item.get("actor"):
             blockers.append(f"server_side_audit_log_actor:{index}")
         if not isinstance(item.get("at_utc"), str) or not item.get("at_utc").endswith("Z"):
@@ -962,6 +1123,12 @@ def validate_data(data: dict[str, Any],
     blockers.extend(trusted_key_errors or [])
     blockers.extend(trust_anchor_errors or [])
     resolved_trusted_keys = trusted_keys or {}
+    unexpected_fields = sorted(set(data) - set(ALLOWED_TOP_LEVEL_FIELDS))
+    if unexpected_fields:
+        blockers.append("server_side_unexpected_fields")
+        blockers.extend(f"server_side_unexpected_field:{key}" for key in unexpected_fields)
+    for hit in secret_json_paths(data):
+        blockers.append(f"server_side_secret_material_present:{hit}")
     if expected_component is not None and expected_component not in EXPECTED_COMPONENT_SCOPE:
         blockers.append("server_side_expected_component_invalid")
     if data.get("schema") != SCHEMA:
@@ -1203,33 +1370,47 @@ def write_fixture_release(root: Path,
                           component: str = "totem-core",
                           release_gate_name: str = FIXTURE_RELEASE_GATE_NAME) -> Path:
     root.mkdir(parents=True, exist_ok=True)
-    payload_path = root / FIXTURE_PAYLOAD_NAME
-    payload_path.write_bytes(b"C18 server-side governance fixture payload\n")
-    payload_sha256 = sha256_file(payload_path)
-    manifest = {
-        "schema": "dadooh.totem.update.v1",
-        "component": component,
-        "version": "server-fixture",
-        "channel": "homologation",
-        "payload": payload_path.name,
-        "payload_sha256": payload_sha256,
-        "source_commit": "a" * 40,
-        "created_at_utc": "2026-06-12T00:00:00Z",
-    }
-    manifest_path = root / FIXTURE_MANIFEST_NAME
-    write_json(manifest_path, manifest)
-    release_gate = {
-        "schema": RELEASE_GATE_SCHEMA_BY_COMPONENT[component],
-        "passed": True,
-        "package": {
-            "manifest": manifest_path.name,
+    if component == "player-runtime":
+        version = "server-fixture"
+        payload_path = write_player_runtime_payload(root, version, SNAPSHOT_KIOSK.read_text(encoding="utf-8"))
+        manifest_path = write_player_runtime_manifest(root, version, payload_path)
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload_sha256 = sha256_file(payload_path)
+        release_gate = validate_player_runtime_release(manifest_path, payload_path)
+    else:
+        payload_path = root / FIXTURE_PAYLOAD_NAME
+        payload_path.write_bytes(b"C18 server-side governance fixture payload\n")
+        payload_sha256 = sha256_file(payload_path)
+        manifest = {
+            "schema": "dadooh.totem.update.v1",
+            "component": component,
+            "version": "server-fixture",
+            "channel": "homologation",
             "payload": payload_path.name,
             "payload_sha256": payload_sha256,
-            "source_commit": manifest["source_commit"],
-            "component": manifest["component"],
-            "channel": manifest["channel"],
-        },
-    }
+            "source_commit": "a" * 40,
+            "source_dirty": False,
+            "created_at_utc": "2026-06-12T00:00:00Z",
+        }
+        manifest_path = root / FIXTURE_MANIFEST_NAME
+        write_json(manifest_path, manifest)
+        release_gate = {
+            "schema": RELEASE_GATE_SCHEMA_BY_COMPONENT[component],
+            "passed": True,
+            "steps": [{"name": "fixture_release_gate", "passed": True}],
+            "repo": {"dirty": False},
+            "guardrails": {"github_used": False},
+            "package": {
+                "manifest": manifest_path.name,
+                "payload": payload_path.name,
+                "payload_sha256": payload_sha256,
+                "source_commit": manifest["source_commit"],
+                "component": manifest["component"],
+                "channel": manifest["channel"],
+                "checks": {"fixture_release_gate": True},
+                "passed": True,
+            },
+        }
     release_gate_path = root / release_gate_name
     write_json(release_gate_path, release_gate)
     asset_hashes = {
@@ -1277,7 +1458,12 @@ def write_fixture_release(root: Path,
         proof_files=proof_files,
         test_fixture=True,
     )
-    data["release_assets"]["release_gate"] = release_gate_path.name
+    data["release_assets"] = {
+        "manifest": manifest_path.name,
+        "payload": payload_path.name,
+        "release_gate": release_gate_path.name,
+        "audit_log": audit_path.name,
+    }
     evidence_path = root / SERVER_SIDE_EVIDENCE_FILENAME
     write_json(evidence_path, data)
     return evidence_path
@@ -1320,34 +1506,49 @@ def write_signed_fixture_release(root: Path, *, component: str = "totem-core") -
     if public_key_sha256 is None:
         raise RuntimeError("openssl could not derive public key fingerprint")
 
-    payload_path = root / SIGNED_FIXTURE_PAYLOAD_NAME
-    payload_path.write_bytes(b"C18 signed server-side governance fixture payload\n")
-    payload_sha256 = sha256_file(payload_path)
-    manifest = {
-        "schema": "dadooh.totem.update.v1",
-        "component": component,
-        "version": "signed-release",
-        "channel": "homologation",
-        "payload": payload_path.name,
-        "payload_sha256": payload_sha256,
-        "source_commit": "b" * 40,
-        "created_at_utc": "2026-06-12T00:00:00Z",
-    }
-    manifest_path = root / SIGNED_FIXTURE_MANIFEST_NAME
-    write_json(manifest_path, manifest)
-    release_gate_path = root / FIXTURE_RELEASE_GATE_NAME
-    write_json(release_gate_path, {
-        "schema": RELEASE_GATE_SCHEMA_BY_COMPONENT[component],
-        "passed": True,
-        "package": {
-            "manifest": manifest_path.name,
+    if component == "player-runtime":
+        version = "signed-release"
+        payload_path = write_player_runtime_payload(root, version, SNAPSHOT_KIOSK.read_text(encoding="utf-8"))
+        manifest_path = write_player_runtime_manifest(root, version, payload_path)
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload_sha256 = sha256_file(payload_path)
+        release_gate = validate_player_runtime_release(manifest_path, payload_path)
+    else:
+        payload_path = root / SIGNED_FIXTURE_PAYLOAD_NAME
+        payload_path.write_bytes(b"C18 signed server-side governance fixture payload\n")
+        payload_sha256 = sha256_file(payload_path)
+        manifest = {
+            "schema": "dadooh.totem.update.v1",
+            "component": component,
+            "version": "signed-release",
+            "channel": "homologation",
             "payload": payload_path.name,
             "payload_sha256": payload_sha256,
-            "source_commit": manifest["source_commit"],
-            "component": manifest["component"],
-            "channel": manifest["channel"],
-        },
-    })
+            "source_commit": "b" * 40,
+            "source_dirty": False,
+            "created_at_utc": "2026-06-12T00:00:00Z",
+        }
+        manifest_path = root / SIGNED_FIXTURE_MANIFEST_NAME
+        write_json(manifest_path, manifest)
+        release_gate = {
+            "schema": RELEASE_GATE_SCHEMA_BY_COMPONENT[component],
+            "passed": True,
+            "steps": [{"name": "fixture_release_gate", "passed": True}],
+            "repo": {"dirty": False},
+            "guardrails": {"github_used": False},
+            "package": {
+                "manifest": manifest_path.name,
+                "payload": payload_path.name,
+                "payload_sha256": payload_sha256,
+                "source_commit": manifest["source_commit"],
+                "component": manifest["component"],
+                "channel": manifest["channel"],
+                "checks": {"fixture_release_gate": True},
+                "passed": True,
+            },
+        }
+    release_gate_path = root / FIXTURE_RELEASE_GATE_NAME
+    write_json(release_gate_path, release_gate)
     asset_hashes = {
         "manifest": sha256_file(manifest_path),
         "payload": payload_sha256,
@@ -1743,6 +1944,18 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("server_side_auto_pull_policy_enabled", result["blockers"])
 
+    def test_main_evidence_rejects_unexpected_fields_and_secret_material(self) -> None:
+        data = valid_fixture()
+        data["operator_secret_token"] = "redacted"
+        data["leaked_private_key"] = "-----BEGIN PRIVATE KEY-----\nredacted\n-----END PRIVATE KEY-----"
+        result = validate_data(data)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_unexpected_fields", result["blockers"])
+        self.assertIn("server_side_unexpected_field:operator_secret_token", result["blockers"])
+        self.assertIn("server_side_unexpected_field:leaked_private_key", result["blockers"])
+        self.assertIn("server_side_secret_material_present:$.operator_secret_token", result["blockers"])
+        self.assertIn("server_side_secret_material_present:$.leaked_private_key", result["blockers"])
+
     def test_channel_inheritance_denies(self) -> None:
         data = valid_fixture()
         data["channel_inheritance_allowed"] = True
@@ -1831,7 +2044,7 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             path = write_fixture_release(root, component="player-runtime")
-            manifest_path = root / FIXTURE_MANIFEST_NAME
+            manifest_path = next(root.glob("dadooh-player-runtime-*.manifest.json"))
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest.pop("source_commit")
             write_json(manifest_path, manifest)
@@ -1859,6 +2072,24 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("server_side_asset_attestation_proof_hash_mismatch:payload", result["blockers"])
         self.assertIn("server_side_asset_attestation_proof_subject_sha256:payload", result["blockers"])
+
+    def test_attestation_proof_rejects_unexpected_secret_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = write_fixture_release(root)
+            evidence = json.loads(path.read_text(encoding="utf-8"))
+            proof_path = root / "attestations" / "payload.attestation.json"
+            proof = json.loads(proof_path.read_text(encoding="utf-8"))
+            proof["operator_secret_token"] = "redacted"
+            write_json(proof_path, proof)
+            for item in evidence["asset_attestations"]:
+                if item["asset"] == "payload":
+                    item["attestation_sha256"] = sha256_file(proof_path)
+            write_json(path, evidence)
+            result = evaluate(path, allow_test_fixtures=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_attestation_proof_secret_material:payload:$.operator_secret_token", result["blockers"])
+        self.assertIn("server_side_asset_attestation_proof_unexpected_fields:payload", result["blockers"])
 
     def test_tampered_release_gate_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1894,6 +2125,89 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertIn("server_side_asset_attestation_sha256_mismatch:audit-log", result["blockers"])
         self.assertIn("server_side_audit_log_event_missing:stable_promoted", result["blockers"])
         self.assertIn("server_side_audit_log_hash_mismatch:release_created:payload", result["blockers"])
+
+    def test_audit_log_positive_claims_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = write_fixture_release(root)
+            audit_path = root / FIXTURE_AUDIT_LOG_NAME
+            lines = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+            lines[0]["promotion_performed"] = True
+            lines[1]["auto_pull_enabled"] = True
+            lines[2]["public_player_runtime_thaw"] = True
+            lines[3]["operator_secret_token"] = "redacted"
+            audit_path.write_text("\n".join(json.dumps(line, sort_keys=True) for line in lines) + "\n", encoding="utf-8")
+            result = evaluate(path, allow_test_fixtures=True)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_audit_log_forbidden_positive_claim:release_created:promotion_performed",
+            result["blockers"],
+        )
+        self.assertIn(
+            "server_side_audit_log_forbidden_positive_claim:asset_attested:auto_pull_enabled",
+            result["blockers"],
+        )
+        self.assertIn(
+            "server_side_audit_log_forbidden_positive_claim:channel_selected:public_player_runtime_thaw",
+            result["blockers"],
+        )
+        self.assertIn("server_side_audit_log_secret_material:4:$.operator_secret_token", result["blockers"])
+
+    def test_totem_core_minimal_release_gate_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = write_fixture_release(root)
+            gate_path = root / FIXTURE_RELEASE_GATE_NAME
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+            write_json(gate_path, {
+                "schema": gate["schema"],
+                "passed": True,
+                "package": {
+                    "manifest": gate["package"]["manifest"],
+                    "payload": gate["package"]["payload"],
+                    "payload_sha256": gate["package"]["payload_sha256"],
+                    "source_commit": gate["package"]["source_commit"],
+                    "component": gate["package"]["component"],
+                    "channel": gate["package"]["channel"],
+                },
+            })
+            result = evaluate(path, allow_test_fixtures=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_totem_core_release_gate_steps_missing", result["blockers"])
+        self.assertIn("server_side_totem_core_release_gate_repo_dirty", result["blockers"])
+        self.assertIn("server_side_totem_core_release_gate_github_used", result["blockers"])
+        self.assertIn("server_side_totem_core_release_gate_package_checks_missing", result["blockers"])
+
+    def test_player_runtime_stable_or_minimal_release_gate_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = write_fixture_release(
+                root,
+                component="player-runtime",
+                release_gate_name=PLAYER_RUNTIME_FIXTURE_RELEASE_GATE_NAME,
+            )
+            manifest_path = next(root.glob("dadooh-player-runtime-*.manifest.json"))
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["channel"] = "stable"
+            write_json(manifest_path, manifest)
+            gate_path = root / PLAYER_RUNTIME_FIXTURE_RELEASE_GATE_NAME
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+            write_json(gate_path, {
+                "schema": gate["schema"],
+                "passed": True,
+                "package": {
+                    "manifest": gate["package"]["manifest"],
+                    "payload": gate["package"]["payload"],
+                    "payload_sha256": gate["package"]["payload_sha256"],
+                    "source_commit": gate["package"]["source_commit"],
+                    "component": gate["package"]["component"],
+                    "channel": "stable",
+                },
+            })
+            result = evaluate(path, expected_component="player-runtime", allow_test_fixtures=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_player_runtime_stable_release_gate_forbidden", result["blockers"])
+        self.assertIn("server_side_player_runtime_release_gate_recompute_failed", result["blockers"])
 
     def test_release_assets_must_not_be_symlinks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

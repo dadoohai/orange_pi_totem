@@ -60,6 +60,7 @@ PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_p
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
 SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
 SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_asset_collect.py"
+SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_evidence_build.py"
 TOTEM_CORE_PUBLISH_ASSET_LIST_PATH = REPO_ROOT / "scripts" / "qa" / "c18_totem_core_publish_asset_list.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
@@ -1993,6 +1994,24 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("this_gate_does_not_enable_auto_pull", server_side_gate)
         self.assertNotIn("gh release", server_side_gate)
         self.assertNotIn("apply-github", server_side_gate)
+
+        evidence_build = SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.server_side_publish_evidence_build.v1", evidence_build)
+        self.assertIn("signing_private_key_inside_release_dir", evidence_build)
+        self.assertIn("signing_private_key_inside_repo", evidence_build)
+        self.assertIn("trusted_public_key_inside_release_dir", evidence_build)
+        self.assertIn("trust_anchor_evidence_inside_release_dir", evidence_build)
+        self.assertIn('"promotion_performed": False', evidence_build)
+        self.assertIn("this_tool_does_not_publish_releases", evidence_build)
+        self.assertIn("this_tool_does_not_enable_auto_pull", evidence_build)
+        self.assertIn("test_generates_player_runtime_evidence_accepted_by_gate", evidence_build)
+        self.assertIn("test_refuses_private_key_inside_release_dir", evidence_build)
+        self.assertIn("test_refuses_private_key_inside_repo", evidence_build)
+        self.assertIn("test_refuses_public_key_inside_release_dir", evidence_build)
+        self.assertIn("test_refuses_trust_anchor_inside_release_dir", evidence_build)
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("c18_server_side_publish_evidence_build.py", release_gate)
+        self.assertIn("c18_server_side_publish_evidence_build", release_gate)
 
         pilot_gate = PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.homologation_pilot_readiness.v1", pilot_gate)

@@ -552,6 +552,13 @@ eventos de auditoria obrigatorios. Fora de self-test, fixture e evidencia sem
 trust anchor/signature verificada continuam bloqueadas; o gate nao publica
 release, nao habilita auto-pull, nao promove stable e nao faz thaw de
 `player-runtime`.
+Para produzir essa familia a partir de uma release ja existente, use
+`scripts/qa/c18_server_side_publish_evidence_build.py`: o gerador e offline,
+exige chave privada de assinatura, chave publica confiavel e trust-anchor fora
+do diretorio da release, escreve `audit-log.ndjson`, provas JSON canonicas,
+assinaturas destacadas e `c18-server-side-publish-governance.json`, e em seguida
+reroda o gate real. Ele tambem nao publica release, nao habilita auto-pull, nao
+promove stable e nao faz thaw.
 
 Entre H1 e H2 existe somente um caminho intermediario controlado:
 `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido
