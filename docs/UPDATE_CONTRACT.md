@@ -459,7 +459,8 @@ esses hashes devem bater com os arquivos de evidencia efetivamente passados ao
 avaliador (`release_gate`, server-side, soak, matriz power-loss e bundle H2
 pre-stable); hashes arbitrarios ou stale nao fecham a promocao. O publisher de
 `totem-core` deve preservar `c18-ota-release-gate.json` junto da release para
-manter a trilha de auditoria.
+manter a trilha de auditoria. O stable gate tambem aceita esses caminhos como
+argumentos para validar os hashes em modo artifact-bound fora do H2.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e

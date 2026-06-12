@@ -366,14 +366,8 @@ def evaluate_soak(summary_path: Path | None) -> dict[str, Any]:
 def evaluate_stable_promotion(path: Path | None, *, expected_hashes: dict[str, str]) -> dict[str, Any]:
     if path is None:
         return step(False, ["missing_stable_promotion_evidence"])
-    result = evaluate_stable_promotion_gate(path)
+    result = evaluate_stable_promotion_gate(path, expected_hashes=expected_hashes)
     blockers = list(result.get("blockers", []))
-    errors: list[str] = []
-    data = read_json(path, errors, "stable_promotion")
-    blockers.extend(errors)
-    for field, expected in expected_hashes.items():
-        if data.get(field) != expected:
-            blockers.append(f"stable_promotion_{field}_mismatch")
     return step(
         not blockers,
         blockers,
