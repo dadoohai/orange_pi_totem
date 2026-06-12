@@ -72,10 +72,11 @@ foi aceita pelo release gate em modo `decisive` na rodada em que a golden era
 `1t`. Ela prova o fluxo lab-only A->B->A de `player-runtime` em `/data`, com
 reboot controlado, B adotada de `/data/player-runtime/current`, deep-health do
 candidato B e rollback para A real em `/data`. Apos o bump para golden `1u`, o
-gate atual e image-pinned a `1u` e rejeita essa evidencia `1t` como autorizacao
-`decisive` corrente; um M6 re-rodado contra a golden atual e o caminho para
-restaurar uma autorizacao decisiva viva. Esse marco nao abre thaw publico,
-publish GitHub, auto-pull, `stable`, producao, power-loss fisico nem soak.
+gate passou a rejeitar essa evidencia `1t` como autorizacao `decisive`
+corrente. Hoje essa autorizacao decisiva viva ja foi restaurada pelo bundle
+`1x` descrito abaixo, sem promover a `1x` como golden de recovery/delivery.
+Esse marco `1t` nao abre thaw publico, publish GitHub, auto-pull, `stable`,
+producao, power-loss fisico nem soak.
 
 Ou seja: para recovery/baseline validado de laboratorio, partir da imagem `1u`.
 A `1t` permanece como golden historica e como base do M6 A->B->A anterior; a
