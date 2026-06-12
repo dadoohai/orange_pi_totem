@@ -289,6 +289,15 @@
   "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
   "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
   "image_tag": "c18-hwdecode-lab-1x",
+  "non_claims": [
+    "not_production_readiness",
+    "not_stable_promotion",
+    "not_public_thaw",
+    "not_auto_pull_enablement",
+    "not_24h_soak",
+    "not_full_17_of_17_powerloss_matrix",
+    "not_server_side_publish_governance"
+  ],
   "rollback_expectation": "data-current-after-state-success",
   "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
   "setup_candidate_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
