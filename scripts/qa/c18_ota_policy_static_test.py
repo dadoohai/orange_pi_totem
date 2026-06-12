@@ -58,6 +58,7 @@ PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtim
 PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_pilot_readiness_gate.py"
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
 SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
+SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_asset_collect.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
@@ -278,17 +279,23 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("stable_promotion_evidence_sha256", publish)
         self.assertIn("stable evidence sha256 mismatch", publish)
         self.assertIn("ACTUAL_STABLE_EVIDENCE_SHA", publish)
-        self.assertIn("collect_stable_server_side_assets()", publish)
-        self.assertIn("release_assets", publish)
-        self.assertIn("asset_attestations", publish)
-        self.assertIn('for field in ("manifest", "payload", "release_gate", "audit_log")', publish)
-        self.assertIn('for field in ("proof_file", "signature_file")', publish)
-        self.assertIn("server-side asset symlink", publish)
+        self.assertIn("c18_server_side_publish_asset_collect.py", publish)
+        self.assertIn("--server-side-evidence", publish)
+        self.assertIn("--trust-anchor-evidence", publish)
+        self.assertIn("--expected-release-gate-sha256", publish)
         self.assertIn("STABLE_SERVER_SIDE_ASSETS", publish)
         self.assertIn("append_unique_asset", publish)
         self.assertIn("stable release gate summary sha256 mismatch after generation", publish)
         self.assertIn("stable_server_side_assets =", publish)
         self.assertIn('log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"', publish)
+        asset_collect = SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH.read_text(encoding="utf-8")
+        self.assertIn("release_assets", asset_collect)
+        self.assertIn("asset_attestations", asset_collect)
+        self.assertIn('for field in ("manifest", "payload", "release_gate", "audit_log")', asset_collect)
+        self.assertIn('proof.get("signature_file")', asset_collect)
+        self.assertIn("server_side_release_gate_sha256_mismatch", asset_collect)
+        self.assertIn("test_signed_fixture_collects_proofs_signatures_and_trust_anchor", asset_collect)
+        self.assertIn("test_release_gate_hash_mismatch_fails", asset_collect)
         stable_gate = STABLE_PROMOTION_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.stable_promotion.v1", stable_gate)
         self.assertIn("h2_readiness_passed", stable_gate)

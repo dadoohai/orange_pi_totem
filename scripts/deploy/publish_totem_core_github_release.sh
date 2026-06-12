@@ -116,64 +116,6 @@ print(val)
 " "$1" "$2"
 }
 
-collect_stable_server_side_assets() {
-  python3 - "$STABLE_SERVER_SIDE_EVIDENCE" "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-evidence = Path(sys.argv[1]).resolve(strict=True)
-trust_anchor = Path(sys.argv[2]).resolve(strict=True)
-release_dir = evidence.parent.resolve(strict=True)
-data = json.loads(evidence.read_text(encoding="utf-8"))
-
-def release_file(raw: object, label: str) -> Path:
-    if not isinstance(raw, str) or not raw or raw.startswith("/") or ".." in Path(raw).parts:
-        raise SystemExit(f"invalid server-side asset path for {label}: {raw!r}")
-    candidate = release_dir / raw
-    current = release_dir
-    for part in Path(raw).parts:
-        current = current / part
-        if current.is_symlink():
-            raise SystemExit(f"server-side asset symlink for {label}: {raw!r}")
-    path = candidate.resolve(strict=True)
-    try:
-        path.relative_to(release_dir)
-    except ValueError as exc:
-        raise SystemExit(f"server-side asset outside release dir for {label}: {raw!r}") from exc
-    if not path.is_file():
-        raise SystemExit(f"missing server-side asset for {label}: {raw!r}")
-    return path
-
-paths = [evidence]
-release_assets = data.get("release_assets")
-if not isinstance(release_assets, dict):
-    raise SystemExit("server-side evidence missing release_assets")
-for field in ("manifest", "payload", "release_gate", "audit_log"):
-    paths.append(release_file(release_assets.get(field), field))
-
-attestations = data.get("asset_attestations")
-if not isinstance(attestations, list):
-    raise SystemExit("server-side evidence missing asset_attestations")
-for item in attestations:
-    if not isinstance(item, dict):
-        raise SystemExit("server-side asset_attestations contains non-object")
-    for field in ("proof_file", "signature_file"):
-        value = item.get(field)
-        if isinstance(value, str) and value:
-            paths.append(release_file(value, f"{item.get('asset')}:{field}"))
-
-paths.append(trust_anchor)
-seen: set[str] = set()
-for path in paths:
-    key = str(path)
-    if key in seen:
-        continue
-    seen.add(key)
-    print(key)
-PY
-}
-
 append_unique_asset() {
   local candidate="$1"
   local existing
@@ -245,11 +187,6 @@ if [[ "$CHANNEL" == "stable" ]]; then
   then
     die "stable promotion evidence failed scripts/qa/c18_stable_promotion_gate.py"
   fi
-  STABLE_SERVER_SIDE_ASSET_LIST="$(collect_stable_server_side_assets)" \
-    || die "stable server-side publish assets could not be collected from evidence"
-  while IFS= read -r asset; do
-    [[ -n "$asset" ]] && STABLE_SERVER_SIDE_ASSETS+=( "$asset" )
-  done <<< "$STABLE_SERVER_SIDE_ASSET_LIST"
   [[ "$STABLE_EVIDENCE_SHA" =~ ^[0-9a-f]{64}$ ]] \
     || die "stable manifest must include stable_promotion_evidence_sha256"
   ACTUAL_STABLE_EVIDENCE_SHA="$(sha256sum "$STABLE_EVIDENCE" | awk '{print $1}')"
@@ -278,6 +215,15 @@ if [[ "$CHANNEL" == "stable" ]]; then
   ACTUAL_GATE_EVIDENCE_SHA="$(sha256sum "$GATE_EVIDENCE" | awk '{print $1}')"
   [[ "$ACTUAL_GATE_EVIDENCE_SHA" == "$STABLE_RELEASE_GATE_SUMMARY_SHA" ]] \
     || die "stable release gate summary sha256 mismatch after generation: actual=$ACTUAL_GATE_EVIDENCE_SHA expected=$STABLE_RELEASE_GATE_SUMMARY_SHA"
+  STABLE_SERVER_SIDE_ASSET_LIST="$(
+    PYTHONDONTWRITEBYTECODE=1 python3 "$REPO_ROOT/scripts/qa/c18_server_side_publish_asset_collect.py" \
+      --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
+      --trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
+      --expected-release-gate-sha256 "$STABLE_RELEASE_GATE_SUMMARY_SHA"
+  )" || die "stable server-side publish assets could not be collected from evidence"
+  while IFS= read -r asset; do
+    [[ -n "$asset" ]] && STABLE_SERVER_SIDE_ASSETS+=( "$asset" )
+  done <<< "$STABLE_SERVER_SIDE_ASSET_LIST"
 fi
 
 if [[ -n "$TAG_OVERRIDE" ]]; then
