@@ -94,6 +94,113 @@ def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
     }
 
 
+def repo_rel(path: Path) -> str | None:
+    try:
+        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def repo_clean_guard() -> dict[str, Any]:
+    proc = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    blockers: list[str] = []
+    if proc.returncode != 0:
+        blockers.append("git_status_failed")
+    elif proc.stdout.strip():
+        blockers.append("repo_dirty")
+    return step(
+        not blockers,
+        blockers,
+        stdout_tail=proc.stdout[-1200:],
+        stderr_tail=proc.stderr[-1200:],
+    )
+
+
+def git_lines(args: list[str]) -> tuple[int, list[str], str]:
+    proc = subprocess.run(
+        args,
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    return proc.returncode, [line for line in proc.stdout.splitlines() if line], proc.stderr
+
+
+def tracked_input_guard(paths: list[Path]) -> dict[str, Any]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {
+        "paths": [str(path) for path in paths],
+        "untracked": [],
+        "ignored": [],
+        "manifest_untracked_entries": [],
+        "outside_repo": [],
+    }
+    for path in paths:
+        rel = repo_rel(path)
+        if rel is None:
+            blockers.append("input_path_outside_repo")
+            details["outside_repo"].append(str(path))
+            continue
+        if path.is_dir():
+            tracked_rc, tracked_files, _tracked_err = git_lines(["git", "ls-files", "--", rel])
+            ignored_rc, ignored_files, _ignored_err = git_lines([
+                "git", "ls-files", "--others", "--ignored", "--exclude-standard", "--", rel,
+            ])
+            untracked_rc, untracked_files, _untracked_err = git_lines([
+                "git", "ls-files", "--others", "--exclude-standard", "--", rel,
+            ])
+            if tracked_rc != 0 or not tracked_files:
+                blockers.append("input_dir_not_tracked")
+                details["untracked"].append(rel)
+            if ignored_rc != 0:
+                blockers.append("input_dir_ignored_scan_failed")
+            elif ignored_files:
+                blockers.append("input_dir_ignored_files_present")
+                details["ignored"].extend(ignored_files[:20])
+            if untracked_rc != 0:
+                blockers.append("input_dir_untracked_scan_failed")
+            elif untracked_files:
+                blockers.append("input_dir_untracked_files_present")
+                details["untracked"].extend(untracked_files[:20])
+            manifest_path = path / "evidence-manifest.json"
+            tracked_set = set(tracked_files)
+            if manifest_path.exists():
+                manifest_errors: list[str] = []
+                manifest = read_json(manifest_path, manifest_errors, "tracked_input_manifest")
+                if manifest_errors:
+                    blockers.extend(manifest_errors)
+                manifest_rel = f"{rel}/evidence-manifest.json"
+                if manifest_rel not in tracked_set:
+                    blockers.append("input_manifest_not_tracked")
+                    details["manifest_untracked_entries"].append(manifest_rel)
+                manifest_files = manifest.get("files")
+                if not isinstance(manifest_files, list):
+                    manifest_files = manifest.get("artifacts")
+                if isinstance(manifest_files, list):
+                    for item in manifest_files:
+                        if not isinstance(item, dict) or not isinstance(item.get("file"), str):
+                            continue
+                        rel_file = f"{rel}/{item['file']}"
+                        if rel_file not in tracked_set:
+                            blockers.append("input_manifest_entries_not_tracked")
+                            details["manifest_untracked_entries"].append(rel_file)
+        else:
+            tracked_rc, _tracked_files, _tracked_err = git_lines(["git", "ls-files", "--error-unmatch", "--", rel])
+            if tracked_rc != 0:
+                blockers.append("input_file_not_tracked")
+                details["untracked"].append(rel)
+    return step(not blockers, sorted(set(blockers)), **details)
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -277,18 +384,30 @@ def evaluate_h1(summary_path: Path | None) -> dict[str, Any]:
     steps = summary.get("steps")
     step_items = [item for item in steps if isinstance(item, dict)] if isinstance(steps, list) else []
     step_names = [item.get("name") for item in step_items]
-    if not any(
-        str(item.get("name")).startswith("c18_player_runtime_teardown_evidence:")
-        and item.get("passed") is True
-        for item in step_items
-    ):
+    required_exact_steps = (
+        ("c18_player_runtime_data_coldboot_evidence", "h1_data_coldboot_step_missing", "h1_data_coldboot_step_not_passed"),
+        ("c18_player_runtime_data_evidence", "h1_data_evidence_step_missing", "h1_data_evidence_step_not_passed"),
+        ("c18_player_runtime_data_evidence_link", "h1_data_evidence_link_step_missing", "h1_data_evidence_link_step_not_passed"),
+        (
+            "c18_player_runtime_production_stop_teardown_required",
+            "h1_production_stop_teardown_step_missing",
+            "h1_production_stop_teardown_step_not_passed",
+        ),
+    )
+    for expected_name, missing_blocker, not_passed_blocker in required_exact_steps:
+        matching_steps = [item for item in step_items if item.get("name") == expected_name]
+        if not matching_steps:
+            blockers.append(missing_blocker)
+        elif not any(item.get("passed") is True for item in matching_steps):
+            blockers.append(not_passed_blocker)
+    teardown_steps = [
+        item for item in step_items
+        if str(item.get("name")).startswith("c18_player_runtime_teardown_evidence:")
+    ]
+    if not teardown_steps:
         blockers.append("h1_teardown_evidence_step_missing")
-    if not any(
-        str(item.get("name")).startswith("c18_player_runtime_data_evidence")
-        and item.get("passed") is True
-        for item in step_items
-    ):
-        blockers.append("h1_data_evidence_step_missing")
+    elif not any(item.get("passed") is True for item in teardown_steps):
+        blockers.append("h1_teardown_evidence_step_not_passed")
     return step(not blockers, blockers, summary_path=str(summary_path), step_count=len(step_names))
 
 
@@ -499,7 +618,26 @@ def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
-def evaluate(args: argparse.Namespace) -> dict[str, Any]:
+def h2_tracked_input_paths(args: argparse.Namespace) -> list[Path]:
+    paths: list[Path] = []
+    for path in (
+        getattr(args, "h1_release_gate_summary", None),
+        *(getattr(args, "powerloss_evidence_dir", []) or []),
+        getattr(args, "soak_summary", None),
+        getattr(args, "stable_promotion_evidence", None),
+        getattr(args, "server_side_trust_anchor_evidence", None),
+        *(getattr(args, "server_side_trusted_key_pem", []) or []),
+        getattr(args, "operator_thaw_decision", None),
+    ):
+        if path is not None:
+            paths.append(path)
+    server_side = getattr(args, "server_side_evidence", None)
+    if server_side is not None:
+        paths.append(server_side.parent if server_side.is_file() else server_side)
+    return paths
+
+
+def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> dict[str, Any]:
     expected_stable_hashes = stable_expected_hashes(args)
     allow_test_fixtures = bool(getattr(args, "allow_test_fixtures", False))
     checks = {
@@ -518,6 +656,9 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "explicit_operator_thaw_decision": evaluate_operator_decision(args),
     }
+    if require_repo_clean:
+        checks["repo_clean"] = repo_clean_guard()
+        checks["tracked_inputs"] = tracked_input_guard(h2_tracked_input_paths(args))
     blockers = [
         f"{name}:{blocker}"
         for name, result in checks.items()
@@ -561,7 +702,10 @@ def complete_args(root: Path) -> argparse.Namespace:
         "passed": True,
         "player_runtime_data_evidence": {"mode": "decisive", "status": "passed"},
         "steps": [
+            {"name": "c18_player_runtime_data_coldboot_evidence", "passed": True},
             {"name": "c18_player_runtime_data_evidence", "passed": True},
+            {"name": "c18_player_runtime_data_evidence_link", "passed": True},
+            {"name": "c18_player_runtime_production_stop_teardown_required", "passed": True},
             {"name": "c18_player_runtime_teardown_evidence:1", "passed": True},
         ],
     })
@@ -677,6 +821,15 @@ def complete_args(root: Path) -> argparse.Namespace:
 
 
 class H2ReadinessGateSelfTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.real_tracked_input_guard = tracked_input_guard
+        self.repo_clean_patch = mock.patch(__name__ + ".repo_clean_guard", return_value=step(True, []))
+        self.tracked_inputs_patch = mock.patch(__name__ + ".tracked_input_guard", return_value=step(True, []))
+        self.repo_clean_patch.start()
+        self.tracked_inputs_patch.start()
+        self.addCleanup(self.repo_clean_patch.stop)
+        self.addCleanup(self.tracked_inputs_patch.stop)
+
     def test_default_denies_every_required_family(self) -> None:
         args = argparse.Namespace(
             h1_release_gate_summary=None,
@@ -693,6 +846,60 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("explicit_operator_thaw_decision:missing_operator_thaw_decision", result["blockers"])
         self.assertIn("this_gate_does_not_thaw_player_runtime", result["non_claims"])
+
+    def test_repo_clean_and_tracked_inputs_are_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            with (
+                mock.patch(__name__ + ".repo_clean_guard", return_value=step(False, ["repo_dirty"])),
+                mock.patch(__name__ + ".tracked_input_guard", return_value=step(False, ["input_file_not_tracked"])),
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args, require_repo_clean=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("repo_clean:repo_dirty", result["blockers"])
+        self.assertIn("tracked_inputs:input_file_not_tracked", result["blockers"])
+
+    def test_tracked_input_paths_include_server_side_release_dir_and_trust_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = complete_args(root)
+            key = root / "release-signing.pub.pem"
+            key.write_text("public key\n", encoding="utf-8")
+            args.server_side_trusted_key_pem = [key]
+            paths = h2_tracked_input_paths(args)
+        self.assertIn(args.h1_release_gate_summary, paths)
+        self.assertIn(args.server_side_evidence.parent, paths)
+        self.assertNotIn(args.server_side_evidence, paths)
+        self.assertIn(args.server_side_trust_anchor_evidence, paths)
+        self.assertIn(key, paths)
+        self.assertIn(args.operator_thaw_decision, paths)
+        self.assertTrue(all(path in paths for path in args.powerloss_evidence_dir))
+
+    def test_tracked_input_guard_accepts_tracked_artifacts_manifest(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-h2-tracked-artifacts-") as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=root, check=True)
+            evidence = root / "docs" / "evidence" / "data"
+            evidence.mkdir(parents=True)
+            readme = evidence / "README.md"
+            readme.write_text("tracked artifact evidence\n", encoding="utf-8")
+            write_json(evidence / "evidence-manifest.json", {
+                "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
+                "artifacts": [{
+                    "file": "README.md",
+                    "bytes": readme.stat().st_size,
+                    "sha256": sha256_file(readme),
+                }],
+            })
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "evidence"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            with mock.patch(__name__ + ".REPO_ROOT", root):
+                result = self.real_tracked_input_guard([evidence])
+        self.assertTrue(result["passed"], result)
 
     def test_complete_fixture_passes_when_each_powerloss_dir_gate_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -763,7 +970,28 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
             ):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
-        self.assertIn("h1_decisive_bundle:h1_teardown_evidence_step_missing", result["blockers"])
+        self.assertIn("h1_decisive_bundle:h1_teardown_evidence_step_not_passed", result["blockers"])
+        self.assertIn("h1_decisive_bundle:h1_data_evidence_step_not_passed", result["blockers"])
+
+    def test_h1_git_guard_step_does_not_substitute_real_data_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            h1 = json.loads(args.h1_release_gate_summary.read_text(encoding="utf-8"))
+            h1["steps"] = [
+                item for item in h1["steps"]
+                if item.get("name") != "c18_player_runtime_data_evidence"
+            ]
+            h1["steps"].append({
+                "name": "c18_player_runtime_data_evidence_git_guard:1",
+                "passed": True,
+            })
+            write_json(args.h1_release_gate_summary, h1)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
         self.assertIn("h1_decisive_bundle:h1_data_evidence_step_missing", result["blockers"])
 
     def test_short_soak_denies(self) -> None:

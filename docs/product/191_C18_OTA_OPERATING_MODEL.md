@@ -239,6 +239,12 @@ Esse gate inclui `py_compile`, sintaxe dos scripts de release, policy/service,
 freeze/downgrade/GC, governanca de canais, permissao de release, sandbox local,
 `git diff --check`, validacao do manifest/payload/tar e scan de padroes de
 segredo de alta confianca.
+Quando `--player-runtime-evidence-mode decisive` for usado, os diretorios
+coldboot/data tambem precisam estar rastreados no git e sem lixo ignored ou
+untracked. Para H2/prod, `c18_player_runtime_h2_readiness_gate.py` aplica a
+mesma disciplina ao bundle de entrada: H1 summary, power-loss, server-side
+release dir, trust-anchor/key publica, soak, stable evidence e decisao operador
+devem estar sob HEAD limpo quando informados.
 
 Antes de apply em placa:
 

@@ -89,6 +89,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json
 ```
 
 Resultado: `passed=true`.
+Em modo decisivo, os diretorios coldboot/data de `player-runtime` agora tambem
+sao git-guardados; H2 readiness exige arvore limpa e inputs rastreados antes de
+qualquer leitura de readiness.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_release_gate.py \

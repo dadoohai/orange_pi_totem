@@ -261,6 +261,8 @@ def tracked_input_guard(paths: list[Path]) -> dict[str, Any]:
                     blockers.append("input_manifest_not_tracked")
                     details["manifest_untracked_entries"].append(manifest_rel)
                 manifest_files = manifest.get("files")
+                if not isinstance(manifest_files, list):
+                    manifest_files = manifest.get("artifacts")
                 if isinstance(manifest_files, list):
                     for item in manifest_files:
                         if not isinstance(item, dict) or not isinstance(item.get("file"), str):
@@ -393,7 +395,7 @@ def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_h1
     steps = summary.get("steps")
     step_items = [item for item in steps if isinstance(item, dict)] if isinstance(steps, list) else []
     step_names = [item.get("name") for item in step_items]
-    for prefix, missing_blocker, not_passed_blocker in (
+    for expected_name, missing_blocker, not_passed_blocker in (
         (
             "c18_player_runtime_data_coldboot_evidence",
             "h1_data_coldboot_step_missing",
@@ -405,18 +407,25 @@ def evaluate_h1(summary_path: Path | None, args: argparse.Namespace, expected_h1
             "h1_data_evidence_link_step_missing",
             "h1_data_evidence_link_step_not_passed",
         ),
-        ("c18_player_runtime_teardown_evidence:", "h1_teardown_evidence_step_missing", "h1_teardown_evidence_step_not_passed"),
         (
             "c18_player_runtime_production_stop_teardown_required",
             "h1_production_stop_teardown_step_missing",
             "h1_production_stop_teardown_step_not_passed",
         ),
     ):
-        matching_steps = [item for item in step_items if str(item.get("name")).startswith(prefix)]
+        matching_steps = [item for item in step_items if item.get("name") == expected_name]
         if not matching_steps:
             blockers.append(missing_blocker)
         elif not any(item.get("passed") is True for item in matching_steps):
             blockers.append(not_passed_blocker)
+    teardown_steps = [
+        item for item in step_items
+        if str(item.get("name")).startswith("c18_player_runtime_teardown_evidence:")
+    ]
+    if not teardown_steps:
+        blockers.append("h1_teardown_evidence_step_missing")
+    elif not any(item.get("passed") is True for item in teardown_steps):
+        blockers.append("h1_teardown_evidence_step_not_passed")
     repo = summary.get("repo") if isinstance(summary.get("repo"), dict) else {}
     if not expected_h1_repo_head:
         blockers.append("h1_expected_repo_head_missing")
@@ -1226,6 +1235,24 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
                 result = evaluate(args, require_repo_clean=False)
         self.assertFalse(result["passed"])
         self.assertIn("h1_decisive_bundle:h1_teardown_evidence_step_not_passed", result["blockers"])
+
+    def test_h1_git_guard_step_does_not_substitute_real_data_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.h1_release_gate_summary.read_text(encoding="utf-8"))
+            data["steps"] = [
+                item for item in data["steps"]
+                if item.get("name") != "c18_player_runtime_data_evidence"
+            ]
+            data["steps"].append({
+                "name": "c18_player_runtime_data_evidence_git_guard:1",
+                "passed": True,
+            })
+            write_json(args.h1_release_gate_summary, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("h1_decisive_bundle:h1_data_evidence_step_missing", result["blockers"])
 
     def test_preflight_stage_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

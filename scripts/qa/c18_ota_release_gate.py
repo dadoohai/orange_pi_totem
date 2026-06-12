@@ -21,6 +21,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from c18_current_golden import load_current_golden
 
@@ -452,6 +453,10 @@ def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> tup
     if args.expect_image_marker_sha256:
         image_marker_arg = ["--expect-image-marker-sha256", args.expect_image_marker_sha256]
     if args.player_runtime_data_coldboot_evidence_dir is not None:
+        steps.append(player_runtime_data_coldboot_evidence_git_guard(
+            args.player_runtime_data_coldboot_evidence_dir,
+            index=1,
+        ))
         steps.append(run_step(
             "c18_player_runtime_data_coldboot_evidence",
             [
@@ -469,6 +474,10 @@ def player_runtime_decisive_data_evidence_steps(args: argparse.Namespace) -> tup
             ],
         ))
     if args.player_runtime_data_evidence_dir is not None:
+        steps.append(player_runtime_data_evidence_git_guard(
+            args.player_runtime_data_evidence_dir,
+            index=1,
+        ))
         steps.append(run_step(
             "c18_player_runtime_data_evidence",
             [
@@ -584,7 +593,9 @@ def _evidence_git_guard(evidence_dir: Path, *, index: int, step_name: str, inter
             manifest = load_json_file(manifest_path)
             manifest_files = manifest.get("files")
             if not isinstance(manifest_files, list):
-                errors.append("evidence_manifest_files_missing")
+                manifest_files = manifest.get("artifacts")
+            if not isinstance(manifest_files, list):
+                errors.append("evidence_manifest_files_or_artifacts_missing")
             else:
                 missing_entries: list[str] = []
                 for item in manifest_files:
@@ -615,6 +626,24 @@ def player_runtime_powerloss_evidence_git_guard(evidence_dir: Path, *, index: in
         index=index,
         step_name="c18_player_runtime_powerloss_evidence_git_guard",
         internal_name="player_runtime_powerloss_evidence_git_guard",
+    )
+
+
+def player_runtime_data_coldboot_evidence_git_guard(evidence_dir: Path, *, index: int) -> dict[str, Any]:
+    return _evidence_git_guard(
+        evidence_dir,
+        index=index,
+        step_name="c18_player_runtime_data_coldboot_evidence_git_guard",
+        internal_name="player_runtime_data_coldboot_evidence_git_guard",
+    )
+
+
+def player_runtime_data_evidence_git_guard(evidence_dir: Path, *, index: int) -> dict[str, Any]:
+    return _evidence_git_guard(
+        evidence_dir,
+        index=index,
+        step_name="c18_player_runtime_data_evidence_git_guard",
+        internal_name="player_runtime_data_evidence_git_guard",
     )
 
 
@@ -1085,6 +1114,131 @@ class TeardownEvidenceImageGuardSelfTest(unittest.TestCase):
             self.assertIn("missing_production_stop_teardown_evidence", step["stderr_tail"])
 
 
+class PlayerRuntimeDataEvidenceGitGuardSelfTest(unittest.TestCase):
+    def test_data_git_guards_reject_outside_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "evidence-manifest.json").write_text(
+                json.dumps({"schema": "selftest", "files": []}, sort_keys=True),
+                encoding="utf-8",
+            )
+            coldboot = player_runtime_data_coldboot_evidence_git_guard(root, index=1)
+            data = player_runtime_data_evidence_git_guard(root, index=1)
+        self.assertFalse(coldboot["passed"])
+        self.assertFalse(data["passed"])
+        self.assertIn("evidence_dir_not_under_repo", coldboot["stderr_tail"])
+        self.assertIn("evidence_dir_not_under_repo", data["stderr_tail"])
+
+    def test_data_git_guard_accepts_tracked_artifacts_manifest(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-data-git-guard-") as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=root, check=True)
+            evidence = root / "docs" / "evidence" / "data"
+            evidence.mkdir(parents=True)
+            readme = evidence / "README.md"
+            readme.write_text("tracked artifact evidence\n", encoding="utf-8")
+            manifest = {
+                "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
+                "artifacts": [{
+                    "file": "README.md",
+                    "bytes": readme.stat().st_size,
+                    "sha256": sha256_file(readme),
+                }],
+            }
+            (evidence / "evidence-manifest.json").write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "evidence"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            with mock.patch(__name__ + ".REPO_ROOT", root):
+                result = player_runtime_data_evidence_git_guard(evidence, index=1)
+            self.assertTrue(result["passed"], result)
+
+    def test_data_git_guard_rejects_untracked_artifact_entry(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-data-git-guard-") as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=root, check=True)
+            evidence = root / "docs" / "evidence" / "data"
+            evidence.mkdir(parents=True)
+            readme = evidence / "README.md"
+            readme.write_text("tracked artifact evidence\n", encoding="utf-8")
+            extra = evidence / "extra.json"
+            extra.write_text("{}\n", encoding="utf-8")
+            manifest = {
+                "schema": "dadooh.c18.player_runtime.evidence_manifest.v1",
+                "artifacts": [
+                    {
+                        "file": "README.md",
+                        "bytes": readme.stat().st_size,
+                        "sha256": sha256_file(readme),
+                    },
+                    {
+                        "file": "extra.json",
+                        "bytes": extra.stat().st_size,
+                        "sha256": sha256_file(extra),
+                    },
+                ],
+            }
+            (evidence / "evidence-manifest.json").write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", evidence / "README.md", evidence / "evidence-manifest.json"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "evidence"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            with mock.patch(__name__ + ".REPO_ROOT", root):
+                result = player_runtime_data_evidence_git_guard(evidence, index=1)
+            self.assertFalse(result["passed"])
+            self.assertIn("evidence_untracked_files_present", result["stderr_tail"])
+            self.assertIn("evidence_manifest_entries_not_tracked", result["stderr_tail"])
+
+    def test_decisive_data_steps_emit_git_guards_before_subgates(self) -> None:
+        args = argparse.Namespace(
+            player_runtime_evidence_mode="decisive",
+            player_runtime_data_coldboot_evidence_dir=Path("docs/evidence/coldboot"),
+            player_runtime_data_evidence_dir=Path("docs/evidence/data"),
+            expect_image_tag="c18-hwdecode-lab-test",
+            expect_image_sha256="a" * 64,
+            expect_image_marker_sha256="b" * 64,
+        )
+        with (
+            mock.patch(__name__ + ".run_step", side_effect=lambda name, _cmd: {
+                "name": name,
+                "passed": True,
+                "returncode": 0,
+                "stdout_tail": "",
+                "stderr_tail": "",
+            }),
+            mock.patch(__name__ + ".player_runtime_data_coldboot_evidence_git_guard", return_value={
+                "name": "c18_player_runtime_data_coldboot_evidence_git_guard:1",
+                "passed": True,
+            }),
+            mock.patch(__name__ + ".player_runtime_data_evidence_git_guard", return_value={
+                "name": "c18_player_runtime_data_evidence_git_guard:1",
+                "passed": True,
+            }),
+            mock.patch(__name__ + ".link_player_runtime_data_evidence", return_value={
+                "name": "c18_player_runtime_data_evidence_link",
+                "passed": True,
+            }),
+        ):
+            steps, summary = player_runtime_decisive_data_evidence_steps(args)
+        names = [str(item.get("name")) for item in steps]
+        self.assertLess(
+            names.index("c18_player_runtime_data_coldboot_evidence_git_guard:1"),
+            names.index("c18_player_runtime_data_coldboot_evidence"),
+        )
+        self.assertLess(
+            names.index("c18_player_runtime_data_evidence_git_guard:1"),
+            names.index("c18_player_runtime_data_evidence"),
+        )
+        self.assertEqual(summary["status"], "pending")
+
+
 class TotemCorePayloadBoundarySelfTest(unittest.TestCase):
     def _write_package(self, root: Path, entries: dict[str, str]) -> tuple[Path, Path]:
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
@@ -1169,6 +1323,7 @@ def main() -> int:
     if args.self_test:
         suite = unittest.TestSuite()
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TeardownEvidenceImageGuardSelfTest))
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(PlayerRuntimeDataEvidenceGitGuardSelfTest))
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TotemCorePayloadBoundarySelfTest))
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1

@@ -398,6 +398,12 @@ a identidade de imagem esperada da invocacao (por default a golden corrente,
 mas sobrescrevivel por uma tripla explicita), e o release gate cruza o
 marker/version/tree/kiosk entre as duas evidencias. Sem modo `decisive`, o
 release gate nao prova cold-boot `/data`.
+No modo `decisive`, os diretorios de evidencia de coldboot/data tambem passam
+por git-guard: precisam estar dentro do repo, rastreados, sem arquivos
+ignorados/untracked e com `evidence-manifest.json` apontando apenas para
+entradas rastreadas. O H2 readiness gate aplica a mesma regra ao bundle de
+entrada completo e exige arvore limpa, para evitar que evidencia local ou
+mutada fora do HEAD sustente uma conclusao de readiness.
 
 O registro `current-golden.json` e a autorizacao decisiva de `player-runtime`
 podem divergir durante H1/H2: hoje a golden de recovery/delivery permanece
