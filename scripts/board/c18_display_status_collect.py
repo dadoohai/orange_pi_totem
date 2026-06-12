@@ -113,12 +113,16 @@ def connector_label(path: Path) -> str:
 def connector_summary(path: Path) -> dict[str, Any]:
     status = read_text(path / "status", max_bytes=128).lower()
     enabled = read_text(path / "enabled", max_bytes=128).lower()
-    mode = read_text(path / "mode", max_bytes=128)
+    mode_file = path / "mode"
+    mode_observed = mode_file.exists()
+    mode = read_text(mode_file, max_bytes=128)
     modes = [line.strip() for line in read_text(path / "modes").splitlines() if line.strip()]
     return {
         "connector": connector_label(path),
         "status": status or "unknown",
         "enabled": enabled or "unknown",
+        "enabled_active": enabled == "enabled",
+        "mode_observed": mode_observed,
         "mode_present": bool(mode),
         "modes_count": len(modes),
     }
@@ -144,6 +148,15 @@ def collect_drm(root: Path) -> dict[str, Any]:
         "connectors": connectors,
         "connected_count": sum(1 for item in connectors if item.get("status") == "connected"),
         "modes_present_count": sum(1 for item in connectors if safe_int(item.get("modes_count")) > 0),
+        "connected_active_count": sum(
+            1
+            for item in connectors
+            if (
+                item.get("status") == "connected"
+                and item.get("enabled_active") is True
+                and safe_int(item.get("modes_count")) > 0
+            )
+        ),
         "connected_ready_count": sum(
             1
             for item in connectors
@@ -236,6 +249,7 @@ def classify(
     if safe_int(drm.get("connected_count")) <= 0:
         return "no_sink"
     scanout_ready = safe_int(drm.get("connected_ready_count")) > 0
+    scanout_indeterminate = not scanout_ready and safe_int(drm.get("connected_active_count")) > 0
 
     service_active = service.get("active_state") == "active"
     has_status = player_status.get("present") is True
@@ -245,9 +259,13 @@ def classify(
 
     if visible_state in {"black", "frozen"} and board_healthy and scanout_ready:
         return "sink_hung_board_healthy"
+    if visible_state == "ok" and board_healthy and (scanout_ready or scanout_indeterminate):
+        return "display_ok"
     if visible_state == "looping_same_media":
         return "pipeline_stalled"
     if not scanout_ready or has_error or (service_active and has_status and not running):
+        if scanout_indeterminate and board_healthy:
+            return "unknown"
         return "pipeline_stalled"
     if board_healthy:
         return "display_ok"
@@ -316,13 +334,21 @@ def make_args(**overrides: Any) -> argparse.Namespace:
 
 
 class DisplayStatusCollectSelfTest(unittest.TestCase):
-    def write_connector(self, root: Path, name: str, *, status: str, modes: str = "1920x1080\n") -> None:
+    def write_connector(
+        self,
+        root: Path,
+        name: str,
+        *,
+        status: str,
+        modes: str = "1920x1080\n",
+        write_mode_file: bool = True,
+    ) -> None:
         path = root / name
         path.mkdir(parents=True)
         (path / "status").write_text(status + "\n", encoding="utf-8")
         (path / "enabled").write_text(("enabled" if status == "connected" else "disabled") + "\n", encoding="utf-8")
         (path / "modes").write_text(modes, encoding="utf-8")
-        if status == "connected" and modes.strip():
+        if status == "connected" and modes.strip() and write_mode_file:
             (path / "mode").write_text(modes.splitlines()[0] + "\n", encoding="utf-8")
 
     def test_no_sink_classification(self) -> None:
@@ -398,6 +424,34 @@ class DisplayStatusCollectSelfTest(unittest.TestCase):
             result["service"]["active_state"] = "active"
             result["classification"] = classify(result["drm"], result["service"], result["player_status"], "unknown")
         self.assertEqual(result["classification"], "pipeline_stalled")
+
+    def test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "drm"
+            status = Path(tmp) / "status.json"
+            self.write_connector(root, "card0-HDMI-A-1", status="connected", write_mode_file=False)
+            status.write_text(json.dumps({"playback_state": "playing", "mpv_running": True}), encoding="utf-8")
+            result = build_result(make_args(drm_root=root, status_file=status))
+            result["service"]["active_state"] = "active"
+            result["classification"] = classify(result["drm"], result["service"], result["player_status"], "unknown")
+        self.assertEqual(result["drm"]["connected_ready_count"], 0)
+        self.assertEqual(result["drm"]["connected_active_count"], 1)
+        self.assertEqual(result["classification"], "unknown")
+
+    def test_visible_ok_with_mode_file_unavailable_can_classify_display_ok(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "drm"
+            status = Path(tmp) / "status.json"
+            self.write_connector(root, "card0-HDMI-A-1", status="connected", write_mode_file=False)
+            status.write_text(json.dumps({"playback_state": "playing", "mpv_running": True}), encoding="utf-8")
+            result = build_result(make_args(drm_root=root, status_file=status, visible_state="ok"))
+            result["service"]["active_state"] = "active"
+            result["classification"] = classify(result["drm"], result["service"], result["player_status"], "ok")
+        self.assertEqual(result["classification"], "display_ok")
 
     def test_disconnected_connector_modes_do_not_make_connected_sink_ready(self) -> None:
         import tempfile

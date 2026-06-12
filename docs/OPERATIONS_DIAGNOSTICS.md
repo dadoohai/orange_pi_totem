@@ -87,6 +87,10 @@ Sinais uteis para versoes futuras, ainda fora do OTA comum:
 
 Evitar:
 
+- tratar ausencia do arquivo `mode` em `/sys/class/drm` como prova isolada de
+  pipeline travada quando o conector esta `connected`, `enabled` e com modos
+  anunciados; nesse caso, sem observacao visual, a classificacao deve ficar
+  indeterminada;
 - confiar em `tmds_char_rate=0` como prova de HDMI morto neste BSP;
 - reboot automatico do board quando a assinatura aponta para sink travado;
 - loops agressivos de DPMS/modeset sem prova de seguranca;
