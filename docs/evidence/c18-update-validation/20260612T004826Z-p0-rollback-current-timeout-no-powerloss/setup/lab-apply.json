@@ -1,0 +1,58 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "last_operation": {
+      "finished_at_utc": "2026-06-12T00:30:27Z",
+      "lab_reapply_linked_previous": true,
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json:linked-previous",
+      "started_at_utc": "2026-06-12T00:29:27Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_current_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "state_previous_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-12T00:22:25Z",
+      "lab_reapply_linked_previous": true,
+      "rollback_reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "rolled_back_to": "previous",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json:linked-previous",
+      "started_at_utc": "2026-06-12T00:21:25Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_previous_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/c18-evidence/p0-c16fb3e-rollback_after_current_to_previous/setup/apply",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "reapply_linked_previous": true,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+}

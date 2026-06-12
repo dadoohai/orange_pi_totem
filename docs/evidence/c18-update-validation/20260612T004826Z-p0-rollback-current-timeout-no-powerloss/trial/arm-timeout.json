@@ -1,0 +1,8 @@
+{
+  "checkpoint_reached": true,
+  "passed": false,
+  "phase": "arm-rollback",
+  "reason": "power_cut_not_observed_before_timeout:rollback_after_current_to_previous",
+  "resume_required": true,
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}

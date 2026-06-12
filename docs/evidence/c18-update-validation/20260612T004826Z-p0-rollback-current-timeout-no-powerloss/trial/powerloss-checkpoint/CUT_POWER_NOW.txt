@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=rollback_after_current_to_previous action=rollback evidence=/data/c18-evidence/p0-c16fb3e-rollback_after_current_to_previous/trial/powerloss-checkpoint
