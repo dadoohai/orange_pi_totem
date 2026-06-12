@@ -5,8 +5,8 @@
 #
 # Stable publishes are production-gated. They require
 # ALLOW_C18_STABLE_PROMOTION=1 plus artifact paths for release gate,
-# server-side evidence, server-side trust anchor, soak, power-loss matrix,
-# operator thaw decision, and expected image identity.
+# server-side evidence, server-side trusted key, server-side trust anchor, soak,
+# power-loss matrix, operator thaw decision, and expected image identity.
 
 set -euo pipefail
 
@@ -26,6 +26,7 @@ STABLE_OPERATOR_THAW_DECISION=""
 STABLE_EXPECT_IMAGE_TAG=""
 STABLE_EXPECT_IMAGE_SHA256=""
 STABLE_EXPECT_IMAGE_MARKER_SHA256=""
+STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS=()
 STABLE_POWERLOSS_EVIDENCE_DIRS=()
 
 while [[ $# -gt 0 ]]; do
@@ -45,6 +46,8 @@ while [[ $# -gt 0 ]]; do
     --stable-release-gate-summary) shift; STABLE_RELEASE_GATE_SUMMARY="${1:-}" ;;
     --stable-server-side-evidence=*) STABLE_SERVER_SIDE_EVIDENCE="${arg#*=}" ;;
     --stable-server-side-evidence) shift; STABLE_SERVER_SIDE_EVIDENCE="${1:-}" ;;
+    --stable-server-side-trusted-key-pem=*) STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS+=( "${arg#*=}" ) ;;
+    --stable-server-side-trusted-key-pem) shift; STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS+=( "${1:-}" ) ;;
     --stable-server-side-trust-anchor-evidence=*) STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${arg#*=}" ;;
     --stable-server-side-trust-anchor-evidence) shift; STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${1:-}" ;;
     --stable-soak-summary=*) STABLE_SOAK_SUMMARY="${arg#*=}" ;;
@@ -134,6 +137,8 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel requires --stable-release-gate-summary=<json>"
   [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
     || die "stable channel requires --stable-server-side-evidence=<json>"
+  (( ${#STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]} > 0 )) \
+    || die "stable channel requires at least one --stable-server-side-trusted-key-pem=<pem>"
   [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
     || die "stable channel requires --stable-server-side-trust-anchor-evidence=<json>"
   [[ -n "$STABLE_SOAK_SUMMARY" && -f "$STABLE_SOAK_SUMMARY" ]] \
@@ -161,6 +166,10 @@ if [[ "$CHANNEL" == "stable" ]]; then
   for run_dir in "${STABLE_POWERLOSS_EVIDENCE_DIRS[@]}"; do
     [[ -d "$run_dir" ]] || die "stable powerloss evidence dir not found: $run_dir"
     STABLE_GATE_CMD+=( --powerloss-evidence-dir "$run_dir" )
+  done
+  for key_pem in "${STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]}"; do
+    [[ -f "$key_pem" ]] || die "stable server-side trusted key not found: $key_pem"
+    STABLE_GATE_CMD+=( --server-side-trusted-key-pem "$key_pem" )
   done
   if ! "${STABLE_GATE_CMD[@]}" >/dev/null
   then

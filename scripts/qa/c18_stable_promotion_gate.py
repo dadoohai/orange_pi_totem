@@ -12,15 +12,48 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
+
+from c18_player_runtime_powerloss_evidence_gate import (
+    ALL_MATRIX_CHECKPOINTS as EVIDENCE_GATE_POWERLOSS_CHECKPOINTS,
+    MANIFEST_SCHEMA as POWERLOSS_MANIFEST_SCHEMA,
+    SEMANTICALLY_VALIDATED_CHECKPOINTS as SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS,
+)
+from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 
 
 SCHEMA = "dadooh.c18.stable_promotion.v1"
 GATE_SCHEMA = "dadooh.c18.stable_promotion_gate.v1"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
+SOAK_SCHEMA = "dadooh.c18.playback.soak.v1"
+THAW_DECISION_SCHEMA = "dadooh.c18.player_runtime.thaw_decision.v1"
+MIN_SOAK_DURATION_SEC = 24 * 60 * 60
+REQUIRED_POWERLOSS_CHECKPOINTS = (
+    "after_payload_staged",
+    "after_release_dir_created",
+    "after_extract",
+    "after_state_verifying",
+    "after_health_passed",
+    "after_release_tree_fsync",
+    "after_marker_written",
+    "after_previous_symlink",
+    "after_current_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_current_unlinked",
+    "rollback_after_state_success",
+)
 REQUIRED_TRUE_FIELDS = (
     "approved",
     "physical_homologation_passed",
@@ -76,6 +109,14 @@ def sha256_file(path: Path) -> str:
 def sha256_json(payload: Any) -> str:
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
+    return {
+        "passed": passed,
+        "blockers": blockers,
+        **details,
+    }
 
 
 def powerloss_matrix_sha256(run_dirs: list[Path]) -> str:
@@ -134,11 +175,249 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
     return hashes
 
 
+def read_artifact(path: Path | None, label: str) -> tuple[dict[str, Any], list[str]]:
+    if path is None:
+        return {}, [f"{label}_missing"]
+    return read_json(path)
+
+
+def evaluate_release_gate_summary(path: Path | None) -> dict[str, Any]:
+    data, errors = read_artifact(path, "release_gate_summary")
+    blockers = list(errors)
+    if not errors:
+        if data.get("schema") != RELEASE_GATE_SCHEMA:
+            blockers.append("release_gate_summary_schema")
+        if data.get("passed") is not True:
+            blockers.append("release_gate_summary_not_passed")
+        repo = data.get("repo") if isinstance(data.get("repo"), dict) else {}
+        if repo.get("dirty") is True:
+            blockers.append("release_gate_summary_repo_dirty")
+    return step(not blockers, blockers, evidence_path=str(path) if path is not None else None)
+
+
+def soak_total_duration(summary: dict[str, Any]) -> float:
+    policy = summary.get("collection_policy")
+    counters = summary.get("counters")
+    if isinstance(policy, dict):
+        try:
+            return float(policy.get("cycles", 0)) * float(policy.get("cycle_duration_sec", 0))
+        except Exception:
+            return 0.0
+    if isinstance(counters, dict):
+        try:
+            return float(counters.get("duration_sec", 0))
+        except Exception:
+            return 0.0
+    return 0.0
+
+
+def evaluate_soak_summary(path: Path | None) -> dict[str, Any]:
+    data, errors = read_artifact(path, "soak_summary")
+    blockers = list(errors)
+    duration = 0.0
+    if not errors:
+        if data.get("schema") != SOAK_SCHEMA:
+            blockers.append("soak_summary_schema")
+        if data.get("passed") is not True:
+            blockers.append("soak_summary_not_passed")
+        duration = soak_total_duration(data)
+        if duration < MIN_SOAK_DURATION_SEC:
+            blockers.append("soak_summary_duration_below_24h")
+        counters = data.get("counters") if isinstance(data.get("counters"), dict) else {}
+        for key in ("max_panfrost_faults_delta", "max_mmc_timeout_reset_delta", "max_ext4_errors_delta"):
+            if counters.get(key) not in (0, 0.0):
+                blockers.append(f"soak_summary_{key}_nonzero_or_missing")
+    return step(not blockers, blockers, evidence_path=str(path) if path is not None else None, duration_sec=duration)
+
+
+def manifest_image_errors(
+    manifest: dict[str, Any],
+    *,
+    expect_image_tag: str | None,
+    expect_image_sha256: str | None,
+    expect_image_marker_sha256: str | None,
+) -> list[str]:
+    errors: list[str] = []
+    if expect_image_tag is None:
+        errors.append("powerloss_expected_image_tag_required")
+    elif manifest.get("image_tag") != expect_image_tag:
+        errors.append("powerloss_image_tag_mismatch_or_missing")
+    if expect_image_sha256 is None:
+        errors.append("powerloss_expected_image_sha256_required")
+    elif manifest.get("image_sha256") != expect_image_sha256:
+        errors.append("powerloss_image_sha256_mismatch_or_missing")
+    if expect_image_marker_sha256 is None:
+        errors.append("powerloss_expected_image_marker_sha256_required")
+    elif manifest.get("image_marker_sha256") != expect_image_marker_sha256:
+        errors.append("powerloss_image_marker_sha256_mismatch_or_missing")
+    return errors
+
+
+def powerloss_semantics_ledger() -> dict[str, Any]:
+    required = set(REQUIRED_POWERLOSS_CHECKPOINTS)
+    evidence_gate_matrix = set(EVIDENCE_GATE_POWERLOSS_CHECKPOINTS)
+    semantically_validated = required & set(SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS)
+    return {
+        "required_checkpoints": list(REQUIRED_POWERLOSS_CHECKPOINTS),
+        "evidence_gate_matrix_checkpoints": sorted(evidence_gate_matrix),
+        "semantically_validated_checkpoints": sorted(semantically_validated),
+        "semantics_not_implemented_checkpoints": sorted(required - semantically_validated),
+        "evidence_gate_contract_mismatch": sorted(required ^ evidence_gate_matrix),
+    }
+
+
+def run_powerloss_gate(run_dir: Path) -> dict[str, Any]:
+    proc = subprocess.run(
+        [
+            "python3",
+            "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
+            "--run-dir",
+            str(run_dir),
+            "--json",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=120,
+        check=False,
+    )
+    payload: dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = json.loads(proc.stdout)
+            if isinstance(parsed, dict):
+                payload = parsed
+        except json.JSONDecodeError:
+            payload = {}
+    return {
+        "passed": proc.returncode == 0 and payload.get("passed") is True,
+        "returncode": proc.returncode,
+        "stderr_tail": proc.stderr[-800:],
+        "gate": payload,
+    }
+
+
+def evaluate_powerloss_matrix(args: argparse.Namespace) -> dict[str, Any]:
+    blockers: list[str] = []
+    checkpoint_dirs: dict[str, str] = {}
+    gate_results: dict[str, dict[str, Any]] = {}
+    duplicate_checkpoints: list[str] = []
+    semantics_ledger = powerloss_semantics_ledger()
+    if semantics_ledger["evidence_gate_contract_mismatch"]:
+        blockers.append("powerloss_matrix_contract_mismatch")
+    if semantics_ledger["semantics_not_implemented_checkpoints"]:
+        blockers.append("powerloss_checkpoint_semantics_incomplete")
+    for run_dir in args.powerloss_evidence_dir or []:
+        data, errors = read_json(run_dir / "evidence-manifest.json")
+        checkpoint = data.get("checkpoint")
+        if data.get("schema") != POWERLOSS_MANIFEST_SCHEMA:
+            errors.append("powerloss_manifest_schema")
+        if not isinstance(checkpoint, str) or not checkpoint:
+            errors.append("powerloss_manifest_checkpoint_missing")
+            checkpoint = f"unknown:{run_dir.name}"
+        if checkpoint in checkpoint_dirs:
+            duplicate_checkpoints.append(str(checkpoint))
+        checkpoint_dirs[str(checkpoint)] = str(run_dir)
+        errors.extend(
+            manifest_image_errors(
+                data,
+                expect_image_tag=args.expect_image_tag,
+                expect_image_sha256=args.expect_image_sha256,
+                expect_image_marker_sha256=args.expect_image_marker_sha256,
+            )
+        )
+        gate = run_powerloss_gate(run_dir)
+        gate_results[str(checkpoint)] = {
+            "dir": str(run_dir),
+            "manifest_errors": errors,
+            "gate_passed": gate["passed"],
+            "gate_returncode": gate["returncode"],
+            "gate_stderr_tail": gate["stderr_tail"],
+        }
+        if errors:
+            blockers.extend(f"{checkpoint}:{error}" for error in errors)
+        if not gate["passed"]:
+            blockers.append(f"{checkpoint}:powerloss_gate_failed")
+    missing = sorted(set(REQUIRED_POWERLOSS_CHECKPOINTS) - set(checkpoint_dirs))
+    extra = sorted(set(checkpoint_dirs) - set(REQUIRED_POWERLOSS_CHECKPOINTS))
+    if missing:
+        blockers.append("powerloss_matrix_incomplete")
+    if extra:
+        blockers.append("powerloss_unknown_checkpoint")
+    if duplicate_checkpoints:
+        blockers.append("powerloss_duplicate_checkpoint")
+    return step(
+        not blockers,
+        blockers,
+        observed_checkpoints=sorted(checkpoint_dirs),
+        missing_checkpoints=missing,
+        extra_checkpoints=extra,
+        duplicate_checkpoints=sorted(set(duplicate_checkpoints)),
+        semantics_ledger=semantics_ledger,
+        gate_results=gate_results,
+    )
+
+
+def evaluate_server_side_artifact(args: argparse.Namespace) -> dict[str, Any]:
+    if args.server_side_evidence is None:
+        return step(False, ["server_side_evidence_missing"])
+    trusted_keys = list(getattr(args, "server_side_trusted_key_pem", []) or [])
+    if not trusted_keys:
+        return step(False, ["server_side_trusted_key_pem_missing"], evidence_path=str(args.server_side_evidence))
+    result = evaluate_server_side_gate(
+        args.server_side_evidence,
+        trusted_key_pems=trusted_keys,
+        trust_anchor_evidence=args.server_side_trust_anchor_evidence,
+    )
+    blockers = list(result.get("blockers", []))
+    return step(
+        not blockers,
+        blockers,
+        evidence_path=str(args.server_side_evidence),
+        gate_result=result,
+    )
+
+
+def evaluate_operator_decision(path: Path | None) -> dict[str, Any]:
+    data, errors = read_artifact(path, "operator_thaw_decision")
+    blockers = list(errors)
+    if not errors:
+        if data.get("schema") != THAW_DECISION_SCHEMA:
+            blockers.append("operator_thaw_decision_schema")
+        if data.get("approved") is not True:
+            blockers.append("operator_thaw_decision_not_approved")
+        if data.get("acknowledges_h2_evidence") is not True:
+            blockers.append("operator_thaw_decision_missing_h2_ack")
+    return step(not blockers, blockers, evidence_path=str(path) if path is not None else None)
+
+
+def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
+    checks = {
+        "release_gate_summary": evaluate_release_gate_summary(args.release_gate_summary),
+        "powerloss_matrix": evaluate_powerloss_matrix(args),
+        "soak_summary": evaluate_soak_summary(args.soak_summary),
+        "server_side_governance": evaluate_server_side_artifact(args),
+        "operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
+    }
+    blockers = [
+        f"{name}:{blocker}"
+        for name, result in checks.items()
+        for blocker in result.get("blockers", [])
+    ]
+    return {
+        "passed": not blockers,
+        "checks": checks,
+        "blockers": blockers,
+    }
+
+
 def validate_data(data: dict[str, Any],
                   *,
                   evidence_path: str | None = None,
                   expected_hashes: dict[str, str] | None = None,
-                  require_expected_hashes: bool = False) -> dict[str, Any]:
+                  require_expected_hashes: bool = False,
+                  artifact_semantics: dict[str, Any] | None = None) -> dict[str, Any]:
     blockers: list[str] = []
     resolved_expected_hashes = expected_hashes or {}
     if data.get("schema") != SCHEMA:
@@ -168,12 +447,15 @@ def validate_data(data: dict[str, Any],
     for field, expected in resolved_expected_hashes.items():
         if data.get(field) != expected:
             blockers.append(f"stable_promotion_{field}_mismatch")
+    if artifact_semantics is not None:
+        blockers.extend(f"stable_promotion_artifact_semantics:{blocker}" for blocker in artifact_semantics.get("blockers", []))
     return {
         "schema": GATE_SCHEMA,
         "passed": not blockers,
         "result_claim": "stable_promotion_evidence_ready" if not blockers else "stable_promotion_evidence_blocked",
         "evidence_path": evidence_path,
         "expected_hashes": resolved_expected_hashes,
+        "artifact_semantics": artifact_semantics,
         "blockers": blockers,
         "non_claims": list(NON_CLAIMS),
     }
@@ -182,7 +464,8 @@ def validate_data(data: dict[str, Any],
 def evaluate(path: Path | None,
              *,
              expected_hashes: dict[str, str] | None = None,
-             require_expected_hashes: bool = False) -> dict[str, Any]:
+             require_expected_hashes: bool = False,
+             artifact_semantics: dict[str, Any] | None = None) -> dict[str, Any]:
     if path is None:
         return {
             "schema": GATE_SCHEMA,
@@ -207,10 +490,12 @@ def evaluate(path: Path | None,
         evidence_path=str(path),
         expected_hashes=expected_hashes,
         require_expected_hashes=require_expected_hashes,
+        artifact_semantics=artifact_semantics,
     )
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -239,6 +524,67 @@ def valid_fixture() -> dict[str, Any]:
         "auto_pull_enabled": False,
         "public_player_runtime_thaw": False,
     }
+
+
+def semantic_args_fixture(root: Path) -> argparse.Namespace:
+    release_gate = root / "release-gate.json"
+    server_side = root / "server-side.json"
+    trusted_key = root / "trusted-key.pub.pem"
+    trust_anchor = root / "trust-anchor.json"
+    soak = root / "soak.json"
+    operator = root / "operator.json"
+    write_json(release_gate, {
+        "schema": RELEASE_GATE_SCHEMA,
+        "passed": True,
+        "repo": {"dirty": False},
+    })
+    write_json(server_side, {"schema": "dadooh.c18.server_side_publish_governance.v1"})
+    trusted_key.write_text("PUBLIC KEY PLACEHOLDER\n", encoding="utf-8")
+    write_json(trust_anchor, {"schema": "dadooh.c18.server_side_trust_anchor.v1"})
+    write_json(soak, {
+        "schema": SOAK_SCHEMA,
+        "passed": True,
+        "collection_policy": {"cycles": 24, "cycle_duration_sec": 60 * 60},
+        "counters": {
+            "max_panfrost_faults_delta": 0,
+            "max_mmc_timeout_reset_delta": 0,
+            "max_ext4_errors_delta": 0,
+        },
+    })
+    write_json(operator, {
+        "schema": THAW_DECISION_SCHEMA,
+        "approved": True,
+        "acknowledges_h2_evidence": True,
+    })
+    powerloss_dirs: list[Path] = []
+    for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS:
+        run_dir = root / "powerloss" / checkpoint
+        write_json(run_dir / "evidence-manifest.json", {
+            "schema": POWERLOSS_MANIFEST_SCHEMA,
+            "checkpoint": checkpoint,
+            "image_tag": "c18-hwdecode-lab-1x",
+            "image_sha256": "1" * 64,
+            "image_marker_sha256": "2" * 64,
+        })
+        powerloss_dirs.append(run_dir)
+    return argparse.Namespace(
+        release_gate_summary=release_gate,
+        server_side_evidence=server_side,
+        server_side_trusted_key_pem=[trusted_key],
+        server_side_trust_anchor_evidence=trust_anchor,
+        soak_summary=soak,
+        powerloss_evidence_dir=powerloss_dirs,
+        operator_thaw_decision=operator,
+        expect_image_tag="c18-hwdecode-lab-1x",
+        expect_image_sha256="1" * 64,
+        expect_image_marker_sha256="2" * 64,
+    )
+
+
+def stable_fixture_bound_to_args(args: argparse.Namespace) -> dict[str, Any]:
+    data = valid_fixture()
+    data.update(expected_hashes_from_args(args))
+    return data
 
 
 class StablePromotionGateSelfTest(unittest.TestCase):
@@ -341,6 +687,61 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertIn("h2_readiness_sha256", hashes)
         self.assertEqual(hashes["h2_readiness_sha256"], h2_input_bundle_sha256(args, hashes))
 
+    def test_artifact_semantics_pass_with_real_validators_mocked_green(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            data = stable_fixture_bound_to_args(args)
+            with (
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+                mock.patch(__name__ + ".evaluate_server_side_gate", return_value={"passed": True, "blockers": []}),
+            ):
+                semantics = evaluate_artifact_semantics(args)
+                result = validate_data(
+                    data,
+                    expected_hashes=expected_hashes_from_args(args),
+                    require_expected_hashes=True,
+                    artifact_semantics=semantics,
+                )
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_hash_consistent_fake_artifacts_do_not_promote_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            write_json(args.release_gate_summary, {"schema": "fake", "passed": True})
+            write_json(args.server_side_evidence, {"schema": "fake", "passed": True})
+            args.powerloss_evidence_dir = args.powerloss_evidence_dir[:1]
+            data = stable_fixture_bound_to_args(args)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                semantics = evaluate_artifact_semantics(args)
+                result = validate_data(
+                    data,
+                    expected_hashes=expected_hashes_from_args(args),
+                    require_expected_hashes=True,
+                    artifact_semantics=semantics,
+                )
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "stable_promotion_artifact_semantics:release_gate_summary:release_gate_summary_schema",
+            result["blockers"],
+        )
+        self.assertIn(
+            "stable_promotion_artifact_semantics:powerloss_matrix:powerloss_matrix_incomplete",
+            result["blockers"],
+        )
+        self.assertTrue(
+            any(blocker.startswith("stable_promotion_artifact_semantics:server_side_governance:")
+                for blocker in result["blockers"])
+        )
+
+    def test_server_side_trusted_key_is_required_for_stable_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            args.server_side_trusted_key_pem = []
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                semantics = evaluate_artifact_semantics(args)
+        self.assertFalse(semantics["passed"])
+        self.assertIn("server_side_governance:server_side_trusted_key_pem_missing", semantics["blockers"])
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate C18 stable promotion evidence.")
@@ -348,6 +749,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evidence", type=Path, default=None)
     parser.add_argument("--release-gate-summary", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
+    parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--server-side-trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--soak-summary", type=Path, default=None)
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
@@ -369,6 +771,7 @@ def main() -> int:
         args.evidence,
         expected_hashes=expected_hashes_from_args(args),
         require_expected_hashes=True,
+        artifact_semantics=evaluate_artifact_semantics(args),
     )
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))

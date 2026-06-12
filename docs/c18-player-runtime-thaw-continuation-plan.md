@@ -245,6 +245,10 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   do caminho da chave ou do trust anchor.
   Producao ainda exige evidencia real assinada com chave operacional. Ele nao
   publica release, nao liga auto-pull e nao promove stable.
+- stable promotion no caminho CLI/build/publish valida artefatos
+  semanticamente, nao apenas hashes: release gate verde, matriz power-loss
+  17/17 verde, soak 24h, server-side assinado com trust key externa + trust
+  anchor, e decisao de operador aprovada.
 - DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked
   condition, not a hand-flip. Landing is a separate authorized step.
 

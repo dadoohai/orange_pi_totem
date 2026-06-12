@@ -464,7 +464,11 @@ manter a trilha de auditoria. O stable gate tambem aceita esses caminhos como
 argumentos para validar os hashes em modo artifact-bound fora do H2. No caminho
 CLI/build/publish de `stable`, esses argumentos sao obrigatorios; chamar o gate
 somente com `--evidence` falha fechado para impedir promocao baseada em hashes
-declarados sem arquivos reais.
+declarados sem arquivos reais. O gate tambem valida a semantica dos artefatos
+recebidos nesse caminho: release gate precisa estar verde, matriz power-loss
+precisa estar completa e passar seus subgates, soak precisa cobrir 24h,
+server-side precisa passar com chave publica confiavel externa + trust anchor, e
+a decisao do operador precisa estar aprovada.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e

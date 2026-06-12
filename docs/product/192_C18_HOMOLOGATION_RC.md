@@ -163,4 +163,7 @@ Stable tambem fica atras de `scripts/qa/c18_stable_promotion_gate.py`; evidencia
 minima com apenas `approved=true` nao autoriza build nem publish stable, e no H2
 os hashes declarados precisam bater com as evidencias consumidas. Nos scripts de
 build/publish stable, o gate deve receber os caminhos dos artefatos reais; usar
-somente `--evidence` falha fechado.
+somente `--evidence` falha fechado. Alem do hash binding, esses artefatos sao
+validados semanticamente no caminho stable: release gate verde, power-loss 17/17
+verde, soak 24h, server-side assinado com trust key externa + trust anchor, e
+decisao de operador aprovada.
