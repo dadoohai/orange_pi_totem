@@ -38,6 +38,29 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
         identity = reset.payload_identity(json.loads(manifest.read_text(encoding="utf-8")), payload)
         return manifest, payload, identity
 
+    def seed_state(
+        self,
+        data_root: Path,
+        out: Path,
+        quarantine: list[dict],
+        *,
+        current_link: str = "releases/runtime-current",
+        previous_link: str = "releases/runtime-previous",
+    ) -> None:
+        reset.configure_updatectl_for_lab(data_root, out / "policy.json")
+        reset.updatectl.STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        reset.updatectl._write_state({
+            "schema": reset.updatectl.SCHEMA_STATE,
+            "component": "player-runtime",
+            "current": {"version": current_link.split("/")[-1]},
+            "previous": {"version": previous_link.split("/")[-1]} if previous_link else None,
+            "quarantine": quarantine,
+        })
+        reset.updatectl.CURRENT_LINK.parent.mkdir(parents=True, exist_ok=True)
+        reset.updatectl.CURRENT_LINK.symlink_to(current_link)
+        if previous_link:
+            reset.updatectl.PREVIOUS_LINK.symlink_to(previous_link)
+
     def run_reset(self, args: list[str]) -> int:
         old_lab = os.environ.get(reset.LAB_ENV)
         try:
@@ -75,22 +98,14 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             _other_manifest, _other_payload, other_identity = self.make_package(root, "runtime-reset-other", "other")
             data_root = root / "data"
             out = root / "out"
-            reset.configure_updatectl_for_lab(data_root, out / "policy.json")
-            state = {
-                "schema": reset.updatectl.SCHEMA_STATE,
-                "component": "player-runtime",
-                "current": {"version": "runtime-current"},
-                "previous": {"version": "runtime-previous"},
-                "quarantine": [
+            self.seed_state(
+                data_root,
+                out,
+                [
                     {**identity, "reason": "physical_powerloss_trial"},
                     {**other_identity, "reason": "unrelated"},
                 ],
-            }
-            reset.updatectl.STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            reset.updatectl._write_state(state)
-            reset.updatectl.CURRENT_LINK.parent.mkdir(parents=True, exist_ok=True)
-            reset.updatectl.CURRENT_LINK.symlink_to("releases/runtime-current")
-            reset.updatectl.PREVIOUS_LINK.symlink_to("releases/runtime-previous")
+            )
 
             rc = self.run_reset([
                 "--lab-only-quarantine-reset",
@@ -115,6 +130,151 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             self.assertTrue(result["public_cli_apply_still_frozen"]["frozen"])
             self.assertTrue(result["public_cli_rollback_still_frozen"]["frozen"])
             self.assertTrue(result["public_cli_reconcile_still_frozen"]["frozen"])
+
+    def test_rejects_reset_when_target_is_linked_active(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-active")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(
+                data_root,
+                out,
+                [{**identity, "reason": "physical_powerloss_trial"}],
+                current_link="releases/runtime-reset-active",
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_isolation_reset",
+                "--reason", "unit-repeat-p0",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("target_linked_active", result["blockers"])
+            self.assertEqual(result["active_links"], ["current"])
+
+    def test_rejects_non_powerloss_quarantine_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-healthfail")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(data_root, out, [{**identity, "reason": "candidate_health_failed"}])
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_isolation_reset",
+                "--reason", "unit-repeat-p0",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("target_quarantine_reason_not_allowed", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_rejects_lab_channel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = release_gate.write_payload(
+                root,
+                "runtime-reset-lab-channel",
+                release_gate.SNAPSHOT_KIOSK.read_text(encoding="utf-8"),
+            )
+            manifest = release_gate.write_manifest(root, "runtime-reset-lab-channel", payload, {"channel": "lab"})
+            data_root = root / "data"
+            out = root / "out"
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_isolation_reset",
+                "--reason", "unit-repeat-p0",
+            ])
+
+            self.assertEqual(rc, 42)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("manifest_channel_not_homologation", result["blockers"])
+
+    def test_pre_freeze_failure_does_not_mutate_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-prefreeze")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(data_root, out, [{**identity, "reason": "physical_powerloss_trial"}])
+            original = reset.public_cli_freeze
+            reset.public_cli_freeze = lambda data_root, action: {"returncode": 0, "frozen": False}
+            try:
+                rc = self.run_reset([
+                    "--lab-only-quarantine-reset",
+                    "--manifest", str(manifest),
+                    "--payload", str(payload),
+                    "--data-root", str(data_root),
+                    "--output-dir", str(out),
+                    "--reset-scope", "p0_isolation_reset",
+                    "--reason", "unit-repeat-p0",
+                ])
+            finally:
+                reset.public_cli_freeze = original
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("public_cli_not_frozen_before_reset", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_post_freeze_failure_reverts_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-postfreeze")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(data_root, out, [{**identity, "reason": "physical_powerloss_trial"}])
+            calls = {"count": 0}
+            original = reset.public_cli_freeze
+
+            def fake_freeze(data_root, action):
+                calls["count"] += 1
+                return {"returncode": 44 if calls["count"] <= 3 else 0, "frozen": calls["count"] <= 3}
+
+            reset.public_cli_freeze = fake_freeze
+            try:
+                rc = self.run_reset([
+                    "--lab-only-quarantine-reset",
+                    "--manifest", str(manifest),
+                    "--payload", str(payload),
+                    "--data-root", str(data_root),
+                    "--output-dir", str(out),
+                    "--reset-scope", "p0_isolation_reset",
+                    "--reason", "unit-repeat-p0",
+                ])
+            finally:
+                reset.public_cli_freeze = original
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("public_cli_not_frozen_after_reset", result["blockers"])
+            self.assertTrue(result["reverted"])
 
     def test_fails_when_target_is_not_quarantined(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
