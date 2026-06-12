@@ -557,10 +557,18 @@ def evaluate_preflight(path: Path | None, args: argparse.Namespace) -> tuple[dic
     elif stage != expected_stage:
         blockers.append("preflight_stage_mismatch")
     policy = data.get("policy") if isinstance(data.get("policy"), dict) else {}
+    if policy.get("schema") != "dadooh.totem.update.policy.v1":
+        blockers.append("preflight_policy_schema")
+    if policy.get("device_track") != "c18-hwdecode":
+        blockers.append("preflight_policy_device_track_not_c18_hwdecode")
+    if policy.get("allowed_components") != ["totem-core"]:
+        blockers.append("preflight_policy_allowed_components_not_totem_core")
     if policy.get("device_channel") != "homologation":
         blockers.append("preflight_policy_not_homologation")
     if policy.get("allow_prerelease") is not True:
         blockers.append("preflight_allow_prerelease_not_true")
+    if policy.get("allow_downgrade") is not False:
+        blockers.append("preflight_allow_downgrade_not_false")
     timer = data.get("timer") if isinstance(data.get("timer"), dict) else {}
     timer_enabled = timer.get("enabled", data.get("timer_enabled"))
     timer_active = timer.get("active", data.get("timer_active"))
@@ -988,7 +996,14 @@ def complete_args(root: Path) -> argparse.Namespace:
         "stage": "pre_apply",
         "device_hash": device_hash,
         "source_commit": package_source,
-        "policy": {"device_channel": "homologation", "allow_prerelease": True},
+        "policy": {
+            "schema": "dadooh.totem.update.policy.v1",
+            "allowed_components": ["totem-core"],
+            "device_track": "c18-hwdecode",
+            "device_channel": "homologation",
+            "allow_prerelease": True,
+            "allow_downgrade": False,
+        },
         "timer": {"enabled": False, "active": False},
         "public_freeze": {"apply_local": freeze, "rollback": freeze, "reconcile": freeze},
         "image": {"tag": image_tag, "sha256": image_sha, "marker_sha256": marker_sha},
@@ -1101,6 +1116,19 @@ class PilotReadinessGateSelfTest(unittest.TestCase):
                 result = evaluate(args, require_repo_clean=False)
         self.assertFalse(result["passed"])
         self.assertIn("board_preflight:preflight_policy_not_homologation", result["blockers"])
+
+    def test_preflight_policy_must_match_c18_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            data = json.loads(args.preflight.read_text(encoding="utf-8"))
+            data["policy"]["allowed_components"] = ["totem-core", "player-runtime"]
+            data["policy"]["allow_downgrade"] = True
+            write_json(args.preflight, data)
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args, require_repo_clean=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("board_preflight:preflight_policy_allowed_components_not_totem_core", result["blockers"])
+        self.assertIn("board_preflight:preflight_allow_downgrade_not_false", result["blockers"])
 
     def test_preflight_source_commit_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

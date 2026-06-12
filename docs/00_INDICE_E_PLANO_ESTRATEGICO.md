@@ -45,6 +45,8 @@ Para qualquer decisão de update, a fonte vigente é:
 - `docs/product/189_C18_OTA_READINESS_GATE.md` para o estado live/baseline de
   laboratório validado;
 - `docs/product/191_C18_OTA_OPERATING_MODEL.md` para o modelo operacional.
+- `docs/product/192_C18_HOMOLOGATION_RC.md` para o retrato da RC de
+  homologacao assistida, sem inferir producao/stable.
 - `docs/product/188_C18_STATUS_E_CONTINUIDADE.md` para continuidade historica
   C18; o baseline live continua em `189`.
 

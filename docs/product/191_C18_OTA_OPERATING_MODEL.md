@@ -113,8 +113,9 @@ O piloto so pode avancar com
   `ring=pilot`, `channel=homologation`, operador, janela, rollback owner e
   devices allowlisted por hash;
 - preflight de placa `dadooh.c18.homologation_pilot_preflight.v1` com policy
-  homologation, `allow_prerelease=true`, timer desligado, public freeze
-  `rc=44`, marker/imagem esperados e stack MPV C18;
+  homologation, `allowed_components=["totem-core"]`, `device_track=c18-hwdecode`,
+  `allow_prerelease=true`, `allow_downgrade=false`, timer desligado, public
+  freeze `rc=44`, marker/imagem esperados e stack MPV C18;
 - P0 power-loss seletivo:
   `after_current_symlink`, `rollback_after_current_to_previous`,
   `rollback_after_previous_removed`, `rollback_after_quarantine` e

@@ -150,6 +150,30 @@ FORBIDDEN_TOTEM_CORE_TAR_NAMES = {
     "bin/totem-kiosky-launcher.sh",
     "./bin/totem-kiosky-launcher.sh",
 }
+TOTEM_CORE_ALLOWED_BIN_FILES = (
+    "totem_setup_visual_wizard.py",
+    "totem_wifi_nm_adapter.py",
+    "totem_visual_splash.py",
+    "totem_status_aggregate.py",
+    "totem_status_render_preview.py",
+    "totem_config_contract_validate.py",
+    "totem_open_settings_session.sh",
+    "totem_visual_tty_guard.sh",
+    "totem_firstboot_gate.sh",
+    "totem_status_renderer.sh",
+    "totem_settings_trigger.py",
+    "totem_open_settings_cleanup.sh",
+    "totem_visual_setup_writer_handoff.py",
+    "totem_config_writer_real.py",
+    "totem_setup_minimal_server.py",
+    "totem_setup_local_wizard.py",
+)
+TOTEM_CORE_ALLOWED_TAR_DIRS = {"", "bin", "health", "manifest-fragment"}
+TOTEM_CORE_ALLOWED_TAR_FILES = {
+    *(f"bin/{name}" for name in TOTEM_CORE_ALLOWED_BIN_FILES),
+    "health/totem-core-health.json",
+    "manifest-fragment/totem-core.json",
+}
 PLAYER_RUNTIME_DIFF_PATHS = {
     "scripts/board/kiosky_service_launcher.sh",
     "scripts/board/totem-kiosky-launcher.sh",
@@ -157,6 +181,28 @@ PLAYER_RUNTIME_DIFF_PATHS = {
     "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
     "player-runtime/kiosky-player/kiosk.py",
     "player-runtime/kiosky-player/SOURCE.json",
+}
+SYSTEM_IMAGE_DIFF_PATHS = {
+    "scripts/board/totem_updatectl.py",
+    "scripts/board/totem_update_policy.json",
+    "scripts/board/totem_appliance_manifest.json",
+    "scripts/board/systemd/",
+    "scripts/build/totem_core_image_embed.py",
+    "scripts/build/derive_",
+}
+MEDIA_SYSTEM_DIFF_PATHS = {
+    "scripts/build/derive_c18_image_lab_1_hwdecode.py",
+    "scripts/board/mpv_controller_playlist_probe.sh",
+}
+FIELD_DATA_DIFF_PATHS = {
+    "app-integration/config*",
+    "docs/app-integration/config*",
+}
+RESPONSIBILITY_MATRIX_DIFF_PATHS = {
+    "player-runtime": PLAYER_RUNTIME_DIFF_PATHS,
+    "system-image": SYSTEM_IMAGE_DIFF_PATHS,
+    "media-system": MEDIA_SYSTEM_DIFF_PATHS,
+    "field-data": FIELD_DATA_DIFF_PATHS,
 }
 
 
@@ -620,7 +666,13 @@ def production_stop_teardown_required_step(teardown_dirs: list[Path]) -> dict[st
     }
 
 
-def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
+def responsibility_path_matches(path: str, rule: str) -> bool:
+    if rule.endswith("*"):
+        return path.startswith(rule[:-1])
+    return path.startswith(rule) if rule.endswith(("/", "_")) else path == rule
+
+
+def responsibility_matrix_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
     names: set[str] = set()
     for cmd in (
         ["git", "diff", "--name-only"],
@@ -637,7 +689,7 @@ def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
         )
         if proc.returncode != 0:
             return {
-                "name": "player_runtime_diff_guard",
+                "name": "responsibility_matrix_diff_guard",
                 "cmd": cmd,
                 "returncode": proc.returncode,
                 "passed": False,
@@ -657,7 +709,7 @@ def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
         )
         if merge_base.returncode != 0:
             return {
-                "name": "player_runtime_diff_guard",
+                "name": "responsibility_matrix_diff_guard",
                 "cmd": ["git", "merge-base", base_ref, "HEAD"],
                 "returncode": merge_base.returncode,
                 "passed": False,
@@ -675,7 +727,7 @@ def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
         )
         if proc.returncode != 0:
             return {
-                "name": "player_runtime_diff_guard",
+                "name": "responsibility_matrix_diff_guard",
                 "cmd": base_cmd,
                 "returncode": proc.returncode,
                 "passed": False,
@@ -683,23 +735,40 @@ def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
                 "stderr_tail": proc.stderr[-4000:],
             }
         names.update(line.strip() for line in proc.stdout.splitlines() if line.strip())
-    hits = sorted(names & PLAYER_RUNTIME_DIFF_PATHS)
+    hits_by_front: dict[str, list[str]] = {}
+    for front, rules in RESPONSIBILITY_MATRIX_DIFF_PATHS.items():
+        hits = sorted(
+            name
+            for name in names
+            if any(responsibility_path_matches(name, rule) for rule in rules)
+        )
+        if hits:
+            hits_by_front[front] = hits
+    hit_lines = [
+        f"{front}:{name}"
+        for front, hits in sorted(hits_by_front.items())
+        for name in hits
+    ]
     message = (
-        "player-runtime files changed; this is outside ordinary totem-core OTA "
-        "and requires image/homologation or an explicit C18-aware player-runtime release"
+        "non-totem-core responsibility front changed; ordinary totem-core OTA "
+        "requires image/homologation, field-data operation, or an explicit governed release"
     )
     return {
-        "name": "player_runtime_diff_guard",
+        "name": "responsibility_matrix_diff_guard",
         "cmd": [
             "git",
             "diff/status name scan",
             *(["--base-ref", base_ref] if base_ref else []),
         ],
-        "returncode": 1 if hits else 0,
-        "passed": not hits,
-        "stdout_tail": "\n".join(hits),
-        "stderr_tail": message if hits else "",
+        "returncode": 1 if hit_lines else 0,
+        "passed": not hit_lines,
+        "stdout_tail": "\n".join(hit_lines),
+        "stderr_tail": message if hit_lines else "",
     }
+
+
+def player_runtime_diff_guard(base_ref: str | None = None) -> dict[str, Any]:
+    return responsibility_matrix_diff_guard(base_ref)
 
 
 def sha256_file(path: Path) -> str:
@@ -708,6 +777,14 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: fh.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def normalize_tar_name(name: str) -> str:
+    normalized = name
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    normalized = normalized.rstrip("/")
+    return "" if normalized == "." else normalized
 
 
 def payload_for_manifest(manifest_path: Path, override: Path | None) -> Path:
@@ -815,9 +892,22 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
                     data.get("component") == "totem-core"
                     and any(name.lstrip("./") in FORBIDDEN_TOTEM_CORE_TAR_NAMES for name in names)
                 )
+                unexpected_totem_core_entries: list[str] = []
+                if data.get("component") == "totem-core":
+                    for member in tf.getmembers():
+                        normalized = normalize_tar_name(member.name)
+                        if member.isdir():
+                            if normalized not in TOTEM_CORE_ALLOWED_TAR_DIRS:
+                                unexpected_totem_core_entries.append(member.name)
+                        elif member.isfile() and normalized not in TOTEM_CORE_ALLOWED_TAR_FILES:
+                            unexpected_totem_core_entries.append(member.name)
+                    checks["totem_core_tar_allowlist_exact"] = not unexpected_totem_core_entries
+                else:
+                    checks["totem_core_tar_allowlist_exact"] = True
                 result["tar_entry_count"] = len(names)
                 result["tar_bad_entries"] = bad_names[:20]
                 result["tar_bad_type_entries"] = bad_types[:20]
+                result["totem_core_tar_unexpected_entries"] = unexpected_totem_core_entries[:20]
                 small_text_hits: list[str] = []
                 for member in tf.getmembers():
                     if not member.isfile() or member.size > 256 * 1024:
@@ -832,6 +922,7 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
                 result["tar_secret_pattern_path_hits"] = small_text_hits[:20]
         except Exception as exc:
             checks["tar_no_path_escape_or_forbidden_entries"] = False
+            checks["totem_core_tar_allowlist_exact"] = False
             checks["tar_secret_pattern_paths_absent"] = False
             errors.append(f"tar_read_failed:{exc}")
 
@@ -991,7 +1082,7 @@ def main() -> int:
     steps.append(run_step("py_compile", ["python3", "-m", "py_compile", *PY_COMPILE_TARGETS]))
     for target in BASH_SYNTAX_TARGETS:
         steps.append(run_step(f"bash_syntax:{target}", ["bash", "-n", target]))
-    steps.append(player_runtime_diff_guard(args.base_ref))
+    steps.append(responsibility_matrix_diff_guard(args.base_ref))
     for name, cmd in TEST_COMMANDS:
         step_cmd = list(cmd)
         if name == "player_runtime_sandbox":

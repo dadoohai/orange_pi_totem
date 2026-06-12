@@ -75,6 +75,7 @@ DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md
 DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
 DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
 DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
+DOC192_PATH = REPO_ROOT / "docs" / "product" / "192_C18_HOMOLOGATION_RC.md"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 EVIDENCE_CURRENT_DEEP_HEALTH_DIR = REPO_ROOT / str(CURRENT_GOLDEN["coldboot_evidence_dir"])
@@ -225,11 +226,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
     def test_totem_core_ota_payload_excludes_player_launcher(self) -> None:
         build = BUILD_CORE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertNotIn("bash -n bin/kiosky_service_launcher.sh", build)
         self.assertNotIn("bash -n bin/totem-kiosky-launcher.sh", build)
+        self.assertIn("TOTEM_CORE_ALLOWED_TAR_FILES", release_gate)
+        self.assertIn("totem_core_tar_allowlist_exact", release_gate)
+        self.assertIn("totem_core_tar_unexpected_entries", release_gate)
+        self.assertIn('"health/totem-core-health.json"', release_gate)
+        self.assertIn('"manifest-fragment/totem-core.json"', release_gate)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
@@ -427,10 +434,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("must not be reused as current decisive authorization", latest_m6_readme_words)
         index = DOC_INDEX_PATH.read_text(encoding="utf-8")
         self.assertIn("docs/product/189_C18_OTA_READINESS_GATE.md", index)
+        self.assertIn("docs/product/192_C18_HOMOLOGATION_RC.md", index)
         self.assertIn("baseline live continua em `189`", index)
         operating_model = DOC191_PATH.read_text(encoding="utf-8")
         self.assertIn("docs/UPDATE_CONTRACT.md", operating_model)
         self.assertIn("--package-payload <release-dir>/dadooh-totem-core-<version>.tar.gz", operating_model)
+        doc192 = DOC192_PATH.read_text(encoding="utf-8")
+        doc192_words = " ".join(doc192.split())
+        self.assertIn("Homologation RC", doc192)
+        self.assertIn("piloto assistido", doc192_words)
+        self.assertIn("semantica de validacao", doc192_words)
+        self.assertIn("nao publica releases nem habilita auto-pull", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
         self.assertNotIn("Tratar `c18-hwdecode-lab-1m` como baseline", doc189)
@@ -1570,6 +1584,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("missing_server_side_publish_governance", h2_gate)
         self.assertIn("missing_24h_soak_summary", h2_gate)
         self.assertIn("powerloss_matrix_incomplete", h2_gate)
+        self.assertIn("powerloss_checkpoint_semantics_incomplete", h2_gate)
+        self.assertIn("powerloss_semantics_ledger", h2_gate)
         self.assertIn("REQUIRED_POWERLOSS_CHECKPOINTS", h2_gate)
         self.assertIn('"after_payload_staged"', h2_gate)
         self.assertIn('"rollback_after_current_unlinked"', h2_gate)
@@ -1593,6 +1609,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("staged_rollout_defined", server_side_gate)
         self.assertIn("audit_trail_defined", server_side_gate)
         self.assertIn("public_player_runtime_thaw_requires_h2", server_side_gate)
+        self.assertIn("EXPECTED_COMPONENT_SCOPE", server_side_gate)
+        self.assertIn("FORBIDDEN_COMPONENT_SCOPES", server_side_gate)
+        self.assertIn("server_side_component_scope_not_exact", server_side_gate)
+        self.assertIn("server_side_forbidden_component_scopes_not_exact", server_side_gate)
         self.assertIn("this_gate_does_not_publish_releases", server_side_gate)
         self.assertIn("this_gate_does_not_enable_auto_pull", server_side_gate)
         self.assertNotIn("gh release", server_side_gate)
@@ -1602,6 +1622,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.homologation_pilot_readiness.v1", pilot_gate)
         self.assertIn("dadooh.c18.homologation_pilot_authorization.v1", pilot_gate)
         self.assertIn("dadooh.c18.homologation_pilot_preflight.v1", pilot_gate)
+        self.assertIn("preflight_policy_allowed_components_not_totem_core", pilot_gate)
+        self.assertIn("preflight_policy_device_track_not_c18_hwdecode", pilot_gate)
+        self.assertIn("preflight_allow_downgrade_not_false", pilot_gate)
         self.assertIn('"ring") != "pilot"', pilot_gate)
         self.assertIn('"channel") != "homologation"', pilot_gate)
         self.assertIn("PILOT_POWERLOSS_CHECKPOINTS", pilot_gate)
@@ -1827,8 +1850,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("totem_config_contract_self_test", gate)
         self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
+        self.assertIn("RESPONSIBILITY_MATRIX_DIFF_PATHS", gate)
+        self.assertIn("SYSTEM_IMAGE_DIFF_PATHS", gate)
+        self.assertIn("FIELD_DATA_DIFF_PATHS", gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
-        self.assertIn("player_runtime_diff_guard", gate)
+        self.assertIn('"scripts/board/totem_updatectl.py"', gate)
+        self.assertIn("responsibility_matrix_diff_guard", gate)
         self.assertIn("repo_clean_guard", gate)
         self.assertIn("--porcelain", gate)
         self.assertIn("--untracked-files=normal", gate)
@@ -1838,7 +1865,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("merge-base", gate)
         self.assertIn("requires image/homologation", gate)
 
-    def test_release_gate_base_ref_catches_committed_player_runtime_diff(self) -> None:
+    def test_release_gate_base_ref_catches_committed_responsibility_matrix_diff(self) -> None:
         spec = importlib.util.spec_from_file_location("c18_ota_release_gate_test", RELEASE_GATE_PATH)
         self.assertIsNotNone(spec)
         self.assertIsNotNone(spec.loader)
@@ -1867,13 +1894,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             old_root = gate.REPO_ROOT
             try:
                 gate.REPO_ROOT = root
-                self.assertTrue(gate.player_runtime_diff_guard(base)["passed"])
+                self.assertTrue(gate.responsibility_matrix_diff_guard(base)["passed"])
                 protected.write_text("print('protected')\n", encoding="utf-8")
                 subprocess.run(["git", "add", "."], cwd=root, check=True)
                 subprocess.run(["git", "commit", "-m", "protected"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                result = gate.player_runtime_diff_guard(base)
+                result = gate.responsibility_matrix_diff_guard(base)
                 self.assertFalse(result["passed"])
-                self.assertIn("player-runtime/kiosky-player/kiosk.py", result["stdout_tail"])
+                self.assertIn("player-runtime:player-runtime/kiosky-player/kiosk.py", result["stdout_tail"])
+
+                image_path = root / "scripts" / "board" / "totem_updatectl.py"
+                image_path.write_text("print('image')\n", encoding="utf-8")
+                field_path = root / "docs" / "app-integration" / "config.homologation-v0.1.example.json"
+                field_path.parent.mkdir(parents=True, exist_ok=True)
+                field_path.write_text("{}\n", encoding="utf-8")
+                subprocess.run(["git", "add", "."], cwd=root, check=True)
+                subprocess.run(["git", "commit", "-m", "matrix"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                result = gate.responsibility_matrix_diff_guard(base)
+                self.assertFalse(result["passed"])
+                self.assertIn("system-image:scripts/board/totem_updatectl.py", result["stdout_tail"])
+                self.assertIn("field-data:docs/app-integration/config.homologation-v0.1.example.json", result["stdout_tail"])
             finally:
                 gate.REPO_ROOT = old_root
 

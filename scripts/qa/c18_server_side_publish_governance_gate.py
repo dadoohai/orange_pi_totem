@@ -19,6 +19,8 @@ from typing import Any
 
 SCHEMA = "dadooh.c18.server_side_publish_governance.v1"
 ALLOWED_CHANNELS = ("lab", "homologation", "stable")
+EXPECTED_COMPONENT_SCOPE = ("totem-core", "player-runtime")
+FORBIDDEN_COMPONENT_SCOPES = ("kiosky-player", "media-system", "field-data")
 REQUIRED_TRUE_FIELDS = (
     "publish_gate_enforced",
     "release_assets_verified",
@@ -67,9 +69,13 @@ def validate_data(data: dict[str, Any], *, evidence_path: str | None = None) -> 
     if data.get("channel_inheritance_allowed") is True:
         blockers.append("server_side_channel_inheritance_allowed")
     component_scope = data.get("component_scope")
-    if component_scope is not None:
-        if not isinstance(component_scope, list) or "totem-core" not in component_scope:
-            blockers.append("server_side_component_scope_missing_totem_core")
+    if component_scope != list(EXPECTED_COMPONENT_SCOPE):
+        blockers.append("server_side_component_scope_not_exact")
+    elif any(scope in component_scope for scope in FORBIDDEN_COMPONENT_SCOPES):
+        blockers.append("server_side_forbidden_component_in_scope")
+    forbidden_scopes = data.get("forbidden_component_scopes")
+    if forbidden_scopes != list(FORBIDDEN_COMPONENT_SCOPES):
+        blockers.append("server_side_forbidden_component_scopes_not_exact")
     signed_assets = data.get("signed_or_attested_assets")
     if signed_assets is not None:
         if not isinstance(signed_assets, list) or len(signed_assets) < 3:
@@ -129,7 +135,8 @@ def valid_fixture() -> dict[str, Any]:
         "rollback_policy_defined": True,
         "audit_trail_defined": True,
         "public_player_runtime_thaw_requires_h2": True,
-        "component_scope": ["totem-core", "player-runtime"],
+        "component_scope": list(EXPECTED_COMPONENT_SCOPE),
+        "forbidden_component_scopes": list(FORBIDDEN_COMPONENT_SCOPES),
         "signed_or_attested_assets": [
             "manifest",
             "payload",
@@ -169,6 +176,19 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         result = validate_data(data)
         self.assertFalse(result["passed"])
         self.assertIn("server_side_channel_inheritance_allowed", result["blockers"])
+
+    def test_component_scope_must_be_exact_and_forbid_legacy_scopes(self) -> None:
+        data = valid_fixture()
+        data["component_scope"] = ["totem-core", "player-runtime", "kiosky-player"]
+        result = validate_data(data)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_component_scope_not_exact", result["blockers"])
+
+        data = valid_fixture()
+        data["forbidden_component_scopes"] = ["kiosky-player"]
+        result = validate_data(data)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_forbidden_component_scopes_not_exact", result["blockers"])
 
     def test_file_roundtrip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

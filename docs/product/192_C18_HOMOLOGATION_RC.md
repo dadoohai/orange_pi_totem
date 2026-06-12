@@ -106,6 +106,7 @@ O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:
 
 - matriz fisica power-loss 17/17 incompleta;
+- semantica de validacao ainda nao implementada para todos os 17 checkpoints;
 - soak 24h ausente;
 - stable promotion ausente;
 - evidencia de governanca server-side/signature ausente;
@@ -141,3 +142,6 @@ versionada antes de aplicar em placa ou cliente.
 Nota pos-RC: a familia server-side/signature deve passar por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
 pelo H2. Esse gate e offline e nao publica releases nem habilita auto-pull.
+O H2 tambem reporta um ledger de semantica da matriz power-loss; portanto nao
+basta coletar os 17 cortes fisicos, cada checkpoint precisa ter validador
+semantico implementado antes de qualquer leitura de producao.

@@ -190,14 +190,16 @@ O gate deve provar, no minimo:
 
 - `totem-core` sem `bin/kiosky_service_launcher.sh` no payload;
 - manifest com contrato C18 completo;
-- payload com SHA correto e sem path traversal, symlink, hardlink ou segredo;
+- payload com SHA correto, allowlist estrita de conteudo `totem-core`, e sem
+  path traversal, symlink, hardlink ou segredo;
 - release GitHub publicada a partir do `source_commit` declarado no manifest,
   nunca do default branch implicito do `gh`;
 - policy/service/timer C18 coerentes;
 - freeze de `kiosky-player` preservado;
 - scripts historicos de release de `kiosky-player` falhando por padrao, salvo
   override explicito para release `player-runtime` C18-aware homologada;
-- diff OTA comum sem arquivos `player-runtime` fixos por imagem;
+- diff OTA comum sem arquivos de frentes fora de `totem-core` operacional
+  (`player-runtime`, `system-image`, `media-system` ou `field-data`);
 - sandbox apply/rollback de `totem-core` passando.
 
 ## Deep-Health De Playback
@@ -454,7 +456,8 @@ Os builders/publishers C18 devem falhar fechados para `stable` sem
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e
 off-board e falha fechado enquanto faltar qualquer familia requerida: bundle H1
-decisivo, matriz fisica power-loss 17/17, soak 24h, governanca server-side com
+decisivo, matriz fisica power-loss 17/17, semantica implementada para cada
+checkpoint da matriz, soak 24h, governanca server-side com
 assinatura/attestation, evidencia de promocao stable e decisao explicita do
 operador. Ele nao altera o freeze `rc=44` e nao publica releases.
 
@@ -463,9 +466,10 @@ A familia de governanca server-side deve ser validada antes de entrar no H2 por
 `dadooh.c18.server_side_publish_governance.v1`. Esse gate exige publish gate,
 assets verificaveis, assinatura ou attestation, politica de auto-pull definida
 mas desabilitada por padrao, canais exatos, promocao stable obrigatoria,
-allowlist, staged rollout, rollback e trilha de auditoria. Ele nao publica
-release, nao habilita auto-pull, nao promove stable e nao faz thaw de
-`player-runtime`.
+allowlist, staged rollout, rollback, trilha de auditoria, escopo exato
+`totem-core` + `player-runtime` e escopos proibidos explicitos para
+`kiosky-player`, `media-system` e `field-data`. Ele nao publica release, nao
+habilita auto-pull, nao promove stable e nao faz thaw de `player-runtime`.
 
 Entre H1 e H2 existe somente um caminho intermediario controlado:
 `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido

@@ -20,6 +20,10 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+from c18_player_runtime_powerloss_evidence_gate import (
+    ALL_MATRIX_CHECKPOINTS as EVIDENCE_GATE_POWERLOSS_CHECKPOINTS,
+    SEMANTICALLY_VALIDATED_CHECKPOINTS as SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS,
+)
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 
 
@@ -168,11 +172,29 @@ def manifest_image_errors(
     return errors
 
 
+def powerloss_semantics_ledger() -> dict[str, Any]:
+    required = set(REQUIRED_POWERLOSS_CHECKPOINTS)
+    evidence_gate_matrix = set(EVIDENCE_GATE_POWERLOSS_CHECKPOINTS)
+    semantically_validated = required & set(SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS)
+    return {
+        "required_checkpoints": list(REQUIRED_POWERLOSS_CHECKPOINTS),
+        "evidence_gate_matrix_checkpoints": sorted(evidence_gate_matrix),
+        "semantically_validated_checkpoints": sorted(semantically_validated),
+        "semantics_not_implemented_checkpoints": sorted(required - semantically_validated),
+        "evidence_gate_contract_mismatch": sorted(required ^ evidence_gate_matrix),
+    }
+
+
 def evaluate_powerloss(args: argparse.Namespace) -> dict[str, Any]:
     blockers: list[str] = []
     checkpoint_dirs: dict[str, str] = {}
     gate_results: dict[str, dict[str, Any]] = {}
     duplicate_checkpoints: list[str] = []
+    semantics_ledger = powerloss_semantics_ledger()
+    if semantics_ledger["evidence_gate_contract_mismatch"]:
+        blockers.append("powerloss_matrix_contract_mismatch")
+    if semantics_ledger["semantics_not_implemented_checkpoints"]:
+        blockers.append("powerloss_checkpoint_semantics_incomplete")
     for run_dir in args.powerloss_evidence_dir or []:
         errors: list[str] = []
         manifest = read_json(run_dir / "evidence-manifest.json", errors, f"{run_dir.name}_manifest")
@@ -221,6 +243,7 @@ def evaluate_powerloss(args: argparse.Namespace) -> dict[str, Any]:
         missing_checkpoints=missing,
         extra_checkpoints=extra,
         duplicate_checkpoints=sorted(set(duplicate_checkpoints)),
+        semantics_ledger=semantics_ledger,
         gate_results=gate_results,
     )
 
@@ -400,6 +423,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         "audit_trail_defined": True,
         "public_player_runtime_thaw_requires_h2": True,
         "component_scope": ["totem-core", "player-runtime"],
+        "forbidden_component_scopes": ["kiosky-player", "media-system", "field-data"],
         "signed_or_attested_assets": [
             "manifest",
             "payload",
@@ -447,15 +471,35 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
     def test_complete_fixture_passes_when_each_powerloss_dir_gate_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             args = complete_args(Path(tmp))
-            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
                 result = evaluate(args)
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_incomplete_powerloss_semantics_denies_even_with_all_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "full_physical_powerloss_matrix:powerloss_checkpoint_semantics_incomplete",
+            result["blockers"],
+        )
+        ledger = result["checks"]["full_physical_powerloss_matrix"]["semantics_ledger"]
+        self.assertIn("after_extract", ledger["semantics_not_implemented_checkpoints"])
+        self.assertIn("rollback_after_current_to_previous", ledger["semantically_validated_checkpoints"])
 
     def test_missing_one_powerloss_checkpoint_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             args = complete_args(Path(tmp))
             args.powerloss_evidence_dir = args.powerloss_evidence_dir[:-1]
-            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn("full_physical_powerloss_matrix:powerloss_matrix_incomplete", result["blockers"])
@@ -473,7 +517,10 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
                     "max_ext4_errors_delta": 0,
                 },
             })
-            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn("soak_endurance_24h:soak_duration_below_24h", result["blockers"])
@@ -488,7 +535,10 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
                 "signature_or_attestation_present": False,
                 "auto_pull_policy_defined": True,
             })
-            with mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}):
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn(
