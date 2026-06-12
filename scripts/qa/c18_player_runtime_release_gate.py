@@ -42,6 +42,7 @@ REQUIRED_UPDATER_FEATURES = {
     "c18-player-runtime-verify-then-promote-v1",
 }
 SAFE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 MARKER_NAME = ".release_verified.json"
 ALLOWED_PAYLOAD_DIRS = {""}
 ALLOWED_PAYLOAD_FILES = {"kiosk.py"}
@@ -122,6 +123,7 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
         "version",
         "channel",
         "created_at_utc",
+        "source_commit",
         "payload",
         "payload_sha256",
         "requires",
@@ -145,6 +147,8 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
         raise GateError("player-runtime stable releases are blocked until lab thaw and homologation gates exist")
     if manifest.get("source_dirty") is not False:
         raise GateError("source_dirty must be false for player-runtime lab evidence")
+    if not isinstance(manifest.get("source_commit"), str) or not GIT_SHA_RE.fullmatch(manifest["source_commit"]):
+        raise GateError("source_commit must be a 40-character lowercase git SHA")
     parse_utc_timestamp(manifest["created_at_utc"])
 
     requires = manifest["requires"]
@@ -700,6 +704,7 @@ def write_manifest(root: Path, version: str, payload: Path, mutate: dict[str, An
         "version": version,
         "channel": "homologation",
         "created_at_utc": "2026-06-03T00:00:00Z",
+        "source_commit": "d" * 40,
         "source_dirty": False,
         "payload": payload.name,
         "payload_sha256": sha256_file(payload),
@@ -767,6 +772,15 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         data["source_dirty"] = True
         manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(GateError, "source_dirty must be false"):
+            validate_release(manifest, payload)
+
+    def test_rejects_missing_source_commit(self) -> None:
+        manifest, payload, tmp = self.with_case("missing-source-commit")
+        self.addCleanup(tmp.cleanup)
+        data = load_json(manifest)
+        data.pop("source_commit")
+        manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "source_commit"):
             validate_release(manifest, payload)
 
     def test_rejects_missing_player_runtime_updater_feature(self) -> None:

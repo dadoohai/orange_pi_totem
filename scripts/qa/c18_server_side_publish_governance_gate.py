@@ -128,12 +128,17 @@ NON_CLAIMS = (
     "this_gate_does_not_thaw_player_runtime",
 )
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$")
 PRIVATE_KEY_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
 
 
 def is_hash(value: Any) -> bool:
     return isinstance(value, str) and bool(HASH_RE.fullmatch(value))
+
+
+def is_git_sha(value: Any) -> bool:
+    return isinstance(value, str) and bool(GIT_SHA_RE.fullmatch(value))
 
 
 def safe_id(value: Any) -> bool:
@@ -892,6 +897,8 @@ def validate_release_artifacts(data: dict[str, Any],
         blockers.append("server_side_manifest_component_expected_mismatch")
     if manifest.get("channel") not in ALLOWED_CHANNELS:
         blockers.append("server_side_manifest_channel")
+    if not is_git_sha(manifest.get("source_commit")):
+        blockers.append("server_side_manifest_source_commit_invalid")
     if not allow_test_fixtures and (
         data.get("test_fixture") is True
         or manifest.get("version") == "server-fixture"
@@ -1785,6 +1792,18 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("server_side_manifest_component_expected_mismatch", result["blockers"])
         self.assertIn("server_side_publish_gate_tool", result["blockers"])
+
+    def test_manifest_source_commit_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = write_fixture_release(root, component="player-runtime")
+            manifest_path = root / FIXTURE_MANIFEST_NAME
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.pop("source_commit")
+            write_json(manifest_path, manifest)
+            result = evaluate(path, expected_component="player-runtime", allow_test_fixtures=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_manifest_source_commit_invalid", result["blockers"])
 
     def test_tampered_payload_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
