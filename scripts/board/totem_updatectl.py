@@ -1024,7 +1024,14 @@ def _apply_player_runtime_linked_previous_unfrozen(
         }
         _write_state(state)
         return 10
-    _player_runtime_fault("after_health_passed", version=version, identity=identity)
+    _player_runtime_fault(
+        "after_health_passed",
+        version=version,
+        identity=identity,
+        health_passed=bool(health.get("passed")),
+        health_observed_kiosk_py_sha256=health.get("observed_kiosk_py_sha256"),
+        health_observed_tree_sha256=health.get("observed_tree_sha256"),
+    )
 
     try:
         post_health_identity = _player_runtime_identity(release_dir, manifest)
@@ -1035,9 +1042,15 @@ def _apply_player_runtime_linked_previous_unfrozen(
             raise RuntimeError("candidate_identity_changed_after_health")
         identity = post_health_identity
         _fsync_release_tree(release_dir)
-        _player_runtime_fault("after_release_tree_fsync", version=version, identity=identity)
+        _player_runtime_fault(
+            "after_release_tree_fsync",
+            version=version,
+            identity=identity,
+            release=str(release_dir),
+            release_tree_fsync_completed=True,
+        )
         marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
-        _player_runtime_fault("after_marker_written", version=version, identity=identity)
+        _player_runtime_fault("after_marker_written", version=version, identity=identity, marker=marker)
     except Exception as e:
         reason = f"linked_previous_reverify_failed:{e}"
         log("ERROR", "player_runtime_reapply_reverify_failed", reason=reason)
@@ -2032,7 +2045,14 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
         _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 11 if not old_current else 10
-    _player_runtime_fault("after_health_passed", version=version, identity=identity)
+    _player_runtime_fault(
+        "after_health_passed",
+        version=version,
+        identity=identity,
+        health_passed=bool(health.get("passed")),
+        health_observed_kiosk_py_sha256=health.get("observed_kiosk_py_sha256"),
+        health_observed_tree_sha256=health.get("observed_tree_sha256"),
+    )
 
     try:
         post_health_identity = _player_runtime_identity(release_dir, manifest)
@@ -2082,9 +2102,15 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
 
     try:
         _fsync_release_tree(release_dir)
-        _player_runtime_fault("after_release_tree_fsync", version=version, identity=identity)
+        _player_runtime_fault(
+            "after_release_tree_fsync",
+            version=version,
+            identity=identity,
+            release=str(release_dir),
+            release_tree_fsync_completed=True,
+        )
         marker = _write_player_runtime_marker(release_dir, manifest, identity, health)
-        _player_runtime_fault("after_marker_written", version=version, identity=identity)
+        _player_runtime_fault("after_marker_written", version=version, identity=identity, marker=marker)
     except Exception as e:
         reason = f"marker_write_failed:{e}"
         _quarantine_player_runtime_identity(state, identity, reason)

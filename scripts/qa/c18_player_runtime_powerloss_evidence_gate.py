@@ -28,6 +28,7 @@ LAB_ROLLBACK_SCHEMA = "dadooh.c18.player_runtime.lab_rollback.v1"
 ADOPTION_SCHEMA = "dadooh.c18.player_runtime.adoption.v1"
 PLAYBACK_SCHEMA = "dadooh.c18.playback.deep_health.v1"
 POST_RECONCILE_STATE_SCHEMA = "dadooh.c18.player_runtime.powerloss.post_reconcile_state.v1"
+PLAYER_RUNTIME_MARKER_SCHEMA = "dadooh.c18.player_runtime.verified.v1"
 
 PRIVATE_IP_RE = re.compile(
     r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
@@ -423,7 +424,9 @@ def quarantine_entry(runtime: dict[str, Any], version: str | None) -> dict[str, 
 
 def require_verifying_apply(checkpoint: dict[str, Any],
                             manifest: dict[str, Any],
-                            errors: list[str]) -> tuple[dict[str, Any], dict[str, Any], str | None, str | None]:
+                            errors: list[str],
+                            *,
+                            context_identity_required: bool = True) -> tuple[dict[str, Any], dict[str, Any], str | None, str | None]:
     runtime = checkpoint.get("runtime_snapshot") if isinstance(checkpoint.get("runtime_snapshot"), dict) else {}
     context = checkpoint.get("context") if isinstance(checkpoint.get("context"), dict) else {}
     last_operation = runtime.get("last_operation") if isinstance(runtime.get("last_operation"), dict) else {}
@@ -449,9 +452,18 @@ def require_verifying_apply(checkpoint: dict[str, Any],
         errors.append("checkpoint_last_operation_not_verifying_apply")
     if candidate and last_operation.get("version") != candidate:
         errors.append("checkpoint_last_operation_version_mismatch")
-    if not isinstance(context.get("identity"), dict):
+    candidate_identity = last_operation.get("candidate_identity") if isinstance(last_operation.get("candidate_identity"), dict) else {}
+    if not candidate_identity:
+        errors.append("checkpoint_last_operation_candidate_identity_missing")
+    else:
+        require_hash_identity("checkpoint_last_operation_candidate", candidate_identity, candidate, errors)
+    context_identity = context.get("identity")
+    if context_identity_required and not isinstance(context_identity, dict):
         errors.append("checkpoint_identity_missing")
-    identity_errors("checkpoint_last_operation_candidate", last_operation.get("candidate_identity"), context.get("identity"), errors)
+    elif isinstance(context_identity, dict):
+        identity_errors("checkpoint_last_operation_candidate", candidate_identity, context_identity, errors)
+    elif context_identity is not None:
+        errors.append("checkpoint_identity_not_object")
     return runtime, context, candidate, expected
 
 
@@ -495,7 +507,41 @@ def validate_apply_verifying_checkpoint(checkpoint: dict[str, Any],
         checkpoint,
         manifest,
         errors,
+        context_identity_required=checkpoint_name != "after_previous_symlink",
     )
+    identity = context.get("identity") if isinstance(context.get("identity"), dict) else {}
+    if checkpoint_name == "after_health_passed":
+        if context.get("health_passed") is not True:
+            errors.append("checkpoint_health_not_passed")
+        if identity:
+            if context.get("health_observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+                errors.append("checkpoint_health_kiosk_identity_mismatch")
+            if context.get("health_observed_tree_sha256") != identity.get("tree_sha256"):
+                errors.append("checkpoint_health_tree_identity_mismatch")
+    elif checkpoint_name == "after_release_tree_fsync":
+        if context.get("release_tree_fsync_completed") is not True:
+            errors.append("checkpoint_release_tree_fsync_not_completed")
+        if link_version(context.get("release")) != candidate:
+            errors.append("checkpoint_release_not_candidate")
+    elif checkpoint_name == "after_marker_written":
+        marker = context.get("marker") if isinstance(context.get("marker"), dict) else {}
+        if not marker:
+            errors.append("checkpoint_marker_missing")
+        else:
+            if marker.get("schema") != PLAYER_RUNTIME_MARKER_SCHEMA:
+                errors.append("checkpoint_marker_schema")
+            if marker.get("verdict") != "verified":
+                errors.append("checkpoint_marker_not_verified")
+            for key in ("version", "payload_sha256", "tree_sha256", "kiosk_py_sha256"):
+                if identity and marker.get(key) != identity.get(key):
+                    errors.append(f"checkpoint_marker_{key}_mismatch")
+            deep_health = marker.get("deep_health") if isinstance(marker.get("deep_health"), dict) else {}
+            if deep_health.get("passed") is not True:
+                errors.append("checkpoint_marker_health_not_passed")
+            if identity and deep_health.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+                errors.append("checkpoint_marker_health_kiosk_identity_mismatch")
+            if identity and deep_health.get("observed_tree_sha256") != identity.get("tree_sha256"):
+                errors.append("checkpoint_marker_health_tree_identity_mismatch")
     if checkpoint_name == "after_previous_symlink":
         previous = context.get("previous")
         if not isinstance(previous, str) or not previous:
@@ -1235,7 +1281,33 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
                 "version": candidate,
                 "candidate_identity": identity,
             }
-            context["identity"] = identity
+            if checkpoint_name != "after_previous_symlink":
+                context["identity"] = identity
+            if checkpoint_name == "after_health_passed":
+                context.update({
+                    "health_passed": True,
+                    "health_observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                    "health_observed_tree_sha256": identity["tree_sha256"],
+                })
+            elif checkpoint_name == "after_release_tree_fsync":
+                context.update({
+                    "release": f"/data/player-runtime/releases/{candidate}",
+                    "release_tree_fsync_completed": True,
+                })
+            elif checkpoint_name == "after_marker_written":
+                context["marker"] = {
+                    "schema": PLAYER_RUNTIME_MARKER_SCHEMA,
+                    "verdict": "verified",
+                    "version": candidate,
+                    "payload_sha256": identity["payload_sha256"],
+                    "tree_sha256": identity["tree_sha256"],
+                    "kiosk_py_sha256": identity["kiosk_py_sha256"],
+                    "deep_health": {
+                        "passed": True,
+                        "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                        "observed_tree_sha256": identity["tree_sha256"],
+                    },
+                }
             if checkpoint_name == "after_previous_symlink":
                 context["previous"] = f"releases/{expected}"
                 runtime["previous_link"] = f"releases/{expected}"
@@ -1384,6 +1456,63 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("checkpoint_identity_missing", result["errors"])
+
+    def test_after_health_passed_requires_health_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "after_health_passed")
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            del checkpoint["context"]["health_passed"]
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_health_not_passed", result["errors"])
+
+    def test_after_marker_written_requires_marker_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "after_marker_written")
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            del checkpoint["context"]["marker"]
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_marker_missing", result["errors"])
+
+    def test_after_release_tree_fsync_requires_fsync_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "after_release_tree_fsync")
+            self.assertTrue(validate(root)["passed"])
+
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint["context"]["release_tree_fsync_completed"] = False
+            write_json(checkpoint_path, checkpoint)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("checkpoint_release_tree_fsync_not_completed", result["errors"])
+
+    def test_after_previous_symlink_matches_hook_without_context_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            self.set_apply_checkpoint(root, "after_previous_symlink")
+            checkpoint = json.loads((root / "trial/powerloss-checkpoint/checkpoint.json").read_text(encoding="utf-8"))
+            self.assertNotIn("identity", checkpoint["context"])
+            self.assertTrue(validate(root)["passed"])
 
     def test_apply_success_checkpoint_semantics_pass_and_reject_non_success_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
