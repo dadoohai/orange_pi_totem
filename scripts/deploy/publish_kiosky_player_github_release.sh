@@ -139,6 +139,41 @@ ACTUAL_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 [[ "$ACTUAL_SHA" == "$MANIFEST_SHA" ]] \
   || die "payload sha256 mismatch: actual=$ACTUAL_SHA manifest=$MANIFEST_SHA"
 
+# C18 boundary scan: this historical publisher may only publish a legacy app
+# reproduction artifact, never media-system, field-data, service, or image-owned
+# content smuggled through a tarball built outside the guarded builder.
+if ! python3 - "$PAYLOAD" <<'PY'
+import posixpath
+import sys
+import tarfile
+
+payload = sys.argv[1]
+for member in tarfile.open(payload, "r:gz").getmembers():
+    name = member.name
+    normalized = posixpath.normpath(name.lstrip("./"))
+    if normalized in {"", "."}:
+        continue
+    parts = [part for part in normalized.split("/") if part and part != "."]
+    if name.startswith("/") or ".." in parts:
+        raise SystemExit(f"C18 legacy boundary violation in payload: {name}")
+    if not (member.isfile() or member.isdir()):
+        raise SystemExit(f"C18 legacy boundary violation in payload: {name}")
+    base = parts[-1] if parts else ""
+    banned_dirs = {"data", "media", "cache", "config", "secrets", "opt", "usr", "boot"}
+    if any(part in banned_dirs for part in parts):
+        raise SystemExit(f"C18 legacy boundary violation in payload: {name}")
+    joined = "/".join(parts)
+    if joined.startswith(("lib/modules/", "etc/systemd/")) or joined in {"lib/modules", "etc/systemd"}:
+        raise SystemExit(f"C18 legacy boundary violation in payload: {name}")
+    if base in {"mpv", "ffmpeg", "ffprobe", "playlist.json", "state.json", "cache_index.json", "seed.json", "policy.json"}:
+        raise SystemExit(f"C18 legacy boundary violation in payload: {name}")
+    if base.endswith((".service", ".timer", ".ko")):
+        raise SystemExit(f"C18 legacy boundary violation in payload: {name}")
+PY
+then
+  die "C18 legacy boundary violation in payload"
+fi
+
 # ----- compute tag / title / prerelease policy -----
 if [[ -n "$TAG_OVERRIDE" ]]; then
   TAG="$TAG_OVERRIDE"

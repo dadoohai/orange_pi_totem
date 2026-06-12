@@ -152,6 +152,27 @@ for fname in "${FORBIDDEN_NAMES[@]}"; do
   fi
 done
 
+# ----- C18 legacy boundary scan -----
+# Even with the explicit frozen-player bypass, this historical helper must not
+# smuggle media-system, field-data, service, or image-owned files into a package.
+while IFS= read -r -d '' path; do
+  rel="${path#"$STAGE_DIR"/}"
+  base="$(basename "$rel")"
+  case "$rel" in
+    data|data/*|*/data|*/data/*|media|media/*|*/media|*/media/*|cache|cache/*|*/cache|*/cache/*|config|config/*|*/config|*/config/*|secrets|secrets/*|*/secrets|*/secrets/*)
+      die "C18 legacy boundary violation in staged tree: $rel"
+      ;;
+    opt|opt/*|*/opt|*/opt/*|usr|usr/*|*/usr|*/usr/*|boot|boot/*|*/boot|*/boot/*|lib/modules|lib/modules/*|*/lib/modules|*/lib/modules/*|etc/systemd|etc/systemd/*|*/etc/systemd|*/etc/systemd/*)
+      die "C18 legacy boundary violation in staged tree: $rel"
+      ;;
+  esac
+  case "$base" in
+    mpv|ffmpeg|ffprobe|playlist.json|state.json|cache_index.json|seed.json|policy.json|*.service|*.timer|*.ko)
+      die "C18 legacy boundary violation in staged tree: $rel"
+      ;;
+  esac
+done < <(find "$STAGE_DIR" -mindepth 1 -print0)
+
 # ----- secret scan (regex defense in depth) -----
 SCAN_PATTERNS=(
   '-----BEGIN [A-Z ]+PRIVATE KEY-----'

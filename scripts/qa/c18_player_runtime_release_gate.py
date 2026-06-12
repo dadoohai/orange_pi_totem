@@ -43,6 +43,8 @@ REQUIRED_UPDATER_FEATURES = {
 }
 SAFE_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 MARKER_NAME = ".release_verified.json"
+ALLOWED_PAYLOAD_DIRS = {""}
+ALLOWED_PAYLOAD_FILES = {"kiosk.py"}
 FORBIDDEN_RUNTIME_BASENAMES = {
     "totem_updatectl.py",
     "totem-kiosky-launcher.sh",
@@ -188,18 +190,28 @@ def safe_member_path(name: str) -> Path:
     return Path(name)
 
 
+def normalized_member_name(path: Path) -> str:
+    normalized = "/".join(path.parts)
+    return "" if normalized == "." else normalized
+
+
 def validate_tar_member(member: tarfile.TarInfo) -> Path:
     path = safe_member_path(member.name)
     if not (member.isfile() or member.isdir()):
         raise GateError(f"unsupported tar member type: {member.name}")
-    lowered = "/".join(path.parts).lower()
+    normalized = normalized_member_name(path)
+    lowered = normalized.lower()
     basename = path.name.lower()
     if lowered.startswith(("opt/", "etc/systemd/", "usr/", "lib/systemd/")):
         raise GateError(f"image-fixed/control path is not allowed in player-runtime payload: {member.name}")
+    if lowered.startswith(("boot/", "lib/modules/", "lib/firmware/")):
+        raise GateError(f"media-system/image path is not allowed in player-runtime payload: {member.name}")
     if lowered.startswith(("data/", "media/", "secrets/", "config/")):
         raise GateError(f"field-data path is not allowed in player-runtime payload: {member.name}")
-    if basename in {".env", "config.json", "seed.json", "policy.json"}:
+    if basename in {".env", "config.json", "seed.json", "policy.json", "playlist.json", "state.json", "cache_index.json"}:
         raise GateError(f"field-data file is not allowed in player-runtime payload: {member.name}")
+    if basename in {"mpv", "ffmpeg", "ffprobe"} or basename.endswith(".ko"):
+        raise GateError(f"media-system file is not allowed in player-runtime payload: {member.name}")
     if basename == MARKER_NAME:
         raise GateError(f"verified marker must be written by updater, not payload: {member.name}")
     if basename in FORBIDDEN_RUNTIME_BASENAMES:
@@ -208,6 +220,10 @@ def validate_tar_member(member: tarfile.TarInfo) -> Path:
         raise GateError(f"secret-like file is not allowed in player-runtime payload: {member.name}")
     if member.mode & 0o002:
         raise GateError(f"world-writable file mode is not allowed in player-runtime payload: {member.name}")
+    if member.isdir() and normalized not in ALLOWED_PAYLOAD_DIRS:
+        raise GateError(f"unexpected player-runtime payload directory: {member.name}")
+    if member.isfile() and normalized not in ALLOWED_PAYLOAD_FILES:
+        raise GateError(f"unexpected player-runtime payload entry: {member.name}")
     return path
 
 
@@ -661,6 +677,8 @@ def write_payload(root: Path, version: str, kiosk_source: str, extra_files: dict
     payload = root / f"dadooh-{COMPONENT}-{version}.tar.gz"
     with tarfile.open(payload, "w:gz") as tf:
         for path in sorted(work.rglob("*")):
+            if not path.is_file():
+                continue
             tf.add(path, arcname=str(path.relative_to(work)))
     return payload
 
@@ -950,6 +968,32 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         manifest = write_manifest(root, "bad-config", payload)
         with self.assertRaisesRegex(GateError, "field-data"):
             validate_release(manifest, payload)
+
+    def test_rejects_unexpected_payload_entries(self) -> None:
+        cases = {
+            "cache/item.bin": "unexpected|field-data",
+            "playlist.json": "field-data",
+            "state.json": "field-data",
+            "mpv": "media-system",
+            "ffmpeg": "media-system",
+            "lib/modules/panfrost.ko": "media-system",
+            "helpers/runtime_helper.py": "unexpected player-runtime payload",
+        }
+        for name, pattern in cases.items():
+            with self.subTest(name=name):
+                tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")
+                self.addCleanup(tmp.cleanup)
+                root = Path(tmp.name)
+                version = re.sub(r"[^A-Za-z0-9._-]+", "-", f"bad-extra-{name}")[:120]
+                payload = write_payload(
+                    root,
+                    version,
+                    SNAPSHOT_KIOSK.read_text(encoding="utf-8"),
+                    {name: b"nope\n"},
+                )
+                manifest = write_manifest(root, version, payload)
+                with self.assertRaisesRegex(GateError, pattern):
+                    validate_release(manifest, payload)
 
     def test_rejects_control_files(self) -> None:
         tmp = tempfile.TemporaryDirectory(prefix="c18-player-runtime-release-gate-test-")

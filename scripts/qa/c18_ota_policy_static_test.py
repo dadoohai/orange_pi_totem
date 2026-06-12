@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -1185,6 +1186,80 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("stable", result.stdout + result.stderr)
+
+    def test_legacy_kiosky_player_bypass_rejects_boundary_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-kiosky-builder-boundary-") as tmp:
+            root = Path(tmp)
+            repo = root / "kiosky-player"
+            out = root / "out"
+            repo.mkdir()
+            subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "C18 Test"], cwd=repo, check=True)
+            (repo / "kiosk.py").write_text("print('ok')\n", encoding="utf-8")
+            (repo / "media").mkdir()
+            (repo / "media" / "clip.mp4").write_bytes(b"not-real-media\n")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "fixture"], cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            env = os.environ.copy()
+            env["ALLOW_C18_FROZEN_PLAYER_RELEASE"] = "1"
+            result = subprocess.run(
+                [
+                    str(BUILD_PLAYER_PATH),
+                    "--build-package",
+                    "--channel=homologation",
+                    f"--kiosky-repo={repo}",
+                    f"--out-base={out}",
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("C18 legacy boundary violation", result.stdout + result.stderr)
+
+    def test_legacy_kiosky_player_publisher_rejects_boundary_payload(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-kiosky-publisher-boundary-") as tmp:
+            root = Path(tmp)
+            release_dir = root / "release"
+            payload_root = root / "payload-root"
+            release_dir.mkdir()
+            payload_root.mkdir()
+            version = "homolog-boundary-test"
+            payload_name = f"dadooh-kiosky-player-{version}.tar.gz"
+            manifest_name = f"dadooh-kiosky-player-{version}.manifest.json"
+            payload = release_dir / payload_name
+            (payload_root / "kiosk.py").write_text("print('ok')\n", encoding="utf-8")
+            (payload_root / "media").mkdir()
+            (payload_root / "media" / "clip.mp4").write_bytes(b"not-real-media\n")
+            with tarfile.open(payload, "w:gz") as tf:
+                for path in sorted(payload_root.rglob("*")):
+                    tf.add(path, arcname=str(path.relative_to(payload_root)))
+            manifest = {
+                "schema": "dadooh.totem.update.v1",
+                "component": "kiosky-player",
+                "version": version,
+                "channel": "homologation",
+                "source_commit": "a" * 40,
+                "created_at_utc": "2026-06-12T00:00:00Z",
+                "payload": payload_name,
+                "payload_sha256": hashlib.sha256(payload.read_bytes()).hexdigest(),
+            }
+            (release_dir / manifest_name).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            env = os.environ.copy()
+            env["ALLOW_C18_FROZEN_PLAYER_RELEASE"] = "1"
+            result = subprocess.run(
+                [str(PUBLISH_PLAYER_PATH), "--release-dir", str(release_dir), "--prepare-only"],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("C18 legacy boundary violation", result.stdout + result.stderr)
 
     def test_player_runtime_builder_is_lab_only_and_gated(self) -> None:
         script = BUILD_PLAYER_RUNTIME_PATH.read_text(encoding="utf-8")
