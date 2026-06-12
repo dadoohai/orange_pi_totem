@@ -9,6 +9,7 @@ or thaw player-runtime.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import re
@@ -597,6 +598,11 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def utc_z(delta: dt.timedelta = dt.timedelta()) -> str:
+    value = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) + delta
+    return value.isoformat().replace("+00:00", "Z")
+
+
 def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
     return {
         "schema": SCHEMA,
@@ -694,8 +700,8 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
         "target_payload_sha256": target["payload_sha256"],
         **thaw_decision_expected_hashes_from_args(args),
         "window": {
-            "start_utc": "2000-01-01T00:00:00Z",
-            "end_utc": "2100-01-01T00:00:00Z",
+            "start_utc": utc_z(dt.timedelta(minutes=-30)),
+            "end_utc": utc_z(dt.timedelta(minutes=30)),
         },
         "non_claims": [
             "this_decision_does_not_execute_thaw",

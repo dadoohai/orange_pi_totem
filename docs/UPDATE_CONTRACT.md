@@ -530,11 +530,24 @@ A decisao explicita do operador para thaw publico de `player-runtime` deve ser
 um artefato proprio `dadooh.c18.player_runtime.thaw_decision.v1`, validado por
 `scripts/qa/c18_player_runtime_thaw_decision_gate.py`. O artefato deve estar em
 `channel=stable`, `component=player-runtime`, trazer operador, rollback owner,
-janela UTC ativa, pacote/source/payload alvo, hashes das familias H2/stable
-requeridas, `auto_pull_enabled=false`, `thaw_execution_performed=false` e
+janela UTC ativa de no maximo 4h, pacote/source/payload alvo, hashes das
+familias H2/stable requeridas, `auto_pull_enabled=false`,
+`thaw_execution_performed=false` e
 non-claims explicitos. Esse gate nao executa thaw, nao publica release, nao
 habilita auto-pull e nao substitui H2 verde; ele apenas torna a autorizacao
 auditavel e artifact-bound.
+
+Para reduzir erro operacional quando os testes fisicos terminarem, o scaffold
+fail-closed dos artefatos finais deve ser gerado por
+`scripts/qa/c18_player_runtime_stable_decision_draft_build.py`. O builder e
+offline, calcula os hashes dos artefatos reais e deriva pacote/source/payload da
+evidencia server-side, mas escreve `approved=false`, campos de operador vazios e
+janela de thaw invalida. A saida deve falhar nos gates ate que H2 esteja verde e
+um operador preencha a decisao real; o script nao publica release, nao habilita
+auto-pull, nao executa thaw e nao remove o freeze publico `rc=44`.
+O diretorio final de evidencia deve versionar, no minimo,
+`c18-stable-promotion-evidence.json`, `c18-player-runtime-thaw-decision.json`,
+`h2-readiness-final.json` e README com non-claims/hashes.
 
 A familia de governanca server-side deve ser validada antes de entrar no H2 por
 `scripts/qa/c18_server_side_publish_governance_gate.py`, com schema

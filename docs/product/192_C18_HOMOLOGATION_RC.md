@@ -195,4 +195,9 @@ validados semanticamente no caminho stable: release gate verde, power-loss 17/17
 verde, soak 24h, server-side assinado com trust key externa + trust anchor, e
 decisao de operador aprovada pelo gate dedicado
 `scripts/qa/c18_player_runtime_thaw_decision_gate.py`. Essa decisao tambem e
-artifact-bound e nao executa thaw, nao publica release e nao habilita auto-pull.
+artifact-bound, tem janela UTC maxima de 4h e nao executa thaw, nao publica
+release e nao habilita auto-pull.
+O scaffold operacional desses dois JSONs finais existe em
+`scripts/qa/c18_player_runtime_stable_decision_draft_build.py`: ele apenas gera
+rascunhos fail-closed, com hashes reais quando os artefatos forem fornecidos, e
+nao substitui H2 verde nem decisao humana.

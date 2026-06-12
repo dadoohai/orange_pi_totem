@@ -47,6 +47,8 @@ Para qualquer decisão de update, a fonte vigente é:
 - `docs/product/191_C18_OTA_OPERATING_MODEL.md` para o modelo operacional.
 - `docs/product/192_C18_HOMOLOGATION_RC.md` para o retrato da RC de
   homologacao assistida, sem inferir producao/stable.
+- `docs/c18-player-runtime-h2-stable-thaw-runbook.md` para a sequencia final
+  H2/stable/thaw quando power-loss 17/17 e soak 24h existirem.
 - `docs/product/188_C18_STATUS_E_CONTINUIDADE.md` para continuidade historica
   C18; o baseline live continua em `189`.
 
@@ -106,6 +108,14 @@ podem ser atualizados hoje, o que permanece congelado e como distinguir service
 health, deep-health e soak.
 
 Arquivo: `UPDATE_AUTHORIZATION_HEALTH.md`
+
+### Runbook H2/stable/thaw de player-runtime
+
+Roteiro final para a fase posterior ao piloto assistido: power-loss 17/17,
+soak 24h, rascunhos fail-closed de stable promotion/thaw decision, gates finais
+e regra de nao criar manifest `player-runtime channel=stable`.
+
+Arquivo: `c18-player-runtime-h2-stable-thaw-runbook.md`
 
 ### Diagnóstico operacional e incidentes de campo
 

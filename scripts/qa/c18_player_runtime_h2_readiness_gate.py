@@ -11,6 +11,7 @@ and an explicit operator thaw decision. Missing evidence is a blocker.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import subprocess
@@ -104,6 +105,11 @@ def sha256_file(path: Path) -> str:
 def sha256_json(payload: Any) -> str:
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def utc_z(delta: dt.timedelta = dt.timedelta()) -> str:
+    value = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) + delta
+    return value.isoformat().replace("+00:00", "Z")
 
 
 def is_hex(value: Any, length: int) -> bool:
@@ -466,6 +472,11 @@ def evaluate_server_side(path: Path | None,
 
 def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
     expected_target, target_errors = thaw_decision_expected_target(args)
+    decision_sha256 = (
+        sha256_file(args.operator_thaw_decision)
+        if args.operator_thaw_decision is not None and args.operator_thaw_decision.is_file()
+        else None
+    )
     result = evaluate_thaw_decision_gate(
         args.operator_thaw_decision,
         expected_hashes=thaw_decision_expected_hashes(args),
@@ -481,6 +492,7 @@ def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
         not blockers,
         blockers,
         evidence_path=str(args.operator_thaw_decision) if args.operator_thaw_decision is not None else None,
+        evidence_sha256=decision_sha256,
         gate_result=result,
         expected_target=expected_target,
         expected_target_errors=target_errors,
@@ -650,8 +662,8 @@ def complete_args(root: Path) -> argparse.Namespace:
         "target_payload_sha256": target["payload_sha256"],
         **thaw_decision_expected_hashes(args),
         "window": {
-            "start_utc": "2000-01-01T00:00:00Z",
-            "end_utc": "2100-01-01T00:00:00Z",
+            "start_utc": utc_z(dt.timedelta(minutes=-30)),
+            "end_utc": utc_z(dt.timedelta(minutes=30)),
         },
         "non_claims": [
             "this_decision_does_not_execute_thaw",

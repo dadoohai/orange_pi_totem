@@ -60,6 +60,9 @@ PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtim
 PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_pilot_readiness_gate.py"
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
 PLAYER_RUNTIME_THAW_DECISION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_thaw_decision_gate.py"
+PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_stable_decision_draft_build.py"
+)
 SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
 SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_asset_collect.py"
 SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_evidence_build.py"
@@ -80,6 +83,7 @@ ROADMAP_PATH = REPO_ROOT / "docs" / "04_ROADMAP_PRODUTO_TESTES_ATUALIZACAO_MONIT
 POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
 UPDATE_CONTRACT_PATH = REPO_ROOT / "docs" / "UPDATE_CONTRACT.md"
 UPDATE_AUTHORIZATION_HEALTH_PATH = REPO_ROOT / "docs" / "UPDATE_AUTHORIZATION_HEALTH.md"
+PLAYER_RUNTIME_H2_STABLE_THAW_RUNBOOK_PATH = REPO_ROOT / "docs" / "c18-player-runtime-h2-stable-thaw-runbook.md"
 README_PATH = REPO_ROOT / "README.md"
 DOC_INDEX_PATH = REPO_ROOT / "docs" / "00_INDICE_E_PLANO_ESTRATEGICO.md"
 DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md"
@@ -357,6 +361,28 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("thaw_decision_auto_pull_enabled", thaw_gate)
         self.assertIn("thaw_decision_execution_already_performed", thaw_gate)
         self.assertIn("thaw_decision_window_inactive", thaw_gate)
+        self.assertIn("MAX_THAW_WINDOW_SEC = 4 * 60 * 60", thaw_gate)
+        self.assertIn("thaw_decision_window_too_long", thaw_gate)
+        self.assertIn("test_long_window_denies", thaw_gate)
+        decision_draft = PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.stable_decision_draft_build.v1", decision_draft)
+        self.assertIn("STABLE_DRAFT_NAME", decision_draft)
+        self.assertIn("THAW_DRAFT_NAME", decision_draft)
+        self.assertIn('"approved": False', decision_draft)
+        self.assertIn('"operator": ""', decision_draft)
+        self.assertIn('"window": {', decision_draft)
+        self.assertIn("stable_promotion_evidence_sha256", decision_draft)
+        self.assertIn("target_from_server_side", decision_draft)
+        self.assertIn("validate_powerloss_inputs", decision_draft)
+        self.assertIn("powerloss_matrix_incomplete", decision_draft)
+        self.assertIn("powerloss_dir_missing", decision_draft)
+        self.assertIn("this_tool_does_not_authorize_stable", decision_draft)
+        self.assertIn("this_tool_does_not_thaw_player_runtime", decision_draft)
+        self.assertIn("this_tool_does_not_publish_releases", decision_draft)
+        self.assertIn("this_tool_does_not_enable_auto_pull", decision_draft)
+        self.assertIn("test_drafts_are_hash_bound_but_fail_closed", decision_draft)
+        self.assertIn("test_missing_artifact_hash_fails", decision_draft)
+        self.assertIn("test_missing_powerloss_dir_fails_before_writing_drafts", decision_draft)
 
     def test_totem_core_stable_publisher_passes_validated_assets_to_gh(self) -> None:
         if shutil.which("openssl") is None:
@@ -1121,6 +1147,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             PLAYER_RUNTIME_H2_READINESS_GATE_PATH,
             STABLE_PROMOTION_GATE_PATH,
             PLAYER_RUNTIME_THAW_DECISION_GATE_PATH,
+            PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH,
             PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH,
             SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH,
             SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH,
@@ -2106,6 +2133,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("thaw_decision_expected_hashes", h2_gate)
         self.assertIn("thaw_decision_expected_target", h2_gate)
         self.assertIn("expected_payload_sha256=expected_target.get", h2_gate)
+        self.assertIn("evidence_sha256=decision_sha256", h2_gate)
         self.assertIn("test_operator_thaw_target_must_match_server_side_manifest", h2_gate)
         self.assertNotIn("operator_thaw_decision_sha256", h2_gate)
         self.assertIn("this_gate_does_not_thaw_player_runtime", h2_gate)
@@ -2205,6 +2233,15 @@ exec "$C18_REAL_PYTHON3" "$@"
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = subprocess.run(
+            ["python3", str(PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = subprocess.run(
             ["python3", str(SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH), "--self-test"],
             cwd=REPO_ROOT,
             text=True,
@@ -2224,12 +2261,16 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         update_auth = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
+        update_contract = UPDATE_CONTRACT_PATH.read_text(encoding="utf-8")
+        h2_stable_runbook = PLAYER_RUNTIME_H2_STABLE_THAW_RUNBOOK_PATH.read_text(encoding="utf-8")
+        doc_index = DOC_INDEX_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_player_runtime_lab_rollback.py", update_auth)
         self.assertIn("C18_PLAYER_RUNTIME_LAB_ROLLBACK", update_auth)
         self.assertIn("c18_player_runtime_evidence_gate.py", update_auth)
         self.assertIn("abort-cleanup.json", update_auth)
         self.assertIn("boot reconcile nao", update_auth)
         update_auth_words = " ".join(update_auth.split())
+        h2_stable_runbook_words = " ".join(h2_stable_runbook.split())
         self.assertIn(
             "C18 Homologation RC esta pronta para piloto assistido, nao para producao.",
             update_auth_words,
@@ -2263,8 +2304,11 @@ exec "$C18_REAL_PYTHON3" "$@"
             "c18_player_runtime_h2_readiness_gate.py",
             "c18_stable_promotion_gate.py",
             "c18_player_runtime_thaw_decision_gate.py",
+            "c18_player_runtime_stable_decision_draft_build.py",
             "c18_server_side_publish_governance_gate.py",
             "dadooh.c18.player_runtime.thaw_decision.v1",
+            "janela UTC ativa de no maximo 4h",
+            "h2-readiness-final.json",
             "server-side/signature",
             "power-loss 17/17",
             "soak 24h",
@@ -2273,6 +2317,28 @@ exec "$C18_REAL_PYTHON3" "$@"
         ):
             self.assertIn(token, update_auth)
         self.assertNotIn("so imagem ou thaw lab explicito", update_auth)
+        self.assertIn("c18-player-runtime-h2-stable-thaw-runbook.md", doc_index)
+        for token in (
+            "c18_player_runtime_stable_decision_draft_build.py",
+            "janela UTC ativa de no maximo 4h",
+            "c18-stable-promotion-evidence.json",
+            "c18-player-runtime-thaw-decision.json",
+            "h2-readiness-final.json",
+        ):
+            self.assertIn(token, update_contract)
+        for token in (
+            "C18 Player-Runtime H2 Stable/Thaw Runbook",
+            "nao gerar manifest `player-runtime channel=stable`",
+            "--cycles 24",
+            "--cycle-duration-sec 3600",
+            "--evidence-scope endurance-candidate",
+            "c18_player_runtime_stable_decision_draft_build.py",
+            "c18-stable-promotion-evidence.json",
+            "c18-player-runtime-thaw-decision.json",
+            "h2-readiness-final.json",
+        ):
+            self.assertIn(token, h2_stable_runbook)
+        self.assertIn("no maximo 4h", h2_stable_runbook_words)
 
     def test_m6_trial_accepts_clean_repo_identity_file(self) -> None:
         spec = importlib.util.spec_from_file_location("c18_m6_trial_policy_test", PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH)

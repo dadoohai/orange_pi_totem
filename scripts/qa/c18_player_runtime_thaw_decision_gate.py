@@ -23,6 +23,7 @@ from typing import Any
 SCHEMA = "dadooh.c18.player_runtime.thaw_decision.v1"
 GATE_SCHEMA = "dadooh.c18.player_runtime.thaw_decision_gate.v1"
 COMPONENT = "player-runtime"
+MAX_THAW_WINDOW_SEC = 4 * 60 * 60
 REQUIRED_HASH_FIELDS = (
     "release_gate_sha256",
     "powerloss_matrix_sha256",
@@ -84,6 +85,8 @@ def validate_window(data: dict[str, Any], now_utc: dt.datetime | None) -> list[s
     if start is not None and end is not None:
         if end <= start:
             blockers.append("thaw_decision_window_not_forward")
+        elif (end - start).total_seconds() > MAX_THAW_WINDOW_SEC:
+            blockers.append("thaw_decision_window_too_long")
         if now_utc is not None:
             now = now_utc.astimezone(dt.timezone.utc)
             if now < start or now > end:
@@ -242,8 +245,8 @@ def valid_fixture(**overrides: Any) -> dict[str, Any]:
         "server_side_trust_anchor_evidence_sha256": "1" * 64,
         "stable_promotion_evidence_sha256": "2" * 64,
         "window": {
-            "start_utc": "2099-01-01T00:00:00Z",
-            "end_utc": "2099-01-02T00:00:00Z",
+            "start_utc": "2099-01-01T10:00:00Z",
+            "end_utc": "2099-01-01T14:00:00Z",
         },
         "non_claims": list(REQUIRED_NON_CLAIMS),
     }
@@ -298,6 +301,18 @@ class ThawDecisionGateSelfTest(unittest.TestCase):
         self.assertIn("thaw_decision_auto_pull_enabled", result["blockers"])
         self.assertIn("thaw_decision_execution_already_performed", result["blockers"])
         self.assertIn("thaw_decision_window_inactive", result["blockers"])
+
+    def test_long_window_denies(self) -> None:
+        data = valid_fixture(window={
+            "start_utc": "2099-01-01T00:00:00Z",
+            "end_utc": "2099-01-02T00:00:01Z",
+        })
+        result = validate_data(
+            data,
+            now_utc=dt.datetime(2099, 1, 1, 12, 0, tzinfo=dt.timezone.utc),
+        )
+        self.assertFalse(result["passed"])
+        self.assertIn("thaw_decision_window_too_long", result["blockers"])
 
     def test_file_roundtrip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

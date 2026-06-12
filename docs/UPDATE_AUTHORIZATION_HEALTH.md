@@ -393,11 +393,17 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
 - `scripts/qa/c18_player_runtime_h2_readiness_gate.py` precisa passar;
 - `scripts/qa/c18_stable_promotion_gate.py` precisa validar a promocao stable;
 - `scripts/qa/c18_player_runtime_thaw_decision_gate.py` precisa validar a
-  decisao formal de thaw;
+  decisao formal de thaw, com janela UTC ativa de no maximo 4h;
+- `scripts/qa/c18_player_runtime_stable_decision_draft_build.py` pode gerar
+  rascunhos fail-closed dos JSONs finais, hash-bound aos artefatos reais, mas
+  esses rascunhos nao aprovam stable nem thaw ate serem preenchidos por operador
+  depois de H2 verde;
 - `scripts/qa/c18_server_side_publish_governance_gate.py` precisa validar a
   familia server-side/signature e trust anchor;
 - a matriz fisica power-loss precisa estar 17/17;
 - o soak precisa ter no minimo 24h;
+- a evidencia final precisa versionar stable evidence, thaw decision,
+  `h2-readiness-final.json` e README com non-claims/hashes;
 - nada disso publica release, liga auto-pull ou remove `rc=44` por si so.
 
 A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
