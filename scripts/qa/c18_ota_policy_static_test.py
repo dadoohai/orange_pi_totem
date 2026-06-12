@@ -38,6 +38,7 @@ PUBLISH_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_kiosky_player_
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
 CONFIG_CONTRACT_PATH = REPO_ROOT / "scripts" / "board" / "totem_config_contract_validate.py"
 APP_INTEGRATION_CONFIG_PATH = REPO_ROOT / "docs" / "app-integration" / "config.homologation-v0.1.example.json"
+APP_INTEGRATION_PLAN_PATH = REPO_ROOT / "docs" / "app-integration" / "00_PLANO_INTEGRACAO_KIOSKY_PLAYER.md"
 MANUAL_KIOSKY_DOC_PATH = REPO_ROOT / "docs" / "app-integration" / "01_TESTE_MANUAL_KIOSKY_PLAYER.md"
 MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_playlist_probe.sh"
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
@@ -86,6 +87,9 @@ DOC189_PATH = REPO_ROOT / "docs" / "product" / "189_C18_OTA_READINESS_GATE.md"
 DOC190_PATH = REPO_ROOT / "docs" / "product" / "190_C18_PROD_ORIENTATION.md"
 DOC191_PATH = REPO_ROOT / "docs" / "product" / "191_C18_OTA_OPERATING_MODEL.md"
 DOC192_PATH = REPO_ROOT / "docs" / "product" / "192_C18_HOMOLOGATION_RC.md"
+DOC136_C14_KIOSKY_PULL_PATH = (
+    REPO_ROOT / "docs" / "product" / "136_C14_2_1_SHIPPING_HOMOLOGATION_IMAGE_WITH_PULL_UPDATER.md"
+)
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 EVIDENCE_CURRENT_DEEP_HEALTH_DIR = REPO_ROOT / str(CURRENT_GOLDEN["coldboot_evidence_dir"])
@@ -1087,6 +1091,91 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("state_file_corrupt_fail_closed", updatectl)
         self.assertIn("_gc_player_runtime_invalid_orphan_releases", updatectl)
         self.assertIn("_fsync_release_tree(release_dir)", updatectl)
+
+    def test_public_player_runtime_thaw_activation_has_no_public_path(self) -> None:
+        updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
+        expected_public_commands = {
+            "status",
+            "self-test",
+            "check-github-latest",
+            "list-github",
+            "apply-github-latest",
+            "apply-manifest-url",
+            "apply-local",
+            "rollback",
+            "reconcile",
+        }
+        parser_commands = set(re.findall(r'sub\.add_parser\("([^"]+)"', updatectl))
+        handlers = updatectl.split("handlers = {", 1)[1].split("}", 1)[0]
+        handler_commands = set(re.findall(r'"([^"]+)": cmd_', handlers))
+        self.assertEqual(parser_commands, expected_public_commands)
+        self.assertEqual(handler_commands, expected_public_commands)
+        for command in parser_commands | handler_commands:
+            self.assertNotRegex(command, r"(?:thaw|unfreeze|activate)")
+        self.assertIn('PLAYER_RUNTIME_LAB_THAW_ENABLED = False', updatectl)
+        self.assertIn("OTA_FROZEN_COMPONENTS", updatectl)
+        self.assertIn("def _apply_frozen_reason", updatectl)
+        self.assertIn("def _block_frozen_apply", updatectl)
+
+        governance_paths = [
+            PLAYER_RUNTIME_H2_READINESS_GATE_PATH,
+            STABLE_PROMOTION_GATE_PATH,
+            PLAYER_RUNTIME_THAW_DECISION_GATE_PATH,
+            PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH,
+            SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH,
+            SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH,
+        ]
+        for path in governance_paths:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.relative_to(REPO_ROOT).as_posix()):
+                self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", text)
+                self.assertNotIn("apply-github", text)
+                self.assertNotIn("gh release", text)
+
+        allowed_lab_thaw_assignment_files = {
+            "scripts/qa/c18_player_runtime_lab_apply.py",
+            "scripts/qa/c18_player_runtime_lab_rollback.py",
+            "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
+            "scripts/qa/c18_runtime_3_release_perms_test.py",
+        }
+        hits: set[str] = set()
+        assignment_re = re.compile(r"^\s*(?:updatectl\.)?PLAYER_RUNTIME_LAB_THAW_ENABLED\s*=\s*True\b")
+        for root in (REPO_ROOT / "scripts" / "qa", REPO_ROOT / "scripts" / "board", REPO_ROOT / "scripts" / "build"):
+            for path in root.rglob("*.py"):
+                if any(assignment_re.search(line) for line in path.read_text(encoding="utf-8").splitlines()):
+                    hits.add(path.relative_to(REPO_ROOT).as_posix())
+        self.assertEqual(hits, allowed_lab_thaw_assignment_files)
+
+    def test_c18_docs_mark_legacy_kiosky_update_paths_and_artifact_roots(self) -> None:
+        update_contract = UPDATE_CONTRACT_PATH.read_text(encoding="utf-8")
+        rc_doc = DOC192_PATH.read_text(encoding="utf-8")
+        for text in (update_contract, rc_doc):
+            self.assertIn("releases/core-updates", text)
+            self.assertIn("releases/player-runtime", text)
+            self.assertIn("releases/totem-core", text)
+            self.assertIn("releases/app-updates", text)
+            self.assertIn("nao usar", text.lower())
+
+        historical_docs = [
+            APP_INTEGRATION_PLAN_PATH,
+            MANUAL_KIOSKY_DOC_PATH,
+            DOC136_C14_KIOSKY_PULL_PATH,
+        ]
+        legacy_tokens = (
+            "scripts/remote/deploy_kiosky_player.sh",
+            "apply-github-latest --repo dadoohai/kiosky-player",
+            "releases/app-updates",
+        )
+        for path in historical_docs:
+            text = path.read_text(encoding="utf-8")
+            if any(token in text for token in legacy_tokens):
+                header = text[:900]
+                with self.subTest(path=path.relative_to(REPO_ROOT).as_posix()):
+                    self.assertIn("Historico", header)
+                    self.assertIn("Nao usar", header)
+                    self.assertIn("C18 OTA/RC", header)
+                    self.assertIn("UPDATE_CONTRACT", header)
+                    self.assertIn("192_C18_HOMOLOGATION_RC", header)
 
     def test_c18_player_runtime_future_trial_records_repo_identity(self) -> None:
         trial = PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH.read_text(encoding="utf-8")

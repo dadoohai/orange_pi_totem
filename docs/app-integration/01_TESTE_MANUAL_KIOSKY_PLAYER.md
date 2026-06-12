@@ -1,5 +1,11 @@
 # Teste manual controlado do kiosky-player
 
+> **Historico C14/Candidato A.** Nao usar este documento como caminho de C18 OTA/RC,
+> `player-runtime`, `stable` ou producao. Para C18, seguir
+> `docs/UPDATE_CONTRACT.md` e `docs/product/192_C18_HOMOLOGATION_RC.md`.
+> O script `scripts/remote/deploy_kiosky_player.sh` e bypass historico/lab,
+> nao mecanismo de update C18.
+
 ## Objetivo
 
 Preparar o primeiro run manual supervisionado do `kiosky-player` na Orange Pi Zero 3 Candidato A, usando o runtime minimo ja validado e preservando DRM/KMS como caminho principal de display.

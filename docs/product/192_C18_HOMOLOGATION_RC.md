@@ -32,6 +32,15 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; guardrails executaveis bloqueiam vazamento para OTA comum; qualquer mudanca exige imagem/homologacao propria |
 | `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software |
 
+## Roots canonicos de artefatos
+
+| Frente | Root canonico | Regra C18 |
+| --- | --- | --- |
+| `player-runtime` | `releases/player-runtime` | Root do pacote homologation atual e dos artefatos server-side do `player-runtime`; qualquer pacote novo precisa passar no `c18_player_runtime_release_gate.py` e nos gates do canal. |
+| `totem-core` | `releases/core-updates` | Root historico/canonico de pacotes core. Artefatos antigos que nao passam no gate C18 atual sao apenas historicos; pacote C18 novo deve ser regenerado e passar `c18_ota_release_gate.py --package-manifest ... --package-payload ...`. |
+| `totem-core` | `releases/totem-core` | Nao e root canonico nesta linha; nao usar para RC C18. |
+| `kiosky-player` legado | `releases/app-updates` | Historico C14/kiosky; nao usar para C18 OTA/RC, `player-runtime`, `stable` ou producao. |
+
 ## Evidencia de fechamento
 
 Pacote alvo de `player-runtime`:

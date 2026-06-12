@@ -1,5 +1,11 @@
 # 136 — C14.2.1 — Shipping homologation image with C14 pull updater embedded
 
+> **Historico C14.** Nao usar este documento como caminho de C18 OTA/RC,
+> `player-runtime`, `stable` ou producao. Para C18, seguir
+> `docs/UPDATE_CONTRACT.md` e `docs/product/192_C18_HOMOLOGATION_RC.md`.
+> O fluxo `apply-github-latest --repo dadoohai/kiosky-player` e o root legado
+> de app updates pertencem ao modelo C14/kiosky congelado.
+
 ## Por que existe esta frente
 
 C14.1.1 entregou o fluxo de atualização remota do `kiosky-player` via GitHub

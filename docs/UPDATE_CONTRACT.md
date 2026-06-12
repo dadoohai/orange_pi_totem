@@ -22,6 +22,15 @@ nao entram no OTA comum.
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, HDMI/display, kernel, DTB, U-Boot, BSP | nova imagem + homologacao | imagem/cartao known-good; sem A/B nesta linha |
 | `field-data` | config real, seed, midia, playlist/cache, estado operacional | fluxo operacional em `/data`; nao release de software | writer/backup/re-sync conforme o dado |
 
+## Roots De Artefatos
+
+| Classe | Root canonico | Observacao |
+| --- | --- | --- |
+| `totem-core` | `releases/core-updates` | Pacotes core C18 devem ser gerados de novo e passar `c18_ota_release_gate.py --package-manifest ... --package-payload ...`; artefatos C17/C14 antigos nesse root sao historicos se falharem o gate atual. |
+| `player-runtime` | `releases/player-runtime` | Root do pacote C18-aware e da familia server-side do `player-runtime`; nao e OTA comum e continua atras dos gates de homologacao/H2. |
+| `totem-core` | `releases/totem-core` | Nao e root canonico nesta linha; nao usar para C18. |
+| `kiosky-player` legado | `releases/app-updates` | Historico C14/kiosky; nao usar como C18 OTA, `player-runtime`, `stable` ou producao. |
+
 ## Contrato De Config C18
 
 `field-data` nao pode escolher outro binario de MPV na linha C18. Esse campo
