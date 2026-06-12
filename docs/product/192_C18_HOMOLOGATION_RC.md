@@ -55,15 +55,17 @@ Pacote alvo de `player-runtime`:
 Evidencia principal:
 
 - H1 decisivo:
-  `docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json`;
-- autorizacao vigente/refrescada para a janela operacional:
-  `docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json`;
-- gate de piloto rerodado com a autorizacao refrescada:
-  `docs/evidence/c18-update-validation/20260612T101300Z-pilot-readiness-refresh-c16fb3e/pilot-readiness-with-refreshed-authorization.json`;
+  `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`;
+- autorizacao vigente/refrescada para a janela operacional e para o H1 rastreavel:
+  `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`;
+- gate de piloto rerodado com a autorizacao/H1 rastreaveis:
+  `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
+- snapshot H2 atual, vermelho apenas pelos blockers de producao:
+  `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json`;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
-- fechamento original da RC:
-  `docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/pilot-readiness-final.json`.
+- fechamento original da RC, superseded pelo refresh rastreavel:
+  `docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/pilot-readiness-final.json`;
 - diagnostico read-only de placa:
   `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`;
   esta evidencia registra appliance `player_running`, `privacy_scan=ok`,
@@ -105,8 +107,8 @@ Resultado: `passed=true`.
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_pilot_readiness_gate.py \
   --package-manifest releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json \
   --package-payload releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz \
-  --h1-release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
-  --authorization docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json \
+  --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
+  --authorization docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json \
   --preflight docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json \
   --preflight-stage post_apply_observation \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T001436Z-p0-after-current-symlink-c16fb3e \
@@ -130,6 +132,12 @@ esperados:
 - soak 24h ausente;
 - stable promotion ausente;
 - decisao explicita de thaw ausente.
+
+O snapshot H2 rastreavel esta versionado em
+`docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:
+`h1_decisive_bundle=true`, `server_side_publish_governance=true`,
+`repo_clean=true` e `tracked_inputs=true`; `passed=false` continua correto para
+producao.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
 checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica

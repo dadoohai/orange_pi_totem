@@ -889,6 +889,15 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("piloto assistido", doc192_words)
         self.assertIn("semantica de validacao", doc192_words)
         self.assertIn("nao publica releases nem habilita auto-pull", doc192_words)
+        for token in (
+            "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
+            "20260612T195336Z-pilot-authorization-traceability-refresh",
+            "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
+            "20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e",
+            "repo_clean=true",
+            "tracked_inputs=true",
+        ):
+            self.assertIn(token, doc192)
         self.assertIn("20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
@@ -2499,9 +2508,10 @@ exec "$C18_REAL_PYTHON3" "$@"
         for token in (
             "C18 Homologation RC",
             "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
-            "20260612T040055Z-pilot-readiness-final-c16fb3e",
-            "20260612T101300Z-pilot-authorization-refresh",
-            "20260612T101300Z-pilot-readiness-refresh-c16fb3e",
+            "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
+            "20260612T195336Z-pilot-authorization-traceability-refresh",
+            "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
+            "20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e",
             "20260612T125127Z-server-side-governance-c16fb3e",
             "20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e",
             "channel=homologation",

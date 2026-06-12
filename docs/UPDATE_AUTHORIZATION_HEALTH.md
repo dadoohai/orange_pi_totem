@@ -11,11 +11,14 @@ C18 Homologation RC esta pronta para piloto assistido, nao para producao. O
 alvo corrente e
 `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, em
 `channel=homologation` e `ring=pilot`, com evidencia final em
-`docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/`
-e autorizacao operacional refrescada em
-`docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json`,
-rerodada no gate em
-`docs/evidence/c18-update-validation/20260612T101300Z-pilot-readiness-refresh-c16fb3e/pilot-readiness-with-refreshed-authorization.json`.
+`docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`
+e autorizacao operacional refrescada para o H1 rastreavel em
+`docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
+rerodada no gate com H1 decisive traceability refresh em
+`docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`.
+O snapshot H2 corrente esta versionado em
+`docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:
+H1, server-side, repo clean e tracked inputs verdes; H2/producao ainda vermelho.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
