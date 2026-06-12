@@ -1,0 +1,48 @@
+{
+  "collected_at_utc": "2026-06-12T19:49:11Z",
+  "files": [
+    {
+      "bytes": 768,
+      "file": "README.md",
+      "sha256": "0206810ced78b62c07011af8c355cc0e3d1fe601a7bd0de8f1d869905950b09e"
+    },
+    {
+      "bytes": 94858,
+      "file": "h1-release-gate.json",
+      "sha256": "004619b3c6a1bf4124d7f34fcda3c9fd6505deaef837a316af378b6bbe94cac1"
+    }
+  ],
+  "non_claims": [
+    "not_h2_readiness",
+    "not_stable_or_production",
+    "not_public_player_runtime_thaw",
+    "not_auto_pull_or_publish",
+    "not_24h_soak",
+    "not_full_17_17_physical_powerloss_matrix"
+  ],
+  "player_runtime_data_evidence": {
+    "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot",
+    "data_evidence_dir": "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data",
+    "decisive": true,
+    "expected_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "expected_image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "expected_image_tag": "c18-hwdecode-lab-1x",
+    "mode": "decisive",
+    "status": "passed"
+  },
+  "release_gate_passed": true,
+  "release_gate_step_count": 66,
+  "repo_commit": "7e40e80789229de1aed5d736a504803a09f97f54",
+  "repo_dirty": false,
+  "repo_tree": "759097c149943e4d67e808c5fef96be19186fbb7",
+  "required_steps": {
+    "c18_player_runtime_data_coldboot_evidence": true,
+    "c18_player_runtime_data_coldboot_evidence_git_guard:1": true,
+    "c18_player_runtime_data_evidence": true,
+    "c18_player_runtime_data_evidence_git_guard:1": true,
+    "c18_player_runtime_data_evidence_link": true,
+    "c18_player_runtime_production_stop_teardown_required": true
+  },
+  "result_claim": "h1_decisive_release_gate_traceability_refreshed",
+  "schema": "dadooh.c18.h1_decisive_traceability_refresh.v1"
+}

@@ -1,0 +1,920 @@
+{
+  "current_golden": {
+    "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health",
+    "image_marker_path": "/etc/dadooh/c18-hwdecode-lab-1u-image",
+    "image_marker_sha256": "b1a37c793f7a085a025f9cd448e0d36caecc75d7823980cb9f8ad0199ea68cbd",
+    "image_sha256": "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd",
+    "image_tag": "c18-hwdecode-lab-1u",
+    "image_version": "c18.image-lab.1u",
+    "schema": "dadooh.c18.current_golden.v1"
+  },
+  "evidence_dir": "/tmp/c18-ota-gate-evidence-l1pooh3b",
+  "guardrails": {
+    "apt_used": false,
+    "github_used": false,
+    "media_read": false,
+    "pip_used": false,
+    "secrets_read": false,
+    "ssh_used": false
+  },
+  "package": null,
+  "passed": true,
+  "player_runtime_data_evidence": {
+    "coldboot_evidence_dir": "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot",
+    "data_evidence_dir": "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data",
+    "decisive": true,
+    "errors": [],
+    "expected_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "expected_image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "expected_image_tag": "c18-hwdecode-lab-1x",
+    "mode": "decisive",
+    "non_claims": [],
+    "required": true,
+    "status": "passed"
+  },
+  "repo": {
+    "dirty": false,
+    "exact_tag": null,
+    "head": "7e40e80789229de1aed5d736a504803a09f97f54",
+    "tree": "759097c149943e4d67e808c5fef96be19186fbb7"
+  },
+  "sandbox": "/tmp/c18-ota-gate-sandbox-bv2581bp",
+  "schema": "dadooh.c18.ota.release_gate.v1",
+  "steps": [
+    {
+      "cmd": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=normal"
+      ],
+      "name": "repo_clean_guard",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "-m",
+        "py_compile",
+        "scripts/board/totem_config_contract_validate.py",
+        "scripts/board/totem_config_writer_real.py",
+        "scripts/board/totem_visual_setup_writer_handoff.py",
+        "scripts/board/totem_status_render_preview.py",
+        "scripts/board/totem_updatectl.py",
+        "scripts/board/totem_appliance_status_snapshot.py",
+        "scripts/board/c18_coldboot_state_collect.py",
+        "scripts/board/c18_display_status_collect.py",
+        "scripts/board/c18_playback_health_collect.py",
+        "scripts/board/c18_playback_soak_collect.py",
+        "scripts/board/c18_playback_health_summary.py",
+        "scripts/board/c18_playback_incident_collect.py",
+        "scripts/board/c18_player_runtime_candidate_health.py",
+        "scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py",
+        "scripts/build/totem_core_image_embed.py",
+        "scripts/build/derive_c18_image_lab_1_hwdecode.py",
+        "scripts/sim/run_totem_core_sandbox.py",
+        "scripts/sim/run_player_runtime_sandbox.py",
+        "scripts/qa/c18_ota_policy_static_test.py",
+        "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
+        "scripts/qa/c18_player_runtime_static_test.py",
+        "scripts/qa/c18_player_runtime_release_gate.py",
+        "scripts/qa/c18_player_runtime_lab_apply.py",
+        "scripts/qa/c18_player_runtime_lab_rollback.py",
+        "scripts/qa/c18_player_runtime_lab_quarantine_reset.py",
+        "scripts/qa/c18_player_runtime_lab_quarantine_reset_test.py",
+        "scripts/qa/c18_player_runtime_adoption_probe.py",
+        "scripts/qa/c18_current_golden.py",
+        "scripts/qa/c18_coldboot_evidence_gate.py",
+        "scripts/qa/c18_player_runtime_evidence_gate.py",
+        "scripts/qa/c18_player_runtime_persistent_trial.py",
+        "scripts/qa/c18_player_runtime_m6_coldboot_trial.py",
+        "scripts/qa/c18_player_runtime_lab_thaw.py",
+        "scripts/qa/c18_playback_incident_evidence_gate.py",
+        "scripts/qa/c18_board_readonly_diagnostics_evidence_gate.py",
+        "scripts/qa/c18_player_runtime_pilot_readiness_gate.py",
+        "scripts/qa/c18_stable_promotion_gate.py",
+        "scripts/qa/c18_player_runtime_thaw_decision_gate.py",
+        "scripts/qa/c18_player_runtime_stable_decision_draft_build.py",
+        "scripts/qa/c18_server_side_publish_governance_gate.py",
+        "scripts/qa/c18_server_side_publish_asset_collect.py",
+        "scripts/qa/c18_server_side_publish_evidence_build.py",
+        "scripts/qa/c18_totem_core_publish_asset_list.py",
+        "scripts/qa/c18_player_runtime_h2_readiness_gate.py",
+        "scripts/qa/c18_player_runtime_powerloss_trial.py",
+        "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
+        "scripts/qa/c18_player_runtime_powerloss_matrix_plan.py",
+        "scripts/qa/c18_player_runtime_powerloss_operator_runbook_build.py",
+        "scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py",
+        "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+        "scripts/qa/c18_player_runtime_teardown_static_test.py",
+        "scripts/board/c18_player_runtime_teardown_trial.py",
+        "scripts/qa/c18_playback_deep_health_fixture_test.py",
+        "scripts/qa/c18_ota_release_gate.py",
+        "player-runtime/kiosky-player/kiosk.py"
+      ],
+      "name": "py_compile",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/board/kiosky_playback_observer_probe.sh"
+      ],
+      "name": "bash_syntax:scripts/board/kiosky_playback_observer_probe.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/board/kiosky_service_observer_probe.sh"
+      ],
+      "name": "bash_syntax:scripts/board/kiosky_service_observer_probe.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/board/mpv_controller_playlist_probe.sh"
+      ],
+      "name": "bash_syntax:scripts/board/mpv_controller_playlist_probe.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/deploy/build_player_runtime_release_package.sh"
+      ],
+      "name": "bash_syntax:scripts/deploy/build_player_runtime_release_package.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/deploy/build_totem_core_release_package.sh"
+      ],
+      "name": "bash_syntax:scripts/deploy/build_totem_core_release_package.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/deploy/publish_totem_core_github_release.sh"
+      ],
+      "name": "bash_syntax:scripts/deploy/publish_totem_core_github_release.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/remote/apply_c15_1_1_session_hotfix.sh"
+      ],
+      "name": "bash_syntax:scripts/remote/apply_c15_1_1_session_hotfix.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/remote/bootstrap_c14_1_1_on_board.sh"
+      ],
+      "name": "bash_syntax:scripts/remote/bootstrap_c14_1_1_on_board.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/remote/bootstrap_c17_5_totem_core_on_board.sh"
+      ],
+      "name": "bash_syntax:scripts/remote/bootstrap_c17_5_totem_core_on_board.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/remote/deploy_kiosky_player.sh"
+      ],
+      "name": "bash_syntax:scripts/remote/deploy_kiosky_player.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/remote/push_and_run.sh"
+      ],
+      "name": "bash_syntax:scripts/remote/push_and_run.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "bash",
+        "-n",
+        "scripts/remote/validate_c14_2_1_clean_board.sh"
+      ],
+      "name": "bash_syntax:scripts/remote/validate_c14_2_1_clean_board.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "git",
+        "diff/status name scan"
+      ],
+      "name": "responsibility_matrix_diff_guard",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/totem_config_contract_validate.py",
+        "--self-test"
+      ],
+      "name": "totem_config_contract_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "self-test: ok\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/totem_config_writer_real.py",
+        "--self-test"
+      ],
+      "name": "totem_config_writer_real_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "self-test: ok\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/totem_visual_setup_writer_handoff.py",
+        "--self-test"
+      ],
+      "name": "totem_visual_setup_writer_handoff_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "self-test: ok\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/totem_status_render_preview.py",
+        "--self-test"
+      ],
+      "name": "totem_status_render_preview_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "self-test: ok\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/totem_appliance_status_snapshot.py",
+        "--self-test"
+      ],
+      "name": "totem_appliance_status_snapshot_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "self-test ok; sanitized fixture root: /tmp/dadooh-c7-selftest-root\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/c18_display_status_collect.py",
+        "--self-test"
+      ],
+      "name": "c18_display_status_collect_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled) ... ok\ntest_connected_enabled_modes_without_mode_file_is_unknown_not_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled) ... ok\ntest_connected_without_mode_is_pipeline_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_without_mode_is_pipeline_stalled) ... ok\ntest_disconnected_connector_modes_do_not_make_connected_sink_ready (__main__.DisplayStatusCollectSelfTest.test_disconnected_connector_modes_do_not_make_connected_sink_ready) ... ok\ntest_display_ok_classification (__main__.DisplayStatusCollectSelfTest.test_display_ok_classification) ... ok\ntest_no_sink_classification (__main__.DisplayStatusCollectSelfTest.test_no_sink_classification) ... ok\ntest_output_json_roundtrip (__main__.DisplayStatusCollectSelfTest.test_output_json_roundtrip) ... ok\ntest_status_error_classifies_pipeline_stalled (__main__.DisplayStatusCollectSelfTest.test_status_error_classifies_pipeline_stalled) ... ok\ntest_status_fields_are_token_sanitized (__main__.DisplayStatusCollectSelfTest.test_status_fields_are_token_sanitized) ... ok\ntest_visible_black_with_healthy_board_classifies_sink_hung (__main__.DisplayStatusCollectSelfTest.test_visible_black_with_healthy_board_classifies_sink_hung) ... ok\ntest_visible_ok_with_mode_file_unavailable_can_classify_display_ok (__main__.DisplayStatusCollectSelfTest.test_visible_ok_with_mode_file_unavailable_can_classify_display_ok) ... ok\ntest_visible_ok_without_status_does_not_overclaim_display_ok (__main__.DisplayStatusCollectSelfTest.test_visible_ok_without_status_does_not_overclaim_display_ok) ... ok\n\n----------------------------------------------------------------------\nRan 12 tests in 0.108s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_ota_policy_static_test.py"
+      ],
+      "name": "c18_ota_policy_static",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "C18OtaPolicyStaticTest.test_legacy_kiosky_player_bypass_rejects_boundary_payload) ... ok\ntest_legacy_kiosky_player_publisher_rejects_boundary_payload (__main__.C18OtaPolicyStaticTest.test_legacy_kiosky_player_publisher_rejects_boundary_payload) ... ok\ntest_legacy_remote_bypass_scripts_are_guarded (__main__.C18OtaPolicyStaticTest.test_legacy_remote_bypass_scripts_are_guarded) ... ok\ntest_m6_trial_accepts_clean_repo_identity_file (__main__.C18OtaPolicyStaticTest.test_m6_trial_accepts_clean_repo_identity_file) ... ok\ntest_m6_trial_validates_live_repo_identity_before_persisting (__main__.C18OtaPolicyStaticTest.test_m6_trial_validates_live_repo_identity_before_persisting) ... ok\ntest_persistent_trial_repo_identity_treats_empty_git_status_as_clean (__main__.C18OtaPolicyStaticTest.test_persistent_trial_repo_identity_treats_empty_git_status_as_clean) ... ok\ntest_playback_observers_collect_c18_decode_properties (__main__.C18OtaPolicyStaticTest.test_playback_observers_collect_c18_decode_properties) ... ok\ntest_player_release_scripts_are_frozen_by_default (__main__.C18OtaPolicyStaticTest.test_player_release_scripts_are_frozen_by_default) ... ok\ntest_player_runtime_builder_is_lab_only_and_gated (__main__.C18OtaPolicyStaticTest.test_player_runtime_builder_is_lab_only_and_gated) ... ok\ntest_player_runtime_evidence_gate_self_test_passes (__main__.C18OtaPolicyStaticTest.test_player_runtime_evidence_gate_self_test_passes) ... ok\ntest_player_runtime_lab_apply_guards_are_executable (__main__.C18OtaPolicyStaticTest.test_player_runtime_lab_apply_guards_are_executable) ... ok\ntest_player_runtime_lab_rollback_guards_are_executable (__main__.C18OtaPolicyStaticTest.test_player_runtime_lab_rollback_guards_are_executable) ... ok\ntest_player_runtime_launcher_path_is_governed (__main__.C18OtaPolicyStaticTest.test_player_runtime_launcher_path_is_governed) ... ok\ntest_player_runtime_mpv_stop_requests_ipc_quit_before_signals (__main__.C18OtaPolicyStaticTest.test_player_runtime_mpv_stop_requests_ipc_quit_before_signals) ... ok\ntest_public_player_runtime_thaw_activation_has_no_public_path (__main__.C18OtaPolicyStaticTest.test_public_player_runtime_thaw_activation_has_no_public_path) ... ok\ntest_release_gate_base_ref_catches_committed_responsibility_matrix_diff (__main__.C18OtaPolicyStaticTest.test_release_gate_base_ref_catches_committed_responsibility_matrix_diff) ... ok\ntest_release_gate_blocks_player_runtime_diff (__main__.C18OtaPolicyStaticTest.test_release_gate_blocks_player_runtime_diff) ... ok\ntest_release_gate_powerloss_evidence_guard_rejects_untracked_or_ignored_files (__main__.C18OtaPolicyStaticTest.test_release_gate_powerloss_evidence_guard_rejects_untracked_or_ignored_files) ... ok\ntest_stable_channel_requires_promotion_evidence (__main__.C18OtaPolicyStaticTest.test_stable_channel_requires_promotion_evidence) ... ok\ntest_timer_is_manifested_disabled (__main__.C18OtaPolicyStaticTest.test_timer_is_manifested_disabled) ... ok\ntest_totem_core_ota_payload_excludes_player_launcher (__main__.C18OtaPolicyStaticTest.test_totem_core_ota_payload_excludes_player_launcher) ... ok\ntest_totem_core_publish_targets_manifest_source_commit (__main__.C18OtaPolicyStaticTest.test_totem_core_publish_targets_manifest_source_commit) ... ok\ntest_totem_core_stable_publisher_passes_validated_assets_to_gh (__main__.C18OtaPolicyStaticTest.test_totem_core_stable_publisher_passes_validated_assets_to_gh) ... ok\ntest_update_agent_service_targets_totem_core_repo (__main__.C18OtaPolicyStaticTest.test_update_agent_service_targets_totem_core_repo) ... ok\ntest_update_contract_declares_c18_config_and_deep_health (__main__.C18OtaPolicyStaticTest.test_update_contract_declares_c18_config_and_deep_health) ... ok\ntest_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at (__main__.C18OtaPolicyStaticTest.test_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at) ... ok\n\n----------------------------------------------------------------------\nRan 55 tests in 30.421s\n\nOK\n",
+      "stdout_tail": "self-test ok; sanitized fixture root: /tmp/dadooh-c7-selftest-root\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py"
+      ],
+      "name": "c18_updatectl_freeze_downgrade_gc",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_same_version_different_sha_is_always_rejected (__main__.C18UpdatectlFreezeDowngradeGcTest.test_same_version_different_sha_is_always_rejected) ... ok\ntest_totem_core_apply_rejects_payload_outside_device_allowlist (__main__.C18UpdatectlFreezeDowngradeGcTest.test_totem_core_apply_rejects_payload_outside_device_allowlist) ... 2026-06-12T19:47:29Z INFO apply_start source=local-test manifest=/tmp/tmpwmaeoptn/pkg/dadooh-totem-core-core-bad-scope-0.manifest.json\n2026-06-12T19:47:29Z INFO local_payload_staged bytes=223 sha256=387445af0e858f8107a606ade8310bf72bbb0bf8a9d9e52eee15fdad29bfb623\n2026-06-12T19:47:29Z ERROR extract_failed err=totem-core payload entry outside allowlist: bin/kiosky_service_launcher.sh\n2026-06-12T19:47:29Z INFO stage_cleanup_ok path=/tmp/tmpwmaeoptn/data/updates/incoming/totem-core/core-bad-scope-0\n2026-06-12T19:47:29Z INFO apply_start source=local-test manifest=/tmp/tmp0u_cy14g/pkg/dadooh-totem-core-core-bad-scope-1.manifest.json\n2026-06-12T19:47:29Z INFO local_payload_staged bytes=219 sha256=306271382ff7b917509dae05b7ef111cf237c62bae389c0449dbbe68a5ee4716\n2026-06-12T19:47:29Z ERROR extract_failed err=totem-core payload entry outside allowlist: bin/totem-kiosky-launcher.sh\n2026-06-12T19:47:29Z INFO stage_cleanup_ok path=/tmp/tmp0u_cy14g/data/updates/incoming/totem-core/core-bad-scope-1\n2026-06-12T19:47:29Z INFO apply_start source=local-test manifest=/tmp/tmputxk48we/pkg/dadooh-totem-core-core-bad-scope-2.manifest.json\n2026-06-12T19:47:29Z INFO local_payload_staged bytes=219 sha256=d0813a9e4ddaf77d3eec801fb2cfb24798cc711c6e95830d9b6c319094b19df5\n2026-06-12T19:47:29Z ERROR extract_failed err=totem-core payload entry outside allowlist: data/media/playlist.json\n2026-06-12T19:47:29Z INFO stage_cleanup_ok path=/tmp/tmputxk48we/data/updates/incoming/totem-core/core-bad-scope-2\n2026-06-12T19:47:29Z INFO apply_start source=local-test manifest=/tmp/tmplel34_17/pkg/dadooh-totem-core-core-bad-scope-3.manifest.json\n2026-06-12T19:47:29Z INFO local_payload_staged bytes=216 sha256=167a0bbc511d40e68d5225d7adf13539c0a9d8897e678bfb1c183e666b79e510\n2026-06-12T19:47:29Z ERROR extract_failed err=totem-core payload entry outside allowlist: opt/totem/bin/totem-mpv-hwdecode\n2026-06-12T19:47:29Z INFO stage_cleanup_ok path=/tmp/tmplel34_17/data/updates/incoming/totem-core/core-bad-scope-3\n2026-06-12T19:47:29Z INFO apply_start source=local-test manifest=/tmp/tmpz9ng_fyq/pkg/dadooh-totem-core-core-bad-scope-4.manifest.json\n2026-06-12T19:47:29Z INFO local_payload_staged bytes=214 sha256=ff764f6b78df6a35393897344613efae0d18283ce49578592c47263d60b930bd\n2026-06-12T19:47:29Z ERROR extract_failed err=totem-core payload entry outside allowlist: health/extra.json\n2026-06-12T19:47:29Z INFO stage_cleanup_ok path=/tmp/tmpz9ng_fyq/data/updates/incoming/totem-core/core-bad-scope-4\n2026-06-12T19:47:29Z INFO apply_start source=local-test manifest=/tmp/tmpmk5v_ss2/pkg/dadooh-totem-core-core-bad-scope-5.manifest.json\n2026-06-12T19:47:29Z INFO local_payload_staged bytes=222 sha256=d5c3fb4838d9c3a5f8258e01fc054f76fc5318cd095457f5a5222103aed447c8\n2026-06-12T19:47:29Z ERROR extract_failed err=totem-core payload entry outside allowlist: manifest-fragment/extra.json\n2026-06-12T19:47:29Z INFO stage_cleanup_ok path=/tmp/tmpmk5v_ss2/data/updates/incoming/totem-core/core-bad-scope-5\nok\ntest_totem_core_health_check_does_not_require_player_launcher (__main__.C18UpdatectlFreezeDowngradeGcTest.test_totem_core_health_check_does_not_require_player_launcher) ... ok\ntest_totem_core_manifest_requires_track_features_and_supported_base (__main__.C18UpdatectlFreezeDowngradeGcTest.test_totem_core_manifest_requires_track_features_and_supported_base) ... ok\ntest_totem_core_rollback_to_image_fallback_still_works (__main__.C18UpdatectlFreezeDowngradeGcTest.test_totem_core_rollback_to_image_fallback_still_works) ... 2026-06-12T19:47:30Z INFO manual_rollback_ok rolled_to=fallback\nok\n\n----------------------------------------------------------------------\nRan 47 tests in 4.518s\n\nOK\n",
+      "stdout_tail": "{\n  \"component\": \"player-runtime\",\n  \"current_link\": null,\n  \"reject_reason\": \"marker_invalid:[Errno 2] No such file or directory: '/tmp/tmptxeyb7zc/data/player-runtime/releases/runtime-a/.release_verified.json'\",\n  \"rejected_current\": \"releases/runtime-a\",\n  \"status\": \"image_fallback\"\n}\n{\n  \"rollback\": \"ok\",\n  \"rolled_to\": \"fallback\"\n}\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_static_test.py"
+      ],
+      "name": "c18_player_runtime_static",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_absent_mpv_path_is_accepted (__main__.C18LauncherConfigBaselineGuardTest.test_absent_mpv_path_is_accepted) ... ok\ntest_baseline_lowering_mpv_path_is_rejected (__main__.C18LauncherConfigBaselineGuardTest.test_baseline_lowering_mpv_path_is_rejected) ... ok\ntest_guard_is_fail_closed_when_validator_is_absent (__main__.C18LauncherConfigBaselineGuardTest.test_guard_is_fail_closed_when_validator_is_absent) ... ok\ntest_launcher_reuses_shipped_contract_validator (__main__.C18LauncherConfigBaselineGuardTest.test_launcher_reuses_shipped_contract_validator) ... ok\ntest_non_string_mpv_path_is_rejected (__main__.C18LauncherConfigBaselineGuardTest.test_non_string_mpv_path_is_rejected) ... ok\ntest_unreadable_config_fails_closed (__main__.C18LauncherConfigBaselineGuardTest.test_unreadable_config_fails_closed) ... ok\ntest_wrapper_mpv_path_is_accepted (__main__.C18LauncherConfigBaselineGuardTest.test_wrapper_mpv_path_is_accepted) ... ok\ntest_c18_deriver_promotes_artifacts_only_after_offline_validation (__main__.C18PlayerRuntimeStaticTest.test_c18_deriver_promotes_artifacts_only_after_offline_validation) ... ok\ntest_c18_deriver_uses_governed_snapshot (__main__.C18PlayerRuntimeStaticTest.test_c18_deriver_uses_governed_snapshot) ... ok\ntest_candidate_health_sets_explicit_panfrost_fault_policy (__main__.C18PlayerRuntimeStaticTest.test_candidate_health_sets_explicit_panfrost_fault_policy) ... ok\ntest_common_ota_gate_tracks_player_runtime_boundary (__main__.C18PlayerRuntimeStaticTest.test_common_ota_gate_tracks_player_runtime_boundary) ... ok\ntest_lab_thaw_wrapper_is_guarded_and_m6_based (__main__.C18PlayerRuntimeStaticTest.test_lab_thaw_wrapper_is_guarded_and_m6_based) ... ok\ntest_mpv_stop_uses_ipc_quit_with_signal_fallbacks (__main__.C18PlayerRuntimeStaticTest.test_mpv_stop_uses_ipc_quit_with_signal_fallbacks) ... WARNING:root:MPV IPC quit unavailable; falling back to process signal reason=no_ipc_fail generation=0 pid=1234 ipc_connected=False log_file=none\nWARNING:root:MPV IPC quit timeout; falling back to SIGTERM reason=stuck generation=0 pid=1234 log_file=none\nok\ntest_snapshot_compiles_and_has_no_debugfs_banner (__main__.C18PlayerRuntimeStaticTest.test_snapshot_compiles_and_has_no_debugfs_banner) ... ok\ntest_snapshot_has_single_default_mpv_path_assignment (__main__.C18PlayerRuntimeStaticTest.test_snapshot_has_single_default_mpv_path_assignment) ... ok\ntest_snapshot_preserves_c18_hwdecode_wrapper_contract (__main__.C18PlayerRuntimeStaticTest.test_snapshot_preserves_c18_hwdecode_wrapper_contract) ... ok\ntest_snapshot_sha_matches_source_metadata (__main__.C18PlayerRuntimeStaticTest.test_snapshot_sha_matches_source_metadata) ... ok\ntest_source_metadata_is_frozen_not_ota_release (__main__.C18PlayerRuntimeStaticTest.test_source_metadata_is_frozen_not_ota_release) ... ok\ntest_all_accessible_returns_empty (__main__.CandidateHealthAccessPreflightTest.test_all_accessible_returns_empty) ... ok\ntest_nonexistent_target_reported (__main__.CandidateHealthAccessPreflightTest.test_nonexistent_target_reported) ... ok\ntest_setup_failure_result_names_setup_error (__main__.CandidateHealthAccessPreflightTest.test_setup_failure_result_names_setup_error) ... ok\ntest_source_captures_candidate_streams_not_devnull (__main__.CandidateHealthAccessPreflightTest.test_source_captures_candidate_streams_not_devnull) ... ok\ntest_targets_cover_required_paths (__main__.CandidateHealthAccessPreflightTest.test_targets_cover_required_paths) ... ok\ntest_workdir_under_nontraversable_dir_reported (__main__.CandidateHealthAccessPreflightTest.test_workdir_under_nontraversable_dir_reported) ... ok\n\n----------------------------------------------------------------------\nRan 24 tests in 2.054s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_release_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_release_gate",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "t_accepts_governed_snapshot_payload (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_accepts_governed_snapshot_payload) ... ok\ntest_rejects_alternative_builder_at_popen_callsite (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_alternative_builder_at_popen_callsite) ... ok\ntest_rejects_callsite_mpv_arg_mutation_after_builder (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_callsite_mpv_arg_mutation_after_builder) ... ok\ntest_rejects_callsite_mpv_arg_reassignment_after_builder (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_callsite_mpv_arg_reassignment_after_builder) ... ok\ntest_rejects_control_files (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_control_files) ... ok\ntest_rejects_dangerous_mpv_script_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_dangerous_mpv_script_arg) ... ok\ntest_rejects_dirty_source_manifest (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_dirty_source_manifest) ... ok\ntest_rejects_dynamic_concatenated_dangerous_mpv_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_dynamic_concatenated_dangerous_mpv_arg) ... ok\ntest_rejects_external_ipc_server_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_external_ipc_server_arg) ... ok\ntest_rejects_field_data_payload (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_field_data_payload) ... ok\ntest_rejects_forbidden_append_mpv_option_helper_call (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_forbidden_append_mpv_option_helper_call) ... ok\ntest_rejects_format_constructed_dangerous_mpv_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_format_constructed_dangerous_mpv_arg) ... ok\ntest_rejects_hardcoded_input_conf_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_hardcoded_input_conf_arg) ... ok\ntest_rejects_hwdec_no_default (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_hwdec_no_default) ... ok\ntest_rejects_hwdec_no_mpv_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_hwdec_no_mpv_arg) ... ok\ntest_rejects_image_fixed_paths (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_image_fixed_paths) ... ok\ntest_rejects_missing_player_runtime_updater_feature (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_missing_player_runtime_updater_feature) ... ok\ntest_rejects_missing_source_commit (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_missing_source_commit) ... ok\ntest_rejects_osc_enable_arg (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_osc_enable_arg) ... ok\ntest_rejects_payload_provided_verified_marker (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_payload_provided_verified_marker) ... ok\ntest_rejects_runtime_hwdec_mutation_before_builder (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_runtime_hwdec_mutation_before_builder) ... ok\ntest_rejects_stable_channel_until_thaw (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_stable_channel_until_thaw) ... ok\ntest_rejects_stock_mpv_default (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_stock_mpv_default) ... ok\ntest_rejects_symlink_members (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_symlink_members) ... ok\ntest_rejects_tampered_payload_sha (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_tampered_payload_sha) ... ok\ntest_rejects_unexpected_payload_entries (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_unexpected_payload_entries) ... ok\ntest_rejects_unsupported_player_runtime_updater_feature (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_unsupported_player_runtime_updater_feature) ... ok\ntest_rejects_wrong_media_stack_contract (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_wrong_media_stack_contract) ... ok\ntest_rejects_ytdl_and_include_args (__main__.C18PlayerRuntimeReleaseGateSelfTest.test_rejects_ytdl_and_include_args) ... ok\n\n----------------------------------------------------------------------\nRan 30 tests in 4.758s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_stable_promotion_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_stable_promotion_gate",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_artifact_binding_required_when_requested (__main__.StablePromotionGateSelfTest.test_artifact_binding_required_when_requested) ... ok\ntest_artifact_semantics_pass_with_real_validators_mocked_green (__main__.StablePromotionGateSelfTest.test_artifact_semantics_pass_with_real_validators_mocked_green) ... ok\ntest_auto_pull_or_public_thaw_denies (__main__.StablePromotionGateSelfTest.test_auto_pull_or_public_thaw_denies) ... ok\ntest_complete_fixture_passes (__main__.StablePromotionGateSelfTest.test_complete_fixture_passes) ... ok\ntest_file_roundtrip (__main__.StablePromotionGateSelfTest.test_file_roundtrip) ... ok\ntest_h2_readiness_hash_is_derived_from_artifacts (__main__.StablePromotionGateSelfTest.test_h2_readiness_hash_is_derived_from_artifacts) ... ok\ntest_hash_binding_denies_stale_evidence (__main__.StablePromotionGateSelfTest.test_hash_binding_denies_stale_evidence) ... ok\ntest_hash_binding_passes_when_expected_matches (__main__.StablePromotionGateSelfTest.test_hash_binding_passes_when_expected_matches) ... ok\ntest_hash_consistent_fake_artifacts_do_not_promote_stable (__main__.StablePromotionGateSelfTest.test_hash_consistent_fake_artifacts_do_not_promote_stable) ... ok\ntest_minimal_approved_json_denies (__main__.StablePromotionGateSelfTest.test_minimal_approved_json_denies) ... ok\ntest_missing_evidence_denies (__main__.StablePromotionGateSelfTest.test_missing_evidence_denies) ... ok\ntest_operator_thaw_target_must_match_server_side_manifest (__main__.StablePromotionGateSelfTest.test_operator_thaw_target_must_match_server_side_manifest) ... ok\ntest_player_runtime_fixture_passes_when_expected (__main__.StablePromotionGateSelfTest.test_player_runtime_fixture_passes_when_expected) ... ok\ntest_server_side_trusted_key_is_required_for_stable_semantics (__main__.StablePromotionGateSelfTest.test_server_side_trusted_key_is_required_for_stable_semantics) ... ok\ntest_totem_core_stable_evidence_does_not_satisfy_player_runtime (__main__.StablePromotionGateSelfTest.test_totem_core_stable_evidence_does_not_satisfy_player_runtime) ... ok\n\n----------------------------------------------------------------------\nRan 15 tests in 1.591s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_thaw_decision_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_thaw_decision_gate",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_complete_fixture_passes (__main__.ThawDecisionGateSelfTest.test_complete_fixture_passes) ... ok\ntest_expected_hash_mismatch_denies (__main__.ThawDecisionGateSelfTest.test_expected_hash_mismatch_denies) ... ok\ntest_file_roundtrip (__main__.ThawDecisionGateSelfTest.test_file_roundtrip) ... ok\ntest_long_window_denies (__main__.ThawDecisionGateSelfTest.test_long_window_denies) ... ok\ntest_minimal_boolean_decision_denies (__main__.ThawDecisionGateSelfTest.test_minimal_boolean_decision_denies) ... ok\ntest_missing_evidence_denies (__main__.ThawDecisionGateSelfTest.test_missing_evidence_denies) ... ok\ntest_window_and_execution_guards_deny (__main__.ThawDecisionGateSelfTest.test_window_and_execution_guards_deny) ... ok\n\n----------------------------------------------------------------------\nRan 7 tests in 0.004s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_stable_decision_draft_build.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_stable_decision_draft_build",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_drafts_are_hash_bound_but_fail_closed (__main__.StableDecisionDraftBuildSelfTest.test_drafts_are_hash_bound_but_fail_closed) ... ok\ntest_missing_artifact_hash_fails (__main__.StableDecisionDraftBuildSelfTest.test_missing_artifact_hash_fails) ... ok\ntest_missing_powerloss_dir_fails_before_writing_drafts (__main__.StableDecisionDraftBuildSelfTest.test_missing_powerloss_dir_fails_before_writing_drafts) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.067s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_server_side_publish_governance_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_server_side_publish_governance_gate",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "main__.ServerSidePublishGovernanceGateSelfTest.test_player_runtime_release_gate_filename_missing_fails_closed) ... ok\ntest_player_runtime_release_gate_filename_passes_as_logical_release_gate_asset (__main__.ServerSidePublishGovernanceGateSelfTest.test_player_runtime_release_gate_filename_passes_as_logical_release_gate_asset) ... ok\ntest_player_runtime_stable_or_minimal_release_gate_denies (__main__.ServerSidePublishGovernanceGateSelfTest.test_player_runtime_stable_or_minimal_release_gate_denies) ... ok\ntest_publish_allowlist_rollout_and_audit_are_enforced (__main__.ServerSidePublishGovernanceGateSelfTest.test_publish_allowlist_rollout_and_audit_are_enforced) ... ok\ntest_release_assets_must_not_be_symlinks (__main__.ServerSidePublishGovernanceGateSelfTest.test_release_assets_must_not_be_symlinks) ... ok\ntest_release_gate_package_paths_must_not_traverse (__main__.ServerSidePublishGovernanceGateSelfTest.test_release_gate_package_paths_must_not_traverse) ... ok\ntest_signature_or_attestation_required (__main__.ServerSidePublishGovernanceGateSelfTest.test_signature_or_attestation_required) ... ok\ntest_signed_fixture_denies_tampered_proof_payload (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_tampered_proof_payload) ... ok\ntest_signed_fixture_denies_tampered_release_set (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_tampered_release_set) ... ok\ntest_signed_fixture_denies_tampered_signature (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_tampered_signature) ... ok\ntest_signed_fixture_denies_trust_anchor_channel_mismatch (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trust_anchor_channel_mismatch) ... ok\ntest_signed_fixture_denies_trust_anchor_inside_release_dir (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trust_anchor_inside_release_dir) ... ok\ntest_signed_fixture_denies_trust_anchor_key_mismatch (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trust_anchor_key_mismatch) ... ok\ntest_signed_fixture_denies_trust_anchor_parent_symlink (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trust_anchor_parent_symlink) ... ok\ntest_signed_fixture_denies_trust_anchor_pki_claim (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trust_anchor_pki_claim) ... ok\ntest_signed_fixture_denies_trusted_key_inside_release_dir (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trusted_key_inside_release_dir) ... ok\ntest_signed_fixture_denies_trusted_key_parent_symlink (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_trusted_key_parent_symlink) ... ok\ntest_signed_fixture_denies_untrusted_key (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_untrusted_key) ... ok\ntest_signed_fixture_denies_without_external_trusted_key (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_without_external_trusted_key) ... ok\ntest_signed_fixture_denies_without_trust_anchor (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_denies_without_trust_anchor) ... ok\ntest_signed_fixture_passes_with_external_trusted_key (__main__.ServerSidePublishGovernanceGateSelfTest.test_signed_fixture_passes_with_external_trusted_key) ... ok\ntest_tampered_attestation_proof_denies (__main__.ServerSidePublishGovernanceGateSelfTest.test_tampered_attestation_proof_denies) ... ok\ntest_tampered_payload_denies (__main__.ServerSidePublishGovernanceGateSelfTest.test_tampered_payload_denies) ... ok\ntest_tampered_release_gate_denies (__main__.ServerSidePublishGovernanceGateSelfTest.test_tampered_release_gate_denies) ... ok\ntest_totem_core_minimal_release_gate_denies (__main__.ServerSidePublishGovernanceGateSelfTest.test_totem_core_minimal_release_gate_denies) ... ok\n\n----------------------------------------------------------------------\nRan 43 tests in 11.537s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_server_side_publish_asset_collect.py",
+        "--self-test"
+      ],
+      "name": "c18_server_side_publish_asset_collect",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_json_output_can_be_relative_and_hash_bound (__main__.ServerSidePublishAssetCollectSelfTest.test_json_output_can_be_relative_and_hash_bound) ... ok\ntest_missing_signature_file_fails (__main__.ServerSidePublishAssetCollectSelfTest.test_missing_signature_file_fails) ... ok\ntest_release_gate_hash_mismatch_fails (__main__.ServerSidePublishAssetCollectSelfTest.test_release_gate_hash_mismatch_fails) ... ok\ntest_signed_fixture_collects_proofs_signatures_and_trust_anchor (__main__.ServerSidePublishAssetCollectSelfTest.test_signed_fixture_collects_proofs_signatures_and_trust_anchor) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 3.302s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_server_side_publish_evidence_build.py",
+        "--self-test"
+      ],
+      "name": "c18_server_side_publish_evidence_build",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_generates_player_runtime_evidence_accepted_by_gate (__main__.ServerSidePublishEvidenceBuildSelfTest.test_generates_player_runtime_evidence_accepted_by_gate) ... ok\ntest_generates_totem_core_evidence_accepted_by_gate (__main__.ServerSidePublishEvidenceBuildSelfTest.test_generates_totem_core_evidence_accepted_by_gate) ... ok\ntest_refuses_overwrite_without_force (__main__.ServerSidePublishEvidenceBuildSelfTest.test_refuses_overwrite_without_force) ... ok\ntest_refuses_private_key_inside_release_dir (__main__.ServerSidePublishEvidenceBuildSelfTest.test_refuses_private_key_inside_release_dir) ... ok\ntest_refuses_private_key_inside_repo (__main__.ServerSidePublishEvidenceBuildSelfTest.test_refuses_private_key_inside_repo) ... ok\ntest_refuses_public_key_inside_release_dir (__main__.ServerSidePublishEvidenceBuildSelfTest.test_refuses_public_key_inside_release_dir) ... ok\ntest_refuses_trust_anchor_inside_release_dir (__main__.ServerSidePublishEvidenceBuildSelfTest.test_refuses_trust_anchor_inside_release_dir) ... ok\n\n----------------------------------------------------------------------\nRan 7 tests in 7.427s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_totem_core_publish_asset_list.py",
+        "--self-test"
+      ],
+      "name": "c18_totem_core_publish_asset_list",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_missing_asset_fails_closed (__main__.TotemCorePublishAssetListSelfTest.test_missing_asset_fails_closed) ... ok\ntest_non_stable_rejects_stable_assets (__main__.TotemCorePublishAssetListSelfTest.test_non_stable_rejects_stable_assets) ... ok\ntest_stable_list_includes_base_stable_and_server_side_assets_once (__main__.TotemCorePublishAssetListSelfTest.test_stable_list_includes_base_stable_and_server_side_assets_once) ... ok\ntest_stable_requires_server_side_assets (__main__.TotemCorePublishAssetListSelfTest.test_stable_requires_server_side_assets) ... ok\ntest_symlink_asset_fails_closed (__main__.TotemCorePublishAssetListSelfTest.test_symlink_asset_fails_closed) ... ok\n\n----------------------------------------------------------------------\nRan 5 tests in 0.011s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_lab_quarantine_reset_test.py"
+      ],
+      "name": "c18_player_runtime_lab_quarantine_reset",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_fails_when_target_is_not_quarantined (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_fails_when_target_is_not_quarantined) ... /usr/lib/python3.12/tarfile.py:2274: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.\n  warnings.warn(\nok\ntest_guard_blocks_without_env_and_flag (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_guard_blocks_without_env_and_flag) ... ok\ntest_post_freeze_failure_reverts_quarantine (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_post_freeze_failure_reverts_quarantine) ... ok\ntest_pre_freeze_failure_does_not_mutate_quarantine (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_pre_freeze_failure_does_not_mutate_quarantine) ... ok\ntest_rejects_lab_channel (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_rejects_lab_channel) ... ok\ntest_rejects_non_powerloss_quarantine_reason (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_rejects_non_powerloss_quarantine_reason) ... ok\ntest_rejects_reset_when_target_is_linked_active (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_rejects_reset_when_target_is_linked_active) ... ok\ntest_removes_only_matching_target_quarantine (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_removes_only_matching_target_quarantine) ... ok\ntest_setup_contention_retry_removes_matching_quarantine_with_evidence (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_setup_contention_retry_removes_matching_quarantine_with_evidence) ... ok\ntest_setup_contention_retry_requires_evidence (__main__.C18PlayerRuntimeLabQuarantineResetTest.test_setup_contention_retry_requires_evidence) ... ok\n\n----------------------------------------------------------------------\nRan 10 tests in 9.587s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_coldboot_evidence_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_coldboot_evidence_gate",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"self_test\": true}\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_powerloss_trial.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_powerloss_trial_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"schema\": \"dadooh.c18.player_runtime.powerloss_trial.v1\", \"self_test\": true}\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_powerloss_evidence_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_powerloss_evidence_gate_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "est_adoption_sidecar_mismatch_fails (__main__.PowerlossEvidenceGateSelfTest.test_adoption_sidecar_mismatch_fails) ... ok\ntest_after_current_symlink_requires_cut_before_state_success (__main__.PowerlossEvidenceGateSelfTest.test_after_current_symlink_requires_cut_before_state_success) ... ok\ntest_after_health_passed_requires_health_context (__main__.PowerlossEvidenceGateSelfTest.test_after_health_passed_requires_health_context) ... ok\ntest_after_marker_written_requires_marker_context (__main__.PowerlossEvidenceGateSelfTest.test_after_marker_written_requires_marker_context) ... ok\ntest_after_previous_symlink_matches_hook_without_context_identity (__main__.PowerlossEvidenceGateSelfTest.test_after_previous_symlink_matches_hook_without_context_identity) ... ok\ntest_after_release_tree_fsync_requires_fsync_context (__main__.PowerlossEvidenceGateSelfTest.test_after_release_tree_fsync_requires_fsync_context) ... ok\ntest_after_state_verifying_requires_identity (__main__.PowerlossEvidenceGateSelfTest.test_after_state_verifying_requires_identity) ... ok\ntest_all_apply_checkpoint_semantics_pass (__main__.PowerlossEvidenceGateSelfTest.test_all_apply_checkpoint_semantics_pass) ... ok\ntest_apply_checkpoint_semantics_pass_and_reject_premature_promotion (__main__.PowerlossEvidenceGateSelfTest.test_apply_checkpoint_semantics_pass_and_reject_premature_promotion) ... ok\ntest_apply_success_checkpoint_semantics_pass_and_reject_non_success_state (__main__.PowerlossEvidenceGateSelfTest.test_apply_success_checkpoint_semantics_pass_and_reject_non_success_state) ... ok\ntest_apply_verifying_checkpoint_semantics_pass_and_reject_bad_identity (__main__.PowerlossEvidenceGateSelfTest.test_apply_verifying_checkpoint_semantics_pass_and_reject_bad_identity) ... ok\ntest_bad_checkpoint_state_fails (__main__.PowerlossEvidenceGateSelfTest.test_bad_checkpoint_state_fails) ... ok\ntest_fixture_passes (__main__.PowerlossEvidenceGateSelfTest.test_fixture_passes) ... ok\ntest_hash_tamper_fails (__main__.PowerlossEvidenceGateSelfTest.test_hash_tamper_fails) ... ok\ntest_missing_health_check_fails (__main__.PowerlossEvidenceGateSelfTest.test_missing_health_check_fails) ... ok\ntest_required_postcheck_fails_when_missing (__main__.PowerlossEvidenceGateSelfTest.test_required_postcheck_fails_when_missing) ... ok\ntest_rollback_after_current_to_previous_requires_boot_change (__main__.PowerlossEvidenceGateSelfTest.test_rollback_after_current_to_previous_requires_boot_change) ... ok\ntest_rollback_after_current_to_previous_requires_pre_state_not_yet_rewritten (__main__.PowerlossEvidenceGateSelfTest.test_rollback_after_current_to_previous_requires_pre_state_not_yet_rewritten) ... ok\ntest_rollback_after_quarantine_requires_post_state_match (__main__.PowerlossEvidenceGateSelfTest.test_rollback_after_quarantine_requires_post_state_match) ... ok\ntest_rollback_after_state_success_rejects_arm_timeout_artifact (__main__.PowerlossEvidenceGateSelfTest.test_rollback_after_state_success_rejects_arm_timeout_artifact) ... ok\ntest_rollback_after_state_success_requires_boot_change (__main__.PowerlossEvidenceGateSelfTest.test_rollback_after_state_success_requires_boot_change) ... ok\ntest_rollback_after_state_success_requires_final_state (__main__.PowerlossEvidenceGateSelfTest.test_rollback_after_state_success_requires_final_state) ... ok\ntest_rollback_current_unlinked_semantics_pass_and_reject_data_adoption (__main__.PowerlossEvidenceGateSelfTest.test_rollback_current_unlinked_semantics_pass_and_reject_data_adoption) ... ok\ntest_rollback_identify_links_semantics_pass_and_reject_link_mismatch (__main__.PowerlossEvidenceGateSelfTest.test_rollback_identify_links_semantics_pass_and_reject_link_mismatch) ... ok\ntest_secret_value_fails (__main__.PowerlossEvidenceGateSelfTest.test_secret_value_fails) ... ok\ntest_unknown_checkpoint_fails (__main__.PowerlossEvidenceGateSelfTest.test_unknown_checkpoint_fails) ... ok\n\n----------------------------------------------------------------------\nRan 26 tests in 1.114s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_powerloss_matrix_plan.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_powerloss_matrix_plan_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_board_path_preserves_safe_relative_package_paths (__main__.PowerlossMatrixPlanSelfTest.test_board_path_preserves_safe_relative_package_paths) ... ok\ntest_missing_matrix_emits_non_claims_and_commands (__main__.PowerlossMatrixPlanSelfTest.test_missing_matrix_emits_non_claims_and_commands) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.005s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_powerloss_operator_runbook_build.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_powerloss_operator_runbook_build_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_invalid_plan_blocks (__main__.OperatorRunbookBuildSelfTest.test_invalid_plan_blocks) ... ok\ntest_writes_runbook_without_claiming_evidence (__main__.OperatorRunbookBuildSelfTest.test_writes_runbook_without_claiming_evidence) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.005s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_h2_powerloss_preflight_gate_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_accepts_clean_target_bound_preflight (__main__.H2PowerlossPreflightGateSelfTest.test_accepts_clean_target_bound_preflight) ... ok\ntest_rejects_existing_target_release_dir_for_fresh_apply_matrix (__main__.H2PowerlossPreflightGateSelfTest.test_rejects_existing_target_release_dir_for_fresh_apply_matrix) ... ok\ntest_rejects_pending_checkpoint_dir_contamination (__main__.H2PowerlossPreflightGateSelfTest.test_rejects_pending_checkpoint_dir_contamination) ... ok\ntest_rejects_stable_or_wrong_policy (__main__.H2PowerlossPreflightGateSelfTest.test_rejects_stable_or_wrong_policy) ... ok\ntest_rejects_target_linked_for_post_payload_apply (__main__.H2PowerlossPreflightGateSelfTest.test_rejects_target_linked_for_post_payload_apply) ... ok\ntest_rejects_target_quarantined_before_matrix_setup (__main__.H2PowerlossPreflightGateSelfTest.test_rejects_target_quarantined_before_matrix_setup) ... ok\ntest_requires_explicit_non_claims (__main__.H2PowerlossPreflightGateSelfTest.test_requires_explicit_non_claims) ... ok\n\n----------------------------------------------------------------------\nRan 7 tests in 0.024s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_gate_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "TeardownEvidenceGateSelfTest.test_negative_delta_unflagged_fails) ... ok\ntest_no_service_restart_fails (__main__.TeardownEvidenceGateSelfTest.test_no_service_restart_fails) ... ok\ntest_non_int_delta_fails_without_crash (__main__.TeardownEvidenceGateSelfTest.test_non_int_delta_fails_without_crash) ... ok\ntest_nonzero_delta_fails (__main__.TeardownEvidenceGateSelfTest.test_nonzero_delta_fails) ... ok\ntest_overlapping_windows_fails (__main__.TeardownEvidenceGateSelfTest.test_overlapping_windows_fails) ... ok\ntest_persistent_fault_both_windows_fails (__main__.TeardownEvidenceGateSelfTest.test_persistent_fault_both_windows_fails) ... ok\ntest_postcheck_duplicate_key_fails (__main__.TeardownEvidenceGateSelfTest.test_postcheck_duplicate_key_fails) ... ok\ntest_postcheck_missing_freeze_fails (__main__.TeardownEvidenceGateSelfTest.test_postcheck_missing_freeze_fails) ... ok\ntest_postcheck_value_poisoning_fails (__main__.TeardownEvidenceGateSelfTest.test_postcheck_value_poisoning_fails) ... ok\ntest_process_not_exited_fails (__main__.TeardownEvidenceGateSelfTest.test_process_not_exited_fails) ... ok\ntest_production_stop_accepts_ipc_unavailable_as_observed_path (__main__.TeardownEvidenceGateSelfTest.test_production_stop_accepts_ipc_unavailable_as_observed_path) ... ok\ntest_production_stop_fault_delta_fails (__main__.TeardownEvidenceGateSelfTest.test_production_stop_fault_delta_fails) ... ok\ntest_production_stop_mpv_alive_after_kiosk_exit_fails (__main__.TeardownEvidenceGateSelfTest.test_production_stop_mpv_alive_after_kiosk_exit_fails) ... ok\ntest_production_stop_post_restore_health_sidecar_tamper_fails (__main__.TeardownEvidenceGateSelfTest.test_production_stop_post_restore_health_sidecar_tamper_fails) ... ok\ntest_production_stop_pre_signal_pid_must_be_int (__main__.TeardownEvidenceGateSelfTest.test_production_stop_pre_signal_pid_must_be_int) ... ok\ntest_production_stop_rejects_bad_attempt_invariants (__main__.TeardownEvidenceGateSelfTest.test_production_stop_rejects_bad_attempt_invariants) ... ok\ntest_production_stop_rejects_fresh_ipc_path (__main__.TeardownEvidenceGateSelfTest.test_production_stop_rejects_fresh_ipc_path) ... ok\ntest_production_stop_rejects_lax_invariants (__main__.TeardownEvidenceGateSelfTest.test_production_stop_rejects_lax_invariants) ... ok\ntest_production_stop_signal_log_required (__main__.TeardownEvidenceGateSelfTest.test_production_stop_signal_log_required) ... ok\ntest_production_stop_signal_target_mismatch_fails (__main__.TeardownEvidenceGateSelfTest.test_production_stop_signal_target_mismatch_fails) ... ok\ntest_production_stop_stop_path_must_match_log (__main__.TeardownEvidenceGateSelfTest.test_production_stop_stop_path_must_match_log) ... ok\ntest_production_stop_stop_path_pid_prefix_collision_fails (__main__.TeardownEvidenceGateSelfTest.test_production_stop_stop_path_pid_prefix_collision_fails) ... ok\ntest_production_stop_stop_path_wrong_pid_fails (__main__.TeardownEvidenceGateSelfTest.test_production_stop_stop_path_wrong_pid_fails) ... ok\ntest_reversed_windows_fails (__main__.TeardownEvidenceGateSelfTest.test_reversed_windows_fails) ... ok\ntest_secret_leak_fails (__main__.TeardownEvidenceGateSelfTest.test_secret_leak_fails) ... ok\ntest_service_restart_index_wrong_kind_fails (__main__.TeardownEvidenceGateSelfTest.test_service_restart_index_wrong_kind_fails) ... ok\ntest_summary_cycle_binding_mismatch_fails (__main__.TeardownEvidenceGateSelfTest.test_summary_cycle_binding_mismatch_fails) ... ok\ntest_too_few_cycles_fails (__main__.TeardownEvidenceGateSelfTest.test_too_few_cycles_fails) ... ok\ntest_touching_windows_fails (__main__.TeardownEvidenceGateSelfTest.test_touching_windows_fails) ... ok\ntest_undeclared_file_fails (__main__.TeardownEvidenceGateSelfTest.test_undeclared_file_fails) ... ok\ntest_zero_width_photocopy_windows_fails (__main__.TeardownEvidenceGateSelfTest.test_zero_width_photocopy_windows_fails) ... ok\n\n----------------------------------------------------------------------\nRan 58 tests in 3.710s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_teardown_static_test.py"
+      ],
+      "name": "c18_player_runtime_teardown_static",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"errors\": [], \"kiosk_py\": \"/home/builder/totem-os/orange_pi_totem/player-runtime/kiosky-player/kiosk.py\", \"open_ipc_callers\": {\"_start_locked\": [1726]}, \"passed\": true, \"self_ipc_writers\": {\"__init__\": [1468], \"_close_ipc_locked\": [1594], \"_open_ipc\": [1542, 1559]}}\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/c18_player_runtime_teardown_trial.py",
+        "--self-test"
+      ],
+      "name": "c18_player_runtime_teardown_trial_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_cycle_fails_on_nonzero_delta (__main__.TeardownTrialSelfTest.test_cycle_fails_on_nonzero_delta) ... ok\ntest_delta_negative_is_anomalous (__main__.TeardownTrialSelfTest.test_delta_negative_is_anomalous) ... ok\ntest_delta_positive (__main__.TeardownTrialSelfTest.test_delta_positive) ... ok\ntest_delta_zero (__main__.TeardownTrialSelfTest.test_delta_zero) ... ok\ntest_freeze_postcheck_apply_local_manifest_is_positional (__main__.TeardownTrialSelfTest.test_freeze_postcheck_apply_local_manifest_is_positional) ... ok\ntest_fresh_ipc_classify_defaults_to_not_forced (__main__.TeardownTrialSelfTest.test_fresh_ipc_classify_defaults_to_not_forced) ... ok\ntest_fresh_ipc_classify_honesty (__main__.TeardownTrialSelfTest.test_fresh_ipc_classify_honesty) ... ok\ntest_journalctl_failure_fails_closed (__main__.TeardownTrialSelfTest.test_journalctl_failure_fails_closed) ... ok\ntest_mid_decode_confirm_ignores_initial_embryonic_sample (__main__.TeardownTrialSelfTest.test_mid_decode_confirm_ignores_initial_embryonic_sample) ... ok\ntest_mid_decode_confirm_rejects_final_ipc_error (__main__.TeardownTrialSelfTest.test_mid_decode_confirm_rejects_final_ipc_error) ... ok\ntest_mid_decode_confirm_requires_trailing_progress (__main__.TeardownTrialSelfTest.test_mid_decode_confirm_requires_trailing_progress) ... ok\ntest_mid_decode_restore_honors_startup_wait_before_health (__main__.TeardownTrialSelfTest.test_mid_decode_restore_honors_startup_wait_before_health) ... ok\ntest_probe_real_driver_stages_corner_end_to_end (__main__.TeardownTrialSelfTest.test_probe_real_driver_stages_corner_end_to_end)\nRun the REAL _run_fresh_ipc_probe off-board against a FAKE kiosk. ... ok\ntest_probe_real_driver_without_canary_is_not_forced (__main__.TeardownTrialSelfTest.test_probe_real_driver_without_canary_is_not_forced) ... ok\ntest_probe_without_fresh_line_rejected_by_gate (__main__.TeardownTrialSelfTest.test_probe_without_fresh_line_rejected_by_gate) ... ok\ntest_producer_output_passes_gate (__main__.TeardownTrialSelfTest.test_producer_output_passes_gate) ... ok\ntest_production_stop_path_classification (__main__.TeardownTrialSelfTest.test_production_stop_path_classification) ... ok\ntest_run_trial_end_to_end_passes_gate (__main__.TeardownTrialSelfTest.test_run_trial_end_to_end_passes_gate)\nRun the FULL run_trial() with every board seam shimmed by a fake. ... ok\ntest_run_trial_lab_guard_blocks_without_env (__main__.TeardownTrialSelfTest.test_run_trial_lab_guard_blocks_without_env) ... refusing to run: set C18_PLAYER_RUNTIME_TEARDOWN_TRIAL=1 to run the lab-only teardown trial\nok\ntest_unforced_probe_rejected_by_gate (__main__.TeardownTrialSelfTest.test_unforced_probe_rejected_by_gate) ... ok\n\n----------------------------------------------------------------------\nRan 20 tests in 1.422s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/board/c18_playback_soak_collect.py",
+        "--self-test"
+      ],
+      "name": "c18_playback_soak_collect_self_test",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"schema\": \"dadooh.c18.playback.soak.v1\", \"self_test\": true}\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_coldboot_evidence_gate.py",
+        "--run-dir",
+        "docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health",
+        "--expect-selected-source",
+        "fallback",
+        "--expect-image-tag",
+        "c18-hwdecode-lab-1u",
+        "--json"
+      ],
+      "name": "c18_coldboot_evidence_current",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"boot_state\": \"docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health/boot-state-public.json\",\n  \"errors\": [],\n  \"passed\": true\n}\n"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_playback_deep_health_fixture_test.py"
+      ],
+      "name": "c18_playback_deep_health_fixture",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "lthFixtureTest.test_pass_fixture) ... ok\ntest_rejects_bad_hwdec (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_bad_hwdec) ... ok\ntest_rejects_decode_stall_when_time_advances_but_frame_is_frozen (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_decode_stall_when_time_advances_but_frame_is_frozen) ... ok\ntest_rejects_forward_status_lag_without_next_item_proof (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_forward_status_lag_without_next_item_proof) ... ok\ntest_rejects_initial_status_mpv_lag_without_later_alignment (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_initial_status_mpv_lag_without_later_alignment) ... ok\ntest_rejects_ipc_timeout_after_success (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_ipc_timeout_after_success) ... ok\ntest_rejects_kernel_fault_counters (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_kernel_fault_counters) ... ok\ntest_rejects_long_status_mpv_transition_lag (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_long_status_mpv_transition_lag) ... ok\ntest_rejects_media_load_failed_and_mpv_restart (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_media_load_failed_and_mpv_restart) ... ok\ntest_rejects_missing_ext4_counter (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_missing_ext4_counter) ... ok\ntest_rejects_missing_frame_progress_evidence (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_missing_frame_progress_evidence) ... ok\ntest_rejects_missing_restart_and_fault_counter_evidence (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_missing_restart_and_fault_counter_evidence) ... ok\ntest_rejects_multisegment_stall_even_when_last_segment_progresses (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_multisegment_stall_even_when_last_segment_progresses) ... ok\ntest_rejects_panfrost_fault_delta (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_panfrost_fault_delta) ... ok\ntest_rejects_repeated_short_status_mpv_mismatches (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_repeated_short_status_mpv_mismatches) ... ok\ntest_rejects_short_final_segment_without_proven_progress (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_short_final_segment_without_proven_progress) ... ok\ntest_rejects_short_frame_burst_then_stall (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_short_frame_burst_then_stall) ... ok\ntest_rejects_status_failure_and_missing_transition (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_status_failure_and_missing_transition) ... ok\ntest_rejects_status_mpv_mismatch_outside_transition_edge (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_status_mpv_mismatch_outside_transition_edge) ... ok\ntest_rejects_status_transition_when_mpv_path_repeats (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_status_transition_when_mpv_path_repeats) ... ok\ntest_rejects_stock_mpv_path (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_stock_mpv_path) ... ok\ntest_rejects_too_many_terminal_forward_status_lag_segments (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_too_many_terminal_forward_status_lag_segments) ... ok\ntest_rejects_transition_required_without_status_mpv_comparable_samples (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_transition_required_without_status_mpv_comparable_samples) ... ok\ntest_rejects_unbounded_chained_status_mpv_transition_lag (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_unbounded_chained_status_mpv_transition_lag) ... ok\ntest_rejects_wrong_mpv_count (__main__.C18PlaybackDeepHealthFixtureTest.test_rejects_wrong_mpv_count) ... ok\ntest_service_mode_rejects_filtered_or_extra_mpv_evidence (__main__.C18PlaybackDeepHealthFixtureTest.test_service_mode_rejects_filtered_or_extra_mpv_evidence) ... ok\ntest_service_mode_requires_total_mpv_count_evidence (__main__.C18PlaybackDeepHealthFixtureTest.test_service_mode_requires_total_mpv_count_evidence) ... ok\n\n----------------------------------------------------------------------\nRan 49 tests in 0.212s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_board_readonly_diagnostics_evidence_gate.py",
+        "--self-test"
+      ],
+      "name": "c18_board_readonly_diagnostics_evidence_gate",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_config_content_read_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_config_content_read_denies) ... ok\ntest_h2_claim_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_h2_claim_denies) ... ok\ntest_manifest_hash_mismatch_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_manifest_hash_mismatch_denies) ... ok\ntest_overclaim_readme_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_overclaim_readme_denies) ... ok\ntest_privacy_leak_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_privacy_leak_denies) ... ok\ntest_root_symlink_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_root_symlink_denies) ... ok\ntest_sensitive_json_key_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_sensitive_json_key_denies) ... ok\ntest_sensitive_negative_looking_json_key_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_sensitive_negative_looking_json_key_denies) ... ok\ntest_valid_fixture_passes (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_valid_fixture_passes) ... ok\n\n----------------------------------------------------------------------\nRan 9 tests in 0.166s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c17_9_update_channel_policy_test.py"
+      ],
+      "name": "c17_9_update_channel_policy",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_component_filter_blocks_kiosky_player_for_totem_core (__main__.UpdateChannelPolicyTest.test_component_filter_blocks_kiosky_player_for_totem_core) ... ok\ntest_component_filter_blocks_totem_core_for_kiosky_player (__main__.UpdateChannelPolicyTest.test_component_filter_blocks_totem_core_for_kiosky_player) ... ok\ntest_draft_release_is_ignored (__main__.UpdateChannelPolicyTest.test_draft_release_is_ignored) ... ok\ntest_dry_run_selection_does_not_mutate_state_links (__main__.UpdateChannelPolicyTest.test_dry_run_selection_does_not_mutate_state_links) ... ok\ntest_github_release_listing_paginates (__main__.UpdateChannelPolicyTest.test_github_release_listing_paginates) ... ok\ntest_homologation_device_does_not_select_lab_conservative_policy (__main__.UpdateChannelPolicyTest.test_homologation_device_does_not_select_lab_conservative_policy) ... ok\ntest_homologation_device_selects_homologation_when_allowed (__main__.UpdateChannelPolicyTest.test_homologation_device_selects_homologation_when_allowed) ... ok\ntest_lab_device_selects_lab_when_allowed (__main__.UpdateChannelPolicyTest.test_lab_device_selects_lab_when_allowed) ... ok\ntest_manifest_with_unknown_requires_key_is_ignored (__main__.UpdateChannelPolicyTest.test_manifest_with_unknown_requires_key_is_ignored) ... ok\ntest_manifest_with_unsupported_updater_feature_is_ignored (__main__.UpdateChannelPolicyTest.test_manifest_with_unsupported_updater_feature_is_ignored) ... ok\ntest_manifest_with_wrong_device_track_is_ignored (__main__.UpdateChannelPolicyTest.test_manifest_with_wrong_device_track_is_ignored) ... ok\ntest_manifest_without_sha_is_ignored (__main__.UpdateChannelPolicyTest.test_manifest_without_sha_is_ignored) ... ok\ntest_prerelease_requires_policy_permission (__main__.UpdateChannelPolicyTest.test_prerelease_requires_policy_permission) ... ok\ntest_release_without_valid_manifest_is_ignored (__main__.UpdateChannelPolicyTest.test_release_without_valid_manifest_is_ignored) ... ok\ntest_stable_device_does_not_select_homologation (__main__.UpdateChannelPolicyTest.test_stable_device_does_not_select_homologation) ... ok\ntest_stable_device_does_not_select_lab (__main__.UpdateChannelPolicyTest.test_stable_device_does_not_select_lab) ... ok\ntest_stable_device_selects_stable (__main__.UpdateChannelPolicyTest.test_stable_device_selects_stable) ... ok\n\n----------------------------------------------------------------------\nRan 17 tests in 0.006s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_runtime_3_release_perms_test.py"
+      ],
+      "name": "c18_runtime_3_release_perms",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "test_extracted_release_is_world_traversable_after_fix (__main__.ReleasePermsTest.test_extracted_release_is_world_traversable_after_fix) ... /usr/lib/python3.12/tarfile.py:2274: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.\n  warnings.warn(\nok\ntest_player_runtime_base_dirs_are_traversable_after_ensure_dirs (__main__.ReleasePermsTest.test_player_runtime_base_dirs_are_traversable_after_ensure_dirs) ... ok\ntest_player_runtime_internal_apply_normalizes_base_dirs (__main__.ReleasePermsTest.test_player_runtime_internal_apply_normalizes_base_dirs) ... 2026-06-12T19:48:23Z INFO release_cleanup_ok path=/tmp/tmp4gnz7afa/data/player-runtime/releases/runtime-perms-test\n2026-06-12T19:48:23Z INFO stage_cleanup_ok path=/tmp/tmp4gnz7afa/data/updates/incoming/player-runtime/runtime-perms-test\nok\ntest_safe_extract_rejects_symlink_and_hardlink_members (__main__.ReleasePermsTest.test_safe_extract_rejects_symlink_and_hardlink_members) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.092s\n\nOK\n",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/sim/run_player_runtime_sandbox.py",
+        "--json",
+        "--sandbox",
+        "/tmp/c18-player-runtime-sandbox-stc46xk4"
+      ],
+      "name": "player_runtime_sandbox",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "2026-06-12T19:48:26Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-a\n2026-06-12T19:48:27Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-b\n2026-06-12T19:48:27Z ERROR player_runtime_refusing_to_overwrite_linked_release version=sandbox-a link=previous\n2026-06-12T19:48:27Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-a\n2026-06-12T19:48:27Z INFO release_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/player-runtime/releases/sandbox-bad\n2026-06-12T19:48:27Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-bad\n2026-06-12T19:48:28Z ERROR player_runtime_deep_health_exception err_type=RuntimeError\n2026-06-12T19:48:28Z INFO release_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/player-runtime/releases/sandbox-hook-error\n2026-06-12T19:48:28Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-hook-error\n2026-06-12T19:48:28Z INFO release_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/player-runtime/releases/sandbox-mutating\n2026-06-12T19:48:28Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-mutating\n2026-06-12T19:48:29Z INFO release_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/player-runtime/releases/sandbox-bad-no-prev\n2026-06-12T19:48:29Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-bad-no-prev\n2026-06-12T19:48:29Z INFO release_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/player-runtime/releases/unmarked\n2026-06-12T19:48:29Z INFO release_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/player-runtime/releases/sandbox-bad-fallback\n2026-06-12T19:48:29Z INFO stage_cleanup_ok path=/tmp/c18-player-runtime-sandbox-stc46xk4/data/updates/incoming/player-runtime/sandbox-bad-fallback\n",
+      "stdout_tail": "{\n  \"board_touched\": false,\n  \"checks\": {\n    \"apply_a_offline_passed\": true,\n    \"apply_b_offline_passed\": true,\n    \"cli_apply_still_frozen\": true,\n    \"cli_reconcile_still_frozen\": true,\n    \"cli_rollback_still_frozen\": true,\n    \"current_previous_swap_passed\": true,\n    \"deep_health_fixture_passed\": true,\n    \"external_package_apply_passed\": true,\n    \"failed_apply_with_previous_cleaned_release\": true,\n    \"failed_apply_with_previous_rolled_back\": true,\n    \"failed_apply_without_previous_cleaned_release\": true,\n    \"failed_apply_without_previous_falls_back_to_image\": true,\n    \"fallback_health_does_not_verify_candidate\": true,\n    \"fallback_health_rejected_release_cleaned\": true,\n    \"health_hook_exception_cleans_release_and_stage\": true,\n    \"health_hook_exception_keeps_previous_current\": true,\n    \"launcher_corrupt_marker_falls_back\": true,\n    \"launcher_data_source_passed\": true,\n    \"launcher_unmarked_data_current_falls_back\": true,\n    \"missing_image_fallback_fails_closed\": true,\n    \"post_health_identity_mutation_rejected\": true,\n    \"previous_release_collision_preserves_marker\": true,\n    \"reconcile_candidate_rejected_hygiene_passed\": true,\n    \"reconcile_verified_current_passed\": true,\n    \"release_gate_validated\": true,\n    \"rollback_roundtrip_passed\": true\n  },\n  \"external_package\": {\n    \"reason\": \"not_requested\",\n    \"requested\": false,\n    \"version\": \"\"\n  },\n  \"network_required\": false,\n  \"passed\": true,\n  \"path_debt\": {\n    \"launcher_default_data_dir\": \"/data/player-runtime/current\",\n    \"player_runtime_component_base\": \"/data/player-runtime\",\n    \"requires_image_launcher_env_or_path_convergence_before_thaw\": false\n  },\n  \"sandbox\": \"/tmp/c18-player-runtime-sandbox-stc46xk4\",\n  \"schema\": \"dadooh.c18.player_runtime.sandbox.v1\",\n  \"ssh_used\": false\n}\n"
+    },
+    {
+      "cmd": [
+        "internal",
+        "player_runtime_data_coldboot_evidence_git_guard",
+        "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot"
+      ],
+      "name": "c18_player_runtime_data_coldboot_evidence_git_guard:1",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"evidence_dir\": \"docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot\", \"ignored_files\": [], \"manifest_untracked_entries\": [], \"repo_relative_dir\": \"docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot\", \"untracked_files\": []}"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_coldboot_evidence_gate.py",
+        "--run-dir",
+        "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot",
+        "--expect-selected-source",
+        "data",
+        "--require-pre-state",
+        "--expect-image-tag",
+        "c18-hwdecode-lab-1x",
+        "--expect-image-marker-sha256",
+        "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+        "--json"
+      ],
+      "name": "c18_player_runtime_data_coldboot_evidence",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"boot_state\": \"docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-coldboot/boot-state-public.json\",\n  \"errors\": [],\n  \"passed\": true\n}\n"
+    },
+    {
+      "cmd": [
+        "internal",
+        "player_runtime_data_evidence_git_guard",
+        "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data"
+      ],
+      "name": "c18_player_runtime_data_evidence_git_guard:1",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"evidence_dir\": \"docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data\", \"ignored_files\": [], \"manifest_untracked_entries\": [], \"repo_relative_dir\": \"docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data\", \"untracked_files\": []}"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_evidence_gate.py",
+        "--run-dir",
+        "docs/evidence/c18-update-validation/20260610T072826Z-1x-m6-data",
+        "--expect-image-tag",
+        "c18-hwdecode-lab-1x",
+        "--expect-image-sha256",
+        "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+        "--expect-image-marker-sha256",
+        "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+        "--json"
+      ],
+      "name": "c18_player_runtime_data_evidence",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"errors\": [],\n  \"files\": [\n    \"README.md\",\n    \"candidate-health/deep-health-kernel.json\",\n    \"candidate-health/deep-health-player-counters.json\",\n    \"candidate-health/deep-health-process.json\",\n    \"candidate-health/deep-health-systemd.json\",\n    \"candidate-health/playback-deep-health-public.json\",\n    \"candidate-health/playback-samples.tsv\",\n    \"candidate-health/status-samples.ndjson\",\n    \"candidate-health-result.json\",\n    \"candidate-teardown-kernel.json\",\n    \"evidence-manifest.json\",\n    \"lab-apply.json\",\n    \"lab-rollback.json\",\n    \"package/dadooh-player-runtime-c18.player-runtime-m6-b2-20260610T072826Z-29ff33b.manifest.json\",\n    \"package/player-runtime-release-gate.json\",\n    \"service-after-restart/deep-health-kernel.json\",\n    \"service-after-restart/deep-health-player-counters.json\",\n    \"service-after-restart/deep-health-process.json\",\n    \"service-after-restart/deep-health-systemd.json\",\n    \"service-after-restart/launcher-adoption.json\",\n    \"service-after-restart/playback-deep-health-public.json\",\n    \"service-after-restart/playback-samples.tsv\",\n    \"service-after-restart/status-samples.ndjson\",\n    \"service-after-rollback/deep-health-kernel.json\",\n    \"service-after-rollback/deep-health-player-counters.json\",\n    \"service-after-rollback/deep-health-process.json\",\n    \"service-after-rollback/deep-health-systemd.json\",\n    \"service-after-rollback/launcher-adoption.json\",\n    \"service-after-rollback/playback-deep-health-public.json\",\n    \"service-after-rollback/playback-samples.tsv\",\n    \"service-after-rollback/status-samples.ndjson\",\n    \"service-before-apply/deep-health-kernel.json\",\n    \"service-before-apply/deep-health-player-counters.json\",\n    \"service-before-apply/deep-health-process.json\",\n    \"service-before-apply/deep-health-systemd.json\",\n    \"service-before-apply/launcher-adoption.json\",\n    \"service-before-apply/playback-deep-health-public.json\",\n    \"service-before-apply/playback-samples.tsv\",\n    \"service-before-apply/status-samples.ndjson\",\n    \"verified-marker.json\"\n  ],\n  \"passed\": true,\n  \"schema\": \"dadooh.c18.player_runtime.evidence_gate.v1\"\n}\n"
+    },
+    {
+      "cmd": [
+        "internal",
+        "link_player_runtime_data_evidence"
+      ],
+      "name": "c18_player_runtime_data_evidence_link",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"kiosk_py_sha256\": \"aed11086fcde3054f0c4360d0075cc2ac64499e073d5f350cac6279abd45a88c\", \"tree_sha256\": \"b23ca25b6553a380a7edc811110112c918510cace4ee4c3b5383e359eec36d70\", \"version\": \"c18.player-runtime-m6-b2-20260610T072826Z-29ff33b\"}"
+    },
+    {
+      "cmd": [
+        "internal",
+        "player_runtime_production_stop_teardown_required",
+        "docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown",
+        "docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe",
+        "docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop"
+      ],
+      "name": "c18_player_runtime_production_stop_teardown_required",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"matched_dirs\": [\"docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop\"], \"teardown_dirs\": [\"docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown\", \"docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe\", \"docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop\"]}"
+    },
+    {
+      "cmd": [
+        "internal",
+        "player_runtime_teardown_evidence_git_guard",
+        "docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_git_guard:1",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"evidence_dir\": \"docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown\", \"ignored_files\": [], \"manifest_untracked_entries\": [], \"repo_relative_dir\": \"docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown\", \"untracked_files\": []}"
+    },
+    {
+      "cmd": [
+        "internal",
+        "teardown_evidence_image_mismatch",
+        "docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_image_guard:1",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"board_image_marker\": \"c18-hwdecode-lab-1x\", \"evidence_dir\": \"docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown\", \"expected_image_tag\": \"c18-hwdecode-lab-1x\"}"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+        "--run-dir",
+        "docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown",
+        "--json"
+      ],
+      "name": "c18_player_runtime_teardown_evidence:1",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"errors\": [],\n  \"files\": [\n    \"README.md\",\n    \"cycles/cycle-00/cycle.json\",\n    \"cycles/cycle-00/health/deep-health-kernel.json\",\n    \"cycles/cycle-00/health/deep-health-player-counters.json\",\n    \"cycles/cycle-00/health/deep-health-process.json\",\n    \"cycles/cycle-00/health/deep-health-systemd.json\",\n    \"cycles/cycle-00/health/playback-deep-health-public.json\",\n    \"cycles/cycle-00/health/playback-samples.tsv\",\n    \"cycles/cycle-00/health/status-samples.ndjson\",\n    \"cycles/cycle-00/kernel-after.txt\",\n    \"cycles/cycle-00/kernel-before.txt\",\n    \"cycles/cycle-01/cycle.json\",\n    \"cycles/cycle-01/health/deep-health-kernel.json\",\n    \"cycles/cycle-01/health/deep-health-player-counters.json\",\n    \"cycles/cycle-01/health/deep-health-process.json\",\n    \"cycles/cycle-01/health/deep-health-systemd.json\",\n    \"cycles/cycle-01/health/playback-deep-health-public.json\",\n    \"cycles/cycle-01/health/playback-samples.tsv\",\n    \"cycles/cycle-01/health/status-samples.ndjson\",\n    \"cycles/cycle-01/kernel-after.txt\",\n    \"cycles/cycle-01/kernel-before.txt\",\n    \"cycles/cycle-02/cycle.json\",\n    \"cycles/cycle-02/health/deep-health-kernel.json\",\n    \"cycles/cycle-02/health/deep-health-player-counters.json\",\n    \"cycles/cycle-02/health/deep-health-process.json\",\n    \"cycles/cycle-02/health/deep-health-systemd.json\",\n    \"cycles/cycle-02/health/playback-deep-health-public.json\",\n    \"cycles/cycle-02/health/playback-samples.tsv\",\n    \"cycles/cycle-02/health/status-samples.ndjson\",\n    \"cycles/cycle-02/kernel-after.txt\",\n    \"cycles/cycle-02/kernel-before.txt\",\n    \"evidence-manifest.json\",\n    \"postcheck.txt\",\n    \"setup/service-state-before.json\",\n    \"teardown-summary.json\"\n  ],\n  \"passed\": true,\n  \"run_dir\": \"docs/evidence/c18-update-validation/20260610T052324Z-1x-teardown\",\n  \"schema\": \"dadooh.c18.player_runtime.teardown_evidence_gate.v1\"\n}\n"
+    },
+    {
+      "cmd": [
+        "internal",
+        "player_runtime_teardown_evidence_git_guard",
+        "docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_git_guard:2",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"evidence_dir\": \"docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe\", \"ignored_files\": [], \"manifest_untracked_entries\": [], \"repo_relative_dir\": \"docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe\", \"untracked_files\": []}"
+    },
+    {
+      "cmd": [
+        "internal",
+        "teardown_evidence_image_mismatch",
+        "docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_image_guard:2",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"board_image_marker\": \"c18-hwdecode-lab-1x\", \"evidence_dir\": \"docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe\", \"expected_image_tag\": \"c18-hwdecode-lab-1x\"}"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+        "--run-dir",
+        "docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe",
+        "--json"
+      ],
+      "name": "c18_player_runtime_teardown_evidence:2",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"errors\": [],\n  \"files\": [\n    \"README.md\",\n    \"cycles/cycle-00/cycle.json\",\n    \"cycles/cycle-00/health/deep-health-kernel.json\",\n    \"cycles/cycle-00/health/deep-health-player-counters.json\",\n    \"cycles/cycle-00/health/deep-health-process.json\",\n    \"cycles/cycle-00/health/deep-health-systemd.json\",\n    \"cycles/cycle-00/health/playback-deep-health-public.json\",\n    \"cycles/cycle-00/health/playback-samples.tsv\",\n    \"cycles/cycle-00/health/status-samples.ndjson\",\n    \"cycles/cycle-00/kernel-after.txt\",\n    \"cycles/cycle-00/kernel-before.txt\",\n    \"cycles/cycle-01/cycle.json\",\n    \"cycles/cycle-01/health/deep-health-kernel.json\",\n    \"cycles/cycle-01/health/deep-health-player-counters.json\",\n    \"cycles/cycle-01/health/deep-health-process.json\",\n    \"cycles/cycle-01/health/deep-health-systemd.json\",\n    \"cycles/cycle-01/health/playback-deep-health-public.json\",\n    \"cycles/cycle-01/health/playback-samples.tsv\",\n    \"cycles/cycle-01/health/status-samples.ndjson\",\n    \"cycles/cycle-01/kernel-after.txt\",\n    \"cycles/cycle-01/kernel-before.txt\",\n    \"cycles/cycle-02/cycle.json\",\n    \"cycles/cycle-02/health/deep-health-kernel.json\",\n    \"cycles/cycle-02/health/deep-health-player-counters.json\",\n    \"cycles/cycle-02/health/deep-health-process.json\",\n    \"cycles/cycle-02/health/deep-health-systemd.json\",\n    \"cycles/cycle-02/health/playback-deep-health-public.json\",\n    \"cycles/cycle-02/health/playback-samples.tsv\",\n    \"cycles/cycle-02/health/status-samples.ndjson\",\n    \"cycles/cycle-02/kernel-after.txt\",\n    \"cycles/cycle-02/kernel-before.txt\",\n    \"evidence-manifest.json\",\n    \"fresh-ipc-probe/probe-kiosk-log-tail.txt\",\n    \"fresh-ipc-probe/probe-stderr.txt\",\n    \"fresh-ipc-probe/probe-stdout.txt\",\n    \"fresh_ipc_probe.json\",\n    \"postcheck.txt\",\n    \"setup/service-state-before.json\",\n    \"teardown-summary.json\"\n  ],\n  \"passed\": true,\n  \"run_dir\": \"docs/evidence/c18-update-validation/20260610T185956Z-1x-teardown-fresh-ipc-probe\",\n  \"schema\": \"dadooh.c18.player_runtime.teardown_evidence_gate.v1\"\n}\n"
+    },
+    {
+      "cmd": [
+        "internal",
+        "player_runtime_teardown_evidence_git_guard",
+        "docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_git_guard:3",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"evidence_dir\": \"docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop\", \"ignored_files\": [], \"manifest_untracked_entries\": [], \"repo_relative_dir\": \"docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop\", \"untracked_files\": []}"
+    },
+    {
+      "cmd": [
+        "internal",
+        "teardown_evidence_image_mismatch",
+        "docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop"
+      ],
+      "name": "c18_player_runtime_teardown_evidence_image_guard:3",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"board_image_marker\": \"c18-hwdecode-lab-1x\", \"evidence_dir\": \"docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop\", \"expected_image_tag\": \"c18-hwdecode-lab-1x\"}"
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
+        "--run-dir",
+        "docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop",
+        "--json"
+      ],
+      "name": "c18_player_runtime_teardown_evidence:3",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"errors\": [],\n  \"files\": [\n    \"README.md\",\n    \"cycles/cycle-00/cycle.json\",\n    \"cycles/cycle-00/health/deep-health-kernel.json\",\n    \"cycles/cycle-00/health/deep-health-player-counters.json\",\n    \"cycles/cycle-00/health/deep-health-process.json\",\n    \"cycles/cycle-00/health/deep-health-systemd.json\",\n    \"cycles/cycle-00/health/playback-deep-health-public.json\",\n    \"cycles/cycle-00/health/playback-samples.tsv\",\n    \"cycles/cycle-00/health/status-samples.ndjson\",\n    \"cycles/cycle-00/kernel-after.txt\",\n    \"cycles/cycle-00/kernel-before.txt\",\n    \"cycles/cycle-01/cycle.json\",\n    \"cycles/cycle-01/health/deep-health-kernel.json\",\n    \"cycles/cycle-01/health/deep-health-player-counters.json\",\n    \"cycles/cycle-01/health/deep-health-process.json\",\n    \"cycles/cycle-01/health/deep-health-systemd.json\",\n    \"cycles/cycle-01/health/playback-deep-health-public.json\",\n    \"cycles/cycle-01/health/playback-samples.tsv\",\n    \"cycles/cycle-01/health/status-samples.ndjson\",\n    \"cycles/cycle-01/kernel-after.txt\",\n    \"cycles/cycle-01/kernel-before.txt\",\n    \"cycles/cycle-02/cycle.json\",\n    \"cycles/cycle-02/health/deep-health-kernel.json\",\n    \"cycles/cycle-02/health/deep-health-player-counters.json\",\n    \"cycles/cycle-02/health/deep-health-process.json\",\n    \"cycles/cycle-02/health/deep-health-systemd.json\",\n    \"cycles/cycle-02/health/playback-deep-health-public.json\",\n    \"cycles/cycle-02/health/playback-samples.tsv\",\n    \"cycles/cycle-02/health/status-samples.ndjson\",\n    \"cycles/cycle-02/kernel-after.txt\",\n    \"cycles/cycle-02/kernel-before.txt\",\n    \"evidence-manifest.json\",\n    \"postcheck.txt\",\n    \"production-stop-probe/attempt-00/decode-samples.ndjson\",\n    \"production-stop-probe/attempt-00/kernel-after.txt\",\n    \"production-stop-probe/attempt-00/kernel-before.txt\",\n    \"production-stop-probe/attempt-00/probe-kiosk-log-tail.txt\",\n    \"production-stop-probe/attempt-00/probe-stderr.txt\",\n    \"production-stop-probe/attempt-00/probe-stdout.txt\",\n    \"production-stop-probe/post-restore-health/deep-health-kernel.json\",\n    \"production-stop-probe/post-restore-health/deep-health-player-counters.json\",\n    \"production-stop-probe/post-restore-health/deep-health-process.json\",\n    \"production-stop-probe/post-restore-health/deep-health-systemd.json\",\n    \"production-stop-probe/post-restore-health/playback-deep-health-public.json\",\n    \"production-stop-probe/post-restore-health/playback-samples.tsv\",\n    \"production-stop-probe/post-restore-health/status-samples.ndjson\",\n    \"production-stop-probe/service-restore.json\",\n    \"production_stop_probe.json\",\n    \"setup/service-state-before.json\",\n    \"teardown-summary.json\"\n  ],\n  \"passed\": true,\n  \"run_dir\": \"docs/evidence/c18-update-validation/20260611T050939Z-1x-production-stop\",\n  \"schema\": \"dadooh.c18.player_runtime.teardown_evidence_gate.v1\"\n}\n"
+    },
+    {
+      "cmd": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "name": "git_diff_check",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "cmd": [
+        "python3",
+        "scripts/sim/run_totem_core_sandbox.py",
+        "--sandbox",
+        "/tmp/c18-ota-gate-sandbox-bv2581bp",
+        "--evidence-dir",
+        "/tmp/c18-ota-gate-evidence-l1pooh3b",
+        "--json"
+      ],
+      "name": "totem_core_sandbox",
+      "passed": true,
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\"apply_blocked_when_settings_active\": true, \"apply_local_passed\": true, \"output\": \"/tmp/c18-ota-gate-evidence-l1pooh3b/totem-core-sandbox.json\", \"result\": \"passed\", \"rollback_passed\": true, \"sandbox_created\": true, \"settings_lock_guard_passed\": true, \"wrapper_fallback_passed\": true}\n"
+    }
+  ]
+}
