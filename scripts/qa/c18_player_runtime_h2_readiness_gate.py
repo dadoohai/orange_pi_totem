@@ -26,6 +26,7 @@ from c18_player_runtime_powerloss_evidence_gate import (
 )
 from c18_stable_promotion_gate import evaluate as evaluate_stable_promotion_gate
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
+from c18_server_side_publish_governance_gate import write_fixture_release as write_server_side_fixture_release
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -426,32 +427,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         "auto_pull_enabled": False,
         "public_player_runtime_thaw": False,
     })
-    server = root / "server.json"
-    write_json(server, {
-        "schema": SERVER_SIDE_SCHEMA,
-        "publish_gate_enforced": True,
-        "release_assets_verified": True,
-        "signature_or_attestation_present": True,
-        "auto_pull_policy_defined": True,
-        "auto_pull_default_disabled": True,
-        "auto_pull_enabled": False,
-        "channel_governance_defined": True,
-        "channels": ["lab", "homologation", "stable"],
-        "channel_inheritance_allowed": False,
-        "stable_requires_promotion": True,
-        "allowlist_controls_defined": True,
-        "staged_rollout_defined": True,
-        "rollback_policy_defined": True,
-        "audit_trail_defined": True,
-        "public_player_runtime_thaw_requires_h2": True,
-        "component_scope": ["totem-core", "player-runtime"],
-        "forbidden_component_scopes": ["kiosky-player", "media-system", "field-data"],
-        "signed_or_attested_assets": [
-            "manifest",
-            "payload",
-            "c18-ota-release-gate",
-        ],
-    })
+    server = write_server_side_fixture_release(root / "server-side-release")
     operator = root / "operator.json"
     write_json(operator, {
         "schema": THAW_DECISION_SCHEMA,

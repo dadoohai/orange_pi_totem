@@ -144,7 +144,10 @@ versionada antes de aplicar em placa ou cliente.
 
 Nota pos-RC: a familia server-side/signature deve passar por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
-pelo H2. Esse gate e offline e nao publica releases nem habilita auto-pull.
+pelo H2. Esse gate e offline, nao publica releases nem habilita auto-pull, e
+agora rejeita evidencia apenas declaratoria: exige artefatos reais no diretorio
+da release, provas de attestation com hashes conferidos, canal, auto-pull off,
+allowlist, staged rollout, rollback e auditoria.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12
 checkpoints fisicos restantes.

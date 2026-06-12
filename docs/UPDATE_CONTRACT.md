@@ -473,8 +473,13 @@ assets verificaveis, assinatura ou attestation, politica de auto-pull definida
 mas desabilitada por padrao, canais exatos, promocao stable obrigatoria,
 allowlist, staged rollout, rollback, trilha de auditoria, escopo exato
 `totem-core` + `player-runtime` e escopos proibidos explicitos para
-`kiosky-player`, `media-system` e `field-data`. Ele nao publica release, nao
-habilita auto-pull, nao promove stable e nao faz thaw de `player-runtime`.
+`kiosky-player`, `media-system` e `field-data`. A evidencia nao pode ser apenas
+um conjunto de flags: deve apontar para manifest, payload, resumo do release
+gate, provas de attestation e log de auditoria existentes no diretorio da
+release, com hashes conferidos contra os arquivos. Tambem deve trazer politica
+de canal, auto-pull, allowlist, rollout, rollback e eventos de auditoria
+obrigatorios. Ele nao publica release, nao habilita auto-pull, nao promove
+stable e nao faz thaw de `player-runtime`.
 
 Entre H1 e H2 existe somente um caminho intermediario controlado:
 `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido
