@@ -257,3 +257,24 @@ Antes de `stable` ou batch:
 - gates de producao aplicaveis de C18 permanecem obrigatorios, incluindo soak
   quando a frente for promover imagem/batch;
 - se a mudanca exigir nova baseline de imagem, seguir o fluxo de imagem, nao OTA.
+
+Para `player-runtime`, `stable`/thaw publico nao e o mesmo fluxo do OTA comum de
+`totem-core`. Seguir `docs/c18-player-runtime-h2-stable-thaw-runbook.md` e
+manter estas regras:
+
+- nao gerar manifest `player-runtime channel=stable`; o alvo de pacote continua
+  sendo o release `homologation` validado;
+- `stable` aparece nos artefatos de promocao, decisao e policy, nao como pacote
+  `player-runtime` stable;
+- H2 precisa estar verde com power-loss fisico 17/17, soak 24h,
+  server-side/signature com trust anchor, stable promotion e decisao formal de
+  thaw;
+- `scripts/qa/c18_player_runtime_stable_decision_draft_build.py` pode gerar
+  rascunhos fail-closed, mas eles nao autorizam `stable`, thaw publico,
+  publish nem auto-pull;
+- `scripts/qa/c18_player_runtime_thaw_decision_gate.py` valida a decisao formal
+  de thaw com janela UTC ativa de no maximo 4h;
+- o diretorio final de evidencia deve versionar
+  `c18-stable-promotion-evidence.json`,
+  `c18-player-runtime-thaw-decision.json`, `h2-readiness-final.json` e README
+  com non-claims/hashes.

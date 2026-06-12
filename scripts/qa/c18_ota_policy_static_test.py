@@ -745,6 +745,21 @@ exec "$C18_REAL_PYTHON3" "$@"
         operating_model = DOC191_PATH.read_text(encoding="utf-8")
         self.assertIn("docs/UPDATE_CONTRACT.md", operating_model)
         self.assertIn("--package-payload <release-dir>/dadooh-totem-core-<version>.tar.gz", operating_model)
+        for token in (
+            "docs/c18-player-runtime-h2-stable-thaw-runbook.md",
+            "nao gerar manifest `player-runtime channel=stable`",
+            "power-loss fisico 17/17",
+            "soak 24h",
+            "server-side/signature com trust anchor",
+            "c18_player_runtime_stable_decision_draft_build.py",
+            "rascunhos fail-closed",
+            "c18_player_runtime_thaw_decision_gate.py",
+            "janela UTC ativa de no maximo 4h",
+            "c18-stable-promotion-evidence.json",
+            "c18-player-runtime-thaw-decision.json",
+            "h2-readiness-final.json",
+        ):
+            self.assertIn(token, operating_model)
         doc192 = DOC192_PATH.read_text(encoding="utf-8")
         doc192_words = " ".join(doc192.split())
         self.assertIn("Homologation RC", doc192)
