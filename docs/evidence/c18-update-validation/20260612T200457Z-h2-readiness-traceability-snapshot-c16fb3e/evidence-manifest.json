@@ -1,0 +1,40 @@
+{
+  "blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "collected_at_utc": "2026-06-12T20:04:57Z",
+  "files": [
+    {
+      "bytes": 653,
+      "file": "README.md",
+      "sha256": "4b87e51c04f24007b907e5ca83bf7087d234e0e6d50ff096f5816f8b7427c87b"
+    },
+    {
+      "bytes": 9581,
+      "file": "h2-readiness.json",
+      "sha256": "d4a536b982dd78bda1848b4cbc9126573d004cfcd9077d399fa47dc49a4b00e6"
+    }
+  ],
+  "key_checks": {
+    "explicit_operator_thaw_decision": false,
+    "full_physical_powerloss_matrix": false,
+    "h1_decisive_bundle": true,
+    "repo_clean": true,
+    "server_side_publish_governance": true,
+    "soak_endurance_24h": false,
+    "stable_promotion_authorization": false,
+    "tracked_inputs": true
+  },
+  "non_claims": [
+    "this_gate_does_not_thaw_player_runtime",
+    "this_gate_does_not_publish_or_fetch_releases",
+    "this_gate_does_not_override_freeze_rc_44",
+    "this_gate_does_not_promote_stable_without_operator_decision"
+  ],
+  "passed": false,
+  "result_claim": "h2_readiness_blocked",
+  "schema": "dadooh.c18.h2_readiness_traceability_snapshot.v1"
+}
