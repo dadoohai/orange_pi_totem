@@ -44,6 +44,7 @@ MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_pl
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
 COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_state_collect.py"
+APPLIANCE_STATUS_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_status_snapshot.py"
 DISPLAY_STATUS_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_display_status_collect.py"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
@@ -258,9 +259,13 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
+        self.assertNotIn("totem_appliance_status_snapshot.py", core_files_block)
         self.assertNotIn("c18_display_status_collect.py", core_files_block)
+        self.assertNotIn("python3 bin/totem_appliance_status_snapshot.py --self-test", build)
         self.assertNotIn("python3 bin/c18_display_status_collect.py --self-test", build)
+        self.assertNotIn('"bin/totem_appliance_status_snapshot.py"', release_gate)
         self.assertNotIn('"bin/c18_display_status_collect.py"', release_gate)
+        self.assertIn("totem_appliance_status_snapshot_self_test", release_gate)
         self.assertIn("c18_display_status_collect_self_test", release_gate)
         self.assertNotIn("bash -n bin/kiosky_service_launcher.sh", build)
         self.assertNotIn("bash -n bin/totem-kiosky-launcher.sh", build)
@@ -297,6 +302,33 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotRegex(collector, r"(xset|modetest|kmsprint|drm_info|chvt|fbset)")
         self.assertNotIn("/dev/fb", collector)
         self.assertNotIn("/data/config/config.json", collector)
+
+    def test_appliance_status_snapshot_is_read_only_field_data_governance(self) -> None:
+        collector = APPLIANCE_STATUS_COLLECTOR_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(APPLIANCE_STATUS_COLLECTOR_PATH), "--self-test"], check=True)
+
+        self.assertIn('C18_GOVERNANCE_SCHEMA = "dadooh.c18.appliance_public_state.governance.v1"', collector)
+        self.assertIn('C18_RESULT_CLAIM = "read_only_appliance_public_state_collected"', collector)
+        self.assertIn('"responsibility": "field-data"', collector)
+        self.assertIn('"reads_config_content": False', collector)
+        self.assertIn('"copies_raw_player_status": False', collector)
+        self.assertIn('"copies_raw_public_status": False', collector)
+        self.assertIn('"reads_media": False', collector)
+        self.assertIn('"reads_network": False', collector)
+        self.assertIn('"reads_journal": False', collector)
+        self.assertIn('"executes_commands": False', collector)
+        self.assertIn('"writes_only_under_tmp": True', collector)
+        self.assertIn('"not_ota_release_payload": True', collector)
+        self.assertIn('"not_h2_or_production_readiness": True', collector)
+        self.assertIn("privacy_scan", collector)
+        self.assertIn("CONFIG_FILE_REL", collector)
+        config_metadata_block = collector.split("def config_metadata(", 1)[1].split("\ndef build_snapshot(", 1)[0]
+        self.assertIn("path.lstat()", config_metadata_block)
+        self.assertNotIn(".open(", config_metadata_block)
+        self.assertNotIn(".read_text(", config_metadata_block)
+        self.assertNotIn("json.load", config_metadata_block)
+        for prohibited in ("subprocess", "os.system", "systemctl", "journalctl", "nmcli"):
+            self.assertNotIn(prohibited, collector)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")

@@ -22,6 +22,18 @@ nao entram no OTA comum.
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, HDMI/display, kernel, DTB, U-Boot, BSP | nova imagem + homologacao | imagem/cartao known-good; sem A/B nesta linha |
 | `field-data` | config real, seed, midia, playlist/cache, estado operacional | fluxo operacional em `/data`; nao release de software | writer/backup/re-sync conforme o dado |
 
+`field-data` pode gerar fotografia publica/sanitizada de estado operacional,
+mas isso nao torna config, midia, cache ou playlist parte de um release de
+software. O snapshot governado atual e
+`scripts/board/totem_appliance_status_snapshot.py`, com
+`c18_governance.schema=dadooh.c18.appliance_public_state.governance.v1` e
+`result_claim=read_only_appliance_public_state_collected`. Ele le somente
+status publico, campos allowlisted do status do player e metadados da config
+por `stat`; nao abre config real, nao copia status bruto, nao le midia/rede ou
+journal, nao executa comandos e escreve apenas em `/tmp`. Ele e evidencia
+operacional, nao payload OTA comum, nao release `player-runtime`, nao imagem,
+nao H2/stable/producao e nao substitui power-loss, soak ou thaw.
+
 ## Roots De Artefatos
 
 | Classe | Root canonico | Observacao |

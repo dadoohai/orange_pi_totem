@@ -190,3 +190,20 @@ A fila de homologacao continua separada. C7 pode ajudar a montar evidencias
 futuras com formato consistente, mas nao prova estabilidade de longa duracao,
 reboot/autoboot, segunda placa/cartao, root read-only, corte seco, rollback real
 ou producao.
+
+## 9. Promocao de governanca C18
+
+Na linha C18, `scripts/board/totem_appliance_status_snapshot.py` permanece
+compativel com o schema C7, mas adiciona metadados de governanca:
+
+- `c18_governance.schema=dadooh.c18.appliance_public_state.governance.v1`;
+- `responsibility=field-data`;
+- `result_claim=read_only_appliance_public_state_collected`.
+
+Esse claim significa apenas que a fotografia publica/sanitizada foi coletada.
+Nao significa que `field-data` virou release de software, que o pacote OTA pode
+carregar config/midia/cache, ou que H2/producao foram aprovados.
+
+O self-test desse snapshot passa a rodar dentro do gate C18 offline. O binario
+continua fora do payload OTA comum de `totem-core` enquanto o updater/base de
+campo nao tiver allowlist compativel para novos binarios de diagnostico.

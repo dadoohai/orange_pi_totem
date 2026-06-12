@@ -25,6 +25,8 @@ from typing import Any
 
 
 SCHEMA_VERSION = "dadooh-c7-appliance-status.v0"
+C18_GOVERNANCE_SCHEMA = "dadooh.c18.appliance_public_state.governance.v1"
+C18_RESULT_CLAIM = "read_only_appliance_public_state_collected"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c7-appliance-status"
 DEFAULT_ROOT = "/"
 SELFTEST_ROOT = pathlib.Path("/tmp/dadooh-c7-selftest-root")
@@ -455,6 +457,24 @@ def build_snapshot(root: pathlib.Path) -> dict[str, Any]:
 
     snapshot: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
+        "c18_governance": {
+            "schema": C18_GOVERNANCE_SCHEMA,
+            "responsibility": "field-data",
+            "result_claim": C18_RESULT_CLAIM,
+            "collection_mode": "local_offline_read_only",
+            "reads_config_content": False,
+            "copies_raw_player_status": False,
+            "copies_raw_public_status": False,
+            "reads_media": False,
+            "reads_network": False,
+            "reads_journal": False,
+            "executes_commands": False,
+            "writes_only_under_tmp": True,
+            "not_ota_release_payload": True,
+            "not_player_runtime_release": True,
+            "not_system_image_release": True,
+            "not_h2_or_production_readiness": True,
+        },
         "generated_at": utc_timestamp(),
         "source_presence": {
             "public_status": public_status_state,
@@ -504,6 +524,9 @@ def build_summary(snapshot: dict[str, Any]) -> str:
         "Dadooh C7 appliance status snapshot",
         "",
         f"schema_version: {snapshot['schema_version']}",
+        f"c18_governance_schema: {snapshot['c18_governance']['schema']}",
+        f"c18_result_claim: {snapshot['c18_governance']['result_claim']}",
+        f"c18_responsibility: {snapshot['c18_governance']['responsibility']}",
         f"generated_at: {snapshot['generated_at']}",
         f"privacy_scan: {snapshot['privacy_scan']}",
         f"public_status_source: {snapshot['source_presence']['public_status']}",
@@ -529,6 +552,8 @@ def build_summary(snapshot: dict[str, Any]) -> str:
         "network_access: false",
         "commands_executed: false",
         "writes_only_under_tmp: true",
+        "not_ota_release_payload: true",
+        "not_h2_or_production_readiness: true",
     ]
     if snapshot["warnings"]:
         lines.append("warnings: " + ",".join(snapshot["warnings"]))
@@ -651,6 +676,12 @@ def run_self_test() -> int:
         run_snapshot(root_raw=str(root), out_dir_raw=str(out))
         data = load_output_json(out)
         assert data["public_state"] == "config_missing"
+        assert data["c18_governance"]["schema"] == C18_GOVERNANCE_SCHEMA
+        assert data["c18_governance"]["responsibility"] == "field-data"
+        assert data["c18_governance"]["result_claim"] == C18_RESULT_CLAIM
+        assert data["c18_governance"]["reads_config_content"] is False
+        assert data["c18_governance"]["not_ota_release_payload"] is True
+        assert data["c18_governance"]["not_h2_or_production_readiness"] is True
         assert data["privacy_scan"] == "ok"
         assert_no_private_output(out)
 

@@ -92,6 +92,31 @@ Evitar:
 - loops agressivos de DPMS/modeset sem prova de seguranca;
 - capturar framebuffer bruto, midias, URLs, config real ou dados sensiveis.
 
+## Snapshot Publico Do Appliance
+
+`scripts/board/totem_appliance_status_snapshot.py` agora tambem carrega
+metadados de governanca C18:
+
+- `c18_governance.schema=dadooh.c18.appliance_public_state.governance.v1`;
+- `responsibility=field-data`;
+- `result_claim=read_only_appliance_public_state_collected`.
+
+Ele e uma fotografia operacional sanitizada. A versao atual observa somente
+status publico em `/tmp/dadooh-status/status.json`, campos allowlisted de
+`/tmp/kiosky-status.json` e metadados de `/data/config/config.json` por `stat`.
+Nao abre a config real, nao copia status bruto, nao le midia, rede ou journal,
+nao executa comandos, nao inicia/parar/reinicia servico e escreve apenas em
+`/tmp`.
+
+Compatibilidade OTA: assim como o coletor de display, esse snapshot fica
+gateado e testado no repo, mas nao entra no payload OTA comum de `totem-core`
+enquanto a base/updater de campo nao tiver allowlist compativel para esse novo
+binario. Em cliente, usar via imagem/base homologada ou copia assistida de
+laboratorio ate essa base existir.
+
+Nao-claims: esse snapshot nao e release de software, nao prova H2, nao substitui
+deep-health, power-loss, soak, stable, public thaw nem decisao de producao.
+
 ## Relacao Com OTA
 
 Este incidente nao bloqueia a trilha OTA C18. Ele informa backlog de diagnostico
