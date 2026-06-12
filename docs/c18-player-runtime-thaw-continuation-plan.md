@@ -257,8 +257,13 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   do caminho da chave ou do trust anchor. O H2 de `player-runtime` passa
   `expected_component=player-runtime`; manifest/release gate de `totem-core`
   ficam bloqueados para essa familia.
-  Producao ainda exige evidencia real assinada com chave operacional. Ele nao
-  publica release, nao liga auto-pull e nao promove stable.
+  Para o pacote atual `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`,
+  a familia server-side esta materializada em
+  `docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`
+  e o H2 consome essa evidencia com `server_side_publish_governance` verde.
+  Isso nao publica release, nao liga auto-pull, nao promove stable e nao e
+  publicacao/producao real; producao ainda exige a decisao stable/thaw e o
+  restante do H2.
 - stable promotion no caminho CLI/build/publish valida artefatos
   semanticamente, nao apenas hashes: release gate verde, matriz power-loss
   17/17 verde, soak 24h, server-side assinado com trust key externa + trust
@@ -271,15 +276,17 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados; release gate geral verde na RC; payload protegido por allowlist exata no gate e no device-side antes de extrair/promover | Hardening de producao/stable quando a frente H2 for aberta |
-| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde; payload C18-aware restrito a `kiosk.py` no gate; builder local preserva release-gate JSON junto de payload/manifest e o release atual recebeu backfill auditavel desse JSON | H2/prod: matriz power-loss 17/17, soak 24h, server-side publish/signature, stable promotion e decisao explicita de thaw |
+| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde; payload C18-aware restrito a `kiosk.py` no gate; builder local preserva release-gate JSON junto de payload/manifest e o release atual recebeu backfill auditavel desse JSON; familia server-side/signature atual passa no H2 | H2/prod: matriz power-loss 17/17, soak 24h, stable promotion e decisao explicita de thaw |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44); build/publish historicos seguem bloqueados por padrao e, mesmo com bypass lab, recusam media/cache/config/data/secrets, systemd, `/opt`, MPV/ffmpeg e modulos | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo de release atual, mas agora protegidos por guardrails executaveis na matriz de responsabilidade, no gate de `player-runtime`, nos scripts legados e na allowlist device-side de `totem-core` | Trazer ao padrão de evidência quando forem priorizados como frente propria |
-| server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test; publisher stable de `totem-core` agora compara o release gate final com o hash validado e monta a lista final de assets por helper offline testado, anexando stable evidence + familia server-side validada antes do `gh`; gerador offline de evidencia assinada agora existe e reroda o gate real sem publicar | Evidencia real de publish/signature com trust anchor operacional a ser produzida antes do H2 |
-| power-loss/soak | P0 seletivo fisico completo para piloto; semantica 17/17 implementada no gate; H2 gate ainda vermelho por lacuna de evidencia fisica e soak | 12 checkpoints fisicos restantes da matriz 17/17 e soak 24h |
+| server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test; publisher stable de `totem-core` agora compara o release gate final com o hash validado e monta a lista final de assets por helper offline testado, anexando stable evidence + familia server-side validada antes do `gh`; gerador offline de evidencia assinada agora existe, reroda o gate real sem publicar e a evidencia atual esta verde para o pacote `c16fb3e` | Publicacao real/stable continua fora de escopo ate H2; manter chave/trust-anchor operacional e evidencias versionadas para o canal de producao |
+| power-loss/soak | P0 seletivo fisico completo para piloto; semantica 17/17 implementada no gate; planner H2 `20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e` registra 5/17 cobertos, 12 faltantes e comandos skeleton sem reivindicar evidencia; H2 gate ainda vermelho por lacuna de evidencia fisica e soak | 12 checkpoints fisicos restantes da matriz 17/17 e soak 24h |
 
 Estado: Homologation RC de `player-runtime` pronta para piloto assistido, com
 freeze publico `rc=44`, pacote `homologation`, P0 seletivo completo, pilot
-readiness verde e H2 readiness vermelho pelos bloqueios esperados. Funil:
+readiness verde, server-side/signature verde para o pacote atual e H2 readiness
+vermelho pelos bloqueios esperados: power-loss 17/17, soak 24h, stable
+promotion e decisao explicita de thaw. Funil:
 piloto assistido allowlisted -> evidencia de campo -> H2 completo -> decisao
 explicita de thaw.
 

@@ -28,8 +28,9 @@ golden atual `1u`.
 | M6 `/data` decisivo atual | Bundle `1x`: `20260610T072826Z` evidenciou A2->B2->cold-boot->A2 de `player-runtime` em `/data`; teardown dirs `20260610T052324Z`, `20260610T185956Z` e `20260611T050939Z` cobrem teardown/relaunch repetido, req#4 fresh-IPC exercitado e parada SIGTERM saudavel do Python-kiosk; release gate host `decisive` verde com a tripla explicita da imagem `1x` |
 | H1.5 homologation pilot | Novo caminho intermediario controlado por `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`: `channel=homologation`, `ring=pilot`, entrega assistida, autorizacao formal, preflight com public freeze `rc=44`, pacote alvo e P0 power-loss seletivo; nao e `stable`/producao |
 | Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
-| Power-loss fisico | Parcialmente provado em laboratorio na imagem `1w`: `after_marker_written`, `after_previous_symlink`, `after_current_symlink`, `rollback_after_current_to_previous`, `rollback_after_previous_removed`, `rollback_after_quarantine` e `rollback_after_state_success` |
-| Proximo gate H2 | checkpoints restantes de power-loss/torn-write, soak/endurance, server-side/signature, promocao stable e decisao final antes de qualquer caminho `stable`/producao |
+| Power-loss fisico | P0 seletivo do pacote `c16fb3e` esta completo para piloto com 5/17 (`after_current_symlink`, `rollback_after_current_to_previous`, `rollback_after_previous_removed`, `rollback_after_quarantine`, `rollback_after_state_success`); planner H2 `20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e` registra os 12 checkpoints restantes sem reivindicar evidencia |
+| Server-side/signature | Familia atual do pacote `c16fb3e` esta verde em `20260612T125127Z-server-side-governance-c16fb3e`; gate offline valida artefatos reais, assinaturas/trust-anchor, audit log, auto-pull off, allowlist/staged rollout e component binding, sem publicar release |
+| Proximo gate H2 | checkpoints restantes de power-loss/torn-write, soak/endurance, promocao stable e decisao final antes de qualquer caminho `stable`/producao |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, matriz completa de power-loss fisico e soak/endurance |
 
 ## Golden atual (2026-06-08)

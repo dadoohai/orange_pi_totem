@@ -85,7 +85,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_pilot_readiness_
   --package-manifest releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json \
   --package-payload releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz \
   --h1-release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
-  --authorization docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/pilot-authorization-h1-refresh.json \
+  --authorization docs/evidence/c18-update-validation/20260612T101300Z-pilot-authorization-refresh/pilot-authorization.json \
   --preflight docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json \
   --preflight-stage post_apply_observation \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T001436Z-p0-after-current-symlink-c16fb3e \
@@ -108,12 +108,14 @@ esperados:
 - matriz fisica power-loss 17/17 incompleta;
 - soak 24h ausente;
 - stable promotion ausente;
-- evidencia real de governanca server-side/signature ausente;
 - decisao explicita de thaw ausente.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
 checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica
-dos 12 checkpoints restantes.
+dos 12 checkpoints restantes. O planner
+`docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/`
+registra a matriz atual como 5/17 coberta e 12/17 pendente, sem reivindicar
+evidencia fisica.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:
@@ -148,10 +150,10 @@ versionada antes de aplicar em placa ou cliente.
 2. Preservar evidencia de apply, health, rollback e qualquer incidente.
 3. Se houver loop/restart/`media_load_failed`, parar o piloto e coletar
    incidente antes de continuar.
-4. Depois do piloto, abrir H2: 17/17 power-loss, soak 24h, server-side/signature,
-   stable promotion e decisao formal de thaw.
+4. Depois do piloto, abrir H2: 17/17 power-loss, soak 24h, stable promotion e
+   decisao formal de thaw.
 
-Nota pos-RC: a familia server-side/signature deve passar por
+Nota pos-RC: a familia server-side/signature passa por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
 pelo H2. Esse gate e offline, nao publica releases nem habilita auto-pull, e
 agora rejeita evidencia apenas declaratoria: exige artefatos reais no diretorio
@@ -167,6 +169,11 @@ evidencia nao afirma cadeia PKI, rejeita claims PKI extras e
 rejeita symlink em qualquer componente do caminho da chave ou do trust anchor.
 Fixture nao passa fora de self-test; producao ainda exige evidencia real
 assinada com chave operacional.
+Para o pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`,
+essa familia ja esta materializada em
+`docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`
+e o H2 reporta `server_side_publish_governance=true`; isso nao publica release,
+nao habilita auto-pull, nao promove stable e nao abre producao.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12
 checkpoints fisicos restantes.
