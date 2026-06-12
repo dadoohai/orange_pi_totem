@@ -181,6 +181,8 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
     return {
         "version": version,
         "payload_sha256": manifest["payload_sha256"].lower(),
+        "source_commit": manifest.get("source_commit"),
+        "channel": manifest.get("channel"),
     }
 
 
@@ -660,6 +662,14 @@ def validate_release(manifest_path: Path, payload_path: Path) -> dict[str, Any]:
         "passed": True,
         "component": COMPONENT,
         "manifest": manifest_result,
+        "package": {
+            "manifest": manifest_path.name,
+            "payload": payload_path.name,
+            "payload_sha256": manifest_result["payload_sha256"],
+            "source_commit": manifest_result.get("source_commit"),
+            "component": COMPONENT,
+            "channel": manifest_result.get("channel"),
+        },
         "payload": payload_result,
     }
 

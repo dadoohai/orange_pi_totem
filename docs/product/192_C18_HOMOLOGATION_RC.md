@@ -161,7 +161,9 @@ rollout, rollback e auditoria. Assinatura destacada e verificada offline com
 prova JSON canonica, fingerprint SPKI DER da chave publica, `release_set_sha256`,
 chave publica externa via `--trusted-key-pem` e evidencia de trust anchor
 separada via `--trust-anchor-evidence`; H2/stable carregam o hash dessa
-evidencia. Essa evidencia nao afirma cadeia PKI, rejeita claims PKI extras e
+evidencia. Para H2 de `player-runtime`, o consumo e componente-amarrado:
+evidencia server-side de `totem-core` nao fecha thaw de `player-runtime`. Essa
+evidencia nao afirma cadeia PKI, rejeita claims PKI extras e
 rejeita symlink em qualquer componente do caminho da chave ou do trust anchor.
 Fixture nao passa fora de self-test; producao ainda exige evidencia real
 assinada com chave operacional.

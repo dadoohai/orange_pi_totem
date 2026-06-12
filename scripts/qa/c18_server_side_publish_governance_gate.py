@@ -24,6 +24,14 @@ SCHEMA = "dadooh.c18.server_side_publish_governance.v1"
 ALLOWED_CHANNELS = ("lab", "homologation", "stable")
 EXPECTED_COMPONENT_SCOPE = ("totem-core", "player-runtime")
 FORBIDDEN_COMPONENT_SCOPES = ("kiosky-player", "media-system", "field-data")
+RELEASE_GATE_SCHEMA_BY_COMPONENT = {
+    "totem-core": "dadooh.c18.ota.release_gate.v1",
+    "player-runtime": "dadooh.c18.player_runtime.release_gate.v1",
+}
+RELEASE_GATE_TOOL_BY_COMPONENT = {
+    "totem-core": "scripts/qa/c18_ota_release_gate.py",
+    "player-runtime": "scripts/qa/c18_player_runtime_release_gate.py",
+}
 REQUIRED_SIGNED_OR_ATTESTED_ASSETS = (
     "manifest",
     "payload",
@@ -151,12 +159,16 @@ def require_exact_list(data: dict[str, Any],
         blockers.append(label)
 
 
-def validate_publish_gate(data: dict[str, Any], blockers: list[str]) -> None:
+def validate_publish_gate(data: dict[str, Any], blockers: list[str], *, expected_component: str | None = None) -> None:
     gate = data.get("publish_gate") if isinstance(data.get("publish_gate"), dict) else {}
     if not gate:
         blockers.append("server_side_publish_gate_missing")
         return
-    if gate.get("tool") != "scripts/qa/c18_ota_release_gate.py":
+    expected_tool = RELEASE_GATE_TOOL_BY_COMPONENT.get(expected_component) if expected_component else None
+    if expected_tool is not None:
+        if gate.get("tool") != expected_tool:
+            blockers.append("server_side_publish_gate_tool")
+    elif gate.get("tool") != "scripts/qa/c18_ota_release_gate.py":
         blockers.append("server_side_publish_gate_tool")
     for key in ("required", "passed_required", "base_ref_required", "dirty_repo_denied", "package_assets_bound"):
         require_true(gate, key, blockers, "server_side_publish_gate")
@@ -761,7 +773,10 @@ def validate_release_gate_artifact(gate_path: Path,
     if errors:
         blockers.append("server_side_release_gate_json")
         return
-    if gate.get("schema") != "dadooh.c18.ota.release_gate.v1":
+    expected_schema = RELEASE_GATE_SCHEMA_BY_COMPONENT.get(str(manifest.get("component")))
+    if expected_schema is None:
+        blockers.append("server_side_release_gate_component_scope")
+    elif gate.get("schema") != expected_schema:
         blockers.append("server_side_release_gate_schema")
     if gate.get("passed") is not True:
         blockers.append("server_side_release_gate_not_passed")
@@ -853,6 +868,7 @@ def validate_release_artifacts(data: dict[str, Any],
                                *,
                                evidence_path: str | None,
                                release_dir: Path | None,
+                               expected_component: str | None,
                                allow_test_fixtures: bool,
                                trusted_keys: dict[str, Path],
                                trust_anchor: dict[str, Any] | None,
@@ -872,6 +888,8 @@ def validate_release_artifacts(data: dict[str, Any],
         blockers.append("server_side_manifest_schema")
     if manifest.get("component") not in EXPECTED_COMPONENT_SCOPE:
         blockers.append("server_side_manifest_component_scope")
+    if expected_component is not None and manifest.get("component") != expected_component:
+        blockers.append("server_side_manifest_component_expected_mismatch")
     if manifest.get("channel") not in ALLOWED_CHANNELS:
         blockers.append("server_side_manifest_channel")
     if not allow_test_fixtures and (
@@ -926,6 +944,7 @@ def validate_data(data: dict[str, Any],
                   *,
                   evidence_path: str | None = None,
                   release_dir: Path | None = None,
+                  expected_component: str | None = None,
                   allow_test_fixtures: bool = False,
                   trusted_keys: dict[str, Path] | None = None,
                   trusted_key_errors: list[str] | None = None,
@@ -935,6 +954,8 @@ def validate_data(data: dict[str, Any],
     blockers.extend(trusted_key_errors or [])
     blockers.extend(trust_anchor_errors or [])
     resolved_trusted_keys = trusted_keys or {}
+    if expected_component is not None and expected_component not in EXPECTED_COMPONENT_SCOPE:
+        blockers.append("server_side_expected_component_invalid")
     if data.get("schema") != SCHEMA:
         blockers.append("server_side_schema")
     for key in REQUIRED_TRUE_FIELDS:
@@ -955,7 +976,7 @@ def validate_data(data: dict[str, Any],
     forbidden_scopes = data.get("forbidden_component_scopes")
     if forbidden_scopes != list(FORBIDDEN_COMPONENT_SCOPES):
         blockers.append("server_side_forbidden_component_scopes_not_exact")
-    validate_publish_gate(data, blockers)
+    validate_publish_gate(data, blockers, expected_component=expected_component)
     validate_asset_attestations(data, blockers)
     validate_channel_policy(data, blockers)
     validate_auto_pull_policy(data, blockers)
@@ -972,6 +993,7 @@ def validate_data(data: dict[str, Any],
         data,
         evidence_path=evidence_path,
         release_dir=release_dir,
+        expected_component=expected_component,
         allow_test_fixtures=allow_test_fixtures,
         trusted_keys=resolved_trusted_keys,
         trust_anchor=trust_anchor,
@@ -989,6 +1011,7 @@ def validate_data(data: dict[str, Any],
 
 def evaluate(path: Path | None,
              *,
+             expected_component: str | None = None,
              allow_test_fixtures: bool = False,
              trusted_key_pems: list[Path] | None = None,
              trust_anchor_evidence: Path | None = None) -> dict[str, Any]:
@@ -1030,6 +1053,7 @@ def evaluate(path: Path | None,
         data,
         evidence_path=str(path),
         release_dir=path.parent,
+        expected_component=expected_component,
         allow_test_fixtures=allow_test_fixtures,
         trusted_keys=trusted_keys,
         trusted_key_errors=trusted_key_errors,
@@ -1044,6 +1068,7 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def valid_fixture(*,
+                  component: str = "totem-core",
                   asset_hashes: dict[str, str] | None = None,
                   proof_hashes: dict[str, str] | None = None,
                   proof_files: dict[str, str] | None = None,
@@ -1090,7 +1115,7 @@ def valid_fixture(*,
             "audit_log": FIXTURE_AUDIT_LOG_NAME,
         },
         "publish_gate": {
-            "tool": "scripts/qa/c18_ota_release_gate.py",
+            "tool": RELEASE_GATE_TOOL_BY_COMPONENT[component],
             "required": True,
             "passed_required": True,
             "base_ref_required": True,
@@ -1165,14 +1190,14 @@ def valid_fixture(*,
     }
 
 
-def write_fixture_release(root: Path) -> Path:
+def write_fixture_release(root: Path, *, component: str = "totem-core") -> Path:
     root.mkdir(parents=True, exist_ok=True)
     payload_path = root / FIXTURE_PAYLOAD_NAME
     payload_path.write_bytes(b"C18 server-side governance fixture payload\n")
     payload_sha256 = sha256_file(payload_path)
     manifest = {
         "schema": "dadooh.totem.update.v1",
-        "component": "totem-core",
+        "component": component,
         "version": "server-fixture",
         "channel": "homologation",
         "payload": payload_path.name,
@@ -1183,7 +1208,7 @@ def write_fixture_release(root: Path) -> Path:
     manifest_path = root / FIXTURE_MANIFEST_NAME
     write_json(manifest_path, manifest)
     release_gate = {
-        "schema": "dadooh.c18.ota.release_gate.v1",
+        "schema": RELEASE_GATE_SCHEMA_BY_COMPONENT[component],
         "passed": True,
         "package": {
             "manifest": manifest_path.name,
@@ -1235,6 +1260,7 @@ def write_fixture_release(root: Path) -> Path:
         })
         proof_hashes[asset] = sha256_file(proof_path)
     data = valid_fixture(
+        component=component,
         asset_hashes=asset_hashes,
         proof_hashes=proof_hashes,
         proof_files=proof_files,
@@ -1270,7 +1296,7 @@ def sign_payload(private_key: Path, payload: bytes, signature_path: Path) -> Non
         ])
 
 
-def write_signed_fixture_release(root: Path) -> tuple[Path, Path]:
+def write_signed_fixture_release(root: Path, *, component: str = "totem-core") -> tuple[Path, Path]:
     root.mkdir(parents=True, exist_ok=True)
     trust_dir = root.parent / f"{root.name}-trust"
     trust_dir.mkdir(parents=True, exist_ok=True)
@@ -1287,7 +1313,7 @@ def write_signed_fixture_release(root: Path) -> tuple[Path, Path]:
     payload_sha256 = sha256_file(payload_path)
     manifest = {
         "schema": "dadooh.totem.update.v1",
-        "component": "totem-core",
+        "component": component,
         "version": "signed-release",
         "channel": "homologation",
         "payload": payload_path.name,
@@ -1299,7 +1325,7 @@ def write_signed_fixture_release(root: Path) -> tuple[Path, Path]:
     write_json(manifest_path, manifest)
     release_gate_path = root / FIXTURE_RELEASE_GATE_NAME
     write_json(release_gate_path, {
-        "schema": "dadooh.c18.ota.release_gate.v1",
+        "schema": RELEASE_GATE_SCHEMA_BY_COMPONENT[component],
         "passed": True,
         "package": {
             "manifest": manifest_path.name,
@@ -1329,7 +1355,7 @@ def write_signed_fixture_release(root: Path) -> tuple[Path, Path]:
     asset_hashes["audit-log"] = sha256_file(audit_path)
     expected_release_set_sha256 = release_set_sha256(asset_hashes)
 
-    data = valid_fixture(asset_hashes=asset_hashes)
+    data = valid_fixture(component=component, asset_hashes=asset_hashes)
     data["release_assets"] = {
         "manifest": manifest_path.name,
         "payload": payload_path.name,
@@ -1746,6 +1772,20 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
             result = evaluate(path, allow_test_fixtures=True)
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
 
+    def test_expected_component_accepts_matching_player_runtime_release(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_fixture_release(Path(tmp), component="player-runtime")
+            result = evaluate(path, expected_component="player-runtime", allow_test_fixtures=True)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_expected_component_denies_totem_core_for_player_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_fixture_release(Path(tmp), component="totem-core")
+            result = evaluate(path, expected_component="player-runtime", allow_test_fixtures=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_manifest_component_expected_mismatch", result["blockers"])
+        self.assertIn("server_side_publish_gate_tool", result["blockers"])
+
     def test_tampered_payload_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = write_fixture_release(Path(tmp))
@@ -1844,6 +1884,7 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate C18 server-side publish governance evidence.")
     parser.add_argument("--evidence", type=Path, default=None)
+    parser.add_argument("--expected-component", choices=EXPECTED_COMPONENT_SCOPE, default=None)
     parser.add_argument("--trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--self-test", action="store_true")
@@ -1859,6 +1900,7 @@ def main() -> int:
         return 0 if result.wasSuccessful() else 1
     result = evaluate(
         args.evidence,
+        expected_component=args.expected_component,
         trusted_key_pems=args.trusted_key_pem,
         trust_anchor_evidence=args.trust_anchor_evidence,
     )

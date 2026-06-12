@@ -476,7 +476,10 @@ avaliador (`release_gate`, server-side, trust anchor server-side, soak, matriz
 power-loss e bundle H2 pre-stable); hashes arbitrarios ou stale nao fecham a
 promocao. O publisher de
 `totem-core` deve preservar `c18-ota-release-gate.json` junto da release para
-manter a trilha de auditoria. O stable gate tambem aceita esses caminhos como
+manter a trilha de auditoria. O release gate de `player-runtime` tambem emite
+um bloco `package` portavel (`manifest`, `payload`, `payload_sha256`,
+`source_commit`, `component`, `channel`) para ser consumido por
+assinatura/attestation server-side. O stable gate tambem aceita esses caminhos como
 argumentos para validar os hashes em modo artifact-bound fora do H2. No caminho
 CLI/build/publish de `stable`, esses argumentos sao obrigatorios; chamar o gate
 somente com `--evidence` falha fechado para impedir promocao baseada em hashes
@@ -520,6 +523,10 @@ de trust anchor e fechado a campos conhecidos: claims PKI extras, mesmo
 positivos, bloqueiam a evidencia. H2 e stable carregam
 `server_side_trust_anchor_evidence_sha256` para impedir troca silenciosa da
 chave entre readiness e promocao.
+Quando consumido pelo H2 de `player-runtime`, esse gate e invocado com
+`expected_component=player-runtime`: manifest/release gate de `totem-core` nao
+satisfazem thaw de `player-runtime`, mesmo que a politica global server-side
+tenha escopo para ambos os componentes.
 Tambem deve trazer politica de canal, auto-pull, allowlist, rollout, rollback e
 eventos de auditoria obrigatorios. Fora de self-test, fixture e evidencia sem
 trust anchor/signature verificada continuam bloqueadas; o gate nao publica

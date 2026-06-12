@@ -394,6 +394,7 @@ def evaluate_server_side(path: Path | None,
         return step(False, ["missing_server_side_publish_governance"])
     result = evaluate_server_side_gate(
         path,
+        expected_component="player-runtime",
         allow_test_fixtures=allow_test_fixtures,
         trusted_key_pems=trusted_key_pems,
         trust_anchor_evidence=trust_anchor_evidence,
@@ -495,7 +496,7 @@ def complete_args(root: Path) -> argparse.Namespace:
             "max_ext4_errors_delta": 0,
         },
     })
-    server = write_server_side_fixture_release(root / "server-side-release")
+    server = write_server_side_fixture_release(root / "server-side-release", component="player-runtime")
     trust_anchor = root / "server-side-trust-anchor.json"
     write_json(trust_anchor, {
         "schema": "dadooh.c18.server_side_trust_anchor.v1",
@@ -698,6 +699,32 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_publish_governance:server_side_signature_or_attestation_present_missing_or_false",
+            result["blockers"],
+        )
+
+    def test_totem_core_server_side_evidence_cannot_satisfy_player_runtime_h2(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = complete_args(root)
+            args.server_side_evidence = write_server_side_fixture_release(
+                root / "totem-core-server-side-release",
+                component="totem-core",
+            )
+            stable = json.loads(args.stable_promotion_evidence.read_text(encoding="utf-8"))
+            stable.update(stable_expected_hashes(args))
+            write_json(args.stable_promotion_evidence, stable)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_publish_governance:server_side_manifest_component_expected_mismatch",
+            result["blockers"],
+        )
+        self.assertIn(
+            "server_side_publish_governance:server_side_publish_gate_tool",
             result["blockers"],
         )
 
