@@ -1010,7 +1010,6 @@ def _apply_player_runtime_linked_previous_unfrozen(
         return 13
     if not bool(health.get("passed")):
         reason = ",".join(str(item) for item in health.get("failure_reasons", [])) or "deep_health_failed"
-        _quarantine_player_runtime_identity(state, identity, reason)
         state["last_operation"] = {
             "type": "apply",
             "status": "candidate_rejected",
@@ -1021,6 +1020,7 @@ def _apply_player_runtime_linked_previous_unfrozen(
             "rollback_reason": reason,
             "rolled_back_to": "previous",
             "lab_reapply_linked_previous": True,
+            "quarantined_current": False,
         }
         _write_state(state)
         return 10

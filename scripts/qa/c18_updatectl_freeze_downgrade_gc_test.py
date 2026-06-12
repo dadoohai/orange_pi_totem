@@ -554,6 +554,63 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), "releases/runtime-b")
             self.assertEqual((updatectl._read_state().get("previous") or {}).get("payload_sha256"), "f" * 64)
 
+    def test_player_runtime_lab_reapply_health_failure_does_not_quarantine_verified_previous(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            write_player_runtime_policy(root)
+            updatectl._ensure_dirs()
+            _release_a, manifest_a, identity_a = write_verified_player_runtime_release("runtime-a")
+            _release_b, manifest_b, identity_b = write_verified_player_runtime_release("runtime-b")
+            updatectl._atomic_symlink("releases/runtime-a", updatectl.CURRENT_LINK)
+            updatectl._atomic_symlink("releases/runtime-b", updatectl.PREVIOUS_LINK)
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "player-runtime",
+                "current": {
+                    "version": "runtime-a",
+                    "payload_sha256": manifest_a["payload_sha256"],
+                    "kiosk_py_sha256": identity_a["kiosk_py_sha256"],
+                    "tree_sha256": identity_a["tree_sha256"],
+                },
+                "previous": {
+                    "version": "runtime-b",
+                    "payload_sha256": manifest_b["payload_sha256"],
+                    "kiosk_py_sha256": identity_b["kiosk_py_sha256"],
+                    "tree_sha256": identity_b["tree_sha256"],
+                },
+            })
+
+            old_thaw = updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED
+            old_health = updatectl.PLAYER_RUNTIME_HEALTH_HOOK
+            try:
+                updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = True
+                updatectl.PLAYER_RUNTIME_HEALTH_HOOK = lambda _release, identity: {
+                    "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                    "passed": False,
+                    "failure_reasons": ["unit_transient_health_probe"],
+                    "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+                    "observed_tree_sha256": identity["tree_sha256"],
+                    "artifact_id": "unit-linked-previous-reapply-fail",
+                }
+                rc = updatectl._apply_player_runtime_linked_previous_unfrozen(
+                    manifest_b,
+                    source="unit-reapply",
+                )
+            finally:
+                updatectl.PLAYER_RUNTIME_LAB_THAW_ENABLED = old_thaw
+                updatectl.PLAYER_RUNTIME_HEALTH_HOOK = old_health
+
+            self.assertEqual(rc, 10)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/runtime-a")
+            self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), "releases/runtime-b")
+            state = updatectl._read_state()
+            self.assertEqual(updatectl._quarantine_entries(state), [])
+            self.assertEqual((state.get("current") or {}).get("version"), "runtime-a")
+            self.assertEqual((state.get("previous") or {}).get("version"), "runtime-b")
+            self.assertEqual((state.get("last_operation") or {}).get("status"), "candidate_rejected")
+            self.assertFalse((state.get("last_operation") or {}).get("quarantined_current"))
+
     def test_same_version_different_sha_is_always_rejected(self) -> None:
         state = {"current": {"version": "core-a", "payload_sha256": "b" * 64}}
         ok, reason = updatectl._downgrade_policy_allows_manifest(
