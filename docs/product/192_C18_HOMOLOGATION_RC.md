@@ -184,4 +184,6 @@ build/publish stable, o gate deve receber os caminhos dos artefatos reais; usar
 somente `--evidence` falha fechado. Alem do hash binding, esses artefatos sao
 validados semanticamente no caminho stable: release gate verde, power-loss 17/17
 verde, soak 24h, server-side assinado com trust key externa + trust anchor, e
-decisao de operador aprovada.
+decisao de operador aprovada pelo gate dedicado
+`scripts/qa/c18_player_runtime_thaw_decision_gate.py`. Essa decisao tambem e
+artifact-bound e nao executa thaw, nao publica release e nao habilita auto-pull.

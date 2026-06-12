@@ -517,6 +517,16 @@ checkpoint da matriz, soak 24h, governanca server-side com
 assinatura/attestation, evidencia de promocao stable e decisao explicita do
 operador. Ele nao altera o freeze `rc=44` e nao publica releases.
 
+A decisao explicita do operador para thaw publico de `player-runtime` deve ser
+um artefato proprio `dadooh.c18.player_runtime.thaw_decision.v1`, validado por
+`scripts/qa/c18_player_runtime_thaw_decision_gate.py`. O artefato deve estar em
+`channel=stable`, `component=player-runtime`, trazer operador, rollback owner,
+janela UTC ativa, pacote/source/payload alvo, hashes das familias H2/stable
+requeridas, `auto_pull_enabled=false`, `thaw_execution_performed=false` e
+non-claims explicitos. Esse gate nao executa thaw, nao publica release, nao
+habilita auto-pull e nao substitui H2 verde; ele apenas torna a autorizacao
+auditavel e artifact-bound.
+
 A familia de governanca server-side deve ser validada antes de entrar no H2 por
 `scripts/qa/c18_server_side_publish_governance_gate.py`, com schema
 `dadooh.c18.server_side_publish_governance.v1`. Esse gate exige publish gate,

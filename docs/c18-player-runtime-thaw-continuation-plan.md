@@ -77,11 +77,11 @@ The two core invariants hold **by construction** and were re-verified this round
 | Offline power-loss semantics matrix (17/17) | **DONE (off-board)**: producer arms 17/17; evidence gate has semantic validators for every required checkpoint and H2 reports an empty `semantics_not_implemented_checkpoints` ledger. This does not replace physical evidence. | H2 governance foundation — DONE |
 | Physical power-cut (apply/rollback) | **PARTIAL**: P0 selective set is complete for pilot (5/17); H2 still requires the remaining 12 physical checkpoints. | H2 physical validation |
 | 24h soak/endurance | **ABSENT** | LATER (production) |
-| player-runtime stable-promotion authorization | **GATE PARAMETERIZED (off-board, default-deny)**: `stable_promotion.v1` now supports `expected_component=player-runtime`; H2 rejects `totem-core` stable evidence for player-runtime thaw. Real approved stable evidence is still absent. | H2 production evidence |
+| player-runtime stable-promotion authorization | **GATE PARAMETERIZED (off-board, default-deny)**: `stable_promotion.v1` now supports `expected_component=player-runtime`; H2 rejects `totem-core` stable evidence for player-runtime thaw. Stable/H2 now consume a dedicated `dadooh.c18.player_runtime.thaw_decision.v1` artifact via `scripts/qa/c18_player_runtime_thaw_decision_gate.py`, so a boolean operator approval is not enough. Real approved stable + thaw-decision evidence is still absent. | H2 production evidence |
 | Server-side publish gate / signature / auto-pull | **GATE HARDENED (off-board, default-deny for prod)**: evidence gate now rejects boolean-only claims, symlink/out-of-dir assets and fixture evidence; it requires artifact-bound manifest/payload/release-gate/audit-log files, per-asset attestation proofs or detached signatures, channel, auto-pull, allowlist, staged rollout, rollback and audit log structure. Detached signatures are verified offline with an explicit external trust key, SPKI DER fingerprint, canonical JSON proof, release-set hash, and separate trust-anchor evidence hash-bound by H2/stable. H2 for `player-runtime` consumes this with `expected_component=player-runtime`, so `totem-core` server-side evidence cannot satisfy the player-runtime thaw. The local `player-runtime` builder now preserves `c18-player-runtime-release-gate.json` next to payload/manifest as the future server-side signing input. Real production signing evidence is still absent. | H2 production evidence |
 | Homologation pilot readiness (H1.5) | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_pilot_readiness_gate.py` authorizes only `ring=pilot`, `channel=homologation`, operator-assisted delivery, allowlisted hashed devices, board preflight, and P0 power-loss subset. It keeps `stable`, auto-pull, public thaw, 24h soak, 17/17 power-loss, and signature/attestation as non-claims. | H1.5 controlled pilot / governance |
-| H2 readiness evaluator | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_h2_readiness_gate.py` aggregates H1 decisive evidence, 17/17 physical power-loss checkpoints, 24h soak, server-side publish/signature governance, stable-promotion evidence, and explicit operator thaw decision. It reports blockers; it does not thaw. | H2 planning / governance |
-| Thaw barriers (`:123` toggle + `:967` stable block) → evidence-bound gate | **DESIGN-ONLY** | gating mechanism |
+| H2 readiness evaluator | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_h2_readiness_gate.py` aggregates H1 decisive evidence, 17/17 physical power-loss checkpoints, 24h soak, server-side publish/signature governance, stable-promotion evidence, and explicit operator thaw decision validated by the dedicated thaw-decision gate. It reports blockers; it does not thaw. | H2 planning / governance |
+| Public thaw barriers (`:123` toggle + `:967` stable block) | **ACTIVATION DESIGN-ONLY**: the operator decision artifact gate exists, but the public thaw execution path remains a separate authorized step. | gating mechanism |
 
 ## Critical path
 
@@ -232,8 +232,10 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   governance, stable-promotion approval, and explicit operator thaw decision. It is an
   evaluator, not a public thaw mechanism.
 - player-runtime stable-promotion authorization evidence: schema/gate support exists
-  via `expected_component=player-runtime`, but production still needs real approved
-  evidence bound to H2 inputs.
+  via `expected_component=player-runtime`; the explicit thaw decision is now a
+  separate artifact-bound gate requiring stable channel, operator, rollback owner,
+  window, hashes for H2/stable evidence, auto-pull off, no execution performed and
+  explicit non-claims. Production still needs real approved evidence.
 - player-runtime build artifact traceability: the local builder preserves
   `c18-player-runtime-release-gate.json` beside payload/manifest after validating
   the gate is green, so a future server-side publish/signature run has a real
@@ -268,15 +270,16 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   semanticamente, nao apenas hashes: release gate verde, matriz power-loss
   17/17 verde, soak 24h, server-side assinado com trust key externa + trust
   anchor, e decisao de operador aprovada.
-- DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked
-  condition, not a hand-flip. Landing is a separate authorized step.
+- Public thaw activation through `:123`/`:967` remains a separate authorized step;
+  the landed thaw-decision gate validates the operator artifact and does not execute
+  thaw.
 
 ## OTA responsibility snapshot (2026-06-12 — Homologation RC)
 
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados; release gate geral verde na RC; payload protegido por allowlist exata no gate e no device-side antes de extrair/promover | Hardening de producao/stable quando a frente H2 for aberta |
-| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde; payload C18-aware restrito a `kiosk.py` no gate; builder local preserva release-gate JSON junto de payload/manifest e o release atual recebeu backfill auditavel desse JSON; familia server-side/signature atual passa no H2 | H2/prod: matriz power-loss 17/17, soak 24h, stable promotion e decisao explicita de thaw |
+| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde; payload C18-aware restrito a `kiosk.py` no gate; builder local preserva release-gate JSON junto de payload/manifest e o release atual recebeu backfill auditavel desse JSON; familia server-side/signature atual passa no H2; gate formal de decisao de thaw existe | H2/prod: matriz power-loss 17/17, soak 24h, stable promotion, evidencia real de decisao explicita de thaw e ativacao publica separada |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44); build/publish historicos seguem bloqueados por padrao e, mesmo com bypass lab, recusam media/cache/config/data/secrets, systemd, `/opt`, MPV/ffmpeg e modulos | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo de release atual, mas agora protegidos por guardrails executaveis na matriz de responsabilidade, no gate de `player-runtime`, nos scripts legados e na allowlist device-side de `totem-core` | Trazer ao padrão de evidência quando forem priorizados como frente propria |
 | server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test; publisher stable de `totem-core` agora compara o release gate final com o hash validado e monta a lista final de assets por helper offline testado, anexando stable evidence + familia server-side validada antes do `gh`; gerador offline de evidencia assinada agora existe, reroda o gate real sem publicar e a evidencia atual esta verde para o pacote `c16fb3e` | Publicacao real/stable continua fora de escopo ate H2; manter chave/trust-anchor operacional e evidencias versionadas para o canal de producao |
@@ -286,7 +289,7 @@ Estado: Homologation RC de `player-runtime` pronta para piloto assistido, com
 freeze publico `rc=44`, pacote `homologation`, P0 seletivo completo, pilot
 readiness verde, server-side/signature verde para o pacote atual e H2 readiness
 vermelho pelos bloqueios esperados: power-loss 17/17, soak 24h, stable
-promotion e decisao explicita de thaw. Funil:
+promotion e evidencia real de decisao explicita de thaw. Funil:
 piloto assistido allowlisted -> evidencia de campo -> H2 completo -> decisao
 explicita de thaw.
 

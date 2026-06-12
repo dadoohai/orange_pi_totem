@@ -25,7 +25,9 @@ from c18_player_runtime_powerloss_evidence_gate import (
     MANIFEST_SCHEMA as POWERLOSS_MANIFEST_SCHEMA,
     SEMANTICALLY_VALIDATED_CHECKPOINTS as SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS,
 )
+from c18_player_runtime_thaw_decision_gate import evaluate as evaluate_thaw_decision_gate
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
+from c18_server_side_publish_governance_gate import write_fixture_release as write_server_side_fixture_release
 
 
 SCHEMA = "dadooh.c18.stable_promotion.v1"
@@ -39,7 +41,6 @@ RELEASE_GATE_SCHEMA_BY_COMPONENT = {
     "player-runtime": PLAYER_RUNTIME_RELEASE_GATE_SCHEMA,
 }
 SOAK_SCHEMA = "dadooh.c18.playback.soak.v1"
-THAW_DECISION_SCHEMA = "dadooh.c18.player_runtime.thaw_decision.v1"
 MIN_SOAK_DURATION_SEC = 24 * 60 * 60
 REQUIRED_POWERLOSS_CHECKPOINTS = (
     "after_payload_staged",
@@ -104,6 +105,10 @@ def is_sha256(value: Any) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
+def is_git_sha(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
+
+
 def component_blocker(expected_component: str) -> str:
     return f"stable_promotion_component_not_{expected_component.replace('-', '_')}"
 
@@ -149,11 +154,6 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
         "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
-        "operator_thaw_decision_sha256": (
-            sha256_file(args.operator_thaw_decision)
-            if args.operator_thaw_decision is not None and args.operator_thaw_decision.is_file()
-            else None
-        ),
         "expect_image_tag": args.expect_image_tag,
         "expect_image_sha256": args.expect_image_sha256,
         "expect_image_marker_sha256": args.expect_image_marker_sha256,
@@ -183,6 +183,68 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
     }.issubset(hashes):
         hashes["h2_readiness_sha256"] = h2_input_bundle_sha256(args, hashes)
     return hashes
+
+
+def thaw_decision_expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
+    hashes = {
+        key: value
+        for key, value in expected_hashes_from_args(args).items()
+        if key in {
+            "release_gate_sha256",
+            "powerloss_matrix_sha256",
+            "soak_summary_sha256",
+            "server_side_evidence_sha256",
+            "server_side_trust_anchor_evidence_sha256",
+        }
+    }
+    stable = getattr(args, "evidence", None)
+    if stable is not None and stable.is_file():
+        hashes["stable_promotion_evidence_sha256"] = sha256_file(stable)
+    return hashes
+
+
+def release_asset_relative_path(raw: Any) -> Path | None:
+    if not isinstance(raw, str) or not raw or raw.startswith("/"):
+        return None
+    candidate = Path(raw)
+    if ".." in candidate.parts:
+        return None
+    return candidate
+
+
+def thaw_decision_expected_target_from_args(args: argparse.Namespace) -> tuple[dict[str, str], list[str]]:
+    errors: list[str] = []
+    target: dict[str, str] = {}
+    server_side = getattr(args, "server_side_evidence", None)
+    if server_side is None or not server_side.is_file():
+        return target, ["thaw_decision_expected_target_server_side_missing"]
+    evidence, read_errors = read_json(server_side)
+    errors.extend(f"server_side_evidence_for_thaw_target_{error}" for error in read_errors)
+    assets = evidence.get("release_assets") if isinstance(evidence.get("release_assets"), dict) else {}
+    manifest_rel = release_asset_relative_path(assets.get("manifest"))
+    if manifest_rel is None:
+        return target, errors + ["thaw_decision_expected_target_manifest_path_invalid_or_missing"]
+    manifest_path = server_side.parent / manifest_rel
+    if not manifest_path.is_file():
+        return target, errors + ["thaw_decision_expected_target_manifest_missing"]
+    manifest, manifest_errors = read_json(manifest_path)
+    errors.extend(f"server_side_manifest_for_thaw_target_{error}" for error in manifest_errors)
+    version = manifest.get("version")
+    source_commit = manifest.get("source_commit")
+    payload_sha256 = manifest.get("payload_sha256")
+    if isinstance(version, str) and version.strip():
+        target["package_version"] = version
+    else:
+        errors.append("thaw_decision_expected_target_package_version_missing")
+    if is_git_sha(source_commit):
+        target["source_commit"] = source_commit
+    else:
+        errors.append("thaw_decision_expected_target_source_commit_missing_or_invalid")
+    if is_sha256(payload_sha256):
+        target["payload_sha256"] = payload_sha256
+    else:
+        errors.append("thaw_decision_expected_target_payload_sha256_missing_or_invalid")
+    return target, errors
 
 
 def read_artifact(path: Path | None, label: str) -> tuple[dict[str, Any], list[str]]:
@@ -393,17 +455,27 @@ def evaluate_server_side_artifact(args: argparse.Namespace, *, expected_componen
     )
 
 
-def evaluate_operator_decision(path: Path | None) -> dict[str, Any]:
-    data, errors = read_artifact(path, "operator_thaw_decision")
-    blockers = list(errors)
-    if not errors:
-        if data.get("schema") != THAW_DECISION_SCHEMA:
-            blockers.append("operator_thaw_decision_schema")
-        if data.get("approved") is not True:
-            blockers.append("operator_thaw_decision_not_approved")
-        if data.get("acknowledges_h2_evidence") is not True:
-            blockers.append("operator_thaw_decision_missing_h2_ack")
-    return step(not blockers, blockers, evidence_path=str(path) if path is not None else None)
+def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
+    expected_target, target_errors = thaw_decision_expected_target_from_args(args)
+    result = evaluate_thaw_decision_gate(
+        args.operator_thaw_decision,
+        expected_hashes=thaw_decision_expected_hashes_from_args(args),
+        require_expected_hashes=True,
+        expected_package_version=expected_target.get("package_version"),
+        expected_source_commit=expected_target.get("source_commit"),
+        expected_payload_sha256=expected_target.get("payload_sha256"),
+    )
+    blockers = list(result.get("blockers", []))
+    if args.operator_thaw_decision is not None:
+        blockers.extend(target_errors)
+    return step(
+        not blockers,
+        blockers,
+        evidence_path=str(args.operator_thaw_decision) if args.operator_thaw_decision is not None else None,
+        gate_result=result,
+        expected_target=expected_target,
+        expected_target_errors=target_errors,
+    )
 
 
 def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
@@ -419,7 +491,7 @@ def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
             args,
             expected_component=expected_component,
         ),
-        "operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
+        "operator_thaw_decision": evaluate_operator_decision(args),
     }
     blockers = [
         f"{name}:{blocker}"
@@ -554,17 +626,17 @@ def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
 
 def semantic_args_fixture(root: Path) -> argparse.Namespace:
     release_gate = root / "release-gate.json"
-    server_side = root / "server-side.json"
+    server_side = write_server_side_fixture_release(root / "server-side-release", component="player-runtime")
     trusted_key = root / "trusted-key.pub.pem"
     trust_anchor = root / "trust-anchor.json"
     soak = root / "soak.json"
     operator = root / "operator.json"
+    stable = root / "stable.json"
     write_json(release_gate, {
         "schema": RELEASE_GATE_SCHEMA,
         "passed": True,
         "repo": {"dirty": False},
     })
-    write_json(server_side, {"schema": "dadooh.c18.server_side_publish_governance.v1"})
     trusted_key.write_text("PUBLIC KEY PLACEHOLDER\n", encoding="utf-8")
     write_json(trust_anchor, {"schema": "dadooh.c18.server_side_trust_anchor.v1"})
     write_json(soak, {
@@ -577,11 +649,6 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
             "max_ext4_errors_delta": 0,
         },
     })
-    write_json(operator, {
-        "schema": THAW_DECISION_SCHEMA,
-        "approved": True,
-        "acknowledges_h2_evidence": True,
-    })
     powerloss_dirs: list[Path] = []
     for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS:
         run_dir = root / "powerloss" / checkpoint
@@ -593,7 +660,8 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
             "image_marker_sha256": "2" * 64,
         })
         powerloss_dirs.append(run_dir)
-    return argparse.Namespace(
+    args = argparse.Namespace(
+        evidence=stable,
         release_gate_summary=release_gate,
         server_side_evidence=server_side,
         server_side_trusted_key_pem=[trusted_key],
@@ -605,6 +673,39 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
         expect_image_sha256="1" * 64,
         expect_image_marker_sha256="2" * 64,
     )
+    write_json(stable, stable_fixture_bound_to_args(args))
+    target, target_errors = thaw_decision_expected_target_from_args(args)
+    if target_errors:
+        raise AssertionError(f"fixture target metadata errors: {target_errors}")
+    write_json(operator, {
+        "schema": "dadooh.c18.player_runtime.thaw_decision.v1",
+        "component": "player-runtime",
+        "channel": "stable",
+        "approved": True,
+        "acknowledges_h2_evidence": True,
+        "explicit_operator_decision": True,
+        "rollback_ready": True,
+        "auto_pull_enabled": False,
+        "thaw_execution_performed": False,
+        "operator": "operator-prod-01",
+        "rollback_owner": "rollback-owner-01",
+        "target_package_version": target["package_version"],
+        "target_source_commit": target["source_commit"],
+        "target_payload_sha256": target["payload_sha256"],
+        **thaw_decision_expected_hashes_from_args(args),
+        "window": {
+            "start_utc": "2000-01-01T00:00:00Z",
+            "end_utc": "2100-01-01T00:00:00Z",
+        },
+        "non_claims": [
+            "this_decision_does_not_execute_thaw",
+            "this_decision_does_not_publish_releases",
+            "this_decision_does_not_enable_auto_pull",
+            "this_decision_does_not_override_freeze_rc_44_by_itself",
+            "this_decision_requires_h2_green",
+        ],
+    })
+    return args
 
 
 def stable_fixture_bound_to_args(args: argparse.Namespace) -> dict[str, Any]:
@@ -769,6 +870,23 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertTrue(
             any(blocker.startswith("stable_promotion_artifact_semantics:server_side_governance:")
                 for blocker in result["blockers"])
+        )
+
+    def test_operator_thaw_target_must_match_server_side_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            operator = json.loads(args.operator_thaw_decision.read_text(encoding="utf-8"))
+            operator["target_source_commit"] = "0" * 40
+            write_json(args.operator_thaw_decision, operator)
+            with (
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+                mock.patch(__name__ + ".evaluate_server_side_gate", return_value={"passed": True, "blockers": []}),
+            ):
+                semantics = evaluate_artifact_semantics(args)
+        self.assertFalse(semantics["passed"])
+        self.assertIn(
+            "operator_thaw_decision:thaw_decision_target_source_commit_mismatch",
+            semantics["blockers"],
         )
 
     def test_server_side_trusted_key_is_required_for_stable_semantics(self) -> None:

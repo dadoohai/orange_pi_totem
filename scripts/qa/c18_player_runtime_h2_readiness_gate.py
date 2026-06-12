@@ -28,6 +28,7 @@ from c18_player_runtime_powerloss_evidence_gate import (
 from c18_stable_promotion_gate import evaluate as evaluate_stable_promotion_gate
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 from c18_server_side_publish_governance_gate import write_fixture_release as write_server_side_fixture_release
+from c18_player_runtime_thaw_decision_gate import evaluate as evaluate_thaw_decision_gate
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -38,8 +39,6 @@ SOAK_SCHEMA = "dadooh.c18.playback.soak.v1"
 RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
 STABLE_PROMOTION_SCHEMA = "dadooh.c18.stable_promotion.v1"
 SERVER_SIDE_SCHEMA = "dadooh.c18.server_side_publish_governance.v1"
-THAW_DECISION_SCHEMA = "dadooh.c18.player_runtime.thaw_decision.v1"
-
 MIN_SOAK_DURATION_SEC = 24 * 60 * 60
 
 REQUIRED_POWERLOSS_CHECKPOINTS = (
@@ -107,6 +106,10 @@ def sha256_json(payload: Any) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def is_hex(value: Any, length: int) -> bool:
+    return isinstance(value, str) and len(value) == length and all(ch in "0123456789abcdef" for ch in value)
+
+
 def powerloss_matrix_sha256(run_dirs: list[Path]) -> str:
     entries: list[dict[str, str]] = []
     for run_dir in sorted(run_dirs, key=lambda item: str(item)):
@@ -127,11 +130,6 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
         "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
-        "operator_thaw_decision_sha256": (
-            sha256_file(args.operator_thaw_decision)
-            if args.operator_thaw_decision is not None and args.operator_thaw_decision.is_file()
-            else None
-        ),
         "expect_image_tag": args.expect_image_tag,
         "expect_image_sha256": args.expect_image_sha256,
         "expect_image_marker_sha256": args.expect_image_marker_sha256,
@@ -154,6 +152,68 @@ def stable_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
         hashes["powerloss_matrix_sha256"] = powerloss_matrix_sha256(list(args.powerloss_evidence_dir))
     hashes["h2_readiness_sha256"] = h2_input_bundle_sha256(args, hashes)
     return hashes
+
+
+def thaw_decision_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
+    hashes = {
+        key: value
+        for key, value in stable_expected_hashes(args).items()
+        if key in {
+            "release_gate_sha256",
+            "powerloss_matrix_sha256",
+            "soak_summary_sha256",
+            "server_side_evidence_sha256",
+            "server_side_trust_anchor_evidence_sha256",
+        }
+    }
+    stable = getattr(args, "stable_promotion_evidence", None)
+    if stable is not None and stable.is_file():
+        hashes["stable_promotion_evidence_sha256"] = sha256_file(stable)
+    return hashes
+
+
+def release_asset_relative_path(raw: Any) -> Path | None:
+    if not isinstance(raw, str) or not raw or raw.startswith("/"):
+        return None
+    candidate = Path(raw)
+    if ".." in candidate.parts:
+        return None
+    return candidate
+
+
+def thaw_decision_expected_target(args: argparse.Namespace) -> tuple[dict[str, str], list[str]]:
+    errors: list[str] = []
+    target: dict[str, str] = {}
+    server_side = getattr(args, "server_side_evidence", None)
+    if server_side is None or not server_side.is_file():
+        return target, ["thaw_decision_expected_target_server_side_missing"]
+    evidence = read_json(server_side, errors, "server_side_evidence_for_thaw_target")
+    assets = evidence.get("release_assets") if isinstance(evidence.get("release_assets"), dict) else {}
+    manifest_rel = release_asset_relative_path(assets.get("manifest"))
+    if manifest_rel is None:
+        return target, errors + ["thaw_decision_expected_target_manifest_path_invalid_or_missing"]
+    manifest_path = server_side.parent / manifest_rel
+    if not manifest_path.is_file():
+        return target, errors + ["thaw_decision_expected_target_manifest_missing"]
+    manifest_errors: list[str] = []
+    manifest = read_json(manifest_path, manifest_errors, "server_side_manifest_for_thaw_target")
+    errors.extend(manifest_errors)
+    version = manifest.get("version")
+    source_commit = manifest.get("source_commit")
+    payload_sha256 = manifest.get("payload_sha256")
+    if isinstance(version, str) and version.strip():
+        target["package_version"] = version
+    else:
+        errors.append("thaw_decision_expected_target_package_version_missing")
+    if is_hex(source_commit, 40):
+        target["source_commit"] = source_commit
+    else:
+        errors.append("thaw_decision_expected_target_source_commit_missing_or_invalid")
+    if is_hex(payload_sha256, 64):
+        target["payload_sha256"] = payload_sha256
+    else:
+        errors.append("thaw_decision_expected_target_payload_sha256_missing_or_invalid")
+    return target, errors
 
 
 def run_powerloss_gate(run_dir: Path) -> dict[str, Any]:
@@ -404,20 +464,27 @@ def evaluate_server_side(path: Path | None,
     return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
 
 
-def evaluate_operator_decision(path: Path | None) -> dict[str, Any]:
-    blockers: list[str] = []
-    if path is None:
-        return step(False, ["missing_operator_thaw_decision"])
-    errors: list[str] = []
-    data = read_json(path, errors, "operator_thaw_decision")
-    blockers.extend(errors)
-    if data.get("schema") != THAW_DECISION_SCHEMA:
-        blockers.append("operator_thaw_decision_schema")
-    if data.get("approved") is not True:
-        blockers.append("operator_thaw_decision_not_approved")
-    if data.get("acknowledges_h2_evidence") is not True:
-        blockers.append("operator_thaw_decision_missing_h2_ack")
-    return step(not blockers, blockers, evidence_path=str(path))
+def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
+    expected_target, target_errors = thaw_decision_expected_target(args)
+    result = evaluate_thaw_decision_gate(
+        args.operator_thaw_decision,
+        expected_hashes=thaw_decision_expected_hashes(args),
+        require_expected_hashes=True,
+        expected_package_version=expected_target.get("package_version"),
+        expected_source_commit=expected_target.get("source_commit"),
+        expected_payload_sha256=expected_target.get("payload_sha256"),
+    )
+    blockers = list(result.get("blockers", []))
+    if args.operator_thaw_decision is not None:
+        blockers.extend(target_errors)
+    return step(
+        not blockers,
+        blockers,
+        evidence_path=str(args.operator_thaw_decision) if args.operator_thaw_decision is not None else None,
+        gate_result=result,
+        expected_target=expected_target,
+        expected_target_errors=target_errors,
+    )
 
 
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
@@ -437,7 +504,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             trusted_key_pems=getattr(args, "server_side_trusted_key_pem", []),
             trust_anchor_evidence=getattr(args, "server_side_trust_anchor_evidence", None),
         ),
-        "explicit_operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
+        "explicit_operator_thaw_decision": evaluate_operator_decision(args),
     }
     blockers = [
         f"{name}:{blocker}"
@@ -521,14 +588,9 @@ def complete_args(root: Path) -> argparse.Namespace:
             "this_evidence_does_not_thaw_player_runtime",
         ],
     })
-    operator = root / "operator.json"
-    write_json(operator, {
-        "schema": THAW_DECISION_SCHEMA,
-        "approved": True,
-        "acknowledges_h2_evidence": True,
-    })
     dirs = [fixture_manifest(root / "powerloss", checkpoint) for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS]
     stable = root / "stable.json"
+    operator = root / "operator.json"
     args = argparse.Namespace(
         h1_release_gate_summary=h1,
         powerloss_evidence_dir=dirs,
@@ -544,6 +606,9 @@ def complete_args(root: Path) -> argparse.Namespace:
         server_side_trusted_key_pem=[],
     )
     hashes = stable_expected_hashes(args)
+    target, target_errors = thaw_decision_expected_target(args)
+    if target_errors:
+        raise AssertionError(f"fixture target metadata errors: {target_errors}")
     write_json(stable, {
         "schema": STABLE_PROMOTION_SCHEMA,
         "component": "player-runtime",
@@ -567,6 +632,34 @@ def complete_args(root: Path) -> argparse.Namespace:
         "powerloss_matrix_sha256": hashes["powerloss_matrix_sha256"],
         "auto_pull_enabled": False,
         "public_player_runtime_thaw": False,
+    })
+    write_json(operator, {
+        "schema": "dadooh.c18.player_runtime.thaw_decision.v1",
+        "component": "player-runtime",
+        "channel": "stable",
+        "approved": True,
+        "acknowledges_h2_evidence": True,
+        "explicit_operator_decision": True,
+        "rollback_ready": True,
+        "auto_pull_enabled": False,
+        "thaw_execution_performed": False,
+        "operator": "operator-prod-01",
+        "rollback_owner": "rollback-owner-01",
+        "target_package_version": target["package_version"],
+        "target_source_commit": target["source_commit"],
+        "target_payload_sha256": target["payload_sha256"],
+        **thaw_decision_expected_hashes(args),
+        "window": {
+            "start_utc": "2000-01-01T00:00:00Z",
+            "end_utc": "2100-01-01T00:00:00Z",
+        },
+        "non_claims": [
+            "this_decision_does_not_execute_thaw",
+            "this_decision_does_not_publish_releases",
+            "this_decision_does_not_enable_auto_pull",
+            "this_decision_does_not_override_freeze_rc_44_by_itself",
+            "this_decision_requires_h2_green",
+        ],
     })
     return args
 
@@ -759,6 +852,23 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "stable_promotion_authorization:stable_promotion_server_side_trust_anchor_evidence_sha256_mismatch",
+            result["blockers"],
+        )
+
+    def test_operator_thaw_target_must_match_server_side_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            operator = json.loads(args.operator_thaw_decision.read_text(encoding="utf-8"))
+            operator["target_payload_sha256"] = "0" * 64
+            write_json(args.operator_thaw_decision, operator)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "explicit_operator_thaw_decision:thaw_decision_target_payload_sha256_mismatch",
             result["blockers"],
         )
 

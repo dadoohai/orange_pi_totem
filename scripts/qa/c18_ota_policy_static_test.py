@@ -58,6 +58,7 @@ PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_play
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_pilot_readiness_gate.py"
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
+PLAYER_RUNTIME_THAW_DECISION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_thaw_decision_gate.py"
 SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
 SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_asset_collect.py"
 SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_evidence_build.py"
@@ -315,6 +316,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_totem_core_publish_asset_list.py", release_gate)
         self.assertIn("c18_totem_core_publish_asset_list", release_gate)
+        self.assertIn("c18_player_runtime_thaw_decision_gate.py", release_gate)
+        self.assertIn("c18_player_runtime_thaw_decision_gate", release_gate)
         stable_gate = STABLE_PROMOTION_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.stable_promotion.v1", stable_gate)
         self.assertIn("h2_readiness_passed", stable_gate)
@@ -332,6 +335,24 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("--expected-h2-readiness-sha256", stable_gate)
         self.assertIn("stable_promotion_auto_pull_enabled", stable_gate)
         self.assertIn("stable_promotion_public_player_runtime_thaw_enabled", stable_gate)
+        self.assertIn("evaluate_thaw_decision_gate", stable_gate)
+        self.assertIn("thaw_decision_expected_hashes_from_args", stable_gate)
+        self.assertIn("thaw_decision_expected_target_from_args", stable_gate)
+        self.assertIn("expected_package_version=expected_target.get", stable_gate)
+        self.assertIn("test_operator_thaw_target_must_match_server_side_manifest", stable_gate)
+        self.assertNotIn("operator_thaw_decision_sha256", stable_gate)
+        thaw_gate = PLAYER_RUNTIME_THAW_DECISION_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.thaw_decision.v1", thaw_gate)
+        self.assertIn("dadooh.c18.player_runtime.thaw_decision_gate.v1", thaw_gate)
+        self.assertIn("stable_promotion_evidence_sha256", thaw_gate)
+        self.assertIn("release_gate_sha256", thaw_gate)
+        self.assertIn("powerloss_matrix_sha256", thaw_gate)
+        self.assertIn("soak_summary_sha256", thaw_gate)
+        self.assertIn("server_side_evidence_sha256", thaw_gate)
+        self.assertIn("server_side_trust_anchor_evidence_sha256", thaw_gate)
+        self.assertIn("thaw_decision_auto_pull_enabled", thaw_gate)
+        self.assertIn("thaw_decision_execution_already_performed", thaw_gate)
+        self.assertIn("thaw_decision_window_inactive", thaw_gate)
 
     def test_totem_core_stable_publisher_passes_validated_assets_to_gh(self) -> None:
         if shutil.which("openssl") is None:
@@ -1992,6 +2013,12 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("c18_server_side_publish_governance_gate", h2_gate)
         self.assertIn("server_side_trust_anchor_evidence_sha256", h2_gate)
         self.assertIn("dadooh.c18.player_runtime.thaw_decision.v1", h2_gate)
+        self.assertIn("evaluate_thaw_decision_gate", h2_gate)
+        self.assertIn("thaw_decision_expected_hashes", h2_gate)
+        self.assertIn("thaw_decision_expected_target", h2_gate)
+        self.assertIn("expected_payload_sha256=expected_target.get", h2_gate)
+        self.assertIn("test_operator_thaw_target_must_match_server_side_manifest", h2_gate)
+        self.assertNotIn("operator_thaw_decision_sha256", h2_gate)
         self.assertIn("this_gate_does_not_thaw_player_runtime", h2_gate)
         self.assertIn("this_gate_does_not_publish_or_fetch_releases", h2_gate)
         self.assertIn("this_gate_does_not_override_freeze_rc_44", h2_gate)
