@@ -14,6 +14,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -26,6 +27,7 @@ MANIFEST_SCHEMA = "dadooh.c18.board_readonly_diagnostics_evidence.v1"
 APPLIANCE_SCHEMA = "dadooh-c7-appliance-status.v0"
 APPLIANCE_GOVERNANCE_SCHEMA = "dadooh.c18.appliance_public_state.governance.v1"
 DISPLAY_SCHEMA = "dadooh.c18.display_status.v1"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_FILES = {
     "appliance-status.json",
     "c18-display-status.json",
@@ -67,10 +69,37 @@ LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("data_media_path", re.compile(r"/data/media(?:/|\b)", re.I)),
     ("data_config_path", re.compile(r"/data/config(?:/|\b)", re.I)),
     ("opt_totem_path", re.compile(r"/opt/totem(?:/|\b)", re.I)),
-    ("secret_key", re.compile(r"(api[_-]?key|secret|password|passwd|senha)\s*[:=]", re.I)),
+    ("secret_key", re.compile(r'"?(api[_-]?key|secret|password|passwd|senha)"?\s*[:=]', re.I)),
     ("bearer", re.compile(r"\bBearer\s+\S+", re.I)),
-    ("network_id", re.compile(r"\b(ssid|bssid|gateway|dns|hostname|mac)\b\s*[:=]", re.I)),
+    ("network_id", re.compile(r'"?(ssid|bssid|gateway|dns|hostname|mac)"?\s*[:=]', re.I)),
 )
+OVERCLAIM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("h2_ready", re.compile(r"\bH2\b.{0,40}\b(passed|green|ready|approved|complete|completed|verde|pronto|aprovad)", re.I)),
+    ("stable_ready", re.compile(r"\bstable\b.{0,40}\b(passed|green|ready|approved|enabled|complete|completed|verde|pronto|aprovad|habilitad)", re.I)),
+    ("production_ready", re.compile(r"\b(production|producao)\b.{0,40}\b(passed|green|ready|approved|enabled|complete|completed|verde|pronto|aprovad|habilitad)", re.I)),
+    ("public_thaw", re.compile(r"\b(public thaw|thaw)\b.{0,40}\b(passed|green|ready|approved|enabled|complete|completed|verde|pronto|aprovad|habilitad)", re.I)),
+    ("auto_pull_enabled", re.compile(r"\bauto-?pull\b.{0,40}\b(enabled|habilitad|active|ativo|on)\b", re.I)),
+)
+SENSITIVE_KEY_PARTS = (
+    "api_key",
+    "apikey",
+    "token",
+    "password",
+    "passwd",
+    "senha",
+    "secret",
+    "ssid",
+    "bssid",
+    "gateway",
+    "dns",
+    "hostname",
+    "mac",
+    "environment_id",
+    "station_id",
+    "url",
+    "payload",
+)
+STRING_LEAK_PATTERNS = LEAK_PATTERNS[:6] + (LEAK_PATTERNS[7],)
 
 
 def rel(path: Path, root: Path) -> str:
@@ -105,6 +134,42 @@ def read_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
     return data
 
 
+def git_commit_exists(commit: str) -> bool:
+    proc = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        cwd=REPO_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
+def sensitive_json_values(value: Any, *, key_path: str = "$") -> list[str]:
+    hits: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{key_path}.{key}"
+            lower = str(key).lower()
+            negative_claim_key = lower.startswith(("not_", "this_"))
+            if (
+                not negative_claim_key
+                and any(part in lower for part in SENSITIVE_KEY_PARTS)
+                and child not in ("", None, [], {}, "null")
+            ):
+                hits.append(child_path)
+            hits.extend(sensitive_json_values(child, key_path=child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            hits.extend(sensitive_json_values(child, key_path=f"{key_path}[{index}]"))
+    elif isinstance(value, str):
+        for label, pattern in STRING_LEAK_PATTERNS:
+            if pattern.search(value):
+                hits.append(f"{key_path}:{label}")
+    return hits
+
+
 def is_utc_timestamp(raw: Any) -> bool:
     if not isinstance(raw, str) or not raw.endswith("Z"):
         return False
@@ -135,6 +200,9 @@ def validate_regular_tree(run_dir: Path, errors: list[str]) -> set[str]:
         for label, pattern in LEAK_PATTERNS:
             if pattern.search(text):
                 errors.append(f"privacy_leak:{label}:{rel_path}")
+        for label, pattern in OVERCLAIM_PATTERNS:
+            if pattern.search(text):
+                errors.append(f"overclaim:{label}:{rel_path}")
     unexpected = sorted(files - REQUIRED_FILES - OPTIONAL_FILES)
     if unexpected:
         errors.append("unexpected_files:" + ",".join(unexpected))
@@ -142,6 +210,11 @@ def validate_regular_tree(run_dir: Path, errors: list[str]) -> set[str]:
     for name in missing:
         errors.append(f"required_file_missing:{name}")
     return files
+
+
+def validate_json_privacy(label: str, data: dict[str, Any], errors: list[str]) -> None:
+    for hit in sensitive_json_values(data):
+        errors.append(f"{label}_sensitive_json:{hit}")
 
 
 def validate_manifest(run_dir: Path, errors: list[str]) -> dict[str, Any]:
@@ -154,6 +227,8 @@ def validate_manifest(run_dir: Path, errors: list[str]) -> dict[str, Any]:
         errors.append("manifest_collected_at_utc")
     if not isinstance(manifest.get("repo_commit"), str) or not COMMIT_RE.fullmatch(manifest["repo_commit"]):
         errors.append("manifest_repo_commit")
+    elif not git_commit_exists(manifest["repo_commit"]):
+        errors.append("manifest_repo_commit_not_found")
     if manifest.get("collection_mode") != "assisted_ssh_read_only":
         errors.append("manifest_collection_mode")
     claims = set(manifest.get("result_claims") if isinstance(manifest.get("result_claims"), list) else [])
@@ -209,6 +284,7 @@ def validate_appliance(run_dir: Path, manifest: dict[str, Any], errors: list[str
     appliance = read_json(run_dir / "appliance-status.json", errors, "appliance")
     if not appliance:
         return {}
+    validate_json_privacy("appliance", appliance, errors)
     if appliance.get("schema_version") != APPLIANCE_SCHEMA:
         errors.append("appliance_schema")
     governance = appliance.get("c18_governance") if isinstance(appliance.get("c18_governance"), dict) else {}
@@ -253,6 +329,7 @@ def validate_display(run_dir: Path, manifest: dict[str, Any], errors: list[str])
     display = read_json(run_dir / "c18-display-status.json", errors, "display")
     if not display:
         return {}
+    validate_json_privacy("display", display, errors)
     if display.get("schema") != DISPLAY_SCHEMA:
         errors.append("display_schema")
     if display.get("result_claim") != "read_only_display_status_collected":
@@ -287,11 +364,17 @@ def validate_display(run_dir: Path, manifest: dict[str, Any], errors: list[str])
 
 def evaluate(run_dir: Path) -> dict[str, Any]:
     errors: list[str] = []
-    run_dir = run_dir.resolve()
-    validate_regular_tree(run_dir, errors)
-    manifest = validate_manifest(run_dir, errors)
-    validate_appliance(run_dir, manifest, errors)
-    validate_display(run_dir, manifest, errors)
+    raw_run_dir = run_dir.expanduser()
+    if raw_run_dir.is_symlink():
+        errors.append("run_dir_symlink_forbidden")
+        run_dir = raw_run_dir
+    else:
+        run_dir = raw_run_dir.resolve(strict=False)
+        validate_regular_tree(run_dir, errors)
+        manifest = validate_manifest(run_dir, errors)
+        validate_json_privacy("manifest", manifest, errors)
+        validate_appliance(run_dir, manifest, errors)
+        validate_display(run_dir, manifest, errors)
     return {
         "schema": SCHEMA,
         "run_dir": str(run_dir),
@@ -359,10 +442,18 @@ def valid_fixture(root: Path) -> Path:
     for name in sorted(REQUIRED_FILES):
         path = run / name
         files.append({"path": name, "bytes": path.stat().st_size, "sha256": sha256_file(path)})
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
     write_json(run / "evidence-manifest.json", {
         "schema": MANIFEST_SCHEMA,
         "collected_at_utc": "2026-06-12T18:37:25Z",
-        "repo_commit": "a" * 40,
+        "repo_commit": head,
         "collection_mode": "assisted_ssh_read_only",
         "result_claims": sorted(REQUIRED_RESULT_CLAIMS),
         "summary": {
@@ -399,6 +490,41 @@ class BoardReadonlyDiagnosticsEvidenceGateSelfTest(unittest.TestCase):
             result = evaluate(run)
         self.assertFalse(result["passed"])
         self.assertIn("privacy_leak:url:summary.txt", result["blockers"])
+
+    def test_sensitive_json_key_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run = valid_fixture(Path(tmp))
+            data = json.loads((run / "appliance-status.json").read_text(encoding="utf-8"))
+            data["password"] = "secret-value"
+            write_json(run / "appliance-status.json", data)
+            manifest = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
+            for item in manifest["files"]:
+                if item["path"] == "appliance-status.json":
+                    path = run / item["path"]
+                    item["bytes"] = path.stat().st_size
+                    item["sha256"] = sha256_file(path)
+            write_json(run / "evidence-manifest.json", manifest)
+            result = evaluate(run)
+        self.assertFalse(result["passed"])
+        self.assertIn("appliance_sensitive_json:$.password", result["blockers"])
+
+    def test_root_symlink_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = valid_fixture(root)
+            link = root / "link"
+            link.symlink_to(target, target_is_directory=True)
+            result = evaluate(link)
+        self.assertFalse(result["passed"])
+        self.assertIn("run_dir_symlink_forbidden", result["blockers"])
+
+    def test_overclaim_readme_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run = valid_fixture(Path(tmp))
+            (run / "README.md").write_text("H2 passed, stable production ready, public thaw approved\n", encoding="utf-8")
+            result = evaluate(run)
+        self.assertFalse(result["passed"])
+        self.assertIn("overclaim:h2_ready:README.md", result["blockers"])
 
     def test_manifest_hash_mismatch_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
