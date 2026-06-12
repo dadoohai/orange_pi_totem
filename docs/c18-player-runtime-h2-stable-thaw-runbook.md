@@ -15,6 +15,13 @@ sem soak 24h e sem decisao humana real, os gates devem continuar vermelhos.
 7. Rodar `c18_player_runtime_h2_readiness_gate.py`.
 8. So depois disso qualquer decisao de execucao/publicacao pode ser discutida.
 
+Antes de uma sessao fisica de power-loss, rode o preflight H2 da placa:
+`scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` no board e
+`scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` off-board contra
+o plano da matriz. Esse passo evita iniciar cortes com pacote, imagem,
+evidence root ou topologia errados, mas nao conta como power-loss nem substitui
+os 17 diretórios reais validados pelo evidence gate.
+
 ## Regra De Pacote
 
 No desenho C18 atual, nao gerar manifest `player-runtime channel=stable`. O alvo

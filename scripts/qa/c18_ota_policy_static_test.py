@@ -75,6 +75,12 @@ PLAYER_RUNTIME_POWERLOSS_MATRIX_PLAN_PATH = (
 PLAYER_RUNTIME_POWERLOSS_OPERATOR_RUNBOOK_BUILD_PATH = (
     REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_operator_runbook_build.py"
 )
+PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_COLLECT_PATH = (
+    REPO_ROOT / "scripts" / "board" / "c18_player_runtime_h2_powerloss_preflight_collect.py"
+)
+PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_GATE_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_powerloss_preflight_gate.py"
+)
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
@@ -2110,6 +2116,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("requires --quarantine-current", powerloss_plan)
         self.assertIn("fresh apply path is required", powerloss_plan)
         self.assertIn("rollback result is expected to be image_fallback, not previous", powerloss_plan)
+        self.assertIn("test_board_path_preserves_safe_relative_package_paths", powerloss_plan)
+        self.assertIn("releases/player-runtime/v1/manifest.json", powerloss_plan)
         self.assertIn("CUT_POWER_NOW", powerloss_plan)
         self.assertIn("remote reboot is not acceptable evidence", powerloss_plan)
         self.assertIn("previous_version_required_for_rollback_commands", powerloss_plan)
@@ -2129,6 +2137,46 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("pull-and-validate-evidence.sh", powerloss_runbook)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", powerloss_runbook)
         self.assertIn("OperatorRunbookBuildSelfTest", powerloss_runbook)
+
+        powerloss_preflight_collect = PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_COLLECT_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1", powerloss_preflight_collect)
+        self.assertIn("collection_mode", powerloss_preflight_collect)
+        self.assertIn("read_only_preflight", powerloss_preflight_collect)
+        self.assertIn("h2_powerloss_board_preflight_collected", powerloss_preflight_collect)
+        self.assertIn("this_preflight_is_not_powerloss_evidence", powerloss_preflight_collect)
+        self.assertIn("this_preflight_does_not_claim_17_17", powerloss_preflight_collect)
+        self.assertIn("this_preflight_does_not_arm_or_resume_trials", powerloss_preflight_collect)
+        self.assertIn("this_preflight_does_not_replace_physical_power_cut", powerloss_preflight_collect)
+        self.assertIn("this_preflight_does_not_create_or_modify_evidence", powerloss_preflight_collect)
+        self.assertIn("this_preflight_does_not_probe_or_prove_public_freeze_rc44", powerloss_preflight_collect)
+        self.assertIn("target_quarantined", powerloss_preflight_collect)
+        self.assertIn("target_is_current_link", powerloss_preflight_collect)
+        self.assertIn("target_is_previous_link", powerloss_preflight_collect)
+        self.assertIn("raw_boot_id_persisted", powerloss_preflight_collect)
+        self.assertNotIn('parser.add_argument("--output"', powerloss_preflight_collect)
+        self.assertNotIn("arm-apply", powerloss_preflight_collect)
+        self.assertNotIn("arm-rollback", powerloss_preflight_collect)
+        self.assertNotIn("CUT_POWER_NOW", powerloss_preflight_collect)
+        self.assertNotIn("apply-github", powerloss_preflight_collect)
+
+        powerloss_preflight_gate = PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.h2_powerloss_board_preflight_gate.v1", powerloss_preflight_gate)
+        self.assertIn("dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1", powerloss_preflight_gate)
+        self.assertIn("this_gate_does_not_claim_powerloss_evidence", powerloss_preflight_gate)
+        self.assertIn("this_gate_does_not_claim_17_17", powerloss_preflight_gate)
+        self.assertIn("this_gate_does_not_run_board_commands", powerloss_preflight_gate)
+        self.assertIn("topology_target_linked_blocks_apply_checkpoints", powerloss_preflight_gate)
+        self.assertIn("topology_target_quarantined_requires_lab_reset", powerloss_preflight_gate)
+        self.assertIn("topology_target_release_dir_exists_for_fresh_apply", powerloss_preflight_gate)
+        self.assertIn("evidence_root_contains_pending_checkpoint_dirs", powerloss_preflight_gate)
+        self.assertIn("policy_allowed_components_not_totem_core", powerloss_preflight_gate)
+        self.assertIn("package_channel_not_homologation", powerloss_preflight_gate)
+        self.assertIn("H2PowerlossPreflightGateSelfTest", powerloss_preflight_gate)
+        self.assertIn("scp scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py", powerloss_runbook)
+        self.assertIn("/tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", powerloss_runbook)
+        self.assertIn("PYTHONDONTWRITEBYTECODE=1", powerloss_runbook)
+        self.assertIn("python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", powerloss_runbook)
+        self.assertIn("PYTHONPATH=", powerloss_runbook)
 
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)

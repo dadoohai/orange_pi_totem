@@ -7,6 +7,34 @@ pulled directory.
 
 Do not use remote reboot as a substitute for power loss.
 
+## Preflight Before Physical Session
+
+Collect this read-only preflight from board stdout into a local file, then
+run the offline gate against the matrix plan. Do not start physical cuts if
+the gate is red.
+
+```sh
+scp scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py <board-host>:/tmp/c18_player_runtime_h2_powerloss_preflight_collect.py
+ssh <board-host> \
+  "cd '/data/c18-p0-bundle-a0dcb13fd78d' && \
+   PYTHONDONTWRITEBYTECODE=1 \
+   PYTHONPATH='/data/c18-p0-bundle-a0dcb13fd78d/scripts/board' \
+   python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py \
+     --bundle-dir '/data/c18-p0-bundle-a0dcb13fd78d' \
+     --evidence-root '/data/c18-evidence/h2-c16fb3e' \
+     --canary-media '/data/media/c18-canary-h264.mp4' \
+     --json" \
+  > 'docs/evidence/c18-update-validation/<utc>-h2-powerloss-board-preflight.json'
+ssh <board-host> \
+  "rm -f /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py"
+python3 scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py \
+  --preflight 'docs/evidence/c18-update-validation/<utc>-h2-powerloss-board-preflight.json' \
+  --matrix-plan 'docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/powerloss-matrix-plan.json' \
+  --expect-image-tag 'c18-hwdecode-lab-1x' \
+  --expect-image-marker-sha256 '59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e' \
+  --json
+```
+
 ## 1. after_payload_staged
 
 - Phase: `apply`
@@ -29,8 +57,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_payload_staged' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -88,8 +116,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_release_dir_created' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -147,8 +175,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_extract' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -206,8 +234,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_state_verifying' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -265,8 +293,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_health_passed' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -324,8 +352,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_release_tree_fsync' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -383,8 +411,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_marker_written' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -443,8 +471,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_previous_symlink' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -502,8 +530,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'after_state_success' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -561,8 +589,8 @@ C18_PLAYER_RUNTIME_POWER_LOSS_TRIAL=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=
 python3 scripts/qa/c18_player_runtime_powerloss_trial.py \
   --phase arm-apply \
   --checkpoint 'before_stage_cleanup' \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --canary-media '/data/media/c18-canary-h264.mp4' \
   --data-root /data \
   --allow-device-data-root \
@@ -621,8 +649,8 @@ mkdir -p '/data/c18-evidence/h2-c16fb3e/rollback_after_identify_links/setup'
 C18_PLAYER_RUNTIME_LAB_APPLY=1 C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1 \
 python3 scripts/qa/c18_player_runtime_lab_apply.py \
   --lab-only-apply \
-  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
-  --payload '/data/c18-p0-bundle-a0dcb13fd78d/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
+  --manifest '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json' \
+  --payload '/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz' \
   --data-root /data \
   --allow-device-data-root \
   --canary-media '/data/media/c18-canary-h264.mp4' \

@@ -406,6 +406,11 @@ updater para matar apply/rollback em fronteiras conhecidas e exigir que
 reconcile termine em `current` verificado ou fallback `/opt`, nunca em release
 nao verificada. A camada fisica de power-cut continua gate de homologacao e nao
 fica satisfeita apenas pelo teste offline.
+Antes de rodar a camada fisica, o preflight H2
+`c18_player_runtime_h2_powerloss_preflight_collect.py` +
+`c18_player_runtime_h2_powerloss_preflight_gate.py` deve validar placa, bundle,
+imagem, policy/timer e topologia contra o plano da matriz; ele e preparatorio e
+nao substitui evidencia de corte real.
 
 Para uma evidencia A->B->A ser aceita como rollback para `previous` real, ela
 precisa declarar `rollback_expectation=data-previous`, conter

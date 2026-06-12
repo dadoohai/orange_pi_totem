@@ -409,6 +409,19 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
 - o runbook
   `docs/evidence/c18-update-validation/20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e/`
   pode orientar os 12 checkpoints pendentes, mas nao conta como evidencia;
+- antes de iniciar uma sessao fisica, rodar
+  `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` na placa
+  e validar o JSON com
+  `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o plano
+  da matriz; esse preflight confirma pacote/imagem/topologia de sessao e
+  continua sem reivindicar power-loss, 17/17, stable, producao ou thaw;
+- em `20260612T163008Z`, esse preflight encontrou o target `c16fb3e` ainda
+  quarentenado; o reset lab-only em
+  `docs/evidence/c18-update-validation/20260612T163437Z-h2-powerloss-quarantine-reset-c16fb3e/`
+  removeu uma entrada do target sem mudar links e com CLI publico ainda
+  congelado; o preflight pos-reset em
+  `docs/evidence/c18-update-validation/20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e/`
+  ficou verde para iniciar a sessao fisica;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;

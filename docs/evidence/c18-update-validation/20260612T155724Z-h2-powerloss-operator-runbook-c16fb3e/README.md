@@ -1,6 +1,6 @@
 # C18 H2 Power-Loss Operator Runbook
 
-Generated: `2026-06-12T15:57:24Z`
+Generated: `2026-06-12T16:51:17Z`
 
 This directory is not physical power-loss evidence. It is an operator aid built
 from the offline matrix plan so the remaining H2 checkpoints can be run one at a
@@ -19,6 +19,10 @@ time without losing the non-claims.
 - `operator-runbook.md`: per-checkpoint setup, arm and resume commands.
 - `pull-and-validate-evidence.sh`: optional pull/validation helper; edit host/path first.
 - `operator-runbook-manifest.json`: machine-readable summary of this runbook.
+
+Run the H2 board preflight gate before starting a physical checkpoint session.
+The preflight is not power-loss evidence; it only checks the board/package/image
+and session topology against the matrix plan.
 
 ## Non-Claims
 

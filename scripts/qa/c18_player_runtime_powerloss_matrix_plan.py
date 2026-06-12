@@ -218,9 +218,14 @@ def evaluate_evidence_dir(run_dir: Path, package: dict[str, Any], args: argparse
 
 def board_path(board_bundle_dir: str, local_path: str) -> str:
     local = Path(local_path)
-    try:
-        rel = local.relative_to(REPO_ROOT)
-    except ValueError:
+    if local.is_absolute():
+        try:
+            rel = local.relative_to(REPO_ROOT)
+        except ValueError:
+            rel = Path(local.name)
+    elif ".." not in local.parts:
+        rel = local
+    else:
         rel = Path(local.name)
     return f"{board_bundle_dir.rstrip('/')}/{rel.as_posix()}"
 
@@ -460,6 +465,16 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
 
 
 class PowerlossMatrixPlanSelfTest(unittest.TestCase):
+    def test_board_path_preserves_safe_relative_package_paths(self) -> None:
+        self.assertEqual(
+            board_path("/data/c18-bundle", "releases/player-runtime/v1/manifest.json"),
+            "/data/c18-bundle/releases/player-runtime/v1/manifest.json",
+        )
+        self.assertEqual(
+            board_path("/data/c18-bundle", "../manifest.json"),
+            "/data/c18-bundle/manifest.json",
+        )
+
     def test_missing_matrix_emits_non_claims_and_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

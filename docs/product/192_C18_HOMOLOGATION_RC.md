@@ -132,6 +132,18 @@ O runbook operacional gerado em
 organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
 de pull/validacao, mas tambem nao e evidencia fisica e nao substitui corte real
 de energia.
+O mesmo runbook agora inclui uma etapa previa de preflight H2: coletar estado
+read-only da placa com
+`scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` e validar
+com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o
+plano da matriz. Esse gate bloqueia placa/pacote/topologia errados antes da
+sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
+Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target
+`c16fb3e` ainda estava em quarentena. O reset lab-only
+`20260612T163437Z-h2-powerloss-quarantine-reset-c16fb3e` removeu uma entrada do
+target sem mudar links e mantendo CLI publico congelado. O preflight
+`20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e` ficou verde
+para iniciar os 12 cortes fisicos restantes.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:

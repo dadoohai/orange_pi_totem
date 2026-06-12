@@ -27,6 +27,8 @@ README_NAME = "README.md"
 RUNBOOK_NAME = "operator-runbook.md"
 PULL_SCRIPT_NAME = "pull-and-validate-evidence.sh"
 MANIFEST_NAME = "operator-runbook-manifest.json"
+PREFLIGHT_COLLECTOR = "scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py"
+PREFLIGHT_GATE = "scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py"
 NON_CLAIMS = (
     "this_runbook_is_not_powerloss_evidence",
     "this_runbook_does_not_claim_17_17",
@@ -128,6 +130,9 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "result_claim": "powerloss_operator_runbook_written",
         "board_host_placeholder": args.board_host,
         "local_evidence_root_placeholder": args.local_evidence_root,
+        "preflight_local_output": args.preflight_local_output,
+        "preflight_expected_image_tag": args.expected_image_tag,
+        "preflight_expected_image_marker_sha256": args.expected_image_marker_sha256,
         "non_claims": list(NON_CLAIMS),
     }
 
@@ -157,6 +162,10 @@ time without losing the non-claims.
 - `{RUNBOOK_NAME}`: per-checkpoint setup, arm and resume commands.
 - `{PULL_SCRIPT_NAME}`: optional pull/validation helper; edit host/path first.
 - `{MANIFEST_NAME}`: machine-readable summary of this runbook.
+
+Run the H2 board preflight gate before starting a physical checkpoint session.
+The preflight is not power-loss evidence; it only checks the board/package/image
+and session topology against the matrix plan.
 
 ## Non-Claims
 
@@ -211,6 +220,7 @@ def render_checkpoint(index: int, total: int, item: dict[str, Any]) -> str:
 
 def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
     commands = [item for item in plan.get("commands_for_missing_checkpoints", []) if isinstance(item, dict)]
+    board = plan.get("board") if isinstance(plan.get("board"), dict) else {}
     body = [
         "# C18 H2 Power-Loss Checkpoint Runbook",
         "",
@@ -220,6 +230,34 @@ def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
         "pulled directory.",
         "",
         "Do not use remote reboot as a substitute for power loss.",
+        "",
+        "## Preflight Before Physical Session",
+        "",
+        "Collect this read-only preflight from board stdout into a local file, then",
+        "run the offline gate against the matrix plan. Do not start physical cuts if",
+        "the gate is red.",
+        "",
+        command_block([
+            f"scp {PREFLIGHT_COLLECTOR} {manifest['board_host_placeholder']}:/tmp/c18_player_runtime_h2_powerloss_preflight_collect.py",
+            f"ssh {manifest['board_host_placeholder']} \\",
+            f"  \"cd {command_quote(str(board.get('bundle_dir') or '/data/c18-h2-powerloss-bundle'))} && \\",
+            "   PYTHONDONTWRITEBYTECODE=1 \\",
+            f"   PYTHONPATH={command_quote(str(board.get('bundle_dir') or '/data/c18-h2-powerloss-bundle') + '/scripts/board')} \\",
+            "   python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py \\",
+            f"     --bundle-dir {command_quote(str(board.get('bundle_dir') or '/data/c18-h2-powerloss-bundle'))} \\",
+            f"     --evidence-root {command_quote(str(board.get('evidence_root') or '/data/c18-evidence/h2-powerloss'))} \\",
+            f"     --canary-media {command_quote(str(board.get('canary_media') or '/data/media/c18-canary-h264.mp4'))} \\",
+            "     --json\" \\",
+            f"  > {command_quote(str(manifest['preflight_local_output']))}",
+            f"ssh {manifest['board_host_placeholder']} \\",
+            "  \"rm -f /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py\"",
+            f"python3 {PREFLIGHT_GATE} \\",
+            f"  --preflight {command_quote(str(manifest['preflight_local_output']))} \\",
+            f"  --matrix-plan {command_quote(str(manifest['source_plan']))} \\",
+            f"  --expect-image-tag {command_quote(str(manifest['preflight_expected_image_tag']))} \\",
+            f"  --expect-image-marker-sha256 {command_quote(str(manifest['preflight_expected_image_marker_sha256']))} \\",
+            "  --json",
+        ]),
         "",
     ]
     for index, item in enumerate(commands, start=1):
@@ -243,6 +281,10 @@ def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
 def shell_array(name: str, values: list[str]) -> str:
     quoted = " ".join("'" + value.replace("'", "'\"'\"'") + "'" for value in values)
     return f"{name}=({quoted})"
+
+
+def command_quote(value: str) -> str:
+    return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
 def render_pull_script(plan: dict[str, Any], args: argparse.Namespace) -> str:
@@ -355,6 +397,9 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 output_dir=root / "out",
                 board_host="<board-host>",
                 local_evidence_root="docs/evidence/c18-update-validation/<utc>-h2-powerloss",
+                preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
+                expected_image_tag="c18-hwdecode-lab-test",
+                expected_image_marker_sha256="c" * 64,
             )
             result = build(args)
             self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
@@ -365,11 +410,21 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("not physical power-loss evidence", readme)
         self.assertIn("CUT_POWER_NOW", runbook)
         self.assertIn("Do not use remote reboot", runbook)
+        self.assertIn("Preflight Before Physical Session", runbook)
+        self.assertIn(PREFLIGHT_COLLECTOR, runbook)
+        self.assertIn(PREFLIGHT_GATE, runbook)
+        self.assertIn("scp scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
+        self.assertIn("PYTHONDONTWRITEBYTECODE=1", runbook)
+        self.assertIn("PYTHONPATH='/data/c18-test-bundle/scripts/board'", runbook)
+        self.assertIn("python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
+        self.assertIn("rm -f /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
+        self.assertIn("c18-hwdecode-lab-test", runbook)
         self.assertIn("does not execute board commands", pull_script)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", pull_script)
         self.assertIn('"$LOCAL_ROOT/_validation/$checkpoint-powerloss-evidence-gate.json"', pull_script)
         self.assertNotIn('"$LOCAL_ROOT/$checkpoint/powerloss-evidence-gate.json"', pull_script)
         self.assertIn("this_runbook_does_not_claim_17_17", manifest["non_claims"])
+        self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
 
     def test_invalid_plan_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -381,6 +436,9 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 output_dir=root / "out",
                 board_host="<board-host>",
                 local_evidence_root="docs/evidence/c18-update-validation/<utc>-h2-powerloss",
+                preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
+                expected_image_tag="c18-hwdecode-lab-test",
+                expected_image_marker_sha256="c" * 64,
             )
             result = build(args)
         self.assertFalse(result["passed"])
@@ -393,6 +451,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--board-host", default="<board-host>")
     parser.add_argument("--local-evidence-root", default="docs/evidence/c18-update-validation/<utc>-h2-powerloss")
+    parser.add_argument("--preflight-local-output", default="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json")
+    parser.add_argument("--expected-image-tag", default="<expected-image-tag>")
+    parser.add_argument("--expected-image-marker-sha256", default="<expected-image-marker-sha256>")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
