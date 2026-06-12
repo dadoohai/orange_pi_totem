@@ -11,6 +11,7 @@ and an explicit operator thaw decision. Missing evidence is a blocker.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -91,6 +92,64 @@ def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
         "blockers": blockers,
         **details,
     }
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def sha256_json(payload: Any) -> str:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def powerloss_matrix_sha256(run_dirs: list[Path]) -> str:
+    entries: list[dict[str, str]] = []
+    for run_dir in sorted(run_dirs, key=lambda item: str(item)):
+        files = (item for item in run_dir.rglob("*") if item.is_file())
+        for path in sorted(files, key=lambda item: str(item.relative_to(run_dir))):
+            entries.append({
+                "run_dir": run_dir.name,
+                "file": str(path.relative_to(run_dir)),
+                "sha256": sha256_file(path),
+            })
+    return sha256_json(entries)
+
+
+def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, str]) -> str:
+    bundle = {
+        "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
+        "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
+        "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
+        "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
+        "operator_thaw_decision_sha256": (
+            sha256_file(args.operator_thaw_decision)
+            if args.operator_thaw_decision is not None and args.operator_thaw_decision.is_file()
+            else None
+        ),
+        "expect_image_tag": args.expect_image_tag,
+        "expect_image_sha256": args.expect_image_sha256,
+        "expect_image_marker_sha256": args.expect_image_marker_sha256,
+    }
+    return sha256_json(bundle)
+
+
+def stable_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    if args.h1_release_gate_summary is not None and args.h1_release_gate_summary.is_file():
+        hashes["release_gate_sha256"] = sha256_file(args.h1_release_gate_summary)
+    if args.server_side_evidence is not None and args.server_side_evidence.is_file():
+        hashes["server_side_evidence_sha256"] = sha256_file(args.server_side_evidence)
+    if args.soak_summary is not None and args.soak_summary.is_file():
+        hashes["soak_summary_sha256"] = sha256_file(args.soak_summary)
+    if args.powerloss_evidence_dir:
+        hashes["powerloss_matrix_sha256"] = powerloss_matrix_sha256(list(args.powerloss_evidence_dir))
+    hashes["h2_readiness_sha256"] = h2_input_bundle_sha256(args, hashes)
+    return hashes
 
 
 def run_powerloss_gate(run_dir: Path) -> dict[str, Any]:
@@ -304,18 +363,30 @@ def evaluate_soak(summary_path: Path | None) -> dict[str, Any]:
     return step(not blockers, blockers, summary_path=str(summary_path), duration_sec=duration)
 
 
-def evaluate_stable_promotion(path: Path | None) -> dict[str, Any]:
+def evaluate_stable_promotion(path: Path | None, *, expected_hashes: dict[str, str]) -> dict[str, Any]:
     if path is None:
         return step(False, ["missing_stable_promotion_evidence"])
     result = evaluate_stable_promotion_gate(path)
     blockers = list(result.get("blockers", []))
-    return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
+    errors: list[str] = []
+    data = read_json(path, errors, "stable_promotion")
+    blockers.extend(errors)
+    for field, expected in expected_hashes.items():
+        if data.get(field) != expected:
+            blockers.append(f"stable_promotion_{field}_mismatch")
+    return step(
+        not blockers,
+        blockers,
+        evidence_path=str(path),
+        gate_result=result,
+        expected_hashes=expected_hashes,
+    )
 
 
-def evaluate_server_side(path: Path | None) -> dict[str, Any]:
+def evaluate_server_side(path: Path | None, *, allow_test_fixtures: bool = False) -> dict[str, Any]:
     if path is None:
         return step(False, ["missing_server_side_publish_governance"])
-    result = evaluate_server_side_gate(path)
+    result = evaluate_server_side_gate(path, allow_test_fixtures=allow_test_fixtures)
     blockers = list(result.get("blockers", []))
     return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
 
@@ -337,12 +408,20 @@ def evaluate_operator_decision(path: Path | None) -> dict[str, Any]:
 
 
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
+    expected_stable_hashes = stable_expected_hashes(args)
+    allow_test_fixtures = bool(getattr(args, "allow_test_fixtures", False))
     checks = {
         "h1_decisive_bundle": evaluate_h1(args.h1_release_gate_summary),
         "full_physical_powerloss_matrix": evaluate_powerloss(args),
         "soak_endurance_24h": evaluate_soak(args.soak_summary),
-        "stable_promotion_authorization": evaluate_stable_promotion(args.stable_promotion_evidence),
-        "server_side_publish_governance": evaluate_server_side(args.server_side_evidence),
+        "stable_promotion_authorization": evaluate_stable_promotion(
+            args.stable_promotion_evidence,
+            expected_hashes=expected_stable_hashes,
+        ),
+        "server_side_publish_governance": evaluate_server_side(
+            args.server_side_evidence,
+            allow_test_fixtures=allow_test_fixtures,
+        ),
         "explicit_operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
     }
     blockers = [
@@ -403,7 +482,28 @@ def complete_args(root: Path) -> argparse.Namespace:
             "max_ext4_errors_delta": 0,
         },
     })
+    server = write_server_side_fixture_release(root / "server-side-release")
+    operator = root / "operator.json"
+    write_json(operator, {
+        "schema": THAW_DECISION_SCHEMA,
+        "approved": True,
+        "acknowledges_h2_evidence": True,
+    })
+    dirs = [fixture_manifest(root / "powerloss", checkpoint) for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS]
     stable = root / "stable.json"
+    args = argparse.Namespace(
+        h1_release_gate_summary=h1,
+        powerloss_evidence_dir=dirs,
+        soak_summary=soak,
+        stable_promotion_evidence=stable,
+        server_side_evidence=server,
+        operator_thaw_decision=operator,
+        expect_image_tag="c18-hwdecode-lab-test",
+        expect_image_sha256="a" * 64,
+        expect_image_marker_sha256="b" * 64,
+        allow_test_fixtures=True,
+    )
+    hashes = stable_expected_hashes(args)
     write_json(stable, {
         "schema": STABLE_PROMOTION_SCHEMA,
         "component": "totem-core",
@@ -419,33 +519,15 @@ def complete_args(root: Path) -> argparse.Namespace:
         "explicit_operator_decision": True,
         "operator": "operator-prod-01",
         "rollback_owner": "rollback-owner-01",
-        "release_gate_sha256": "d" * 64,
-        "h2_readiness_sha256": "e" * 64,
-        "server_side_evidence_sha256": "f" * 64,
-        "soak_summary_sha256": "1" * 64,
-        "powerloss_matrix_sha256": "2" * 64,
+        "release_gate_sha256": hashes["release_gate_sha256"],
+        "h2_readiness_sha256": hashes["h2_readiness_sha256"],
+        "server_side_evidence_sha256": hashes["server_side_evidence_sha256"],
+        "soak_summary_sha256": hashes["soak_summary_sha256"],
+        "powerloss_matrix_sha256": hashes["powerloss_matrix_sha256"],
         "auto_pull_enabled": False,
         "public_player_runtime_thaw": False,
     })
-    server = write_server_side_fixture_release(root / "server-side-release")
-    operator = root / "operator.json"
-    write_json(operator, {
-        "schema": THAW_DECISION_SCHEMA,
-        "approved": True,
-        "acknowledges_h2_evidence": True,
-    })
-    dirs = [fixture_manifest(root / "powerloss", checkpoint) for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS]
-    return argparse.Namespace(
-        h1_release_gate_summary=h1,
-        powerloss_evidence_dir=dirs,
-        soak_summary=soak,
-        stable_promotion_evidence=stable,
-        server_side_evidence=server,
-        operator_thaw_decision=operator,
-        expect_image_tag="c18-hwdecode-lab-test",
-        expect_image_sha256="a" * 64,
-        expect_image_marker_sha256="b" * 64,
-    )
+    return args
 
 
 class H2ReadinessGateSelfTest(unittest.TestCase):
@@ -577,6 +659,23 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_publish_governance:server_side_signature_or_attestation_present_missing_or_false",
+            result["blockers"],
+        )
+
+    def test_stable_promotion_hashes_must_match_current_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            stable = json.loads(args.stable_promotion_evidence.read_text(encoding="utf-8"))
+            stable["server_side_evidence_sha256"] = "0" * 64
+            write_json(args.stable_promotion_evidence, stable)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "stable_promotion_authorization:stable_promotion_server_side_evidence_sha256_mismatch",
             result["blockers"],
         )
 

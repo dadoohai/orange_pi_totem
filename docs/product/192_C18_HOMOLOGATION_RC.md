@@ -146,10 +146,13 @@ Nota pos-RC: a familia server-side/signature deve passar por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
 pelo H2. Esse gate e offline, nao publica releases nem habilita auto-pull, e
 agora rejeita evidencia apenas declaratoria: exige artefatos reais no diretorio
-da release, provas de attestation com hashes conferidos, canal, auto-pull off,
-allowlist, staged rollout, rollback e auditoria.
+da release, sem symlink/out-of-dir, provas de attestation com hashes conferidos,
+audit-log hash-bound, canal, auto-pull off, allowlist, staged rollout, rollback
+e auditoria. Fixture nao passa fora de self-test; producao ainda exige trust
+anchor/signature verificada.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12
 checkpoints fisicos restantes.
 Stable tambem fica atras de `scripts/qa/c18_stable_promotion_gate.py`; evidencia
-minima com apenas `approved=true` nao autoriza build nem publish stable.
+minima com apenas `approved=true` nao autoriza build nem publish stable, e no H2
+os hashes declarados precisam bater com as evidencias consumidas.

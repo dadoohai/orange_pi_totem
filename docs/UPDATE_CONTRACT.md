@@ -454,9 +454,12 @@ Os builders/publishers C18 devem falhar fechados para `stable` sem
 `scripts/qa/c18_stable_promotion_gate.py`. Esse gate exige H2 readiness,
 power-loss 17/17, semantica power-loss completa, soak 24h, governanca
 server-side, release gate, operador, rollback owner e hashes das evidencias; um
-JSON minimo com `approved=true` nao e suficiente. O publisher de `totem-core`
-deve preservar `c18-ota-release-gate.json` junto da release para manter a trilha
-de auditoria.
+JSON minimo com `approved=true` nao e suficiente. Quando consumido pelo H2,
+esses hashes devem bater com os arquivos de evidencia efetivamente passados ao
+avaliador (`release_gate`, server-side, soak, matriz power-loss e bundle H2
+pre-stable); hashes arbitrarios ou stale nao fecham a promocao. O publisher de
+`totem-core` deve preservar `c18-ota-release-gate.json` junto da release para
+manter a trilha de auditoria.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e
@@ -476,10 +479,12 @@ allowlist, staged rollout, rollback, trilha de auditoria, escopo exato
 `kiosky-player`, `media-system` e `field-data`. A evidencia nao pode ser apenas
 um conjunto de flags: deve apontar para manifest, payload, resumo do release
 gate, provas de attestation e log de auditoria existentes no diretorio da
-release, com hashes conferidos contra os arquivos. Tambem deve trazer politica
-de canal, auto-pull, allowlist, rollout, rollback e eventos de auditoria
-obrigatorios. Ele nao publica release, nao habilita auto-pull, nao promove
-stable e nao faz thaw de `player-runtime`.
+release, sem symlink/out-of-dir, com hashes conferidos contra os arquivos; o
+log de auditoria tambem precisa ser hash-bound/attested. Tambem deve trazer
+politica de canal, auto-pull, allowlist, rollout, rollback e eventos de
+auditoria obrigatorios. Fora de self-test, fixture e evidencia sem trust
+anchor/signature verificada continuam bloqueadas; o gate nao publica release,
+nao habilita auto-pull, nao promove stable e nao faz thaw de `player-runtime`.
 
 Entre H1 e H2 existe somente um caminho intermediario controlado:
 `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido
