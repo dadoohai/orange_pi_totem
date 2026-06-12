@@ -108,7 +108,7 @@ esperados:
 - matriz fisica power-loss 17/17 incompleta;
 - soak 24h ausente;
 - stable promotion ausente;
-- governanca server-side/signature ausente;
+- evidencia de governanca server-side/signature ausente;
 - decisao explicita de thaw ausente.
 
 ## Limites da RC
@@ -137,3 +137,7 @@ versionada antes de aplicar em placa ou cliente.
    incidente antes de continuar.
 4. Depois do piloto, abrir H2: 17/17 power-loss, soak 24h, server-side/signature,
    stable promotion e decisao formal de thaw.
+
+Nota pos-RC: a familia server-side/signature deve passar por
+`scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
+pelo H2. Esse gate e offline e nao publica releases nem habilita auto-pull.

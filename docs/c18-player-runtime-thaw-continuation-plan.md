@@ -230,7 +230,10 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   governance, stable-promotion approval, and explicit operator thaw decision. It is an
   evaluator, not a public thaw mechanism.
 - player-runtime stable-promotion authorization schema (analog of `stable_promotion.v1`).
-- server-side publish gate / signature / auto-pull hardening.
+- server-side publish governance gate / signature / auto-pull hardening:
+  `scripts/qa/c18_server_side_publish_governance_gate.py` valida a evidencia
+  `dadooh.c18.server_side_publish_governance.v1` antes do H2 consumi-la; ele
+  nao publica release, nao liga auto-pull e nao promove stable.
 - DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked
   condition, not a hand-flip. Landing is a separate authorized step.
 
@@ -242,7 +245,7 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 | player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde | H2/prod: matriz power-loss 17/17, soak 24h, server-side publish/signature, stable promotion e decisao explicita de thaw |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
-| server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
+| server-side/publish | Gate offline adicionado para evidencia de governanca; auto-pull/stable continuam off | Evidencia real de publish/signature/attestation, canais, allowlist/staged rollout e auditoria |
 | power-loss/soak | P0 seletivo fisico completo para piloto; H2 gate ainda vermelho | 12 checkpoints restantes da matriz 17/17 e soak 24h |
 
 Estado: Homologation RC de `player-runtime` pronta para piloto assistido, com

@@ -55,6 +55,7 @@ PLAYER_RUNTIME_PERSISTENT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_playe
 PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_pilot_readiness_gate.py"
+SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
@@ -1575,6 +1576,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("MIN_SOAK_DURATION_SEC = 24 * 60 * 60", h2_gate)
         self.assertIn("dadooh.c18.stable_promotion.v1", h2_gate)
         self.assertIn("dadooh.c18.server_side_publish_governance.v1", h2_gate)
+        self.assertIn("c18_server_side_publish_governance_gate", h2_gate)
         self.assertIn("dadooh.c18.player_runtime.thaw_decision.v1", h2_gate)
         self.assertIn("this_gate_does_not_thaw_player_runtime", h2_gate)
         self.assertIn("this_gate_does_not_publish_or_fetch_releases", h2_gate)
@@ -1582,6 +1584,19 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("PLAYER_RUNTIME_LAB_THAW_ENABLED = True", h2_gate)
         self.assertNotIn("apply-github", h2_gate)
         self.assertNotIn("gh release", h2_gate)
+
+        server_side_gate = SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.server_side_publish_governance.v1", server_side_gate)
+        self.assertIn("signature_or_attestation_present", server_side_gate)
+        self.assertIn("auto_pull_default_disabled", server_side_gate)
+        self.assertIn("allowlist_controls_defined", server_side_gate)
+        self.assertIn("staged_rollout_defined", server_side_gate)
+        self.assertIn("audit_trail_defined", server_side_gate)
+        self.assertIn("public_player_runtime_thaw_requires_h2", server_side_gate)
+        self.assertIn("this_gate_does_not_publish_releases", server_side_gate)
+        self.assertIn("this_gate_does_not_enable_auto_pull", server_side_gate)
+        self.assertNotIn("gh release", server_side_gate)
+        self.assertNotIn("apply-github", server_side_gate)
 
         pilot_gate = PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.homologation_pilot_readiness.v1", pilot_gate)
@@ -1607,6 +1622,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("gh release", pilot_gate)
         result = subprocess.run(
             ["python3", str(PLAYER_RUNTIME_H2_READINESS_GATE_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = subprocess.run(
+            ["python3", str(SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH), "--self-test"],
             cwd=REPO_ROOT,
             text=True,
             stdout=subprocess.PIPE,

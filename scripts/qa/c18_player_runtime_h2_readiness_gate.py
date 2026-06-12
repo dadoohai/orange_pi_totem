@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -280,18 +282,11 @@ def evaluate_stable_promotion(path: Path | None) -> dict[str, Any]:
 
 
 def evaluate_server_side(path: Path | None) -> dict[str, Any]:
-    blockers: list[str] = []
     if path is None:
         return step(False, ["missing_server_side_publish_governance"])
-    errors: list[str] = []
-    data = read_json(path, errors, "server_side_publish_governance")
-    blockers.extend(errors)
-    if data.get("schema") != SERVER_SIDE_SCHEMA:
-        blockers.append("server_side_schema")
-    for key in ("publish_gate_enforced", "release_assets_verified", "signature_or_attestation_present", "auto_pull_policy_defined"):
-        if data.get(key) is not True:
-            blockers.append(f"server_side_{key}_missing_or_false")
-    return step(not blockers, blockers, evidence_path=str(path))
+    result = evaluate_server_side_gate(path)
+    blockers = list(result.get("blockers", []))
+    return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
 
 
 def evaluate_operator_decision(path: Path | None) -> dict[str, Any]:
@@ -393,6 +388,23 @@ def complete_args(root: Path) -> argparse.Namespace:
         "release_assets_verified": True,
         "signature_or_attestation_present": True,
         "auto_pull_policy_defined": True,
+        "auto_pull_default_disabled": True,
+        "auto_pull_enabled": False,
+        "channel_governance_defined": True,
+        "channels": ["lab", "homologation", "stable"],
+        "channel_inheritance_allowed": False,
+        "stable_requires_promotion": True,
+        "allowlist_controls_defined": True,
+        "staged_rollout_defined": True,
+        "rollback_policy_defined": True,
+        "audit_trail_defined": True,
+        "public_player_runtime_thaw_requires_h2": True,
+        "component_scope": ["totem-core", "player-runtime"],
+        "signed_or_attested_assets": [
+            "manifest",
+            "payload",
+            "c18-ota-release-gate",
+        ],
     })
     operator = root / "operator.json"
     write_json(operator, {
