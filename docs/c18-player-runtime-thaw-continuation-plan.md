@@ -234,21 +234,22 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 - DESIGN (not land) the `:123`/`:967` → evidence-bound thaw gate so thaw is a checked
   condition, not a hand-flip. Landing is a separate authorized step.
 
-## OTA responsibility snapshot (2026-06-10 — converged with the external auditor)
+## OTA responsibility snapshot (2026-06-12 — Homologation RC)
 
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
-| totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados | Hardening de produção/stable (incl. `created_at` obrigatório) |
-| player-runtime | H1 lab-scope evidence complete for measured paths: apply A2/B2, coldboot, rollback, repeated teardown, req#4 reachability, and healthy Python-kiosk SIGTERM stop via IPC quit; freeze still rc=44; H2-A split formalized (`1u` golden, `1x` decisive evidence) | power-loss/soak; server-side publish/signature; explicit thaw decision. Non-claims remain for GR4b success, mpv-SIGTERM fallback/wedged cleanup, full launcher/systemd cgroup cleanup |
+| totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados; release gate geral verde na RC | Hardening de producao/stable quando a frente H2 for aberta |
+| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde | H2/prod: matriz power-loss 17/17, soak 24h, server-side publish/signature, stable promotion e decisao explicita de thaw |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44) | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo atual | Trazer ao padrão de evidência quando priorizado |
 | server-side/publish | Ausente por design; auto-pull/stable off | Publish gate, assinatura, canais |
-| power-loss/soak | Parcial; reboot controlado provado, power-cut não | Power-cut físico, torn-write, soak 24h |
+| power-loss/soak | P0 seletivo fisico completo para piloto; H2 gate ainda vermelho | 12 checkpoints restantes da matriz 17/17 e soak 24h |
 
-Estado (na âncora `6871f21`; HEAD real = git): production-stop evidence committed and
-gate-hardened; freeze rc=44; no thaw/stable/publish; no execution in progress. Funil:
-external ratification of this range if desired → power-loss/soak/server-side →
-explicit thaw decision.
+Estado: Homologation RC de `player-runtime` pronta para piloto assistido, com
+freeze publico `rc=44`, pacote `homologation`, P0 seletivo completo, pilot
+readiness verde e H2 readiness vermelho pelos bloqueios esperados. Funil:
+piloto assistido allowlisted -> evidencia de campo -> H2 completo -> decisao
+explicita de thaw.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the
