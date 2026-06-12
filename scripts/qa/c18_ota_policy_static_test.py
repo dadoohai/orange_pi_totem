@@ -44,6 +44,7 @@ MPV_CONTROLLER_PROBE_PATH = REPO_ROOT / "scripts" / "board" / "mpv_controller_pl
 PLAYBACK_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_playback_observer_probe.sh"
 SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observer_probe.sh"
 COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_state_collect.py"
+DISPLAY_STATUS_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_display_status_collect.py"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
 PLAYBACK_INCIDENT_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_incident_collect.py"
@@ -257,6 +258,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
+        self.assertNotIn("c18_display_status_collect.py", core_files_block)
+        self.assertNotIn("python3 bin/c18_display_status_collect.py --self-test", build)
+        self.assertNotIn('"bin/c18_display_status_collect.py"', release_gate)
+        self.assertIn("c18_display_status_collect_self_test", release_gate)
         self.assertNotIn("bash -n bin/kiosky_service_launcher.sh", build)
         self.assertNotIn("bash -n bin/totem-kiosky-launcher.sh", build)
         self.assertIn("TOTEM_CORE_ALLOWED_TAR_FILES", release_gate)
@@ -264,6 +269,34 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("totem_core_tar_unexpected_entries", release_gate)
         self.assertIn('"health/totem-core-health.json"', release_gate)
         self.assertIn('"manifest-fragment/totem-core.json"', release_gate)
+
+    def test_display_status_collector_is_read_only_public_totem_core(self) -> None:
+        collector = DISPLAY_STATUS_COLLECTOR_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(DISPLAY_STATUS_COLLECTOR_PATH), "--self-test"], check=True)
+
+        self.assertIn('SCHEMA = "dadooh.c18.display_status.v1"', collector)
+        for classification in (
+            "display_ok",
+            "sink_hung_board_healthy",
+            "pipeline_stalled",
+            "no_sink",
+        ):
+            self.assertIn(classification, collector)
+        self.assertIn("DRM_TEXT_FIELDS", collector)
+        self.assertIn('"status"', collector)
+        self.assertIn('"enabled"', collector)
+        self.assertIn('"mode"', collector)
+        self.assertIn('"modes"', collector)
+        self.assertIn('"reads_edid": False', collector)
+        self.assertIn('"reads_framebuffer": False', collector)
+        self.assertIn('"reads_media": False', collector)
+        self.assertIn('"reads_config": False', collector)
+        self.assertIn("this_collector_does_not_read_edid_framebuffer_media_or_config", collector)
+        self.assertIn("this_collector_does_not_replace_h2_powerloss_or_soak", collector)
+        self.assertNotRegex(collector, r"systemctl[^\n]*(stop|start|restart|reload|reset-failed)")
+        self.assertNotRegex(collector, r"(xset|modetest|kmsprint|drm_info|chvt|fbset)")
+        self.assertNotIn("/dev/fb", collector)
+        self.assertNotIn("/data/config/config.json", collector)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
@@ -635,6 +668,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("C18 operational OTA must pass --component totem-core", updatectl)
         self.assertIn("C18 OTA must pass --component totem-core", updatectl)
         required_bin_block = updatectl.split("TOTEM_CORE_REQUIRED_BIN = (", 1)[1].split(")", 1)[0]
+        self.assertNotIn("c18_display_status_collect.py", required_bin_block)
         self.assertNotIn("kiosky_service_launcher.sh", required_bin_block)
 
     def test_config_contract_seals_c18_mpv_path(self) -> None:

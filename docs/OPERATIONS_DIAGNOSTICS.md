@@ -51,15 +51,32 @@ O recovery conhecido foi power-cycle do display/sink.
 
 ## Diagnostico Futuro Recomendado
 
-Criar um collector read-only de display/HDMI, idealmente em `totem-core`, para
-classificar:
+`scripts/board/c18_display_status_collect.py` e a primeira versao read-only em
+repo para classificar sinais publicos de display/player:
 
 - `display_ok`: playback, scanout e sink coerentes.
 - `sink_hung_board_healthy`: player/scanout saudaveis, mas sink suspeito.
 - `pipeline_stalled`: player ou scanout parados com sink presente.
-- `no_sink`: HDMI/EDID/HPD ausente.
+- `no_sink`: conector DRM desconectado ou sem sink detectado.
 
-Sinais uteis:
+Esta versao le somente:
+
+- connector status/enable/mode/modes em `/sys/class/drm`;
+- estado `systemctl is-active` do servico do player;
+- status publico sanitizado de `/tmp/kiosky-status.json`;
+- observacao operacional opcional `--visible-state`, sem nomes de midia.
+
+Ela nao le EDID, framebuffer, config real, midia, URLs, rede, journal bruto nem
+arquivos privados, e nao executa stop/start/restart do player. A saida e
+`dadooh.c18.display_status.v1` e serve para triagem e evidencia de incidente;
+nao substitui deep-health, power-loss, soak, H2, stable ou thaw.
+
+Compatibilidade OTA: o coletor fica gateado e testado no repo, mas nao entra no
+payload OTA comum de `totem-core` enquanto a base/updater de campo nao tiver
+allowlist compativel para esse novo binario. Em cliente, usar via imagem/base
+homologada ou copia assistida de laboratorio ate essa base existir.
+
+Sinais uteis para versoes futuras, ainda fora do OTA comum:
 
 - MPV IPC e sidecars de deep-health;
 - service status e restart counters;
