@@ -64,6 +64,9 @@ SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH = REPO_ROOT / "scripts" / "qa" / "c18_se
 TOTEM_CORE_PUBLISH_ASSET_LIST_PATH = REPO_ROOT / "scripts" / "qa" / "c18_totem_core_publish_asset_list.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
+PLAYER_RUNTIME_POWERLOSS_MATRIX_PLAN_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_matrix_plan.py"
+)
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
@@ -1922,6 +1925,34 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("POST_RECONCILE_STATE_SCHEMA", powerloss_gate)
         self.assertIn("post-reconcile-state.json", powerloss_gate)
         self.assertIn("post_reconcile_state_quarantine_tree_sha256_mismatch", powerloss_gate)
+
+        powerloss_plan = PLAYER_RUNTIME_POWERLOSS_MATRIX_PLAN_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.powerloss_matrix_plan.v1", powerloss_plan)
+        self.assertIn("this_plan_is_not_powerloss_evidence", powerloss_plan)
+        self.assertIn("this_plan_does_not_claim_17_17", powerloss_plan)
+        self.assertIn("this_plan_does_not_execute_board_commands", powerloss_plan)
+        self.assertIn("this_plan_does_not_create_powerloss_artifacts", powerloss_plan)
+        self.assertIn("this_plan_does_not_claim_boot_transition", powerloss_plan)
+        self.assertIn("this_plan_does_not_claim_health_reconcile_or_adoption", powerloss_plan)
+        self.assertIn("this_plan_does_not_replace_physical_power_cut", powerloss_plan)
+        self.assertIn("this_plan_does_not_authorize_stable_or_production", powerloss_plan)
+        self.assertIn("this_plan_does_not_publish_or_fetch_releases", powerloss_plan)
+        self.assertIn("this_plan_does_not_prepare_customer_data_for_destructive_tests", powerloss_plan)
+        self.assertIn("REQUIRED_CHECKPOINTS", powerloss_plan)
+        self.assertIn('"after_previous_symlink"', powerloss_plan)
+        self.assertIn('"rollback_after_current_unlinked"', powerloss_plan)
+        self.assertIn("ROLLBACK_SPECIAL_SETUP", powerloss_plan)
+        self.assertIn("old-current-present-and-different-from-target", powerloss_plan)
+        self.assertIn("target-current-without-previous-link-or-state", powerloss_plan)
+        self.assertIn("requires --quarantine-current", powerloss_plan)
+        self.assertIn("fresh apply path is required", powerloss_plan)
+        self.assertIn("CUT_POWER_NOW", powerloss_plan)
+        self.assertIn("remote reboot is not acceptable evidence", powerloss_plan)
+        self.assertIn("previous_version_required_for_rollback_commands", powerloss_plan)
+        self.assertIn("--self-test", powerloss_plan)
+        self.assertNotIn("--allow-reapply-linked-previous", powerloss_plan)
+        self.assertNotIn("stable_allowed", powerloss_plan)
+        self.assertNotIn("public_cli_thawed", powerloss_plan)
 
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)
