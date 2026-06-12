@@ -1,0 +1,5 @@
+boot_id=21333b78-0137-43b5-b2a8-464466555e37
+current_link=releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+previous_link=releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+state_current=c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+state_previous=c18.player-runtime-m6-a2-20260610T072826Z-29ff33b

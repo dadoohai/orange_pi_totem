@@ -1,0 +1,11 @@
+{
+  "allow_downgrade": false,
+  "allow_prerelease": true,
+  "allowed_components": [
+    "player-runtime",
+    "totem-core"
+  ],
+  "device_channel": "homologation",
+  "device_track": "c18-hwdecode",
+  "schema": "dadooh.totem.update.policy.v1"
+}
