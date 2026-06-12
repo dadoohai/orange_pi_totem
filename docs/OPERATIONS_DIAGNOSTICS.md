@@ -121,6 +121,11 @@ laboratorio ate essa base existir.
 Nao-claims: esse snapshot nao e release de software, nao prova H2, nao substitui
 deep-health, power-loss, soak, stable, public thaw nem decisao de producao.
 
+Evidencias versionadas dessa familia devem passar por
+`scripts/qa/c18_board_readonly_diagnostics_evidence_gate.py`. O gate e
+offline, confere hashes/tamanhos, schemas, non-claims e padroes de privacidade,
+e nao executa SSH, comandos de placa, publish, H2, stable, auto-pull ou thaw.
+
 ## Relacao Com OTA
 
 Este incidente nao bloqueia a trilha OTA C18. Ele informa backlog de diagnostico

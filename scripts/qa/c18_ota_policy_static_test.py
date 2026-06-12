@@ -50,6 +50,9 @@ PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback
 PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
 PLAYBACK_INCIDENT_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_incident_collect.py"
 PLAYBACK_INCIDENT_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_playback_incident_evidence_gate.py"
+BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_board_readonly_diagnostics_evidence_gate.py"
+)
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -134,6 +137,13 @@ EVIDENCE_1U_OFFLINE_BUILD_DIR = (
 EVIDENCE_CURRENT_IMAGE_SHA256 = str(CURRENT_GOLDEN["image_sha256"])
 EVIDENCE_CURRENT_IMAGE_TAG = str(CURRENT_GOLDEN["image_tag"])
 EVIDENCE_CURRENT_IMAGE_MARKER_PATH = str(CURRENT_GOLDEN["image_marker_path"])
+EVIDENCE_BOARD_READONLY_DIAGNOSTICS_DIR = (
+    REPO_ROOT
+    / "docs"
+    / "evidence"
+    / "c18-update-validation"
+    / "20260612T183722Z-board-readonly-diagnostics-17a1f9d"
+)
 EVIDENCE_1U_IMAGE_TAG = "c18-hwdecode-lab-1u"
 EVIDENCE_1U_IMAGE_SHA256 = "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd"
 EVIDENCE_1U_REPO_COMMIT = "58457740661b557877e06f53b932b133d62838cb"
@@ -334,6 +344,34 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("json.load", config_metadata_block)
         for prohibited in ("subprocess", "os.system", "systemctl", "journalctl", "nmcli"):
             self.assertNotIn(prohibited, collector)
+
+    def test_board_readonly_diagnostics_evidence_gate_is_wired(self) -> None:
+        gate = BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH), "--self-test"], check=True)
+        subprocess.run(
+            [
+                "python3",
+                str(BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH),
+                "--run-dir",
+                str(EVIDENCE_BOARD_READONLY_DIAGNOSTICS_DIR),
+                "--json",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+
+        self.assertIn("dadooh.c18.board_readonly_diagnostics_evidence_gate.v1", gate)
+        self.assertIn("dadooh.c18.board_readonly_diagnostics_evidence.v1", gate)
+        self.assertIn("read_only_appliance_public_state_collected", gate)
+        self.assertIn("read_only_display_status_collected", gate)
+        self.assertIn("this_gate_does_not_complete_h2", gate)
+        self.assertIn("this_evidence_does_not_complete_h2", gate)
+        self.assertIn("this_evidence_does_not_publish_promote_stable_enable_auto_pull_or_thaw", gate)
+        self.assertIn("privacy_leak", gate)
+        self.assertIn("manifest_file_sha256_mismatch", gate)
+        self.assertIn("c18_board_readonly_diagnostics_evidence_gate", release_gate)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
