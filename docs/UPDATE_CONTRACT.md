@@ -410,9 +410,12 @@ A->B->A.
 O builder local `scripts/deploy/build_player_runtime_release_package.sh` cria
 um pacote lab-only de `player-runtime` a partir do snapshot governado e roda
 `scripts/qa/c18_player_runtime_release_gate.py` antes de promover payload e
-manifest ao diretorio final. Ele nao publica, nao toca a placa e nao descongela
-o `rc=44` do updater. Por construcao, esse builder nao gera canal `stable`; um
-manifest `player-runtime` com `channel=stable` tambem e rejeitado pelo gate.
+manifest ao diretorio final. O mesmo diretorio tambem preserva
+`c18-player-runtime-release-gate.json`, validado como verde antes da promocao
+local, para que a etapa server-side futura tenha artefato real a assinar. Ele
+nao publica, nao toca a placa e nao descongela o `rc=44` do updater. Por
+construcao, esse builder nao gera canal `stable`; um manifest `player-runtime`
+com `channel=stable` tambem e rejeitado pelo gate.
 
 Sem esse gate, update de player fica restrito a imagem/homologacao manual.
 
@@ -483,11 +486,13 @@ promocao. O publisher de
 manter a trilha de auditoria. O release gate de `player-runtime` tambem emite
 um bloco `package` portavel (`manifest`, `payload`, `payload_sha256`,
 `source_commit`, `component`, `channel`) para ser consumido por
-assinatura/attestation server-side. O stable gate tambem aceita esses caminhos como
-argumentos para validar os hashes em modo artifact-bound fora do H2. No caminho
-CLI/build/publish de `stable`, esses argumentos sao obrigatorios; chamar o gate
-somente com `--evidence` falha fechado para impedir promocao baseada em hashes
-declarados sem arquivos reais. O gate tambem valida a semantica dos artefatos
+assinatura/attestation server-side; o builder de `player-runtime` preserva esse
+JSON junto do payload e manifest no diretorio da release. O stable gate tambem
+aceita esses caminhos como argumentos para validar os hashes em modo
+artifact-bound fora do H2. No caminho CLI/build/publish de `stable`, esses
+argumentos sao obrigatorios; chamar o gate somente com `--evidence` falha
+fechado para impedir promocao baseada em hashes declarados sem arquivos reais.
+O gate tambem valida a semantica dos artefatos
 recebidos nesse caminho: release gate precisa estar verde, matriz power-loss
 precisa estar completa e passar seus subgates, soak precisa cobrir 24h,
 server-side precisa passar com chave publica confiavel externa + trust anchor, e

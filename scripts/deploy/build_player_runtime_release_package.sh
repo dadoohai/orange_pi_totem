@@ -86,8 +86,10 @@ esac
 OUT_DIR="$OUT_ROOT/$VERSION"
 PAYLOAD_NAME="dadooh-${COMPONENT}-${VERSION}.tar.gz"
 MANIFEST_NAME="dadooh-${COMPONENT}-${VERSION}.manifest.json"
+RELEASE_GATE_NAME="c18-player-runtime-release-gate.json"
 PAYLOAD_PATH="$OUT_DIR/$PAYLOAD_NAME"
 MANIFEST_PATH="$OUT_DIR/$MANIFEST_NAME"
+RELEASE_GATE_PATH="$OUT_DIR/$RELEASE_GATE_NAME"
 NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 log "component       = $COMPONENT"
@@ -105,6 +107,7 @@ if [[ "$MODE" == "prepare-only" ]]; then
   log "prepare_only=true"
   log "would_build_payload=${PAYLOAD_PATH}"
   log "would_build_manifest=${MANIFEST_PATH}"
+  log "would_build_release_gate=${RELEASE_GATE_PATH}"
   exit 0
 fi
 
@@ -112,6 +115,7 @@ STAGE_DIR="$(mktemp -d -t player-runtime-stage-XXXXXX)"
 BUILD_DIR="$(mktemp -d -t player-runtime-build-XXXXXX)"
 TMP_PAYLOAD_PATH="$BUILD_DIR/$PAYLOAD_NAME"
 TMP_MANIFEST_PATH="$BUILD_DIR/$MANIFEST_NAME"
+TMP_RELEASE_GATE_PATH="$BUILD_DIR/$RELEASE_GATE_NAME"
 cleanup() { rm -rf "$STAGE_DIR" "$BUILD_DIR"; }
 trap cleanup EXIT
 
@@ -178,14 +182,35 @@ python3 -m json.tool "$TMP_MANIFEST_PATH" >/dev/null
 PYTHONDONTWRITEBYTECODE=1 python3 "$RELEASE_GATE" \
   --manifest "$TMP_MANIFEST_PATH" \
   --payload "$TMP_PAYLOAD_PATH" \
-  >/dev/null
+  >"$TMP_RELEASE_GATE_PATH"
+
+python3 - "$TMP_RELEASE_GATE_PATH" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    gate = json.load(fh)
+
+if gate.get("schema") != "dadooh.c18.player_runtime.release_gate.v1":
+    raise SystemExit("player-runtime release gate emitted unexpected schema")
+if gate.get("passed") is not True:
+    raise SystemExit("player-runtime release gate did not pass")
+
+package = gate.get("package")
+if not isinstance(package, dict):
+    raise SystemExit("player-runtime release gate did not emit package block")
+if package.get("component") != "player-runtime":
+    raise SystemExit("player-runtime release gate package block has wrong component")
+PY
 
 mkdir -p "$OUT_DIR"
 mv -f "$TMP_PAYLOAD_PATH" "$PAYLOAD_PATH"
 mv -f "$TMP_MANIFEST_PATH" "$MANIFEST_PATH"
+mv -f "$TMP_RELEASE_GATE_PATH" "$RELEASE_GATE_PATH"
 
 log "build_package=true"
 log "payload_path=${PAYLOAD_PATH}"
 log "manifest_path=${MANIFEST_PATH}"
+log "release_gate_path=${RELEASE_GATE_PATH}"
 log "payload_sha256=${PAYLOAD_SHA256}"
 log "payload_bytes=${PAYLOAD_BYTES}"
