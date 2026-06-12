@@ -99,6 +99,12 @@ SENSITIVE_KEY_PARTS = (
     "url",
     "payload",
 )
+SAFE_NEGATIVE_KEYS = {
+    "not_ota_release_payload",
+    "not_player_runtime_release",
+    "not_system_image_release",
+    "not_h2_or_production_readiness",
+}
 STRING_LEAK_PATTERNS = LEAK_PATTERNS[:6] + (LEAK_PATTERNS[7],)
 
 
@@ -152,9 +158,9 @@ def sensitive_json_values(value: Any, *, key_path: str = "$") -> list[str]:
         for key, child in value.items():
             child_path = f"{key_path}.{key}"
             lower = str(key).lower()
-            negative_claim_key = lower.startswith(("not_", "this_"))
+            known_negative_claim_key = lower in SAFE_NEGATIVE_KEYS
             if (
-                not negative_claim_key
+                not known_negative_claim_key
                 and any(part in lower for part in SENSITIVE_KEY_PARTS)
                 and child not in ("", None, [], {}, "null")
             ):
@@ -507,6 +513,23 @@ class BoardReadonlyDiagnosticsEvidenceGateSelfTest(unittest.TestCase):
             result = evaluate(run)
         self.assertFalse(result["passed"])
         self.assertIn("appliance_sensitive_json:$.password", result["blockers"])
+
+    def test_sensitive_negative_looking_json_key_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run = valid_fixture(Path(tmp))
+            data = json.loads((run / "appliance-status.json").read_text(encoding="utf-8"))
+            data["not_token"] = "secret-value"
+            write_json(run / "appliance-status.json", data)
+            manifest = json.loads((run / "evidence-manifest.json").read_text(encoding="utf-8"))
+            for item in manifest["files"]:
+                if item["path"] == "appliance-status.json":
+                    path = run / item["path"]
+                    item["bytes"] = path.stat().st_size
+                    item["sha256"] = sha256_file(path)
+            write_json(run / "evidence-manifest.json", manifest)
+            result = evaluate(run)
+        self.assertFalse(result["passed"])
+        self.assertIn("appliance_sensitive_json:$.not_token", result["blockers"])
 
     def test_root_symlink_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
