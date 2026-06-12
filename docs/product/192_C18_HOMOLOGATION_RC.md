@@ -108,7 +108,7 @@ esperados:
 - matriz fisica power-loss 17/17 incompleta;
 - soak 24h ausente;
 - stable promotion ausente;
-- evidencia de governanca server-side/signature ausente;
+- evidencia real de governanca server-side/signature ausente;
 - decisao explicita de thaw ausente.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
@@ -124,7 +124,7 @@ Esta RC nao autoriza:
 - auto-pull;
 - public thaw de `player-runtime`;
 - publicacao server-side;
-- assinatura/attestation;
+- evidencia real assinada/attested para producao;
 - substituir soak 24h;
 - substituir matriz power-loss 17/17.
 
@@ -146,10 +146,12 @@ Nota pos-RC: a familia server-side/signature deve passar por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
 pelo H2. Esse gate e offline, nao publica releases nem habilita auto-pull, e
 agora rejeita evidencia apenas declaratoria: exige artefatos reais no diretorio
-da release, sem symlink/out-of-dir, provas de attestation com hashes conferidos,
-audit-log hash-bound, canal, auto-pull off, allowlist, staged rollout, rollback
-e auditoria. Fixture nao passa fora de self-test; producao ainda exige trust
-anchor/signature verificada.
+da release, sem symlink/out-of-dir, provas de attestation/assinatura com hashes
+conferidos, audit-log hash-bound, canal, auto-pull off, allowlist, staged
+rollout, rollback e auditoria. Assinatura destacada e verificada offline com
+prova JSON canonica, fingerprint SPKI DER da chave publica, `release_set_sha256`
+e trust anchor externo via `--trusted-key-pem`. Fixture nao passa fora de
+self-test; producao ainda exige evidencia real assinada com chave operacional.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12
 checkpoints fisicos restantes.

@@ -11,6 +11,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -35,6 +37,7 @@ REQUIRED_AUDIT_HASHED_ASSETS = (
 )
 REQUIRED_ATTESTATION_COVERS = (
     "asset_sha256",
+    "release_set_sha256",
     "source_commit",
     "component",
     "channel",
@@ -67,7 +70,11 @@ FIXTURE_MANIFEST_NAME = "dadooh-totem-core-server-fixture.manifest.json"
 FIXTURE_PAYLOAD_NAME = "dadooh-totem-core-server-fixture.tar.gz"
 FIXTURE_RELEASE_GATE_NAME = "c18-ota-release-gate.json"
 FIXTURE_AUDIT_LOG_NAME = "audit-log.ndjson"
-TRUSTED_SERVER_SIDE_SIGNATURE_KEYS_SHA256: tuple[str, ...] = ()
+SIGNED_FIXTURE_MANIFEST_NAME = "dadooh-totem-core-signed-release.manifest.json"
+SIGNED_FIXTURE_PAYLOAD_NAME = "dadooh-totem-core-signed-release.tar.gz"
+SIGNATURE_SCHEMA = "dadooh.c18.asset_signature.v1"
+ATTESTATION_SCHEMA = "dadooh.c18.asset_attestation.v1"
+SIGNATURE_ALGORITHM = "openssl-dgst-sha256-rsa-pkcs1-v1_5"
 REQUIRED_TRUE_FIELDS = (
     "publish_gate_enforced",
     "release_assets_verified",
@@ -156,29 +163,13 @@ def validate_asset_attestations(data: dict[str, Any], blockers: list[str]) -> No
         signature_hash = item.get("signature_sha256") or item.get("attestation_sha256")
         if not is_hash(signature_hash):
             blockers.append(f"server_side_asset_attestation_proof_hash_invalid:{asset}")
+        if item.get("attestation_type") == "signature" and not is_hash(item.get("proof_sha256")):
+            blockers.append(f"server_side_asset_signature_proof_hash_invalid:{asset}")
         if item.get("covers") != list(REQUIRED_ATTESTATION_COVERS):
             blockers.append(f"server_side_asset_attestation_covers_not_exact:{asset}")
     missing = set(REQUIRED_SIGNED_OR_ATTESTED_ASSETS) - seen
     for asset in sorted(missing):
         blockers.append(f"server_side_asset_attestation_missing:{asset}")
-
-
-def has_trusted_signature_verification(data: dict[str, Any]) -> bool:
-    if not TRUSTED_SERVER_SIDE_SIGNATURE_KEYS_SHA256:
-        return False
-    attestations = attestation_by_asset(data)
-    for asset in REQUIRED_SIGNED_OR_ATTESTED_ASSETS:
-        item = attestations.get(asset)
-        if item is None or item.get("attestation_type") != "signature":
-            return False
-        verification = item.get("signature_verification")
-        if not isinstance(verification, dict):
-            return False
-        if verification.get("verified") is not True:
-            return False
-        if verification.get("trusted_key_sha256") not in TRUSTED_SERVER_SIDE_SIGNATURE_KEYS_SHA256:
-            return False
-    return True
 
 
 def validate_channel_policy(data: dict[str, Any], blockers: list[str]) -> None:
@@ -296,6 +287,25 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def sha256_bytes(raw: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def release_set_sha256(asset_hashes: dict[str, str]) -> str:
+    return sha256_bytes(canonical_json_bytes({
+        "assets": [
+            {"asset": asset, "sha256": asset_hashes[asset]}
+            for asset in REQUIRED_SIGNED_OR_ATTESTED_ASSETS
+        ],
+    }))
+
+
 def rel_path(value: Any) -> str | None:
     if not isinstance(value, str) or not value or value.startswith("/"):
         return None
@@ -398,10 +408,166 @@ def attestation_by_asset(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return out
 
 
+def public_key_spki_sha256(path: Path) -> str | None:
+    if shutil.which("openssl") is None:
+        return None
+    proc = subprocess.run(
+        ["openssl", "pkey", "-pubin", "-in", str(path), "-pubout", "-outform", "DER"],
+        text=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout:
+        return None
+    return sha256_bytes(proc.stdout)
+
+
+def trusted_key_map(paths: list[Path] | None,
+                    *,
+                    release_dir: Path | None = None,
+                    blockers: list[str] | None = None) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    release_root = release_dir.resolve(strict=True) if release_dir is not None and release_dir.exists() else None
+    for path in paths or []:
+        if path.is_symlink():
+            if blockers is not None:
+                blockers.append(f"server_side_trusted_key_symlink:{path}")
+            continue
+        if not path.is_file():
+            if blockers is not None:
+                blockers.append(f"server_side_trusted_key_missing:{path}")
+            continue
+        resolved = path.resolve(strict=True)
+        if release_root is not None and is_relative_to(resolved, release_root):
+            if blockers is not None:
+                blockers.append(f"server_side_trusted_key_inside_release_dir:{path}")
+            continue
+        key_hash = public_key_spki_sha256(path)
+        if key_hash is None:
+            if blockers is not None:
+                blockers.append(f"server_side_trusted_key_invalid:{path}")
+            continue
+        out[key_hash] = path
+    return out
+
+
+def signature_payload(proof: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": SIGNATURE_SCHEMA,
+        "subject_asset": proof.get("subject_asset"),
+        "subject_sha256": proof.get("subject_sha256"),
+        "release_set_sha256": proof.get("release_set_sha256"),
+        "source_commit": proof.get("source_commit"),
+        "component": proof.get("component"),
+        "channel": proof.get("channel"),
+        "created_at_utc": proof.get("created_at_utc"),
+        "covers": proof.get("covers"),
+        "signature_algorithm": proof.get("signature_algorithm"),
+        "trusted_key_sha256": proof.get("trusted_key_sha256"),
+    }
+
+
+def verify_openssl_signature(*,
+                             public_key: Path,
+                             signature_path: Path,
+                             payload: bytes) -> bool:
+    with tempfile.NamedTemporaryFile(prefix="c18-signature-payload-", delete=True) as fh:
+        fh.write(payload)
+        fh.flush()
+        proc = subprocess.run(
+            [
+                "openssl",
+                "dgst",
+                "-sha256",
+                "-verify",
+                str(public_key),
+                "-signature",
+                str(signature_path),
+                fh.name,
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    return proc.returncode == 0 and "Verified OK" in proc.stdout
+
+
+def validate_common_proof_fields(item: dict[str, Any],
+                                 *,
+                                 proof: dict[str, Any],
+                                 schema: str,
+                                 manifest: dict[str, Any],
+                                 expected_release_set_sha256: str,
+                                 blockers: list[str]) -> None:
+    asset = item.get("asset")
+    if proof.get("schema") != schema:
+        blockers.append(f"server_side_asset_attestation_proof_schema:{asset}")
+    if proof.get("subject_asset") != asset:
+        blockers.append(f"server_side_asset_attestation_proof_subject_asset:{asset}")
+    if proof.get("subject_sha256") != item.get("sha256"):
+        blockers.append(f"server_side_asset_attestation_proof_subject_sha256:{asset}")
+    if proof.get("release_set_sha256") != expected_release_set_sha256:
+        blockers.append(f"server_side_asset_attestation_proof_release_set_sha256:{asset}")
+    for key in ("source_commit", "component", "channel", "created_at_utc"):
+        if proof.get(key) != manifest.get(key):
+            blockers.append(f"server_side_asset_attestation_proof_{key}:{asset}")
+    if proof.get("covers") != list(REQUIRED_ATTESTATION_COVERS):
+        blockers.append(f"server_side_asset_attestation_proof_covers:{asset}")
+
+
+def validate_signature_proof_file(item: dict[str, Any],
+                                  *,
+                                  proof: dict[str, Any],
+                                  release_dir: Path,
+                                  trusted_keys: dict[str, Path],
+                                  blockers: list[str]) -> None:
+    asset = str(item.get("asset"))
+    proof_hash = item.get("proof_sha256")
+    if not is_hash(proof_hash):
+        blockers.append(f"server_side_asset_signature_proof_hash_invalid:{asset}")
+    elif sha256_bytes(canonical_json_bytes(proof)) != proof_hash:
+        blockers.append(f"server_side_asset_signature_proof_hash_mismatch:{asset}")
+    if proof.get("signature_algorithm") != SIGNATURE_ALGORITHM:
+        blockers.append(f"server_side_asset_signature_algorithm:{asset}")
+    signature_path = resolve_release_file(
+        proof.get("signature_file"),
+        release_dir=release_dir,
+        blockers=blockers,
+        asset=asset,
+        path_invalid_blocker="server_side_asset_signature_file_invalid",
+        missing_blocker="server_side_asset_signature_file_missing",
+        symlink_blocker="server_side_asset_signature_file_symlink",
+        outside_blocker="server_side_asset_signature_file_outside_release_dir",
+    )
+    if signature_path is None:
+        return
+    if sha256_file(signature_path) != item.get("signature_sha256"):
+        blockers.append(f"server_side_asset_signature_hash_mismatch:{asset}")
+    key_sha = proof.get("trusted_key_sha256")
+    key_path = trusted_keys.get(key_sha) if isinstance(key_sha, str) else None
+    if key_path is None:
+        blockers.append(f"server_side_asset_signature_untrusted_key:{asset}")
+        return
+    if shutil.which("openssl") is None:
+        blockers.append(f"server_side_asset_signature_openssl_missing:{asset}")
+        return
+    if not verify_openssl_signature(
+        public_key=key_path,
+        signature_path=signature_path,
+        payload=canonical_json_bytes(signature_payload(proof)),
+    ):
+        blockers.append(f"server_side_asset_signature_verify_failed:{asset}")
+
+
 def validate_attestation_proof_file(item: dict[str, Any],
                                     *,
                                     release_dir: Path,
                                     manifest: dict[str, Any],
+                                    expected_release_set_sha256: str,
+                                    trusted_keys: dict[str, Path],
+                                    allow_test_fixtures: bool,
                                     blockers: list[str]) -> None:
     asset = item.get("asset")
     proof_path = resolve_release_file(
@@ -417,24 +583,39 @@ def validate_attestation_proof_file(item: dict[str, Any],
     if proof_path is None:
         return
     proof_hash = sha256_file(proof_path)
-    expected_hash = item.get("signature_sha256") or item.get("attestation_sha256")
-    if proof_hash != expected_hash:
-        blockers.append(f"server_side_asset_attestation_proof_hash_mismatch:{asset}")
     proof, errors = read_json(proof_path)
     if errors:
         blockers.append(f"server_side_asset_attestation_proof_json:{asset}")
         return
-    if proof.get("schema") != "dadooh.c18.asset_attestation.v1":
-        blockers.append(f"server_side_asset_attestation_proof_schema:{asset}")
-    if proof.get("subject_asset") != asset:
-        blockers.append(f"server_side_asset_attestation_proof_subject_asset:{asset}")
-    if proof.get("subject_sha256") != item.get("sha256"):
-        blockers.append(f"server_side_asset_attestation_proof_subject_sha256:{asset}")
-    for key in ("source_commit", "component", "channel", "created_at_utc"):
-        if proof.get(key) != manifest.get(key):
-            blockers.append(f"server_side_asset_attestation_proof_{key}:{asset}")
-    if proof.get("covers") != list(REQUIRED_ATTESTATION_COVERS):
-        blockers.append(f"server_side_asset_attestation_proof_covers:{asset}")
+    if item.get("attestation_type") == "signature":
+        validate_common_proof_fields(
+            item,
+            proof=proof,
+            schema=SIGNATURE_SCHEMA,
+            manifest=manifest,
+            expected_release_set_sha256=expected_release_set_sha256,
+            blockers=blockers,
+        )
+        validate_signature_proof_file(
+            item,
+            proof=proof,
+            release_dir=release_dir,
+            trusted_keys=trusted_keys,
+            blockers=blockers,
+        )
+        return
+    if proof_hash != item.get("attestation_sha256"):
+        blockers.append(f"server_side_asset_attestation_proof_hash_mismatch:{asset}")
+    validate_common_proof_fields(
+        item,
+        proof=proof,
+        schema=ATTESTATION_SCHEMA,
+        manifest=manifest,
+        expected_release_set_sha256=expected_release_set_sha256,
+        blockers=blockers,
+    )
+    if not allow_test_fixtures:
+        blockers.append(f"server_side_asset_signature_required:{asset}")
 
 
 def validate_release_gate_artifact(gate_path: Path,
@@ -542,6 +723,7 @@ def validate_release_artifacts(data: dict[str, Any],
                                evidence_path: str | None,
                                release_dir: Path | None,
                                allow_test_fixtures: bool,
+                               trusted_keys: dict[str, Path],
                                blockers: list[str]) -> None:
     if release_dir is None:
         blockers.append("server_side_release_dir_missing")
@@ -577,6 +759,7 @@ def validate_release_artifacts(data: dict[str, Any],
         "c18-ota-release-gate": sha256_file(paths["c18-ota-release-gate"]),
         "audit-log": sha256_file(paths["audit-log"]),
     }
+    expected_release_set_sha256 = release_set_sha256(asset_hashes)
     attestations = attestation_by_asset(data)
     for asset, expected_hash in asset_hashes.items():
         item = attestations.get(asset)
@@ -585,7 +768,15 @@ def validate_release_artifacts(data: dict[str, Any],
             continue
         if item.get("sha256") != expected_hash:
             blockers.append(f"server_side_asset_attestation_sha256_mismatch:{asset}")
-        validate_attestation_proof_file(item, release_dir=release_dir, manifest=manifest, blockers=blockers)
+        validate_attestation_proof_file(
+            item,
+            release_dir=release_dir,
+            manifest=manifest,
+            expected_release_set_sha256=expected_release_set_sha256,
+            trusted_keys=trusted_keys,
+            allow_test_fixtures=allow_test_fixtures,
+            blockers=blockers,
+        )
     validate_release_gate_artifact(
         paths["c18-ota-release-gate"],
         release_dir=release_dir,
@@ -602,8 +793,12 @@ def validate_data(data: dict[str, Any],
                   *,
                   evidence_path: str | None = None,
                   release_dir: Path | None = None,
-                  allow_test_fixtures: bool = False) -> dict[str, Any]:
+                  allow_test_fixtures: bool = False,
+                  trusted_keys: dict[str, Path] | None = None,
+                  trusted_key_errors: list[str] | None = None) -> dict[str, Any]:
     blockers: list[str] = []
+    blockers.extend(trusted_key_errors or [])
+    resolved_trusted_keys = trusted_keys or {}
     if data.get("schema") != SCHEMA:
         blockers.append("server_side_schema")
     for key in REQUIRED_TRUE_FIELDS:
@@ -633,13 +828,14 @@ def validate_data(data: dict[str, Any],
     validate_staged_rollout_policy(data, blockers)
     validate_rollback_policy(data, blockers)
     validate_audit_trail(data, blockers)
-    if not allow_test_fixtures and not has_trusted_signature_verification(data):
+    if not allow_test_fixtures and not resolved_trusted_keys:
         blockers.append("server_side_trusted_signature_verification_missing")
     validate_release_artifacts(
         data,
         evidence_path=evidence_path,
         release_dir=release_dir,
         allow_test_fixtures=allow_test_fixtures,
+        trusted_keys=resolved_trusted_keys,
         blockers=blockers,
     )
     return {
@@ -652,7 +848,10 @@ def validate_data(data: dict[str, Any],
     }
 
 
-def evaluate(path: Path | None, *, allow_test_fixtures: bool = False) -> dict[str, Any]:
+def evaluate(path: Path | None,
+             *,
+             allow_test_fixtures: bool = False,
+             trusted_key_pems: list[Path] | None = None) -> dict[str, Any]:
     if path is None:
         return {
             "schema": "dadooh.c18.server_side_publish_governance_gate.v1",
@@ -672,11 +871,19 @@ def evaluate(path: Path | None, *, allow_test_fixtures: bool = False) -> dict[st
             "blockers": errors,
             "non_claims": list(NON_CLAIMS),
         }
+    trusted_key_errors: list[str] = []
+    trusted_keys = trusted_key_map(
+        trusted_key_pems,
+        release_dir=path.parent,
+        blockers=trusted_key_errors,
+    )
     return validate_data(
         data,
         evidence_path=str(path),
         release_dir=path.parent,
         allow_test_fixtures=allow_test_fixtures,
+        trusted_keys=trusted_keys,
+        trusted_key_errors=trusted_key_errors,
     )
 
 
@@ -855,6 +1062,7 @@ def write_fixture_release(root: Path) -> Path:
     ]
     audit_path.write_text("\n".join(audit_lines) + "\n", encoding="utf-8")
     asset_hashes["audit-log"] = sha256_file(audit_path)
+    expected_release_set_sha256 = release_set_sha256(asset_hashes)
     proof_files = {
         asset: f"attestations/{asset}.attestation.json"
         for asset in REQUIRED_SIGNED_OR_ATTESTED_ASSETS
@@ -866,6 +1074,7 @@ def write_fixture_release(root: Path) -> Path:
             "schema": "dadooh.c18.asset_attestation.v1",
             "subject_asset": asset,
             "subject_sha256": asset_hashes[asset],
+            "release_set_sha256": expected_release_set_sha256,
             "source_commit": manifest["source_commit"],
             "component": manifest["component"],
             "channel": manifest["channel"],
@@ -885,6 +1094,142 @@ def write_fixture_release(root: Path) -> Path:
     return evidence_path
 
 
+def run_openssl(cmd: list[str]) -> None:
+    subprocess.run(
+        ["openssl", *cmd],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+
+def sign_payload(private_key: Path, payload: bytes, signature_path: Path) -> None:
+    with tempfile.NamedTemporaryFile(prefix="c18-signature-payload-", delete=True) as fh:
+        fh.write(payload)
+        fh.flush()
+        run_openssl([
+            "dgst",
+            "-sha256",
+            "-sign",
+            str(private_key),
+            "-out",
+            str(signature_path),
+            fh.name,
+        ])
+
+
+def write_signed_fixture_release(root: Path) -> tuple[Path, Path]:
+    root.mkdir(parents=True, exist_ok=True)
+    trust_dir = root.parent / f"{root.name}-trust"
+    trust_dir.mkdir(parents=True, exist_ok=True)
+    private_key = trust_dir / "c18-test-release-signing-key.pem"
+    public_key = trust_dir / "c18-test-release-signing-key.pub.pem"
+    run_openssl(["genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(private_key)])
+    run_openssl(["rsa", "-pubout", "-in", str(private_key), "-out", str(public_key)])
+    public_key_sha256 = public_key_spki_sha256(public_key)
+    if public_key_sha256 is None:
+        raise RuntimeError("openssl could not derive public key fingerprint")
+
+    payload_path = root / SIGNED_FIXTURE_PAYLOAD_NAME
+    payload_path.write_bytes(b"C18 signed server-side governance fixture payload\n")
+    payload_sha256 = sha256_file(payload_path)
+    manifest = {
+        "schema": "dadooh.totem.update.v1",
+        "component": "totem-core",
+        "version": "signed-release",
+        "channel": "homologation",
+        "payload": payload_path.name,
+        "payload_sha256": payload_sha256,
+        "source_commit": "b" * 40,
+        "created_at_utc": "2026-06-12T00:00:00Z",
+    }
+    manifest_path = root / SIGNED_FIXTURE_MANIFEST_NAME
+    write_json(manifest_path, manifest)
+    release_gate_path = root / FIXTURE_RELEASE_GATE_NAME
+    write_json(release_gate_path, {
+        "schema": "dadooh.c18.ota.release_gate.v1",
+        "passed": True,
+        "package": {
+            "manifest": manifest_path.name,
+            "payload": payload_path.name,
+            "payload_sha256": payload_sha256,
+            "source_commit": manifest["source_commit"],
+            "component": manifest["component"],
+            "channel": manifest["channel"],
+        },
+    })
+    asset_hashes = {
+        "manifest": sha256_file(manifest_path),
+        "payload": payload_sha256,
+        "c18-ota-release-gate": sha256_file(release_gate_path),
+    }
+    audit_path = root / FIXTURE_AUDIT_LOG_NAME
+    audit_lines = [
+        json.dumps({
+            "event": event,
+            "actor": "c18-release-governance",
+            "at_utc": "2026-06-12T00:00:00Z",
+            "artifact_hashes": asset_hashes,
+        }, sort_keys=True)
+        for event in REQUIRED_AUDIT_EVENTS
+    ]
+    audit_path.write_text("\n".join(audit_lines) + "\n", encoding="utf-8")
+    asset_hashes["audit-log"] = sha256_file(audit_path)
+    expected_release_set_sha256 = release_set_sha256(asset_hashes)
+
+    data = valid_fixture(asset_hashes=asset_hashes)
+    data["release_assets"] = {
+        "manifest": manifest_path.name,
+        "payload": payload_path.name,
+        "release_gate": release_gate_path.name,
+        "audit_log": audit_path.name,
+    }
+    proof_files: dict[str, str] = {}
+    proof_hashes: dict[str, str] = {}
+    signature_hashes: dict[str, str] = {}
+    for asset in REQUIRED_SIGNED_OR_ATTESTED_ASSETS:
+        proof_files[asset] = f"signatures/{asset}.signature.json"
+        signature_rel = f"signatures/{asset}.sig"
+        proof = {
+            "schema": SIGNATURE_SCHEMA,
+            "subject_asset": asset,
+            "subject_sha256": asset_hashes[asset],
+            "release_set_sha256": expected_release_set_sha256,
+            "source_commit": manifest["source_commit"],
+            "component": manifest["component"],
+            "channel": manifest["channel"],
+            "created_at_utc": manifest["created_at_utc"],
+            "covers": list(REQUIRED_ATTESTATION_COVERS),
+            "signature_algorithm": SIGNATURE_ALGORITHM,
+            "trusted_key_sha256": public_key_sha256,
+            "signature_file": signature_rel,
+        }
+        signature_path = root / signature_rel
+        signature_path.parent.mkdir(parents=True, exist_ok=True)
+        sign_payload(private_key, canonical_json_bytes(signature_payload(proof)), signature_path)
+        proof_path = root / proof_files[asset]
+        write_json(proof_path, proof)
+        proof_hashes[asset] = sha256_bytes(canonical_json_bytes(proof))
+        signature_hashes[asset] = sha256_file(signature_path)
+    data["asset_attestations"] = [
+        {
+            "asset": asset,
+            "sha256": asset_hashes[asset],
+            "attestation_type": "signature",
+            "signer": "c18-release-governance",
+            "signature_sha256": signature_hashes[asset],
+            "proof_sha256": proof_hashes[asset],
+            "proof_file": proof_files[asset],
+            "covers": list(REQUIRED_ATTESTATION_COVERS),
+        }
+        for asset in REQUIRED_SIGNED_OR_ATTESTED_ASSETS
+    ]
+    evidence_path = root / SERVER_SIDE_EVIDENCE_FILENAME
+    write_json(evidence_path, data)
+    return evidence_path, public_key
+
+
 class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
     def test_complete_fixture_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -898,6 +1243,88 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("server_side_fixture_evidence_not_allowed", result["blockers"])
         self.assertIn("server_side_trusted_signature_verification_missing", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_passes_with_external_trusted_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path, public_key = write_signed_fixture_release(Path(tmp) / "release")
+            result = evaluate(path, trusted_key_pems=[public_key])
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_without_external_trusted_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path, _public_key = write_signed_fixture_release(Path(tmp) / "release")
+            result = evaluate(path)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_trusted_signature_verification_missing", result["blockers"])
+        self.assertIn("server_side_asset_signature_untrusted_key:payload", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_untrusted_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, _public_key = write_signed_fixture_release(root / "release")
+            other_private = root / "other-private.pem"
+            other_public = root / "other-public.pem"
+            run_openssl(["genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(other_private)])
+            run_openssl(["rsa", "-pubout", "-in", str(other_private), "-out", str(other_public)])
+            result = evaluate(path, trusted_key_pems=[other_public])
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_signature_untrusted_key:manifest", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_trusted_key_inside_release_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "release"
+            path, public_key = write_signed_fixture_release(root)
+            inside_key = root / public_key.name
+            shutil.copyfile(public_key, inside_key)
+            result = evaluate(path, trusted_key_pems=[inside_key])
+        self.assertFalse(result["passed"])
+        self.assertIn(f"server_side_trusted_key_inside_release_dir:{inside_key}", result["blockers"])
+        self.assertIn("server_side_asset_signature_untrusted_key:manifest", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_tampered_signature(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "release"
+            path, public_key = write_signed_fixture_release(root)
+            (root / "signatures" / "payload.sig").write_bytes(b"tampered")
+            result = evaluate(path, trusted_key_pems=[public_key])
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_signature_hash_mismatch:payload", result["blockers"])
+        self.assertIn("server_side_asset_signature_verify_failed:payload", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_tampered_release_set(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "release"
+            path, public_key = write_signed_fixture_release(root)
+            proof_path = root / "signatures" / "payload.signature.json"
+            proof = json.loads(proof_path.read_text(encoding="utf-8"))
+            proof["release_set_sha256"] = "0" * 64
+            write_json(proof_path, proof)
+            result = evaluate(path, trusted_key_pems=[public_key])
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_attestation_proof_release_set_sha256:payload", result["blockers"])
+        self.assertIn("server_side_asset_signature_proof_hash_mismatch:payload", result["blockers"])
+        self.assertIn("server_side_asset_signature_verify_failed:payload", result["blockers"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_signed_fixture_denies_tampered_proof_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "release"
+            path, public_key = write_signed_fixture_release(root)
+            proof_path = root / "signatures" / "payload.signature.json"
+            proof = json.loads(proof_path.read_text(encoding="utf-8"))
+            proof["channel"] = "stable"
+            write_json(proof_path, proof)
+            result = evaluate(path, trusted_key_pems=[public_key])
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_asset_attestation_proof_channel:payload", result["blockers"])
+        self.assertIn("server_side_asset_signature_proof_hash_mismatch:payload", result["blockers"])
+        self.assertIn("server_side_asset_signature_verify_failed:payload", result["blockers"])
 
     def test_missing_evidence_denies(self) -> None:
         result = evaluate(None)
@@ -1130,6 +1557,7 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate C18 server-side publish governance evidence.")
     parser.add_argument("--evidence", type=Path, default=None)
+    parser.add_argument("--trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
@@ -1141,7 +1569,7 @@ def main() -> int:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ServerSidePublishGovernanceGateSelfTest)
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
-    result = evaluate(args.evidence)
+    result = evaluate(args.evidence, trusted_key_pems=args.trusted_key_pem)
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     elif not result["passed"]:

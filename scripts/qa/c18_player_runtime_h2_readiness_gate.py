@@ -377,10 +377,17 @@ def evaluate_stable_promotion(path: Path | None, *, expected_hashes: dict[str, s
     )
 
 
-def evaluate_server_side(path: Path | None, *, allow_test_fixtures: bool = False) -> dict[str, Any]:
+def evaluate_server_side(path: Path | None,
+                         *,
+                         allow_test_fixtures: bool = False,
+                         trusted_key_pems: list[Path] | None = None) -> dict[str, Any]:
     if path is None:
         return step(False, ["missing_server_side_publish_governance"])
-    result = evaluate_server_side_gate(path, allow_test_fixtures=allow_test_fixtures)
+    result = evaluate_server_side_gate(
+        path,
+        allow_test_fixtures=allow_test_fixtures,
+        trusted_key_pems=trusted_key_pems,
+    )
     blockers = list(result.get("blockers", []))
     return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
 
@@ -415,6 +422,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "server_side_publish_governance": evaluate_server_side(
             args.server_side_evidence,
             allow_test_fixtures=allow_test_fixtures,
+            trusted_key_pems=getattr(args, "server_side_trusted_key_pem", []),
         ),
         "explicit_operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
     }
@@ -496,6 +504,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         expect_image_sha256="a" * 64,
         expect_image_marker_sha256="b" * 64,
         allow_test_fixtures=True,
+        server_side_trusted_key_pem=[],
     )
     hashes = stable_expected_hashes(args)
     write_json(stable, {
@@ -690,6 +699,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--soak-summary", type=Path, default=None)
     parser.add_argument("--stable-promotion-evidence", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
+    parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--operator-thaw-decision", type=Path, default=None)
     parser.add_argument("--expect-image-tag", default=None)
     parser.add_argument("--expect-image-sha256", default=None)
