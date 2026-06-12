@@ -406,6 +406,9 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
 - `scripts/qa/c18_server_side_publish_governance_gate.py` precisa validar a
   familia server-side/signature e trust anchor;
 - a matriz fisica power-loss precisa estar 17/17;
+- o runbook
+  `docs/evidence/c18-update-validation/20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e/`
+  pode orientar os 12 checkpoints pendentes, mas nao conta como evidencia;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;

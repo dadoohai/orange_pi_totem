@@ -72,6 +72,9 @@ PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player
 PLAYER_RUNTIME_POWERLOSS_MATRIX_PLAN_PATH = (
     REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_matrix_plan.py"
 )
+PLAYER_RUNTIME_POWERLOSS_OPERATOR_RUNBOOK_BUILD_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_operator_runbook_build.py"
+)
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
@@ -771,6 +774,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("piloto assistido", doc192_words)
         self.assertIn("semantica de validacao", doc192_words)
         self.assertIn("nao publica releases nem habilita auto-pull", doc192_words)
+        self.assertIn("20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e", doc192)
+        self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
         self.assertNotIn("Tratar `c18-hwdecode-lab-1m` como baseline", doc189)
@@ -2113,6 +2118,18 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertNotIn("stable_allowed", powerloss_plan)
         self.assertNotIn("public_cli_thawed", powerloss_plan)
 
+        powerloss_runbook = PLAYER_RUNTIME_POWERLOSS_OPERATOR_RUNBOOK_BUILD_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.powerloss_operator_runbook.v1", powerloss_runbook)
+        self.assertIn("this_runbook_is_not_powerloss_evidence", powerloss_runbook)
+        self.assertIn("this_runbook_does_not_claim_17_17", powerloss_runbook)
+        self.assertIn("this_runbook_does_not_execute_board_commands", powerloss_runbook)
+        self.assertIn("this_runbook_does_not_replace_physical_power_cut", powerloss_runbook)
+        self.assertIn("remote_reboot_is_not_acceptable_powerloss_evidence", powerloss_runbook)
+        self.assertIn("CUT_POWER_NOW", powerloss_runbook)
+        self.assertIn("pull-and-validate-evidence.sh", powerloss_runbook)
+        self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", powerloss_runbook)
+        self.assertIn("OperatorRunbookBuildSelfTest", powerloss_runbook)
+
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)
         self.assertIn("c18_player_runtime_m6_coldboot_trial.py", lab_thaw)
@@ -2322,6 +2339,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T101300Z-pilot-authorization-refresh",
             "20260612T101300Z-pilot-readiness-refresh-c16fb3e",
             "20260612T125127Z-server-side-governance-c16fb3e",
+            "20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",

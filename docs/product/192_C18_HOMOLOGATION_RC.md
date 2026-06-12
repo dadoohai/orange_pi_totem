@@ -127,6 +127,11 @@ dos 12 checkpoints restantes. O planner
 `docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/`
 registra a matriz atual como 5/17 coberta e 12/17 pendente, sem reivindicar
 evidencia fisica.
+O runbook operacional gerado em
+`docs/evidence/c18-update-validation/20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e/`
+organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
+de pull/validacao, mas tambem nao e evidencia fisica e nao substitui corte real
+de energia.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:
