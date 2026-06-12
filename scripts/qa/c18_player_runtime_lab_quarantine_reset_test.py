@@ -73,6 +73,28 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             else:
                 os.environ[reset.LAB_ENV] = old_lab
 
+    def write_setup_contention_evidence(self, root: Path, identity: dict) -> Path:
+        health_dir = root / "failed-candidate-health"
+        (health_dir / "health").mkdir(parents=True, exist_ok=True)
+        (health_dir / "candidate-health-result.json").write_text(json.dumps({
+            "schema": "dadooh.c18.playback.deep_health.v1",
+            "candidate_version": identity["version"],
+            "passed": False,
+            "failure_reasons": sorted(reset.SETUP_CONTENTION_FAILURE_REASONS),
+            "checks": {"service_active": True},
+            "counters": {"total_mpv_count": 2},
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        (health_dir / "health" / "deep-health-process.json").write_text(json.dumps({
+            "mpv_count": 1,
+            "total_mpv_count": 2,
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        (health_dir / "mpv.log").write_text(
+            "Failed to acquire DRM master: Permission denied\n"
+            "Error opening/initializing the selected video_out (--vo) device.\n",
+            encoding="utf-8",
+        )
+        return health_dir
+
     def test_guard_blocks_without_env_and_flag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -240,6 +262,61 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
             self.assertIn("public_cli_not_frozen_before_reset", result["blockers"])
             self.assertEqual(result["removed_count"], 0)
+
+    def test_setup_contention_retry_requires_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention-missing")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--reason", "unit-contention-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("setup_contention_evidence_missing", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_setup_contention_retry_removes_matching_quarantine_with_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_setup_contention_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-contention-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(entries, [])
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["removed_count"], 1)
+            self.assertEqual(result["setup_contention_evidence"]["total_mpv_count"], 2)
 
     def test_post_freeze_failure_reverts_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

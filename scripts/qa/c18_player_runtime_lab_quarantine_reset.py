@@ -36,8 +36,17 @@ RESET_SCOPES = {
     "p0_rollback_after_quarantine",
     "p0_rollback_after_state_success",
     "p0_isolation_reset",
+    "p0_setup_contention_retry",
 }
 ALLOWED_QUARANTINE_REASONS = {"physical_powerloss_trial"}
+SETUP_CONTENTION_SCOPE = "p0_setup_contention_retry"
+SETUP_CONTENTION_FAILURE_REASONS = {
+    "hwdec_expected_present",
+    "vo_configured_present",
+    "vo_configured_no_unexpected",
+    "estimated_frame_present",
+    "playback_progressed",
+}
 
 
 def path_is_under(path: Path, root: Path) -> bool:
@@ -166,12 +175,74 @@ def identity_matches_target(entry: dict[str, Any], identity: dict[str, Any]) -> 
     return payload_match or tree_match
 
 
-def quarantine_reason_allowed(entry: dict[str, Any]) -> bool:
-    return str(entry.get("reason") or "") in ALLOWED_QUARANTINE_REASONS
+def setup_contention_evidence(candidate_health_dir: Path | None, identity: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["setup_contention_evidence_missing"], details
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    process_path = candidate_health_dir / "health" / "deep-health-process.json"
+    mpv_log_path = candidate_health_dir / "mpv.log"
+    try:
+        result = read_json(result_path)
+    except Exception as exc:
+        return False, [f"setup_contention_result_read_failed:{type(exc).__name__}"], details
+    try:
+        process = read_json(process_path)
+    except Exception as exc:
+        return False, [f"setup_contention_process_read_failed:{type(exc).__name__}"], details
+    try:
+        mpv_log = mpv_log_path.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        return False, [f"setup_contention_mpv_log_read_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "total_mpv_count": counters.get("total_mpv_count"),
+        "process_total_mpv_count": process.get("total_mpv_count"),
+        "service_active": checks.get("service_active"),
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("setup_contention_candidate_version_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("setup_contention_result_not_failed")
+    if failures != SETUP_CONTENTION_FAILURE_REASONS:
+        blockers.append("setup_contention_failure_reasons_mismatch")
+    if int(counters.get("total_mpv_count") or 0) < 2 or int(process.get("total_mpv_count") or 0) < 2:
+        blockers.append("setup_contention_total_mpv_count")
+    if checks.get("service_active") is not True:
+        blockers.append("setup_contention_service_not_active")
+    if "Failed to acquire DRM master: Permission denied" not in mpv_log:
+        blockers.append("setup_contention_drm_master_marker_missing")
+    if "Error opening/initializing the selected video_out" not in mpv_log:
+        blockers.append("setup_contention_video_out_marker_missing")
+    return not blockers, blockers, details
 
 
-def matches_target(entry: dict[str, Any], identity: dict[str, Any]) -> bool:
-    return identity_matches_target(entry, identity) and quarantine_reason_allowed(entry)
+def quarantine_reason_allowed(entry: dict[str, Any],
+                              *,
+                              reset_scope: str,
+                              setup_contention_ok: bool) -> bool:
+    reason = str(entry.get("reason") or "")
+    if reset_scope == SETUP_CONTENTION_SCOPE:
+        return setup_contention_ok and set(reason.split(",")) == SETUP_CONTENTION_FAILURE_REASONS
+    return reason in ALLOWED_QUARANTINE_REASONS
+
+
+def matches_target(entry: dict[str, Any],
+                   identity: dict[str, Any],
+                   *,
+                   reset_scope: str,
+                   setup_contention_ok: bool) -> bool:
+    return identity_matches_target(entry, identity) and quarantine_reason_allowed(
+        entry,
+        reset_scope=reset_scope,
+        setup_contention_ok=setup_contention_ok,
+    )
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -183,6 +254,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--allow-device-data-root", action="store_true")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--reset-scope", choices=sorted(RESET_SCOPES), required=True)
+    parser.add_argument("--failed-candidate-health-dir", type=Path)
     parser.add_argument("--reason", required=True)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
@@ -249,6 +321,10 @@ def main(argv: list[str]) -> int:
     before_snapshot = runtime_snapshot()
     state = updatectl._read_state()
     before_quarantine = updatectl._quarantine_entries(state)
+    setup_ok, setup_blockers, setup_details = setup_contention_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == SETUP_CONTENTION_SCOPE else (False, [], {})
     target_link = f"releases/{identity.get('version')}"
     active_links = [
         name
@@ -259,8 +335,14 @@ def main(argv: list[str]) -> int:
         if link == target_link
     ]
     matching_entries = [entry for entry in before_quarantine if identity_matches_target(entry, identity)]
-    disallowed_entries = [entry for entry in matching_entries if not quarantine_reason_allowed(entry)]
-    removed = [entry for entry in matching_entries if quarantine_reason_allowed(entry)]
+    disallowed_entries = [
+        entry for entry in matching_entries
+        if not quarantine_reason_allowed(entry, reset_scope=args.reset_scope, setup_contention_ok=setup_ok)
+    ]
+    removed = [
+        entry for entry in matching_entries
+        if quarantine_reason_allowed(entry, reset_scope=args.reset_scope, setup_contention_ok=setup_ok)
+    ]
     blockers: list[str] = []
     if not all(item["frozen"] for item in public_before.values()):
         blockers.append("public_cli_not_frozen_before_reset")
@@ -270,6 +352,7 @@ def main(argv: list[str]) -> int:
         blockers.append("target_quarantine_reason_not_allowed")
     if not matching_entries:
         blockers.append("target_quarantine_not_found")
+    blockers.extend(setup_blockers)
     if blockers:
         still_quarantined, quarantine_reason = updatectl._player_runtime_is_quarantined(identity, state)
         after_snapshot = runtime_snapshot()
@@ -287,6 +370,7 @@ def main(argv: list[str]) -> int:
             "removed_entries": [],
             "matching_disallowed_entries": disallowed_entries,
             "active_links": active_links,
+            "setup_contention_evidence": setup_details,
             "still_quarantined": still_quarantined,
             "quarantine_reason": quarantine_reason,
             "links_unchanged": (
@@ -395,6 +479,7 @@ def main(argv: list[str]) -> int:
         "removed_entries": removed,
         "matching_disallowed_entries": [],
         "active_links": active_links,
+        "setup_contention_evidence": setup_details,
         "reverted": reverted,
         "still_quarantined": still_quarantined,
         "quarantine_reason": quarantine_reason,
