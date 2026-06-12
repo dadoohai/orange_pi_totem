@@ -2229,6 +2229,50 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("c18_player_runtime_evidence_gate.py", update_auth)
         self.assertIn("abort-cleanup.json", update_auth)
         self.assertIn("boot reconcile nao", update_auth)
+        update_auth_words = " ".join(update_auth.split())
+        self.assertIn(
+            "C18 Homologation RC esta pronta para piloto assistido, nao para producao.",
+            update_auth_words,
+        )
+        self.assertIn(
+            "O piloto controlado autoriza somente entrega assistida por operador, "
+            "com rollback pronto, allowlist de devices, preflight de placa, "
+            "H1 decisivo image-bound e P0 power-loss seletivo.",
+            update_auth_words,
+        )
+        self.assertIn(
+            "Ele nao autoriza producao, `stable`, auto-pull, thaw publico, "
+            "soak 24h, power-loss 17/17 nem pular H2.",
+            update_auth_words,
+        )
+        self.assertIn("- `totem-core`: `releases/core-updates`;", update_auth)
+        self.assertIn("- `player-runtime`: `releases/player-runtime`;", update_auth)
+        self.assertIn("- `releases/totem-core`: nao canonico para C18;", update_auth)
+        self.assertIn(
+            "- `releases/app-updates`: historico C14/kiosky, nao usar como C18 corrente.",
+            update_auth,
+        )
+        for token in (
+            "C18 Homologation RC",
+            "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+            "20260612T040055Z-pilot-readiness-final-c16fb3e",
+            "20260612T125127Z-server-side-governance-c16fb3e",
+            "channel=homologation",
+            "ring=pilot",
+            "c18_player_runtime_pilot_readiness_gate.py",
+            "c18_player_runtime_h2_readiness_gate.py",
+            "c18_stable_promotion_gate.py",
+            "c18_player_runtime_thaw_decision_gate.py",
+            "c18_server_side_publish_governance_gate.py",
+            "dadooh.c18.player_runtime.thaw_decision.v1",
+            "server-side/signature",
+            "power-loss 17/17",
+            "soak 24h",
+            "stable promotion",
+            "decisao formal de thaw",
+        ):
+            self.assertIn(token, update_auth)
+        self.assertNotIn("so imagem ou thaw lab explicito", update_auth)
 
     def test_m6_trial_accepts_clean_repo_identity_file(self) -> None:
         spec = importlib.util.spec_from_file_location("c18_m6_trial_policy_test", PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH)

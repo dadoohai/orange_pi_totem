@@ -5,12 +5,38 @@ acidental para update inseguro. Em caso de divergencia, o contrato vigente esta
 em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 `docs/product/189_C18_OTA_READINESS_GATE.md`.
 
+## Estado Operacional Vigente (2026-06-12)
+
+C18 Homologation RC esta pronta para piloto assistido, nao para producao. O
+alvo corrente e
+`c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, em
+`channel=homologation` e `ring=pilot`, com evidencia final em
+`docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/`.
+
+O piloto controlado autoriza somente entrega assistida por operador, com
+rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
+image-bound e P0 power-loss seletivo. Ele nao autoriza producao, `stable`,
+auto-pull, thaw publico, soak 24h, power-loss 17/17 nem pular H2.
+
+A familia server-side/signature do alvo `c16fb3e` tambem esta gateada no host,
+sem publicar release e sem habilitar auto-pull, em
+`docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`.
+Depois disso, H2/stable/producao continuam bloqueados por quatro itens:
+power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw.
+
+Roots canonicos de artefato:
+
+- `totem-core`: `releases/core-updates`;
+- `player-runtime`: `releases/player-runtime`;
+- `releases/totem-core`: nao canonico para C18;
+- `releases/app-updates`: historico C14/kiosky, nao usar como C18 corrente.
+
 ## Modelo De Classes
 
 | Classe | Inclui | Caminho de update |
 | --- | --- | --- |
 | `totem-core` | wizard, splash, status, writer, validadores, helpers de Wi-Fi/config, settings | OTA C18 manual, operador presente |
-| `player-runtime` | `kiosk.py`, launchers do player, logica de start, flags de MPV, timing/sync/duracao/playlist | congelado no fluxo publico; so imagem ou thaw lab explicito |
+| `player-runtime` | `kiosk.py`, launchers do player, logica de start, flags de MPV, timing/sync/duracao/playlist | piloto assistido `channel=homologation`/`ring=pilot` via gate; thaw publico somente H2/stable futuro |
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot, BSP | nova imagem + homologacao |
 | `field-data` | config real, seed, midia, cache, playlist, estado local | fluxo operacional em `/data`; nao e release de software |
 
@@ -66,7 +92,10 @@ descongelar `player-runtime`.
 
 Para stable, a autorizacao humana precisa vir junto de evidencia JSON aprovada
 `dadooh.c18.stable_promotion.v1` e do bypass controlado
-`ALLOW_C18_STABLE_PROMOTION=1`. Isso nao substitui homologacao fisica.
+`ALLOW_C18_STABLE_PROMOTION=1`. Para `player-runtime`, tambem precisa da
+decisao formal `dadooh.c18.player_runtime.thaw_decision.v1`, validada por
+`scripts/qa/c18_player_runtime_thaw_decision_gate.py`, alem de H2 readiness.
+Isso nao substitui homologacao fisica.
 
 ## Health, Deep-Health E Soak
 
@@ -240,6 +269,23 @@ Baseline de laboratorio/delivery registrado em 2026-06-08:
 
 ## Gates Antes De Thaw Do Player-Runtime
 
+Antes de piloto homologation assistido:
+
+- `scripts/qa/c18_player_runtime_pilot_readiness_gate.py` precisa passar sobre
+  o pacote real e a evidencia commitada;
+- a autorizacao formal precisa declarar `ring=pilot`, `channel=homologation`,
+  operador, janela, rollback owner e devices allowlisted por hash/sanitizados;
+- o preflight da placa precisa provar policy `homologation`,
+  `allow_prerelease=true`, timer off, public freeze `rc=44` e marcador/imagem
+  esperados;
+- o gate precisa carregar non-claims explicitos: sem producao, sem `stable`,
+  sem auto-pull, sem soak 24h, sem power-loss 17/17, sem assinatura/attestation
+  como requisito do piloto e sem thaw publico;
+- o P0 seletivo aceito para piloto e: `after_current_symlink`,
+  `rollback_after_current_to_previous`, `rollback_after_previous_removed`,
+  `rollback_after_quarantine` e `rollback_after_state_success`;
+- o resto da matriz power-loss permanece H2/producao.
+
 Antes de qualquer thaw de laboratorio:
 
 - `scripts/qa/c18_player_runtime_release_gate.py` precisa passar no pacote real;
@@ -342,6 +388,18 @@ Os gates que ainda ficam para homologacao/producao sao
 interrupcao/power-loss fisico, soak/endurance, publish/server-side governado e
 decisao explicita de promocao sem `stable` nem auto-pull.
 
+Antes de thaw publico, stable ou producao de `player-runtime`:
+
+- `scripts/qa/c18_player_runtime_h2_readiness_gate.py` precisa passar;
+- `scripts/qa/c18_stable_promotion_gate.py` precisa validar a promocao stable;
+- `scripts/qa/c18_player_runtime_thaw_decision_gate.py` precisa validar a
+  decisao formal de thaw;
+- `scripts/qa/c18_server_side_publish_governance_gate.py` precisa validar a
+  familia server-side/signature e trust anchor;
+- a matriz fisica power-loss precisa estar 17/17;
+- o soak precisa ter no minimo 24h;
+- nada disso publica release, liga auto-pull ou remove `rc=44` por si so.
+
 A imagem `1t` ja embarca e valida em cold-boot do baseline/fallback:
 
 - `RequiresMountsFor=/data` no drop-in do `kiosky-player.service`, para o
@@ -426,11 +484,16 @@ Antes de qualquer stable ou batch:
 - homologacao fisica na placa-alvo;
 - policy stable com `allow_prerelease=false`;
 - evidencia `dadooh.c18.stable_promotion.v1` aprovada;
+- para `player-runtime`, evidencia
+  `dadooh.c18.player_runtime.thaw_decision.v1` aprovada;
+- H2 readiness verde, incluindo server-side/signature, trust anchor,
+  power-loss 17/17, soak 24h e decisao formal de thaw;
 - rollback testado e documentado;
 - deep-health aprovado apos update;
 - soak de endurance aprovado quando a mudanca tocar player/runtime/imagem;
 - decisao humana explicita sobre imagem final;
 - auditoria de privacidade das evidencias.
 
-CI, assinatura/attestation, bridge de updater, A/B de imagem e auto-pull sao
-hardening futuro. Nao assumir que existem na linha C18 atual.
+CI ampliado, bridge de updater, A/B de imagem e auto-pull sao hardening futuro.
+Assinatura/attestation ja e requisito H2/server-side para producao, mas nao e
+requisito do piloto manual imediato.
