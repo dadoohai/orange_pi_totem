@@ -30,7 +30,7 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 | `totem-core` | OTA C18 comum: wizard, splash, status, writer, validadores, helpers e settings | Funcional como OTA manual/operator-triggered; policy, timer, freeze, downgrade, rollback e allowlist de payload cobertos no gate e no device-side |
 | `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Funcional somente como piloto assistido em `homologation`; payload C18-aware restrito a `kiosk.py`; nao e public thaw |
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; guardrails executaveis bloqueiam vazamento para OTA comum; qualquer mudanca exige imagem/homologacao propria |
-| `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software; snapshot publico C18/C7 coleta apenas estado sanitizado e metadados |
+| `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software; snapshot publico C18/C7 coleta apenas estado sanitizado e metadados, com evidencia read-only em placa |
 
 ## Roots canonicos de artefatos
 
@@ -64,6 +64,13 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC:
   `docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/pilot-readiness-final.json`.
+- diagnostico read-only de placa:
+  `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`;
+  esta evidencia registra appliance `player_running`, `privacy_scan=ok`,
+  config content nao lido e display `unknown` porque o sysfs da placa tem HDMI
+  `connected`/`enabled` com modos, mas sem `mode` observavel. Ela nao e
+  deep-health, power-loss, soak, H2, stable, producao, publish, auto-pull ou
+  thaw.
 
 P0 power-loss seletivo contado para piloto:
 

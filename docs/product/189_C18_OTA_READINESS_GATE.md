@@ -30,6 +30,7 @@ golden atual `1u`.
 | Evidencia 1u | offline `20260608T024500Z-1u-offline-build`, cold-boot HW `20260608T035330Z-1u-coldboot-deep-health` |
 | Power-loss fisico | P0 seletivo do pacote `c16fb3e` esta completo para piloto com 5/17 (`after_current_symlink`, `rollback_after_current_to_previous`, `rollback_after_previous_removed`, `rollback_after_quarantine`, `rollback_after_state_success`); planner H2 `20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e` registra os 12 checkpoints restantes sem reivindicar evidencia |
 | Server-side/signature | Familia atual do pacote `c16fb3e` esta verde em `20260612T125127Z-server-side-governance-c16fb3e`; gate offline valida artefatos reais, assinaturas/trust-anchor, audit log, auto-pull off, allowlist/staged rollout e component binding, sem publicar release |
+| Diagnostico operacional | Snapshot publico C18/C7 de `field-data` e coletor read-only de display/player estao gateados no repo; evidencia de placa `20260612T183722Z-board-readonly-diagnostics-17a1f9d` mostra appliance `player_running`, `privacy_scan=ok`, config content nao lido, e display `unknown` por sysfs sem `mode` observavel |
 | Proximo gate H2 | checkpoints restantes de power-loss/torn-write, soak/endurance, promocao stable e decisao final antes de qualquer caminho `stable`/producao |
 | Ainda nao provado | public thaw, GitHub/auto-pull, `stable`, producao, matriz completa de power-loss fisico e soak/endurance |
 

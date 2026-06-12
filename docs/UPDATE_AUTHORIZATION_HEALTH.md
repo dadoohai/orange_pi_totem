@@ -29,6 +29,13 @@ O inventario versionavel dos assets server-side desse pacote esta em
 `docs/evidence/c18-update-validation/20260612T172602Z-server-side-asset-list-c16fb3e/`,
 com paths repo-relative, bytes e SHA256; ele tambem nao publica, nao promove
 `stable` e nao abre thaw.
+O diagnostico operacional read-only tambem esta versionado em
+`docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`:
+appliance `player_running`, playback `playing`, `privacy_scan=ok`, config
+content nao lido e display `unknown` por HDMI `connected`/`enabled` com modos,
+mas sem arquivo `mode` observavel no sysfs da placa. Essa evidencia ajuda
+suporte/homologacao, mas nao substitui deep-health, power-loss, soak, H2,
+`stable`, producao, publish, auto-pull ou thaw.
 Depois disso, H2/stable/producao continuam bloqueados por quatro itens:
 power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw.
 
