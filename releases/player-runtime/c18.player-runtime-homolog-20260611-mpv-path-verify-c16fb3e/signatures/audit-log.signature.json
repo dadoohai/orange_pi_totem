@@ -1,0 +1,21 @@
+{
+  "channel": "homologation",
+  "component": "player-runtime",
+  "covers": [
+    "asset_sha256",
+    "release_set_sha256",
+    "source_commit",
+    "component",
+    "channel",
+    "created_at_utc"
+  ],
+  "created_at_utc": "2026-06-11T10:32:57Z",
+  "release_set_sha256": "66356f6e308a45bf61b307bbc8aedff95317924f4c45510d967727e42b296606",
+  "schema": "dadooh.c18.asset_signature.v1",
+  "signature_algorithm": "openssl-dgst-sha256-rsa-pkcs1-v1_5",
+  "signature_file": "signatures/audit-log.sig",
+  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "subject_asset": "audit-log",
+  "subject_sha256": "6ff729caf695fb2a5f523d162fbf8b18c831d6aa9f81f346927abb1037a6bd64",
+  "trusted_key_sha256": "bb274a52582a98c2b23b4d4f7aac21186e92c19f2c5d964e67d107f83566c249"
+}

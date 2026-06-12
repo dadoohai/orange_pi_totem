@@ -1,0 +1,208 @@
+{
+  "allowlist_controls_defined": true,
+  "allowlist_policy": {
+    "default_deny": true,
+    "device_identity": "sha256",
+    "empty_allowlist_blocks": true,
+    "operator_window_required": true,
+    "raw_device_ids_persisted": false,
+    "required_for_channels": [
+      "homologation",
+      "stable"
+    ]
+  },
+  "asset_attestations": [
+    {
+      "asset": "manifest",
+      "attestation_type": "signature",
+      "covers": [
+        "asset_sha256",
+        "release_set_sha256",
+        "source_commit",
+        "component",
+        "channel",
+        "created_at_utc"
+      ],
+      "proof_file": "signatures/manifest.signature.json",
+      "proof_sha256": "95da57502d8ac30b57cdcdab18bfdfdce4cf0d0b13f1349da03a1a0ae2025d89",
+      "sha256": "6941bb84b355fb1f08a9c1725190c332f54bce0dfb61034c2ff386788ebe1895",
+      "signature_sha256": "b2be3c9921220b960b0ce5069dae5118f02055077225ef1f430b92f85b18b5dc",
+      "signer": "c18-release-governance"
+    },
+    {
+      "asset": "payload",
+      "attestation_type": "signature",
+      "covers": [
+        "asset_sha256",
+        "release_set_sha256",
+        "source_commit",
+        "component",
+        "channel",
+        "created_at_utc"
+      ],
+      "proof_file": "signatures/payload.signature.json",
+      "proof_sha256": "8a063d87f8dbaa91cecf5248089df6ccb1d96db22cf13b617909247fc4a6db12",
+      "sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+      "signature_sha256": "0bdf0c469b37b351e59bd1affe2c285bee1fb02a573f76bc263978a402b1593c",
+      "signer": "c18-release-governance"
+    },
+    {
+      "asset": "c18-ota-release-gate",
+      "attestation_type": "signature",
+      "covers": [
+        "asset_sha256",
+        "release_set_sha256",
+        "source_commit",
+        "component",
+        "channel",
+        "created_at_utc"
+      ],
+      "proof_file": "signatures/c18-ota-release-gate.signature.json",
+      "proof_sha256": "83e29dcf489db05b8624039275e36b60a05cf9c092eaaebeb466e131927130a9",
+      "sha256": "c315841cb517c544a454475e841ce56048d5211dbe1b310733fd0840f72fffc3",
+      "signature_sha256": "756afeb08f3d5432e0c8a7de22428a59f520b7fe3e3a61e384da02709b54d48c",
+      "signer": "c18-release-governance"
+    },
+    {
+      "asset": "audit-log",
+      "attestation_type": "signature",
+      "covers": [
+        "asset_sha256",
+        "release_set_sha256",
+        "source_commit",
+        "component",
+        "channel",
+        "created_at_utc"
+      ],
+      "proof_file": "signatures/audit-log.signature.json",
+      "proof_sha256": "3efbf86aab7b19a40be3483c90c3600973c78b2b66852ae030de45b901aacc40",
+      "sha256": "6ff729caf695fb2a5f523d162fbf8b18c831d6aa9f81f346927abb1037a6bd64",
+      "signature_sha256": "76ee761f8bb56d07f58803afb15b2d65e9a2e6c6803474cb4d65ec7229d0b7c3",
+      "signer": "c18-release-governance"
+    }
+  ],
+  "audit_trail": {
+    "actor_recorded": true,
+    "append_only": true,
+    "artifact_hashes_recorded": true,
+    "required_events": [
+      "release_created",
+      "asset_attested",
+      "channel_selected",
+      "allowlist_evaluated",
+      "rollout_stage_changed",
+      "rollback_triggered",
+      "stable_promoted"
+    ],
+    "secret_redaction_required": true,
+    "timestamp_recorded": true
+  },
+  "audit_trail_defined": true,
+  "auto_pull_default_disabled": true,
+  "auto_pull_enabled": false,
+  "auto_pull_policy": {
+    "default_disabled": true,
+    "default_enabled": false,
+    "defined": true,
+    "enable_requires": [
+      "stable_promotion",
+      "signature_or_attestation",
+      "allowlist_match",
+      "staged_rollout_active",
+      "operator_rollback_owner"
+    ],
+    "enabled": false
+  },
+  "auto_pull_policy_defined": true,
+  "channel_governance_defined": true,
+  "channel_inheritance_allowed": false,
+  "channel_policy": {
+    "allowed_channels": [
+      "lab",
+      "homologation",
+      "stable"
+    ],
+    "channel_inheritance_allowed": false,
+    "homologation_requires_prerelease": true,
+    "lab_is_internal_only": true,
+    "stable_requires_promotion": true,
+    "unknown_channel_denied": true
+  },
+  "channels": [
+    "lab",
+    "homologation",
+    "stable"
+  ],
+  "component_policy": {
+    "allowed_components": [
+      "totem-core",
+      "player-runtime"
+    ],
+    "component_inheritance_allowed": false,
+    "exact_scope_required": true,
+    "forbidden_components": [
+      "kiosky-player",
+      "media-system",
+      "field-data"
+    ]
+  },
+  "component_scope": [
+    "totem-core",
+    "player-runtime"
+  ],
+  "forbidden_component_scopes": [
+    "kiosky-player",
+    "media-system",
+    "field-data"
+  ],
+  "public_player_runtime_thaw_requires_h2": true,
+  "publish_gate": {
+    "base_ref_required": true,
+    "dirty_repo_denied": true,
+    "evidence_asset": "c18-ota-release-gate",
+    "package_assets_bound": true,
+    "passed_required": true,
+    "required": true,
+    "tool": "scripts/qa/c18_player_runtime_release_gate.py"
+  },
+  "publish_gate_enforced": true,
+  "release_assets": {
+    "audit_log": "audit-log.ndjson",
+    "manifest": "dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+    "payload": "dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+    "release_gate": "c18-player-runtime-release-gate.json"
+  },
+  "release_assets_verified": true,
+  "rollback_policy": {
+    "image_fallback_documented": true,
+    "previous_release_preserved": true,
+    "quarantine_supported": true,
+    "rollback_audit_required": true,
+    "rollback_owner_required": true
+  },
+  "rollback_policy_defined": true,
+  "schema": "dadooh.c18.server_side_publish_governance.v1",
+  "signature_or_attestation_present": true,
+  "signed_or_attested_assets": [
+    "manifest",
+    "payload",
+    "c18-ota-release-gate",
+    "audit-log"
+  ],
+  "stable_requires_promotion": true,
+  "staged_rollout_defined": true,
+  "staged_rollout_policy": {
+    "audit_before_advance": true,
+    "default_paused": true,
+    "initial_percentage": 0,
+    "manual_advance_required": true,
+    "rollback_on_health_failure": true,
+    "stages": [
+      "operator_canary",
+      "pilot_allowlist",
+      "stable_canary",
+      "stable_batch"
+    ]
+  },
+  "test_fixture": false
+}
