@@ -77,6 +77,7 @@ SERVER_SIDE_EVIDENCE_FILENAME = "c18-server-side-publish-governance.json"
 FIXTURE_MANIFEST_NAME = "dadooh-totem-core-server-fixture.manifest.json"
 FIXTURE_PAYLOAD_NAME = "dadooh-totem-core-server-fixture.tar.gz"
 FIXTURE_RELEASE_GATE_NAME = "c18-ota-release-gate.json"
+PLAYER_RUNTIME_FIXTURE_RELEASE_GATE_NAME = "c18-player-runtime-release-gate.json"
 FIXTURE_AUDIT_LOG_NAME = "audit-log.ndjson"
 SIGNED_FIXTURE_MANIFEST_NAME = "dadooh-totem-core-signed-release.manifest.json"
 SIGNED_FIXTURE_PAYLOAD_NAME = "dadooh-totem-core-signed-release.tar.gz"
@@ -1197,7 +1198,10 @@ def valid_fixture(*,
     }
 
 
-def write_fixture_release(root: Path, *, component: str = "totem-core") -> Path:
+def write_fixture_release(root: Path,
+                          *,
+                          component: str = "totem-core",
+                          release_gate_name: str = FIXTURE_RELEASE_GATE_NAME) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     payload_path = root / FIXTURE_PAYLOAD_NAME
     payload_path.write_bytes(b"C18 server-side governance fixture payload\n")
@@ -1226,7 +1230,7 @@ def write_fixture_release(root: Path, *, component: str = "totem-core") -> Path:
             "channel": manifest["channel"],
         },
     }
-    release_gate_path = root / FIXTURE_RELEASE_GATE_NAME
+    release_gate_path = root / release_gate_name
     write_json(release_gate_path, release_gate)
     asset_hashes = {
         "manifest": sha256_file(manifest_path),
@@ -1273,6 +1277,7 @@ def write_fixture_release(root: Path, *, component: str = "totem-core") -> Path:
         proof_files=proof_files,
         test_fixture=True,
     )
+    data["release_assets"]["release_gate"] = release_gate_path.name
     evidence_path = root / SERVER_SIDE_EVIDENCE_FILENAME
     write_json(evidence_path, data)
     return evidence_path
@@ -1450,6 +1455,35 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
             result = evaluate(write_fixture_release(Path(tmp)), allow_test_fixtures=True)
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
         self.assertIn("this_gate_does_not_enable_auto_pull", result["non_claims"])
+
+    def test_player_runtime_release_gate_filename_passes_as_logical_release_gate_asset(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = evaluate(
+                write_fixture_release(
+                    Path(tmp),
+                    component="player-runtime",
+                    release_gate_name=PLAYER_RUNTIME_FIXTURE_RELEASE_GATE_NAME,
+                ),
+                expected_component="player-runtime",
+                allow_test_fixtures=True,
+            )
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_player_runtime_release_gate_filename_missing_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence_path = write_fixture_release(
+                Path(tmp),
+                component="player-runtime",
+                release_gate_name=PLAYER_RUNTIME_FIXTURE_RELEASE_GATE_NAME,
+            )
+            (Path(tmp) / PLAYER_RUNTIME_FIXTURE_RELEASE_GATE_NAME).unlink()
+            result = evaluate(
+                evidence_path,
+                expected_component="player-runtime",
+                allow_test_fixtures=True,
+            )
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_release_asset_missing:c18-ota-release-gate", result["blockers"])
 
     def test_fixture_denies_outside_self_test_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

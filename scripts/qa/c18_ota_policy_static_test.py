@@ -1295,6 +1295,34 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         gate = (REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_release_gate.py").read_text(encoding="utf-8")
         self.assertIn("player-runtime stable releases are blocked", gate)
 
+    def test_current_player_runtime_homologation_release_preserves_release_gate_artifact(self) -> None:
+        release_dir = (
+            REPO_ROOT
+            / "releases"
+            / "player-runtime"
+            / "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+        )
+        manifest_path = (
+            release_dir
+            / "dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json"
+        )
+        payload_path = (
+            release_dir
+            / "dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz"
+        )
+        release_gate_path = release_dir / "c18-player-runtime-release-gate.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        release_gate = json.loads(release_gate_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(release_gate["schema"], "dadooh.c18.player_runtime.release_gate.v1")
+        self.assertTrue(release_gate["passed"])
+        self.assertEqual(release_gate["package"]["component"], "player-runtime")
+        self.assertEqual(release_gate["package"]["channel"], "homologation")
+        self.assertEqual(release_gate["package"]["manifest"], manifest_path.name)
+        self.assertEqual(release_gate["package"]["payload"], payload_path.name)
+        self.assertEqual(release_gate["package"]["payload_sha256"], hashlib.sha256(payload_path.read_bytes()).hexdigest())
+        self.assertEqual(release_gate["package"]["source_commit"], manifest["source_commit"])
+
     def test_legacy_c14_remote_scripts_are_guarded_as_bypass(self) -> None:
         for path in LEGACY_C14_REMOTE_SCRIPTS:
             script = path.read_text(encoding="utf-8")

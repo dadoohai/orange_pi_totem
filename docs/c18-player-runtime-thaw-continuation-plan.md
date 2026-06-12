@@ -237,7 +237,11 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 - player-runtime build artifact traceability: the local builder preserves
   `c18-player-runtime-release-gate.json` beside payload/manifest after validating
   the gate is green, so a future server-side publish/signature run has a real
-  release-gate artifact to bind.
+  release-gate artifact to bind. The current homologation release
+  `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e` also carries a
+  backfilled `c18-player-runtime-release-gate.json` generated from its existing
+  manifest/payload. This is release-gate traceability only; it is not
+  server-side publish/signature evidence.
 - server-side publish governance gate / signature / auto-pull hardening:
   `scripts/qa/c18_server_side_publish_governance_gate.py` valida a evidencia
   `dadooh.c18.server_side_publish_governance.v1` antes do H2 consumi-la; ela
@@ -267,7 +271,7 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados; release gate geral verde na RC; payload protegido por allowlist exata no gate e no device-side antes de extrair/promover | Hardening de producao/stable quando a frente H2 for aberta |
-| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde; payload C18-aware restrito a `kiosk.py` no gate; builder local preserva release-gate JSON junto de payload/manifest para auditoria futura | H2/prod: matriz power-loss 17/17, soak 24h, server-side publish/signature, stable promotion e decisao explicita de thaw |
+| player-runtime | Homologation RC pronta para piloto assistido: pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, `channel=homologation`, `ring=pilot`, H1 decisivo `1x`, apply/observacao/rollback-ready, freeze publico `rc=44`, P0 power-loss seletivo completo e pilot gate verde; payload C18-aware restrito a `kiosk.py` no gate; builder local preserva release-gate JSON junto de payload/manifest e o release atual recebeu backfill auditavel desse JSON | H2/prod: matriz power-loss 17/17, soak 24h, server-side publish/signature, stable promotion e decisao explicita de thaw |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44); build/publish historicos seguem bloqueados por padrao e, mesmo com bypass lab, recusam media/cache/config/data/secrets, systemd, `/opt`, MPV/ffmpeg e modulos | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo de release atual, mas agora protegidos por guardrails executaveis na matriz de responsabilidade, no gate de `player-runtime`, nos scripts legados e na allowlist device-side de `totem-core` | Trazer ao padrão de evidência quando forem priorizados como frente propria |
 | server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test | Evidencia real de publish/signature com trust anchor operacional a ser produzida antes do H2 |
