@@ -181,7 +181,8 @@ def build_player_runtime_package(sandbox: Path, version: str, marker: str = "") 
     stage.mkdir(parents=True, exist_ok=True)
     shutil.copy2(SNAPSHOT_KIOSK, stage / "kiosk.py")
     if marker:
-        (stage / "VERSION").write_text(marker + "\n", encoding="utf-8")
+        with (stage / "kiosk.py").open("a", encoding="utf-8") as fh:
+            fh.write(f"\n# c18_player_runtime_sandbox_marker={marker}\n")
     payload = package_dir / f"dadooh-{COMPONENT}-{version}.tar.gz"
     with tarfile.open(payload, "w:gz") as tf:
         for path in sorted(stage.rglob("*")):
