@@ -1,0 +1,63 @@
+{
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "operation": {
+    "action": "rollback",
+    "after": {
+      "current_exists": true,
+      "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "last_operation": {
+        "finished_at_utc": "2026-06-12T00:21:20Z",
+        "quarantined_current": false,
+        "rollback_reason": "p0_rollback_after_current_to_previous_setup_reset",
+        "rolled_back_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+        "started_at_utc": "2026-06-12T00:21:20Z",
+        "status": "success",
+        "type": "rollback"
+      },
+      "previous_exists": true,
+      "previous_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+      "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "state_previous_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "before": {
+      "current_exists": true,
+      "current_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+      "last_operation": {
+        "finished_at_utc": "2026-06-12T00:12:53Z",
+        "reason": "physical_powerloss_trial_resume",
+        "started_at_utc": "2026-06-12T00:12:53Z",
+        "status": "current_verified",
+        "type": "reconcile",
+        "verified": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+      },
+      "previous_exists": true,
+      "previous_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "state_current_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+      "state_previous_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "expected_rolled_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "quarantine_current": false,
+    "rc": 0,
+    "result": "ok",
+    "rolled_back_to": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+  },
+  "output_dir": "/data/c18-evidence/p0-c16fb3e-rollback_after_current_to_previous/setup/reset-rollback",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "schema": "dadooh.c18.player_runtime.lab_rollback.v1"
+}

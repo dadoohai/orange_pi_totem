@@ -1,0 +1,32 @@
+{
+  "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "last_lab_remediation": {
+    "reason": "linked_previous_health_failure_should_not_quarantine_verified_previous",
+    "remediated_at_utc": "2026-06-12T00:27:46Z",
+    "removed_count": 1,
+    "target_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "type": "remove_linked_previous_lab_reapply_quarantine"
+  },
+  "non_claims": [
+    "pilot_powerloss_checkpoint",
+    "production_or_stable",
+    "public_thaw"
+  ],
+  "passed": true,
+  "previous_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "remaining_quarantine_count": 1,
+  "removed": [
+    {
+      "kiosk_py_sha256": "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c",
+      "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+      "quarantined_at_utc": "2026-06-12T00:22:25Z",
+      "reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "tree_sha256": "64bc45403c557d5cddfedaa8d1ee58f8ed2ccbe35cff2154de25d37a46b2ff71",
+      "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    }
+  ],
+  "schema": "dadooh.c18.player_runtime.lab_remediation.v1",
+  "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "state_previous_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "target_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+}

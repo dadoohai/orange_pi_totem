@@ -1,0 +1,4 @@
+checkpoint=rollback_after_current_to_previous
+initial_current=c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e
+initial_previous=c18.player-runtime-m6-a2-20260610T072826Z-29ff33b
+harness_head=c4369b7
