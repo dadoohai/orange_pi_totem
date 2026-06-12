@@ -1,0 +1,38 @@
+{
+  "blockers": [],
+  "channel": "homologation",
+  "collected_at_utc": "2026-06-12T19:55:16Z",
+  "files": [
+    {
+      "bytes": 835,
+      "file": "README.md",
+      "sha256": "b831c43fae0749e68a01cd23fe6609dba2df824f27e3439ddb3d37a09fcc3ccf"
+    },
+    {
+      "bytes": 7197,
+      "file": "pilot-readiness.json",
+      "sha256": "af8eb311a69ecdeef06740adb0de7f9b25911ef8753a93bd3413c07406ad2894"
+    }
+  ],
+  "key_checks": {
+    "board_preflight": true,
+    "h1_decisive_bundle": true,
+    "pilot_authorization": true,
+    "pilot_powerloss_p0": true,
+    "repo_clean": true,
+    "tracked_inputs": true
+  },
+  "non_claims": [
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_require_or_claim_signature_attestation",
+    "this_gate_does_not_thaw_public_player_runtime"
+  ],
+  "passed": true,
+  "result_claim": "homologation_pilot_ready",
+  "ring": "pilot",
+  "schema": "dadooh.c18.pilot_readiness_traceability_refresh.v1"
+}
