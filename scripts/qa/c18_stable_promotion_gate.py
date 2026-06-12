@@ -32,6 +32,12 @@ SCHEMA = "dadooh.c18.stable_promotion.v1"
 GATE_SCHEMA = "dadooh.c18.stable_promotion_gate.v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
+PLAYER_RUNTIME_RELEASE_GATE_SCHEMA = "dadooh.c18.player_runtime.release_gate.v1"
+STABLE_PROMOTION_COMPONENTS = ("totem-core", "player-runtime")
+RELEASE_GATE_SCHEMA_BY_COMPONENT = {
+    "totem-core": RELEASE_GATE_SCHEMA,
+    "player-runtime": PLAYER_RUNTIME_RELEASE_GATE_SCHEMA,
+}
 SOAK_SCHEMA = "dadooh.c18.playback.soak.v1"
 THAW_DECISION_SCHEMA = "dadooh.c18.player_runtime.thaw_decision.v1"
 MIN_SOAK_DURATION_SEC = 24 * 60 * 60
@@ -96,6 +102,10 @@ def read_json(path: Path) -> tuple[dict[str, Any], list[str]]:
 
 def is_sha256(value: Any) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def component_blocker(expected_component: str) -> str:
+    return f"stable_promotion_component_not_{expected_component.replace('-', '_')}"
 
 
 def sha256_file(path: Path) -> str:
@@ -181,11 +191,14 @@ def read_artifact(path: Path | None, label: str) -> tuple[dict[str, Any], list[s
     return read_json(path)
 
 
-def evaluate_release_gate_summary(path: Path | None) -> dict[str, Any]:
+def evaluate_release_gate_summary(path: Path | None, *, expected_component: str = "totem-core") -> dict[str, Any]:
     data, errors = read_artifact(path, "release_gate_summary")
     blockers = list(errors)
     if not errors:
-        if data.get("schema") != RELEASE_GATE_SCHEMA:
+        expected_schema = RELEASE_GATE_SCHEMA_BY_COMPONENT.get(expected_component)
+        if expected_schema is None:
+            blockers.append("release_gate_summary_expected_component_invalid")
+        elif data.get("schema") != expected_schema:
             blockers.append("release_gate_summary_schema")
         if data.get("passed") is not True:
             blockers.append("release_gate_summary_not_passed")
@@ -359,7 +372,7 @@ def evaluate_powerloss_matrix(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
-def evaluate_server_side_artifact(args: argparse.Namespace) -> dict[str, Any]:
+def evaluate_server_side_artifact(args: argparse.Namespace, *, expected_component: str = "totem-core") -> dict[str, Any]:
     if args.server_side_evidence is None:
         return step(False, ["server_side_evidence_missing"])
     trusted_keys = list(getattr(args, "server_side_trusted_key_pem", []) or [])
@@ -367,6 +380,7 @@ def evaluate_server_side_artifact(args: argparse.Namespace) -> dict[str, Any]:
         return step(False, ["server_side_trusted_key_pem_missing"], evidence_path=str(args.server_side_evidence))
     result = evaluate_server_side_gate(
         args.server_side_evidence,
+        expected_component=expected_component,
         trusted_key_pems=trusted_keys,
         trust_anchor_evidence=args.server_side_trust_anchor_evidence,
     )
@@ -393,11 +407,18 @@ def evaluate_operator_decision(path: Path | None) -> dict[str, Any]:
 
 
 def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
+    expected_component = getattr(args, "expected_component", "totem-core")
     checks = {
-        "release_gate_summary": evaluate_release_gate_summary(args.release_gate_summary),
+        "release_gate_summary": evaluate_release_gate_summary(
+            args.release_gate_summary,
+            expected_component=expected_component,
+        ),
         "powerloss_matrix": evaluate_powerloss_matrix(args),
         "soak_summary": evaluate_soak_summary(args.soak_summary),
-        "server_side_governance": evaluate_server_side_artifact(args),
+        "server_side_governance": evaluate_server_side_artifact(
+            args,
+            expected_component=expected_component,
+        ),
         "operator_thaw_decision": evaluate_operator_decision(args.operator_thaw_decision),
     }
     blockers = [
@@ -415,6 +436,7 @@ def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
 def validate_data(data: dict[str, Any],
                   *,
                   evidence_path: str | None = None,
+                  expected_component: str = "totem-core",
                   expected_hashes: dict[str, str] | None = None,
                   require_expected_hashes: bool = False,
                   artifact_semantics: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -422,8 +444,10 @@ def validate_data(data: dict[str, Any],
     resolved_expected_hashes = expected_hashes or {}
     if data.get("schema") != SCHEMA:
         blockers.append("stable_promotion_schema")
-    if data.get("component") != "totem-core":
-        blockers.append("stable_promotion_component_not_totem_core")
+    if expected_component not in STABLE_PROMOTION_COMPONENTS:
+        blockers.append("stable_promotion_expected_component_invalid")
+    elif data.get("component") != expected_component:
+        blockers.append(component_blocker(expected_component))
     if data.get("channel") != "stable":
         blockers.append("stable_promotion_channel_not_stable")
     for key in REQUIRED_TRUE_FIELDS:
@@ -463,6 +487,7 @@ def validate_data(data: dict[str, Any],
 
 def evaluate(path: Path | None,
              *,
+             expected_component: str = "totem-core",
              expected_hashes: dict[str, str] | None = None,
              require_expected_hashes: bool = False,
              artifact_semantics: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -488,6 +513,7 @@ def evaluate(path: Path | None,
     return validate_data(
         data,
         evidence_path=str(path),
+        expected_component=expected_component,
         expected_hashes=expected_hashes,
         require_expected_hashes=require_expected_hashes,
         artifact_semantics=artifact_semantics,
@@ -499,10 +525,10 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def valid_fixture() -> dict[str, Any]:
+def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
     return {
         "schema": SCHEMA,
-        "component": "totem-core",
+        "component": component,
         "channel": "stable",
         "approved": True,
         "physical_homologation_passed": True,
@@ -591,6 +617,18 @@ class StablePromotionGateSelfTest(unittest.TestCase):
     def test_complete_fixture_passes(self) -> None:
         result = validate_data(valid_fixture())
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_player_runtime_fixture_passes_when_expected(self) -> None:
+        result = validate_data(
+            valid_fixture(component="player-runtime"),
+            expected_component="player-runtime",
+        )
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_totem_core_stable_evidence_does_not_satisfy_player_runtime(self) -> None:
+        result = validate_data(valid_fixture(), expected_component="player-runtime")
+        self.assertFalse(result["passed"])
+        self.assertIn("stable_promotion_component_not_player_runtime", result["blockers"])
 
     def test_missing_evidence_denies(self) -> None:
         result = evaluate(None)
@@ -747,6 +785,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate C18 stable promotion evidence.")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--evidence", type=Path, default=None)
+    parser.add_argument("--expected-component", choices=STABLE_PROMOTION_COMPONENTS, default="totem-core")
     parser.add_argument("--release-gate-summary", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
     parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
@@ -769,6 +808,7 @@ def main() -> int:
         return 0 if result.wasSuccessful() else 1
     result = evaluate(
         args.evidence,
+        expected_component=args.expected_component,
         expected_hashes=expected_hashes_from_args(args),
         require_expected_hashes=True,
         artifact_semantics=evaluate_artifact_semantics(args),

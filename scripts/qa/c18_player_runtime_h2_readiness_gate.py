@@ -372,6 +372,7 @@ def evaluate_stable_promotion(path: Path | None, *, expected_hashes: dict[str, s
         return step(False, ["missing_stable_promotion_evidence"])
     result = evaluate_stable_promotion_gate(
         path,
+        expected_component="player-runtime",
         expected_hashes=expected_hashes,
         require_expected_hashes=True,
     )
@@ -545,7 +546,7 @@ def complete_args(root: Path) -> argparse.Namespace:
     hashes = stable_expected_hashes(args)
     write_json(stable, {
         "schema": STABLE_PROMOTION_SCHEMA,
-        "component": "totem-core",
+        "component": "player-runtime",
         "channel": "stable",
         "approved": True,
         "physical_homologation_passed": True,
@@ -758,6 +759,23 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "stable_promotion_authorization:stable_promotion_server_side_trust_anchor_evidence_sha256_mismatch",
+            result["blockers"],
+        )
+
+    def test_totem_core_stable_evidence_cannot_satisfy_player_runtime_h2(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            stable = json.loads(args.stable_promotion_evidence.read_text(encoding="utf-8"))
+            stable["component"] = "totem-core"
+            write_json(args.stable_promotion_evidence, stable)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "stable_promotion_authorization:stable_promotion_component_not_player_runtime",
             result["blockers"],
         )
 

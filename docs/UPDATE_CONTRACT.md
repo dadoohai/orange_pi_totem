@@ -471,6 +471,10 @@ Os builders/publishers C18 devem falhar fechados para `stable` sem
 power-loss 17/17, semantica power-loss completa, soak 24h, governanca
 server-side, release gate, operador, rollback owner e hashes das evidencias; um
 JSON minimo com `approved=true` nao e suficiente. Quando consumido pelo H2,
+o gate e componente-amarrado: `player-runtime` exige
+`expected_component=player-runtime`, e evidencia `totem-core` nao satisfaz thaw
+de `player-runtime`. Tambem fora do H2, a CLI aceita `--expected-component` e
+mantem `totem-core` como default para os fluxos atuais. Nessa avaliacao,
 esses hashes devem bater com os arquivos de evidencia efetivamente passados ao
 avaliador (`release_gate`, server-side, trust anchor server-side, soak, matriz
 power-loss e bundle H2 pre-stable); hashes arbitrarios ou stale nao fecham a

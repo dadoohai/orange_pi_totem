@@ -77,7 +77,7 @@ The two core invariants hold **by construction** and were re-verified this round
 | Offline power-loss semantics matrix (17/17) | **DONE (off-board)**: producer arms 17/17; evidence gate has semantic validators for every required checkpoint and H2 reports an empty `semantics_not_implemented_checkpoints` ledger. This does not replace physical evidence. | H2 governance foundation — DONE |
 | Physical power-cut (apply/rollback) | **PARTIAL**: P0 selective set is complete for pilot (5/17); H2 still requires the remaining 12 physical checkpoints. | H2 physical validation |
 | 24h soak/endurance | **ABSENT** | LATER (production) |
-| player-runtime stable-promotion authorization | **ABSENT** | LATER (production) |
+| player-runtime stable-promotion authorization | **GATE PARAMETERIZED (off-board, default-deny)**: `stable_promotion.v1` now supports `expected_component=player-runtime`; H2 rejects `totem-core` stable evidence for player-runtime thaw. Real approved stable evidence is still absent. | H2 production evidence |
 | Server-side publish gate / signature / auto-pull | **GATE HARDENED (off-board, default-deny for prod)**: evidence gate now rejects boolean-only claims, symlink/out-of-dir assets and fixture evidence; it requires artifact-bound manifest/payload/release-gate/audit-log files, per-asset attestation proofs or detached signatures, channel, auto-pull, allowlist, staged rollout, rollback and audit log structure. Detached signatures are verified offline with an explicit external trust key, SPKI DER fingerprint, canonical JSON proof, release-set hash, and separate trust-anchor evidence hash-bound by H2/stable. H2 for `player-runtime` consumes this with `expected_component=player-runtime`, so `totem-core` server-side evidence cannot satisfy the player-runtime thaw. Real production signing evidence is still absent. | H2 production evidence |
 | Homologation pilot readiness (H1.5) | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_pilot_readiness_gate.py` authorizes only `ring=pilot`, `channel=homologation`, operator-assisted delivery, allowlisted hashed devices, board preflight, and P0 power-loss subset. It keeps `stable`, auto-pull, public thaw, 24h soak, 17/17 power-loss, and signature/attestation as non-claims. | H1.5 controlled pilot / governance |
 | H2 readiness evaluator | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_h2_readiness_gate.py` aggregates H1 decisive evidence, 17/17 physical power-loss checkpoints, 24h soak, server-side publish/signature governance, stable-promotion evidence, and explicit operator thaw decision. It reports blockers; it does not thaw. | H2 planning / governance |
@@ -231,7 +231,9 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   is present: full 17/17 power-loss matrix, 24h soak, server-side publish/signature
   governance, stable-promotion approval, and explicit operator thaw decision. It is an
   evaluator, not a public thaw mechanism.
-- player-runtime stable-promotion authorization schema (analog of `stable_promotion.v1`).
+- player-runtime stable-promotion authorization evidence: schema/gate support exists
+  via `expected_component=player-runtime`, but production still needs real approved
+  evidence bound to H2 inputs.
 - server-side publish governance gate / signature / auto-pull hardening:
   `scripts/qa/c18_server_side_publish_governance_gate.py` valida a evidencia
   `dadooh.c18.server_side_publish_governance.v1` antes do H2 consumi-la; ela
