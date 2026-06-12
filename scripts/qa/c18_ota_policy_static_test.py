@@ -1904,9 +1904,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
         self.assertIn("RESPONSIBILITY_MATRIX_DIFF_PATHS", gate)
         self.assertIn("SYSTEM_IMAGE_DIFF_PATHS", gate)
+        self.assertIn("MEDIA_SYSTEM_DIFF_PATHS", gate)
         self.assertIn("FIELD_DATA_DIFF_PATHS", gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
         self.assertIn('"scripts/board/totem_updatectl.py"', gate)
+        self.assertIn('"scripts/board/mpv_"', gate)
         self.assertIn("responsibility_matrix_diff_guard", gate)
         self.assertIn("repo_clean_guard", gate)
         self.assertIn("--porcelain", gate)
@@ -1956,6 +1958,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
                 image_path = root / "scripts" / "board" / "totem_updatectl.py"
                 image_path.write_text("print('image')\n", encoding="utf-8")
+                media_path = root / "scripts" / "board" / "mpv_manual_probe.sh"
+                media_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 field_path = root / "docs" / "app-integration" / "config.homologation-v0.1.example.json"
                 field_path.parent.mkdir(parents=True, exist_ok=True)
                 field_path.write_text("{}\n", encoding="utf-8")
@@ -1964,6 +1968,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 result = gate.responsibility_matrix_diff_guard(base)
                 self.assertFalse(result["passed"])
                 self.assertIn("system-image:scripts/board/totem_updatectl.py", result["stdout_tail"])
+                self.assertIn("media-system:scripts/board/mpv_manual_probe.sh", result["stdout_tail"])
                 self.assertIn("field-data:docs/app-integration/config.homologation-v0.1.example.json", result["stdout_tail"])
             finally:
                 gate.REPO_ROOT = old_root

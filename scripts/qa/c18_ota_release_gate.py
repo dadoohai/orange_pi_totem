@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import io
 import json
 import os
 import subprocess
@@ -194,11 +195,25 @@ SYSTEM_IMAGE_DIFF_PATHS = {
 }
 MEDIA_SYSTEM_DIFF_PATHS = {
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
+    "scripts/build/userpatches-c12-image-lab/kernel-config-policy.md",
+    "scripts/board/c18_mpv_",
+    "scripts/board/classify_playlist_media.sh",
+    "scripts/board/media_",
+    "scripts/board/mpv_",
     "scripts/board/mpv_controller_playlist_probe.sh",
+    "scripts/board/setup_totem_media_groups.sh",
 }
 FIELD_DATA_DIFF_PATHS = {
     "app-integration/config*",
+    "app-integration/seed*",
+    "app-integration/media*",
+    "app-integration/playlist*",
+    "app-integration/cache*",
     "docs/app-integration/config*",
+    "docs/app-integration/seed*",
+    "docs/app-integration/media*",
+    "docs/app-integration/playlist*",
+    "docs/app-integration/cache*",
 }
 RESPONSIBILITY_MATRIX_DIFF_PATHS = {
     "player-runtime": PLAYER_RUNTIME_DIFF_PATHS,
@@ -1043,6 +1058,60 @@ class TeardownEvidenceImageGuardSelfTest(unittest.TestCase):
             self.assertIn("missing_production_stop_teardown_evidence", step["stderr_tail"])
 
 
+class TotemCorePayloadBoundarySelfTest(unittest.TestCase):
+    def _write_package(self, root: Path, entries: dict[str, str]) -> tuple[Path, Path]:
+        head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
+        version = "selftest-c18-boundary"
+        payload = root / f"dadooh-totem-core-{version}.tar.gz"
+        with tarfile.open(payload, "w:gz") as tf:
+            for name, text in entries.items():
+                encoded = text.encode("utf-8")
+                info = tarfile.TarInfo(name)
+                info.size = len(encoded)
+                tf.addfile(info, io.BytesIO(encoded))
+        manifest = {
+            "schema": "dadooh.totem.update.v1",
+            "component": "totem-core",
+            "version": version,
+            "channel": "homologation",
+            "created_at_utc": "2026-06-12T00:00:00Z",
+            "source_commit": head,
+            "source_dirty": False,
+            "payload": payload.name,
+            "payload_sha256": sha256_file(payload),
+            "requires": {
+                "device": "orangepizero3",
+                "device_track": "c18-hwdecode",
+                "updater_features": [
+                    "c18-freeze-kiosky-player-v1",
+                    "c18-rollback-reapply-v1",
+                    "c18-safe-payload-v1",
+                    "c18-track-v1",
+                ],
+            },
+            "updates": [{"path": "bin/totem_status_renderer.sh"}],
+        }
+        manifest_path = root / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        return manifest_path, payload
+
+    def test_totem_core_payload_rejects_media_system_and_field_data(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, payload = self._write_package(
+                Path(tmp),
+                {
+                    "bin/totem_status_renderer.sh": "#!/bin/sh\nexit 0\n",
+                    "opt/totem/bin/totem-mpv-hwdecode": "#!/bin/sh\n",
+                    "data/media/playlist.json": "{}\n",
+                },
+            )
+            result = validate_package(manifest, payload, allow_dirty=True)
+            self.assertFalse(result["passed"])
+            self.assertIn("totem_core_tar_allowlist_exact", result["errors"])
+            self.assertIn("opt/totem/bin/totem-mpv-hwdecode", result["totem_core_tar_unexpected_entries"])
+            self.assertIn("data/media/playlist.json", result["totem_core_tar_unexpected_entries"])
+
+
 _OMIT = object()
 
 
@@ -1071,7 +1140,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     if args.self_test:
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(TeardownEvidenceImageGuardSelfTest)
+        suite = unittest.TestSuite()
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TeardownEvidenceImageGuardSelfTest))
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TotemCorePayloadBoundarySelfTest))
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
     steps: list[dict[str, Any]] = []
