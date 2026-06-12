@@ -25,6 +25,10 @@ auto-pull, thaw publico, soak 24h, power-loss 17/17 nem pular H2.
 A familia server-side/signature do alvo `c16fb3e` tambem esta gateada no host,
 sem publicar release e sem habilitar auto-pull, em
 `docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`.
+O inventario versionavel dos assets server-side desse pacote esta em
+`docs/evidence/c18-update-validation/20260612T172602Z-server-side-asset-list-c16fb3e/`,
+com paths repo-relative, bytes e SHA256; ele tambem nao publica, nao promove
+`stable` e nao abre thaw.
 Depois disso, H2/stable/producao continuam bloqueados por quatro itens:
 power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw.
 
@@ -405,6 +409,8 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   rascunhos foram escritos e continuam reprovando nos gates como esperado;
 - `scripts/qa/c18_server_side_publish_governance_gate.py` precisa validar a
   familia server-side/signature e trust anchor;
+- `scripts/qa/c18_server_side_publish_asset_collect.py` pode materializar a
+  lista repo-relative de assets server-side e hashes, sem publicar release;
 - a matriz fisica power-loss precisa estar 17/17;
 - o runbook
   `docs/evidence/c18-update-validation/20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e/`

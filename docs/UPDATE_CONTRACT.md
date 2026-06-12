@@ -602,6 +602,10 @@ do diretorio da release, escreve `audit-log.ndjson`, provas JSON canonicas,
 assinaturas destacadas e `c18-server-side-publish-governance.json`, e em seguida
 reroda o gate real. Ele tambem nao publica release, nao habilita auto-pull, nao
 promove stable e nao faz thaw.
+Para materializar o inventario dos assets que seriam anexados, use
+`scripts/qa/c18_server_side_publish_asset_collect.py --relative-to . --json`.
+A saida `dadooh.c18.server_side_publish_asset_list.v1` deve conter paths
+repo-relative, bytes e SHA256; ela e evidencia de inventario, nao publicacao.
 
 Entre H1 e H2 existe somente um caminho intermediario controlado:
 `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido

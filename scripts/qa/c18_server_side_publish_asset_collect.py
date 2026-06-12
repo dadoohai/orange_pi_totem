@@ -65,6 +65,43 @@ def append_unique(paths: list[Path], path: Path) -> None:
         paths.append(resolved)
 
 
+def display_path(path: Path, relative_to: Path | None) -> str:
+    resolved = path.resolve(strict=True)
+    if relative_to is None:
+        return str(resolved)
+    root = relative_to.resolve(strict=True)
+    try:
+        return str(resolved.relative_to(root))
+    except ValueError as exc:
+        raise ValueError(f"server_side_asset_outside_relative_root:{path}") from exc
+
+
+def asset_output(paths: list[Path], *, relative_to: Path | None = None) -> dict[str, Any]:
+    records = [
+        {
+            "path": display_path(path, relative_to),
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        }
+        for path in paths
+    ]
+    return {
+        "schema": "dadooh.c18.server_side_publish_asset_list.v1",
+        "assets": [record["path"] for record in records],
+        "asset_records": records,
+        "non_claims": [
+            "this_list_does_not_publish_releases",
+            "this_list_does_not_enable_auto_pull",
+            "this_list_does_not_promote_stable",
+            "this_list_does_not_thaw_player_runtime",
+            "this_list_does_not_complete_h2",
+            "this_list_does_not_replace_powerloss_17_17",
+            "this_list_does_not_replace_soak_24h",
+            "this_list_does_not_replace_stable_promotion_or_formal_thaw_decision",
+        ],
+    }
+
+
 def collect_assets(
     evidence_path: Path,
     trust_anchor_path: Path,
@@ -168,6 +205,23 @@ class ServerSidePublishAssetCollectSelfTest(unittest.TestCase):
         self.assertEqual(len([path for path in paths if path.name.endswith(".signature.json")]), len(REQUIRED_SIGNED_OR_ATTESTED_ASSETS))
 
     @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
+    def test_json_output_can_be_relative_and_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence, public_key = write_signed_fixture_release(root / "release")
+            trust_anchor = write_trust_anchor_for_key(root / "trust-anchor.json", public_key)
+            paths = collect_assets(evidence, trust_anchor)
+            output = asset_output(paths, relative_to=root)
+
+        self.assertEqual(output["schema"], "dadooh.c18.server_side_publish_asset_list.v1")
+        self.assertIn("release/c18-server-side-publish-governance.json", output["assets"])
+        self.assertTrue(all(not path.startswith("/") for path in output["assets"]))
+        self.assertTrue(all(is_sha256(record["sha256"]) for record in output["asset_records"]))
+        self.assertTrue(all(record["bytes"] > 0 for record in output["asset_records"]))
+        self.assertIn("this_list_does_not_complete_h2", output["non_claims"])
+        self.assertIn("this_list_does_not_replace_powerloss_17_17", output["non_claims"])
+
+    @unittest.skipIf(shutil.which("openssl") is None, "openssl missing")
     def test_release_gate_hash_mismatch_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -194,6 +248,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--server-side-evidence", type=Path)
     parser.add_argument("--trust-anchor-evidence", type=Path)
     parser.add_argument("--expected-release-gate-sha256")
+    parser.add_argument("--relative-to", type=Path)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
@@ -214,10 +269,10 @@ def main(argv: list[str] | None = None) -> int:
         expected_release_gate_sha256=args.expected_release_gate_sha256,
     )
     if args.json:
-        print(json.dumps({"assets": [str(path) for path in paths]}, indent=2, sort_keys=True))
+        print(json.dumps(asset_output(paths, relative_to=args.relative_to), indent=2, sort_keys=True))
     else:
         for path in paths:
-            print(path)
+            print(display_path(path, args.relative_to))
     return 0
 
 

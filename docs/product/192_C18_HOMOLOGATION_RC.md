@@ -200,7 +200,9 @@ assinada com chave operacional.
 Para o pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`,
 essa familia ja esta materializada em
 `docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`
-e o H2 reporta `server_side_publish_governance=true`; isso nao publica release,
+e a lista repo-relative de assets/hashes esta em
+`docs/evidence/c18-update-validation/20260612T172602Z-server-side-asset-list-c16fb3e/`.
+O H2 reporta `server_side_publish_governance=true`; isso nao publica release,
 nao habilita auto-pull, nao promove stable e nao abre producao.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
 esse ledger esta completo; para producao ainda falta coletar e commitar os 12
