@@ -2,7 +2,7 @@
   "blockers": [],
   "checks": {
     "current_board_preflight": {
-      "age_sec": 85,
+      "age_sec": 1965,
       "blockers": [],
       "collected_at_utc": "2026-06-16T23:14:48Z",
       "device_hash": "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
@@ -19,7 +19,7 @@
       "device_hashes": [
         "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104"
       ],
-      "evaluated_at_utc": "2026-06-16T23:16:13.347195Z",
+      "evaluated_at_utc": "2026-06-16T23:47:33.512416Z",
       "h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
       "max_window_sec": 86400,
       "passed": true,
@@ -29,9 +29,9 @@
     },
     "macro_governance_snapshot": {
       "blockers": [],
-      "evaluated_at_utc": "2026-06-16T22:22:50.736273Z",
+      "evaluated_at_utc": "2026-06-16T23:34:36.945703Z",
       "passed": true,
-      "summary_path": "docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json",
+      "summary_path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/macro-governance.json",
       "target": {
         "channel": "homologation",
         "component": "player-runtime",
@@ -55,14 +55,14 @@
       "outside_repo": [],
       "passed": true,
       "paths": [
-        "docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json",
         "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/board-preflight.json",
-        "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/pilot-authorization.json"
+        "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/pilot-authorization.json",
+        "docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/macro-governance.json"
       ],
       "untracked": []
     }
   },
-  "evaluated_at_utc": "2026-06-16T23:16:13.347195Z",
+  "evaluated_at_utc": "2026-06-16T23:47:33.512416Z",
   "non_claims": [
     "this_gate_does_not_reopen_expired_pilot_windows",
     "this_gate_does_not_use_snapshot_as_operational_authorization",

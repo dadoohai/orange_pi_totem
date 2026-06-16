@@ -6,9 +6,9 @@
       "sha256": "1f2c7049969727f10aa087e07cd811666d4c5a43c4b39a38d7153f05e2b2b6f5"
     },
     "operational_resume": {
-      "bytes": 3798,
+      "bytes": 3837,
       "path": "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/operational-resume.json",
-      "sha256": "a7715e1847f64500e3ec0e557c2765c66ba77e5b26093ba378621d25564c3bbc"
+      "sha256": "b794580815488b9c98d74b29b7ab0e043cfd9e29386796d1010412d1d2a53094"
     },
     "pilot_authorization": {
       "bytes": 1411,
@@ -23,7 +23,7 @@
     "scp_used_for_collector_and_evidence": true,
     "ssh_used_for_read_only_preflight": true
   },
-  "created_at_utc": "2026-06-16T23:16:13Z",
+  "created_at_utc": "2026-06-16T23:47:33Z",
   "non_claims": [
     "no_production",
     "no_stable",
@@ -33,8 +33,8 @@
     "no_powerloss_17_17",
     "no_h2_readiness"
   ],
-  "operational_resume_repo_commit": "77ed5b153a86c2042ef01b8f812294a66c0fb601",
-  "operational_resume_repo_tree": "f53acc7110b9be3c66018cb46f402e750f5acfcc",
+  "operational_resume_repo_commit": "178c2714d2cdd00ac5410d9ef7ec6efbf2372dfb",
+  "operational_resume_repo_tree": "bb57201e8484dd5ff48e2e2844cf02d8b668dc72",
   "preflight_collector_commit": "2320950",
   "result_claim": "c18_operational_resume_ready",
   "schema": "dadooh.c18.ota_operational_resume_current_evidence.v1",

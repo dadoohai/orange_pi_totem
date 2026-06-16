@@ -58,9 +58,15 @@ Evidencia principal:
 
 - H1 decisivo:
   `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`;
-- autorizacao vigente/refrescada para a janela operacional e para o H1 rastreavel:
-  `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`;
-- gate de piloto rerodado com a autorizacao/H1 rastreaveis:
+- autorizacao operacional atual:
+  `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/pilot-authorization.json`;
+- retomada operacional atual:
+  `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`;
+- pilot readiness atual:
+  `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json`;
+- autorizacao/readiness de 2026-06-12, preservados como rastreabilidade
+  historica:
+  `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual, vermelho apenas pelos blockers de producao:
   `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json`;
@@ -71,10 +77,6 @@ Evidencia principal:
   nao reabre janela de piloto expirada e nao autoriza producao;
 - snapshot macro versionado:
   `docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/`;
-- retomada operacional atual:
-  `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`;
-- pilot readiness atual sobre a retomada operacional fresca:
-  `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json`;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:

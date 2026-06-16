@@ -110,11 +110,23 @@ REQUIRED_DOC_TOKENS = (
     "scripts/qa/c18_ota_macro_governance_gate.py",
     "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
     "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
+    "docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/",
+    "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/",
     "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
     "pre-H2",
     "nao substitui H2",
     *EXPECTED_H2_BLOCKERS,
+)
+FORBIDDEN_DOC_TOKENS = (
+    (
+        "com evidencia final em\n"
+        "`docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`"
+    ),
+    (
+        "autorizacao operacional refrescada para o H1 rastreavel em\n"
+        "`docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`"
+    ),
 )
 NON_CLAIMS = (
     "this_gate_does_not_reopen_expired_pilot_windows",
@@ -495,6 +507,9 @@ def evaluate_docs(doc_paths: list[Path]) -> dict[str, Any]:
     for token in REQUIRED_DOC_TOKENS:
         if token not in combined:
             blockers.append(f"doc_token_missing:{token}")
+    for token in FORBIDDEN_DOC_TOKENS:
+        if token in combined:
+            blockers.append(f"doc_forbidden_stale_current_token:{token}")
     if "producao" not in combined or "stable" not in combined:
         blockers.append("doc_production_stable_scope_missing")
     return check("macro_docs", blockers, docs=read_docs)
@@ -578,6 +593,8 @@ def write_fixture(root: Path) -> argparse.Namespace:
                 "scripts/qa/c18_ota_macro_governance_gate.py",
                 "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
                 "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
+                "docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/",
+                "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/",
                 "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
                 "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
                 "pre-H2",
@@ -740,6 +757,22 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "macro_docs:doc_token_missing:scripts/qa/c18_ota_macro_governance_gate.py",
+            result["blockers"],
+        )
+
+    def test_docs_reject_stale_current_pilot_wording(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = write_fixture(Path(tmp))
+            fixture.docs[0].write_text(
+                fixture.docs[0].read_text(encoding="utf-8")
+                + "\ncom evidencia final em\n"
+                "`docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`\n",
+                encoding="utf-8",
+            )
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertTrue(
+            any(item.startswith("macro_docs:doc_forbidden_stale_current_token:") for item in result["blockers"]),
             result["blockers"],
         )
 

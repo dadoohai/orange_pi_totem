@@ -10,12 +10,19 @@ em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 C18 Homologation RC esta pronta para piloto assistido, nao para producao. O
 alvo corrente e
 `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, em
-`channel=homologation` e `ring=pilot`, com evidencia final em
-`docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`
-e autorizacao operacional refrescada para o H1 rastreavel em
-`docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
-rerodada no gate com H1 decisive traceability refresh em
-`docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`.
+`channel=homologation` e `ring=pilot`. A evidencia operacional atual esta em
+`docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`,
+com retomada operacional em
+`docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`
+e macro-governanca atual em
+`docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/`.
+A trilha de 2026-06-12 continua preservada como rastreabilidade historica:
+H1 decisive traceability refresh em
+`docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`,
+autorizacao historica de piloto em
+`docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`
+e pilot readiness traceability refresh em
+`docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`.
 O snapshot H2 corrente esta versionado em
 `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:
 H1, server-side, repo clean e tracked inputs verdes; H2/producao ainda vermelho.
