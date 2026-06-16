@@ -67,6 +67,8 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d`
   e prova que a governanca de homologacao esta coerente; nao substitui H2,
   nao reabre janela de piloto expirada e nao autoriza producao;
+- snapshot macro versionado:
+  `docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/`;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:

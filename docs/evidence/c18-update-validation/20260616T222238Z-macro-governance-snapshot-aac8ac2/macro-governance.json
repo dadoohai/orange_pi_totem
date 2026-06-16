@@ -1,0 +1,134 @@
+{
+  "blockers": [],
+  "checks": {
+    "board_readonly_diagnostics": {
+      "blockers": [],
+      "board_blockers": [],
+      "board_result_claim": "board_readonly_diagnostics_evidence_accepted",
+      "passed": true,
+      "run_dir": "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d"
+    },
+    "h1_traceability": {
+      "blockers": [],
+      "data_evidence": {
+        "expected_image_tag": "c18-hwdecode-lab-1x",
+        "mode": "decisive",
+        "status": "passed"
+      },
+      "passed": true,
+      "repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
+      "step_count": 66,
+      "summary_path": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+      "teardown_evidence_count": 3
+    },
+    "h2_preproduction_block": {
+      "blockers": [],
+      "blockers_actual": [
+        "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+        "soak_endurance_24h:missing_24h_soak_summary",
+        "stable_promotion_authorization:missing_stable_promotion_evidence",
+        "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+      ],
+      "blockers_expected": [
+        "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+        "soak_endurance_24h:missing_24h_soak_summary",
+        "stable_promotion_authorization:missing_stable_promotion_evidence",
+        "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+      ],
+      "passed": true,
+      "result_claim": "h2_readiness_blocked",
+      "summary_path": "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json"
+    },
+    "macro_docs": {
+      "blockers": [],
+      "docs": [
+        "docs/product/189_C18_OTA_READINESS_GATE.md",
+        "docs/product/191_C18_OTA_OPERATING_MODEL.md",
+        "docs/product/192_C18_HOMOLOGATION_RC.md",
+        "docs/UPDATE_AUTHORIZATION_HEALTH.md",
+        "docs/UPDATE_CONTRACT.md"
+      ],
+      "passed": true
+    },
+    "pilot_readiness": {
+      "authorization_window": {
+        "end": "2026-06-13T10:00:00Z",
+        "evaluated_at_utc": "2026-06-12T19:54:53.947843Z",
+        "snapshot_only": true,
+        "start": "2026-06-12T10:00:00Z"
+      },
+      "blockers": [],
+      "passed": true,
+      "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+      "summary_path": "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json",
+      "target_channel": "homologation",
+      "target_package": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+    },
+    "repo_clean": {
+      "blockers": [],
+      "changed_paths": [],
+      "passed": true,
+      "stderr_tail": ""
+    },
+    "tracked_inputs": {
+      "blockers": [],
+      "ignored": [],
+      "manifest_untracked_entries": [],
+      "missing": [],
+      "outside_repo": [],
+      "passed": true,
+      "paths": [
+        "docs/UPDATE_AUTHORIZATION_HEALTH.md",
+        "docs/UPDATE_CONTRACT.md",
+        "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/README.md",
+        "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/appliance-status.json",
+        "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/c18-display-status.json",
+        "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/evidence-manifest.json",
+        "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/summary.txt",
+        "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/README.md",
+        "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/evidence-manifest.json",
+        "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+        "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/README.md",
+        "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/evidence-manifest.json",
+        "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json",
+        "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/README.md",
+        "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/evidence-manifest.json",
+        "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
+        "docs/product/189_C18_OTA_READINESS_GATE.md",
+        "docs/product/191_C18_OTA_OPERATING_MODEL.md",
+        "docs/product/192_C18_HOMOLOGATION_RC.md"
+      ],
+      "untracked": []
+    }
+  },
+  "evaluated_at_utc": "2026-06-16T22:22:50.736273Z",
+  "h2_expected_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "non_claims": [
+    "this_gate_does_not_reopen_expired_pilot_windows",
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "c18_homologation_governance_ready_pre_h2",
+  "schema": "dadooh.c18.ota_macro_governance_gate.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "ring": "pilot",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+  }
+}

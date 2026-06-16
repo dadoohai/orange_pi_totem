@@ -1,0 +1,27 @@
+{
+  "artifacts": [
+    {
+      "bytes": 6288,
+      "file": "macro-governance.json",
+      "sha256": "bd8885482fcb9bf3c144b33598f1fa28ebbd3949d32c518e943d0863b3657dc1"
+    }
+  ],
+  "collected_at_utc": "2026-06-16T22:22:50.736273Z",
+  "evidence_kind": "c18_ota_macro_governance_snapshot",
+  "non_claims": [
+    "this_evidence_does_not_reopen_expired_pilot_windows",
+    "this_evidence_does_not_authorize_production",
+    "this_evidence_does_not_promote_stable",
+    "this_evidence_does_not_enable_auto_pull",
+    "this_evidence_does_not_publish_releases",
+    "this_evidence_does_not_thaw_public_player_runtime",
+    "this_evidence_does_not_satisfy_24h_soak",
+    "this_evidence_does_not_satisfy_powerloss_17_17",
+    "this_evidence_does_not_replace_h2_readiness"
+  ],
+  "repo_commit": "aac8ac2d4272655bd1612f3c94835694d2dbb540",
+  "repo_dirty": false,
+  "repo_tree": "27c957865e7470e36dfa603b6a3f601f0a5f5194",
+  "result_claim": "c18_homologation_governance_ready_pre_h2",
+  "schema": "dadooh.c18.ota_macro_governance_evidence.v1"
+}

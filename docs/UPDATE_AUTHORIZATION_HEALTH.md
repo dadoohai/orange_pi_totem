@@ -24,6 +24,8 @@ valida o retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
 read-only de placa. Esse gate nao substitui H2, nao reabre janela expirada de
 piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
+Snapshot versionado:
+`docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/`.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
