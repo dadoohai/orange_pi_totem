@@ -146,6 +146,13 @@ somente de governanca/snapshot: ele carrega a janela antiga como
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
 
+O preflight fresco deve ser coletado na placa com
+`scripts/board/c18_homologation_pilot_preflight_collect.py` copiado para
+`/tmp`, usando `stage=pre_apply`, o device hash sanitizado allowlistado e os
+hashes esperados do pacote `c16fb3e`. Esse coletor valida policy/timer, imagem,
+stack `mpv`/`hwdec` e freeze publico `rc=44`; ele nao usa o reconcile de
+manutencao autorizado.
+
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_operational_resume_gate.py \
   --macro-governance-summary docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json \

@@ -44,7 +44,10 @@ expirada, nao publica, nao promove `stable`, nao habilita auto-pull e nao thaw
 Retomar operacao de piloto depois de pausa, reboot ou passagem de dias exige
 `scripts/qa/c18_ota_operational_resume_gate.py` verde. Esse gate separa snapshot
 de autorizacao viva: requer janela atual aprovada e preflight `pre_apply` fresco
-da placa antes de qualquer apply/rollback assistido.
+da placa antes de qualquer apply/rollback assistido. O preflight fresco deve ser
+coletado com `scripts/board/c18_homologation_pilot_preflight_collect.py`, que
+mantem o fluxo read-only e bloqueia antes de probes publicos se o `updatectl`
+instalado nao declarar `player-runtime` congelado.
 
 ## Roots De Artefatos
 

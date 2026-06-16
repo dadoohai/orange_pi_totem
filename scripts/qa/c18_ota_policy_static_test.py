@@ -55,6 +55,9 @@ BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH = (
 )
 MACRO_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_macro_governance_gate.py"
 OPERATIONAL_RESUME_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_operational_resume_gate.py"
+HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH = (
+    REPO_ROOT / "scripts" / "board" / "c18_homologation_pilot_preflight_collect.py"
+)
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -478,6 +481,38 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("preflight_stale", gate)
         self.assertIn("authorization_window_expired", gate)
         self.assertIn("c18_ota_operational_resume_gate", release_gate)
+
+    def test_homologation_pilot_preflight_collector_is_read_only_and_wired(self) -> None:
+        collector = HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        result = subprocess.run(
+            ["python3", str(HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH), "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("dadooh.c18.homologation_pilot_preflight.v1", collector)
+        self.assertIn("homologation_pilot_preflight_collected", collector)
+        self.assertIn("public_freeze_static_guard", collector)
+        self.assertIn("public_freeze_static_guard_failed", collector)
+        self.assertIn("updatectl_static_freeze_guard", collector)
+        self.assertIn("apply-local", collector)
+        self.assertIn("rollback", collector)
+        self.assertIn("reconcile", collector)
+        self.assertIn("this_preflight_does_not_apply_or_rollback_player_runtime", collector)
+        self.assertIn("this_preflight_does_not_run_authorized_maintenance_reconcile", collector)
+        self.assertIn("raw_config_persisted", collector)
+        self.assertIn("raw_media_path_persisted", collector)
+        self.assertNotIn("C18_PLAYER_RUNTIME_RECONCILE=1", collector)
+        self.assertNotIn("--allow-player-runtime-maintenance", collector)
+        self.assertNotIn("apply-github", collector)
+        self.assertNotIn("gh release", collector)
+        self.assertIn("c18_homologation_pilot_preflight_collect.py", release_gate)
+        self.assertIn("c18_homologation_pilot_preflight_collect", release_gate)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")

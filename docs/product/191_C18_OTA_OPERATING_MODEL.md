@@ -141,6 +141,9 @@ autorizacao ativa para a janela atual, preflight `pre_apply` fresco, device hash
 allowlisted, policy homologation, timer off, freeze publico `rc=44`, imagem e
 source commit esperados. O gate deve ficar vermelho sobre snapshots antigos; isso
 e o comportamento correto.
+O preflight fresco deve vir de
+`scripts/board/c18_homologation_pilot_preflight_collect.py`, executado na placa
+sem maintenance reconcile autorizado.
 
 ## Publicacao de totem-core
 

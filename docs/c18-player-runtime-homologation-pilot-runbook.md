@@ -101,6 +101,25 @@ observation evidence can be committed separately, but it is not a substitute for
 this pre-apply readiness check unless the gate is intentionally run with a
 different expected preflight stage.
 
+Use the board collector to create the preflight artifact instead of hand-writing
+JSON:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -B /tmp/c18_homologation_pilot_preflight_collect.py \
+  --stage pre_apply \
+  --device-hash sha256:<allowlisted-device-hash> \
+  --source-commit c16fb3ed01f0ce25c8203e5fe1d60baf60a75749 \
+  --image-sha256 1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2 \
+  --expect-image-tag c18-hwdecode-lab-1x \
+  --expect-image-marker-sha256 59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e \
+  --json
+```
+
+The collector first checks that the installed public `totem-updatectl` still
+declares `player-runtime` frozen before it probes public `apply-local`,
+`rollback`, and `reconcile` for `rc=44`. It never uses
+`C18_PLAYER_RUNTIME_RECONCILE=1` or `--allow-player-runtime-maintenance`.
+
 Required facts:
 
 - policy `device_channel=homologation`;
