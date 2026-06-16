@@ -168,6 +168,14 @@ o resultado correto em 2026-06-16 e vermelho:
 Snapshot versionado desse bloqueio:
 `docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
 
+Snapshot atual de retomada operacional:
+`docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`.
+Resultado: `passed=true`, `result_claim=c18_operational_resume_ready`, com
+autorizacao vigente, preflight `pre_apply` fresco da placa, freeze publico
+`rc=44`, policy homologation e stack C18 `mpv`/`hwdec` provada. Esse resultado
+autoriza apenas continuidade assistida do piloto de homologacao; nao autoriza
+producao, `stable`, auto-pull, thaw publico, soak 24h nem power-loss 17/17.
+
 O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:
 

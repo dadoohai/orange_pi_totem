@@ -1,0 +1,49 @@
+{
+  "artifacts": {
+    "board_preflight": {
+      "bytes": 4217,
+      "path": "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/board-preflight.json",
+      "sha256": "1f2c7049969727f10aa087e07cd811666d4c5a43c4b39a38d7153f05e2b2b6f5"
+    },
+    "operational_resume": {
+      "bytes": 3798,
+      "path": "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/operational-resume.json",
+      "sha256": "a7715e1847f64500e3ec0e557c2765c66ba77e5b26093ba378621d25564c3bbc"
+    },
+    "pilot_authorization": {
+      "bytes": 1411,
+      "path": "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/pilot-authorization.json",
+      "sha256": "bd22672bba68cc42d50f0b8d906ad054121cc494a57e4db8848cf8fa3cbf9160"
+    }
+  },
+  "board_interaction": {
+    "apply_or_rollback_run": false,
+    "auto_pull_enabled": false,
+    "public_thaw_enabled": false,
+    "scp_used_for_collector_and_evidence": true,
+    "ssh_used_for_read_only_preflight": true
+  },
+  "created_at_utc": "2026-06-16T23:16:13Z",
+  "non_claims": [
+    "no_production",
+    "no_stable",
+    "no_auto_pull",
+    "no_public_thaw",
+    "no_24h_soak",
+    "no_powerloss_17_17",
+    "no_h2_readiness"
+  ],
+  "operational_resume_repo_commit": "77ed5b153a86c2042ef01b8f812294a66c0fb601",
+  "operational_resume_repo_tree": "f53acc7110b9be3c66018cb46f402e750f5acfcc",
+  "preflight_collector_commit": "2320950",
+  "result_claim": "c18_operational_resume_ready",
+  "schema": "dadooh.c18.ota_operational_resume_current_evidence.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "ring": "pilot",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+  }
+}

@@ -36,6 +36,11 @@ O preflight fresco deve ser produzido por
 sem reconcile de manutencao autorizado e commitado antes do gate de retomada.
 Snapshot do bloqueio:
 `docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
+O refresh operacional atual esta versionado em
+`docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`:
+autorizacao da janela atual + preflight `pre_apply` fresco da placa +
+`c18_ota_operational_resume_gate.py` verde. Isso libera apenas retomada
+assistida do piloto em homologacao; H2/producao permanecem bloqueados.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
