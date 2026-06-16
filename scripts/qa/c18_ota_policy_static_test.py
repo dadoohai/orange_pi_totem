@@ -54,6 +54,7 @@ BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH = (
     REPO_ROOT / "scripts" / "qa" / "c18_board_readonly_diagnostics_evidence_gate.py"
 )
 MACRO_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_macro_governance_gate.py"
+OPERATIONAL_RESUME_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_operational_resume_gate.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -144,6 +145,30 @@ EVIDENCE_BOARD_READONLY_DIAGNOSTICS_DIR = (
     / "evidence"
     / "c18-update-validation"
     / "20260612T183722Z-board-readonly-diagnostics-17a1f9d"
+)
+EVIDENCE_MACRO_GOVERNANCE_SNAPSHOT = (
+    REPO_ROOT
+    / "docs"
+    / "evidence"
+    / "c18-update-validation"
+    / "20260616T222238Z-macro-governance-snapshot-aac8ac2"
+    / "macro-governance.json"
+)
+EVIDENCE_PILOT_AUTHORIZATION_TRACEABILITY = (
+    REPO_ROOT
+    / "docs"
+    / "evidence"
+    / "c18-update-validation"
+    / "20260612T195336Z-pilot-authorization-traceability-refresh"
+    / "pilot-authorization.json"
+)
+EVIDENCE_PILOT_BOARD_PREFLIGHT_POST_APPLY = (
+    REPO_ROOT
+    / "docs"
+    / "evidence"
+    / "c18-update-validation"
+    / "20260611T182922Z-board-lab-apply-c16fb3e"
+    / "board-preflight-post-apply-observation.json"
 )
 EVIDENCE_1U_IMAGE_TAG = "c18-hwdecode-lab-1u"
 EVIDENCE_1U_IMAGE_SHA256 = "57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd"
@@ -413,6 +438,46 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("EXPECTED_H2_BLOCKERS", gate)
         self.assertIn("h2_must_remain_blocked_pre_production", gate)
         self.assertIn("c18_ota_macro_governance_gate", release_gate)
+
+    def test_operational_resume_gate_blocks_stale_snapshot_inputs(self) -> None:
+        gate = OPERATIONAL_RESUME_GATE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(OPERATIONAL_RESUME_GATE_PATH), "--self-test"], check=True)
+        result = subprocess.run(
+            [
+                "python3",
+                str(OPERATIONAL_RESUME_GATE_PATH),
+                "--macro-governance-summary",
+                str(EVIDENCE_MACRO_GOVERNANCE_SNAPSHOT),
+                "--authorization",
+                str(EVIDENCE_PILOT_AUTHORIZATION_TRACEABILITY),
+                "--preflight",
+                str(EVIDENCE_PILOT_BOARD_PREFLIGHT_POST_APPLY),
+                "--now-utc",
+                "2026-06-16T22:22:50Z",
+                "--allow-dirty-repo",
+                "--json",
+            ],
+            check=False,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        summary = json.loads(result.stdout)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(summary["passed"])
+        self.assertEqual(summary["schema"], "dadooh.c18.ota_operational_resume_gate.v1")
+        self.assertEqual(summary["result_claim"], "c18_operational_resume_blocked")
+        self.assertIn("current_pilot_authorization:authorization_window_expired", summary["blockers"])
+        self.assertIn("current_board_preflight:preflight_stale", summary["blockers"])
+        self.assertIn("current_board_preflight:preflight_stage_mismatch", summary["blockers"])
+
+        self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
+        self.assertIn("c18_operational_resume_blocked", gate)
+        self.assertIn("this_gate_does_not_use_snapshot_as_operational_authorization", gate)
+        self.assertIn("preflight_stale", gate)
+        self.assertIn("authorization_window_expired", gate)
+        self.assertIn("c18_ota_operational_resume_gate", release_gate)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")

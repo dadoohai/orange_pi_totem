@@ -143,6 +143,22 @@ Resultado esperado: `passed=true`,
 somente de governanca/snapshot: ele carrega a janela antiga como
 `snapshot_only`, nao como autorizacao operacional viva.
 
+Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
+dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_operational_resume_gate.py \
+  --macro-governance-summary docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json \
+  --authorization <nova-autorizacao-da-janela-atual.json> \
+  --preflight <novo-preflight-pre_apply-da-placa.json> \
+  --json
+```
+
+Resultado esperado para operar: `passed=true`,
+`result_claim=c18_operational_resume_ready`. Com a autorizacao/preflight antigos,
+o resultado correto em 2026-06-16 e vermelho:
+`authorization_window_expired`, `preflight_stale` e `preflight_stage_mismatch`.
+
 O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:
 

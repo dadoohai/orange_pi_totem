@@ -26,6 +26,11 @@ piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
 Snapshot versionado:
 `docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/`.
+Retomada operacional agora passa por
+`scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate nao usa o snapshot
+como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da
+placa. Com a autorizacao/preflight antigos, o resultado correto e bloqueado por
+janela expirada e preflight velho.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo

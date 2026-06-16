@@ -41,6 +41,11 @@ read-only ja versionados. Ele nao substitui H2, nao reabre janela operacional
 expirada, nao publica, nao promove `stable`, nao habilita auto-pull e nao thaw
 `player-runtime`.
 
+Retomar operacao de piloto depois de pausa, reboot ou passagem de dias exige
+`scripts/qa/c18_ota_operational_resume_gate.py` verde. Esse gate separa snapshot
+de autorizacao viva: requer janela atual aprovada e preflight `pre_apply` fresco
+da placa antes de qualquer apply/rollback assistido.
+
 ## Roots De Artefatos
 
 | Classe | Root canonico | Observacao |

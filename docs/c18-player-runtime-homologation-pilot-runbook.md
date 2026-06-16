@@ -34,6 +34,20 @@ python3 scripts/qa/c18_player_runtime_pilot_readiness_gate.py \
 The gate is default-deny. It also requires a clean Git tree and tracked inputs.
 Commit evidence first, then run the gate from the clean tree.
 
+For any resumed operation after a pause, board reboot, or elapsed days, also run
+the operational resume gate immediately before touching the board:
+
+```sh
+python3 scripts/qa/c18_ota_operational_resume_gate.py \
+  --macro-governance-summary docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json \
+  --authorization <current-window-pilot-authorization.json> \
+  --preflight <fresh-pre_apply-board-preflight.json> \
+  --json
+```
+
+It must return `result_claim=c18_operational_resume_ready`. A green macro
+snapshot or an old `pilot-readiness.json` is not enough to operate.
+
 ## Authorization evidence
 
 Create a JSON document with schema

@@ -135,6 +135,13 @@ vermelho e diagnostico read-only. Ele nao substitui H2 e nao torna uma janela
 de piloto antiga em autorizacao operacional atual; fora da janela, criar nova
 autorizacao antes de aplicar em placa ou cliente.
 
+Antes de retomar operacao depois de pausa, reboot ou passagem de dias, rodar
+`scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate precisa ver
+autorizacao ativa para a janela atual, preflight `pre_apply` fresco, device hash
+allowlisted, policy homologation, timer off, freeze publico `rc=44`, imagem e
+source commit esperados. O gate deve ficar vermelho sobre snapshots antigos; isso
+e o comportamento correto.
+
 ## Publicacao de totem-core
 
 Antes de publicar:
