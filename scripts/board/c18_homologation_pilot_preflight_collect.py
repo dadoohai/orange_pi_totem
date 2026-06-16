@@ -47,6 +47,8 @@ EXPECTED_DEVICE_TRACK = "c18-hwdecode"
 EXPECTED_CHANNEL = "homologation"
 EXPECTED_ALLOWED_COMPONENTS = ["totem-core"]
 EXPECTED_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
+EXPECTED_MPV_BINARY = "/opt/totem/hwdecode/bin/mpv"
+EXPECTED_MPV_PATHS = {EXPECTED_WRAPPER, EXPECTED_MPV_BINARY}
 EXPECTED_HWDEC = "v4l2request-copy"
 PREFLIGHT_STAGES = {"pre_apply", "post_apply_observation"}
 DEVICE_HASH_RE = re.compile(r"^(?:sha256:)?([0-9a-f]{64})$")
@@ -233,13 +235,49 @@ def config_contract(config: Path) -> dict[str, Any]:
         return {
             "config_present": config.is_file(),
             "config_read_error": error,
-            "mpv_path_c18_stack": False,
+            "config_mpv_path_c18_stack": False,
         }
     mpv_path = data.get("mpv_path")
     return {
         "config_present": config.is_file(),
         "mpv_path_present": isinstance(mpv_path, str),
-        "mpv_path_c18_stack": mpv_path == EXPECTED_WRAPPER,
+        "config_mpv_path_c18_stack": mpv_path == EXPECTED_WRAPPER,
+    }
+
+
+def process_stack_check(config: Path, status: Path) -> dict[str, Any]:
+    try:
+        ipc_path, _status_path = playback.read_config(config, status)
+    except Exception as exc:
+        return {
+            "process_scan_result": "error",
+            "process_scan_error": f"config:{type(exc).__name__}",
+            "process_mpv_path_c18_stack": False,
+            "mpv_path_c18_stack": False,
+        }
+    total = 0
+    matching_paths: list[str] = []
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            comm = (proc / "comm").read_text(encoding="utf-8", errors="replace").strip()
+            if comm != "mpv":
+                continue
+            total += 1
+            if not playback.argv_matches_ipc(playback.proc_argv(proc), ipc_path):
+                continue
+            matching_paths.append(os.readlink(proc / "exe"))
+        except Exception:
+            continue
+    expected_matches = [path for path in matching_paths if path in EXPECTED_MPV_PATHS]
+    return {
+        "process_scan_result": "success",
+        "total_mpv_count": total,
+        "matching_ipc_mpv_count": len(matching_paths),
+        "process_mpv_path": matching_paths[0] if matching_paths else "",
+        "process_mpv_path_c18_stack": bool(expected_matches),
+        "mpv_path_c18_stack": bool(expected_matches),
     }
 
 
@@ -310,10 +348,16 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("image_marker_sha256_mismatch")
 
     config_checks = config_contract(args.config)
+    process_checks = process_stack_check(args.config, args.status)
     hwdec_checks = playback_hwdec_check(args.config, args.status, args.ipc_timeout_sec)
     player_checks = {
         **config_checks,
+        **process_checks,
         **hwdec_checks,
+        "mpv_path_c18_stack": (
+            config_checks.get("config_mpv_path_c18_stack") is True
+            or process_checks.get("process_mpv_path_c18_stack") is True
+        ),
         "service_active": service["active"] is True,
     }
     if player_checks.get("mpv_path_c18_stack") is not True:
@@ -450,7 +494,14 @@ class HomologationPilotPreflightCollectSelfTest(unittest.TestCase):
             with mock.patch(__name__ + ".run", side_effect=self.run_mock), mock.patch(
                 "c18_playback_health_collect.ipc_query_many",
                 return_value=("success", "", {"hwdec-current": EXPECTED_HWDEC}, 10, {}),
-            ):
+            ), mock.patch(__name__ + ".process_stack_check", return_value={
+                "process_scan_result": "success",
+                "total_mpv_count": 1,
+                "matching_ipc_mpv_count": 1,
+                "process_mpv_path": EXPECTED_MPV_BINARY,
+                "process_mpv_path_c18_stack": True,
+                "mpv_path_c18_stack": True,
+            }):
                 result = evaluate(args)
         self.assertTrue(result["passed"], result["blockers"])
         self.assertEqual(result["public_freeze"]["rollback"]["returncode"], 44)
@@ -469,7 +520,11 @@ class HomologationPilotPreflightCollectSelfTest(unittest.TestCase):
             with mock.patch(__name__ + ".run", side_effect=capture), mock.patch(
                 "c18_playback_health_collect.ipc_query_many",
                 return_value=("success", "", {"hwdec-current": EXPECTED_HWDEC}, 10, {}),
-            ):
+            ), mock.patch(__name__ + ".process_stack_check", return_value={
+                "process_scan_result": "success",
+                "process_mpv_path_c18_stack": True,
+                "mpv_path_c18_stack": True,
+            }):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn("public_freeze_static_guard_failed", result["blockers"])
@@ -482,10 +537,55 @@ class HomologationPilotPreflightCollectSelfTest(unittest.TestCase):
             with mock.patch(__name__ + ".run", side_effect=self.run_mock), mock.patch(
                 "c18_playback_health_collect.ipc_query_many",
                 return_value=("success", "", {"hwdec-current": "no"}, 10, {}),
-            ):
+            ), mock.patch(__name__ + ".process_stack_check", return_value={
+                "process_scan_result": "success",
+                "process_mpv_path_c18_stack": True,
+                "mpv_path_c18_stack": True,
+            }):
                 result = evaluate(args)
         self.assertFalse(result["passed"])
         self.assertIn("hwdec_expected_missing", result["blockers"])
+
+    def test_missing_config_mpv_path_accepts_expected_runtime_process(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = self.fixture_args(root)
+            write_json(args.config, {"ipc_path": str(root / "mpv.sock")})
+            with mock.patch(__name__ + ".run", side_effect=self.run_mock), mock.patch(
+                "c18_playback_health_collect.ipc_query_many",
+                return_value=("success", "", {"hwdec-current": EXPECTED_HWDEC}, 10, {}),
+            ), mock.patch(__name__ + ".process_stack_check", return_value={
+                "process_scan_result": "success",
+                "total_mpv_count": 1,
+                "matching_ipc_mpv_count": 1,
+                "process_mpv_path": EXPECTED_MPV_BINARY,
+                "process_mpv_path_c18_stack": True,
+                "mpv_path_c18_stack": True,
+            }):
+                result = evaluate(args)
+        self.assertTrue(result["passed"], result["blockers"])
+        self.assertFalse(result["player_runtime"]["checks"]["mpv_path_present"])
+        self.assertTrue(result["player_runtime"]["checks"]["mpv_path_c18_stack"])
+
+    def test_missing_config_mpv_path_rejects_stock_runtime_process(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = self.fixture_args(root)
+            write_json(args.config, {"ipc_path": str(root / "mpv.sock")})
+            with mock.patch(__name__ + ".run", side_effect=self.run_mock), mock.patch(
+                "c18_playback_health_collect.ipc_query_many",
+                return_value=("success", "", {"hwdec-current": EXPECTED_HWDEC}, 10, {}),
+            ), mock.patch(__name__ + ".process_stack_check", return_value={
+                "process_scan_result": "success",
+                "total_mpv_count": 1,
+                "matching_ipc_mpv_count": 1,
+                "process_mpv_path": "/usr/bin/mpv",
+                "process_mpv_path_c18_stack": False,
+                "mpv_path_c18_stack": False,
+            }):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn("mpv_path_c18_stack_missing", result["blockers"])
 
 
 def main(argv: list[str]) -> int:
