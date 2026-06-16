@@ -1,6 +1,8 @@
 # 192 - C18 Homologation RC
 
-Status em 2026-06-12: **Homologation RC pronta para piloto assistido**.
+Status em 2026-06-16: **Homologation RC pronta para piloto assistido**,
+com retomada operacional e readiness atual rerodados sobre autorizacao/preflight
+frescos. Producao/stable continuam bloqueados por H2.
 
 Este documento consolida o norte macro da C18 apos o fechamento do gate de
 piloto. Ele nao substitui `docs/UPDATE_CONTRACT.md`; apenas torna explicito o
@@ -69,6 +71,10 @@ Evidencia principal:
   nao reabre janela de piloto expirada e nao autoriza producao;
 - snapshot macro versionado:
   `docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/`;
+- retomada operacional atual:
+  `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`;
+- pilot readiness atual sobre a retomada operacional fresca:
+  `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json`;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:
@@ -175,6 +181,14 @@ autorizacao vigente, preflight `pre_apply` fresco da placa, freeze publico
 `rc=44`, policy homologation e stack C18 `mpv`/`hwdec` provada. Esse resultado
 autoriza apenas continuidade assistida do piloto de homologacao; nao autoriza
 producao, `stable`, auto-pull, thaw publico, soak 24h nem power-loss 17/17.
+
+Snapshot atual de readiness do piloto:
+`docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`.
+Resultado: `passed=true`, `result_claim=homologation_pilot_ready`, usando o
+mesmo pacote `c16fb3e`, H1 decisivo rastreavel, autorizacao vigente,
+preflight `pre_apply` fresco e os cinco checkpoints P0 seletivos. Esse snapshot
+substitui o readiness antigo apenas para a retomada operacional atual; ele nao
+reduz nenhum blocker H2.
 
 O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:

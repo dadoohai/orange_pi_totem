@@ -1,0 +1,38 @@
+{
+  "schema": "dadooh.c18.current_pilot_readiness_snapshot.v1",
+  "collected_at_utc": "2026-06-16T23:27:21Z",
+  "passed": true,
+  "result_claim": "homologation_pilot_ready",
+  "ring": "pilot",
+  "channel": "homologation",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "e24ae30ccea922750b9f9a643c92eca9f0f177fb2a9838896b8d559dfbb5f28e",
+      "bytes": 783
+    },
+    {
+      "file": "pilot-readiness.json",
+      "sha256": "7d129cbadc242cdcb3d142854403915eba378f1a4d76e1a509135b8c1510d591",
+      "bytes": 7097
+    }
+  ],
+  "key_checks": {
+    "pilot_authorization": true,
+    "board_preflight": true,
+    "authorization_preflight_link": true,
+    "h1_decisive_bundle": true,
+    "pilot_powerloss_p0": true,
+    "repo_clean": true,
+    "tracked_inputs": true
+  },
+  "non_claims": [
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_require_or_claim_signature_attestation",
+    "this_gate_does_not_thaw_public_player_runtime"
+  ]
+}

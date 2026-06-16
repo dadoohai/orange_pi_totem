@@ -5,7 +5,7 @@ acidental para update inseguro. Em caso de divergencia, o contrato vigente esta
 em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 `docs/product/189_C18_OTA_READINESS_GATE.md`.
 
-## Estado Operacional Vigente (2026-06-12)
+## Estado Operacional Vigente (2026-06-16)
 
 C18 Homologation RC esta pronta para piloto assistido, nao para producao. O
 alvo corrente e
@@ -41,6 +41,12 @@ O refresh operacional atual esta versionado em
 autorizacao da janela atual + preflight `pre_apply` fresco da placa +
 `c18_ota_operational_resume_gate.py` verde. Isso libera apenas retomada
 assistida do piloto em homologacao; H2/producao permanecem bloqueados.
+O pilot readiness atual, rerodado sobre esse refresh operacional, esta em
+`docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`:
+`c18_player_runtime_pilot_readiness_gate.py` verde com H1 decisivo, pacote
+`c16fb3e`, autorizacao vigente, preflight fresco e cinco checkpoints P0
+seletivos. Ele substitui o readiness antigo somente para a retomada operacional
+atual; nao reduz blockers H2.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
