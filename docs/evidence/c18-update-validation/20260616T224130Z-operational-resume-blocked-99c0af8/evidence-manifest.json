@@ -1,0 +1,35 @@
+{
+  "artifacts": [
+    {
+      "bytes": 4126,
+      "file": "operational-resume.json",
+      "sha256": "44f1a27f7ff7133e00cdf9e9e3d21f01de11e784fde489ea0da22a58cf4f99e9"
+    }
+  ],
+  "collected_at_utc": "2026-06-16T22:22:50Z",
+  "evidence_kind": "c18_ota_operational_resume_blocked_snapshot",
+  "expected_blockers": [
+    "current_pilot_authorization:authorization_window_expired",
+    "current_board_preflight:preflight_stale",
+    "current_board_preflight:preflight_stage_mismatch"
+  ],
+  "non_claims": [
+    "this_evidence_does_not_reopen_expired_pilot_windows",
+    "this_evidence_does_not_use_snapshot_as_operational_authorization",
+    "this_evidence_does_not_run_ssh_or_board_commands",
+    "this_evidence_does_not_apply_or_rollback_player_runtime",
+    "this_evidence_does_not_authorize_production",
+    "this_evidence_does_not_promote_stable",
+    "this_evidence_does_not_enable_auto_pull",
+    "this_evidence_does_not_publish_releases",
+    "this_evidence_does_not_thaw_public_player_runtime",
+    "this_evidence_does_not_satisfy_24h_soak",
+    "this_evidence_does_not_satisfy_powerloss_17_17",
+    "this_evidence_does_not_replace_h2_readiness"
+  ],
+  "repo_commit": "99c0af8b07e552cb1c5beff999b467f2f6628070",
+  "repo_dirty": false,
+  "repo_tree": "2ad07da28cdfd36512ff28428e3ca024ec85d5c0",
+  "result_claim": "c18_operational_resume_blocked",
+  "schema": "dadooh.c18.ota_operational_resume_evidence.v1"
+}

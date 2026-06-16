@@ -31,6 +31,8 @@ Retomada operacional agora passa por
 como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da
 placa. Com a autorizacao/preflight antigos, o resultado correto e bloqueado por
 janela expirada e preflight velho.
+Snapshot do bloqueio:
+`docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo

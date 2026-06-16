@@ -158,6 +158,8 @@ Resultado esperado para operar: `passed=true`,
 `result_claim=c18_operational_resume_ready`. Com a autorizacao/preflight antigos,
 o resultado correto em 2026-06-16 e vermelho:
 `authorization_window_expired`, `preflight_stale` e `preflight_stage_mismatch`.
+Snapshot versionado desse bloqueio:
+`docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
 
 O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:
