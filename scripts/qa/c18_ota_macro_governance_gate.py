@@ -43,7 +43,7 @@ DEFAULT_H1_SUMMARY = (
 )
 DEFAULT_PILOT_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json"
+    / "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json"
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
@@ -109,7 +109,7 @@ REQUIRED_H2_RED_CHECKS = (
 REQUIRED_DOC_TOKENS = (
     "scripts/qa/c18_ota_macro_governance_gate.py",
     "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
-    "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json",
+    "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
     "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
     "pre-H2",
@@ -577,7 +577,7 @@ def write_fixture(root: Path) -> argparse.Namespace:
             "\n".join([
                 "scripts/qa/c18_ota_macro_governance_gate.py",
                 "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
-                "docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json",
+                "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
                 "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
                 "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
                 "pre-H2",
