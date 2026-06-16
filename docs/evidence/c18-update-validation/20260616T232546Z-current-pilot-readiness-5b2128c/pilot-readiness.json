@@ -36,7 +36,7 @@
       "device_hashes": [
         "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104"
       ],
-      "evaluated_at_utc": "2026-06-16T23:27:21.090661Z",
+      "evaluated_at_utc": "2026-06-16T23:33:25.180366Z",
       "h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
       "passed": true,
       "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
@@ -115,7 +115,7 @@
     "source_expectation": {
       "authorization_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
       "blockers": [],
-      "expect_source_commit": null,
+      "expect_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
       "passed": true
     },
     "target_package": {

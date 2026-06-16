@@ -1,6 +1,6 @@
 {
   "schema": "dadooh.c18.current_pilot_readiness_snapshot.v1",
-  "collected_at_utc": "2026-06-16T23:27:21Z",
+  "collected_at_utc": "2026-06-16T23:33:25Z",
   "passed": true,
   "result_claim": "homologation_pilot_ready",
   "ring": "pilot",
@@ -13,8 +13,8 @@
     },
     {
       "file": "pilot-readiness.json",
-      "sha256": "7d129cbadc242cdcb3d142854403915eba378f1a4d76e1a509135b8c1510d591",
-      "bytes": 7097
+      "sha256": "50468365807d848ea9d2a9107deb5e954e072ae717b2bdf604b998705fef63f4",
+      "bytes": 7135
     }
   ],
   "key_checks": {
