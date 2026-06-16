@@ -1,0 +1,44 @@
+{
+  "schema": "dadooh.c18.current_macro_governance_snapshot.v1",
+  "collected_at_utc": "2026-06-16T23:34:36Z",
+  "passed": true,
+  "result_claim": "c18_homologation_governance_ready_pre_h2",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "30d2a1804edb5d5cb77178164fd5fdfb03dd8de76a7844e438dc6eb5b3d54fe3",
+      "bytes": 805
+    },
+    {
+      "file": "macro-governance.json",
+      "sha256": "92e43de9680efa7cea964f5c88cddeab605f1fe2ffe8b45e63651e55c346c0d6",
+      "bytes": 6236
+    }
+  ],
+  "key_checks": {
+    "h1_traceability": true,
+    "pilot_readiness": true,
+    "h2_preproduction_block": true,
+    "board_readonly_diagnostics": true,
+    "macro_docs": true,
+    "repo_clean": true,
+    "tracked_inputs": true
+  },
+  "h2_expected_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "non_claims": [
+    "this_gate_does_not_reopen_expired_pilot_windows",
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness"
+  ]
+}

@@ -30,7 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/macro-governance.json"
 )
 TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
 TARGET_SOURCE_COMMIT = "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"

@@ -39,7 +39,7 @@ the operational resume gate immediately before touching the board:
 
 ```sh
 python3 scripts/qa/c18_ota_operational_resume_gate.py \
-  --macro-governance-summary docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/macro-governance.json \
+  --macro-governance-summary docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/macro-governance.json \
   --authorization <current-window-pilot-authorization.json> \
   --preflight <fresh-pre_apply-board-preflight.json> \
   --json

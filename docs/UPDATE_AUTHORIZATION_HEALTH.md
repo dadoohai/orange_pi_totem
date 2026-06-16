@@ -25,7 +25,7 @@ read-only de placa. Esse gate nao substitui H2, nao reabre janela expirada de
 piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
 Snapshot versionado:
-`docs/evidence/c18-update-validation/20260616T222238Z-macro-governance-snapshot-aac8ac2/`.
+`docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/`.
 Retomada operacional agora passa por
 `scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate nao usa o snapshot
 como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da
