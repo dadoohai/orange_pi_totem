@@ -62,6 +62,11 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual, vermelho apenas pelos blockers de producao:
   `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json`;
+- gate macro pre-H2:
+  `scripts/qa/c18_ota_macro_governance_gate.py` agrega os snapshots acima com
+  `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d`
+  e prova que a governanca de homologacao esta coerente; nao substitui H2,
+  nao reabre janela de piloto expirada e nao autoriza producao;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:
@@ -125,6 +130,17 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_pilot_readiness_
 
 Resultado: `passed=true`, `result_claim=homologation_pilot_ready`.
 
+Como agregador pre-H2, o snapshot macro tambem deve passar:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_macro_governance_gate.py --json
+```
+
+Resultado esperado: `passed=true`,
+`result_claim=c18_homologation_governance_ready_pre_h2`. Esse resultado e
+somente de governanca/snapshot: ele carrega a janela antiga como
+`snapshot_only`, nao como autorizacao operacional viva.
+
 O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:
 
@@ -132,6 +148,13 @@ esperados:
 - soak 24h ausente;
 - stable promotion ausente;
 - decisao explicita de thaw ausente.
+
+Blockers exatos preservados no gate macro:
+
+- `full_physical_powerloss_matrix:powerloss_matrix_incomplete`;
+- `soak_endurance_24h:missing_24h_soak_summary`;
+- `stable_promotion_authorization:missing_stable_promotion_evidence`;
+- `explicit_operator_thaw_decision:missing_operator_thaw_decision`.
 
 O snapshot H2 rastreavel esta versionado em
 `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:

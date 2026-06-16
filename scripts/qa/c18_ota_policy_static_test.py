@@ -53,6 +53,7 @@ PLAYBACK_INCIDENT_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_playb
 BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH = (
     REPO_ROOT / "scripts" / "qa" / "c18_board_readonly_diagnostics_evidence_gate.py"
 )
+MACRO_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_macro_governance_gate.py"
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -372,6 +373,46 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("privacy_leak", gate)
         self.assertIn("manifest_file_sha256_mismatch", gate)
         self.assertIn("c18_board_readonly_diagnostics_evidence_gate", release_gate)
+
+    def test_macro_governance_gate_aggregates_pre_h2_snapshot(self) -> None:
+        gate = MACRO_GOVERNANCE_GATE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(MACRO_GOVERNANCE_GATE_PATH), "--self-test"], check=True)
+        result = subprocess.run(
+            [
+                "python3",
+                str(MACRO_GOVERNANCE_GATE_PATH),
+                "--allow-dirty-repo",
+                "--json",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        summary = json.loads(result.stdout)
+
+        self.assertTrue(summary["passed"], summary["blockers"])
+        self.assertEqual(summary["schema"], "dadooh.c18.ota_macro_governance_gate.v1")
+        self.assertEqual(summary["result_claim"], "c18_homologation_governance_ready_pre_h2")
+        self.assertEqual(summary["checks"]["pilot_readiness"]["authorization_window"]["snapshot_only"], True)
+        self.assertEqual(summary["checks"]["h2_preproduction_block"]["result_claim"], "h2_readiness_blocked")
+        self.assertEqual(
+            sorted(summary["h2_expected_blockers"]),
+            sorted([
+                "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+                "soak_endurance_24h:missing_24h_soak_summary",
+                "stable_promotion_authorization:missing_stable_promotion_evidence",
+                "explicit_operator_thaw_decision:missing_operator_thaw_decision",
+            ]),
+        )
+
+        self.assertIn("dadooh.c18.ota_macro_governance_gate.v1", gate)
+        self.assertIn("c18_homologation_governance_ready_pre_h2", gate)
+        self.assertIn("this_gate_does_not_reopen_expired_pilot_windows", gate)
+        self.assertIn("snapshot_only", gate)
+        self.assertIn("EXPECTED_H2_BLOCKERS", gate)
+        self.assertIn("h2_must_remain_blocked_pre_production", gate)
+        self.assertIn("c18_ota_macro_governance_gate", release_gate)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")

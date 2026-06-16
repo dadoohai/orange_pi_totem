@@ -19,6 +19,11 @@ rerodada no gate com H1 decisive traceability refresh em
 O snapshot H2 corrente esta versionado em
 `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:
 H1, server-side, repo clean e tracked inputs verdes; H2/producao ainda vermelho.
+O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
+valida o retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
+read-only de placa. Esse gate nao substitui H2, nao reabre janela expirada de
+piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
+producao.
 
 O piloto controlado autoriza somente entrega assistida por operador, com
 rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
@@ -41,6 +46,11 @@ suporte/homologacao, mas nao substitui deep-health, power-loss, soak, H2,
 `stable`, producao, publish, auto-pull ou thaw.
 Depois disso, H2/stable/producao continuam bloqueados por quatro itens:
 power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw.
+Os blockers exatos esperados continuam:
+`full_physical_powerloss_matrix:powerloss_matrix_incomplete`,
+`soak_endurance_24h:missing_24h_soak_summary`,
+`stable_promotion_authorization:missing_stable_promotion_evidence` e
+`explicit_operator_thaw_decision:missing_operator_thaw_decision`.
 
 Roots canonicos de artefato:
 

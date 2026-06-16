@@ -129,6 +129,12 @@ substitui assinatura/attestation e nao abre public thaw.
 
 Runbook: `docs/c18-player-runtime-homologation-pilot-runbook.md`.
 
+O agregador `scripts/qa/c18_ota_macro_governance_gate.py` pode ser usado para
+auditar o snapshot pre-H2 completo: H1 decisivo, readiness de piloto, H2 ainda
+vermelho e diagnostico read-only. Ele nao substitui H2 e nao torna uma janela
+de piloto antiga em autorizacao operacional atual; fora da janela, criar nova
+autorizacao antes de aplicar em placa ou cliente.
+
 ## Publicacao de totem-core
 
 Antes de publicar:

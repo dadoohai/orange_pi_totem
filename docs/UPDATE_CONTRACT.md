@@ -34,6 +34,13 @@ journal, nao executa comandos e escreve apenas em `/tmp`. Ele e evidencia
 operacional, nao payload OTA comum, nao release `player-runtime`, nao imagem,
 nao H2/stable/producao e nao substitui power-loss, soak ou thaw.
 
+O retrato macro de governanca C18 e validado por
+`scripts/qa/c18_ota_macro_governance_gate.py`. Esse gate e apenas agregador
+offline pre-H2: confere H1, pilot readiness, H2 bloqueado e diagnostico
+read-only ja versionados. Ele nao substitui H2, nao reabre janela operacional
+expirada, nao publica, nao promove `stable`, nao habilita auto-pull e nao thaw
+`player-runtime`.
+
 ## Roots De Artefatos
 
 | Classe | Root canonico | Observacao |
