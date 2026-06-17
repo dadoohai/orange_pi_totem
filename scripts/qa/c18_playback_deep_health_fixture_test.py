@@ -112,6 +112,26 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             rows[index]["vo_configured"] = ""
         fixture.write_rows(rows)
 
+    def write_long_run_ipc_error_rows(self, fixture: Fixture, indexes: list[int], reason: str) -> None:
+        source_rows = fixture.rows()
+        rows = []
+        for index in range(555):
+            row = source_rows[index % len(source_rows)].copy()
+            row.setdefault("ipc_error", "")
+            row["seq"] = str(index + 1)
+            row["rel_sec"] = str(index)
+            rows.append(row)
+        for index in indexes:
+            rows[index]["ipc_result"] = "error"
+            rows[index]["ipc_error"] = reason
+            rows[index]["path_alias"] = ""
+            rows[index]["filename_alias"] = ""
+            rows[index]["time_pos"] = ""
+            rows[index]["estimated_frame_number"] = ""
+            rows[index]["hwdec_current"] = ""
+            rows[index]["vo_configured"] = ""
+        fixture.write_rows(rows)
+
     def write_status_mpv_alignment_rows(
         self,
         fixture: Fixture,
@@ -217,6 +237,23 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 2)
         self.assertEqual(result["counters"]["ipc_missing_socket_max_consecutive_after_first_success"], 2)
         self.assertNotIn("ipc_stable_after_success", result["failure_reasons"])
+
+    def test_accepts_sparse_long_run_transient_missing_socket_after_success(self) -> None:
+        fixture = self.with_case()
+        self.write_long_run_ipc_error_rows(fixture, [83, 407, 408], "missing_socket")
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 3)
+        self.assertEqual(result["counters"]["ipc_missing_socket_allowed_after_first_success"], 3)
+        self.assertEqual(result["counters"]["ipc_missing_socket_max_consecutive_after_first_success"], 2)
+        self.assertNotIn("ipc_stable_after_success", result["failure_reasons"])
+
+    def test_rejects_excessive_sparse_long_run_missing_socket_after_success(self) -> None:
+        fixture = self.with_case()
+        self.write_long_run_ipc_error_rows(fixture, [83, 200, 350, 500], "missing_socket")
+        result = self.assert_fails_with(fixture, "ipc_stable_after_success")
+        self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 4)
+        self.assertEqual(result["counters"]["ipc_missing_socket_allowed_after_first_success"], 3)
 
     def test_rejects_excessive_missing_socket_after_success(self) -> None:
         fixture = self.with_case()

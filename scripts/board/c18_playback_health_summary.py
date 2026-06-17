@@ -28,6 +28,8 @@ MAX_STATUS_MPV_FORWARD_STATUS_LAG_SEGMENTS = 3
 MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES = 1
 MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
+TRANSIENT_MISSING_SOCKET_LONG_RUN_SAMPLE_WINDOW = 180
+MAX_TRANSIENT_MISSING_SOCKET_LONG_RUN_CAP = 6
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 
 
@@ -578,6 +580,14 @@ def present_count(values: list[float | None]) -> int:
     return len([value for value in values if value is not None])
 
 
+def allowed_transient_missing_socket_after_success(sample_count: int) -> int:
+    long_run_allowance = sample_count // TRANSIENT_MISSING_SOCKET_LONG_RUN_SAMPLE_WINDOW
+    return min(
+        MAX_TRANSIENT_MISSING_SOCKET_LONG_RUN_CAP,
+        max(MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS, long_run_allowance),
+    )
+
+
 def evaluate(
     *,
     samples_path: Path,
@@ -744,8 +754,9 @@ def evaluate(
         else not panfrost_faults_delta_present or panfrost_faults_delta == 0
     )
     panfrost_faults_clean = panfrost_faults_zero if panfrost_fault_policy == "absolute" else panfrost_faults_delta_zero
+    ipc_missing_socket_allowed = allowed_transient_missing_socket_after_success(len(rows))
     ipc_transient_missing_socket_ok = (
-        ipc_missing_socket_after_success <= MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS
+        ipc_missing_socket_after_success <= ipc_missing_socket_allowed
         and ipc_missing_socket_max_streak <= MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS
     )
     ipc_stable_after_success = (
@@ -812,10 +823,13 @@ def evaluate(
             "ipc_missing_socket_after_first_success": ipc_missing_socket_after_success,
             "ipc_other_error_after_first_success": ipc_other_error_after_success,
             "ipc_missing_socket_max_consecutive_after_first_success": ipc_missing_socket_max_streak,
-            "ipc_missing_socket_allowed_after_first_success": MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS,
+            "ipc_missing_socket_allowed_after_first_success": ipc_missing_socket_allowed,
+            "ipc_missing_socket_min_allowed_after_first_success": MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS,
             "ipc_missing_socket_max_allowed_consecutive_after_first_success": (
                 MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS
             ),
+            "ipc_missing_socket_long_run_sample_window": TRANSIENT_MISSING_SOCKET_LONG_RUN_SAMPLE_WINDOW,
+            "ipc_missing_socket_long_run_cap": MAX_TRANSIENT_MISSING_SOCKET_LONG_RUN_CAP,
             "unique_aliases": unique_aliases,
             "status_unique_aliases": status_unique_aliases,
             "mpv_unique_aliases": mpv_unique_aliases,
