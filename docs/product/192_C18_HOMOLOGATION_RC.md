@@ -111,9 +111,10 @@ Evidencia principal:
   e sem liberar piloto/producao;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`;
-  snapshot historico de `c16fb3e`; novo snapshot pre-soak para `9bebaf1`
-  depende de P0/preflight aceito e continua sem substituir soak 24h ou
-  power-loss 17/17;
+  snapshot historico de `c16fb3e`. O snapshot corrente
+  `docs/evidence/c18-update-validation/20260617T222006Z-pre-soak-scale-governance-9bebaf1/`
+  esta verde para governanca pre-soak/pre-H2 e continua sem substituir soak 24h
+  ou power-loss 17/17;
 - playback em nivel usuario:
   `docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/`
   preserva 10 minutos de placa real com 9 midias observadas, zero restart,
