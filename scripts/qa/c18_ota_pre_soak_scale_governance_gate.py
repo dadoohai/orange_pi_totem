@@ -41,7 +41,7 @@ DEFAULT_H2_READINESS = (
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T031156Z-current-macro-governance-d1209e3/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260617T061938Z-current-macro-governance-1a7cce9/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e"
@@ -466,7 +466,7 @@ def evaluate_operational_resume_default(now_utc: str, *, allow_dirty_repo: bool 
     macro = payload.get("checks", {}).get("macro_governance_snapshot", {}) if isinstance(payload.get("checks"), dict) else {}
     if macro.get("passed") is not True:
         blockers.append("operational_resume_default_macro_not_passed")
-    if "20260617T031156Z-current-macro-governance-d1209e3" not in str(macro.get("summary_path")):
+    if "20260617T061938Z-current-macro-governance-1a7cce9" not in str(macro.get("summary_path")):
         blockers.append("operational_resume_default_macro_not_current")
     return step(not blockers, blockers, returncode=result.get("returncode"))
 

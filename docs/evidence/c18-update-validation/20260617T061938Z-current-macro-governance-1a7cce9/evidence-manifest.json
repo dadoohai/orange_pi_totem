@@ -1,0 +1,45 @@
+{
+  "schema": "dadooh.c18.ota_macro_governance_snapshot.v1",
+  "collected_at_utc": "2026-06-17T06:19:38.498133Z",
+  "collection_repo_commit": "1a7cce98238840a74d2b3d3eb5bff51d692a3f0f",
+  "collection_repo_tree": "8e4a85a4a31fdb74d8ac6f753ce88c994d94d225",
+  "passed": true,
+  "result_claim": "c18_homologation_governance_ready_pre_h2",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "63ad2557bee926257e89a95361299413565a791edca306ffd50b9056d52cf4d1",
+      "bytes": 844
+    },
+    {
+      "file": "macro-governance.json",
+      "sha256": "bea8d9deb66fd1a0e3667321a43a4e19f8dba59568cf69ff9f827190573ee979",
+      "bytes": 6996
+    }
+  ],
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "ring": "pilot",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+  },
+  "expected_h2_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "non_claims": [
+    "this_snapshot_does_not_replace_h2",
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_powerloss_17_17",
+    "this_snapshot_does_not_satisfy_24h_soak"
+  ]
+}
