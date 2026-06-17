@@ -192,6 +192,13 @@
       "stderr_tail": "",
       "stdout_tail": ""
     },
+    "server_side_current_snapshot": {
+      "blockers": [],
+      "passed": true,
+      "result_claim": "server_side_publish_governance_ready",
+      "run_dir": "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e",
+      "snapshot_sha256": "2875944f73f96a8606722836ff4c7cd7ddf069d5f2e29210e12290f974c58542"
+    },
     "server_side_publish_governance": {
       "blockers": [],
       "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json",
@@ -237,6 +244,7 @@
         "docs/evidence/c18-update-validation/20260612T035520Z-p0-rollback-after-state-success-c16fb3e",
         "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json",
         "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem",
+        "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e",
         "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
       ],
       "untracked": []

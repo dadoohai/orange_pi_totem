@@ -1,8 +1,8 @@
 # C18 current H2 readiness snapshot: c16fb3e
 
 This snapshot reruns the C18 `player-runtime` H2 readiness gate against the
-current tracked H1, P0 power-loss, server-side governance, trust-anchor and
-image-bound inputs for package
+current tracked H1, P0 power-loss, server-side governance, current
+server-side snapshot, trust-anchor and image-bound inputs for package
 `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`.
 
 Result: `passed=false`, `result_claim=h2_readiness_blocked`.
@@ -21,6 +21,8 @@ Positive inputs accepted by the gate:
 - the five P0 pilot power-loss checkpoints pass their evidence gates;
 - server-side publish governance passes with trusted key and trust-anchor
   evidence;
+- the current server-side validation snapshot is hash-bound and points to the
+  same `player-runtime`/`homologation` package;
 - repo was clean when the gate was generated;
 - tracked input guard passed.
 

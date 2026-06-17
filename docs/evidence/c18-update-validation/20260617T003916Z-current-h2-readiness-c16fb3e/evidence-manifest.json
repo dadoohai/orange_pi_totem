@@ -1,8 +1,8 @@
 {
   "schema": "dadooh.c18.h2_readiness_current_snapshot.v1",
-  "artifact_id": "c18-current-h2-readiness-c16fb3e-20260617T003916Z",
-  "collected_at_utc": "2026-06-17T00:39:16Z",
-  "repo_commit": "9e477a5c1542f832ad07e52a1dbb69b079e2e70d",
+  "artifact_id": "c18-current-h2-readiness-c16fb3e-20260617T011046Z",
+  "collected_at_utc": "2026-06-17T01:10:46Z",
+  "repo_commit": "4f4d1a0c5fa67eda75effa99a232ee8b36fe79e7",
   "component": "player-runtime",
   "channel": "homologation",
   "target_package": {
@@ -26,6 +26,7 @@
   "accepted_inputs": {
     "h1_decisive_bundle": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
     "server_side_evidence": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json",
+    "server_side_current_snapshot": "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e",
     "server_side_trusted_key_pem": "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem",
     "server_side_trust_anchor": "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json",
     "p0_powerloss_checkpoints": [
@@ -53,13 +54,13 @@
   "files": [
     {
       "file": "README.md",
-      "bytes": 1215,
-      "sha256": "05f9e69ace45b1f6acc33747d569670f12670e245920cdaafceb51aef0312743"
+      "bytes": 1371,
+      "sha256": "12582b59b68e0086e1f9f492659150a87f5150e01eccdc87615e9b8f0ce7a015"
     },
     {
       "file": "h2-readiness.json",
-      "bytes": 9581,
-      "sha256": "d4a536b982dd78bda1848b4cbc9126573d004cfcd9077d399fa47dc49a4b00e6"
+      "bytes": 10017,
+      "sha256": "528c4adec7ac8acded55ac2a82839246faea624c002e839dcc47726280c8813b"
     }
   ],
   "non_claims": [
