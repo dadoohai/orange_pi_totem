@@ -83,7 +83,7 @@ Evidencia principal:
   e prova que a governanca de homologacao esta coerente; nao substitui H2,
   nao reabre janela de piloto expirada e nao autoriza producao;
 - snapshot macro versionado:
-  `docs/evidence/c18-update-validation/20260617T021956Z-current-macro-governance-fa2f0a6/`;
+  `docs/evidence/c18-update-validation/20260617T031156Z-current-macro-governance-d1209e3/`;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T023512Z-pre-soak-scale-governance-164cb19/`;
   `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` verde em arvore
@@ -189,7 +189,7 @@ manutencao autorizado.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_operational_resume_gate.py \
-  --macro-governance-summary docs/evidence/c18-update-validation/20260617T021956Z-current-macro-governance-fa2f0a6/macro-governance.json \
+  --macro-governance-summary docs/evidence/c18-update-validation/20260617T031156Z-current-macro-governance-d1209e3/macro-governance.json \
   --authorization <nova-autorizacao-da-janela-atual.json> \
   --preflight <novo-preflight-pre_apply-da-placa.json> \
   --json
