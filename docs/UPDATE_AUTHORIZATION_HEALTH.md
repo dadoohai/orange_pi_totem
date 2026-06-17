@@ -15,7 +15,7 @@ alvo corrente e
 com retomada operacional em
 `docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`
 e macro-governanca atual em
-`docs/evidence/c18-update-validation/20260617T061938Z-current-macro-governance-1a7cce9/`.
+`docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`.
 A trilha de 2026-06-12 continua preservada como rastreabilidade historica:
 H1 decisive traceability refresh em
 `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`,
@@ -32,7 +32,7 @@ read-only de placa. Esse gate nao substitui H2, nao reabre janela expirada de
 piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
 Snapshot versionado:
-`docs/evidence/c18-update-validation/20260617T061938Z-current-macro-governance-1a7cce9/`.
+`docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`.
 O snapshot pre-soak scale governance atual esta em
 `docs/evidence/c18-update-validation/20260617T062826Z-pre-soak-scale-governance-f696c25/`:
 `c18_ota_pre_soak_scale_governance_gate.py` verde em arvore limpa, com release
