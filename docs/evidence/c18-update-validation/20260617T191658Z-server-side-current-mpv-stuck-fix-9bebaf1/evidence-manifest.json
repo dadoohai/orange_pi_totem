@@ -1,0 +1,57 @@
+{
+  "files": [
+    {
+      "bytes": 1091,
+      "file": "README.md",
+      "sha256": "90fd01e6277d5124e2ec86946b347d2c754ec9152ebe90e9828be51ab891d645"
+    },
+    {
+      "bytes": 501,
+      "file": "server-side-governance-gate.json",
+      "sha256": "cbce80b672cbf768c366d86d4ba93858301ba79c90b5ff331108777839617dc7"
+    },
+    {
+      "bytes": 5939,
+      "file": "server-side-asset-list.json",
+      "sha256": "087a3aed3bf5084c1c2aed488a361969c5ac66b489872089b3dfea2f258dc405"
+    }
+  ],
+  "inputs": {
+    "expected_release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+    "server_side_evidence": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+    "trust_anchor_evidence": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json",
+    "trusted_key_pem": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-release-signing-key.pub.pem"
+  },
+  "key_checks": {
+    "allowlist_controls_defined": true,
+    "asset_count": 14,
+    "asset_list_hash_bound": true,
+    "audit_trail_defined": true,
+    "auto_pull_default_disabled": true,
+    "expected_component_player_runtime": true,
+    "external_trust_anchor_verified": true,
+    "governance_gate_passed": true,
+    "signed_or_attested_assets_verified": true,
+    "staged_rollout_defined": true
+  },
+  "non_claims": [
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_thaw_player_runtime",
+    "this_snapshot_does_not_complete_h2",
+    "this_snapshot_does_not_replace_powerloss_17_17",
+    "this_snapshot_does_not_replace_soak_24h",
+    "this_snapshot_does_not_replace_stable_promotion_or_formal_thaw_decision"
+  ],
+  "passed": true,
+  "result_claim": "server_side_publish_governance_ready",
+  "schema": "dadooh.c18.server_side_current_validation_snapshot.v1",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  }
+}

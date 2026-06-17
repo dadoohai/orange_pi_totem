@@ -1,0 +1,13 @@
+{
+  "blockers": [],
+  "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+  "non_claims": [
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_thaw_player_runtime"
+  ],
+  "passed": true,
+  "result_claim": "server_side_publish_governance_ready",
+  "schema": "dadooh.c18.server_side_publish_governance_gate.v1"
+}

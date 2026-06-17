@@ -1,0 +1,101 @@
+{
+  "asset_records": [
+    {
+      "bytes": 6203,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+      "sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319"
+    },
+    {
+      "bytes": 1385,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "sha256": "e7c9b3d538ee865ab0eb7108931ce38bc06d235dd66ea74267bec35d90a5c0be"
+    },
+    {
+      "bytes": 27074,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+      "sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+    },
+    {
+      "bytes": 1048,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+      "sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272"
+    },
+    {
+      "bytes": 3268,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/audit-log.ndjson",
+      "sha256": "8125c3042d25d5d8b6d9b188b9d32fd284d6fcabba534bf7781cf97fcc445da7"
+    },
+    {
+      "bytes": 769,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/manifest.signature.json",
+      "sha256": "716d3e25a6af4aa882f037ebf52c067985e75da6b8e12c96cb83d6d24233954e"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/manifest.sig",
+      "sha256": "8cd26d4678e034818da3c7315a8571f1cd5a09aa1da261e9568e1e8dbf73cb36"
+    },
+    {
+      "bytes": 767,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/payload.signature.json",
+      "sha256": "671bad45a05f1ddfd172359830c374b69860a3778064ecf42ce044a1d0219116"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/payload.sig",
+      "sha256": "c1c47d0c72515adb7e9cdb0e42c847cf552aa2850bd7543b4508f78419483ee4"
+    },
+    {
+      "bytes": 793,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/c18-ota-release-gate.signature.json",
+      "sha256": "928b1f201c0edb4428cdb55d373ba55c8c17920701a21e30f9f574fe51eb471e"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/c18-ota-release-gate.sig",
+      "sha256": "260a3905a6a43e45077f13a669e3841f0744886b7d21aea6dad453b73fd5f9e3"
+    },
+    {
+      "bytes": 771,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/audit-log.signature.json",
+      "sha256": "622973eb3aa16a5bc6fc5846ffa1846a9b3cf736da4d736973fdd55df616b9c2"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/audit-log.sig",
+      "sha256": "c6c59d5e6fde53f3d4e54ef3de6df3ea6203a4a88fc17cb02fc22c85ba64da58"
+    },
+    {
+      "bytes": 853,
+      "path": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json",
+      "sha256": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67"
+    }
+  ],
+  "assets": [
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/audit-log.ndjson",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/manifest.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/manifest.sig",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/payload.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/payload.sig",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/c18-ota-release-gate.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/c18-ota-release-gate.sig",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/audit-log.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/signatures/audit-log.sig",
+    "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json"
+  ],
+  "non_claims": [
+    "this_list_does_not_publish_releases",
+    "this_list_does_not_enable_auto_pull",
+    "this_list_does_not_promote_stable",
+    "this_list_does_not_thaw_player_runtime",
+    "this_list_does_not_complete_h2",
+    "this_list_does_not_replace_powerloss_17_17",
+    "this_list_does_not_replace_soak_24h",
+    "this_list_does_not_replace_stable_promotion_or_formal_thaw_decision"
+  ],
+  "schema": "dadooh.c18.server_side_publish_asset_list.v1"
+}

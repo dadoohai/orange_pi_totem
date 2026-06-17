@@ -1,0 +1,27 @@
+{
+  "key_owner": "release-security-01",
+  "non_claims": [
+    "this_evidence_does_not_assert_pki_chain",
+    "this_evidence_does_not_publish_releases",
+    "this_evidence_does_not_enable_auto_pull",
+    "this_evidence_does_not_promote_stable",
+    "this_evidence_does_not_thaw_player_runtime"
+  ],
+  "private_key_material_present": false,
+  "public_key_algorithm": "rsa",
+  "purpose": "c18_server_side_release_signing",
+  "schema": "dadooh.c18.server_side_trust_anchor.v1",
+  "scope": {
+    "channels": [
+      "homologation"
+    ],
+    "components": [
+      "totem-core",
+      "player-runtime"
+    ]
+  },
+  "selected_at_utc": "2026-06-17T19:16:58Z",
+  "selected_by": "operator-release-01",
+  "signature_algorithm": "openssl-dgst-sha256-rsa-pkcs1-v1_5",
+  "trusted_key_spki_sha256": "51868761afd2c4c6ac9b59651913d027817dee20f4a2456a6ff344226ec164b5"
+}
