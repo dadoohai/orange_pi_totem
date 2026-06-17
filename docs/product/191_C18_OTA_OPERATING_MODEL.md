@@ -1,9 +1,10 @@
 # 191 - C18 OTA Operating Model
 
 Documento operacional curto para OTA C18 futuro. Complementa o gate tecnico de
-`189_C18_OTA_READINESS_GATE.md` e a orientacao de producao de
-`190_C18_PROD_ORIENTATION.md`; nao substitui nenhum gate deles. A fonte
-contratual vigente e `docs/UPDATE_CONTRACT.md`.
+`189_C18_OTA_READINESS_GATE.md`. O documento
+`190_C18_PROD_ORIENTATION.md` fica preservado como orientacao historica/nao
+autoritativa; o estado operacional vigente esta neste documento e em
+`docs/UPDATE_CONTRACT.md`.
 
 ## Regra principal
 
@@ -134,6 +135,12 @@ auditar o snapshot pre-H2 completo: H1 decisivo, readiness de piloto, H2 ainda
 vermelho e diagnostico read-only. Ele nao substitui H2 e nao torna uma janela
 de piloto antiga em autorizacao operacional atual; fora da janela, criar nova
 autorizacao antes de aplicar em placa ou cliente.
+
+O agregador `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` fecha a
+visao estatica pre-soak para escala: responsabilidade das frentes C18,
+server-side atual, snapshot H2 ainda vermelho, preflight H2 power-loss da placa
+e retomada operacional default-deny. Ele tambem nao autoriza producao, `stable`,
+auto-pull, public thaw, soak 24h nem matriz power-loss 17/17.
 
 Antes de retomar operacao depois de pausa, reboot ou passagem de dias, rodar
 `scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate precisa ver

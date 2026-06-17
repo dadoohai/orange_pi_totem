@@ -22,6 +22,12 @@ o plano da matriz. Esse passo evita iniciar cortes com pacote, imagem,
 evidence root ou topologia errados, mas nao conta como power-loss nem substitui
 os 17 diretórios reais validados pelo evidence gate.
 
+Depois de cada sessao fisica, puxar o diretorio de evidencia para
+`docs/evidence/c18-update-validation/`, validar off-board com o gate
+correspondente, confirmar que todos os arquivos relevantes estao rastreados por
+Git e commitar antes de rodar qualquer gate final. Evidencia local em `/data`
+sem commit nao deve ser usada para H2/stable.
+
 ## Regra De Pacote
 
 No desenho C18 atual, nao gerar manifest `player-runtime channel=stable`. O alvo
@@ -62,7 +68,7 @@ os rascunhos:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_stable_decision_draft_build.py \
   --output-dir docs/evidence/c18-update-validation/<utc>-h2-stable-thaw-drafts-c16fb3e \
-  --release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
+  --release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
   --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
@@ -114,6 +120,11 @@ Os arquivos gerados devem falhar fechado ate serem preenchidos por operador:
 }
 ```
 
+O campo `h2_readiness_sha256` e o hash do conjunto de entradas H2 calculado
+pelos gates `c18_stable_promotion_gate.py` e
+`c18_player_runtime_h2_readiness_gate.py`; ele nao e o hash do artefato final
+`h2-readiness-final.json` salvo no diretorio de fechamento.
+
 `c18-player-runtime-thaw-decision.json` precisa manter janela UTC curta, no
 maximo 4h:
 
@@ -162,7 +173,7 @@ Stable promotion:
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_stable_promotion_gate.py \
   --expected-component player-runtime \
   --evidence docs/evidence/c18-update-validation/<final-dir>/c18-stable-promotion-evidence.json \
-  --release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
+  --release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
   --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem \
@@ -181,7 +192,7 @@ H2 readiness:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_h2_readiness_gate.py \
-  --h1-release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
+  --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-01> \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<...17-checkpoints...> \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \

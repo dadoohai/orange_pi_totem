@@ -30,9 +30,11 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 | Frente | Responsabilidade | Estado da RC |
 | --- | --- | --- |
 | `totem-core` | OTA C18 comum: wizard, splash, status, writer, validadores, helpers e settings | Funcional como OTA manual/operator-triggered; policy, timer, freeze, downgrade, rollback e allowlist de payload cobertos no gate e no device-side |
-| `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Funcional somente como piloto assistido em `homologation`; payload C18-aware restrito a `kiosk.py`; nao e public thaw |
+| `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Funcional somente como piloto assistido em `homologation`; a frente e mais ampla, mas o payload C18-aware atual esta restrito a `kiosk.py`; nao e public thaw |
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; guardrails executaveis bloqueiam vazamento para OTA comum; qualquer mudanca exige imagem/homologacao propria |
 | `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software; snapshot publico C18/C7 coleta apenas estado sanitizado e metadados, com evidencia read-only em placa |
+| `server-side/publish` | server-side/signature, trust anchor, lista de assets, allowlist, staged rollout e audit | Verde para os artefatos de homologacao atuais; nao publica, nao promove `stable`, nao liga auto-pull e nao abre thaw publico |
+| `H2/prod` | gates de producao/stable, power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw | Intencionalmente vermelho antes de H2; nenhuma conclusao de producao pode ser inferida da RC ou do piloto assistido |
 
 ## Roots canonicos de artefatos
 

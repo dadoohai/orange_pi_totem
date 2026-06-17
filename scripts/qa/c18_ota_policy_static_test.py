@@ -55,6 +55,9 @@ BOARD_READONLY_DIAGNOSTICS_EVIDENCE_GATE_PATH = (
 )
 MACRO_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_macro_governance_gate.py"
 OPERATIONAL_RESUME_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_operational_resume_gate.py"
+PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_ota_pre_soak_scale_governance_gate.py"
+)
 HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH = (
     REPO_ROOT / "scripts" / "board" / "c18_homologation_pilot_preflight_collect.py"
 )
@@ -486,6 +489,51 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("preflight_stale", gate)
         self.assertIn("authorization_window_expired", gate)
         self.assertIn("c18_ota_operational_resume_gate", release_gate)
+
+    def test_pre_soak_scale_governance_gate_is_wired(self) -> None:
+        gate = PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH), "--self-test"], check=True)
+        result = subprocess.run(
+            [
+                "python3",
+                str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
+                "--allow-dirty-repo",
+                "--json",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        summary = json.loads(result.stdout)
+
+        self.assertTrue(summary["passed"], summary["blockers"])
+        self.assertEqual(summary["schema"], "dadooh.c18.ota_pre_soak_scale_governance_gate.v1")
+        self.assertEqual(summary["result_claim"], "c18_ota_pre_soak_scale_governance_ready")
+        self.assertEqual(summary["checks"]["release_gate"]["skipped"], True)
+        self.assertEqual(summary["checks"]["h2_powerloss_board_preflight_snapshot"]["passed"], True)
+        self.assertEqual(
+            sorted(summary["expected_h2_blockers"]),
+            sorted([
+                "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+                "soak_endurance_24h:missing_24h_soak_summary",
+                "stable_promotion_authorization:missing_stable_promotion_evidence",
+                "explicit_operator_thaw_decision:missing_operator_thaw_decision",
+            ]),
+        )
+
+        self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
+        self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
+        self.assertIn("20260617T011150Z-current-macro-governance-ab6ad5f", gate)
+        self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
+        self.assertIn("20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e", gate)
+        self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
+        self.assertIn("this_gate_does_not_authorize_production", gate)
+        self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
+        self.assertIn("this_gate_does_not_satisfy_powerloss_17_17", gate)
+        self.assertIn("--run-release-gate", gate)
+        self.assertIn("c18_ota_pre_soak_scale_governance_gate.py", release_gate)
+        self.assertIn("c18_ota_pre_soak_scale_governance_gate", release_gate)
 
     def test_homologation_pilot_preflight_collector_is_read_only_and_wired(self) -> None:
         collector = HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH.read_text(encoding="utf-8")
