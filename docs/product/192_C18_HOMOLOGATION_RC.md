@@ -263,7 +263,7 @@ com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o
 plano da matriz. Esse gate bloqueia placa/pacote/topologia errados antes da
 sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
 Snapshot fresco coletado da placa e validado contra o plano com custom setup:
-`docs/evidence/c18-update-validation/20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d/`;
+`docs/evidence/c18-update-validation/20260617T082642Z-h2-powerloss-board-preflight-fresh-7a73f9a/`;
 ele reporta `after_previous_symlink` e `rollback_after_current_unlinked` como
 checkpoints que exigem setup customizado.
 Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target

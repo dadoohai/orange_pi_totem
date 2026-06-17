@@ -498,7 +498,7 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   `docs/evidence/c18-update-validation/20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e/`
   ficou verde para iniciar a sessao fisica;
 - depois da nova retomada com placa acessivel, o preflight fresco em
-  `docs/evidence/c18-update-validation/20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d/`
+  `docs/evidence/c18-update-validation/20260617T082642Z-h2-powerloss-board-preflight-fresh-7a73f9a/`
   reconfirmou pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`, policy
   `homologation`, timer inativo/desabilitado, target nao linkado, target nao
   quarentenado, raiz H2 sem diretorios de checkpoint pendentes e custom setup

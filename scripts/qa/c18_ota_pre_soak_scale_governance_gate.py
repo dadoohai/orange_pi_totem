@@ -49,7 +49,7 @@ DEFAULT_SERVER_SIDE_CURRENT_DIR = (
 )
 DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d"
+    / "docs/evidence/c18-update-validation/20260617T082642Z-h2-powerloss-board-preflight-fresh-7a73f9a"
 )
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/191_C18_OTA_OPERATING_MODEL.md",
