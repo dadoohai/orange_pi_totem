@@ -24,7 +24,7 @@ autorizacao historica de piloto em
 e pilot readiness traceability refresh em
 `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`.
 O snapshot H2 corrente esta versionado em
-`docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/`:
+`docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/`:
 H1, server-side, repo clean e tracked inputs verdes; H2/producao ainda vermelho.
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida o retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
@@ -478,9 +478,10 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   registra 5/17 cobertos e 12/17 pendentes, com instrucoes manuais explicitas
   para checkpoints `requires_custom_setup`;
 - o runbook
-  `docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e/`
+  `docs/evidence/c18-update-validation/20260617T030341Z-h2-powerloss-operator-runbook-fresh-local-root-c16fb3e/`
   pode orientar os 12 checkpoints pendentes, bloqueia setup customizado sem
-  comandos/instrucoes e nao conta como evidencia;
+  comandos/instrucoes, recusa placeholder `<utc>`/diretorio local existente no
+  helper de pull e nao conta como evidencia;
 - antes de iniciar uma sessao fisica, rodar
   `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` na placa
   e validar o JSON com

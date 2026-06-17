@@ -71,7 +71,7 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual, vermelho apenas pelos blockers de producao:
-  `docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json`;
+  `docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json`;
 - server-side/signature atual:
   `docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/`;
   `server-side-governance-gate.json` verde para `player-runtime`, trust anchor
@@ -234,7 +234,7 @@ Blockers exatos preservados no gate macro:
 - `explicit_operator_thaw_decision:missing_operator_thaw_decision`.
 
 O snapshot H2 rastreavel esta versionado em
-`docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/`:
+`docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/`:
 `h1_decisive_bundle=true`, `server_side_publish_governance=true`,
 `repo_clean=true` e `tracked_inputs=true`; `passed=false` continua correto para
 producao.
@@ -247,11 +247,12 @@ registra a matriz atual como 5/17 coberta e 12/17 pendente, com instrucoes
 manuais explicitas para checkpoints de setup customizado e sem reivindicar
 evidencia fisica.
 O runbook operacional gerado em
-`docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e/`
+`docs/evidence/c18-update-validation/20260617T030341Z-h2-powerloss-operator-runbook-fresh-local-root-c16fb3e/`
 organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
 de pull/validacao. O builder agora bloqueia checkpoint `requires_custom_setup`
-sem comandos ou instrucoes manuais; o runbook tambem nao e evidencia fisica e
-nao substitui corte real de energia.
+sem comandos ou instrucoes manuais; o helper tambem recusa placeholder `<utc>`
+e diretorio local existente para evitar mistura de evidencia. O runbook tambem
+nao e evidencia fisica e nao substitui corte real de energia.
 O mesmo runbook agora inclui uma etapa previa de preflight H2: coletar estado
 read-only da placa com
 `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` e validar

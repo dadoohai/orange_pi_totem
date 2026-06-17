@@ -37,7 +37,7 @@ EXPECTED_H2_BLOCKERS = (
     "explicit_operator_thaw_decision:missing_operator_thaw_decision",
 )
 DEFAULT_H2_READINESS = (
-    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json"
+    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT

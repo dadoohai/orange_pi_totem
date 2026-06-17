@@ -1096,12 +1096,12 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260617T003916Z-current-h2-readiness-c16fb3e",
+            "20260617T030214Z-current-h2-readiness-13d4cbd",
             "repo_clean=true",
             "tracked_inputs=true",
         ):
             self.assertIn(token, doc192)
-        self.assertIn("20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e", doc192)
+        self.assertIn("20260617T030341Z-h2-powerloss-operator-runbook-fresh-local-root-c16fb3e", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
@@ -2470,7 +2470,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             / "docs"
             / "evidence"
             / "c18-update-validation"
-            / "20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e"
+            / "20260617T030341Z-h2-powerloss-operator-runbook-fresh-local-root-c16fb3e"
             / "operator-runbook.md"
         ).read_text(encoding="utf-8")
         self.assertEqual(2, current_powerloss_runbook_artifact.count("Manual setup before arm:"))
@@ -2735,9 +2735,9 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260617T003916Z-current-h2-readiness-c16fb3e",
+            "20260617T030214Z-current-h2-readiness-13d4cbd",
             "20260612T125127Z-server-side-governance-c16fb3e",
-            "20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e",
+            "20260617T030341Z-h2-powerloss-operator-runbook-fresh-local-root-c16fb3e",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",

@@ -53,7 +53,7 @@ DEFAULT_PILOT_READINESS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json"
 )
 DEFAULT_BOARD_READONLY_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d"
@@ -157,7 +157,7 @@ REQUIRED_DOC_TOKENS = (
     "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
     "docs/evidence/c18-update-validation/20260617T021956Z-current-macro-governance-fa2f0a6/",
     "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/",
-    "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
+    "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json",
     "docs/evidence/c18-update-validation/20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e/",
     "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
@@ -820,7 +820,7 @@ def write_fixture(root: Path) -> argparse.Namespace:
                 "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
                 "docs/evidence/c18-update-validation/20260617T021956Z-current-macro-governance-fa2f0a6/",
                 "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/",
-                "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
+                "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json",
                 "docs/evidence/c18-update-validation/20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e/",
                 "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
                 "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
