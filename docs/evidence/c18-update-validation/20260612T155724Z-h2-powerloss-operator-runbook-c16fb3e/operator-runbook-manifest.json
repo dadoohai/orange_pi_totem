@@ -130,6 +130,7 @@
   "preflight_expected_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
   "preflight_expected_image_tag": "c18-hwdecode-lab-1x",
   "preflight_local_output": "docs/evidence/c18-update-validation/<utc>-h2-powerloss-board-preflight.json",
+  "preflight_max_age_sec": 14400,
   "result_claim": "powerloss_operator_runbook_written",
   "schema": "dadooh.c18.player_runtime.powerloss_operator_runbook.v1",
   "source_plan": "docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/powerloss-matrix-plan.json",

@@ -11,6 +11,7 @@ image, or topology.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import sys
 import tempfile
@@ -71,6 +72,30 @@ def read_json(path: Path) -> dict[str, Any]:
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def parse_utc(raw: Any) -> dt.datetime | None:
+    if not isinstance(raw, str) or not raw.endswith("Z"):
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(raw[:-1] + "+00:00")
+    except ValueError:
+        return None
+    if parsed.utcoffset() != dt.timedelta(0):
+        return None
+    return parsed
+
+
+def format_utc(value: dt.datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def now_from_args(args: argparse.Namespace) -> dt.datetime | None:
+    if args.now_utc:
+        return parse_utc(args.now_utc)
+    return dt.datetime.now(dt.timezone.utc)
 
 
 def is_sha256(value: Any) -> bool:
@@ -267,6 +292,43 @@ def validate_runtime_topology(preflight: dict[str, Any], analysis: dict[str, Any
     }
 
 
+def validate_freshness(
+    preflight: dict[str, Any],
+    args: argparse.Namespace,
+    now_utc: dt.datetime | None,
+) -> tuple[list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    max_age_sec = args.max_age_sec
+    raw_captured = (
+        preflight.get("captured_at_utc")
+        or preflight.get("collected_at_utc")
+        or preflight.get("created_at_utc")
+    )
+    collected = parse_utc(raw_captured)
+    age_sec: int | None = None
+    if max_age_sec is not None:
+        if max_age_sec < 0:
+            blockers.append("preflight_max_age_invalid")
+        if collected is None:
+            blockers.append("preflight_captured_at_invalid")
+        elif now_utc is None:
+            blockers.append("preflight_now_invalid")
+        else:
+            age = (now_utc - collected).total_seconds()
+            age_sec = int(age)
+            if age < -60:
+                blockers.append("preflight_captured_in_future")
+            if max_age_sec >= 0 and age > max_age_sec:
+                blockers.append("preflight_stale")
+    return blockers, {
+        "required": max_age_sec is not None,
+        "captured_at_utc": raw_captured if isinstance(raw_captured, str) else None,
+        "evaluated_at_utc": format_utc(now_utc),
+        "max_age_sec": max_age_sec,
+        "age_sec": age_sec,
+    }
+
+
 def evaluate(preflight_path: Path, matrix_plan_path: Path, args: argparse.Namespace) -> dict[str, Any]:
     blockers: list[str] = []
     errors: list[str] = []
@@ -295,6 +357,9 @@ def evaluate(preflight_path: Path, matrix_plan_path: Path, args: argparse.Namesp
         blockers.append("preflight_non_claims_missing")
     target = analysis["target"]
     board = analysis["board"]
+    now_utc = now_from_args(args)
+    freshness_blockers, freshness = validate_freshness(preflight, args, now_utc)
+    blockers.extend(freshness_blockers)
     blockers.extend(f"target_package:{blocker}" for blocker in validate_package(preflight, target))
     blockers.extend(f"board_paths:{blocker}" for blocker in validate_board_paths(
         preflight,
@@ -307,6 +372,7 @@ def evaluate(preflight_path: Path, matrix_plan_path: Path, args: argparse.Namesp
     blockers.extend(f"runtime_topology:{blocker}" for blocker in topology_blockers)
     return {
         "schema": SCHEMA,
+        "evaluated_at_utc": format_utc(now_utc),
         "passed": not blockers,
         "result_claim": (
             "h2_powerloss_board_preflight_accepted"
@@ -324,6 +390,7 @@ def evaluate(preflight_path: Path, matrix_plan_path: Path, args: argparse.Namesp
             "missing_checkpoints": analysis["missing_checkpoints"],
             "missing_apply_checkpoints": analysis["missing_apply_checkpoints"],
         },
+        "freshness": freshness,
         "topology_analysis": topology_analysis,
         "missing_preflight_non_claims": missing_non_claims,
         "blockers": blockers,
@@ -356,6 +423,7 @@ def fixture_preflight(root: Path) -> Path:
     write_json(path, {
         "schema": PREFLIGHT_SCHEMA,
         "passed": True,
+        "captured_at_utc": "2026-06-16T11:30:00Z",
         "collection_mode": "read_only_preflight",
         "target_package": {
             "manifest_schema": PACKAGE_SCHEMA,
@@ -427,6 +495,8 @@ def fixture_args() -> argparse.Namespace:
     return argparse.Namespace(
         expect_image_tag="c18-hwdecode-lab-test",
         expect_image_marker_sha256="c" * 64,
+        max_age_sec=None,
+        now_utc=None,
     )
 
 
@@ -509,6 +579,27 @@ class H2PowerlossPreflightGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("preflight_non_claims_missing", result["blockers"])
 
+    def test_accepts_fresh_preflight_when_max_age_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = fixture_args()
+            args.max_age_sec = 4 * 60 * 60
+            args.now_utc = "2026-06-16T12:00:00Z"
+            result = evaluate(fixture_preflight(root), fixture_plan(root), args)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+        self.assertTrue(result["freshness"]["required"])
+        self.assertEqual(result["freshness"]["age_sec"], 1800)
+
+    def test_rejects_stale_preflight_when_max_age_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = fixture_args()
+            args.max_age_sec = 4 * 60 * 60
+            args.now_utc = "2026-06-16T16:00:01Z"
+            result = evaluate(fixture_preflight(root), fixture_plan(root), args)
+        self.assertFalse(result["passed"])
+        self.assertIn("preflight_stale", result["blockers"])
+
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
@@ -516,6 +607,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--matrix-plan", type=Path)
     parser.add_argument("--expect-image-tag", required=False)
     parser.add_argument("--expect-image-marker-sha256", required=False)
+    parser.add_argument(
+        "--max-age-sec",
+        type=int,
+        help="Require the preflight capture to be no older than this many seconds.",
+    )
+    parser.add_argument(
+        "--now-utc",
+        help="Override evaluation time for tests/repro, formatted as YYYY-MM-DDTHH:MM:SSZ.",
+    )
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)

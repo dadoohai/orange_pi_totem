@@ -236,6 +236,13 @@ Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target
 target sem mudar links e mantendo CLI publico congelado. O preflight
 `20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e` ficou verde
 para iniciar os 12 cortes fisicos restantes.
+Depois da pausa/reboot multi-dia, o preflight atual
+`20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e` reconfirmou a
+placa no mesmo terreno seguro: pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`,
+policy `homologation`, timer inativo/desabilitado, target nao linkado, target
+nao quarentenado e raiz de evidencia H2 sem diretorios de checkpoint pendentes.
+Esse snapshot tambem e apenas preflight: nao conta power-loss, nao reduz os 12
+checkpoints fisicos pendentes e nao muda H2/stable/thaw.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:

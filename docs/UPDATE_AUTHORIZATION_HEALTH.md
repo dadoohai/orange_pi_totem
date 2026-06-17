@@ -478,6 +478,12 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   congelado; o preflight pos-reset em
   `docs/evidence/c18-update-validation/20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e/`
   ficou verde para iniciar a sessao fisica;
+- depois da pausa/reboot multi-dia, o preflight atual em
+  `docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e/`
+  reconfirmou pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`, policy
+  `homologation`, timer inativo/desabilitado, target nao linkado, target nao
+  quarentenado e raiz H2 sem diretorios de checkpoint pendentes; continua sendo
+  somente preflight e nao evidencia power-loss;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;

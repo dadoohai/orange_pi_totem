@@ -133,6 +133,7 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "preflight_local_output": args.preflight_local_output,
         "preflight_expected_image_tag": args.expected_image_tag,
         "preflight_expected_image_marker_sha256": args.expected_image_marker_sha256,
+        "preflight_max_age_sec": args.preflight_max_age_sec,
         "non_claims": list(NON_CLAIMS),
     }
 
@@ -233,9 +234,15 @@ def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
         "",
         "## Preflight Before Physical Session",
         "",
-        "Collect this read-only preflight from board stdout into a local file, then",
-        "run the offline gate against the matrix plan. Do not start physical cuts if",
-        "the gate is red.",
+        "Collect this preflight from board stdout into a local file, then run the",
+        "offline gate against the matrix plan. Do not start physical cuts if the",
+        "gate is red.",
+        "",
+        "The collector execution is read-only: it inspects board/package/image",
+        "state and prints JSON to stdout. The `scp`/`rm` lines below only stage and",
+        "remove a temporary collector copy under `/tmp`; they are not power-loss",
+        "evidence, do not create checkpoint evidence, and may be skipped when the",
+        "collector is already present in the bundle.",
         "",
         command_block([
             f"scp {PREFLIGHT_COLLECTOR} {manifest['board_host_placeholder']}:/tmp/c18_player_runtime_h2_powerloss_preflight_collect.py",
@@ -256,6 +263,7 @@ def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
             f"  --matrix-plan {command_quote(str(manifest['source_plan']))} \\",
             f"  --expect-image-tag {command_quote(str(manifest['preflight_expected_image_tag']))} \\",
             f"  --expect-image-marker-sha256 {command_quote(str(manifest['preflight_expected_image_marker_sha256']))} \\",
+            f"  --max-age-sec {int(manifest['preflight_max_age_sec'])} \\",
             "  --json",
         ]),
         "",
@@ -400,6 +408,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
                 expected_image_tag="c18-hwdecode-lab-test",
                 expected_image_marker_sha256="c" * 64,
+                preflight_max_age_sec=4 * 60 * 60,
             )
             result = build(args)
             self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
@@ -418,6 +427,8 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("PYTHONPATH='/data/c18-test-bundle/scripts/board'", runbook)
         self.assertIn("python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
         self.assertIn("rm -f /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
+        self.assertIn("only stage and", runbook)
+        self.assertIn("--max-age-sec 14400", runbook)
         self.assertIn("c18-hwdecode-lab-test", runbook)
         self.assertIn("does not execute board commands", pull_script)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", pull_script)
@@ -425,6 +436,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertNotIn('"$LOCAL_ROOT/$checkpoint/powerloss-evidence-gate.json"', pull_script)
         self.assertIn("this_runbook_does_not_claim_17_17", manifest["non_claims"])
         self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
+        self.assertEqual(manifest["preflight_max_age_sec"], 4 * 60 * 60)
 
     def test_invalid_plan_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -439,6 +451,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
                 expected_image_tag="c18-hwdecode-lab-test",
                 expected_image_marker_sha256="c" * 64,
+                preflight_max_age_sec=4 * 60 * 60,
             )
             result = build(args)
         self.assertFalse(result["passed"])
@@ -454,6 +467,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--preflight-local-output", default="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json")
     parser.add_argument("--expected-image-tag", default="<expected-image-tag>")
     parser.add_argument("--expected-image-marker-sha256", default="<expected-image-marker-sha256>")
+    parser.add_argument("--preflight-max-age-sec", type=int, default=4 * 60 * 60)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)

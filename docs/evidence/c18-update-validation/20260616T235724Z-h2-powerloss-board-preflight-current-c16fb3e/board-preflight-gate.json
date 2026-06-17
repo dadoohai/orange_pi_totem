@@ -1,0 +1,77 @@
+{
+  "blockers": [],
+  "evaluated_at_utc": "2026-06-17T00:00:36Z",
+  "freshness": {
+    "age_sec": 192,
+    "captured_at_utc": "2026-06-16T23:57:24Z",
+    "evaluated_at_utc": "2026-06-17T00:00:36Z",
+    "max_age_sec": 14400,
+    "required": true
+  },
+  "matrix": {
+    "missing_apply_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_state_success",
+      "before_stage_cleanup"
+    ],
+    "missing_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_state_success",
+      "before_stage_cleanup",
+      "rollback_after_identify_links",
+      "rollback_after_current_unlinked"
+    ]
+  },
+  "matrix_plan": "docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/powerloss-matrix-plan.json",
+  "missing_preflight_non_claims": [],
+  "non_claims": [
+    "this_gate_does_not_claim_powerloss_evidence",
+    "this_gate_does_not_claim_17_17",
+    "this_gate_does_not_run_board_commands",
+    "this_gate_does_not_authorize_stable_or_production",
+    "this_gate_does_not_thaw_player_runtime"
+  ],
+  "passed": true,
+  "preflight": "docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e/board-preflight.json",
+  "result_claim": "h2_powerloss_board_preflight_accepted",
+  "schema": "dadooh.c18.player_runtime.h2_powerloss_board_preflight_gate.v1",
+  "target_package": {
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  },
+  "topology_analysis": {
+    "blocked_apply_checkpoints_when_target_linked": [],
+    "missing_apply_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_state_success",
+      "before_stage_cleanup"
+    ],
+    "requires_custom_setup_checkpoints": [
+      "rollback_after_current_unlinked"
+    ],
+    "target_linked": false,
+    "target_quarantined": false
+  }
+}

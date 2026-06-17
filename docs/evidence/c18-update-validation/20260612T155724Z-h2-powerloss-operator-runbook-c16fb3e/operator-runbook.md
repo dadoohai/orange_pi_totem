@@ -9,9 +9,15 @@ Do not use remote reboot as a substitute for power loss.
 
 ## Preflight Before Physical Session
 
-Collect this read-only preflight from board stdout into a local file, then
-run the offline gate against the matrix plan. Do not start physical cuts if
-the gate is red.
+Collect this preflight from board stdout into a local file, then run the
+offline gate against the matrix plan. Do not start physical cuts if the
+gate is red.
+
+The collector execution is read-only: it inspects board/package/image
+state and prints JSON to stdout. The `scp`/`rm` lines below only stage and
+remove a temporary collector copy under `/tmp`; they are not power-loss
+evidence, do not create checkpoint evidence, and may be skipped when the
+collector is already present in the bundle.
 
 ```sh
 scp scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py <board-host>:/tmp/c18_player_runtime_h2_powerloss_preflight_collect.py
@@ -32,6 +38,7 @@ python3 scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py \
   --matrix-plan 'docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/powerloss-matrix-plan.json' \
   --expect-image-tag 'c18-hwdecode-lab-1x' \
   --expect-image-marker-sha256 '59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e' \
+  --max-age-sec 14400 \
   --json
 ```
 
