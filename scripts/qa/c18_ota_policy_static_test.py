@@ -1110,12 +1110,12 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260617T030214Z-current-h2-readiness-13d4cbd",
+            "20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1",
             "repo_clean=true",
             "tracked_inputs=true",
         ):
             self.assertIn(token, doc192)
-        self.assertIn("20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e", doc192)
+        self.assertIn("20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
@@ -2737,14 +2737,15 @@ exec "$C18_REAL_PYTHON3" "$@"
         update_contract_words = " ".join(update_contract.split())
         h2_stable_runbook_words = " ".join(h2_stable_runbook.split())
         self.assertIn(
-            "C18 Homologation RC `c16fb3e` esta bloqueada por evidencia fisica negativa, "
-            "nao pronta como RC corrente de piloto e nao para producao.",
+            "C18 Homologation RC agora esta reancorada no alvo corrigido "
+            "`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em "
+            "`channel=homologation` e `ring=pilot`, mas ainda esta **pre-P0**",
             update_auth_words,
         )
         self.assertIn(
-            "O piloto controlado autoriza somente entrega assistida por operador, "
-            "com rollback pronto, allowlist de devices, preflight de placa, "
-            "H1 decisivo image-bound e P0 power-loss seletivo.",
+            "O piloto controlado, quando liberado, autoriza somente entrega "
+            "assistida por operador, com rollback pronto, allowlist de devices, "
+            "preflight de placa, H1 decisivo image-bound e P0 power-loss seletivo.",
             update_auth_words,
         )
         self.assertIn(
@@ -2761,14 +2762,14 @@ exec "$C18_REAL_PYTHON3" "$@"
         )
         for token in (
             "C18 Homologation RC",
-            "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+            "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
-            "20260612T195336Z-pilot-authorization-traceability-refresh",
-            "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260617T030214Z-current-h2-readiness-13d4cbd",
+            "20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1",
+            "20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1",
             "20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
-            "20260612T125127Z-server-side-governance-c16fb3e",
-            "20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e",
+            "20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+            "20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1",
+            "pilot_powerloss_p0:pilot_powerloss_p0_incomplete",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",

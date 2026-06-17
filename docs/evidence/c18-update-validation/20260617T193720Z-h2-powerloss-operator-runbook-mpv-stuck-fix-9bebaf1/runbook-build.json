@@ -1,0 +1,39 @@
+{
+  "manifest": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/operator-runbook-manifest.json",
+  "missing_checkpoints": [
+    "after_payload_staged",
+    "after_release_dir_created",
+    "after_extract",
+    "after_state_verifying",
+    "after_health_passed",
+    "after_release_tree_fsync",
+    "after_marker_written",
+    "after_previous_symlink",
+    "after_current_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_current_unlinked",
+    "rollback_after_state_success"
+  ],
+  "non_claims": [
+    "this_runbook_is_not_powerloss_evidence",
+    "this_runbook_does_not_claim_17_17",
+    "this_runbook_does_not_execute_board_commands",
+    "this_runbook_does_not_pull_or_validate_evidence_by_itself",
+    "this_runbook_does_not_replace_physical_power_cut",
+    "this_runbook_does_not_authorize_stable_or_production",
+    "this_runbook_does_not_thaw_player_runtime",
+    "this_runbook_does_not_publish_or_fetch_releases",
+    "remote_reboot_is_not_acceptable_powerloss_evidence"
+  ],
+  "output_dir": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1",
+  "passed": true,
+  "pull_script": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/pull-and-validate-evidence.sh",
+  "result_claim": "powerloss_operator_runbook_written",
+  "runbook": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/operator-runbook.md",
+  "schema": "dadooh.c18.player_runtime.powerloss_operator_runbook.v1"
+}

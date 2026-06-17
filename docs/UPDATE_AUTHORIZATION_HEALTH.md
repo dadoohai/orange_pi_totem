@@ -7,87 +7,61 @@ em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 
 ## Estado Operacional Vigente (2026-06-17)
 
-C18 Homologation RC `c16fb3e` esta bloqueada por evidencia fisica negativa,
-nao pronta como RC corrente de piloto e nao para producao. O alvo historico
-`c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, em
-`channel=homologation` e `ring=pilot`, fica preservado para rastreabilidade,
-mas nao deve ser usado como alvo final H2/piloto. A evidencia bloqueadora esta
-em
+C18 Homologation RC agora esta reancorada no alvo corrigido
+`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em
+`channel=homologation` e `ring=pilot`, mas ainda esta **pre-P0**: nao esta
+pronta para piloto assistido, H2 ou producao ate fechar o power-loss seletivo.
+O pacote atual declara source commit
+`9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522` e payload sha256
+`d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`.
+
+O alvo anterior
+`c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e` fica preservado
+apenas como historico bloqueado. A evidencia bloqueadora esta em
 `docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`:
 adocao antes do reconcile passou, mas o deep-health falhou porque o MPV ficou
 em 1 alias de midia enquanto o status publico avancou por 4 aliases
-(`status_advanced_without_mpv=true`). A proxima RC precisa nascer de novo alvo
-corrigido e evidencia limpa.
+(`status_advanced_without_mpv=true`). Esse alvo nao deve ser usado como RC
+corrente de piloto ou H2.
 
-A evidencia operacional historica esta em
-`docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`,
-com retomada operacional em
-`docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`
-e macro-governanca atual em
-`docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`.
-A trilha de 2026-06-12 continua preservada como rastreabilidade historica:
-H1 decisive traceability refresh em
-`docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`,
-autorizacao historica de piloto em
-`docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`
-e pilot readiness traceability refresh em
-`docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`.
-O snapshot H2 corrente esta versionado em
-`docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/`:
-H1, server-side, repo clean e tracked inputs verdes; H2/producao ainda vermelho.
+A trilha decisiva H1 continua sendo o bundle `1x`:
+`docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`.
+Para o alvo `9bebaf1`, os inputs correntes sao:
+
+- release/pacote:
+  `releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/`;
+- lab apply + service adoption/deep-health curto:
+  `docs/evidence/c18-update-validation/20260617T185552Z-service-adoption-health-mpv-stuck-fix-4235e07/`;
+- server-side/signature:
+  `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
+- H2 readiness:
+  `docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json`;
+- autorizacao/preflight/pilot readiness:
+  `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
+- plano/runbook de power-loss:
+  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
+- preflight H2 read-only da placa:
+  `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`.
+
+O pilot readiness do alvo `9bebaf1` esta bloqueado somente por
+`pilot_powerloss_p0:pilot_powerloss_p0_incomplete`. O preflight H2 read-only da
+placa coletou board, imagem, policy, timer, bundle e canary saudaveis, mas o
+gate offline bloqueou a sessao fisica porque o target ja estava linkado como
+`current`; os checkpoints de apply fresco exigem reset/topologia controlada
+antes de armar o corte fisico.
+
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
-valida o retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
-read-only de placa. Esse gate nao substitui H2, nao reabre janela expirada de
-piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
-producao.
-Snapshot versionado:
-`docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`.
-O snapshot pre-soak scale governance
-`docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`
-fica preservado como historico anterior ao diagnostico MPV preso. No estado
-atual, `c18_ota_pre_soak_scale_governance_gate.py` deve ficar vermelho,
-propagando
-`macro_gate_blocker:target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`.
-Esse bloqueio nao autoriza producao, `stable`, auto-pull, publish, public thaw,
-soak 24h nem power-loss 17/17.
-Retomada operacional agora passa por
-`scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate nao usa o snapshot
-como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da
-placa. Com a autorizacao/preflight antigos, o resultado correto e bloqueado por
-janela expirada e preflight velho.
-O preflight fresco deve ser produzido por
-`scripts/board/c18_homologation_pilot_preflight_collect.py`, coletado na placa
-sem reconcile de manutencao autorizado e commitado antes do gate de retomada.
-Snapshot do bloqueio:
-`docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
-O refresh operacional atual esta versionado em
-`docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`:
-autorizacao da janela atual + preflight `pre_apply` fresco da placa +
-`c18_ota_operational_resume_gate.py` verde. Isso libera apenas retomada
-assistida do piloto em homologacao; H2/producao permanecem bloqueados.
-O pilot readiness atual, rerodado sobre esse refresh operacional, esta em
-`docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`:
-`c18_player_runtime_pilot_readiness_gate.py` verde com H1 decisivo, pacote
-`c16fb3e`, autorizacao vigente, preflight fresco e cinco checkpoints P0
-seletivos. Ele substitui o readiness antigo somente para a retomada operacional
-atual; nao reduz blockers H2.
+valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
+read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
+historico e nao deve ser lido como RC atual. O novo snapshot macro de `9bebaf1`
+so deve ser produzido quando a evidencia de P0/preflight aceitar a sessao de
+homologacao sem overclaim.
 
-O piloto controlado autoriza somente entrega assistida por operador, com
-rollback pronto, allowlist de devices, preflight de placa, H1 decisivo
-image-bound e P0 power-loss seletivo. Ele nao autoriza producao, `stable`,
-auto-pull, thaw publico, soak 24h, power-loss 17/17 nem pular H2.
-
-A familia server-side/signature do alvo `c16fb3e` tambem esta gateada no host,
-sem publicar release e sem habilitar auto-pull, em
-`docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`.
-O snapshot corrente de revalidacao server-side esta em
-`docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/`:
-`c18_server_side_publish_governance_gate.py` verde para `player-runtime`, trust
-anchor externo verificado e lista de 14 assets assinados/atestados hash-bound.
-O inventario versionavel dos assets server-side desse pacote esta em
-`docs/evidence/c18-update-validation/20260612T172602Z-server-side-asset-list-c16fb3e/`,
-com paths repo-relative, bytes e SHA256; ele tambem nao publica, nao promove
-`stable` e nao abre thaw.
+O piloto controlado, quando liberado, autoriza somente entrega assistida por
+operador, com rollback pronto, allowlist de devices, preflight de placa, H1
+decisivo image-bound e P0 power-loss seletivo. Ele nao autoriza producao,
+`stable`, auto-pull, thaw publico, soak 24h, power-loss 17/17 nem pular H2.
 O diagnostico operacional read-only tambem esta versionado em
 `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`:
 appliance `player_running`, playback `playing`, `privacy_scan=ok`, config
@@ -484,12 +458,12 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   lista repo-relative de assets server-side e hashes, sem publicar release;
 - a matriz fisica power-loss precisa estar 17/17;
 - o planner
-  `docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e/`
-  registra 5/17 cobertos e 12/17 pendentes, com instrucoes manuais explicitas
+  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`
+  registra 0/17 cobertos e 17/17 pendentes, com instrucoes manuais explicitas
   para checkpoints `requires_custom_setup`;
 - o runbook
-  `docs/evidence/c18-update-validation/20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e/`
-  pode orientar os 12 checkpoints pendentes, bloqueia setup customizado sem
+  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`
+  pode orientar os 17 checkpoints pendentes, bloqueia setup customizado sem
   comandos/instrucoes, recusa placeholder `<utc>`/diretorio local existente no
   helper de pull, materializa o manifest local exigido pelo evidence gate, fixa o
   marker de imagem esperado no preflight, injeta binding de payload/imagem no
@@ -500,20 +474,12 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o plano
   da matriz; esse preflight confirma pacote/imagem/topologia de sessao e
   continua sem reivindicar power-loss, 17/17, stable, producao ou thaw;
-- em `20260612T163008Z`, esse preflight encontrou o target `c16fb3e` ainda
-  quarentenado; o reset lab-only em
-  `docs/evidence/c18-update-validation/20260612T163437Z-h2-powerloss-quarantine-reset-c16fb3e/`
-  removeu uma entrada do target sem mudar links e com CLI publico ainda
-  congelado; o preflight pos-reset em
-  `docs/evidence/c18-update-validation/20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e/`
-  ficou verde para iniciar a sessao fisica;
-- depois da nova retomada com placa acessivel, o preflight fresco em
-  `docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f/`
-  reconfirmou pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`, policy
-  `homologation`, timer inativo/desabilitado, target nao linkado, target nao
-  quarentenado, raiz H2 sem diretorios de checkpoint pendentes e custom setup
-  reportado para `after_previous_symlink` e `rollback_after_current_unlinked`;
-  continua sendo somente preflight e nao evidencia power-loss;
+- para o alvo `9bebaf1`, o preflight fresco em
+  `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`
+  confirmou pacote, imagem `c18-hwdecode-lab-1x`, policy `homologation`, timer
+  inativo/desabilitado, bundle e canary, mas o gate bloqueou a sessao fisica
+  porque o target ja estava linkado como `current`; antes de armar cortes,
+  preparar reset/topologia controlada e coletar novo preflight aceito;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;

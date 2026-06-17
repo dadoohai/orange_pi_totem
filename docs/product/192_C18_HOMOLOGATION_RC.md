@@ -1,7 +1,10 @@
 # 192 - C18 Homologation RC
 
-Status em 2026-06-17: **Homologation RC `c16fb3e` bloqueada por evidencia
-fisica negativa**, nao pronta como RC corrente de piloto. Producao/stable
+Status em 2026-06-17: **Homologation RC reancorada em `9bebaf1`, ainda
+pre-P0**. O alvo corrigido
+`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` passou release
+gate, lab apply/adoption/deep-health curto e server-side governance, mas o
+piloto assistido ainda esta bloqueado por `pilot_powerloss_p0`. Producao/stable
 continuam bloqueados por H2.
 
 A evidencia
@@ -11,13 +14,14 @@ reconcile passou, mas o deep-health falhou com `status_mpv_path_aligned`: o MPV
 permaneceu em 1 alias de midia enquanto o status publico avancou por 4 aliases
 (`status_advanced_without_mpv=true`). Portanto, o pacote
 `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e` fica historico e
-bloqueado como alvo final H2/piloto; a proxima RC precisa nascer de novo alvo
-corrigido e evidencia limpa.
+bloqueado como alvo final H2/piloto. A trilha corrente usa o alvo corrigido
+`9bebaf1`; ela ainda precisa fechar P0 e reancorar o snapshot macro antes de
+qualquer claim de piloto pronto.
 
-Este documento consolida o norte macro da C18 apos o fechamento do gate de
-piloto. Ele nao substitui `docs/UPDATE_CONTRACT.md`; apenas torna explicito o
-estado de entrega: OTA funcional em homologacao, com producao/stable ainda
-bloqueados pelos gates H2.
+Este documento consolida o norte macro da C18 para a RC de homologacao. Ele nao
+substitui `docs/UPDATE_CONTRACT.md`; apenas torna explicito o estado de
+entrega: OTA funcional em laboratorio/homologacao controlada, com piloto
+assistido aguardando P0 e producao/stable ainda bloqueados pelos gates H2.
 
 ## Objetivo
 
@@ -40,10 +44,10 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 | Frente | Responsabilidade | Estado da RC |
 | --- | --- | --- |
 | `totem-core` | OTA C18 comum: wizard, splash, status, writer, validadores, helpers e settings | Funcional como OTA manual/operator-triggered; policy, timer, freeze, downgrade, rollback e allowlist de payload cobertos no gate e no device-side |
-| `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Funcional somente como piloto assistido em `homologation`; a frente e mais ampla, mas o payload C18-aware atual esta restrito a `kiosk.py`; nao e public thaw |
+| `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Alvo `9bebaf1` funcional em lab apply/adoption/deep-health curto e server-side; piloto assistido ainda bloqueado por P0; a frente e mais ampla, mas o payload C18-aware atual esta restrito a `kiosk.py`; nao e public thaw |
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; guardrails executaveis bloqueiam vazamento para OTA comum; qualquer mudanca exige imagem/homologacao propria |
 | `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software; snapshot publico C18/C7 coleta apenas estado sanitizado e metadados, com evidencia read-only em placa |
-| `server-side/publish` | server-side/signature, trust anchor, lista de assets, allowlist, staged rollout e audit | Verde para os artefatos de homologacao atuais; nao publica, nao promove `stable`, nao liga auto-pull e nao abre thaw publico |
+| `server-side/publish` | server-side/signature, trust anchor, lista de assets, allowlist, staged rollout e audit | Verde para os artefatos de homologacao `9bebaf1`; nao publica, nao promove `stable`, nao liga auto-pull e nao abre thaw publico |
 | `H2/prod` | gates de producao/stable, power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw | Intencionalmente vermelho antes de H2; nenhuma conclusao de producao pode ser inferida da RC ou do piloto assistido |
 
 ## Roots canonicos de artefatos
@@ -57,49 +61,55 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 
 ## Evidencia de fechamento
 
-Pacote alvo de `player-runtime`:
+Pacote alvo corrente de `player-runtime`:
 
-- versao: `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`;
+- versao: `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`;
 - componente: `player-runtime`;
 - canal: `homologation`;
-- source commit: `c16fb3ed01f0ce25c8203e5fe1d60baf60a75749`;
+- source commit: `9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522`;
 - payload sha256:
-  `d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7`.
+  `d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`.
 
 Evidencia principal:
 
 - H1 decisivo:
   `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`;
-- autorizacao operacional atual:
-  `docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/pilot-authorization.json`;
-- retomada operacional atual:
-  `docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`;
-- pilot readiness atual:
-  `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json`;
+- lab apply/adoption/deep-health curto do alvo corrigido:
+  `docs/evidence/c18-update-validation/20260617T185552Z-service-adoption-health-mpv-stuck-fix-4235e07/`;
+- autorizacao/preflight/pilot readiness do alvo corrigido:
+  `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
 - autorizacao/readiness de 2026-06-12, preservados como rastreabilidade
   historica:
   `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual, vermelho apenas pelos blockers de producao:
-  `docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json`;
+  `docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json`;
 - server-side/signature atual:
-  `docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/`;
+  `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
   `server-side-governance-gate.json` verde para `player-runtime`, trust anchor
   externo verificado e lista de 14 assets assinados/atestados hash-bound; nao
   publica, nao promove `stable`, nao liga auto-pull e nao abre thaw;
+- plano/runbook H2 power-loss do alvo corrigido:
+  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
+- preflight H2 read-only da placa:
+  `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`;
+  a coleta passou, mas o gate bloqueou a sessao fisica porque o alvo ja estava
+  linkado como `current`, entao os checkpoints de apply fresco exigem
+  reset/topologia controlada antes de armar power cut;
 - gate macro pre-H2:
-  `scripts/qa/c18_ota_macro_governance_gate.py` agrega os snapshots acima com
-  `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d`
-  e prova que a governanca de homologacao esta coerente; nao substitui H2,
-  nao reabre janela de piloto expirada e nao autoriza producao;
+  `scripts/qa/c18_ota_macro_governance_gate.py` agrega os snapshots versionados
+  e nao substitui H2, nao reabre janela de piloto expirada e nao autoriza
+  producao. O snapshot macro `20260617T064617Z-current-macro-governance-a761a67`
+  fica historico de `c16fb3e`; novo snapshot macro positivo para `9bebaf1`
+  depende de P0/preflight aceito;
 - snapshot macro versionado:
   `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`;
-  `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` verde em arvore
-  limpa, com release gate interno verde, H2 ainda vermelho pelos blockers
-  esperados e non-claims explicitos para producao, `stable`, auto-pull, thaw,
-  soak 24h e power-loss 17/17;
+  snapshot historico de `c16fb3e`; novo snapshot pre-soak para `9bebaf1`
+  depende de P0/preflight aceito e continua sem substituir soak 24h ou
+  power-loss 17/17;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:
@@ -112,7 +122,7 @@ Evidencia principal:
   deep-health, power-loss, soak, H2, stable, producao, publish, auto-pull ou
   thaw.
 
-P0 power-loss seletivo contado para piloto:
+P0 power-loss seletivo exigido para piloto do alvo `9bebaf1`:
 
 - `after_current_symlink`;
 - `rollback_after_current_to_previous`;
@@ -120,9 +130,11 @@ P0 power-loss seletivo contado para piloto:
 - `rollback_after_quarantine`;
 - `rollback_after_state_success`.
 
+No estado atual, esses 5 checkpoints ainda nao estao coletados para `9bebaf1`.
+
 ## Verificacao off-board
 
-Comandos rerodados em 2026-06-12 sobre a arvore limpa da RC:
+Comandos atuais para o alvo `9bebaf1` em arvore limpa:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_release_gate.py --json
@@ -135,45 +147,41 @@ qualquer leitura de readiness.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_release_gate.py \
-  --manifest releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json \
-  --payload releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz
+  --manifest releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json \
+  --payload releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz
 ```
 
 Resultado: `passed=true`.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_pilot_readiness_gate.py \
-  --package-manifest releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json \
-  --package-payload releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz \
+  --package-manifest releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json \
+  --package-payload releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz \
   --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
-  --authorization docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json \
-  --preflight docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json \
-  --preflight-stage post_apply_observation \
-  --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T001436Z-p0-after-current-symlink-c16fb3e \
-  --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T010313Z-p0-rollback-current-to-previous-c16fb3e \
-  --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T012322Z-p0-rollback-after-previous-removed-c16fb3e \
-  --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T025112Z-p0-rollback-after-quarantine-c16fb3e \
-  --powerloss-evidence-dir docs/evidence/c18-update-validation/20260612T035520Z-p0-rollback-after-state-success-c16fb3e \
+  --authorization docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/pilot-authorization.json \
+  --preflight docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/board-preflight.json \
   --expect-image-tag c18-hwdecode-lab-1x \
   --expect-image-sha256 1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2 \
   --expect-image-marker-sha256 59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e \
-  --expect-source-commit c16fb3ed01f0ce25c8203e5fe1d60baf60a75749 \
+  --expect-source-commit 9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522 \
   --json
 ```
 
-Resultado: `passed=true`, `result_claim=homologation_pilot_ready`.
+Resultado atual: `passed=false`, `result_claim=homologation_pilot_blocked`,
+com blocker `pilot_powerloss_p0:pilot_powerloss_p0_incomplete`.
 
-Como agregador pre-H2, o gate macro atual deve bloquear este alvo historico:
+Como agregador pre-H2, o gate macro default atual ainda bloqueia o alvo
+historico `c16fb3e`:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_macro_governance_gate.py --json
 ```
 
-Resultado esperado: `passed=false`,
+Resultado esperado enquanto os defaults nao forem reancorados: `passed=false`,
 `result_claim=c18_macro_governance_blocked`, com blocker
 `target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`. Esse
-resultado preserva a governanca: a janela antiga segue apenas como
-`snapshot_only`, nao como autorizacao operacional viva.
+resultado preserva a governanca do alvo historico; nao e claim contra o pacote
+`9bebaf1`.
 
 Como agregador pre-soak para escala, o gate atual tambem deve bloquear:
 
@@ -181,14 +189,13 @@ Como agregador pre-soak para escala, o gate atual tambem deve bloquear:
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_gate.py --json
 ```
 
-Resultado esperado: `passed=false`,
-`result_claim=c18_ota_pre_soak_scale_governance_blocked`, propagando
-`macro_gate_blocker:target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`.
-Quando usado para gerar evidencia final de uma futura RC corrigida, rodar com
-`--run-release-gate` em arvore limpa. Esse gate agrega docs de
-responsabilidade, H2 vermelho, server-side atual, preflight H2 power-loss,
-retomada operacional default-deny e release gate; nao substitui H2 nem
-autorizacao operacional fresca.
+Resultado esperado enquanto os defaults nao forem reancorados: `passed=false`,
+`result_claim=c18_ota_pre_soak_scale_governance_blocked`, propagando o blocker
+macro historico. Quando usado para gerar evidencia final do alvo `9bebaf1`,
+rodar com `--run-release-gate` em arvore limpa e com P0/preflight aceito. Esse
+gate agrega docs de responsabilidade, H2 vermelho, server-side atual, preflight
+H2 power-loss, retomada operacional default-deny e release gate; nao substitui
+H2 nem autorizacao operacional fresca.
 
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
@@ -196,7 +203,7 @@ dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
 O preflight fresco deve ser coletado na placa com
 `scripts/board/c18_homologation_pilot_preflight_collect.py` copiado para
 `/tmp`, usando `stage=pre_apply`, o device hash sanitizado allowlistado e os
-hashes esperados do pacote `c16fb3e`. Esse coletor valida policy/timer, imagem,
+hashes esperados do pacote `9bebaf1`. Esse coletor valida policy/timer, imagem,
 stack `mpv`/`hwdec` e freeze publico `rc=44`; ele nao usa o reconcile de
 manutencao autorizado.
 
@@ -215,21 +222,11 @@ o resultado correto em 2026-06-16 e vermelho:
 Snapshot versionado desse bloqueio:
 `docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
 
-Snapshot atual de retomada operacional:
-`docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`.
-Resultado: `passed=true`, `result_claim=c18_operational_resume_ready`, com
-autorizacao vigente, preflight `pre_apply` fresco da placa, freeze publico
-`rc=44`, policy homologation e stack C18 `mpv`/`hwdec` provada. Esse resultado
-autoriza apenas continuidade assistida do piloto de homologacao; nao autoriza
-producao, `stable`, auto-pull, thaw publico, soak 24h nem power-loss 17/17.
-
-Snapshot atual de readiness do piloto:
-`docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`.
-Resultado: `passed=true`, `result_claim=homologation_pilot_ready`, usando o
-mesmo pacote `c16fb3e`, H1 decisivo rastreavel, autorizacao vigente,
-preflight `pre_apply` fresco e os cinco checkpoints P0 seletivos. Esse snapshot
-substitui o readiness antigo apenas para a retomada operacional atual; ele nao
-reduz nenhum blocker H2.
+Snapshot atual de readiness do piloto para `9bebaf1`:
+`docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`.
+Resultado: bloqueado somente por P0, com H1 decisivo rastreavel, autorizacao,
+preflight `pre_apply`, package/source binding, repo clean e tracked inputs
+verdes. Esse snapshot nao reduz nenhum blocker H2.
 
 O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
 esperados:
@@ -246,55 +243,38 @@ Blockers exatos preservados no gate macro:
 - `stable_promotion_authorization:missing_stable_promotion_evidence`;
 - `explicit_operator_thaw_decision:missing_operator_thaw_decision`.
 
-O snapshot H2 rastreavel esta versionado em
-`docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/`:
+O snapshot H2 rastreavel do alvo `9bebaf1` esta versionado em
+`docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/`:
 `h1_decisive_bundle=true`, `server_side_publish_governance=true`,
 `repo_clean=true` e `tracked_inputs=true`; `passed=false` continua correto para
 producao.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
 checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica
-dos 12 checkpoints restantes. O planner
-`docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e/`
-registra a matriz atual como 5/17 coberta e 12/17 pendente, com instrucoes
+dos 17 checkpoints do alvo `9bebaf1`. O planner
+`docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`
+registra a matriz atual como 0/17 coberta e 17/17 pendente, com instrucoes
 manuais explicitas para checkpoints de setup customizado e sem reivindicar
 evidencia fisica.
 O runbook operacional gerado em
-`docs/evidence/c18-update-validation/20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e/`
-organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
-de pull/validacao. O builder agora bloqueia checkpoint `requires_custom_setup`
-sem comandos ou instrucoes manuais; o helper tambem recusa placeholder `<utc>`
-e diretorio local existente para evitar mistura de evidencia, materializa o
-manifest local exigido pelo evidence gate, fixa o marker de imagem esperado no
-preflight e injeta binding de payload/imagem para H2. O runbook tambem nao e
-evidencia fisica e nao substitui corte real de
-energia.
-O mesmo runbook agora inclui uma etapa previa de preflight H2: coletar estado
-read-only da placa com
-`scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` e validar
-com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o
-plano da matriz. Esse gate bloqueia placa/pacote/topologia errados antes da
-sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
-Snapshot fresco coletado da placa e validado contra o plano com custom setup:
-`docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f/`;
-ele reporta `after_previous_symlink` e `rollback_after_current_unlinked` como
-checkpoints que exigem setup customizado.
-Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target
-`c16fb3e` ainda estava em quarentena. O reset lab-only
-`20260612T163437Z-h2-powerloss-quarantine-reset-c16fb3e` removeu uma entrada do
-target sem mudar links e mantendo CLI publico congelado. O preflight
-`20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e` ficou verde
-para iniciar os 12 cortes fisicos restantes.
-Depois da pausa/reboot multi-dia, o preflight intermediario
-`20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e` reconfirmou a
-placa no mesmo terreno seguro: pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`,
-policy `homologation`, timer inativo/desabilitado, target nao linkado, target
-nao quarentenado e raiz de evidencia H2 sem diretorios de checkpoint pendentes.
-O snapshot fresco da sessao H2 e o `20260617T082642Z`, coletado novamente da
-placa e validado contra o plano com custom setup. Esses snapshots sao apenas
-preflight: nao contam
-power-loss, nao reduzem os 12 checkpoints fisicos pendentes e nao mudam
-H2/stable/thaw.
+`docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`
+organiza esses 17 checkpoints para operador, com comandos arm/resume e helper
+de pull/validacao. O builder bloqueia checkpoint `requires_custom_setup` sem
+comandos ou instrucoes manuais; o helper recusa placeholder `<utc>`/diretorio
+local existente para evitar mistura de evidencia, materializa o manifest local
+exigido pelo evidence gate, fixa o marker de imagem esperado no preflight e
+injeta binding de payload/imagem para H2. O runbook tambem nao e evidencia
+fisica e nao substitui corte real de energia.
+O runbook inclui uma etapa previa de preflight H2: coletar estado read-only da
+placa com `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py`
+e validar com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py`
+contra o plano da matriz. Esse gate bloqueia placa/pacote/topologia errados
+antes da sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
+O snapshot fresco `20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1`
+coletou board/bundle saudaveis, porem bloqueou corretamente porque o target ja
+esta linkado como `current` e a release dir do alvo existe. Antes de iniciar a
+sessao fisica, e necessario reset/topologia controlada para apply fresco e novo
+preflight aceito.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:
@@ -324,13 +304,13 @@ versionada antes de aplicar em placa ou cliente.
 
 ## Proxima rodada
 
-1. Usar esta RC em piloto assistido, com device allowlist, operador presente e
-   rollback owner definido.
-2. Preservar evidencia de apply, health, rollback e qualquer incidente.
-3. Se houver loop/restart/`media_load_failed`, parar o piloto e coletar
-   incidente antes de continuar.
-4. Depois do piloto, abrir H2: 17/17 power-loss, soak 24h, stable promotion e
-   decisao formal de thaw.
+1. Preparar reset/topologia controlada da placa para o alvo `9bebaf1`.
+2. Recoletar preflight H2 ate o gate aceitar a sessao fisica.
+3. Fechar P0 seletivo (`after_current_symlink` e quatro rollback checkpoints)
+   antes de qualquer piloto assistido.
+4. Preservar evidencia de apply, health, rollback e qualquer incidente.
+5. Depois do piloto, abrir H2 completo: 17/17 power-loss, soak 24h, stable
+   promotion e decisao formal de thaw.
 
 Nota pos-RC: a familia server-side/signature passa por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
@@ -348,16 +328,16 @@ evidencia nao afirma cadeia PKI, rejeita claims PKI extras e
 rejeita symlink em qualquer componente do caminho da chave ou do trust anchor.
 Fixture nao passa fora de self-test; producao ainda exige evidencia real
 assinada com chave operacional.
-Para o pacote `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`,
+Para o pacote `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`,
 essa familia ja esta materializada em
-`docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`
-e a lista repo-relative de assets/hashes esta em
-`docs/evidence/c18-update-validation/20260612T172602Z-server-side-asset-list-c16fb3e/`.
+`docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/`
+e o snapshot corrente esta em
+`docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`.
 O H2 reporta `server_side_publish_governance=true`; isso nao publica release,
 nao habilita auto-pull, nao promove stable e nao abre producao.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
-esse ledger esta completo; para producao ainda falta coletar e commitar os 12
-checkpoints fisicos restantes.
+esse ledger esta completo; para producao ainda falta coletar e commitar os 17
+checkpoints fisicos do alvo `9bebaf1`.
 Stable tambem fica atras de `scripts/qa/c18_stable_promotion_gate.py`; evidencia
 minima com apenas `approved=true` nao autoriza build nem publish stable, e no H2
 os hashes declarados precisam bater com as evidencias consumidas. Nos scripts de
