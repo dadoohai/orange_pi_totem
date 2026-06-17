@@ -1,0 +1,58 @@
+{
+  "board_paths": {
+    "bundle_dir": "/data/c18-powerloss-bundle-3eb06f1",
+    "canary_media": "/data/media/c18-canary-h264.mp4",
+    "evidence_root": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1"
+  },
+  "collected_at_utc": "2026-06-17T20:37:01Z",
+  "files": [
+    {
+      "bytes": 801,
+      "file": "README.md",
+      "sha256": "7d3010b0959385509665a72440926c2249b276a48311d32d0ee1fb1ceef39275"
+    },
+    {
+      "bytes": 7417,
+      "file": "board-preflight.json",
+      "sha256": "1468777850ce2fdabfd078c8dc30c0778de073386d3fb00da2cdbeccaec0a4d1"
+    },
+    {
+      "bytes": 2899,
+      "file": "h2-powerloss-preflight-gate.json",
+      "sha256": "a9d3d830831b16b393765e8acf56e7b329e12f8649aedae57902323ffef60dcc"
+    }
+  ],
+  "gate_evaluated_at_utc": "2026-06-17T20:37:13Z",
+  "key_checks": {
+    "allowed_components_totem_core_only": true,
+    "collector_passed": true,
+    "image_marker_c18_hwdecode_lab_1x": true,
+    "offline_gate_passed": true,
+    "pending_checkpoint_dirs_absent": true,
+    "policy_homologation": true,
+    "preflight_fresh_under_4h": true,
+    "target_not_linked": true,
+    "target_not_quarantined": true,
+    "update_timer_disabled": true
+  },
+  "matrix_plan": {
+    "path": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/powerloss-matrix-plan.json"
+  },
+  "non_claims": [
+    "this_preflight_is_not_powerloss_evidence",
+    "this_preflight_does_not_claim_17_17",
+    "this_preflight_does_not_authorize_stable_or_production",
+    "this_preflight_does_not_thaw_player_runtime",
+    "this_preflight_does_not_satisfy_24h_soak",
+    "this_preflight_does_not_complete_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "h2_powerloss_board_preflight_accepted",
+  "schema": "dadooh.c18.h2_powerloss_board_preflight_snapshot.v1",
+  "target_package": {
+    "channel": "homologation",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  }
+}

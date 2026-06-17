@@ -25,9 +25,9 @@ from typing import Any
 
 SCHEMA = "dadooh.c18.ota_pre_soak_scale_governance_gate.v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
-TARGET_SOURCE_COMMIT = "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
-TARGET_PAYLOAD_SHA256 = "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+TARGET_SOURCE_COMMIT = "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+TARGET_PAYLOAD_SHA256 = "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
 TARGET_CHANNEL = "homologation"
 TARGET_RING = "pilot"
 H2_POWERLOSS_PREFLIGHT_MAX_AGE_SEC = 4 * 60 * 60
@@ -38,23 +38,20 @@ EXPECTED_H2_BLOCKERS = (
     "explicit_operator_thaw_decision:missing_operator_thaw_decision",
 )
 DEFAULT_H2_READINESS = (
-    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json"
+    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
     / "docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
-    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e"
+    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
 )
 DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f"
+    / "docs/evidence/c18-update-validation/20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1"
 )
-DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS = (
-    REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
-)
+DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/191_C18_OTA_OPERATING_MODEL.md",
     REPO_ROOT / "docs/product/192_C18_HOMOLOGATION_RC.md",
@@ -404,7 +401,7 @@ def evaluate_h2_powerloss_preflight_snapshot(
         if claim not in non_claims:
             blockers.append(f"h2_powerloss_preflight_non_claim_missing:{claim}")
     files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
-    for filename in ("README.md", "board-preflight.json", "board-preflight-gate.json"):
+    for filename in ("README.md", "board-preflight.json", "h2-powerloss-preflight-gate.json"):
         path = run_dir / filename
         entry = next((item for item in files if isinstance(item, dict) and item.get("file") == filename), None)
         if not path.is_file():
@@ -625,7 +622,7 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         for filename, content in {
             "README.md": "fixture\n",
             "board-preflight.json": "{}\n",
-            "board-preflight-gate.json": "{}\n",
+            "h2-powerloss-preflight-gate.json": "{}\n",
         }.items():
             (run_dir / filename).write_text(content, encoding="utf-8")
         checks = {
@@ -658,7 +655,7 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
                     "sha256": sha256_file(run_dir / filename),
                     "bytes": (run_dir / filename).stat().st_size,
                 }
-                for filename in ("README.md", "board-preflight.json", "board-preflight-gate.json")
+                for filename in ("README.md", "board-preflight.json", "h2-powerloss-preflight-gate.json")
             ],
             "key_checks": checks,
             "non_claims": [

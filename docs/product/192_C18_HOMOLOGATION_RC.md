@@ -100,16 +100,22 @@ Evidencia principal:
 - gate macro pre-H2:
   `scripts/qa/c18_ota_macro_governance_gate.py` agrega os snapshots versionados
   e nao substitui H2, nao reabre janela de piloto expirada e nao autoriza
-  producao. O snapshot macro `20260617T064617Z-current-macro-governance-a761a67`
-  fica historico de `c16fb3e`; novo snapshot macro positivo para `9bebaf1`
-  depende de P0/preflight aceito;
+  producao. O gate corrente esta reancorado em `9bebaf1` e aceita
+  `pilot_powerloss_p0` como unico bloqueio de piloto no estado pre-H2; isso nao
+  libera piloto, apenas preserva a fronteira correta antes da corrida fisica;
 - snapshot macro versionado:
-  `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`;
+  o snapshot `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`
+  fica historico de `c16fb3e`; o proximo snapshot corrente deve apontar para
+  `9bebaf1`;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`;
   snapshot historico de `c16fb3e`; novo snapshot pre-soak para `9bebaf1`
   depende de P0/preflight aceito e continua sem substituir soak 24h ou
   power-loss 17/17;
+- playback em nivel usuario:
+  `docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/`
+  preserva 10 minutos de placa real com 9 midias observadas, zero restart,
+  zero falha de render e sem padrao de midia presa;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:
@@ -212,7 +218,7 @@ manutencao autorizado.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_operational_resume_gate.py \
-  --macro-governance-summary docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/macro-governance.json \
+  --macro-governance-summary <novo-macro-governance-9bebaf1.json> \
   --authorization <nova-autorizacao-da-janela-atual.json> \
   --preflight <novo-preflight-pre_apply-da-placa.json> \
   --json
@@ -283,6 +289,9 @@ release dir do alvo e manteve o freeze publico `rc=44`. O preflight fresco
 `20260617T201635Z-h2-powerloss-board-preflight-after-topology-reset-mpv-stuck-fix-9bebaf1`
 foi aceito pelo gate H2 para iniciar a sessao fisica; isso ainda nao conta
 checkpoint power-loss e nao reduz os blockers H2.
+O refresh rastreavel
+`docs/evidence/c18-update-validation/20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1/`
+materializa o mesmo estado de preflight para uso dos agregadores macro/pre-soak.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:

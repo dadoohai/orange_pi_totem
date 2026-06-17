@@ -37,9 +37,9 @@ SERVER_SIDE_ASSET_LIST_SCHEMA = "dadooh.c18.server_side_publish_asset_list.v1"
 TARGET_BLOCKER_SCHEMA = "dadooh.c18.h2_powerloss_mpv_stuck_resume_failure.v1"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
-TARGET_SOURCE_COMMIT = "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
-TARGET_PAYLOAD_SHA256 = "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+TARGET_SOURCE_COMMIT = "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+TARGET_PAYLOAD_SHA256 = "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
 EXPECTED_IMAGE_TAG = "c18-hwdecode-lab-1x"
 EXPECTED_IMAGE_SHA256 = "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2"
 EXPECTED_IMAGE_MARKER_SHA256 = "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e"
@@ -50,22 +50,19 @@ DEFAULT_H1_SUMMARY = (
 )
 DEFAULT_PILOT_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json"
+    / "docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/pilot-readiness.json"
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json"
 )
 DEFAULT_BOARD_READONLY_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
-    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e"
+    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
 )
-DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS = (
-    REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
-)
+DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/189_C18_OTA_READINESS_GATE.md",
     REPO_ROOT / "docs/product/191_C18_OTA_OPERATING_MODEL.md",
@@ -159,14 +156,13 @@ REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS = (
 REQUIRED_DOC_TOKENS = (
     "scripts/qa/c18_ota_macro_governance_gate.py",
     "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
-    "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
-    "docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/",
-    "docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/",
-    "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json",
-    "docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f/",
-    "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/",
-    "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
+    "docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/pilot-readiness.json",
+    "docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json",
+    "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/",
+    "docs/evidence/c18-update-validation/20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1/",
+    "docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
+    "pilot_powerloss_p0",
     "pre-H2",
     "nao substitui H2",
     *EXPECTED_H2_BLOCKERS,
@@ -447,19 +443,29 @@ def evaluate_pilot_readiness(path: Path) -> dict[str, Any]:
     data = read_json(path, blockers, "pilot")
     if not data:
         return check("pilot_readiness", blockers, summary_path=str(path))
+    raw_blockers = data.get("blockers") if isinstance(data.get("blockers"), list) else []
+    p0_only_blocked = raw_blockers == ["pilot_powerloss_p0:pilot_powerloss_p0_incomplete"]
     if data.get("schema") != PILOT_READINESS_SCHEMA:
         blockers.append("pilot_schema")
-    if data.get("passed") is not True:
+    if data.get("passed") is not True and not p0_only_blocked:
         blockers.append("pilot_not_passed")
-    if data.get("result_claim") != "homologation_pilot_ready":
+    expected_claims = {"homologation_pilot_ready"}
+    if p0_only_blocked:
+        expected_claims.add("homologation_pilot_blocked")
+    if data.get("result_claim") not in expected_claims:
         blockers.append("pilot_result_claim")
     if data.get("ring") != "pilot":
         blockers.append("pilot_ring")
     if data.get("channel") != "homologation":
         blockers.append("pilot_channel")
-    if data.get("blockers") != []:
+    if raw_blockers and not p0_only_blocked:
         blockers.append("pilot_has_blockers")
     for key in REQUIRED_PILOT_CHECKS:
+        if key == "pilot_powerloss_p0" and p0_only_blocked:
+            nested = nested_check_blockers(data, key)
+            if nested != ["pilot_powerloss_p0_incomplete"]:
+                blockers.append("pilot_powerloss_p0_blocker_not_exact")
+            continue
         if not nested_check_passed(data, key):
             blockers.append(f"pilot_check_missing_or_failed:{key}")
     non_claims = set(data.get("non_claims") if isinstance(data.get("non_claims"), list) else [])
@@ -490,6 +496,7 @@ def evaluate_pilot_readiness(path: Path) -> dict[str, Any]:
         "pilot_readiness",
         blockers,
         summary_path=repo_relative(path) or str(path),
+        pilot_state="blocked_by_p0_only" if p0_only_blocked else "ready",
         target_package=package.get("version"),
         target_channel=package.get("channel"),
         source_commit=source.get("expect_source_commit"),
@@ -868,22 +875,7 @@ def write_fixture(root: Path) -> argparse.Namespace:
     docs = [root / f"doc-{index}.md" for index in range(5)]
     for path in docs:
         path.write_text(
-            "\n".join([
-                "scripts/qa/c18_ota_macro_governance_gate.py",
-                "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
-                "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
-                "docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/",
-                "docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/",
-                "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json",
-                "docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f/",
-                "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/",
-                "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
-                "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
-                "pre-H2",
-                "nao substitui H2",
-                *EXPECTED_H2_BLOCKERS,
-                "producao stable",
-            ]),
+            "\n".join([*REQUIRED_DOC_TOKENS, "producao stable"]),
             encoding="utf-8",
         )
 
