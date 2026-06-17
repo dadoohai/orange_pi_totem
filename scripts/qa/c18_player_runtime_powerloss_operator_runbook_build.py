@@ -95,6 +95,13 @@ def validate_plan(plan: dict[str, Any]) -> list[str]:
             blockers.append(f"{checkpoint or index}:arm_command_missing")
         if not isinstance(item.get("resume_after_power_restore"), list) or not item.get("resume_after_power_restore"):
             blockers.append(f"{checkpoint or index}:resume_command_missing")
+        if item.get("requires_custom_setup") is True:
+            setup = item.get("setup_before_arm")
+            manual = item.get("manual_setup_instructions")
+            has_setup_commands = isinstance(setup, list) and bool(setup)
+            has_manual_instructions = isinstance(manual, list) and bool(manual)
+            if not has_setup_commands and not has_manual_instructions:
+                blockers.append(f"{checkpoint or index}:custom_setup_missing")
         notes = " ".join(str(note) for note in item.get("notes", []))
         if "remote reboot is not acceptable evidence" not in notes:
             blockers.append(f"{checkpoint or index}:remote_reboot_nonclaim_missing")
@@ -113,6 +120,8 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
             "checkpoint": item.get("checkpoint"),
             "phase": item.get("phase"),
             "requires_custom_setup": item.get("requires_custom_setup") is True,
+            "manual_setup_required": item.get("requires_custom_setup") is True
+            and not bool(item.get("setup_before_arm")),
             "setup_precondition": item.get("setup_precondition"),
             "requires_physical_cut": item.get("requires_physical_cut") is True,
         })
@@ -193,8 +202,23 @@ def render_checkpoint(index: int, total: int, item: dict[str, Any]) -> str:
     setup = item.get("setup_before_arm")
     if isinstance(setup, list) and setup:
         lines.extend(["Setup before arm:", "", command_block(setup), ""])
+    elif item.get("requires_custom_setup") is True:
+        manual = item.get("manual_setup_instructions")
+        if isinstance(manual, list) and manual:
+            lines.append("Manual setup before arm:")
+            lines.extend(f"- {instruction}" for instruction in manual)
+            lines.extend([
+                "",
+                "Do not run the arm command until the custom setup has been completed and recorded.",
+                "",
+            ])
+        else:
+            lines.extend([
+                "Setup before arm: BLOCKED - the plan marks this checkpoint as custom setup but provides no setup instructions.",
+                "",
+            ])
     else:
-        lines.extend(["Setup before arm: none emitted by the plan.", ""])
+        lines.extend(["Setup before arm: none required by the plan.", ""])
     arm = item.get("arm") if isinstance(item.get("arm"), list) else []
     resume = item.get("resume_after_power_restore") if isinstance(item.get("resume_after_power_restore"), list) else []
     lines.extend([
@@ -437,6 +461,44 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("this_runbook_does_not_claim_17_17", manifest["non_claims"])
         self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
         self.assertEqual(manifest["preflight_max_age_sec"], 4 * 60 * 60)
+
+    def test_custom_setup_requires_commands_or_manual_instructions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            plan = self.fixture_plan(root)
+            data = read_json(plan)
+            data["missing_checkpoints"] = ["after_previous_symlink"]
+            item = data["commands_for_missing_checkpoints"][0]
+            item["checkpoint"] = "after_previous_symlink"
+            item["requires_custom_setup"] = True
+            item["setup_before_arm"] = []
+            write_json(plan, data)
+            args = argparse.Namespace(
+                matrix_plan=plan,
+                output_dir=root / "out",
+                board_host="<board-host>",
+                local_evidence_root="docs/evidence/c18-update-validation/<utc>-h2-powerloss",
+                preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
+                expected_image_tag="c18-hwdecode-lab-test",
+                expected_image_marker_sha256="c" * 64,
+                preflight_max_age_sec=4 * 60 * 60,
+            )
+            blocked = build(args)
+            data["commands_for_missing_checkpoints"][0]["manual_setup_instructions"] = [
+                "Confirm old current exists and differs from target before arm.",
+            ]
+            write_json(plan, data)
+            result = build(args)
+            runbook = (args.output_dir / RUNBOOK_NAME).read_text(encoding="utf-8")
+            manifest = read_json(args.output_dir / MANIFEST_NAME)
+
+        self.assertFalse(blocked["passed"])
+        self.assertIn("after_previous_symlink:custom_setup_missing", blocked["blockers"])
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+        self.assertIn("Manual setup before arm", runbook)
+        self.assertIn("Confirm old current exists", runbook)
+        self.assertNotIn("none emitted by the plan", runbook)
+        self.assertTrue(manifest["checkpoints"][0]["manual_setup_required"])
 
     def test_invalid_plan_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -283,7 +283,7 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
             f"  --startup-wait-sec {args.startup_wait_sec:g} \\",
             "  --json",
         ])
-        return {
+        result = {
             "checkpoint": checkpoint,
             "phase": "apply",
             "requires_physical_cut": True,
@@ -308,6 +308,14 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
                 else []
             ),
         }
+        if checkpoint == "after_previous_symlink":
+            result["manual_setup_instructions"] = [
+                "Use only a lab image or a board state that has been backed up for destructive H2 trials.",
+                "Before arming, verify that the data current runtime exists and is the expected previous version, not the target package.",
+                "Do not run this checkpoint immediately after a successful target apply; restore an old current first or use a freshly imaged/prepared board.",
+                "Record the pre-arm current/previous topology in the checkpoint evidence notes before physical cut.",
+            ]
+        return result
     before_source, after_source = rollback_resume_sources(checkpoint)
     setup = command_block([
         f"cd {shell_quote(args.board_bundle_dir)}",
@@ -396,7 +404,7 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
             "prepare only on a lab image or after backing up device state",
         ])
     expected_rolled_to = "image_fallback" if checkpoint == "rollback_after_current_unlinked" else previous
-    return {
+    result = {
         "checkpoint": checkpoint,
         "phase": "rollback",
         "requires_physical_cut": True,
@@ -414,6 +422,14 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
         "expected_rolled_to": expected_rolled_to,
         "notes": notes,
     }
+    if checkpoint == "rollback_after_current_unlinked":
+        result["manual_setup_instructions"] = [
+            "Use only a lab image or a board state that has been backed up for destructive H2 trials.",
+            "Prepare target as the data current runtime, then remove the previous symlink and any state previous pointer before arming.",
+            "Confirm the rollback topology is target-current-without-previous-link-or-state before running the arm command.",
+            "Record the pre-arm current/previous/state topology in the checkpoint evidence notes before physical cut.",
+        ]
+    return result
 
 
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
@@ -514,9 +530,13 @@ class PowerlossMatrixPlanSelfTest(unittest.TestCase):
         self.assertEqual(result["commands_for_missing_checkpoints"][0]["phase"], "apply")
         rollback = [item for item in result["commands_for_missing_checkpoints"] if item["checkpoint"] == "rollback_after_current_unlinked"][0]
         self.assertTrue(rollback["requires_custom_setup"])
+        self.assertIn("manual_setup_instructions", rollback)
         self.assertEqual(rollback["expected_before_resume_source"], "fallback")
         self.assertEqual(rollback["expected_after_reconcile_source"], "fallback")
         self.assertEqual(rollback["expected_rolled_to"], "image_fallback")
+        previous = [item for item in result["commands_for_missing_checkpoints"] if item["checkpoint"] == "after_previous_symlink"][0]
+        self.assertTrue(previous["requires_custom_setup"])
+        self.assertIn("manual_setup_instructions", previous)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

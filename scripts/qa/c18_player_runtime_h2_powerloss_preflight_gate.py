@@ -113,6 +113,20 @@ def plan_missing_checkpoints(plan: dict[str, Any]) -> list[str]:
     return [str(item) for item in missing if isinstance(item, str) and item]
 
 
+def plan_custom_setup_checkpoints(plan: dict[str, Any]) -> list[str]:
+    commands = plan.get("commands_for_missing_checkpoints")
+    if not isinstance(commands, list):
+        return []
+    checkpoints: list[str] = []
+    for item in commands:
+        if not isinstance(item, dict):
+            continue
+        checkpoint = item.get("checkpoint")
+        if item.get("requires_custom_setup") is True and isinstance(checkpoint, str) and checkpoint:
+            checkpoints.append(checkpoint)
+    return sorted(set(checkpoints))
+
+
 def target_from_plan(plan: dict[str, Any]) -> dict[str, Any]:
     target = plan.get("target_package")
     return target if isinstance(target, dict) else {}
@@ -153,6 +167,7 @@ def validate_plan(plan: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
         "board": board,
         "missing_checkpoints": missing,
         "missing_apply_checkpoints": [item for item in missing if item in APPLY_CHECKPOINTS],
+        "custom_setup_checkpoints": plan_custom_setup_checkpoints(plan),
     }
 
 
@@ -284,11 +299,7 @@ def validate_runtime_topology(preflight: dict[str, Any], analysis: dict[str, Any
         "target_quarantined": topology.get("target_quarantined") is True,
         "blocked_apply_checkpoints_when_target_linked": blocked_apply,
         "missing_apply_checkpoints": missing_apply,
-        "requires_custom_setup_checkpoints": [
-            checkpoint
-            for checkpoint in analysis["missing_checkpoints"]
-            if checkpoint == "rollback_after_current_unlinked"
-        ],
+        "requires_custom_setup_checkpoints": analysis["custom_setup_checkpoints"],
     }
 
 
@@ -414,6 +425,16 @@ def fixture_plan(root: Path) -> Path:
             "canary_media": "/data/media/c18-canary.mp4",
         },
         "missing_checkpoints": ["after_release_dir_created", "after_previous_symlink"],
+        "commands_for_missing_checkpoints": [
+            {
+                "checkpoint": "after_release_dir_created",
+                "requires_custom_setup": False,
+            },
+            {
+                "checkpoint": "after_previous_symlink",
+                "requires_custom_setup": True,
+            },
+        ],
     })
     return path
 
@@ -507,6 +528,10 @@ class H2PowerlossPreflightGateSelfTest(unittest.TestCase):
             result = evaluate(fixture_preflight(root), fixture_plan(root), fixture_args())
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
         self.assertIn("this_gate_does_not_claim_17_17", result["non_claims"])
+        self.assertEqual(
+            result["topology_analysis"]["requires_custom_setup_checkpoints"],
+            ["after_previous_symlink"],
+        )
 
     def test_rejects_target_linked_for_post_payload_apply(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
