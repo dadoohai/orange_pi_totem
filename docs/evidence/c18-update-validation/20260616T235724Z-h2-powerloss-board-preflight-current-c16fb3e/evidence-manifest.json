@@ -1,8 +1,9 @@
 {
   "schema": "dadooh.c18.h2_powerloss_board_preflight_snapshot.v1",
   "collected_at_utc": "2026-06-16T23:57:24Z",
-  "repo_commit": "60e3104199d474d5c4c030a438a736de0d098977",
-  "repo_tree": "c6257a23a809e5b2f5a4ca73669ba02c4bcc52b5",
+  "collection_repo_commit": "60e3104199d474d5c4c030a438a736de0d098977",
+  "collection_repo_tree": "c6257a23a809e5b2f5a4ca73669ba02c4bcc52b5",
+  "evidence_first_commit": "1e39b5d4f69573d30606a7526369c8d439ab6791",
   "passed": true,
   "result_claim": "h2_powerloss_board_preflight_accepted",
   "files": [
@@ -13,8 +14,8 @@
     },
     {
       "file": "board-preflight.json",
-      "sha256": "d45785b08d434b4343deb040277db4d79ba53e7f8860417bcb92e08c04ac2021",
-      "bytes": 7467
+      "sha256": "88644f323da60507107b9adada54440d6db5360ef4e203ca55d1a0fa414c72e2",
+      "bytes": 7267
     },
     {
       "file": "board-preflight-gate.json",
