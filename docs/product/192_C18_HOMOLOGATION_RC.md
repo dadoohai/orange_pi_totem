@@ -247,13 +247,14 @@ registra a matriz atual como 5/17 coberta e 12/17 pendente, com instrucoes
 manuais explicitas para checkpoints de setup customizado e sem reivindicar
 evidencia fisica.
 O runbook operacional gerado em
-`docs/evidence/c18-update-validation/20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e/`
+`docs/evidence/c18-update-validation/20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e/`
 organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
 de pull/validacao. O builder agora bloqueia checkpoint `requires_custom_setup`
 sem comandos ou instrucoes manuais; o helper tambem recusa placeholder `<utc>`
 e diretorio local existente para evitar mistura de evidencia, materializa o
-manifest local exigido pelo evidence gate e fixa o marker de imagem esperado no
-preflight. O runbook tambem nao e evidencia fisica e nao substitui corte real de
+manifest local exigido pelo evidence gate, fixa o marker de imagem esperado no
+preflight e injeta binding de payload/imagem para H2. O runbook tambem nao e
+evidencia fisica e nao substitui corte real de
 energia.
 O mesmo runbook agora inclui uma etapa previa de preflight H2: coletar estado
 read-only da placa com

@@ -447,8 +447,12 @@ def manifest_image_errors(
     expect_image_tag: str | None,
     expect_image_sha256: str | None,
     expect_image_marker_sha256: str | None,
+    expect_payload_sha256: str | None,
 ) -> list[str]:
     errors: list[str] = []
+    if expect_payload_sha256 is not None:
+        if manifest.get("target_payload_sha256") != expect_payload_sha256:
+            errors.append("powerloss_target_payload_sha256_mismatch_or_missing")
     if expect_image_tag is not None:
         if manifest.get("image_tag") != expect_image_tag:
             errors.append("powerloss_image_tag_mismatch_or_missing")
@@ -474,7 +478,7 @@ def powerloss_semantics_ledger() -> dict[str, Any]:
     }
 
 
-def evaluate_powerloss(args: argparse.Namespace) -> dict[str, Any]:
+def evaluate_powerloss(args: argparse.Namespace, *, expect_payload_sha256: str | None = None) -> dict[str, Any]:
     blockers: list[str] = []
     checkpoint_dirs: dict[str, str] = {}
     gate_results: dict[str, dict[str, Any]] = {}
@@ -486,6 +490,8 @@ def evaluate_powerloss(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("powerloss_expected_image_sha256_required")
     if args.expect_image_marker_sha256 is None:
         blockers.append("powerloss_expected_image_marker_sha256_required")
+    if expect_payload_sha256 is None:
+        blockers.append("powerloss_expected_payload_sha256_required")
     if semantics_ledger["evidence_gate_contract_mismatch"]:
         blockers.append("powerloss_matrix_contract_mismatch")
     if semantics_ledger["semantics_not_implemented_checkpoints"]:
@@ -508,6 +514,7 @@ def evaluate_powerloss(args: argparse.Namespace) -> dict[str, Any]:
                 expect_image_tag=args.expect_image_tag,
                 expect_image_sha256=args.expect_image_sha256,
                 expect_image_marker_sha256=args.expect_image_marker_sha256,
+                expect_payload_sha256=expect_payload_sha256,
             )
         )
         gate = run_powerloss_gate(run_dir)
@@ -769,13 +776,21 @@ def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> di
     expected_stable_hashes = stable_expected_hashes(args)
     allow_test_fixtures = bool(getattr(args, "allow_test_fixtures", False))
     server_side_target, _target_errors = thaw_decision_expected_target(args)
+    expected_powerloss_payload_sha256 = (
+        server_side_target.get("payload_sha256")
+        if isinstance(server_side_target, dict)
+        else None
+    )
     checks = {
         "h1_decisive_bundle": evaluate_h1(args.h1_release_gate_summary),
         "player_runtime_release_gate": evaluate_release_gate_summary(
             getattr(args, "player_runtime_release_gate_summary", None),
             expected_component="player-runtime",
         ),
-        "full_physical_powerloss_matrix": evaluate_powerloss(args),
+        "full_physical_powerloss_matrix": evaluate_powerloss(
+            args,
+            expect_payload_sha256=expected_powerloss_payload_sha256,
+        ),
         "soak_endurance_24h": evaluate_soak(args.soak_summary),
         "stable_promotion_authorization": evaluate_stable_promotion(
             args.stable_promotion_evidence,
@@ -820,7 +835,7 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def fixture_manifest(root: Path, checkpoint: str) -> Path:
+def fixture_manifest(root: Path, checkpoint: str, *, target_payload_sha256: str) -> Path:
     run_dir = root / checkpoint
     run_dir.mkdir(parents=True)
     write_json(run_dir / "evidence-manifest.json", {
@@ -831,6 +846,7 @@ def fixture_manifest(root: Path, checkpoint: str) -> Path:
         "image_sha256": "a" * 64,
         "image_marker_sha256": "b" * 64,
         "source_commit": "c" * 40,
+        "target_payload_sha256": target_payload_sha256,
         "files": [],
     })
     return run_dir
@@ -932,7 +948,14 @@ def complete_args(root: Path) -> argparse.Namespace:
             "this_evidence_does_not_thaw_player_runtime",
         ],
     })
-    dirs = [fixture_manifest(root / "powerloss", checkpoint) for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS]
+    dirs = [
+        fixture_manifest(
+            root / "powerloss",
+            checkpoint,
+            target_payload_sha256=server_manifest["payload_sha256"],
+        )
+        for checkpoint in REQUIRED_POWERLOSS_CHECKPOINTS
+    ]
     stable = root / "stable.json"
     operator = root / "operator.json"
     args = argparse.Namespace(
@@ -1180,6 +1203,24 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertIn("full_physical_powerloss_matrix:powerloss_expected_image_tag_required", result["blockers"])
         self.assertIn("full_physical_powerloss_matrix:powerloss_expected_image_sha256_required", result["blockers"])
         self.assertIn("full_physical_powerloss_matrix:powerloss_expected_image_marker_sha256_required", result["blockers"])
+
+    def test_powerloss_payload_must_match_server_side_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            manifest_path = args.powerloss_evidence_dir[0] / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["target_payload_sha256"] = "0" * 64
+            write_json(manifest_path, manifest)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            f"full_physical_powerloss_matrix:{REQUIRED_POWERLOSS_CHECKPOINTS[0]}:powerloss_target_payload_sha256_mismatch_or_missing",
+            result["blockers"],
+        )
 
     def test_h1_failed_decisive_steps_deny(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

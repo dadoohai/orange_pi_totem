@@ -150,8 +150,17 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "preflight_local_output": args.preflight_local_output,
         "preflight_image_marker": args.image_marker,
         "preflight_expected_image_tag": args.expected_image_tag,
+        "preflight_expected_image_sha256": args.expected_image_sha256,
         "preflight_expected_image_marker_sha256": args.expected_image_marker_sha256,
         "preflight_max_age_sec": args.preflight_max_age_sec,
+        "powerloss_manifest_target_payload_sha256": (
+            plan.get("target_package", {}).get("payload_sha256")
+            if isinstance(plan.get("target_package"), dict)
+            else None
+        ),
+        "powerloss_manifest_image_tag": args.expected_image_tag,
+        "powerloss_manifest_image_sha256": args.expected_image_sha256,
+        "powerloss_manifest_image_marker_sha256": args.expected_image_marker_sha256,
         "pull_helper_requires_fresh_local_root": True,
         "pull_helper_rejects_utc_placeholder": True,
         "pull_helper_materializes_powerloss_manifest": True,
@@ -349,8 +358,12 @@ def render_pull_script(plan: dict[str, Any], args: argparse.Namespace) -> str:
     checkpoints = [str(item) for item in plan.get("missing_checkpoints", [])]
     target_version = str(target.get("version") or "")
     source_commit = str(target.get("source_commit") or "")
+    target_payload_sha256 = str(target.get("payload_sha256") or "")
     previous_version = str(board.get("previous_version") or "")
     board_image_marker = Path(str(args.image_marker)).name
+    image_tag = str(args.expected_image_tag or "")
+    image_sha256 = str(args.expected_image_sha256 or "")
+    image_marker_sha256 = str(args.expected_image_marker_sha256 or "")
     expected_active: dict[str, str] = {}
     setup_expected_active: dict[str, str] = {}
     setup_candidate: dict[str, str] = {}
@@ -390,7 +403,11 @@ LOCAL_ROOT="${{2:-{args.local_evidence_root}}}"
 REMOTE_ROOT="{remote_root}"
 SOURCE_COMMIT="{source_commit}"
 TARGET_PACKAGE_VERSION="{target_version}"
+TARGET_PAYLOAD_SHA256="{target_payload_sha256}"
 BOARD_IMAGE_MARKER="{board_image_marker}"
+IMAGE_TAG="{image_tag}"
+IMAGE_SHA256="{image_sha256}"
+IMAGE_MARKER_SHA256="{image_marker_sha256}"
 {shell_array("CHECKPOINTS", checkpoints)}
 {shell_assoc("EXPECTED_ACTIVE_VERSION", expected_active)}
 {shell_assoc("SETUP_EXPECTED_ACTIVE_VERSION", setup_expected_active)}
@@ -421,7 +438,11 @@ for checkpoint in "${{CHECKPOINTS[@]}}"; do
     --checkpoint "$checkpoint"
     --source-commit "$SOURCE_COMMIT"
     --target-package-version "$TARGET_PACKAGE_VERSION"
+    --target-payload-sha256 "$TARGET_PAYLOAD_SHA256"
     --board-image-marker "$BOARD_IMAGE_MARKER"
+    --image-tag "$IMAGE_TAG"
+    --image-sha256 "$IMAGE_SHA256"
+    --image-marker-sha256 "$IMAGE_MARKER_SHA256"
   )
   if [[ -n "${{EXPECTED_ACTIVE_VERSION[$checkpoint]:-}}" ]]; then
     manifest_args+=(--expected-active-version "${{EXPECTED_ACTIVE_VERSION[$checkpoint]}}")
@@ -529,6 +550,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
                 image_marker="/etc/dadooh/c18-hwdecode-lab-test-image",
                 expected_image_tag="c18-hwdecode-lab-test",
+                expected_image_sha256="d" * 64,
                 expected_image_marker_sha256="c" * 64,
                 preflight_max_age_sec=4 * 60 * 60,
             )
@@ -556,13 +578,22 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("does not execute board commands", pull_script)
         self.assertIn(POWERLOSS_MANIFEST_BUILD, pull_script)
         self.assertIn("--target-package-version", pull_script)
+        self.assertIn("--target-payload-sha256", pull_script)
+        self.assertIn("--image-tag", pull_script)
+        self.assertIn("--image-sha256", pull_script)
+        self.assertIn("--image-marker-sha256", pull_script)
         self.assertIn('"$LOCAL_ROOT/_validation/$checkpoint-powerloss-manifest-build.json"', pull_script)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", pull_script)
         self.assertIn('"$LOCAL_ROOT/_validation/$checkpoint-powerloss-evidence-gate.json"', pull_script)
         self.assertNotIn('"$LOCAL_ROOT/$checkpoint/powerloss-evidence-gate.json"', pull_script)
         self.assertIn("this_runbook_does_not_claim_17_17", manifest["non_claims"])
         self.assertEqual(manifest["preflight_image_marker"], "/etc/dadooh/c18-hwdecode-lab-test-image")
+        self.assertEqual(manifest["preflight_expected_image_sha256"], "d" * 64)
         self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
+        self.assertEqual(manifest["powerloss_manifest_target_payload_sha256"], "b" * 64)
+        self.assertEqual(manifest["powerloss_manifest_image_tag"], "c18-hwdecode-lab-test")
+        self.assertEqual(manifest["powerloss_manifest_image_sha256"], "d" * 64)
+        self.assertEqual(manifest["powerloss_manifest_image_marker_sha256"], "c" * 64)
         self.assertEqual(manifest["preflight_max_age_sec"], 4 * 60 * 60)
         self.assertTrue(manifest["pull_helper_materializes_powerloss_manifest"])
 
@@ -585,6 +616,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
                 image_marker="/etc/dadooh/c18-hwdecode-lab-test-image",
                 expected_image_tag="c18-hwdecode-lab-test",
+                expected_image_sha256="d" * 64,
                 expected_image_marker_sha256="c" * 64,
                 preflight_max_age_sec=4 * 60 * 60,
             )
@@ -624,6 +656,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
                 image_marker="/etc/dadooh/c18-hwdecode-lab-test-image",
                 expected_image_tag="c18-hwdecode-lab-test",
+                expected_image_sha256="d" * 64,
                 expected_image_marker_sha256="c" * 64,
                 preflight_max_age_sec=4 * 60 * 60,
             )
@@ -641,6 +674,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--preflight-local-output", default="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json")
     parser.add_argument("--image-marker", default="/etc/dadooh/c18-hwdecode-lab-1x-image")
     parser.add_argument("--expected-image-tag", default="<expected-image-tag>")
+    parser.add_argument("--expected-image-sha256", default="<expected-image-sha256>")
     parser.add_argument("--expected-image-marker-sha256", default="<expected-image-marker-sha256>")
     parser.add_argument("--preflight-max-age-sec", type=int, default=4 * 60 * 60)
     parser.add_argument("--self-test", action="store_true")

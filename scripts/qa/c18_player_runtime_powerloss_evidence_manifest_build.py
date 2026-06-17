@@ -22,6 +22,7 @@ from typing import Any
 
 SCHEMA = "dadooh.c18.powerloss.evidence_manifest.v1"
 COMPONENT = "player-runtime"
+SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
 def sha256_file(path: Path) -> str:
@@ -62,8 +63,16 @@ def validate_args(args: argparse.Namespace) -> list[str]:
         blockers.append("source_commit_invalid")
     if not args.target_package_version:
         blockers.append("target_package_version_missing")
+    if not SHA256_RE.fullmatch(args.target_payload_sha256 or ""):
+        blockers.append("target_payload_sha256_invalid")
     if not args.board_image_marker:
         blockers.append("board_image_marker_missing")
+    if not args.image_tag:
+        blockers.append("image_tag_missing")
+    if not SHA256_RE.fullmatch(args.image_sha256 or ""):
+        blockers.append("image_sha256_invalid")
+    if not SHA256_RE.fullmatch(args.image_marker_sha256 or ""):
+        blockers.append("image_marker_sha256_invalid")
     if (args.run_dir / "evidence-manifest.json").exists() and not args.overwrite:
         blockers.append("evidence_manifest_already_exists")
     return blockers
@@ -85,7 +94,11 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
         "component": COMPONENT,
         "checkpoint": args.checkpoint,
         "board_image_marker": args.board_image_marker,
+        "image_marker_sha256": args.image_marker_sha256,
+        "image_sha256": args.image_sha256,
+        "image_tag": args.image_tag,
         "source_commit": args.source_commit,
+        "target_payload_sha256": args.target_payload_sha256,
         "target_package_version": args.target_package_version,
         "files": evidence_files(args.run_dir),
     }
@@ -131,7 +144,11 @@ class PowerlossEvidenceManifestBuildSelfTest(unittest.TestCase):
                 checkpoint="after_payload_staged",
                 source_commit="a" * 40,
                 target_package_version="c18.player-runtime-test",
+                target_payload_sha256="b" * 64,
                 board_image_marker="c18-hwdecode-lab-test-image",
+                image_tag="c18-hwdecode-lab-test",
+                image_sha256="c" * 64,
+                image_marker_sha256="d" * 64,
                 expected_active_version="runtime-a",
                 setup_expected_active_version="runtime-a",
                 setup_candidate_version="runtime-b",
@@ -148,6 +165,10 @@ class PowerlossEvidenceManifestBuildSelfTest(unittest.TestCase):
         self.assertEqual(manifest["checkpoint"], "after_payload_staged")
         self.assertEqual(manifest["source_commit"], "a" * 40)
         self.assertEqual(manifest["target_package_version"], "c18.player-runtime-test")
+        self.assertEqual(manifest["target_payload_sha256"], "b" * 64)
+        self.assertEqual(manifest["image_tag"], "c18-hwdecode-lab-test")
+        self.assertEqual(manifest["image_sha256"], "c" * 64)
+        self.assertEqual(manifest["image_marker_sha256"], "d" * 64)
         self.assertEqual(manifest["expected_active_version"], "runtime-a")
         self.assertEqual(manifest["setup_candidate_version"], "runtime-b")
         self.assertEqual(manifest["files"][0]["file"], "powerloss-checkpoint/checkpoint.json")
@@ -161,7 +182,11 @@ class PowerlossEvidenceManifestBuildSelfTest(unittest.TestCase):
                 checkpoint="after_payload_staged",
                 source_commit="a" * 40,
                 target_package_version="c18.player-runtime-test",
+                target_payload_sha256="b" * 64,
                 board_image_marker="c18-hwdecode-lab-test-image",
+                image_tag="c18-hwdecode-lab-test",
+                image_sha256="c" * 64,
+                image_marker_sha256="d" * 64,
                 expected_active_version=None,
                 setup_expected_active_version=None,
                 setup_candidate_version=None,
@@ -174,6 +199,35 @@ class PowerlossEvidenceManifestBuildSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("evidence_manifest_already_exists", result["blockers"])
 
+    def test_requires_payload_and_image_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / "checkpoint.json").write_text("{}\n", encoding="utf-8")
+            args = argparse.Namespace(
+                run_dir=run_dir,
+                checkpoint="after_payload_staged",
+                source_commit="a" * 40,
+                target_package_version="c18.player-runtime-test",
+                target_payload_sha256=None,
+                board_image_marker="c18-hwdecode-lab-test-image",
+                image_tag=None,
+                image_sha256=None,
+                image_marker_sha256=None,
+                expected_active_version=None,
+                setup_expected_active_version=None,
+                setup_candidate_version=None,
+                rollback_expectation=None,
+                artifact_id=None,
+                overwrite=False,
+            )
+            result = build_manifest(args)
+
+        self.assertFalse(result["passed"])
+        self.assertIn("target_payload_sha256_invalid", result["blockers"])
+        self.assertIn("image_tag_missing", result["blockers"])
+        self.assertIn("image_sha256_invalid", result["blockers"])
+        self.assertIn("image_marker_sha256_invalid", result["blockers"])
+
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
@@ -181,7 +235,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--checkpoint")
     parser.add_argument("--source-commit")
     parser.add_argument("--target-package-version")
+    parser.add_argument("--target-payload-sha256")
     parser.add_argument("--board-image-marker")
+    parser.add_argument("--image-tag")
+    parser.add_argument("--image-sha256")
+    parser.add_argument("--image-marker-sha256")
     parser.add_argument("--expected-active-version")
     parser.add_argument("--setup-expected-active-version")
     parser.add_argument("--setup-candidate-version")

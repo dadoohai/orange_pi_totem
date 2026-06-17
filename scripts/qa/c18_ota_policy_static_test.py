@@ -1103,7 +1103,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "tracked_inputs=true",
         ):
             self.assertIn(token, doc192)
-        self.assertIn("20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e", doc192)
+        self.assertIn("20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
@@ -2474,13 +2474,25 @@ exec "$C18_REAL_PYTHON3" "$@"
             / "docs"
             / "evidence"
             / "c18-update-validation"
-            / "20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e"
+            / "20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e"
             / "operator-runbook.md"
+        ).read_text(encoding="utf-8")
+        current_powerloss_pull_helper = (
+            REPO_ROOT
+            / "docs"
+            / "evidence"
+            / "c18-update-validation"
+            / "20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e"
+            / "pull-and-validate-evidence.sh"
         ).read_text(encoding="utf-8")
         self.assertEqual(2, current_powerloss_runbook_artifact.count("Manual setup before arm:"))
         self.assertIn("Setup before arm: none required by the plan.", current_powerloss_runbook_artifact)
         self.assertIn("--image-marker '/etc/dadooh/c18-hwdecode-lab-1x-image'", current_powerloss_runbook_artifact)
         self.assertNotIn("none emitted by the plan", current_powerloss_runbook_artifact)
+        self.assertIn("--target-payload-sha256", current_powerloss_pull_helper)
+        self.assertIn("--image-tag", current_powerloss_pull_helper)
+        self.assertIn("--image-sha256", current_powerloss_pull_helper)
+        self.assertIn("--image-marker-sha256", current_powerloss_pull_helper)
 
         powerloss_preflight_collect = PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_COLLECT_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1", powerloss_preflight_collect)
@@ -2742,7 +2754,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
             "20260617T030214Z-current-h2-readiness-13d4cbd",
             "20260612T125127Z-server-side-governance-c16fb3e",
-            "20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e",
+            "20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",

@@ -1,0 +1,51 @@
+{
+  "collected_at_utc": "2026-06-17T08:10:18Z",
+  "collection_repo_commit": "3d422aab5983c04e34299d0f471d4975abaca912",
+  "collection_repo_tree": "9a331f005c52dd89864c281e9c17d175e9535454",
+  "files": [
+    {
+      "bytes": 1545,
+      "file": "README.md",
+      "sha256": "1832115f1a8ac5ccd94a2f9e3695b95ee31536058f11ea4a2d2bbd7d91373b83"
+    },
+    {
+      "bytes": 6725,
+      "file": "operator-runbook-manifest.json",
+      "sha256": "b03838e4197d20ca39aea3756dcdbc740e509c0719a6f7e854132071a541d73b"
+    },
+    {
+      "bytes": 32786,
+      "file": "operator-runbook.md",
+      "sha256": "76c26af5b8744aadedeeb3500b072e7cbafdde2a5a6f29e049f1b849d302515d"
+    },
+    {
+      "bytes": 6305,
+      "file": "pull-and-validate-evidence.sh",
+      "sha256": "17ce194a9f02240ed79b62f2a08131661c4fd6c88c9b577a5a5433bd5c8b4a30"
+    }
+  ],
+  "manifest_helper_binding": {
+    "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "target_payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+  },
+  "non_claims": [
+    "this_runbook_is_not_powerloss_evidence",
+    "this_manifest_does_not_claim_17_17",
+    "this_manifest_does_not_execute_board_commands",
+    "this_manifest_does_not_replace_physical_power_cut",
+    "this_manifest_does_not_authorize_stable_or_production",
+    "this_manifest_does_not_thaw_player_runtime"
+  ],
+  "passed": true,
+  "result_claim": "powerloss_operator_runbook_written",
+  "schema": "dadooh.c18.powerloss_operator_runbook_evidence.v1",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+  }
+}
