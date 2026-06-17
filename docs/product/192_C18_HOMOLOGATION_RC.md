@@ -312,8 +312,10 @@ versionada antes de aplicar em placa ou cliente.
 
 ## Proxima rodada
 
-1. Preparar reset/topologia controlada da placa para o alvo `9bebaf1`.
-2. Recoletar preflight H2 ate o gate aceitar a sessao fisica.
+1. Iniciar P0 fisico seletivo do alvo `9bebaf1` a partir da topologia
+   resetada e do preflight H2 aceito.
+2. Recoletar preflight H2 antes da sessao fisica se a janela de frescor expirar
+   ou se o estado da placa mudar.
 3. Fechar P0 seletivo (`after_current_symlink` e quatro rollback checkpoints)
    antes de qualquer piloto assistido.
 4. Preservar evidencia de apply, health, rollback e qualquer incidente.
