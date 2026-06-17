@@ -478,10 +478,11 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   registra 5/17 cobertos e 12/17 pendentes, com instrucoes manuais explicitas
   para checkpoints `requires_custom_setup`;
 - o runbook
-  `docs/evidence/c18-update-validation/20260617T030341Z-h2-powerloss-operator-runbook-fresh-local-root-c16fb3e/`
+  `docs/evidence/c18-update-validation/20260617T064310Z-h2-powerloss-operator-runbook-explicit-marker-c16fb3e/`
   pode orientar os 12 checkpoints pendentes, bloqueia setup customizado sem
   comandos/instrucoes, recusa placeholder `<utc>`/diretorio local existente no
-  helper de pull e nao conta como evidencia;
+  helper de pull, fixa o marker de imagem esperado no preflight e nao conta
+  como evidencia;
 - antes de iniciar uma sessao fisica, rodar
   `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` na placa
   e validar o JSON com

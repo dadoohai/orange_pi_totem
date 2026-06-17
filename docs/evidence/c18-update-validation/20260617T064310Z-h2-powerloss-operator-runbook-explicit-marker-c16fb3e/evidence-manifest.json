@@ -1,0 +1,61 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_operator_runbook_snapshot.v1",
+  "collected_at_utc": "2026-06-17T06:43:10Z",
+  "collection_repo_commit": "8fd7fc8b22ae21846843b87c3c23bfa92e89ce4b",
+  "collection_repo_tree": "829a0d00dee5f3de351793ae90ba1d4eb0d9bdf3",
+  "passed": true,
+  "result_claim": "powerloss_operator_runbook_written",
+  "source_plan": "docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e/powerloss-matrix-plan.json",
+  "source_plan_sha256": "692ebc907e106fb520244081c446e599720b3d75aebfbd31404bbe0511793ce2",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "9a986cd16478bf9109f38b716eb34fd8444e9a146a381a2cae31da615a2ce91e",
+      "bytes": 1545
+    },
+    {
+      "file": "operator-runbook.md",
+      "sha256": "76c26af5b8744aadedeeb3500b072e7cbafdde2a5a6f29e049f1b849d302515d",
+      "bytes": 32786
+    },
+    {
+      "file": "operator-runbook-manifest.json",
+      "sha256": "c9549b9541428579f252c51b90a8567280cb40ca622827f13e9f967c1a328c27",
+      "bytes": 6177
+    },
+    {
+      "file": "pull-and-validate-evidence.sh",
+      "sha256": "20c4d541b8a871379278d4a22c671db4a8cf2f672be0680a895b7831704a4ba3",
+      "bytes": 1514
+    }
+  ],
+  "coverage": {
+    "covered": 5,
+    "missing": 12,
+    "required": 17
+  },
+  "preflight": {
+    "image_marker": "/etc/dadooh/c18-hwdecode-lab-1x-image",
+    "expected_image_tag": "c18-hwdecode-lab-1x",
+    "expected_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "max_age_sec": 14400
+  },
+  "custom_setup_guard": {
+    "manual_setup_sections": 2,
+    "builder_blocks_custom_setup_without_commands_or_manual_instructions": true
+  },
+  "pull_helper_guard": {
+    "requires_fresh_local_root": true,
+    "rejects_utc_placeholder": true,
+    "rejects_existing_checkpoint_dirs": true
+  },
+  "non_claims": [
+    "this_snapshot_is_not_powerloss_evidence",
+    "this_snapshot_does_not_claim_17_17",
+    "this_snapshot_does_not_execute_board_commands",
+    "this_snapshot_does_not_pull_or_validate_evidence_by_itself",
+    "this_snapshot_does_not_replace_physical_power_cut",
+    "this_snapshot_does_not_authorize_stable_or_production",
+    "this_snapshot_does_not_thaw_player_runtime"
+  ]
+}
