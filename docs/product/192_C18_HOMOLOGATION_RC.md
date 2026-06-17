@@ -1,6 +1,6 @@
 # 192 - C18 Homologation RC
 
-Status em 2026-06-16: **Homologation RC pronta para piloto assistido**,
+Status em 2026-06-17: **Homologation RC pronta para piloto assistido**,
 com retomada operacional e readiness atual rerodados sobre autorizacao/preflight
 frescos. Producao/stable continuam bloqueados por H2.
 
@@ -247,21 +247,22 @@ registra a matriz atual como 5/17 coberta e 12/17 pendente, com instrucoes
 manuais explicitas para checkpoints de setup customizado e sem reivindicar
 evidencia fisica.
 O runbook operacional gerado em
-`docs/evidence/c18-update-validation/20260617T064310Z-h2-powerloss-operator-runbook-explicit-marker-c16fb3e/`
+`docs/evidence/c18-update-validation/20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e/`
 organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
 de pull/validacao. O builder agora bloqueia checkpoint `requires_custom_setup`
 sem comandos ou instrucoes manuais; o helper tambem recusa placeholder `<utc>`
-e diretorio local existente para evitar mistura de evidencia; o preflight do
-runbook fixa o marker de imagem esperado. O runbook tambem nao e evidencia
-fisica e nao substitui corte real de energia.
+e diretorio local existente para evitar mistura de evidencia, materializa o
+manifest local exigido pelo evidence gate e fixa o marker de imagem esperado no
+preflight. O runbook tambem nao e evidencia fisica e nao substitui corte real de
+energia.
 O mesmo runbook agora inclui uma etapa previa de preflight H2: coletar estado
 read-only da placa com
 `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` e validar
 com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o
 plano da matriz. Esse gate bloqueia placa/pacote/topologia errados antes da
 sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
-Snapshot atual coletado da placa e validado contra o plano com custom setup:
-`docs/evidence/c18-update-validation/20260617T061038Z-h2-powerloss-board-preflight-current-7c5fc17/`;
+Snapshot fresco coletado da placa e validado contra o plano com custom setup:
+`docs/evidence/c18-update-validation/20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d/`;
 ele reporta `after_previous_symlink` e `rollback_after_current_unlinked` como
 checkpoints que exigem setup customizado.
 Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target
@@ -275,7 +276,7 @@ Depois da pausa/reboot multi-dia, o preflight intermediario
 placa no mesmo terreno seguro: pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`,
 policy `homologation`, timer inativo/desabilitado, target nao linkado, target
 nao quarentenado e raiz de evidencia H2 sem diretorios de checkpoint pendentes.
-O snapshot atual da sessao H2 e o `20260617T061038Z`, coletado novamente da
+O snapshot fresco da sessao H2 e o `20260617T071517Z`, coletado novamente da
 placa e validado contra o plano com custom setup. Esses snapshots sao apenas
 preflight: nao contam
 power-loss, nao reduzem os 12 checkpoints fisicos pendentes e nao mudam

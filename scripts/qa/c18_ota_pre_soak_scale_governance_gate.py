@@ -30,6 +30,7 @@ TARGET_SOURCE_COMMIT = "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
 TARGET_PAYLOAD_SHA256 = "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
 TARGET_CHANNEL = "homologation"
 TARGET_RING = "pilot"
+H2_POWERLOSS_PREFLIGHT_MAX_AGE_SEC = 4 * 60 * 60
 EXPECTED_H2_BLOCKERS = (
     "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
     "soak_endurance_24h:missing_24h_soak_summary",
@@ -48,7 +49,7 @@ DEFAULT_SERVER_SIDE_CURRENT_DIR = (
 )
 DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T061038Z-h2-powerloss-board-preflight-current-7c5fc17"
+    / "docs/evidence/c18-update-validation/20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d"
 )
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/191_C18_OTA_OPERATING_MODEL.md",
@@ -121,6 +122,25 @@ TRACKED_INPUTS = (
 
 def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
     return {"passed": passed, "blockers": sorted(set(blockers)), **details}
+
+
+def utcnow() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def parse_utc(value: Any, blockers: list[str], label: str) -> dt.datetime | None:
+    if not isinstance(value, str) or not value:
+        blockers.append(f"{label}_missing")
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        blockers.append(f"{label}_invalid")
+        return None
+    if parsed.tzinfo is None:
+        blockers.append(f"{label}_not_timezone_aware")
+        return None
+    return parsed.astimezone(dt.timezone.utc)
 
 
 def read_json(path: Path, blockers: list[str], label: str) -> dict[str, Any]:
@@ -320,7 +340,12 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
     return step(not blockers, blockers, run_dir=str(run_dir), result_claim=manifest.get("result_claim"))
 
 
-def evaluate_h2_powerloss_preflight_snapshot(run_dir: Path) -> dict[str, Any]:
+def evaluate_h2_powerloss_preflight_snapshot(
+    run_dir: Path,
+    now_utc: str,
+    *,
+    max_age_sec: int = H2_POWERLOSS_PREFLIGHT_MAX_AGE_SEC,
+) -> dict[str, Any]:
     blockers: list[str] = []
     manifest = read_json(run_dir / "evidence-manifest.json", blockers, "h2_powerloss_preflight_manifest")
     if not manifest:
@@ -338,6 +363,15 @@ def evaluate_h2_powerloss_preflight_snapshot(run_dir: Path) -> dict[str, Any]:
         blockers.append("h2_powerloss_preflight_source_commit")
     if target.get("payload_sha256") != TARGET_PAYLOAD_SHA256:
         blockers.append("h2_powerloss_preflight_payload_sha256")
+    captured_at = parse_utc(manifest.get("collected_at_utc"), blockers, "h2_powerloss_preflight_collected_at_utc")
+    evaluated_at = parse_utc(now_utc, blockers, "now_utc")
+    age_sec: int | None = None
+    if captured_at is not None and evaluated_at is not None:
+        age_sec = int((evaluated_at - captured_at).total_seconds())
+        if age_sec < 0:
+            blockers.append("h2_powerloss_preflight_collected_after_now")
+        elif age_sec > max_age_sec:
+            blockers.append("h2_powerloss_preflight_stale")
     checks = manifest.get("key_checks") if isinstance(manifest.get("key_checks"), dict) else {}
     for name in (
         "collector_passed",
@@ -383,7 +417,12 @@ def evaluate_h2_powerloss_preflight_snapshot(run_dir: Path) -> dict[str, Any]:
         blockers,
         run_dir=str(run_dir),
         result_claim=manifest.get("result_claim"),
-        collected_at_utc=manifest.get("collected_at_utc"),
+        freshness={
+            "captured_at_utc": manifest.get("collected_at_utc"),
+            "evaluated_at_utc": now_utc,
+            "age_sec": age_sec,
+            "max_age_sec": max_age_sec,
+        },
     )
 
 
@@ -517,6 +556,7 @@ def effective_tracked_inputs(args: argparse.Namespace) -> tuple[Path, ...]:
 
 
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
+    now_utc = args.now_utc or utcnow()
     checks = {
         "repo_clean": evaluate_repo_clean(allow_dirty_repo=args.allow_dirty_repo),
         "tracked_inputs": evaluate_tracked_inputs(effective_tracked_inputs(args)),
@@ -526,10 +566,11 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "server_side_current": evaluate_server_side_current(args.server_side_current_dir),
         "h2_powerloss_board_preflight_snapshot": evaluate_h2_powerloss_preflight_snapshot(
             args.h2_powerloss_preflight_dir,
+            now_utc,
         ),
         "macro_gate": evaluate_macro_gate(allow_dirty_repo=args.allow_dirty_repo),
         "operational_resume_default": evaluate_operational_resume_default(
-            args.now_utc,
+            now_utc,
             allow_dirty_repo=args.allow_dirty_repo,
         ),
     }
@@ -547,7 +588,8 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "schema": SCHEMA,
         "passed": passed,
         "result_claim": "c18_ota_pre_soak_scale_governance_ready" if passed else "c18_ota_pre_soak_scale_governance_blocked",
-        "evaluated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "evaluated_at_utc": utcnow(),
+        "now_utc": now_utc,
         "target": {
             "component": "player-runtime",
             "package_version": TARGET_PACKAGE_VERSION,
@@ -669,8 +711,15 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
     def test_h2_powerloss_preflight_snapshot_is_accepted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = self.write_h2_powerloss_preflight_fixture(Path(tmp))
-            result = evaluate_h2_powerloss_preflight_snapshot(run_dir)
+            result = evaluate_h2_powerloss_preflight_snapshot(run_dir, "2026-06-17T01:20:00Z")
         self.assertTrue(result["passed"], msg=result)
+
+    def test_h2_powerloss_preflight_snapshot_rejects_stale_freshness(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_h2_powerloss_preflight_fixture(Path(tmp))
+            result = evaluate_h2_powerloss_preflight_snapshot(run_dir, "2026-06-17T05:00:00Z")
+        self.assertFalse(result["passed"])
+        self.assertIn("h2_powerloss_preflight_stale", result["blockers"])
 
     def test_h2_powerloss_preflight_snapshot_rejects_tampered_key_check(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -678,7 +727,7 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
                 Path(tmp),
                 key_checks={"update_timer_disabled": False},
             )
-            result = evaluate_h2_powerloss_preflight_snapshot(run_dir)
+            result = evaluate_h2_powerloss_preflight_snapshot(run_dir, "2026-06-17T01:20:00Z")
         self.assertFalse(result["passed"])
         self.assertIn(
             "h2_powerloss_preflight_key_check_not_true:update_timer_disabled",
@@ -744,7 +793,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--macro-governance-summary", type=Path, default=DEFAULT_MACRO_SUMMARY)
     parser.add_argument("--server-side-current-dir", type=Path, default=DEFAULT_SERVER_SIDE_CURRENT_DIR)
     parser.add_argument("--h2-powerloss-preflight-dir", type=Path, default=DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR)
-    parser.add_argument("--now-utc", default="2026-06-17T01:20:00Z")
+    parser.add_argument("--now-utc")
     parser.add_argument("--run-release-gate", action="store_true")
     parser.add_argument("--allow-dirty-repo", action="store_true")
     parser.add_argument("--json", action="store_true")

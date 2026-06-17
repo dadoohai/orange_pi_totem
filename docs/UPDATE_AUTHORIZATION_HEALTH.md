@@ -478,11 +478,11 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   registra 5/17 cobertos e 12/17 pendentes, com instrucoes manuais explicitas
   para checkpoints `requires_custom_setup`;
 - o runbook
-  `docs/evidence/c18-update-validation/20260617T064310Z-h2-powerloss-operator-runbook-explicit-marker-c16fb3e/`
+  `docs/evidence/c18-update-validation/20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e/`
   pode orientar os 12 checkpoints pendentes, bloqueia setup customizado sem
   comandos/instrucoes, recusa placeholder `<utc>`/diretorio local existente no
-  helper de pull, fixa o marker de imagem esperado no preflight e nao conta
-  como evidencia;
+  helper de pull, materializa o manifest local exigido pelo evidence gate, fixa o
+  marker de imagem esperado no preflight e nao conta como evidencia fisica;
 - antes de iniciar uma sessao fisica, rodar
   `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` na placa
   e validar o JSON com
@@ -496,8 +496,8 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   congelado; o preflight pos-reset em
   `docs/evidence/c18-update-validation/20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e/`
   ficou verde para iniciar a sessao fisica;
-- depois da nova retomada com placa acessivel, o preflight atual em
-  `docs/evidence/c18-update-validation/20260617T061038Z-h2-powerloss-board-preflight-current-7c5fc17/`
+- depois da nova retomada com placa acessivel, o preflight fresco em
+  `docs/evidence/c18-update-validation/20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d/`
   reconfirmou pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`, policy
   `homologation`, timer inativo/desabilitado, target nao linkado, target nao
   quarentenado, raiz H2 sem diretorios de checkpoint pendentes e custom setup

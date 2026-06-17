@@ -864,8 +864,8 @@ vir como nova imagem ou release ponte explicitamente homologada.
 
 ## Continuidade pos-compactacao
 
-1. Tratar `c18-hwdecode-lab-1t` como baseline de laboratorio validada para a
-   frente OTA/manual, ainda `final_image=false`.
+1. Tratar `c18-hwdecode-lab-1u` como baseline de laboratorio/delivery validada
+   para a frente OTA/manual, ainda `final_image=false`; `1t` permanece historica.
 2. Fluxo manual de release GitHub `totem-core` validado na 1n com mudanca real
    de aplicacao, rollback e reapply; as golden posteriores herdam esse contrato
    e adicionam validacao de imagem/deep-health com evidencia auditavel.

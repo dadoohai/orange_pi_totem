@@ -29,6 +29,14 @@ PULL_SCRIPT_NAME = "pull-and-validate-evidence.sh"
 MANIFEST_NAME = "operator-runbook-manifest.json"
 PREFLIGHT_COLLECTOR = "scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py"
 PREFLIGHT_GATE = "scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py"
+POWERLOSS_MANIFEST_BUILD = "scripts/qa/c18_player_runtime_powerloss_evidence_manifest_build.py"
+ROLLBACK_EXPECTATIONS = {
+    "rollback_after_identify_links": "data-current-after-identify-links",
+    "rollback_after_current_unlinked": "image-fallback-after-current-unlinked",
+    "rollback_after_previous_removed": "data-current-after-previous-removed",
+    "rollback_after_quarantine": "data-current-after-quarantine",
+    "rollback_after_state_success": "data-current-after-state-success",
+}
 NON_CLAIMS = (
     "this_runbook_is_not_powerloss_evidence",
     "this_runbook_does_not_claim_17_17",
@@ -146,6 +154,7 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "preflight_max_age_sec": args.preflight_max_age_sec,
         "pull_helper_requires_fresh_local_root": True,
         "pull_helper_rejects_utc_placeholder": True,
+        "pull_helper_materializes_powerloss_manifest": True,
         "non_claims": list(NON_CLAIMS),
     }
 
@@ -320,24 +329,73 @@ def shell_array(name: str, values: list[str]) -> str:
     return f"{name}=({quoted})"
 
 
+def shell_assoc(name: str, values: dict[str, str]) -> str:
+    entries = []
+    for key in sorted(values):
+        quoted_key = "'" + key.replace("'", "'\"'\"'") + "'"
+        quoted_value = "'" + values[key].replace("'", "'\"'\"'") + "'"
+        entries.append(f"[{quoted_key}]={quoted_value}")
+    return f"declare -A {name}=({' '.join(entries)})"
+
+
 def command_quote(value: str) -> str:
     return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
 def render_pull_script(plan: dict[str, Any], args: argparse.Namespace) -> str:
     board = plan.get("board") if isinstance(plan.get("board"), dict) else {}
+    target = plan.get("target_package") if isinstance(plan.get("target_package"), dict) else {}
     remote_root = str(board.get("evidence_root") or "/data/c18-evidence/h2-c16fb3e")
     checkpoints = [str(item) for item in plan.get("missing_checkpoints", [])]
+    target_version = str(target.get("version") or "")
+    source_commit = str(target.get("source_commit") or "")
+    previous_version = str(board.get("previous_version") or "")
+    board_image_marker = Path(str(args.image_marker)).name
+    expected_active: dict[str, str] = {}
+    setup_expected_active: dict[str, str] = {}
+    setup_candidate: dict[str, str] = {}
+    rollback_expectation: dict[str, str] = {}
+    for item in plan.get("commands_for_missing_checkpoints", []):
+        if not isinstance(item, dict):
+            continue
+        checkpoint = str(item.get("checkpoint") or "")
+        if not checkpoint:
+            continue
+        phase = item.get("phase")
+        if phase == "apply":
+            expected = item.get("expected_resume_version")
+            if isinstance(expected, str) and expected:
+                expected_active[checkpoint] = expected
+            if target_version:
+                setup_candidate[checkpoint] = target_version
+            if previous_version:
+                setup_expected_active[checkpoint] = previous_version
+        elif phase == "rollback":
+            expected = item.get("expected_rolled_to")
+            if isinstance(expected, str) and expected and expected != "image_fallback":
+                expected_active[checkpoint] = expected
+            if target_version:
+                setup_candidate[checkpoint] = target_version
+            if checkpoint in ROLLBACK_EXPECTATIONS:
+                rollback_expectation[checkpoint] = ROLLBACK_EXPECTATIONS[checkpoint]
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
 # This helper only pulls and validates evidence after the physical trials have
-# been run. It does not execute board commands and does not create evidence.
+# been run. It does not execute board commands for trials. After each pull, it
+# materializes the local top-level manifest required by the evidence gate.
 
 BOARD_HOST="${{1:-{args.board_host}}}"
 LOCAL_ROOT="${{2:-{args.local_evidence_root}}}"
 REMOTE_ROOT="{remote_root}"
+SOURCE_COMMIT="{source_commit}"
+TARGET_PACKAGE_VERSION="{target_version}"
+BOARD_IMAGE_MARKER="{board_image_marker}"
 {shell_array("CHECKPOINTS", checkpoints)}
+{shell_assoc("EXPECTED_ACTIVE_VERSION", expected_active)}
+{shell_assoc("SETUP_EXPECTED_ACTIVE_VERSION", setup_expected_active)}
+{shell_assoc("SETUP_CANDIDATE_VERSION", setup_candidate)}
+{shell_assoc("ROLLBACK_EXPECTATION", rollback_expectation)}
 
 if [[ "$LOCAL_ROOT" == *"<utc>"* ]]; then
   echo "LOCAL_ROOT still contains <utc>; choose a concrete fresh path" >&2
@@ -358,6 +416,27 @@ for checkpoint in "${{CHECKPOINTS[@]}}"; do
   fi
   echo "pulling $checkpoint"
   scp -r "$BOARD_HOST:$REMOTE_ROOT/$checkpoint" "$LOCAL_ROOT/"
+  manifest_args=(
+    --run-dir "$LOCAL_ROOT/$checkpoint"
+    --checkpoint "$checkpoint"
+    --source-commit "$SOURCE_COMMIT"
+    --target-package-version "$TARGET_PACKAGE_VERSION"
+    --board-image-marker "$BOARD_IMAGE_MARKER"
+  )
+  if [[ -n "${{EXPECTED_ACTIVE_VERSION[$checkpoint]:-}}" ]]; then
+    manifest_args+=(--expected-active-version "${{EXPECTED_ACTIVE_VERSION[$checkpoint]}}")
+  fi
+  if [[ -n "${{SETUP_EXPECTED_ACTIVE_VERSION[$checkpoint]:-}}" ]]; then
+    manifest_args+=(--setup-expected-active-version "${{SETUP_EXPECTED_ACTIVE_VERSION[$checkpoint]}}")
+  fi
+  if [[ -n "${{SETUP_CANDIDATE_VERSION[$checkpoint]:-}}" ]]; then
+    manifest_args+=(--setup-candidate-version "${{SETUP_CANDIDATE_VERSION[$checkpoint]}}")
+  fi
+  if [[ -n "${{ROLLBACK_EXPECTATION[$checkpoint]:-}}" ]]; then
+    manifest_args+=(--rollback-expectation "${{ROLLBACK_EXPECTATION[$checkpoint]}}")
+  fi
+  python3 {POWERLOSS_MANIFEST_BUILD} "${{manifest_args[@]}}" \\
+    --json > "$LOCAL_ROOT/_validation/$checkpoint-powerloss-manifest-build.json"
   python3 scripts/qa/c18_player_runtime_powerloss_evidence_gate.py \\
     --run-dir "$LOCAL_ROOT/$checkpoint" \\
     --json > "$LOCAL_ROOT/_validation/$checkpoint-powerloss-evidence-gate.json"
@@ -475,6 +554,9 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("--max-age-sec 14400", runbook)
         self.assertIn("c18-hwdecode-lab-test", runbook)
         self.assertIn("does not execute board commands", pull_script)
+        self.assertIn(POWERLOSS_MANIFEST_BUILD, pull_script)
+        self.assertIn("--target-package-version", pull_script)
+        self.assertIn('"$LOCAL_ROOT/_validation/$checkpoint-powerloss-manifest-build.json"', pull_script)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", pull_script)
         self.assertIn('"$LOCAL_ROOT/_validation/$checkpoint-powerloss-evidence-gate.json"', pull_script)
         self.assertNotIn('"$LOCAL_ROOT/$checkpoint/powerloss-evidence-gate.json"', pull_script)
@@ -482,6 +564,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertEqual(manifest["preflight_image_marker"], "/etc/dadooh/c18-hwdecode-lab-test-image")
         self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
         self.assertEqual(manifest["preflight_max_age_sec"], 4 * 60 * 60)
+        self.assertTrue(manifest["pull_helper_materializes_powerloss_manifest"])
 
     def test_custom_setup_requires_commands_or_manual_instructions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

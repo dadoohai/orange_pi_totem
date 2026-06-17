@@ -498,6 +498,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             [
                 "python3",
                 str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
+                "--now-utc",
+                "2026-06-17T07:20:00Z",
                 "--allow-dirty-repo",
                 "--json",
             ],
@@ -526,7 +528,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("20260617T064617Z-current-macro-governance-a761a67", gate)
         self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
-        self.assertIn("20260617T061038Z-h2-powerloss-board-preflight-current-7c5fc17", gate)
+        self.assertIn("20260617T071517Z-h2-powerloss-board-preflight-fresh-c2c6c8d", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
@@ -1101,7 +1103,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "tracked_inputs=true",
         ):
             self.assertIn(token, doc192)
-        self.assertIn("20260617T064310Z-h2-powerloss-operator-runbook-explicit-marker-c16fb3e", doc192)
+        self.assertIn("20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
@@ -2463,6 +2465,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("none required by the plan", powerloss_runbook)
         self.assertIn("CUT_POWER_NOW", powerloss_runbook)
         self.assertIn("pull-and-validate-evidence.sh", powerloss_runbook)
+        self.assertIn("c18_player_runtime_powerloss_evidence_manifest_build.py", powerloss_runbook)
+        self.assertIn("pull_helper_materializes_powerloss_manifest", powerloss_runbook)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", powerloss_runbook)
         self.assertIn("OperatorRunbookBuildSelfTest", powerloss_runbook)
         current_powerloss_runbook_artifact = (
@@ -2470,7 +2474,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             / "docs"
             / "evidence"
             / "c18-update-validation"
-            / "20260617T064310Z-h2-powerloss-operator-runbook-explicit-marker-c16fb3e"
+            / "20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e"
             / "operator-runbook.md"
         ).read_text(encoding="utf-8")
         self.assertEqual(2, current_powerloss_runbook_artifact.count("Manual setup before arm:"))
@@ -2738,7 +2742,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
             "20260617T030214Z-current-h2-readiness-13d4cbd",
             "20260612T125127Z-server-side-governance-c16fb3e",
-            "20260617T064310Z-h2-powerloss-operator-runbook-explicit-marker-c16fb3e",
+            "20260617T073519Z-h2-powerloss-operator-runbook-manifest-helper-c16fb3e",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",

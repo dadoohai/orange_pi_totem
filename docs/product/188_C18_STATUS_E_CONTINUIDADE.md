@@ -201,10 +201,10 @@ Recomendado para a imagem de **PRODUÇÃO**: rebuild **GCC-12 limpo** num **chro
 1. Continuar a frente de governanca de atualizacoes: `totem-core` OTA manual ja
    validado; `player-runtime` so avanca em thaw controlado, ainda congelado para
    producao;
-2. `c18-hwdecode-lab-1t` e a golden de laboratorio/delivery atual: mantem os
-   fechamentos pre-thaw anteriores e valida em hardware boot-state auditavel,
-   boot reconcile ordenado por `/data`, fsync de arvore antes de promote e
-   cold-boot com deep-health;
+2. `c18-hwdecode-lab-1u` e a golden de laboratorio/delivery atual; a `1t`
+   permanece historica, enquanto a `1u` mantem os fechamentos pre-thaw
+   anteriores e valida em hardware boot-state auditavel, boot reconcile ordenado
+   por `/data`, fsync de arvore antes de promote e cold-boot com deep-health;
 3. **Rebuild GCC-12 de produção;**
 4. **Imagem de produção** (a decisão **C12 read-only** é separada e está **bloqueada**).
 
