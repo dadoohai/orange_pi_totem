@@ -1,0 +1,36 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_board_harness_hash_audit_snapshot.v1",
+  "collected_at_utc": "2026-06-17T07:06:01Z",
+  "collection_repo_commit": "a043aec64086ba7517d2a50275fd86842bcf716c",
+  "collection_repo_tree": "3831adf77faed96fbbef0fcab04d9fa71c102c3d",
+  "manifest_repo_commit": "a043aec64086ba7517d2a50275fd86842bcf716c",
+  "manifest_repo_tree": "3831adf77faed96fbbef0fcab04d9fa71c102c3d",
+  "passed": true,
+  "result_claim": "h2_powerloss_board_harness_hashes_aligned",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "8e1714292a62e2f40e5306c697c5f563e3726f12869a8dbefbacdd7a576bc1b2",
+      "bytes": 1007
+    },
+    {
+      "file": "board-harness-hashes.json",
+      "sha256": "a23e00e6027e9886bc752a29c0efc4327319e31de7316000ebe8d07234a1bb63",
+      "bytes": 4354
+    }
+  ],
+  "script_count": 8,
+  "all_scripts_match": true,
+  "host_persisted": false,
+  "credential_persisted": false,
+  "non_claims": [
+    "this_audit_is_not_powerloss_evidence",
+    "this_audit_does_not_claim_17_17",
+    "this_audit_does_not_execute_board_commands_beyond_read_only_hashing",
+    "this_audit_does_not_arm_or_resume_trials",
+    "this_audit_does_not_replace_physical_power_cut",
+    "this_audit_does_not_authorize_stable_or_production",
+    "this_audit_does_not_thaw_player_runtime",
+    "this_audit_does_not_satisfy_24h_soak"
+  ]
+}
