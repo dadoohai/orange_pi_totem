@@ -163,29 +163,32 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_pilot_readiness_
 
 Resultado: `passed=true`, `result_claim=homologation_pilot_ready`.
 
-Como agregador pre-H2, o snapshot macro tambem deve passar:
+Como agregador pre-H2, o gate macro atual deve bloquear este alvo historico:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_macro_governance_gate.py --json
 ```
 
-Resultado esperado: `passed=true`,
-`result_claim=c18_homologation_governance_ready_pre_h2`. Esse resultado e
-somente de governanca/snapshot: ele carrega a janela antiga como
+Resultado esperado: `passed=false`,
+`result_claim=c18_macro_governance_blocked`, com blocker
+`target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`. Esse
+resultado preserva a governanca: a janela antiga segue apenas como
 `snapshot_only`, nao como autorizacao operacional viva.
 
-Como agregador pre-soak para escala, o snapshot atual tambem deve passar:
+Como agregador pre-soak para escala, o gate atual tambem deve bloquear:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_gate.py --json
 ```
 
-Resultado esperado: `passed=true`,
-`result_claim=c18_ota_pre_soak_scale_governance_ready`. Quando usado para gerar
-evidencia final do retrato atual, rodar com `--run-release-gate` em arvore
-limpa. Esse gate agrega docs de responsabilidade, H2 vermelho, server-side
-atual, preflight H2 power-loss, retomada operacional default-deny e release
-gate; nao substitui H2 nem autorizacao operacional fresca.
+Resultado esperado: `passed=false`,
+`result_claim=c18_ota_pre_soak_scale_governance_blocked`, propagando
+`macro_gate_blocker:target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`.
+Quando usado para gerar evidencia final de uma futura RC corrigida, rodar com
+`--run-release-gate` em arvore limpa. Esse gate agrega docs de
+responsabilidade, H2 vermelho, server-side atual, preflight H2 power-loss,
+retomada operacional default-deny e release gate; nao substitui H2 nem
+autorizacao operacional fresca.
 
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:

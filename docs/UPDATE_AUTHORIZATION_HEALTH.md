@@ -42,13 +42,14 @@ piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
 Snapshot versionado:
 `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`.
-O snapshot pre-soak scale governance atual esta em
-`docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`:
-`c18_ota_pre_soak_scale_governance_gate.py` verde em arvore limpa, com release
-gate interno verde, H2 ainda vermelho pelos blockers esperados, server-side
-atual, preflight H2 power-loss aceito e retomada operacional default-deny. Esse
-snapshot sustenta a governanca pre-soak para escala; nao autoriza producao,
-`stable`, auto-pull, publish, public thaw, soak 24h nem power-loss 17/17.
+O snapshot pre-soak scale governance
+`docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`
+fica preservado como historico anterior ao diagnostico MPV preso. No estado
+atual, `c18_ota_pre_soak_scale_governance_gate.py` deve ficar vermelho,
+propagando
+`macro_gate_blocker:target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`.
+Esse bloqueio nao autoriza producao, `stable`, auto-pull, publish, public thaw,
+soak 24h nem power-loss 17/17.
 Retomada operacional agora passa por
 `scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate nao usa o snapshot
 como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da

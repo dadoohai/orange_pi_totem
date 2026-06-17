@@ -3309,6 +3309,9 @@ def playback_loop(
                 black_screen_risk_reason="media_path_mismatch",
                 blocked_media_count=len(blocked_media_until),
                 last_render_error=f"{iso_now()} current_path_mismatch:{item.path}",
+                current_index=None,
+                current_item=None,
+                next_item=None,
             )
             idx += 1
             offset_ms = 0

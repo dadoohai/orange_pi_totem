@@ -34,7 +34,7 @@ CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "a44e4ca43061d05b40b5cf88dbd6aceba6c7d2845db78513f53c0d6c4e1be497"
+EXPECTED_SNAPSHOT_SHA256 = "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -312,6 +312,13 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         kiosk = load_kiosk_module()
         stop_event = threading.Event()
         status = StopOnMismatchStatus(stop_event)
+        status._data.update(
+            {
+                "current_index": 7,
+                "current_item": {"path": "/data/media/old.mp4"},
+                "next_item": {"path": "/data/media/next-old.mp4"},
+            }
+        )
         state = kiosk.PlaylistState()
         item = kiosk.MediaItem(
             url="cache://stuck.mp4",
@@ -333,8 +340,11 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             kiosk.playback_loop(cfg, threading.Lock(), state, status, mpv, kiosk.CacheIndex(cfg), stop_event)
 
         current_item_updates = [update for update in status.updates if "current_item" in update]
-        self.assertEqual(current_item_updates, [])
+        self.assertEqual([update["current_item"] for update in current_item_updates], [None])
         self.assertTrue(any(update.get("content_state") == "media_path_mismatch" for update in status.updates))
+        self.assertIsNone(status.snapshot().get("current_index"))
+        self.assertIsNone(status.snapshot().get("current_item"))
+        self.assertIsNone(status.snapshot().get("next_item"))
         self.assertTrue(mpv.restart_reasons)
         self.assertEqual(mpv.append_calls, [])
 
@@ -480,6 +490,9 @@ class C18LauncherConfigBaselineGuardTest(unittest.TestCase):
 
     def test_wrapper_mpv_path_is_accepted(self) -> None:
         self.assertEqual(self._config_valid_rc(self._config_with(mpv_path=C18_WRAPPER)), 0)
+
+    def test_preload_next_true_is_rejected_at_boot(self) -> None:
+        self.assertEqual(self._config_valid_rc(self._config_with(preload_next=True)), 1)
 
     def test_baseline_lowering_mpv_path_is_rejected(self) -> None:
         for bad in ("mpv", "/usr/bin/mpv", "relative/mpv", "", "/opt/totem/bin/totem-mpv-hwdecode-x"):

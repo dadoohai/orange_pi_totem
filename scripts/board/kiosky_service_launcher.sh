@@ -466,7 +466,15 @@ def _c18_mpv_path_violation(cfg, validator_path, wrapper):
         return not (isinstance(value, str) and value == wrapper)
 
 
+def _c18_preload_next_violation(cfg):
+    if "preload_next" not in cfg:
+        return False
+    return cfg.get("preload_next") is not False
+
+
 if _c18_mpv_path_violation(config, sys.argv[2], sys.argv[3]):
+    sys.exit(1)
+if _c18_preload_next_violation(config):
     sys.exit(1)
 PY
 }
