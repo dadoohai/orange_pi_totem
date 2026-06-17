@@ -1,0 +1,58 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T20:50:32Z",
+      "rollback_reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "rolled_back_to": "previous",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-06-17T20:47:16Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": null
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T20:50:32Z",
+      "rollback_reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "rolled_back_to": "previous",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-06-17T20:47:16Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205208Z/raw-apply",
+  "passed": false,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 47,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

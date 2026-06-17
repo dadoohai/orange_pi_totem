@@ -1,0 +1,2731 @@
+[   0.000][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/mpv-g001.log' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/mpv-g001.log'
+[   0.006][v][cplayer] mpv 8670d2e-dirty Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects
+[   0.006][v][cplayer]  built on May 30 2026 19:25:16
+[   0.006][v][cplayer] libplacebo version: v6.338.2
+[   0.006][v][cplayer] FFmpeg version: git-2024-08-06-2af4006
+[   0.006][v][cplayer] FFmpeg library versions:
+[   0.006][v][cplayer]    libavcodec      61.11.100
+[   0.006][v][cplayer]    libavdevice     61.2.100
+[   0.006][v][cplayer]    libavfilter     10.2.102
+[   0.006][v][cplayer]    libavformat     61.5.101
+[   0.006][v][cplayer]    libavutil       59.32.100
+[   0.006][v][cplayer]    libswresample   5.2.100
+[   0.006][v][cplayer]    libswscale      8.2.100
+[   0.006][v][cplayer] Configuration: -Dbuildtype=release -Dprefix=/tmp/ffbuild/prefix -Dv4l2request=enabled -Dlibmpv=false -Dcplayer=true -Dgpl=true -Dlua=disabled -Djavascript=disabled -Dvulkan=disabled -Dlibbluray=disabled -Duchardet=disabled -Dvapoursynth=disabled -Dzimg=disabled -Dshaderc=disabled -Dspirv-cross=disabled --cross-file=/tmp/ffbuild/cross.ini
+[   0.006][v][cplayer] List of enabled features: build-date cplugins dmabuf-interop-gl drm dvbin egl egl-drm ffmpeg gbm gl glibc-thread-name glob glob-posix gpl iconv libass libavdevice libdl libplacebo linux-fstatfs memrchr posix posix-shm ppoll pthread-condattr-setclock v4l2request vector vt.h
+[   0.006][v][cplayer] Command line options: '--fs' '--force-window=yes' '--idle=yes' '--keep-open=yes' '--no-terminal' '--loop-file=inf' '--image-display-duration=inf' '--osd-level=0' '--input-ipc-server=/tmp/c18-pr-ipc-63e8f7eac595ed56/mpv.sock' '--log-file=/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/mpv-g001.log' '--no-input-default-bindings' '--video-rotate=0' '--input-conf=/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf' '--input-vo-keyboard=yes' '--hwdec=auto' '--vo=gpu' '--gpu-context=drm' '--hwdec=v4l2request-copy'
+[   0.006][v][cplayer] mpv 8670d2e-dirty Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects
+[   0.006][v][cplayer]  built on May 30 2026 19:25:16
+[   0.006][v][cplayer] libplacebo version: v6.338.2
+[   0.006][v][cplayer] FFmpeg version: git-2024-08-06-2af4006
+[   0.006][v][cplayer] FFmpeg library versions:
+[   0.006][v][cplayer]    libavcodec      61.11.100
+[   0.006][v][cplayer]    libavdevice     61.2.100
+[   0.006][v][cplayer]    libavfilter     10.2.102
+[   0.006][v][cplayer]    libavformat     61.5.101
+[   0.006][v][cplayer]    libavutil       59.32.100
+[   0.006][v][cplayer]    libswresample   5.2.100
+[   0.006][v][cplayer]    libswscale      8.2.100
+[   0.006][v][cplayer] Configuration: -Dbuildtype=release -Dprefix=/tmp/ffbuild/prefix -Dv4l2request=enabled -Dlibmpv=false -Dcplayer=true -Dgpl=true -Dlua=disabled -Djavascript=disabled -Dvulkan=disabled -Dlibbluray=disabled -Duchardet=disabled -Dvapoursynth=disabled -Dzimg=disabled -Dshaderc=disabled -Dspirv-cross=disabled --cross-file=/tmp/ffbuild/cross.ini
+[   0.006][v][cplayer] List of enabled features: build-date cplugins dmabuf-interop-gl drm dvbin egl egl-drm ffmpeg gbm gl glibc-thread-name glob glob-posix gpl iconv libass libavdevice libdl libplacebo linux-fstatfs memrchr posix posix-shm ppoll pthread-condattr-setclock v4l2request vector vt.h
+[   0.006][d][global] home path: '' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv'
+[   0.006][d][global] user path: '~~home/' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv'
+[   0.006][d][global] user path: '~~old_home/' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv'
+[   0.006][d][global] config path: 'encoding-profiles.conf' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/encoding-profiles.conf'
+[   0.006][d][global] config path: 'encoding-profiles.conf' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/encoding-profiles.conf'
+[   0.006][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/ffbuild/prefix/etc/mpv/encoding-profiles.conf'
+[   0.006][d][global] config path: 'mpv.conf' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/mpv.conf'
+[   0.006][d][global] config path: 'config' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/config'
+[   0.006][d][global] config path: 'mpv.conf' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/mpv.conf'
+[   0.006][d][global] config path: 'config' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/config'
+[   0.006][d][global] config path: 'mpv.conf' -/-> '/tmp/ffbuild/prefix/etc/mpv/mpv.conf'
+[   0.006][d][global] config path: 'config' -/-> '/tmp/ffbuild/prefix/etc/mpv/config'
+[   0.007][v][cplayer] Setting option 'fs' = '' (flags = 8)
+[   0.007][v][cplayer] Setting option 'force-window' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'idle' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'keep-open' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'terminal' = 'no' (flags = 8)
+[   0.007][v][cplayer] Setting option 'loop-file' = 'inf' (flags = 8)
+[   0.007][v][cplayer] Setting option 'image-display-duration' = 'inf' (flags = 8)
+[   0.007][v][cplayer] Setting option 'osd-level' = '0' (flags = 8)
+[   0.007][v][cplayer] Setting option 'input-ipc-server' = '/tmp/c18-pr-ipc-63e8f7eac595ed56/mpv.sock' (flags = 8)
+[   0.007][v][cplayer] Setting option 'log-file' = '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/mpv-g001.log' (flags = 8)
+[   0.007][v][cplayer] Setting option 'input-default-bindings' = 'no' (flags = 8)
+[   0.007][v][cplayer] Setting option 'video-rotate' = '0' (flags = 8)
+[   0.007][v][cplayer] Setting option 'input-conf' = '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf' (flags = 8)
+[   0.007][v][cplayer] Setting option 'input-vo-keyboard' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'hwdec' = 'auto' (flags = 8)
+[   0.007][v][cplayer] Setting option 'vo' = 'gpu' (flags = 8)
+[   0.008][v][cplayer] Setting option 'gpu-context' = 'drm' (flags = 8)
+[   0.008][v][cplayer] Setting option 'hwdec' = 'v4l2request-copy' (flags = 8)
+[   0.015][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf'
+[   0.015][v][file] Opening /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf
+[   0.015][d][file] resize stream to 131072 bytes, drop 0 bytes
+[   0.015][d][file] Stream opened successfully.
+[   0.015][v][input] Parsing input config file /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf
+[   0.015][v][input] Input config file /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/runtime/hotkeys.conf parsed: 1 binds
+[   0.016][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/mpv-g001.log' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/mpv-g001.log'
+[   0.016][d][global] user path: '/tmp/c18-pr-ipc-63e8f7eac595ed56/mpv.sock' -> '/tmp/c18-pr-ipc-63e8f7eac595ed56/mpv.sock'
+[   0.016][v][ipc] Starting IPC master
+[   0.016][d][global] config path: 'scripts' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/scripts'
+[   0.016][d][global] config path: 'scripts' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/scripts'
+[   0.016][d][global] config path: 'scripts' -/-> '/tmp/ffbuild/prefix/etc/mpv/scripts'
+[   0.016][v][ipc] Listening to IPC socket.
+[   0.017][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[   0.017][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[   0.017][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[   0.017][v][ipc_0] Client connected
+[   0.142][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[   0.142][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[   0.252][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[   0.252][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[   0.252][v][vo/gpu/drm] Selected mode: 1360x768 (1360x768@59.80Hz)
+[   0.252][v][vo/gpu/drm] DRM Atomic support found
+[   0.361][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[   0.361][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[   0.361][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[   0.361][v][vo/gpu] Supported modifier: 0x0
+[   0.361][v][vo/gpu] Creating GBM device
+[   0.695][v][vo/gpu] Initializing GBM surface (1360 x 768)
+[   0.695][v][vo/gpu/opengl] Initializing EGL
+[   0.701][v][vo/gpu/opengl] EGL_VERSION=1.4
+[   0.701][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[   0.701][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[   0.701][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[   0.702][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[   0.702][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[   0.702][d][vo/gpu/opengl] Chosen EGLConfig:
+[   0.702][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[   0.702][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[   0.702][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[   0.702][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[   0.702][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[   0.702][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[   0.702][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[   0.702][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[   0.702][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[   0.706][v][vo/gpu/opengl] Initializing EGL surface
+[   0.715][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[   0.716][v][vo/gpu] Detected desktop OpenGL 3.1.
+[   0.716][v][vo/gpu] GL_VENDOR='Panfrost'
+[   0.716][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[   0.716][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[   0.717][d][vo/gpu] Combined OpenGL extensions string:
+[   0.717][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_sync.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[   0.718][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[   0.718][v][vo/gpu] Loaded extension GL_KHR_debug.
+[   0.718][v][vo/gpu/opengl] Preparing framebuffer
+[   0.718][v][vo/gpu/drm] crtc is not VRR capable
+[   0.728][v][vo/gpu/drm] Monitor pixel aspect: 1
+[   0.728][v][vo/gpu/opengl] Could not find path to render node.
+[   0.729][d][vo/gpu/opengl] Texture formats:
+[   0.729][d][vo/gpu/opengl]   NAME       COMP*TYPE SIZE           DEPTH PER COMP.
+[   0.729][d][vo/gpu/opengl]   r8         1*unorm   1B    LF CR ST {8}
+[   0.729][d][vo/gpu/opengl]   rg8        2*unorm   2B    LF CR ST {8 8}
+[   0.729][d][vo/gpu/opengl]   rgb8       3*unorm   3B    LF CR ST {8 8 8}
+[   0.729][d][vo/gpu/opengl]   rgba8      4*unorm   4B    LF CR ST {8 8 8 8}
+[   0.729][d][vo/gpu/opengl]   r16        1*unorm   2B    LF CR ST {16}
+[   0.729][d][vo/gpu/opengl]   rg16       2*unorm   4B    LF CR ST {16 16}
+[   0.729][d][vo/gpu/opengl]   rgb16      3*unorm   6B    LF CR ST {16 16 16}
+[   0.729][d][vo/gpu/opengl]   rgba16     4*unorm   8B    LF CR ST {16 16 16 16}
+[   0.729][d][vo/gpu/opengl]   r8ui       1*uint    1B       CR ST {8}
+[   0.729][d][vo/gpu/opengl]   rg8ui      2*uint    2B       CR ST {8 8}
+[   0.729][d][vo/gpu/opengl]   rgb8ui     3*uint    3B          ST {8 8 8}
+[   0.729][d][vo/gpu/opengl]   rgba8ui    4*uint    4B       CR ST {8 8 8 8}
+[   0.729][d][vo/gpu/opengl]   r16ui      1*uint    2B       CR ST {16}
+[   0.729][d][vo/gpu/opengl]   rg16ui     2*uint    4B       CR ST {16 16}
+[   0.729][d][vo/gpu/opengl]   rgb16ui    3*uint    6B          ST {16 16 16}
+[   0.729][d][vo/gpu/opengl]   rgba16ui   4*uint    8B       CR ST {16 16 16 16}
+[   0.729][d][vo/gpu/opengl]   r16f       1*float   4B    LF CR ST {32/16}
+[   0.729][d][vo/gpu/opengl]   rg16f      2*float   8B    LF CR ST {32/16 32/16}
+[   0.729][d][vo/gpu/opengl]   rgb16f     3*float  12B    LF CR ST {32/16 32/16 32/16}
+[   0.729][d][vo/gpu/opengl]   rgba16f    4*float  16B    LF CR ST {32/16 32/16 32/16 32/16}
+[   0.729][d][vo/gpu/opengl]   r32f       1*float   4B    LF CR ST {32}
+[   0.729][d][vo/gpu/opengl]   rg32f      2*float   8B    LF CR ST {32 32}
+[   0.729][d][vo/gpu/opengl]   rgb32f     3*float  12B    LF CR ST {32 32 32}
+[   0.729][d][vo/gpu/opengl]   rgba32f    4*float  16B    LF CR ST {32 32 32 32}
+[   0.729][d][vo/gpu/opengl]   rgb10_a2   4*unorm   4B    LF CR ST {0/10 0/10 0/10 0/2}
+[   0.729][d][vo/gpu/opengl]   rgba12     4*unorm   8B    LF CR ST {16 16 16 16}
+[   0.729][d][vo/gpu/opengl]   rgb10      3*unorm   6B    LF CR ST {16/10 16/10 16/10}
+[   0.729][d][vo/gpu/opengl]   rgb565     3*unorm   2B    LF    ST {0/8 0/8 0/8}
+[   0.729][d][vo/gpu/opengl]  LA = LUMINANCE_ALPHA hack format
+[   0.729][d][vo/gpu/opengl]  LF = linear filterable
+[   0.729][d][vo/gpu/opengl]  CR = can be used for render targets
+[   0.729][d][vo/gpu/opengl]  ST = can be used for storable images
+[   0.729][d][vo/gpu/opengl] Image formats:
+[   0.729][d][vo/gpu/opengl]   yuv444p => 3 planes 1x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.729][d][vo/gpu/opengl]   yuv420p => 3 planes 2x2 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.729][d][vo/gpu/opengl]   gray => 1 planes 1x1 8/0 [r8] (r) [unorm]
+[   0.729][d][vo/gpu/opengl]   gray16 => 1 planes 1x1 16/0 [r16] (r) [unorm]
+[   0.729][d][vo/gpu/opengl]   uyvy422
+[   0.729][d][vo/gpu/opengl]   nv12 => 2 planes 2x2 8/0 [r8/rg8] (r/gb) [unorm]
+[   0.729][d][vo/gpu/opengl]   p010 => 2 planes 2x2 16/6 [r16/rg16] (r/gb) [unorm]
+[   0.729][d][vo/gpu/opengl]   argb => 1 planes 1x1 8/0 [rgba8] (argb) [unorm]
+[   0.729][d][vo/gpu/opengl]   bgra => 1 planes 1x1 8/0 [rgba8] (bgra) [unorm]
+[   0.729][d][vo/gpu/opengl]   abgr => 1 planes 1x1 8/0 [rgba8] (abgr) [unorm]
+[   0.729][d][vo/gpu/opengl]   rgba => 1 planes 1x1 8/0 [rgba8] (rgba) [unorm]
+[   0.730][d][vo/gpu/opengl]   bgr24 => 1 planes 1x1 8/0 [rgb8] (bgr) [unorm]
+[   0.730][d][vo/gpu/opengl]   rgb24 => 1 planes 1x1 8/0 [rgb8] (rgb) [unorm]
+[   0.730][d][vo/gpu/opengl]   0rgb => 1 planes 1x1 8/0 [rgba8] (_rgb) [unorm]
+[   0.730][d][vo/gpu/opengl]   bgr0 => 1 planes 1x1 8/0 [rgba8] (bgr) [unorm]
+[   0.730][d][vo/gpu/opengl]   0bgr => 1 planes 1x1 8/0 [rgba8] (_bgr) [unorm]
+[   0.730][d][vo/gpu/opengl]   rgb0 => 1 planes 1x1 8/0 [rgba8] (rgb) [unorm]
+[   0.730][d][vo/gpu/opengl]   rgba64 => 1 planes 1x1 16/0 [rgba16] (rgba) [unorm]
+[   0.730][d][vo/gpu/opengl]   rgb565 => 1 planes 1x1 0/0 [rgb565] (rgb) [unknown]
+[   0.730][d][vo/gpu/opengl]   pal8
+[   0.730][d][vo/gpu/opengl]   vdpau
+[   0.730][d][vo/gpu/opengl]   d3d11
+[   0.730][d][vo/gpu/opengl]   dxva2_vld
+[   0.730][d][vo/gpu/opengl]   mmal
+[   0.730][d][vo/gpu/opengl]   mediacodec
+[   0.730][d][vo/gpu/opengl]   cuda
+[   0.730][d][vo/gpu/opengl]   yap8 => 2 planes 1x1 8/0 [r8/r8] (r/a) [unorm]
+[   0.730][d][vo/gpu/opengl]   yap16 => 2 planes 1x1 16/0 [r16/r16] (r/a) [unorm]
+[   0.730][d][vo/gpu/opengl]   grayaf32 => 2 planes 1x1 32/0 [r16f/r16f] (r/a) [float]
+[   0.730][d][vo/gpu/opengl]   yuv444pf => 3 planes 1x1 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   0.730][d][vo/gpu/opengl]   yuva444pf => 4 planes 1x1 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   0.730][d][vo/gpu/opengl]   yuv420pf => 3 planes 2x2 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   0.730][d][vo/gpu/opengl]   yuva420pf => 4 planes 2x2 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   0.730][d][vo/gpu/opengl]   yuv422pf => 3 planes 2x1 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   0.730][d][vo/gpu/opengl]   yuva422pf => 4 planes 2x1 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   0.730][d][vo/gpu/opengl]   yuv440pf => 3 planes 1x2 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   0.730][d][vo/gpu/opengl]   yuva440pf => 4 planes 1x2 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   0.730][d][vo/gpu/opengl]   yuv410pf => 3 planes 4x4 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   0.730][d][vo/gpu/opengl]   yuva410pf => 4 planes 4x4 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   0.730][d][vo/gpu/opengl]   yuv411pf => 3 planes 4x1 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   0.730][d][vo/gpu/opengl]   yuva411pf => 4 planes 4x1 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   0.730][d][vo/gpu/opengl]   rgb30 => 1 planes 1x1 10/0 [rgb10_a2] (bgr) [unknown]
+[   0.730][d][vo/gpu/opengl]   y1 => 1 planes 1x1 8/-7 [r8] (r) [unorm]
+[   0.730][d][vo/gpu/opengl]   gbrp1 => 3 planes 1x1 8/-7 [r8/r8/r8] (g/b/r) [unorm]
+[   0.730][d][vo/gpu/opengl]   gbrp2 => 3 planes 1x1 8/-6 [r8/r8/r8] (g/b/r) [unorm]
+[   0.730][d][vo/gpu/opengl]   gbrp3 => 3 planes 1x1 8/-5 [r8/r8/r8] (g/b/r) [unorm]
+[   0.730][d][vo/gpu/opengl]   gbrp4 => 3 planes 1x1 8/-4 [r8/r8/r8] (g/b/r) [unorm]
+[   0.730][d][vo/gpu/opengl]   gbrp5 => 3 planes 1x1 8/-3 [r8/r8/r8] (g/b/r) [unorm]
+[   0.730][d][vo/gpu/opengl]   gbrp6 => 3 planes 1x1 8/-2 [r8/r8/r8] (g/b/r) [unorm]
+[   0.730][d][vo/gpu/opengl]   vdpau_output
+[   0.730][d][vo/gpu/opengl]   vaapi
+[   0.730][d][vo/gpu/opengl]   videotoolbox
+[   0.730][d][vo/gpu/opengl]   vulkan
+[   0.730][d][vo/gpu/opengl]   drm_prime
+[   0.730][d][vo/gpu/opengl]   yuyv422
+[   0.730][d][vo/gpu/opengl]   yuv422p => 3 planes 2x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   yuv410p => 3 planes 4x4 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   yuv411p => 3 planes 4x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   monow
+[   0.730][d][vo/gpu/opengl]   monob
+[   0.730][d][vo/gpu/opengl]   yuvj422p => 3 planes 2x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   uyyvyy411
+[   0.730][d][vo/gpu/opengl]   bgr8
+[   0.730][d][vo/gpu/opengl]   bgr4
+[   0.730][d][vo/gpu/opengl]   bgr4_byte
+[   0.730][d][vo/gpu/opengl]   rgb8
+[   0.730][d][vo/gpu/opengl]   rgb4
+[   0.730][d][vo/gpu/opengl]   rgb4_byte
+[   0.730][d][vo/gpu/opengl]   nv21 => 2 planes 2x2 8/0 [r8/rg8] (r/bg) [unorm]
+[   0.730][d][vo/gpu/opengl]   gray16be
+[   0.730][d][vo/gpu/opengl]   yuv440p => 3 planes 1x2 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   yuvj440p => 3 planes 1x2 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   yuva420p => 4 planes 2x2 8/0 [r8/r8/r8/r8] (r/g/b/a) [unorm]
+[   0.730][d][vo/gpu/opengl]   rgb48be
+[   0.730][d][vo/gpu/opengl]   rgb48 => 1 planes 1x1 16/0 [rgb16] (rgb) [unorm]
+[   0.730][d][vo/gpu/opengl]   rgb565be
+[   0.730][d][vo/gpu/opengl]   rgb555be
+[   0.730][d][vo/gpu/opengl]   rgb555
+[   0.730][d][vo/gpu/opengl]   bgr565be
+[   0.730][d][vo/gpu/opengl]   bgr565
+[   0.730][d][vo/gpu/opengl]   bgr555be
+[   0.730][d][vo/gpu/opengl]   bgr555
+[   0.730][d][vo/gpu/opengl]   yuv420p16 => 3 planes 2x2 16/0 [r16/r16/r16] (r/g/b) [unorm]
+[   0.730][d][vo/gpu/opengl]   yuv420p16be
+[   0.731][d][vo/gpu/opengl]   yuv422p16 => 3 planes 2x1 16/0 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv422p16be
+[   0.731][d][vo/gpu/opengl]   yuv444p16 => 3 planes 1x1 16/0 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv444p16be
+[   0.731][d][vo/gpu/opengl]   rgb444
+[   0.731][d][vo/gpu/opengl]   rgb444be
+[   0.731][d][vo/gpu/opengl]   bgr444
+[   0.731][d][vo/gpu/opengl]   bgr444be
+[   0.731][d][vo/gpu/opengl]   ya8 => 1 planes 1x1 8/0 [rg8] (ra) [unorm]
+[   0.731][d][vo/gpu/opengl]   bgr48be
+[   0.731][d][vo/gpu/opengl]   bgr48 => 1 planes 1x1 16/0 [rgb16] (bgr) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv420p9be
+[   0.731][d][vo/gpu/opengl]   yuv420p9 => 3 planes 2x2 16/-7 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv420p10be
+[   0.731][d][vo/gpu/opengl]   yuv420p10 => 3 planes 2x2 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv422p10be
+[   0.731][d][vo/gpu/opengl]   yuv422p10 => 3 planes 2x1 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv444p9be
+[   0.731][d][vo/gpu/opengl]   yuv444p9 => 3 planes 1x1 16/-7 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv444p10be
+[   0.731][d][vo/gpu/opengl]   yuv444p10 => 3 planes 1x1 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv422p9be
+[   0.731][d][vo/gpu/opengl]   yuv422p9 => 3 planes 2x1 16/-7 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   gbrp => 3 planes 1x1 8/0 [r8/r8/r8] (g/b/r) [unorm]
+[   0.731][d][vo/gpu/opengl]   gbrp9be
+[   0.731][d][vo/gpu/opengl]   gbrp9 => 3 planes 1x1 16/-7 [r16/r16/r16] (g/b/r) [unorm]
+[   0.731][d][vo/gpu/opengl]   gbrp10be
+[   0.731][d][vo/gpu/opengl]   gbrp10 => 3 planes 1x1 16/-6 [r16/r16/r16] (g/b/r) [unorm]
+[   0.731][d][vo/gpu/opengl]   gbrp16be
+[   0.731][d][vo/gpu/opengl]   gbrp16 => 3 planes 1x1 16/0 [r16/r16/r16] (g/b/r) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva422p => 4 planes 2x1 8/0 [r8/r8/r8/r8] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva444p => 4 planes 1x1 8/0 [r8/r8/r8/r8] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva420p9be
+[   0.731][d][vo/gpu/opengl]   yuva420p9 => 4 planes 2x2 16/-7 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva422p9be
+[   0.731][d][vo/gpu/opengl]   yuva422p9 => 4 planes 2x1 16/-7 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva444p9be
+[   0.731][d][vo/gpu/opengl]   yuva444p9 => 4 planes 1x1 16/-7 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva420p10be
+[   0.731][d][vo/gpu/opengl]   yuva420p10 => 4 planes 2x2 16/-6 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva422p10be
+[   0.731][d][vo/gpu/opengl]   yuva422p10 => 4 planes 2x1 16/-6 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva444p10be
+[   0.731][d][vo/gpu/opengl]   yuva444p10 => 4 planes 1x1 16/-6 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva420p16be
+[   0.731][d][vo/gpu/opengl]   yuva420p16 => 4 planes 2x2 16/0 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva422p16be
+[   0.731][d][vo/gpu/opengl]   yuva422p16 => 4 planes 2x1 16/0 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuva444p16be
+[   0.731][d][vo/gpu/opengl]   yuva444p16 => 4 planes 1x1 16/0 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   xyz12 => 1 planes 1x1 16/4 [rgb16] (rgb) [unorm]
+[   0.731][d][vo/gpu/opengl]   xyz12be
+[   0.731][d][vo/gpu/opengl]   nv16 => 2 planes 2x1 8/0 [r8/rg8] (r/gb) [unorm]
+[   0.731][d][vo/gpu/opengl]   nv20 => 2 planes 2x1 16/-6 [r16/rg16] (r/gb) [unorm]
+[   0.731][d][vo/gpu/opengl]   nv20be
+[   0.731][d][vo/gpu/opengl]   rgba64be
+[   0.731][d][vo/gpu/opengl]   bgra64be
+[   0.731][d][vo/gpu/opengl]   bgra64 => 1 planes 1x1 16/0 [rgba16] (bgra) [unorm]
+[   0.731][d][vo/gpu/opengl]   yvyu422
+[   0.731][d][vo/gpu/opengl]   ya16be
+[   0.731][d][vo/gpu/opengl]   ya16 => 1 planes 1x1 16/0 [rg16] (ra) [unorm]
+[   0.731][d][vo/gpu/opengl]   gbrap => 4 planes 1x1 8/0 [r8/r8/r8/r8] (g/b/r/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   gbrap16be
+[   0.731][d][vo/gpu/opengl]   gbrap16 => 4 planes 1x1 16/0 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   0.731][d][vo/gpu/opengl]   qsv
+[   0.731][d][vo/gpu/opengl]   d3d11va_vld
+[   0.731][d][vo/gpu/opengl]   yuv420p12be
+[   0.731][d][vo/gpu/opengl]   yuv420p12 => 3 planes 2x2 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv420p14be
+[   0.731][d][vo/gpu/opengl]   yuv420p14 => 3 planes 2x2 16/-2 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv422p12be
+[   0.731][d][vo/gpu/opengl]   yuv422p12 => 3 planes 2x1 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv422p14be
+[   0.731][d][vo/gpu/opengl]   yuv422p14 => 3 planes 2x1 16/-2 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv444p12be
+[   0.731][d][vo/gpu/opengl]   yuv444p12 => 3 planes 1x1 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   0.731][d][vo/gpu/opengl]   yuv444p14be
+[   0.732][d][vo/gpu/opengl]   yuv444p14 => 3 planes 1x1 16/-2 [r16/r16/r16] (r/g/b) [unorm]
+[   0.732][d][vo/gpu/opengl]   gbrp12be
+[   0.732][d][vo/gpu/opengl]   gbrp12 => 3 planes 1x1 16/-4 [r16/r16/r16] (g/b/r) [unorm]
+[   0.732][d][vo/gpu/opengl]   gbrp14be
+[   0.732][d][vo/gpu/opengl]   gbrp14 => 3 planes 1x1 16/-2 [r16/r16/r16] (g/b/r) [unorm]
+[   0.732][d][vo/gpu/opengl]   yuvj411p => 3 planes 4x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   0.732][d][vo/gpu/opengl]   bayer_bggr8
+[   0.732][d][vo/gpu/opengl]   bayer_rggb8
+[   0.732][d][vo/gpu/opengl]   bayer_gbrg8
+[   0.732][d][vo/gpu/opengl]   bayer_grbg8
+[   0.732][d][vo/gpu/opengl]   bayer_bggr16
+[   0.732][d][vo/gpu/opengl]   bayer_bggr16be
+[   0.732][d][vo/gpu/opengl]   bayer_rggb16
+[   0.732][d][vo/gpu/opengl]   bayer_rggb16be
+[   0.732][d][vo/gpu/opengl]   bayer_gbrg16
+[   0.732][d][vo/gpu/opengl]   bayer_gbrg16be
+[   0.732][d][vo/gpu/opengl]   bayer_grbg16
+[   0.732][d][vo/gpu/opengl]   bayer_grbg16be
+[   0.732][d][vo/gpu/opengl]   yuv440p10 => 3 planes 1x2 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   0.732][d][vo/gpu/opengl]   yuv440p10be
+[   0.732][d][vo/gpu/opengl]   yuv440p12 => 3 planes 1x2 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   0.732][d][vo/gpu/opengl]   yuv440p12be
+[   0.732][d][vo/gpu/opengl]   ayuv64 => 1 planes 1x1 16/0 [rgba16] (argb) [unorm]
+[   0.732][d][vo/gpu/opengl]   ayuv64be
+[   0.732][d][vo/gpu/opengl]   p010be
+[   0.732][d][vo/gpu/opengl]   gbrap12be
+[   0.732][d][vo/gpu/opengl]   gbrap12 => 4 planes 1x1 16/-4 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   0.732][d][vo/gpu/opengl]   gbrap10be
+[   0.732][d][vo/gpu/opengl]   gbrap10 => 4 planes 1x1 16/-6 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   0.732][d][vo/gpu/opengl]   gray12be
+[   0.732][d][vo/gpu/opengl]   gray12 => 1 planes 1x1 16/-4 [r16] (r) [unorm]
+[   0.732][d][vo/gpu/opengl]   gray10be
+[   0.732][d][vo/gpu/opengl]   gray10 => 1 planes 1x1 16/-6 [r16] (r) [unorm]
+[   0.732][d][vo/gpu/opengl]   p016 => 2 planes 2x2 16/0 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   p016be
+[   0.732][d][vo/gpu/opengl]   gray9be
+[   0.732][d][vo/gpu/opengl]   gray9 => 1 planes 1x1 16/-7 [r16] (r) [unorm]
+[   0.732][d][vo/gpu/opengl]   gbrpf32be
+[   0.732][d][vo/gpu/opengl]   gbrpf32 => 3 planes 1x1 32/0 [r16f/r16f/r16f] (g/b/r) [float]
+[   0.732][d][vo/gpu/opengl]   gbrapf32be
+[   0.732][d][vo/gpu/opengl]   gbrapf32 => 4 planes 1x1 32/0 [r16f/r16f/r16f/r16f] (g/b/r/a) [float]
+[   0.732][d][vo/gpu/opengl]   opencl
+[   0.732][d][vo/gpu/opengl]   gray14be
+[   0.732][d][vo/gpu/opengl]   gray14 => 1 planes 1x1 16/-2 [r16] (r) [unorm]
+[   0.732][d][vo/gpu/opengl]   grayf32be
+[   0.732][d][vo/gpu/opengl]   grayf32 => 1 planes 1x1 32/0 [r16f] (r) [float]
+[   0.732][d][vo/gpu/opengl]   yuva422p12be
+[   0.732][d][vo/gpu/opengl]   yuva422p12 => 4 planes 2x1 16/-4 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.732][d][vo/gpu/opengl]   yuva444p12be
+[   0.732][d][vo/gpu/opengl]   yuva444p12 => 4 planes 1x1 16/-4 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   0.732][d][vo/gpu/opengl]   nv24 => 2 planes 1x1 8/0 [r8/rg8] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   nv42 => 2 planes 1x1 8/0 [r8/rg8] (r/bg) [unorm]
+[   0.732][d][vo/gpu/opengl]   y210be
+[   0.732][d][vo/gpu/opengl]   y210
+[   0.732][d][vo/gpu/opengl]   x2rgb10be
+[   0.732][d][vo/gpu/opengl]   x2bgr10
+[   0.732][d][vo/gpu/opengl]   x2bgr10be
+[   0.732][d][vo/gpu/opengl]   p210be
+[   0.732][d][vo/gpu/opengl]   p210 => 2 planes 2x1 16/6 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   p410be
+[   0.732][d][vo/gpu/opengl]   p410 => 2 planes 1x1 16/6 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   p216be
+[   0.732][d][vo/gpu/opengl]   p216 => 2 planes 2x1 16/0 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   p416be
+[   0.732][d][vo/gpu/opengl]   p416 => 2 planes 1x1 16/0 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   vuya => 1 planes 1x1 8/0 [rgba8] (bgra) [unorm]
+[   0.732][d][vo/gpu/opengl]   rgbaf16be
+[   0.732][d][vo/gpu/opengl]   rgbaf16
+[   0.732][d][vo/gpu/opengl]   vuyx => 1 planes 1x1 8/0 [rgba8] (bgr) [unorm]
+[   0.732][d][vo/gpu/opengl]   p012 => 2 planes 2x2 16/4 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   p012be
+[   0.732][d][vo/gpu/opengl]   y212be
+[   0.732][d][vo/gpu/opengl]   y212
+[   0.732][d][vo/gpu/opengl]   xv30be
+[   0.732][d][vo/gpu/opengl]   xv30
+[   0.732][d][vo/gpu/opengl]   xv36be
+[   0.732][d][vo/gpu/opengl]   xv36 => 1 planes 1x1 16/4 [rgba16] (grb) [unorm]
+[   0.732][d][vo/gpu/opengl]   rgbf32be
+[   0.732][d][vo/gpu/opengl]   rgbf32
+[   0.732][d][vo/gpu/opengl]   rgbaf32be
+[   0.732][d][vo/gpu/opengl]   rgbaf32
+[   0.732][d][vo/gpu/opengl]   p212be
+[   0.732][d][vo/gpu/opengl]   p212 => 2 planes 2x1 16/4 [r16/rg16] (r/gb) [unorm]
+[   0.732][d][vo/gpu/opengl]   p412be
+[   0.733][d][vo/gpu/opengl]   p412 => 2 planes 1x1 16/4 [r16/rg16] (r/gb) [unorm]
+[   0.733][d][vo/gpu/opengl]   gbrap14be
+[   0.733][d][vo/gpu/opengl]   gbrap14 => 4 planes 1x1 16/-2 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   0.733][d][vo/gpu/opengl]   d3d12
+[   0.733][v][vo/gpu] Testing FBO format rgba16f
+[   0.733][d][vo/gpu] Resizing texture: 16x16
+[   0.733][v][vo/gpu] Using FBO format rgba16f.
+[   0.733][v][vo/gpu] Disabling HDR peak computation (one or more of the following is not supported: compute shaders=0, SSBO=1).
+[   0.733][d][global] cache path: '' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   0.733][v][vo/gpu] Assuming 59.798991 FPS for display sync.
+[   0.734][v][vo/gpu] reconfig to 960x540 yuv444p auto/auto/auto/auto/auto CL=unknown
+[   0.734][v][vo/gpu] Resize: 1360x768
+[   0.734][v][vo/gpu] Window size: 1360x768 (Borders: l=0 t=0 r=0 b=0)
+[   0.734][v][vo/gpu] Video source: 960x540 (1:1)
+[   0.734][v][vo/gpu] Video display: (0, 0) 960x540 -> (0, 1) 1360x765
+[   0.734][v][vo/gpu] Video scale: 1.416667/1.416667
+[   0.734][v][vo/gpu] OSD borders: l=0 t=1 r=0 b=2
+[   0.734][v][vo/gpu] Video borders: l=0 t=1 r=0 b=2
+[   0.734][v][vo/gpu] Reported display depth: 8
+[   0.734][v][vo/gpu] Texture for plane 0: 960x540
+[   0.734][v][vo/gpu] Texture for plane 1: 960x540
+[   0.735][v][vo/gpu] Texture for plane 2: 960x540
+[   0.736][v][vo/gpu] Testing FBO format rgba16f
+[   0.736][d][vo/gpu] Resizing texture: 16x16
+[   0.736][v][vo/gpu] Using FBO format rgba16f.
+[   0.745][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[   0.745][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[   0.746][v][file] Opening /data/media/c18-canary-h264.mp4
+[   0.746][d][file] resize stream to 131072 bytes, drop 0 bytes
+[   0.746][d][file] Stream opened successfully.
+[   0.746][v][demux] Trying demuxers for level=normal.
+[   0.746][d][demux] Trying demuxer: disc (force-level: normal)
+[   0.746][d][demux] Trying demuxer: edl (force-level: normal)
+[   0.746][d][demux] Trying demuxer: cue (force-level: normal)
+[   0.746][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[   0.746][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[   0.746][d][demux] Trying demuxer: mkv (force-level: normal)
+[   0.746][d][demux] Trying demuxer: lavf (force-level: normal)
+[   0.747][v][ipc_1] Client connected
+[   0.747][v][ipc_1] Client disconnected
+[   0.747][d][ipc_1] Exiting...
+[   0.750][v][ipc_2] Client connected
+[   0.750][v][ipc_2] Client disconnected
+[   0.750][d][ipc_2] Exiting...
+[   0.759][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[   0.762][v][file] stream level seek from 131072 to 536637
+[   0.763][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[   0.763][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[   0.764][v][find_files] Loading external files in /data/media/
+[   0.764][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[   0.764][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[   0.764][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[   0.764][v][lavf] select track 0
+[   0.764][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[   0.765][v][vd] Container reported FPS: 30.000000
+[   0.766][v][vd] Codec list:
+[   0.766][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[   0.766][v][vd] Opening decoder h264
+[   0.766][v][vd] Looking at hwdec h264-v4l2request-copy...
+[   0.766][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[   0.766][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[   0.768][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[   0.768][v][vf] User filter list:
+[   0.768][v][vf]   (empty)
+[   0.769][v][cplayer] Starting playback...
+[   0.769][v][file] stream level seek from 541053 to 48
+[   0.770][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[   0.770][v][vd] Codec profile: Constrained Baseline (0x242)
+[   0.770][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[   0.771][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[   0.783][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[   0.810][i][vd] Using hardware decoding (v4l2request-copy).
+[   0.810][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.810][v][vd] Using container aspect ratio.
+[   0.810][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.810][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.810][v][vf] [userdeint] (disabled)
+[   0.810][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.810][v][vf] [autorotate] (disabled)
+[   0.810][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.810][v][vf] [convert] (disabled)
+[   0.810][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.828][i][cplayer] VO: [gpu] 1280x720 nv12
+[   0.828][v][cplayer] VO: Description: Shader-based GPU Renderer
+[   0.828][v][vo/gpu] reconfig to 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[   0.828][v][vo/gpu] Resize: 1360x768
+[   0.828][v][vo/gpu] Window size: 1360x768 (Borders: l=0 t=0 r=0 b=0)
+[   0.828][v][vo/gpu] Video source: 1280x720 (1:1)
+[   0.828][v][vo/gpu] Video display: (0, 0) 1280x720 -> (0, 1) 1360x765
+[   0.828][v][vo/gpu] Video scale: 1.062500/1.062500
+[   0.828][v][vo/gpu] OSD borders: l=0 t=1 r=0 b=2
+[   0.828][v][vo/gpu] Video borders: l=0 t=1 r=0 b=2
+[   0.828][v][vo/gpu] Reported display depth: 8
+[   0.828][v][vo/gpu] Texture for plane 0: 1280x720
+[   0.829][v][vo/gpu] Texture for plane 1: 640x360
+[   0.830][v][vo/gpu] Testing FBO format rgba16f
+[   0.830][d][vo/gpu] Resizing texture: 16x16
+[   0.830][v][vo/gpu] Using FBO format rgba16f.
+[   0.839][d][vo/gpu] Resizing texture: 640x720
+[   0.843][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   0.884][d][vo/gpu/opengl] vertex shader source:
+[   0.884][d][vo/gpu/opengl] [  1] #version 140
+[   0.884][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.884][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.884][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.884][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   0.884][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   0.884][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   0.884][d][vo/gpu/opengl] [  8] void main() {
+[   0.885][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   0.885][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   0.885][d][vo/gpu/opengl] [ 11] }
+[   0.888][d][vo/gpu/opengl] fragment shader source:
+[   0.888][d][vo/gpu/opengl] [  1] #version 140
+[   0.888][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.888][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.888][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.888][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   0.888][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   0.888][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   0.888][d][vo/gpu/opengl] [  8] uniform sampler2D texture0;
+[   0.888][d][vo/gpu/opengl] [  9] uniform vec2 texture_size0;
+[   0.888][d][vo/gpu/opengl] [ 10] uniform mat2 texture_rot0;
+[   0.888][d][vo/gpu/opengl] [ 11] uniform vec2 texture_off0;
+[   0.888][d][vo/gpu/opengl] [ 12] uniform vec2 pixel_size0;
+[   0.888][d][vo/gpu/opengl] [ 13] void main() {
+[   0.888][d][vo/gpu/opengl] [ 14] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   0.888][d][vo/gpu/opengl] [ 15] // upscaling plane 1
+[   0.888][d][vo/gpu/opengl] [ 16] #undef tex
+[   0.888][d][vo/gpu/opengl] [ 17] #undef texmap
+[   0.888][d][vo/gpu/opengl] [ 18] #define tex texture0
+[   0.888][d][vo/gpu/opengl] [ 19] #define texmap texmap0
+[   0.888][d][vo/gpu/opengl] [ 20] vec2 pos = texcoord0;
+[   0.888][d][vo/gpu/opengl] [ 21] vec2 size = texture_size0;
+[   0.888][d][vo/gpu/opengl] [ 22] vec2 pt = pixel_size0;
+[   0.888][d][vo/gpu/opengl] [ 23] // first pass
+[   0.888][d][vo/gpu/opengl] [ 24] color = vec4(0.0);
+[   0.888][d][vo/gpu/opengl] [ 25] {
+[   0.888][d][vo/gpu/opengl] [ 26] vec2 dir = vec2(0.0, 1.0);
+[   0.888][d][vo/gpu/opengl] [ 27] pt *= dir;
+[   0.888][d][vo/gpu/opengl] [ 28] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   0.888][d][vo/gpu/opengl] [ 29] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   0.888][d][vo/gpu/opengl] [ 30] vec4 c;
+[   0.888][d][vo/gpu/opengl] [ 31] float ypos = LUT_POS(fcoord, 256.0);
+[   0.888][d][vo/gpu/opengl] [ 32] float weights[6];
+[   0.888][d][vo/gpu/opengl] [ 33] c = texture(lut, vec2(0.250000, ypos));
+[   0.888][d][vo/gpu/opengl] [ 34] weights[0] = c[0];
+[   0.888][d][vo/gpu/opengl] [ 35] weights[1] = c[1];
+[   0.888][d][vo/gpu/opengl] [ 36] weights[2] = c[2];
+[   0.888][d][vo/gpu/opengl] [ 37] weights[3] = c[3];
+[   0.888][d][vo/gpu/opengl] [ 38] c = texture(lut, vec2(0.750000, ypos));
+[   0.888][d][vo/gpu/opengl] [ 39] weights[4] = c[0];
+[   0.888][d][vo/gpu/opengl] [ 40] weights[5] = c[1];
+[   0.888][d][vo/gpu/opengl] [ 41] // scaler samples
+[   0.888][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(0.0));
+[   0.888][d][vo/gpu/opengl] [ 43] color += vec4(weights[0]) * c;
+[   0.888][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(1.0));
+[   0.888][d][vo/gpu/opengl] [ 45] color += vec4(weights[1]) * c;
+[   0.888][d][vo/gpu/opengl] [ 46] c = texture(tex, base + pt * vec2(2.0));
+[   0.888][d][vo/gpu/opengl] [ 47] color += vec4(weights[2]) * c;
+[   0.888][d][vo/gpu/opengl] [ 48] c = texture(tex, base + pt * vec2(3.0));
+[   0.888][d][vo/gpu/opengl] [ 49] color += vec4(weights[3]) * c;
+[   0.888][d][vo/gpu/opengl] [ 50] c = texture(tex, base + pt * vec2(4.0));
+[   0.888][d][vo/gpu/opengl] [ 51] color += vec4(weights[4]) * c;
+[   0.888][d][vo/gpu/opengl] [ 52] c = texture(tex, base + pt * vec2(5.0));
+[   0.888][d][vo/gpu/opengl] [ 53] color += vec4(weights[5]) * c;
+[   0.888][d][vo/gpu/opengl] [ 54] }
+[   0.888][d][vo/gpu/opengl] [ 55] color *= 1.000000;
+[   0.888][d][vo/gpu/opengl] [ 56] out_color = color;
+[   0.888][d][vo/gpu/opengl] [ 57] }
+[   0.897][d][vo/gpu/opengl] shader link log (status=1): 
+[   0.898][d][vo/gpu] Writing shader cache file: /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv/D1B95DE1436160C51F46A584DA81D219D646BD6506F7235F76A05287D4F77D41
+[   0.899][d][vo/gpu] Resizing texture: 1280x720
+[   0.906][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   0.908][d][vo/gpu/opengl] vertex shader source:
+[   0.908][d][vo/gpu/opengl] [  1] #version 140
+[   0.908][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.908][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.908][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.908][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   0.908][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   0.908][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   0.908][d][vo/gpu/opengl] [  8] void main() {
+[   0.908][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   0.908][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   0.908][d][vo/gpu/opengl] [ 11] }
+[   0.911][d][vo/gpu/opengl] fragment shader source:
+[   0.911][d][vo/gpu/opengl] [  1] #version 140
+[   0.911][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.911][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.911][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.912][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   0.912][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   0.912][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   0.912][d][vo/gpu/opengl] [  8] uniform sampler2D texture0;
+[   0.912][d][vo/gpu/opengl] [  9] uniform vec2 texture_size0;
+[   0.912][d][vo/gpu/opengl] [ 10] uniform mat2 texture_rot0;
+[   0.912][d][vo/gpu/opengl] [ 11] uniform vec2 texture_off0;
+[   0.912][d][vo/gpu/opengl] [ 12] uniform vec2 pixel_size0;
+[   0.912][d][vo/gpu/opengl] [ 13] void main() {
+[   0.912][d][vo/gpu/opengl] [ 14] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   0.912][d][vo/gpu/opengl] [ 15] #undef tex
+[   0.912][d][vo/gpu/opengl] [ 16] #undef texmap
+[   0.912][d][vo/gpu/opengl] [ 17] #define tex texture0
+[   0.912][d][vo/gpu/opengl] [ 18] #define texmap texmap0
+[   0.912][d][vo/gpu/opengl] [ 19] vec2 pos = texcoord0;
+[   0.912][d][vo/gpu/opengl] [ 20] vec2 size = texture_size0;
+[   0.912][d][vo/gpu/opengl] [ 21] vec2 pt = pixel_size0;
+[   0.912][d][vo/gpu/opengl] [ 22] color = vec4(0.0);
+[   0.912][d][vo/gpu/opengl] [ 23] {
+[   0.912][d][vo/gpu/opengl] [ 24] vec2 dir = vec2(1.0, 0.0);
+[   0.912][d][vo/gpu/opengl] [ 25] pt *= dir;
+[   0.912][d][vo/gpu/opengl] [ 26] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   0.912][d][vo/gpu/opengl] [ 27] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   0.912][d][vo/gpu/opengl] [ 28] vec4 c;
+[   0.912][d][vo/gpu/opengl] [ 29] float ypos = LUT_POS(fcoord, 256.0);
+[   0.912][d][vo/gpu/opengl] [ 30] float weights[6];
+[   0.912][d][vo/gpu/opengl] [ 31] c = texture(lut, vec2(0.250000, ypos));
+[   0.912][d][vo/gpu/opengl] [ 32] weights[0] = c[0];
+[   0.912][d][vo/gpu/opengl] [ 33] weights[1] = c[1];
+[   0.912][d][vo/gpu/opengl] [ 34] weights[2] = c[2];
+[   0.912][d][vo/gpu/opengl] [ 35] weights[3] = c[3];
+[   0.912][d][vo/gpu/opengl] [ 36] c = texture(lut, vec2(0.750000, ypos));
+[   0.912][d][vo/gpu/opengl] [ 37] weights[4] = c[0];
+[   0.912][d][vo/gpu/opengl] [ 38] weights[5] = c[1];
+[   0.912][d][vo/gpu/opengl] [ 39] // scaler samples
+[   0.912][d][vo/gpu/opengl] [ 40] c = texture(tex, base + pt * vec2(0.0));
+[   0.912][d][vo/gpu/opengl] [ 41] color += vec4(weights[0]) * c;
+[   0.912][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(1.0));
+[   0.912][d][vo/gpu/opengl] [ 43] color += vec4(weights[1]) * c;
+[   0.912][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(2.0));
+[   0.912][d][vo/gpu/opengl] [ 45] color += vec4(weights[2]) * c;
+[   0.912][d][vo/gpu/opengl] [ 46] c = texture(tex, base + pt * vec2(3.0));
+[   0.912][d][vo/gpu/opengl] [ 47] color += vec4(weights[3]) * c;
+[   0.912][d][vo/gpu/opengl] [ 48] c = texture(tex, base + pt * vec2(4.0));
+[   0.912][d][vo/gpu/opengl] [ 49] color += vec4(weights[4]) * c;
+[   0.912][d][vo/gpu/opengl] [ 50] c = texture(tex, base + pt * vec2(5.0));
+[   0.912][d][vo/gpu/opengl] [ 51] color += vec4(weights[5]) * c;
+[   0.912][d][vo/gpu/opengl] [ 52] }
+[   0.912][d][vo/gpu/opengl] [ 53] color.b = 0.000000;
+[   0.912][d][vo/gpu/opengl] [ 54] color.a = 1.000000;
+[   0.912][d][vo/gpu/opengl] [ 55] out_color = color;
+[   0.912][d][vo/gpu/opengl] [ 56] }
+[   0.920][d][vo/gpu/opengl] shader link log (status=1): 
+[   0.921][d][vo/gpu] Writing shader cache file: /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv/955B8A68885D3743C2E5D991F0B74AEB6E8D734DA13BBF14FFDCF122D9EB976B
+[   0.922][d][vo/gpu] Resizing texture: 1280x720
+[   0.929][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   0.931][d][vo/gpu/opengl] vertex shader source:
+[   0.931][d][vo/gpu/opengl] [  1] #version 140
+[   0.932][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.932][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.932][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.932][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   0.932][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   0.932][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   0.932][d][vo/gpu/opengl] [  8] in vec2 vertex_texcoord1;
+[   0.932][d][vo/gpu/opengl] [  9] out vec2 texcoord1;
+[   0.932][d][vo/gpu/opengl] [ 10] void main() {
+[   0.932][d][vo/gpu/opengl] [ 11] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   0.932][d][vo/gpu/opengl] [ 12] texcoord0 = vertex_texcoord0;
+[   0.932][d][vo/gpu/opengl] [ 13] texcoord1 = vertex_texcoord1;
+[   0.932][d][vo/gpu/opengl] [ 14] }
+[   0.934][d][vo/gpu/opengl] fragment shader source:
+[   0.934][d][vo/gpu/opengl] [  1] #version 140
+[   0.934][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.934][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.934][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.934][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   0.934][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   0.934][d][vo/gpu/opengl] [  7] in vec2 texcoord1;
+[   0.934][d][vo/gpu/opengl] [  8] uniform mat3 colormatrix;
+[   0.934][d][vo/gpu/opengl] [  9] uniform vec3 colormatrix_c;
+[   0.934][d][vo/gpu/opengl] [ 10] uniform sampler2D texture0;
+[   0.934][d][vo/gpu/opengl] [ 11] uniform vec2 texture_size0;
+[   0.934][d][vo/gpu/opengl] [ 12] uniform mat2 texture_rot0;
+[   0.934][d][vo/gpu/opengl] [ 13] uniform vec2 texture_off0;
+[   0.934][d][vo/gpu/opengl] [ 14] uniform vec2 pixel_size0;
+[   0.934][d][vo/gpu/opengl] [ 15] uniform sampler2D texture1;
+[   0.934][d][vo/gpu/opengl] [ 16] uniform vec2 texture_size1;
+[   0.934][d][vo/gpu/opengl] [ 17] uniform mat2 texture_rot1;
+[   0.934][d][vo/gpu/opengl] [ 18] uniform vec2 texture_off1;
+[   0.934][d][vo/gpu/opengl] [ 19] uniform vec2 pixel_size1;
+[   0.934][d][vo/gpu/opengl] [ 20] void main() {
+[   0.934][d][vo/gpu/opengl] [ 21] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   0.934][d][vo/gpu/opengl] [ 22] color.r = 1.000000 * vec4(texture(texture0, texcoord0)).r;
+[   0.934][d][vo/gpu/opengl] [ 23] color.gb = 1.000000 * vec4(texture(texture1, texcoord1)).rg;
+[   0.934][d][vo/gpu/opengl] [ 24] color = color.rgbr;
+[   0.934][d][vo/gpu/opengl] [ 25] color.rgb = mat3(colormatrix) * color.rgb + colormatrix_c;
+[   0.934][d][vo/gpu/opengl] [ 26] color.a = 1.0;
+[   0.934][d][vo/gpu/opengl] [ 27] // scaler pre-conversion
+[   0.934][d][vo/gpu/opengl] [ 28] // linearize
+[   0.934][d][vo/gpu/opengl] [ 29] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   0.934][d][vo/gpu/opengl] [ 30] color.rgb = pow(color.rgb, vec3(2.4));
+[   0.934][d][vo/gpu/opengl] [ 31] color.rgb *= vec3(1.0/1.000000);
+[   0.935][d][vo/gpu/opengl] [ 32] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   0.935][d][vo/gpu/opengl] [ 33] color.rgb = 0.750000 - log(1.0/(color.rgb * 0.827906 + 0.007577) - 1.0) * 1.0/6.500000;
+[   0.935][d][vo/gpu/opengl] [ 34] // main scaling
+[   0.935][d][vo/gpu/opengl] [ 35] out_color = color;
+[   0.935][d][vo/gpu/opengl] [ 36] }
+[   0.941][d][vo/gpu/opengl] shader link log (status=1): 
+[   0.942][d][vo/gpu] Writing shader cache file: /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv/BA5FB4C3449ECA625EC50DBBB65472FB4104A4BD66EF89616844E3F2D5B5DAB8
+[   0.944][d][vo/gpu] Resizing texture: 1280x765
+[   0.952][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   0.954][d][vo/gpu/opengl] vertex shader source:
+[   0.954][d][vo/gpu/opengl] [  1] #version 140
+[   0.954][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.954][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.954][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.954][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   0.954][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   0.954][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   0.954][d][vo/gpu/opengl] [  8] void main() {
+[   0.954][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   0.954][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   0.954][d][vo/gpu/opengl] [ 11] }
+[   0.957][d][vo/gpu/opengl] fragment shader source:
+[   0.957][d][vo/gpu/opengl] [  1] #version 140
+[   0.957][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   0.957][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   0.957][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   0.957][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   0.957][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   0.957][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   0.957][d][vo/gpu/opengl] [  8] uniform sampler2D texture0;
+[   0.958][d][vo/gpu/opengl] [  9] uniform vec2 texture_size0;
+[   0.958][d][vo/gpu/opengl] [ 10] uniform mat2 texture_rot0;
+[   0.958][d][vo/gpu/opengl] [ 11] uniform vec2 texture_off0;
+[   0.958][d][vo/gpu/opengl] [ 12] uniform vec2 pixel_size0;
+[   0.958][d][vo/gpu/opengl] [ 13] void main() {
+[   0.958][d][vo/gpu/opengl] [ 14] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   0.958][d][vo/gpu/opengl] [ 15] #undef tex
+[   0.958][d][vo/gpu/opengl] [ 16] #undef texmap
+[   0.958][d][vo/gpu/opengl] [ 17] #define tex texture0
+[   0.958][d][vo/gpu/opengl] [ 18] #define texmap texmap0
+[   0.958][d][vo/gpu/opengl] [ 19] vec2 pos = texcoord0;
+[   0.958][d][vo/gpu/opengl] [ 20] vec2 size = texture_size0;
+[   0.958][d][vo/gpu/opengl] [ 21] vec2 pt = pixel_size0;
+[   0.958][d][vo/gpu/opengl] [ 22] // first pass
+[   0.958][d][vo/gpu/opengl] [ 23] color = vec4(0.0);
+[   0.958][d][vo/gpu/opengl] [ 24] {
+[   0.958][d][vo/gpu/opengl] [ 25] vec2 dir = vec2(0.0, 1.0);
+[   0.958][d][vo/gpu/opengl] [ 26] pt *= dir;
+[   0.958][d][vo/gpu/opengl] [ 27] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   0.958][d][vo/gpu/opengl] [ 28] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   0.958][d][vo/gpu/opengl] [ 29] vec4 c;
+[   0.958][d][vo/gpu/opengl] [ 30] float ypos = LUT_POS(fcoord, 256.0);
+[   0.958][d][vo/gpu/opengl] [ 31] float weights[6];
+[   0.958][d][vo/gpu/opengl] [ 32] c = texture(lut, vec2(0.250000, ypos));
+[   0.958][d][vo/gpu/opengl] [ 33] weights[0] = c[0];
+[   0.958][d][vo/gpu/opengl] [ 34] weights[1] = c[1];
+[   0.958][d][vo/gpu/opengl] [ 35] weights[2] = c[2];
+[   0.958][d][vo/gpu/opengl] [ 36] weights[3] = c[3];
+[   0.958][d][vo/gpu/opengl] [ 37] c = texture(lut, vec2(0.750000, ypos));
+[   0.958][d][vo/gpu/opengl] [ 38] weights[4] = c[0];
+[   0.958][d][vo/gpu/opengl] [ 39] weights[5] = c[1];
+[   0.958][d][vo/gpu/opengl] [ 40] // scaler samples
+[   0.958][d][vo/gpu/opengl] [ 41] c = texture(tex, base + pt * vec2(0.0));
+[   0.958][d][vo/gpu/opengl] [ 42] color += vec4(weights[0]) * c;
+[   0.958][d][vo/gpu/opengl] [ 43] c = texture(tex, base + pt * vec2(1.0));
+[   0.958][d][vo/gpu/opengl] [ 44] color += vec4(weights[1]) * c;
+[   0.958][d][vo/gpu/opengl] [ 45] c = texture(tex, base + pt * vec2(2.0));
+[   0.958][d][vo/gpu/opengl] [ 46] color += vec4(weights[2]) * c;
+[   0.958][d][vo/gpu/opengl] [ 47] c = texture(tex, base + pt * vec2(3.0));
+[   0.958][d][vo/gpu/opengl] [ 48] color += vec4(weights[3]) * c;
+[   0.958][d][vo/gpu/opengl] [ 49] c = texture(tex, base + pt * vec2(4.0));
+[   0.958][d][vo/gpu/opengl] [ 50] color += vec4(weights[4]) * c;
+[   0.958][d][vo/gpu/opengl] [ 51] c = texture(tex, base + pt * vec2(5.0));
+[   0.958][d][vo/gpu/opengl] [ 52] color += vec4(weights[5]) * c;
+[   0.958][d][vo/gpu/opengl] [ 53] }
+[   0.958][d][vo/gpu/opengl] [ 54] color *= 1.000000;
+[   0.958][d][vo/gpu/opengl] [ 55] out_color = color;
+[   0.958][d][vo/gpu/opengl] [ 56] }
+[   0.967][d][vo/gpu/opengl] shader link log (status=1): 
+[   0.967][d][vo/gpu] Writing shader cache file: /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv/D683AAC24DF9D59935CF2662437127DD6583BBC016E90CBCF9F9FE75F658FE2B
+[   0.968][v][vo/gpu] Dither to 8.
+[   1.153][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   1.155][d][vo/gpu/opengl] vertex shader source:
+[   1.155][d][vo/gpu/opengl] [  1] #version 140
+[   1.155][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   1.155][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   1.155][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   1.155][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   1.155][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   1.155][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   1.156][d][vo/gpu/opengl] [  8] void main() {
+[   1.156][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   1.156][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   1.156][d][vo/gpu/opengl] [ 11] }
+[   1.160][d][vo/gpu/opengl] fragment shader source:
+[   1.160][d][vo/gpu/opengl] [  1] #version 140
+[   1.160][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   1.160][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   1.160][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   1.160][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   1.160][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   1.160][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   1.160][d][vo/gpu/opengl] [  8] uniform vec3 src_luma;
+[   1.160][d][vo/gpu/opengl] [  9] uniform vec3 dst_luma;
+[   1.160][d][vo/gpu/opengl] [ 10] uniform sampler2D dither;
+[   1.160][d][vo/gpu/opengl] [ 11] uniform sampler2D texture0;
+[   1.160][d][vo/gpu/opengl] [ 12] uniform vec2 texture_size0;
+[   1.160][d][vo/gpu/opengl] [ 13] uniform mat2 texture_rot0;
+[   1.160][d][vo/gpu/opengl] [ 14] uniform vec2 texture_off0;
+[   1.160][d][vo/gpu/opengl] [ 15] uniform vec2 pixel_size0;
+[   1.160][d][vo/gpu/opengl] [ 16] void main() {
+[   1.160][d][vo/gpu/opengl] [ 17] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   1.160][d][vo/gpu/opengl] [ 18] #undef tex
+[   1.160][d][vo/gpu/opengl] [ 19] #undef texmap
+[   1.160][d][vo/gpu/opengl] [ 20] #define tex texture0
+[   1.160][d][vo/gpu/opengl] [ 21] #define texmap texmap0
+[   1.160][d][vo/gpu/opengl] [ 22] vec2 pos = texcoord0;
+[   1.160][d][vo/gpu/opengl] [ 23] vec2 size = texture_size0;
+[   1.161][d][vo/gpu/opengl] [ 24] vec2 pt = pixel_size0;
+[   1.161][d][vo/gpu/opengl] [ 25] color = vec4(0.0);
+[   1.161][d][vo/gpu/opengl] [ 26] {
+[   1.161][d][vo/gpu/opengl] [ 27] vec2 dir = vec2(1.0, 0.0);
+[   1.161][d][vo/gpu/opengl] [ 28] pt *= dir;
+[   1.161][d][vo/gpu/opengl] [ 29] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   1.161][d][vo/gpu/opengl] [ 30] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   1.161][d][vo/gpu/opengl] [ 31] vec4 c;
+[   1.161][d][vo/gpu/opengl] [ 32] float ypos = LUT_POS(fcoord, 256.0);
+[   1.161][d][vo/gpu/opengl] [ 33] float weights[6];
+[   1.161][d][vo/gpu/opengl] [ 34] c = texture(lut, vec2(0.250000, ypos));
+[   1.161][d][vo/gpu/opengl] [ 35] weights[0] = c[0];
+[   1.161][d][vo/gpu/opengl] [ 36] weights[1] = c[1];
+[   1.161][d][vo/gpu/opengl] [ 37] weights[2] = c[2];
+[   1.161][d][vo/gpu/opengl] [ 38] weights[3] = c[3];
+[   1.161][d][vo/gpu/opengl] [ 39] c = texture(lut, vec2(0.750000, ypos));
+[   1.161][d][vo/gpu/opengl] [ 40] weights[4] = c[0];
+[   1.161][d][vo/gpu/opengl] [ 41] weights[5] = c[1];
+[   1.161][d][vo/gpu/opengl] [ 42] // scaler samples
+[   1.161][d][vo/gpu/opengl] [ 43] c = texture(tex, base + pt * vec2(0.0));
+[   1.161][d][vo/gpu/opengl] [ 44] color += vec4(weights[0]) * c;
+[   1.161][d][vo/gpu/opengl] [ 45] c = texture(tex, base + pt * vec2(1.0));
+[   1.161][d][vo/gpu/opengl] [ 46] color += vec4(weights[1]) * c;
+[   1.161][d][vo/gpu/opengl] [ 47] c = texture(tex, base + pt * vec2(2.0));
+[   1.161][d][vo/gpu/opengl] [ 48] color += vec4(weights[2]) * c;
+[   1.161][d][vo/gpu/opengl] [ 49] c = texture(tex, base + pt * vec2(3.0));
+[   1.161][d][vo/gpu/opengl] [ 50] color += vec4(weights[3]) * c;
+[   1.161][d][vo/gpu/opengl] [ 51] c = texture(tex, base + pt * vec2(4.0));
+[   1.161][d][vo/gpu/opengl] [ 52] color += vec4(weights[4]) * c;
+[   1.161][d][vo/gpu/opengl] [ 53] c = texture(tex, base + pt * vec2(5.0));
+[   1.161][d][vo/gpu/opengl] [ 54] color += vec4(weights[5]) * c;
+[   1.161][d][vo/gpu/opengl] [ 55] }
+[   1.161][d][vo/gpu/opengl] [ 56] color.a = 1.000000;
+[   1.161][d][vo/gpu/opengl] [ 57] // scaler post-conversion
+[   1.161][d][vo/gpu/opengl] [ 58] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   1.161][d][vo/gpu/opengl] [ 59] color.rgb = (1.0/(1.0 + exp(6.500000 * (0.750000 - color.rgb))) - 0.007577) * 1.0/0.827906;
+[   1.161][d][vo/gpu/opengl] [ 60] // color mapping
+[   1.161][d][vo/gpu/opengl] [ 61] color.rgb *= vec3(1.000000);
+[   1.161][d][vo/gpu/opengl] [ 62] color.rgb *= vec3(1.000000);
+[   1.161][d][vo/gpu/opengl] [ 63] // delinearize
+[   1.161][d][vo/gpu/opengl] [ 64] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   1.161][d][vo/gpu/opengl] [ 65] color.rgb *= vec3(1.000000);
+[   1.161][d][vo/gpu/opengl] [ 66] color.rgb = pow(color.rgb, vec3(1.0/2.4));
+[   1.161][d][vo/gpu/opengl] [ 67] // dithering
+[   1.161][d][vo/gpu/opengl] [ 68] vec2 dither_coord = vec2(gl_FragCoord.x, 768.0 + -1.000000 * gl_FragCoord.y);vec2 dither_pos = dither_coord * 1.0/64.0;
+[   1.161][d][vo/gpu/opengl] [ 69] float dither_value = texture(dither, dither_pos).r;
+[   1.161][d][vo/gpu/opengl] [ 70] color = floor(color * 255.0 + dither_value + 0.5 / 4096.0) * 1.0/255.0;
+[   1.161][d][vo/gpu/opengl] [ 71] out_color = color;
+[   1.161][d][vo/gpu/opengl] [ 72] }
+[   1.173][d][vo/gpu/opengl] shader link log (status=1): 
+[   1.173][d][vo/gpu] Writing shader cache file: /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv/B1E34AB76B17662FBF7240EE4E167F270D88169350937530F32DF17823CC5E04
+[   1.175][v][cplayer] first video frame after restart shown
+[   1.175][d][cplayer] starting video playback
+[   1.175][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[   1.186][d][vo/gpu] Resizing texture: 1360x768
+[   1.195][d][global] user path: '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv'
+[   1.197][d][vo/gpu/opengl] vertex shader source:
+[   1.197][d][vo/gpu/opengl] [  1] #version 140
+[   1.197][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   1.197][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   1.198][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   1.199][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   1.199][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   1.199][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   1.199][d][vo/gpu/opengl] [  8] void main() {
+[   1.199][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   1.199][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   1.199][d][vo/gpu/opengl] [ 11] }
+[   1.203][d][vo/gpu/opengl] fragment shader source:
+[   1.203][d][vo/gpu/opengl] [  1] #version 140
+[   1.203][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   1.203][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   1.203][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   1.203][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   1.203][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   1.203][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   1.203][d][vo/gpu/opengl] [  8] uniform vec3 src_luma;
+[   1.203][d][vo/gpu/opengl] [  9] uniform vec3 dst_luma;
+[   1.203][d][vo/gpu/opengl] [ 10] uniform sampler2D dither;
+[   1.203][d][vo/gpu/opengl] [ 11] uniform sampler2D texture0;
+[   1.203][d][vo/gpu/opengl] [ 12] uniform vec2 texture_size0;
+[   1.203][d][vo/gpu/opengl] [ 13] uniform mat2 texture_rot0;
+[   1.203][d][vo/gpu/opengl] [ 14] uniform vec2 texture_off0;
+[   1.203][d][vo/gpu/opengl] [ 15] uniform vec2 pixel_size0;
+[   1.203][d][vo/gpu/opengl] [ 16] void main() {
+[   1.203][d][vo/gpu/opengl] [ 17] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   1.203][d][vo/gpu/opengl] [ 18] #undef tex
+[   1.203][d][vo/gpu/opengl] [ 19] #undef texmap
+[   1.203][d][vo/gpu/opengl] [ 20] #define tex texture0
+[   1.203][d][vo/gpu/opengl] [ 21] #define texmap texmap0
+[   1.203][d][vo/gpu/opengl] [ 22] vec2 pos = texcoord0;
+[   1.203][d][vo/gpu/opengl] [ 23] vec2 size = texture_size0;
+[   1.203][d][vo/gpu/opengl] [ 24] vec2 pt = pixel_size0;
+[   1.203][d][vo/gpu/opengl] [ 25] color = vec4(0.0);
+[   1.203][d][vo/gpu/opengl] [ 26] {
+[   1.203][d][vo/gpu/opengl] [ 27] vec2 dir = vec2(1.0, 0.0);
+[   1.203][d][vo/gpu/opengl] [ 28] pt *= dir;
+[   1.203][d][vo/gpu/opengl] [ 29] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   1.203][d][vo/gpu/opengl] [ 30] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   1.203][d][vo/gpu/opengl] [ 31] vec4 c;
+[   1.203][d][vo/gpu/opengl] [ 32] float ypos = LUT_POS(fcoord, 256.0);
+[   1.203][d][vo/gpu/opengl] [ 33] float weights[6];
+[   1.203][d][vo/gpu/opengl] [ 34] c = texture(lut, vec2(0.250000, ypos));
+[   1.203][d][vo/gpu/opengl] [ 35] weights[0] = c[0];
+[   1.203][d][vo/gpu/opengl] [ 36] weights[1] = c[1];
+[   1.203][d][vo/gpu/opengl] [ 37] weights[2] = c[2];
+[   1.204][d][vo/gpu/opengl] [ 38] weights[3] = c[3];
+[   1.204][d][vo/gpu/opengl] [ 39] c = texture(lut, vec2(0.750000, ypos));
+[   1.204][d][vo/gpu/opengl] [ 40] weights[4] = c[0];
+[   1.204][d][vo/gpu/opengl] [ 41] weights[5] = c[1];
+[   1.204][d][vo/gpu/opengl] [ 42] // scaler samples
+[   1.204][d][vo/gpu/opengl] [ 43] c = texture(tex, base + pt * vec2(0.0));
+[   1.204][d][vo/gpu/opengl] [ 44] color += vec4(weights[0]) * c;
+[   1.204][d][vo/gpu/opengl] [ 45] c = texture(tex, base + pt * vec2(1.0));
+[   1.204][d][vo/gpu/opengl] [ 46] color += vec4(weights[1]) * c;
+[   1.204][d][vo/gpu/opengl] [ 47] c = texture(tex, base + pt * vec2(2.0));
+[   1.204][d][vo/gpu/opengl] [ 48] color += vec4(weights[2]) * c;
+[   1.204][d][vo/gpu/opengl] [ 49] c = texture(tex, base + pt * vec2(3.0));
+[   1.204][d][vo/gpu/opengl] [ 50] color += vec4(weights[3]) * c;
+[   1.204][d][vo/gpu/opengl] [ 51] c = texture(tex, base + pt * vec2(4.0));
+[   1.204][d][vo/gpu/opengl] [ 52] color += vec4(weights[4]) * c;
+[   1.204][d][vo/gpu/opengl] [ 53] c = texture(tex, base + pt * vec2(5.0));
+[   1.204][d][vo/gpu/opengl] [ 54] color += vec4(weights[5]) * c;
+[   1.204][d][vo/gpu/opengl] [ 55] }
+[   1.204][d][vo/gpu/opengl] [ 56] color.a = 1.000000;
+[   1.204][d][vo/gpu/opengl] [ 57] // scaler post-conversion
+[   1.204][d][vo/gpu/opengl] [ 58] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   1.204][d][vo/gpu/opengl] [ 59] color.rgb = (1.0/(1.0 + exp(6.500000 * (0.750000 - color.rgb))) - 0.007577) * 1.0/0.827906;
+[   1.204][d][vo/gpu/opengl] [ 60] // color mapping
+[   1.204][d][vo/gpu/opengl] [ 61] color.rgb *= vec3(1.000000);
+[   1.204][d][vo/gpu/opengl] [ 62] color.rgb *= vec3(1.000000);
+[   1.204][d][vo/gpu/opengl] [ 63] // delinearize
+[   1.204][d][vo/gpu/opengl] [ 64] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   1.204][d][vo/gpu/opengl] [ 65] color.rgb *= vec3(1.000000);
+[   1.204][d][vo/gpu/opengl] [ 66] color.rgb = pow(color.rgb, vec3(1.0/2.4));
+[   1.204][d][vo/gpu/opengl] [ 67] // dithering
+[   1.204][d][vo/gpu/opengl] [ 68] vec2 dither_coord = vec2(gl_FragCoord.x, 0.0 + 1.000000 * gl_FragCoord.y);vec2 dither_pos = dither_coord * 1.0/64.0;
+[   1.204][d][vo/gpu/opengl] [ 69] float dither_value = texture(dither, dither_pos).r;
+[   1.204][d][vo/gpu/opengl] [ 70] color = floor(color * 255.0 + dither_value + 0.5 / 4096.0) * 1.0/255.0;
+[   1.204][d][vo/gpu/opengl] [ 71] out_color = color;
+[   1.204][d][vo/gpu/opengl] [ 72] }
+[   1.216][d][vo/gpu/opengl] shader link log (status=1): 
+[   1.217][d][vo/gpu] Writing shader cache file: /data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.cache/mpv/9AD1C12CA1752EED332B466B6E5A7C04C1F797D74454D5FC8F7A3AF53778E205
+[  10.762][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  10.762][v][cplayer] EOF code: 3  
+[  10.762][d][vd] Uninit decoder.
+[  10.764][v][ipc_3] Client connected
+[  10.766][d][cplayer] Terminating demuxers...
+[  10.767][d][cplayer] Done terminating demuxers.
+[  10.767][v][ipc_3] Client disconnected
+[  10.767][v][cplayer] finished playback, success (reason 2)
+[  10.767][d][ipc_3] Exiting...
+[  10.767][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  10.767][v][file] Opening /data/media/c18-canary-h264.mp4
+[  10.767][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  10.767][d][file] Stream opened successfully.
+[  10.767][v][demux] Trying demuxers for level=normal.
+[  10.767][d][demux] Trying demuxer: disc (force-level: normal)
+[  10.768][d][demux] Trying demuxer: edl (force-level: normal)
+[  10.768][d][demux] Trying demuxer: cue (force-level: normal)
+[  10.768][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  10.768][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  10.768][d][demux] Trying demuxer: mkv (force-level: normal)
+[  10.768][d][demux] Trying demuxer: lavf (force-level: normal)
+[  10.770][v][ipc_4] Client connected
+[  10.771][v][ipc_4] Client disconnected
+[  10.771][d][ipc_4] Exiting...
+[  10.780][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  10.780][v][file] stream level seek from 131072 to 536637
+[  10.782][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  10.782][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  10.782][v][find_files] Loading external files in /data/media/
+[  10.782][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  10.782][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  10.782][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  10.782][v][lavf] select track 0
+[  10.782][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  10.806][v][vd] Container reported FPS: 30.000000
+[  10.807][v][vd] Codec list:
+[  10.807][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  10.807][v][vd] Opening decoder h264
+[  10.807][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  10.807][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  10.807][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  10.808][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  10.808][v][vf] User filter list:
+[  10.808][v][vf]   (empty)
+[  10.808][v][cplayer] Starting playback...
+[  10.808][v][file] stream level seek from 541053 to 48
+[  10.809][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  10.809][v][vd] Codec profile: Constrained Baseline (0x242)
+[  10.809][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  10.810][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  10.828][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  10.855][i][vd] Using hardware decoding (v4l2request-copy).
+[  10.855][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  10.855][v][vd] Using container aspect ratio.
+[  10.855][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  10.855][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  10.855][v][vf] [userdeint] (disabled)
+[  10.855][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  10.855][v][vf] [autorotate] (disabled)
+[  10.855][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  10.856][v][vf] [convert] (disabled)
+[  10.856][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  10.877][v][cplayer] first video frame after restart shown
+[  10.877][d][cplayer] starting video playback
+[  10.877][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  11.271][v][ipc_5] Client connected
+[  11.272][v][ipc_5] Client disconnected
+[  11.272][d][ipc_5] Exiting...
+[  12.276][v][ipc_6] Client connected
+[  12.370][v][ipc_6] Client disconnected
+[  12.370][d][ipc_6] Exiting...
+[  13.374][v][ipc_7] Client connected
+[  13.375][v][ipc_7] Client disconnected
+[  13.375][d][ipc_7] Exiting...
+[  14.378][v][ipc_8] Client connected
+[  14.410][v][ipc_8] Client disconnected
+[  14.410][d][ipc_8] Exiting...
+[  15.413][v][ipc_9] Client connected
+[  15.454][v][ipc_9] Client disconnected
+[  15.454][d][ipc_9] Exiting...
+[  16.458][v][ipc_10] Client connected
+[  16.517][v][ipc_10] Client disconnected
+[  16.517][d][ipc_10] Exiting...
+[  17.521][v][ipc_11] Client connected
+[  17.571][v][ipc_11] Client disconnected
+[  17.571][d][ipc_11] Exiting...
+[  18.574][v][ipc_12] Client connected
+[  18.618][v][ipc_12] Client disconnected
+[  18.619][d][ipc_12] Exiting...
+[  19.622][v][ipc_13] Client connected
+[  19.649][v][ipc_13] Client disconnected
+[  19.649][d][ipc_13] Exiting...
+[  20.652][v][ipc_14] Client connected
+[  20.693][v][ipc_14] Client disconnected
+[  20.693][d][ipc_14] Exiting...
+[  20.784][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  20.784][v][cplayer] EOF code: 3  
+[  20.784][d][vd] Uninit decoder.
+[  20.786][v][ipc_15] Client connected
+[  20.788][d][cplayer] Terminating demuxers...
+[  20.788][d][cplayer] Done terminating demuxers.
+[  20.788][v][ipc_15] Client disconnected
+[  20.789][v][cplayer] finished playback, success (reason 2)
+[  20.789][d][ipc_15] Exiting...
+[  20.789][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  20.789][v][file] Opening /data/media/c18-canary-h264.mp4
+[  20.789][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  20.789][d][file] Stream opened successfully.
+[  20.789][v][demux] Trying demuxers for level=normal.
+[  20.789][d][demux] Trying demuxer: disc (force-level: normal)
+[  20.789][d][demux] Trying demuxer: edl (force-level: normal)
+[  20.789][d][demux] Trying demuxer: cue (force-level: normal)
+[  20.789][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  20.789][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  20.789][d][demux] Trying demuxer: mkv (force-level: normal)
+[  20.789][d][demux] Trying demuxer: lavf (force-level: normal)
+[  20.791][v][ipc_16] Client connected
+[  20.791][v][ipc_16] Client disconnected
+[  20.791][d][ipc_16] Exiting...
+[  20.802][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  20.802][v][file] stream level seek from 131072 to 536637
+[  20.803][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  20.803][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  20.804][v][find_files] Loading external files in /data/media/
+[  20.804][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  20.804][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  20.804][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  20.804][v][lavf] select track 0
+[  20.804][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  20.805][v][vd] Container reported FPS: 30.000000
+[  20.806][v][vd] Codec list:
+[  20.806][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  20.806][v][vd] Opening decoder h264
+[  20.806][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  20.806][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  20.806][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  20.807][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  20.807][v][vf] User filter list:
+[  20.807][v][vf]   (empty)
+[  20.807][v][cplayer] Starting playback...
+[  20.807][v][file] stream level seek from 541053 to 48
+[  20.808][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  20.808][v][vd] Codec profile: Constrained Baseline (0x242)
+[  20.808][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  20.809][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  20.826][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  20.850][i][vd] Using hardware decoding (v4l2request-copy).
+[  20.850][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  20.850][v][vd] Using container aspect ratio.
+[  20.850][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  20.850][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  20.850][v][vf] [userdeint] (disabled)
+[  20.850][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  20.850][v][vf] [autorotate] (disabled)
+[  20.850][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  20.850][v][vf] [convert] (disabled)
+[  20.850][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  20.871][v][cplayer] first video frame after restart shown
+[  20.871][d][cplayer] starting video playback
+[  20.871][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  21.697][v][ipc_17] Client connected
+[  21.698][v][ipc_17] Client disconnected
+[  21.698][d][ipc_17] Exiting...
+[  22.701][v][ipc_18] Client connected
+[  22.728][v][ipc_18] Client disconnected
+[  22.728][d][ipc_18] Exiting...
+[  23.730][v][ipc_19] Client connected
+[  23.789][v][ipc_19] Client disconnected
+[  23.789][d][ipc_19] Exiting...
+[  24.793][v][ipc_20] Client connected
+[  24.823][v][ipc_20] Client disconnected
+[  24.823][d][ipc_20] Exiting...
+[  25.827][v][ipc_21] Client connected
+[  25.868][v][ipc_21] Client disconnected
+[  25.868][d][ipc_21] Exiting...
+[  26.871][v][ipc_22] Client connected
+[  26.872][v][ipc_22] Client disconnected
+[  26.872][d][ipc_22] Exiting...
+[  27.875][v][ipc_23] Client connected
+[  27.897][v][ipc_23] Client disconnected
+[  27.897][d][ipc_23] Exiting...
+[  28.900][v][ipc_24] Client connected
+[  28.901][v][ipc_24] Client disconnected
+[  28.901][d][ipc_24] Exiting...
+[  29.905][v][ipc_25] Client connected
+[  29.940][v][ipc_25] Client disconnected
+[  29.940][d][ipc_25] Exiting...
+[  30.810][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  30.810][v][cplayer] EOF code: 3  
+[  30.810][d][vd] Uninit decoder.
+[  30.812][v][ipc_26] Client connected
+[  30.814][d][cplayer] Terminating demuxers...
+[  30.815][v][ipc_26] Client disconnected
+[  30.815][d][cplayer] Done terminating demuxers.
+[  30.815][d][ipc_26] Exiting...
+[  30.815][v][cplayer] finished playback, success (reason 2)
+[  30.815][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  30.815][v][file] Opening /data/media/c18-canary-h264.mp4
+[  30.815][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  30.815][d][file] Stream opened successfully.
+[  30.815][v][demux] Trying demuxers for level=normal.
+[  30.815][d][demux] Trying demuxer: disc (force-level: normal)
+[  30.815][d][demux] Trying demuxer: edl (force-level: normal)
+[  30.816][d][demux] Trying demuxer: cue (force-level: normal)
+[  30.816][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  30.816][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  30.816][d][demux] Trying demuxer: mkv (force-level: normal)
+[  30.816][d][demux] Trying demuxer: lavf (force-level: normal)
+[  30.819][v][ipc_27] Client connected
+[  30.819][v][ipc_27] Client disconnected
+[  30.819][d][ipc_27] Exiting...
+[  30.821][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  30.821][v][file] stream level seek from 131072 to 536637
+[  30.822][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  30.822][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  30.823][v][find_files] Loading external files in /data/media/
+[  30.823][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  30.823][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  30.823][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  30.823][v][lavf] select track 0
+[  30.823][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  30.860][v][vd] Container reported FPS: 30.000000
+[  30.862][v][vd] Codec list:
+[  30.862][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  30.862][v][vd] Opening decoder h264
+[  30.862][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  30.862][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  30.862][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  30.862][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  30.862][v][vf] User filter list:
+[  30.862][v][vf]   (empty)
+[  30.863][v][cplayer] Starting playback...
+[  30.863][v][file] stream level seek from 541053 to 48
+[  30.864][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  30.864][v][vd] Codec profile: Constrained Baseline (0x242)
+[  30.864][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  30.864][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  30.880][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  30.906][i][vd] Using hardware decoding (v4l2request-copy).
+[  30.906][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  30.906][v][vd] Using container aspect ratio.
+[  30.906][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  30.906][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  30.906][v][vf] [userdeint] (disabled)
+[  30.906][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  30.906][v][vf] [autorotate] (disabled)
+[  30.906][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  30.906][v][vf] [convert] (disabled)
+[  30.906][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  30.930][v][cplayer] first video frame after restart shown
+[  30.930][d][cplayer] starting video playback
+[  30.930][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  30.943][v][ipc_28] Client connected
+[  30.971][v][ipc_28] Client disconnected
+[  30.971][d][ipc_28] Exiting...
+[  31.975][v][ipc_29] Client connected
+[  31.976][v][ipc_29] Client disconnected
+[  31.976][d][ipc_29] Exiting...
+[  32.979][v][ipc_30] Client connected
+[  33.014][v][ipc_30] Client disconnected
+[  33.014][d][ipc_30] Exiting...
+[  34.018][v][ipc_31] Client connected
+[  34.045][v][ipc_31] Client disconnected
+[  34.045][d][ipc_31] Exiting...
+[  35.048][v][ipc_32] Client connected
+[  35.049][v][ipc_32] Client disconnected
+[  35.049][d][ipc_32] Exiting...
+[  36.053][v][ipc_33] Client connected
+[  36.088][v][ipc_33] Client disconnected
+[  36.089][d][ipc_33] Exiting...
+[  37.091][v][ipc_34] Client connected
+[  37.136][v][ipc_34] Client disconnected
+[  37.136][d][ipc_34] Exiting...
+[  38.140][v][ipc_35] Client connected
+[  38.166][v][ipc_35] Client disconnected
+[  38.166][d][ipc_35] Exiting...
+[  39.169][v][ipc_36] Client connected
+[  39.170][v][ipc_36] Client disconnected
+[  39.170][d][ipc_36] Exiting...
+[  40.173][v][ipc_37] Client connected
+[  40.193][v][ipc_37] Client disconnected
+[  40.194][d][ipc_37] Exiting...
+[  40.838][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  40.838][v][cplayer] EOF code: 3  
+[  40.838][d][vd] Uninit decoder.
+[  40.840][v][ipc_38] Client connected
+[  40.842][d][cplayer] Terminating demuxers...
+[  40.843][d][cplayer] Done terminating demuxers.
+[  40.843][v][cplayer] finished playback, success (reason 2)
+[  40.843][e][ipc_38] Write error (Broken pipe)
+[  40.843][d][ipc_38] Exiting...
+[  40.843][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  40.843][v][file] Opening /data/media/c18-canary-h264.mp4
+[  40.843][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  40.843][d][file] Stream opened successfully.
+[  40.843][v][demux] Trying demuxers for level=normal.
+[  40.843][d][demux] Trying demuxer: disc (force-level: normal)
+[  40.843][d][demux] Trying demuxer: edl (force-level: normal)
+[  40.844][d][demux] Trying demuxer: cue (force-level: normal)
+[  40.844][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  40.844][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  40.844][d][demux] Trying demuxer: mkv (force-level: normal)
+[  40.844][d][demux] Trying demuxer: lavf (force-level: normal)
+[  40.847][v][ipc_39] Client connected
+[  40.847][v][ipc_39] Client disconnected
+[  40.847][d][ipc_39] Exiting...
+[  40.847][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  40.847][v][file] stream level seek from 131072 to 536637
+[  40.849][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  40.849][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  40.849][v][find_files] Loading external files in /data/media/
+[  40.849][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  40.849][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  40.849][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  40.849][v][lavf] select track 0
+[  40.849][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  40.852][v][vd] Container reported FPS: 30.000000
+[  40.853][v][vd] Codec list:
+[  40.853][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  40.853][v][vd] Opening decoder h264
+[  40.853][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  40.853][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  40.853][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  40.854][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  40.854][v][vf] User filter list:
+[  40.854][v][vf]   (empty)
+[  40.854][v][cplayer] Starting playback...
+[  40.854][v][file] stream level seek from 541053 to 48
+[  40.855][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  40.855][v][vd] Codec profile: Constrained Baseline (0x242)
+[  40.855][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  40.856][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  40.870][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  40.895][i][vd] Using hardware decoding (v4l2request-copy).
+[  40.896][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  40.896][v][vd] Using container aspect ratio.
+[  40.896][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  40.896][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  40.896][v][vf] [userdeint] (disabled)
+[  40.896][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  40.896][v][vf] [autorotate] (disabled)
+[  40.896][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  40.896][v][vf] [convert] (disabled)
+[  40.896][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  40.922][v][cplayer] first video frame after restart shown
+[  40.922][d][cplayer] starting video playback
+[  40.922][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  41.196][v][ipc_40] Client connected
+[  41.237][v][ipc_40] Client disconnected
+[  41.237][d][ipc_40] Exiting...
+[  42.241][v][ipc_41] Client connected
+[  42.242][v][ipc_41] Client disconnected
+[  42.242][d][ipc_41] Exiting...
+[  43.245][v][ipc_42] Client connected
+[  43.272][v][ipc_42] Client disconnected
+[  43.272][d][ipc_42] Exiting...
+[  44.275][v][ipc_43] Client connected
+[  44.296][v][ipc_43] Client disconnected
+[  44.297][d][ipc_43] Exiting...
+[  45.300][v][ipc_44] Client connected
+[  45.318][v][ipc_44] Client disconnected
+[  45.318][d][ipc_44] Exiting...
+[  46.322][v][ipc_45] Client connected
+[  46.359][v][ipc_45] Client disconnected
+[  46.359][d][ipc_45] Exiting...
+[  47.362][v][ipc_46] Client connected
+[  47.390][v][ipc_46] Client disconnected
+[  47.390][d][ipc_46] Exiting...
+[  48.393][v][ipc_47] Client connected
+[  48.394][v][ipc_47] Client disconnected
+[  48.394][d][ipc_47] Exiting...
+[  49.396][v][ipc_48] Client connected
+[  49.417][v][ipc_48] Client disconnected
+[  49.417][d][ipc_48] Exiting...
+[  50.420][v][ipc_49] Client connected
+[  50.516][v][ipc_49] Client disconnected
+[  50.516][d][ipc_49] Exiting...
+[  50.862][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  50.862][v][cplayer] EOF code: 3  
+[  50.862][d][vd] Uninit decoder.
+[  50.864][v][ipc_50] Client connected
+[  50.867][d][cplayer] Terminating demuxers...
+[  50.867][v][ipc_50] Client disconnected
+[  50.867][d][cplayer] Done terminating demuxers.
+[  50.867][v][cplayer] finished playback, success (reason 2)
+[  50.867][d][ipc_50] Exiting...
+[  50.867][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  50.868][v][file] Opening /data/media/c18-canary-h264.mp4
+[  50.868][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  50.868][d][file] Stream opened successfully.
+[  50.868][v][demux] Trying demuxers for level=normal.
+[  50.868][d][demux] Trying demuxer: disc (force-level: normal)
+[  50.868][d][demux] Trying demuxer: edl (force-level: normal)
+[  50.868][d][demux] Trying demuxer: cue (force-level: normal)
+[  50.868][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  50.868][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  50.868][d][demux] Trying demuxer: mkv (force-level: normal)
+[  50.868][d][demux] Trying demuxer: lavf (force-level: normal)
+[  50.872][v][ipc_51] Client connected
+[  50.872][v][ipc_51] Client disconnected
+[  50.872][d][ipc_51] Exiting...
+[  50.872][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  50.873][v][file] stream level seek from 131072 to 536637
+[  50.874][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  50.874][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  50.874][v][find_files] Loading external files in /data/media/
+[  50.875][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  50.875][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  50.875][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  50.875][v][lavf] select track 0
+[  50.875][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  50.913][v][vd] Container reported FPS: 30.000000
+[  50.914][v][vd] Codec list:
+[  50.914][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  50.914][v][vd] Opening decoder h264
+[  50.914][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  50.914][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  50.914][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  50.915][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  50.915][v][vf] User filter list:
+[  50.915][v][vf]   (empty)
+[  50.915][v][cplayer] Starting playback...
+[  50.915][v][file] stream level seek from 541053 to 48
+[  50.916][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  50.916][v][vd] Codec profile: Constrained Baseline (0x242)
+[  50.916][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  50.917][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  50.931][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  50.956][i][vd] Using hardware decoding (v4l2request-copy).
+[  50.956][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  50.956][v][vd] Using container aspect ratio.
+[  50.956][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  50.956][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  50.956][v][vf] [userdeint] (disabled)
+[  50.956][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  50.956][v][vf] [autorotate] (disabled)
+[  50.956][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  50.957][v][vf] [convert] (disabled)
+[  50.957][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  50.982][v][cplayer] first video frame after restart shown
+[  50.982][d][cplayer] starting video playback
+[  50.982][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  51.520][v][ipc_52] Client connected
+[  51.538][v][ipc_52] Client disconnected
+[  51.538][d][ipc_52] Exiting...
+[  52.541][v][ipc_53] Client connected
+[  52.564][v][ipc_53] Client disconnected
+[  52.564][d][ipc_53] Exiting...
+[  53.567][v][ipc_54] Client connected
+[  53.593][v][ipc_54] Client disconnected
+[  53.593][d][ipc_54] Exiting...
+[  54.596][v][ipc_55] Client connected
+[  54.642][v][ipc_55] Client disconnected
+[  54.642][d][ipc_55] Exiting...
+[  55.646][v][ipc_56] Client connected
+[  55.668][v][ipc_56] Client disconnected
+[  55.668][d][ipc_56] Exiting...
+[  56.669][v][ipc_57] Client connected
+[  56.682][v][ipc_57] Client disconnected
+[  56.683][d][ipc_57] Exiting...
+[  57.685][v][ipc_58] Client connected
+[  57.686][v][ipc_58] Client disconnected
+[  57.686][d][ipc_58] Exiting...
+[  58.689][v][ipc_59] Client connected
+[  58.710][v][ipc_59] Client disconnected
+[  58.710][d][ipc_59] Exiting...
+[  59.713][v][ipc_60] Client connected
+[  59.809][v][ipc_60] Client disconnected
+[  59.809][d][ipc_60] Exiting...
+[  60.813][v][ipc_61] Client connected
+[  60.860][v][ipc_61] Client disconnected
+[  60.860][d][ipc_61] Exiting...
+[  60.886][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  60.886][v][cplayer] EOF code: 3  
+[  60.886][d][vd] Uninit decoder.
+[  60.887][v][ipc_62] Client connected
+[  60.890][d][cplayer] Terminating demuxers...
+[  60.891][v][ipc_62] Client disconnected
+[  60.891][d][ipc_62] Exiting...
+[  60.891][d][cplayer] Done terminating demuxers.
+[  60.891][v][cplayer] finished playback, success (reason 2)
+[  60.891][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  60.891][v][file] Opening /data/media/c18-canary-h264.mp4
+[  60.891][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  60.891][d][file] Stream opened successfully.
+[  60.891][v][demux] Trying demuxers for level=normal.
+[  60.891][d][demux] Trying demuxer: disc (force-level: normal)
+[  60.891][d][demux] Trying demuxer: edl (force-level: normal)
+[  60.892][d][demux] Trying demuxer: cue (force-level: normal)
+[  60.892][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  60.892][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  60.892][d][demux] Trying demuxer: mkv (force-level: normal)
+[  60.892][d][demux] Trying demuxer: lavf (force-level: normal)
+[  60.894][v][ipc_63] Client connected
+[  60.895][v][ipc_63] Client disconnected
+[  60.895][d][ipc_63] Exiting...
+[  60.895][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  60.896][v][file] stream level seek from 131072 to 536637
+[  60.897][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  60.897][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  60.897][v][find_files] Loading external files in /data/media/
+[  60.897][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  60.897][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  60.898][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  60.898][v][lavf] select track 0
+[  60.898][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  60.904][v][vd] Container reported FPS: 30.000000
+[  60.905][v][vd] Codec list:
+[  60.905][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  60.905][v][vd] Opening decoder h264
+[  60.905][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  60.905][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  60.905][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  60.906][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  60.906][v][vf] User filter list:
+[  60.906][v][vf]   (empty)
+[  60.906][v][cplayer] Starting playback...
+[  60.906][v][file] stream level seek from 541053 to 48
+[  60.907][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  60.907][v][vd] Codec profile: Constrained Baseline (0x242)
+[  60.907][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  60.908][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  60.921][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  60.946][i][vd] Using hardware decoding (v4l2request-copy).
+[  60.946][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  60.946][v][vd] Using container aspect ratio.
+[  60.946][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  60.946][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  60.946][v][vf] [userdeint] (disabled)
+[  60.946][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  60.946][v][vf] [autorotate] (disabled)
+[  60.946][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  60.947][v][vf] [convert] (disabled)
+[  60.947][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  60.973][v][cplayer] first video frame after restart shown
+[  60.973][d][cplayer] starting video playback
+[  60.973][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  61.863][v][ipc_64] Client connected
+[  61.881][v][ipc_64] Client disconnected
+[  61.881][d][ipc_64] Exiting...
+[  62.885][v][ipc_65] Client connected
+[  62.905][v][ipc_65] Client disconnected
+[  62.906][d][ipc_65] Exiting...
+[  63.909][v][ipc_66] Client connected
+[  63.965][v][ipc_66] Client disconnected
+[  63.965][d][ipc_66] Exiting...
+[  64.969][v][ipc_67] Client connected
+[  64.996][v][ipc_67] Client disconnected
+[  64.996][d][ipc_67] Exiting...
+[  65.999][v][ipc_68] Client connected
+[  66.057][v][ipc_68] Client disconnected
+[  66.058][d][ipc_68] Exiting...
+[  67.061][v][ipc_69] Client connected
+[  67.092][v][ipc_69] Client disconnected
+[  67.092][d][ipc_69] Exiting...
+[  68.095][v][ipc_70] Client connected
+[  68.096][v][ipc_70] Client disconnected
+[  68.096][d][ipc_70] Exiting...
+[  69.100][v][ipc_71] Client connected
+[  69.134][v][ipc_71] Client disconnected
+[  69.135][d][ipc_71] Exiting...
+[  70.138][v][ipc_72] Client connected
+[  70.169][v][ipc_72] Client disconnected
+[  70.169][d][ipc_72] Exiting...
+[  70.913][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  70.913][v][cplayer] EOF code: 3  
+[  70.913][d][vd] Uninit decoder.
+[  70.916][v][ipc_73] Client connected
+[  70.917][d][cplayer] Terminating demuxers...
+[  70.918][v][ipc_73] Client disconnected
+[  70.918][d][ipc_73] Exiting...
+[  70.918][d][cplayer] Done terminating demuxers.
+[  70.918][v][cplayer] finished playback, success (reason 2)
+[  70.918][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  70.918][v][file] Opening /data/media/c18-canary-h264.mp4
+[  70.918][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  70.918][d][file] Stream opened successfully.
+[  70.919][v][demux] Trying demuxers for level=normal.
+[  70.919][d][demux] Trying demuxer: disc (force-level: normal)
+[  70.919][d][demux] Trying demuxer: edl (force-level: normal)
+[  70.919][d][demux] Trying demuxer: cue (force-level: normal)
+[  70.919][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  70.919][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  70.919][d][demux] Trying demuxer: mkv (force-level: normal)
+[  70.919][d][demux] Trying demuxer: lavf (force-level: normal)
+[  70.922][v][ipc_74] Client connected
+[  70.923][v][ipc_74] Client disconnected
+[  70.923][d][ipc_74] Exiting...
+[  70.923][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  70.923][v][file] stream level seek from 131072 to 536637
+[  70.925][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  70.925][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  70.925][v][find_files] Loading external files in /data/media/
+[  70.925][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  70.925][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  70.925][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  70.925][v][lavf] select track 0
+[  70.925][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  70.964][v][vd] Container reported FPS: 30.000000
+[  70.965][v][vd] Codec list:
+[  70.965][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  70.965][v][vd] Opening decoder h264
+[  70.965][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  70.965][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  70.965][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  70.965][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  70.965][v][vf] User filter list:
+[  70.966][v][vf]   (empty)
+[  70.966][v][cplayer] Starting playback...
+[  70.966][v][file] stream level seek from 541053 to 48
+[  70.967][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  70.967][v][vd] Codec profile: Constrained Baseline (0x242)
+[  70.967][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  70.968][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  70.982][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  71.008][i][vd] Using hardware decoding (v4l2request-copy).
+[  71.008][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  71.008][v][vd] Using container aspect ratio.
+[  71.008][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  71.008][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  71.008][v][vf] [userdeint] (disabled)
+[  71.008][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  71.008][v][vf] [autorotate] (disabled)
+[  71.008][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  71.008][v][vf] [convert] (disabled)
+[  71.008][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  71.033][v][cplayer] first video frame after restart shown
+[  71.033][d][cplayer] starting video playback
+[  71.033][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  71.173][v][ipc_75] Client connected
+[  71.214][v][ipc_75] Client disconnected
+[  71.214][d][ipc_75] Exiting...
+[  72.218][v][ipc_76] Client connected
+[  72.277][v][ipc_76] Client disconnected
+[  72.277][d][ipc_76] Exiting...
+[  73.282][v][ipc_77] Client connected
+[  73.310][v][ipc_77] Client disconnected
+[  73.310][d][ipc_77] Exiting...
+[  74.314][v][ipc_78] Client connected
+[  74.315][v][ipc_78] Client disconnected
+[  74.315][d][ipc_78] Exiting...
+[  75.318][v][ipc_79] Client connected
+[  75.342][v][ipc_79] Client disconnected
+[  75.342][d][ipc_79] Exiting...
+[  76.347][v][ipc_80] Client connected
+[  76.383][v][ipc_80] Client disconnected
+[  76.383][d][ipc_80] Exiting...
+[  77.386][v][ipc_81] Client connected
+[  77.427][v][ipc_81] Client disconnected
+[  77.427][d][ipc_81] Exiting...
+[  78.430][v][ipc_82] Client connected
+[  78.431][v][ipc_82] Client disconnected
+[  78.431][d][ipc_82] Exiting...
+[  79.434][v][ipc_83] Client connected
+[  79.474][v][ipc_83] Client disconnected
+[  79.474][d][ipc_83] Exiting...
+[  80.478][v][ipc_84] Client connected
+[  80.505][v][ipc_84] Client disconnected
+[  80.506][d][ipc_84] Exiting...
+[  80.936][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  80.937][v][cplayer] EOF code: 3  
+[  80.937][d][vd] Uninit decoder.
+[  80.938][v][ipc_85] Client connected
+[  80.941][d][cplayer] Terminating demuxers...
+[  80.941][v][ipc_85] Client disconnected
+[  80.941][d][cplayer] Done terminating demuxers.
+[  80.941][d][ipc_85] Exiting...
+[  80.941][v][cplayer] finished playback, success (reason 2)
+[  80.941][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  80.941][v][file] Opening /data/media/c18-canary-h264.mp4
+[  80.942][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  80.942][d][file] Stream opened successfully.
+[  80.942][v][demux] Trying demuxers for level=normal.
+[  80.942][d][demux] Trying demuxer: disc (force-level: normal)
+[  80.942][d][demux] Trying demuxer: edl (force-level: normal)
+[  80.942][d][demux] Trying demuxer: cue (force-level: normal)
+[  80.942][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  80.942][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  80.942][d][demux] Trying demuxer: mkv (force-level: normal)
+[  80.942][d][demux] Trying demuxer: lavf (force-level: normal)
+[  80.944][v][ipc_86] Client connected
+[  80.945][v][ipc_86] Client disconnected
+[  80.945][d][ipc_86] Exiting...
+[  80.946][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  80.946][v][file] stream level seek from 131072 to 536637
+[  80.947][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  80.947][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  80.947][v][find_files] Loading external files in /data/media/
+[  80.947][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  80.948][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  80.948][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  80.948][v][lavf] select track 0
+[  80.948][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  80.954][v][vd] Container reported FPS: 30.000000
+[  80.955][v][vd] Codec list:
+[  80.955][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  80.955][v][vd] Opening decoder h264
+[  80.955][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  80.955][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  80.955][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  80.956][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  80.956][v][vf] User filter list:
+[  80.956][v][vf]   (empty)
+[  80.957][v][cplayer] Starting playback...
+[  80.957][v][file] stream level seek from 541053 to 48
+[  80.957][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  80.957][v][vd] Codec profile: Constrained Baseline (0x242)
+[  80.957][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  80.958][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  80.972][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  80.998][i][vd] Using hardware decoding (v4l2request-copy).
+[  80.998][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  80.998][v][vd] Using container aspect ratio.
+[  80.998][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  80.998][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  80.998][v][vf] [userdeint] (disabled)
+[  80.998][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  80.998][v][vf] [autorotate] (disabled)
+[  80.998][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  80.998][v][vf] [convert] (disabled)
+[  80.998][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  81.024][v][cplayer] first video frame after restart shown
+[  81.025][d][cplayer] starting video playback
+[  81.025][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  81.508][v][ipc_87] Client connected
+[  81.509][v][ipc_87] Client disconnected
+[  81.509][d][ipc_87] Exiting...
+[  82.513][v][ipc_88] Client connected
+[  82.549][v][ipc_88] Client disconnected
+[  82.550][d][ipc_88] Exiting...
+[  83.552][v][ipc_89] Client connected
+[  83.580][v][ipc_89] Client disconnected
+[  83.580][d][ipc_89] Exiting...
+[  84.583][v][ipc_90] Client connected
+[  84.623][v][ipc_90] Client disconnected
+[  84.623][d][ipc_90] Exiting...
+[  85.626][v][ipc_91] Client connected
+[  85.627][v][ipc_91] Client disconnected
+[  85.627][d][ipc_91] Exiting...
+[  86.630][v][ipc_92] Client connected
+[  86.653][v][ipc_92] Client disconnected
+[  86.653][d][ipc_92] Exiting...
+[  87.656][v][ipc_93] Client connected
+[  87.752][v][ipc_93] Client disconnected
+[  87.752][d][ipc_93] Exiting...
+[  88.756][v][ipc_94] Client connected
+[  88.774][v][ipc_94] Client disconnected
+[  88.774][d][ipc_94] Exiting...
+[  89.777][v][ipc_95] Client connected
+[  89.797][v][ipc_95] Client disconnected
+[  89.798][d][ipc_95] Exiting...
+[  90.800][v][ipc_96] Client connected
+[  90.841][v][ipc_96] Client disconnected
+[  90.841][d][ipc_96] Exiting...
+[  90.963][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[  90.963][v][cplayer] EOF code: 3  
+[  90.963][d][vd] Uninit decoder.
+[  90.965][v][ipc_97] Client connected
+[  90.968][d][cplayer] Terminating demuxers...
+[  90.968][d][cplayer] Done terminating demuxers.
+[  90.968][v][ipc_97] Client disconnected
+[  90.968][v][cplayer] finished playback, success (reason 2)
+[  90.968][d][ipc_97] Exiting...
+[  90.968][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[  90.969][v][file] Opening /data/media/c18-canary-h264.mp4
+[  90.969][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  90.969][d][file] Stream opened successfully.
+[  90.969][v][demux] Trying demuxers for level=normal.
+[  90.969][d][demux] Trying demuxer: disc (force-level: normal)
+[  90.969][d][demux] Trying demuxer: edl (force-level: normal)
+[  90.969][d][demux] Trying demuxer: cue (force-level: normal)
+[  90.969][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  90.969][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  90.969][d][demux] Trying demuxer: mkv (force-level: normal)
+[  90.969][d][demux] Trying demuxer: lavf (force-level: normal)
+[  90.972][v][ipc_98] Client connected
+[  90.973][v][ipc_98] Client disconnected
+[  90.973][d][ipc_98] Exiting...
+[  90.974][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  90.974][v][file] stream level seek from 131072 to 536637
+[  90.975][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  90.975][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[  90.976][v][find_files] Loading external files in /data/media/
+[  90.976][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[  90.976][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[  90.976][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  90.976][v][lavf] select track 0
+[  90.976][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[  90.977][v][vd] Container reported FPS: 30.000000
+[  90.978][v][vd] Codec list:
+[  90.978][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  90.978][v][vd] Opening decoder h264
+[  90.978][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  90.978][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  90.978][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  90.979][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  90.979][v][vf] User filter list:
+[  90.979][v][vf]   (empty)
+[  90.979][v][cplayer] Starting playback...
+[  90.979][v][file] stream level seek from 541053 to 48
+[  90.980][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  90.980][v][vd] Codec profile: Constrained Baseline (0x242)
+[  90.980][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  90.981][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  90.993][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[  91.016][i][vd] Using hardware decoding (v4l2request-copy).
+[  91.016][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[  91.016][v][vd] Using container aspect ratio.
+[  91.016][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  91.016][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  91.016][v][vf] [userdeint] (disabled)
+[  91.016][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  91.016][v][vf] [autorotate] (disabled)
+[  91.016][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  91.016][v][vf] [convert] (disabled)
+[  91.016][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[  91.037][v][cplayer] first video frame after restart shown
+[  91.037][d][cplayer] starting video playback
+[  91.037][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  91.845][v][ipc_99] Client connected
+[  91.863][v][ipc_99] Client disconnected
+[  91.863][d][ipc_99] Exiting...
+[  92.866][v][ipc_100] Client connected
+[  92.893][v][ipc_100] Client disconnected
+[  92.893][d][ipc_100] Exiting...
+[  93.896][v][ipc_101] Client connected
+[  93.955][v][ipc_101] Client disconnected
+[  93.955][d][ipc_101] Exiting...
+[  94.959][v][ipc_102] Client connected
+[  94.989][v][ipc_102] Client disconnected
+[  94.989][d][ipc_102] Exiting...
+[  95.992][v][ipc_103] Client connected
+[  96.051][v][ipc_103] Client disconnected
+[  96.051][d][ipc_103] Exiting...
+[  97.055][v][ipc_104] Client connected
+[  97.085][v][ipc_104] Client disconnected
+[  97.085][d][ipc_104] Exiting...
+[  98.088][v][ipc_105] Client connected
+[  98.089][v][ipc_105] Client disconnected
+[  98.089][d][ipc_105] Exiting...
+[  99.092][v][ipc_106] Client connected
+[  99.113][v][ipc_106] Client disconnected
+[  99.113][d][ipc_106] Exiting...
+[ 100.116][v][ipc_107] Client connected
+[ 100.117][v][ipc_107] Client disconnected
+[ 100.117][d][ipc_107] Exiting...
+[ 100.987][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 100.987][v][cplayer] EOF code: 3  
+[ 100.987][d][vd] Uninit decoder.
+[ 100.989][v][ipc_108] Client connected
+[ 100.992][d][cplayer] Terminating demuxers...
+[ 100.992][v][ipc_108] Client disconnected
+[ 100.992][d][cplayer] Done terminating demuxers.
+[ 100.992][d][ipc_108] Exiting...
+[ 100.992][v][cplayer] finished playback, success (reason 2)
+[ 100.993][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 100.993][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 100.993][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 100.993][d][file] Stream opened successfully.
+[ 100.993][v][demux] Trying demuxers for level=normal.
+[ 100.993][d][demux] Trying demuxer: disc (force-level: normal)
+[ 100.993][d][demux] Trying demuxer: edl (force-level: normal)
+[ 100.993][d][demux] Trying demuxer: cue (force-level: normal)
+[ 100.993][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 100.993][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 100.993][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 100.994][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 100.996][v][ipc_109] Client connected
+[ 100.997][v][ipc_109] Client disconnected
+[ 100.997][d][ipc_109] Exiting...
+[ 100.998][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 100.998][v][file] stream level seek from 131072 to 536637
+[ 101.000][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 101.000][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 101.000][v][find_files] Loading external files in /data/media/
+[ 101.000][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 101.000][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 101.000][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 101.000][v][lavf] select track 0
+[ 101.000][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 101.027][v][vd] Container reported FPS: 30.000000
+[ 101.028][v][vd] Codec list:
+[ 101.028][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 101.028][v][vd] Opening decoder h264
+[ 101.028][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 101.028][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 101.028][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 101.029][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 101.029][v][vf] User filter list:
+[ 101.029][v][vf]   (empty)
+[ 101.029][v][cplayer] Starting playback...
+[ 101.029][v][file] stream level seek from 541053 to 48
+[ 101.030][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 101.030][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 101.030][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 101.031][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 101.044][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 101.070][i][vd] Using hardware decoding (v4l2request-copy).
+[ 101.070][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 101.070][v][vd] Using container aspect ratio.
+[ 101.070][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 101.070][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 101.070][v][vf] [userdeint] (disabled)
+[ 101.070][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 101.070][v][vf] [autorotate] (disabled)
+[ 101.070][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 101.070][v][vf] [convert] (disabled)
+[ 101.070][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 101.096][v][cplayer] first video frame after restart shown
+[ 101.096][d][cplayer] starting video playback
+[ 101.096][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 101.121][v][ipc_110] Client connected
+[ 101.157][v][ipc_110] Client disconnected
+[ 101.157][d][ipc_110] Exiting...
+[ 102.160][v][ipc_111] Client connected
+[ 102.185][v][ipc_111] Client disconnected
+[ 102.185][d][ipc_111] Exiting...
+[ 103.188][v][ipc_112] Client connected
+[ 103.189][v][ipc_112] Client disconnected
+[ 103.189][d][ipc_112] Exiting...
+[ 104.192][v][ipc_113] Client connected
+[ 104.210][v][ipc_113] Client disconnected
+[ 104.210][d][ipc_113] Exiting...
+[ 105.213][v][ipc_114] Client connected
+[ 105.214][v][ipc_114] Client disconnected
+[ 105.214][d][ipc_114] Exiting...
+[ 106.217][v][ipc_115] Client connected
+[ 106.221][v][ipc_115] Client disconnected
+[ 106.221][d][ipc_115] Exiting...
+[ 107.224][v][ipc_116] Client connected
+[ 107.241][v][ipc_116] Client disconnected
+[ 107.242][d][ipc_116] Exiting...
+[ 108.245][v][ipc_117] Client connected
+[ 108.261][v][ipc_117] Client disconnected
+[ 108.262][d][ipc_117] Exiting...
+[ 109.265][v][ipc_118] Client connected
+[ 109.294][v][ipc_118] Client disconnected
+[ 109.295][d][ipc_118] Exiting...
+[ 110.299][v][ipc_119] Client connected
+[ 110.300][v][ipc_119] Client disconnected
+[ 110.300][d][ipc_119] Exiting...
+[ 111.011][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 111.011][v][cplayer] EOF code: 3  
+[ 111.011][d][vd] Uninit decoder.
+[ 111.013][v][ipc_120] Client connected
+[ 111.015][d][cplayer] Terminating demuxers...
+[ 111.016][v][ipc_120] Client disconnected
+[ 111.016][d][ipc_120] Exiting...
+[ 111.016][d][cplayer] Done terminating demuxers.
+[ 111.016][v][cplayer] finished playback, success (reason 2)
+[ 111.016][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 111.017][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 111.017][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 111.017][d][file] Stream opened successfully.
+[ 111.017][v][demux] Trying demuxers for level=normal.
+[ 111.017][d][demux] Trying demuxer: disc (force-level: normal)
+[ 111.017][d][demux] Trying demuxer: edl (force-level: normal)
+[ 111.017][d][demux] Trying demuxer: cue (force-level: normal)
+[ 111.017][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 111.017][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 111.017][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 111.017][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 111.019][v][ipc_121] Client connected
+[ 111.020][v][ipc_121] Client disconnected
+[ 111.020][d][ipc_121] Exiting...
+[ 111.021][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 111.021][v][file] stream level seek from 131072 to 536637
+[ 111.022][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 111.022][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 111.023][v][find_files] Loading external files in /data/media/
+[ 111.023][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 111.023][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 111.023][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 111.023][v][lavf] select track 0
+[ 111.023][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 111.024][v][vd] Container reported FPS: 30.000000
+[ 111.025][v][vd] Codec list:
+[ 111.025][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 111.025][v][vd] Opening decoder h264
+[ 111.025][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 111.025][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 111.025][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 111.026][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 111.026][v][vf] User filter list:
+[ 111.026][v][vf]   (empty)
+[ 111.026][v][cplayer] Starting playback...
+[ 111.027][v][file] stream level seek from 541053 to 48
+[ 111.027][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 111.027][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 111.027][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 111.028][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 111.042][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 111.066][i][vd] Using hardware decoding (v4l2request-copy).
+[ 111.066][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 111.066][v][vd] Using container aspect ratio.
+[ 111.066][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 111.066][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 111.066][v][vf] [userdeint] (disabled)
+[ 111.066][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 111.066][v][vf] [autorotate] (disabled)
+[ 111.066][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 111.067][v][vf] [convert] (disabled)
+[ 111.067][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 111.088][v][cplayer] first video frame after restart shown
+[ 111.088][d][cplayer] starting video playback
+[ 111.088][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 111.302][v][ipc_122] Client connected
+[ 111.337][v][ipc_122] Client disconnected
+[ 111.337][d][ipc_122] Exiting...
+[ 112.340][v][ipc_123] Client connected
+[ 112.399][v][ipc_123] Client disconnected
+[ 112.399][d][ipc_123] Exiting...
+[ 113.403][v][ipc_124] Client connected
+[ 113.435][v][ipc_124] Client disconnected
+[ 113.435][d][ipc_124] Exiting...
+[ 114.438][v][ipc_125] Client connected
+[ 114.439][v][ipc_125] Client disconnected
+[ 114.440][d][ipc_125] Exiting...
+[ 115.443][v][ipc_126] Client connected
+[ 115.460][v][ipc_126] Client disconnected
+[ 115.460][d][ipc_126] Exiting...
+[ 116.463][v][ipc_127] Client connected
+[ 116.504][v][ipc_127] Client disconnected
+[ 116.504][d][ipc_127] Exiting...
+[ 117.508][v][ipc_128] Client connected
+[ 117.548][v][ipc_128] Client disconnected
+[ 117.548][d][ipc_128] Exiting...
+[ 118.551][v][ipc_129] Client connected
+[ 118.552][v][ipc_129] Client disconnected
+[ 118.552][d][ipc_129] Exiting...
+[ 119.555][v][ipc_130] Client connected
+[ 119.586][v][ipc_130] Client disconnected
+[ 119.586][d][ipc_130] Exiting...
+[ 120.590][v][ipc_131] Client connected
+[ 120.686][v][ipc_131] Client disconnected
+[ 120.686][d][ipc_131] Exiting...
+[ 121.048][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 121.048][v][cplayer] EOF code: 3  
+[ 121.048][d][vd] Uninit decoder.
+[ 121.052][v][ipc_132] Client connected
+[ 121.053][d][cplayer] Terminating demuxers...
+[ 121.054][d][cplayer] Done terminating demuxers.
+[ 121.054][v][ipc_132] Client disconnected
+[ 121.054][v][cplayer] finished playback, success (reason 2)
+[ 121.054][d][ipc_132] Exiting...
+[ 121.054][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 121.054][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 121.054][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 121.054][d][file] Stream opened successfully.
+[ 121.054][v][demux] Trying demuxers for level=normal.
+[ 121.054][d][demux] Trying demuxer: disc (force-level: normal)
+[ 121.054][d][demux] Trying demuxer: edl (force-level: normal)
+[ 121.054][d][demux] Trying demuxer: cue (force-level: normal)
+[ 121.054][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 121.054][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 121.054][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 121.054][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 121.057][v][ipc_133] Client connected
+[ 121.058][v][ipc_133] Client disconnected
+[ 121.058][d][ipc_133] Exiting...
+[ 121.058][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 121.058][v][file] stream level seek from 131072 to 536637
+[ 121.059][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 121.059][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 121.060][v][find_files] Loading external files in /data/media/
+[ 121.060][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 121.060][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 121.060][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 121.060][v][lavf] select track 0
+[ 121.060][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 121.080][v][vd] Container reported FPS: 30.000000
+[ 121.081][v][vd] Codec list:
+[ 121.081][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 121.081][v][vd] Opening decoder h264
+[ 121.081][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 121.081][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 121.081][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 121.082][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 121.082][v][vf] User filter list:
+[ 121.082][v][vf]   (empty)
+[ 121.082][v][cplayer] Starting playback...
+[ 121.082][v][file] stream level seek from 541053 to 48
+[ 121.083][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 121.083][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 121.083][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 121.084][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 121.097][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 121.123][i][vd] Using hardware decoding (v4l2request-copy).
+[ 121.123][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 121.123][v][vd] Using container aspect ratio.
+[ 121.123][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 121.123][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 121.123][v][vf] [userdeint] (disabled)
+[ 121.123][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 121.123][v][vf] [autorotate] (disabled)
+[ 121.123][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 121.123][v][vf] [convert] (disabled)
+[ 121.123][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 121.149][v][cplayer] first video frame after restart shown
+[ 121.149][d][cplayer] starting video playback
+[ 121.149][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 121.690][v][ipc_134] Client connected
+[ 121.709][v][ipc_134] Client disconnected
+[ 121.709][d][ipc_134] Exiting...
+[ 122.713][v][ipc_135] Client connected
+[ 122.727][v][ipc_135] Client disconnected
+[ 122.727][d][ipc_135] Exiting...
+[ 123.730][v][ipc_136] Client connected
+[ 123.771][v][ipc_136] Client disconnected
+[ 123.771][d][ipc_136] Exiting...
+[ 124.774][v][ipc_137] Client connected
+[ 124.832][v][ipc_137] Client disconnected
+[ 124.832][d][ipc_137] Exiting...
+[ 125.836][v][ipc_138] Client connected
+[ 125.870][v][ipc_138] Client disconnected
+[ 125.870][d][ipc_138] Exiting...
+[ 126.874][v][ipc_139] Client connected
+[ 126.875][v][ipc_139] Client disconnected
+[ 126.875][d][ipc_139] Exiting...
+[ 127.879][v][ipc_140] Client connected
+[ 127.896][v][ipc_140] Client disconnected
+[ 127.897][d][ipc_140] Exiting...
+[ 128.899][v][ipc_141] Client connected
+[ 128.900][v][ipc_141] Client disconnected
+[ 128.900][d][ipc_141] Exiting...
+[ 129.904][v][ipc_142] Client connected
+[ 129.922][v][ipc_142] Client disconnected
+[ 129.922][d][ipc_142] Exiting...
+[ 130.925][v][ipc_143] Client connected
+[ 130.966][v][ipc_143] Client disconnected
+[ 130.966][d][ipc_143] Exiting...
+[ 131.088][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 131.089][v][cplayer] EOF code: 3  
+[ 131.089][d][vd] Uninit decoder.
+[ 131.091][v][ipc_144] Client connected
+[ 131.093][d][cplayer] Terminating demuxers...
+[ 131.093][v][ipc_144] Client disconnected
+[ 131.093][d][ipc_144] Exiting...
+[ 131.093][d][cplayer] Done terminating demuxers.
+[ 131.093][v][cplayer] finished playback, success (reason 2)
+[ 131.093][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 131.094][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 131.094][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 131.094][d][file] Stream opened successfully.
+[ 131.094][v][demux] Trying demuxers for level=normal.
+[ 131.094][d][demux] Trying demuxer: disc (force-level: normal)
+[ 131.094][d][demux] Trying demuxer: edl (force-level: normal)
+[ 131.094][d][demux] Trying demuxer: cue (force-level: normal)
+[ 131.094][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 131.094][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 131.094][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 131.094][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 131.097][v][ipc_145] Client connected
+[ 131.098][v][ipc_145] Client disconnected
+[ 131.098][d][ipc_145] Exiting...
+[ 131.098][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 131.099][v][file] stream level seek from 131072 to 536637
+[ 131.100][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 131.100][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 131.100][v][find_files] Loading external files in /data/media/
+[ 131.101][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 131.101][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 131.101][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 131.101][v][lavf] select track 0
+[ 131.101][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 131.102][v][vd] Container reported FPS: 30.000000
+[ 131.103][v][vd] Codec list:
+[ 131.103][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 131.103][v][vd] Opening decoder h264
+[ 131.103][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 131.103][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 131.103][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 131.104][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 131.104][v][vf] User filter list:
+[ 131.104][v][vf]   (empty)
+[ 131.104][v][cplayer] Starting playback...
+[ 131.104][v][file] stream level seek from 541053 to 48
+[ 131.105][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 131.105][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 131.105][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 131.106][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 131.119][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 131.141][i][vd] Using hardware decoding (v4l2request-copy).
+[ 131.141][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 131.141][v][vd] Using container aspect ratio.
+[ 131.141][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 131.141][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 131.141][v][vf] [userdeint] (disabled)
+[ 131.141][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 131.141][v][vf] [autorotate] (disabled)
+[ 131.141][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 131.142][v][vf] [convert] (disabled)
+[ 131.142][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 131.162][v][cplayer] first video frame after restart shown
+[ 131.163][d][cplayer] starting video playback
+[ 131.163][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 131.971][v][ipc_146] Client connected
+[ 131.975][v][ipc_146] Client disconnected
+[ 131.975][d][ipc_146] Exiting...
+[ 132.978][v][ipc_147] Client connected
+[ 133.019][v][ipc_147] Client disconnected
+[ 133.019][d][ipc_147] Exiting...
+[ 134.021][v][ipc_148] Client connected
+[ 134.080][v][ipc_148] Client disconnected
+[ 134.080][d][ipc_148] Exiting...
+[ 135.084][v][ipc_149] Client connected
+[ 135.114][v][ipc_149] Client disconnected
+[ 135.114][d][ipc_149] Exiting...
+[ 136.117][v][ipc_150] Client connected
+[ 136.118][v][ipc_150] Client disconnected
+[ 136.118][d][ipc_150] Exiting...
+[ 137.122][v][ipc_151] Client connected
+[ 137.157][v][ipc_151] Client disconnected
+[ 137.158][d][ipc_151] Exiting...
+[ 138.161][v][ipc_152] Client connected
+[ 138.205][v][ipc_152] Client disconnected
+[ 138.205][d][ipc_152] Exiting...
+[ 139.209][v][ipc_153] Client connected
+[ 139.252][v][ipc_153] Client disconnected
+[ 139.252][d][ipc_153] Exiting...
+[ 140.256][v][ipc_154] Client connected
+[ 140.284][v][ipc_154] Client disconnected
+[ 140.284][d][ipc_154] Exiting...
+[ 141.112][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 141.113][v][cplayer] EOF code: 3  
+[ 141.113][d][vd] Uninit decoder.
+[ 141.114][v][ipc_155] Client connected
+[ 141.117][d][cplayer] Terminating demuxers...
+[ 141.117][d][cplayer] Done terminating demuxers.
+[ 141.117][v][cplayer] finished playback, success (reason 2)
+[ 141.117][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 141.117][e][ipc_155] Write error (Broken pipe)
+[ 141.118][d][ipc_155] Exiting...
+[ 141.118][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 141.118][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 141.118][d][file] Stream opened successfully.
+[ 141.118][v][demux] Trying demuxers for level=normal.
+[ 141.118][d][demux] Trying demuxer: disc (force-level: normal)
+[ 141.118][d][demux] Trying demuxer: edl (force-level: normal)
+[ 141.118][d][demux] Trying demuxer: cue (force-level: normal)
+[ 141.118][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 141.118][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 141.118][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 141.118][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 141.121][v][ipc_156] Client connected
+[ 141.122][v][ipc_156] Client disconnected
+[ 141.122][d][ipc_156] Exiting...
+[ 141.123][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 141.123][v][file] stream level seek from 131072 to 536637
+[ 141.124][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 141.124][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 141.125][v][find_files] Loading external files in /data/media/
+[ 141.125][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 141.125][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 141.125][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 141.125][v][lavf] select track 0
+[ 141.125][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 141.151][v][vd] Container reported FPS: 30.000000
+[ 141.152][v][vd] Codec list:
+[ 141.152][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 141.152][v][vd] Opening decoder h264
+[ 141.153][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 141.153][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 141.153][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 141.153][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 141.153][v][vf] User filter list:
+[ 141.153][v][vf]   (empty)
+[ 141.154][v][cplayer] Starting playback...
+[ 141.154][v][file] stream level seek from 541053 to 48
+[ 141.155][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 141.155][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 141.155][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 141.155][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 141.169][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 141.195][i][vd] Using hardware decoding (v4l2request-copy).
+[ 141.195][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 141.195][v][vd] Using container aspect ratio.
+[ 141.195][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 141.195][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 141.195][v][vf] [userdeint] (disabled)
+[ 141.195][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 141.195][v][vf] [autorotate] (disabled)
+[ 141.195][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 141.196][v][vf] [convert] (disabled)
+[ 141.196][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 141.220][v][cplayer] first video frame after restart shown
+[ 141.220][d][cplayer] starting video playback
+[ 141.220][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 141.287][v][ipc_157] Client connected
+[ 141.328][v][ipc_157] Client disconnected
+[ 141.328][d][ipc_157] Exiting...
+[ 142.331][v][ipc_158] Client connected
+[ 142.371][v][ipc_158] Client disconnected
+[ 142.371][d][ipc_158] Exiting...
+[ 143.374][v][ipc_159] Client connected
+[ 143.432][v][ipc_159] Client disconnected
+[ 143.432][d][ipc_159] Exiting...
+[ 144.437][v][ipc_160] Client connected
+[ 144.475][v][ipc_160] Client disconnected
+[ 144.475][d][ipc_160] Exiting...
+[ 145.478][v][ipc_161] Client connected
+[ 145.479][v][ipc_161] Client disconnected
+[ 145.479][d][ipc_161] Exiting...
+[ 146.483][v][ipc_162] Client connected
+[ 146.501][v][ipc_162] Client disconnected
+[ 146.501][d][ipc_162] Exiting...
+[ 147.504][v][ipc_163] Client connected
+[ 147.544][v][ipc_163] Client disconnected
+[ 147.544][d][ipc_163] Exiting...
+[ 148.547][v][ipc_164] Client connected
+[ 148.587][v][ipc_164] Client disconnected
+[ 148.588][d][ipc_164] Exiting...
+[ 149.592][v][ipc_165] Client connected
+[ 149.631][v][ipc_165] Client disconnected
+[ 149.631][d][ipc_165] Exiting...
+[ 150.635][v][ipc_166] Client connected
+[ 150.636][v][ipc_166] Client disconnected
+[ 150.636][d][ipc_166] Exiting...
+[ 151.135][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 151.135][v][cplayer] EOF code: 3  
+[ 151.135][d][vd] Uninit decoder.
+[ 151.136][v][ipc_167] Client connected
+[ 151.139][d][cplayer] Terminating demuxers...
+[ 151.140][d][cplayer] Done terminating demuxers.
+[ 151.140][v][cplayer] finished playback, success (reason 2)
+[ 151.140][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 151.140][e][ipc_167] Write error (Broken pipe)
+[ 151.140][d][ipc_167] Exiting...
+[ 151.140][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 151.140][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 151.140][d][file] Stream opened successfully.
+[ 151.140][v][demux] Trying demuxers for level=normal.
+[ 151.140][d][demux] Trying demuxer: disc (force-level: normal)
+[ 151.140][d][demux] Trying demuxer: edl (force-level: normal)
+[ 151.140][d][demux] Trying demuxer: cue (force-level: normal)
+[ 151.140][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 151.140][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 151.140][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 151.140][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 151.143][v][ipc_168] Client connected
+[ 151.144][v][ipc_168] Client disconnected
+[ 151.144][d][ipc_168] Exiting...
+[ 151.144][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 151.144][v][file] stream level seek from 131072 to 536637
+[ 151.146][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 151.146][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 151.146][v][find_files] Loading external files in /data/media/
+[ 151.146][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 151.146][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 151.146][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 151.147][v][lavf] select track 0
+[ 151.147][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 151.147][v][vd] Container reported FPS: 30.000000
+[ 151.149][v][vd] Codec list:
+[ 151.149][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 151.149][v][vd] Opening decoder h264
+[ 151.149][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 151.149][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 151.149][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 151.150][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 151.150][v][vf] User filter list:
+[ 151.150][v][vf]   (empty)
+[ 151.150][v][cplayer] Starting playback...
+[ 151.150][v][file] stream level seek from 541053 to 48
+[ 151.151][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 151.151][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 151.151][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 151.152][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 151.166][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 151.190][i][vd] Using hardware decoding (v4l2request-copy).
+[ 151.190][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 151.190][v][vd] Using container aspect ratio.
+[ 151.190][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 151.190][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 151.190][v][vf] [userdeint] (disabled)
+[ 151.190][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 151.190][v][vf] [autorotate] (disabled)
+[ 151.190][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 151.191][v][vf] [convert] (disabled)
+[ 151.191][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 151.212][v][cplayer] first video frame after restart shown
+[ 151.212][d][cplayer] starting video playback
+[ 151.212][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 151.639][v][ipc_169] Client connected
+[ 151.671][v][ipc_169] Client disconnected
+[ 151.671][d][ipc_169] Exiting...
+[ 152.674][v][ipc_170] Client connected
+[ 152.703][v][ipc_170] Client disconnected
+[ 152.704][d][ipc_170] Exiting...
+[ 153.708][v][ipc_171] Client connected
+[ 153.709][v][ipc_171] Client disconnected
+[ 153.709][d][ipc_171] Exiting...
+[ 154.711][v][ipc_172] Client connected
+[ 154.761][v][ipc_172] Client disconnected
+[ 154.761][d][ipc_172] Exiting...
+[ 155.765][v][ipc_173] Client connected
+[ 155.793][v][ipc_173] Client disconnected
+[ 155.793][d][ipc_173] Exiting...
+[ 156.796][v][ipc_174] Client connected
+[ 156.797][v][ipc_174] Client disconnected
+[ 156.797][d][ipc_174] Exiting...
+[ 157.800][v][ipc_175] Client connected
+[ 157.819][v][ipc_175] Client disconnected
+[ 157.819][d][ipc_175] Exiting...
+[ 158.822][v][ipc_176] Client connected
+[ 158.863][v][ipc_176] Client disconnected
+[ 158.863][d][ipc_176] Exiting...
+[ 159.867][v][ipc_177] Client connected
+[ 159.926][v][ipc_177] Client disconnected
+[ 159.926][d][ipc_177] Exiting...
+[ 160.930][v][ipc_178] Client connected
+[ 160.963][v][ipc_178] Client disconnected
+[ 160.963][d][ipc_178] Exiting...
+[ 161.171][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 161.172][v][cplayer] EOF code: 3  
+[ 161.172][d][vd] Uninit decoder.
+[ 161.174][v][ipc_179] Client connected
+[ 161.175][d][cplayer] Terminating demuxers...
+[ 161.176][v][ipc_179] Client disconnected
+[ 161.176][d][cplayer] Done terminating demuxers.
+[ 161.176][d][ipc_179] Exiting...
+[ 161.176][v][cplayer] finished playback, success (reason 2)
+[ 161.176][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 161.176][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 161.176][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 161.176][d][file] Stream opened successfully.
+[ 161.177][v][demux] Trying demuxers for level=normal.
+[ 161.177][d][demux] Trying demuxer: disc (force-level: normal)
+[ 161.177][d][demux] Trying demuxer: edl (force-level: normal)
+[ 161.177][d][demux] Trying demuxer: cue (force-level: normal)
+[ 161.177][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 161.177][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 161.177][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 161.177][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 161.180][v][ipc_180] Client connected
+[ 161.180][v][ipc_180] Client disconnected
+[ 161.180][d][ipc_180] Exiting...
+[ 161.180][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 161.181][v][file] stream level seek from 131072 to 536637
+[ 161.182][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 161.182][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 161.182][v][find_files] Loading external files in /data/media/
+[ 161.182][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 161.182][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 161.182][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 161.183][v][lavf] select track 0
+[ 161.183][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 161.202][v][vd] Container reported FPS: 30.000000
+[ 161.203][v][vd] Codec list:
+[ 161.203][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 161.203][v][vd] Opening decoder h264
+[ 161.203][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 161.203][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 161.203][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 161.204][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 161.204][v][vf] User filter list:
+[ 161.204][v][vf]   (empty)
+[ 161.204][v][cplayer] Starting playback...
+[ 161.205][v][file] stream level seek from 541053 to 48
+[ 161.205][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 161.205][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 161.205][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 161.206][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 161.220][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 161.245][i][vd] Using hardware decoding (v4l2request-copy).
+[ 161.245][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 161.245][v][vd] Using container aspect ratio.
+[ 161.245][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 161.245][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 161.245][v][vf] [userdeint] (disabled)
+[ 161.245][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 161.245][v][vf] [autorotate] (disabled)
+[ 161.245][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 161.246][v][vf] [convert] (disabled)
+[ 161.246][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 161.271][v][cplayer] first video frame after restart shown
+[ 161.271][d][cplayer] starting video playback
+[ 161.271][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 161.967][v][ipc_181] Client connected
+[ 162.025][v][ipc_181] Client disconnected
+[ 162.025][d][ipc_181] Exiting...
+[ 163.028][v][ipc_182] Client connected
+[ 163.059][v][ipc_182] Client disconnected
+[ 163.059][d][ipc_182] Exiting...
+[ 164.062][v][ipc_183] Client connected
+[ 164.121][v][ipc_183] Client disconnected
+[ 164.121][d][ipc_183] Exiting...
+[ 165.124][v][ipc_184] Client connected
+[ 165.155][v][ipc_184] Client disconnected
+[ 165.155][d][ipc_184] Exiting...
+[ 166.158][v][ipc_185] Client connected
+[ 166.216][v][ipc_185] Client disconnected
+[ 166.217][d][ipc_185] Exiting...
+[ 167.220][v][ipc_186] Client connected
+[ 167.255][v][ipc_186] Client disconnected
+[ 167.256][d][ipc_186] Exiting...
+[ 168.259][v][ipc_187] Client connected
+[ 168.323][v][ipc_187] Client disconnected
+[ 168.323][d][ipc_187] Exiting...
+[ 169.327][v][ipc_188] Client connected
+[ 169.354][v][ipc_188] Client disconnected
+[ 169.354][d][ipc_188] Exiting...
+[ 170.358][v][ipc_189] Client connected
+[ 170.396][v][ipc_189] Client disconnected
+[ 170.396][d][ipc_189] Exiting...
+[ 171.193][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 171.193][v][cplayer] EOF code: 3  
+[ 171.193][d][vd] Uninit decoder.
+[ 171.195][v][ipc_190] Client connected
+[ 171.197][d][cplayer] Terminating demuxers...
+[ 171.197][v][ipc_190] Client disconnected
+[ 171.197][d][cplayer] Done terminating demuxers.
+[ 171.197][d][ipc_190] Exiting...
+[ 171.197][v][cplayer] finished playback, success (reason 2)
+[ 171.197][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 171.198][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 171.198][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 171.198][d][file] Stream opened successfully.
+[ 171.198][v][demux] Trying demuxers for level=normal.
+[ 171.198][d][demux] Trying demuxer: disc (force-level: normal)
+[ 171.198][d][demux] Trying demuxer: edl (force-level: normal)
+[ 171.198][d][demux] Trying demuxer: cue (force-level: normal)
+[ 171.198][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 171.198][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 171.198][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 171.198][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 171.201][v][ipc_191] Client connected
+[ 171.202][v][ipc_191] Client disconnected
+[ 171.202][d][ipc_191] Exiting...
+[ 171.203][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 171.203][v][file] stream level seek from 131072 to 536637
+[ 171.204][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 171.204][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 171.205][v][find_files] Loading external files in /data/media/
+[ 171.205][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 171.205][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 171.205][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 171.205][v][lavf] select track 0
+[ 171.205][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 171.206][v][vd] Container reported FPS: 30.000000
+[ 171.207][v][vd] Codec list:
+[ 171.207][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 171.207][v][vd] Opening decoder h264
+[ 171.207][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 171.207][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 171.207][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 171.208][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 171.208][v][vf] User filter list:
+[ 171.208][v][vf]   (empty)
+[ 171.208][v][cplayer] Starting playback...
+[ 171.209][v][file] stream level seek from 541053 to 48
+[ 171.209][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 171.209][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 171.209][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 171.210][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 171.225][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 171.248][i][vd] Using hardware decoding (v4l2request-copy).
+[ 171.248][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 171.248][v][vd] Using container aspect ratio.
+[ 171.248][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 171.249][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 171.249][v][vf] [userdeint] (disabled)
+[ 171.249][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 171.249][v][vf] [autorotate] (disabled)
+[ 171.249][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 171.249][v][vf] [convert] (disabled)
+[ 171.249][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 171.270][v][cplayer] first video frame after restart shown
+[ 171.270][d][cplayer] starting video playback
+[ 171.270][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 171.399][v][ipc_192] Client connected
+[ 171.439][v][ipc_192] Client disconnected
+[ 171.439][d][ipc_192] Exiting...
+[ 172.443][v][ipc_193] Client connected
+[ 172.483][v][ipc_193] Client disconnected
+[ 172.483][d][ipc_193] Exiting...
+[ 173.486][v][ipc_194] Client connected
+[ 173.531][v][ipc_194] Client disconnected
+[ 173.531][d][ipc_194] Exiting...
+[ 174.535][v][ipc_195] Client connected
+[ 174.574][v][ipc_195] Client disconnected
+[ 174.574][d][ipc_195] Exiting...
+[ 175.578][v][ipc_196] Client connected
+[ 175.579][v][ipc_196] Client disconnected
+[ 175.579][d][ipc_196] Exiting...
+[ 176.583][v][ipc_197] Client connected
+[ 176.619][v][ipc_197] Client disconnected
+[ 176.619][d][ipc_197] Exiting...
+[ 177.622][v][ipc_198] Client connected
+[ 177.623][v][ipc_198] Client disconnected
+[ 177.623][d][ipc_198] Exiting...
+[ 178.626][v][ipc_199] Client connected
+[ 178.649][v][ipc_199] Client disconnected
+[ 178.649][d][ipc_199] Exiting...
+[ 179.652][v][ipc_200] Client connected
+[ 179.709][v][ipc_200] Client disconnected
+[ 179.709][d][ipc_200] Exiting...
+[ 180.713][v][ipc_201] Client connected
+[ 180.740][v][ipc_201] Client disconnected
+[ 180.740][d][ipc_201] Exiting...
+[ 181.227][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 181.227][v][cplayer] EOF code: 3  
+[ 181.227][d][vd] Uninit decoder.
+[ 181.231][v][ipc_202] Client connected
+[ 181.232][d][cplayer] Terminating demuxers...
+[ 181.233][v][ipc_202] Client disconnected
+[ 181.233][d][cplayer] Done terminating demuxers.
+[ 181.233][d][ipc_202] Exiting...
+[ 181.233][v][cplayer] finished playback, success (reason 2)
+[ 181.233][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 181.233][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 181.233][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 181.233][d][file] Stream opened successfully.
+[ 181.233][v][demux] Trying demuxers for level=normal.
+[ 181.233][d][demux] Trying demuxer: disc (force-level: normal)
+[ 181.233][d][demux] Trying demuxer: edl (force-level: normal)
+[ 181.233][d][demux] Trying demuxer: cue (force-level: normal)
+[ 181.233][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 181.233][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 181.233][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 181.233][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 181.236][v][ipc_203] Client connected
+[ 181.236][v][ipc_203] Client disconnected
+[ 181.236][d][ipc_203] Exiting...
+[ 181.237][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 181.237][v][file] stream level seek from 131072 to 536637
+[ 181.238][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 181.238][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 181.239][v][find_files] Loading external files in /data/media/
+[ 181.239][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 181.239][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 181.239][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 181.239][v][lavf] select track 0
+[ 181.239][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 181.259][v][vd] Container reported FPS: 30.000000
+[ 181.260][v][vd] Codec list:
+[ 181.260][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 181.260][v][vd] Opening decoder h264
+[ 181.260][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 181.260][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 181.260][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 181.260][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 181.260][v][vf] User filter list:
+[ 181.261][v][vf]   (empty)
+[ 181.261][v][cplayer] Starting playback...
+[ 181.261][v][file] stream level seek from 541053 to 48
+[ 181.262][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 181.262][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 181.262][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 181.263][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 181.277][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 181.302][i][vd] Using hardware decoding (v4l2request-copy).
+[ 181.302][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 181.302][v][vd] Using container aspect ratio.
+[ 181.302][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 181.302][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 181.302][v][vf] [userdeint] (disabled)
+[ 181.302][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 181.302][v][vf] [autorotate] (disabled)
+[ 181.302][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 181.303][v][vf] [convert] (disabled)
+[ 181.303][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 181.328][v][cplayer] first video frame after restart shown
+[ 181.328][d][cplayer] starting video playback
+[ 181.328][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 181.743][v][ipc_204] Client connected
+[ 181.802][v][ipc_204] Client disconnected
+[ 181.802][d][ipc_204] Exiting...
+[ 182.806][v][ipc_205] Client connected
+[ 182.891][v][ipc_205] Client disconnected
+[ 182.892][d][ipc_205] Exiting...
+[ 183.895][v][ipc_206] Client connected
+[ 183.938][v][ipc_206] Client disconnected
+[ 183.939][d][ipc_206] Exiting...
+[ 184.942][v][ipc_207] Client connected
+[ 184.959][v][ipc_207] Client disconnected
+[ 184.960][d][ipc_207] Exiting...
+[ 185.964][v][ipc_208] Client connected
+[ 185.996][v][ipc_208] Client disconnected
+[ 185.996][d][ipc_208] Exiting...
+[ 186.999][v][ipc_209] Client connected
+[ 187.027][v][ipc_209] Client disconnected
+[ 187.027][d][ipc_209] Exiting...
+[ 188.030][v][ipc_210] Client connected
+[ 188.059][v][ipc_210] Client disconnected
+[ 188.059][d][ipc_210] Exiting...
+[ 189.063][v][ipc_211] Client connected
+[ 189.107][v][ipc_211] Client disconnected
+[ 189.107][d][ipc_211] Exiting...
+[ 190.110][v][ipc_212] Client connected
+[ 190.128][v][ipc_212] Client disconnected
+[ 190.128][d][ipc_212] Exiting...
+[ 191.132][v][ipc_213] Client connected
+[ 191.153][v][ipc_213] Client disconnected
+[ 191.153][d][ipc_213] Exiting...
+[ 191.266][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/c18-canary-h264.mp4", flags="replace", index="-1", options=""]
+[ 191.267][v][cplayer] EOF code: 3  
+[ 191.267][d][vd] Uninit decoder.
+[ 191.269][v][ipc_214] Client connected
+[ 191.271][d][cplayer] Terminating demuxers...
+[ 191.271][d][cplayer] Done terminating demuxers.
+[ 191.272][v][cplayer] finished playback, success (reason 2)
+[ 191.272][d][global] state path: 'watch_later' -> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.local/state/mpv/watch_later'
+[ 191.272][e][ipc_214] Write error (Broken pipe)
+[ 191.272][v][file] Opening /data/media/c18-canary-h264.mp4
+[ 191.272][d][ipc_214] Exiting...
+[ 191.272][d][file] resize stream to 131072 bytes, drop 0 bytes
+[ 191.272][d][file] Stream opened successfully.
+[ 191.272][v][demux] Trying demuxers for level=normal.
+[ 191.272][d][demux] Trying demuxer: disc (force-level: normal)
+[ 191.272][d][demux] Trying demuxer: edl (force-level: normal)
+[ 191.272][d][demux] Trying demuxer: cue (force-level: normal)
+[ 191.272][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[ 191.272][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[ 191.272][d][demux] Trying demuxer: mkv (force-level: normal)
+[ 191.272][d][demux] Trying demuxer: lavf (force-level: normal)
+[ 191.277][v][ipc_215] Client connected
+[ 191.277][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[ 191.277][v][file] stream level seek from 131072 to 536637
+[ 191.277][v][ipc_215] Client disconnected
+[ 191.277][d][ipc_215] Exiting...
+[ 191.279][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[ 191.279][v][cplayer] Opening done: /data/media/c18-canary-h264.mp4
+[ 191.279][v][find_files] Loading external files in /data/media/
+[ 191.279][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/xdg-config/mpv/sub'
+[ 191.280][d][global] config path: 'sub' -/-> '/data/c18-evidence/user-level-mpv-stuck-fix-9bebaf1/apply-service-stopped-20260617T205453Z/raw-apply/candidate-health/home/.mpv/sub'
+[ 191.280][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[ 191.280][v][lavf] select track 0
+[ 191.280][i][cplayer] ● Video  --vid=1  (h264 1280x720 30 fps) [default]
+[ 191.281][v][vd] Container reported FPS: 30.000000
+[ 191.282][v][vd] Codec list:
+[ 191.282][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 191.282][v][vd] Opening decoder h264
+[ 191.282][v][vd] Looking at hwdec h264-v4l2request-copy...
+[ 191.282][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[ 191.282][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[ 191.283][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[ 191.283][v][vf] User filter list:
+[ 191.283][v][vf]   (empty)
+[ 191.284][v][cplayer] Starting playback...
+[ 191.284][v][file] stream level seek from 541053 to 48
+[ 191.285][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[ 191.285][v][vd] Codec profile: Constrained Baseline (0x242)
+[ 191.285][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[ 191.286][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[ 191.303][d][ffmpeg/video] h264: Reinit context to 1280x720, pix_fmt: drm_prime
+[ 191.326][i][vd] Using hardware decoding (v4l2request-copy).
+[ 191.326][v][vd] Decoder format: 1280x720 nv12 auto/auto/auto/auto/auto CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 191.326][v][vd] Using container aspect ratio.
+[ 191.326][v][vf] [in] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 191.326][v][vf] [userdeint] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 191.326][v][vf] [userdeint] (disabled)
+[ 191.326][v][vf] [autorotate] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 191.326][v][vf] [autorotate] (disabled)
+[ 191.326][v][vf] [convert] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 191.327][v][vf] [convert] (disabled)
+[ 191.327][v][vf] [out] 1280x720 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=1280x720+0+0
+[ 191.348][v][cplayer] first video frame after restart shown
+[ 191.348][d][cplayer] starting video playback
+[ 191.348][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[ 191.753][d][cplayer] Run command: quit, flags=64, args=[code="0"]
+[ 191.753][v][cplayer] EOF code: 5  
+[ 191.753][d][vd] Uninit decoder.
+[ 191.757][d][cplayer] Terminating demuxers...
+[ 191.758][d][cplayer] Done terminating demuxers.
+[ 191.758][v][cplayer] finished playback, success (reason 3)
+[ 191.758][i][cplayer] Exiting... (Quit)
+[ 191.758][d][ipc_0] Exiting...
+[ 191.766][d][vo/gpu] flushing shader cache

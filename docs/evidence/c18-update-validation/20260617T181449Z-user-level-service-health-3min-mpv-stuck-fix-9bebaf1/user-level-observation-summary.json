@@ -1,0 +1,143 @@
+{
+  "apply": {
+    "artifact": "../20260617T205453Z-user-level-apply-service-stopped-mpv-stuck-fix-9bebaf1/lab-apply.json",
+    "passed": true,
+    "rc": "0"
+  },
+  "generated_at_utc": "2026-06-17T21:20:00Z",
+  "honest_limitations": [
+    "The strict deep-health gate remains red because it treats transient missing_socket IPC samples as failures.",
+    "This is not a P0 power-loss result and not a 24h/H2 production claim.",
+    "The user-visible stuck-loop symptom was not reproduced during these observations."
+  ],
+  "live_state_after_health": {
+    "adoption_passed": true,
+    "artifact": "../20260617T181345Z-user-level-live-check-mpv-stuck-fix-9bebaf1/adoption-late.json",
+    "current_link": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "service_active": "active",
+    "service_show": [
+      "NRestarts=0",
+      "ExecMainPID=16225",
+      "ActiveState=active",
+      "SubState=running"
+    ]
+  },
+  "purpose": "Fast user-level validation of the mpv stuck-loop fix on the physical board; this does not claim H2 production readiness.",
+  "schema": "dadooh.c18.user_level.playback_observation.v1",
+  "target_package": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "ten_minute_observation": {
+    "artifact": "../20260617T205914Z-user-level-service-health-10min-mpv-stuck-fix-9bebaf1/playback-health-10min.json",
+    "counters": {
+      "estimated_frame_progressed": true,
+      "ext4_errors_delta": 0,
+      "hwdec_expected_samples": 561,
+      "hwdec_unexpected_samples": 0,
+      "ipc_error_after_first_success": 1,
+      "ipc_success": 562,
+      "ipc_timeout_after_first_success": 0,
+      "media_load_failed": 0,
+      "mmc_timeout_reset_delta": 0,
+      "mpv_count": 1,
+      "mpv_restart": 0,
+      "mpv_unique_aliases": 9,
+      "nrestarts_delta": 0,
+      "panfrost_faults_delta": 0,
+      "samples": 563,
+      "status_advanced_without_mpv": false,
+      "status_mpv_path_aligned": true,
+      "status_unique_aliases": 9,
+      "time_pos_progressed": true,
+      "total_mpv_count": 1,
+      "unique_aliases": 9,
+      "vo_configured_true_samples": 562,
+      "vo_configured_unexpected_samples": 0
+    },
+    "deep_health_failure_reasons": [
+      "ipc_stable_after_success"
+    ],
+    "deep_health_gate_passed": false,
+    "ipc_errors": [
+      {
+        "current_alias": "<media-path:c58db4e1cc>",
+        "ipc_error": "missing_socket",
+        "ipc_result": "error",
+        "rel_sec": "275.859",
+        "seq": "259",
+        "status_current_alias": "media-907addee8b",
+        "status_path_alias": "<media-path:c58db4e1cc>",
+        "time_pos": "",
+        "wall_time": "2026-06-17T18:03:52-0300"
+      }
+    ],
+    "user_level_observation_passed": true
+  },
+  "three_minute_observation": {
+    "adoption_after_passed": true,
+    "adoption_before_passed": true,
+    "artifact": "playback-health-3min.json",
+    "counters": {
+      "estimated_frame_progressed": true,
+      "ext4_errors_delta": 0,
+      "hwdec_expected_samples": 161,
+      "hwdec_unexpected_samples": 0,
+      "ipc_error_after_first_success": 2,
+      "ipc_success": 161,
+      "ipc_timeout_after_first_success": 0,
+      "media_load_failed": 0,
+      "mmc_timeout_reset_delta": 0,
+      "mpv_count": 1,
+      "mpv_restart": 0,
+      "mpv_unique_aliases": 9,
+      "nrestarts_delta": 0,
+      "panfrost_faults_delta": 0,
+      "samples": 163,
+      "status_advanced_without_mpv": false,
+      "status_mpv_path_aligned": true,
+      "status_unique_aliases": 9,
+      "time_pos_progressed": true,
+      "total_mpv_count": 1,
+      "unique_aliases": 9,
+      "vo_configured_true_samples": 161,
+      "vo_configured_unexpected_samples": 0
+    },
+    "deep_health_failure_reasons": [
+      "ipc_stable_after_success",
+      "service_process_unfiltered"
+    ],
+    "deep_health_gate_passed": false,
+    "ipc_errors": [
+      {
+        "current_alias": "<media-path:31af3d58a2>",
+        "ipc_error": "missing_socket",
+        "ipc_result": "error",
+        "rel_sec": "6.034",
+        "seq": "7",
+        "status_current_alias": "media-749f1db21b",
+        "status_path_alias": "<media-path:31af3d58a2>",
+        "time_pos": "",
+        "wall_time": "2026-06-17T18:14:57-0300"
+      },
+      {
+        "current_alias": "<media-path:31af3d58a2>",
+        "ipc_error": "missing_socket",
+        "ipc_result": "error",
+        "rel_sec": "7.036",
+        "seq": "8",
+        "status_current_alias": "media-749f1db21b",
+        "status_path_alias": "<media-path:31af3d58a2>",
+        "time_pos": "",
+        "wall_time": "2026-06-17T18:14:58-0300"
+      }
+    ],
+    "service_active": "active",
+    "service_show": [
+      "NRestarts=0",
+      "ExecMainPID=16225",
+      "ActiveState=active",
+      "SubState=running"
+    ],
+    "user_level_observation_passed": true
+  }
+}
