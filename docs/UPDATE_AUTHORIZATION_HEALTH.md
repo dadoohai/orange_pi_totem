@@ -9,8 +9,9 @@ em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 
 C18 Homologation RC agora esta reancorada no alvo corrigido
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em
-`channel=homologation` e `ring=pilot`, mas ainda esta **pre-P0**: nao esta
-pronta para piloto assistido, H2 ou producao ate fechar o power-loss seletivo.
+`channel=homologation` e `ring=pilot`, com preflight H2 aceito apos
+reset/topologia, mas ainda esta **pre-P0 fisico**: nao esta pronta para piloto
+assistido, H2 ou producao ate fechar o power-loss seletivo.
 O pacote atual declara source commit
 `9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522` e payload sha256
 `d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`.
@@ -42,14 +43,19 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
 - preflight H2 read-only da placa:
-  `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`.
+  bloqueado por topologia em
+  `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`;
+- reset/topologia e preflight H2 aceito:
+  `docs/evidence/c18-update-validation/20260617T201430Z-h2-powerloss-topology-reset-mpv-stuck-fix-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260617T201635Z-h2-powerloss-board-preflight-after-topology-reset-mpv-stuck-fix-9bebaf1/`.
 
 O pilot readiness do alvo `9bebaf1` esta bloqueado somente por
-`pilot_powerloss_p0:pilot_powerloss_p0_incomplete`. O preflight H2 read-only da
-placa coletou board, imagem, policy, timer, bundle e canary saudaveis, mas o
-gate offline bloqueou a sessao fisica porque o target ja estava linkado como
-`current`; os checkpoints de apply fresco exigem reset/topologia controlada
-antes de armar o corte fisico.
+`pilot_powerloss_p0:pilot_powerloss_p0_incomplete`. O primeiro preflight H2
+read-only da placa coletou board, imagem, policy, timer, bundle e canary
+saudaveis, mas bloqueou porque o target ja estava linkado como `current`. O
+reset/topologia controlado restaurou `m6-a` como current, removeu a release dir
+do alvo e manteve freeze publico `rc=44`; o preflight H2 fresco foi aceito para
+iniciar a sessao fisica. Isso ainda nao e evidencia power-loss.
 
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico

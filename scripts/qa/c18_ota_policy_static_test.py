@@ -64,6 +64,9 @@ HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH = (
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
+PLAYER_RUNTIME_LAB_TOPOLOGY_RESET_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_topology_reset.py"
+)
 PLAYER_RUNTIME_ADOPTION_PROBE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_adoption_probe.py"
 COLDBOOT_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_coldboot_evidence_gate.py"
 PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_evidence_gate.py"
@@ -2546,6 +2549,25 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", powerloss_runbook)
         self.assertIn("PYTHONPATH=", powerloss_runbook)
 
+        topology_reset = PLAYER_RUNTIME_LAB_TOPOLOGY_RESET_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.player_runtime.lab_topology_reset.v1", topology_reset)
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_TOPOLOGY_RESET", topology_reset)
+        self.assertIn("C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT", topology_reset)
+        self.assertIn("--lab-only-topology-reset", topology_reset)
+        self.assertIn("--allow-device-data-root", topology_reset)
+        self.assertIn("release_gate.validate_release", topology_reset)
+        self.assertIn("_validate_player_runtime_marker", topology_reset)
+        self.assertIn("_atomic_symlink", topology_reset)
+        self.assertIn("_write_state", topology_reset)
+        self.assertIn("target_release_linked", topology_reset)
+        self.assertIn("target_release_dir_removed", topology_reset)
+        self.assertIn("public_cli_apply_frozen_before_reset", topology_reset)
+        self.assertIn("public_cli_apply_still_frozen", topology_reset)
+        self.assertIn("not_public_thaw", topology_reset)
+        self.assertIn("does_not_apply_or_rollback_runtime", topology_reset)
+        self.assertNotIn("apply-github", topology_reset)
+        self.assertNotIn("gh release", topology_reset)
+
         lab_thaw = PLAYER_RUNTIME_LAB_THAW_PATH.read_text(encoding="utf-8")
         self.assertIn("C18_PLAYER_RUNTIME_LAB_THAW", lab_thaw)
         self.assertIn("c18_player_runtime_m6_coldboot_trial.py", lab_thaw)
@@ -2739,7 +2761,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn(
             "C18 Homologation RC agora esta reancorada no alvo corrigido "
             "`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em "
-            "`channel=homologation` e `ring=pilot`, mas ainda esta **pre-P0**",
+            "`channel=homologation` e `ring=pilot`, com preflight H2 aceito apos "
+            "reset/topologia, mas ainda esta **pre-P0 fisico**",
             update_auth_words,
         )
         self.assertIn(
@@ -3218,6 +3241,58 @@ exec "$C18_REAL_PYTHON3" "$@"
             )
             self.assertEqual(proc.returncode, 43, proc.stderr)
             self.assertIn("device_data_root_guard_required", proc.stderr)
+
+    def test_player_runtime_lab_topology_reset_guards_are_executable(self) -> None:
+        base_cmd = [
+            "python3",
+            str(PLAYER_RUNTIME_LAB_TOPOLOGY_RESET_PATH),
+        ]
+
+        no_lab = subprocess.run(
+            [*base_cmd, "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(no_lab.returncode, 44)
+        self.assertIn("player_runtime_lab_topology_reset_guard_required", no_lab.stderr)
+
+        self_test = subprocess.run(
+            [*base_cmd, "--self-test"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(self_test.returncode, 0, self_test.stderr)
+
+        env = {"PATH": os.environ.get("PATH", ""), "C18_PLAYER_RUNTIME_LAB_TOPOLOGY_RESET": "1"}
+        proc = subprocess.run(
+            [
+                *base_cmd,
+                "--lab-only-topology-reset",
+                "--manifest",
+                str(REPO_ROOT / "missing.manifest.json"),
+                "--payload",
+                str(REPO_ROOT / "missing.tar.gz"),
+                "--previous-version",
+                "old",
+                "--data-root",
+                "/data/foo",
+                "--json",
+            ],
+            cwd=REPO_ROOT,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 43, proc.stderr)
+        self.assertIn("device_data_root_guard_required", proc.stderr)
 
     def test_player_runtime_evidence_gate_self_test_passes(self) -> None:
         proc = subprocess.run(

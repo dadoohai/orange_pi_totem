@@ -1,11 +1,11 @@
 # 192 - C18 Homologation RC
 
-Status em 2026-06-17: **Homologation RC reancorada em `9bebaf1`, ainda
-pre-P0**. O alvo corrigido
+Status em 2026-06-17: **Homologation RC reancorada em `9bebaf1`, preflight H2
+aceito, ainda pre-P0 fisico**. O alvo corrigido
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` passou release
-gate, lab apply/adoption/deep-health curto e server-side governance, mas o
-piloto assistido ainda esta bloqueado por `pilot_powerloss_p0`. Producao/stable
-continuam bloqueados por H2.
+gate, lab apply/adoption/deep-health curto, server-side governance e preflight
+H2 apos reset/topologia, mas o piloto assistido ainda esta bloqueado por
+`pilot_powerloss_p0`. Producao/stable continuam bloqueados por H2.
 
 A evidencia
 `docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`
@@ -178,10 +178,11 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_macro_governance_gate.py --
 ```
 
 Resultado esperado enquanto os defaults nao forem reancorados: `passed=false`,
-`result_claim=c18_macro_governance_blocked`, com blocker
-`target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic`. Esse
-resultado preserva a governanca do alvo historico; nao e claim contra o pacote
-`9bebaf1`.
+`result_claim=c18_macro_governance_blocked`, com blocker historico
+`target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic` e
+blockers `macro_docs:doc_token_missing:*` para snapshots antigos `c16fb3e`
+retirados do retrato atual. Esse resultado preserva a governanca fail-closed do
+alvo historico; nao e claim contra o pacote `9bebaf1`.
 
 Como agregador pre-soak para escala, o gate atual tambem deve bloquear:
 
@@ -190,12 +191,14 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_g
 ```
 
 Resultado esperado enquanto os defaults nao forem reancorados: `passed=false`,
-`result_claim=c18_ota_pre_soak_scale_governance_blocked`, propagando o blocker
-macro historico. Quando usado para gerar evidencia final do alvo `9bebaf1`,
-rodar com `--run-release-gate` em arvore limpa e com P0/preflight aceito. Esse
-gate agrega docs de responsabilidade, H2 vermelho, server-side atual, preflight
-H2 power-loss, retomada operacional default-deny e release gate; nao substitui
-H2 nem autorizacao operacional fresca.
+`result_claim=c18_ota_pre_soak_scale_governance_blocked`, propagando
+`macro_gate:macro_gate_not_passed`, o blocker macro historico e os blockers
+`macro_gate:macro_gate_blocker:macro_docs:doc_token_missing:*`. Quando usado
+para gerar evidencia final do alvo `9bebaf1`, rodar com `--run-release-gate` em
+arvore limpa e com P0/preflight aceito. Esse gate agrega docs de
+responsabilidade, H2 vermelho, server-side atual, preflight H2 power-loss,
+retomada operacional default-deny e release gate; nao substitui H2 nem
+autorizacao operacional fresca.
 
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
@@ -270,11 +273,16 @@ placa com `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py`
 e validar com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py`
 contra o plano da matriz. Esse gate bloqueia placa/pacote/topologia errados
 antes da sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
-O snapshot fresco `20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1`
+O snapshot `20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1`
 coletou board/bundle saudaveis, porem bloqueou corretamente porque o target ja
-esta linkado como `current` e a release dir do alvo existe. Antes de iniciar a
-sessao fisica, e necessario reset/topologia controlada para apply fresco e novo
-preflight aceito.
+estava linkado como `current` e a release dir do alvo existia. O reset
+controlado
+`20260617T201430Z-h2-powerloss-topology-reset-mpv-stuck-fix-9bebaf1` restaurou
+`current` para `c18.player-runtime-m6-a-20260610T0501Z-29ff33b`, removeu a
+release dir do alvo e manteve o freeze publico `rc=44`. O preflight fresco
+`20260617T201635Z-h2-powerloss-board-preflight-after-topology-reset-mpv-stuck-fix-9bebaf1`
+foi aceito pelo gate H2 para iniciar a sessao fisica; isso ainda nao conta
+checkpoint power-loss e nao reduz os blockers H2.
 
 Depois da auditoria de fronteiras, a RC tambem passou a ter defesa em
 profundidade para payloads:
