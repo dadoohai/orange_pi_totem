@@ -140,6 +140,7 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "board_host_placeholder": args.board_host,
         "local_evidence_root_placeholder": args.local_evidence_root,
         "preflight_local_output": args.preflight_local_output,
+        "preflight_image_marker": args.image_marker,
         "preflight_expected_image_tag": args.expected_image_tag,
         "preflight_expected_image_marker_sha256": args.expected_image_marker_sha256,
         "preflight_max_age_sec": args.preflight_max_age_sec,
@@ -281,6 +282,7 @@ def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
             f"     --bundle-dir {command_quote(str(board.get('bundle_dir') or '/data/c18-h2-powerloss-bundle'))} \\",
             f"     --evidence-root {command_quote(str(board.get('evidence_root') or '/data/c18-evidence/h2-powerloss'))} \\",
             f"     --canary-media {command_quote(str(board.get('canary_media') or '/data/media/c18-canary-h264.mp4'))} \\",
+            f"     --image-marker {command_quote(str(manifest['preflight_image_marker']))} \\",
             "     --json\" \\",
             f"  > {command_quote(str(manifest['preflight_local_output']))}",
             f"ssh {manifest['board_host_placeholder']} \\",
@@ -446,6 +448,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 board_host="<board-host>",
                 local_evidence_root="docs/evidence/c18-update-validation/<utc>-h2-powerloss",
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
+                image_marker="/etc/dadooh/c18-hwdecode-lab-test-image",
                 expected_image_tag="c18-hwdecode-lab-test",
                 expected_image_marker_sha256="c" * 64,
                 preflight_max_age_sec=4 * 60 * 60,
@@ -466,6 +469,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("PYTHONDONTWRITEBYTECODE=1", runbook)
         self.assertIn("PYTHONPATH='/data/c18-test-bundle/scripts/board'", runbook)
         self.assertIn("python3 -B /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
+        self.assertIn("--image-marker '/etc/dadooh/c18-hwdecode-lab-test-image'", runbook)
         self.assertIn("rm -f /tmp/c18_player_runtime_h2_powerloss_preflight_collect.py", runbook)
         self.assertIn("only stage and", runbook)
         self.assertIn("--max-age-sec 14400", runbook)
@@ -475,6 +479,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn('"$LOCAL_ROOT/_validation/$checkpoint-powerloss-evidence-gate.json"', pull_script)
         self.assertNotIn('"$LOCAL_ROOT/$checkpoint/powerloss-evidence-gate.json"', pull_script)
         self.assertIn("this_runbook_does_not_claim_17_17", manifest["non_claims"])
+        self.assertEqual(manifest["preflight_image_marker"], "/etc/dadooh/c18-hwdecode-lab-test-image")
         self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
         self.assertEqual(manifest["preflight_max_age_sec"], 4 * 60 * 60)
 
@@ -495,6 +500,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 board_host="<board-host>",
                 local_evidence_root="docs/evidence/c18-update-validation/<utc>-h2-powerloss",
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
+                image_marker="/etc/dadooh/c18-hwdecode-lab-test-image",
                 expected_image_tag="c18-hwdecode-lab-test",
                 expected_image_marker_sha256="c" * 64,
                 preflight_max_age_sec=4 * 60 * 60,
@@ -533,6 +539,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 board_host="<board-host>",
                 local_evidence_root="docs/evidence/c18-update-validation/<utc>-h2-powerloss",
                 preflight_local_output="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json",
+                image_marker="/etc/dadooh/c18-hwdecode-lab-test-image",
                 expected_image_tag="c18-hwdecode-lab-test",
                 expected_image_marker_sha256="c" * 64,
                 preflight_max_age_sec=4 * 60 * 60,
@@ -549,6 +556,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--board-host", default="<board-host>")
     parser.add_argument("--local-evidence-root", default="docs/evidence/c18-update-validation/<utc>-h2-powerloss")
     parser.add_argument("--preflight-local-output", default="docs/evidence/c18-update-validation/<utc>-h2-powerloss-preflight.json")
+    parser.add_argument("--image-marker", default="/etc/dadooh/c18-hwdecode-lab-1x-image")
     parser.add_argument("--expected-image-tag", default="<expected-image-tag>")
     parser.add_argument("--expected-image-marker-sha256", default="<expected-image-marker-sha256>")
     parser.add_argument("--preflight-max-age-sec", type=int, default=4 * 60 * 60)
