@@ -69,7 +69,7 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual, vermelho apenas pelos blockers de producao:
-  `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json`;
+  `docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json`;
 - server-side/signature atual:
   `docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/`;
   `server-side-governance-gate.json` verde para `player-runtime`, trust anchor
@@ -213,7 +213,7 @@ Blockers exatos preservados no gate macro:
 - `explicit_operator_thaw_decision:missing_operator_thaw_decision`.
 
 O snapshot H2 rastreavel esta versionado em
-`docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:
+`docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/`:
 `h1_decisive_bundle=true`, `server_side_publish_governance=true`,
 `repo_clean=true` e `tracked_inputs=true`; `passed=false` continua correto para
 producao.

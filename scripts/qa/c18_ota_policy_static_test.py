@@ -1034,7 +1034,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e",
+            "20260617T003916Z-current-h2-readiness-c16fb3e",
             "repo_clean=true",
             "tracked_inputs=true",
         ):
@@ -2652,7 +2652,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e",
+            "20260617T003916Z-current-h2-readiness-c16fb3e",
             "20260612T125127Z-server-side-governance-c16fb3e",
             "20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e",
             "channel=homologation",

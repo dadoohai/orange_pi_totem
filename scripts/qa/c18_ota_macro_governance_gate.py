@@ -29,6 +29,7 @@ SCHEMA = "dadooh.c18.ota_macro_governance_gate.v1"
 H1_RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
 PILOT_READINESS_SCHEMA = "dadooh.c18.homologation_pilot_readiness.v1"
 H2_READINESS_SCHEMA = "dadooh.c18.player_runtime.h2_readiness.v1"
+H2_CURRENT_SNAPSHOT_SCHEMA = "dadooh.c18.h2_readiness_current_snapshot.v1"
 BOARD_READONLY_GATE_SCHEMA = "dadooh.c18.board_readonly_diagnostics_evidence_gate.v1"
 SERVER_SIDE_CURRENT_SCHEMA = "dadooh.c18.server_side_current_validation_snapshot.v1"
 SERVER_SIDE_GATE_SCHEMA = "dadooh.c18.server_side_publish_governance_gate.v1"
@@ -52,7 +53,7 @@ DEFAULT_PILOT_READINESS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json"
 )
 DEFAULT_BOARD_READONLY_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d"
@@ -156,7 +157,7 @@ REQUIRED_DOC_TOKENS = (
     "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
     "docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/",
     "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/",
-    "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
+    "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
     "docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e/",
     "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
@@ -517,6 +518,43 @@ def evaluate_h2_readiness(path: Path) -> dict[str, Any]:
         nested = nested_check_blockers(data, key)
         if not nested:
             blockers.append(f"h2_prod_check_missing_blocker:{key}")
+
+    manifest_path = path.parent / "evidence-manifest.json"
+    manifest = read_json(manifest_path, blockers, "h2_manifest")
+    if not manifest:
+        blockers.append("h2_manifest_missing_or_empty")
+    else:
+        if manifest.get("schema") != H2_CURRENT_SNAPSHOT_SCHEMA:
+            blockers.append("h2_manifest_schema")
+        result = manifest.get("h2_result") if isinstance(manifest.get("h2_result"), dict) else {}
+        if result.get("passed") is not False:
+            blockers.append("h2_manifest_result_must_remain_blocked")
+        if result.get("result_claim") != "h2_readiness_blocked":
+            blockers.append("h2_manifest_result_claim")
+        expected = result.get("expected_blockers")
+        if sorted(expected if isinstance(expected, list) else []) != sorted(EXPECTED_H2_BLOCKERS):
+            blockers.append("h2_manifest_expected_blockers")
+        package = manifest.get("target_package") if isinstance(manifest.get("target_package"), dict) else {}
+        if package.get("version") != TARGET_PACKAGE_VERSION:
+            blockers.append("h2_manifest_target_package")
+        if package.get("source_commit") != TARGET_SOURCE_COMMIT:
+            blockers.append("h2_manifest_source_commit")
+        if package.get("payload_sha256") != TARGET_PAYLOAD_SHA256:
+            blockers.append("h2_manifest_payload_sha256")
+        if package.get("image_tag") != EXPECTED_IMAGE_TAG:
+            blockers.append("h2_manifest_image_tag")
+        files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
+        h2_entry = next(
+            (item for item in files if isinstance(item, dict) and item.get("file") == path.name),
+            None,
+        )
+        if h2_entry is None:
+            blockers.append("h2_manifest_h2_file_missing")
+        else:
+            if h2_entry.get("sha256") != sha256_file(path):
+                blockers.append("h2_manifest_h2_sha256_mismatch")
+            if h2_entry.get("bytes") != path.stat().st_size:
+                blockers.append("h2_manifest_h2_bytes_mismatch")
     return check(
         "h2_preproduction_block",
         blockers,
@@ -782,7 +820,7 @@ def write_fixture(root: Path) -> argparse.Namespace:
                 "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
                 "docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/",
                 "docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/",
-                "docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json",
+                "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
                 "docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e/",
                 "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
                 "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
@@ -857,6 +895,25 @@ def write_fixture(root: Path) -> argparse.Namespace:
             "this_gate_does_not_override_freeze_rc_44",
             "this_gate_does_not_promote_stable_without_operator_decision",
         ],
+    })
+    write_json(root / "evidence-manifest.json", {
+        "schema": H2_CURRENT_SNAPSHOT_SCHEMA,
+        "target_package": {
+            "version": TARGET_PACKAGE_VERSION,
+            "source_commit": TARGET_SOURCE_COMMIT,
+            "payload_sha256": TARGET_PAYLOAD_SHA256,
+            "image_tag": EXPECTED_IMAGE_TAG,
+        },
+        "h2_result": {
+            "passed": False,
+            "result_claim": "h2_readiness_blocked",
+            "expected_blockers": list(EXPECTED_H2_BLOCKERS),
+        },
+        "files": [{
+            "file": h2_path.name,
+            "sha256": sha256_file(h2_path),
+            "bytes": h2_path.stat().st_size,
+        }],
     })
 
     (server_side_dir / "README.md").write_text(
@@ -979,6 +1036,16 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
             result = self.evaluate_fixture(fixture)
         self.assertFalse(result["passed"])
         self.assertIn("h2_preproduction_block:h2_blockers_not_exact", result["blockers"])
+
+    def test_h2_current_snapshot_is_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = write_fixture(Path(tmp))
+            data = json.loads(fixture.h2_readiness.read_text(encoding="utf-8"))
+            data["non_claims"].append("tampered")
+            write_json(fixture.h2_readiness, data)
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertIn("h2_preproduction_block:h2_manifest_h2_sha256_mismatch", result["blockers"])
 
     def test_h1_data_git_guard_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

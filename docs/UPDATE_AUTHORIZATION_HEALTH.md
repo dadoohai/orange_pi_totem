@@ -24,7 +24,7 @@ autorizacao historica de piloto em
 e pilot readiness traceability refresh em
 `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/`.
 O snapshot H2 corrente esta versionado em
-`docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/`:
+`docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/`:
 H1, server-side, repo clean e tracked inputs verdes; H2/producao ainda vermelho.
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida o retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
