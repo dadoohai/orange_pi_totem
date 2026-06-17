@@ -2461,11 +2461,21 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("custom_setup_missing", powerloss_runbook)
         self.assertIn("Manual setup before arm", powerloss_runbook)
         self.assertIn("none required by the plan", powerloss_runbook)
-        self.assertNotIn("none emitted by the plan", powerloss_runbook)
         self.assertIn("CUT_POWER_NOW", powerloss_runbook)
         self.assertIn("pull-and-validate-evidence.sh", powerloss_runbook)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", powerloss_runbook)
         self.assertIn("OperatorRunbookBuildSelfTest", powerloss_runbook)
+        current_powerloss_runbook_artifact = (
+            REPO_ROOT
+            / "docs"
+            / "evidence"
+            / "c18-update-validation"
+            / "20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e"
+            / "operator-runbook.md"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(2, current_powerloss_runbook_artifact.count("Manual setup before arm:"))
+        self.assertIn("Setup before arm: none required by the plan.", current_powerloss_runbook_artifact)
+        self.assertNotIn("none emitted by the plan", current_powerloss_runbook_artifact)
 
         powerloss_preflight_collect = PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_COLLECT_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1", powerloss_preflight_collect)
