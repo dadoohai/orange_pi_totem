@@ -1,8 +1,18 @@
 # 192 - C18 Homologation RC
 
-Status em 2026-06-17: **Homologation RC pronta para piloto assistido**,
-com retomada operacional e readiness atual rerodados sobre autorizacao/preflight
-frescos. Producao/stable continuam bloqueados por H2.
+Status em 2026-06-17: **Homologation RC `c16fb3e` bloqueada por evidencia
+fisica negativa**, nao pronta como RC corrente de piloto. Producao/stable
+continuam bloqueados por H2.
+
+A evidencia
+`docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`
+preserva uma tentativa fisica `after_payload_staged` em que a adocao antes do
+reconcile passou, mas o deep-health falhou com `status_mpv_path_aligned`: o MPV
+permaneceu em 1 alias de midia enquanto o status publico avancou por 4 aliases
+(`status_advanced_without_mpv=true`). Portanto, o pacote
+`c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e` fica historico e
+bloqueado como alvo final H2/piloto; a proxima RC precisa nascer de novo alvo
+corrigido e evidencia limpa.
 
 Este documento consolida o norte macro da C18 apos o fechamento do gate de
 piloto. Ele nao substitui `docs/UPDATE_CONTRACT.md`; apenas torna explicito o

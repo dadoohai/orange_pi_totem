@@ -381,6 +381,7 @@ def build_candidate_config(environment_id: str, rotation: int, selection_mode: s
         "mpv_gpu_context": "drm",
         "mpv_query_uses_fresh_ipc": True,
         "mpv_vo": "gpu",
+        "preload_next": False,
         "rotation_deg": rotation,
         "runtime_dir": "/tmp/kiosky",
         "setup_environment_source": selection_mode,

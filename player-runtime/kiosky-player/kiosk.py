@@ -92,7 +92,7 @@ DEFAULT_CONFIG = {
     "telemetry_interval_sec": 60,
     "telemetry_timeout_sec": 10,
     "station_id": "",
-    "preload_next": True,
+    "preload_next": False,
     "mute": False,
     "lock_input": True,
     "hwdec": "auto",
@@ -1155,8 +1155,26 @@ def advance_to_preloaded_media(mpv: "MPVController", item: MediaItem, index: int
             media_load_log_context(item, index, duration_ms, mpv),
         )
         return False
-    mpv.playlist_remove(0)
+    if not mpv.playlist_remove(0):
+        logging.warning(
+            "MPV playlist cleanup failed after playlist-next; falling back to explicit loadfile: %s",
+            media_load_log_context(item, index, duration_ms, mpv),
+        )
+        return False
+    if not mpv.wait_for_current_path(item.path):
+        logging.warning(
+            "MPV playlist-next post-cleanup verification failed; falling back to explicit loadfile: %s",
+            media_load_log_context(item, index, duration_ms, mpv),
+        )
+        return False
     return True
+
+
+def apply_item_offset(mpv: "MPVController", item: MediaItem, offset_ms: int) -> None:
+    if offset_ms > 0 and not is_image_path(item.path):
+        offset_seconds = offset_ms / 1000.0
+        if not mpv.seek_absolute(offset_seconds):
+            mpv.set_property("time-pos", offset_seconds)
 
 
 def free_space_bytes(path: str) -> int:
@@ -3197,15 +3215,19 @@ def playback_loop(
         next_item = None
         if len(items) > 1:
             next_item = items[(idx + 1) % len(items)]
+        item_alias = media_alias(item.path, item.url)
+        load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
 
         mpv.ensure_running()
         if mpv.generation() != last_mpv_generation:
             last_mpv_generation = mpv.generation()
             preloaded_path = None
-        reuse_preloaded = preloaded_path == item.path and offset_ms <= 0
+        reuse_preloaded = (
+            preloaded_path == item.path
+            and offset_ms <= 0
+            and mpv.wait_for_current_path(item.path)
+        )
         if not reuse_preloaded:
-            item_alias = media_alias(item.path, item.url)
-            load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
             status.update(
                 player_state="preparing_first_frame",
                 playback_state="preparing_first_frame",
@@ -3244,12 +3266,54 @@ def playback_loop(
                     offset_ms = 0
                     time.sleep(0.2)
                     continue
-            if offset_ms > 0 and not is_image_path(item.path):
-                offset_seconds = offset_ms / 1000.0
-                if not mpv.seek_absolute(offset_seconds):
-                    mpv.set_property("time-pos", offset_seconds)
+            apply_item_offset(mpv, item, offset_ms)
         preloaded_path = None
         blocked_media_until.pop(item.path, None)
+
+        current_path_verified = mpv.wait_for_current_path(item.path)
+        if not current_path_verified:
+            logging.warning(
+                "MPV current path verification failed before status publish; falling back to explicit loadfile: %s",
+                load_context,
+            )
+            preloaded_path = None
+            if mpv.load_file(item.path, alias=item_alias):
+                apply_item_offset(mpv, item, offset_ms)
+                current_path_verified = mpv.wait_for_current_path(item.path)
+        if not current_path_verified:
+            logging.warning(
+                "MPV current path verification still failed before status publish; restarting MPV: %s",
+                load_context,
+            )
+            mpv.restart(reason=f"media_path_mismatch:{item_alias}")
+            load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
+            if mpv.load_file(item.path, alias=item_alias):
+                apply_item_offset(mpv, item, offset_ms)
+                current_path_verified = mpv.wait_for_current_path(item.path)
+        if not current_path_verified:
+            cooldown_sec = max(int(cfg_snapshot.get("media_load_retry_cooldown_sec") or 0), 5)
+            blocked_media_until[item.path] = time.time() + cooldown_sec
+            logging.warning(
+                "MPV current path mismatch persisted; status publish blocked: %s cooldown_sec=%d",
+                load_context,
+                cooldown_sec,
+            )
+            status.update(
+                player_state="error_player_start",
+                playback_state="recovering",
+                startup_phase="error_player_start",
+                startup_feedback_state="error_player_start",
+                content_state="media_path_mismatch",
+                first_frame_ready=False,
+                first_content_load_accepted=False,
+                black_screen_risk_reason="media_path_mismatch",
+                blocked_media_count=len(blocked_media_until),
+                last_render_error=f"{iso_now()} current_path_mismatch:{item.path}",
+            )
+            idx += 1
+            offset_ms = 0
+            time.sleep(0.2)
+            continue
 
         if next_item is not None and cfg_snapshot.get("preload_next"):
             mpv.append_file(next_item.path)

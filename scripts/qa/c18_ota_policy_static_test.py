@@ -416,15 +416,20 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "--allow-dirty-repo",
                 "--json",
             ],
-            check=True,
+            check=False,
             stdout=subprocess.PIPE,
             text=True,
         )
         summary = json.loads(result.stdout)
 
-        self.assertTrue(summary["passed"], summary["blockers"])
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(summary["passed"])
         self.assertEqual(summary["schema"], "dadooh.c18.ota_macro_governance_gate.v1")
-        self.assertEqual(summary["result_claim"], "c18_homologation_governance_ready_pre_h2")
+        self.assertEqual(summary["result_claim"], "c18_macro_governance_blocked")
+        self.assertIn(
+            "target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic",
+            summary["blockers"],
+        )
         self.assertEqual(summary["checks"]["pilot_readiness"]["authorization_window"]["snapshot_only"], True)
         self.assertEqual(summary["checks"]["h2_preproduction_block"]["result_claim"], "h2_readiness_blocked")
         self.assertEqual(
@@ -439,6 +444,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         self.assertIn("dadooh.c18.ota_macro_governance_gate.v1", gate)
         self.assertIn("c18_homologation_governance_ready_pre_h2", gate)
+        self.assertIn("target_has_blocking_mpv_stuck_diagnostic", gate)
         self.assertIn("this_gate_does_not_reopen_expired_pilot_windows", gate)
         self.assertIn("snapshot_only", gate)
         self.assertIn("EXPECTED_H2_BLOCKERS", gate)
@@ -503,15 +509,20 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "--allow-dirty-repo",
                 "--json",
             ],
-            check=True,
+            check=False,
             stdout=subprocess.PIPE,
             text=True,
         )
         summary = json.loads(result.stdout)
 
-        self.assertTrue(summary["passed"], summary["blockers"])
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(summary["passed"])
         self.assertEqual(summary["schema"], "dadooh.c18.ota_pre_soak_scale_governance_gate.v1")
-        self.assertEqual(summary["result_claim"], "c18_ota_pre_soak_scale_governance_ready")
+        self.assertEqual(summary["result_claim"], "c18_ota_pre_soak_scale_governance_blocked")
+        self.assertIn(
+            "macro_gate:macro_gate_blocker:target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic",
+            summary["blockers"],
+        )
         self.assertEqual(summary["checks"]["release_gate"]["skipped"], True)
         self.assertEqual(summary["checks"]["h2_powerloss_board_preflight_snapshot"]["passed"], True)
         self.assertEqual(
@@ -526,6 +537,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
+        self.assertIn("macro_gate_blocker", gate)
         self.assertIn("20260617T064617Z-current-macro-governance-a761a67", gate)
         self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
         self.assertIn("20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f", gate)
@@ -2725,7 +2737,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         update_contract_words = " ".join(update_contract.split())
         h2_stable_runbook_words = " ".join(h2_stable_runbook.split())
         self.assertIn(
-            "C18 Homologation RC esta pronta para piloto assistido, nao para producao.",
+            "C18 Homologation RC `c16fb3e` esta bloqueada por evidencia fisica negativa, "
+            "nao pronta como RC corrente de piloto e nao para producao.",
             update_auth_words,
         )
         self.assertIn(
@@ -2753,6 +2766,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
             "20260617T030214Z-current-h2-readiness-13d4cbd",
+            "20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
             "20260612T125127Z-server-side-governance-c16fb3e",
             "20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e",
             "channel=homologation",

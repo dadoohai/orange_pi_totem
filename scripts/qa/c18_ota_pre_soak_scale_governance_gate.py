@@ -51,6 +51,10 @@ DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
     / "docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f"
 )
+DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS = (
+    REPO_ROOT
+    / "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
+)
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/191_C18_OTA_OPERATING_MODEL.md",
     REPO_ROOT / "docs/product/192_C18_HOMOLOGATION_RC.md",
@@ -116,6 +120,7 @@ TRACKED_INPUTS = (
     DEFAULT_MACRO_SUMMARY,
     DEFAULT_SERVER_SIDE_CURRENT_DIR,
     DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR,
+    *DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS,
     *DEFAULT_DOCS,
 )
 
@@ -470,13 +475,15 @@ def evaluate_macro_gate(*, allow_dirty_repo: bool = False) -> dict[str, Any]:
     result = run_json_command(
         "macro_gate",
         cmd,
-        expected_returncodes={0},
+        expected_returncodes={0, 1},
     )
     payload = result.get("payload", {})
     blockers = list(result.get("blockers", []))
     if payload.get("passed") is not True:
         blockers.append("macro_gate_not_passed")
-    if payload.get("result_claim") != "c18_homologation_governance_ready_pre_h2":
+        for blocker in payload.get("blockers", []):
+            blockers.append(f"macro_gate_blocker:{blocker}")
+    elif payload.get("result_claim") != "c18_homologation_governance_ready_pre_h2":
         blockers.append("macro_gate_result_claim")
     return step(not blockers, blockers, returncode=result.get("returncode"))
 
@@ -551,6 +558,7 @@ def effective_tracked_inputs(args: argparse.Namespace) -> tuple[Path, ...]:
         args.macro_governance_summary,
         args.server_side_current_dir,
         args.h2_powerloss_preflight_dir,
+        *DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS,
         *DEFAULT_DOCS,
     )
 

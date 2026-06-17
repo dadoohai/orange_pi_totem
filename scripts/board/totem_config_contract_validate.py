@@ -447,6 +447,19 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
     if invalid is not None:
         invalid_fields.append(invalid)
 
+    preload_next = config.get("preload_next")
+    if "preload_next" in config and not isinstance(preload_next, bool):
+        append_invalid(invalid_fields, "preload_next", "invalid type")
+    preload_finding: dict[str, str | bool] = {
+        "field": "preload_next",
+        "status": "ok" if preload_next is False else "not_present_default_false" if "preload_next" not in config else "invalid",
+        "expected": False,
+        "actual": preload_next if isinstance(preload_next, bool) else str(type(preload_next).__name__),
+    }
+    runtime_contract_findings.append(preload_finding)
+    if preload_next is True:
+        append_invalid(invalid_fields, "preload_next", "must be false for C18 governed config")
+
     api_key = config.get("api_key")
     api_key_present = isinstance(api_key, str) and bool(api_key.strip())
     api_key_placeholder = detect_api_key_placeholder(api_key)
@@ -569,6 +582,7 @@ def build_mock_candidate() -> dict[str, Any]:
         "ipc_path": "/tmp/kiosky/mpv.sock",
         "runtime_dir": "/tmp/kiosky",
         "strict_paths_enabled": True,
+        "preload_next": False,
         "mpv_query_uses_fresh_ipc": True,
         "mpv_vo": "gpu",
         "mpv_gpu_context": "drm",
@@ -614,6 +628,29 @@ def run_self_test() -> None:
         invalid_status_file = dict(mock_candidate)
         invalid_status_file["status_file"] = "/data/state/status.json"
         assert_invalid(invalid_status_file, "allow-mock", "status_file outside /tmp should fail")
+
+        missing_preload_next = dict(mock_candidate)
+        del missing_preload_next["preload_next"]
+        status = validate_candidate_config(missing_preload_next, "allow-mock")
+        assert_true(
+            status["valid"],
+            "missing preload_next should pass because the C18 runtime default is false",
+        )
+        assert_true(
+            any(
+                item.get("field") == "preload_next" and item.get("status") == "not_present_default_false"
+                for item in status["runtime_contract_findings"]
+            ),
+            "missing preload_next should be recorded as default_false",
+        )
+
+        enabled_preload_next = dict(mock_candidate)
+        enabled_preload_next["preload_next"] = True
+        status = assert_invalid(enabled_preload_next, "allow-mock", "preload_next true should fail")
+        assert_true(
+            any(item["field"] == "preload_next" for item in status["invalid_fields"]),
+            "preload_next invalid field should be reported",
+        )
 
         empty_api_key = dict(mock_candidate)
         empty_api_key["api_key"] = ""

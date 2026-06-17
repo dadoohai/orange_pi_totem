@@ -829,6 +829,7 @@ def build_synthetic_candidate() -> dict[str, Any]:
         "ipc_path": "/tmp/kiosky/mpv.sock",
         "runtime_dir": "/tmp/kiosky",
         "strict_paths_enabled": True,
+        "preload_next": False,
         "mpv_query_uses_fresh_ipc": True,
         "mpv_vo": "gpu",
         "mpv_gpu_context": "drm",

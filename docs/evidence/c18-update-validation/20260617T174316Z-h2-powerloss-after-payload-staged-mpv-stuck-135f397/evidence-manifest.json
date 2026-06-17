@@ -1,0 +1,113 @@
+{
+  "adoption_before_reconcile_passed": true,
+  "captured_from_board_at_utc": "2026-06-17T17:43:16Z",
+  "checkpoint": "after_payload_staged",
+  "checkpoint_hit_at_utc": "2026-06-17T17:27:32Z",
+  "files": [
+    {
+      "bytes": 1031,
+      "file": "README.md",
+      "sha256": "9748bdfd80d40e96c2726037eb3831a49050e5f84a40eda6a59fbd3adcf985c5"
+    },
+    {
+      "bytes": 146,
+      "file": "after_payload_staged/trial/powerloss-checkpoint/CUT_POWER_NOW.txt",
+      "sha256": "43e104f60aee53dfbf6a2b85903a0964c10a25e6039e6abcb375ae1b99be1ce2"
+    },
+    {
+      "bytes": 1883,
+      "file": "after_payload_staged/trial/powerloss-checkpoint/checkpoint.json",
+      "sha256": "91bda5a61d9cd1f85f2103b238f226b1eff33edad2eee81f9415983a9e61f855"
+    },
+    {
+      "bytes": 645,
+      "file": "after_payload_staged/trial/powerloss-trial-state.json",
+      "sha256": "046cfa365116405f2cc264fcea86eef054484ae624ff96851c47154cab30d5a3"
+    },
+    {
+      "bytes": 244,
+      "file": "after_payload_staged/trial/raw/apply/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 1089,
+      "file": "after_payload_staged/trial/resume/before-reconcile-adoption.json",
+      "sha256": "93028ec2e85a95399cb08e10af23f1b19e499b2730aac024c3653b4067c88ae8"
+    },
+    {
+      "bytes": 334,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/deep-health-kernel.json",
+      "sha256": "6d61cfe15a5e18a3d7022900bb44b1bded3ed57aa3bfe51e2399e22af2f38f1e"
+    },
+    {
+      "bytes": 49,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4210,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/playback-deep-health-public.json",
+      "sha256": "60fd4825b51a4c9bcbbe4dfeaeaabf29cc9a85af96fbb9b660abdeaf89b88244"
+    },
+    {
+      "bytes": 57928,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/playback-samples.tsv",
+      "sha256": "7bffcc53a9f49ba61a51f4cc6765aaa14ddaa9041f1a7f1a0f4a79f70d3f4101"
+    },
+    {
+      "bytes": 45077,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health/status-samples.ndjson",
+      "sha256": "5c088b6711722eb6e6c38ff786e1ebaa9cde25e286997db3fff5faf3e6f2c98d"
+    },
+    {
+      "bytes": 4229,
+      "file": "after_payload_staged/trial/resume/before-reconcile-health.json",
+      "sha256": "f79574be9715819705b98393299467da1f5d5b674b8980fca794bbb80d60be87"
+    },
+    {
+      "bytes": 333,
+      "file": "after_payload_staged/trial/service-runtime-mask-before-apply.json",
+      "sha256": "28df649fb5d982440cef8e74779196d41c5aa4c9f6ff16a63024a55f1c181111"
+    },
+    {
+      "bytes": 246,
+      "file": "after_payload_staged/trial/service-stop-before-apply.json",
+      "sha256": "97b55aa39844d700d393a52fa2937f1cf6c06479bc4cd424daba141575574b48"
+    }
+  ],
+  "health_before_reconcile_passed": false,
+  "health_failure_reasons": [
+    "status_mpv_path_aligned"
+  ],
+  "mpv_media_transitions_observed": false,
+  "mpv_unique_aliases": 1,
+  "non_claims": [
+    "this_diagnostic_evidence_does_not_accept_the_checkpoint",
+    "this_diagnostic_evidence_does_not_claim_17_17",
+    "this_diagnostic_evidence_does_not_authorize_stable_or_production",
+    "this_diagnostic_evidence_does_not_thaw_player_runtime",
+    "this_diagnostic_evidence_does_not_publish_or_fetch_releases",
+    "this_diagnostic_evidence_blocks_c16fb3e_as_final_h2_target"
+  ],
+  "passed": false,
+  "repo_commit_at_capture": "135f397f23d1534d89219f0eddd42356a2c5aa05",
+  "result_claim": "diagnostic_mpv_stuck_resume_failure_preserved",
+  "schema": "dadooh.c18.h2_powerloss_mpv_stuck_resume_failure.v1",
+  "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "status_advanced_without_mpv": true,
+  "status_mpv_comparable_samples": 45,
+  "status_mpv_mismatch_samples": 45,
+  "status_unique_aliases": 4,
+  "target_package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+  "target_payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+}

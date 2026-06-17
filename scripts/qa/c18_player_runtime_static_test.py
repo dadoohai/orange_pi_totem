@@ -15,6 +15,8 @@ import py_compile
 import re
 import subprocess
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -32,7 +34,7 @@ CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c"
+EXPECTED_SNAPSHOT_SHA256 = "a44e4ca43061d05b40b5cf88dbd6aceba6c7d2845db78513f53c0d6c4e1be497"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -82,6 +84,91 @@ class FakeProc:
         self._poll = -9
 
 
+class FakePreloadMPV:
+    def __init__(
+        self,
+        *,
+        playlist_next: bool = True,
+        playlist_remove: bool = True,
+        wait_results: list[bool] | None = None,
+    ) -> None:
+        self.playlist_next_result = playlist_next
+        self.playlist_remove_result = playlist_remove
+        self.wait_results = list(wait_results if wait_results is not None else [True, True])
+        self.removed: list[int] = []
+
+    def playlist_next(self) -> bool:
+        return self.playlist_next_result
+
+    def playlist_remove(self, index: int) -> bool:
+        self.removed.append(index)
+        return self.playlist_remove_result
+
+    def wait_for_current_path(self, _path: str) -> bool:
+        if not self.wait_results:
+            return False
+        return self.wait_results.pop(0)
+
+    def generation(self) -> int:
+        return 1
+
+    def pid(self) -> int:
+        return 1234
+
+
+class FakeMismatchMPV:
+    def __init__(self) -> None:
+        self.load_calls: list[str] = []
+        self.restart_reasons: list[str] = []
+        self.append_calls: list[str] = []
+
+    def ensure_running(self) -> None:
+        return None
+
+    def generation(self) -> int:
+        return 1
+
+    def wait_for_current_path(self, _path: str) -> bool:
+        return False
+
+    def load_file(self, path: str, alias: str = "") -> bool:
+        self.load_calls.append(f"{path}|{alias}")
+        return True
+
+    def seek_absolute(self, _seconds: float) -> bool:
+        return True
+
+    def set_property(self, _name: str, _value: object) -> bool:
+        return True
+
+    def append_file(self, path: str) -> bool:
+        self.append_calls.append(path)
+        return True
+
+    def restart(self, reason: str = "restart") -> None:
+        self.restart_reasons.append(reason)
+
+    def pid(self) -> int:
+        return 1234
+
+
+class StopOnMismatchStatus:
+    def __init__(self, stop_event: threading.Event) -> None:
+        self.start_time = time.time()
+        self.stop_event = stop_event
+        self.updates: list[dict[str, object]] = []
+        self._data: dict[str, object] = {}
+
+    def update(self, **kwargs: object) -> None:
+        self.updates.append(dict(kwargs))
+        self._data.update(kwargs)
+        if kwargs.get("content_state") == "media_path_mismatch":
+            self.stop_event.set()
+
+    def snapshot(self) -> dict[str, object]:
+        return dict(self._data)
+
+
 class C18PlayerRuntimeStaticTest(unittest.TestCase):
     def test_source_metadata_is_frozen_not_ota_release(self) -> None:
         data = source()
@@ -104,6 +191,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             patches["MPVController.load_file/preload_next"]["to"],
             "fresh IPC path verification before trusting loadfile or preloaded playlist-next",
         )
+        self.assertEqual(patches["DEFAULT_CONFIG.preload_next"]["to"], False)
 
     def test_snapshot_sha_matches_source_metadata(self) -> None:
         self.assertEqual(sha256_file(KIOSK_PATH), source()["snapshot"]["sha256"])
@@ -124,10 +212,12 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn('cfg["mpv_path"]', text)
         self.assertIn('"--hwdec-codecs=h264,mpeg4,mpeg2video"', text)
         self.assertIn('"--no-osc"', text)
+        self.assertIn('"preload_next": False,', text)
         self.assertIn('"loadfile", path, "replace"', text)
         self.assertIn("def wait_for_current_path", text)
         self.assertIn("MPV loadfile verification failed", text)
         self.assertIn("MPV playlist-next verification failed", text)
+        self.assertIn("MPV playlist-next post-cleanup verification failed", text)
 
     def test_snapshot_has_single_default_mpv_path_assignment(self) -> None:
         text = KIOSK_PATH.read_text(encoding="utf-8")
@@ -195,6 +285,58 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             self.assertEqual(stuck_proc.wait_timeouts, [5, 5, 5])
         finally:
             kiosk.os.killpg = original_killpg
+
+    def test_preloaded_advance_requires_cleanup_and_post_cleanup_verification(self) -> None:
+        kiosk = load_kiosk_module()
+        item = kiosk.MediaItem(
+            url="cache://next.mp4",
+            duration_ms=1000,
+            path="/data/media/next.mp4",
+            campaign_id="",
+            campaign_name="",
+        )
+
+        ok_mpv = FakePreloadMPV(wait_results=[True, True])
+        self.assertTrue(kiosk.advance_to_preloaded_media(ok_mpv, item, 1, 1000))
+        self.assertEqual(ok_mpv.removed, [0])
+
+        cleanup_fail = FakePreloadMPV(playlist_remove=False, wait_results=[True])
+        self.assertFalse(kiosk.advance_to_preloaded_media(cleanup_fail, item, 1, 1000))
+        self.assertEqual(cleanup_fail.removed, [0])
+
+        post_cleanup_mismatch = FakePreloadMPV(wait_results=[True, False])
+        self.assertFalse(kiosk.advance_to_preloaded_media(post_cleanup_mismatch, item, 1, 1000))
+        self.assertEqual(post_cleanup_mismatch.removed, [0])
+
+    def test_playback_loop_blocks_status_when_mpv_path_does_not_match_item(self) -> None:
+        kiosk = load_kiosk_module()
+        stop_event = threading.Event()
+        status = StopOnMismatchStatus(stop_event)
+        state = kiosk.PlaylistState()
+        item = kiosk.MediaItem(
+            url="cache://stuck.mp4",
+            duration_ms=25,
+            path="/data/media/stuck.mp4",
+            campaign_id="campaign-1",
+            campaign_name="Campaign 1",
+        )
+        self.assertTrue(state.update([item], "fixture"))
+        with tempfile.TemporaryDirectory(prefix="c18-playback-cache-index-") as tmp:
+            cfg = {
+                "state_dir": tmp,
+                "sync_enabled": False,
+                "preload_next": False,
+                "media_load_retry_cooldown_sec": 5,
+            }
+            mpv = FakeMismatchMPV()
+
+            kiosk.playback_loop(cfg, threading.Lock(), state, status, mpv, kiosk.CacheIndex(cfg), stop_event)
+
+        current_item_updates = [update for update in status.updates if "current_item" in update]
+        self.assertEqual(current_item_updates, [])
+        self.assertTrue(any(update.get("content_state") == "media_path_mismatch" for update in status.updates))
+        self.assertTrue(mpv.restart_reasons)
+        self.assertEqual(mpv.append_calls, [])
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")
@@ -294,6 +436,7 @@ class C18LauncherConfigBaselineGuardTest(unittest.TestCase):
         "state_dir": "/data/state/kiosky-player",
         "status_file": "/tmp/kiosky-status.json",
         "ipc_path": "/tmp/kiosky/mpv.sock",
+        "preload_next": False,
     }
 
     def _config_valid_rc(self, config_text: str, *, with_validator: bool = True) -> int:

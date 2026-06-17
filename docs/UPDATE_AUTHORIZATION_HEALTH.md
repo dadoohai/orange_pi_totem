@@ -5,12 +5,21 @@ acidental para update inseguro. Em caso de divergencia, o contrato vigente esta
 em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 `docs/product/189_C18_OTA_READINESS_GATE.md`.
 
-## Estado Operacional Vigente (2026-06-16)
+## Estado Operacional Vigente (2026-06-17)
 
-C18 Homologation RC esta pronta para piloto assistido, nao para producao. O
-alvo corrente e
+C18 Homologation RC `c16fb3e` esta bloqueada por evidencia fisica negativa,
+nao pronta como RC corrente de piloto e nao para producao. O alvo historico
 `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`, em
-`channel=homologation` e `ring=pilot`. A evidencia operacional atual esta em
+`channel=homologation` e `ring=pilot`, fica preservado para rastreabilidade,
+mas nao deve ser usado como alvo final H2/piloto. A evidencia bloqueadora esta
+em
+`docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`:
+adocao antes do reconcile passou, mas o deep-health falhou porque o MPV ficou
+em 1 alias de midia enquanto o status publico avancou por 4 aliases
+(`status_advanced_without_mpv=true`). A proxima RC precisa nascer de novo alvo
+corrigido e evidencia limpa.
+
+A evidencia operacional historica esta em
 `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`,
 com retomada operacional em
 `docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`

@@ -13,6 +13,7 @@
     "Runtime behavior starts from the 1i image: upstream kiosk.py plus C18 mpv_path wrapper patch.",
     "C18 teardown hardening requests MPV IPC quit, using a fresh IPC connection if needed, before falling back to process signals to avoid panfrost faults on relaunch.",
     "C18 playback hardening verifies the real MPV path after loadfile and playlist-next before trusting preloaded media state.",
+    "C18 disables preload_next by default so legacy configs without the field inherit the safe path.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -30,12 +31,17 @@
       "field": "MPVController.load_file/preload_next",
       "from": "IPC write success implies media switch",
       "to": "fresh IPC path verification before trusting loadfile or preloaded playlist-next"
+    },
+    {
+      "field": "DEFAULT_CONFIG.preload_next",
+      "from": true,
+      "to": false
     }
   ],
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c"
+    "sha256": "a44e4ca43061d05b40b5cf88dbd6aceba6c7d2845db78513f53c0d6c4e1be497"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

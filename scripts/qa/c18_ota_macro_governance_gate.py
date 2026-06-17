@@ -34,6 +34,7 @@ BOARD_READONLY_GATE_SCHEMA = "dadooh.c18.board_readonly_diagnostics_evidence_gat
 SERVER_SIDE_CURRENT_SCHEMA = "dadooh.c18.server_side_current_validation_snapshot.v1"
 SERVER_SIDE_GATE_SCHEMA = "dadooh.c18.server_side_publish_governance_gate.v1"
 SERVER_SIDE_ASSET_LIST_SCHEMA = "dadooh.c18.server_side_publish_asset_list.v1"
+TARGET_BLOCKER_SCHEMA = "dadooh.c18.h2_powerloss_mpv_stuck_resume_failure.v1"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
@@ -60,6 +61,10 @@ DEFAULT_BOARD_READONLY_DIR = (
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e"
+)
+DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS = (
+    REPO_ROOT
+    / "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
 )
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/189_C18_OTA_READINESS_GATE.md",
@@ -159,6 +164,7 @@ REQUIRED_DOC_TOKENS = (
     "docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/",
     "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json",
     "docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f/",
+    "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/",
     "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
     "pre-H2",
@@ -713,6 +719,51 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
     )
 
 
+def evaluate_target_blocking_diagnostics(run_dirs: list[Path]) -> dict[str, Any]:
+    blockers: list[str] = []
+    evidence: list[dict[str, Any]] = []
+    for run_dir in run_dirs:
+        manifest = read_json(run_dir / "evidence-manifest.json", blockers, "target_blocking_diagnostic")
+        if not manifest:
+            continue
+        if manifest.get("schema") != TARGET_BLOCKER_SCHEMA:
+            blockers.append("target_blocking_diagnostic_schema")
+        if manifest.get("passed") is not False:
+            blockers.append("target_blocking_diagnostic_must_be_failed")
+        if manifest.get("result_claim") != "diagnostic_mpv_stuck_resume_failure_preserved":
+            blockers.append("target_blocking_diagnostic_result_claim")
+        if manifest.get("target_package_version") != TARGET_PACKAGE_VERSION:
+            blockers.append("target_blocking_diagnostic_target_version")
+        if manifest.get("source_commit") != TARGET_SOURCE_COMMIT:
+            blockers.append("target_blocking_diagnostic_source_commit")
+        if manifest.get("target_payload_sha256") != TARGET_PAYLOAD_SHA256:
+            blockers.append("target_blocking_diagnostic_payload_sha256")
+        if manifest.get("status_advanced_without_mpv") is not True:
+            blockers.append("target_blocking_diagnostic_missing_status_advanced_without_mpv")
+        if manifest.get("mpv_unique_aliases") != 1:
+            blockers.append("target_blocking_diagnostic_mpv_alias_count")
+        if int(manifest.get("status_unique_aliases") or 0) < 2:
+            blockers.append("target_blocking_diagnostic_status_alias_count")
+        evidence.append(
+            {
+                "run_dir": repo_relative(run_dir) or str(run_dir),
+                "result_claim": manifest.get("result_claim"),
+                "target_package_version": manifest.get("target_package_version"),
+                "status_advanced_without_mpv": manifest.get("status_advanced_without_mpv"),
+                "mpv_unique_aliases": manifest.get("mpv_unique_aliases"),
+                "status_unique_aliases": manifest.get("status_unique_aliases"),
+            }
+        )
+    if evidence:
+        blockers.append("target_has_blocking_mpv_stuck_diagnostic")
+    return check(
+        "target_blocking_diagnostics",
+        blockers,
+        evidence_count=len(evidence),
+        evidence=evidence,
+    )
+
+
 def evaluate_docs(doc_paths: list[Path]) -> dict[str, Any]:
     blockers: list[str] = []
     combined_parts: list[str] = []
@@ -742,6 +793,7 @@ def evaluate(
     h2_readiness: Path,
     board_readonly_dir: Path,
     server_side_current_dir: Path,
+    target_blocker_dirs: list[Path],
     docs: list[Path],
     require_repo_clean: bool = True,
 ) -> dict[str, Any]:
@@ -751,6 +803,7 @@ def evaluate(
         "h2_preproduction_block": evaluate_h2_readiness(h2_readiness),
         "board_readonly_diagnostics": evaluate_board_diagnostics(board_readonly_dir),
         "server_side_current": evaluate_server_side_current(server_side_current_dir),
+        "target_blocking_diagnostics": evaluate_target_blocking_diagnostics(target_blocker_dirs),
         "macro_docs": evaluate_docs(docs),
     }
     if require_repo_clean:
@@ -761,6 +814,7 @@ def evaluate(
             h2_readiness.parent,
             board_readonly_dir,
             server_side_current_dir,
+            *target_blocker_dirs,
             *docs,
         ])
 
@@ -822,6 +876,7 @@ def write_fixture(root: Path) -> argparse.Namespace:
                 "docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/",
                 "docs/evidence/c18-update-validation/20260617T030214Z-current-h2-readiness-13d4cbd/h2-readiness.json",
                 "docs/evidence/c18-update-validation/20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f/",
+                "docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/",
                 "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/",
                 "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
                 "pre-H2",
@@ -980,6 +1035,7 @@ def write_fixture(root: Path) -> argparse.Namespace:
         h2_readiness=h2_path,
         board_readonly_dir=board_dir,
         server_side_current_dir=server_side_dir,
+        target_blocker_dirs=[],
         docs=docs,
     )
 
@@ -992,6 +1048,7 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
             h2_readiness=fixture.h2_readiness,
             board_readonly_dir=fixture.board_readonly_dir,
             server_side_current_dir=fixture.server_side_current_dir,
+            target_blocker_dirs=fixture.target_blocker_dirs,
             docs=fixture.docs,
             require_repo_clean=False,
         )
@@ -1002,6 +1059,30 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
             result = self.evaluate_fixture(fixture)
         self.assertTrue(result["passed"], result["blockers"])
         self.assertEqual(result["result_claim"], "c18_homologation_governance_ready_pre_h2")
+
+    def test_target_blocking_diagnostic_blocks_current_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = write_fixture(Path(tmp))
+            blocker_dir = Path(tmp) / "mpv-stuck"
+            blocker_dir.mkdir()
+            write_json(blocker_dir / "evidence-manifest.json", {
+                "schema": TARGET_BLOCKER_SCHEMA,
+                "passed": False,
+                "result_claim": "diagnostic_mpv_stuck_resume_failure_preserved",
+                "target_package_version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "target_payload_sha256": TARGET_PAYLOAD_SHA256,
+                "status_advanced_without_mpv": True,
+                "mpv_unique_aliases": 1,
+                "status_unique_aliases": 4,
+            })
+            fixture.target_blocker_dirs = [blocker_dir]
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic",
+            result["blockers"],
+        )
 
     def test_pilot_channel_must_remain_homologation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1124,6 +1205,7 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
                     h2_readiness=fixture.h2_readiness,
                     board_readonly_dir=fixture.board_readonly_dir,
                     server_side_current_dir=fixture.server_side_current_dir,
+                    target_blocker_dirs=fixture.target_blocker_dirs,
                     docs=fixture.docs,
                     require_repo_clean=True,
                 )
@@ -1139,6 +1221,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--h2-readiness-summary", type=Path, default=DEFAULT_H2_READINESS)
     parser.add_argument("--board-readonly-diagnostics-dir", type=Path, default=DEFAULT_BOARD_READONLY_DIR)
     parser.add_argument("--server-side-current-dir", type=Path, default=DEFAULT_SERVER_SIDE_CURRENT_DIR)
+    parser.add_argument("--target-blocker-evidence-dir", action="append", type=Path, default=None)
     parser.add_argument("--doc", action="append", type=Path, default=[])
     parser.add_argument("--allow-dirty-repo", action="store_true")
     parser.add_argument("--self-test", action="store_true")
@@ -1154,12 +1237,18 @@ def main(argv: list[str]) -> int:
         return 0 if result.wasSuccessful() else 1
 
     docs = args.doc if args.doc else list(DEFAULT_DOCS)
+    target_blocker_dirs = (
+        args.target_blocker_evidence_dir
+        if args.target_blocker_evidence_dir is not None
+        else list(DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS)
+    )
     result = evaluate(
         h1_summary=args.h1_release_gate_summary,
         pilot_readiness=args.pilot_readiness_summary,
         h2_readiness=args.h2_readiness_summary,
         board_readonly_dir=args.board_readonly_diagnostics_dir,
         server_side_current_dir=args.server_side_current_dir,
+        target_blocker_dirs=target_blocker_dirs,
         docs=docs,
         require_repo_clean=not args.allow_dirty_repo,
     )
