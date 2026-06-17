@@ -425,14 +425,16 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         )
         summary = json.loads(result.stdout)
 
-        self.assertEqual(result.returncode, 1)
-        self.assertFalse(summary["passed"])
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(summary["passed"])
         self.assertEqual(summary["schema"], "dadooh.c18.ota_macro_governance_gate.v1")
-        self.assertEqual(summary["result_claim"], "c18_macro_governance_blocked")
-        self.assertIn(
-            "target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic",
-            summary["blockers"],
+        self.assertEqual(summary["result_claim"], "c18_homologation_governance_ready_pre_h2")
+        self.assertEqual(summary["blockers"], [])
+        self.assertEqual(
+            summary["target"]["package_version"],
+            "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
         )
+        self.assertEqual(summary["checks"]["pilot_readiness"]["pilot_state"], "blocked_by_p0_only")
         self.assertEqual(summary["checks"]["pilot_readiness"]["authorization_window"]["snapshot_only"], True)
         self.assertEqual(summary["checks"]["h2_preproduction_block"]["result_claim"], "h2_readiness_blocked")
         self.assertEqual(
@@ -447,7 +449,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         self.assertIn("dadooh.c18.ota_macro_governance_gate.v1", gate)
         self.assertIn("c18_homologation_governance_ready_pre_h2", gate)
-        self.assertIn("target_has_blocking_mpv_stuck_diagnostic", gate)
+        self.assertIn("blocked_by_p0_only", gate)
         self.assertIn("this_gate_does_not_reopen_expired_pilot_windows", gate)
         self.assertIn("snapshot_only", gate)
         self.assertIn("EXPECTED_H2_BLOCKERS", gate)
@@ -490,7 +492,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
         self.assertIn(
-            "docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/macro-governance.json",
+            "docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/macro-governance.json",
             gate,
         )
         self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
@@ -508,7 +510,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "python3",
                 str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
                 "--now-utc",
-                "2026-06-17T17:30:00Z",
+                "2026-06-17T22:30:00Z",
                 "--allow-dirty-repo",
                 "--json",
             ],
@@ -518,16 +520,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         )
         summary = json.loads(result.stdout)
 
-        self.assertEqual(result.returncode, 1)
-        self.assertFalse(summary["passed"])
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(summary["passed"])
         self.assertEqual(summary["schema"], "dadooh.c18.ota_pre_soak_scale_governance_gate.v1")
-        self.assertEqual(summary["result_claim"], "c18_ota_pre_soak_scale_governance_blocked")
-        self.assertIn(
-            "macro_gate:macro_gate_blocker:target_blocking_diagnostics:target_has_blocking_mpv_stuck_diagnostic",
-            summary["blockers"],
-        )
+        self.assertEqual(summary["result_claim"], "c18_ota_pre_soak_scale_governance_ready")
+        self.assertEqual(summary["blockers"], [])
         self.assertEqual(summary["checks"]["release_gate"]["skipped"], True)
         self.assertEqual(summary["checks"]["h2_powerloss_board_preflight_snapshot"]["passed"], True)
+        self.assertEqual(summary["checks"]["macro_snapshot"]["passed"], True)
         self.assertEqual(
             sorted(summary["expected_h2_blockers"]),
             sorted([
@@ -541,9 +541,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("macro_gate_blocker", gate)
-        self.assertIn("20260617T064617Z-current-macro-governance-a761a67", gate)
-        self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
-        self.assertIn("20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f", gate)
+        self.assertIn("20260617T221732Z-current-macro-governance-9bebaf1", gate)
+        self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
+        self.assertIn("20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
