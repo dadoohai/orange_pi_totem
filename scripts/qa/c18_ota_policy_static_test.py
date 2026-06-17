@@ -499,7 +499,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "python3",
                 str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
                 "--now-utc",
-                "2026-06-17T08:30:00Z",
+                "2026-06-17T17:30:00Z",
                 "--allow-dirty-repo",
                 "--json",
             ],
@@ -528,7 +528,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("20260617T064617Z-current-macro-governance-a761a67", gate)
         self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
-        self.assertIn("20260617T082642Z-h2-powerloss-board-preflight-fresh-7a73f9a", gate)
+        self.assertIn("20260617T172405Z-h2-powerloss-board-preflight-fresh-eda4d4f", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
