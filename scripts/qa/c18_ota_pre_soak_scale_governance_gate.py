@@ -506,10 +506,20 @@ def evaluate_tracked_inputs(paths: tuple[Path, ...] = TRACKED_INPUTS) -> dict[st
     return step(not blockers, blockers, paths=checked)
 
 
+def effective_tracked_inputs(args: argparse.Namespace) -> tuple[Path, ...]:
+    return (
+        args.h2_readiness,
+        args.macro_governance_summary,
+        args.server_side_current_dir,
+        args.h2_powerloss_preflight_dir,
+        *DEFAULT_DOCS,
+    )
+
+
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     checks = {
         "repo_clean": evaluate_repo_clean(allow_dirty_repo=args.allow_dirty_repo),
-        "tracked_inputs": evaluate_tracked_inputs(),
+        "tracked_inputs": evaluate_tracked_inputs(effective_tracked_inputs(args)),
         "responsibility_docs": evaluate_docs(),
         "h2_pre_soak_block": evaluate_h2_readiness(args.h2_readiness),
         "macro_snapshot": evaluate_macro_snapshot(args.macro_governance_summary),
@@ -674,6 +684,24 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             "h2_powerloss_preflight_key_check_not_true:update_timer_disabled",
             result["blockers"],
         )
+
+    def test_tracked_inputs_follow_cli_overrides(self) -> None:
+        args = argparse.Namespace(
+            h2_readiness=Path("/tmp/custom-h2.json"),
+            macro_governance_summary=Path("/tmp/custom-macro.json"),
+            server_side_current_dir=Path("/tmp/custom-server-side"),
+            h2_powerloss_preflight_dir=Path("/tmp/custom-powerloss-preflight"),
+        )
+        inputs = effective_tracked_inputs(args)
+
+        self.assertIn(Path("/tmp/custom-h2.json"), inputs)
+        self.assertIn(Path("/tmp/custom-macro.json"), inputs)
+        self.assertIn(Path("/tmp/custom-server-side"), inputs)
+        self.assertIn(Path("/tmp/custom-powerloss-preflight"), inputs)
+        self.assertNotIn(DEFAULT_H2_READINESS, inputs)
+        self.assertNotIn(DEFAULT_MACRO_SUMMARY, inputs)
+        self.assertNotIn(DEFAULT_SERVER_SIDE_CURRENT_DIR, inputs)
+        self.assertNotIn(DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR, inputs)
 
     def test_docs_require_all_responsibility_fronts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
