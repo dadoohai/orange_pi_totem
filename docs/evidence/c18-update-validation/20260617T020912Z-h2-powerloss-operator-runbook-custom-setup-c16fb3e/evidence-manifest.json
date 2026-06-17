@@ -1,0 +1,50 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_operator_runbook_snapshot.v1",
+  "collected_at_utc": "2026-06-17T02:09:12Z",
+  "collection_repo_commit": "7f3f9283b9e6faa45f258dd4c3217e62c8e48f54",
+  "collection_repo_tree": "75ce90060b1df1dd91e6a8a7c68d34a101c92712",
+  "passed": true,
+  "result_claim": "powerloss_operator_runbook_written",
+  "source_plan": "docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e/powerloss-matrix-plan.json",
+  "source_plan_sha256": "692ebc907e106fb520244081c446e599720b3d75aebfbd31404bbe0511793ce2",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "396beacb6837a00e873aa490366fbf7d2ca2069ad11e48e02b9f2970b1cfbcc3",
+      "bytes": 1465
+    },
+    {
+      "file": "operator-runbook.md",
+      "sha256": "1c4dabe939060c850759ac99b809d882e10b4e94bdfb4db254ec7850a19bc8c4",
+      "bytes": 32772
+    },
+    {
+      "file": "operator-runbook-manifest.json",
+      "sha256": "e1fc8ea130e23276bbadbc743c082cc4934a2cf57d6c18f532d94f92aed7a181",
+      "bytes": 6036
+    },
+    {
+      "file": "pull-and-validate-evidence.sh",
+      "sha256": "8ef340eecae92772cb210054bbd9cf7e58e95b1268153e5521c8bdc73c58ac5d",
+      "bytes": 1131
+    }
+  ],
+  "coverage": {
+    "covered": 5,
+    "missing": 12,
+    "required": 17
+  },
+  "custom_setup_guard": {
+    "manual_setup_sections": 2,
+    "builder_blocks_custom_setup_without_commands_or_manual_instructions": true
+  },
+  "non_claims": [
+    "this_snapshot_is_not_powerloss_evidence",
+    "this_snapshot_does_not_claim_17_17",
+    "this_snapshot_does_not_execute_board_commands",
+    "this_snapshot_does_not_pull_or_validate_evidence_by_itself",
+    "this_snapshot_does_not_replace_physical_power_cut",
+    "this_snapshot_does_not_authorize_stable_or_production",
+    "this_snapshot_does_not_thaw_player_runtime"
+  ]
+}

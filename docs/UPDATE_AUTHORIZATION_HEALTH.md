@@ -473,9 +473,14 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
 - `scripts/qa/c18_server_side_publish_asset_collect.py` pode materializar a
   lista repo-relative de assets server-side e hashes, sem publicar release;
 - a matriz fisica power-loss precisa estar 17/17;
+- o planner
+  `docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e/`
+  registra 5/17 cobertos e 12/17 pendentes, com instrucoes manuais explicitas
+  para checkpoints `requires_custom_setup`;
 - o runbook
-  `docs/evidence/c18-update-validation/20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e/`
-  pode orientar os 12 checkpoints pendentes, mas nao conta como evidencia;
+  `docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e/`
+  pode orientar os 12 checkpoints pendentes, bloqueia setup customizado sem
+  comandos/instrucoes e nao conta como evidencia;
 - antes de iniciar uma sessao fisica, rodar
   `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` na placa
   e validar o JSON com
@@ -490,11 +495,12 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   `docs/evidence/c18-update-validation/20260612T163650Z-h2-powerloss-board-preflight-after-reset-c16fb3e/`
   ficou verde para iniciar a sessao fisica;
 - depois da pausa/reboot multi-dia, o preflight atual em
-  `docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e/`
+  `docs/evidence/c18-update-validation/20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e/`
   reconfirmou pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`, policy
   `homologation`, timer inativo/desabilitado, target nao linkado, target nao
-  quarentenado e raiz H2 sem diretorios de checkpoint pendentes; continua sendo
-  somente preflight e nao evidencia power-loss;
+  quarentenado, raiz H2 sem diretorios de checkpoint pendentes e custom setup
+  reportado para `after_previous_symlink` e `rollback_after_current_unlinked`;
+  continua sendo somente preflight e nao evidencia power-loss;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;

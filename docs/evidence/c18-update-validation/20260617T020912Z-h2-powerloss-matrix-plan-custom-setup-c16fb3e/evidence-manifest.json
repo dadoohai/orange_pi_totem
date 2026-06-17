@@ -1,0 +1,40 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_matrix_plan_snapshot.v1",
+  "collected_at_utc": "2026-06-17T02:09:12Z",
+  "collection_repo_commit": "7f3f9283b9e6faa45f258dd4c3217e62c8e48f54",
+  "collection_repo_tree": "75ce90060b1df1dd91e6a8a7c68d34a101c92712",
+  "passed": false,
+  "result_claim": "powerloss_matrix_plan_incomplete",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "87da3daf9b4636c157272045a2ef046c891391e2534867f8171e77158c64db7c",
+      "bytes": 1665
+    },
+    {
+      "file": "powerloss-matrix-plan.json",
+      "sha256": "692ebc907e106fb520244081c446e599720b3d75aebfbd31404bbe0511793ce2",
+      "bytes": 36977
+    }
+  ],
+  "target_package": {
+    "component": "player-runtime",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "channel": "homologation"
+  },
+  "coverage": {
+    "covered": 5,
+    "missing": 12,
+    "required": 17
+  },
+  "non_claims": [
+    "this_snapshot_is_not_powerloss_evidence",
+    "this_snapshot_does_not_claim_17_17",
+    "this_snapshot_does_not_execute_board_commands",
+    "this_snapshot_does_not_replace_physical_power_cut",
+    "this_snapshot_does_not_authorize_stable_or_production",
+    "this_snapshot_does_not_thaw_player_runtime"
+  ]
+}

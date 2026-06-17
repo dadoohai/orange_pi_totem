@@ -526,7 +526,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("20260617T011150Z-current-macro-governance-ab6ad5f", gate)
         self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
-        self.assertIn("20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e", gate)
+        self.assertIn("20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
@@ -1101,7 +1101,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "tracked_inputs=true",
         ):
             self.assertIn(token, doc192)
-        self.assertIn("20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e", doc192)
+        self.assertIn("20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
@@ -2436,6 +2436,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("ROLLBACK_SPECIAL_SETUP", powerloss_plan)
         self.assertIn("old-current-present-and-different-from-target", powerloss_plan)
         self.assertIn("target-current-without-previous-link-or-state", powerloss_plan)
+        self.assertIn("manual_setup_instructions", powerloss_plan)
+        self.assertIn("Record the pre-arm current/previous topology", powerloss_plan)
         self.assertIn("requires --quarantine-current", powerloss_plan)
         self.assertIn("fresh apply path is required", powerloss_plan)
         self.assertIn("rollback result is expected to be image_fallback, not previous", powerloss_plan)
@@ -2456,6 +2458,10 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("this_runbook_does_not_execute_board_commands", powerloss_runbook)
         self.assertIn("this_runbook_does_not_replace_physical_power_cut", powerloss_runbook)
         self.assertIn("remote_reboot_is_not_acceptable_powerloss_evidence", powerloss_runbook)
+        self.assertIn("custom_setup_missing", powerloss_runbook)
+        self.assertIn("Manual setup before arm", powerloss_runbook)
+        self.assertIn("none required by the plan", powerloss_runbook)
+        self.assertNotIn("none emitted by the plan", powerloss_runbook)
         self.assertIn("CUT_POWER_NOW", powerloss_runbook)
         self.assertIn("pull-and-validate-evidence.sh", powerloss_runbook)
         self.assertIn("c18_player_runtime_powerloss_evidence_gate.py", powerloss_runbook)
@@ -2721,7 +2727,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
             "20260617T003916Z-current-h2-readiness-c16fb3e",
             "20260612T125127Z-server-side-governance-c16fb3e",
-            "20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e",
+            "20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",

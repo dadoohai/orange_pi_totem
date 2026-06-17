@@ -242,20 +242,26 @@ producao.
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
 checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica
 dos 12 checkpoints restantes. O planner
-`docs/evidence/c18-update-validation/20260612T131426Z-h2-powerloss-matrix-plan-c16fb3e/`
-registra a matriz atual como 5/17 coberta e 12/17 pendente, sem reivindicar
+`docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e/`
+registra a matriz atual como 5/17 coberta e 12/17 pendente, com instrucoes
+manuais explicitas para checkpoints de setup customizado e sem reivindicar
 evidencia fisica.
 O runbook operacional gerado em
-`docs/evidence/c18-update-validation/20260612T155724Z-h2-powerloss-operator-runbook-c16fb3e/`
+`docs/evidence/c18-update-validation/20260617T020912Z-h2-powerloss-operator-runbook-custom-setup-c16fb3e/`
 organiza esses 12 checkpoints para operador, com comandos arm/resume e helper
-de pull/validacao, mas tambem nao e evidencia fisica e nao substitui corte real
-de energia.
+de pull/validacao. O builder agora bloqueia checkpoint `requires_custom_setup`
+sem comandos ou instrucoes manuais; o runbook tambem nao e evidencia fisica e
+nao substitui corte real de energia.
 O mesmo runbook agora inclui uma etapa previa de preflight H2: coletar estado
 read-only da placa com
 `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py` e validar
 com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o
 plano da matriz. Esse gate bloqueia placa/pacote/topologia errados antes da
 sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
+Snapshot atual revalidado contra o plano com custom setup:
+`docs/evidence/c18-update-validation/20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e/`;
+ele reporta `after_previous_symlink` e `rollback_after_current_unlinked` como
+checkpoints que exigem setup customizado.
 Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target
 `c16fb3e` ainda estava em quarentena. O reset lab-only
 `20260612T163437Z-h2-powerloss-quarantine-reset-c16fb3e` removeu uma entrada do
