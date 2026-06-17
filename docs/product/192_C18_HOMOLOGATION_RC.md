@@ -277,7 +277,7 @@ Depois da pausa/reboot multi-dia, o preflight intermediario
 placa no mesmo terreno seguro: pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`,
 policy `homologation`, timer inativo/desabilitado, target nao linkado, target
 nao quarentenado e raiz de evidencia H2 sem diretorios de checkpoint pendentes.
-O snapshot fresco da sessao H2 e o `20260617T071517Z`, coletado novamente da
+O snapshot fresco da sessao H2 e o `20260617T082642Z`, coletado novamente da
 placa e validado contra o plano com custom setup. Esses snapshots sao apenas
 preflight: nao contam
 power-loss, nao reduzem os 12 checkpoints fisicos pendentes e nao mudam
