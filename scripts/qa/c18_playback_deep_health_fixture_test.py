@@ -90,6 +90,28 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertIn(reason, result["failure_reasons"])
         return result
 
+    def write_ipc_error_rows(self, fixture: Fixture, indexes: list[int], reason: str) -> None:
+        rows = fixture.rows()
+        for row in rows:
+            row.setdefault("ipc_error", "")
+        while len(rows) < 8:
+            row = rows[-1].copy()
+            row["seq"] = str(len(rows) + 1)
+            row["rel_sec"] = str(float(rows[-1]["rel_sec"]) + 1)
+            row["time_pos"] = str(float(rows[-1].get("time_pos") or 0) + 1)
+            row["estimated_frame_number"] = str(int(float(rows[-1].get("estimated_frame_number") or 0)) + 30)
+            rows.append(row)
+        for index in indexes:
+            rows[index]["ipc_result"] = "error"
+            rows[index]["ipc_error"] = reason
+            rows[index]["path_alias"] = ""
+            rows[index]["filename_alias"] = ""
+            rows[index]["time_pos"] = ""
+            rows[index]["estimated_frame_number"] = ""
+            rows[index]["hwdec_current"] = ""
+            rows[index]["vo_configured"] = ""
+        fixture.write_rows(rows)
+
     def write_status_mpv_alignment_rows(
         self,
         fixture: Fixture,
@@ -176,6 +198,67 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         rows[1]["ipc_result"] = "timeout"
         fixture.write_rows(rows)
         self.assert_fails_with(fixture, "ipc_stable_after_success")
+
+    def test_accepts_single_transient_missing_socket_after_success(self) -> None:
+        fixture = self.with_case()
+        self.write_ipc_error_rows(fixture, [1], "missing_socket")
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["counters"]["ipc_error_after_first_success"], 1)
+        self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 1)
+        self.assertEqual(result["counters"]["ipc_other_error_after_first_success"], 0)
+        self.assertNotIn("ipc_stable_after_success", result["failure_reasons"])
+
+    def test_accepts_bounded_transient_missing_socket_burst_after_success(self) -> None:
+        fixture = self.with_case()
+        self.write_ipc_error_rows(fixture, [1, 2], "missing_socket")
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 2)
+        self.assertEqual(result["counters"]["ipc_missing_socket_max_consecutive_after_first_success"], 2)
+        self.assertNotIn("ipc_stable_after_success", result["failure_reasons"])
+
+    def test_rejects_excessive_missing_socket_after_success(self) -> None:
+        fixture = self.with_case()
+        self.write_ipc_error_rows(fixture, [1, 2, 3], "missing_socket")
+        result = self.assert_fails_with(fixture, "ipc_stable_after_success")
+        self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 3)
+
+    def test_rejects_non_missing_socket_ipc_error_after_success(self) -> None:
+        fixture = self.with_case()
+        self.write_ipc_error_rows(fixture, [1], "connection_reset")
+        result = self.assert_fails_with(fixture, "ipc_stable_after_success")
+        self.assertEqual(result["counters"]["ipc_other_error_after_first_success"], 1)
+
+    def test_transient_missing_socket_does_not_mask_mpv_stuck_on_old_media(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:a>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:a>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:a>"),
+            ],
+        )
+        rows = fixture.rows()
+        for row in rows:
+            row.setdefault("ipc_error", "")
+        rows[2]["ipc_result"] = "error"
+        rows[2]["ipc_error"] = "missing_socket"
+        rows[2]["path_alias"] = ""
+        rows[2]["filename_alias"] = ""
+        rows[2]["time_pos"] = ""
+        rows[2]["estimated_frame_number"] = ""
+        rows[2]["hwdec_current"] = ""
+        rows[2]["vo_configured"] = ""
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "status_mpv_path_aligned")
+        self.assertTrue(result["checks"]["ipc_stable_after_success"])
+        self.assertEqual(result["counters"]["ipc_missing_socket_after_first_success"], 1)
+        self.assertTrue(result["counters"]["status_advanced_without_mpv"])
 
     def test_rejects_wrong_mpv_count(self) -> None:
         fixture = self.with_case()

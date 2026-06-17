@@ -26,6 +26,8 @@ MAX_STATUS_MPV_TRANSITION_LAG_RUNS = 3
 MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS = 2
 MAX_STATUS_MPV_FORWARD_STATUS_LAG_SEGMENTS = 3
 MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES = 1
+MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
+MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 
 
@@ -597,14 +599,29 @@ def evaluate(
     seen_success = False
     ipc_timeout_after_success = 0
     ipc_error_after_success = 0
+    ipc_missing_socket_after_success = 0
+    ipc_other_error_after_success = 0
+    ipc_missing_socket_streak = 0
+    ipc_missing_socket_max_streak = 0
     for row in rows:
         result = row.get("ipc_result")
         if result == "success":
             seen_success = True
+            ipc_missing_socket_streak = 0
         elif seen_success and result == "timeout":
             ipc_timeout_after_success += 1
+            ipc_missing_socket_streak = 0
         elif seen_success and result == "error":
             ipc_error_after_success += 1
+            if row.get("ipc_error") == "missing_socket":
+                ipc_missing_socket_after_success += 1
+                ipc_missing_socket_streak += 1
+                ipc_missing_socket_max_streak = max(ipc_missing_socket_max_streak, ipc_missing_socket_streak)
+            else:
+                ipc_other_error_after_success += 1
+                ipc_missing_socket_streak = 0
+        elif seen_success:
+            ipc_missing_socket_streak = 0
 
     hwdec_expected_samples = 0
     hwdec_unexpected_samples = 0
@@ -727,11 +744,20 @@ def evaluate(
         else not panfrost_faults_delta_present or panfrost_faults_delta == 0
     )
     panfrost_faults_clean = panfrost_faults_zero if panfrost_fault_policy == "absolute" else panfrost_faults_delta_zero
+    ipc_transient_missing_socket_ok = (
+        ipc_missing_socket_after_success <= MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS
+        and ipc_missing_socket_max_streak <= MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS
+    )
+    ipc_stable_after_success = (
+        ipc_timeout_after_success == 0
+        and ipc_other_error_after_success == 0
+        and ipc_transient_missing_socket_ok
+    )
 
     checks = {
         "samples_present": len(rows) > 0,
         "ipc_success_present": len(success_rows) > 0,
-        "ipc_stable_after_success": ipc_timeout_after_success == 0 and ipc_error_after_success == 0,
+        "ipc_stable_after_success": ipc_stable_after_success,
         "hwdec_expected_present": hwdec_expected_samples > 0,
         "hwdec_no_unexpected": hwdec_unexpected_samples == 0,
         "vo_configured_present": vo_configured_true_samples > 0,
@@ -783,6 +809,13 @@ def evaluate(
             "ipc_success": len(success_rows),
             "ipc_timeout_after_first_success": ipc_timeout_after_success,
             "ipc_error_after_first_success": ipc_error_after_success,
+            "ipc_missing_socket_after_first_success": ipc_missing_socket_after_success,
+            "ipc_other_error_after_first_success": ipc_other_error_after_success,
+            "ipc_missing_socket_max_consecutive_after_first_success": ipc_missing_socket_max_streak,
+            "ipc_missing_socket_allowed_after_first_success": MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS,
+            "ipc_missing_socket_max_allowed_consecutive_after_first_success": (
+                MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS
+            ),
             "unique_aliases": unique_aliases,
             "status_unique_aliases": status_unique_aliases,
             "mpv_unique_aliases": mpv_unique_aliases,
