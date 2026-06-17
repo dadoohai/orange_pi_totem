@@ -1,0 +1,60 @@
+{
+  "schema": "dadooh.c18.server_side_current_validation_snapshot.v1",
+  "collected_at_utc": "2026-06-17T00:18:04Z",
+  "repo_commit": "416f9396c6c64671ed55494c056d98b74d5c18c7",
+  "repo_tree": "9fadbbf02adbd6370faabf1ebf4bfe02f694f73d",
+  "passed": true,
+  "result_claim": "server_side_publish_governance_ready",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "4a256f1591b2da99f48de6fb809fada3f7d9b7230c5039c0436e98ae03b013c9",
+      "bytes": 1076
+    },
+    {
+      "file": "server-side-governance-gate.json",
+      "sha256": "43cdc8e802ca7f0556e448f3bc18fb982c6512ce5859670c0707116dccf7a68d",
+      "bytes": 503
+    },
+    {
+      "file": "server-side-asset-list.json",
+      "sha256": "a7ce1ee2c4c25eff16b49d7df077d67b5d939f3bfe59d7d4f4cdb39779f74266",
+      "bytes": 5971
+    }
+  ],
+  "target_package": {
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "component": "player-runtime",
+    "channel": "homologation",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+  },
+  "inputs": {
+    "server_side_evidence": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json",
+    "trusted_key_pem": "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem",
+    "trust_anchor_evidence": "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json",
+    "expected_release_gate_sha256": "c315841cb517c544a454475e841ce56048d5211dbe1b310733fd0840f72fffc3"
+  },
+  "key_checks": {
+    "governance_gate_passed": true,
+    "expected_component_player_runtime": true,
+    "external_trust_anchor_verified": true,
+    "signed_or_attested_assets_verified": true,
+    "asset_list_hash_bound": true,
+    "asset_count": 14,
+    "auto_pull_default_disabled": true,
+    "allowlist_controls_defined": true,
+    "staged_rollout_defined": true,
+    "audit_trail_defined": true
+  },
+  "non_claims": [
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_thaw_player_runtime",
+    "this_snapshot_does_not_complete_h2",
+    "this_snapshot_does_not_replace_powerloss_17_17",
+    "this_snapshot_does_not_replace_soak_24h",
+    "this_snapshot_does_not_replace_stable_promotion_or_formal_thaw_decision"
+  ]
+}

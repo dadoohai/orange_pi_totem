@@ -1,0 +1,101 @@
+{
+  "asset_records": [
+    {
+      "bytes": 6207,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json",
+      "sha256": "e5fd6ce2965e9b946bbd0f750420448d96fc894b700c98d99e9e40fe46113a92"
+    },
+    {
+      "bytes": 1389,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+      "sha256": "6941bb84b355fb1f08a9c1725190c332f54bce0dfb61034c2ff386788ebe1895"
+    },
+    {
+      "bytes": 26783,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+      "sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+    },
+    {
+      "bytes": 1054,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json",
+      "sha256": "c315841cb517c544a454475e841ce56048d5211dbe1b310733fd0840f72fffc3"
+    },
+    {
+      "bytes": 3268,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/audit-log.ndjson",
+      "sha256": "6ff729caf695fb2a5f523d162fbf8b18c831d6aa9f81f346927abb1037a6bd64"
+    },
+    {
+      "bytes": 769,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/manifest.signature.json",
+      "sha256": "0746b10f438c176e7c02cb22130ab24d926484af95399fd8c17f05542c9af9df"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/manifest.sig",
+      "sha256": "b2be3c9921220b960b0ce5069dae5118f02055077225ef1f430b92f85b18b5dc"
+    },
+    {
+      "bytes": 767,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/payload.signature.json",
+      "sha256": "125e0db41026e2b3d9ccd559486298786583234d4dba534ee8d2cbd0017c935e"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/payload.sig",
+      "sha256": "0bdf0c469b37b351e59bd1affe2c285bee1fb02a573f76bc263978a402b1593c"
+    },
+    {
+      "bytes": 793,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/c18-ota-release-gate.signature.json",
+      "sha256": "87f2e44d2a2259b34a3c77d6f067d760507bd8d070a753a1d75d4d6b5b713535"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/c18-ota-release-gate.sig",
+      "sha256": "756afeb08f3d5432e0c8a7de22428a59f520b7fe3e3a61e384da02709b54d48c"
+    },
+    {
+      "bytes": 771,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/audit-log.signature.json",
+      "sha256": "d6cf34bdc8743176dc897a58397f9fff8da9a16198b131e08b432ae1f4b67f2e"
+    },
+    {
+      "bytes": 256,
+      "path": "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/audit-log.sig",
+      "sha256": "76ee761f8bb56d07f58803afb15b2d65e9a2e6c6803474cb4d65ec7229d0b7c3"
+    },
+    {
+      "bytes": 853,
+      "path": "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json",
+      "sha256": "c1d36a808dd6b77cd7c9dc01606d2188c3c81273effb9940f0e514da24f95c85"
+    }
+  ],
+  "assets": [
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/audit-log.ndjson",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/manifest.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/manifest.sig",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/payload.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/payload.sig",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/c18-ota-release-gate.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/c18-ota-release-gate.sig",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/audit-log.signature.json",
+    "releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/signatures/audit-log.sig",
+    "docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json"
+  ],
+  "non_claims": [
+    "this_list_does_not_publish_releases",
+    "this_list_does_not_enable_auto_pull",
+    "this_list_does_not_promote_stable",
+    "this_list_does_not_thaw_player_runtime",
+    "this_list_does_not_complete_h2",
+    "this_list_does_not_replace_powerloss_17_17",
+    "this_list_does_not_replace_soak_24h",
+    "this_list_does_not_replace_stable_promotion_or_formal_thaw_decision"
+  ],
+  "schema": "dadooh.c18.server_side_publish_asset_list.v1"
+}

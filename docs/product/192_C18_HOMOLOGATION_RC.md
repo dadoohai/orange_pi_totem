@@ -70,6 +70,11 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual, vermelho apenas pelos blockers de producao:
   `docs/evidence/c18-update-validation/20260612T200457Z-h2-readiness-traceability-snapshot-c16fb3e/h2-readiness.json`;
+- server-side/signature atual:
+  `docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/`;
+  `server-side-governance-gate.json` verde para `player-runtime`, trust anchor
+  externo verificado e lista de 14 assets assinados/atestados hash-bound; nao
+  publica, nao promove `stable`, nao liga auto-pull e nao abre thaw;
 - gate macro pre-H2:
   `scripts/qa/c18_ota_macro_governance_gate.py` agrega os snapshots acima com
   `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d`
