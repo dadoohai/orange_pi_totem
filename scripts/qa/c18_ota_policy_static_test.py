@@ -477,6 +477,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
+        self.assertIn(
+            "docs/evidence/c18-update-validation/20260617T011150Z-current-macro-governance-ab6ad5f/macro-governance.json",
+            gate,
+        )
+        self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
         self.assertIn("this_gate_does_not_use_snapshot_as_operational_authorization", gate)
         self.assertIn("preflight_stale", gate)
         self.assertIn("authorization_window_expired", gate)
