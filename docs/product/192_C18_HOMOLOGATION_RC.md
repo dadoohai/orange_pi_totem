@@ -119,6 +119,11 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/`
   preserva 10 minutos de placa real com 9 midias observadas, zero restart,
   zero falha de render e sem padrao de midia presa;
+- playback fresco pos-alinhamento:
+  `docs/evidence/c18-update-validation/user-level-fresh-20260617T2234Z-9bebaf1/`
+  preserva 120 segundos de placa real no runtime corrente, com 9 midias
+  observadas, hwdecode esperado, zero restart, zero falha de midia e sem
+  divergencia status/MPV;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:

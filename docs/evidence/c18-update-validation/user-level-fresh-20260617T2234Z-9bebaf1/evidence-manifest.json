@@ -1,0 +1,51 @@
+{
+  "artifact_id": "user-level-fresh-20260617T2234Z-9bebaf1",
+  "board": "root@192.168.18.131",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "b6a93936c6fe51da7aad3bc2cb95e1bd326f02c3bb9769b3530b6b7517c39061"
+    },
+    {
+      "file": "deep-health-kernel.json",
+      "sha256": "3ed6494ea1b2cf81adc6003f9160ae2b3e1599025722be749574dcbe0c7853e8"
+    },
+    {
+      "file": "deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "file": "deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "file": "deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "file": "playback-deep-health-public.json",
+      "sha256": "de6957f1a43c41a012ed92659e46acf0deb35785f7780ca42566bbf21068728d"
+    },
+    {
+      "file": "playback-samples.tsv",
+      "sha256": "8025562876fbf838677a5d2d948e500210c7a9d849c41aa8208a55b600858f27"
+    },
+    {
+      "file": "status-samples.ndjson",
+      "sha256": "81fd6ca127bbc5bfe75a8cab9c1f5488c7c493b2b52672af440473c5e7188b0a"
+    }
+  ],
+  "non_claims": [
+    "this_evidence_does_not_claim_h2",
+    "this_evidence_does_not_authorize_production",
+    "this_evidence_does_not_promote_stable",
+    "this_evidence_does_not_thaw_public_player_runtime",
+    "this_evidence_does_not_satisfy_powerloss_17_17",
+    "this_evidence_does_not_satisfy_24h_soak"
+  ],
+  "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "passed": true,
+  "result_claim": "fresh_user_level_playback_check_passed",
+  "schema": "dadooh.c18.user_level_playback_evidence.v1",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+}

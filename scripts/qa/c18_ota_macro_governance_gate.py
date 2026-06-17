@@ -161,6 +161,7 @@ REQUIRED_DOC_TOKENS = (
     "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/",
     "docs/evidence/c18-update-validation/20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1/",
     "docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/",
+    "docs/evidence/c18-update-validation/user-level-fresh-20260617T2234Z-9bebaf1/",
     "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
     "pilot_powerloss_p0",
     "pre-H2",
