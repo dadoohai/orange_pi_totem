@@ -1,0 +1,64 @@
+{
+  "schema": "dadooh.c18.operational_resume_current_snapshot.v1",
+  "collected_at_utc": "2026-06-17T05:57:49Z",
+  "collection_repo_commit": "af1bb94a39bbe9f75d7215f529127fcf53231b10",
+  "collection_repo_tree": "688c8583609b91ae68fc67bb70f540f97217668d",
+  "passed": true,
+  "result_claim": "c18_operational_resume_ready",
+  "target_package": {
+    "component": "player-runtime",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "channel": "homologation",
+    "ring": "pilot"
+  },
+  "operator_window": {
+    "start_utc": "2026-06-17T05:51:57Z",
+    "end_utc": "2026-06-17T09:51:57Z",
+    "operator_assisted_delivery": true,
+    "rollback_ready": true
+  },
+  "preflight": {
+    "stage": "pre_apply",
+    "collected_at_utc": "2026-06-17T05:56:16Z",
+    "device_hash": "sha256:fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+    "policy": "homologation",
+    "allow_prerelease": true,
+    "timer_disabled": true,
+    "public_freeze_rc": 44,
+    "image_tag": "c18-hwdecode-lab-1x"
+  },
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "8c9507730b09184a6b3fde066174a739f85ae4171ccf9f6c639ed632caf297a4",
+      "bytes": 1110
+    },
+    {
+      "file": "pilot-authorization.json",
+      "sha256": "d7c251bdb1cec09c11fc84ccc24effb40a83711135f727e77d09ca386fc9ac24",
+      "bytes": 909
+    },
+    {
+      "file": "board-preflight.json",
+      "sha256": "f7a7fa5f741a79574298507d0277825b5560ed2c051c89710ab0cfd19a6a7f72",
+      "bytes": 4217
+    },
+    {
+      "file": "operational-resume.json",
+      "sha256": "3bb79478e6042023b1ed04dc92d798f780cfaaedc519d41bdae0737973a6fba4",
+      "bytes": 3836
+    }
+  ],
+  "non_claims": [
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_24h_soak",
+    "this_snapshot_does_not_satisfy_powerloss_17_17",
+    "this_snapshot_does_not_replace_h2_readiness"
+  ]
+}

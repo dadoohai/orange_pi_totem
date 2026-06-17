@@ -61,9 +61,9 @@ Evidencia principal:
 - H1 decisivo:
   `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`;
 - autorizacao operacional atual:
-  `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/pilot-authorization.json`;
+  `docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/pilot-authorization.json`;
 - retomada operacional atual:
-  `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`;
+  `docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`;
 - pilot readiness atual:
   `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json`;
 - autorizacao/readiness de 2026-06-12, preservados como rastreabilidade
@@ -203,7 +203,7 @@ Snapshot versionado desse bloqueio:
 `docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
 
 Snapshot atual de retomada operacional:
-`docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`.
+`docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`.
 Resultado: `passed=true`, `result_claim=c18_operational_resume_ready`, com
 autorizacao vigente, preflight `pre_apply` fresco da placa, freeze publico
 `rc=44`, policy homologation e stack C18 `mpv`/`hwdec` provada. Esse resultado

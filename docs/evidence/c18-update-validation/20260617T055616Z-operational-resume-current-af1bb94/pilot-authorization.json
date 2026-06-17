@@ -1,0 +1,31 @@
+{
+  "schema": "dadooh.c18.homologation_pilot_authorization.v1",
+  "approved": true,
+  "ring": "pilot",
+  "channel": "homologation",
+  "operator_assisted_delivery": true,
+  "rollback_ready": true,
+  "operator": "operator-current-session",
+  "rollback_owner": "rollback-owner-current-session",
+  "expected_package_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+  "expected_h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
+  "window": {
+    "start_utc": "2026-06-17T05:51:57Z",
+    "end_utc": "2026-06-17T09:51:57Z"
+  },
+  "allowlisted_devices": [
+    {
+      "device_hash": "sha256:fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "label": "pilot-board-current-session"
+    }
+  ],
+  "non_claims": [
+    "no_production",
+    "no_stable",
+    "no_auto_pull",
+    "no_24h_soak",
+    "no_powerloss_17_17",
+    "no_signature_or_attestation",
+    "no_public_thaw"
+  ]
+}

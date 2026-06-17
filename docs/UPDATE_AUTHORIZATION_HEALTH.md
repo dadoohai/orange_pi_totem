@@ -13,7 +13,7 @@ alvo corrente e
 `channel=homologation` e `ring=pilot`. A evidencia operacional atual esta em
 `docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/`,
 com retomada operacional em
-`docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`
+`docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`
 e macro-governanca atual em
 `docs/evidence/c18-update-validation/20260617T031156Z-current-macro-governance-d1209e3/`.
 A trilha de 2026-06-12 continua preservada como rastreabilidade historica:
@@ -51,7 +51,7 @@ sem reconcile de manutencao autorizado e commitado antes do gate de retomada.
 Snapshot do bloqueio:
 `docs/evidence/c18-update-validation/20260616T224130Z-operational-resume-blocked-99c0af8/`.
 O refresh operacional atual esta versionado em
-`docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`:
+`docs/evidence/c18-update-validation/20260617T055616Z-operational-resume-current-af1bb94/`:
 autorizacao da janela atual + preflight `pre_apply` fresco da placa +
 `c18_ota_operational_resume_gate.py` verde. Isso libera apenas retomada
 assistida do piloto em homologacao; H2/producao permanecem bloqueados.
