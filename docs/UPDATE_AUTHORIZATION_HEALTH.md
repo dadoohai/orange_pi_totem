@@ -15,7 +15,7 @@ alvo corrente e
 com retomada operacional em
 `docs/evidence/c18-update-validation/20260616T231448Z-operational-resume-current-2320950/`
 e macro-governanca atual em
-`docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/`.
+`docs/evidence/c18-update-validation/20260617T005124Z-current-macro-governance-e55500c/`.
 A trilha de 2026-06-12 continua preservada como rastreabilidade historica:
 H1 decisive traceability refresh em
 `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`,
@@ -32,7 +32,7 @@ read-only de placa. Esse gate nao substitui H2, nao reabre janela expirada de
 piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
 Snapshot versionado:
-`docs/evidence/c18-update-validation/20260616T233424Z-current-macro-governance-95d79ef/`.
+`docs/evidence/c18-update-validation/20260617T005124Z-current-macro-governance-e55500c/`.
 Retomada operacional agora passa por
 `scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate nao usa o snapshot
 como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da

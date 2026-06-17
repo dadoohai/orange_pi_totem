@@ -1,0 +1,55 @@
+{
+  "schema": "dadooh.c18.macro_governance_current_snapshot.v1",
+  "artifact_id": "c18-current-macro-governance-e55500c-20260617T005124Z",
+  "collected_at_utc": "2026-06-17T00:51:24Z",
+  "repo_commit": "e55500c30419be3c05e3e8ab47a27b6de0997caa",
+  "component": "player-runtime",
+  "channel": "homologation",
+  "ring": "pilot",
+  "result": {
+    "passed": true,
+    "result_claim": "c18_homologation_governance_ready_pre_h2"
+  },
+  "target_package": {
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "image_tag": "c18-hwdecode-lab-1x"
+  },
+  "inputs": {
+    "h1": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+    "pilot_readiness": "docs/evidence/c18-update-validation/20260616T232546Z-current-pilot-readiness-5b2128c/pilot-readiness.json",
+    "h2_readiness": "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
+    "board_readonly_diagnostics": "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/",
+    "server_side_current": "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e/"
+  },
+  "h2_expected_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 1289,
+      "sha256": "9bf6657f1a9351b270caa85e093a14d6729c01b525ee109b9003809b5ec2f602"
+    },
+    {
+      "file": "macro-governance.json",
+      "bytes": 6996,
+      "sha256": "51bfb7dbf0e3a69771d264c8642219e198eb64e8134b68340957bf41681ada1f"
+    }
+  ],
+  "non_claims": [
+    "this_snapshot_does_not_reopen_expired_pilot_windows",
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_24h_soak",
+    "this_snapshot_does_not_satisfy_powerloss_17_17",
+    "this_snapshot_does_not_replace_h2_readiness"
+  ]
+}
