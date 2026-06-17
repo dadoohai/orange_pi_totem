@@ -1,0 +1,107 @@
+{
+  "blockers": [],
+  "checks": {
+    "h2_powerloss_board_preflight_snapshot": {
+      "blockers": [],
+      "collected_at_utc": "2026-06-16T23:57:24Z",
+      "passed": true,
+      "result_claim": "h2_powerloss_board_preflight_accepted",
+      "run_dir": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e"
+    },
+    "h2_pre_soak_block": {
+      "blockers": [],
+      "blockers_actual": [
+        "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+        "soak_endurance_24h:missing_24h_soak_summary",
+        "stable_promotion_authorization:missing_stable_promotion_evidence",
+        "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+      ],
+      "passed": true,
+      "path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
+      "result_claim": "h2_readiness_blocked",
+      "sha256": "528c4adec7ac8acded55ac2a82839246faea624c002e839dcc47726280c8813b"
+    },
+    "macro_gate": {
+      "blockers": [],
+      "passed": true,
+      "returncode": 0
+    },
+    "macro_snapshot": {
+      "blockers": [],
+      "passed": true,
+      "path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260617T011150Z-current-macro-governance-ab6ad5f/macro-governance.json",
+      "result_claim": "c18_homologation_governance_ready_pre_h2"
+    },
+    "operational_resume_default": {
+      "blockers": [],
+      "passed": true,
+      "returncode": 1
+    },
+    "release_gate": {
+      "blockers": [],
+      "passed": true,
+      "returncode": 0
+    },
+    "repo_clean": {
+      "blockers": [],
+      "changed_paths": [],
+      "passed": true,
+      "stderr_tail": ""
+    },
+    "responsibility_docs": {
+      "blockers": [],
+      "doc_count": 5,
+      "passed": true
+    },
+    "server_side_current": {
+      "blockers": [],
+      "passed": true,
+      "result_claim": "server_side_publish_governance_ready",
+      "run_dir": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e"
+    },
+    "tracked_inputs": {
+      "blockers": [],
+      "passed": true,
+      "paths": [
+        "docs/evidence/c18-update-validation/20260617T003916Z-current-h2-readiness-c16fb3e/h2-readiness.json",
+        "docs/evidence/c18-update-validation/20260617T011150Z-current-macro-governance-ab6ad5f/macro-governance.json",
+        "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e",
+        "docs/evidence/c18-update-validation/20260616T235724Z-h2-powerloss-board-preflight-current-c16fb3e",
+        "docs/product/191_C18_OTA_OPERATING_MODEL.md",
+        "docs/product/192_C18_HOMOLOGATION_RC.md",
+        "docs/UPDATE_CONTRACT.md",
+        "docs/UPDATE_AUTHORIZATION_HEALTH.md",
+        "docs/c18-player-runtime-h2-stable-thaw-runbook.md"
+      ]
+    }
+  },
+  "evaluated_at_utc": "2026-06-17T01:41:37.695861Z",
+  "expected_h2_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "non_claims": [
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness",
+    "this_gate_does_not_replace_operational_resume"
+  ],
+  "passed": true,
+  "result_claim": "c18_ota_pre_soak_scale_governance_ready",
+  "schema": "dadooh.c18.ota_pre_soak_scale_governance_gate.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "ring": "pilot",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
+  }
+}

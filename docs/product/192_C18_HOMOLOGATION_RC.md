@@ -84,6 +84,12 @@ Evidencia principal:
   nao reabre janela de piloto expirada e nao autoriza producao;
 - snapshot macro versionado:
   `docs/evidence/c18-update-validation/20260617T011150Z-current-macro-governance-ab6ad5f/`;
+- snapshot pre-soak scale governance:
+  `docs/evidence/c18-update-validation/20260617T014137Z-pre-soak-scale-governance-0c5fd2e/`;
+  `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` verde em arvore
+  limpa, com release gate interno verde, H2 ainda vermelho pelos blockers
+  esperados e non-claims explicitos para producao, `stable`, auto-pull, thaw,
+  soak 24h e power-loss 17/17;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:
@@ -157,6 +163,19 @@ Resultado esperado: `passed=true`,
 `result_claim=c18_homologation_governance_ready_pre_h2`. Esse resultado e
 somente de governanca/snapshot: ele carrega a janela antiga como
 `snapshot_only`, nao como autorizacao operacional viva.
+
+Como agregador pre-soak para escala, o snapshot atual tambem deve passar:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_gate.py --json
+```
+
+Resultado esperado: `passed=true`,
+`result_claim=c18_ota_pre_soak_scale_governance_ready`. Quando usado para gerar
+evidencia final do retrato atual, rodar com `--run-release-gate` em arvore
+limpa. Esse gate agrega docs de responsabilidade, H2 vermelho, server-side
+atual, preflight H2 power-loss, retomada operacional default-deny e release
+gate; nao substitui H2 nem autorizacao operacional fresca.
 
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:

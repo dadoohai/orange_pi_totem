@@ -33,6 +33,13 @@ piloto, nao publica, nao promove `stable`, nao liga auto-pull e nao autoriza
 producao.
 Snapshot versionado:
 `docs/evidence/c18-update-validation/20260617T011150Z-current-macro-governance-ab6ad5f/`.
+O snapshot pre-soak scale governance atual esta em
+`docs/evidence/c18-update-validation/20260617T014137Z-pre-soak-scale-governance-0c5fd2e/`:
+`c18_ota_pre_soak_scale_governance_gate.py` verde em arvore limpa, com release
+gate interno verde, H2 ainda vermelho pelos blockers esperados, server-side
+atual, preflight H2 power-loss aceito e retomada operacional default-deny. Esse
+snapshot sustenta a governanca pre-soak para escala; nao autoriza producao,
+`stable`, auto-pull, publish, public thaw, soak 24h nem power-loss 17/17.
 Retomada operacional agora passa por
 `scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate nao usa o snapshot
 como autorizacao viva: exige nova janela ativa e preflight `pre_apply` fresco da
