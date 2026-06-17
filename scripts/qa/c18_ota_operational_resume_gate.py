@@ -30,11 +30,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/macro-governance.json"
 )
-TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
-TARGET_SOURCE_COMMIT = "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749"
-TARGET_PAYLOAD_SHA256 = "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7"
+TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+TARGET_SOURCE_COMMIT = "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+TARGET_PAYLOAD_SHA256 = "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
 EXPECTED_IMAGE_TAG = "c18-hwdecode-lab-1x"
 EXPECTED_IMAGE_SHA256 = "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2"
 EXPECTED_IMAGE_MARKER_SHA256 = "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e"

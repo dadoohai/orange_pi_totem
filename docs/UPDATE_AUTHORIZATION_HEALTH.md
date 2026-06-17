@@ -60,9 +60,10 @@ iniciar a sessao fisica. Isso ainda nao e evidencia power-loss.
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
 read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
-historico e nao deve ser lido como RC atual. O novo snapshot macro de `9bebaf1`
-so deve ser produzido quando a evidencia de P0/preflight aceitar a sessao de
-homologacao sem overclaim.
+historico e nao deve ser lido como RC atual. O snapshot corrente
+`docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/`
+esta reancorado em `9bebaf1` e verde pre-H2, tratando `pilot_powerloss_p0`
+como fronteira pendente sem liberar piloto ou producao.
 
 O piloto controlado, quando liberado, autoriza somente entrega assistida por
 operador, com rollback pronto, allowlist de devices, preflight de placa, H1

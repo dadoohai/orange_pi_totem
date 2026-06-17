@@ -1,0 +1,45 @@
+{
+  "collected_at_utc": "2026-06-17T22:17:54.818175Z",
+  "collection_repo_commit": "d97a3acab08de10dd3b867c34fd29e3f7a4fa16e",
+  "collection_repo_tree": "6a0aab8d84ec127a35b28c05b4a3171da019a51d",
+  "expected_h2_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "files": [
+    {
+      "bytes": 715,
+      "file": "README.md",
+      "sha256": "b3d8fecf4bc35024934e4f46e950a3d7eaad9492e79270b1330b2e70a733c359"
+    },
+    {
+      "bytes": 7691,
+      "file": "macro-governance.json",
+      "sha256": "43b5d8a73f79c6d0dbeab3bbe46bbafdd14fa2b98861865f57f79a0930824a23"
+    }
+  ],
+  "non_claims": [
+    "this_snapshot_does_not_replace_h2",
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_powerloss_17_17",
+    "this_snapshot_does_not_satisfy_24h_soak"
+  ],
+  "passed": true,
+  "result_claim": "c18_homologation_governance_ready_pre_h2",
+  "schema": "dadooh.c18.ota_macro_governance_snapshot.v1",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}

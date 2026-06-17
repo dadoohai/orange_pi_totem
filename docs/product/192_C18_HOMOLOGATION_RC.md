@@ -106,7 +106,9 @@ Evidencia principal:
 - snapshot macro versionado:
   o snapshot `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`
   fica historico de `c16fb3e`; o proximo snapshot corrente deve apontar para
-  `9bebaf1`;
+  `9bebaf1`. O snapshot corrente `docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/`
+  esta verde pre-H2, com `pilot_powerloss_p0` tratado como fronteira pendente
+  e sem liberar piloto/producao;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`;
   snapshot historico de `c16fb3e`; novo snapshot pre-soak para `9bebaf1`
