@@ -25,6 +25,7 @@ GATE_SCHEMA = "dadooh.c18.player_runtime.thaw_decision_gate.v1"
 COMPONENT = "player-runtime"
 MAX_THAW_WINDOW_SEC = 4 * 60 * 60
 REQUIRED_HASH_FIELDS = (
+    "h1_release_gate_sha256",
     "release_gate_sha256",
     "powerloss_matrix_sha256",
     "soak_summary_sha256",
@@ -239,6 +240,7 @@ def valid_fixture(**overrides: Any) -> dict[str, Any]:
         "target_package_version": "c18.player-runtime-stable-test",
         "target_source_commit": "a" * 40,
         "target_payload_sha256": "b" * 64,
+        "h1_release_gate_sha256": "0" * 64,
         "release_gate_sha256": "c" * 64,
         "powerloss_matrix_sha256": "d" * 64,
         "soak_summary_sha256": "e" * 64,
@@ -339,6 +341,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--evidence", type=Path)
+    parser.add_argument("--expected-h1-release-gate-sha256")
     parser.add_argument("--expected-release-gate-sha256")
     parser.add_argument("--expected-powerloss-matrix-sha256")
     parser.add_argument("--expected-soak-summary-sha256")
@@ -356,6 +359,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def expected_hashes_from_cli(args: argparse.Namespace) -> dict[str, str]:
     mapping = {
+        "h1_release_gate_sha256": args.expected_h1_release_gate_sha256,
         "release_gate_sha256": args.expected_release_gate_sha256,
         "powerloss_matrix_sha256": args.expected_powerloss_matrix_sha256,
         "soak_summary_sha256": args.expected_soak_summary_sha256,

@@ -36,6 +36,9 @@ GATE_SCHEMA = "dadooh.c18.stable_promotion_gate.v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
 PLAYER_RUNTIME_RELEASE_GATE_SCHEMA = "dadooh.c18.player_runtime.release_gate.v1"
+SERVER_SIDE_CURRENT_SCHEMA = "dadooh.c18.server_side_current_validation_snapshot.v1"
+SERVER_SIDE_GATE_SCHEMA = "dadooh.c18.server_side_publish_governance_gate.v1"
+SERVER_SIDE_ASSET_LIST_SCHEMA = "dadooh.c18.server_side_publish_asset_list.v1"
 STABLE_PROMOTION_COMPONENTS = ("totem-core", "player-runtime")
 RELEASE_GATE_SCHEMA_BY_COMPONENT = {
     "totem-core": RELEASE_GATE_SCHEMA,
@@ -78,6 +81,7 @@ REQUIRED_STRING_FIELDS = (
     "rollback_owner",
 )
 REQUIRED_SHA256_FIELDS = (
+    "h1_release_gate_sha256",
     "release_gate_sha256",
     "h2_readiness_sha256",
     "server_side_evidence_sha256",
@@ -90,6 +94,11 @@ NON_CLAIMS = (
     "this_gate_does_not_publish_releases",
     "this_gate_does_not_enable_auto_pull",
     "this_gate_does_not_thaw_player_runtime",
+)
+REQUIRED_SERVER_SIDE_CURRENT_FILES = (
+    "README.md",
+    "server-side-governance-gate.json",
+    "server-side-asset-list.json",
 )
 
 
@@ -139,6 +148,13 @@ def directory_tree_sha256(root: Path) -> str:
     return sha256_json(entries)
 
 
+def repo_rel(path: Path) -> str | None:
+    try:
+        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
 def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
     return {
         "passed": passed,
@@ -162,7 +178,8 @@ def powerloss_matrix_sha256(run_dirs: list[Path]) -> str:
 
 def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, str]) -> str:
     bundle = {
-        "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
+        "h1_release_gate_sha256": evidence_hashes.get("h1_release_gate_sha256"),
+        "release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
         "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
         "server_side_current_snapshot_sha256": evidence_hashes.get("server_side_current_snapshot_sha256"),
@@ -177,6 +194,9 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
 
 def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
     hashes: dict[str, str] = {}
+    h1_release_gate = getattr(args, "h1_release_gate_summary", None)
+    if h1_release_gate is not None and h1_release_gate.is_file():
+        hashes["h1_release_gate_sha256"] = sha256_file(h1_release_gate)
     if args.release_gate_summary is not None and args.release_gate_summary.is_file():
         hashes["release_gate_sha256"] = sha256_file(args.release_gate_summary)
     if args.server_side_evidence is not None and args.server_side_evidence.is_file():
@@ -192,6 +212,7 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
     if args.powerloss_evidence_dir:
         hashes["powerloss_matrix_sha256"] = powerloss_matrix_sha256(list(args.powerloss_evidence_dir))
     if {
+        "h1_release_gate_sha256",
         "release_gate_sha256",
         "server_side_evidence_sha256",
         "server_side_current_snapshot_sha256",
@@ -209,6 +230,7 @@ def thaw_decision_expected_hashes_from_args(args: argparse.Namespace) -> dict[st
         for key, value in expected_hashes_from_args(args).items()
         if key in {
             "release_gate_sha256",
+            "h1_release_gate_sha256",
             "powerloss_matrix_sha256",
             "soak_summary_sha256",
             "server_side_evidence_sha256",
@@ -286,6 +308,28 @@ def evaluate_release_gate_summary(path: Path | None, *, expected_component: str 
         repo = data.get("repo") if isinstance(data.get("repo"), dict) else {}
         if repo.get("dirty") is True:
             blockers.append("release_gate_summary_repo_dirty")
+    return step(not blockers, blockers, evidence_path=str(path) if path is not None else None)
+
+
+def evaluate_h1_release_gate_summary(path: Path | None) -> dict[str, Any]:
+    data, errors = read_artifact(path, "h1_release_gate_summary")
+    blockers = list(errors)
+    if not errors:
+        if data.get("schema") != RELEASE_GATE_SCHEMA:
+            blockers.append("h1_release_gate_summary_schema")
+        if data.get("passed") is not True:
+            blockers.append("h1_release_gate_summary_not_passed")
+        repo = data.get("repo") if isinstance(data.get("repo"), dict) else {}
+        if repo.get("dirty") is True:
+            blockers.append("h1_release_gate_summary_repo_dirty")
+        evidence = data.get("player_runtime_data_evidence")
+        if not isinstance(evidence, dict):
+            blockers.append("h1_release_gate_summary_player_runtime_data_missing")
+        else:
+            if evidence.get("mode") != "decisive":
+                blockers.append("h1_release_gate_summary_player_runtime_data_not_decisive")
+            if evidence.get("status") != "passed":
+                blockers.append("h1_release_gate_summary_player_runtime_data_not_passed")
     return step(not blockers, blockers, evidence_path=str(path) if path is not None else None)
 
 
@@ -474,6 +518,84 @@ def evaluate_server_side_artifact(args: argparse.Namespace, *, expected_componen
     )
 
 
+def evaluate_server_side_current_snapshot(args: argparse.Namespace, *, expected_component: str = "totem-core") -> dict[str, Any]:
+    run_dir = getattr(args, "server_side_current_dir", None)
+    if run_dir is None:
+        return step(False, ["server_side_current_snapshot_missing"])
+    blockers: list[str] = []
+    manifest, errors = read_json(run_dir / "evidence-manifest.json")
+    blockers.extend(f"server_side_current_manifest_{error}" for error in errors)
+    if not errors:
+        if manifest.get("schema") != SERVER_SIDE_CURRENT_SCHEMA:
+            blockers.append("server_side_current_manifest_schema")
+        if manifest.get("passed") is not True:
+            blockers.append("server_side_current_not_passed")
+        if manifest.get("result_claim") != "server_side_publish_governance_ready":
+            blockers.append("server_side_current_result_claim")
+        target = manifest.get("target_package") if isinstance(manifest.get("target_package"), dict) else {}
+        if target.get("component") != expected_component:
+            blockers.append("server_side_current_component")
+        if target.get("channel") != "homologation":
+            blockers.append("server_side_current_channel")
+        inputs = manifest.get("inputs") if isinstance(manifest.get("inputs"), dict) else {}
+        if args.server_side_evidence is not None:
+            expected = repo_rel(args.server_side_evidence) or str(args.server_side_evidence)
+            if inputs.get("server_side_evidence") != expected:
+                blockers.append("server_side_current_input_server_side_evidence_mismatch")
+        if args.release_gate_summary is not None and args.release_gate_summary.is_file():
+            expected_release_gate_sha256 = sha256_file(args.release_gate_summary)
+            if inputs.get("expected_release_gate_sha256") != expected_release_gate_sha256:
+                blockers.append("server_side_current_input_release_gate_sha256_mismatch")
+        if args.server_side_trust_anchor_evidence is not None:
+            expected = repo_rel(args.server_side_trust_anchor_evidence) or str(args.server_side_trust_anchor_evidence)
+            if inputs.get("trust_anchor_evidence") != expected:
+                blockers.append("server_side_current_input_trust_anchor_mismatch")
+        trusted_keys = list(getattr(args, "server_side_trusted_key_pem", []) or [])
+        if len(trusted_keys) == 1:
+            expected = repo_rel(trusted_keys[0]) or str(trusted_keys[0])
+            if inputs.get("trusted_key_pem") != expected:
+                blockers.append("server_side_current_input_trusted_key_mismatch")
+        elif trusted_keys:
+            blockers.append("server_side_current_input_trusted_key_count_unsupported")
+        files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
+        for filename in REQUIRED_SERVER_SIDE_CURRENT_FILES:
+            path = run_dir / filename
+            entry = next((item for item in files if isinstance(item, dict) and item.get("file") == filename), None)
+            if not path.is_file():
+                blockers.append(f"server_side_current_file_missing:{filename}")
+                continue
+            if entry is None:
+                blockers.append(f"server_side_current_manifest_file_missing:{filename}")
+                continue
+            if entry.get("sha256") != sha256_file(path):
+                blockers.append(f"server_side_current_file_sha256_mismatch:{filename}")
+            if entry.get("bytes") != path.stat().st_size:
+                blockers.append(f"server_side_current_file_bytes_mismatch:{filename}")
+    gate, gate_errors = read_json(run_dir / "server-side-governance-gate.json")
+    blockers.extend(f"server_side_current_gate_{error}" for error in gate_errors)
+    if not gate_errors:
+        if gate.get("schema") != SERVER_SIDE_GATE_SCHEMA:
+            blockers.append("server_side_current_gate_schema")
+        if gate.get("passed") is not True:
+            blockers.append("server_side_current_gate_not_passed")
+        if gate.get("result_claim") != "server_side_publish_governance_ready":
+            blockers.append("server_side_current_gate_result_claim")
+    assets, asset_errors = read_json(run_dir / "server-side-asset-list.json")
+    blockers.extend(f"server_side_current_asset_list_{error}" for error in asset_errors)
+    if not asset_errors:
+        if assets.get("schema") != SERVER_SIDE_ASSET_LIST_SCHEMA:
+            blockers.append("server_side_current_asset_list_schema")
+        asset_records = assets.get("asset_records") if isinstance(assets.get("asset_records"), list) else []
+        if len(asset_records) != 14:
+            blockers.append("server_side_current_asset_count_not_14")
+    return step(
+        not blockers,
+        blockers,
+        run_dir=str(run_dir),
+        snapshot_sha256=directory_tree_sha256(run_dir) if run_dir.is_dir() else None,
+    )
+
+
 def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
     expected_target, target_errors = thaw_decision_expected_target_from_args(args)
     result = evaluate_thaw_decision_gate(
@@ -500,6 +622,9 @@ def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
 def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
     expected_component = getattr(args, "expected_component", "totem-core")
     checks = {
+        "h1_decisive_bundle": evaluate_h1_release_gate_summary(
+            getattr(args, "h1_release_gate_summary", None),
+        ),
         "release_gate_summary": evaluate_release_gate_summary(
             args.release_gate_summary,
             expected_component=expected_component,
@@ -507,6 +632,10 @@ def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
         "powerloss_matrix": evaluate_powerloss_matrix(args),
         "soak_summary": evaluate_soak_summary(args.soak_summary),
         "server_side_governance": evaluate_server_side_artifact(
+            args,
+            expected_component=expected_component,
+        ),
+        "server_side_current_snapshot": evaluate_server_side_current_snapshot(
             args,
             expected_component=expected_component,
         ),
@@ -637,6 +766,7 @@ def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
         "explicit_operator_decision": True,
         "operator": "operator-prod-01",
         "rollback_owner": "rollback-owner-01",
+        "h1_release_gate_sha256": "0" * 64,
         "release_gate_sha256": "a" * 64,
         "h2_readiness_sha256": "b" * 64,
         "server_side_evidence_sha256": "c" * 64,
@@ -650,16 +780,39 @@ def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
 
 
 def semantic_args_fixture(root: Path) -> argparse.Namespace:
+    h1_release_gate = root / "h1-release-gate.json"
     release_gate = root / "release-gate.json"
-    server_side = write_server_side_fixture_release(root / "server-side-release", component="player-runtime")
+    server_side = write_server_side_fixture_release(root / "server-side-release", component="totem-core")
+    server_side_evidence = json.loads(server_side.read_text(encoding="utf-8"))
+    manifest_rel = server_side_evidence["release_assets"]["manifest"]
+    server_manifest = json.loads((server_side.parent / manifest_rel).read_text(encoding="utf-8"))
     server_side_current = root / "server-side-current"
     server_side_current.mkdir(parents=True)
-    (server_side_current / "evidence-manifest.json").write_text("server-side current fixture\n", encoding="utf-8")
+    (server_side_current / "README.md").write_text("server-side current fixture\n", encoding="utf-8")
+    write_json(server_side_current / "server-side-governance-gate.json", {
+        "schema": SERVER_SIDE_GATE_SCHEMA,
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
+        "blockers": [],
+    })
+    write_json(server_side_current / "server-side-asset-list.json", {
+        "schema": SERVER_SIDE_ASSET_LIST_SCHEMA,
+        "asset_records": [
+            {"path": f"release/asset-{index}.json", "bytes": 100 + index, "sha256": f"{index:064x}"[-64:]}
+            for index in range(14)
+        ],
+    })
     trusted_key = root / "trusted-key.pub.pem"
     trust_anchor = root / "trust-anchor.json"
     soak = root / "soak.json"
     operator = root / "operator.json"
     stable = root / "stable.json"
+    write_json(h1_release_gate, {
+        "schema": RELEASE_GATE_SCHEMA,
+        "passed": True,
+        "repo": {"dirty": False},
+        "player_runtime_data_evidence": {"mode": "decisive", "status": "passed"},
+    })
     write_json(release_gate, {
         "schema": RELEASE_GATE_SCHEMA,
         "passed": True,
@@ -667,6 +820,29 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
     })
     trusted_key.write_text("PUBLIC KEY PLACEHOLDER\n", encoding="utf-8")
     write_json(trust_anchor, {"schema": "dadooh.c18.server_side_trust_anchor.v1"})
+    current_files = []
+    for filename in REQUIRED_SERVER_SIDE_CURRENT_FILES:
+        path = server_side_current / filename
+        current_files.append({"file": filename, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    write_json(server_side_current / "evidence-manifest.json", {
+        "schema": SERVER_SIDE_CURRENT_SCHEMA,
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
+        "target_package": {
+            "version": server_manifest["version"],
+            "component": "totem-core",
+            "channel": server_manifest["channel"],
+            "source_commit": server_manifest["source_commit"],
+            "payload_sha256": server_manifest["payload_sha256"],
+        },
+        "inputs": {
+            "server_side_evidence": str(server_side),
+            "trusted_key_pem": str(trusted_key),
+            "trust_anchor_evidence": str(trust_anchor),
+            "expected_release_gate_sha256": sha256_file(release_gate),
+        },
+        "files": current_files,
+    })
     write_json(soak, {
         "schema": SOAK_SCHEMA,
         "passed": True,
@@ -690,6 +866,7 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
         powerloss_dirs.append(run_dir)
     args = argparse.Namespace(
         evidence=stable,
+        h1_release_gate_summary=h1_release_gate,
         release_gate_summary=release_gate,
         server_side_evidence=server_side,
         server_side_current_dir=server_side_current,
@@ -838,6 +1015,7 @@ class StablePromotionGateSelfTest(unittest.TestCase):
     def test_h2_readiness_hash_is_derived_from_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
+            h1_release_gate = tmp_path / "h1-release-gate.json"
             release_gate = tmp_path / "release-gate.json"
             server_side = tmp_path / "server-side.json"
             trust_anchor = tmp_path / "trust-anchor.json"
@@ -846,6 +1024,7 @@ class StablePromotionGateSelfTest(unittest.TestCase):
             powerloss_dir = tmp_path / "powerloss"
             server_side_current.mkdir()
             powerloss_dir.mkdir()
+            write_json(h1_release_gate, {"h1": True})
             write_json(release_gate, {"release": True})
             write_json(server_side, {"server_side": True})
             write_json(trust_anchor, {"trust_anchor": True})
@@ -853,6 +1032,7 @@ class StablePromotionGateSelfTest(unittest.TestCase):
             write_json(soak, {"duration": "24h"})
             write_json(powerloss_dir / "manifest.json", {"checkpoint": "after_current_symlink"})
             args = argparse.Namespace(
+                h1_release_gate_summary=h1_release_gate,
                 release_gate_summary=release_gate,
                 server_side_evidence=server_side,
                 server_side_current_dir=server_side_current,
@@ -946,6 +1126,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--evidence", type=Path, default=None)
     parser.add_argument("--expected-component", choices=STABLE_PROMOTION_COMPONENTS, default="totem-core")
+    parser.add_argument("--h1-release-gate-summary", type=Path, default=None)
     parser.add_argument("--release-gate-summary", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
     parser.add_argument("--server-side-current-dir", type=Path, default=None)

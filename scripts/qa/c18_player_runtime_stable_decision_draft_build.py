@@ -170,6 +170,7 @@ def validate_powerloss_inputs(run_dirs: list[Path]) -> list[str]:
 def validate_artifact_inputs(args: argparse.Namespace) -> list[str]:
     blockers: list[str] = []
     file_fields = (
+        "h1_release_gate_summary",
         "release_gate_summary",
         "server_side_evidence",
         "server_side_trust_anchor_evidence",
@@ -312,6 +313,8 @@ Non-claims:
 Inputs:
 
 - release gate: `{args.release_gate_summary}`
+- H1 release gate: `{args.h1_release_gate_summary}`
+- component release gate: `{args.release_gate_summary}`
 - server-side evidence: `{args.server_side_evidence}`
 - server-side current snapshot: `{args.server_side_current_dir}`
 - server-side trust anchor: `{args.server_side_trust_anchor_evidence}`
@@ -371,7 +374,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def write_fixture_inputs(root: Path) -> argparse.Namespace:
-    release_gate = root / "h1-release-gate.json"
+    h1_release_gate = root / "h1-release-gate.json"
+    release_gate = root / "player-runtime-release-gate.json"
     server_side_dir = root / "server-side"
     server_side_dir.mkdir(parents=True)
     server_side = server_side_dir / "c18-server-side-publish-governance.json"
@@ -381,6 +385,12 @@ def write_fixture_inputs(root: Path) -> argparse.Namespace:
     soak = root / "soak.json"
     output = root / "out"
     server_side_current.mkdir(parents=True)
+    write_json(h1_release_gate, {
+        "schema": stable_gate.RELEASE_GATE_SCHEMA,
+        "passed": True,
+        "repo": {"dirty": False},
+        "player_runtime_data_evidence": {"mode": "decisive", "status": "passed"},
+    })
     write_json(release_gate, {
         "schema": stable_gate.PLAYER_RUNTIME_RELEASE_GATE_SCHEMA,
         "passed": True,
@@ -424,6 +434,7 @@ def write_fixture_inputs(root: Path) -> argparse.Namespace:
         powerloss_dirs.append(run_dir)
     return argparse.Namespace(
         output_dir=output,
+        h1_release_gate_summary=h1_release_gate,
         release_gate_summary=release_gate,
         server_side_evidence=server_side,
         server_side_current_dir=server_side_current,
@@ -484,6 +495,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--h1-release-gate-summary", type=Path)
     parser.add_argument("--release-gate-summary", type=Path)
     parser.add_argument("--server-side-evidence", type=Path)
     parser.add_argument("--server-side-current-dir", type=Path)
@@ -501,6 +513,7 @@ def require_args(args: argparse.Namespace) -> list[str]:
     missing: list[str] = []
     for name in (
         "output_dir",
+        "h1_release_gate_summary",
         "release_gate_summary",
         "server_side_evidence",
         "server_side_current_dir",

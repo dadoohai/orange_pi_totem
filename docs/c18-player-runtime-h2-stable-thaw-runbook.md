@@ -68,7 +68,8 @@ os rascunhos:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_stable_decision_draft_build.py \
   --output-dir docs/evidence/c18-update-validation/<utc>-h2-stable-thaw-drafts-c16fb3e \
-  --release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
+  --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
+  --release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
   --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
@@ -108,6 +109,7 @@ Os arquivos gerados devem falhar fechado ate serem preenchidos por operador:
   "explicit_operator_decision": true,
   "operator": "<operator-id>",
   "rollback_owner": "<rollback-owner-id>",
+  "h1_release_gate_sha256": "<sha256>",
   "release_gate_sha256": "<sha256>",
   "h2_readiness_sha256": "<sha256>",
   "server_side_evidence_sha256": "<sha256>",
@@ -120,10 +122,13 @@ Os arquivos gerados devem falhar fechado ate serem preenchidos por operador:
 }
 ```
 
-O campo `h2_readiness_sha256` e o hash do conjunto de entradas H2 calculado
-pelos gates `c18_stable_promotion_gate.py` e
-`c18_player_runtime_h2_readiness_gate.py`; ele nao e o hash do artefato final
-`h2-readiness-final.json` salvo no diretorio de fechamento.
+O campo `h1_release_gate_sha256` e o hash do H1 decisivo OTA, enquanto
+`release_gate_sha256` e o hash do release gate do pacote `player-runtime`
+`c18-player-runtime-release-gate.json`. O campo `h2_readiness_sha256` e o hash
+do conjunto de entradas H2 calculado pelos gates
+`c18_stable_promotion_gate.py` e `c18_player_runtime_h2_readiness_gate.py`; ele
+nao e o hash do artefato final `h2-readiness-final.json` salvo no diretorio de
+fechamento.
 
 `c18-player-runtime-thaw-decision.json` precisa manter janela UTC curta, no
 maximo 4h:
@@ -144,6 +149,7 @@ maximo 4h:
   "target_package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
   "target_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
   "target_payload_sha256": "<payload-sha256>",
+  "h1_release_gate_sha256": "<sha256>",
   "release_gate_sha256": "<sha256>",
   "powerloss_matrix_sha256": "<sha256>",
   "soak_summary_sha256": "<sha256>",
@@ -173,7 +179,8 @@ Stable promotion:
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_stable_promotion_gate.py \
   --expected-component player-runtime \
   --evidence docs/evidence/c18-update-validation/<final-dir>/c18-stable-promotion-evidence.json \
-  --release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
+  --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
+  --release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
   --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem \
@@ -193,6 +200,7 @@ H2 readiness:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_h2_readiness_gate.py \
   --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
+  --player-runtime-release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-01> \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<...17-checkpoints...> \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \

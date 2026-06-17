@@ -143,6 +143,8 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "preflight_expected_image_tag": args.expected_image_tag,
         "preflight_expected_image_marker_sha256": args.expected_image_marker_sha256,
         "preflight_max_age_sec": args.preflight_max_age_sec,
+        "pull_helper_requires_fresh_local_root": True,
+        "pull_helper_rejects_utc_placeholder": True,
         "non_claims": list(NON_CLAIMS),
     }
 
@@ -171,6 +173,7 @@ time without losing the non-claims.
 
 - `{RUNBOOK_NAME}`: per-checkpoint setup, arm and resume commands.
 - `{PULL_SCRIPT_NAME}`: optional pull/validation helper; edit host/path first.
+  It refuses a `<utc>` placeholder and refuses to reuse an existing local root.
 - `{MANIFEST_NAME}`: machine-readable summary of this runbook.
 
 Run the H2 board preflight gate before starting a physical checkpoint session.
@@ -334,10 +337,23 @@ LOCAL_ROOT="${{2:-{args.local_evidence_root}}}"
 REMOTE_ROOT="{remote_root}"
 {shell_array("CHECKPOINTS", checkpoints)}
 
-mkdir -p "$LOCAL_ROOT"
+if [[ "$LOCAL_ROOT" == *"<utc>"* ]]; then
+  echo "LOCAL_ROOT still contains <utc>; choose a concrete fresh path" >&2
+  exit 2
+fi
+
+if [[ -e "$LOCAL_ROOT" ]]; then
+  echo "LOCAL_ROOT already exists; choose a fresh path to avoid mixing evidence" >&2
+  exit 2
+fi
+
 mkdir -p "$LOCAL_ROOT/_validation"
 
 for checkpoint in "${{CHECKPOINTS[@]}}"; do
+  if [[ -e "$LOCAL_ROOT/$checkpoint" ]]; then
+    echo "checkpoint directory already exists locally: $LOCAL_ROOT/$checkpoint" >&2
+    exit 2
+  fi
   echo "pulling $checkpoint"
   scp -r "$BOARD_HOST:$REMOTE_ROOT/$checkpoint" "$LOCAL_ROOT/"
   python3 scripts/qa/c18_player_runtime_powerloss_evidence_gate.py \\
@@ -490,6 +506,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
             write_json(plan, data)
             result = build(args)
             runbook = (args.output_dir / RUNBOOK_NAME).read_text(encoding="utf-8")
+            pull_script = (args.output_dir / PULL_SCRIPT_NAME).read_text(encoding="utf-8")
             manifest = read_json(args.output_dir / MANIFEST_NAME)
 
         self.assertFalse(blocked["passed"])
@@ -499,6 +516,11 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("Confirm old current exists", runbook)
         self.assertNotIn("none emitted by the plan", runbook)
         self.assertTrue(manifest["checkpoints"][0]["manual_setup_required"])
+        self.assertTrue(manifest["pull_helper_requires_fresh_local_root"])
+        self.assertTrue(manifest["pull_helper_rejects_utc_placeholder"])
+        self.assertIn('LOCAL_ROOT still contains <utc>', pull_script)
+        self.assertIn('LOCAL_ROOT already exists', pull_script)
+        self.assertIn('checkpoint directory already exists locally', pull_script)
 
     def test_invalid_plan_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

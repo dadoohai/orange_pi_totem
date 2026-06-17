@@ -27,6 +27,7 @@ from c18_player_runtime_powerloss_evidence_gate import (
     SEMANTICALLY_VALIDATED_CHECKPOINTS as SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS,
 )
 from c18_stable_promotion_gate import evaluate as evaluate_stable_promotion_gate
+from c18_stable_promotion_gate import evaluate_release_gate_summary as evaluate_release_gate_summary
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 from c18_server_side_publish_governance_gate import write_fixture_release as write_server_side_fixture_release
 from c18_player_runtime_thaw_decision_gate import evaluate as evaluate_thaw_decision_gate
@@ -257,7 +258,8 @@ def powerloss_matrix_sha256(run_dirs: list[Path]) -> str:
 
 def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, str]) -> str:
     bundle = {
-        "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
+        "h1_release_gate_sha256": evidence_hashes.get("h1_release_gate_sha256"),
+        "release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
         "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
         "server_side_current_snapshot_sha256": evidence_hashes.get("server_side_current_snapshot_sha256"),
@@ -273,7 +275,10 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
 def stable_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
     hashes: dict[str, str] = {}
     if args.h1_release_gate_summary is not None and args.h1_release_gate_summary.is_file():
-        hashes["release_gate_sha256"] = sha256_file(args.h1_release_gate_summary)
+        hashes["h1_release_gate_sha256"] = sha256_file(args.h1_release_gate_summary)
+    player_runtime_release_gate = getattr(args, "player_runtime_release_gate_summary", None)
+    if player_runtime_release_gate is not None and player_runtime_release_gate.is_file():
+        hashes["release_gate_sha256"] = sha256_file(player_runtime_release_gate)
     if args.server_side_evidence is not None and args.server_side_evidence.is_file():
         hashes["server_side_evidence_sha256"] = sha256_file(args.server_side_evidence)
     server_side_current = getattr(args, "server_side_current_dir", None)
@@ -296,6 +301,7 @@ def thaw_decision_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
         for key, value in stable_expected_hashes(args).items()
         if key in {
             "release_gate_sha256",
+            "h1_release_gate_sha256",
             "powerloss_matrix_sha256",
             "soak_summary_sha256",
             "server_side_evidence_sha256",
@@ -618,6 +624,7 @@ def evaluate_server_side_current(
     *,
     expected_target: dict[str, str] | None = None,
     expected_server_side_evidence: Path | None = None,
+    expected_release_gate_summary: Path | None = None,
     expected_trusted_key_pems: list[Path] | None = None,
     expected_trust_anchor_evidence: Path | None = None,
 ) -> dict[str, Any]:
@@ -652,6 +659,13 @@ def evaluate_server_side_current(
         expected = repo_rel(expected_server_side_evidence) or str(expected_server_side_evidence)
         if inputs.get("server_side_evidence") != expected:
             blockers.append("server_side_current_input_server_side_evidence_mismatch")
+    if expected_release_gate_summary is not None:
+        if expected_release_gate_summary.is_file():
+            expected_release_gate_sha256 = sha256_file(expected_release_gate_summary)
+            if inputs.get("expected_release_gate_sha256") != expected_release_gate_sha256:
+                blockers.append("server_side_current_input_release_gate_sha256_mismatch")
+        else:
+            blockers.append("server_side_current_input_release_gate_missing")
     trusted_keys = expected_trusted_key_pems or []
     if len(trusted_keys) == 1:
         expected = repo_rel(trusted_keys[0]) or str(trusted_keys[0])
@@ -734,6 +748,7 @@ def h2_tracked_input_paths(args: argparse.Namespace) -> list[Path]:
     paths: list[Path] = []
     for path in (
         getattr(args, "h1_release_gate_summary", None),
+        getattr(args, "player_runtime_release_gate_summary", None),
         *(getattr(args, "powerloss_evidence_dir", []) or []),
         getattr(args, "soak_summary", None),
         getattr(args, "stable_promotion_evidence", None),
@@ -756,6 +771,10 @@ def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> di
     server_side_target, _target_errors = thaw_decision_expected_target(args)
     checks = {
         "h1_decisive_bundle": evaluate_h1(args.h1_release_gate_summary),
+        "player_runtime_release_gate": evaluate_release_gate_summary(
+            getattr(args, "player_runtime_release_gate_summary", None),
+            expected_component="player-runtime",
+        ),
         "full_physical_powerloss_matrix": evaluate_powerloss(args),
         "soak_endurance_24h": evaluate_soak(args.soak_summary),
         "stable_promotion_authorization": evaluate_stable_promotion(
@@ -772,6 +791,7 @@ def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> di
             getattr(args, "server_side_current_dir", None),
             expected_target=server_side_target,
             expected_server_side_evidence=args.server_side_evidence,
+            expected_release_gate_summary=getattr(args, "player_runtime_release_gate_summary", None),
             expected_trusted_key_pems=getattr(args, "server_side_trusted_key_pem", []),
             expected_trust_anchor_evidence=getattr(args, "server_side_trust_anchor_evidence", None),
         ),
@@ -818,6 +838,7 @@ def fixture_manifest(root: Path, checkpoint: str) -> Path:
 
 def complete_args(root: Path) -> argparse.Namespace:
     h1 = root / "release-gate.json"
+    player_runtime_release_gate = root / "player-runtime-release-gate.json"
     write_json(h1, {
         "schema": RELEASE_GATE_SCHEMA,
         "passed": True,
@@ -829,6 +850,11 @@ def complete_args(root: Path) -> argparse.Namespace:
             {"name": "c18_player_runtime_production_stop_teardown_required", "passed": True},
             {"name": "c18_player_runtime_teardown_evidence:1", "passed": True},
         ],
+    })
+    write_json(player_runtime_release_gate, {
+        "schema": "dadooh.c18.player_runtime.release_gate.v1",
+        "passed": True,
+        "repo": {"dirty": False},
     })
     soak = root / "soak-summary.json"
     write_json(soak, {
@@ -879,6 +905,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         },
         "inputs": {
             "server_side_evidence": str(server),
+            "expected_release_gate_sha256": sha256_file(player_runtime_release_gate),
             "trust_anchor_evidence": str(trust_anchor),
         },
         "files": current_files,
@@ -910,6 +937,7 @@ def complete_args(root: Path) -> argparse.Namespace:
     operator = root / "operator.json"
     args = argparse.Namespace(
         h1_release_gate_summary=h1,
+        player_runtime_release_gate_summary=player_runtime_release_gate,
         powerloss_evidence_dir=dirs,
         soak_summary=soak,
         stable_promotion_evidence=stable,
@@ -942,6 +970,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         "explicit_operator_decision": True,
         "operator": "operator-prod-01",
         "rollback_owner": "rollback-owner-01",
+        "h1_release_gate_sha256": hashes["h1_release_gate_sha256"],
         "release_gate_sha256": hashes["release_gate_sha256"],
         "h2_readiness_sha256": hashes["h2_readiness_sha256"],
         "server_side_evidence_sha256": hashes["server_side_evidence_sha256"],
@@ -1337,6 +1366,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate C18 player-runtime H2 public-thaw readiness.")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--h1-release-gate-summary", type=Path, default=None)
+    parser.add_argument("--player-runtime-release-gate-summary", type=Path, default=None)
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--soak-summary", type=Path, default=None)
     parser.add_argument("--stable-promotion-evidence", type=Path, default=None)
