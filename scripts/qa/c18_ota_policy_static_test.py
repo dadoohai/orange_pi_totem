@@ -526,7 +526,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("20260617T031156Z-current-macro-governance-d1209e3", gate)
         self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
-        self.assertIn("20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e", gate)
+        self.assertIn("20260617T061038Z-h2-powerloss-board-preflight-current-7c5fc17", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)

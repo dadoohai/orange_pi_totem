@@ -259,8 +259,8 @@ read-only da placa com
 com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o
 plano da matriz. Esse gate bloqueia placa/pacote/topologia errados antes da
 sessao fisica, mas nao conta checkpoint e nao reduz os blockers H2.
-Snapshot atual revalidado contra o plano com custom setup:
-`docs/evidence/c18-update-validation/20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e/`;
+Snapshot atual coletado da placa e validado contra o plano com custom setup:
+`docs/evidence/c18-update-validation/20260617T061038Z-h2-powerloss-board-preflight-current-7c5fc17/`;
 ele reporta `after_previous_symlink` e `rollback_after_current_unlinked` como
 checkpoints que exigem setup customizado.
 Na rodada `20260612T163008Z`, o preflight bloqueou corretamente porque o target
@@ -274,8 +274,9 @@ Depois da pausa/reboot multi-dia, o preflight intermediario
 placa no mesmo terreno seguro: pacote `c16fb3e`, imagem `c18-hwdecode-lab-1x`,
 policy `homologation`, timer inativo/desabilitado, target nao linkado, target
 nao quarentenado e raiz de evidencia H2 sem diretorios de checkpoint pendentes.
-O snapshot atual da sessao H2 e o `20260617T021300Z`, ja revalidado contra o
-plano com custom setup. Esses snapshots sao apenas preflight: nao contam
+O snapshot atual da sessao H2 e o `20260617T061038Z`, coletado novamente da
+placa e validado contra o plano com custom setup. Esses snapshots sao apenas
+preflight: nao contam
 power-loss, nao reduzem os 12 checkpoints fisicos pendentes e nao mudam
 H2/stable/thaw.
 

@@ -1,0 +1,199 @@
+{
+  "blockers": [],
+  "board_paths": {
+    "bundle_dir": "/data/c18-p0-bundle-a0dcb13fd78d",
+    "canary_media": "/data/media/c18-canary-h264.mp4",
+    "evidence_root": "/data/c18-evidence/h2-c16fb3e"
+  },
+  "boot": {
+    "boot_id_sha256_12": "4a3f6241ff51",
+    "raw_boot_id_persisted": false
+  },
+  "bundle": {
+    "exists": true,
+    "is_dir": true,
+    "is_file": false,
+    "is_symlink": false,
+    "mode_octal": "0o755",
+    "path": "/data/c18-p0-bundle-a0dcb13fd78d",
+    "size_bytes": 4096
+  },
+  "canary_media": {
+    "exists": true,
+    "is_dir": false,
+    "is_file": true,
+    "is_symlink": false,
+    "mode_octal": "0o644",
+    "path": "/data/media/c18-canary-h264.mp4",
+    "size_bytes": 541053
+  },
+  "captured_at_utc": "2026-06-17T06:10:38Z",
+  "collection_mode": "read_only_preflight",
+  "evidence_root": {
+    "direct_child_dirs": [],
+    "exists": false,
+    "is_dir": false,
+    "parent": "/data/c18-evidence",
+    "parent_exists": true,
+    "parent_is_dir": true,
+    "parent_writable": true,
+    "path": "/data/c18-evidence/h2-c16fb3e"
+  },
+  "image": {
+    "final_image": "false",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "image_version": "c18.image-lab.1x",
+    "marker_bytes": 2546,
+    "marker_path": "/etc/dadooh/c18-hwdecode-lab-1x-image",
+    "marker_present": true,
+    "marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "not_for_production": "true",
+    "player_runtime_ota_still_frozen": "true"
+  },
+  "non_claims": [
+    "this_preflight_is_not_powerloss_evidence",
+    "this_preflight_does_not_claim_17_17",
+    "this_preflight_does_not_arm_or_resume_trials",
+    "this_preflight_does_not_replace_physical_power_cut",
+    "this_preflight_does_not_create_or_modify_evidence",
+    "this_preflight_does_not_apply_or_rollback_player_runtime",
+    "this_preflight_does_not_probe_or_prove_public_freeze_rc44",
+    "this_preflight_does_not_authorize_stable_or_production",
+    "this_preflight_does_not_thaw_player_runtime",
+    "this_preflight_does_not_publish_or_fetch_releases"
+  ],
+  "passed": true,
+  "player_runtime": {
+    "current_present": true,
+    "data_base_present": true,
+    "data_current_kiosk_present": true,
+    "data_current_kiosk_py_sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310",
+    "data_current_marker_present": true,
+    "data_current_marker_reason": "verified",
+    "data_current_marker_verified": true,
+    "data_current_marker_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "data_current_tree_sha256": "b2f44a4931b0f0d9229350a8114b18862abf2c1d7a22c47d0359d3022994d019",
+    "fallback_kiosk_present": true,
+    "previous_present": false,
+    "selected_source": "data"
+  },
+  "policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "path": "/data/updates/policy.json",
+    "present": true,
+    "read_error": null,
+    "schema": "dadooh.totem.update.policy.v1"
+  },
+  "privacy": {
+    "raw_boot_id_persisted": false,
+    "raw_device_serial_persisted": false,
+    "raw_journal_persisted": false,
+    "raw_mount_source_persisted": false
+  },
+  "result_claim": "h2_powerloss_board_preflight_collected",
+  "runtime_topology": {
+    "app_base": "/data/player-runtime",
+    "current_link": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "data_root": "/data",
+    "last_operation": {
+      "finished_at_utc": "2026-06-15T12:17:09Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-15T12:17:09Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b"
+    },
+    "previous_link": null,
+    "quarantine_count": 1,
+    "quarantine_versions": [
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    ],
+    "state_current_payload_sha256": "f8861315a7c849a585cbcc150e61846eb039ac61cb42a1802ad1be5ff6b41ea1",
+    "state_current_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+    "state_file": "/data/player-runtime/state.json",
+    "state_present": true,
+    "state_previous_payload_sha256": null,
+    "state_previous_version": null,
+    "state_read_error": null,
+    "state_schema": "dadooh.totem.update.state.v1",
+    "target_is_current_link": false,
+    "target_is_current_state": false,
+    "target_is_previous_link": false,
+    "target_is_previous_state": false,
+    "target_link": "releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "target_quarantine_count": 0,
+    "target_quarantined": false,
+    "target_release_dir": "/data/player-runtime/releases/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "target_release_dir_exists": false
+  },
+  "schema": "dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1",
+  "systemd": {
+    "player_service": {
+      "active": true,
+      "active_raw": "active",
+      "active_rc": 0,
+      "enabled": true,
+      "enabled_raw": "enabled",
+      "enabled_rc": 0,
+      "unit": "kiosky-player.service"
+    },
+    "update_timer": {
+      "active": false,
+      "active_raw": "inactive",
+      "active_rc": 3,
+      "enabled": false,
+      "enabled_raw": "disabled",
+      "enabled_rc": 1,
+      "unit": "totem-update-agent.timer"
+    }
+  },
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "manifest_path": "/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+    "manifest_present": true,
+    "manifest_schema": "dadooh.totem.update.v1",
+    "payload_name": "dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+    "payload_path": "/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+    "payload_present": true,
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "payload_sha256_actual": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "payload_sha256_matches_manifest": true,
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  },
+  "updatectl_freeze_probe": {
+    "included": false,
+    "reason": "read_only_h2_powerloss_preflight"
+  },
+  "wrappers": {
+    "expected_hwdecode_mpv": "/opt/totem/hwdecode/bin/mpv",
+    "expected_mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+    "hwdecode_mpv": {
+      "executable": true,
+      "exists": true,
+      "is_dir": false,
+      "is_file": true,
+      "is_symlink": false,
+      "mode_octal": "0o755",
+      "path": "/opt/totem/hwdecode/bin/mpv",
+      "size_bytes": 2102504
+    },
+    "mpv_wrapper": {
+      "executable": true,
+      "exists": true,
+      "is_dir": false,
+      "is_file": true,
+      "is_symlink": false,
+      "mode_octal": "0o755",
+      "path": "/opt/totem/bin/totem-mpv-hwdecode",
+      "size_bytes": 959
+    }
+  }
+}
