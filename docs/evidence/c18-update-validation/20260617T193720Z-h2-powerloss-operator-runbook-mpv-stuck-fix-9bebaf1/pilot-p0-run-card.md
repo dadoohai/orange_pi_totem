@@ -17,6 +17,13 @@ runbook during the pilot P0 session.
 - Physical power can be removed after `CUT_POWER_NOW`.
 - Remote reboot is not acceptable evidence.
 
+If the preflight is blocked only because target `9bebaf1` is already linked as
+current, do not arm a checkpoint from that topology. Run the guarded fresh apply
+topology prep from `operator-runbook.md`, then rerun preflight and proceed only
+from green. The evidence
+`docs/evidence/c18-update-validation/20260617T225708Z-h2-powerloss-board-preflight-target-linked-9bebaf1/`
+records this expected target-linked state after user-level validation.
+
 ## Required Pilot P0 Checkpoints
 
 Run one checkpoint at a time. For each checkpoint:
@@ -52,4 +59,3 @@ docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbo
 Then run the pilot readiness gate with the five pulled evidence directories.
 The gate must still not claim production, stable, public thaw, 17/17 or 24h
 soak.
-

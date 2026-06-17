@@ -1,0 +1,100 @@
+{
+  "blockers": [
+    "runtime_topology:topology_target_linked_blocks_apply_checkpoints",
+    "runtime_topology:topology_after_previous_symlink_current_already_target",
+    "runtime_topology:topology_target_release_dir_exists_for_fresh_apply"
+  ],
+  "evaluated_at_utc": "2026-06-17T22:57:30Z",
+  "freshness": {
+    "age_sec": 22,
+    "captured_at_utc": "2026-06-17T22:57:08Z",
+    "evaluated_at_utc": "2026-06-17T22:57:30Z",
+    "max_age_sec": 1800,
+    "required": true
+  },
+  "matrix": {
+    "missing_apply_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_current_symlink",
+      "after_state_success",
+      "before_stage_cleanup"
+    ],
+    "missing_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_current_symlink",
+      "after_state_success",
+      "before_stage_cleanup",
+      "rollback_after_identify_links",
+      "rollback_after_current_to_previous",
+      "rollback_after_previous_removed",
+      "rollback_after_quarantine",
+      "rollback_after_current_unlinked",
+      "rollback_after_state_success"
+    ]
+  },
+  "matrix_plan": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/powerloss-matrix-plan.json",
+  "missing_preflight_non_claims": [],
+  "non_claims": [
+    "this_gate_does_not_claim_powerloss_evidence",
+    "this_gate_does_not_claim_17_17",
+    "this_gate_does_not_run_board_commands",
+    "this_gate_does_not_authorize_stable_or_production",
+    "this_gate_does_not_thaw_player_runtime"
+  ],
+  "passed": false,
+  "preflight": "docs/evidence/c18-update-validation/20260617T225411Z-h2-powerloss-board-preflight-pilot-p0-ready-9bebaf1/board-preflight.json",
+  "result_claim": "h2_powerloss_board_preflight_blocked",
+  "schema": "dadooh.c18.player_runtime.h2_powerloss_board_preflight_gate.v1",
+  "target_package": {
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "topology_analysis": {
+    "blocked_apply_checkpoints_when_target_linked": [
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_current_symlink",
+      "after_state_success",
+      "before_stage_cleanup"
+    ],
+    "missing_apply_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_current_symlink",
+      "after_state_success",
+      "before_stage_cleanup"
+    ],
+    "requires_custom_setup_checkpoints": [
+      "after_previous_symlink",
+      "rollback_after_current_unlinked"
+    ],
+    "target_linked": true,
+    "target_quarantined": false
+  }
+}
