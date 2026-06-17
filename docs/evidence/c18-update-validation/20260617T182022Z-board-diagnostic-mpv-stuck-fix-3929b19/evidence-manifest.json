@@ -1,0 +1,137 @@
+{
+  "active_runtime_version": "c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+  "collected_at_utc": "2026-06-17T18:20:22Z",
+  "deep_health_passed": true,
+  "deep_health_rc": 0,
+  "diagnostic_action": "replace_active_kiosk_py_and_restart_service_once",
+  "files": [
+    {
+      "bytes": 1250,
+      "file": "README.md",
+      "sha256": "a73e6e9514abed84ce608ca289df679d4c609a29b015fd7e852b5c1f319397b9"
+    },
+    {
+      "bytes": 80,
+      "file": "current-release.txt",
+      "sha256": "c64f72611ebbb2eeb9bcdbbb3f6ab52a5eb5a49cfca0e4fc0b1c68637e3ca5f8"
+    },
+    {
+      "bytes": 336,
+      "file": "deep-health/deep-health-kernel.json",
+      "sha256": "1a75ed7d7beb32145ca67878ff0af2def193b219550d6be6af152f0300c6d19b"
+    },
+    {
+      "bytes": 49,
+      "file": "deep-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "deep-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "deep-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4172,
+      "file": "deep-health/playback-deep-health-public.json",
+      "sha256": "2c5bc33101c95a523f90e5af46cd4482a186d076a9ac45f7f7cbb3a171f130c4"
+    },
+    {
+      "bytes": 285852,
+      "file": "deep-health/playback-samples.tsv",
+      "sha256": "9de529ad01b79635165ec6ef1f07202225b3346945a0c5933b749b2d3a33463f"
+    },
+    {
+      "bytes": 118373,
+      "file": "deep-health/status-samples.ndjson",
+      "sha256": "85279210567c5df42f927fbbd85db2e5149d22d88e2f7997ee778e4aea6985f3"
+    },
+    {
+      "bytes": 4172,
+      "file": "deep-health.json",
+      "sha256": "2c5bc33101c95a523f90e5af46cd4482a186d076a9ac45f7f7cbb3a171f130c4"
+    },
+    {
+      "bytes": 2,
+      "file": "deep-health.rc",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "bytes": 0,
+      "file": "deep-health.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 84,
+      "file": "diagnostic-session.txt",
+      "sha256": "70050b840b6da1d9e3e55bf125e41d6f849f6c7566c61fa404de56975408258a"
+    },
+    {
+      "bytes": 104,
+      "file": "kiosk-after.sha256",
+      "sha256": "f6120df7b9e2db6f5e252ddf3f9bb48102484bb5e97b15fc78b1858a692fa7d2"
+    },
+    {
+      "bytes": 104,
+      "file": "kiosk-before.sha256",
+      "sha256": "a57b9123b93e93badc0a5eea88738cdd812cec76d848294b253ed097d40599f5"
+    },
+    {
+      "bytes": 59,
+      "file": "kiosk-before.stat",
+      "sha256": "431c713461af78797478116bcb6510df3ced2c88febed9eba66ef188f7c36b89"
+    },
+    {
+      "bytes": 134683,
+      "file": "kiosk.py.before",
+      "sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310"
+    },
+    {
+      "bytes": 534,
+      "file": "processes-after-restart.txt",
+      "sha256": "10776cb1d58233f1ea96fce6ff8621a01489668f181dd2be83ea01d294c16885"
+    },
+    {
+      "bytes": 25449,
+      "file": "scripts/c18_playback_health_collect.py",
+      "sha256": "5075fba0d5f0c3f23cc37b2dfac2e1e9124852ab1fbf3c85ccea97dfd08d6d0b"
+    },
+    {
+      "bytes": 37157,
+      "file": "scripts/c18_playback_health_summary.py",
+      "sha256": "daf8e45c5753e7a246deab0aa6cc80b16729cb1c91e853e845d38941f710048e"
+    },
+    {
+      "bytes": 7,
+      "file": "service-active-after-restart.txt",
+      "sha256": "45df5ad5e0ecfa54d3226343e0e6857337494ba6e32f189d1174070665d8c659"
+    }
+  ],
+  "health_failure_reasons": [],
+  "kiosk_after_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+  "kiosk_before_sha256": "f88515378cf647ce067789f223f68ccdfd8f5705a6f3ff8aa25bb4674e949310",
+  "mpv_media_transitions_observed": true,
+  "mpv_unique_aliases": 9,
+  "non_claims": [
+    "this_diagnostic_does_not_create_or_validate_a_new_package",
+    "this_diagnostic_does_not_accept_any_h2_powerloss_checkpoint",
+    "this_diagnostic_does_not_claim_pilot_readiness",
+    "this_diagnostic_does_not_claim_powerloss_17_17",
+    "this_diagnostic_does_not_satisfy_24h_soak",
+    "this_diagnostic_does_not_authorize_stable_or_production",
+    "this_diagnostic_does_not_thaw_player_runtime",
+    "this_diagnostic_does_not_publish_or_fetch_releases"
+  ],
+  "passed": true,
+  "repo_commit_at_diagnostic": "3929b19",
+  "result_claim": "diagnostic_mpv_stuck_fix_direction_validated",
+  "samples": 223,
+  "schema": "dadooh.c18.board_diagnostic_mpv_stuck_fix.v1",
+  "status_advanced_without_mpv": false,
+  "status_mpv_path_aligned": true,
+  "status_unique_aliases": 9
+}
