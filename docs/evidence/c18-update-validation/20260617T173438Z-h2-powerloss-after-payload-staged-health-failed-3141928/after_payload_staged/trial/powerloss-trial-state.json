@@ -1,0 +1,9 @@
+{
+  "armed_at_utc": "2026-06-17T17:27:24Z",
+  "checkpoint": "after_payload_staged",
+  "data_root": "/data",
+  "manifest": "/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.manifest.json",
+  "payload": "/data/c18-p0-bundle-a0dcb13fd78d/releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/dadooh-player-runtime-c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e.tar.gz",
+  "phase": "arm-apply",
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}

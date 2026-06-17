@@ -24,6 +24,7 @@ MAX_STATUS_MPV_TRANSITION_LAG_SAMPLES = 5
 MAX_STATUS_MPV_TRANSITION_LAG_SECONDS = 6.0
 MAX_STATUS_MPV_TRANSITION_LAG_RUNS = 3
 MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS = 2
+MAX_STATUS_MPV_FORWARD_STATUS_LAG_SEGMENTS = 3
 MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES = 1
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 
@@ -339,7 +340,8 @@ def _status_mpv_is_forward_status_lag(events: list[dict[str, Any]], start: int, 
     while index < end:
         status_alias = events[index]["status_alias"]
         mpv_alias = events[index]["mpv_alias"]
-        if not mpv_alias or events[index].get("status_next_alias") != mpv_alias:
+        status_next_alias = events[index].get("status_next_alias")
+        if not mpv_alias:
             return False
         if status_alias == mpv_alias:
             return False
@@ -350,7 +352,7 @@ def _status_mpv_is_forward_status_lag(events: list[dict[str, Any]], start: int, 
             and events[index]["status_alias"] == status_alias
             and events[index]["mpv_alias"] == mpv_alias
         ):
-            if events[index].get("status_next_alias") != mpv_alias:
+            if events[index].get("status_next_alias") != status_next_alias:
                 return False
             index += 1
         segment_events = events[seg_start:index]
@@ -358,14 +360,45 @@ def _status_mpv_is_forward_status_lag(events: list[dict[str, Any]], start: int, 
             return False
         if _status_mpv_lag_duration_seconds(segment_events) > MAX_STATUS_MPV_TRANSITION_LAG_SECONDS:
             return False
-        segments.append({"status_alias": status_alias, "mpv_alias": mpv_alias})
+        segments.append({
+            "status_alias": status_alias,
+            "mpv_alias": mpv_alias,
+            "status_next_alias": status_next_alias,
+            "samples": len(segment_events),
+        })
 
-    if not segments or len(segments) > MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS:
+    max_segments = MAX_STATUS_MPV_FORWARD_STATUS_LAG_SEGMENTS if end < len(events) else MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS
+    if not segments or len(segments) > max_segments:
         return False
     if segments[0]["status_alias"] != before["status_alias"]:
         return False
-    for left, right in zip(segments, segments[1:]):
-        if left["mpv_alias"] != right["status_alias"]:
+    for offset, (left, right) in enumerate(zip(segments, segments[1:])):
+        if left["mpv_alias"] == right["status_alias"]:
+            continue
+        final_bridge_to_alignment = (
+            end < len(events)
+            and offset == len(segments) - 2
+            and right["samples"] <= MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES
+            and events[end]["aligned"]
+            and events[end]["mpv_alias"] == right["mpv_alias"]
+            and right["status_alias"] == left["status_alias"]
+            and right["status_next_alias"] == left["mpv_alias"]
+        )
+        if not final_bridge_to_alignment:
+            return False
+    for offset, segment in enumerate(segments):
+        if segment["status_next_alias"] == segment["mpv_alias"]:
+            continue
+        final_bridge_to_alignment = (
+            end < len(events)
+            and offset == len(segments) - 1
+            and offset > 0
+            and segment["samples"] <= MAX_STATUS_MPV_TERMINAL_LAG_SAMPLES
+            and events[end]["aligned"]
+            and events[end]["mpv_alias"] == segment["mpv_alias"]
+            and segments[offset - 1]["mpv_alias"] == segment["status_next_alias"]
+        )
+        if not final_bridge_to_alignment:
             return False
     return True
 
@@ -509,6 +542,7 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
         "max_allowed_transition_lag_seconds": MAX_STATUS_MPV_TRANSITION_LAG_SECONDS,
         "max_allowed_transition_lag_runs": MAX_STATUS_MPV_TRANSITION_LAG_RUNS,
         "max_allowed_chained_transition_lag_segments": MAX_STATUS_MPV_CHAINED_TRANSITION_LAG_SEGMENTS,
+        "max_allowed_forward_status_lag_segments": MAX_STATUS_MPV_FORWARD_STATUS_LAG_SEGMENTS,
     }
 
 
