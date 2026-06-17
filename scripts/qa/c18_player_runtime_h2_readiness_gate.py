@@ -40,6 +40,9 @@ SOAK_SCHEMA = "dadooh.c18.playback.soak.v1"
 RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
 STABLE_PROMOTION_SCHEMA = "dadooh.c18.stable_promotion.v1"
 SERVER_SIDE_SCHEMA = "dadooh.c18.server_side_publish_governance.v1"
+SERVER_SIDE_CURRENT_SCHEMA = "dadooh.c18.server_side_current_validation_snapshot.v1"
+SERVER_SIDE_GATE_SCHEMA = "dadooh.c18.server_side_publish_governance_gate.v1"
+SERVER_SIDE_ASSET_LIST_SCHEMA = "dadooh.c18.server_side_publish_asset_list.v1"
 MIN_SOAK_DURATION_SEC = 24 * 60 * 60
 
 REQUIRED_POWERLOSS_CHECKPOINTS = (
@@ -67,6 +70,11 @@ NON_CLAIMS = (
     "this_gate_does_not_publish_or_fetch_releases",
     "this_gate_does_not_override_freeze_rc_44",
     "this_gate_does_not_promote_stable_without_operator_decision",
+)
+REQUIRED_SERVER_SIDE_CURRENT_FILES = (
+    "README.md",
+    "server-side-governance-gate.json",
+    "server-side-asset-list.json",
 )
 
 
@@ -214,6 +222,17 @@ def sha256_json(payload: Any) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def directory_tree_sha256(root: Path) -> str:
+    entries: list[dict[str, Any]] = []
+    for path in sorted((item for item in root.rglob("*") if item.is_file()), key=lambda item: item.relative_to(root).as_posix()):
+        entries.append({
+            "file": path.relative_to(root).as_posix(),
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        })
+    return sha256_json(entries)
+
+
 def utc_z(delta: dt.timedelta = dt.timedelta()) -> str:
     value = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) + delta
     return value.isoformat().replace("+00:00", "Z")
@@ -241,6 +260,7 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
         "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
+        "server_side_current_snapshot_sha256": evidence_hashes.get("server_side_current_snapshot_sha256"),
         "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
         "expect_image_tag": args.expect_image_tag,
@@ -256,6 +276,9 @@ def stable_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
         hashes["release_gate_sha256"] = sha256_file(args.h1_release_gate_summary)
     if args.server_side_evidence is not None and args.server_side_evidence.is_file():
         hashes["server_side_evidence_sha256"] = sha256_file(args.server_side_evidence)
+    server_side_current = getattr(args, "server_side_current_dir", None)
+    if server_side_current is not None and server_side_current.is_dir():
+        hashes["server_side_current_snapshot_sha256"] = directory_tree_sha256(server_side_current)
     trust_anchor = getattr(args, "server_side_trust_anchor_evidence", None)
     if trust_anchor is not None and trust_anchor.is_file():
         hashes["server_side_trust_anchor_evidence_sha256"] = sha256_file(trust_anchor)
@@ -276,6 +299,7 @@ def thaw_decision_expected_hashes(args: argparse.Namespace) -> dict[str, str]:
             "powerloss_matrix_sha256",
             "soak_summary_sha256",
             "server_side_evidence_sha256",
+            "server_side_current_snapshot_sha256",
             "server_side_trust_anchor_evidence_sha256",
         }
     }
@@ -589,6 +613,94 @@ def evaluate_server_side(path: Path | None,
     return step(not blockers, blockers, evidence_path=str(path), gate_result=result)
 
 
+def evaluate_server_side_current(
+    run_dir: Path | None,
+    *,
+    expected_target: dict[str, str] | None = None,
+    expected_server_side_evidence: Path | None = None,
+    expected_trusted_key_pems: list[Path] | None = None,
+    expected_trust_anchor_evidence: Path | None = None,
+) -> dict[str, Any]:
+    if run_dir is None:
+        return step(False, ["missing_server_side_current_snapshot"])
+    blockers: list[str] = []
+    manifest = read_json(run_dir / "evidence-manifest.json", blockers, "server_side_current_manifest")
+    if not manifest:
+        return step(False, blockers + ["server_side_current_manifest_missing_or_empty"], run_dir=str(run_dir))
+    if manifest.get("schema") != SERVER_SIDE_CURRENT_SCHEMA:
+        blockers.append("server_side_current_manifest_schema")
+    if manifest.get("passed") is not True:
+        blockers.append("server_side_current_not_passed")
+    if manifest.get("result_claim") != "server_side_publish_governance_ready":
+        blockers.append("server_side_current_result_claim")
+    target = manifest.get("target_package") if isinstance(manifest.get("target_package"), dict) else {}
+    expected_target = expected_target or {}
+    if not isinstance(target.get("version"), str) or not target.get("version"):
+        blockers.append("server_side_current_target_package_missing")
+    if expected_target.get("package_version") is not None and target.get("version") != expected_target["package_version"]:
+        blockers.append("server_side_current_target_package")
+    if expected_target.get("source_commit") is not None and target.get("source_commit") != expected_target["source_commit"]:
+        blockers.append("server_side_current_source_commit")
+    if expected_target.get("payload_sha256") is not None and target.get("payload_sha256") != expected_target["payload_sha256"]:
+        blockers.append("server_side_current_payload_sha256")
+    if target.get("component") != "player-runtime":
+        blockers.append("server_side_current_component")
+    if target.get("channel") != "homologation":
+        blockers.append("server_side_current_channel")
+    inputs = manifest.get("inputs") if isinstance(manifest.get("inputs"), dict) else {}
+    if expected_server_side_evidence is not None:
+        expected = repo_rel(expected_server_side_evidence) or str(expected_server_side_evidence)
+        if inputs.get("server_side_evidence") != expected:
+            blockers.append("server_side_current_input_server_side_evidence_mismatch")
+    trusted_keys = expected_trusted_key_pems or []
+    if len(trusted_keys) == 1:
+        expected = repo_rel(trusted_keys[0]) or str(trusted_keys[0])
+        if inputs.get("trusted_key_pem") != expected:
+            blockers.append("server_side_current_input_trusted_key_mismatch")
+    elif trusted_keys:
+        blockers.append("server_side_current_input_trusted_key_count_unsupported")
+    if expected_trust_anchor_evidence is not None:
+        expected = repo_rel(expected_trust_anchor_evidence) or str(expected_trust_anchor_evidence)
+        if inputs.get("trust_anchor_evidence") != expected:
+            blockers.append("server_side_current_input_trust_anchor_mismatch")
+    files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
+    for filename in REQUIRED_SERVER_SIDE_CURRENT_FILES:
+        path = run_dir / filename
+        entry = next((item for item in files if isinstance(item, dict) and item.get("file") == filename), None)
+        if not path.is_file():
+            blockers.append(f"server_side_current_file_missing:{filename}")
+            continue
+        if entry is None:
+            blockers.append(f"server_side_current_manifest_file_missing:{filename}")
+            continue
+        if entry.get("sha256") != sha256_file(path):
+            blockers.append(f"server_side_current_file_sha256_mismatch:{filename}")
+        if entry.get("bytes") != path.stat().st_size:
+            blockers.append(f"server_side_current_file_bytes_mismatch:{filename}")
+    gate = read_json(run_dir / "server-side-governance-gate.json", blockers, "server_side_current_gate")
+    if gate:
+        if gate.get("schema") != SERVER_SIDE_GATE_SCHEMA:
+            blockers.append("server_side_current_gate_schema")
+        if gate.get("passed") is not True:
+            blockers.append("server_side_current_gate_not_passed")
+        if gate.get("result_claim") != "server_side_publish_governance_ready":
+            blockers.append("server_side_current_gate_result_claim")
+    assets = read_json(run_dir / "server-side-asset-list.json", blockers, "server_side_current_asset_list")
+    if assets:
+        if assets.get("schema") != SERVER_SIDE_ASSET_LIST_SCHEMA:
+            blockers.append("server_side_current_asset_list_schema")
+        asset_records = assets.get("asset_records") if isinstance(assets.get("asset_records"), list) else []
+        if len(asset_records) != 14:
+            blockers.append("server_side_current_asset_count_not_14")
+    return step(
+        not blockers,
+        blockers,
+        run_dir=str(run_dir),
+        result_claim=manifest.get("result_claim"),
+        snapshot_sha256=directory_tree_sha256(run_dir),
+    )
+
+
 def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
     expected_target, target_errors = thaw_decision_expected_target(args)
     decision_sha256 = (
@@ -627,6 +739,7 @@ def h2_tracked_input_paths(args: argparse.Namespace) -> list[Path]:
         getattr(args, "stable_promotion_evidence", None),
         getattr(args, "server_side_trust_anchor_evidence", None),
         *(getattr(args, "server_side_trusted_key_pem", []) or []),
+        getattr(args, "server_side_current_dir", None),
         getattr(args, "operator_thaw_decision", None),
     ):
         if path is not None:
@@ -640,6 +753,7 @@ def h2_tracked_input_paths(args: argparse.Namespace) -> list[Path]:
 def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> dict[str, Any]:
     expected_stable_hashes = stable_expected_hashes(args)
     allow_test_fixtures = bool(getattr(args, "allow_test_fixtures", False))
+    server_side_target, _target_errors = thaw_decision_expected_target(args)
     checks = {
         "h1_decisive_bundle": evaluate_h1(args.h1_release_gate_summary),
         "full_physical_powerloss_matrix": evaluate_powerloss(args),
@@ -653,6 +767,13 @@ def evaluate(args: argparse.Namespace, *, require_repo_clean: bool = True) -> di
             allow_test_fixtures=allow_test_fixtures,
             trusted_key_pems=getattr(args, "server_side_trusted_key_pem", []),
             trust_anchor_evidence=getattr(args, "server_side_trust_anchor_evidence", None),
+        ),
+        "server_side_current_snapshot": evaluate_server_side_current(
+            getattr(args, "server_side_current_dir", None),
+            expected_target=server_side_target,
+            expected_server_side_evidence=args.server_side_evidence,
+            expected_trusted_key_pems=getattr(args, "server_side_trusted_key_pem", []),
+            expected_trust_anchor_evidence=getattr(args, "server_side_trust_anchor_evidence", None),
         ),
         "explicit_operator_thaw_decision": evaluate_operator_decision(args),
     }
@@ -721,7 +842,47 @@ def complete_args(root: Path) -> argparse.Namespace:
         },
     })
     server = write_server_side_fixture_release(root / "server-side-release", component="player-runtime")
+    server_evidence = json.loads(server.read_text(encoding="utf-8"))
+    manifest_rel = server_evidence["release_assets"]["manifest"]
+    server_manifest = json.loads((server.parent / manifest_rel).read_text(encoding="utf-8"))
     trust_anchor = root / "server-side-trust-anchor.json"
+    server_current = root / "server-side-current"
+    server_current.mkdir(parents=True)
+    (server_current / "README.md").write_text("server-side current fixture\n", encoding="utf-8")
+    write_json(server_current / "server-side-governance-gate.json", {
+        "schema": SERVER_SIDE_GATE_SCHEMA,
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
+        "blockers": [],
+    })
+    write_json(server_current / "server-side-asset-list.json", {
+        "schema": SERVER_SIDE_ASSET_LIST_SCHEMA,
+        "asset_records": [
+            {"path": f"release/asset-{index}.json", "bytes": 100 + index, "sha256": f"{index:064x}"[-64:]}
+            for index in range(14)
+        ],
+    })
+    current_files = []
+    for filename in REQUIRED_SERVER_SIDE_CURRENT_FILES:
+        path = server_current / filename
+        current_files.append({"file": filename, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    write_json(server_current / "evidence-manifest.json", {
+        "schema": SERVER_SIDE_CURRENT_SCHEMA,
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
+        "target_package": {
+            "version": server_manifest["version"],
+            "component": "player-runtime",
+            "channel": server_manifest["channel"],
+            "source_commit": server_manifest["source_commit"],
+            "payload_sha256": server_manifest["payload_sha256"],
+        },
+        "inputs": {
+            "server_side_evidence": str(server),
+            "trust_anchor_evidence": str(trust_anchor),
+        },
+        "files": current_files,
+    })
     write_json(trust_anchor, {
         "schema": "dadooh.c18.server_side_trust_anchor.v1",
         "purpose": "c18_server_side_release_signing",
@@ -753,6 +914,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         soak_summary=soak,
         stable_promotion_evidence=stable,
         server_side_evidence=server,
+        server_side_current_dir=server_current,
         server_side_trust_anchor_evidence=trust_anchor,
         operator_thaw_decision=operator,
         expect_image_tag="c18-hwdecode-lab-test",
@@ -783,6 +945,7 @@ def complete_args(root: Path) -> argparse.Namespace:
         "release_gate_sha256": hashes["release_gate_sha256"],
         "h2_readiness_sha256": hashes["h2_readiness_sha256"],
         "server_side_evidence_sha256": hashes["server_side_evidence_sha256"],
+        "server_side_current_snapshot_sha256": hashes["server_side_current_snapshot_sha256"],
         "server_side_trust_anchor_evidence_sha256": hashes["server_side_trust_anchor_evidence_sha256"],
         "soak_summary_sha256": hashes["soak_summary_sha256"],
         "powerloss_matrix_sha256": hashes["powerloss_matrix_sha256"],
@@ -837,6 +1000,7 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
             soak_summary=None,
             stable_promotion_evidence=None,
             server_side_evidence=None,
+            server_side_current_dir=None,
             operator_thaw_decision=None,
             expect_image_tag=None,
             expect_image_sha256=None,
@@ -872,10 +1036,41 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertIn(args.h1_release_gate_summary, paths)
         self.assertIn(args.server_side_evidence.parent, paths)
         self.assertNotIn(args.server_side_evidence, paths)
+        self.assertIn(args.server_side_current_dir, paths)
         self.assertIn(args.server_side_trust_anchor_evidence, paths)
         self.assertIn(key, paths)
         self.assertIn(args.operator_thaw_decision, paths)
         self.assertTrue(all(path in paths for path in args.powerloss_evidence_dir))
+
+    def test_server_side_current_snapshot_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            args.server_side_current_dir = None
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current_snapshot:missing_server_side_current_snapshot",
+            result["blockers"],
+        )
+
+    def test_server_side_current_snapshot_is_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            (args.server_side_current_dir / "server-side-asset-list.json").write_text("{}", encoding="utf-8")
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current_snapshot:server_side_current_file_sha256_mismatch:server-side-asset-list.json",
+            result["blockers"],
+        )
 
     def test_tracked_input_guard_accepts_tracked_artifacts_manifest(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-h2-tracked-artifacts-") as tmp:
@@ -1148,6 +1343,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--server-side-evidence", type=Path, default=None)
     parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--server-side-trust-anchor-evidence", type=Path, default=None)
+    parser.add_argument("--server-side-current-dir", type=Path, default=None)
     parser.add_argument("--operator-thaw-decision", type=Path, default=None)
     parser.add_argument("--expect-image-tag", default=None)
     parser.add_argument("--expect-image-sha256", default=None)

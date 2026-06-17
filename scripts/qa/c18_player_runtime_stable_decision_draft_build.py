@@ -181,6 +181,13 @@ def validate_artifact_inputs(args: argparse.Namespace) -> list[str]:
             blockers.append(f"{field}_missing")
         elif not path.is_file():
             blockers.append(f"{field}_not_file:{path}")
+    current_dir = getattr(args, "server_side_current_dir", None)
+    if current_dir is None:
+        blockers.append("server_side_current_dir_missing")
+    elif not current_dir.is_dir():
+        blockers.append(f"server_side_current_dir_not_dir:{current_dir}")
+    elif not (current_dir / "evidence-manifest.json").is_file():
+        blockers.append(f"server_side_current_manifest_not_file:{current_dir / 'evidence-manifest.json'}")
     blockers.extend(validate_powerloss_inputs(list(args.powerloss_evidence_dir or [])))
     return blockers
 
@@ -273,6 +280,9 @@ Generated files:
 These drafts must fail their gates until an operator fills the decision fields
 after H2 is genuinely green. Do not flip booleans without rerunning the gates
 over the real evidence paths.
+Both drafts include `server_side_current_snapshot_sha256` so stable/thaw stays
+bound to the current server-side validation snapshot, not just to raw release
+evidence.
 
 `passed=true` from this builder only means the drafts were written and confirmed
 fail-closed. It is not stable authorization, thaw authorization, publish
@@ -282,7 +292,7 @@ Required sequence:
 
 1. Complete and commit the full 17/17 physical power-loss matrix.
 2. Complete and commit the 24h soak summary.
-3. Keep server-side/signature evidence green and hash-bound to the target package.
+3. Keep server-side/signature evidence green, current, and hash-bound to the target package.
 4. Fill the stable promotion decision, then regenerate or update the thaw
    decision so `stable_promotion_evidence_sha256` matches the final stable file.
 5. Run `scripts/qa/c18_stable_promotion_gate.py` with all real artifact paths and
@@ -303,6 +313,7 @@ Inputs:
 
 - release gate: `{args.release_gate_summary}`
 - server-side evidence: `{args.server_side_evidence}`
+- server-side current snapshot: `{args.server_side_current_dir}`
 - server-side trust anchor: `{args.server_side_trust_anchor_evidence}`
 - soak summary: `{args.soak_summary}`
 - power-loss dirs: `{len(args.powerloss_evidence_dir or [])}`
@@ -364,10 +375,12 @@ def write_fixture_inputs(root: Path) -> argparse.Namespace:
     server_side_dir = root / "server-side"
     server_side_dir.mkdir(parents=True)
     server_side = server_side_dir / "c18-server-side-publish-governance.json"
+    server_side_current = root / "server-side-current"
     manifest = server_side_dir / "manifest.json"
     trust_anchor = root / "trust-anchor.json"
     soak = root / "soak.json"
     output = root / "out"
+    server_side_current.mkdir(parents=True)
     write_json(release_gate, {
         "schema": stable_gate.PLAYER_RUNTIME_RELEASE_GATE_SCHEMA,
         "passed": True,
@@ -381,6 +394,11 @@ def write_fixture_inputs(root: Path) -> argparse.Namespace:
     write_json(server_side, {
         "schema": "dadooh.c18.server_side_publish_governance.v1",
         "release_assets": {"manifest": "manifest.json"},
+    })
+    write_json(server_side_current / "evidence-manifest.json", {
+        "schema": "dadooh.c18.server_side_current_validation_snapshot.v1",
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
     })
     write_json(trust_anchor, {"schema": "dadooh.c18.server_side_trust_anchor.v1"})
     write_json(soak, {
@@ -408,6 +426,8 @@ def write_fixture_inputs(root: Path) -> argparse.Namespace:
         output_dir=output,
         release_gate_summary=release_gate,
         server_side_evidence=server_side,
+        server_side_current_dir=server_side_current,
+        server_side_trusted_key_pem=[],
         server_side_trust_anchor_evidence=trust_anchor,
         soak_summary=soak,
         powerloss_evidence_dir=powerloss_dirs,
@@ -466,6 +486,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--release-gate-summary", type=Path)
     parser.add_argument("--server-side-evidence", type=Path)
+    parser.add_argument("--server-side-current-dir", type=Path)
     parser.add_argument("--server-side-trust-anchor-evidence", type=Path)
     parser.add_argument("--soak-summary", type=Path)
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
@@ -482,6 +503,7 @@ def require_args(args: argparse.Namespace) -> list[str]:
         "output_dir",
         "release_gate_summary",
         "server_side_evidence",
+        "server_side_current_dir",
         "server_side_trust_anchor_evidence",
         "soak_summary",
         "expect_image_tag",

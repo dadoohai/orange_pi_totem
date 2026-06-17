@@ -8,7 +8,7 @@ sem soak 24h e sem decisao humana real, os gates devem continuar vermelhos.
 
 1. Completar e commitar a matriz fisica power-loss 17/17.
 2. Rodar e commitar o soak 24h com a mesma configuracao candidata.
-3. Manter a familia server-side/signature verde para o pacote alvo.
+3. Manter a familia server-side/signature verde, atual e hash-bound para o pacote alvo.
 4. Gerar rascunhos fail-closed de stable promotion e thaw decision.
 5. Preencher os JSONs finais somente depois de H2 estar pronto para revisao.
 6. Rodar `c18_stable_promotion_gate.py`.
@@ -64,6 +64,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_stable_decision_
   --output-dir docs/evidence/c18-update-validation/<utc>-h2-stable-thaw-drafts-c16fb3e \
   --release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
+  --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-01> \
@@ -104,6 +105,7 @@ Os arquivos gerados devem falhar fechado ate serem preenchidos por operador:
   "release_gate_sha256": "<sha256>",
   "h2_readiness_sha256": "<sha256>",
   "server_side_evidence_sha256": "<sha256>",
+  "server_side_current_snapshot_sha256": "<sha256>",
   "server_side_trust_anchor_evidence_sha256": "<sha256>",
   "soak_summary_sha256": "<sha256>",
   "powerloss_matrix_sha256": "<sha256>",
@@ -135,6 +137,7 @@ maximo 4h:
   "powerloss_matrix_sha256": "<sha256>",
   "soak_summary_sha256": "<sha256>",
   "server_side_evidence_sha256": "<sha256>",
+  "server_side_current_snapshot_sha256": "<sha256>",
   "server_side_trust_anchor_evidence_sha256": "<sha256>",
   "stable_promotion_evidence_sha256": "<sha256>",
   "window": {
@@ -161,6 +164,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_stable_promotion_gate.py \
   --evidence docs/evidence/c18-update-validation/<final-dir>/c18-stable-promotion-evidence.json \
   --release-gate-summary docs/evidence/c18-update-validation/20260611T192940Z-1x-h1-decisive-release-gate-refresh/h1-release-gate.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
+  --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem \
   --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \
@@ -183,6 +187,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_h2_readiness_gat
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \
   --stable-promotion-evidence docs/evidence/c18-update-validation/<final-dir>/c18-stable-promotion-evidence.json \
   --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
+  --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
   --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem \
   --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
   --operator-thaw-decision docs/evidence/c18-update-validation/<final-dir>/c18-player-runtime-thaw-decision.json \

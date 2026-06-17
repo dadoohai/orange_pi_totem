@@ -81,6 +81,7 @@ REQUIRED_SHA256_FIELDS = (
     "release_gate_sha256",
     "h2_readiness_sha256",
     "server_side_evidence_sha256",
+    "server_side_current_snapshot_sha256",
     "server_side_trust_anchor_evidence_sha256",
     "soak_summary_sha256",
     "powerloss_matrix_sha256",
@@ -127,6 +128,17 @@ def sha256_json(payload: Any) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def directory_tree_sha256(root: Path) -> str:
+    entries: list[dict[str, Any]] = []
+    for path in sorted((item for item in root.rglob("*") if item.is_file()), key=lambda item: item.relative_to(root).as_posix()):
+        entries.append({
+            "file": path.relative_to(root).as_posix(),
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        })
+    return sha256_json(entries)
+
+
 def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
     return {
         "passed": passed,
@@ -153,6 +165,7 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "h1_release_gate_sha256": evidence_hashes.get("release_gate_sha256"),
         "powerloss_matrix_sha256": evidence_hashes.get("powerloss_matrix_sha256"),
         "server_side_evidence_sha256": evidence_hashes.get("server_side_evidence_sha256"),
+        "server_side_current_snapshot_sha256": evidence_hashes.get("server_side_current_snapshot_sha256"),
         "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
         "expect_image_tag": args.expect_image_tag,
@@ -168,6 +181,9 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
         hashes["release_gate_sha256"] = sha256_file(args.release_gate_summary)
     if args.server_side_evidence is not None and args.server_side_evidence.is_file():
         hashes["server_side_evidence_sha256"] = sha256_file(args.server_side_evidence)
+    server_side_current = getattr(args, "server_side_current_dir", None)
+    if server_side_current is not None and server_side_current.is_dir():
+        hashes["server_side_current_snapshot_sha256"] = directory_tree_sha256(server_side_current)
     trust_anchor = getattr(args, "server_side_trust_anchor_evidence", None)
     if trust_anchor is not None and trust_anchor.is_file():
         hashes["server_side_trust_anchor_evidence_sha256"] = sha256_file(trust_anchor)
@@ -178,6 +194,7 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
     if {
         "release_gate_sha256",
         "server_side_evidence_sha256",
+        "server_side_current_snapshot_sha256",
         "server_side_trust_anchor_evidence_sha256",
         "soak_summary_sha256",
         "powerloss_matrix_sha256",
@@ -195,6 +212,7 @@ def thaw_decision_expected_hashes_from_args(args: argparse.Namespace) -> dict[st
             "powerloss_matrix_sha256",
             "soak_summary_sha256",
             "server_side_evidence_sha256",
+            "server_side_current_snapshot_sha256",
             "server_side_trust_anchor_evidence_sha256",
         }
     }
@@ -622,6 +640,7 @@ def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
         "release_gate_sha256": "a" * 64,
         "h2_readiness_sha256": "b" * 64,
         "server_side_evidence_sha256": "c" * 64,
+        "server_side_current_snapshot_sha256": "9" * 64,
         "server_side_trust_anchor_evidence_sha256": "f" * 64,
         "soak_summary_sha256": "d" * 64,
         "powerloss_matrix_sha256": "e" * 64,
@@ -633,6 +652,9 @@ def valid_fixture(*, component: str = "totem-core") -> dict[str, Any]:
 def semantic_args_fixture(root: Path) -> argparse.Namespace:
     release_gate = root / "release-gate.json"
     server_side = write_server_side_fixture_release(root / "server-side-release", component="player-runtime")
+    server_side_current = root / "server-side-current"
+    server_side_current.mkdir(parents=True)
+    (server_side_current / "evidence-manifest.json").write_text("server-side current fixture\n", encoding="utf-8")
     trusted_key = root / "trusted-key.pub.pem"
     trust_anchor = root / "trust-anchor.json"
     soak = root / "soak.json"
@@ -670,6 +692,7 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
         evidence=stable,
         release_gate_summary=release_gate,
         server_side_evidence=server_side,
+        server_side_current_dir=server_side_current,
         server_side_trusted_key_pem=[trusted_key],
         server_side_trust_anchor_evidence=trust_anchor,
         soak_summary=soak,
@@ -792,12 +815,21 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("stable_promotion_server_side_trust_anchor_evidence_sha256_mismatch", result["blockers"])
 
+        data = valid_fixture()
+        result = validate_data(
+            data,
+            expected_hashes={"server_side_current_snapshot_sha256": "0" * 64},
+        )
+        self.assertFalse(result["passed"])
+        self.assertIn("stable_promotion_server_side_current_snapshot_sha256_mismatch", result["blockers"])
+
     def test_hash_binding_passes_when_expected_matches(self) -> None:
         data = valid_fixture()
         result = validate_data(
             data,
             expected_hashes={
                 "server_side_evidence_sha256": data["server_side_evidence_sha256"],
+                "server_side_current_snapshot_sha256": data["server_side_current_snapshot_sha256"],
                 "server_side_trust_anchor_evidence_sha256": data["server_side_trust_anchor_evidence_sha256"],
             },
         )
@@ -809,17 +841,21 @@ class StablePromotionGateSelfTest(unittest.TestCase):
             release_gate = tmp_path / "release-gate.json"
             server_side = tmp_path / "server-side.json"
             trust_anchor = tmp_path / "trust-anchor.json"
+            server_side_current = tmp_path / "server-side-current"
             soak = tmp_path / "soak.json"
             powerloss_dir = tmp_path / "powerloss"
+            server_side_current.mkdir()
             powerloss_dir.mkdir()
             write_json(release_gate, {"release": True})
             write_json(server_side, {"server_side": True})
             write_json(trust_anchor, {"trust_anchor": True})
+            write_json(server_side_current / "evidence-manifest.json", {"current": True})
             write_json(soak, {"duration": "24h"})
             write_json(powerloss_dir / "manifest.json", {"checkpoint": "after_current_symlink"})
             args = argparse.Namespace(
                 release_gate_summary=release_gate,
                 server_side_evidence=server_side,
+                server_side_current_dir=server_side_current,
                 server_side_trust_anchor_evidence=trust_anchor,
                 soak_summary=soak,
                 powerloss_evidence_dir=[powerloss_dir],
@@ -912,6 +948,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-component", choices=STABLE_PROMOTION_COMPONENTS, default="totem-core")
     parser.add_argument("--release-gate-summary", type=Path, default=None)
     parser.add_argument("--server-side-evidence", type=Path, default=None)
+    parser.add_argument("--server-side-current-dir", type=Path, default=None)
     parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--server-side-trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--soak-summary", type=Path, default=None)

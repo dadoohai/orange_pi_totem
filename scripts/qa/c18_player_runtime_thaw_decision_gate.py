@@ -29,6 +29,7 @@ REQUIRED_HASH_FIELDS = (
     "powerloss_matrix_sha256",
     "soak_summary_sha256",
     "server_side_evidence_sha256",
+    "server_side_current_snapshot_sha256",
     "server_side_trust_anchor_evidence_sha256",
     "stable_promotion_evidence_sha256",
 )
@@ -242,6 +243,7 @@ def valid_fixture(**overrides: Any) -> dict[str, Any]:
         "powerloss_matrix_sha256": "d" * 64,
         "soak_summary_sha256": "e" * 64,
         "server_side_evidence_sha256": "f" * 64,
+        "server_side_current_snapshot_sha256": "9" * 64,
         "server_side_trust_anchor_evidence_sha256": "1" * 64,
         "stable_promotion_evidence_sha256": "2" * 64,
         "window": {
@@ -291,6 +293,14 @@ class ThawDecisionGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("thaw_decision_server_side_evidence_sha256_mismatch", result["blockers"])
 
+        result = validate_data(
+            data,
+            expected_hashes={"server_side_current_snapshot_sha256": "0" * 64},
+            now_utc=dt.datetime(2099, 1, 1, 12, 0, tzinfo=dt.timezone.utc),
+        )
+        self.assertFalse(result["passed"])
+        self.assertIn("thaw_decision_server_side_current_snapshot_sha256_mismatch", result["blockers"])
+
     def test_window_and_execution_guards_deny(self) -> None:
         data = valid_fixture(auto_pull_enabled=True, thaw_execution_performed=True)
         result = validate_data(
@@ -333,6 +343,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--expected-powerloss-matrix-sha256")
     parser.add_argument("--expected-soak-summary-sha256")
     parser.add_argument("--expected-server-side-evidence-sha256")
+    parser.add_argument("--expected-server-side-current-snapshot-sha256")
     parser.add_argument("--expected-server-side-trust-anchor-evidence-sha256")
     parser.add_argument("--expected-stable-promotion-evidence-sha256")
     parser.add_argument("--expected-package-version")
@@ -349,6 +360,7 @@ def expected_hashes_from_cli(args: argparse.Namespace) -> dict[str, str]:
         "powerloss_matrix_sha256": args.expected_powerloss_matrix_sha256,
         "soak_summary_sha256": args.expected_soak_summary_sha256,
         "server_side_evidence_sha256": args.expected_server_side_evidence_sha256,
+        "server_side_current_snapshot_sha256": args.expected_server_side_current_snapshot_sha256,
         "server_side_trust_anchor_evidence_sha256": args.expected_server_side_trust_anchor_evidence_sha256,
         "stable_promotion_evidence_sha256": args.expected_stable_promotion_evidence_sha256,
     }
