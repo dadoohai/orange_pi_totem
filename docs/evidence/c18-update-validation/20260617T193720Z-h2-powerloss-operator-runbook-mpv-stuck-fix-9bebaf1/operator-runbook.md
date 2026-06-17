@@ -29,7 +29,7 @@ ssh root@192.168.18.131 \
      --bundle-dir '/data/c18-powerloss-bundle-3eb06f1' \
      --evidence-root '/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1' \
      --canary-media '/data/media/c18-canary-h264.mp4' \
-     --image-marker '/etc/dadooh/image-build.json' \
+     --image-marker '/etc/dadooh/c18-hwdecode-lab-1x-image' \
      --json" \
   > 'docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/board-preflight.json'
 ssh root@192.168.18.131 \

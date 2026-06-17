@@ -185,7 +185,7 @@
   "preflight_expected_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
   "preflight_expected_image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
   "preflight_expected_image_tag": "c18-hwdecode-lab-1x",
-  "preflight_image_marker": "/etc/dadooh/image-build.json",
+  "preflight_image_marker": "/etc/dadooh/c18-hwdecode-lab-1x-image",
   "preflight_local_output": "docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/board-preflight.json",
   "preflight_max_age_sec": 1800,
   "pull_helper_materializes_powerloss_manifest": true,
