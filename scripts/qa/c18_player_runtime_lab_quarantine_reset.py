@@ -37,15 +37,42 @@ RESET_SCOPES = {
     "p0_rollback_after_state_success",
     "p0_isolation_reset",
     "p0_setup_contention_retry",
+    "lab_no_canary_retry",
+    "lab_harness_ipc_drm_retry",
 }
 ALLOWED_QUARANTINE_REASONS = {"physical_powerloss_trial"}
 SETUP_CONTENTION_SCOPE = "p0_setup_contention_retry"
+NO_CANARY_SCOPE = "lab_no_canary_retry"
+HARNESS_IPC_DRM_SCOPE = "lab_harness_ipc_drm_retry"
 SETUP_CONTENTION_FAILURE_REASONS = {
     "hwdec_expected_present",
     "vo_configured_present",
     "vo_configured_no_unexpected",
     "estimated_frame_present",
     "playback_progressed",
+}
+NO_CANARY_FAILURE_REASONS = {
+    "candidate_teardown_process_stopped_cleanly",
+    "estimated_frame_present",
+    "hwdec_expected_present",
+    "ipc_success_present",
+    "mpv_path_c18_stack",
+    "playback_progressed",
+    "service_active",
+    "single_mpv",
+    "vo_configured_present",
+}
+HARNESS_IPC_DRM_FAILURE_REASONS = {
+    "candidate_teardown_process_stopped_cleanly",
+    "estimated_frame_present",
+    "hwdec_expected_present",
+    "ipc_success_present",
+    "mpv_path_c18_stack",
+    "playback_progressed",
+    "service_active",
+    "single_mpv",
+    "status_no_failures",
+    "vo_configured_present",
 }
 
 
@@ -223,13 +250,157 @@ def setup_contention_evidence(candidate_health_dir: Path | None, identity: dict[
     return not blockers, blockers, details
 
 
+def no_canary_retry_evidence(candidate_health_dir: Path | None, identity: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["no_canary_retry_evidence_missing"], details
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    try:
+        result = read_json(result_path)
+    except Exception as exc:
+        return False, [f"no_canary_retry_result_read_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    teardown = result.get("candidate_teardown") if isinstance(result.get("candidate_teardown"), dict) else {}
+    stop = teardown.get("stop") if isinstance(teardown.get("stop"), dict) else {}
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "canary_media_used": result.get("canary_media_used"),
+        "playlist_size_max": counters.get("playlist_size_max"),
+        "mpv_count": counters.get("mpv_count"),
+        "ipc_success": counters.get("ipc_success"),
+        "gpu_faults_delta": teardown.get("gpu_faults_delta"),
+        "stop_returncode": stop.get("returncode"),
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("no_canary_retry_candidate_version_mismatch")
+    if result.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+        blockers.append("no_canary_retry_kiosk_identity_mismatch")
+    if result.get("observed_tree_sha256") != identity.get("tree_sha256"):
+        blockers.append("no_canary_retry_tree_identity_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("no_canary_retry_result_not_failed")
+    if result.get("canary_media_used") is not False:
+        blockers.append("no_canary_retry_canary_was_used")
+    if failures != NO_CANARY_FAILURE_REASONS:
+        blockers.append("no_canary_retry_failure_reasons_mismatch")
+    if int(counters.get("playlist_size_max") or 0) != 0:
+        blockers.append("no_canary_retry_playlist_not_empty")
+    if int(counters.get("mpv_count") or 0) != 0:
+        blockers.append("no_canary_retry_mpv_process_started")
+    if int(counters.get("ipc_success") or 0) != 0:
+        blockers.append("no_canary_retry_ipc_success_seen")
+    if int(counters.get("hwdec_expected_samples") or 0) != 0:
+        blockers.append("no_canary_retry_hwdec_seen")
+    if int(counters.get("vo_configured_true_samples") or 0) != 0:
+        blockers.append("no_canary_retry_vo_seen")
+    if checks.get("media_load_failed_zero") is not True:
+        blockers.append("no_canary_retry_media_load_failures_seen")
+    if checks.get("panfrost_faults_delta_zero") is not True:
+        blockers.append("no_canary_retry_gpu_fault_delta_seen")
+    if checks.get("ext4_errors_zero") is not True or checks.get("mmc_timeout_reset_zero") is not True:
+        blockers.append("no_canary_retry_storage_fault_seen")
+    if teardown.get("gpu_faults_delta") not in (0, None):
+        blockers.append("no_canary_retry_teardown_gpu_fault_delta")
+    if stop.get("method") != "none" or stop.get("returncode") != 2:
+        blockers.append("no_canary_retry_candidate_exit_shape")
+    return not blockers, blockers, details
+
+
+def harness_ipc_drm_retry_evidence(candidate_health_dir: Path | None, identity: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["harness_ipc_drm_retry_evidence_missing"], details
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    try:
+        result = read_json(result_path)
+    except Exception as exc:
+        return False, [f"harness_ipc_drm_retry_result_read_failed:{type(exc).__name__}"], details
+    try:
+        combined_logs = "\n".join(
+            path.read_text(encoding="utf-8", errors="replace")
+            for path in sorted(candidate_health_dir.glob("mpv*.log"))
+        )
+        combined_logs += "\n" + (candidate_health_dir / "kiosk.log").read_text(
+            encoding="utf-8", errors="replace"
+        )
+    except Exception as exc:
+        return False, [f"harness_ipc_drm_retry_log_read_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    teardown = result.get("candidate_teardown") if isinstance(result.get("candidate_teardown"), dict) else {}
+    stop = teardown.get("stop") if isinstance(teardown.get("stop"), dict) else {}
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "canary_media_used": result.get("canary_media_used"),
+        "playlist_size_max": counters.get("playlist_size_max"),
+        "mpv_count": counters.get("mpv_count"),
+        "total_mpv_count": counters.get("total_mpv_count"),
+        "ipc_success": counters.get("ipc_success"),
+        "status_failure_samples": counters.get("status_failure_samples"),
+        "gpu_faults_delta": teardown.get("gpu_faults_delta"),
+        "stop_returncode": stop.get("returncode"),
+        "af_unix_path_too_long": "AF_UNIX path too long" in combined_logs,
+        "drm_master_permission_denied": "Failed to acquire DRM master: Permission denied" in combined_logs,
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("harness_ipc_drm_retry_candidate_version_mismatch")
+    if result.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+        blockers.append("harness_ipc_drm_retry_kiosk_identity_mismatch")
+    if result.get("observed_tree_sha256") != identity.get("tree_sha256"):
+        blockers.append("harness_ipc_drm_retry_tree_identity_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("harness_ipc_drm_retry_result_not_failed")
+    if result.get("canary_media_used") is not True:
+        blockers.append("harness_ipc_drm_retry_canary_missing")
+    if failures != HARNESS_IPC_DRM_FAILURE_REASONS:
+        blockers.append("harness_ipc_drm_retry_failure_reasons_mismatch")
+    if int(counters.get("playlist_size_max") or 0) < 1:
+        blockers.append("harness_ipc_drm_retry_playlist_missing")
+    if int(counters.get("ipc_success") or 0) != 0:
+        blockers.append("harness_ipc_drm_retry_ipc_success_seen")
+    if int(counters.get("hwdec_expected_samples") or 0) != 0:
+        blockers.append("harness_ipc_drm_retry_hwdec_seen")
+    if checks.get("media_load_failed_zero") is not True:
+        blockers.append("harness_ipc_drm_retry_media_load_failures_seen")
+    if checks.get("panfrost_faults_delta_zero") is not True:
+        blockers.append("harness_ipc_drm_retry_gpu_fault_delta_seen")
+    if checks.get("ext4_errors_zero") is not True or checks.get("mmc_timeout_reset_zero") is not True:
+        blockers.append("harness_ipc_drm_retry_storage_fault_seen")
+    if "AF_UNIX path too long" not in combined_logs:
+        blockers.append("harness_ipc_drm_retry_af_unix_marker_missing")
+    if "Failed to acquire DRM master: Permission denied" not in combined_logs:
+        blockers.append("harness_ipc_drm_retry_drm_marker_missing")
+    if "Error opening/initializing the VO window" not in combined_logs:
+        blockers.append("harness_ipc_drm_retry_vo_marker_missing")
+    if teardown.get("gpu_faults_delta") not in (0, None):
+        blockers.append("harness_ipc_drm_retry_teardown_gpu_fault_delta")
+    if stop.get("method") != "none" or stop.get("returncode") != 3:
+        blockers.append("harness_ipc_drm_retry_candidate_exit_shape")
+    return not blockers, blockers, details
+
+
 def quarantine_reason_allowed(entry: dict[str, Any],
                               *,
                               reset_scope: str,
-                              setup_contention_ok: bool) -> bool:
+                              setup_contention_ok: bool,
+                              no_canary_retry_ok: bool,
+                              harness_ipc_drm_retry_ok: bool) -> bool:
     reason = str(entry.get("reason") or "")
     if reset_scope == SETUP_CONTENTION_SCOPE:
         return setup_contention_ok and set(reason.split(",")) == SETUP_CONTENTION_FAILURE_REASONS
+    if reset_scope == NO_CANARY_SCOPE:
+        return no_canary_retry_ok and set(reason.split(",")) == NO_CANARY_FAILURE_REASONS
+    if reset_scope == HARNESS_IPC_DRM_SCOPE:
+        return harness_ipc_drm_retry_ok and set(reason.split(",")) == HARNESS_IPC_DRM_FAILURE_REASONS
     return reason in ALLOWED_QUARANTINE_REASONS
 
 
@@ -237,11 +408,15 @@ def matches_target(entry: dict[str, Any],
                    identity: dict[str, Any],
                    *,
                    reset_scope: str,
-                   setup_contention_ok: bool) -> bool:
+                   setup_contention_ok: bool,
+                   no_canary_retry_ok: bool,
+                   harness_ipc_drm_retry_ok: bool) -> bool:
     return identity_matches_target(entry, identity) and quarantine_reason_allowed(
         entry,
         reset_scope=reset_scope,
         setup_contention_ok=setup_contention_ok,
+        no_canary_retry_ok=no_canary_retry_ok,
+        harness_ipc_drm_retry_ok=harness_ipc_drm_retry_ok,
     )
 
 
@@ -325,6 +500,14 @@ def main(argv: list[str]) -> int:
         args.failed_candidate_health_dir,
         identity,
     ) if args.reset_scope == SETUP_CONTENTION_SCOPE else (False, [], {})
+    no_canary_ok, no_canary_blockers, no_canary_details = no_canary_retry_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == NO_CANARY_SCOPE else (False, [], {})
+    harness_ipc_drm_ok, harness_ipc_drm_blockers, harness_ipc_drm_details = harness_ipc_drm_retry_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == HARNESS_IPC_DRM_SCOPE else (False, [], {})
     target_link = f"releases/{identity.get('version')}"
     active_links = [
         name
@@ -337,11 +520,23 @@ def main(argv: list[str]) -> int:
     matching_entries = [entry for entry in before_quarantine if identity_matches_target(entry, identity)]
     disallowed_entries = [
         entry for entry in matching_entries
-        if not quarantine_reason_allowed(entry, reset_scope=args.reset_scope, setup_contention_ok=setup_ok)
+        if not quarantine_reason_allowed(
+            entry,
+            reset_scope=args.reset_scope,
+            setup_contention_ok=setup_ok,
+            no_canary_retry_ok=no_canary_ok,
+            harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
+        )
     ]
     removed = [
         entry for entry in matching_entries
-        if quarantine_reason_allowed(entry, reset_scope=args.reset_scope, setup_contention_ok=setup_ok)
+        if quarantine_reason_allowed(
+            entry,
+            reset_scope=args.reset_scope,
+            setup_contention_ok=setup_ok,
+            no_canary_retry_ok=no_canary_ok,
+            harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
+        )
     ]
     blockers: list[str] = []
     if not all(item["frozen"] for item in public_before.values()):
@@ -353,6 +548,8 @@ def main(argv: list[str]) -> int:
     if not matching_entries:
         blockers.append("target_quarantine_not_found")
     blockers.extend(setup_blockers)
+    blockers.extend(no_canary_blockers)
+    blockers.extend(harness_ipc_drm_blockers)
     if blockers:
         still_quarantined, quarantine_reason = updatectl._player_runtime_is_quarantined(identity, state)
         after_snapshot = runtime_snapshot()
@@ -371,6 +568,8 @@ def main(argv: list[str]) -> int:
             "matching_disallowed_entries": disallowed_entries,
             "active_links": active_links,
             "setup_contention_evidence": setup_details,
+            "no_canary_retry_evidence": no_canary_details,
+            "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
             "still_quarantined": still_quarantined,
             "quarantine_reason": quarantine_reason,
             "links_unchanged": (
@@ -480,6 +679,8 @@ def main(argv: list[str]) -> int:
         "matching_disallowed_entries": [],
         "active_links": active_links,
         "setup_contention_evidence": setup_details,
+        "no_canary_retry_evidence": no_canary_details,
+        "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
         "reverted": reverted,
         "still_quarantined": still_quarantined,
         "quarantine_reason": quarantine_reason,

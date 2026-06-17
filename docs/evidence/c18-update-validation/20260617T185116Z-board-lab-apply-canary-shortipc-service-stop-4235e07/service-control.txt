@@ -1,0 +1,7 @@
+schema=dadooh.c18.player_runtime.lab_apply_service_control.v1
+service_before=active
+stop_rc=0
+service_after_stop=inactive
+apply_rc=13
+restart_rc=0
+service_after_restart=active

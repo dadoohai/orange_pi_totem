@@ -1,0 +1,65 @@
+{
+  "after": {
+    "current_exists": false,
+    "current_link": null,
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T18:51:24Z",
+      "rollback_reason": "deep_health_exception:CandidateSetupInaccessibleError",
+      "rolled_back_to": "image_fallback",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-06-17T18:51:24Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": null,
+    "state_previous_version": null
+  },
+  "before": {
+    "current_exists": false,
+    "current_link": null,
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T18:50:36Z",
+      "non_claims": [
+        "not_a_public_thaw",
+        "not_stable_or_production",
+        "does_not_apply_or_rollback_runtime"
+      ],
+      "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+      "reason": "harness_ipc_path_and_drm_contention_retry_with_short_ipc_and_service_stop",
+      "removed_count": 1,
+      "reset_scope": "lab_harness_ipc_drm_retry",
+      "started_at_utc": "2026-06-17T18:50:36Z",
+      "status": "success",
+      "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+      "type": "lab_quarantine_reset",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": null,
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/c18e/20260617T185116Z-board-lab-apply-canary-shortipc-service-stop-4235e07/apply",
+  "passed": false,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 13,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

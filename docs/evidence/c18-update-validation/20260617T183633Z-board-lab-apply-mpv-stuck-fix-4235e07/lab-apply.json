@@ -1,0 +1,57 @@
+{
+  "after": {
+    "current_exists": false,
+    "current_link": null,
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T18:38:46Z",
+      "rollback_reason": "ipc_success_present,hwdec_expected_present,vo_configured_present,estimated_frame_present,playback_progressed,service_active,single_mpv,mpv_path_c18_stack,candidate_teardown_process_stopped_cleanly",
+      "rolled_back_to": "image_fallback",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-06-17T18:36:35Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": null,
+    "state_previous_version": null
+  },
+  "before": {
+    "current_exists": false,
+    "current_link": null,
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T18:21:21Z",
+      "reason": "manual_reconcile",
+      "reject_reason": "kiosk_sha_mismatch",
+      "rejected_current": "releases/c18.player-runtime-m6-a2-20260610T072826Z-29ff33b",
+      "started_at_utc": "2026-06-17T18:21:21Z",
+      "status": "image_fallback",
+      "type": "reconcile"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": null,
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/c18-evidence/20260617T183633Z-board-lab-apply-mpv-stuck-fix-4235e07/apply",
+  "passed": false,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 11,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

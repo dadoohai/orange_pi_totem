@@ -1,0 +1,23 @@
+{
+  "canary_media_used": true,
+  "candidate_health_schema": "dadooh.c18.player_runtime.candidate_health.v1",
+  "candidate_run_user": "totem",
+  "candidate_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "checks": {
+    "candidate_setup_accessible_to_run_user": false
+  },
+  "counters": {
+    "candidate_setup_inaccessible_target_count": 1
+  },
+  "failure_reasons": [
+    "candidate_setup_inaccessible_to_run_user"
+  ],
+  "inaccessible_targets": [
+    "ipc_dir_write"
+  ],
+  "observed_kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+  "observed_tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+  "passed": false,
+  "schema": "dadooh.c18.playback.deep_health.v1",
+  "setup_error": "candidate_setup_inaccessible_to_run_user"
+}

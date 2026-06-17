@@ -10,6 +10,7 @@ health shape expected by totem_updatectl's internal lab path.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pwd
@@ -85,6 +86,7 @@ SAFE_TEMPLATE_KEYS = {
 }
 CANARY_MEDIA_ALLOWED_ROOTS = (Path("/tmp"), Path("/data/media"))
 CANARY_MEDIA_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi"}
+UNIX_SOCKET_PATH_SOFT_LIMIT = 100
 
 
 class CandidateSetupInaccessibleError(RuntimeError):
@@ -175,6 +177,38 @@ def candidate_identity(release_dir: Path, manifest: dict[str, Any] | None = None
     }
 
 
+def candidate_ipc_path(work_dir: Path) -> Path:
+    default = work_dir / "mpv.sock"
+    if len(str(default)) < UNIX_SOCKET_PATH_SOFT_LIMIT:
+        return default
+    digest = hashlib.sha256(str(work_dir).encode("utf-8")).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / f"c18-pr-ipc-{digest}" / "mpv.sock"
+
+
+def prepare_candidate_ipc_path(ipc_path: Path, uid: int, gid: int) -> None:
+    prepare_candidate_path(ipc_path.parent, uid, gid)
+    try:
+        if ipc_path.exists() or ipc_path.is_symlink():
+            ipc_path.unlink()
+    except OSError:
+        pass
+
+
+def cleanup_candidate_ipc_path(cfg: dict[str, Any], work_root: Path) -> None:
+    try:
+        ipc_path = Path(str(cfg.get("ipc_path") or ""))
+        parent = ipc_path.parent
+        if is_under(parent, work_root):
+            return
+        if parent.parent != Path(tempfile.gettempdir()) or not parent.name.startswith("c18-pr-ipc-"):
+            return
+        if ipc_path.exists() or ipc_path.is_symlink():
+            ipc_path.unlink()
+        parent.rmdir()
+    except OSError:
+        pass
+
+
 def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, Any]:
     template = read_json_object(template_path)
     cfg = {key: template[key] for key in SAFE_TEMPLATE_KEYS if key in template}
@@ -191,7 +225,7 @@ def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, An
         "default_duration_ms": int(cfg.get("default_duration_ms") or 10000),
         "cache_dir": str(work_dir / "media_cache"),
         "state_dir": str(work_dir / "state"),
-        "ipc_path": str(work_dir / "mpv.sock"),
+        "ipc_path": str(candidate_ipc_path(work_dir)),
         "runtime_dir": str(runtime_dir),
         "status_file": str(work_dir / "status.json"),
         "mpv_log_file": str(work_dir / "mpv.log"),
@@ -312,6 +346,20 @@ def chown_tree(root: Path, uid: int, gid: int) -> None:
             os.chown(path, uid, gid)
         except OSError:
             pass
+
+
+def prepare_candidate_path(path: Path, uid: int, gid: int, mode: int = 0o700) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        pass
+    if os.geteuid() != 0:
+        return
+    try:
+        os.chown(path, uid, gid)
+    except OSError:
+        pass
 
 
 def drop_to_user_preexec(user_name: str, uid: int, gid: int):
@@ -466,6 +514,7 @@ def run_candidate_health(
     # Pre-create derived workspace dirs so the preflight (and chown) act on a concrete tree.
     for sub in ("runtime_dir", "state_dir", "cache_dir"):
         Path(str(cfg[sub])).mkdir(parents=True, exist_ok=True)
+    prepare_candidate_ipc_path(Path(str(cfg["ipc_path"])), run_user.pw_uid, run_user.pw_gid)
     chown_tree(work_root, run_user.pw_uid, run_user.pw_gid)
 
     # PREFLIGHT — the candidate kiosk.py runs as run_user via setuid. If any path it must
@@ -481,6 +530,7 @@ def run_candidate_health(
             identity, run_user, normalized_canary is not None, inaccessible
         )
         write_json(work_root / "candidate-health-result.json", result)
+        cleanup_candidate_ipc_path(cfg, work_root)
         # Raise (not return passed=False): the apply path then aborts via deep_health_exception
         # (fail-closed, no promotion) WITHOUT quarantining the identity. The result artifact above
         # keeps the explicit setup_error/inaccessible_targets for diagnosis.
@@ -592,6 +642,7 @@ def run_candidate_health(
                 reasons.append(reason)
         result["passed"] = False
     write_json(work_root / "candidate-health-result.json", result)
+    cleanup_candidate_ipc_path(cfg, work_root)
     return result
 
 

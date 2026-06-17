@@ -95,6 +95,109 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
         )
         return health_dir
 
+    def write_no_canary_retry_evidence(
+        self,
+        root: Path,
+        identity: dict,
+        *,
+        progressed: bool = False,
+        canary_used: bool = False,
+    ) -> Path:
+        health_dir = root / "failed-no-canary-health"
+        health_dir.mkdir(parents=True, exist_ok=True)
+        failures = sorted(reset.NO_CANARY_FAILURE_REASONS)
+        counters = {
+            "playlist_size_max": 0,
+            "mpv_count": 0,
+            "ipc_success": 0,
+            "hwdec_expected_samples": 0,
+            "vo_configured_true_samples": 0,
+        }
+        if progressed:
+            counters["mpv_count"] = 1
+        (health_dir / "candidate-health-result.json").write_text(json.dumps({
+            "schema": "dadooh.c18.playback.deep_health.v1",
+            "candidate_version": identity["version"],
+            "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+            "observed_tree_sha256": identity["tree_sha256"],
+            "canary_media_used": canary_used,
+            "passed": False,
+            "failure_reasons": failures,
+            "checks": {
+                "media_load_failed_zero": True,
+                "panfrost_faults_delta_zero": True,
+                "ext4_errors_zero": True,
+                "mmc_timeout_reset_zero": True,
+            },
+            "counters": counters,
+            "candidate_teardown": {
+                "gpu_faults_delta": 0,
+                "stop": {
+                    "method": "none",
+                    "returncode": 2,
+                },
+            },
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        return health_dir
+
+    def write_harness_ipc_drm_retry_evidence(
+        self,
+        root: Path,
+        identity: dict,
+        *,
+        include_drm_marker: bool = True,
+        include_af_unix_marker: bool = True,
+        ipc_success: int = 0,
+    ) -> Path:
+        health_dir = root / "failed-harness-ipc-drm-health"
+        health_dir.mkdir(parents=True, exist_ok=True)
+        (health_dir / "candidate-health-result.json").write_text(json.dumps({
+            "schema": "dadooh.c18.playback.deep_health.v1",
+            "candidate_version": identity["version"],
+            "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+            "observed_tree_sha256": identity["tree_sha256"],
+            "canary_media_used": True,
+            "passed": False,
+            "failure_reasons": sorted(reset.HARNESS_IPC_DRM_FAILURE_REASONS),
+            "checks": {
+                "media_load_failed_zero": True,
+                "panfrost_faults_delta_zero": True,
+                "ext4_errors_zero": True,
+                "mmc_timeout_reset_zero": True,
+            },
+            "counters": {
+                "playlist_size_max": 1,
+                "mpv_count": 0,
+                "total_mpv_count": 1,
+                "ipc_success": ipc_success,
+                "hwdec_expected_samples": 0,
+                "status_failure_samples": 12,
+            },
+            "candidate_teardown": {
+                "gpu_faults_delta": 0,
+                "stop": {
+                    "method": "none",
+                    "returncode": 3,
+                },
+            },
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        drm = "Failed to acquire DRM master: Permission denied\n" if include_drm_marker else ""
+        af_unix = "AF_UNIX path too long\n" if include_af_unix_marker else ""
+        (health_dir / "mpv-g001.log").write_text(
+            "Could not create IPC socket\n"
+            + af_unix
+            + drm
+            + "Error opening/initializing the VO window.\n",
+            encoding="utf-8",
+        )
+        (health_dir / "kiosk.log").write_text(
+            "MPV IPC fresh command failed error="
+            + ("AF_UNIX path too long" if include_af_unix_marker else "permission denied")
+            + "\n",
+            encoding="utf-8",
+        )
+        return health_dir
+
     def test_guard_blocks_without_env_and_flag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -317,6 +420,231 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             self.assertTrue(result["passed"])
             self.assertEqual(result["removed_count"], 1)
             self.assertEqual(result["setup_contention_evidence"]["total_mpv_count"], 2)
+
+    def test_no_canary_retry_requires_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-no-canary-missing")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.NO_CANARY_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_no_canary_retry",
+                "--reason", "unit-no-canary-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("no_canary_retry_evidence_missing", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_no_canary_retry_removes_matching_quarantine_with_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-no-canary")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.NO_CANARY_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_no_canary_retry_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_no_canary_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-no-canary-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(entries, [])
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["removed_count"], 1)
+            self.assertEqual(result["no_canary_retry_evidence"]["playlist_size_max"], 0)
+
+    def test_no_canary_retry_rejects_if_candidate_started_playback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-no-canary-started")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.NO_CANARY_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_no_canary_retry_evidence(root, identity, progressed=True)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_no_canary_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-no-canary-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("no_canary_retry_mpv_process_started", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_no_canary_retry_rejects_if_canary_was_used(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-no-canary-with-canary")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.NO_CANARY_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_no_canary_retry_evidence(root, identity, canary_used=True)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_no_canary_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-no-canary-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("no_canary_retry_canary_was_used", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_harness_ipc_drm_retry_removes_matching_quarantine_with_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-harness-ipc-drm")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.HARNESS_IPC_DRM_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_harness_ipc_drm_retry_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_harness_ipc_drm_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-harness-ipc-drm-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(entries, [])
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["removed_count"], 1)
+            self.assertTrue(result["harness_ipc_drm_retry_evidence"]["af_unix_path_too_long"])
+            self.assertTrue(result["harness_ipc_drm_retry_evidence"]["drm_master_permission_denied"])
+
+    def test_harness_ipc_drm_retry_rejects_without_drm_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-harness-no-marker")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.HARNESS_IPC_DRM_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_harness_ipc_drm_retry_evidence(root, identity, include_drm_marker=False)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_harness_ipc_drm_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-harness-ipc-drm-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("harness_ipc_drm_retry_drm_marker_missing", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_harness_ipc_drm_retry_rejects_without_af_unix_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-harness-no-af-unix")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.HARNESS_IPC_DRM_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_harness_ipc_drm_retry_evidence(root, identity, include_af_unix_marker=False)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_harness_ipc_drm_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-harness-ipc-drm-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("harness_ipc_drm_retry_af_unix_marker_missing", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_harness_ipc_drm_retry_rejects_ipc_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-harness-ipc-success")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.HARNESS_IPC_DRM_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_harness_ipc_drm_retry_evidence(root, identity, ipc_success=1)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_harness_ipc_drm_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-harness-ipc-drm-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("harness_ipc_drm_retry_ipc_success_seen", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
 
     def test_post_freeze_failure_reverts_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

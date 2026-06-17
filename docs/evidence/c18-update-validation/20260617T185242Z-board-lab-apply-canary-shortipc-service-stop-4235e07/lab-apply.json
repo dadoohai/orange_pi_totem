@@ -1,0 +1,54 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T18:54:56Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-06-17T18:52:45Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "state_previous_version": null
+  },
+  "before": {
+    "current_exists": false,
+    "current_link": null,
+    "last_operation": {
+      "finished_at_utc": "2026-06-17T18:51:26Z",
+      "reason": "manual_reconcile",
+      "reject_reason": "no_current_symlink",
+      "started_at_utc": "2026-06-17T18:51:26Z",
+      "status": "image_fallback",
+      "type": "reconcile"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": null,
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/c18e/20260617T185242Z-board-lab-apply-canary-shortipc-service-stop-4235e07/apply",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

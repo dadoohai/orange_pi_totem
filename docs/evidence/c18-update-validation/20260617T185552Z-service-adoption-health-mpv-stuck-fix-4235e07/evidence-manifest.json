@@ -1,0 +1,34 @@
+{
+  "schema": "dadooh.c18.player_runtime.board_lab_apply_service_health.v1",
+  "passed": true,
+  "result_claim": "board_lab_apply_and_service_health_passed_for_mpv_stuck_fix",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "target_kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+  "target_tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+  "lab_apply_dir": "docs/evidence/c18-update-validation/20260617T185242Z-board-lab-apply-canary-shortipc-service-stop-4235e07",
+  "service_validation_dir": "docs/evidence/c18-update-validation/20260617T185552Z-service-adoption-health-mpv-stuck-fix-4235e07",
+  "quarantine_reset_dirs": [
+    "docs/evidence/c18-update-validation/20260617T184341Z-lab-quarantine-reset-no-canary-mpv-stuck-fix-4235e07",
+    "docs/evidence/c18-update-validation/20260617T185032Z-lab-quarantine-reset-harness-ipc-drm-mpv-stuck-fix-4235e07"
+  ],
+  "service_adoption_passed": true,
+  "service_health_passed": true,
+  "public_player_runtime_apply_frozen_rc": 44,
+  "public_player_runtime_reconcile_frozen_rc": 44,
+  "status_advanced_without_mpv": false,
+  "service_health_samples": 114,
+  "service_health_mpv_unique_aliases": 9,
+  "service_health_status_unique_aliases": 9,
+  "non_claims": [
+    "not_production",
+    "not_stable",
+    "not_public_player_runtime_thaw",
+    "not_auto_pull",
+    "not_server_side_publish_signature_or_attestation",
+    "not_24h_soak",
+    "not_h2_powerloss_17_17",
+    "not_pilot_authorization"
+  ]
+}

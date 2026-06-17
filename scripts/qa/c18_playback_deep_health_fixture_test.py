@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -911,6 +912,24 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             payload = json.dumps(cfg, sort_keys=True)
             for forbidden in ("SECRET", "ENV_SECRET", "TOKEN_SECRET", "CUSTOM_SECRET", "private.example"):
                 self.assertNotIn(forbidden, payload)
+
+    def test_candidate_health_uses_short_tmp_ipc_path_for_long_workdir(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-config-") as tmp:
+            root = Path(tmp)
+            short_work = root / "work"
+            short_cfg = candidate_health.candidate_config(None, short_work)
+            self.assertTrue(str(short_cfg["ipc_path"]).startswith(str(short_work)))
+
+            long_work = root / ("x" * 96) / ("y" * 32)
+            long_cfg = candidate_health.candidate_config(None, long_work)
+            ipc_path = Path(str(long_cfg["ipc_path"]))
+            self.assertTrue(str(ipc_path).startswith("/tmp/c18-pr-ipc-"))
+            self.assertLess(len(str(ipc_path)), candidate_health.UNIX_SOCKET_PATH_SOFT_LIMIT)
+            self.assertFalse(ipc_path.parent.exists())
+            candidate_health.prepare_candidate_ipc_path(ipc_path, os.getuid(), os.getgid())
+            self.assertTrue(ipc_path.parent.is_dir())
+            candidate_health.cleanup_candidate_ipc_path(long_cfg, long_work)
+            self.assertFalse(ipc_path.parent.exists())
 
     def test_candidate_health_canary_playlist_is_explicit_and_isolated(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-candidate-canary-") as tmp:
