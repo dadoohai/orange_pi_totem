@@ -85,7 +85,7 @@ Evidencia principal:
 - snapshot macro versionado:
   `docs/evidence/c18-update-validation/20260617T061938Z-current-macro-governance-1a7cce9/`;
 - snapshot pre-soak scale governance:
-  `docs/evidence/c18-update-validation/20260617T031532Z-pre-soak-scale-governance-9bd359d/`;
+  `docs/evidence/c18-update-validation/20260617T062826Z-pre-soak-scale-governance-f696c25/`;
   `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` verde em arvore
   limpa, com release gate interno verde, H2 ainda vermelho pelos blockers
   esperados e non-claims explicitos para producao, `stable`, auto-pull, thaw,
