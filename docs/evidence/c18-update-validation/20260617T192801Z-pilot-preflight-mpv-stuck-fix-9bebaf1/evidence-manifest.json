@@ -1,0 +1,73 @@
+{
+  "artifact_id": "c18-pilot-preflight-mpv-stuck-fix-9bebaf1-20260617T192801Z",
+  "channel": "homologation",
+  "collected_at_utc": "2026-06-17T19:28:01Z",
+  "component": "player-runtime",
+  "evaluated_at_utc": "2026-06-17T19:32:00Z",
+  "files": [
+    {
+      "bytes": 1194,
+      "file": "README.md",
+      "sha256": "7f05d14c24ad8510531cee61aeff59aeeeb56f880e27439758dcaab5a7276107"
+    },
+    {
+      "bytes": 816,
+      "file": "PILOT_READINESS_BLOCKED.md",
+      "sha256": "4859f028c70b548b1eb2af3defeb726385aa911fa40a3edc0918d7a513cffcdc"
+    },
+    {
+      "bytes": 4218,
+      "file": "board-preflight.json",
+      "sha256": "c6f7b3b68b14bc278a106f4cdac05c420d9cb7a13ed3b55cb6f0140704d1796a"
+    },
+    {
+      "bytes": 916,
+      "file": "pilot-authorization.json",
+      "sha256": "faca9839638bca41716a6df88f6c1151e3b64257ad6172045af060fc11a386e1"
+    },
+    {
+      "bytes": 5080,
+      "file": "pilot-readiness.json",
+      "sha256": "09a0fe4cd902a635aa698aa9853b518b3e3a86d0454b0c0d35387ee570b6acba"
+    }
+  ],
+  "key_checks": {
+    "authorization_preflight_link": true,
+    "board_preflight": true,
+    "h1_decisive_bundle": true,
+    "pilot_authorization": true,
+    "pilot_powerloss_p0": false,
+    "repo_clean": true,
+    "target_package": true,
+    "tracked_inputs": true
+  },
+  "non_claims": [
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_24h_soak",
+    "this_snapshot_does_not_satisfy_powerloss_17_17"
+  ],
+  "pilot_result": {
+    "blockers": [
+      "pilot_powerloss_p0:pilot_powerloss_p0_incomplete"
+    ],
+    "passed": false,
+    "result_claim": "homologation_pilot_blocked"
+  },
+  "remaining_blocker": "pilot_powerloss_p0_incomplete",
+  "repo_commit": "62a1624a3fcbff1ce4f636bd3bc4d85a303ab944",
+  "repo_tree": "364df29d325d17cfc493f919ecfc032fbbb9cd8e",
+  "ring": "pilot",
+  "schema": "dadooh.c18.homologation_pilot_preflight_snapshot.v1",
+  "target_package": {
+    "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "blockers": [
+    "pilot_powerloss_p0:pilot_powerloss_p0_incomplete"
+  ],
+  "channel": "homologation",
+  "checks": {
+    "authorization_preflight_link": {
+      "authorized_device": "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "blockers": [],
+      "passed": true,
+      "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+    },
+    "board_preflight": {
+      "blockers": [],
+      "device_hash": "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "expected_stage": "pre_apply",
+      "passed": true,
+      "preflight_path": "docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/board-preflight.json",
+      "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+      "stage": "pre_apply"
+    },
+    "h1_decisive_bundle": {
+      "blockers": [],
+      "h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
+      "passed": true,
+      "step_count": 66,
+      "summary_path": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json"
+    },
+    "incident_evidence": {
+      "blockers": [],
+      "incident_count": 0,
+      "passed": true,
+      "results": {}
+    },
+    "pilot_authorization": {
+      "authorization_path": "docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/pilot-authorization.json",
+      "blockers": [],
+      "device_hashes": [
+        "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104"
+      ],
+      "evaluated_at_utc": "2026-06-17T19:32:00Z",
+      "h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
+      "passed": true,
+      "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+      "window_end_utc": "2026-06-18T19:20:00Z",
+      "window_start_utc": "2026-06-17T19:20:00Z"
+    },
+    "pilot_powerloss_p0": {
+      "blockers": [
+        "pilot_powerloss_p0_incomplete"
+      ],
+      "duplicate_checkpoints": [],
+      "gate_results": {},
+      "h2_only_observed": [],
+      "missing_checkpoints": [
+        "after_current_symlink",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ],
+      "observed_checkpoints": [],
+      "passed": false,
+      "required_checkpoints": [
+        "after_current_symlink",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ]
+    },
+    "repo_clean": {
+      "blockers": [],
+      "passed": true,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    "source_expectation": {
+      "authorization_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+      "blockers": [],
+      "expect_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+      "passed": true
+    },
+    "target_package": {
+      "blockers": [],
+      "channel": "homologation",
+      "manifest_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "passed": true,
+      "payload_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+      "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "tracked_inputs": {
+      "blockers": [],
+      "ignored": [],
+      "manifest_untracked_entries": [],
+      "outside_repo": [],
+      "passed": true,
+      "paths": [
+        "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+        "docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/pilot-authorization.json",
+        "docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/board-preflight.json"
+      ],
+      "untracked": []
+    }
+  },
+  "non_claims": [
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_require_or_claim_signature_attestation",
+    "this_gate_does_not_thaw_public_player_runtime"
+  ],
+  "passed": false,
+  "result_claim": "homologation_pilot_blocked",
+  "ring": "pilot",
+  "schema": "dadooh.c18.homologation_pilot_readiness.v1"
+}
