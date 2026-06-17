@@ -2,15 +2,17 @@
 """Validate the current C18 OTA macro-governance snapshot.
 
 This is an offline aggregate gate. It consumes already-versioned evidence for
-H1, homologation pilot readiness, H2 readiness and read-only board diagnostics.
-It does not re-open an expired pilot window, run SSH, publish, promote stable,
-enable auto-pull, complete H2, or thaw player-runtime.
+H1, homologation pilot readiness, H2 readiness, read-only board diagnostics and
+current server-side publish governance. It does not re-open an expired pilot
+window, run SSH, publish, promote stable, enable auto-pull, complete H2, or thaw
+player-runtime.
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import subprocess
 import sys
@@ -28,6 +30,9 @@ H1_RELEASE_GATE_SCHEMA = "dadooh.c18.ota.release_gate.v1"
 PILOT_READINESS_SCHEMA = "dadooh.c18.homologation_pilot_readiness.v1"
 H2_READINESS_SCHEMA = "dadooh.c18.player_runtime.h2_readiness.v1"
 BOARD_READONLY_GATE_SCHEMA = "dadooh.c18.board_readonly_diagnostics_evidence_gate.v1"
+SERVER_SIDE_CURRENT_SCHEMA = "dadooh.c18.server_side_current_validation_snapshot.v1"
+SERVER_SIDE_GATE_SCHEMA = "dadooh.c18.server_side_publish_governance_gate.v1"
+SERVER_SIDE_ASSET_LIST_SCHEMA = "dadooh.c18.server_side_publish_asset_list.v1"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TARGET_PACKAGE_VERSION = "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
@@ -51,6 +56,9 @@ DEFAULT_H2_READINESS = (
 )
 DEFAULT_BOARD_READONLY_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d"
+)
+DEFAULT_SERVER_SIDE_CURRENT_DIR = (
+    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e"
 )
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/189_C18_OTA_READINESS_GATE.md",
@@ -105,6 +113,42 @@ REQUIRED_H2_RED_CHECKS = (
     "soak_endurance_24h",
     "stable_promotion_authorization",
     "explicit_operator_thaw_decision",
+)
+REQUIRED_SERVER_SIDE_FILES = (
+    "README.md",
+    "server-side-governance-gate.json",
+    "server-side-asset-list.json",
+)
+REQUIRED_SERVER_SIDE_KEY_CHECKS = (
+    "governance_gate_passed",
+    "expected_component_player_runtime",
+    "external_trust_anchor_verified",
+    "signed_or_attested_assets_verified",
+    "asset_list_hash_bound",
+    "auto_pull_default_disabled",
+    "allowlist_controls_defined",
+    "staged_rollout_defined",
+    "audit_trail_defined",
+)
+REQUIRED_SERVER_SIDE_NON_CLAIMS = (
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_thaw_player_runtime",
+    "this_snapshot_does_not_complete_h2",
+    "this_snapshot_does_not_replace_powerloss_17_17",
+    "this_snapshot_does_not_replace_soak_24h",
+    "this_snapshot_does_not_replace_stable_promotion_or_formal_thaw_decision",
+)
+REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS = (
+    "this_list_does_not_publish_releases",
+    "this_list_does_not_enable_auto_pull",
+    "this_list_does_not_promote_stable",
+    "this_list_does_not_thaw_player_runtime",
+    "this_list_does_not_complete_h2",
+    "this_list_does_not_replace_powerloss_17_17",
+    "this_list_does_not_replace_soak_24h",
+    "this_list_does_not_replace_stable_promotion_or_formal_thaw_decision",
 )
 REQUIRED_DOC_TOKENS = (
     "scripts/qa/c18_ota_macro_governance_gate.py",
@@ -161,6 +205,17 @@ def read_json(path: Path, blockers: list[str], label: str) -> dict[str, Any]:
         blockers.append(f"{label}_not_object")
         return {}
     return data
+
+
+def sha256_file(path: Path) -> str | None:
+    try:
+        h = hashlib.sha256()
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
 
 
 def git_lines(cmd: list[str]) -> tuple[int, list[str], str]:
@@ -495,6 +550,131 @@ def evaluate_board_diagnostics(run_dir: Path) -> dict[str, Any]:
     )
 
 
+def manifest_file_map(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    entries = manifest.get("files")
+    out: dict[str, dict[str, Any]] = {}
+    if not isinstance(entries, list):
+        return out
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        raw = item.get("file")
+        if isinstance(raw, str):
+            out[raw] = item
+    return out
+
+
+def validate_manifest_hashes(run_dir: Path, manifest: dict[str, Any], blockers: list[str]) -> None:
+    entries = manifest_file_map(manifest)
+    if set(entries) != set(REQUIRED_SERVER_SIDE_FILES):
+        blockers.append("server_side_manifest_files_not_exact")
+    for filename in REQUIRED_SERVER_SIDE_FILES:
+        item = entries.get(filename)
+        path = run_dir / filename
+        if item is None:
+            blockers.append(f"server_side_manifest_file_missing:{filename}")
+            continue
+        if path.is_symlink() or not path.is_file():
+            blockers.append(f"server_side_file_missing_or_symlink:{filename}")
+            continue
+        if item.get("bytes") != path.stat().st_size:
+            blockers.append(f"server_side_file_bytes_mismatch:{filename}")
+        actual_hash = sha256_file(path)
+        if item.get("sha256") != actual_hash:
+            blockers.append(f"server_side_file_sha256_mismatch:{filename}")
+
+
+def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
+    blockers: list[str] = []
+    manifest_path = run_dir / "evidence-manifest.json"
+    manifest = read_json(manifest_path, blockers, "server_side_manifest")
+    if not manifest:
+        return check("server_side_current", blockers, run_dir=str(run_dir))
+    validate_manifest_hashes(run_dir, manifest, blockers)
+    if manifest.get("schema") != SERVER_SIDE_CURRENT_SCHEMA:
+        blockers.append("server_side_manifest_schema")
+    if manifest.get("passed") is not True:
+        blockers.append("server_side_manifest_not_passed")
+    if manifest.get("result_claim") != "server_side_publish_governance_ready":
+        blockers.append("server_side_manifest_result_claim")
+
+    target = manifest.get("target_package") if isinstance(manifest.get("target_package"), dict) else {}
+    if target.get("version") != TARGET_PACKAGE_VERSION:
+        blockers.append("server_side_target_version")
+    if target.get("component") != "player-runtime":
+        blockers.append("server_side_target_component")
+    if target.get("channel") != "homologation":
+        blockers.append("server_side_target_channel")
+    if target.get("source_commit") != TARGET_SOURCE_COMMIT:
+        blockers.append("server_side_target_source_commit")
+    if target.get("payload_sha256") != TARGET_PAYLOAD_SHA256:
+        blockers.append("server_side_target_payload_sha256")
+
+    key_checks = manifest.get("key_checks") if isinstance(manifest.get("key_checks"), dict) else {}
+    for key in REQUIRED_SERVER_SIDE_KEY_CHECKS:
+        if key_checks.get(key) is not True:
+            blockers.append(f"server_side_key_check_missing_or_false:{key}")
+    if key_checks.get("asset_count") != 14:
+        blockers.append("server_side_asset_count")
+    non_claims = set(manifest.get("non_claims") if isinstance(manifest.get("non_claims"), list) else [])
+    for claim in REQUIRED_SERVER_SIDE_NON_CLAIMS:
+        if claim not in non_claims:
+            blockers.append(f"server_side_non_claim_missing:{claim}")
+
+    gate = read_json(run_dir / "server-side-governance-gate.json", blockers, "server_side_gate")
+    if gate:
+        if gate.get("schema") != SERVER_SIDE_GATE_SCHEMA:
+            blockers.append("server_side_gate_schema")
+        if gate.get("passed") is not True:
+            blockers.append("server_side_gate_not_passed")
+        if gate.get("result_claim") != "server_side_publish_governance_ready":
+            blockers.append("server_side_gate_result_claim")
+        if gate.get("blockers") != []:
+            blockers.append("server_side_gate_has_blockers")
+
+    assets = read_json(run_dir / "server-side-asset-list.json", blockers, "server_side_assets")
+    asset_count = 0
+    if assets:
+        if assets.get("schema") != SERVER_SIDE_ASSET_LIST_SCHEMA:
+            blockers.append("server_side_asset_list_schema")
+        asset_paths = assets.get("assets")
+        asset_records = assets.get("asset_records")
+        if not isinstance(asset_paths, list) or len(asset_paths) != 14:
+            blockers.append("server_side_asset_list_count")
+        else:
+            asset_count = len(asset_paths)
+        if not isinstance(asset_records, list) or len(asset_records) != 14:
+            blockers.append("server_side_asset_records_count")
+        else:
+            record_paths = [item.get("path") for item in asset_records if isinstance(item, dict)]
+            if record_paths != asset_paths:
+                blockers.append("server_side_asset_records_path_order")
+            for item in asset_records:
+                if not isinstance(item, dict):
+                    blockers.append("server_side_asset_record_not_object")
+                    continue
+                raw_path = item.get("path")
+                if not isinstance(raw_path, str) or not raw_path or raw_path.startswith("/") or ".." in Path(raw_path).parts:
+                    blockers.append("server_side_asset_record_path_invalid")
+                if not isinstance(item.get("sha256"), str) or len(item["sha256"]) != 64:
+                    blockers.append("server_side_asset_record_sha256_invalid")
+                if not isinstance(item.get("bytes"), int) or item["bytes"] <= 0:
+                    blockers.append("server_side_asset_record_bytes_invalid")
+        asset_non_claims = set(assets.get("non_claims") if isinstance(assets.get("non_claims"), list) else [])
+        for claim in REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS:
+            if claim not in asset_non_claims:
+                blockers.append(f"server_side_asset_non_claim_missing:{claim}")
+
+    return check(
+        "server_side_current",
+        blockers,
+        run_dir=repo_relative(run_dir) or str(run_dir),
+        result_claim=manifest.get("result_claim"),
+        asset_count=asset_count,
+        target_package=target.get("version"),
+    )
+
+
 def evaluate_docs(doc_paths: list[Path]) -> dict[str, Any]:
     blockers: list[str] = []
     combined_parts: list[str] = []
@@ -523,6 +703,7 @@ def evaluate(
     pilot_readiness: Path,
     h2_readiness: Path,
     board_readonly_dir: Path,
+    server_side_current_dir: Path,
     docs: list[Path],
     require_repo_clean: bool = True,
 ) -> dict[str, Any]:
@@ -531,6 +712,7 @@ def evaluate(
         "pilot_readiness": evaluate_pilot_readiness(pilot_readiness),
         "h2_preproduction_block": evaluate_h2_readiness(h2_readiness),
         "board_readonly_diagnostics": evaluate_board_diagnostics(board_readonly_dir),
+        "server_side_current": evaluate_server_side_current(server_side_current_dir),
         "macro_docs": evaluate_docs(docs),
     }
     if require_repo_clean:
@@ -540,6 +722,7 @@ def evaluate(
             pilot_readiness.parent,
             h2_readiness.parent,
             board_readonly_dir,
+            server_side_current_dir,
             *docs,
         ])
 
@@ -588,6 +771,8 @@ def write_fixture(root: Path) -> argparse.Namespace:
     pilot_path = root / "pilot-readiness.json"
     h2_path = root / "h2-readiness.json"
     board_dir = board_gate.valid_fixture(root)
+    server_side_dir = root / "server-side-current"
+    server_side_dir.mkdir(parents=True, exist_ok=True)
     docs = [root / f"doc-{index}.md" for index in range(5)]
     for path in docs:
         path.write_text(
@@ -674,11 +859,70 @@ def write_fixture(root: Path) -> argparse.Namespace:
         ],
     })
 
+    (server_side_dir / "README.md").write_text(
+        "Server-side current validation fixture. Does not complete H2, publish, stable, thaw, 17/17 or soak.\n",
+        encoding="utf-8",
+    )
+    write_json(server_side_dir / "server-side-governance-gate.json", {
+        "schema": SERVER_SIDE_GATE_SCHEMA,
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
+        "blockers": [],
+        "non_claims": [
+            "this_gate_does_not_publish_releases",
+            "this_gate_does_not_enable_auto_pull",
+            "this_gate_does_not_promote_stable",
+            "this_gate_does_not_thaw_player_runtime",
+        ],
+    })
+    asset_records = [
+        {
+            "path": f"release/asset-{index}.json",
+            "bytes": 100 + index,
+            "sha256": f"{index:064x}"[-64:],
+        }
+        for index in range(14)
+    ]
+    write_json(server_side_dir / "server-side-asset-list.json", {
+        "schema": SERVER_SIDE_ASSET_LIST_SCHEMA,
+        "assets": [item["path"] for item in asset_records],
+        "asset_records": asset_records,
+        "non_claims": list(REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS),
+    })
+    file_entries = []
+    for filename in REQUIRED_SERVER_SIDE_FILES:
+        path = server_side_dir / filename
+        file_entries.append({
+            "file": filename,
+            "sha256": sha256_file(path),
+            "bytes": path.stat().st_size,
+        })
+    write_json(server_side_dir / "evidence-manifest.json", {
+        "schema": SERVER_SIDE_CURRENT_SCHEMA,
+        "collected_at_utc": "2026-06-17T00:18:04Z",
+        "passed": True,
+        "result_claim": "server_side_publish_governance_ready",
+        "files": file_entries,
+        "target_package": {
+            "version": TARGET_PACKAGE_VERSION,
+            "component": "player-runtime",
+            "channel": "homologation",
+            "source_commit": TARGET_SOURCE_COMMIT,
+            "payload_sha256": TARGET_PAYLOAD_SHA256,
+        },
+        "key_checks": {
+            **{key: True for key in REQUIRED_SERVER_SIDE_KEY_CHECKS},
+            "asset_count": 14,
+        },
+        "non_claims": list(REQUIRED_SERVER_SIDE_NON_CLAIMS),
+    })
+
     return argparse.Namespace(
         h1_summary=h1_path,
         pilot_readiness=pilot_path,
         h2_readiness=h2_path,
         board_readonly_dir=board_dir,
+        server_side_current_dir=server_side_dir,
         docs=docs,
     )
 
@@ -690,6 +934,7 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
             pilot_readiness=fixture.pilot_readiness,
             h2_readiness=fixture.h2_readiness,
             board_readonly_dir=fixture.board_readonly_dir,
+            server_side_current_dir=fixture.server_side_current_dir,
             docs=fixture.docs,
             require_repo_clean=False,
         )
@@ -788,6 +1033,17 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertTrue(any(item.startswith("board_readonly_diagnostics:board_gate:overclaim:") for item in result["blockers"]))
 
+    def test_server_side_current_is_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = write_fixture(Path(tmp))
+            (fixture.server_side_current_dir / "server-side-asset-list.json").write_text("{}", encoding="utf-8")
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current:server_side_file_sha256_mismatch:server-side-asset-list.json",
+            result["blockers"],
+        )
+
     def test_repo_clean_and_tracked_inputs_are_required_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             fixture = write_fixture(Path(tmp))
@@ -800,6 +1056,7 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
                     pilot_readiness=fixture.pilot_readiness,
                     h2_readiness=fixture.h2_readiness,
                     board_readonly_dir=fixture.board_readonly_dir,
+                    server_side_current_dir=fixture.server_side_current_dir,
                     docs=fixture.docs,
                     require_repo_clean=True,
                 )
@@ -814,6 +1071,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--pilot-readiness-summary", type=Path, default=DEFAULT_PILOT_READINESS)
     parser.add_argument("--h2-readiness-summary", type=Path, default=DEFAULT_H2_READINESS)
     parser.add_argument("--board-readonly-diagnostics-dir", type=Path, default=DEFAULT_BOARD_READONLY_DIR)
+    parser.add_argument("--server-side-current-dir", type=Path, default=DEFAULT_SERVER_SIDE_CURRENT_DIR)
     parser.add_argument("--doc", action="append", type=Path, default=[])
     parser.add_argument("--allow-dirty-repo", action="store_true")
     parser.add_argument("--self-test", action="store_true")
@@ -834,6 +1092,7 @@ def main(argv: list[str]) -> int:
         pilot_readiness=args.pilot_readiness_summary,
         h2_readiness=args.h2_readiness_summary,
         board_readonly_dir=args.board_readonly_diagnostics_dir,
+        server_side_current_dir=args.server_side_current_dir,
         docs=docs,
         require_repo_clean=not args.allow_dirty_repo,
     )
