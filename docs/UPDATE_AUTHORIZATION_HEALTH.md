@@ -34,7 +34,7 @@ producao.
 Snapshot versionado:
 `docs/evidence/c18-update-validation/20260617T021956Z-current-macro-governance-fa2f0a6/`.
 O snapshot pre-soak scale governance atual esta em
-`docs/evidence/c18-update-validation/20260617T015640Z-pre-soak-scale-governance-c8b0566/`:
+`docs/evidence/c18-update-validation/20260617T023512Z-pre-soak-scale-governance-164cb19/`:
 `c18_ota_pre_soak_scale_governance_gate.py` verde em arvore limpa, com release
 gate interno verde, H2 ainda vermelho pelos blockers esperados, server-side
 atual, preflight H2 power-loss aceito e retomada operacional default-deny. Esse
