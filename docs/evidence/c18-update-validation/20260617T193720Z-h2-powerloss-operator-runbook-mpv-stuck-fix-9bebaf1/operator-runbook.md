@@ -43,6 +43,36 @@ python3 scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py \
   --json
 ```
 
+## Fresh Apply Topology Prep
+
+Use this only when the preflight gate reports that the target is already
+linked/current or that the target release directory already exists. It moves
+the board back to the verified previous runtime and removes only the verified
+target release directory so fresh apply checkpoints can be armed.
+
+Do not run an arm command after this until the preflight gate is green again.
+
+```sh
+ssh root@192.168.18.131 \
+  "cd '/data/c18-powerloss-bundle-3eb06f1' && \
+   RESET_UTC=\$(date -u +%Y%m%dT%H%M%SZ) && \
+   C18_PLAYER_RUNTIME_LAB_TOPOLOGY_RESET=1 \
+   C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1 \
+   python3 scripts/qa/c18_player_runtime_lab_topology_reset.py \
+     --lab-only-topology-reset \
+     --manifest '/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json' \
+     --payload '/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz' \
+     --previous-version 'c18.player-runtime-m6-a-20260610T0501Z-29ff33b' \
+     --data-root /data \
+     --allow-device-data-root \
+     --output-dir '/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1'/topology-reset-\$RESET_UTC \
+     --reason 'h2_p0_fresh_apply_prep' \
+     --json"
+```
+
+After a passing reset, run the preflight command above again. Proceed to
+`CUT_POWER_NOW` only from a green preflight.
+
 ## 1. after_payload_staged
 
 - Phase: `apply`

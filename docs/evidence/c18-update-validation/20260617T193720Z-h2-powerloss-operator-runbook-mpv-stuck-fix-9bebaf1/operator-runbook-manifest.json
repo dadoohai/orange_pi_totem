@@ -146,7 +146,7 @@
     }
   ],
   "covered_checkpoints": [],
-  "generated_at_utc": "2026-06-17T19:43:49Z",
+  "generated_at_utc": "2026-06-17T21:42:42Z",
   "local_evidence_root_placeholder": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/pulled-evidence",
   "missing_checkpoints": [
     "after_payload_staged",
@@ -203,5 +203,7 @@
     "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
     "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
     "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
-  }
+  },
+  "topology_reset_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "topology_reset_reason": "h2_p0_fresh_apply_prep"
 }

@@ -29,6 +29,7 @@ PULL_SCRIPT_NAME = "pull-and-validate-evidence.sh"
 MANIFEST_NAME = "operator-runbook-manifest.json"
 PREFLIGHT_COLLECTOR = "scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py"
 PREFLIGHT_GATE = "scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py"
+TOPOLOGY_RESET = "scripts/qa/c18_player_runtime_lab_topology_reset.py"
 POWERLOSS_MANIFEST_BUILD = "scripts/qa/c18_player_runtime_powerloss_evidence_manifest_build.py"
 ROLLBACK_EXPECTATIONS = {
     "rollback_after_identify_links": "data-current-after-identify-links",
@@ -120,6 +121,7 @@ def validate_plan(plan: dict[str, Any]) -> list[str]:
 
 def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_at: str) -> dict[str, Any]:
     commands = plan.get("commands_for_missing_checkpoints") or []
+    board = plan.get("board") if isinstance(plan.get("board"), dict) else {}
     checkpoints = []
     for item in commands:
         if not isinstance(item, dict):
@@ -153,6 +155,8 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "preflight_expected_image_sha256": args.expected_image_sha256,
         "preflight_expected_image_marker_sha256": args.expected_image_marker_sha256,
         "preflight_max_age_sec": args.preflight_max_age_sec,
+        "topology_reset_previous_version": board.get("previous_version"),
+        "topology_reset_reason": "h2_p0_fresh_apply_prep",
         "powerloss_manifest_target_payload_sha256": (
             plan.get("target_package", {}).get("payload_sha256")
             if isinstance(plan.get("target_package"), dict)
@@ -187,6 +191,8 @@ time without losing the non-claims.
 - Board bundle dir: `{board.get("bundle_dir")}`
 - Board evidence root: `{board.get("evidence_root")}`
 - Canary media: `{board.get("canary_media")}`
+- Fresh apply topology prep: use the guarded lab topology reset only if the
+  preflight gate reports that the target is already current/linked.
 
 ## Files
 
@@ -203,6 +209,59 @@ and session topology against the matrix plan.
 
 {chr(10).join(f"- `{claim}`" for claim in manifest["non_claims"])}
 """
+
+
+def board_package_path(board: dict[str, Any], relative_or_absolute: Any) -> str:
+    raw = str(relative_or_absolute or "")
+    if not raw:
+        return ""
+    if raw.startswith("/"):
+        return raw
+    return str(Path(str(board.get("bundle_dir") or "/data/c18-h2-powerloss-bundle")) / raw)
+
+
+def render_topology_prep(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
+    board = plan.get("board") if isinstance(plan.get("board"), dict) else {}
+    target = plan.get("target_package") if isinstance(plan.get("target_package"), dict) else {}
+    board_host = str(manifest["board_host_placeholder"])
+    bundle_dir = str(board.get("bundle_dir") or "/data/c18-h2-powerloss-bundle")
+    evidence_root = str(board.get("evidence_root") or "/data/c18-evidence/h2-powerloss")
+    previous_version = str(manifest.get("topology_reset_previous_version") or "")
+    manifest_path = board_package_path(board, target.get("manifest_path"))
+    payload_path = board_package_path(board, target.get("payload_path"))
+    reason = str(manifest.get("topology_reset_reason") or "h2_p0_fresh_apply_prep")
+    return "\n".join([
+        "## Fresh Apply Topology Prep",
+        "",
+        "Use this only when the preflight gate reports that the target is already",
+        "linked/current or that the target release directory already exists. It moves",
+        "the board back to the verified previous runtime and removes only the verified",
+        "target release directory so fresh apply checkpoints can be armed.",
+        "",
+        "Do not run an arm command after this until the preflight gate is green again.",
+        "",
+        command_block([
+            f"ssh {board_host} \\",
+            f"  \"cd {command_quote(bundle_dir)} && \\",
+            "   RESET_UTC=\\$(date -u +%Y%m%dT%H%M%SZ) && \\",
+            "   C18_PLAYER_RUNTIME_LAB_TOPOLOGY_RESET=1 \\",
+            "   C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT=1 \\",
+            f"   python3 {TOPOLOGY_RESET} \\",
+            "     --lab-only-topology-reset \\",
+            f"     --manifest {command_quote(manifest_path)} \\",
+            f"     --payload {command_quote(payload_path)} \\",
+            f"     --previous-version {command_quote(previous_version)} \\",
+            "     --data-root /data \\",
+            "     --allow-device-data-root \\",
+            f"     --output-dir {command_quote(evidence_root)}/topology-reset-\\$RESET_UTC \\",
+            f"     --reason {command_quote(reason)} \\",
+            "     --json\"",
+        ]),
+        "",
+        "After a passing reset, run the preflight command above again. Proceed to",
+        "`CUT_POWER_NOW` only from a green preflight.",
+        "",
+    ])
 
 
 def render_checkpoint(index: int, total: int, item: dict[str, Any]) -> str:
@@ -314,6 +373,7 @@ def render_runbook(plan: dict[str, Any], manifest: dict[str, Any]) -> str:
             "  --json",
         ]),
         "",
+        render_topology_prep(plan, manifest),
     ]
     for index, item in enumerate(commands, start=1):
         body.append(render_checkpoint(index, len(commands), item))
@@ -510,11 +570,14 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
                 "version": "c18.player-runtime-test",
                 "source_commit": "a" * 40,
                 "payload_sha256": "b" * 64,
+                "manifest_path": "releases/player-runtime/c18.player-runtime-test/manifest.json",
+                "payload_path": "releases/player-runtime/c18.player-runtime-test/payload.tar.gz",
             },
             "board": {
                 "bundle_dir": "/data/c18-test-bundle",
                 "evidence_root": "/data/c18-evidence/h2-test",
                 "canary_media": "/data/media/c18-canary-h264.mp4",
+                "previous_version": "c18.player-runtime-prev",
             },
             "covered_checkpoints": [],
             "missing_checkpoints": ["after_payload_staged"],
@@ -563,6 +626,13 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertIn("not physical power-loss evidence", readme)
         self.assertIn("CUT_POWER_NOW", runbook)
         self.assertIn("Do not use remote reboot", runbook)
+        self.assertIn("Fresh Apply Topology Prep", runbook)
+        self.assertIn(TOPOLOGY_RESET, runbook)
+        self.assertIn("C18_PLAYER_RUNTIME_LAB_TOPOLOGY_RESET=1", runbook)
+        self.assertIn("--lab-only-topology-reset", runbook)
+        self.assertIn("--previous-version 'c18.player-runtime-prev'", runbook)
+        self.assertIn("topology-reset-\\$RESET_UTC", runbook)
+        self.assertIn("Proceed to", runbook)
         self.assertIn("Preflight Before Physical Session", runbook)
         self.assertIn(PREFLIGHT_COLLECTOR, runbook)
         self.assertIn(PREFLIGHT_GATE, runbook)
@@ -590,6 +660,8 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertEqual(manifest["preflight_image_marker"], "/etc/dadooh/c18-hwdecode-lab-test-image")
         self.assertEqual(manifest["preflight_expected_image_sha256"], "d" * 64)
         self.assertEqual(manifest["preflight_expected_image_marker_sha256"], "c" * 64)
+        self.assertEqual(manifest["topology_reset_previous_version"], "c18.player-runtime-prev")
+        self.assertEqual(manifest["topology_reset_reason"], "h2_p0_fresh_apply_prep")
         self.assertEqual(manifest["powerloss_manifest_target_payload_sha256"], "b" * 64)
         self.assertEqual(manifest["powerloss_manifest_image_tag"], "c18-hwdecode-lab-test")
         self.assertEqual(manifest["powerloss_manifest_image_sha256"], "d" * 64)

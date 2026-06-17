@@ -1,6 +1,6 @@
 # C18 H2 Power-Loss Operator Runbook
 
-Generated: `2026-06-17T19:43:49Z`
+Generated: `2026-06-17T21:42:42Z`
 
 This directory is not physical power-loss evidence. It is an operator aid built
 from the offline matrix plan so the remaining H2 checkpoints can be run one at a
@@ -13,6 +13,8 @@ time without losing the non-claims.
 - Board bundle dir: `/data/c18-powerloss-bundle-3eb06f1`
 - Board evidence root: `/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1`
 - Canary media: `/data/media/c18-canary-h264.mp4`
+- Fresh apply topology prep: use the guarded lab topology reset only if the
+  preflight gate reports that the target is already current/linked.
 
 ## Files
 
