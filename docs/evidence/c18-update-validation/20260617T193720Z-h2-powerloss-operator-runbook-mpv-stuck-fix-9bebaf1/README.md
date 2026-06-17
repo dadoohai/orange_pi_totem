@@ -19,8 +19,12 @@ time without losing the non-claims.
 ## Files
 
 - `operator-runbook.md`: per-checkpoint setup, arm and resume commands.
+- `pilot-p0-run-card.md`: short operator card for the five P0 checkpoints
+  that unblock assisted pilot readiness.
 - `pull-and-validate-evidence.sh`: optional pull/validation helper; edit host/path first.
   It refuses a `<utc>` placeholder and refuses to reuse an existing local root.
+- `pull-and-validate-pilot-p0-evidence.sh`: optional pull/validation helper
+  restricted to the five pilot P0 checkpoints.
 - `operator-runbook-manifest.json`: machine-readable summary of this runbook.
 
 Run the H2 board preflight gate before starting a physical checkpoint session.
