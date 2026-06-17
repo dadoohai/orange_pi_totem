@@ -481,7 +481,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
         self.assertIn(
-            "docs/evidence/c18-update-validation/20260617T011150Z-current-macro-governance-ab6ad5f/macro-governance.json",
+            "docs/evidence/c18-update-validation/20260617T021956Z-current-macro-governance-fa2f0a6/macro-governance.json",
             gate,
         )
         self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
@@ -524,7 +524,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
-        self.assertIn("20260617T011150Z-current-macro-governance-ab6ad5f", gate)
+        self.assertIn("20260617T021956Z-current-macro-governance-fa2f0a6", gate)
         self.assertIn("20260617T001804Z-server-side-current-c16fb3e", gate)
         self.assertIn("20260617T021300Z-h2-powerloss-board-preflight-current-custom-plan-c16fb3e", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)

@@ -1,0 +1,44 @@
+{
+  "schema": "dadooh.c18.ota_macro_governance_snapshot.v1",
+  "collected_at_utc": "2026-06-17T02:19:56Z",
+  "collection_repo_commit": "fa2f0a61117ec8157f3577eb3b8566ff33345c9e",
+  "collection_repo_tree": "a4f4849175347aa6ce9a7636d15eeaf1eb2ab364",
+  "passed": true,
+  "result_claim": "c18_homologation_governance_ready_pre_h2",
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "64fcfbf3a247b317115947a0b2e6b5fb796bdcf0c8968ecf14f8007490682136",
+      "bytes": 844
+    },
+    {
+      "file": "macro-governance.json",
+      "sha256": "752452fa55b27ca9c62f58a3a2d2c8de623e65725029a6352d28b9f1e0e9981b",
+      "bytes": 6996
+    }
+  ],
+  "target_package": {
+    "component": "player-runtime",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "channel": "homologation",
+    "ring": "pilot"
+  },
+  "expected_h2_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:missing_24h_soak_summary",
+    "stable_promotion_authorization:missing_stable_promotion_evidence",
+    "explicit_operator_thaw_decision:missing_operator_thaw_decision"
+  ],
+  "non_claims": [
+    "this_snapshot_does_not_replace_h2",
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_powerloss_17_17",
+    "this_snapshot_does_not_satisfy_24h_soak"
+  ]
+}
