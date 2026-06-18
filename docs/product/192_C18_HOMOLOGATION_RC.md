@@ -273,7 +273,7 @@ snapshots nao reabrem operacao depois de pausa, reboot, passagem de dias ou
 mudanca de estado da placa.
 
 O estado default atual esta bloqueado em
-`docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T102725Z-operational-resume-default-blocked-head-f47d0f8-9bebaf1/`
 sem autorizacao/preflight atuais. Para retomar, coletar nova
 autorizacao/preflight e rodar o gate novamente.
 

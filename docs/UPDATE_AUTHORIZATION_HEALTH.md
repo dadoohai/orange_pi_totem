@@ -103,7 +103,7 @@ renovou o preflight `pre_apply` read-only da placa, manteve a mesma autorizacao
 sanitizada vigente e voltou a passar com `c18_operational_resume_ready`,
 `repo_clean=true` e `tracked_inputs=true`. O estado default atual sem insumos
 continua versionado em
-`docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T102725Z-operational-resume-default-blocked-head-f47d0f8-9bebaf1/`
 e bloqueia corretamente sem autorizacao/preflight atuais. Antes de qualquer nova
 acao assistida, coletar nova autorizacao/preflight e rodar
 `scripts/qa/c18_ota_operational_resume_gate.py`.
