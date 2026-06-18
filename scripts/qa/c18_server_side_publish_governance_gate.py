@@ -78,8 +78,11 @@ REQUIRED_AUDIT_EVENTS = (
     "allowlist_evaluated",
     "rollout_stage_changed",
     "rollback_triggered",
-    "stable_promoted",
+    "stable_promotion_evaluated",
 )
+LEGACY_AUDIT_EVENT_ALIASES = {
+    "stable_promoted": "stable_promotion_evaluated",
+}
 SERVER_SIDE_EVIDENCE_FILENAME = "c18-server-side-publish-governance.json"
 FIXTURE_MANIFEST_NAME = "dadooh-totem-core-server-fixture.manifest.json"
 FIXTURE_PAYLOAD_NAME = "dadooh-totem-core-server-fixture.tar.gz"
@@ -258,6 +261,18 @@ def require_exact_list(data: dict[str, Any],
         blockers.append(label)
 
 
+def canonical_audit_event(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return LEGACY_AUDIT_EVENT_ALIASES.get(value, value)
+
+
+def audit_events_match(raw_events: Any) -> bool:
+    if not isinstance(raw_events, list) or not all(isinstance(event, str) for event in raw_events):
+        return False
+    return [canonical_audit_event(event) for event in raw_events] == list(REQUIRED_AUDIT_EVENTS)
+
+
 def validate_publish_gate(data: dict[str, Any], blockers: list[str], *, expected_component: str | None = None) -> None:
     gate = data.get("publish_gate") if isinstance(data.get("publish_gate"), dict) else {}
     if not gate:
@@ -405,7 +420,8 @@ def validate_audit_trail(data: dict[str, Any], blockers: list[str]) -> None:
         return
     for key in ("append_only", "actor_recorded", "timestamp_recorded", "artifact_hashes_recorded", "secret_redaction_required"):
         require_true(audit, key, blockers, "server_side_audit_trail")
-    require_exact_list(audit, "required_events", REQUIRED_AUDIT_EVENTS, blockers, "server_side_audit_trail_required_events")
+    if not audit_events_match(audit.get("required_events")):
+        blockers.append("server_side_audit_trail_required_events")
 
 
 def read_json(path: Path) -> tuple[dict[str, Any], list[str]]:
@@ -1004,11 +1020,12 @@ def validate_audit_log(log_path: Path, data: dict[str, Any], blockers: list[str]
         if not isinstance(item, dict):
             blockers.append(f"server_side_audit_log_not_object:{index}")
             continue
-        event = item.get("event")
-        if isinstance(event, str):
+        raw_event = item.get("event")
+        event = canonical_audit_event(raw_event)
+        if event is not None:
             seen.add(event)
             if event not in REQUIRED_AUDIT_EVENTS:
-                blockers.append(f"server_side_audit_log_event_unexpected:{event}")
+                blockers.append(f"server_side_audit_log_event_unexpected:{raw_event}")
         else:
             blockers.append(f"server_side_audit_log_event_missing_value:{index}")
         for hit in secret_json_paths(item):
@@ -1368,7 +1385,8 @@ def valid_fixture(*,
 def write_fixture_release(root: Path,
                           *,
                           component: str = "totem-core",
-                          release_gate_name: str = FIXTURE_RELEASE_GATE_NAME) -> Path:
+                          release_gate_name: str = FIXTURE_RELEASE_GATE_NAME,
+                          audit_events: tuple[str, ...] = REQUIRED_AUDIT_EVENTS) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     if component == "player-runtime":
         version = "server-fixture"
@@ -1426,7 +1444,7 @@ def write_fixture_release(root: Path,
             "at_utc": "2026-06-12T00:00:00Z",
             "artifact_hashes": asset_hashes,
         }, sort_keys=True)
-        for event in REQUIRED_AUDIT_EVENTS
+        for event in audit_events
     ]
     audit_path.write_text("\n".join(audit_lines) + "\n", encoding="utf-8")
     asset_hashes["audit-log"] = sha256_file(audit_path)
@@ -1458,6 +1476,7 @@ def write_fixture_release(root: Path,
         proof_files=proof_files,
         test_fixture=True,
     )
+    data["audit_trail"]["required_events"] = list(audit_events)
     data["release_assets"] = {
         "manifest": manifest_path.name,
         "payload": payload_path.name,
@@ -2123,8 +2142,25 @@ class ServerSidePublishGovernanceGateSelfTest(unittest.TestCase):
             result = evaluate(path, allow_test_fixtures=True)
         self.assertFalse(result["passed"])
         self.assertIn("server_side_asset_attestation_sha256_mismatch:audit-log", result["blockers"])
-        self.assertIn("server_side_audit_log_event_missing:stable_promoted", result["blockers"])
+        self.assertIn("server_side_audit_log_event_missing:stable_promotion_evaluated", result["blockers"])
         self.assertIn("server_side_audit_log_hash_mismatch:release_created:payload", result["blockers"])
+
+    def test_legacy_stable_promoted_event_alias_remains_accepted_for_signed_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_fixture_release(
+                Path(tmp),
+                audit_events=(
+                    "release_created",
+                    "asset_attested",
+                    "channel_selected",
+                    "allowlist_evaluated",
+                    "rollout_stage_changed",
+                    "rollback_triggered",
+                    "stable_promoted",
+                ),
+            )
+            result = evaluate(path, allow_test_fixtures=True)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
 
     def test_audit_log_positive_claims_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
