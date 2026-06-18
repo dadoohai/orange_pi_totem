@@ -1,0 +1,93 @@
+{
+  "artifact_id": "user-level-current-20260618T085527Z-7751c95-9bebaf1",
+  "collected_at_utc": "2026-06-18T08:55:27Z",
+  "current_runtime_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "deep_health_failure_reasons": [
+    "status_mpv_path_aligned"
+  ],
+  "deep_health_passed": false,
+  "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+  "files": [
+    {
+      "bytes": 1498,
+      "file": "README.md",
+      "sha256": "422ce13f52292fe166de3962f7eaeb5aa7bcd69a0a46eec5df42cbc9254c159b"
+    },
+    {
+      "bytes": 338,
+      "file": "deep-health-kernel.json",
+      "sha256": "d3b6b9725bf451a9da37f14670f8fb0bc7f8748e771b607f0810f61f1e4c876b"
+    },
+    {
+      "bytes": 49,
+      "file": "deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4681,
+      "file": "playback-deep-health-public.json",
+      "sha256": "53e8acd083a1e9d4d65a546e6327885d055d16a5637496d3720b4f87d695157a"
+    },
+    {
+      "bytes": 153706,
+      "file": "playback-samples.tsv",
+      "sha256": "143a6316e854807ef167e44271dbede0f539f3946a499ceb045a74eb605d33f4"
+    },
+    {
+      "bytes": 656,
+      "file": "runtime-observation.json",
+      "sha256": "85915b5496317b4cf3207592a700c6863612ec52800a3389d260ca3252ec8fb9"
+    },
+    {
+      "bytes": 63878,
+      "file": "status-samples.ndjson",
+      "sha256": "9b98111fed48286d8bf2e31e1500a8a6c4040e7546e77674533d570853b67180"
+    }
+  ],
+  "hwdec_expected_present": true,
+  "manifest_written_at_utc": "2026-06-18T09:02:11.845913Z",
+  "media_load_failed_zero": true,
+  "mpv_restart_zero": true,
+  "mpv_unique_aliases": 1,
+  "non_claims": [
+    "this_evidence_does_not_claim_root_cause",
+    "this_evidence_does_not_validate_target_package_because_target_was_not_current",
+    "this_evidence_does_not_authorize_production",
+    "this_evidence_does_not_promote_stable",
+    "this_evidence_does_not_thaw_public_player_runtime",
+    "this_evidence_does_not_satisfy_powerloss_17_17",
+    "this_evidence_does_not_satisfy_24h_soak"
+  ],
+  "nrestarts_stable": true,
+  "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "passed": false,
+  "playback_progressed": true,
+  "repo_commit": "7751c9531cbfc9a54d79bee1767ed1eb56f4d5fc",
+  "repo_dirty": false,
+  "repo_tree": "e2ab89d772eda2d66832864f17bfb858caf9ca28",
+  "result_claim": "current_runtime_user_level_playback_check_failed",
+  "samples": 120,
+  "schema": "dadooh.c18.user_level_playback_evidence.v1",
+  "service_active": true,
+  "single_mpv": true,
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "status_advanced_without_mpv": true,
+  "status_mpv_max_consecutive_mismatches": 78,
+  "status_mpv_max_transition_lag_seconds": 77.44099999999999,
+  "status_mpv_mismatch_samples": 105,
+  "status_mpv_path_aligned": false,
+  "status_mpv_unexplained_mismatch_samples": 105,
+  "status_unique_aliases": 9,
+  "target_package_current": false,
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+}

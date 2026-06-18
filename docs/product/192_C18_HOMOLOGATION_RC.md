@@ -130,6 +130,14 @@ Evidencia principal:
   preserva 120 segundos de placa real no runtime corrente, com 9 midias
   observadas, hwdecode esperado, zero restart, zero falha de midia e sem
   divergencia status/MPV;
+- diagnostico corrente de playback do runtime ativo:
+  `docs/evidence/c18-update-validation/user-level-current-20260618T085527Z-7751c95-9bebaf1/`
+  preserva 120 segundos de placa real com deep-health vermelho por
+  `status_mpv_path_aligned`: o status avancou por 9 aliases enquanto o MPV
+  permaneceu em 1 alias observado. A placa estava no runtime corrente
+  `c18.player-runtime-m6-a-20260610T0501Z-29ff33b`, nao no pacote alvo
+  `9bebaf1`; portanto isto e alerta operacional/baseline antes da proxima
+  sessao fisica, nao prova defeito do alvo homologation;
 - observacao/preflight da placa:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:

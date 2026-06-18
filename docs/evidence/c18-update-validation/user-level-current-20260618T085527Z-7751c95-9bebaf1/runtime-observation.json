@@ -1,0 +1,18 @@
+{
+  "blocked_media_count": 0,
+  "consecutive_failures": 0,
+  "current_index": 3,
+  "current_runtime_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "mpv_running": true,
+  "non_claims": [
+    "this_observation_does_not_read_media_config_or_journal",
+    "this_observation_does_not_identify_root_cause",
+    "this_observation_does_not_validate_target_package"
+  ],
+  "observed_at_utc": "2026-06-18T09:01:27.934931Z",
+  "playback_state": "playing",
+  "playlist_size": 9,
+  "schema": "dadooh.c18.runtime_observation.v1",
+  "target_package_current": false,
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}
