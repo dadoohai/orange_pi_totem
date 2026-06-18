@@ -69,12 +69,23 @@ historico e nao deve ser lido como RC atual. O snapshot corrente
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
 segue verde pre-H2 sem liberar producao.
 
+O snapshot corrente de retomada operacional pos-P0 esta verde em
+`docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`:
+macro aceito, autorizacao ainda dentro da janela, preflight fresco da placa,
+arvore limpa e inputs rastreados. Ele prova somente essa janela operacional; se
+a janela expirar ou o estado da placa mudar, coletar nova autorizacao/preflight
+antes de qualquer nova acao assistida.
+
 O piloto controlado, quando liberado, autoriza somente entrega assistida por
 operador, com rollback pronto, allowlist de devices, preflight de placa, H1
 decisivo image-bound e P0 power-loss seletivo. Ele nao autoriza producao,
 `stable`, auto-pull, thaw publico, soak 24h, power-loss 17/17 nem pular H2.
-O diagnostico operacional read-only tambem esta versionado em
-`docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`:
+O diagnostico operacional read-only tambem esta versionado em snapshot fresco
+pos-P0:
+`docs/evidence/c18-update-validation/20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4/`;
+a evidencia historica
+`docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`
+permanece rastreavel:
 appliance `player_running`, playback `playing`, `privacy_scan=ok`, config
 content nao lido e display `unknown` por HDMI `connected`/`enabled` com modos,
 mas sem arquivo `mode` observavel no sysfs da placa. Essa evidencia ajuda
