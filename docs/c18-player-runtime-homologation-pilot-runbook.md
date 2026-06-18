@@ -5,6 +5,10 @@ H1 decisive lab bundle and H2 stable/production. It uses `channel=homologation`
 and operational `ring=pilot`. It is operator-assisted, rollback-ready, and keeps
 the public `player-runtime` updater frozen at `rc=44`.
 
+Current target: `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`.
+The previous `c16fb3e` pilot path is historical after the H2 power-loss
+negative evidence where MPV stayed on one media while status advanced.
+
 This runbook does not authorize production, `stable`, auto-pull, public thaw,
 24h soak claims, 17/17 power-loss claims, or signature/attestation claims.
 
@@ -39,7 +43,7 @@ the operational resume gate immediately before touching the board:
 
 ```sh
 python3 scripts/qa/c18_ota_operational_resume_gate.py \
-  --macro-governance-summary docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/macro-governance.json \
+  --macro-governance-summary docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json \
   --authorization <current-window-pilot-authorization.json> \
   --preflight <fresh-pre_apply-board-preflight.json> \
   --json
@@ -108,7 +112,7 @@ JSON:
 PYTHONDONTWRITEBYTECODE=1 python3 -B /tmp/c18_homologation_pilot_preflight_collect.py \
   --stage pre_apply \
   --device-hash sha256:<allowlisted-device-hash> \
-  --source-commit c16fb3ed01f0ce25c8203e5fe1d60baf60a75749 \
+  --source-commit 9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522 \
   --image-sha256 1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2 \
   --expect-image-tag c18-hwdecode-lab-1x \
   --expect-image-marker-sha256 59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e \

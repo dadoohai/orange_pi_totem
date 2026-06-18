@@ -110,6 +110,9 @@ POLICY_DOC_PATH = REPO_ROOT / "docs" / "05_POLITICA_DE_ATUALIZACAO.md"
 UPDATE_CONTRACT_PATH = REPO_ROOT / "docs" / "UPDATE_CONTRACT.md"
 UPDATE_AUTHORIZATION_HEALTH_PATH = REPO_ROOT / "docs" / "UPDATE_AUTHORIZATION_HEALTH.md"
 PLAYER_RUNTIME_H2_STABLE_THAW_RUNBOOK_PATH = REPO_ROOT / "docs" / "c18-player-runtime-h2-stable-thaw-runbook.md"
+PLAYER_RUNTIME_HOMOLOGATION_PILOT_RUNBOOK_PATH = (
+    REPO_ROOT / "docs" / "c18-player-runtime-homologation-pilot-runbook.md"
+)
 README_PATH = REPO_ROOT / "README.md"
 DOC_INDEX_PATH = REPO_ROOT / "docs" / "00_INDICE_E_PLANO_ESTRATEGICO.md"
 DOC188_PATH = REPO_ROOT / "docs" / "product" / "188_C18_STATUS_E_CONTINUIDADE.md"
@@ -598,6 +601,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
     def test_homologation_pilot_preflight_collector_is_read_only_and_wired(self) -> None:
         collector = HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH.read_text(encoding="utf-8")
         release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        pilot_runbook = PLAYER_RUNTIME_HOMOLOGATION_PILOT_RUNBOOK_PATH.read_text(encoding="utf-8")
         result = subprocess.run(
             ["python3", str(HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH), "--self-test"],
             cwd=REPO_ROOT,
@@ -626,6 +630,14 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("gh release", collector)
         self.assertIn("c18_homologation_pilot_preflight_collect.py", release_gate)
         self.assertIn("c18_homologation_pilot_preflight_collect", release_gate)
+        self.assertIn("c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1", pilot_runbook)
+        self.assertIn("9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522", pilot_runbook)
+        self.assertIn(
+            "20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json",
+            pilot_runbook,
+        )
+        self.assertNotIn("source-commit c16fb3ed01f0ce25c8203e5fe1d60baf60a75749", pilot_runbook)
+        self.assertNotIn("20260617T064617Z-current-macro-governance-a761a67", pilot_runbook)
 
     def test_totem_core_publish_targets_manifest_source_commit(self) -> None:
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
