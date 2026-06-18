@@ -128,13 +128,13 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260611T182922Z-board-lab-apply-c16fb3e/board-preflight-post-apply-observation.json`;
 - fechamento original da RC, superseded pelo refresh rastreavel:
   `docs/evidence/c18-update-validation/20260612T040055Z-pilot-readiness-final-c16fb3e/pilot-readiness-final.json`;
-- diagnostico read-only de placa:
-  `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`;
+- diagnostico read-only de placa pos-P0:
+  `docs/evidence/c18-update-validation/20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4/`;
   esta evidencia registra appliance `player_running`, `privacy_scan=ok`,
-  config content nao lido e display `unknown` porque o sysfs da placa tem HDMI
-  `connected`/`enabled` com modos, mas sem `mode` observavel. Ela nao e
-  deep-health, power-loss, soak, H2, stable, producao, publish, auto-pull ou
-  thaw.
+  config content nao lido e display `unknown`; a evidencia historica
+  `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`
+  permanece rastreavel. Diagnostico read-only nao e deep-health, power-loss,
+  soak, H2, stable, producao, publish, auto-pull ou thaw.
 
 P0 power-loss seletivo exigido para piloto do alvo `9bebaf1`:
 

@@ -153,7 +153,7 @@ EVIDENCE_BOARD_READONLY_DIAGNOSTICS_DIR = (
     / "docs"
     / "evidence"
     / "c18-update-validation"
-    / "20260612T183722Z-board-readonly-diagnostics-17a1f9d"
+    / "20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4"
 )
 EVIDENCE_MACRO_GOVERNANCE_SNAPSHOT = (
     REPO_ROOT

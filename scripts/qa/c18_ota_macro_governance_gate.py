@@ -57,7 +57,8 @@ DEFAULT_H2_READINESS = (
     / "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json"
 )
 DEFAULT_BOARD_READONLY_DIR = (
-    REPO_ROOT / "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d"
+    REPO_ROOT
+    / "docs/evidence/c18-update-validation/20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
@@ -162,7 +163,7 @@ REQUIRED_DOC_TOKENS = (
     "docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/",
     "docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/",
     "docs/evidence/c18-update-validation/user-level-fresh-20260617T2234Z-9bebaf1/",
-    "docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d",
+    "docs/evidence/c18-update-validation/20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4",
     "pilot_powerloss_p0",
     "pre-H2",
     "nao substitui H2",
