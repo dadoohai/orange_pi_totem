@@ -1,0 +1,170 @@
+{
+  "board": {
+    "bundle_dir": "/data/c18-powerloss-bundle-3eb06f1",
+    "canary_media": "/data/media/c18-canary-h264.mp4",
+    "evidence_root": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1",
+    "previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "board_host_placeholder": "root@192.168.18.131",
+  "checkpoint_count": 12,
+  "checkpoints": [
+    {
+      "checkpoint": "after_payload_staged",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_release_dir_created",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_extract",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_state_verifying",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_health_passed",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_release_tree_fsync",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_marker_written",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "after_previous_symlink",
+      "manual_setup_required": true,
+      "phase": "apply",
+      "requires_custom_setup": true,
+      "requires_physical_cut": true,
+      "setup_precondition": "old-current-present-and-different-from-target"
+    },
+    {
+      "checkpoint": "after_state_success",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "before_stage_cleanup",
+      "manual_setup_required": false,
+      "phase": "apply",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "standard-target-apply"
+    },
+    {
+      "checkpoint": "rollback_after_identify_links",
+      "manual_setup_required": false,
+      "phase": "rollback",
+      "requires_custom_setup": false,
+      "requires_physical_cut": true,
+      "setup_precondition": "target-current-over-expected-previous"
+    },
+    {
+      "checkpoint": "rollback_after_current_unlinked",
+      "manual_setup_required": true,
+      "phase": "rollback",
+      "requires_custom_setup": true,
+      "requires_physical_cut": true,
+      "setup_precondition": "target-current-without-previous-link-or-state"
+    }
+  ],
+  "covered_checkpoints": [
+    "after_current_symlink",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_state_success"
+  ],
+  "generated_at_utc": "2026-06-18T08:06:29Z",
+  "local_evidence_root_placeholder": "docs/evidence/c18-update-validation/<fresh-utc>-h2-powerloss-remaining-12-9bebaf1",
+  "missing_checkpoints": [
+    "after_payload_staged",
+    "after_release_dir_created",
+    "after_extract",
+    "after_state_verifying",
+    "after_health_passed",
+    "after_release_tree_fsync",
+    "after_marker_written",
+    "after_previous_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
+    "rollback_after_current_unlinked"
+  ],
+  "non_claims": [
+    "this_runbook_is_not_powerloss_evidence",
+    "this_runbook_does_not_claim_17_17",
+    "this_runbook_does_not_execute_board_commands",
+    "this_runbook_does_not_pull_or_validate_evidence_by_itself",
+    "this_runbook_does_not_replace_physical_power_cut",
+    "this_runbook_does_not_authorize_stable_or_production",
+    "this_runbook_does_not_thaw_player_runtime",
+    "this_runbook_does_not_publish_or_fetch_releases",
+    "remote_reboot_is_not_acceptable_powerloss_evidence"
+  ],
+  "powerloss_manifest_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+  "powerloss_manifest_image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+  "powerloss_manifest_image_tag": "c18-hwdecode-lab-1x",
+  "powerloss_manifest_target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "preflight_expected_image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+  "preflight_expected_image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+  "preflight_expected_image_tag": "c18-hwdecode-lab-1x",
+  "preflight_image_marker": "/etc/dadooh/c18-hwdecode-lab-1x-image",
+  "preflight_local_output": "docs/evidence/c18-update-validation/<fresh-utc>-h2-powerloss-preflight-9bebaf1/board-preflight.json",
+  "preflight_max_age_sec": 14400,
+  "pull_helper_materializes_powerloss_manifest": true,
+  "pull_helper_rejects_utc_placeholder": true,
+  "pull_helper_requires_fresh_local_root": true,
+  "result_claim": "powerloss_operator_runbook_written",
+  "schema": "dadooh.c18.player_runtime.powerloss_operator_runbook.v1",
+  "source_plan": "docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/powerloss-matrix-plan.json",
+  "source_plan_schema": "dadooh.c18.player_runtime.powerloss_matrix_plan.v1",
+  "target_package": {
+    "blockers": [],
+    "channel": "homologation",
+    "manifest_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+    "payload_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "topology_reset_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "topology_reset_reason": "h2_p0_fresh_apply_prep"
+}
