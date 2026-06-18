@@ -115,8 +115,8 @@ Evidencia principal:
   producao;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`;
-  snapshot historico de `c16fb3e`. O snapshot corrente pos-P0
-  `docs/evidence/c18-update-validation/20260618T043200Z-pre-soak-scale-governance-after-pilot-p0-9bebaf1/`
+  snapshot historico de `c16fb3e`. O snapshot corrente pre-soak
+  `docs/evidence/c18-update-validation/20260618T071000Z-pre-soak-scale-governance-head-dd3b6c2-9bebaf1/`
   esta verde para governanca pre-soak/pre-H2 e continua sem substituir soak 24h
   ou power-loss 17/17;
 - playback em nivel usuario:
