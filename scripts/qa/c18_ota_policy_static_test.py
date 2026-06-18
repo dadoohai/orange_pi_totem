@@ -498,7 +498,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
         self.assertIn(
-            "docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/macro-governance.json",
+            "docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json",
             gate,
         )
         self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
@@ -510,7 +510,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         default_blocked_dir = (
             REPO_ROOT
             / "docs/evidence/c18-update-validation/"
-            / "20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1"
+            / "20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1"
         )
         default_summary = json.loads((default_blocked_dir / "operational-resume.json").read_text(encoding="utf-8"))
         self.assertFalse(default_summary["passed"])
@@ -575,11 +575,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("macro_gate_blocker", gate)
-        self.assertIn("20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1", gate)
+        self.assertIn("20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
         self.assertIn("20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1", gate)
         self.assertIn("20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1", gate)
-        self.assertIn("20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1", gate)
+        self.assertIn("20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1", gate)
         self.assertIn("stable_thaw_blocked_draft_output_dir_created", gate)
         self.assertIn("stable_thaw_blocked_run_authorization_must_be_false", gate)
         self.assertIn("operational_resume_blocked_summary_must_be_red", gate)
@@ -1134,7 +1134,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         authorization_health = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertNotIn("release gate atual aceitou essa evidencia", authorization_health)
         self.assertNotIn("Esse e o marco decisivo de laboratorio para adocao", authorization_health)
-        self.assertIn("20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1", authorization_health)
+        self.assertIn("20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1", authorization_health)
         self.assertIn("20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/", authorization_health)
         self.assertNotIn(
             "snapshot corrente\n`docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/",

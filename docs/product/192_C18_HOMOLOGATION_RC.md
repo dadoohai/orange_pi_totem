@@ -112,7 +112,7 @@ Evidencia principal:
 - snapshot macro versionado:
   o snapshot `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`
   fica historico de `c16fb3e`; o snapshot corrente
-  `docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/`
+  `docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/`
   esta verde pre-H2 e aponta para o pilot readiness final pos-P0, sem liberar
   producao;
 - snapshot pre-soak scale governance:
@@ -247,7 +247,7 @@ arvore limpa e inputs rastreados. Esse snapshot nao reabre operacao depois de
 pausa, reboot, passagem de dias ou mudanca de estado da placa.
 
 O estado default atual esta bloqueado em
-`docs/evidence/c18-update-validation/20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1/`
 sem autorizacao/preflight atuais. Para retomar, coletar nova
 autorizacao/preflight e rodar o gate novamente.
 

@@ -116,11 +116,11 @@ REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T072806Z-current-h2-readiness-head-3458cba-9bebaf1/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
@@ -135,7 +135,7 @@ DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR = (
 )
 DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1"
+    / "docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1"
 )
 DEFAULT_MACRO_SUMMARY_REL = str(DEFAULT_MACRO_SUMMARY.relative_to(REPO_ROOT))
 DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()

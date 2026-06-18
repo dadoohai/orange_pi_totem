@@ -67,7 +67,7 @@ read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
 historico e nao deve ser lido como RC atual; o snapshot pos-P0 anterior
 `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
 tambem permanece historico. O snapshot corrente
-`docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/`
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
 para o diagnostico read-only pos-P0 da placa, e segue verde pre-H2 sem liberar
 producao.
@@ -81,7 +81,7 @@ O snapshot de retomada operacional pos-P0
 fica historico da janela em que macro, autorizacao, preflight fresco da placa,
 arvore limpa e inputs rastreados estavam aceitos. O estado default atual apos
 pausa/reboot/passagem de dias esta versionado em
-`docs/evidence/c18-update-validation/20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1/`
 e bloqueia corretamente sem autorizacao/preflight atuais. Antes de qualquer nova
 acao assistida, coletar nova autorizacao/preflight e rodar
 `scripts/qa/c18_ota_operational_resume_gate.py`.
