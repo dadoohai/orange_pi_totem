@@ -474,6 +474,11 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   esses rascunhos nao aprovam stable nem thaw ate serem preenchidos por operador
   depois de H2 verde; `passed=true` nesse builder significa apenas que os
   rascunhos foram escritos e continuam reprovando nos gates como esperado;
+- o snapshot negativo pre-H2
+  `docs/evidence/c18-update-validation/20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1/`
+  prova o comportamento inverso esperado: sem soak 24h e sem power-loss 17/17,
+  o builder bloqueia, nao escreve diretorio de drafts e mantem stable/thaw
+  desautorizados;
 - `scripts/qa/c18_server_side_publish_governance_gate.py` precisa validar a
   familia server-side/signature e trust anchor;
 - `scripts/qa/c18_server_side_publish_asset_collect.py` pode materializar a

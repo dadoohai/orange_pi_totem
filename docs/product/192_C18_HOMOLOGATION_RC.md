@@ -387,3 +387,9 @@ rascunhos fail-closed, com hashes reais quando os artefatos forem fornecidos, e
 nao substitui H2 verde nem decisao humana. `passed=true` nesse builder significa
 somente que os rascunhos foram escritos e continuam reprovando nos gates como
 esperado; nao significa stable autorizado, thaw autorizado ou publish liberado.
+O snapshot pre-H2 de `9bebaf1`
+`docs/evidence/c18-update-validation/20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1/`
+registra o caso negativo: com artefatos reais de H1/release/server-side, mas sem
+soak 24h e sem matriz power-loss 17/17, o builder retorna `passed=false`,
+`result_claim=stable_thaw_decision_drafts_blocked`, nao cria diretorio de saida
+e mantem `stable_authorized=false` e `thaw_authorized=false`.

@@ -89,6 +89,18 @@ Os arquivos gerados devem falhar fechado ate serem preenchidos por operador:
 - `c18-player-runtime-thaw-decision-draft.json`;
 - `README.md`.
 
+Antes do H2, o mesmo builder deve continuar bloqueando sem escrever rascunhos
+quando faltar soak 24h ou a matriz power-loss 17/17. O snapshot negativo
+pre-H2 de `9bebaf1` esta versionado em
+`docs/evidence/c18-update-validation/20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1/`:
+ele usa os artefatos reais de H1, release gate e server-side, mas aponta o
+soak 24h para um caminho ausente e fornece apenas os 5 checkpoints P0 do
+piloto. O resultado esperado e `passed=false`,
+`result_claim=stable_thaw_decision_drafts_blocked`,
+`stable_authorized=false`, `thaw_authorized=false` e nenhum diretorio de saida
+criado. Esse snapshot nao reduz nenhum blocker H2 e nao autoriza stable, thaw,
+publish, auto-pull ou producao.
+
 ## Campos Finais
 
 `c18-stable-promotion-evidence.json` precisa manter:

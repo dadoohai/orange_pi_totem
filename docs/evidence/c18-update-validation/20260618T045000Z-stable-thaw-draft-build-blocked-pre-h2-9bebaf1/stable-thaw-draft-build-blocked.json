@@ -1,0 +1,32 @@
+{
+    "authorization_passed": false,
+    "blockers": [
+        "soak_summary_not_file:docs/evidence/c18-update-validation/MISSING-soak-24h-for-9bebaf1/soak-summary.json",
+        "powerloss_matrix_incomplete",
+        "powerloss_checkpoint_missing:after_extract",
+        "powerloss_checkpoint_missing:after_health_passed",
+        "powerloss_checkpoint_missing:after_marker_written",
+        "powerloss_checkpoint_missing:after_payload_staged",
+        "powerloss_checkpoint_missing:after_previous_symlink",
+        "powerloss_checkpoint_missing:after_release_dir_created",
+        "powerloss_checkpoint_missing:after_release_tree_fsync",
+        "powerloss_checkpoint_missing:after_state_success",
+        "powerloss_checkpoint_missing:after_state_verifying",
+        "powerloss_checkpoint_missing:before_stage_cleanup",
+        "powerloss_checkpoint_missing:rollback_after_current_unlinked",
+        "powerloss_checkpoint_missing:rollback_after_identify_links"
+    ],
+    "non_claims": [
+        "this_tool_does_not_authorize_stable",
+        "this_tool_does_not_thaw_player_runtime",
+        "this_tool_does_not_publish_releases",
+        "this_tool_does_not_enable_auto_pull",
+        "this_tool_does_not_override_freeze_rc_44"
+    ],
+    "output_dir": "/tmp/c18-stable-thaw-drafts-pre-h2-9bebaf1",
+    "passed": false,
+    "result_claim": "stable_thaw_decision_drafts_blocked",
+    "schema": "dadooh.c18.player_runtime.stable_decision_draft_build.v1",
+    "stable_authorized": false,
+    "thaw_authorized": false
+}

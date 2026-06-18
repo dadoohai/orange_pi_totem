@@ -1,0 +1,70 @@
+{
+  "schema": "dadooh.c18.player_runtime.stable_thaw_draft_build_blocked_snapshot.v1",
+  "collected_at_utc": "2026-06-18T04:50:00Z",
+  "collection_repo_commit": "a6992cc7f808583023a2b54f089fcf3ea5593152",
+  "collection_repo_tree": "64bdd982ec51331491155c7e0ddf3696980aaa97",
+  "target": {
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "channel": "homologation",
+    "ring": "pilot"
+  },
+  "builder_result": {
+    "passed": false,
+    "result_claim": "stable_thaw_decision_drafts_blocked",
+    "authorization_passed": false,
+    "stable_authorized": false,
+    "thaw_authorized": false,
+    "draft_output_dir_created": false,
+    "blockers": [
+      "soak_summary_not_file:docs/evidence/c18-update-validation/MISSING-soak-24h-for-9bebaf1/soak-summary.json",
+      "powerloss_matrix_incomplete",
+      "powerloss_checkpoint_missing:after_extract",
+      "powerloss_checkpoint_missing:after_health_passed",
+      "powerloss_checkpoint_missing:after_marker_written",
+      "powerloss_checkpoint_missing:after_payload_staged",
+      "powerloss_checkpoint_missing:after_previous_symlink",
+      "powerloss_checkpoint_missing:after_release_dir_created",
+      "powerloss_checkpoint_missing:after_release_tree_fsync",
+      "powerloss_checkpoint_missing:after_state_success",
+      "powerloss_checkpoint_missing:after_state_verifying",
+      "powerloss_checkpoint_missing:before_stage_cleanup",
+      "powerloss_checkpoint_missing:rollback_after_current_unlinked",
+      "powerloss_checkpoint_missing:rollback_after_identify_links"
+    ]
+  },
+  "inputs": {
+    "h1_release_gate_summary": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+    "release_gate_summary": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+    "server_side_evidence": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+    "server_side_current_dir": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+    "server_side_trust_anchor_evidence": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json",
+    "soak_summary": "docs/evidence/c18-update-validation/MISSING-soak-24h-for-9bebaf1/soak-summary.json",
+    "powerloss_checkpoint_count_supplied": 5
+  },
+  "non_claims": [
+    "this_snapshot_does_not_authorize_stable",
+    "this_snapshot_does_not_thaw_player_runtime",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_complete_h2",
+    "this_snapshot_does_not_replace_h2_readiness",
+    "this_snapshot_does_not_replace_powerloss_17_17",
+    "this_snapshot_does_not_replace_soak_24h"
+  ],
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 1193,
+      "sha256": "a49dda410c3e593c2795553ec6b12e0ca7361d73e3e1af5f221a1f23b0667b94"
+    },
+    {
+      "file": "stable-thaw-draft-build-blocked.json",
+      "bytes": 1521,
+      "sha256": "9e4207dd9e110f9f94582b00a817734892f884366b0825e48b15a70c11fda4b2"
+    }
+  ]
+}
