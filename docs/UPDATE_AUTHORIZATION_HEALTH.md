@@ -41,9 +41,9 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
   `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
 - pilot readiness final pos-P0:
   `docs/evidence/c18-update-validation/20260618T041500Z-pilot-readiness-final-9bebaf1/pilot-readiness-final.json`;
-- plano/runbook de power-loss:
-  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
-  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
+- plano/runbook de power-loss corrente:
+  `docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/`;
 - preflight H2 read-only da placa:
   bloqueado por topologia em
   `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`;
@@ -494,13 +494,13 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
 - `scripts/qa/c18_server_side_publish_asset_collect.py` pode materializar a
   lista repo-relative de assets server-side e hashes, sem publicar release;
 - a matriz fisica power-loss precisa estar 17/17;
-- o planner
-  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`
-  registra 0/17 cobertos e 17/17 pendentes, com instrucoes manuais explicitas
-  para checkpoints `requires_custom_setup`;
-- o runbook
-  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`
-  pode orientar os 17 checkpoints pendentes, bloqueia setup customizado sem
+- o planner corrente
+  `docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/`
+  registra 5/17 cobertos pelo P0 aceito e 12/17 pendentes, com instrucoes
+  para os checkpoints restantes;
+- o runbook corrente
+  `docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/`
+  orienta os 12 checkpoints pendentes, bloqueia setup customizado sem
   comandos/instrucoes, recusa placeholder `<utc>`/diretorio local existente no
   helper de pull, materializa o manifest local exigido pelo evidence gate, fixa o
   marker de imagem esperado no preflight, injeta binding de payload/imagem no

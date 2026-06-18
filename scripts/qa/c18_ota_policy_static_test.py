@@ -1199,7 +1199,8 @@ exec "$C18_REAL_PYTHON3" "$@"
             "tracked_inputs=true",
         ):
             self.assertIn(token, doc192)
-        self.assertIn("20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1", doc192)
+        self.assertIn("20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1", doc192)
+        self.assertIn("20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1", doc192)
         self.assertIn("nao e evidencia fisica", doc192_words)
         doc189 = DOC189_PATH.read_text(encoding="utf-8")
         self.assertNotIn("partir da imagem `1l`", doc189)
@@ -2891,7 +2892,8 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1",
             "20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
             "20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
-            "20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1",
+            "20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1",
+            "20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1",
             "20260618T034601Z-pilot-p0-powerloss-9bebaf1",
             "channel=homologation",
             "ring=pilot",

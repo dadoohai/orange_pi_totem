@@ -93,14 +93,14 @@ Evidencia principal:
   `server-side-rollout-state.json` pausado pre-H2 com allowlist vazia,
   auto-pull desligado e IDs brutos ausentes; nao publica, nao promove `stable`,
   nao liga auto-pull, nao avanca rollout e nao abre thaw;
-- plano/runbook H2 power-loss do alvo corrigido:
-  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
-  `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
+- plano/runbook H2 power-loss corrente do alvo corrigido:
+  `docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/`;
 - preflight H2 read-only da placa antes da sessao P0:
   `docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/`;
 - preflight H2 read-only corrente apos limpeza da placa:
   `docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/`;
-- run-card dos 12 checkpoints H2 restantes:
+- run-card historico dos 12 checkpoints H2 restantes:
   `docs/evidence/c18-update-validation/20260618T071500Z-h2-powerloss-remaining-12-run-card-9bebaf1/`;
 - evidencia P0 power-loss seletiva do piloto:
   `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`;
@@ -286,20 +286,19 @@ producao.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
 checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica
-dos 17 checkpoints do alvo `9bebaf1`. O planner
-`docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`
-permanece como plano completo da matriz, com instrucoes
-manuais explicitas para checkpoints de setup customizado e sem reivindicar
-evidencia fisica.
-O runbook operacional gerado em
-`docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`
-organiza esses 17 checkpoints para operador, com comandos arm/resume e helper
-de pull/validacao. O builder bloqueia checkpoint `requires_custom_setup` sem
-comandos ou instrucoes manuais; o helper recusa placeholder `<utc>`/diretorio
-local existente para evitar mistura de evidencia, materializa o manifest local
-exigido pelo evidence gate, fixa o marker de imagem esperado no preflight e
-injeta binding de payload/imagem para H2. O runbook tambem nao e evidencia
-fisica e nao substitui corte real de energia.
+dos 17 checkpoints do alvo `9bebaf1`. O planner corrente
+`docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/`
+registra 5/17 checkpoints cobertos pelo P0 aceito e 12/17 pendentes, sem
+reivindicar evidencia fisica completa.
+O runbook operacional corrente em
+`docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/`
+organiza esses 12 checkpoints restantes para operador, com comandos arm/resume
+e helper de pull/validacao. O builder bloqueia checkpoint
+`requires_custom_setup` sem comandos ou instrucoes manuais; o helper recusa
+placeholder `<utc>`/diretorio local existente para evitar mistura de evidencia,
+materializa o manifest local exigido pelo evidence gate, fixa o marker de imagem
+esperado no preflight e injeta binding de payload/imagem para H2. O runbook
+tambem nao e evidencia fisica e nao substitui corte real de energia.
 O runbook inclui uma etapa previa de preflight H2: coletar estado read-only da
 placa com `scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py`
 e validar com `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py`
