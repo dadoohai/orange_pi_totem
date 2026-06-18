@@ -1,0 +1,35 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_remaining_run_card_manifest.v1",
+  "created_at_utc": "2026-06-18T07:15:00Z",
+  "collection_repo_commit": "ee49ed0260398e3c406cc91d3c0c8dea20e19bcf",
+  "collection_repo_tree": "8f4edb379c6738eae0b4192dc235fcdafc023b19",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+  },
+  "result_claim": "h2_powerloss_remaining_12_ready_to_execute_with_operator",
+  "non_claims": [
+    "this_manifest_is_not_powerloss_evidence",
+    "this_manifest_does_not_satisfy_powerloss_17_17",
+    "this_manifest_does_not_authorize_production",
+    "this_manifest_does_not_promote_stable",
+    "this_manifest_does_not_thaw_player_runtime",
+    "this_manifest_does_not_replace_24h_soak",
+    "this_manifest_does_not_replace_h2_readiness"
+  ],
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 1390,
+      "sha256": "b8eebc36814f6e665041aca95e7b4abde3cc75620857a98b06d992d672e64678"
+    },
+    {
+      "file": "remaining-12-run-card.json",
+      "bytes": 2532,
+      "sha256": "2ae4f7f36e651dfff6654498d6f4ded301f377473e2506df586d20057d8b781e"
+    }
+  ]
+}

@@ -100,6 +100,8 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/`;
 - preflight H2 read-only corrente apos limpeza da placa:
   `docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/`;
+- run-card dos 12 checkpoints H2 restantes:
+  `docs/evidence/c18-update-validation/20260618T071500Z-h2-powerloss-remaining-12-run-card-9bebaf1/`;
 - evidencia P0 power-loss seletiva do piloto:
   `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`;
 - gate macro pre-H2:

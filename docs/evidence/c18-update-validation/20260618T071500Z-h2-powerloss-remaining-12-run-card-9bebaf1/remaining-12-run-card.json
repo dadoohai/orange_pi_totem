@@ -1,0 +1,58 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_remaining_run_card.v1",
+  "created_at_utc": "2026-06-18T07:15:00Z",
+  "result_claim": "h2_powerloss_remaining_12_ready_to_execute_with_operator",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+    "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e"
+  },
+  "inputs": {
+    "pilot_p0_evidence": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1",
+    "h2_readiness_current": "docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json",
+    "fresh_h2_preflight": "docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1",
+    "full_operator_runbook": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1"
+  },
+  "already_accepted_checkpoints": [
+    "after_current_symlink",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_state_success"
+  ],
+  "remaining_checkpoints_order": [
+    "after_payload_staged",
+    "after_release_dir_created",
+    "after_extract",
+    "after_state_verifying",
+    "after_health_passed",
+    "after_release_tree_fsync",
+    "after_marker_written",
+    "after_previous_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
+    "rollback_after_current_unlinked"
+  ],
+  "operator_rules": [
+    "run_exactly_one_checkpoint_at_a_time",
+    "cut_physical_power_only_after_cut_power_now",
+    "remote_reboot_is_not_powerloss_evidence",
+    "resume_and_gate_evidence_before_next_checkpoint",
+    "keep_rollback_after_current_unlinked_last"
+  ],
+  "non_claims": [
+    "this_run_card_is_not_powerloss_evidence",
+    "this_run_card_does_not_satisfy_powerloss_17_17",
+    "this_run_card_does_not_authorize_production",
+    "this_run_card_does_not_promote_stable",
+    "this_run_card_does_not_thaw_player_runtime",
+    "this_run_card_does_not_replace_24h_soak",
+    "this_run_card_does_not_replace_h2_readiness"
+  ]
+}
