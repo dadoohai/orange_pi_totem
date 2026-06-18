@@ -21,8 +21,8 @@ declare -A SETUP_EXPECTED_ACTIVE_VERSION=(['after_extract']='c18.player-runtime-
 declare -A SETUP_CANDIDATE_VERSION=(['after_extract']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_health_passed']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_marker_written']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_payload_staged']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_previous_symlink']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_release_dir_created']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_release_tree_fsync']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_state_success']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['after_state_verifying']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['before_stage_cleanup']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['rollback_after_current_unlinked']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1' ['rollback_after_identify_links']='c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1')
 declare -A ROLLBACK_EXPECTATION=(['rollback_after_current_unlinked']='image-fallback-after-current-unlinked' ['rollback_after_identify_links']='data-current-after-identify-links')
 
-if [[ "$LOCAL_ROOT" == *"<utc>"* ]]; then
-  echo "LOCAL_ROOT still contains <utc>; choose a concrete fresh path" >&2
+if [[ "$LOCAL_ROOT" == *'<'* || "$LOCAL_ROOT" == *'>'* ]]; then
+  echo "LOCAL_ROOT still contains a placeholder; choose a concrete fresh path" >&2
   exit 2
 fi
 

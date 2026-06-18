@@ -166,6 +166,7 @@ def runbook_manifest(plan: dict[str, Any], args: argparse.Namespace, generated_a
         "powerloss_manifest_image_sha256": args.expected_image_sha256,
         "powerloss_manifest_image_marker_sha256": args.expected_image_marker_sha256,
         "pull_helper_requires_fresh_local_root": True,
+        "pull_helper_rejects_placeholder": True,
         "pull_helper_rejects_utc_placeholder": True,
         "pull_helper_materializes_powerloss_manifest": True,
         "non_claims": list(NON_CLAIMS),
@@ -198,7 +199,8 @@ time without losing the non-claims.
 
 - `{RUNBOOK_NAME}`: per-checkpoint setup, arm and resume commands.
 - `{PULL_SCRIPT_NAME}`: optional pull/validation helper; edit host/path first.
-  It refuses a `<utc>` placeholder and refuses to reuse an existing local root.
+  It refuses placeholder paths such as `<utc>` or `<fresh-utc>` and refuses to
+  reuse an existing local root.
 - `{MANIFEST_NAME}`: machine-readable summary of this runbook.
 
 Run the H2 board preflight gate before starting a physical checkpoint session.
@@ -474,8 +476,8 @@ IMAGE_MARKER_SHA256="{image_marker_sha256}"
 {shell_assoc("SETUP_CANDIDATE_VERSION", setup_candidate)}
 {shell_assoc("ROLLBACK_EXPECTATION", rollback_expectation)}
 
-if [[ "$LOCAL_ROOT" == *"<utc>"* ]]; then
-  echo "LOCAL_ROOT still contains <utc>; choose a concrete fresh path" >&2
+if [[ "$LOCAL_ROOT" == *'<'* || "$LOCAL_ROOT" == *'>'* ]]; then
+  echo "LOCAL_ROOT still contains a placeholder; choose a concrete fresh path" >&2
   exit 2
 fi
 
@@ -668,6 +670,7 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertEqual(manifest["powerloss_manifest_image_marker_sha256"], "c" * 64)
         self.assertEqual(manifest["preflight_max_age_sec"], 4 * 60 * 60)
         self.assertTrue(manifest["pull_helper_materializes_powerloss_manifest"])
+        self.assertTrue(manifest["pull_helper_rejects_placeholder"])
 
     def test_custom_setup_requires_commands_or_manual_instructions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -710,8 +713,11 @@ class OperatorRunbookBuildSelfTest(unittest.TestCase):
         self.assertNotIn("none emitted by the plan", runbook)
         self.assertTrue(manifest["checkpoints"][0]["manual_setup_required"])
         self.assertTrue(manifest["pull_helper_requires_fresh_local_root"])
+        self.assertTrue(manifest["pull_helper_rejects_placeholder"])
         self.assertTrue(manifest["pull_helper_rejects_utc_placeholder"])
-        self.assertIn('LOCAL_ROOT still contains <utc>', pull_script)
+        self.assertIn("LOCAL_ROOT still contains a placeholder", pull_script)
+        self.assertIn('''"$LOCAL_ROOT" == *'<'*''', pull_script)
+        self.assertIn('''"$LOCAL_ROOT" == *'>'*''', pull_script)
         self.assertIn('LOCAL_ROOT already exists', pull_script)
         self.assertIn('checkpoint directory already exists locally', pull_script)
 

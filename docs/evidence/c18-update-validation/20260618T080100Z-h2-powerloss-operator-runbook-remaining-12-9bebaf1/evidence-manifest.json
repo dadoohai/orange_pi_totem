@@ -12,14 +12,14 @@
   ],
   "files": [
     {
-      "bytes": 1705,
+      "bytes": 1736,
       "file": "README.md",
-      "sha256": "ae432a9f14dab956748241096cea35f39f8853770a90b5e1db6397c419eea121"
+      "sha256": "bccd1bd4f72ad749a1a2feeb1db0ba839dd9c38d22cf4af7b67dcc5450babe26"
     },
     {
-      "bytes": 6917,
+      "bytes": 6960,
       "file": "operator-runbook-manifest.json",
-      "sha256": "8fe597715be38e78d754a6ce5086e36f5bab8d93befc4aa5b4cad8fd60c01db9"
+      "sha256": "35b1b0e6af2cc90ba47da2997d1e7307c097bb3d8471e87ea577bafe4c80efa7"
     },
     {
       "bytes": 34790,
@@ -27,9 +27,9 @@
       "sha256": "9157ab15a41284e63bbccecb307d06b01de8cfe1da3ccb7ded9632f46e63a642"
     },
     {
-      "bytes": 6258,
+      "bytes": 6288,
       "file": "pull-and-validate-evidence.sh",
-      "sha256": "f03c9ca353043e2f838b9a07b870bed526a80f9988faf18db1a96f2419bf8cf2"
+      "sha256": "7ab257b343d940e307820360c84797d1b93c67ee3ddeb446d8040fcfcf65f89e"
     },
     {
       "bytes": 1611,

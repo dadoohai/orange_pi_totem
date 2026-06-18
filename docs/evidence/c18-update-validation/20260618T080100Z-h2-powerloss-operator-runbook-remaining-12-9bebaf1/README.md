@@ -20,7 +20,8 @@ time without losing the non-claims.
 
 - `operator-runbook.md`: per-checkpoint setup, arm and resume commands.
 - `pull-and-validate-evidence.sh`: optional pull/validation helper; edit host/path first.
-  It refuses a `<utc>` placeholder and refuses to reuse an existing local root.
+  It refuses placeholder paths such as `<utc>` or `<fresh-utc>` and refuses to
+  reuse an existing local root.
 - `operator-runbook-manifest.json`: machine-readable summary of this runbook.
 
 Run the H2 board preflight gate before starting a physical checkpoint session.

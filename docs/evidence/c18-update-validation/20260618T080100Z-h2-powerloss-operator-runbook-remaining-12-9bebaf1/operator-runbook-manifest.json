@@ -150,6 +150,7 @@
   "preflight_local_output": "docs/evidence/c18-update-validation/<fresh-utc>-h2-powerloss-preflight-9bebaf1/board-preflight.json",
   "preflight_max_age_sec": 14400,
   "pull_helper_materializes_powerloss_manifest": true,
+  "pull_helper_rejects_placeholder": true,
   "pull_helper_rejects_utc_placeholder": true,
   "pull_helper_requires_fresh_local_root": true,
   "result_claim": "powerloss_operator_runbook_written",

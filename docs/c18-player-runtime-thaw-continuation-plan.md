@@ -240,10 +240,9 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   `c18-player-runtime-release-gate.json` beside payload/manifest after validating
   the gate is green, so a future server-side publish/signature run has a real
   release-gate artifact to bind. The current homologation release
-  `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e` also carries a
-  backfilled `c18-player-runtime-release-gate.json` generated from its existing
-  manifest/payload. This is release-gate traceability only; it is not
-  server-side publish/signature evidence.
+  `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` carries
+  `c18-player-runtime-release-gate.json` next to its manifest/payload. This is
+  release-gate traceability only; it is not production publication by itself.
 - server-side publish governance gate / signature / auto-pull hardening:
   `scripts/qa/c18_server_side_publish_governance_gate.py` valida a evidencia
   `dadooh.c18.server_side_publish_governance.v1` antes do H2 consumi-la; ela
@@ -259,9 +258,10 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   do caminho da chave ou do trust anchor. O H2 de `player-runtime` passa
   `expected_component=player-runtime`; manifest/release gate de `totem-core`
   ficam bloqueados para essa familia.
-  Para o pacote atual `c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`,
+  Para o pacote atual
+  `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`,
   a familia server-side esta materializada em
-  `docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/`
+  `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`
   e o H2 consome essa evidencia com `server_side_publish_governance` verde.
   Isso nao publica release, nao liga auto-pull, nao promove stable e nao e
   publicacao/producao real; producao ainda exige a decisao stable/thaw e o
@@ -274,21 +274,21 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   the landed thaw-decision gate validates the operator artifact and does not execute
   thaw.
 
-## OTA responsibility snapshot (2026-06-12 — Homologation RC)
+## OTA responsibility snapshot (2026-06-18 — Homologation RC)
 
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados; release gate geral verde na RC; payload protegido por allowlist exata no gate e no device-side antes de extrair/promover | Hardening de producao/stable quando a frente H2 for aberta |
-| player-runtime | Homologation RC `c16fb3e` rebaixada para historico bloqueado: a evidencia `docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/` mostrou MPV preso em uma midia enquanto o status avancou; freeze publico `rc=44`, gates de canal/ring, server-side/signature e decisao formal de thaw continuam como estrutura de governanca, mas o alvo atual nao pode ser tratado como RC corrente | Novo alvo corrigido, H1/pilot/preflight limpos, P0/H2 power-loss reexecutados no alvo novo; H2/prod: matriz power-loss 17/17, soak 24h, stable promotion, evidencia real de decisao explicita de thaw e ativacao publica separada |
+| player-runtime | Homologation RC corrente `9bebaf1` esta governada para piloto assistido: H1/pilot/preflight finais estao versionados, P0 seletivo passou 5/17, server-side/signature esta verde e o freeze publico `rc=44` continua intacto. O alvo `c16fb3e` fica historico/bloqueado pela evidencia negativa `20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397` | H2/prod: executar os 12 checkpoints fisicos restantes para fechar 17/17, soak 24h, stable promotion, evidencia real de decisao explicita de thaw e ativacao publica separada |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44); build/publish historicos seguem bloqueados por padrao e, mesmo com bypass lab, recusam media/cache/config/data/secrets, systemd, `/opt`, MPV/ffmpeg e modulos | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo de release atual, mas agora protegidos por guardrails executaveis na matriz de responsabilidade, no gate de `player-runtime`, nos scripts legados e na allowlist device-side de `totem-core`; `field-data` ja tem snapshot publico C18/C7 gateado e evidencia read-only de placa em `20260612T183722Z-board-readonly-diagnostics-17a1f9d` | Para `media-system`, manter trilha propria de imagem/homologacao; para `field-data`, evoluir evidencia operacional somente sem transformar config/midia/cache em release de software |
-| server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test; publisher stable de `totem-core` agora compara o release gate final com o hash validado e monta a lista final de assets por helper offline testado, anexando stable evidence + familia server-side validada antes do `gh`; gerador offline de evidencia assinada agora existe, reroda o gate real sem publicar e a evidencia atual esta verde para o pacote `c16fb3e` | Publicacao real/stable continua fora de escopo ate H2; manter chave/trust-anchor operacional e evidencias versionadas para o canal de producao |
-| power-loss/soak | Semantica 17/17 implementada no gate; planner H2 `20260617T020912Z-h2-powerloss-matrix-plan-custom-setup-c16fb3e` e runbook `20260617T081018Z-h2-powerloss-operator-runbook-payload-image-bind-c16fb3e` ficam historicos para `c16fb3e`; a tentativa fisica `after_payload_staged` falhou por MPV preso/status avancando, entao a trilha fisica aceita precisa reiniciar no alvo corrigido | Reexecutar P0/H2 fisico no novo alvo; matriz power-loss 17/17 e soak 24h |
+| server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test; evidencia atual esta verde para o pacote `9bebaf1` em `20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1` | Publicacao real/stable continua fora de escopo ate H2; manter chave/trust-anchor operacional e evidencias versionadas para o canal de producao |
+| power-loss/soak | Semantica 17/17 implementada no gate; P0 seletivo do alvo `9bebaf1` passou 5/17 em `20260618T034601Z-pilot-p0-powerloss-9bebaf1`; planner corrente `20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1` registra 12/17 pendentes; runbook corrente `20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1` orienta somente os 12 restantes; tudo isso ainda nao e evidencia 17/17 | Executar fisicamente os 12 checkpoints restantes, depois soak 24h |
 
-Estado: Homologation RC de `player-runtime` bloqueada no alvo `c16fb3e` por
-evidencia fisica negativa. A estrutura de governanca segue valida, mas a
-proxima RC precisa de novo alvo corrigido, H1/pilot/preflight limpos e evidencia
-fisica refeita antes de qualquer piloto. Funil:
+Estado: Homologation RC de `player-runtime` corrente e `9bebaf1`: governanca
+pre-H2 verde para piloto assistido, P0 5/17 aceito, H2 ainda vermelho por
+power-loss 17/17 incompleto, soak 24h ausente, stable promotion ausente e
+decisao formal de thaw ausente. Funil:
 piloto assistido allowlisted -> evidencia de campo -> H2 completo -> decisao
 explicita de thaw.
 
