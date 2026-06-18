@@ -1,0 +1,40 @@
+{
+  "schema": "dadooh.c18.ota_pre_soak_scale_governance_snapshot.v1",
+  "collected_at_utc": "2026-06-18T04:20:43.830820Z",
+  "collection_repo_commit": "8aaf4ae0843a1823f4a9804163c2e5ac61202b84",
+  "collection_repo_tree": "b31d16b6149c3c453b8ebd3735bd9e4d1ba84acb",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  },
+  "passed": true,
+  "result_claim": "c18_ota_pre_soak_scale_governance_ready",
+  "expected_h2_blockers": null,
+  "non_claims": [
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness",
+    "this_gate_does_not_replace_operational_resume"
+  ],
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 823,
+      "sha256": "7a886f3e70cacd31ffa947b217197c867a34bb379323a4605f3a14f5d8c50116"
+    },
+    {
+      "file": "pre-soak-scale-governance.json",
+      "bytes": 5094,
+      "sha256": "f730235ea8bc4edf523ea920b02a24a8f3072adfec87951e394682c3988631e4"
+    }
+  ]
+}
