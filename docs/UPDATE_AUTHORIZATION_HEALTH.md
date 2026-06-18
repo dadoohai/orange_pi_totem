@@ -67,7 +67,7 @@ read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
 historico e nao deve ser lido como RC atual; o snapshot pos-P0 anterior
 `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
 tambem permanece historico. O snapshot corrente
-`docs/evidence/c18-update-validation/20260618T065300Z-current-macro-governance-head-4f698b7-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/`
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
 para o diagnostico read-only pos-P0 da placa, e segue verde pre-H2 sem liberar
 producao.

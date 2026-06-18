@@ -112,13 +112,13 @@ Evidencia principal:
 - snapshot macro versionado:
   o snapshot `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`
   fica historico de `c16fb3e`; o snapshot corrente
-  `docs/evidence/c18-update-validation/20260618T065300Z-current-macro-governance-head-4f698b7-9bebaf1/`
+  `docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/`
   esta verde pre-H2 e aponta para o pilot readiness final pos-P0, sem liberar
   producao;
 - snapshot pre-soak scale governance:
   `docs/evidence/c18-update-validation/20260617T065222Z-pre-soak-scale-governance-6937b26/`;
   snapshot historico de `c16fb3e`. O snapshot corrente pre-soak
-  `docs/evidence/c18-update-validation/20260618T071000Z-pre-soak-scale-governance-head-dd3b6c2-9bebaf1/`
+  `docs/evidence/c18-update-validation/20260618T073400Z-pre-soak-scale-governance-head-7f638c0-9bebaf1/`
   esta verde para governanca pre-soak/pre-H2 e continua sem substituir soak 24h
   ou power-loss 17/17;
 - playback em nivel usuario:
