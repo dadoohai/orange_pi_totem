@@ -528,6 +528,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(summary["blockers"], [])
         self.assertEqual(summary["checks"]["release_gate"]["skipped"], True)
         self.assertEqual(summary["checks"]["h2_powerloss_board_preflight_snapshot"]["passed"], True)
+        self.assertEqual(summary["checks"]["stable_thaw_draft_blocked_snapshot"]["passed"], True)
         self.assertEqual(summary["checks"]["macro_snapshot"]["passed"], True)
         self.assertEqual(
             sorted(summary["expected_h2_blockers"]),
@@ -545,6 +546,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
         self.assertIn("20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1", gate)
+        self.assertIn("20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1", gate)
+        self.assertIn("stable_thaw_blocked_draft_output_dir_created", gate)
+        self.assertIn("stable_thaw_blocked_run_authorization_must_be_false", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)

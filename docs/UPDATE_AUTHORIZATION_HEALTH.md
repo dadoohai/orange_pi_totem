@@ -68,6 +68,10 @@ historico e nao deve ser lido como RC atual. O snapshot corrente
 `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
 segue verde pre-H2 sem liberar producao.
+O agregador pre-soak
+`scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` tambem consome o
+snapshot negativo stable/thaw pre-H2 e exige que ele continue bloqueado, sem
+diretorio de drafts e sem stable/thaw autorizados.
 
 O snapshot corrente de retomada operacional pos-P0 esta verde em
 `docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`:

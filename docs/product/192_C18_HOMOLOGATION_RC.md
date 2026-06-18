@@ -211,8 +211,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_g
 Resultado esperado: `passed=true`,
 `result_claim=c18_ota_pre_soak_scale_governance_ready`. Esse gate agrega docs de
 responsabilidade, H2 vermelho, server-side atual, preflight H2 power-loss,
-retomada operacional default-deny e release gate; nao substitui H2 nem
-autorizacao operacional fresca.
+snapshot stable/thaw bloqueado sem escrever drafts, retomada operacional
+default-deny e release gate; nao substitui H2 nem autorizacao operacional
+fresca.
 
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
