@@ -562,7 +562,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "python3",
                 str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
                 "--now-utc",
-                "2026-06-18T07:10:00Z",
+                "2026-06-18T08:42:00Z",
                 "--allow-dirty-repo",
                 "--json",
             ],
@@ -601,7 +601,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("macro_gate_blocker", gate)
         self.assertIn("20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
-        self.assertIn("20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1", gate)
+        self.assertIn("20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1", gate)
         self.assertIn("20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1", gate)
         self.assertIn("20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1", gate)
         self.assertIn("stable_thaw_blocked_draft_output_dir_created", gate)

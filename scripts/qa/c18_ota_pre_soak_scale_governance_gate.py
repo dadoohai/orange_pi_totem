@@ -127,7 +127,7 @@ DEFAULT_SERVER_SIDE_CURRENT_DIR = (
 )
 DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1"
+    / "docs/evidence/c18-update-validation/20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1"
 )
 DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR = (
     REPO_ROOT

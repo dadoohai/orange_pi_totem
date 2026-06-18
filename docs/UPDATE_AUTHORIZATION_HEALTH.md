@@ -50,6 +50,8 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
 - reset/topologia e preflight H2 aceito:
   `docs/evidence/c18-update-validation/20260617T201430Z-h2-powerloss-topology-reset-mpv-stuck-fix-9bebaf1/`,
   `docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/`;
+- refresh H2 power-loss read-only corrente:
+  `docs/evidence/c18-update-validation/20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1/`;
 - P0 power-loss seletivo:
   `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`.
 
@@ -60,6 +62,8 @@ target ja estava linkado como `current`. O reset/topologia controlado restaurou
 `m6-a` como current, removeu a release dir do alvo e manteve freeze publico
 `rc=44`; o preflight H2 fresco foi aceito para iniciar a sessao fisica, e os 5
 checkpoints P0 do piloto foram validados depois.
+O refresh H2 power-loss das 08:38 confirmou novamente pacote, imagem, policy,
+timer e topologia sem armar checkpoint e sem reivindicar power-loss.
 
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
@@ -515,12 +519,14 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   `scripts/qa/c18_player_runtime_h2_powerloss_preflight_gate.py` contra o plano
   da matriz; esse preflight confirma pacote/imagem/topologia de sessao e
   continua sem reivindicar power-loss, 17/17, stable, producao ou thaw;
-- para o alvo `9bebaf1`, o preflight fresco em
+- para o alvo `9bebaf1`, o preflight inicial em
   `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`
   confirmou pacote, imagem `c18-hwdecode-lab-1x`, policy `homologation`, timer
   inativo/desabilitado, bundle e canary, mas o gate bloqueou a sessao fisica
   porque o target ja estava linkado como `current`; antes de armar cortes,
   preparar reset/topologia controlada e coletar novo preflight aceito;
+- o preflight H2 power-loss corrente para a proxima sessao fisica esta em
+  `docs/evidence/c18-update-validation/20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1/`;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;
