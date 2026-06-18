@@ -22,6 +22,7 @@
   "key_checks": {
     "collector_passed": true,
     "offline_gate_passed": true,
+    "allowed_components_totem_core_only": true,
     "policy_homologation": true,
     "update_timer_disabled": true,
     "image_marker_c18_hwdecode_lab_1x": true,
