@@ -1,0 +1,47 @@
+{
+  "collected_at_utc": "2026-06-18T07:51:00Z",
+  "evidence_kind": "c18_ota_operational_resume_default_blocked_snapshot",
+  "expected_blockers": [
+    "current_board_preflight:current_board_preflight_missing",
+    "current_pilot_authorization:current_pilot_authorization_missing"
+  ],
+  "files": [
+    {
+      "bytes": 998,
+      "file": "README.md",
+      "sha256": "b7de3e405af98f92eb7d8fa08182a24a2537fd33b1a0b54e4b5ebc2082b0f172"
+    },
+    {
+      "bytes": 2919,
+      "file": "operational-resume.json",
+      "sha256": "3280f6411056989550b490cd94f7248b9d71233bcd128bd2ade7d719d197c326"
+    }
+  ],
+  "macro_snapshot": "docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json",
+  "non_claims": [
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_publish_releases",
+    "does_not_thaw_public_player_runtime",
+    "does_not_apply_or_rollback_player_runtime",
+    "does_not_satisfy_24h_soak",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_replace_h2_readiness"
+  ],
+  "passed": false,
+  "repo_commit": "4f0e310fd5a1090c3c06fd4e62b9a794990faf86",
+  "repo_dirty": false,
+  "repo_tree": "2c7d1f21ff8138f0c6c12d4c57b2459f8c60aaa0",
+  "result_claim": "c18_operational_resume_blocked",
+  "schema": "dadooh.c18.ota_operational_resume_evidence.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}
