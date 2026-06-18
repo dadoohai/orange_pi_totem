@@ -273,8 +273,34 @@ def server_side_asset_base(run_dir: Path) -> Path:
     return REPO_ROOT
 
 
+def is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def has_symlink_component(path: Path, root: Path) -> bool:
+    try:
+        parts = path.relative_to(root).parts
+    except ValueError:
+        return True
+    current = root
+    for part in parts:
+        current = current / part
+        if current.is_symlink():
+            return True
+    return False
+
+
 def validate_server_side_asset_record_files(run_dir: Path, asset_records: list[Any], blockers: list[str]) -> None:
     base = server_side_asset_base(run_dir)
+    try:
+        base_root = base.resolve(strict=True)
+    except OSError:
+        blockers.append("server_side_asset_record_file_base_missing")
+        return
     for index, item in enumerate(asset_records):
         if not isinstance(item, dict):
             continue
@@ -287,8 +313,19 @@ def validate_server_side_asset_record_files(run_dir: Path, asset_records: list[A
         ):
             continue
         path = base / raw_path
+        if has_symlink_component(path.parent, base):
+            blockers.append(f"server_side_asset_record_file_parent_symlink:{raw_path}")
+            continue
         if path.is_symlink() or not path.is_file():
             blockers.append(f"server_side_asset_record_file_missing_or_symlink:{raw_path}")
+            continue
+        try:
+            resolved = path.resolve(strict=True)
+        except OSError:
+            blockers.append(f"server_side_asset_record_file_missing_or_symlink:{raw_path}")
+            continue
+        if not is_relative_to(resolved, base_root):
+            blockers.append(f"server_side_asset_record_file_outside_base:{raw_path}")
             continue
         if item.get("bytes") != path.stat().st_size:
             blockers.append(f"server_side_asset_record_file_bytes_mismatch:{raw_path}")
@@ -1333,6 +1370,21 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_current:server_side_asset_record_file_sha256_mismatch:release/asset-0.json",
+            result["blockers"],
+        )
+
+    def test_server_side_asset_records_reject_parent_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = write_fixture(root)
+            release_dir = root / "release"
+            linked_release_dir = root / "linked-release"
+            release_dir.rename(linked_release_dir)
+            release_dir.symlink_to(linked_release_dir, target_is_directory=True)
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current:server_side_asset_record_file_parent_symlink:release/asset-0.json",
             result["blockers"],
         )
 
