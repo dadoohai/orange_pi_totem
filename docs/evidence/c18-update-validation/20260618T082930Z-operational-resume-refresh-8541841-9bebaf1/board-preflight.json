@@ -1,0 +1,110 @@
+{
+    "blockers": [],
+    "collected_at_utc": "2026-06-18T08:29:35Z",
+    "device_hash": "sha256:fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+    "image": {
+        "image_tag": "c18-hwdecode-lab-1x",
+        "marker_path": "/etc/dadooh/c18-hwdecode-lab-1x-image",
+        "marker_present": true,
+        "marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+        "sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+        "tag": "c18-hwdecode-lab-1x"
+    },
+    "non_claims": [
+        "this_preflight_does_not_authorize_production",
+        "this_preflight_does_not_promote_stable",
+        "this_preflight_does_not_enable_auto_pull",
+        "this_preflight_does_not_publish_releases",
+        "this_preflight_does_not_thaw_public_player_runtime",
+        "this_preflight_does_not_satisfy_24h_soak",
+        "this_preflight_does_not_satisfy_powerloss_17_17",
+        "this_preflight_does_not_replace_h2_readiness",
+        "this_preflight_does_not_apply_or_rollback_player_runtime",
+        "this_preflight_does_not_run_authorized_maintenance_reconcile"
+    ],
+    "passed": true,
+    "player_runtime": {
+        "checks": {
+            "config_mpv_path_c18_stack": false,
+            "config_present": true,
+            "hwdec_expected_present": true,
+            "hwdec_unexpected_present": false,
+            "ipc_elapsed_ms": 2,
+            "ipc_error": "",
+            "ipc_query_result": "success",
+            "matching_ipc_mpv_count": 1,
+            "mpv_path_c18_stack": true,
+            "mpv_path_present": false,
+            "process_mpv_path": "/opt/totem/hwdecode/bin/mpv",
+            "process_mpv_path_c18_stack": true,
+            "process_scan_result": "success",
+            "service_active": true,
+            "total_mpv_count": 1
+        }
+    },
+    "policy": {
+        "allow_downgrade": false,
+        "allow_prerelease": true,
+        "allowed_components": [
+            "totem-core"
+        ],
+        "device_channel": "homologation",
+        "device_track": "c18-hwdecode",
+        "path": "/data/updates/policy.json",
+        "present": true,
+        "schema": "dadooh.totem.update.policy.v1"
+    },
+    "privacy": {
+        "raw_config_persisted": false,
+        "raw_ip_persisted": false,
+        "raw_mac_persisted": false,
+        "raw_media_path_persisted": false,
+        "raw_serial_persisted": false
+    },
+    "public_freeze": {
+        "apply_local": {
+            "command": "apply_local",
+            "frozen": true,
+            "output_sha256": "df3b5dad3ec3c44baa3bb11211ff62ee51df0f0738875b955af27483afb9a3f9",
+            "returncode": 44,
+            "summary": "2026-06-18T08:29:33Z WARN apply_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware component_frozen_for_ota: player-runtime: player-runtime O"
+        },
+        "reconcile": {
+            "command": "reconcile",
+            "frozen": true,
+            "output_sha256": "c6e367f17aa4d95003cba5bf40d420e7e248afd25374b3f0ae3742f2fe211c07",
+            "returncode": 44,
+            "summary": "player_runtime_reconcile_guard_required: pass --allow-player-runtime-maintenance and set C18_PLAYER_RUNTIME_RECONCILE=1 2026-06-18T08:29:34Z WARN reconcile_blocked_component_frozen component=player-runtime"
+        },
+        "rollback": {
+            "command": "rollback",
+            "frozen": true,
+            "output_sha256": "8f6f782f5857f3715325e95505a28858afef4cfe8f6104c5a63d391854e78a21",
+            "returncode": 44,
+            "summary": "component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware 2026-06-18T08:29:34Z WARN rollback_blocked_component_frozen component=player-runtime reason=player-runtim"
+        }
+    },
+    "public_freeze_static_guard": {
+        "blockers": [],
+        "passed": true,
+        "path": "/opt/totem/bin/totem-updatectl",
+        "sha256": "f5535af656b1cc2abc7865576cef508db7870b13017762fe11fb38b5dc05e924"
+    },
+    "result_claim": "homologation_pilot_preflight_collected",
+    "schema": "dadooh.c18.homologation_pilot_preflight.v1",
+    "service": {
+        "active": true,
+        "active_raw": "active",
+        "enabled": true,
+        "enabled_raw": "enabled",
+        "unit": "kiosky-player.service"
+    },
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "stage": "pre_apply",
+    "timer": {
+        "active": false,
+        "active_raw": "inactive",
+        "enabled": false,
+        "enabled_raw": "disabled"
+    }
+}
