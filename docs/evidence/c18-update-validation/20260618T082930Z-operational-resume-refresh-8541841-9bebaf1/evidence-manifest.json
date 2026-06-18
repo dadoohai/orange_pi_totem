@@ -1,0 +1,55 @@
+{
+  "blockers": [],
+  "collected_at_utc": "2026-06-18T08:29:35Z",
+  "collection_repo_commit": "c461d0ba5b7e1a4e89a605df778eb0038a46d834",
+  "collection_repo_tree": "44aa8759b657140c3fe8d5b180b89321acc6df06",
+  "evaluated_at_utc": "2026-06-18T08:31:22.291642Z",
+  "files": [
+    {
+      "bytes": 993,
+      "file": "README.md",
+      "sha256": "fd22d090998e38a6bc5647f252334429c7614e92d8f105e88d5b049ab371ac6d"
+    },
+    {
+      "bytes": 916,
+      "file": "pilot-authorization.json",
+      "sha256": "faca9839638bca41716a6df88f6c1151e3b64257ad6172045af060fc11a386e1"
+    },
+    {
+      "bytes": 4659,
+      "file": "board-preflight.json",
+      "sha256": "e028225aede767f632e81be2d4a004479882190cfb402613c3e09f2554e15a62"
+    },
+    {
+      "bytes": 3851,
+      "file": "operational-resume.json",
+      "sha256": "e24e120f2e2bfd83f685d34c5b18b8afc193005eb512b522a45336947901e39a"
+    }
+  ],
+  "non_claims": [
+    "this_gate_does_not_reopen_expired_pilot_windows",
+    "this_gate_does_not_use_snapshot_as_operational_authorization",
+    "this_gate_does_not_run_ssh_or_board_commands",
+    "this_gate_does_not_apply_or_rollback_player_runtime",
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "c18_operational_resume_ready",
+  "schema": "dadooh.c18.ota_operational_resume_snapshot.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}

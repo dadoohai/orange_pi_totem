@@ -524,11 +524,32 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(default_manifest["schema"], "dadooh.c18.ota_operational_resume_evidence.v1")
         self.assertFalse(default_manifest["passed"])
         self.assertEqual(default_manifest["result_claim"], "c18_operational_resume_blocked")
+        resume_refresh_dir = (
+            REPO_ROOT
+            / "docs/evidence/c18-update-validation/"
+            / "20260618T082930Z-operational-resume-refresh-8541841-9bebaf1"
+        )
+        resume_refresh = json.loads((resume_refresh_dir / "operational-resume.json").read_text(encoding="utf-8"))
+        self.assertTrue(resume_refresh["passed"])
+        self.assertEqual(resume_refresh["result_claim"], "c18_operational_resume_ready")
+        self.assertEqual(resume_refresh["blockers"], [])
+        self.assertTrue(resume_refresh["checks"]["repo_clean"]["passed"])
+        self.assertTrue(resume_refresh["checks"]["tracked_inputs"]["passed"])
+        self.assertEqual(
+            resume_refresh["checks"]["current_board_preflight"]["preflight_path"],
+            "docs/evidence/c18-update-validation/20260618T082930Z-operational-resume-refresh-8541841-9bebaf1/board-preflight.json",
+        )
+        resume_refresh_manifest = json.loads((resume_refresh_dir / "evidence-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(resume_refresh_manifest["schema"], "dadooh.c18.ota_operational_resume_snapshot.v1")
+        self.assertTrue(resume_refresh_manifest["passed"])
+        self.assertEqual(resume_refresh_manifest["result_claim"], "c18_operational_resume_ready")
 
         default_dir_name = default_blocked_dir.name
+        refresh_dir_name = resume_refresh_dir.name
         for doc_path in (UPDATE_AUTHORIZATION_HEALTH_PATH, DOC189_PATH, DOC192_PATH):
             doc = doc_path.read_text(encoding="utf-8")
             self.assertIn(default_dir_name, doc)
+            self.assertIn(refresh_dir_name, doc)
             self.assertNotIn("O snapshot corrente de retomada operacional pos-P0 esta verde", doc)
             self.assertNotIn("O snapshot corrente pos-P0 esta\nversionado", doc)
 
@@ -1207,6 +1228,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
             "20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1",
+            "20260618T082930Z-operational-resume-refresh-8541841-9bebaf1",
             "repo_clean=true",
             "tracked_inputs=true",
         ):

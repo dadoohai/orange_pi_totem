@@ -240,11 +240,15 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_operational_resume_gate.py 
 ```
 
 Resultado esperado para operar: `passed=true`,
-`result_claim=c18_operational_resume_ready`. O snapshot verde pos-P0
+`result_claim=c18_operational_resume_ready`. O snapshot verde pos-P0 inicial
 `docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`
 fica historico da janela em que passou com macro, autorizacao, preflight fresco,
-arvore limpa e inputs rastreados. Esse snapshot nao reabre operacao depois de
-pausa, reboot, passagem de dias ou mudanca de estado da placa.
+arvore limpa e inputs rastreados. O refresh operacional
+`docs/evidence/c18-update-validation/20260618T082930Z-operational-resume-refresh-8541841-9bebaf1/`
+renovou o preflight `pre_apply` read-only da placa e passou novamente com
+`c18_operational_resume_ready`, `repo_clean=true` e `tracked_inputs=true`. Esses
+snapshots nao reabrem operacao depois de pausa, reboot, passagem de dias ou
+mudanca de estado da placa.
 
 O estado default atual esta bloqueado em
 `docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1/`

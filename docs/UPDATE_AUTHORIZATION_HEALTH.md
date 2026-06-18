@@ -76,11 +76,15 @@ O agregador pre-soak
 snapshot negativo stable/thaw pre-H2 e exige que ele continue bloqueado, sem
 diretorio de drafts e sem stable/thaw autorizados.
 
-O snapshot de retomada operacional pos-P0
+O snapshot de retomada operacional pos-P0 inicial
 `docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`
 fica historico da janela em que macro, autorizacao, preflight fresco da placa,
-arvore limpa e inputs rastreados estavam aceitos. O estado default atual apos
-pausa/reboot/passagem de dias esta versionado em
+arvore limpa e inputs rastreados estavam aceitos. O refresh operacional
+`docs/evidence/c18-update-validation/20260618T082930Z-operational-resume-refresh-8541841-9bebaf1/`
+renovou o preflight `pre_apply` read-only da placa, manteve a mesma autorizacao
+sanitizada vigente e voltou a passar com `c18_operational_resume_ready`,
+`repo_clean=true` e `tracked_inputs=true`. O estado default atual sem insumos
+continua versionado em
 `docs/evidence/c18-update-validation/20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1/`
 e bloqueia corretamente sem autorizacao/preflight atuais. Antes de qualquer nova
 acao assistida, coletar nova autorizacao/preflight e rodar
