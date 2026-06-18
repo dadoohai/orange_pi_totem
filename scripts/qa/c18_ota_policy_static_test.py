@@ -502,6 +502,28 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("authorization_window_expired", gate)
         self.assertIn("c18_ota_operational_resume_gate", release_gate)
 
+        default_blocked_dir = (
+            REPO_ROOT
+            / "docs/evidence/c18-update-validation/"
+            / "20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1"
+        )
+        default_summary = json.loads((default_blocked_dir / "operational-resume.json").read_text(encoding="utf-8"))
+        self.assertFalse(default_summary["passed"])
+        self.assertEqual(default_summary["result_claim"], "c18_operational_resume_blocked")
+        self.assertIn("current_pilot_authorization:current_pilot_authorization_missing", default_summary["blockers"])
+        self.assertIn("current_board_preflight:current_board_preflight_missing", default_summary["blockers"])
+        default_manifest = json.loads((default_blocked_dir / "evidence-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(default_manifest["schema"], "dadooh.c18.ota_operational_resume_evidence.v1")
+        self.assertFalse(default_manifest["passed"])
+        self.assertEqual(default_manifest["result_claim"], "c18_operational_resume_blocked")
+
+        default_dir_name = default_blocked_dir.name
+        for doc_path in (UPDATE_AUTHORIZATION_HEALTH_PATH, DOC189_PATH, DOC192_PATH):
+            doc = doc_path.read_text(encoding="utf-8")
+            self.assertIn(default_dir_name, doc)
+            self.assertNotIn("O snapshot corrente de retomada operacional pos-P0 esta verde", doc)
+            self.assertNotIn("O snapshot corrente pos-P0 esta\nversionado", doc)
+
     def test_pre_soak_scale_governance_gate_is_wired(self) -> None:
         gate = PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH.read_text(encoding="utf-8")
         release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
@@ -612,8 +634,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("ALLOW_C18_STABLE_PROMOTION", script)
             self.assertIn("c18_stable_promotion_gate.py", script)
             self.assertIn("stable promotion evidence failed", script)
+            self.assertIn("--stable-h1-release-gate-summary", script)
             self.assertIn("--stable-release-gate-summary", script)
             self.assertIn("--stable-server-side-evidence", script)
+            self.assertIn("--stable-server-side-current-dir", script)
             self.assertIn("--stable-server-side-trusted-key-pem", script)
             self.assertIn("--stable-server-side-trust-anchor-evidence", script)
             self.assertIn("--stable-soak-summary", script)
@@ -623,6 +647,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             self.assertIn("--stable-expect-image-sha256", script)
             self.assertIn("--stable-expect-image-marker-sha256", script)
         self.assertIn("--stable-promotion-evidence", build)
+        self.assertIn("--h1-release-gate-summary", build)
+        self.assertIn("--server-side-current-dir", build)
         self.assertIn("c18-stable-promotion-evidence.json", publish)
         self.assertIn("stable_promotion_evidence_sha256", publish)
         self.assertIn("stable evidence sha256 mismatch", publish)
@@ -638,6 +664,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("publish assets could not be assembled from validated evidence", publish)
         self.assertIn("publish_assets  =", publish)
         self.assertIn("stable release gate summary sha256 mismatch after generation", publish)
+        self.assertIn("--h1-release-gate-summary", publish)
+        self.assertIn("--server-side-current-dir", publish)
         self.assertIn("stable_server_side_assets =", publish)
         self.assertIn('log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"', publish)
         asset_collect = SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH.read_text(encoding="utf-8")
@@ -792,6 +820,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
             powerloss_dir = root / "powerloss"
             powerloss_dir.mkdir()
+            server_side_current = root / "server-side-current"
+            server_side_current.mkdir()
             soak = root / "soak.json"
             thaw = root / "thaw.json"
             soak.write_text("{}", encoding="utf-8")
@@ -800,6 +830,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             stub_dir = root / "stubs"
             stub_dir.mkdir()
             gh_capture = root / "gh-argv.bin"
+            stable_gate_capture = root / "stable-gate-argv.bin"
             (stub_dir / "gh").write_text(
                 """#!/usr/bin/env bash
 set -euo pipefail
@@ -837,6 +868,7 @@ exec "$C18_REAL_GIT" "$@"
 set -euo pipefail
 case "${1:-}" in
   */scripts/qa/c18_stable_promotion_gate.py)
+    printf '%s\\0' "$@" > "$C18_STABLE_GATE_CAPTURE"
     exit 0
     ;;
   */scripts/qa/c18_ota_release_gate.py)
@@ -855,6 +887,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             env.update({
                 "ALLOW_C18_STABLE_PROMOTION": "1",
                 "C18_GH_CAPTURE": str(gh_capture),
+                "C18_STABLE_GATE_CAPTURE": str(stable_gate_capture),
                 "C18_REAL_GIT": str(real_git),
                 "C18_REAL_PYTHON3": str(real_python3),
                 "C18_RELEASE_GATE_FIXTURE": str(release_gate),
@@ -871,10 +904,14 @@ exec "$C18_REAL_PYTHON3" "$@"
                     "HEAD",
                     "--repo",
                     "example.invalid/repo",
+                    "--stable-h1-release-gate-summary",
+                    str(release_gate),
                     "--stable-release-gate-summary",
                     str(release_gate),
                     "--stable-server-side-evidence",
                     str(evidence_path),
+                    "--stable-server-side-current-dir",
+                    str(server_side_current),
                     "--stable-server-side-trusted-key-pem",
                     str(public_key),
                     "--stable-server-side-trust-anchor-evidence",
@@ -900,6 +937,13 @@ exec "$C18_REAL_PYTHON3" "$@"
             )
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             self.assertTrue(gh_capture.is_file(), msg=result.stdout + result.stderr)
+            self.assertTrue(stable_gate_capture.is_file(), msg=result.stdout + result.stderr)
+
+            stable_gate_argv = [part.decode() for part in stable_gate_capture.read_bytes().split(b"\0") if part]
+            self.assertIn("--h1-release-gate-summary", stable_gate_argv)
+            self.assertIn(str(release_gate), stable_gate_argv)
+            self.assertIn("--server-side-current-dir", stable_gate_argv)
+            self.assertIn(str(server_side_current), stable_gate_argv)
 
             argv = [part.decode() for part in gh_capture.read_bytes().split(b"\0") if part]
             self.assertEqual(argv[:2], ["release", "create"])
@@ -3019,12 +3063,16 @@ exec "$C18_REAL_PYTHON3" "$@"
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("totem_config_contract_self_test", gate)
         self.assertIn("PLAYER_RUNTIME_DIFF_PATHS", gate)
+        self.assertIn("KIOSKY_PLAYER_DIFF_PATHS", gate)
         self.assertIn("RESPONSIBILITY_MATRIX_DIFF_PATHS", gate)
         self.assertIn("SYSTEM_IMAGE_DIFF_PATHS", gate)
         self.assertIn("MEDIA_SYSTEM_DIFF_PATHS", gate)
         self.assertIn("FIELD_DATA_DIFF_PATHS", gate)
         self.assertIn('"releases/player-runtime/"', gate)
         self.assertIn('"releases/app-updates/"', gate)
+        self.assertIn('"scripts/deploy/build_kiosky_player_release_package.sh"', gate)
+        self.assertIn('"scripts/deploy/publish_kiosky_player_github_release.sh"', gate)
+        self.assertIn('"scripts/remote/deploy_kiosky_player.sh"', gate)
         self.assertIn('"releases/image-lab-readonly/"', gate)
         self.assertIn('"releases/installable-rc/"', gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
@@ -3087,6 +3135,9 @@ exec "$C18_REAL_PYTHON3" "$@"
                 legacy_app_release = root / "releases" / "app-updates" / "legacy" / "manifest.json"
                 legacy_app_release.parent.mkdir(parents=True, exist_ok=True)
                 legacy_app_release.write_text("{}\n", encoding="utf-8")
+                legacy_app_build = root / "scripts" / "deploy" / "build_kiosky_player_release_package.sh"
+                legacy_app_build.parent.mkdir(parents=True, exist_ok=True)
+                legacy_app_build.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 image_path = root / "scripts" / "board" / "totem_updatectl.py"
                 image_path.write_text("print('image')\n", encoding="utf-8")
                 image_release = root / "releases" / "image-lab-readonly" / "image.txt"
@@ -3105,7 +3156,8 @@ exec "$C18_REAL_PYTHON3" "$@"
                 result = gate.responsibility_matrix_diff_guard(base)
                 self.assertFalse(result["passed"])
                 self.assertIn("player-runtime:releases/player-runtime/candidate/manifest.json", result["stdout_tail"])
-                self.assertIn("player-runtime:releases/app-updates/legacy/manifest.json", result["stdout_tail"])
+                self.assertIn("kiosky-player:releases/app-updates/legacy/manifest.json", result["stdout_tail"])
+                self.assertIn("kiosky-player:scripts/deploy/build_kiosky_player_release_package.sh", result["stdout_tail"])
                 self.assertIn("system-image:scripts/board/totem_updatectl.py", result["stdout_tail"])
                 self.assertIn("system-image:releases/image-lab-readonly/image.txt", result["stdout_tail"])
                 self.assertIn("system-image:releases/installable-rc/image.txt", result["stdout_tail"])

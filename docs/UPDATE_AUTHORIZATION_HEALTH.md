@@ -76,12 +76,15 @@ O agregador pre-soak
 snapshot negativo stable/thaw pre-H2 e exige que ele continue bloqueado, sem
 diretorio de drafts e sem stable/thaw autorizados.
 
-O snapshot corrente de retomada operacional pos-P0 esta verde em
-`docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`:
-macro aceito, autorizacao ainda dentro da janela, preflight fresco da placa,
-arvore limpa e inputs rastreados. Ele prova somente essa janela operacional; se
-a janela expirar ou o estado da placa mudar, coletar nova autorizacao/preflight
-antes de qualquer nova acao assistida.
+O snapshot de retomada operacional pos-P0
+`docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`
+fica historico da janela em que macro, autorizacao, preflight fresco da placa,
+arvore limpa e inputs rastreados estavam aceitos. O estado default atual apos
+pausa/reboot/passagem de dias esta versionado em
+`docs/evidence/c18-update-validation/20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1/`
+e bloqueia corretamente sem autorizacao/preflight atuais. Antes de qualquer nova
+acao assistida, coletar nova autorizacao/preflight e rodar
+`scripts/qa/c18_ota_operational_resume_gate.py`.
 
 O piloto controlado, quando liberado, autoriza somente entrega assistida por
 operador, com rollback pronto, allowlist de devices, preflight de placa, H1

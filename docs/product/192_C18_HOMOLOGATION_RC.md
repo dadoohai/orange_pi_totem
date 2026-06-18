@@ -234,12 +234,16 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_operational_resume_gate.py 
 ```
 
 Resultado esperado para operar: `passed=true`,
-`result_claim=c18_operational_resume_ready`. O snapshot corrente pos-P0 esta
-versionado em
+`result_claim=c18_operational_resume_ready`. O snapshot verde pos-P0
 `docs/evidence/c18-update-validation/20260618T044700Z-operational-resume-current-after-pilot-p0-9bebaf1/`
-e passou com macro, autorizacao, preflight fresco, arvore limpa e inputs
-rastreados. Esse snapshot prova somente a janela em que foi avaliado; se a
-janela expirar ou o estado da placa mudar, coletar nova autorizacao/preflight.
+fica historico da janela em que passou com macro, autorizacao, preflight fresco,
+arvore limpa e inputs rastreados. Esse snapshot nao reabre operacao depois de
+pausa, reboot, passagem de dias ou mudanca de estado da placa.
+
+O estado default atual esta bloqueado em
+`docs/evidence/c18-update-validation/20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1/`
+sem autorizacao/preflight atuais. Para retomar, coletar nova
+autorizacao/preflight e rodar o gate novamente.
 
 Com a autorizacao/preflight antigos, o resultado correto em 2026-06-16 e
 vermelho:

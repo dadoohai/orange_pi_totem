@@ -213,13 +213,18 @@ TOTEM_CORE_ALLOWED_TAR_FILES = {
 }
 PLAYER_RUNTIME_DIFF_PATHS = {
     "releases/player-runtime/",
-    "releases/app-updates/",
     "scripts/board/kiosky_service_launcher.sh",
     "scripts/board/totem-kiosky-launcher.sh",
     "scripts/board/kiosky-player.service",
     "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
     "player-runtime/kiosky-player/kiosk.py",
     "player-runtime/kiosky-player/SOURCE.json",
+}
+KIOSKY_PLAYER_DIFF_PATHS = {
+    "releases/app-updates/",
+    "scripts/deploy/build_kiosky_player_release_package.sh",
+    "scripts/deploy/publish_kiosky_player_github_release.sh",
+    "scripts/remote/deploy_kiosky_player.sh",
 }
 SYSTEM_IMAGE_DIFF_PATHS = {
     "releases/image-lab-readonly/",
@@ -255,6 +260,7 @@ FIELD_DATA_DIFF_PATHS = {
 }
 RESPONSIBILITY_MATRIX_DIFF_PATHS = {
     "player-runtime": PLAYER_RUNTIME_DIFF_PATHS,
+    "kiosky-player": KIOSKY_PLAYER_DIFF_PATHS,
     "system-image": SYSTEM_IMAGE_DIFF_PATHS,
     "media-system": MEDIA_SYSTEM_DIFF_PATHS,
     "field-data": FIELD_DATA_DIFF_PATHS,

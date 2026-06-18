@@ -139,7 +139,7 @@ autorizacao antes de aplicar em placa ou cliente.
 O agregador `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` fecha a
 visao estatica pre-soak para escala: responsabilidade das frentes C18,
 server-side atual, snapshot H2 ainda vermelho, preflight H2 power-loss da placa
-snapshot stable/thaw bloqueado sem escrever drafts e retomada operacional
+snapshot, stable/thaw bloqueado sem escrever drafts e retomada operacional
 default-deny. Ele tambem nao autoriza producao, `stable`, auto-pull, public
 thaw, soak 24h nem matriz power-loss 17/17.
 

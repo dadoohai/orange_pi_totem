@@ -5,8 +5,9 @@
 #
 # Stable publishes are production-gated. They require
 # ALLOW_C18_STABLE_PROMOTION=1 plus artifact paths for release gate,
-# server-side evidence, server-side trusted key, server-side trust anchor, soak,
-# power-loss matrix, operator thaw decision, and expected image identity.
+# H1 release gate, server-side evidence/current snapshot, server-side trusted
+# key, server-side trust anchor, soak, power-loss matrix, operator thaw
+# decision, and expected image identity.
 
 set -euo pipefail
 
@@ -18,8 +19,10 @@ PRERELEASE=""
 BASE_REF="${C18_OTA_BASE_REF:-}"
 DRAFT=0
 MODE="publish"
+STABLE_H1_RELEASE_GATE_SUMMARY=""
 STABLE_RELEASE_GATE_SUMMARY=""
 STABLE_SERVER_SIDE_EVIDENCE=""
+STABLE_SERVER_SIDE_CURRENT_DIR=""
 STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE=""
 STABLE_SOAK_SUMMARY=""
 STABLE_OPERATOR_THAW_DECISION=""
@@ -45,10 +48,14 @@ while [[ $# -gt 0 ]]; do
     --title) shift; TITLE_OVERRIDE="${1:-}" ;;
     --base-ref=*) BASE_REF="${arg#*=}" ;;
     --base-ref) shift; BASE_REF="${1:-}" ;;
+    --stable-h1-release-gate-summary=*) STABLE_H1_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
+    --stable-h1-release-gate-summary) shift; STABLE_H1_RELEASE_GATE_SUMMARY="${1:-}" ;;
     --stable-release-gate-summary=*) STABLE_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
     --stable-release-gate-summary) shift; STABLE_RELEASE_GATE_SUMMARY="${1:-}" ;;
     --stable-server-side-evidence=*) STABLE_SERVER_SIDE_EVIDENCE="${arg#*=}" ;;
     --stable-server-side-evidence) shift; STABLE_SERVER_SIDE_EVIDENCE="${1:-}" ;;
+    --stable-server-side-current-dir=*) STABLE_SERVER_SIDE_CURRENT_DIR="${arg#*=}" ;;
+    --stable-server-side-current-dir) shift; STABLE_SERVER_SIDE_CURRENT_DIR="${1:-}" ;;
     --stable-server-side-trusted-key-pem=*) STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS+=( "${arg#*=}" ) ;;
     --stable-server-side-trusted-key-pem) shift; STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS+=( "${1:-}" ) ;;
     --stable-server-side-trust-anchor-evidence=*) STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE="${arg#*=}" ;;
@@ -136,11 +143,15 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1)"
   [[ -f "$STABLE_EVIDENCE" ]] \
     || die "stable channel requires $STABLE_EVIDENCE"
+  [[ -n "$STABLE_H1_RELEASE_GATE_SUMMARY" && -f "$STABLE_H1_RELEASE_GATE_SUMMARY" ]] \
+    || die "stable channel requires --stable-h1-release-gate-summary=<json>"
   [[ -n "$STABLE_RELEASE_GATE_SUMMARY" && -f "$STABLE_RELEASE_GATE_SUMMARY" ]] \
     || die "stable channel requires --stable-release-gate-summary=<json>"
   STABLE_RELEASE_GATE_SUMMARY_SHA="$(sha256sum "$STABLE_RELEASE_GATE_SUMMARY" | awk '{print $1}')"
   [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
     || die "stable channel requires --stable-server-side-evidence=<json>"
+  [[ -n "$STABLE_SERVER_SIDE_CURRENT_DIR" && -d "$STABLE_SERVER_SIDE_CURRENT_DIR" ]] \
+    || die "stable channel requires --stable-server-side-current-dir=<dir>"
   (( ${#STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]} > 0 )) \
     || die "stable channel requires at least one --stable-server-side-trusted-key-pem=<pem>"
   [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
@@ -157,8 +168,10 @@ if [[ "$CHANNEL" == "stable" ]]; then
   STABLE_GATE_CMD=(
     python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py"
     --evidence "$STABLE_EVIDENCE" \
+    --h1-release-gate-summary "$STABLE_H1_RELEASE_GATE_SUMMARY" \
     --release-gate-summary "$STABLE_RELEASE_GATE_SUMMARY" \
     --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
+    --server-side-current-dir "$STABLE_SERVER_SIDE_CURRENT_DIR" \
     --server-side-trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
     --soak-summary "$STABLE_SOAK_SUMMARY" \
     --operator-thaw-decision "$STABLE_OPERATOR_THAW_DECISION" \
