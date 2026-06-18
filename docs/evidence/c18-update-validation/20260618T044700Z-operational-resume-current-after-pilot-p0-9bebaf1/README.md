@@ -3,10 +3,18 @@
 Current operational inputs for resuming the assisted homologation pilot for
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`.
 
-This directory starts by recording the active pilot authorization and a fresh
-read-only board preflight. The operational resume gate result is recorded in a
-follow-up file after these inputs are committed and can be checked as tracked
-inputs.
+Result:
+
+- `operational-resume.json`: `passed=true`
+- `result_claim=c18_operational_resume_ready`
+- macro governance snapshot: accepted
+- current pilot authorization: accepted
+- fresh board preflight: accepted
+- repo clean and tracked inputs: accepted
+
+This proves only that the operator-assisted homologation pilot may be resumed
+within this evidence window. It does not extend the authorization window after
+expiry and does not replace a new preflight if board state changes.
 
 Non-claims:
 

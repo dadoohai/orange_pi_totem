@@ -1,0 +1,54 @@
+{
+  "schema": "dadooh.c18.ota_operational_resume_snapshot.v1",
+  "collected_at_utc": "2026-06-18T04:47:00Z",
+  "collection_repo_commit": "2b6ea041813363e1e6f28ceba3594318e6e075df",
+  "collection_repo_tree": "887cb4b06781df411c591e45fda8c19de2f49ec1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  },
+  "passed": true,
+  "result_claim": "c18_operational_resume_ready",
+  "blockers": [],
+  "non_claims": [
+    "this_gate_does_not_reopen_expired_pilot_windows",
+    "this_gate_does_not_use_snapshot_as_operational_authorization",
+    "this_gate_does_not_run_ssh_or_board_commands",
+    "this_gate_does_not_apply_or_rollback_player_runtime",
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness"
+  ],
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 989,
+      "sha256": "8a74df9d4da7992cf0e1f235a1b289089ca4a1eea3abeda39b357d878e8af3ca"
+    },
+    {
+      "file": "pilot-authorization.json",
+      "bytes": 916,
+      "sha256": "faca9839638bca41716a6df88f6c1151e3b64257ad6172045af060fc11a386e1"
+    },
+    {
+      "file": "board-preflight.json",
+      "bytes": 4217,
+      "sha256": "e938ca75ce46b35513a087712daf3ca7ae563916d8661054907e7403bb50aab0"
+    },
+    {
+      "file": "operational-resume.json",
+      "bytes": 4328,
+      "sha256": "0c9c2b6d2cc2bc38ba63f30f4af202a76a1068b550f330b2d2e6b75931a712bc"
+    }
+  ]
+}
