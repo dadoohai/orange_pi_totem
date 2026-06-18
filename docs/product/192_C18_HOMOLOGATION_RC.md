@@ -106,7 +106,7 @@ Evidencia principal:
 - snapshot macro versionado:
   o snapshot `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`
   fica historico de `c16fb3e`; o snapshot corrente
-  `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
+  `docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/`
   esta verde pre-H2 e aponta para o pilot readiness final pos-P0, sem liberar
   producao;
 - snapshot pre-soak scale governance:

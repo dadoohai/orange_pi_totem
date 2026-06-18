@@ -64,10 +64,13 @@ checkpoints P0 do piloto foram validados depois.
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
 read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
-historico e nao deve ser lido como RC atual. O snapshot corrente
+historico e nao deve ser lido como RC atual; o snapshot pos-P0 anterior
 `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
+tambem permanece historico. O snapshot corrente
+`docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/`
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
-segue verde pre-H2 sem liberar producao.
+para o diagnostico read-only pos-P0 da placa, e segue verde pre-H2 sem liberar
+producao.
 O agregador pre-soak
 `scripts/qa/c18_ota_pre_soak_scale_governance_gate.py` tambem consome o
 snapshot negativo stable/thaw pre-H2 e exige que ele continue bloqueado, sem

@@ -155,7 +155,7 @@ EVIDENCE_BOARD_READONLY_DIAGNOSTICS_DIR = (
     / "c18-update-validation"
     / "20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4"
 )
-EVIDENCE_MACRO_GOVERNANCE_SNAPSHOT = (
+EVIDENCE_HISTORICAL_MACRO_GOVERNANCE_SNAPSHOT = (
     REPO_ROOT
     / "docs"
     / "evidence"
@@ -466,7 +466,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "python3",
                 str(OPERATIONAL_RESUME_GATE_PATH),
                 "--macro-governance-summary",
-                str(EVIDENCE_MACRO_GOVERNANCE_SNAPSHOT),
+                str(EVIDENCE_HISTORICAL_MACRO_GOVERNANCE_SNAPSHOT),
                 "--authorization",
                 str(EVIDENCE_PILOT_AUTHORIZATION_TRACEABILITY),
                 "--preflight",
@@ -493,7 +493,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
         self.assertIn(
-            "docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/macro-governance.json",
+            "docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/macro-governance.json",
             gate,
         )
         self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
@@ -543,7 +543,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("macro_gate_blocker", gate)
-        self.assertIn("20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1", gate)
+        self.assertIn("20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
         self.assertIn("20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1", gate)
         self.assertIn("20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1", gate)
@@ -1064,6 +1064,12 @@ exec "$C18_REAL_PYTHON3" "$@"
         authorization_health = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertNotIn("release gate atual aceitou essa evidencia", authorization_health)
         self.assertNotIn("Esse e o marco decisivo de laboratorio para adocao", authorization_health)
+        self.assertIn("20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1", authorization_health)
+        self.assertIn("20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/", authorization_health)
+        self.assertNotIn(
+            "snapshot corrente\n`docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/",
+            authorization_health,
+        )
         self.assertIn("nao como autorizacao `decisive` corrente", authorization_health)
         self.assertIn("bundle M-6 decisivo lab-only atual de `player-runtime` em `/data`", authorization_health)
         self.assertIn(EVIDENCE_1X_M6_COLDBOOT_DIR_NAME, authorization_health)
