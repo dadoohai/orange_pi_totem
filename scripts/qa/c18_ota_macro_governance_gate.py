@@ -242,6 +242,38 @@ def repo_relative(path: Path) -> str | None:
         return None
 
 
+def server_side_asset_base(run_dir: Path) -> Path:
+    try:
+        run_dir.resolve(strict=False).relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        return run_dir.parent
+    return REPO_ROOT
+
+
+def validate_server_side_asset_record_files(run_dir: Path, asset_records: list[Any], blockers: list[str]) -> None:
+    base = server_side_asset_base(run_dir)
+    for index, item in enumerate(asset_records):
+        if not isinstance(item, dict):
+            continue
+        raw_path = item.get("path")
+        if (
+            not isinstance(raw_path, str)
+            or not raw_path
+            or raw_path.startswith("/")
+            or ".." in Path(raw_path).parts
+        ):
+            continue
+        path = base / raw_path
+        if path.is_symlink() or not path.is_file():
+            blockers.append(f"server_side_asset_record_file_missing_or_symlink:{raw_path}")
+            continue
+        if item.get("bytes") != path.stat().st_size:
+            blockers.append(f"server_side_asset_record_file_bytes_mismatch:{raw_path}")
+        actual_sha256 = sha256_file(path)
+        if item.get("sha256") != actual_sha256:
+            blockers.append(f"server_side_asset_record_file_sha256_mismatch:{raw_path}")
+
+
 def repo_clean_guard() -> dict[str, Any]:
     rc, lines, stderr = git_lines(["git", "status", "--porcelain", "--untracked-files=normal"])
     blockers: list[str] = []
@@ -713,6 +745,7 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
                     blockers.append("server_side_asset_record_sha256_invalid")
                 if not isinstance(item.get("bytes"), int) or item["bytes"] <= 0:
                     blockers.append("server_side_asset_record_bytes_invalid")
+            validate_server_side_asset_record_files(run_dir, asset_records, blockers)
         asset_non_claims = set(assets.get("non_claims") if isinstance(assets.get("non_claims"), list) else [])
         for claim in REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS:
             if claim not in asset_non_claims:
@@ -981,14 +1014,17 @@ def write_fixture(root: Path) -> argparse.Namespace:
             "this_gate_does_not_thaw_player_runtime",
         ],
     })
-    asset_records = [
-        {
+    release_dir = root / "release"
+    release_dir.mkdir()
+    asset_records = []
+    for index in range(14):
+        path = release_dir / f"asset-{index}.json"
+        write_json(path, {"fixture_asset": index})
+        asset_records.append({
             "path": f"release/asset-{index}.json",
-            "bytes": 100 + index,
-            "sha256": f"{index:064x}"[-64:],
-        }
-        for index in range(14)
-    ]
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        })
     write_json(server_side_dir / "server-side-asset-list.json", {
         "schema": SERVER_SIDE_ASSET_LIST_SCHEMA,
         "assets": [item["path"] for item in asset_records],
@@ -1183,6 +1219,18 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_current:server_side_file_sha256_mismatch:server-side-asset-list.json",
+            result["blockers"],
+        )
+
+    def test_server_side_asset_records_are_file_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = write_fixture(Path(tmp))
+            asset_path = Path(tmp) / "release" / "asset-0.json"
+            asset_path.write_text('{"tampered":true}\n', encoding="utf-8")
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current:server_side_asset_record_file_sha256_mismatch:release/asset-0.json",
             result["blockers"],
         )
 

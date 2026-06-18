@@ -246,6 +246,39 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def server_side_asset_base(run_dir: Path) -> Path:
+    try:
+        run_dir.resolve(strict=False).relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        return run_dir.parent
+    return REPO_ROOT
+
+
+def validate_server_side_asset_records(run_dir: Path, asset_records: list[Any], blockers: list[str]) -> None:
+    base = server_side_asset_base(run_dir)
+    for index, item in enumerate(asset_records):
+        if not isinstance(item, dict):
+            blockers.append(f"server_side_current_asset_record_not_object:{index}")
+            continue
+        raw_path = item.get("path")
+        if (
+            not isinstance(raw_path, str)
+            or not raw_path
+            or raw_path.startswith("/")
+            or ".." in Path(raw_path).parts
+        ):
+            blockers.append(f"server_side_current_asset_record_path_invalid:{index}")
+            continue
+        path = base / raw_path
+        if path.is_symlink() or not path.is_file():
+            blockers.append(f"server_side_current_asset_missing_or_symlink:{raw_path}")
+            continue
+        if item.get("bytes") != path.stat().st_size:
+            blockers.append(f"server_side_current_asset_bytes_mismatch:{raw_path}")
+        if item.get("sha256") != sha256_file(path):
+            blockers.append(f"server_side_current_asset_sha256_mismatch:{raw_path}")
+
+
 def run_json_command(name: str, cmd: list[str], *, expected_returncodes: set[int]) -> dict[str, Any]:
     proc = subprocess.run(
         cmd,
@@ -437,6 +470,8 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
         asset_records = assets.get("asset_records") if isinstance(assets.get("asset_records"), list) else []
         if len(asset_records) != 14:
             blockers.append("server_side_current_asset_count_not_14")
+        else:
+            validate_server_side_asset_records(run_dir, asset_records, blockers)
     return step(not blockers, blockers, run_dir=str(run_dir), result_claim=manifest.get("result_claim"))
 
 
@@ -958,9 +993,20 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             "result_claim": "server_side_publish_governance_ready",
             "blockers": [],
         })
+        asset_records = []
+        release_dir = root / "release"
+        release_dir.mkdir()
+        for idx in range(14):
+            path = release_dir / f"asset-{idx}.json"
+            write_json(path, {"fixture_asset": idx})
+            asset_records.append({
+                "path": f"release/asset-{idx}.json",
+                "sha256": sha256_file(path),
+                "bytes": path.stat().st_size,
+            })
         write_json(run_dir / "server-side-asset-list.json", {
             "schema": "dadooh.c18.server_side_publish_asset_list.v1",
-            "asset_records": [{"path": f"asset-{idx}", "sha256": "0" * 64} for idx in range(14)],
+            "asset_records": asset_records,
         })
         key_checks: dict[str, Any] = {name: True for name in REQUIRED_SERVER_SIDE_CURRENT_KEY_CHECKS}
         key_checks["asset_count"] = 14
@@ -1250,6 +1296,20 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_current_non_claim_missing:this_snapshot_does_not_enable_auto_pull",
+            result["blockers"],
+        )
+
+    def test_server_side_current_snapshot_rejects_tampered_asset_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_server_side_current_fixture(Path(tmp))
+            assets_path = run_dir / "server-side-asset-list.json"
+            assets = json.loads(assets_path.read_text(encoding="utf-8"))
+            assets["asset_records"][0]["sha256"] = "f" * 64
+            write_json(assets_path, assets)
+            result = evaluate_server_side_current(run_dir)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current_asset_sha256_mismatch:release/asset-0.json",
             result["blockers"],
         )
 

@@ -155,6 +155,39 @@ def repo_rel(path: Path) -> str | None:
         return None
 
 
+def server_side_asset_base(run_dir: Path) -> Path:
+    try:
+        run_dir.resolve(strict=False).relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        return run_dir.parent
+    return REPO_ROOT
+
+
+def validate_server_side_current_asset_records(run_dir: Path, asset_records: list[Any], blockers: list[str]) -> None:
+    base = server_side_asset_base(run_dir)
+    for index, item in enumerate(asset_records):
+        if not isinstance(item, dict):
+            blockers.append(f"server_side_current_asset_record_not_object:{index}")
+            continue
+        raw_path = item.get("path")
+        if (
+            not isinstance(raw_path, str)
+            or not raw_path
+            or raw_path.startswith("/")
+            or ".." in Path(raw_path).parts
+        ):
+            blockers.append(f"server_side_current_asset_record_path_invalid:{index}")
+            continue
+        path = base / raw_path
+        if path.is_symlink() or not path.is_file():
+            blockers.append(f"server_side_current_asset_missing_or_symlink:{raw_path}")
+            continue
+        if item.get("bytes") != path.stat().st_size:
+            blockers.append(f"server_side_current_asset_bytes_mismatch:{raw_path}")
+        if item.get("sha256") != sha256_file(path):
+            blockers.append(f"server_side_current_asset_sha256_mismatch:{raw_path}")
+
+
 def step(passed: bool, blockers: list[str], **details: Any) -> dict[str, Any]:
     return {
         "passed": passed,
@@ -597,6 +630,8 @@ def evaluate_server_side_current_snapshot(args: argparse.Namespace, *, expected_
         asset_records = assets.get("asset_records") if isinstance(assets.get("asset_records"), list) else []
         if len(asset_records) != 14:
             blockers.append("server_side_current_asset_count_not_14")
+        else:
+            validate_server_side_current_asset_records(run_dir, asset_records, blockers)
     return step(
         not blockers,
         blockers,
@@ -804,12 +839,20 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
         "result_claim": "server_side_publish_governance_ready",
         "blockers": [],
     })
+    release_dir = root / "release"
+    release_dir.mkdir()
+    asset_records = []
+    for index in range(14):
+        path = release_dir / f"asset-{index}.json"
+        write_json(path, {"fixture_asset": index})
+        asset_records.append({
+            "path": f"release/asset-{index}.json",
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        })
     write_json(server_side_current / "server-side-asset-list.json", {
         "schema": SERVER_SIDE_ASSET_LIST_SCHEMA,
-        "asset_records": [
-            {"path": f"release/asset-{index}.json", "bytes": 100 + index, "sha256": f"{index:064x}"[-64:]}
-            for index in range(14)
-        ],
+        "asset_records": asset_records,
     })
     trusted_key = root / "trusted-key.pub.pem"
     trust_anchor = root / "trust-anchor.json"
@@ -1147,6 +1190,22 @@ class StablePromotionGateSelfTest(unittest.TestCase):
                 semantics = evaluate_artifact_semantics(args)
         self.assertFalse(semantics["passed"])
         self.assertIn("server_side_governance:server_side_trusted_key_pem_missing", semantics["blockers"])
+
+    def test_server_side_current_asset_records_must_match_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            asset_path = Path(tmp) / "release" / "asset-0.json"
+            asset_path.write_text('{"tampered":true}\n', encoding="utf-8")
+            with (
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+                mock.patch(__name__ + ".evaluate_server_side_gate", return_value={"passed": True, "blockers": []}),
+            ):
+                semantics = evaluate_artifact_semantics(args)
+        self.assertFalse(semantics["passed"])
+        self.assertIn(
+            "server_side_current_snapshot:server_side_current_asset_sha256_mismatch:release/asset-0.json",
+            semantics["blockers"],
+        )
 
 
 def parse_args() -> argparse.Namespace:
