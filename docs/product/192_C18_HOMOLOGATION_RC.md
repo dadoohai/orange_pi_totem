@@ -328,15 +328,14 @@ versionada antes de aplicar em placa ou cliente.
 
 ## Proxima rodada
 
-1. Iniciar P0 fisico seletivo do alvo `9bebaf1` a partir da topologia
-   resetada e do preflight H2 aceito.
-2. Recoletar preflight H2 antes da sessao fisica se a janela de frescor expirar
-   ou se o estado da placa mudar.
-3. Fechar P0 seletivo (`after_current_symlink` e quatro rollback checkpoints)
-   antes de qualquer piloto assistido.
+1. Executar piloto assistido somente dentro de autorizacao/preflight atuais e
+   frescos, com rollback owner definido e evidencia commitada.
+2. Antes de qualquer nova sessao fisica, recoletar preflight H2 se a janela de
+   frescor expirar ou se o estado da placa mudar.
+3. Abrir H2 completo apenas depois do piloto: 17/17 power-loss, soak 24h,
+   stable promotion e decisao formal de thaw.
 4. Preservar evidencia de apply, health, rollback e qualquer incidente.
-5. Depois do piloto, abrir H2 completo: 17/17 power-loss, soak 24h, stable
-   promotion e decisao formal de thaw.
+5. Manter `stable`, producao, auto-pull e public thaw bloqueados ate H2 verde.
 
 Nota pos-RC: a familia server-side/signature passa por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida

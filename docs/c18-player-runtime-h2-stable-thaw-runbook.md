@@ -32,7 +32,7 @@ sem commit nao deve ser usada para H2/stable.
 
 No desenho C18 atual, nao gerar manifest `player-runtime channel=stable`. O alvo
 de pacote continua sendo o release homologation validado, por exemplo
-`c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e`. `stable` aparece
+`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`. `stable` aparece
 nos artefatos de promocao, decisao e policy, nao como manifest stable do
 `player-runtime`.
 
@@ -67,12 +67,12 @@ os rascunhos:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_stable_decision_draft_build.py \
-  --output-dir docs/evidence/c18-update-validation/<utc>-h2-stable-thaw-drafts-c16fb3e \
+  --output-dir docs/evidence/c18-update-validation/<utc>-h2-stable-thaw-drafts-9bebaf1 \
   --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
-  --release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json \
-  --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
-  --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
-  --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
+  --release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json \
+  --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json \
+  --server-side-current-dir docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1 \
+  --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-01> \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-02> \
@@ -146,9 +146,9 @@ maximo 4h:
   "thaw_execution_performed": false,
   "operator": "<operator-id>",
   "rollback_owner": "<rollback-owner-id>",
-  "target_package_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
-  "target_source_commit": "c16fb3ed01f0ce25c8203e5fe1d60baf60a75749",
-  "target_payload_sha256": "<payload-sha256>",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
   "h1_release_gate_sha256": "<sha256>",
   "release_gate_sha256": "<sha256>",
   "powerloss_matrix_sha256": "<sha256>",
@@ -180,11 +180,11 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_stable_promotion_gate.py \
   --expected-component player-runtime \
   --evidence docs/evidence/c18-update-validation/<final-dir>/c18-stable-promotion-evidence.json \
   --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
-  --release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json \
-  --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
-  --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
-  --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem \
-  --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
+  --release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json \
+  --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json \
+  --server-side-current-dir docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1 \
+  --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-release-signing-key.pub.pem \
+  --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-01> \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<...17-checkpoints...> \
@@ -200,15 +200,15 @@ H2 readiness:
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_player_runtime_h2_readiness_gate.py \
   --h1-release-gate-summary docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json \
-  --player-runtime-release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-player-runtime-release-gate.json \
+  --player-runtime-release-gate-summary releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<checkpoint-01> \
   --powerloss-evidence-dir docs/evidence/c18-update-validation/<...17-checkpoints...> \
   --soak-summary docs/evidence/c18-update-validation/<soak-24h-dir>/soak-summary.json \
   --stable-promotion-evidence docs/evidence/c18-update-validation/<final-dir>/c18-stable-promotion-evidence.json \
-  --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e/c18-server-side-publish-governance.json \
-  --server-side-current-dir docs/evidence/c18-update-validation/20260617T001804Z-server-side-current-c16fb3e \
-  --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-release-signing-key.pub.pem \
-  --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260612T125127Z-server-side-governance-c16fb3e/c18-server-side-trust-anchor.json \
+  --server-side-evidence releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json \
+  --server-side-current-dir docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1 \
+  --server-side-trusted-key-pem docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-release-signing-key.pub.pem \
+  --server-side-trust-anchor-evidence docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json \
   --operator-thaw-decision docs/evidence/c18-update-validation/<final-dir>/c18-player-runtime-thaw-decision.json \
   --expect-image-tag c18-hwdecode-lab-1x \
   --expect-image-sha256 1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2 \
