@@ -451,7 +451,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_macro_governance_gate.v1", gate)
         self.assertIn("c18_homologation_governance_ready_pre_h2", gate)
         self.assertIn("20260618T041500Z-pilot-readiness-final-9bebaf1", gate)
-        self.assertIn("20260618T072806Z-current-h2-readiness-head-3458cba-9bebaf1", gate)
+        self.assertIn("20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1", gate)
         self.assertIn("this_gate_does_not_reopen_expired_pilot_windows", gate)
         self.assertIn("snapshot_only", gate)
         self.assertIn("EXPECTED_H2_BLOCKERS", gate)
@@ -1194,7 +1194,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260618T072806Z-current-h2-readiness-head-3458cba-9bebaf1",
+            "20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1",
             "repo_clean=true",
             "tracked_inputs=true",
         ):
@@ -2888,7 +2888,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1",
-            "20260618T072806Z-current-h2-readiness-head-3458cba-9bebaf1",
+            "20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1",
             "20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
             "20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
             "20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1",
