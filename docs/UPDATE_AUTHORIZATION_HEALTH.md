@@ -85,7 +85,7 @@ read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
 historico e nao deve ser lido como RC atual; o snapshot pos-P0 anterior
 `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
 tambem permanece historico. O snapshot corrente
-`docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/`
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
 para o diagnostico read-only pos-P0 da placa, e segue verde pre-H2 sem liberar
 producao.
@@ -114,7 +114,7 @@ decisivo image-bound e P0 power-loss seletivo. Ele nao autoriza producao,
 `stable`, auto-pull, thaw publico, soak 24h, power-loss 17/17 nem pular H2.
 O diagnostico operacional read-only tambem esta versionado em snapshot fresco
 pos-P0:
-`docs/evidence/c18-update-validation/20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4/`;
+`docs/evidence/c18-update-validation/20260618T084958Z-board-readonly-diagnostics-current-d0a11c7-9bebaf1/`;
 a evidencia historica
 `docs/evidence/c18-update-validation/20260612T183722Z-board-readonly-diagnostics-17a1f9d/`
 permanece rastreavel:

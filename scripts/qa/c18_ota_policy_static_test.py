@@ -501,7 +501,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
         self.assertIn(
-            "docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json",
+            "docs/evidence/c18-update-validation/20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/macro-governance.json",
             gate,
         )
         self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
@@ -599,7 +599,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("macro_gate_blocker", gate)
-        self.assertIn("20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1", gate)
+        self.assertIn("20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
         self.assertIn("20260618T095819Z-h2-powerloss-board-preflight-after-target-health-9bebaf1", gate)
         self.assertIn("20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1", gate)
@@ -654,7 +654,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1", pilot_runbook)
         self.assertIn("9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522", pilot_runbook)
         self.assertIn(
-            "20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json",
+            "20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/macro-governance.json",
             pilot_runbook,
         )
         self.assertNotIn("source-commit c16fb3ed01f0ce25c8203e5fe1d60baf60a75749", pilot_runbook)
@@ -1167,7 +1167,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         authorization_health = UPDATE_AUTHORIZATION_HEALTH_PATH.read_text(encoding="utf-8")
         self.assertNotIn("release gate atual aceitou essa evidencia", authorization_health)
         self.assertNotIn("Esse e o marco decisivo de laboratorio para adocao", authorization_health)
-        self.assertIn("20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1", authorization_health)
+        self.assertIn("20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1", authorization_health)
         self.assertIn("20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/", authorization_health)
         self.assertNotIn(
             "snapshot corrente\n`docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/",

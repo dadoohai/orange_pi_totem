@@ -120,7 +120,7 @@ DEFAULT_H2_READINESS = (
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
