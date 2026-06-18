@@ -86,6 +86,7 @@ def status_has_failure(row: dict[str, str], target_mode: str) -> bool:
         return True
     if not isinstance(data, dict):
         return True
+    snapshot_state = str(data.get("playback_state") or state).lower()
     if as_int(data.get("consecutive_failures")) > 0:
         return True
     if as_int(data.get("blocked_media_count")) > 0:
@@ -97,6 +98,12 @@ def status_has_failure(row: dict[str, str], target_mode: str) -> bool:
             and key == "last_poll_error"
             and isinstance(value, str)
             and "polling_disabled" in value
+        ):
+            continue
+        if (
+            target_mode == "candidate"
+            and key == "black_screen_risk_reason"
+            and snapshot_state == "player_starting"
         ):
             continue
         if value not in (None, "", "null", False):

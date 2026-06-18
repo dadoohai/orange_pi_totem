@@ -25,6 +25,7 @@ sys.path.insert(0, str(BOARD_DIR))
 sys.path.insert(0, str(QA_DIR))
 
 import c18_player_runtime_release_gate as release_gate
+import c18_playback_health_summary as playback_health
 import totem_updatectl as updatectl
 
 
@@ -39,11 +40,13 @@ RESET_SCOPES = {
     "p0_setup_contention_retry",
     "lab_no_canary_retry",
     "lab_harness_ipc_drm_retry",
+    "lab_candidate_startup_status_retry",
 }
 ALLOWED_QUARANTINE_REASONS = {"physical_powerloss_trial"}
 SETUP_CONTENTION_SCOPE = "p0_setup_contention_retry"
 NO_CANARY_SCOPE = "lab_no_canary_retry"
 HARNESS_IPC_DRM_SCOPE = "lab_harness_ipc_drm_retry"
+STARTUP_STATUS_SCOPE = "lab_candidate_startup_status_retry"
 SETUP_CONTENTION_FAILURE_REASONS = {
     "hwdec_expected_present",
     "vo_configured_present",
@@ -74,6 +77,7 @@ HARNESS_IPC_DRM_FAILURE_REASONS = {
     "status_no_failures",
     "vo_configured_present",
 }
+STARTUP_STATUS_FAILURE_REASONS = {"status_no_failures"}
 
 
 def path_is_under(path: Path, root: Path) -> bool:
@@ -388,12 +392,106 @@ def harness_ipc_drm_retry_evidence(candidate_health_dir: Path | None, identity: 
     return not blockers, blockers, details
 
 
+def startup_status_retry_evidence(candidate_health_dir: Path | None, identity: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["startup_status_retry_evidence_missing"], details
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    status_samples_path = candidate_health_dir / "health" / "status-samples.ndjson"
+    try:
+        result = read_json(result_path)
+    except Exception as exc:
+        return False, [f"startup_status_retry_result_read_failed:{type(exc).__name__}"], details
+    try:
+        status_lines = [
+            json.loads(line)
+            for line in status_samples_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    except Exception as exc:
+        return False, [f"startup_status_retry_status_read_failed:{type(exc).__name__}"], details
+    try:
+        reevaluated = playback_health.evaluate(
+            samples_path=candidate_health_dir / "health" / "playback-samples.tsv",
+            systemd_path=candidate_health_dir / "health" / "deep-health-systemd.json",
+            process_path=candidate_health_dir / "health" / "deep-health-process.json",
+            kernel_path=candidate_health_dir / "health" / "deep-health-kernel.json",
+            player_counters_path=candidate_health_dir / "health" / "deep-health-player-counters.json",
+        )
+    except Exception as exc:
+        return False, [f"startup_status_retry_reevaluate_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    false_checks = sorted(key for key, value in checks.items() if value is False)
+    first_status = (
+        status_lines[0].get("status")
+        if status_lines and isinstance(status_lines[0], dict) and isinstance(status_lines[0].get("status"), dict)
+        else {}
+    )
+    remaining_statuses = [
+        item.get("status")
+        for item in status_lines[1:]
+        if isinstance(item, dict) and isinstance(item.get("status"), dict)
+    ]
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "false_checks": false_checks,
+        "status_failure_samples": counters.get("status_failure_samples"),
+        "first_playback_state": first_status.get("playback_state"),
+        "first_black_screen_risk_reason": first_status.get("black_screen_risk_reason"),
+        "reevaluated_passed": reevaluated.get("passed"),
+        "reevaluated_failure_reasons": reevaluated.get("failure_reasons"),
+        "total_mpv_count": counters.get("total_mpv_count"),
+        "mpv_count": counters.get("mpv_count"),
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("startup_status_retry_candidate_version_mismatch")
+    if result.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+        blockers.append("startup_status_retry_kiosk_identity_mismatch")
+    if result.get("observed_tree_sha256") != identity.get("tree_sha256"):
+        blockers.append("startup_status_retry_tree_identity_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("startup_status_retry_result_not_failed")
+    if failures != STARTUP_STATUS_FAILURE_REASONS:
+        blockers.append("startup_status_retry_failure_reasons_mismatch")
+    if false_checks != ["status_no_failures"]:
+        blockers.append("startup_status_retry_false_checks_mismatch")
+    if int(counters.get("status_failure_samples") or 0) != 1:
+        blockers.append("startup_status_retry_status_failure_count")
+    if first_status.get("playback_state") != "player_starting":
+        blockers.append("startup_status_retry_first_state_not_starting")
+    if first_status.get("black_screen_risk_reason") in (None, "", "null", False):
+        blockers.append("startup_status_retry_first_black_screen_marker_missing")
+    if int(first_status.get("consecutive_failures") or 0) != 0:
+        blockers.append("startup_status_retry_first_consecutive_failures")
+    if int(first_status.get("blocked_media_count") or 0) != 0:
+        blockers.append("startup_status_retry_first_blocked_media")
+    for status in remaining_statuses:
+        if status.get("black_screen_risk_reason") not in (None, "", "null", False):
+            blockers.append("startup_status_retry_later_black_screen_marker")
+            break
+    if int(counters.get("total_mpv_count") or 0) != 1 or int(counters.get("mpv_count") or 0) != 1:
+        blockers.append("startup_status_retry_not_single_mpv")
+    if int(counters.get("media_load_failed") or 0) != 0:
+        blockers.append("startup_status_retry_media_load_failed")
+    if int(counters.get("mpv_restart") or 0) != 0:
+        blockers.append("startup_status_retry_mpv_restart")
+    if reevaluated.get("passed") is not True:
+        blockers.append("startup_status_retry_reevaluated_not_passing")
+    return not blockers, blockers, details
+
+
 def quarantine_reason_allowed(entry: dict[str, Any],
                               *,
                               reset_scope: str,
                               setup_contention_ok: bool,
                               no_canary_retry_ok: bool,
-                              harness_ipc_drm_retry_ok: bool) -> bool:
+                              harness_ipc_drm_retry_ok: bool,
+                              startup_status_retry_ok: bool) -> bool:
     reason = str(entry.get("reason") or "")
     if reset_scope == SETUP_CONTENTION_SCOPE:
         return setup_contention_ok and set(reason.split(",")) == SETUP_CONTENTION_FAILURE_REASONS
@@ -401,6 +499,8 @@ def quarantine_reason_allowed(entry: dict[str, Any],
         return no_canary_retry_ok and set(reason.split(",")) == NO_CANARY_FAILURE_REASONS
     if reset_scope == HARNESS_IPC_DRM_SCOPE:
         return harness_ipc_drm_retry_ok and set(reason.split(",")) == HARNESS_IPC_DRM_FAILURE_REASONS
+    if reset_scope == STARTUP_STATUS_SCOPE:
+        return startup_status_retry_ok and set(reason.split(",")) == STARTUP_STATUS_FAILURE_REASONS
     return reason in ALLOWED_QUARANTINE_REASONS
 
 
@@ -410,13 +510,15 @@ def matches_target(entry: dict[str, Any],
                    reset_scope: str,
                    setup_contention_ok: bool,
                    no_canary_retry_ok: bool,
-                   harness_ipc_drm_retry_ok: bool) -> bool:
+                   harness_ipc_drm_retry_ok: bool,
+                   startup_status_retry_ok: bool) -> bool:
     return identity_matches_target(entry, identity) and quarantine_reason_allowed(
         entry,
         reset_scope=reset_scope,
         setup_contention_ok=setup_contention_ok,
         no_canary_retry_ok=no_canary_retry_ok,
         harness_ipc_drm_retry_ok=harness_ipc_drm_retry_ok,
+        startup_status_retry_ok=startup_status_retry_ok,
     )
 
 
@@ -508,6 +610,10 @@ def main(argv: list[str]) -> int:
         args.failed_candidate_health_dir,
         identity,
     ) if args.reset_scope == HARNESS_IPC_DRM_SCOPE else (False, [], {})
+    startup_status_ok, startup_status_blockers, startup_status_details = startup_status_retry_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == STARTUP_STATUS_SCOPE else (False, [], {})
     target_link = f"releases/{identity.get('version')}"
     active_links = [
         name
@@ -526,6 +632,7 @@ def main(argv: list[str]) -> int:
             setup_contention_ok=setup_ok,
             no_canary_retry_ok=no_canary_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
+            startup_status_retry_ok=startup_status_ok,
         )
     ]
     removed = [
@@ -536,6 +643,7 @@ def main(argv: list[str]) -> int:
             setup_contention_ok=setup_ok,
             no_canary_retry_ok=no_canary_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
+            startup_status_retry_ok=startup_status_ok,
         )
     ]
     blockers: list[str] = []
@@ -550,6 +658,7 @@ def main(argv: list[str]) -> int:
     blockers.extend(setup_blockers)
     blockers.extend(no_canary_blockers)
     blockers.extend(harness_ipc_drm_blockers)
+    blockers.extend(startup_status_blockers)
     if blockers:
         still_quarantined, quarantine_reason = updatectl._player_runtime_is_quarantined(identity, state)
         after_snapshot = runtime_snapshot()
@@ -570,6 +679,7 @@ def main(argv: list[str]) -> int:
             "setup_contention_evidence": setup_details,
             "no_canary_retry_evidence": no_canary_details,
             "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
+            "startup_status_retry_evidence": startup_status_details,
             "still_quarantined": still_quarantined,
             "quarantine_reason": quarantine_reason,
             "links_unchanged": (
@@ -681,6 +791,7 @@ def main(argv: list[str]) -> int:
         "setup_contention_evidence": setup_details,
         "no_canary_retry_evidence": no_canary_details,
         "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
+        "startup_status_retry_evidence": startup_status_details,
         "reverted": reverted,
         "still_quarantined": still_quarantined,
         "quarantine_reason": quarantine_reason,

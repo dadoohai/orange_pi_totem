@@ -10,8 +10,9 @@ em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 C18 Homologation RC agora esta reancorada no alvo corrigido
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em
 `channel=homologation` e `ring=pilot`, com preflight H2 aceito apos
-reset/topologia e P0 power-loss seletivo validado. Ela esta pronta para
-piloto assistido, mas H2/producao continuam bloqueados.
+reset/topologia, P0 power-loss seletivo validado e validacao final
+target-current/service-stopped em placa real. Ela esta pronta para piloto
+assistido, mas H2/producao continuam bloqueados.
 O pacote atual declara source commit
 `9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522` e payload sha256
 `d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`.
@@ -33,6 +34,12 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
   `releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/`;
 - lab apply + service adoption/deep-health curto:
   `docs/evidence/c18-update-validation/20260617T185552Z-service-adoption-health-mpv-stuck-fix-4235e07/`;
+- validacao final target-current/service-stopped:
+  `docs/evidence/c18-update-validation/20260618T094737Z-target-current-service-stopped-final-9bebaf1/`;
+- resets governados de quarentena e diagnostico de startup:
+  `docs/evidence/c18-update-validation/20260618T093607Z-quarantine-reset-p0-setup-contention-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T093642Z-target-current-service-stopped-post-quarantine-reset-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T094704Z-quarantine-reset-startup-status-9bebaf1/`;
 - server-side/signature:
   `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
 - H2 readiness pos-P0:
@@ -50,8 +57,11 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
 - reset/topologia e preflight H2 aceito:
   `docs/evidence/c18-update-validation/20260617T201430Z-h2-powerloss-topology-reset-mpv-stuck-fix-9bebaf1/`,
   `docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/`;
-- refresh H2 power-loss read-only corrente:
+- refresh H2 power-loss read-only anterior:
   `docs/evidence/c18-update-validation/20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1/`;
+- restore de topologia apos target-current e preflight H2 corrente:
+  `docs/evidence/c18-update-validation/20260618T095343Z-topology-restore-after-target-health-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T095819Z-h2-powerloss-board-preflight-after-target-health-9bebaf1/`;
 - P0 power-loss seletivo:
   `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`.
 
@@ -63,7 +73,11 @@ target ja estava linkado como `current`. O reset/topologia controlado restaurou
 `rc=44`; o preflight H2 fresco foi aceito para iniciar a sessao fisica, e os 5
 checkpoints P0 do piloto foram validados depois.
 O refresh H2 power-loss das 08:38 confirmou novamente pacote, imagem, policy,
-timer e topologia sem armar checkpoint e sem reivindicar power-loss.
+timer e topologia sem armar checkpoint e sem reivindicar power-loss. Depois da
+validacao target-current final, a topologia foi restaurada para M6 e um novo
+preflight read-only das 09:58 confirmou que o target nao esta current,
+previous, quarantined nem instalado como release dir, deixando a placa pronta
+para a proxima sessao fisica dos 12 checkpoints restantes.
 
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
@@ -526,7 +540,7 @@ Antes de thaw publico, stable ou producao de `player-runtime`:
   porque o target ja estava linkado como `current`; antes de armar cortes,
   preparar reset/topologia controlada e coletar novo preflight aceito;
 - o preflight H2 power-loss corrente para a proxima sessao fisica esta em
-  `docs/evidence/c18-update-validation/20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1/`;
+  `docs/evidence/c18-update-validation/20260618T095819Z-h2-powerloss-board-preflight-after-target-health-9bebaf1/`;
 - o soak precisa ter no minimo 24h;
 - a evidencia final precisa versionar stable evidence, thaw decision,
   `h2-readiness-final.json` e README com non-claims/hashes;

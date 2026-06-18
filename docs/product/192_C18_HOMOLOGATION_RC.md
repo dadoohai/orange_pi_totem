@@ -4,8 +4,9 @@ Status em 2026-06-18: **Homologation RC reancorada em `9bebaf1`, piloto
 assistido liberado, H2/producao ainda bloqueados**. O alvo corrigido
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` passou release
 gate, lab apply/adoption/deep-health curto, server-side governance, preflight
-H2 apos reset/topologia e P0 power-loss seletivo assistido. Producao/stable
-continuam bloqueados por H2.
+H2 apos reset/topologia, P0 power-loss seletivo assistido e validacao final
+target-current/service-stopped em placa real. Producao/stable continuam
+bloqueados por H2.
 
 A evidencia
 `docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`
@@ -76,6 +77,13 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json`;
 - lab apply/adoption/deep-health curto do alvo corrigido:
   `docs/evidence/c18-update-validation/20260617T185552Z-service-adoption-health-mpv-stuck-fix-4235e07/`;
+- validacao final target-current/service-stopped do alvo corrigido:
+  `docs/evidence/c18-update-validation/20260618T094737Z-target-current-service-stopped-final-9bebaf1/`;
+- resets governados que permitiram repetir a validacao sem bypass manual:
+  `docs/evidence/c18-update-validation/20260618T093607Z-quarantine-reset-p0-setup-contention-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T094704Z-quarantine-reset-startup-status-9bebaf1/`;
+- diagnostico do falso positivo de startup em candidate mode:
+  `docs/evidence/c18-update-validation/20260618T093642Z-target-current-service-stopped-post-quarantine-reset-9bebaf1/`;
 - autorizacao/preflight/pilot readiness do alvo corrigido:
   `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
 - pilot readiness final pos-P0:
@@ -98,8 +106,11 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/`;
 - preflight H2 read-only da placa antes da sessao P0:
   `docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/`;
-- preflight H2 read-only corrente apos limpeza da placa:
+- preflight H2 read-only anterior apos limpeza da placa:
   `docs/evidence/c18-update-validation/20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1/`;
+- restore de topologia apos a validacao target-current e preflight H2 corrente:
+  `docs/evidence/c18-update-validation/20260618T095343Z-topology-restore-after-target-health-9bebaf1/`,
+  `docs/evidence/c18-update-validation/20260618T095819Z-h2-powerloss-board-preflight-after-target-health-9bebaf1/`;
 - run-card historico dos 12 checkpoints H2 restantes:
   `docs/evidence/c18-update-validation/20260618T071500Z-h2-powerloss-remaining-12-run-card-9bebaf1/`;
 - evidencia P0 power-loss seletiva do piloto:

@@ -1,0 +1,99 @@
+{
+  "artifact_id": "20260618T093642Z-target-current-service-stopped-post-quarantine-reset-9bebaf1",
+  "candidate_failure_reasons": [
+    "status_no_failures"
+  ],
+  "candidate_false_checks": [
+    "status_no_failures"
+  ],
+  "candidate_health_passed": false,
+  "candidate_media_load_failed": 0,
+  "candidate_mpv_count": 1,
+  "candidate_mpv_restart": 0,
+  "candidate_total_mpv_count": 1,
+  "files": [
+    {
+      "bytes": 1301,
+      "file": "README.md",
+      "sha256": "2bab472681fefbb6ecfa0b79dcf8a7eb17436b7c2d2cb97e6cf377c5b215f29c"
+    },
+    {
+      "bytes": 2469,
+      "file": "lab-apply.json",
+      "sha256": "e6103f5ec68a5daaac8e8cf3210e05fa5f15e03fb79ee1b26a2a19824e485615"
+    },
+    {
+      "bytes": 5642,
+      "file": "candidate-health/candidate-health-result.json",
+      "sha256": "6f1d845fe8df9d2999213e27b4b11b238ab0cf11c1f8cea87694346f84849ee6"
+    },
+    {
+      "bytes": 360,
+      "file": "candidate-health/candidate-teardown-kernel.json",
+      "sha256": "95aab586daf1728fc0c00579a42074b023ef9a902e090ed368ae9aedb9c79106"
+    },
+    {
+      "bytes": 338,
+      "file": "candidate-health/health/deep-health-kernel.json",
+      "sha256": "e6b4f70827867e3a45812fb533ffa9fec18eb57afec1b8f51c081c149db006a8"
+    },
+    {
+      "bytes": 49,
+      "file": "candidate-health/health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 130,
+      "file": "candidate-health/health/deep-health-process.json",
+      "sha256": "9d9cfb6b12f1ad70cb5191f990b331246b460840266cd009b382fc7650a838e7"
+    },
+    {
+      "bytes": 262,
+      "file": "candidate-health/health/deep-health-systemd.json",
+      "sha256": "5ce729fba6d798676557a30e2d68c0f3420bffdbf13ba72b3507f6390ef8ea30"
+    },
+    {
+      "bytes": 4618,
+      "file": "candidate-health/health/playback-deep-health-public.json",
+      "sha256": "31b17b055c5f88f7f6696461984693abdcebb97ecac3b0dc45b6ed9c2e938a6b"
+    },
+    {
+      "bytes": 105020,
+      "file": "candidate-health/health/playback-samples.tsv",
+      "sha256": "eb166016f5b5f056aa460a4d0524eb771da125a16e4b5efd697b64bc3459ddc9"
+    },
+    {
+      "bytes": 40071,
+      "file": "candidate-health/health/status-samples.ndjson",
+      "sha256": "4d9f4cb5c0cffd2d84822ddc8e1d8cb3eefb6a0d30eb50fd01805b40c4bea46e"
+    },
+    {
+      "bytes": 4561,
+      "file": "candidate-health/reevaluated-health-summary.json",
+      "sha256": "1b453fa217b3fe346909962d5624b11f63470691443fa4751a8141fd90852161"
+    }
+  ],
+  "lab_apply_passed": false,
+  "lab_apply_rc": 10,
+  "manifest_written_at_utc": "2026-06-18T10:05:11.986631Z",
+  "non_claims": [
+    "does_not_validate_target_package_as_current",
+    "does_not_authorize_pilot_execution_by_itself",
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_thaw_public_player_runtime",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_satisfy_24h_soak"
+  ],
+  "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "passed": false,
+  "reevaluated_failure_reasons": [],
+  "reevaluated_passed": true,
+  "result_claim": "target_current_lab_apply_rejected_startup_status_false_positive_diagnostic",
+  "schema": "dadooh.c18.player_runtime.target_current_startup_status_diagnostic.v1",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "target_tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b"
+}

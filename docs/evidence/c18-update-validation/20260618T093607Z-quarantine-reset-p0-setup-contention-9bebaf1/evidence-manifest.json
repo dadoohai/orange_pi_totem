@@ -1,0 +1,40 @@
+{
+  "artifact_id": "20260618T093607Z-quarantine-reset-p0-setup-contention-9bebaf1",
+  "files": [
+    {
+      "bytes": 712,
+      "file": "README.md",
+      "sha256": "f25f4d02b57814fe564e0c46754cb6914725d3baf5899bc504d5ffdf53454e73"
+    },
+    {
+      "bytes": 4907,
+      "file": "quarantine-reset.json",
+      "sha256": "d496ae258825e5f02dacd2dffe8cd5c47902b9fba645a1dbf014551121e2e8c0"
+    },
+    {
+      "bytes": 2,
+      "file": "quarantine-reset.rc",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ],
+  "links_unchanged": true,
+  "manifest_written_at_utc": "2026-06-18T10:13:08.510519Z",
+  "non_claims": [
+    "not_a_public_thaw",
+    "not_stable_or_production",
+    "does_not_apply_or_rollback_runtime"
+  ],
+  "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "passed": true,
+  "public_cli_apply_still_frozen_rc": 44,
+  "public_cli_reconcile_still_frozen_rc": 44,
+  "public_cli_rollback_still_frozen_rc": 44,
+  "removed_count": 1,
+  "reset_scope": "p0_setup_contention_retry",
+  "result_claim": "lab_quarantine_reset_p0_setup_contention_retry_accepted",
+  "schema": "dadooh.c18.player_runtime.lab_quarantine_reset_evidence.v1",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "target_tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b"
+}

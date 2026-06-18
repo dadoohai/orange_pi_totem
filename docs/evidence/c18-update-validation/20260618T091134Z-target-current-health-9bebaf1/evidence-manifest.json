@@ -1,0 +1,56 @@
+{
+  "after_current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "artifact_id": "20260618T091134Z-target-current-health-9bebaf1",
+  "attempt_finished_at_utc": "2026-06-18T09:13:40Z",
+  "attempt_started_at_utc": "2026-06-18T09:12:25Z",
+  "before_current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "files": [
+    {
+      "bytes": 1603,
+      "file": "README.md",
+      "sha256": "c3c27c97ccf51dddc52b7d90d914676923b9faf381e6ad094f29a5d41c4e3f4c"
+    },
+    {
+      "bytes": 2515,
+      "file": "lab-apply.json",
+      "sha256": "3a6729fa17d9200a66b4d557ab9659348cbe07d76fde7bd0d56bd865c8039a5f"
+    }
+  ],
+  "github_used": false,
+  "lab_apply_rc": 10,
+  "lab_apply_status": "candidate_rejected",
+  "manifest_written_at_utc": "2026-06-18T09:22:10Z",
+  "network_required": false,
+  "non_claims": [
+    "does_not_validate_target_package_as_current",
+    "does_not_prove_target_package_defect",
+    "does_not_authorize_pilot_execution_by_itself",
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_thaw_public_player_runtime",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_satisfy_24h_soak"
+  ],
+  "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "passed": false,
+  "privacy": {
+    "raw_logs_included": false,
+    "raw_media_paths_included": false,
+    "raw_runtime_config_included": false,
+    "raw_state_files_included": false
+  },
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "result_claim": "target_current_lab_apply_attempt_rejected_candidate_not_promoted",
+  "schema": "dadooh.c18.target_current_health_attempt.evidence_manifest.v1",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "target_promoted": false
+}

@@ -894,6 +894,38 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertTrue(candidate_result["checks"]["status_no_failures"])
         self.assertNotIn("status_no_failures", candidate_result["failure_reasons"])
 
+    def test_candidate_mode_tolerates_startup_black_screen_risk_only(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        rows[0]["status_playback_state"] = "player_starting"
+        snapshot = json.loads(rows[0]["status_snapshot_json"])
+        snapshot["playback_state"] = "player_starting"
+        snapshot["black_screen_risk_reason"] = "present"
+        rows[0]["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+        fixture.write_rows(rows)
+
+        service_result = fixture.result()
+        self.assertFalse(service_result["passed"])
+        self.assertIn("status_no_failures", service_result["failure_reasons"])
+
+        fixture.mutate_json("systemd.json", target_mode="candidate", candidate_pid_present=True)
+        fixture.mutate_json("process.json", process_filter="input-ipc-server")
+        candidate_result = fixture.result()
+        self.assertTrue(candidate_result["checks"]["status_no_failures"])
+        self.assertNotIn("status_no_failures", candidate_result["failure_reasons"])
+
+    def test_candidate_mode_rejects_black_screen_risk_after_startup(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        snapshot = json.loads(rows[0]["status_snapshot_json"])
+        snapshot["playback_state"] = "playing"
+        snapshot["black_screen_risk_reason"] = "present"
+        rows[0]["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+        fixture.write_rows(rows)
+        fixture.mutate_json("systemd.json", target_mode="candidate", candidate_pid_present=True)
+        fixture.mutate_json("process.json", process_filter="input-ipc-server")
+        self.assert_fails_with(fixture, "status_no_failures")
+
     def test_candidate_mode_rejects_generic_poll_error_presence(self) -> None:
         fixture = self.with_case()
         rows = fixture.rows()

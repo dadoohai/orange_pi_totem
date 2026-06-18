@@ -562,7 +562,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "python3",
                 str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
                 "--now-utc",
-                "2026-06-18T08:42:00Z",
+                "2026-06-18T10:02:00Z",
                 "--allow-dirty-repo",
                 "--json",
             ],
@@ -601,7 +601,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("macro_gate_blocker", gate)
         self.assertIn("20260618T074900Z-current-macro-governance-head-ad4095b-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
-        self.assertIn("20260618T083816Z-h2-powerloss-board-preflight-refresh-9bebaf1", gate)
+        self.assertIn("20260618T095819Z-h2-powerloss-board-preflight-after-target-health-9bebaf1", gate)
         self.assertIn("20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1", gate)
         self.assertIn("20260618T075100Z-operational-resume-default-blocked-head-4f0e310-9bebaf1", gate)
         self.assertIn("stable_thaw_blocked_draft_output_dir_created", gate)
@@ -2902,7 +2902,8 @@ exec "$C18_REAL_PYTHON3" "$@"
             "C18 Homologation RC agora esta reancorada no alvo corrigido "
             "`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em "
             "`channel=homologation` e `ring=pilot`, com preflight H2 aceito apos "
-            "reset/topologia e P0 power-loss seletivo validado",
+            "reset/topologia, P0 power-loss seletivo validado e validacao final "
+            "target-current/service-stopped em placa real.",
             update_auth_words,
         )
         self.assertIn(
