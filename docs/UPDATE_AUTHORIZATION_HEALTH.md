@@ -5,13 +5,13 @@ acidental para update inseguro. Em caso de divergencia, o contrato vigente esta
 em `docs/UPDATE_CONTRACT.md`; o baseline live fica em
 `docs/product/189_C18_OTA_READINESS_GATE.md`.
 
-## Estado Operacional Vigente (2026-06-17)
+## Estado Operacional Vigente (2026-06-18)
 
 C18 Homologation RC agora esta reancorada no alvo corrigido
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em
 `channel=homologation` e `ring=pilot`, com preflight H2 aceito apos
-reset/topologia, mas ainda esta **pre-P0 fisico**: nao esta pronta para piloto
-assistido, H2 ou producao ate fechar o power-loss seletivo.
+reset/topologia e P0 power-loss seletivo validado. Ela esta pronta para
+piloto assistido, mas H2/producao continuam bloqueados.
 O pacote atual declara source commit
 `9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522` e payload sha256
 `d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`.
@@ -35,10 +35,12 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
   `docs/evidence/c18-update-validation/20260617T185552Z-service-adoption-health-mpv-stuck-fix-4235e07/`;
 - server-side/signature:
   `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
-- H2 readiness:
-  `docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json`;
+- H2 readiness pos-P0:
+  `docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json`;
 - autorizacao/preflight/pilot readiness:
   `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
+- pilot readiness final pos-P0:
+  `docs/evidence/c18-update-validation/20260618T041500Z-pilot-readiness-final-9bebaf1/pilot-readiness-final.json`;
 - plano/runbook de power-loss:
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
@@ -47,23 +49,25 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
   `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`;
 - reset/topologia e preflight H2 aceito:
   `docs/evidence/c18-update-validation/20260617T201430Z-h2-powerloss-topology-reset-mpv-stuck-fix-9bebaf1/`,
-  `docs/evidence/c18-update-validation/20260617T201635Z-h2-powerloss-board-preflight-after-topology-reset-mpv-stuck-fix-9bebaf1/`.
+  `docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/`;
+- P0 power-loss seletivo:
+  `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`.
 
-O pilot readiness do alvo `9bebaf1` esta bloqueado somente por
-`pilot_powerloss_p0:pilot_powerloss_p0_incomplete`. O primeiro preflight H2
-read-only da placa coletou board, imagem, policy, timer, bundle e canary
-saudaveis, mas bloqueou porque o target ja estava linkado como `current`. O
-reset/topologia controlado restaurou `m6-a` como current, removeu a release dir
-do alvo e manteve freeze publico `rc=44`; o preflight H2 fresco foi aceito para
-iniciar a sessao fisica. Isso ainda nao e evidencia power-loss.
+O pilot readiness final do alvo `9bebaf1` esta verde em
+`homologation_pilot_ready`. O primeiro preflight H2 read-only da placa coletou
+board, imagem, policy, timer, bundle e canary saudaveis, mas bloqueou porque o
+target ja estava linkado como `current`. O reset/topologia controlado restaurou
+`m6-a` como current, removeu a release dir do alvo e manteve freeze publico
+`rc=44`; o preflight H2 fresco foi aceito para iniciar a sessao fisica, e os 5
+checkpoints P0 do piloto foram validados depois.
 
 O agregador macro pre-H2 e `scripts/qa/c18_ota_macro_governance_gate.py`; ele
 valida retrato versionado de H1, pilot readiness, H2 vermelho e diagnostico
 read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
 historico e nao deve ser lido como RC atual. O snapshot corrente
-`docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/`
-esta reancorado em `9bebaf1` e verde pre-H2, tratando `pilot_powerloss_p0`
-como fronteira pendente sem liberar piloto ou producao.
+`docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
+esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
+segue verde pre-H2 sem liberar producao.
 
 O piloto controlado, quando liberado, autoriza somente entrega assistida por
 operador, com rollback pronto, allowlist de devices, preflight de placa, H1

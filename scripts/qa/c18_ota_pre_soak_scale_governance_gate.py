@@ -38,18 +38,19 @@ EXPECTED_H2_BLOCKERS = (
     "explicit_operator_thaw_decision:missing_operator_thaw_decision",
 )
 DEFAULT_H2_READINESS = (
-    REPO_ROOT / "docs/evidence/c18-update-validation/20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1/h2-readiness.json"
+    REPO_ROOT
+    / "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
 )
 DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1"
+    / "docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1"
 )
 DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()
 DEFAULT_DOCS = (
@@ -509,7 +510,7 @@ def evaluate_operational_resume_default(now_utc: str, *, allow_dirty_repo: bool 
     macro = payload.get("checks", {}).get("macro_governance_snapshot", {}) if isinstance(payload.get("checks"), dict) else {}
     if macro.get("passed") is not True:
         blockers.append("operational_resume_default_macro_not_passed")
-    if "20260617T221732Z-current-macro-governance-9bebaf1" not in str(macro.get("summary_path")):
+    if "20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1" not in str(macro.get("summary_path")):
         blockers.append("operational_resume_default_macro_not_current")
     return step(not blockers, blockers, returncode=result.get("returncode"))
 
