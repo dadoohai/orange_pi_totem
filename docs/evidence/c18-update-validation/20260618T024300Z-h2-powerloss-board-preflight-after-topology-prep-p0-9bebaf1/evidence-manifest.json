@@ -1,0 +1,89 @@
+{
+  "board_paths": {
+    "bundle_dir": "/data/c18-powerloss-bundle-3eb06f1",
+    "canary_media": {
+      "exists": true,
+      "is_dir": false,
+      "is_file": true,
+      "is_symlink": false,
+      "mode_octal": "0o644",
+      "path": "/data/media/c18-canary-h264.mp4",
+      "size_bytes": 541053
+    },
+    "evidence_root": {
+      "direct_child_dirs": [
+        "preflight-after-topology-reset-20260617T201635Z",
+        "preflight-refresh-20260617T203659Z",
+        "topology-reset-20260617T201430Z",
+        "topology-reset-20260618T024253Z"
+      ],
+      "exists": true,
+      "is_dir": true,
+      "parent": "/data/c18-evidence",
+      "parent_exists": true,
+      "parent_is_dir": true,
+      "parent_writable": true,
+      "path": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1"
+    }
+  },
+  "collected_at_utc": "2026-06-18T02:43:31Z",
+  "files": [
+    {
+      "bytes": 649,
+      "file": "README.md",
+      "sha256": "f2f17153246e9988988ce8e4ce60dd25ab44628ef1ace2719c4ea83c5368feed"
+    },
+    {
+      "bytes": 7559,
+      "file": "board-preflight.json",
+      "sha256": "5ebebd14d4494d9be001d50440fd394eca9fc042fddb04e648c7920ddf61b6b7"
+    },
+    {
+      "bytes": 2900,
+      "file": "h2-powerloss-preflight-gate.json",
+      "sha256": "e3133048413de6c47c8f7ebe0d03599efd7c58d49f5b14eaf49ea1166165b857"
+    }
+  ],
+  "gate_evaluated_at_utc": "2026-06-18T02:44:00Z",
+  "key_checks": {
+    "allowed_components_totem_core_only": true,
+    "collector_passed": true,
+    "image_marker_c18_hwdecode_lab_1x": true,
+    "offline_gate_passed": true,
+    "pending_checkpoint_dirs_absent": true,
+    "policy_homologation": true,
+    "preflight_fresh_under_4h": true,
+    "target_not_linked": true,
+    "target_not_quarantined": true,
+    "update_timer_disabled": true
+  },
+  "matrix_plan": {
+    "path": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/powerloss-matrix-plan.json"
+  },
+  "non_claims": [
+    "this_preflight_is_not_powerloss_evidence",
+    "this_preflight_does_not_claim_17_17",
+    "this_preflight_does_not_authorize_stable_or_production",
+    "this_preflight_does_not_thaw_player_runtime",
+    "this_preflight_does_not_satisfy_24h_soak",
+    "this_preflight_does_not_complete_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "h2_powerloss_board_preflight_accepted",
+  "schema": "dadooh.c18.h2_powerloss_board_preflight_snapshot.v1",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "manifest_path": "/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+    "manifest_present": true,
+    "manifest_schema": "dadooh.totem.update.v1",
+    "payload_name": "dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "payload_path": "/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "payload_present": true,
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "payload_sha256_actual": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "payload_sha256_matches_manifest": true,
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  }
+}
