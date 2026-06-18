@@ -116,11 +116,11 @@ REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260618T072806Z-current-h2-readiness-head-3458cba-9bebaf1/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T065300Z-current-macro-governance-head-4f698b7-9bebaf1/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260618T073000Z-current-macro-governance-head-6e215bb-9bebaf1/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
