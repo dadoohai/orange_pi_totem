@@ -116,7 +116,7 @@ REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260618T101740Z-current-h2-readiness-head-0401375-9bebaf1/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT

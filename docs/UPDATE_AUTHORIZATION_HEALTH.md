@@ -43,7 +43,7 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
 - server-side/signature:
   `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
 - H2 readiness pos-P0:
-  `docs/evidence/c18-update-validation/20260618T074726Z-current-h2-readiness-head-49fc135-9bebaf1/h2-readiness.json`;
+  `docs/evidence/c18-update-validation/20260618T101740Z-current-h2-readiness-head-0401375-9bebaf1/h2-readiness.json`;
 - autorizacao/preflight/pilot readiness:
   `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
 - pilot readiness final pos-P0:
