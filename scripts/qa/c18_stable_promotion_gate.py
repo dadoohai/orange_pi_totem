@@ -374,8 +374,13 @@ def manifest_image_errors(
     expect_image_tag: str | None,
     expect_image_sha256: str | None,
     expect_image_marker_sha256: str | None,
+    expect_payload_sha256: str | None,
 ) -> list[str]:
     errors: list[str] = []
+    if expect_payload_sha256 is None:
+        errors.append("powerloss_expected_payload_sha256_required")
+    elif manifest.get("target_payload_sha256") != expect_payload_sha256:
+        errors.append("powerloss_target_payload_sha256_mismatch_or_missing")
     if expect_image_tag is None:
         errors.append("powerloss_expected_image_tag_required")
     elif manifest.get("image_tag") != expect_image_tag:
@@ -441,6 +446,9 @@ def evaluate_powerloss_matrix(args: argparse.Namespace) -> dict[str, Any]:
     checkpoint_dirs: dict[str, str] = {}
     gate_results: dict[str, dict[str, Any]] = {}
     duplicate_checkpoints: list[str] = []
+    expected_target, target_errors = thaw_decision_expected_target_from_args(args)
+    expected_payload_sha256 = expected_target.get("payload_sha256")
+    blockers.extend(f"powerloss_expected_target:{error}" for error in target_errors)
     semantics_ledger = powerloss_semantics_ledger()
     if semantics_ledger["evidence_gate_contract_mismatch"]:
         blockers.append("powerloss_matrix_contract_mismatch")
@@ -463,6 +471,7 @@ def evaluate_powerloss_matrix(args: argparse.Namespace) -> dict[str, Any]:
                 expect_image_tag=args.expect_image_tag,
                 expect_image_sha256=args.expect_image_sha256,
                 expect_image_marker_sha256=args.expect_image_marker_sha256,
+                expect_payload_sha256=expected_payload_sha256,
             )
         )
         gate = run_powerloss_gate(run_dir)
@@ -859,6 +868,7 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
         write_json(run_dir / "evidence-manifest.json", {
             "schema": POWERLOSS_MANIFEST_SCHEMA,
             "checkpoint": checkpoint,
+            "target_payload_sha256": server_manifest["payload_sha256"],
             "image_tag": "c18-hwdecode-lab-1x",
             "image_sha256": "1" * 64,
             "image_marker_sha256": "2" * 64,
@@ -1108,6 +1118,24 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertFalse(semantics["passed"])
         self.assertIn(
             "operator_thaw_decision:thaw_decision_target_source_commit_mismatch",
+            semantics["blockers"],
+        )
+
+    def test_powerloss_matrix_must_match_server_side_target_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            manifest_path = args.powerloss_evidence_dir[0] / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["target_payload_sha256"] = "f" * 64
+            write_json(manifest_path, manifest)
+            with (
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+                mock.patch(__name__ + ".evaluate_server_side_gate", return_value={"passed": True, "blockers": []}),
+            ):
+                semantics = evaluate_artifact_semantics(args)
+        self.assertFalse(semantics["passed"])
+        self.assertIn(
+            f"powerloss_matrix:{args.powerloss_evidence_dir[0].name}:powerloss_target_payload_sha256_mismatch_or_missing",
             semantics["blockers"],
         )
 

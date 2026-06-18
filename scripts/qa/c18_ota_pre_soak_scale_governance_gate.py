@@ -92,6 +92,21 @@ REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS = (
     "this_snapshot_does_not_replace_soak_24h",
     "this_snapshot_does_not_replace_stable_promotion_or_formal_thaw_decision",
 )
+EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS = (
+    "current_board_preflight:current_board_preflight_missing",
+    "current_pilot_authorization:current_pilot_authorization_missing",
+)
+REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS = (
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_publish_releases",
+    "does_not_thaw_public_player_runtime",
+    "does_not_apply_or_rollback_player_runtime",
+    "does_not_satisfy_24h_soak",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_replace_h2_readiness",
+)
 DEFAULT_H2_READINESS = (
     REPO_ROOT
     / "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json"
@@ -110,6 +125,10 @@ DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
 DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR = (
     REPO_ROOT
     / "docs/evidence/c18-update-validation/20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1"
+)
+DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR = (
+    REPO_ROOT
+    / "docs/evidence/c18-update-validation/20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1"
 )
 DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()
 DEFAULT_DOCS = (
@@ -178,6 +197,7 @@ TRACKED_INPUTS = (
     DEFAULT_SERVER_SIDE_CURRENT_DIR,
     DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR,
     DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR,
+    DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR,
     *DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS,
     *DEFAULT_DOCS,
 )
@@ -594,6 +614,85 @@ def evaluate_stable_thaw_draft_blocked_snapshot(run_dir: Path) -> dict[str, Any]
     )
 
 
+def evaluate_operational_resume_blocked_snapshot(run_dir: Path) -> dict[str, Any]:
+    blockers: list[str] = []
+    manifest = read_json(run_dir / "evidence-manifest.json", blockers, "operational_resume_blocked_manifest")
+    if not manifest:
+        return step(False, blockers, run_dir=str(run_dir))
+    if manifest.get("schema") != "dadooh.c18.ota_operational_resume_evidence.v1":
+        blockers.append("operational_resume_blocked_manifest_schema")
+    if manifest.get("evidence_kind") != "c18_ota_operational_resume_default_blocked_snapshot":
+        blockers.append("operational_resume_blocked_evidence_kind")
+    if manifest.get("repo_dirty") is not False:
+        blockers.append("operational_resume_blocked_repo_dirty")
+    if manifest.get("passed") is not False:
+        blockers.append("operational_resume_blocked_must_be_red")
+    if manifest.get("result_claim") != "c18_operational_resume_blocked":
+        blockers.append("operational_resume_blocked_result_claim")
+    target = manifest.get("target") if isinstance(manifest.get("target"), dict) else {}
+    blockers.extend(target_blockers(target, label="operational_resume_blocked_target"))
+    if sorted(manifest.get("expected_blockers", [])) != sorted(EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS):
+        blockers.append("operational_resume_blocked_expected_blockers")
+    macro_snapshot = manifest.get("macro_snapshot")
+    if macro_snapshot != "docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/macro-governance.json":
+        blockers.append("operational_resume_blocked_macro_snapshot")
+    non_claims = set(manifest.get("non_claims", []))
+    for claim in REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS:
+        if claim not in non_claims:
+            blockers.append(f"operational_resume_blocked_non_claim_missing:{claim}")
+
+    files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
+    for filename in ("README.md", "operational-resume.json"):
+        path = run_dir / filename
+        entry = next(
+            (
+                item
+                for item in files
+                if isinstance(item, dict) and item.get("path", item.get("file")) == filename
+            ),
+            None,
+        )
+        if not path.is_file():
+            blockers.append(f"operational_resume_blocked_file_missing:{filename}")
+            continue
+        if entry is None:
+            blockers.append(f"operational_resume_blocked_manifest_file_missing:{filename}")
+            continue
+        if entry.get("sha256") != sha256_file(path):
+            blockers.append(f"operational_resume_blocked_file_sha256_mismatch:{filename}")
+        if entry.get("bytes") != path.stat().st_size:
+            blockers.append(f"operational_resume_blocked_file_bytes_mismatch:{filename}")
+
+    summary = read_json(run_dir / "operational-resume.json", blockers, "operational_resume_blocked_summary")
+    if summary:
+        if summary.get("schema") != "dadooh.c18.ota_operational_resume_gate.v1":
+            blockers.append("operational_resume_blocked_summary_schema")
+        if summary.get("passed") is not False:
+            blockers.append("operational_resume_blocked_summary_must_be_red")
+        if summary.get("result_claim") != "c18_operational_resume_blocked":
+            blockers.append("operational_resume_blocked_summary_result_claim")
+        if sorted(summary.get("blockers", [])) != sorted(EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS):
+            blockers.append("operational_resume_blocked_summary_blockers")
+        summary_target = summary.get("target") if isinstance(summary.get("target"), dict) else {}
+        blockers.extend(target_blockers(summary_target, label="operational_resume_blocked_summary_target"))
+        checks = summary.get("checks") if isinstance(summary.get("checks"), dict) else {}
+        macro = checks.get("macro_governance_snapshot") if isinstance(checks.get("macro_governance_snapshot"), dict) else {}
+        if macro.get("passed") is not True:
+            blockers.append("operational_resume_blocked_summary_macro_not_passed")
+        if "20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1" not in str(macro.get("summary_path")):
+            blockers.append("operational_resume_blocked_summary_macro_not_current")
+        repo_clean = checks.get("repo_clean") if isinstance(checks.get("repo_clean"), dict) else {}
+        if repo_clean.get("passed") is not True or repo_clean.get("changed_paths") != []:
+            blockers.append("operational_resume_blocked_summary_repo_not_clean")
+
+    return step(
+        not blockers,
+        blockers,
+        run_dir=str(run_dir),
+        result_claim=manifest.get("result_claim"),
+    )
+
+
 def evaluate_docs(paths: tuple[Path, ...] = DEFAULT_DOCS) -> dict[str, Any]:
     blockers: list[str] = []
     combined_parts: list[str] = []
@@ -722,6 +821,7 @@ def effective_tracked_inputs(args: argparse.Namespace) -> tuple[Path, ...]:
         args.server_side_current_dir,
         args.h2_powerloss_preflight_dir,
         args.stable_thaw_draft_blocked_dir,
+        args.operational_resume_blocked_dir,
         *DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS,
         *DEFAULT_DOCS,
     )
@@ -742,6 +842,9 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "stable_thaw_draft_blocked_snapshot": evaluate_stable_thaw_draft_blocked_snapshot(
             args.stable_thaw_draft_blocked_dir,
+        ),
+        "operational_resume_blocked_snapshot": evaluate_operational_resume_blocked_snapshot(
+            args.operational_resume_blocked_dir,
         ),
         "macro_gate": evaluate_macro_gate(allow_dirty_repo=args.allow_dirty_repo),
         "operational_resume_default": evaluate_operational_resume_default(
@@ -961,6 +1064,75 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         write_json(run_dir / "evidence-manifest.json", manifest)
         return run_dir
 
+    def write_operational_resume_blocked_fixture(
+        self,
+        root: Path,
+        *,
+        manifest_overrides: dict[str, Any] | None = None,
+        summary_overrides: dict[str, Any] | None = None,
+    ) -> Path:
+        run_dir = root / "operational-resume-blocked"
+        run_dir.mkdir()
+        summary = {
+            "schema": "dadooh.c18.ota_operational_resume_gate.v1",
+            "passed": False,
+            "result_claim": "c18_operational_resume_blocked",
+            "blockers": list(EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS),
+            "target": {
+                "component": "player-runtime",
+                "package_version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "payload_sha256": TARGET_PAYLOAD_SHA256,
+                "channel": TARGET_CHANNEL,
+                "ring": TARGET_RING,
+            },
+            "checks": {
+                "macro_governance_snapshot": {
+                    "passed": True,
+                    "summary_path": str(DEFAULT_MACRO_SUMMARY),
+                },
+                "repo_clean": {
+                    "passed": True,
+                    "changed_paths": [],
+                },
+            },
+        }
+        if summary_overrides:
+            summary.update(summary_overrides)
+        write_json(run_dir / "operational-resume.json", summary)
+        (run_dir / "README.md").write_text("operational resume blocked fixture\n", encoding="utf-8")
+        manifest = {
+            "schema": "dadooh.c18.ota_operational_resume_evidence.v1",
+            "evidence_kind": "c18_ota_operational_resume_default_blocked_snapshot",
+            "collected_at_utc": "2026-06-18T05:55:00Z",
+            "repo_dirty": False,
+            "target": {
+                "component": "player-runtime",
+                "package_version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "payload_sha256": TARGET_PAYLOAD_SHA256,
+                "channel": TARGET_CHANNEL,
+                "ring": TARGET_RING,
+            },
+            "passed": False,
+            "result_claim": "c18_operational_resume_blocked",
+            "expected_blockers": list(EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS),
+            "macro_snapshot": "docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/macro-governance.json",
+            "non_claims": list(REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS),
+            "files": [
+                {
+                    "path": filename,
+                    "sha256": sha256_file(run_dir / filename),
+                    "bytes": (run_dir / filename).stat().st_size,
+                }
+                for filename in ("README.md", "operational-resume.json")
+            ],
+        }
+        if manifest_overrides:
+            manifest.update(manifest_overrides)
+        write_json(run_dir / "evidence-manifest.json", manifest)
+        return run_dir
+
     def test_h2_must_remain_blocked_with_exact_blockers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "h2.json"
@@ -1119,6 +1291,24 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("stable_thaw_blocked_run_authorization_must_be_false", result["blockers"])
 
+    def test_operational_resume_blocked_snapshot_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_operational_resume_blocked_fixture(Path(tmp))
+            result = evaluate_operational_resume_blocked_snapshot(run_dir)
+        self.assertTrue(result["passed"], msg=result)
+
+    def test_operational_resume_blocked_snapshot_rejects_green_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_operational_resume_blocked_fixture(
+                Path(tmp),
+                manifest_overrides={"passed": True},
+                summary_overrides={"passed": True, "result_claim": "c18_operational_resume_ready"},
+            )
+            result = evaluate_operational_resume_blocked_snapshot(run_dir)
+        self.assertFalse(result["passed"])
+        self.assertIn("operational_resume_blocked_must_be_red", result["blockers"])
+        self.assertIn("operational_resume_blocked_summary_must_be_red", result["blockers"])
+
     def test_tracked_inputs_follow_cli_overrides(self) -> None:
         args = argparse.Namespace(
             h2_readiness=Path("/tmp/custom-h2.json"),
@@ -1126,6 +1316,7 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             server_side_current_dir=Path("/tmp/custom-server-side"),
             h2_powerloss_preflight_dir=Path("/tmp/custom-powerloss-preflight"),
             stable_thaw_draft_blocked_dir=Path("/tmp/custom-stable-thaw-blocked"),
+            operational_resume_blocked_dir=Path("/tmp/custom-operational-resume-blocked"),
         )
         inputs = effective_tracked_inputs(args)
 
@@ -1134,11 +1325,13 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         self.assertIn(Path("/tmp/custom-server-side"), inputs)
         self.assertIn(Path("/tmp/custom-powerloss-preflight"), inputs)
         self.assertIn(Path("/tmp/custom-stable-thaw-blocked"), inputs)
+        self.assertIn(Path("/tmp/custom-operational-resume-blocked"), inputs)
         self.assertNotIn(DEFAULT_H2_READINESS, inputs)
         self.assertNotIn(DEFAULT_MACRO_SUMMARY, inputs)
         self.assertNotIn(DEFAULT_SERVER_SIDE_CURRENT_DIR, inputs)
         self.assertNotIn(DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR, inputs)
         self.assertNotIn(DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR, inputs)
+        self.assertNotIn(DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR, inputs)
 
     def test_docs_require_all_responsibility_fronts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1182,6 +1375,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--server-side-current-dir", type=Path, default=DEFAULT_SERVER_SIDE_CURRENT_DIR)
     parser.add_argument("--h2-powerloss-preflight-dir", type=Path, default=DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR)
     parser.add_argument("--stable-thaw-draft-blocked-dir", type=Path, default=DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR)
+    parser.add_argument("--operational-resume-blocked-dir", type=Path, default=DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR)
     parser.add_argument("--now-utc")
     parser.add_argument("--run-release-gate", action="store_true")
     parser.add_argument("--allow-dirty-repo", action="store_true")
