@@ -36,7 +36,7 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
 - server-side/signature:
   `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
 - H2 readiness pos-P0:
-  `docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json`;
+  `docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json`;
 - autorizacao/preflight/pilot readiness:
   `docs/evidence/c18-update-validation/20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1/`;
 - pilot readiness final pos-P0:
@@ -49,7 +49,7 @@ Para o alvo `9bebaf1`, os inputs correntes sao:
   `docs/evidence/c18-update-validation/20260617T193921Z-h2-powerloss-board-preflight-mpv-stuck-fix-9bebaf1/`;
 - reset/topologia e preflight H2 aceito:
   `docs/evidence/c18-update-validation/20260617T201430Z-h2-powerloss-topology-reset-mpv-stuck-fix-9bebaf1/`,
-  `docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/`;
+  `docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/`;
 - P0 power-loss seletivo:
   `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`.
 
@@ -67,7 +67,7 @@ read-only de placa. O snapshot macro default antigo de `c16fb3e` permanece
 historico e nao deve ser lido como RC atual; o snapshot pos-P0 anterior
 `docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/`
 tambem permanece historico. O snapshot corrente
-`docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T065300Z-current-macro-governance-head-4f698b7-9bebaf1/`
 esta reancorado em `9bebaf1`, aponta para o pilot readiness final pos-P0 e
 para o diagnostico read-only pos-P0 da placa, e segue verde pre-H2 sem liberar
 producao.
@@ -81,7 +81,7 @@ O snapshot de retomada operacional pos-P0
 fica historico da janela em que macro, autorizacao, preflight fresco da placa,
 arvore limpa e inputs rastreados estavam aceitos. O estado default atual apos
 pausa/reboot/passagem de dias esta versionado em
-`docs/evidence/c18-update-validation/20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T065500Z-operational-resume-default-blocked-head-e8a2d05-9bebaf1/`
 e bloqueia corretamente sem autorizacao/preflight atuais. Antes de qualquer nova
 acao assistida, coletar nova autorizacao/preflight e rodar
 `scripts/qa/c18_ota_operational_resume_gate.py`.
