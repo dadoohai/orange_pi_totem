@@ -322,6 +322,14 @@ def repo_clean_guard() -> dict[str, Any]:
     }
 
 
+def repo_final_clean_guard() -> dict[str, Any]:
+    result = repo_clean_guard()
+    result["name"] = "repo_final_clean_guard"
+    if result["stderr_tail"] == "repository must be clean before claiming C18 release readiness":
+        result["stderr_tail"] = "repository must remain clean after running C18 release gate steps"
+    return result
+
+
 def repo_identity() -> dict[str, Any]:
     identity: dict[str, Any] = {
         "head": None,
@@ -1303,6 +1311,21 @@ class TotemCorePayloadBoundarySelfTest(unittest.TestCase):
             self.assertIn("data/media/playlist.json", result["totem_core_tar_unexpected_entries"])
 
 
+class RepoCleanGuardSelfTest(unittest.TestCase):
+    def test_final_clean_guard_fails_when_steps_leave_repo_dirty(self) -> None:
+        proc = subprocess.CompletedProcess(
+            args=["git", "status", "--porcelain", "--untracked-files=normal"],
+            returncode=0,
+            stdout=" M generated-artifact.json\n",
+            stderr="",
+        )
+        with mock.patch(__name__ + ".subprocess.run", return_value=proc):
+            result = repo_final_clean_guard()
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["name"], "repo_final_clean_guard")
+        self.assertIn("must remain clean after", result["stderr_tail"])
+
+
 _OMIT = object()
 
 
@@ -1335,6 +1358,7 @@ def main() -> int:
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TeardownEvidenceImageGuardSelfTest))
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(PlayerRuntimeDataEvidenceGitGuardSelfTest))
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TotemCorePayloadBoundarySelfTest))
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(RepoCleanGuardSelfTest))
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
     steps: list[dict[str, Any]] = []
@@ -1427,6 +1451,7 @@ def main() -> int:
         if args.package_payload is not None:
             sandbox_cmd.extend(["--package-payload", str(args.package_payload)])
     steps.append(run_step("totem_core_sandbox", sandbox_cmd, timeout=240))
+    steps.append(repo_final_clean_guard())
 
     passed = all(step["passed"] for step in steps) and (package_result is None or bool(package_result["passed"]))
     result = {

@@ -71,6 +71,27 @@ REQUIRED_STABLE_THAW_BLOCKED_RUN_NON_CLAIMS = (
     "this_tool_does_not_enable_auto_pull",
     "this_tool_does_not_override_freeze_rc_44",
 )
+REQUIRED_SERVER_SIDE_CURRENT_KEY_CHECKS = (
+    "governance_gate_passed",
+    "expected_component_player_runtime",
+    "external_trust_anchor_verified",
+    "signed_or_attested_assets_verified",
+    "asset_list_hash_bound",
+    "auto_pull_default_disabled",
+    "allowlist_controls_defined",
+    "staged_rollout_defined",
+    "audit_trail_defined",
+)
+REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS = (
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_thaw_player_runtime",
+    "this_snapshot_does_not_complete_h2",
+    "this_snapshot_does_not_replace_powerloss_17_17",
+    "this_snapshot_does_not_replace_soak_24h",
+    "this_snapshot_does_not_replace_stable_promotion_or_formal_thaw_decision",
+)
 DEFAULT_H2_READINESS = (
     REPO_ROOT
     / "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json"
@@ -360,6 +381,23 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
         blockers.append("server_side_current_component")
     if target.get("channel") != TARGET_CHANNEL:
         blockers.append("server_side_current_channel")
+    key_checks_raw = manifest.get("key_checks")
+    key_checks = key_checks_raw if isinstance(key_checks_raw, dict) else {}
+    if not isinstance(key_checks_raw, dict):
+        blockers.append("server_side_current_key_checks_missing")
+    for name in REQUIRED_SERVER_SIDE_CURRENT_KEY_CHECKS:
+        if key_checks.get(name) is not True:
+            blockers.append(f"server_side_current_key_check_not_true:{name}")
+    if key_checks.get("asset_count") != 14:
+        blockers.append("server_side_current_key_check_asset_count_not_14")
+    non_claims_raw = manifest.get("non_claims")
+    non_claims = non_claims_raw if isinstance(non_claims_raw, list) else []
+    if not isinstance(non_claims_raw, list):
+        blockers.append("server_side_current_non_claims_missing")
+    non_claim_set = {claim for claim in non_claims if isinstance(claim, str)}
+    for claim in REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS:
+        if claim not in non_claim_set:
+            blockers.append(f"server_side_current_non_claim_missing:{claim}")
     files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
     for filename in ("README.md", "server-side-governance-gate.json", "server-side-asset-list.json"):
         path = run_dir / filename
@@ -801,6 +839,54 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         })
         return run_dir
 
+    def write_server_side_current_fixture(
+        self,
+        root: Path,
+        *,
+        key_check_overrides: dict[str, Any] | None = None,
+        non_claims: list[str] | None = None,
+    ) -> Path:
+        run_dir = root / "server-side-current"
+        run_dir.mkdir()
+        (run_dir / "README.md").write_text("server-side current fixture\n", encoding="utf-8")
+        write_json(run_dir / "server-side-governance-gate.json", {
+            "schema": "dadooh.c18.server_side_publish_governance_gate.v1",
+            "passed": True,
+            "result_claim": "server_side_publish_governance_ready",
+            "blockers": [],
+        })
+        write_json(run_dir / "server-side-asset-list.json", {
+            "schema": "dadooh.c18.server_side_publish_asset_list.v1",
+            "asset_records": [{"path": f"asset-{idx}", "sha256": "0" * 64} for idx in range(14)],
+        })
+        key_checks: dict[str, Any] = {name: True for name in REQUIRED_SERVER_SIDE_CURRENT_KEY_CHECKS}
+        key_checks["asset_count"] = 14
+        if key_check_overrides:
+            key_checks.update(key_check_overrides)
+        write_json(run_dir / "evidence-manifest.json", {
+            "schema": "dadooh.c18.server_side_current_validation_snapshot.v1",
+            "passed": True,
+            "result_claim": "server_side_publish_governance_ready",
+            "target_package": {
+                "version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "payload_sha256": TARGET_PAYLOAD_SHA256,
+                "component": "player-runtime",
+                "channel": TARGET_CHANNEL,
+            },
+            "key_checks": key_checks,
+            "non_claims": non_claims if non_claims is not None else list(REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS),
+            "files": [
+                {
+                    "file": filename,
+                    "sha256": sha256_file(run_dir / filename),
+                    "bytes": (run_dir / filename).stat().st_size,
+                }
+                for filename in ("README.md", "server-side-governance-gate.json", "server-side-asset-list.json")
+            ],
+        })
+        return run_dir
+
     def write_stable_thaw_blocked_fixture(
         self,
         root: Path,
@@ -942,6 +1028,56 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "h2_powerloss_preflight_key_check_not_true:update_timer_disabled",
+            result["blockers"],
+        )
+
+    def test_server_side_current_snapshot_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_server_side_current_fixture(Path(tmp))
+            result = evaluate_server_side_current(run_dir)
+        self.assertTrue(result["passed"], msg=result)
+
+    def test_server_side_current_snapshot_rejects_missing_signature_attestation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_server_side_current_fixture(
+                Path(tmp),
+                key_check_overrides={"signed_or_attested_assets_verified": False},
+            )
+            result = evaluate_server_side_current(run_dir)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current_key_check_not_true:signed_or_attested_assets_verified",
+            result["blockers"],
+        )
+
+    def test_server_side_current_snapshot_rejects_missing_rollout_or_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_server_side_current_fixture(
+                Path(tmp),
+                key_check_overrides={
+                    "allowlist_controls_defined": False,
+                    "staged_rollout_defined": False,
+                    "audit_trail_defined": False,
+                },
+            )
+            result = evaluate_server_side_current(run_dir)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_current_key_check_not_true:allowlist_controls_defined", result["blockers"])
+        self.assertIn("server_side_current_key_check_not_true:staged_rollout_defined", result["blockers"])
+        self.assertIn("server_side_current_key_check_not_true:audit_trail_defined", result["blockers"])
+
+    def test_server_side_current_snapshot_rejects_missing_non_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            claims = [
+                claim
+                for claim in REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS
+                if claim != "this_snapshot_does_not_enable_auto_pull"
+            ]
+            run_dir = self.write_server_side_current_fixture(Path(tmp), non_claims=claims)
+            result = evaluate_server_side_current(run_dir)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current_non_claim_missing:this_snapshot_does_not_enable_auto_pull",
             result["blockers"],
         )
 
