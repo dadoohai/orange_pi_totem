@@ -1,0 +1,69 @@
+{
+  "classification": "unknown",
+  "collection_policy": {
+    "drm_fields": [
+      "status",
+      "enabled",
+      "mode",
+      "modes"
+    ],
+    "mutates_player": false,
+    "read_only": true,
+    "reads_config": false,
+    "reads_edid": false,
+    "reads_framebuffer": false,
+    "reads_media": false,
+    "uses_network": false
+  },
+  "collector_version": 1,
+  "drm": {
+    "connected_active_count": 1,
+    "connected_count": 1,
+    "connected_ready_count": 0,
+    "connectors": [
+      {
+        "connector": "HDMI-A-1",
+        "enabled": "enabled",
+        "enabled_active": true,
+        "mode_observed": false,
+        "mode_present": false,
+        "modes_count": 29,
+        "status": "connected"
+      }
+    ],
+    "modes_present_count": 1,
+    "present": true
+  },
+  "ended_at_utc": "2026-06-18T04:44:09Z",
+  "non_claims": [
+    "this_collector_does_not_start_stop_or_restart_player",
+    "this_collector_does_not_read_edid_framebuffer_media_or_config",
+    "this_collector_does_not_validate_playback_decode_health",
+    "this_collector_does_not_replace_h2_powerloss_or_soak",
+    "this_collector_does_not_publish_or_thaw"
+  ],
+  "passed": true,
+  "player_status": {
+    "black_screen_risk_reason": "null",
+    "blocked_media_count": 0,
+    "consecutive_failures": 0,
+    "current_index": 2,
+    "last_poll_error": "null",
+    "last_render_error": "null",
+    "mpv_running": true,
+    "playback_state": "playing",
+    "player_state": "playing",
+    "playlist_size": 9,
+    "present": true,
+    "startup_phase": "playing"
+  },
+  "result_claim": "read_only_display_status_collected",
+  "schema": "dadooh.c18.display_status.v1",
+  "service": {
+    "active_state": "active",
+    "returncode": 0,
+    "service": "kiosky-player.service"
+  },
+  "started_at_utc": "2026-06-18T04:44:08Z",
+  "visible_state": "unknown"
+}
