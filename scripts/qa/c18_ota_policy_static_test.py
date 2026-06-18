@@ -160,7 +160,7 @@ EVIDENCE_MACRO_GOVERNANCE_SNAPSHOT = (
     / "docs"
     / "evidence"
     / "c18-update-validation"
-    / "20260616T222238Z-macro-governance-snapshot-aac8ac2"
+    / "20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1"
     / "macro-governance.json"
 )
 EVIDENCE_PILOT_AUTHORIZATION_TRACEABILITY = (
@@ -434,7 +434,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             summary["target"]["package_version"],
             "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
         )
-        self.assertEqual(summary["checks"]["pilot_readiness"]["pilot_state"], "blocked_by_p0_only")
+        self.assertEqual(summary["checks"]["pilot_readiness"]["pilot_state"], "ready")
         self.assertEqual(summary["checks"]["pilot_readiness"]["authorization_window"]["snapshot_only"], True)
         self.assertEqual(summary["checks"]["h2_preproduction_block"]["result_claim"], "h2_readiness_blocked")
         self.assertEqual(
@@ -449,7 +449,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         self.assertIn("dadooh.c18.ota_macro_governance_gate.v1", gate)
         self.assertIn("c18_homologation_governance_ready_pre_h2", gate)
-        self.assertIn("blocked_by_p0_only", gate)
+        self.assertIn("20260618T041500Z-pilot-readiness-final-9bebaf1", gate)
+        self.assertIn("20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1", gate)
         self.assertIn("this_gate_does_not_reopen_expired_pilot_windows", gate)
         self.assertIn("snapshot_only", gate)
         self.assertIn("EXPECTED_H2_BLOCKERS", gate)
@@ -492,7 +493,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_operational_resume_gate.v1", gate)
         self.assertIn("c18_operational_resume_blocked", gate)
         self.assertIn(
-            "docs/evidence/c18-update-validation/20260617T221732Z-current-macro-governance-9bebaf1/macro-governance.json",
+            "docs/evidence/c18-update-validation/20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1/macro-governance.json",
             gate,
         )
         self.assertNotIn("20260616T233424Z-current-macro-governance-95d79ef", gate)
@@ -510,7 +511,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "python3",
                 str(PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH),
                 "--now-utc",
-                "2026-06-17T22:30:00Z",
+                "2026-06-18T04:35:00Z",
                 "--allow-dirty-repo",
                 "--json",
             ],
@@ -541,9 +542,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("dadooh.c18.ota_pre_soak_scale_governance_gate.v1", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_ready", gate)
         self.assertIn("macro_gate_blocker", gate)
-        self.assertIn("20260617T221732Z-current-macro-governance-9bebaf1", gate)
+        self.assertIn("20260618T043100Z-current-macro-governance-after-pilot-p0-9bebaf1", gate)
         self.assertIn("20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1", gate)
-        self.assertIn("20260617T203659Z-h2-powerloss-board-preflight-refresh-mpv-stuck-fix-9bebaf1", gate)
+        self.assertIn("20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
@@ -1113,7 +1114,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260612T195336Z-pilot-authorization-traceability-refresh",
             "20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e",
-            "20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1",
+            "20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1",
             "repo_clean=true",
             "tracked_inputs=true",
         ):
@@ -2762,7 +2763,7 @@ exec "$C18_REAL_PYTHON3" "$@"
             "C18 Homologation RC agora esta reancorada no alvo corrigido "
             "`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`, em "
             "`channel=homologation` e `ring=pilot`, com preflight H2 aceito apos "
-            "reset/topologia, mas ainda esta **pre-P0 fisico**",
+            "reset/topologia e P0 power-loss seletivo validado",
             update_auth_words,
         )
         self.assertIn(
@@ -2788,11 +2789,11 @@ exec "$C18_REAL_PYTHON3" "$@"
             "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
             "20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80",
             "20260617T192801Z-pilot-preflight-mpv-stuck-fix-9bebaf1",
-            "20260617T192101Z-current-h2-readiness-mpv-stuck-fix-9bebaf1",
+            "20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1",
             "20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397",
             "20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
             "20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1",
-            "pilot_powerloss_p0:pilot_powerloss_p0_incomplete",
+            "20260618T034601Z-pilot-p0-powerloss-9bebaf1",
             "channel=homologation",
             "ring=pilot",
             "c18_player_runtime_pilot_readiness_gate.py",
