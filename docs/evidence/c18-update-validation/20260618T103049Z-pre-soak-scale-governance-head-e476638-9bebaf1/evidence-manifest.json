@@ -1,0 +1,51 @@
+{
+  "collected_at_utc": "2026-06-18T10:31:00Z",
+  "collection_repo_commit": "e476638ac3c491c4faaf0ca739020b58d8c35aa5",
+  "collection_repo_tree": "8a2b74f366ae6ea5953cb24e9e84be48f129834f",
+  "files": [
+    {
+      "bytes": 1378,
+      "file": "README.md",
+      "sha256": "6a6ca281a273c3fad7f1a35e504de0c88e40e8ad9e36167bc0ae33e8647ad53d"
+    },
+    {
+      "bytes": 5405,
+      "file": "pre-soak-scale-governance.json",
+      "sha256": "f0e836a7b59b06299ea3ce52f4eb37b925492e0f08011b3a6be264001851deed"
+    }
+  ],
+  "inputs": {
+    "h2_powerloss_preflight": "docs/evidence/c18-update-validation/20260618T095819Z-h2-powerloss-board-preflight-after-target-health-9bebaf1",
+    "h2_readiness": "docs/evidence/c18-update-validation/20260618T101740Z-current-h2-readiness-head-0401375-9bebaf1/h2-readiness.json",
+    "macro_governance": "docs/evidence/c18-update-validation/20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/macro-governance.json",
+    "operational_resume_default_blocked": "docs/evidence/c18-update-validation/20260618T102725Z-operational-resume-default-blocked-head-f47d0f8-9bebaf1",
+    "server_side_current": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+    "stable_thaw_draft_blocked": "docs/evidence/c18-update-validation/20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1"
+  },
+  "non_claims": [
+    "this_snapshot_does_not_authorize_production",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_thaw_public_player_runtime",
+    "this_snapshot_does_not_satisfy_24h_soak",
+    "this_snapshot_does_not_satisfy_powerloss_17_17",
+    "this_snapshot_does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "c18_ota_pre_soak_scale_governance_ready",
+  "schema": "dadooh.c18.ota_pre_soak_scale_governance_snapshot.v1",
+  "server_side_audit_event_policy": {
+    "accepted_legacy_event_for_signed_current": "stable_promoted",
+    "canonical_future_event": "stable_promotion_evaluated",
+    "current_signed_release_rewritten": false
+  },
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}
