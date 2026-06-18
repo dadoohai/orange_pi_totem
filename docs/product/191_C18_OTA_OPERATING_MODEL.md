@@ -143,6 +143,13 @@ snapshot, stable/thaw bloqueado sem escrever drafts e retomada operacional
 default-deny. Ele tambem nao autoriza producao, `stable`, auto-pull, public
 thaw, soak 24h nem matriz power-loss 17/17.
 
+O server-side atual precisa materializar estado de distribuicao, nao apenas
+politica abstrata: `server-side-rollout-state.json` deve ficar pausado pre-H2,
+com `rollout_enabled=false`, `auto_pull_enabled=false`, allowlist vazia, IDs
+brutos ausentes e hashes prendendo release evidence, governance gate e asset
+list. Esse estado e default-deny; ele nao substitui autorizacao operacional
+fresca, preflight de placa ou H2.
+
 Antes de retomar operacao depois de pausa, reboot ou passagem de dias, rodar
 `scripts/qa/c18_ota_operational_resume_gate.py`. Esse gate precisa ver
 autorizacao ativa para a janela atual, preflight `pre_apply` fresco, device hash

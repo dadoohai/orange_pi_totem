@@ -1,0 +1,40 @@
+{
+  "allowlist": [],
+  "allowlist_count": 0,
+  "allowlist_identity": "sha256",
+  "auto_pull_enabled": false,
+  "current_stage": "paused_pre_h2",
+  "empty_allowlist_blocks": true,
+  "input_hashes": {
+    "server_side_asset_list_sha256": "087a3aed3bf5084c1c2aed488a361969c5ac66b489872089b3dfea2f258dc405",
+    "server_side_evidence_sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+    "server_side_governance_gate_sha256": "cbce80b672cbf768c366d86d4ba93858301ba79c90b5ff331108777839617dc7"
+  },
+  "non_claims": [
+    "this_state_does_not_publish_releases",
+    "this_state_does_not_enable_auto_pull",
+    "this_state_does_not_promote_stable",
+    "this_state_does_not_thaw_player_runtime",
+    "this_state_does_not_authorize_production",
+    "this_state_does_not_advance_rollout",
+    "this_state_does_not_replace_h2",
+    "this_state_does_not_replace_powerloss_17_17",
+    "this_state_does_not_replace_soak_24h"
+  ],
+  "operator_window_active": false,
+  "passed": true,
+  "percentage": 0,
+  "raw_device_ids_persisted": false,
+  "result_claim": "server_side_rollout_paused_pre_h2",
+  "rollout_enabled": false,
+  "schema": "dadooh.c18.server_side_rollout_state.v1",
+  "stage_advance_allowed": false,
+  "state": "paused",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  }
+}

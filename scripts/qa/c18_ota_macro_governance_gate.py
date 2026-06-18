@@ -20,6 +20,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+
+from c18_server_side_rollout_state_gate import validate_rollout_state
 from unittest import mock
 
 import c18_board_readonly_diagnostics_evidence_gate as board_gate
@@ -122,6 +124,8 @@ REQUIRED_SERVER_SIDE_FILES = (
     "README.md",
     "server-side-governance-gate.json",
     "server-side-asset-list.json",
+    "server-side-rollout-state.json",
+    "server-side-rollout-state-gate.json",
 )
 REQUIRED_SERVER_SIDE_KEY_CHECKS = (
     "governance_gate_passed",
@@ -133,6 +137,11 @@ REQUIRED_SERVER_SIDE_KEY_CHECKS = (
     "allowlist_controls_defined",
     "staged_rollout_defined",
     "audit_trail_defined",
+    "rollout_state_present",
+    "rollout_state_hash_bound",
+    "rollout_paused_pre_h2",
+    "allowlist_empty",
+    "raw_device_ids_absent",
 )
 REQUIRED_SERVER_SIDE_NON_CLAIMS = (
     "this_snapshot_does_not_publish_releases",
@@ -240,6 +249,20 @@ def repo_relative(path: Path) -> str | None:
         return path.resolve(strict=False).relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError:
         return None
+
+
+def resolve_server_side_input(raw: Any, run_dir: Path) -> Path | None:
+    if not isinstance(raw, str) or not raw:
+        return None
+    candidate = Path(raw)
+    if candidate.is_absolute():
+        return candidate
+    if ".." in candidate.parts:
+        return None
+    repo_candidate = REPO_ROOT / candidate
+    if repo_candidate.exists():
+        return repo_candidate
+    return run_dir.parent / candidate
 
 
 def server_side_asset_base(run_dir: Path) -> Path:
@@ -705,6 +728,7 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
     for claim in REQUIRED_SERVER_SIDE_NON_CLAIMS:
         if claim not in non_claims:
             blockers.append(f"server_side_non_claim_missing:{claim}")
+    inputs = manifest.get("inputs") if isinstance(manifest.get("inputs"), dict) else {}
 
     gate = read_json(run_dir / "server-side-governance-gate.json", blockers, "server_side_gate")
     if gate:
@@ -750,6 +774,32 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
         for claim in REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS:
             if claim not in asset_non_claims:
                 blockers.append(f"server_side_asset_non_claim_missing:{claim}")
+
+    rollout_gate = read_json(run_dir / "server-side-rollout-state-gate.json", blockers, "server_side_rollout_gate")
+    if rollout_gate:
+        if rollout_gate.get("schema") != "dadooh.c18.server_side_rollout_state_gate.v1":
+            blockers.append("server_side_rollout_gate_schema")
+        if rollout_gate.get("passed") is not True:
+            blockers.append("server_side_rollout_gate_not_passed")
+        if rollout_gate.get("result_claim") != "server_side_rollout_paused_pre_h2":
+            blockers.append("server_side_rollout_gate_result_claim")
+        if rollout_gate.get("blockers") != []:
+            blockers.append("server_side_rollout_gate_has_blockers")
+    rollout_result = validate_rollout_state(
+        run_dir / "server-side-rollout-state.json",
+        server_side_evidence=resolve_server_side_input(inputs.get("server_side_evidence"), run_dir),
+        server_side_governance_gate=run_dir / "server-side-governance-gate.json",
+        server_side_asset_list=run_dir / "server-side-asset-list.json",
+        expected_target={
+            "version": TARGET_PACKAGE_VERSION,
+            "component": "player-runtime",
+            "channel": "homologation",
+            "source_commit": TARGET_SOURCE_COMMIT,
+            "payload_sha256": TARGET_PAYLOAD_SHA256,
+        },
+    )
+    if rollout_result.get("passed") is not True:
+        blockers.extend(f"server_side_rollout_state:{item}" for item in rollout_result.get("blockers", []))
 
     return check(
         "server_side_current",
@@ -1014,6 +1064,8 @@ def write_fixture(root: Path) -> argparse.Namespace:
             "this_gate_does_not_thaw_player_runtime",
         ],
     })
+    server_side_evidence = root / "server-side-evidence.json"
+    write_json(server_side_evidence, {"schema": "fixture", "target": TARGET_PACKAGE_VERSION})
     release_dir = root / "release"
     release_dir.mkdir()
     asset_records = []
@@ -1031,6 +1083,53 @@ def write_fixture(root: Path) -> argparse.Namespace:
         "asset_records": asset_records,
         "non_claims": list(REQUIRED_SERVER_SIDE_ASSET_NON_CLAIMS),
     })
+    write_json(server_side_dir / "server-side-rollout-state.json", {
+        "schema": "dadooh.c18.server_side_rollout_state.v1",
+        "passed": True,
+        "result_claim": "server_side_rollout_paused_pre_h2",
+        "target_package": {
+            "version": TARGET_PACKAGE_VERSION,
+            "component": "player-runtime",
+            "channel": "homologation",
+            "source_commit": TARGET_SOURCE_COMMIT,
+            "payload_sha256": TARGET_PAYLOAD_SHA256,
+        },
+        "state": "paused",
+        "rollout_enabled": False,
+        "auto_pull_enabled": False,
+        "current_stage": "paused_pre_h2",
+        "percentage": 0,
+        "allowlist": [],
+        "allowlist_count": 0,
+        "allowlist_identity": "sha256",
+        "empty_allowlist_blocks": True,
+        "operator_window_active": False,
+        "raw_device_ids_persisted": False,
+        "stage_advance_allowed": False,
+        "input_hashes": {
+            "server_side_evidence_sha256": sha256_file(server_side_evidence),
+            "server_side_governance_gate_sha256": sha256_file(server_side_dir / "server-side-governance-gate.json"),
+            "server_side_asset_list_sha256": sha256_file(server_side_dir / "server-side-asset-list.json"),
+        },
+        "non_claims": [
+            "this_state_does_not_publish_releases",
+            "this_state_does_not_enable_auto_pull",
+            "this_state_does_not_promote_stable",
+            "this_state_does_not_thaw_player_runtime",
+            "this_state_does_not_authorize_production",
+            "this_state_does_not_advance_rollout",
+            "this_state_does_not_replace_h2",
+            "this_state_does_not_replace_powerloss_17_17",
+            "this_state_does_not_replace_soak_24h",
+        ],
+    })
+    rollout_result = validate_rollout_state(
+        server_side_dir / "server-side-rollout-state.json",
+        server_side_evidence=server_side_evidence,
+        server_side_governance_gate=server_side_dir / "server-side-governance-gate.json",
+        server_side_asset_list=server_side_dir / "server-side-asset-list.json",
+    )
+    write_json(server_side_dir / "server-side-rollout-state-gate.json", rollout_result)
     file_entries = []
     for filename in REQUIRED_SERVER_SIDE_FILES:
         path = server_side_dir / filename
@@ -1045,6 +1144,9 @@ def write_fixture(root: Path) -> argparse.Namespace:
         "passed": True,
         "result_claim": "server_side_publish_governance_ready",
         "files": file_entries,
+        "inputs": {
+            "server_side_evidence": "server-side-evidence.json",
+        },
         "target_package": {
             "version": TARGET_PACKAGE_VERSION,
             "component": "player-runtime",
@@ -1231,6 +1333,20 @@ class MacroGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_current:server_side_asset_record_file_sha256_mismatch:release/asset-0.json",
+            result["blockers"],
+        )
+
+    def test_server_side_rollout_state_must_be_paused_pre_h2(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = write_fixture(Path(tmp))
+            state_path = fixture.server_side_current_dir / "server-side-rollout-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["rollout_enabled"] = True
+            write_json(state_path, state)
+            result = self.evaluate_fixture(fixture)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current:server_side_rollout_state:rollout_state_rollout_enabled_not_false",
             result["blockers"],
         )
 

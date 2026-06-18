@@ -1,0 +1,14 @@
+{
+  "blockers": [],
+  "passed": true,
+  "result_claim": "server_side_rollout_paused_pre_h2",
+  "schema": "dadooh.c18.server_side_rollout_state_gate.v1",
+  "state": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/server-side-rollout-state.json",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  }
+}

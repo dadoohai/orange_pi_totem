@@ -89,8 +89,10 @@ Evidencia principal:
 - server-side/signature atual:
   `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
   `server-side-governance-gate.json` verde para `player-runtime`, trust anchor
-  externo verificado e lista de 14 assets assinados/atestados hash-bound; nao
-  publica, nao promove `stable`, nao liga auto-pull e nao abre thaw;
+  externo verificado, lista de 14 assets assinados/atestados hash-bound e
+  `server-side-rollout-state.json` pausado pre-H2 com allowlist vazia,
+  auto-pull desligado e IDs brutos ausentes; nao publica, nao promove `stable`,
+  nao liga auto-pull, nao avanca rollout e nao abre thaw;
 - plano/runbook H2 power-loss do alvo corrigido:
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/`,
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;

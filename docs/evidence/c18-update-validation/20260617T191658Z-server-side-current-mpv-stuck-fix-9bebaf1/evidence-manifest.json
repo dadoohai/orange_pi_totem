@@ -1,9 +1,9 @@
 {
   "files": [
     {
-      "bytes": 1091,
+      "bytes": 1340,
       "file": "README.md",
-      "sha256": "90fd01e6277d5124e2ec86946b347d2c754ec9152ebe90e9828be51ab891d645"
+      "sha256": "2b9c3eabda4f329593366124fb28cadba710e1ea8742b27764f703ec79288581"
     },
     {
       "bytes": 501,
@@ -14,6 +14,16 @@
       "bytes": 5939,
       "file": "server-side-asset-list.json",
       "sha256": "087a3aed3bf5084c1c2aed488a361969c5ac66b489872089b3dfea2f258dc405"
+    },
+    {
+      "bytes": 1570,
+      "file": "server-side-rollout-state.json",
+      "sha256": "1a18e1abe6f297ed7bd0efb0cbd6fd32363c25d10b86634fa005e75edbe23b2a"
+    },
+    {
+      "bytes": 617,
+      "file": "server-side-rollout-state-gate.json",
+      "sha256": "6dd23774011de510f922fd8bbd1fe36af4db188d2d7b1336e19ca672f7bb9ef9"
     }
   ],
   "inputs": {
@@ -24,6 +34,7 @@
   },
   "key_checks": {
     "allowlist_controls_defined": true,
+    "allowlist_empty": true,
     "asset_count": 14,
     "asset_list_hash_bound": true,
     "audit_trail_defined": true,
@@ -31,6 +42,10 @@
     "expected_component_player_runtime": true,
     "external_trust_anchor_verified": true,
     "governance_gate_passed": true,
+    "raw_device_ids_absent": true,
+    "rollout_paused_pre_h2": true,
+    "rollout_state_hash_bound": true,
+    "rollout_state_present": true,
     "signed_or_attested_assets_verified": true,
     "staged_rollout_defined": true
   },

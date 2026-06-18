@@ -82,6 +82,7 @@ PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH = (
 SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_governance_gate.py"
 SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_asset_collect.py"
 SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_publish_evidence_build.py"
+SERVER_SIDE_ROLLOUT_STATE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_server_side_rollout_state_gate.py"
 TOTEM_CORE_PUBLISH_ASSET_LIST_PATH = REPO_ROOT / "scripts" / "qa" / "c18_totem_core_publish_asset_list.py"
 PLAYER_RUNTIME_H2_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_h2_readiness_gate.py"
 PLAYER_RUNTIME_POWERLOSS_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_powerloss_trial.py"
@@ -455,6 +456,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("snapshot_only", gate)
         self.assertIn("EXPECTED_H2_BLOCKERS", gate)
         self.assertIn("h2_must_remain_blocked_pre_production", gate)
+        self.assertIn("c18_server_side_rollout_state_gate", gate)
+        self.assertIn("server-side-rollout-state.json", gate)
+        self.assertIn("rollout_state_hash_bound", gate)
+        self.assertIn("test_server_side_rollout_state_must_be_paused_pre_h2", gate)
         self.assertIn("c18_ota_macro_governance_gate", release_gate)
 
     def test_operational_resume_gate_blocks_stale_snapshot_inputs(self) -> None:
@@ -579,6 +584,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("stable_thaw_blocked_run_authorization_must_be_false", gate)
         self.assertIn("operational_resume_blocked_summary_must_be_red", gate)
         self.assertIn("operational_resume_default_must_block_without_current_inputs", gate)
+        self.assertIn("c18_server_side_rollout_state_gate", gate)
+        self.assertIn("server-side-rollout-state.json", gate)
+        self.assertIn("rollout_state_hash_bound", gate)
+        self.assertIn("test_server_side_current_snapshot_rejects_active_rollout_state", gate)
         self.assertIn("this_gate_does_not_authorize_production", gate)
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
         self.assertIn("this_gate_does_not_satisfy_powerloss_17_17", gate)
@@ -706,6 +715,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("validate_server_side_current_asset_records", stable_gate)
         self.assertIn("server_side_current_asset_sha256_mismatch", stable_gate)
         self.assertIn("test_server_side_current_asset_records_must_match_files", stable_gate)
+        self.assertIn("c18_server_side_rollout_state_gate", stable_gate)
+        self.assertIn("server-side-rollout-state.json", stable_gate)
+        self.assertIn("server_side_current_rollout_state", stable_gate)
+        self.assertIn("test_server_side_current_rollout_state_must_be_paused", stable_gate)
         self.assertIn("stable_promotion_expected_hashes_missing", stable_gate)
         self.assertIn("stable_promotion_expected_hash_missing", stable_gate)
         self.assertIn("test_h2_readiness_hash_is_derived_from_artifacts", stable_gate)
@@ -2679,6 +2692,10 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("validate_server_side_current_asset_records", h2_gate)
         self.assertIn("server_side_current_asset_sha256_mismatch", h2_gate)
         self.assertIn("test_server_side_current_asset_records_must_match_files", h2_gate)
+        self.assertIn("c18_server_side_rollout_state_gate", h2_gate)
+        self.assertIn("server-side-rollout-state.json", h2_gate)
+        self.assertIn("server_side_current_rollout_state", h2_gate)
+        self.assertIn("test_server_side_current_rollout_state_must_be_paused", h2_gate)
         self.assertIn("--server-side-current-dir", h2_gate)
         self.assertIn("repo_clean_guard", h2_gate)
         self.assertIn("tracked_input_guard", h2_gate)
@@ -2701,6 +2718,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertNotIn("gh release", h2_gate)
 
         server_side_gate = SERVER_SIDE_PUBLISH_GOVERNANCE_GATE_PATH.read_text(encoding="utf-8")
+        rollout_state_gate = SERVER_SIDE_ROLLOUT_STATE_GATE_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(SERVER_SIDE_ROLLOUT_STATE_GATE_PATH), "--self-test"], check=True)
         self.assertIn("dadooh.c18.server_side_publish_governance.v1", server_side_gate)
         self.assertIn("signature_or_attestation_present", server_side_gate)
         self.assertIn("auto_pull_default_disabled", server_side_gate)
@@ -2727,6 +2746,13 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("this_gate_does_not_enable_auto_pull", server_side_gate)
         self.assertNotIn("gh release", server_side_gate)
         self.assertNotIn("apply-github", server_side_gate)
+        self.assertIn("dadooh.c18.server_side_rollout_state.v1", rollout_state_gate)
+        self.assertIn("server_side_rollout_paused_pre_h2", rollout_state_gate)
+        self.assertIn("rollout_state_allowlist_not_empty", rollout_state_gate)
+        self.assertIn("rollout_state_raw_identifier_private_ip", rollout_state_gate)
+        self.assertIn("this_state_does_not_advance_rollout", rollout_state_gate)
+        self.assertNotIn("gh release", rollout_state_gate)
+        self.assertNotIn("apply-github", rollout_state_gate)
 
         evidence_build = SERVER_SIDE_PUBLISH_EVIDENCE_BUILD_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.server_side_publish_evidence_build.v1", evidence_build)

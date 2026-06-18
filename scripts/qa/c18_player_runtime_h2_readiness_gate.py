@@ -30,6 +30,7 @@ from c18_stable_promotion_gate import evaluate as evaluate_stable_promotion_gate
 from c18_stable_promotion_gate import evaluate_release_gate_summary as evaluate_release_gate_summary
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 from c18_server_side_publish_governance_gate import write_fixture_release as write_server_side_fixture_release
+from c18_server_side_rollout_state_gate import validate_rollout_state
 from c18_player_runtime_thaw_decision_gate import evaluate as evaluate_thaw_decision_gate
 
 
@@ -76,6 +77,8 @@ REQUIRED_SERVER_SIDE_CURRENT_FILES = (
     "README.md",
     "server-side-governance-gate.json",
     "server-side-asset-list.json",
+    "server-side-rollout-state.json",
+    "server-side-rollout-state-gate.json",
 )
 
 
@@ -748,6 +751,31 @@ def evaluate_server_side_current(
             blockers.append("server_side_current_asset_count_not_14")
         else:
             validate_server_side_current_asset_records(run_dir, asset_records, blockers)
+    rollout_gate = read_json(run_dir / "server-side-rollout-state-gate.json", blockers, "server_side_current_rollout_gate")
+    if rollout_gate:
+        if rollout_gate.get("schema") != "dadooh.c18.server_side_rollout_state_gate.v1":
+            blockers.append("server_side_current_rollout_gate_schema")
+        if rollout_gate.get("passed") is not True:
+            blockers.append("server_side_current_rollout_gate_not_passed")
+        if rollout_gate.get("result_claim") != "server_side_rollout_paused_pre_h2":
+            blockers.append("server_side_current_rollout_gate_result_claim")
+        if rollout_gate.get("blockers") != []:
+            blockers.append("server_side_current_rollout_gate_has_blockers")
+    rollout_result = validate_rollout_state(
+        run_dir / "server-side-rollout-state.json",
+        server_side_evidence=expected_server_side_evidence,
+        server_side_governance_gate=run_dir / "server-side-governance-gate.json",
+        server_side_asset_list=run_dir / "server-side-asset-list.json",
+        expected_target={
+            "version": expected_target.get("package_version", ""),
+            "component": "player-runtime",
+            "channel": "homologation",
+            "source_commit": expected_target.get("source_commit", ""),
+            "payload_sha256": expected_target.get("payload_sha256", ""),
+        },
+    )
+    if rollout_result.get("passed") is not True:
+        blockers.extend(f"server_side_current_rollout_state:{item}" for item in rollout_result.get("blockers", []))
     return step(
         not blockers,
         blockers,
@@ -947,6 +975,59 @@ def complete_args(root: Path) -> argparse.Namespace:
         "schema": SERVER_SIDE_ASSET_LIST_SCHEMA,
         "asset_records": asset_records,
     })
+    write_json(server_current / "server-side-rollout-state.json", {
+        "schema": "dadooh.c18.server_side_rollout_state.v1",
+        "passed": True,
+        "result_claim": "server_side_rollout_paused_pre_h2",
+        "target_package": {
+            "version": server_manifest["version"],
+            "component": "player-runtime",
+            "channel": server_manifest["channel"],
+            "source_commit": server_manifest["source_commit"],
+            "payload_sha256": server_manifest["payload_sha256"],
+        },
+        "state": "paused",
+        "rollout_enabled": False,
+        "auto_pull_enabled": False,
+        "current_stage": "paused_pre_h2",
+        "percentage": 0,
+        "allowlist": [],
+        "allowlist_count": 0,
+        "allowlist_identity": "sha256",
+        "empty_allowlist_blocks": True,
+        "operator_window_active": False,
+        "raw_device_ids_persisted": False,
+        "stage_advance_allowed": False,
+        "input_hashes": {
+            "server_side_evidence_sha256": sha256_file(server),
+            "server_side_governance_gate_sha256": sha256_file(server_current / "server-side-governance-gate.json"),
+            "server_side_asset_list_sha256": sha256_file(server_current / "server-side-asset-list.json"),
+        },
+        "non_claims": [
+            "this_state_does_not_publish_releases",
+            "this_state_does_not_enable_auto_pull",
+            "this_state_does_not_promote_stable",
+            "this_state_does_not_thaw_player_runtime",
+            "this_state_does_not_authorize_production",
+            "this_state_does_not_advance_rollout",
+            "this_state_does_not_replace_h2",
+            "this_state_does_not_replace_powerloss_17_17",
+            "this_state_does_not_replace_soak_24h",
+        ],
+    })
+    write_json(server_current / "server-side-rollout-state-gate.json", validate_rollout_state(
+        server_current / "server-side-rollout-state.json",
+        server_side_evidence=server,
+        server_side_governance_gate=server_current / "server-side-governance-gate.json",
+        server_side_asset_list=server_current / "server-side-asset-list.json",
+        expected_target={
+            "version": server_manifest["version"],
+            "component": "player-runtime",
+            "channel": server_manifest["channel"],
+            "source_commit": server_manifest["source_commit"],
+            "payload_sha256": server_manifest["payload_sha256"],
+        },
+    ))
     current_files = []
     for filename in REQUIRED_SERVER_SIDE_CURRENT_FILES:
         path = server_current / filename
@@ -1180,6 +1261,24 @@ class H2ReadinessGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_current_snapshot:server_side_current_asset_sha256_mismatch:release/asset-0.json",
+            result["blockers"],
+        )
+
+    def test_server_side_current_rollout_state_must_be_paused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = complete_args(Path(tmp))
+            state_path = args.server_side_current_dir / "server-side-rollout-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["stage_advance_allowed"] = True
+            write_json(state_path, state)
+            with (
+                mock.patch(__name__ + ".SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS", set(REQUIRED_POWERLOSS_CHECKPOINTS)),
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+            ):
+                result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_current_snapshot:server_side_current_rollout_state:rollout_state_stage_advance_allowed_not_false",
             result["blockers"],
         )
 

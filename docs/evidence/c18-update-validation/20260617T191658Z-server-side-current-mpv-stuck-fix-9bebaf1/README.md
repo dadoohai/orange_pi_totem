@@ -17,8 +17,12 @@ Result:
 - `server-side-governance-gate.json`: passed,
   `result_claim=server_side_publish_governance_ready`;
 - `server-side-asset-list.json`: 14 release/trust assets, repo-relative and
-  hash-bound.
+  hash-bound;
+- `server-side-rollout-state.json`: rollout paused pre-H2, auto-pull disabled,
+  allowlist empty, raw device IDs absent, and hash-bound to the release evidence,
+  current governance gate, and current asset list.
 
 This snapshot revalidates the signed/attested evidence family. It does not
-publish a release, enable auto-pull, promote `stable`, thaw `player-runtime`,
-complete H2, replace 17/17 power-loss, or replace 24h soak.
+publish a release, enable auto-pull, advance rollout, authorize a device,
+promote `stable`, thaw `player-runtime`, complete H2, replace 17/17 power-loss,
+or replace 24h soak.

@@ -22,6 +22,8 @@ from unittest import mock
 from pathlib import Path
 from typing import Any
 
+from c18_server_side_rollout_state_gate import validate_rollout_state
+
 
 SCHEMA = "dadooh.c18.ota_pre_soak_scale_governance_gate.v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -81,6 +83,11 @@ REQUIRED_SERVER_SIDE_CURRENT_KEY_CHECKS = (
     "allowlist_controls_defined",
     "staged_rollout_defined",
     "audit_trail_defined",
+    "rollout_state_present",
+    "rollout_state_hash_bound",
+    "rollout_paused_pre_h2",
+    "allowlist_empty",
+    "raw_device_ids_absent",
 )
 REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS = (
     "this_snapshot_does_not_publish_releases",
@@ -236,6 +243,20 @@ def read_json(path: Path, blockers: list[str], label: str) -> dict[str, Any]:
         blockers.append(f"{label}_not_object")
         return {}
     return data
+
+
+def resolve_server_side_input(raw: Any, run_dir: Path) -> Path | None:
+    if not isinstance(raw, str) or not raw:
+        return None
+    candidate = Path(raw)
+    if candidate.is_absolute():
+        return candidate
+    if ".." in candidate.parts:
+        return None
+    repo_candidate = REPO_ROOT / candidate
+    if repo_candidate.exists():
+        return repo_candidate
+    return run_dir.parent / candidate
 
 
 def sha256_file(path: Path) -> str:
@@ -452,7 +473,13 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
         if claim not in non_claim_set:
             blockers.append(f"server_side_current_non_claim_missing:{claim}")
     files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
-    for filename in ("README.md", "server-side-governance-gate.json", "server-side-asset-list.json"):
+    for filename in (
+        "README.md",
+        "server-side-governance-gate.json",
+        "server-side-asset-list.json",
+        "server-side-rollout-state.json",
+        "server-side-rollout-state-gate.json",
+    ):
         path = run_dir / filename
         entry = next((item for item in files if isinstance(item, dict) and item.get("file") == filename), None)
         if not path.is_file():
@@ -472,6 +499,33 @@ def evaluate_server_side_current(run_dir: Path) -> dict[str, Any]:
             blockers.append("server_side_current_asset_count_not_14")
         else:
             validate_server_side_asset_records(run_dir, asset_records, blockers)
+    rollout_gate = read_json(run_dir / "server-side-rollout-state-gate.json", blockers, "server_side_rollout_gate")
+    if rollout_gate:
+        if rollout_gate.get("schema") != "dadooh.c18.server_side_rollout_state_gate.v1":
+            blockers.append("server_side_rollout_gate_schema")
+        if rollout_gate.get("passed") is not True:
+            blockers.append("server_side_rollout_gate_not_passed")
+        if rollout_gate.get("result_claim") != "server_side_rollout_paused_pre_h2":
+            blockers.append("server_side_rollout_gate_result_claim")
+        if rollout_gate.get("blockers") != []:
+            blockers.append("server_side_rollout_gate_has_blockers")
+    rollout_result = validate_rollout_state(
+        run_dir / "server-side-rollout-state.json",
+        server_side_evidence=resolve_server_side_input(manifest.get("inputs", {}).get("server_side_evidence"), run_dir)
+        if isinstance(manifest.get("inputs"), dict)
+        else None,
+        server_side_governance_gate=run_dir / "server-side-governance-gate.json",
+        server_side_asset_list=run_dir / "server-side-asset-list.json",
+        expected_target={
+            "version": TARGET_PACKAGE_VERSION,
+            "component": "player-runtime",
+            "channel": TARGET_CHANNEL,
+            "source_commit": TARGET_SOURCE_COMMIT,
+            "payload_sha256": TARGET_PAYLOAD_SHA256,
+        },
+    )
+    if rollout_result.get("passed") is not True:
+        blockers.extend(f"server_side_rollout_state:{item}" for item in rollout_result.get("blockers", []))
     return step(not blockers, blockers, run_dir=str(run_dir), result_claim=manifest.get("result_claim"))
 
 
@@ -993,6 +1047,8 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             "result_claim": "server_side_publish_governance_ready",
             "blockers": [],
         })
+        server_side_evidence = root / "server-side-evidence.json"
+        write_json(server_side_evidence, {"schema": "fixture", "target": TARGET_PACKAGE_VERSION})
         asset_records = []
         release_dir = root / "release"
         release_dir.mkdir()
@@ -1008,6 +1064,52 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             "schema": "dadooh.c18.server_side_publish_asset_list.v1",
             "asset_records": asset_records,
         })
+        write_json(run_dir / "server-side-rollout-state.json", {
+            "schema": "dadooh.c18.server_side_rollout_state.v1",
+            "passed": True,
+            "result_claim": "server_side_rollout_paused_pre_h2",
+            "target_package": {
+                "version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "payload_sha256": TARGET_PAYLOAD_SHA256,
+                "component": "player-runtime",
+                "channel": TARGET_CHANNEL,
+            },
+            "state": "paused",
+            "rollout_enabled": False,
+            "auto_pull_enabled": False,
+            "current_stage": "paused_pre_h2",
+            "percentage": 0,
+            "allowlist": [],
+            "allowlist_count": 0,
+            "allowlist_identity": "sha256",
+            "empty_allowlist_blocks": True,
+            "operator_window_active": False,
+            "raw_device_ids_persisted": False,
+            "stage_advance_allowed": False,
+            "input_hashes": {
+                "server_side_evidence_sha256": sha256_file(server_side_evidence),
+                "server_side_governance_gate_sha256": sha256_file(run_dir / "server-side-governance-gate.json"),
+                "server_side_asset_list_sha256": sha256_file(run_dir / "server-side-asset-list.json"),
+            },
+            "non_claims": [
+                "this_state_does_not_publish_releases",
+                "this_state_does_not_enable_auto_pull",
+                "this_state_does_not_promote_stable",
+                "this_state_does_not_thaw_player_runtime",
+                "this_state_does_not_authorize_production",
+                "this_state_does_not_advance_rollout",
+                "this_state_does_not_replace_h2",
+                "this_state_does_not_replace_powerloss_17_17",
+                "this_state_does_not_replace_soak_24h",
+            ],
+        })
+        write_json(run_dir / "server-side-rollout-state-gate.json", validate_rollout_state(
+            run_dir / "server-side-rollout-state.json",
+            server_side_evidence=server_side_evidence,
+            server_side_governance_gate=run_dir / "server-side-governance-gate.json",
+            server_side_asset_list=run_dir / "server-side-asset-list.json",
+        ))
         key_checks: dict[str, Any] = {name: True for name in REQUIRED_SERVER_SIDE_CURRENT_KEY_CHECKS}
         key_checks["asset_count"] = 14
         if key_check_overrides:
@@ -1024,6 +1126,9 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
                 "channel": TARGET_CHANNEL,
             },
             "key_checks": key_checks,
+            "inputs": {
+                "server_side_evidence": "server-side-evidence.json",
+            },
             "non_claims": non_claims if non_claims is not None else list(REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS),
             "files": [
                 {
@@ -1031,7 +1136,13 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
                     "sha256": sha256_file(run_dir / filename),
                     "bytes": (run_dir / filename).stat().st_size,
                 }
-                for filename in ("README.md", "server-side-governance-gate.json", "server-side-asset-list.json")
+                for filename in (
+                    "README.md",
+                    "server-side-governance-gate.json",
+                    "server-side-asset-list.json",
+                    "server-side-rollout-state.json",
+                    "server-side-rollout-state-gate.json",
+                )
             ],
         })
         return run_dir
@@ -1310,6 +1421,21 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn(
             "server_side_current_asset_sha256_mismatch:release/asset-0.json",
+            result["blockers"],
+        )
+
+    def test_server_side_current_snapshot_rejects_active_rollout_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_server_side_current_fixture(Path(tmp))
+            state_path = run_dir / "server-side-rollout-state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["allowlist"] = ["sha256:" + "1" * 64]
+            state["allowlist_count"] = 1
+            write_json(state_path, state)
+            result = evaluate_server_side_current(run_dir)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "server_side_rollout_state:rollout_state_allowlist_not_empty",
             result["blockers"],
         )
 
