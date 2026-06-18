@@ -135,7 +135,7 @@ DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR = (
 )
 DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T065500Z-operational-resume-default-blocked-head-e8a2d05-9bebaf1"
+    / "docs/evidence/c18-update-validation/20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1"
 )
 DEFAULT_MACRO_SUMMARY_REL = str(DEFAULT_MACRO_SUMMARY.relative_to(REPO_ROOT))
 DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()

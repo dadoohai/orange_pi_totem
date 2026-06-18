@@ -81,7 +81,7 @@ O snapshot de retomada operacional pos-P0
 fica historico da janela em que macro, autorizacao, preflight fresco da placa,
 arvore limpa e inputs rastreados estavam aceitos. O estado default atual apos
 pausa/reboot/passagem de dias esta versionado em
-`docs/evidence/c18-update-validation/20260618T065500Z-operational-resume-default-blocked-head-e8a2d05-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1/`
 e bloqueia corretamente sem autorizacao/preflight atuais. Antes de qualquer nova
 acao assistida, coletar nova autorizacao/preflight e rodar
 `scripts/qa/c18_ota_operational_resume_gate.py`.

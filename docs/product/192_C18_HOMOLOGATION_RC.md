@@ -247,7 +247,7 @@ arvore limpa e inputs rastreados. Esse snapshot nao reabre operacao depois de
 pausa, reboot, passagem de dias ou mudanca de estado da placa.
 
 O estado default atual esta bloqueado em
-`docs/evidence/c18-update-validation/20260618T065500Z-operational-resume-default-blocked-head-e8a2d05-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T073200Z-operational-resume-default-blocked-head-14dd54d-9bebaf1/`
 sem autorizacao/preflight atuais. Para retomar, coletar nova
 autorizacao/preflight e rodar o gate novamente.
 
