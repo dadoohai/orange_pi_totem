@@ -1,0 +1,68 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_board_preflight_snapshot.v1",
+  "collected_at_utc": "2026-06-18T07:03:21Z",
+  "gate_evaluated_at_utc": "2026-06-18T07:05:00Z",
+  "passed": true,
+  "result_claim": "h2_powerloss_board_preflight_accepted",
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+  },
+  "matrix_plan": {
+    "path": "docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-matrix-plan-mpv-stuck-fix-9bebaf1/powerloss-matrix-plan.json"
+  },
+  "board_paths": {
+    "bundle_dir": "/data/c18-powerloss-bundle-3eb06f1",
+    "evidence_root": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1",
+    "canary_media": "/data/media/c18-canary-h264.mp4"
+  },
+  "key_checks": {
+    "collector_passed": true,
+    "offline_gate_passed": true,
+    "policy_homologation": true,
+    "update_timer_disabled": true,
+    "image_marker_c18_hwdecode_lab_1x": true,
+    "target_not_linked": true,
+    "target_not_quarantined": true,
+    "pending_checkpoint_dirs_absent": true,
+    "preflight_fresh_under_4h": true
+  },
+  "non_claims": [
+    "this_preflight_is_not_powerloss_evidence",
+    "this_preflight_does_not_claim_17_17",
+    "this_preflight_does_not_authorize_stable_or_production",
+    "this_preflight_does_not_thaw_player_runtime",
+    "this_preflight_does_not_satisfy_24h_soak",
+    "this_preflight_does_not_complete_h2_readiness"
+  ],
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 1353,
+      "sha256": "d3d2c520b1f1dc68803259b32a862a996dbfe3a069e0f0b209c518ed9ffef951"
+    },
+    {
+      "file": "board-evidence-root-hygiene.json",
+      "bytes": 2520,
+      "sha256": "b6e48f4104337cc67a2643bc8611f952e1560776042f16a8a8bf27e21e28f1d8"
+    },
+    {
+      "file": "board-preflight.json",
+      "bytes": 8709,
+      "sha256": "66229349fabf27b17d2a8548324f19b3e31b407da3c8ac2b6432ea7a8c46e51e"
+    },
+    {
+      "file": "h2-powerloss-preflight-gate.json",
+      "bytes": 2896,
+      "sha256": "35fb5217f1cd2e7fb9146f0e8d22736a5afe9ac1ab4ac6b1875d0f543cdb1106"
+    },
+    {
+      "file": "quarantine-reset-preflight-refresh.json",
+      "bytes": 4450,
+      "sha256": "35ec910ee36d7fe64c28a7977aacbd63ce41ce55456a62c059d71b4dacecaf7b"
+    }
+  ]
+}

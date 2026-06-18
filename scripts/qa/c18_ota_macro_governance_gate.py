@@ -56,7 +56,7 @@ DEFAULT_PILOT_READINESS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json"
 )
 DEFAULT_BOARD_READONLY_DIR = (
     REPO_ROOT
@@ -167,9 +167,9 @@ REQUIRED_DOC_TOKENS = (
     "scripts/qa/c18_ota_macro_governance_gate.py",
     "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
     "docs/evidence/c18-update-validation/20260618T041500Z-pilot-readiness-final-9bebaf1/pilot-readiness-final.json",
-    "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json",
+    "docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json",
     "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/",
-    "docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/",
+    "docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/",
     "docs/evidence/c18-update-validation/user-level-10min-20260617T215450Z-9bebaf1/",
     "docs/evidence/c18-update-validation/user-level-fresh-20260617T2234Z-9bebaf1/",
     "docs/evidence/c18-update-validation/20260618T044408Z-board-readonly-diagnostics-after-pilot-p0-1ddbff4",

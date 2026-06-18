@@ -103,6 +103,31 @@ REQUIRED_SERVER_SIDE_CURRENT_FILES = (
     "server-side-rollout-state.json",
     "server-side-rollout-state-gate.json",
 )
+REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS = (
+    "this_snapshot_does_not_publish_releases",
+    "this_snapshot_does_not_enable_auto_pull",
+    "this_snapshot_does_not_promote_stable",
+    "this_snapshot_does_not_thaw_player_runtime",
+    "this_snapshot_does_not_complete_h2",
+    "this_snapshot_does_not_replace_powerloss_17_17",
+    "this_snapshot_does_not_replace_soak_24h",
+    "this_snapshot_does_not_replace_stable_promotion_or_formal_thaw_decision",
+)
+FORBIDDEN_POSITIVE_CLAIM_FIELDS = frozenset({
+    "auto_pull_active",
+    "auto_pull_started",
+    "production_deployed",
+    "production_enabled",
+    "public_thaw_executed",
+    "published",
+    "release_published",
+    "rollout_advanced",
+    "rollout_enabled",
+    "stable_authorized",
+    "stable_promoted",
+    "stable_publish_executed",
+    "thaw_executed",
+})
 
 
 def read_json(path: Path) -> tuple[dict[str, Any], list[str]]:
@@ -138,6 +163,20 @@ def sha256_file(path: Path) -> str:
 def sha256_json(payload: Any) -> str:
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def positive_claim_blockers(payload: Any, *, label: str, path: str = "") -> list[str]:
+    blockers: list[str] = []
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            child_path = f"{path}.{key}" if path else str(key)
+            if key in FORBIDDEN_POSITIVE_CLAIM_FIELDS and value not in (False, None, "", [], {}):
+                blockers.append(f"{label}_forbidden_positive_claim:{child_path}")
+            blockers.extend(positive_claim_blockers(value, label=label, path=child_path))
+    elif isinstance(payload, list):
+        for index, value in enumerate(payload):
+            blockers.extend(positive_claim_blockers(value, label=label, path=f"{path}[{index}]"))
+    return blockers
 
 
 def directory_tree_sha256(root: Path) -> str:
@@ -568,6 +607,7 @@ def evaluate_server_side_current_snapshot(args: argparse.Namespace, *, expected_
     if run_dir is None:
         return step(False, ["server_side_current_snapshot_missing"])
     blockers: list[str] = []
+    target: dict[str, Any] = {}
     manifest, errors = read_json(run_dir / "evidence-manifest.json")
     blockers.extend(f"server_side_current_manifest_{error}" for error in errors)
     if not errors:
@@ -582,6 +622,11 @@ def evaluate_server_side_current_snapshot(args: argparse.Namespace, *, expected_
             blockers.append("server_side_current_component")
         if target.get("channel") != "homologation":
             blockers.append("server_side_current_channel")
+        blockers.extend(positive_claim_blockers(manifest, label="server_side_current_manifest"))
+        non_claims = set(manifest.get("non_claims", [])) if isinstance(manifest.get("non_claims"), list) else set()
+        for claim in REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS:
+            if claim not in non_claims:
+                blockers.append(f"server_side_current_manifest_non_claim_missing:{claim}")
         inputs = manifest.get("inputs") if isinstance(manifest.get("inputs"), dict) else {}
         if args.server_side_evidence is not None:
             expected = repo_rel(args.server_side_evidence) or str(args.server_side_evidence)
@@ -756,6 +801,7 @@ def validate_data(data: dict[str, Any],
         blockers.append("stable_promotion_auto_pull_enabled")
     if data.get("public_player_runtime_thaw") is True:
         blockers.append("stable_promotion_public_player_runtime_thaw_enabled")
+    blockers.extend(positive_claim_blockers(data, label="stable_promotion"))
     if require_expected_hashes:
         missing_expected = sorted(set(REQUIRED_SHA256_FIELDS) - set(resolved_expected_hashes))
         if missing_expected:
@@ -975,6 +1021,7 @@ def semantic_args_fixture(root: Path) -> argparse.Namespace:
             "trust_anchor_evidence": str(trust_anchor),
             "expected_release_gate_sha256": sha256_file(release_gate),
         },
+        "non_claims": list(REQUIRED_SERVER_SIDE_CURRENT_NON_CLAIMS),
         "files": current_files,
     })
     write_json(soak, {
@@ -1095,6 +1142,15 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         result = validate_data(data)
         self.assertFalse(result["passed"])
         self.assertIn("stable_promotion_public_player_runtime_thaw_enabled", result["blockers"])
+
+    def test_stable_evidence_rejects_positive_publish_claims(self) -> None:
+        for key in ("published", "release_published", "stable_publish_executed"):
+            with self.subTest(key=key):
+                data = valid_fixture()
+                data[key] = True
+                result = validate_data(data)
+                self.assertFalse(result["passed"])
+                self.assertIn(f"stable_promotion_forbidden_positive_claim:{key}", result["blockers"])
 
     def test_file_roundtrip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1304,6 +1360,44 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertFalse(semantics["passed"])
         self.assertIn(
             "server_side_current_snapshot:server_side_current_rollout_state:rollout_state_rollout_enabled_not_false",
+            semantics["blockers"],
+        )
+
+    def test_server_side_current_manifest_missing_returns_structured_blocker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp) / "server-side-current"
+            run_dir.mkdir()
+            args = argparse.Namespace(
+                server_side_current_dir=run_dir,
+                server_side_evidence=None,
+                release_gate_summary=None,
+                server_side_trust_anchor_evidence=None,
+                server_side_trusted_key_pem=[],
+            )
+            result = evaluate_server_side_current_snapshot(args, expected_component="player-runtime")
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_current_manifest_json_error:FileNotFoundError", result["blockers"])
+
+    def test_server_side_current_manifest_rejects_positive_publish_claims(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = semantic_args_fixture(Path(tmp))
+            manifest_path = args.server_side_current_dir / "evidence-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["published"] = True
+            manifest["stable_authorized"] = True
+            write_json(manifest_path, manifest)
+            with (
+                mock.patch(__name__ + ".run_powerloss_gate", return_value={"passed": True, "returncode": 0, "stderr_tail": ""}),
+                mock.patch(__name__ + ".evaluate_server_side_gate", return_value={"passed": True, "blockers": []}),
+            ):
+                semantics = evaluate_artifact_semantics(args)
+        self.assertFalse(semantics["passed"])
+        self.assertIn(
+            "server_side_current_snapshot:server_side_current_manifest_forbidden_positive_claim:published",
+            semantics["blockers"],
+        )
+        self.assertIn(
+            "server_side_current_snapshot:server_side_current_manifest_forbidden_positive_claim:stable_authorized",
             semantics["blockers"],
         )
 

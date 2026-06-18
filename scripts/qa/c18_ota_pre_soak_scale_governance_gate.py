@@ -116,18 +116,18 @@ REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS = (
 )
 DEFAULT_H2_READINESS = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json"
+    / "docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json"
 )
 DEFAULT_MACRO_SUMMARY = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/macro-governance.json"
+    / "docs/evidence/c18-update-validation/20260618T065300Z-current-macro-governance-head-4f698b7-9bebaf1/macro-governance.json"
 )
 DEFAULT_SERVER_SIDE_CURRENT_DIR = (
     REPO_ROOT / "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1"
 )
 DEFAULT_H2_POWERLOSS_PREFLIGHT_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1"
+    / "docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1"
 )
 DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR = (
     REPO_ROOT
@@ -135,8 +135,9 @@ DEFAULT_STABLE_THAW_DRAFT_BLOCKED_DIR = (
 )
 DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR = (
     REPO_ROOT
-    / "docs/evidence/c18-update-validation/20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1"
+    / "docs/evidence/c18-update-validation/20260618T065500Z-operational-resume-default-blocked-head-e8a2d05-9bebaf1"
 )
+DEFAULT_MACRO_SUMMARY_REL = str(DEFAULT_MACRO_SUMMARY.relative_to(REPO_ROOT))
 DEFAULT_TARGET_BLOCKING_DIAGNOSTIC_DIRS: tuple[Path, ...] = ()
 DEFAULT_DOCS = (
     REPO_ROOT / "docs/product/191_C18_OTA_OPERATING_MODEL.md",
@@ -723,7 +724,7 @@ def evaluate_operational_resume_blocked_snapshot(run_dir: Path) -> dict[str, Any
     if sorted(manifest.get("expected_blockers", [])) != sorted(EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS):
         blockers.append("operational_resume_blocked_expected_blockers")
     macro_snapshot = manifest.get("macro_snapshot")
-    if macro_snapshot != "docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/macro-governance.json":
+    if macro_snapshot != DEFAULT_MACRO_SUMMARY_REL:
         blockers.append("operational_resume_blocked_macro_snapshot")
     non_claims = set(manifest.get("non_claims", []))
     for claim in REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS:
@@ -768,7 +769,7 @@ def evaluate_operational_resume_blocked_snapshot(run_dir: Path) -> dict[str, Any
         macro = checks.get("macro_governance_snapshot") if isinstance(checks.get("macro_governance_snapshot"), dict) else {}
         if macro.get("passed") is not True:
             blockers.append("operational_resume_blocked_summary_macro_not_passed")
-        if "20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1" not in str(macro.get("summary_path")):
+        if DEFAULT_MACRO_SUMMARY_REL not in str(macro.get("summary_path")):
             blockers.append("operational_resume_blocked_summary_macro_not_current")
         repo_clean = checks.get("repo_clean") if isinstance(checks.get("repo_clean"), dict) else {}
         if repo_clean.get("passed") is not True or repo_clean.get("changed_paths") != []:
@@ -863,7 +864,7 @@ def evaluate_operational_resume_default(now_utc: str, *, allow_dirty_repo: bool 
     macro = payload.get("checks", {}).get("macro_governance_snapshot", {}) if isinstance(payload.get("checks"), dict) else {}
     if macro.get("passed") is not True:
         blockers.append("operational_resume_default_macro_not_passed")
-    if "20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1" not in str(macro.get("summary_path")):
+    if DEFAULT_MACRO_SUMMARY_REL not in str(macro.get("summary_path")):
         blockers.append("operational_resume_default_macro_not_current")
     return step(not blockers, blockers, returncode=result.get("returncode"))
 
@@ -1274,7 +1275,7 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             "passed": False,
             "result_claim": "c18_operational_resume_blocked",
             "expected_blockers": list(EXPECTED_OPERATIONAL_RESUME_BLOCKED_BLOCKERS),
-            "macro_snapshot": "docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/macro-governance.json",
+            "macro_snapshot": DEFAULT_MACRO_SUMMARY_REL,
             "non_claims": list(REQUIRED_OPERATIONAL_RESUME_BLOCKED_NON_CLAIMS),
             "files": [
                 {

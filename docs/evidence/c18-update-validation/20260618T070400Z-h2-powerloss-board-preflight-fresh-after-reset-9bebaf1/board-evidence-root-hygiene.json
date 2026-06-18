@@ -1,0 +1,55 @@
+
+{
+  "after_direct_child_dirs": [
+    "_completed-pilot-p0-20260618T070300Z",
+    "_diagnostics",
+    "preflight-after-topology-reset-20260617T201635Z",
+    "preflight-refresh-20260617T203659Z",
+    "quarantine-reset-isolation-after-invalid-rollback-quarantine-20260618T032317Z",
+    "quarantine-reset-isolation-after-rollback-current-to-previous-20260618T030708Z",
+    "quarantine-reset-isolation-after-rollback-previous-removed-20260618T031649Z",
+    "quarantine-reset-isolation-after-rollback-quarantine-20260618T033543Z",
+    "quarantine-reset-preflight-refresh-20260618T070200Z",
+    "quarantine-reset-setup-contention-20260618T025730Z",
+    "topology-reset-20260617T201430Z",
+    "topology-reset-20260618T024253Z",
+    "topology-reset-rollback-after-current-to-previous-20260618T025102Z"
+  ],
+  "archive": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/_completed-pilot-p0-20260618T070300Z",
+  "before_direct_child_dirs": [
+    "_diagnostics",
+    "after_current_symlink",
+    "preflight-after-topology-reset-20260617T201635Z",
+    "preflight-refresh-20260617T203659Z",
+    "quarantine-reset-isolation-after-invalid-rollback-quarantine-20260618T032317Z",
+    "quarantine-reset-isolation-after-rollback-current-to-previous-20260618T030708Z",
+    "quarantine-reset-isolation-after-rollback-previous-removed-20260618T031649Z",
+    "quarantine-reset-isolation-after-rollback-quarantine-20260618T033543Z",
+    "quarantine-reset-preflight-refresh-20260618T070200Z",
+    "quarantine-reset-setup-contention-20260618T025730Z",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_state_success",
+    "topology-reset-20260617T201430Z",
+    "topology-reset-20260618T024253Z",
+    "topology-reset-rollback-after-current-to-previous-20260618T025102Z"
+  ],
+  "moved": [
+    "after_current_symlink",
+    "rollback_after_current_to_previous",
+    "rollback_after_previous_removed",
+    "rollback_after_quarantine",
+    "rollback_after_state_success"
+  ],
+  "non_claims": [
+    "this_hygiene_step_does_not_create_powerloss_evidence",
+    "this_hygiene_step_does_not_delete_committed_local_evidence",
+    "this_hygiene_step_does_not_authorize_h2_or_production",
+    "this_hygiene_step_does_not_thaw_player_runtime"
+  ],
+  "performed_at_utc": "2026-06-18T07:03:01Z",
+  "root": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1",
+  "schema": "dadooh.c18.board_evidence_root_hygiene.v1",
+  "skipped": []
+}

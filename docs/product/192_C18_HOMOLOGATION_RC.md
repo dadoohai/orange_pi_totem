@@ -85,7 +85,7 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260612T195336Z-pilot-authorization-traceability-refresh/pilot-authorization.json`,
   `docs/evidence/c18-update-validation/20260612T195516Z-pilot-readiness-traceability-refresh-c16fb3e/pilot-readiness.json`;
 - snapshot H2 atual pos-P0, vermelho apenas pelos blockers de producao:
-  `docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/h2-readiness.json`;
+  `docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/h2-readiness.json`;
 - server-side/signature atual:
   `docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1/`;
   `server-side-governance-gate.json` verde para `player-runtime`, trust anchor
@@ -98,6 +98,8 @@ Evidencia principal:
   `docs/evidence/c18-update-validation/20260617T193720Z-h2-powerloss-operator-runbook-mpv-stuck-fix-9bebaf1/`;
 - preflight H2 read-only da placa antes da sessao P0:
   `docs/evidence/c18-update-validation/20260618T024300Z-h2-powerloss-board-preflight-after-topology-prep-p0-9bebaf1/`;
+- preflight H2 read-only corrente apos limpeza da placa:
+  `docs/evidence/c18-update-validation/20260618T070400Z-h2-powerloss-board-preflight-fresh-after-reset-9bebaf1/`;
 - evidencia P0 power-loss seletiva do piloto:
   `docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/`;
 - gate macro pre-H2:
@@ -108,7 +110,7 @@ Evidencia principal:
 - snapshot macro versionado:
   o snapshot `docs/evidence/c18-update-validation/20260617T064617Z-current-macro-governance-a761a67/`
   fica historico de `c16fb3e`; o snapshot corrente
-  `docs/evidence/c18-update-validation/20260618T054000Z-current-macro-governance-post-p0-board-9bebaf1/`
+  `docs/evidence/c18-update-validation/20260618T065300Z-current-macro-governance-head-4f698b7-9bebaf1/`
   esta verde pre-H2 e aponta para o pilot readiness final pos-P0, sem liberar
   producao;
 - snapshot pre-soak scale governance:
@@ -243,7 +245,7 @@ arvore limpa e inputs rastreados. Esse snapshot nao reabre operacao depois de
 pausa, reboot, passagem de dias ou mudanca de estado da placa.
 
 O estado default atual esta bloqueado em
-`docs/evidence/c18-update-validation/20260618T055500Z-operational-resume-default-blocked-post-p0-board-9bebaf1/`
+`docs/evidence/c18-update-validation/20260618T065500Z-operational-resume-default-blocked-head-e8a2d05-9bebaf1/`
 sem autorizacao/preflight atuais. Para retomar, coletar nova
 autorizacao/preflight e rodar o gate novamente.
 
@@ -275,7 +277,7 @@ Blockers exatos preservados no gate macro:
 - `explicit_operator_thaw_decision:missing_operator_thaw_decision`.
 
 O snapshot H2 rastreavel do alvo `9bebaf1` esta versionado em
-`docs/evidence/c18-update-validation/20260618T043000Z-current-h2-readiness-after-pilot-p0-9bebaf1/`:
+`docs/evidence/c18-update-validation/20260618T065117Z-current-h2-readiness-head-909a625-9bebaf1/`:
 `h1_decisive_bundle=true`, `server_side_publish_governance=true`,
 `repo_clean=true` e `tracked_inputs=true`; `passed=false` continua correto para
 producao.
