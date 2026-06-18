@@ -1,0 +1,57 @@
+{
+  "action": "rollback",
+  "boot_state_at_checkpoint": {
+    "boot_id": "de64cc3b-1aaa-4d2a-81fe-b02322bfbbfb",
+    "btime": 1781750818,
+    "captured_at_utc": "2026-06-18T03:01:32Z",
+    "uptime_sec": 873.91
+  },
+  "checkpoint": "rollback_after_current_to_previous",
+  "context": {
+    "current": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "previous": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "data_root": "/data",
+  "hit_at_utc": "2026-06-18T03:01:32Z",
+  "non_claims": [
+    "power_loss_observed_until_board_boots_and_resume_phase_passes",
+    "public_player_runtime_thaw",
+    "stable_or_production"
+  ],
+  "operator_instruction": "CUT_POWER_NOW",
+  "phase": "armed",
+  "runtime_snapshot": {
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-06-18T02:59:50Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-06-18T02:59:50Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "quarantine": [
+      {
+        "kiosk_py_sha256": "aed11086fcde3054f0c4360d0075cc2ac64499e073d5f350cac6279abd45a88c",
+        "payload_sha256": "23b18fed5d6199575e353a45bb8621de6870ec94a383301d6cb031730694cb27",
+        "quarantined_at_utc": "2026-06-10T07:51:11Z",
+        "reason": "m6_coldboot_trial_rollback",
+        "tree_sha256": "b23ca25b6553a380a7edc811110112c918510cace4ee4c3b5383e359eec36d70",
+        "version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+      },
+      {
+        "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+        "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+        "quarantined_at_utc": "2026-06-18T03:01:32Z",
+        "reason": "physical_powerloss_trial",
+        "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+        "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+      }
+    ],
+    "state_current_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "state_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1",
+  "wait_sec": 600.0
+}

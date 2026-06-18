@@ -1,0 +1,22 @@
+{
+  "api_key": "",
+  "api_url": "https://api.example.invalid/search",
+  "cache_dir": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_state_success/setup/apply/candidate-health/media_cache",
+  "config_ui_enabled": false,
+  "default_duration_ms": 10000,
+  "environment_id": "",
+  "hwdec": "auto",
+  "ipc_path": "/tmp/c18-pr-ipc-892507acfa5f958b/mpv.sock",
+  "log_file": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_state_success/setup/apply/candidate-health/kiosk.log",
+  "mpv_debug_events": true,
+  "mpv_log_file": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_state_success/setup/apply/candidate-health/mpv.log",
+  "mpv_path": "/opt/totem/bin/totem-mpv-hwdecode",
+  "runtime_dir": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_state_success/setup/apply/candidate-health/runtime",
+  "startup_feedback_enabled": false,
+  "state_dir": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_state_success/setup/apply/candidate-health/state",
+  "status_file": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_state_success/setup/apply/candidate-health/status.json",
+  "sync_enabled": false,
+  "telemetry_enabled": false,
+  "telemetry_token": "",
+  "telemetry_url": "https://telemetry.example.invalid/telemetry"
+}

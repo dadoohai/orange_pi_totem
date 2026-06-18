@@ -1,0 +1,18 @@
+{
+  "captured_at_unix": 1781753712,
+  "current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "expected_quarantine_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "quarantine_count": 2,
+  "quarantine_match": {
+    "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "quarantined_at_utc": "2026-06-18T03:26:29Z",
+    "reason": "physical_powerloss_trial",
+    "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "quarantine_match_present": true,
+  "schema": "dadooh.c18.player_runtime.powerloss.post_reconcile_state.v1",
+  "state_sha256": "5114c53ec5739b7bdff1de2b91ddc61b101d81080c87fe9da5dca12d06e3656a"
+}

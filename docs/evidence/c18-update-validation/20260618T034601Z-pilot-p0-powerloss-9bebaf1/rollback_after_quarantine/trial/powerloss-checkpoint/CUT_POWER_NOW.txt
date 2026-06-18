@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=rollback_after_quarantine action=rollback evidence=/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/rollback_after_quarantine/trial/powerloss-checkpoint

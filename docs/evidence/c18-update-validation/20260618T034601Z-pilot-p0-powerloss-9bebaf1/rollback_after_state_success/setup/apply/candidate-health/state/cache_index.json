@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-18T03:37:19Z",
+  "items": {
+    "/data/media/c18-canary-h264.mp4": {
+      "url": "cache://c18-canary-h264.mp4",
+      "duration_ms": 10000,
+      "campaign_id": "c18-canary",
+      "campaign_name": "C18 canary",
+      "last_used": "2026-06-18T03:37:19Z",
+      "size": 541053
+    }
+  }
+}

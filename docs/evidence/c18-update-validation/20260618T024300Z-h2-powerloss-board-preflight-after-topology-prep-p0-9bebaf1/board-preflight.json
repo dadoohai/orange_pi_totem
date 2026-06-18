@@ -1,0 +1,205 @@
+{
+  "blockers": [],
+  "board_paths": {
+    "bundle_dir": "/data/c18-powerloss-bundle-3eb06f1",
+    "canary_media": "/data/media/c18-canary-h264.mp4",
+    "evidence_root": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1"
+  },
+  "boot": {
+    "boot_id_sha256_12": "85976964a60b",
+    "raw_boot_id_persisted": false
+  },
+  "bundle": {
+    "exists": true,
+    "is_dir": true,
+    "is_file": false,
+    "is_symlink": false,
+    "mode_octal": "0o755",
+    "path": "/data/c18-powerloss-bundle-3eb06f1",
+    "size_bytes": 4096
+  },
+  "canary_media": {
+    "exists": true,
+    "is_dir": false,
+    "is_file": true,
+    "is_symlink": false,
+    "mode_octal": "0o644",
+    "path": "/data/media/c18-canary-h264.mp4",
+    "size_bytes": 541053
+  },
+  "captured_at_utc": "2026-06-18T02:43:31Z",
+  "collection_mode": "read_only_preflight",
+  "evidence_root": {
+    "direct_child_dirs": [
+      "preflight-after-topology-reset-20260617T201635Z",
+      "preflight-refresh-20260617T203659Z",
+      "topology-reset-20260617T201430Z",
+      "topology-reset-20260618T024253Z"
+    ],
+    "exists": true,
+    "is_dir": true,
+    "parent": "/data/c18-evidence",
+    "parent_exists": true,
+    "parent_is_dir": true,
+    "parent_writable": true,
+    "path": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1"
+  },
+  "image": {
+    "final_image": "false",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "image_version": "c18.image-lab.1x",
+    "marker_bytes": 2546,
+    "marker_path": "/etc/dadooh/c18-hwdecode-lab-1x-image",
+    "marker_present": true,
+    "marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+    "not_for_production": "true",
+    "player_runtime_ota_still_frozen": "true"
+  },
+  "non_claims": [
+    "this_preflight_is_not_powerloss_evidence",
+    "this_preflight_does_not_claim_17_17",
+    "this_preflight_does_not_arm_or_resume_trials",
+    "this_preflight_does_not_replace_physical_power_cut",
+    "this_preflight_does_not_create_or_modify_evidence",
+    "this_preflight_does_not_apply_or_rollback_player_runtime",
+    "this_preflight_does_not_probe_or_prove_public_freeze_rc44",
+    "this_preflight_does_not_authorize_stable_or_production",
+    "this_preflight_does_not_thaw_player_runtime",
+    "this_preflight_does_not_publish_or_fetch_releases"
+  ],
+  "passed": true,
+  "player_runtime": {
+    "current_present": true,
+    "data_base_present": true,
+    "data_current_kiosk_present": true,
+    "data_current_kiosk_py_sha256": "d63cfd9d31700823d93c7b3c238c4bc8c86330f386f184d2b62bd025f4e221f7",
+    "data_current_marker_present": true,
+    "data_current_marker_reason": "verified",
+    "data_current_marker_verified": true,
+    "data_current_marker_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "data_current_tree_sha256": "e8359959d7bb8b2e03f500cad07798d562085a921947b4f5f269421896179d91",
+    "fallback_kiosk_present": true,
+    "previous_present": false,
+    "selected_source": "data"
+  },
+  "policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "path": "/data/updates/policy.json",
+    "present": true,
+    "read_error": null,
+    "schema": "dadooh.totem.update.policy.v1"
+  },
+  "privacy": {
+    "raw_boot_id_persisted": false,
+    "raw_device_serial_persisted": false,
+    "raw_journal_persisted": false,
+    "raw_mount_source_persisted": false
+  },
+  "result_claim": "h2_powerloss_board_preflight_collected",
+  "runtime_topology": {
+    "app_base": "/data/player-runtime",
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "data_root": "/data",
+    "last_operation": {
+      "current_restored_to": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+      "finished_at_utc": "2026-06-18T02:42:56Z",
+      "reason": "h2_p0_fresh_apply_prep",
+      "started_at_utc": "2026-06-18T02:42:56Z",
+      "status": "success",
+      "target_version_removed": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+      "type": "lab_topology_reset"
+    },
+    "previous_link": null,
+    "quarantine_count": 1,
+    "quarantine_versions": [
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    ],
+    "state_current_payload_sha256": "2dac1f1be3ffc71e4c4539772b7f82d955336e08c6f61eea1d0b55b841a9ca28",
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_file": "/data/player-runtime/state.json",
+    "state_present": true,
+    "state_previous_payload_sha256": null,
+    "state_previous_version": null,
+    "state_read_error": null,
+    "state_schema": "dadooh.totem.update.state.v1",
+    "target_is_current_link": false,
+    "target_is_current_state": false,
+    "target_is_previous_link": false,
+    "target_is_previous_state": false,
+    "target_link": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "target_quarantine_count": 0,
+    "target_quarantined": false,
+    "target_release_dir": "/data/player-runtime/releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "target_release_dir_exists": false
+  },
+  "schema": "dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1",
+  "systemd": {
+    "player_service": {
+      "active": true,
+      "active_raw": "active",
+      "active_rc": 0,
+      "enabled": true,
+      "enabled_raw": "enabled",
+      "enabled_rc": 0,
+      "unit": "kiosky-player.service"
+    },
+    "update_timer": {
+      "active": false,
+      "active_raw": "inactive",
+      "active_rc": 3,
+      "enabled": false,
+      "enabled_raw": "disabled",
+      "enabled_rc": 1,
+      "unit": "totem-update-agent.timer"
+    }
+  },
+  "target_package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "manifest_path": "/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+    "manifest_present": true,
+    "manifest_schema": "dadooh.totem.update.v1",
+    "payload_name": "dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "payload_path": "/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "payload_present": true,
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "payload_sha256_actual": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "payload_sha256_matches_manifest": true,
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "updatectl_freeze_probe": {
+    "included": false,
+    "reason": "read_only_h2_powerloss_preflight"
+  },
+  "wrappers": {
+    "expected_hwdecode_mpv": "/opt/totem/hwdecode/bin/mpv",
+    "expected_mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+    "hwdecode_mpv": {
+      "executable": true,
+      "exists": true,
+      "is_dir": false,
+      "is_file": true,
+      "is_symlink": false,
+      "mode_octal": "0o755",
+      "path": "/opt/totem/hwdecode/bin/mpv",
+      "size_bytes": 2102504
+    },
+    "mpv_wrapper": {
+      "executable": true,
+      "exists": true,
+      "is_dir": false,
+      "is_file": true,
+      "is_symlink": false,
+      "mode_octal": "0o755",
+      "path": "/opt/totem/bin/totem-mpv-hwdecode",
+      "size_bytes": 959
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "action": "systemctl stop kiosky-player.service",
+  "captured_at_utc": "2026-06-18T03:08:35Z",
+  "passed": true,
+  "returncode": 0,
+  "schema": "dadooh.c18.player_runtime.setup_service_hold.v1",
+  "stderr_tail": "",
+  "stdout_tail": ""
+}

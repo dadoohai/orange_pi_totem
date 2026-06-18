@@ -1,0 +1,7 @@
+{
+  "manifest_path": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_state_success/evidence-manifest.json",
+  "manifest_sha256": "00a12b8a8e7fdd42e064769759335d574ad03636f06e0d19e6c427ecb5e368fe",
+  "passed": true,
+  "result_claim": "powerloss_evidence_manifest_written",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1"
+}
