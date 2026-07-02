@@ -1,0 +1,92 @@
+{
+  "blockers": [],
+  "checks": {
+    "current_board_preflight": {
+      "age_sec": 17,
+      "blockers": [],
+      "collected_at_utc": "2026-07-02T23:35:43Z",
+      "device_hash": "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104",
+      "expected_stage": "pre_apply",
+      "max_age_sec": 14400,
+      "passed": true,
+      "preflight_path": "docs/evidence/c18-update-validation/20260702T233543Z-operational-resume-current-91b44e1-9bebaf1/board-preflight.json",
+      "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+      "stage": "pre_apply"
+    },
+    "current_pilot_authorization": {
+      "authorization_path": "docs/evidence/c18-update-validation/20260702T233543Z-operational-resume-current-91b44e1-9bebaf1/pilot-authorization.json",
+      "blockers": [],
+      "device_hashes": [
+        "fe7a64f8170044a6658a80353b927ac023a9eef193310240d7341a26dbff6104"
+      ],
+      "evaluated_at_utc": "2026-07-02T23:36:00Z",
+      "h1_repo_head": "7e40e80789229de1aed5d736a504803a09f97f54",
+      "max_window_sec": 86400,
+      "passed": true,
+      "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+      "window_end_utc": "2026-07-03T23:30:00Z",
+      "window_start_utc": "2026-07-02T23:30:00Z"
+    },
+    "macro_governance_snapshot": {
+      "blockers": [],
+      "evaluated_at_utc": "2026-06-18T10:23:12.129145Z",
+      "passed": true,
+      "summary_path": "docs/evidence/c18-update-validation/20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/macro-governance.json",
+      "target": {
+        "channel": "homologation",
+        "component": "player-runtime",
+        "image_tag": "c18-hwdecode-lab-1x",
+        "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+        "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+        "ring": "pilot",
+        "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+      }
+    },
+    "repo_clean": {
+      "blockers": [],
+      "changed_paths": [],
+      "passed": true,
+      "stderr_tail": ""
+    },
+    "tracked_inputs": {
+      "blockers": [],
+      "ignored": [],
+      "missing": [],
+      "outside_repo": [],
+      "passed": true,
+      "paths": [
+        "docs/evidence/c18-update-validation/20260618T102246Z-current-macro-governance-head-3fb8dc2-9bebaf1/macro-governance.json",
+        "docs/evidence/c18-update-validation/20260702T233543Z-operational-resume-current-91b44e1-9bebaf1/board-preflight.json",
+        "docs/evidence/c18-update-validation/20260702T233543Z-operational-resume-current-91b44e1-9bebaf1/pilot-authorization.json"
+      ],
+      "untracked": []
+    }
+  },
+  "evaluated_at_utc": "2026-07-02T23:36:00Z",
+  "non_claims": [
+    "this_gate_does_not_reopen_expired_pilot_windows",
+    "this_gate_does_not_use_snapshot_as_operational_authorization",
+    "this_gate_does_not_run_ssh_or_board_commands",
+    "this_gate_does_not_apply_or_rollback_player_runtime",
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "c18_operational_resume_ready",
+  "schema": "dadooh.c18.ota_operational_resume_gate.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "blockers": [],
+  "collected_at_utc": "2026-07-02T23:35:43Z",
+  "collection_repo_commit": "6d0473f9de07603916d1c5b1b34f6a1b7f7c300d",
+  "collection_repo_tree": "0b7c3432f70a37c5a17c2eabac052dd346bb133b",
+  "evaluated_at_utc": "2026-07-02T23:36:00Z",
+  "files": [
+    {
+      "bytes": 588,
+      "file": "README.md",
+      "sha256": "b3b677cbe403da455f9ce7b3b037648c64c0ac04dd300544ecbe9aba77eecd6b"
+    },
+    {
+      "bytes": 916,
+      "file": "pilot-authorization.json",
+      "sha256": "443681b2eb3eb69ad7a4140384acc5098632c0c1cae5a1ac1fc47468b396868f"
+    },
+    {
+      "bytes": 4217,
+      "file": "board-preflight.json",
+      "sha256": "298f4ef5c2d6bed42e647cc92bfcdf9e50f3326ec4ed802a08af550c4c754de9"
+    },
+    {
+      "bytes": 3836,
+      "file": "operational-resume.json",
+      "sha256": "54b2441c95bed7f37fa09133ca4a590bdeaf39960136035d214ec79abfae29cf"
+    }
+  ],
+  "non_claims": [
+    "this_gate_does_not_reopen_expired_pilot_windows",
+    "this_gate_does_not_use_snapshot_as_operational_authorization",
+    "this_gate_does_not_run_ssh_or_board_commands",
+    "this_gate_does_not_apply_or_rollback_player_runtime",
+    "this_gate_does_not_authorize_production",
+    "this_gate_does_not_promote_stable",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_thaw_public_player_runtime",
+    "this_gate_does_not_satisfy_24h_soak",
+    "this_gate_does_not_satisfy_powerloss_17_17",
+    "this_gate_does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "c18_operational_resume_ready",
+  "schema": "dadooh.c18.ota_operational_resume_snapshot.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "image_tag": "c18-hwdecode-lab-1x",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}
