@@ -371,6 +371,68 @@ versionada antes de aplicar em placa ou cliente.
 
 ## Proxima rodada
 
+### Nota de contra-auditoria em 2026-07-02
+
+Uma revisao operacional independente em 2026-07-02 confirmou o retrato macro:
+a RC `9bebaf1` continua sustentada como homologacao/pre-H2, sem claim de
+producao, `stable`, auto-pull ou public thaw. A placa estava saudavel no momento
+da coleta ao vivo reportada pela auditoria, mas qualquer operacao nova continua
+dependente de autorizacao/preflight atuais, pois os preflights versionados de
+2026-06-18 vencem por janela de frescor.
+
+Convergencia de decisao:
+
+- nao reabrir a RC inteira;
+- manter `9bebaf1` como alvo de homologacao assistida;
+- tratar producao/H2 como ainda bloqueado;
+- abrir antes de producao uma rodada curta de hardening + revalidacao
+  operacional.
+
+Achados que devem entrar no radar antes de producao/stable:
+
+1. `scripts/qa/c18_server_side_rollout_state_gate.py` aceitou um JSON vazio
+   `{}` como `passed=true` em teste de contra-auditoria. A evidencia real
+   corrente nao e vazia e o rollout continua pausado, portanto isto nao derruba
+   a homologacao atual, mas e bug real de default-deny e deve ser corrigido
+   antes de producao/stable.
+2. O check de frescor do preflight H2 depende de `collected_at_utc` dentro do
+   manifest versionado; adulteracao em copia pode renovar a data se tambem for
+   commitada. Para producao, endurecer esse ponto ou exigir recoleta
+   operacional fresca e hash-bound no runbook final.
+3. O pre-soak gate pode reportar `release_gate.skipped=true` quando
+   `--run-release-gate` nao e passado. Isso e aceitavel como modo rapido, mas a
+   documentacao final de producao deve deixar explicito quando o release gate
+   foi realmente rodado.
+4. O teste estatico contem condicionais historicas de coldboot `1t` que nao
+   exercitam a golden atual `1u`; baixo impacto na RC, mas bom alvo de limpeza
+   antes de chamar a suite de cobertura de producao.
+
+Correcao de leitura importante: a falha `rc=10` em
+`20260618T093642Z-target-current-service-stopped-post-quarantine-reset-9bebaf1`
+foi registrada como falso positivo de startup e teve reavaliacao verde. A
+validacao final subsequente
+`20260618T094737Z-target-current-service-stopped-final-9bebaf1` passou com
+`lab-apply rc=0`, candidato current, health do candidato verde e playback apos
+restart verde. Portanto, o claim correto nao e "o pacote `9bebaf1` ainda esta
+rejeitado"; o claim correto e: "`9bebaf1` tem validacao funcional positiva em
+homologacao, mas ainda nao completou piloto operacional atual, matriz
+power-loss 17/17, soak 24h, stable promotion e thaw formal".
+
+Proximo caminho minimo revisado:
+
+1. Corrigir o fail-open de `{}` no rollout-state gate e adicionar teste
+   negativo.
+2. Clarificar/ajustar o pre-soak para diferenciar release gate rodado de release
+   gate pulado.
+3. Recoletar preflight/autorizacao atuais antes de qualquer nova operacao na
+   placa.
+4. Executar piloto assistido real em janela vigente, com apply, health, rollback
+   e evidencia commitada.
+5. Completar os 12 checkpoints fisicos restantes para fechar 17/17.
+6. Rodar soak 24h.
+7. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
+   verde.
+
 1. Executar piloto assistido somente dentro de autorizacao/preflight atuais e
    frescos, com rollback owner definido e evidencia commitada.
 2. Antes de qualquer nova sessao fisica, recoletar preflight H2 se a janela de
