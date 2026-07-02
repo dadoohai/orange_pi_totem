@@ -1,0 +1,42 @@
+{
+  "checks": {
+    "final_adoption_passed": true,
+    "final_health_passed": true,
+    "lab_apply_passed": true,
+    "lab_rollback_passed": true,
+    "post_apply_adoption_passed": true,
+    "post_apply_health_service_passed": true,
+    "post_rollback_adoption_passed": true,
+    "post_rollback_health_passed": true,
+    "topology_reset_passed": true,
+    "topology_restore_reapply_passed": true
+  },
+  "collected_at_utc": "2026-07-02T23:38:00Z",
+  "completed_at_utc": "2026-07-02T23:47:47Z",
+  "final_board_state": {
+    "current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "previous": null,
+    "public_player_runtime_rollback_rc": 44,
+    "target_release_dir": "absent_after_governed_topology_reset"
+  },
+  "non_claims": [
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_publish_releases",
+    "does_not_thaw_public_player_runtime",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_satisfy_24h_soak",
+    "does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "schema": "dadooh.c18.homologation_pilot_roundtrip_summary.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}

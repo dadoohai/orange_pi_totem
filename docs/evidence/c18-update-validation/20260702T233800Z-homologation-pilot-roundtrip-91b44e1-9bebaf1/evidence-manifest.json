@@ -1,0 +1,145 @@
+{
+  "collected_at_utc": "2026-07-02T23:38:00Z",
+  "collection_repo_commit": "c38bd09753e1f1f793e9edd4673c7732db12e29d",
+  "collection_repo_tree": "ed9b17f5ace0891a84ddbc38466c6588622f3290",
+  "completed_at_utc": "2026-07-02T23:47:47Z",
+  "files": [
+    {
+      "bytes": 874,
+      "file": "README.md",
+      "sha256": "273131511ed2263b78ac9662262704b7c6eac6694cb51a9dfbf794fb98956319"
+    },
+    {
+      "bytes": 5612,
+      "file": "apply/candidate-health/candidate-health-result.json",
+      "sha256": "d22abc0ad945ff6f9c196393edd85cb5c47fca713182ea621397dd9017b2b42d"
+    },
+    {
+      "bytes": 4588,
+      "file": "apply/candidate-health/health/playback-deep-health-public.json",
+      "sha256": "b06ef20cc895a48696369b28f003f5e2731d639d19c3b9a9b5ad938865236bef"
+    },
+    {
+      "bytes": 2021,
+      "file": "apply/lab-apply.json",
+      "sha256": "c6413788b29b0df9db459783308552ace904192e809d9f49e6d8fb4c2576b158"
+    },
+    {
+      "bytes": 1055,
+      "file": "final-adoption.json",
+      "sha256": "d2ef771ae7fdaf1f357707101163f61401d58a7fc45be7a9684bc4e35d18c83b"
+    },
+    {
+      "bytes": 4607,
+      "file": "final-health/playback-deep-health-public.json",
+      "sha256": "66b6b0e18b373d51fe2a294f36df024ed9c3df90307bd0279cd3f8e5b14a1552"
+    },
+    {
+      "bytes": 445,
+      "file": "operator-actions.txt",
+      "sha256": "f8d703cfee286e016fcc5da164769b99bd556183792adba2a6dab3848db35580"
+    },
+    {
+      "bytes": 1466,
+      "file": "pilot-roundtrip-summary.json",
+      "sha256": "66e34a4d3e7cbf1eb7ce16ccdd69576c6ee7bcf64751dbe5e5917c24fd3197b5"
+    },
+    {
+      "bytes": 1207,
+      "file": "post-apply-adoption.json",
+      "sha256": "af7bc35f89c6dccc16cc0f582dcb596cc12b27ab531cbb4e42b2d6c31a50b4f8"
+    },
+    {
+      "bytes": 4637,
+      "file": "post-apply-health/playback-deep-health-public.json",
+      "sha256": "5eb4f48e0322031ad2f360c0ba2429d4a6b2a059cdd5d2c35520a97f9fca52e9"
+    },
+    {
+      "bytes": 4619,
+      "file": "post-apply-health-service/playback-deep-health-public.json",
+      "sha256": "188a41705d2fa8ee5b12bfe52cae3b86a9856b9f8e5b36566aba87be510a4122"
+    },
+    {
+      "bytes": 1174,
+      "file": "post-rollback-adoption.json",
+      "sha256": "7590d9d8b070a51231e9e4afe7c0c503281c939f2366a1ecfdf763f5ae488a7a"
+    },
+    {
+      "bytes": 4615,
+      "file": "post-rollback-health/playback-deep-health-public.json",
+      "sha256": "25902d1322cbbb65760dd79ef81089127a423aeca9396a704a408b6e4caecf1c"
+    },
+    {
+      "bytes": 2395,
+      "file": "rollback/lab-rollback.json",
+      "sha256": "7bd2ca54823739a27c3d51bf8e3cdbe94d10310c5d0dc5dfc286df88a7af097b"
+    },
+    {
+      "bytes": 7,
+      "file": "service-before-apply.txt",
+      "sha256": "45df5ad5e0ecfa54d3226343e0e6857337494ba6e32f189d1174070665d8c659"
+    },
+    {
+      "bytes": 2512,
+      "file": "state-before-apply.json",
+      "sha256": "b91c75f95148c97f86cc0cfc4a37314bc3641a786e5c8c7074f2a3471c503325"
+    },
+    {
+      "bytes": 3085,
+      "file": "state-before-rollback.json",
+      "sha256": "3455f83863424040c153a3768cb31c3c7bd247f6cafebbfc49f45e7fdfd0e9f3"
+    },
+    {
+      "bytes": 3074,
+      "file": "state-before-topology-restore.json",
+      "sha256": "7c5283b30b8a042e45b32d33535d6c0692be189562fddc29fe52e80594d26d85"
+    },
+    {
+      "bytes": 2512,
+      "file": "state-final.json",
+      "sha256": "5c090269936fdca893136a1e0e4f8e57baa684c069f7a4a59933b96ab756f0c1"
+    },
+    {
+      "bytes": 4099,
+      "file": "topology-reset/topology-reset.json",
+      "sha256": "1a893dd3d60205abe7d5d0baea6d61a55e02b0e404035ab202c2b0662ef96d8c"
+    },
+    {
+      "bytes": 5612,
+      "file": "topology-restore-reapply/candidate-health/candidate-health-result.json",
+      "sha256": "273d6672e12625443da1e7baa3db23e67c4b0405c0511cf04aff94787d763316"
+    },
+    {
+      "bytes": 4588,
+      "file": "topology-restore-reapply/candidate-health/health/playback-deep-health-public.json",
+      "sha256": "b06ef20cc895a48696369b28f003f5e2731d639d19c3b9a9b5ad938865236bef"
+    },
+    {
+      "bytes": 2216,
+      "file": "topology-restore-reapply/lab-apply.json",
+      "sha256": "26045423ad91433797f857c0860bb6c19fb5ba5a6659cb854cca96ebec2087a9"
+    }
+  ],
+  "non_claims": [
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_publish_releases",
+    "does_not_thaw_public_player_runtime",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_satisfy_24h_soak",
+    "does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "raw_tar_sha256": "9fb23c1e6d3aa7f82bd5cfb31afdadd2795b3897c9704f8ceafcb6392ed12fd1",
+  "result_claim": "homologation_pilot_roundtrip_passed",
+  "schema": "dadooh.c18.homologation_pilot_roundtrip_evidence.v1",
+  "target": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "ring": "pilot",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  }
+}
