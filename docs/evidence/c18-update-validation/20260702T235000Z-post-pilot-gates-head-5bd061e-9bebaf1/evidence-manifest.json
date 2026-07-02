@@ -1,0 +1,58 @@
+{
+  "checks": {
+    "h2_readiness_still_blocked": true,
+    "pilot_readiness_current_passed": true,
+    "release_gate_passed": true
+  },
+  "collected_at_utc": "2026-07-02T23:50:00Z",
+  "collection_repo_commit": "5bd061e2f4187f05cf4c58141d3dc88e7605dd7f",
+  "collection_repo_tree": "149d46e5aa035872853bc2fe44bcfb5661482611",
+  "files": [
+    {
+      "bytes": 503,
+      "file": "README.md",
+      "sha256": "83c0c8c473dc65589e206bb7f1a72916735c366aba43039b3a06630bc01802ba"
+    },
+    {
+      "bytes": 90710,
+      "file": "c18-ota-release-gate.json",
+      "sha256": "dfee8bd1ffb61907211e79fffb2b287ed4c42ef8f6df077235ab4e858d96c1bb"
+    },
+    {
+      "bytes": 13822,
+      "file": "h2-readiness-blocked.json",
+      "sha256": "37353378ea6fbf9438663e9dc5147c56bfb423505c2585fb81b94e9e5ea007ef"
+    },
+    {
+      "bytes": 7314,
+      "file": "pilot-readiness-current.json",
+      "sha256": "9bcf0d1c41362e7cf3455c3fec51f2bbbe427733601d0030cff42769269d2e7a"
+    }
+  ],
+  "h2_blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:soak_summary_json_error:FileNotFoundError",
+    "soak_endurance_24h:soak_schema",
+    "soak_endurance_24h:soak_not_passed",
+    "soak_endurance_24h:soak_duration_below_24h",
+    "soak_endurance_24h:soak_max_panfrost_faults_delta_nonzero_or_missing",
+    "soak_endurance_24h:soak_max_mmc_timeout_reset_delta_nonzero_or_missing",
+    "soak_endurance_24h:soak_max_ext4_errors_delta_nonzero_or_missing",
+    "stable_promotion_authorization:json_error:FileNotFoundError",
+    "explicit_operator_thaw_decision:json_error:FileNotFoundError",
+    "tracked_inputs:input_file_not_tracked"
+  ],
+  "non_claims": [
+    "does_not_authorize_production",
+    "does_not_promote_stable",
+    "does_not_enable_auto_pull",
+    "does_not_publish_releases",
+    "does_not_thaw_public_player_runtime",
+    "does_not_satisfy_powerloss_17_17",
+    "does_not_satisfy_24h_soak",
+    "does_not_replace_h2_readiness"
+  ],
+  "passed": true,
+  "result_claim": "post_pilot_homologation_ready_h2_blocked",
+  "schema": "dadooh.c18.post_pilot_gates_snapshot.v1"
+}

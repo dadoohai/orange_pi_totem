@@ -1,0 +1,316 @@
+{
+  "blockers": [
+    "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
+    "soak_endurance_24h:soak_summary_json_error:FileNotFoundError",
+    "soak_endurance_24h:soak_schema",
+    "soak_endurance_24h:soak_not_passed",
+    "soak_endurance_24h:soak_duration_below_24h",
+    "soak_endurance_24h:soak_max_panfrost_faults_delta_nonzero_or_missing",
+    "soak_endurance_24h:soak_max_mmc_timeout_reset_delta_nonzero_or_missing",
+    "soak_endurance_24h:soak_max_ext4_errors_delta_nonzero_or_missing",
+    "stable_promotion_authorization:json_error:FileNotFoundError",
+    "explicit_operator_thaw_decision:json_error:FileNotFoundError",
+    "tracked_inputs:input_file_not_tracked"
+  ],
+  "checks": {
+    "explicit_operator_thaw_decision": {
+      "blockers": [
+        "json_error:FileNotFoundError"
+      ],
+      "evidence_path": "docs/evidence/c18-update-validation/MISSING-thaw-decision-for-9bebaf1/c18-player-runtime-thaw-decision.json",
+      "evidence_sha256": null,
+      "expected_target": {
+        "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+        "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+        "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+      },
+      "expected_target_errors": [],
+      "gate_result": {
+        "blockers": [
+          "json_error:FileNotFoundError"
+        ],
+        "evidence_path": "docs/evidence/c18-update-validation/MISSING-thaw-decision-for-9bebaf1/c18-player-runtime-thaw-decision.json",
+        "non_claims": [
+          "this_gate_does_not_thaw_player_runtime",
+          "this_gate_does_not_publish_or_fetch_releases",
+          "this_gate_does_not_override_freeze_rc_44"
+        ],
+        "passed": false,
+        "result_claim": "thaw_decision_blocked",
+        "schema": "dadooh.c18.player_runtime.thaw_decision_gate.v1"
+      },
+      "passed": false
+    },
+    "full_physical_powerloss_matrix": {
+      "blockers": [
+        "powerloss_matrix_incomplete"
+      ],
+      "duplicate_checkpoints": [],
+      "extra_checkpoints": [],
+      "gate_results": {
+        "after_current_symlink": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/after_current_symlink",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_current_to_previous": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_current_to_previous",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_previous_removed": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_previous_removed",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_quarantine": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_quarantine",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_state_success": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_state_success",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        }
+      },
+      "missing_checkpoints": [
+        "after_extract",
+        "after_health_passed",
+        "after_marker_written",
+        "after_payload_staged",
+        "after_previous_symlink",
+        "after_release_dir_created",
+        "after_release_tree_fsync",
+        "after_state_success",
+        "after_state_verifying",
+        "before_stage_cleanup",
+        "rollback_after_current_unlinked",
+        "rollback_after_identify_links"
+      ],
+      "observed_checkpoints": [
+        "after_current_symlink",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ],
+      "passed": false,
+      "required_checkpoints": [
+        "after_payload_staged",
+        "after_release_dir_created",
+        "after_extract",
+        "after_state_verifying",
+        "after_health_passed",
+        "after_release_tree_fsync",
+        "after_marker_written",
+        "after_previous_symlink",
+        "after_current_symlink",
+        "after_state_success",
+        "before_stage_cleanup",
+        "rollback_after_identify_links",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_current_unlinked",
+        "rollback_after_state_success"
+      ],
+      "semantics_ledger": {
+        "evidence_gate_contract_mismatch": [],
+        "evidence_gate_matrix_checkpoints": [
+          "after_current_symlink",
+          "after_extract",
+          "after_health_passed",
+          "after_marker_written",
+          "after_payload_staged",
+          "after_previous_symlink",
+          "after_release_dir_created",
+          "after_release_tree_fsync",
+          "after_state_success",
+          "after_state_verifying",
+          "before_stage_cleanup",
+          "rollback_after_current_to_previous",
+          "rollback_after_current_unlinked",
+          "rollback_after_identify_links",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_state_success"
+        ],
+        "required_checkpoints": [
+          "after_payload_staged",
+          "after_release_dir_created",
+          "after_extract",
+          "after_state_verifying",
+          "after_health_passed",
+          "after_release_tree_fsync",
+          "after_marker_written",
+          "after_previous_symlink",
+          "after_current_symlink",
+          "after_state_success",
+          "before_stage_cleanup",
+          "rollback_after_identify_links",
+          "rollback_after_current_to_previous",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_current_unlinked",
+          "rollback_after_state_success"
+        ],
+        "semantically_validated_checkpoints": [
+          "after_current_symlink",
+          "after_extract",
+          "after_health_passed",
+          "after_marker_written",
+          "after_payload_staged",
+          "after_previous_symlink",
+          "after_release_dir_created",
+          "after_release_tree_fsync",
+          "after_state_success",
+          "after_state_verifying",
+          "before_stage_cleanup",
+          "rollback_after_current_to_previous",
+          "rollback_after_current_unlinked",
+          "rollback_after_identify_links",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_state_success"
+        ],
+        "semantics_not_implemented_checkpoints": []
+      }
+    },
+    "h1_decisive_bundle": {
+      "blockers": [],
+      "passed": true,
+      "step_count": 66,
+      "summary_path": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json"
+    },
+    "player_runtime_release_gate": {
+      "blockers": [],
+      "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+      "passed": true
+    },
+    "repo_clean": {
+      "blockers": [],
+      "passed": true,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    "server_side_current_snapshot": {
+      "blockers": [],
+      "passed": true,
+      "result_claim": "server_side_publish_governance_ready",
+      "run_dir": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+      "snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7"
+    },
+    "server_side_publish_governance": {
+      "blockers": [],
+      "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+      "gate_result": {
+        "blockers": [],
+        "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+        "non_claims": [
+          "this_gate_does_not_publish_releases",
+          "this_gate_does_not_enable_auto_pull",
+          "this_gate_does_not_promote_stable",
+          "this_gate_does_not_thaw_player_runtime"
+        ],
+        "passed": true,
+        "result_claim": "server_side_publish_governance_ready",
+        "schema": "dadooh.c18.server_side_publish_governance_gate.v1"
+      },
+      "passed": true
+    },
+    "soak_endurance_24h": {
+      "blockers": [
+        "soak_summary_json_error:FileNotFoundError",
+        "soak_schema",
+        "soak_not_passed",
+        "soak_duration_below_24h",
+        "soak_max_panfrost_faults_delta_nonzero_or_missing",
+        "soak_max_mmc_timeout_reset_delta_nonzero_or_missing",
+        "soak_max_ext4_errors_delta_nonzero_or_missing"
+      ],
+      "duration_sec": 0.0,
+      "passed": false,
+      "summary_path": "docs/evidence/c18-update-validation/MISSING-soak-24h-for-9bebaf1/soak-summary.json"
+    },
+    "stable_promotion_authorization": {
+      "blockers": [
+        "json_error:FileNotFoundError"
+      ],
+      "evidence_path": "docs/evidence/c18-update-validation/MISSING-stable-promotion-for-9bebaf1/c18-stable-promotion-evidence.json",
+      "expected_hashes": {
+        "h1_release_gate_sha256": "004619b3c6a1bf4124d7f34fcda3c9fd6505deaef837a316af378b6bbe94cac1",
+        "h2_readiness_sha256": "40a9081dca9b7f2d71d7d611ad41bca7b45edae072797375d0eb0a99f47dbcfa",
+        "powerloss_matrix_sha256": "d2db24a64bc8c68d62dc9388d15bac213b7d6d5cc87f5426e46d5bc3d9285d32",
+        "release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+        "server_side_current_snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7",
+        "server_side_evidence_sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+        "server_side_trust_anchor_evidence_sha256": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67"
+      },
+      "gate_result": {
+        "blockers": [
+          "json_error:FileNotFoundError"
+        ],
+        "evidence_path": "docs/evidence/c18-update-validation/MISSING-stable-promotion-for-9bebaf1/c18-stable-promotion-evidence.json",
+        "non_claims": [
+          "this_gate_does_not_publish_releases",
+          "this_gate_does_not_enable_auto_pull",
+          "this_gate_does_not_thaw_player_runtime"
+        ],
+        "passed": false,
+        "result_claim": "stable_promotion_evidence_blocked",
+        "schema": "dadooh.c18.stable_promotion_gate.v1"
+      },
+      "passed": false
+    },
+    "tracked_inputs": {
+      "blockers": [
+        "input_file_not_tracked"
+      ],
+      "ignored": [],
+      "manifest_untracked_entries": [],
+      "outside_repo": [],
+      "passed": false,
+      "paths": [
+        "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/after_current_symlink",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_current_to_previous",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_previous_removed",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_quarantine",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_state_success",
+        "docs/evidence/c18-update-validation/MISSING-soak-24h-for-9bebaf1/soak-summary.json",
+        "docs/evidence/c18-update-validation/MISSING-stable-promotion-for-9bebaf1/c18-stable-promotion-evidence.json",
+        "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json",
+        "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-release-signing-key.pub.pem",
+        "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+        "docs/evidence/c18-update-validation/MISSING-thaw-decision-for-9bebaf1/c18-player-runtime-thaw-decision.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+      ],
+      "untracked": [
+        "docs/evidence/c18-update-validation/MISSING-soak-24h-for-9bebaf1/soak-summary.json",
+        "docs/evidence/c18-update-validation/MISSING-stable-promotion-for-9bebaf1/c18-stable-promotion-evidence.json",
+        "docs/evidence/c18-update-validation/MISSING-thaw-decision-for-9bebaf1/c18-player-runtime-thaw-decision.json"
+      ]
+    }
+  },
+  "non_claims": [
+    "this_gate_does_not_thaw_player_runtime",
+    "this_gate_does_not_publish_or_fetch_releases",
+    "this_gate_does_not_override_freeze_rc_44",
+    "this_gate_does_not_promote_stable_without_operator_decision"
+  ],
+  "passed": false,
+  "result_claim": "h2_readiness_blocked",
+  "schema": "dadooh.c18.player_runtime.h2_readiness.v1"
+}
