@@ -150,7 +150,9 @@ def validate_rollout_state(
     blockers: list[str] = []
     data = read_json(state_path, blockers, "rollout_state")
     expected = expected_target or DEFAULT_TARGET
-    if data:
+    if not data:
+        blockers.append("rollout_state_empty")
+    else:
         if sorted(data) != sorted(ALLOWED_TOP_LEVEL_FIELDS):
             blockers.append("rollout_state_unexpected_or_missing_fields")
         scan_raw_identity(data, blockers)
@@ -270,6 +272,15 @@ class RolloutStateGateSelfTest(unittest.TestCase):
                 server_side_asset_list=assets,
             )
         self.assertTrue(result["passed"], msg=result)
+
+    def test_empty_state_denies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = root / "server-side-rollout-state.json"
+            write_json(state, {})
+            result = validate_rollout_state(state)
+        self.assertFalse(result["passed"])
+        self.assertIn("rollout_state_empty", result["blockers"])
 
     def test_active_rollout_denies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

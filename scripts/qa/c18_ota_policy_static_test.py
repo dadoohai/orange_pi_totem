@@ -564,6 +564,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 "--now-utc",
                 "2026-06-18T10:02:00Z",
                 "--allow-dirty-repo",
+                "--allow-skipped-release-gate",
                 "--json",
             ],
             check=False,
@@ -578,6 +579,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(summary["result_claim"], "c18_ota_pre_soak_scale_governance_ready")
         self.assertEqual(summary["blockers"], [])
         self.assertEqual(summary["checks"]["release_gate"]["skipped"], True)
+        self.assertEqual(summary["checks"]["release_gate"]["advisory_only"], True)
+        self.assertEqual(summary["checks"]["release_gate"]["rerun_with"], "--run-release-gate")
         self.assertEqual(summary["checks"]["h2_powerloss_board_preflight_snapshot"]["passed"], True)
         self.assertEqual(summary["checks"]["stable_thaw_draft_blocked_snapshot"]["passed"], True)
         self.assertEqual(summary["checks"]["operational_resume_blocked_snapshot"]["passed"], True)
@@ -616,6 +619,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("this_gate_does_not_satisfy_24h_soak", gate)
         self.assertIn("this_gate_does_not_satisfy_powerloss_17_17", gate)
         self.assertIn("--run-release-gate", gate)
+        self.assertIn("--allow-skipped-release-gate", gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_gate.py", release_gate)
         self.assertIn("c18_ota_pre_soak_scale_governance_gate", release_gate)
 

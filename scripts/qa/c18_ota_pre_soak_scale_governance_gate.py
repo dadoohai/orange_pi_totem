@@ -33,6 +33,8 @@ TARGET_PAYLOAD_SHA256 = "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e15307
 TARGET_CHANNEL = "homologation"
 TARGET_RING = "pilot"
 H2_POWERLOSS_PREFLIGHT_MAX_AGE_SEC = 4 * 60 * 60
+H2_POWERLOSS_PREFLIGHT_SCHEMA = "dadooh.c18.player_runtime.h2_powerloss_board_preflight.v1"
+H2_POWERLOSS_PREFLIGHT_GATE_SCHEMA = "dadooh.c18.player_runtime.h2_powerloss_board_preflight_gate.v1"
 EXPECTED_H2_BLOCKERS = (
     "full_physical_powerloss_matrix:powerloss_matrix_incomplete",
     "soak_endurance_24h:missing_24h_soak_summary",
@@ -590,13 +592,99 @@ def evaluate_h2_powerloss_preflight_snapshot(
         blockers.append("h2_powerloss_preflight_source_commit")
     if target.get("payload_sha256") != TARGET_PAYLOAD_SHA256:
         blockers.append("h2_powerloss_preflight_payload_sha256")
-    captured_at = parse_utc(manifest.get("collected_at_utc"), blockers, "h2_powerloss_preflight_collected_at_utc")
+    manifest_collected_at = parse_utc(
+        manifest.get("collected_at_utc"),
+        blockers,
+        "h2_powerloss_preflight_collected_at_utc",
+    )
     evaluated_at = parse_utc(now_utc, blockers, "now_utc")
+    board_preflight = read_json(run_dir / "board-preflight.json", blockers, "h2_powerloss_board_preflight")
+    gate_summary = read_json(
+        run_dir / "h2-powerloss-preflight-gate.json",
+        blockers,
+        "h2_powerloss_preflight_gate",
+    )
+    board_captured_at: dt.datetime | None = None
+    if board_preflight:
+        if board_preflight.get("schema") != H2_POWERLOSS_PREFLIGHT_SCHEMA:
+            blockers.append("h2_powerloss_board_preflight_schema")
+        if board_preflight.get("passed") is not True:
+            blockers.append("h2_powerloss_board_preflight_not_passed")
+        if board_preflight.get("result_claim") != "h2_powerloss_board_preflight_collected":
+            blockers.append("h2_powerloss_board_preflight_result_claim")
+        board_target = (
+            board_preflight.get("target_package")
+            if isinstance(board_preflight.get("target_package"), dict)
+            else {}
+        )
+        if board_target.get("version") != TARGET_PACKAGE_VERSION:
+            blockers.append("h2_powerloss_board_preflight_target_version")
+        if board_target.get("source_commit") != TARGET_SOURCE_COMMIT:
+            blockers.append("h2_powerloss_board_preflight_source_commit")
+        if board_target.get("payload_sha256") != TARGET_PAYLOAD_SHA256:
+            blockers.append("h2_powerloss_board_preflight_payload_sha256")
+        board_captured_at = parse_utc(
+            board_preflight.get("captured_at_utc"),
+            blockers,
+            "h2_powerloss_board_preflight_captured_at_utc",
+        )
+    if gate_summary:
+        if gate_summary.get("schema") != H2_POWERLOSS_PREFLIGHT_GATE_SCHEMA:
+            blockers.append("h2_powerloss_preflight_gate_schema")
+        if gate_summary.get("passed") is not True:
+            blockers.append("h2_powerloss_preflight_gate_not_passed")
+        if gate_summary.get("result_claim") != "h2_powerloss_board_preflight_accepted":
+            blockers.append("h2_powerloss_preflight_gate_result_claim")
+        gate_target = (
+            gate_summary.get("target_package")
+            if isinstance(gate_summary.get("target_package"), dict)
+            else {}
+        )
+        if gate_target.get("version") != TARGET_PACKAGE_VERSION:
+            blockers.append("h2_powerloss_preflight_gate_target_version")
+        if gate_target.get("source_commit") != TARGET_SOURCE_COMMIT:
+            blockers.append("h2_powerloss_preflight_gate_source_commit")
+        if gate_target.get("payload_sha256") != TARGET_PAYLOAD_SHA256:
+            blockers.append("h2_powerloss_preflight_gate_payload_sha256")
+        gate_freshness = gate_summary.get("freshness") if isinstance(gate_summary.get("freshness"), dict) else {}
+        gate_captured_at = parse_utc(
+            gate_freshness.get("captured_at_utc"),
+            blockers,
+            "h2_powerloss_preflight_gate_captured_at_utc",
+        )
+        gate_evaluated_at = parse_utc(
+            gate_summary.get("evaluated_at_utc"),
+            blockers,
+            "h2_powerloss_preflight_gate_evaluated_at_utc",
+        )
+        manifest_gate_evaluated_at = parse_utc(
+            manifest.get("gate_evaluated_at_utc"),
+            blockers,
+            "h2_powerloss_preflight_manifest_gate_evaluated_at_utc",
+        )
+        if gate_freshness.get("required") is not True:
+            blockers.append("h2_powerloss_preflight_gate_freshness_not_required")
+        if gate_freshness.get("max_age_sec") != max_age_sec:
+            blockers.append("h2_powerloss_preflight_gate_max_age_sec")
+        if gate_captured_at is not None and board_captured_at is not None and gate_captured_at != board_captured_at:
+            blockers.append("h2_powerloss_preflight_gate_board_timestamp_mismatch")
+        if (
+            manifest_gate_evaluated_at is not None
+            and gate_evaluated_at is not None
+            and manifest_gate_evaluated_at != gate_evaluated_at
+        ):
+            blockers.append("h2_powerloss_preflight_manifest_gate_timestamp_mismatch")
+    if (
+        manifest_collected_at is not None
+        and board_captured_at is not None
+        and manifest_collected_at != board_captured_at
+    ):
+        blockers.append("h2_powerloss_preflight_manifest_board_timestamp_mismatch")
     age_sec: int | None = None
-    if captured_at is not None and evaluated_at is not None:
-        age_sec = int((evaluated_at - captured_at).total_seconds())
+    if board_captured_at is not None and evaluated_at is not None:
+        age_sec = int((evaluated_at - board_captured_at).total_seconds())
         if age_sec < 0:
-            blockers.append("h2_powerloss_preflight_collected_after_now")
+            blockers.append("h2_powerloss_board_preflight_captured_after_now")
         elif age_sec > max_age_sec:
             blockers.append("h2_powerloss_preflight_stale")
     checks = manifest.get("key_checks") if isinstance(manifest.get("key_checks"), dict) else {}
@@ -645,7 +733,8 @@ def evaluate_h2_powerloss_preflight_snapshot(
         run_dir=str(run_dir),
         result_claim=manifest.get("result_claim"),
         freshness={
-            "captured_at_utc": manifest.get("collected_at_utc"),
+            "manifest_collected_at_utc": manifest.get("collected_at_utc"),
+            "board_captured_at_utc": board_preflight.get("captured_at_utc") if board_preflight else None,
             "evaluated_at_utc": now_utc,
             "age_sec": age_sec,
             "max_age_sec": max_age_sec,
@@ -857,6 +946,26 @@ def evaluate_release_gate() -> dict[str, Any]:
     return step(not blockers, blockers, returncode=result.get("returncode"))
 
 
+def evaluate_release_gate_skip_policy(*, allow_skipped_release_gate: bool) -> dict[str, Any]:
+    if allow_skipped_release_gate:
+        return step(
+            True,
+            [],
+            skipped=True,
+            advisory_only=True,
+            required_for_production=True,
+            rerun_with="--run-release-gate",
+        )
+    return step(
+        False,
+        ["release_gate_not_run"],
+        skipped=True,
+        advisory_only=False,
+        required_for_production=True,
+        rerun_with="--run-release-gate",
+    )
+
+
 def evaluate_macro_gate(*, allow_dirty_repo: bool = False) -> dict[str, Any]:
     cmd = ["python3", "scripts/qa/c18_ota_macro_governance_gate.py", "--json"]
     if allow_dirty_repo:
@@ -982,7 +1091,9 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     if args.run_release_gate:
         checks["release_gate"] = evaluate_release_gate()
     else:
-        checks["release_gate"] = step(True, [], skipped=True)
+        checks["release_gate"] = evaluate_release_gate_skip_policy(
+            allow_skipped_release_gate=args.allow_skipped_release_gate,
+        )
     blockers = [
         f"{name}:{blocker}"
         for name, result in checks.items()
@@ -1016,15 +1127,47 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
-    def write_h2_powerloss_preflight_fixture(self, root: Path, *, key_checks: dict[str, bool] | None = None) -> Path:
+    def write_h2_powerloss_preflight_fixture(
+        self,
+        root: Path,
+        *,
+        captured_at_utc: str = "2026-06-16T23:57:24Z",
+        manifest_collected_at_utc: str | None = None,
+        gate_evaluated_at_utc: str = "2026-06-16T23:57:54Z",
+        key_checks: dict[str, bool] | None = None,
+    ) -> Path:
         run_dir = root / "h2-powerloss-preflight"
         run_dir.mkdir()
-        for filename, content in {
-            "README.md": "fixture\n",
-            "board-preflight.json": "{}\n",
-            "h2-powerloss-preflight-gate.json": "{}\n",
-        }.items():
-            (run_dir / filename).write_text(content, encoding="utf-8")
+        (run_dir / "README.md").write_text("fixture\n", encoding="utf-8")
+        write_json(run_dir / "board-preflight.json", {
+            "schema": H2_POWERLOSS_PREFLIGHT_SCHEMA,
+            "captured_at_utc": captured_at_utc,
+            "passed": True,
+            "result_claim": "h2_powerloss_board_preflight_collected",
+            "target_package": {
+                "version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "payload_sha256": TARGET_PAYLOAD_SHA256,
+            },
+        })
+        write_json(run_dir / "h2-powerloss-preflight-gate.json", {
+            "schema": H2_POWERLOSS_PREFLIGHT_GATE_SCHEMA,
+            "evaluated_at_utc": gate_evaluated_at_utc,
+            "freshness": {
+                "captured_at_utc": captured_at_utc,
+                "evaluated_at_utc": gate_evaluated_at_utc,
+                "age_sec": 30,
+                "max_age_sec": H2_POWERLOSS_PREFLIGHT_MAX_AGE_SEC,
+                "required": True,
+            },
+            "passed": True,
+            "result_claim": "h2_powerloss_board_preflight_accepted",
+            "target_package": {
+                "version": TARGET_PACKAGE_VERSION,
+                "source_commit": TARGET_SOURCE_COMMIT,
+                "payload_sha256": TARGET_PAYLOAD_SHA256,
+            },
+        })
         checks = {
             "collector_passed": True,
             "offline_gate_passed": True,
@@ -1041,7 +1184,8 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             checks.update(key_checks)
         write_json(run_dir / "evidence-manifest.json", {
             "schema": "dadooh.c18.h2_powerloss_board_preflight_snapshot.v1",
-            "collected_at_utc": "2026-06-16T23:57:24Z",
+            "collected_at_utc": manifest_collected_at_utc or captured_at_utc,
+            "gate_evaluated_at_utc": gate_evaluated_at_utc,
             "passed": True,
             "result_claim": "h2_powerloss_board_preflight_accepted",
             "target_package": {
@@ -1385,6 +1529,17 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("h2_powerloss_preflight_stale", result["blockers"])
 
+    def test_h2_powerloss_preflight_snapshot_rejects_manifest_restamp(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self.write_h2_powerloss_preflight_fixture(
+                Path(tmp),
+                captured_at_utc="2026-06-16T23:57:24Z",
+                manifest_collected_at_utc="2026-06-17T01:10:00Z",
+            )
+            result = evaluate_h2_powerloss_preflight_snapshot(run_dir, "2026-06-17T01:20:00Z")
+        self.assertFalse(result["passed"])
+        self.assertIn("h2_powerloss_preflight_manifest_board_timestamp_mismatch", result["blockers"])
+
     def test_h2_powerloss_preflight_snapshot_rejects_tampered_key_check(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = self.write_h2_powerloss_preflight_fixture(
@@ -1605,6 +1760,20 @@ class PreSoakScaleGovernanceGateSelfTest(unittest.TestCase):
             result = evaluate_operational_resume_default("2026-06-17T01:20:00Z")
         self.assertTrue(result["passed"], msg=result)
 
+    def test_skipped_release_gate_blocks_by_default(self) -> None:
+        result = evaluate_release_gate_skip_policy(allow_skipped_release_gate=False)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["blockers"], ["release_gate_not_run"])
+        self.assertTrue(result["skipped"])
+        self.assertEqual(result["rerun_with"], "--run-release-gate")
+
+    def test_skipped_release_gate_requires_explicit_advisory_mode(self) -> None:
+        result = evaluate_release_gate_skip_policy(allow_skipped_release_gate=True)
+        self.assertTrue(result["passed"], msg=result)
+        self.assertTrue(result["skipped"])
+        self.assertTrue(result["advisory_only"])
+        self.assertTrue(result["required_for_production"])
+
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
@@ -1617,6 +1786,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--operational-resume-blocked-dir", type=Path, default=DEFAULT_OPERATIONAL_RESUME_BLOCKED_DIR)
     parser.add_argument("--now-utc")
     parser.add_argument("--run-release-gate", action="store_true")
+    parser.add_argument(
+        "--allow-skipped-release-gate",
+        action="store_true",
+        help="Allow the fast advisory mode where release_gate is explicitly skipped.",
+    )
     parser.add_argument("--allow-dirty-repo", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)

@@ -233,15 +233,21 @@ server-side e docs estao coerentes.
 Como agregador pre-soak para escala:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_gate.py --json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_pre_soak_scale_governance_gate.py \
+  --run-release-gate \
+  --json
 ```
 
-Resultado esperado: `passed=true`,
+Resultado esperado durante uma janela com preflight fisico fresco: `passed=true`,
 `result_claim=c18_ota_pre_soak_scale_governance_ready`. Esse gate agrega docs de
 responsabilidade, H2 vermelho, server-side atual, preflight H2 power-loss,
 snapshot stable/thaw bloqueado sem escrever drafts, retomada operacional
 default-deny e release gate; nao substitui H2 nem autorizacao operacional
 fresca.
+
+O modo rapido sem rodar o release gate precisa ser explicito com
+`--allow-skipped-release-gate` e e apenas advisory. Ele nao deve ser usado como
+evidencia forte para producao, stable ou thaw.
 
 Para qualquer retomada operacional apos pausa, reboot da placa ou passagem de
 dias, o gate de retomada deve ser o ultimo check antes de mexer na placa:
@@ -399,10 +405,10 @@ Achados que devem entrar no radar antes de producao/stable:
    manifest versionado; adulteracao em copia pode renovar a data se tambem for
    commitada. Para producao, endurecer esse ponto ou exigir recoleta
    operacional fresca e hash-bound no runbook final.
-3. O pre-soak gate pode reportar `release_gate.skipped=true` quando
-   `--run-release-gate` nao e passado. Isso e aceitavel como modo rapido, mas a
-   documentacao final de producao deve deixar explicito quando o release gate
-   foi realmente rodado.
+3. O pre-soak gate so pode reportar `release_gate.skipped=true` em modo rapido
+   explicitamente advisory (`--allow-skipped-release-gate`). Sem
+   `--run-release-gate`, o caminho forte fica bloqueado e nao serve como
+   evidencia de producao/stable/thaw.
 4. O teste estatico contem condicionais historicas de coldboot `1t` que nao
    exercitam a golden atual `1u`; baixo impacto na RC, mas bom alvo de limpeza
    antes de chamar a suite de cobertura de producao.
