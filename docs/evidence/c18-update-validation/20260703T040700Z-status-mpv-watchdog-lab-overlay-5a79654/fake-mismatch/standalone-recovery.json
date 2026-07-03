@@ -1,0 +1,31 @@
+{
+  "child_returncode": -15,
+  "non_claims": [
+    "not_real_player_runtime_recovery",
+    "not_h2_powerloss_checkpoint_pass",
+    "not_stable_or_production"
+  ],
+  "real_player_touched": false,
+  "schema": "dadooh.c18.status_mpv_watchdog_fake_mismatch.v1",
+  "state": {
+    "action": "terminate_player_child",
+    "elapsed_sec": 2.01,
+    "mpv_alias": "<media-path:f7f306ede9>",
+    "player_pid": 4175,
+    "reason": "status_advanced_without_mpv",
+    "recorded_at_utc": "2026-07-03T04:12:04Z",
+    "schema": "dadooh.player.status_mpv_watchdog.v1",
+    "status_alias_count": 4,
+    "status_aliases": [
+      "<media-path:1d46378a91>",
+      "<media-path:410a2d1a93>",
+      "<media-path:528c9110b2>",
+      "<media-path:b259d4b70f>"
+    ]
+  },
+  "stderr_present": false,
+  "stdout": [
+    "player_status_mpv_watchdog terminating child pid=4175 reason=status_advanced_without_mpv elapsed_sec=2.01 status_alias_count=4"
+  ],
+  "watchdog_rc": 10
+}

@@ -18,10 +18,16 @@ Observed result:
 - `mpv_restart=0`;
 - `NRestarts_delta=0`.
 
+Controlled fake mismatch:
+- a fake MPV IPC socket returned one stuck media path;
+- a fake status file advanced through multiple media paths;
+- the watchdog terminated only a fake `sleep` child;
+- the real player service was not touched.
+
 Non-claims:
 - this is a lab overlay, not a flashed image identity;
 - this does not make the previous `rollback_after_identify_links` power-loss checkpoint pass;
 - this does not claim H2, stable, production, or public thaw;
-- this does not prove recovery from a live mismatch event yet, only that the watchdog installs, runs, and does not disturb healthy playback.
+- this does not prove recovery from a live real-player mismatch event yet, only that the watchdog installs, runs, does not disturb healthy playback, and takes the expected action in an isolated fake mismatch.
 
 Source archive sha256: `1d04c7941438a7c360b44ef25888f47d98542ff416f66bc5418e4070dbaddbb9`.

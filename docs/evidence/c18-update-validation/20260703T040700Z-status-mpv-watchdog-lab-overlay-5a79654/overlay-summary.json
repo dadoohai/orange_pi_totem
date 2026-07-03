@@ -31,12 +31,19 @@
     "mpv_restart": 0,
     "nrestarts_delta": 0
   },
+  "fake_mismatch": {
+    "watchdog_rc": 10,
+    "child_returncode": -15,
+    "real_player_touched": false,
+    "action": "terminate_player_child",
+    "reason": "status_advanced_without_mpv"
+  },
   "non_claims": [
     "not_flashed_image_identity",
     "not_h2_powerloss_checkpoint_pass",
     "not_stable_or_production",
     "not_public_player_runtime_thaw",
-    "not_live_mismatch_recovery_proof"
+    "not_live_real_player_mismatch_recovery_proof"
   ],
   "source_archive_sha256": "1d04c7941438a7c360b44ef25888f47d98542ff416f66bc5418e4070dbaddbb9"
 }
