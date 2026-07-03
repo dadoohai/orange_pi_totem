@@ -49,11 +49,21 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with tmp.open("w", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
     try:
         os.chmod(path, 0o600)
     except OSError:
         pass
+    fd = os.open(str(path.parent), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def configure_updatectl_for_lab(data_root: Path, policy_path: Path) -> None:

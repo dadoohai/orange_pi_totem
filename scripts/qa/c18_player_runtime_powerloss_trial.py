@@ -94,6 +94,17 @@ def write_json_fsync(path: Path, payload: dict[str, Any]) -> None:
     fsync_dir(path.parent)
 
 
+def write_text_fsync(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with tmp.open("w", encoding="utf-8") as fh:
+        fh.write(content)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+    fsync_dir(path.parent)
+
+
 def read_json(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -238,9 +249,9 @@ def checkpoint_hook(args: argparse.Namespace, action: str):
             ],
         }
         write_json_fsync(checkpoint_dir / "checkpoint.json", checkpoint)
-        (checkpoint_dir / "CUT_POWER_NOW.txt").write_text(
+        write_text_fsync(
+            checkpoint_dir / "CUT_POWER_NOW.txt",
             f"CUT_POWER_NOW checkpoint={label} action={action} evidence={checkpoint_dir}\n",
-            encoding="utf-8",
         )
         fsync_dir(checkpoint_dir)
         print(f"C18_POWERLOSS_CHECKPOINT_REACHED action={action} checkpoint={label}", flush=True)
