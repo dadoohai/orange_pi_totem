@@ -1,0 +1,9 @@
+{
+  "armed_at_utc": "2026-07-03T00:17:30Z",
+  "checkpoint": "after_payload_staged",
+  "data_root": "/data",
+  "manifest": "/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+  "payload": "/data/c18-powerloss-bundle-3eb06f1/releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+  "phase": "arm-apply",
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}

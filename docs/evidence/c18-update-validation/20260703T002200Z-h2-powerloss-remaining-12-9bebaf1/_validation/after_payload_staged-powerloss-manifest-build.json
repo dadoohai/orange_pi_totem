@@ -1,0 +1,7 @@
+{
+  "manifest_path": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_payload_staged/evidence-manifest.json",
+  "manifest_sha256": "6df4ac12e8dce15ebc4b252b470637eea78ba35bdd2b5c31b9d7d601dfe693ae",
+  "passed": true,
+  "result_claim": "powerloss_evidence_manifest_written",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1"
+}
