@@ -725,6 +725,20 @@ def resume_contract(checkpoint_name: Any,
     return "data", expected, "data", expected, "current_verified"
 
 
+def observed_resume_contract(checkpoint_name: Any,
+                             expected: str | None,
+                             before: dict[str, Any]) -> tuple[str, str | None, str, str | None, str]:
+    if (
+        checkpoint_name == "rollback_after_identify_links"
+        and isinstance(expected, str)
+        and expected
+        and before.get("selected_source") == "data"
+        and before.get("selected_version") == expected
+    ):
+        return "data", expected, "data", expected, "current_verified"
+    return resume_contract(checkpoint_name, expected)
+
+
 def validate_rollback_after_quarantine(run_dir: Path,
                                        checkpoint: dict[str, Any],
                                        summary: dict[str, Any],
@@ -907,11 +921,12 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
     if manifest.get("checkpoint") in SEMANTICALLY_VALIDATED_CHECKPOINTS:
         validate_boot_transition(checkpoint, summary, errors)
     checkpoint_name = manifest.get("checkpoint")
-    before_source, before_version, after_source, after_version, expected_reconcile_result = resume_contract(
+    before = summary.get("before_reconcile") if isinstance(summary.get("before_reconcile"), dict) else {}
+    before_source, before_version, after_source, after_version, expected_reconcile_result = observed_resume_contract(
         checkpoint_name,
         expected if isinstance(expected, str) and expected else None,
+        before,
     )
-    before = summary.get("before_reconcile") if isinstance(summary.get("before_reconcile"), dict) else {}
     after = summary.get("after_reconcile") if isinstance(summary.get("after_reconcile"), dict) else {}
     validate_adoption(before, "before_reconcile", errors, expected_source=before_source, expected_version=before_version)
     validate_adoption(after, "after_reconcile", errors, expected_source=after_source, expected_version=after_version)
@@ -1658,6 +1673,75 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("checkpoint_previous_link_not_context_previous", result["errors"])
+
+    def test_rollback_identify_links_accepts_boot_adopted_previous_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            candidate = "runtime-b"
+            expected = "runtime-a"
+            checkpoint_path = root / "trial/powerloss-checkpoint/checkpoint.json"
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            checkpoint.update({
+                "action": "rollback",
+                "checkpoint": "rollback_after_identify_links",
+                "context": {
+                    "current": f"releases/{candidate}",
+                    "previous": f"releases/{expected}",
+                    "quarantined_current": True,
+                },
+                "runtime_snapshot": {
+                    "current_link": f"releases/{candidate}",
+                    "previous_link": f"releases/{expected}",
+                    "state_current_version": candidate,
+                    "state_previous_version": expected,
+                    "last_operation": {
+                        "type": "apply",
+                        "status": "success",
+                        "version": candidate,
+                    },
+                    "quarantine": [{
+                        "version": candidate,
+                        "payload_sha256": "b" * 64,
+                        "tree_sha256": "c" * 64,
+                        "kiosk_py_sha256": "d" * 64,
+                    }],
+                },
+            })
+            write_json(checkpoint_path, checkpoint)
+            summary_path = root / "trial/powerloss-summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["checkpoint"] = checkpoint
+            write_json(summary_path, summary)
+            self.set_resume_adoption(
+                root,
+                source="data",
+                version=expected,
+                previous_link=f"releases/{expected}",
+            )
+            self.set_reconcile_result(root, "current_verified")
+            self.set_manifest_checkpoint(
+                root,
+                "rollback_after_identify_links",
+                expected=expected,
+                candidate=candidate,
+                setup_expected=expected,
+                rollback_expectation="data-current-after-identify-links",
+            )
+            self.refresh_manifest_files(root)
+            self.assertTrue(validate(root)["passed"])
+
+            self.set_resume_adoption_label(
+                root,
+                "before_reconcile",
+                source="data",
+                version=candidate,
+                previous_link=f"releases/{expected}",
+            )
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("before_reconcile_source", result["errors"])
 
     def test_rollback_current_unlinked_semantics_pass_and_reject_data_adoption(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

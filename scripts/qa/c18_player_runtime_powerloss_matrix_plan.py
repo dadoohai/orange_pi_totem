@@ -69,7 +69,7 @@ APPLY_TARGET_AFTER_RESUME = {
     "after_state_success",
     "before_stage_cleanup",
 }
-ROLLBACK_FALLBACK_BEFORE = {"rollback_after_identify_links", "rollback_after_current_unlinked"}
+ROLLBACK_FALLBACK_BEFORE = {"rollback_after_current_unlinked"}
 ROLLBACK_FALLBACK_AFTER = {"rollback_after_current_unlinked"}
 ROLLBACK_SPECIAL_SETUP = {"rollback_after_current_unlinked"}
 POSTCHECK_REQUIRED = {
@@ -393,7 +393,7 @@ def plan_commands(checkpoint: str, package: dict[str, Any], args: argparse.Names
             "requires target as current and previous as the expected old active runtime before arm",
             "requires --quarantine-current so the checkpoint records quarantined_current=true",
             "standard fresh lab apply setup is used so target-over-previous topology is explicit",
-            "resume is expected to see fallback before reconcile and data previous after reconcile",
+            "resume is expected to see the data previous active before and after reconcile when boot adopts previous immediately",
         ])
     if checkpoint == "rollback_after_current_unlinked":
         notes.extend([
@@ -534,6 +534,9 @@ class PowerlossMatrixPlanSelfTest(unittest.TestCase):
         self.assertEqual(rollback["expected_before_resume_source"], "fallback")
         self.assertEqual(rollback["expected_after_reconcile_source"], "fallback")
         self.assertEqual(rollback["expected_rolled_to"], "image_fallback")
+        identify = [item for item in result["commands_for_missing_checkpoints"] if item["checkpoint"] == "rollback_after_identify_links"][0]
+        self.assertEqual(identify["expected_before_resume_source"], "data")
+        self.assertEqual(identify["expected_after_reconcile_source"], "data")
         previous = [item for item in result["commands_for_missing_checkpoints"] if item["checkpoint"] == "after_previous_symlink"][0]
         self.assertTrue(previous["requires_custom_setup"])
         self.assertIn("manual_setup_instructions", previous)
