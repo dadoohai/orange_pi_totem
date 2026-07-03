@@ -108,11 +108,55 @@ def read_json_object(path: Path | None) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with tmp.open("w", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
     try:
         os.chmod(path, 0o600)
     except OSError:
         pass
+    fsync_dir(path.parent)
+
+
+def fsync_dir(path: Path) -> None:
+    fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def write_text_fsync(path: Path, content: str, *, mode: int | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with tmp.open("w", encoding="utf-8") as fh:
+        fh.write(content)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+    if mode is not None:
+        try:
+            os.chmod(path, mode)
+        except OSError:
+            pass
+    fsync_dir(path.parent)
+
+
+def materialize_symlink_file(path: Path) -> None:
+    if not path.is_symlink():
+        return
+    target = path.resolve(strict=True)
+    data = target.read_bytes()
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with tmp.open("wb") as fh:
+        fh.write(data)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+    fsync_dir(path.parent)
 
 
 def is_under(path: Path, root: Path) -> bool:
@@ -614,9 +658,16 @@ def run_candidate_health(
         for _cap in (candidate_stdout_path, candidate_stderr_path):
             try:
                 _lines = sanitize_lines(_cap.read_text(encoding="utf-8", errors="replace"))
-                _cap.write_text("\n".join(_lines) + ("\n" if _lines else ""), encoding="utf-8")
+                write_text_fsync(
+                    _cap,
+                    "\n".join(_lines) + ("\n" if _lines else "empty\n"),
+                )
             except OSError:
                 pass
+        try:
+            materialize_symlink_file(Path(str(cfg["mpv_log_file"])))
+        except OSError:
+            pass
 
     result["schema"] = updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA
     result["candidate_health_schema"] = SCHEMA
