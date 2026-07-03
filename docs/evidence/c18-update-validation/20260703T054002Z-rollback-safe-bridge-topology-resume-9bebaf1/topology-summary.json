@@ -1,0 +1,19 @@
+{
+  "bridge_adoption_passed": true,
+  "bridge_apply_passed": true,
+  "bridge_health_passed": true,
+  "current": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "previous": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+  "quarantine": [
+    [
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b",
+      "m6_coldboot_trial_rollback"
+    ]
+  ],
+  "root": "/data/evidence/c18-update-validation/20260703T054002Z-rollback-safe-bridge-topology-resume-9bebaf1",
+  "target_adoption_passed": true,
+  "target_before_adoption_passed": true,
+  "target_before_health_passed": true,
+  "target_health_passed": true,
+  "target_reapply_passed": true
+}

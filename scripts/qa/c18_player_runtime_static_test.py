@@ -658,6 +658,10 @@ class CandidateHealthAccessPreflightTest(unittest.TestCase):
         self.assertNotIn("stdout=subprocess.DEVNULL", text)
         self.assertNotIn("stderr=subprocess.DEVNULL", text)
         self.assertIn("candidate_setup_inaccessible_to_run_user", text)
+
+    def test_candidate_health_supplies_isolated_watchdog_state_to_collector(self) -> None:
+        text = CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
+        self.assertIn('watchdog_state=work_root / "status-mpv-watchdog.json"', text)
         self.assertIn("access_failures_as_user", text)
         # The setup failure must RAISE (so the apply path aborts via deep_health_exception without
         # quarantining the identity), not return passed=False (which would quarantine).

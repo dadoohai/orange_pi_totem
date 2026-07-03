@@ -1,0 +1,121 @@
+{
+  "active_links": [],
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-07-03T05:29:46Z",
+      "non_claims": [
+        "not_a_public_thaw",
+        "not_stable_or_production",
+        "does_not_apply_or_rollback_runtime"
+      ],
+      "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+      "reason": "h2_recover_after_interrupted_rollback_checkpoint",
+      "removed_count": 1,
+      "reset_scope": "p0_rollback_after_quarantine",
+      "started_at_utc": "2026-07-03T05:29:46Z",
+      "status": "success",
+      "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+      "type": "lab_quarantine_reset",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "quarantine_count": 1,
+    "quarantine_versions": [
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    ],
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-07-03T04:33:14Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-07-03T04:33:14Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "quarantine_count": 2,
+    "quarantine_versions": [
+      "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    ],
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "blockers": [],
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "harness_ipc_drm_retry_evidence": {},
+  "links_unchanged": true,
+  "matching_disallowed_entries": [],
+  "network_required": false,
+  "no_canary_retry_evidence": {},
+  "non_claims": [
+    "not_a_public_thaw",
+    "not_stable_or_production",
+    "does_not_apply_or_rollback_runtime"
+  ],
+  "output_dir": "/data/evidence/c18-update-validation/20260703T052900Z-target-quarantine-reset-after-interrupted-h2-9bebaf1",
+  "passed": true,
+  "public_cli_apply_frozen_before_reset": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_frozen_before_reset": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_frozen_before_reset": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "quarantine_reason": "not_quarantined",
+  "reason": "h2_recover_after_interrupted_rollback_checkpoint",
+  "removed_count": 1,
+  "removed_entries": [
+    {
+      "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+      "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+      "quarantined_at_utc": "2026-07-03T03:36:26Z",
+      "reason": "physical_powerloss_trial",
+      "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    }
+  ],
+  "reset_scope": "p0_rollback_after_quarantine",
+  "reverted": false,
+  "schema": "dadooh.c18.player_runtime.lab_quarantine_reset.v1",
+  "setup_contention_evidence": {},
+  "startup_status_retry_evidence": {},
+  "still_quarantined": false,
+  "target_identity": {
+    "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

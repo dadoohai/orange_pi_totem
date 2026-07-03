@@ -155,6 +155,17 @@ nao mascarar H2/power-loss com um realinhamento automatico. Os contadores
 quanto o journal do servico dentro da janela coletada; se o journal esperado nao
 puder ser lido, a evidencia deve falhar fechada em vez de assumir zero eventos.
 
+Para H2/stable, o runtime apontado por `previous` nos checkpoints de rollback faz
+parte da prova. Ele precisa ser rollback-safe: release governada, marker valido,
+deep-health limpo e nenhuma acao de recuperacao do watchdog durante a janela de
+health. Um runtime legado pode continuar existindo como estado historico ou
+fallback assistido, mas nao fecha checkpoint H2 se ja mostrou status avancando
+com MPV preso, salvo se uma nova evidencia limpa provar o contrario. Uma ponte de
+baseline e permitida em homologacao para criar uma topologia `target` sobre
+`previous` seguro, desde que tenha versao/manifest explicitos, release gate verde,
+preflight fresco e evidencia propria; isso nao autoriza public thaw, `stable` ou
+producao.
+
 Uma release `totem-core` que precisa alterar como o player sobe deve ser tratada
 como frente de `player-runtime`, com imagem/homologacao ou pacote C18-aware
 proprio. Nao publicar como core comum.

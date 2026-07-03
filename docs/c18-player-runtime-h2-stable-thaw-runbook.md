@@ -22,6 +22,17 @@ o plano da matriz. Esse passo evita iniciar cortes com pacote, imagem,
 evidence root ou topologia errados, mas nao conta como power-loss nem substitui
 os 17 diretórios reais validados pelo evidence gate.
 
+Antes dos checkpoints de rollback, confirme tambem a topologia de `previous`. O
+`previous` que fecha H2 precisa ser rollback-safe: release governada, marker
+valido, deep-health limpo, sem `media_load_failed`, sem `mpv_restart` e sem
+recuperacao do watchdog durante a janela de health. O runtime legado `m6-a`/`29ff33b`
+ja falhou essa condicao em placa real por status avancando enquanto o MPV ficava
+preso; portanto ele nao deve ser usado como `previous` de producao sem uma nova
+prova limpa especifica. Se a rodada usar uma ponte de baseline em homologacao,
+registre versao/manifest/payload da ponte e rode os gates antes de armar os
+checkpoints restantes. Watchdog realinhando MPV e recuperacao aceitavel para UX,
+mas continua vermelho para H2.
+
 Depois de cada sessao fisica, puxar o diretorio de evidencia para
 `docs/evidence/c18-update-validation/`, validar off-board com o gate
 correspondente, confirmar que todos os arquivos relevantes estao rastreados por

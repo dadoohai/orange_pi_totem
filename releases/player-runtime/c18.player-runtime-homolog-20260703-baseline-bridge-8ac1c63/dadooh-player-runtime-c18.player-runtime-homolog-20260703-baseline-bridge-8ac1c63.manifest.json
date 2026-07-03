@@ -1,0 +1,42 @@
+{
+  "channel": "homologation",
+  "component": "player-runtime",
+  "created_at_utc": "2026-07-03T05:30:38Z",
+  "entrypoint": "kiosk.py",
+  "health_checks": [
+    "player_runtime_release_gate",
+    "playback_deep_health",
+    "marker_identity_match"
+  ],
+  "lab_variant": "baseline_bridge",
+  "payload": "dadooh-player-runtime-c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63.tar.gz",
+  "payload_bytes": 27105,
+  "payload_sha256": "1a8a6779b40dae1a2dac2ad86eb5d5f7b19f3245a681bb02e1d202a1ee9af497",
+  "requires": {
+    "base_image_min": "c17.4.2",
+    "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+    "device": "orangepizero3",
+    "device_track": "c18-hwdecode",
+    "gpu_context": "drm",
+    "hwdec": "v4l2request-copy",
+    "media_stack_id": "c18-hwdecode-v4l2request-copy",
+    "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+    "updater_features": [
+      "c18-freeze-kiosky-player-v1",
+      "c18-rollback-reapply-v1",
+      "c18-safe-payload-v1",
+      "c18-track-v1",
+      "c18-player-runtime-verify-then-promote-v1"
+    ],
+    "vo": "gpu"
+  },
+  "schema": "dadooh.totem.update.v1",
+  "source_branch": "HEAD",
+  "source_commit": "8ac1c63a7f83dbb385653244f52cb1f89ec8ca6e",
+  "source_dirty": false,
+  "source_repo": "dadoohai/orange_pi_totem",
+  "updates": [
+    "kiosk.py"
+  ],
+  "version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+}

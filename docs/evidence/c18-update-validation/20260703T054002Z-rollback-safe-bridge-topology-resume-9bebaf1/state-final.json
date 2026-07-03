@@ -1,0 +1,57 @@
+{
+  "component": "player-runtime",
+  "current": {
+    "applied_at_utc": "2026-07-03T05:44:48Z",
+    "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+    "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "via": "player_runtime_reconcile"
+  },
+  "last_lab_remediation": {
+    "reason": "linked_previous_health_failure_should_not_quarantine_verified_previous",
+    "remediated_at_utc": "2026-06-12T00:27:46Z",
+    "removed_count": 1,
+    "target_version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e",
+    "type": "remove_linked_previous_lab_reapply_quarantine"
+  },
+  "last_operation": {
+    "finished_at_utc": "2026-07-03T05:44:48Z",
+    "reason": "manual_reconcile",
+    "started_at_utc": "2026-07-03T05:44:48Z",
+    "status": "current_verified",
+    "type": "reconcile",
+    "verified": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "last_quarantine_pardon": {
+    "backup": "state.json.c18-pardon-retry12-20260611T184445Z",
+    "kiosk_py_sha256": "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c",
+    "pardon_at_utc": "2026-06-11T18:44:45Z",
+    "payload_sha256": "d74a552f364de0e454a01a6fe839a1581d16c1b74acb357dc92c28a3ec0524a7",
+    "reason": "startup_status_transient_retry_with_startup_wait_12",
+    "schema": "dadooh.c18.quarantine_pardon.v1",
+    "tree_sha256": "64bc45403c557d5cddfedaa8d1ee58f8ed2ccbe35cff2154de25d37a46b2ff71",
+    "version": "c18.player-runtime-homolog-20260611-mpv-path-verify-c16fb3e"
+  },
+  "previous": {
+    "applied_at_utc": "2026-07-03T05:42:05Z",
+    "kiosk_py_sha256": "c92018ff5157c112364077d637a4c110f887c155ca8a31f324765054102450ea",
+    "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "payload_sha256": "1a8a6779b40dae1a2dac2ad86eb5d5f7b19f3245a681bb02e1d202a1ee9af497",
+    "tree_sha256": "10641466d31c92cb78cc94073ea42ac386f565c488f0915e68c6fca82ab707e8",
+    "version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "via": "player_runtime_reconcile"
+  },
+  "quarantine": [
+    {
+      "kiosk_py_sha256": "aed11086fcde3054f0c4360d0075cc2ac64499e073d5f350cac6279abd45a88c",
+      "payload_sha256": "23b18fed5d6199575e353a45bb8621de6870ec94a383301d6cb031730694cb27",
+      "quarantined_at_utc": "2026-06-10T07:51:11Z",
+      "reason": "m6_coldboot_trial_rollback",
+      "tree_sha256": "b23ca25b6553a380a7edc811110112c918510cace4ee4c3b5383e359eec36d70",
+      "version": "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    }
+  ],
+  "schema": "dadooh.totem.update.state.v1"
+}

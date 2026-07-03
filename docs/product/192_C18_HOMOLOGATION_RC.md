@@ -394,24 +394,30 @@ Convergencia de decisao:
 - abrir antes de producao uma rodada curta de hardening + revalidacao
   operacional.
 
-Achados que devem entrar no radar antes de producao/stable:
+Radar atualizado apos a rodada fisica de 2026-07-03:
 
-1. `scripts/qa/c18_server_side_rollout_state_gate.py` aceitou um JSON vazio
-   `{}` como `passed=true` em teste de contra-auditoria. A evidencia real
-   corrente nao e vazia e o rollout continua pausado, portanto isto nao derruba
-   a homologacao atual, mas e bug real de default-deny e deve ser corrigido
-   antes de producao/stable.
-2. O check de frescor do preflight H2 depende de `collected_at_utc` dentro do
-   manifest versionado; adulteracao em copia pode renovar a data se tambem for
-   commitada. Para producao, endurecer esse ponto ou exigir recoleta
-   operacional fresca e hash-bound no runbook final.
-3. O pre-soak gate so pode reportar `release_gate.skipped=true` em modo rapido
+1. O `rollout-state` gate atual rejeita `{}` por execucao (`passed=false`,
+   `rc=1`, blocker `rollout_state_empty`) e o self-test cobre esse caso. O
+   achado de contra-auditoria fica preservado como historico, nao como pendencia
+   aberta.
+2. A matriz power-loss do alvo `9bebaf1` esta em 15/17 checkpoints aceitos. Os
+   dois restantes sao `rollback_after_identify_links` e
+   `rollback_after_current_unlinked`.
+3. A tentativa de `rollback_after_identify_links` voltou para o runtime legado
+   `m6-a`/`29ff33b`, mas nao ficou verde: o status avancou enquanto o MPV ficou
+   preso. O watchdog pode recuperar a experiencia, mas qualquer recuperacao do
+   watchdog durante health continua reprovando H2.
+4. A topologia de rollback segura foi preparada em 2026-07-03 usando uma ponte
+   de baseline governada em homologacao como `previous` rollback-safe:
+   `docs/evidence/c18-update-validation/20260703T054002Z-rollback-safe-bridge-topology-resume-9bebaf1/`.
+   Essa ponte nao autoriza producao, `stable`, auto-pull ou public thaw.
+5. O check de frescor do preflight H2 ainda exige recoleta operacional fresca e
+   hash-bound antes de operar a placa. Evidencia vencida continua snapshot, nao
+   autorizacao viva.
+6. O pre-soak gate so pode usar `release_gate.skipped=true` em modo rapido
    explicitamente advisory (`--allow-skipped-release-gate`). Sem
    `--run-release-gate`, o caminho forte fica bloqueado e nao serve como
    evidencia de producao/stable/thaw.
-4. O teste estatico contem condicionais historicas de coldboot `1t` que nao
-   exercitam a golden atual `1u`; baixo impacto na RC, mas bom alvo de limpeza
-   antes de chamar a suite de cobertura de producao.
 
 Correcao de leitura importante: a falha `rc=10` em
 `20260618T093642Z-target-current-service-stopped-post-quarantine-reset-9bebaf1`
@@ -426,27 +432,14 @@ power-loss 17/17, soak 24h, stable promotion e thaw formal".
 
 Proximo caminho minimo revisado:
 
-1. Corrigir o fail-open de `{}` no rollout-state gate e adicionar teste
-   negativo.
-2. Clarificar/ajustar o pre-soak para diferenciar release gate rodado de release
-   gate pulado.
-3. Recoletar preflight/autorizacao atuais antes de qualquer nova operacao na
+1. Recoletar preflight/autorizacao atuais antes de qualquer nova operacao na
    placa.
-4. Executar piloto assistido real em janela vigente, com apply, health, rollback
-   e evidencia commitada.
-5. Completar os 12 checkpoints fisicos restantes para fechar 17/17.
-6. Rodar soak 24h.
-7. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
+2. Completar os 2 checkpoints fisicos restantes para fechar 17/17:
+   `rollback_after_identify_links` com bridge como `previous` e
+   `rollback_after_current_unlinked` como fallback de imagem.
+3. Rodar soak 24h.
+4. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
    verde.
-
-1. Executar piloto assistido somente dentro de autorizacao/preflight atuais e
-   frescos, com rollback owner definido e evidencia commitada.
-2. Antes de qualquer nova sessao fisica, recoletar preflight H2 se a janela de
-   frescor expirar ou se o estado da placa mudar.
-3. Abrir H2 completo apenas depois do piloto: 17/17 power-loss, soak 24h,
-   stable promotion e decisao formal de thaw.
-4. Preservar evidencia de apply, health, rollback e qualquer incidente.
-5. Manter `stable`, producao, auto-pull e public thaw bloqueados ate H2 verde.
 
 Nota pos-RC: a familia server-side/signature passa por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida

@@ -1,0 +1,23 @@
+{
+  "component": "player-runtime",
+  "manifest": {
+    "channel": "homologation",
+    "payload_sha256": "1a8a6779b40dae1a2dac2ad86eb5d5f7b19f3245a681bb02e1d202a1ee9af497",
+    "source_commit": "8ac1c63a7f83dbb385653244f52cb1f89ec8ca6e",
+    "version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+  },
+  "package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "manifest": "dadooh-player-runtime-c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63.manifest.json",
+    "payload": "dadooh-player-runtime-c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63.tar.gz",
+    "payload_sha256": "1a8a6779b40dae1a2dac2ad86eb5d5f7b19f3245a681bb02e1d202a1ee9af497",
+    "source_commit": "8ac1c63a7f83dbb385653244f52cb1f89ec8ca6e"
+  },
+  "passed": true,
+  "payload": {
+    "kiosk_py_sha256": "c92018ff5157c112364077d637a4c110f887c155ca8a31f324765054102450ea",
+    "tree_sha256": "10641466d31c92cb78cc94073ea42ac386f565c488f0915e68c6fca82ab707e8"
+  },
+  "schema": "dadooh.c18.player_runtime.release_gate.v1"
+}
