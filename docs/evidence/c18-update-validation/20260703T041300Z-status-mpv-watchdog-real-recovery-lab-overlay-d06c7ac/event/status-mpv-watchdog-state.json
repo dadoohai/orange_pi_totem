@@ -1,0 +1,14 @@
+{
+  "action": "terminate_player_child",
+  "elapsed_sec": 20.044,
+  "mpv_alias": "<media-path:c406539999>",
+  "player_pid": 4354,
+  "reason": "status_advanced_without_mpv",
+  "recorded_at_utc": "2026-07-03T04:18:25Z",
+  "schema": "dadooh.player.status_mpv_watchdog.v1",
+  "status_alias_count": 2,
+  "status_aliases": [
+    "<media-path:2b030c3c41>",
+    "<media-path:fee4d36eb4>"
+  ]
+}

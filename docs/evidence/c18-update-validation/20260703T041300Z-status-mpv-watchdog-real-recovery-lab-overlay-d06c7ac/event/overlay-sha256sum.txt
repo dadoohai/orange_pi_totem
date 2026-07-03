@@ -1,0 +1,2 @@
+373e00516097738cd6f2f47e70f1fd6ce5fc8208cfa8ff07c62b9db6efea9455  /opt/totem/bin/kiosky_service_launcher.sh
+52474ae68ed05980f8c20808290b55182a7f3e510a8eccac7dd8065114de0c1b  /opt/totem/bin/totem_player_status_mpv_watchdog.py
