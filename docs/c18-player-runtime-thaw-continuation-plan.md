@@ -274,23 +274,23 @@ no 17/17 power-loss, no signature/attestation, and no public thaw.
   the landed thaw-decision gate validates the operator artifact and does not execute
   thaw.
 
-## OTA responsibility snapshot (2026-06-18 — Homologation RC)
+## OTA responsibility snapshot (2026-07-03 — H2 pre-production)
 
 | Frente OTA | Estado atual | Falta |
 | --- | --- | --- |
 | totem-core | Operacional e mais maduro; policy/freeze/timer/downgrade governados; release gate geral verde na RC; payload protegido por allowlist exata no gate e no device-side antes de extrair/promover | Hardening de producao/stable quando a frente H2 for aberta |
-| player-runtime | Homologation RC corrente `9bebaf1` esta governada para piloto assistido: H1/pilot/preflight finais estao versionados, P0 seletivo passou 5/17, server-side/signature esta verde e o freeze publico `rc=44` continua intacto. O alvo `c16fb3e` fica historico/bloqueado pela evidencia negativa `20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397` | H2/prod: executar os 12 checkpoints fisicos restantes para fechar 17/17, soak 24h, stable promotion, evidencia real de decisao explicita de thaw e ativacao publica separada |
+| player-runtime | Homologation RC corrente `9bebaf1` segue congelada no caminho publico (`rc=44`) e agora tem H2 pre-producao com matriz fisica power-loss 17/17 verde, server-side/signature verde e tracked inputs verdes no snapshot `20260703T073000Z-h2-readiness-17of17-head-d895232-9bebaf1`. O alvo `c16fb3e` fica historico/bloqueado pela evidencia negativa `20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397` | H2/prod: rodar e commitar soak 24h, produzir evidencia formal de stable promotion, produzir decisao explicita de thaw e manter ativacao publica como passo separado |
 | kiosky-player | Continua congelado; protegido pelo mesmo freeze público (rc=44); build/publish historicos seguem bloqueados por padrao e, mesmo com bypass lab, recusam media/cache/config/data/secrets, systemd, `/opt`, MPV/ffmpeg e modulos | Não é frente de thaw; depende da governança do player-runtime |
 | media-system / field-data | Fora do ciclo de release atual, mas agora protegidos por guardrails executaveis na matriz de responsabilidade, no gate de `player-runtime`, nos scripts legados e na allowlist device-side de `totem-core`; `field-data` ja tem snapshot publico C18/C7 gateado e evidencia read-only de placa em `20260612T183722Z-board-readonly-diagnostics-17a1f9d` | Para `media-system`, manter trilha propria de imagem/homologacao; para `field-data`, evoluir evidencia operacional somente sem transformar config/midia/cache em release de software |
 | server-side/publish | Gate offline endurecido: evidencia fraca/booleans nao basta; exige artefatos reais hash-bound, sem symlink/out-of-dir, provas de attestation ou assinatura destacada, canais, auto-pull off, allowlist, staged rollout, rollback e auditoria; assinatura confere trust key externa, fingerprint SPKI DER, release-set hash e trust-anchor evidence separada/hash-bound; H2 de `player-runtime` exige `component=player-runtime`; trust key/anchor rejeitam symlink em qualquer componente do caminho e claims PKI extras; fixture nao passa fora de self-test; evidencia atual esta verde para o pacote `9bebaf1` em `20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1` | Publicacao real/stable continua fora de escopo ate H2; manter chave/trust-anchor operacional e evidencias versionadas para o canal de producao |
-| power-loss/soak | Semantica 17/17 implementada no gate; P0 seletivo do alvo `9bebaf1` passou 5/17 em `20260618T034601Z-pilot-p0-powerloss-9bebaf1`; planner corrente `20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1` registra 12/17 pendentes; runbook corrente `20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1` orienta somente os 12 restantes; tudo isso ainda nao e evidencia 17/17 | Executar fisicamente os 12 checkpoints restantes, depois soak 24h |
+| power-loss/soak | Power-loss fisico H2 fechado: 17/17 checkpoints observados e aceitos pelo H2 readiness gate no snapshot `20260703T073000Z-h2-readiness-17of17-head-d895232-9bebaf1`; os manifests finais foram limpos para nao depender de cache local ignorado. Trilhas historicas superseded, preservadas para auditoria: `20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1` e `20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1` | Rodar e commitar soak 24h com a mesma configuracao candidata |
 
-Estado: Homologation RC de `player-runtime` corrente e `9bebaf1`: governanca
-pre-H2 verde para piloto assistido, P0 5/17 aceito, H2 ainda vermelho por
-power-loss 17/17 incompleto, soak 24h ausente, stable promotion ausente e
-decisao formal de thaw ausente. Funil:
-piloto assistido allowlisted -> evidencia de campo -> H2 completo -> decisao
-explicita de thaw.
+Estado: Homologation RC de `player-runtime` corrente e `9bebaf1`: H2
+pre-producao agora esta verde nas frentes de power-loss 17/17, server-side e
+rastreabilidade dos inputs. H2 continua vermelho por desenho, somente por soak
+24h ausente, stable promotion ausente e decisao formal de thaw ausente. Funil:
+soak 24h -> stable promotion -> decisao explicita de thaw -> discussao de
+ativacao/publicacao separada.
 
 ## Decision points that genuinely need the operator (everything else proceeds)
 - **D1 — Matcher policy:** greedy-now (reversible, fail-closed on known wordings) for the

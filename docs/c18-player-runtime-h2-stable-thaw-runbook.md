@@ -6,7 +6,8 @@ sem soak 24h e sem decisao humana real, os gates devem continuar vermelhos.
 
 ## Ordem Canonica
 
-1. Completar e commitar a matriz fisica power-loss 17/17.
+1. Matriz fisica power-loss 17/17: concluida no snapshot
+   `docs/evidence/c18-update-validation/20260703T073000Z-h2-readiness-17of17-head-d895232-9bebaf1/`.
 2. Rodar e commitar o soak 24h com a mesma configuracao candidata.
 3. Manter a familia server-side/signature verde, atual e hash-bound para o pacote alvo.
 4. Gerar rascunhos fail-closed de stable promotion e thaw decision.
