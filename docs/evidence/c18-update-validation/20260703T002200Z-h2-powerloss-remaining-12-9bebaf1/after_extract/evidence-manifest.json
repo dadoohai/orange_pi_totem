@@ -1,0 +1,153 @@
+{
+  "artifact_id": "c18-player-runtime-h2-powerloss-after_extract-after_extract",
+  "board_image_marker": "c18-hwdecode-lab-1x-image",
+  "checkpoint": "after_extract",
+  "component": "player-runtime",
+  "expected_active_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "files": [
+    {
+      "bytes": 146,
+      "file": "trial/powerloss-checkpoint/CUT_POWER_NOW.txt",
+      "sha256": "c8f04b5e346c2f0edaa59c6db76558a829e6c0025e9b288d568589bf7e548c7d"
+    },
+    {
+      "bytes": 1870,
+      "file": "trial/powerloss-checkpoint/checkpoint.json",
+      "sha256": "aca741c150dde8f35383977eda19b0dcca570199f98bef63bcbbaeeb4fb48aee"
+    },
+    {
+      "bytes": 7363,
+      "file": "trial/powerloss-summary.json",
+      "sha256": "dd17108b66cf2b7526c465388c9b9fa5112f5e0a09a96da7fb51ed2d750d1eeb"
+    },
+    {
+      "bytes": 634,
+      "file": "trial/powerloss-trial-state.json",
+      "sha256": "746d51783b640dbc2a96a22091c48176a94b93e87b5c47dfe91aad2e0ae39f3e"
+    },
+    {
+      "bytes": 244,
+      "file": "trial/raw/apply/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 1074,
+      "file": "trial/resume/after-reconcile-adoption.json",
+      "sha256": "45b5bac2c63b05ad39cb7572138699fb6c19d2240e0c45e31c0eafd1e05c4439"
+    },
+    {
+      "bytes": 332,
+      "file": "trial/resume/after-reconcile-health/deep-health-kernel.json",
+      "sha256": "61940d1dfab240101d2a4486c9ae0b720a17501a87dd12a059f716b3aaecf8a4"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/after-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/after-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/after-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4617,
+      "file": "trial/resume/after-reconcile-health/playback-deep-health-public.json",
+      "sha256": "799db497d07655e6cb318e09f56bf8e26c006b8ce6f4882d3e2b876761fe9ee1"
+    },
+    {
+      "bytes": 54165,
+      "file": "trial/resume/after-reconcile-health/playback-samples.tsv",
+      "sha256": "b7fa08217db492423ef762a135a1cbe1e6013fe8616dee4bf224b85564c3d55b"
+    },
+    {
+      "bytes": 22271,
+      "file": "trial/resume/after-reconcile-health/status-samples.ndjson",
+      "sha256": "85962802461ab6359cc3db7d85843fa72ece9988080fb8d94da4cb96cf717cd0"
+    },
+    {
+      "bytes": 4636,
+      "file": "trial/resume/after-reconcile-health.json",
+      "sha256": "96fd0098da505983bd7f314a885c9c977f165c0a0c8c58700024ef8a6212253c"
+    },
+    {
+      "bytes": 1074,
+      "file": "trial/resume/before-reconcile-adoption.json",
+      "sha256": "45b5bac2c63b05ad39cb7572138699fb6c19d2240e0c45e31c0eafd1e05c4439"
+    },
+    {
+      "bytes": 332,
+      "file": "trial/resume/before-reconcile-health/deep-health-kernel.json",
+      "sha256": "1b120c24a51de51545bf13105d2f9932cdb1c88f18bcd083f16d210e8e77aaa5"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/before-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/before-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/before-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4618,
+      "file": "trial/resume/before-reconcile-health/playback-deep-health-public.json",
+      "sha256": "68069568e56dde4be93038fe491267ca4421595385687e783f1a00f4f8f78444"
+    },
+    {
+      "bytes": 57905,
+      "file": "trial/resume/before-reconcile-health/playback-samples.tsv",
+      "sha256": "31b0bcd3bcf427d658e9413053aadd0ed10b3702ae6c5a2efc775ec5e94de967"
+    },
+    {
+      "bytes": 23902,
+      "file": "trial/resume/before-reconcile-health/status-samples.ndjson",
+      "sha256": "0b013d838033ba1dd9a1c05d43a8bc55ede4dfb86568c3154e49b2f3d7650fd5"
+    },
+    {
+      "bytes": 4637,
+      "file": "trial/resume/before-reconcile-health.json",
+      "sha256": "4c1c93cbcbda3c50d3aefd17ee365dc6d3661011b5e866b9797943046ecc4827"
+    },
+    {
+      "bytes": 244,
+      "file": "trial/resume/reconcile/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 2334,
+      "file": "trial/resume/reconcile.json",
+      "sha256": "e8eac008bec0cf8b704af3431b44b367f01e78c07482ec3ca863b38831a70d0d"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/service-runtime-mask-before-apply.json",
+      "sha256": "28df649fb5d982440cef8e74779196d41c5aa4c9f6ff16a63024a55f1c181111"
+    },
+    {
+      "bytes": 246,
+      "file": "trial/service-stop-before-apply.json",
+      "sha256": "97b55aa39844d700d393a52fa2937f1cf6c06479bc4cd424daba141575574b48"
+    }
+  ],
+  "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+  "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+  "image_tag": "c18-hwdecode-lab-1x",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
+  "setup_candidate_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "setup_expected_active_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+}

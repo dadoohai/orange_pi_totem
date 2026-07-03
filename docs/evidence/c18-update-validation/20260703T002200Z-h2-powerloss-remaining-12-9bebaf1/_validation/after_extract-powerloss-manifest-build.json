@@ -1,0 +1,7 @@
+{
+  "manifest_path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_extract/evidence-manifest.json",
+  "manifest_sha256": "1dc5f308eae4789a1f4deb5237715eedb672a5753730dbb8471dd1ed0eb74843",
+  "passed": true,
+  "result_claim": "powerloss_evidence_manifest_written",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1"
+}

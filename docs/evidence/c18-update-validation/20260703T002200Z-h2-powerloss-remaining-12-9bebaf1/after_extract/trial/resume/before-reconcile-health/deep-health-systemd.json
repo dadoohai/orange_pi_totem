@@ -1,0 +1,11 @@
+{
+  "candidate_pid_present": false,
+  "kill_mode": "mixed",
+  "nrestarts_delta": 0,
+  "send_sigkill": "yes",
+  "service_active": true,
+  "service_lifecycle_show_rc": 0,
+  "target_mode": "service",
+  "timeout_stop_sec": 90.0,
+  "timeout_stop_usec": "1min 30s"
+}
