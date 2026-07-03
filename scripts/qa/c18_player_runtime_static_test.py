@@ -414,7 +414,9 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_candidate_health_sets_explicit_panfrost_fault_policy(self) -> None:
         candidate_health = CANDIDATE_HEALTH_PATH.read_text(encoding="utf-8")
-        self.assertIn('panfrost_fault_policy="absolute"', candidate_health)
+        self.assertIn('panfrost_fault_policy: str = "absolute"', candidate_health)
+        self.assertIn('choices=("absolute", "delta")', candidate_health)
+        self.assertIn("panfrost_fault_policy=panfrost_fault_policy", candidate_health)
 
     def test_lab_thaw_wrapper_is_guarded_and_m6_based(self) -> None:
         thaw = LAB_THAW_PATH.read_text(encoding="utf-8")

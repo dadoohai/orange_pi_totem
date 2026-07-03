@@ -73,15 +73,43 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             else:
                 os.environ[reset.LAB_ENV] = old_lab
 
-    def write_setup_contention_evidence(self, root: Path, identity: dict) -> Path:
+    def write_setup_contention_evidence(
+        self,
+        root: Path,
+        identity: dict,
+        *,
+        include_optional_absolute_faults: bool = False,
+        clean_delta: bool = True,
+        include_panfrost_policy_check: bool = True,
+        panfrost_policy_clean: bool = False,
+        include_storage_presence: bool = True,
+        include_drm_marker: bool = True,
+    ) -> Path:
         health_dir = root / "failed-candidate-health"
         (health_dir / "health").mkdir(parents=True, exist_ok=True)
+        failures = set(reset.SETUP_CONTENTION_FAILURE_REASONS)
+        checks = {"service_active": True}
+        if include_optional_absolute_faults:
+            failures.update(reset.SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS)
+            checks.update({
+                "panfrost_faults_delta_present": True,
+                "panfrost_faults_delta_zero": clean_delta,
+                "ext4_errors_zero": True,
+                "mmc_timeout_reset_zero": True,
+            })
+            if include_panfrost_policy_check:
+                checks["panfrost_faults_clean_for_policy"] = panfrost_policy_clean
+            if include_storage_presence:
+                checks.update({
+                    "ext4_errors_present": True,
+                    "mmc_timeout_reset_present": True,
+                })
         (health_dir / "candidate-health-result.json").write_text(json.dumps({
             "schema": "dadooh.c18.playback.deep_health.v1",
             "candidate_version": identity["version"],
             "passed": False,
-            "failure_reasons": sorted(reset.SETUP_CONTENTION_FAILURE_REASONS),
-            "checks": {"service_active": True},
+            "failure_reasons": sorted(failures),
+            "checks": checks,
             "counters": {"total_mpv_count": 2},
         }, sort_keys=True) + "\n", encoding="utf-8")
         (health_dir / "health" / "deep-health-process.json").write_text(json.dumps({
@@ -89,10 +117,61 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             "total_mpv_count": 2,
         }, sort_keys=True) + "\n", encoding="utf-8")
         (health_dir / "mpv.log").write_text(
-            "Failed to acquire DRM master: Permission denied\n"
-            "Error opening/initializing the selected video_out (--vo) device.\n",
+            ("Failed to acquire DRM master: Permission denied\n" if include_drm_marker else "")
+            + "Error opening/initializing the selected video_out (--vo) device.\n",
             encoding="utf-8",
         )
+        return health_dir
+
+    def write_prior_panfrost_absolute_evidence(
+        self,
+        root: Path,
+        identity: dict,
+        *,
+        panfrost_delta: int = 0,
+    ) -> Path:
+        health_dir = root / "failed-prior-panfrost-health"
+        health_dir.mkdir(parents=True, exist_ok=True)
+        checks = {check: True for check in reset.PRIOR_PANFROST_FUNCTIONAL_CHECKS}
+        checks.update({
+            "panfrost_faults_zero": False,
+            "panfrost_faults_clean_for_policy": False,
+            "panfrost_faults_delta_zero": panfrost_delta == 0,
+        })
+        (health_dir / "candidate-health-result.json").write_text(json.dumps({
+            "schema": "dadooh.c18.playback.deep_health.v1",
+            "candidate_version": identity["version"],
+            "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+            "observed_tree_sha256": identity["tree_sha256"],
+            "passed": False,
+            "failure_reasons": sorted(reset.PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS),
+            "checks": checks,
+            "counters": {
+                "panfrost_fault_policy": "absolute",
+                "panfrost_faults": 4,
+                "panfrost_faults_start": 4,
+                "panfrost_faults_delta": panfrost_delta,
+                "ext4_errors_delta": 0,
+                "mmc_timeout_reset_delta": 0,
+                "mpv_count": 1,
+                "total_mpv_count": 1,
+                "ipc_success": 45,
+                "hwdec_expected_samples": 45,
+                "vo_configured_true_samples": 45,
+                "media_load_failed": 0,
+                "mpv_restart": 0,
+                "nrestarts_delta": 0,
+            },
+            "candidate_teardown": {
+                "passed": True,
+                "gpu_faults_delta": 0,
+                "process_stopped_cleanly": True,
+                "stop": {
+                    "method": "sigterm",
+                    "returncode": 0,
+                },
+            },
+        }, sort_keys=True) + "\n", encoding="utf-8")
         return health_dir
 
     def write_no_canary_retry_evidence(
@@ -486,6 +565,219 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             self.assertTrue(result["passed"])
             self.assertEqual(result["removed_count"], 1)
             self.assertEqual(result["setup_contention_evidence"]["total_mpv_count"], 2)
+
+    def test_setup_contention_retry_allows_optional_absolute_panfrost_reasons_when_delta_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention-absolute")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(
+                reset.SETUP_CONTENTION_FAILURE_REASONS
+                | reset.SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
+            ))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_setup_contention_evidence(
+                root,
+                identity,
+                include_optional_absolute_faults=True,
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-contention-absolute-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["removed_count"], 1)
+
+    def test_setup_contention_retry_rejects_optional_absolute_panfrost_without_clean_delta(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention-dirty")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(
+                reset.SETUP_CONTENTION_FAILURE_REASONS
+                | reset.SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
+            ))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_setup_contention_evidence(
+                root,
+                identity,
+                include_optional_absolute_faults=True,
+                clean_delta=False,
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-contention-dirty-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("setup_contention_panfrost_delta_not_clean_or_missing", result["blockers"])
+
+    def test_setup_contention_retry_rejects_optional_absolute_panfrost_without_storage_presence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention-missing-storage")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(
+                reset.SETUP_CONTENTION_FAILURE_REASONS
+                | reset.SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
+            ))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_setup_contention_evidence(
+                root,
+                identity,
+                include_optional_absolute_faults=True,
+                include_storage_presence=False,
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-contention-missing-storage-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("setup_contention_storage_fault_seen_or_missing", result["blockers"])
+
+    def test_setup_contention_retry_rejects_optional_absolute_panfrost_without_policy_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention-missing-policy")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(
+                reset.SETUP_CONTENTION_FAILURE_REASONS
+                | reset.SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
+            ))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_setup_contention_evidence(
+                root,
+                identity,
+                include_optional_absolute_faults=True,
+                include_panfrost_policy_check=False,
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-contention-missing-policy-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("setup_contention_panfrost_delta_not_clean_or_missing", result["blockers"])
+
+    def test_setup_contention_retry_rejects_without_drm_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-contention-no-drm")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_setup_contention_evidence(root, identity, include_drm_marker=False)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "p0_setup_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-contention-no-drm-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("setup_contention_drm_master_marker_missing", result["blockers"])
+
+    def test_prior_panfrost_absolute_retry_removes_matching_quarantine_with_clean_delta(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-prior-panfrost")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_prior_panfrost_absolute_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_prior_panfrost_absolute_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-prior-panfrost-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["removed_count"], 1)
+            self.assertEqual(
+                result["prior_panfrost_absolute_retry_evidence"]["panfrost_faults_delta"],
+                0,
+            )
+
+    def test_prior_panfrost_absolute_retry_rejects_nonzero_delta(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-prior-panfrost-dirty")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_prior_panfrost_absolute_evidence(root, identity, panfrost_delta=1)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_prior_panfrost_absolute_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-prior-panfrost-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("prior_panfrost_absolute_functional_checks_missing", result["blockers"])
+            self.assertIn("prior_panfrost_absolute_panfrost_delta_nonzero", result["blockers"])
 
     def test_no_canary_retry_requires_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

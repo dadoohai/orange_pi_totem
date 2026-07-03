@@ -536,7 +536,10 @@ def run_candidate_health(
     duration_sec: float = 30.0,
     interval_sec: float = 1.0,
     startup_wait_sec: float = 5.0,
+    panfrost_fault_policy: str = "absolute",
 ) -> dict[str, Any]:
+    if panfrost_fault_policy not in {"absolute", "delta"}:
+        raise ValueError("panfrost_fault_policy must be absolute or delta")
     release_dir = release_dir.resolve()
     identity = identity or candidate_identity(release_dir)
     work_root = output_dir or Path(tempfile.mkdtemp(prefix="c18-player-runtime-candidate-"))
@@ -622,7 +625,7 @@ def run_candidate_health(
             mpv_log=Path(str(cfg["mpv_log_file"])),
             mpv_generation_dir=Path(str(cfg["runtime_dir"])),
             watchdog_state=work_root / "status-mpv-watchdog.json",
-            panfrost_fault_policy="absolute",
+            panfrost_fault_policy=panfrost_fault_policy,
             json=False,
         )
         _out_dir, result = collector.collect(ns)
@@ -709,6 +712,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--duration-sec", type=float, default=30.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=5.0)
+    parser.add_argument("--panfrost-fault-policy", choices=("absolute", "delta"), default="absolute")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
@@ -732,6 +736,7 @@ def main(argv: list[str]) -> int:
             duration_sec=args.duration_sec,
             interval_sec=args.interval_sec,
             startup_wait_sec=args.startup_wait_sec,
+            panfrost_fault_policy=args.panfrost_fault_policy,
         )
     except Exception as exc:
         result = {

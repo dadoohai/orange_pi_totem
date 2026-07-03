@@ -41,6 +41,7 @@ RESET_SCOPES = {
     "lab_no_canary_retry",
     "lab_harness_ipc_drm_retry",
     "lab_candidate_startup_status_retry",
+    "lab_prior_panfrost_absolute_retry",
     "h2_rollback_arm_timeout_previous_linked",
 }
 ALLOWED_QUARANTINE_REASONS = {"physical_powerloss_trial"}
@@ -49,6 +50,7 @@ SETUP_CONTENTION_SCOPE = "p0_setup_contention_retry"
 NO_CANARY_SCOPE = "lab_no_canary_retry"
 HARNESS_IPC_DRM_SCOPE = "lab_harness_ipc_drm_retry"
 STARTUP_STATUS_SCOPE = "lab_candidate_startup_status_retry"
+PRIOR_PANFROST_ABSOLUTE_SCOPE = "lab_prior_panfrost_absolute_retry"
 SETUP_CONTENTION_FAILURE_REASONS = {
     "hwdec_expected_present",
     "vo_configured_present",
@@ -56,6 +58,13 @@ SETUP_CONTENTION_FAILURE_REASONS = {
     "estimated_frame_present",
     "playback_progressed",
 }
+SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS = {
+    "panfrost_faults_zero",
+    "panfrost_faults_clean_for_policy",
+}
+SETUP_CONTENTION_ALLOWED_FAILURE_REASONS = (
+    SETUP_CONTENTION_FAILURE_REASONS | SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
+)
 NO_CANARY_FAILURE_REASONS = {
     "candidate_teardown_process_stopped_cleanly",
     "estimated_frame_present",
@@ -80,6 +89,36 @@ HARNESS_IPC_DRM_FAILURE_REASONS = {
     "vo_configured_present",
 }
 STARTUP_STATUS_FAILURE_REASONS = {"status_no_failures"}
+PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS = {
+    "panfrost_faults_zero",
+    "panfrost_faults_clean_for_policy",
+}
+PRIOR_PANFROST_FUNCTIONAL_CHECKS = {
+    "candidate_process_filtered",
+    "candidate_teardown_gpu_fault_delta_zero",
+    "candidate_teardown_process_stopped_cleanly",
+    "estimated_frame_present",
+    "hwdec_expected_present",
+    "hwdec_no_unexpected",
+    "ipc_stable_after_success",
+    "ipc_success_present",
+    "media_load_failed_zero",
+    "mmc_timeout_reset_present",
+    "mmc_timeout_reset_zero",
+    "mpv_path_c18_stack",
+    "mpv_restart_present",
+    "mpv_restart_zero",
+    "nrestarts_delta_present",
+    "nrestarts_stable",
+    "panfrost_faults_delta_present",
+    "panfrost_faults_delta_zero",
+    "playback_progressed",
+    "single_mpv",
+    "status_mpv_path_aligned",
+    "status_no_failures",
+    "vo_configured_no_unexpected",
+    "vo_configured_present",
+}
 
 
 def path_is_under(path: Path, root: Path) -> bool:
@@ -232,19 +271,43 @@ def setup_contention_evidence(candidate_health_dir: Path | None, identity: dict[
     failures = set(str(item) for item in (result.get("failure_reasons") or []))
     counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
     checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    optional_absolute_faults = failures & SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
     details.update({
         "candidate_version": result.get("candidate_version"),
         "failure_reasons": sorted(failures),
+        "optional_absolute_fault_reasons": sorted(optional_absolute_faults),
         "total_mpv_count": counters.get("total_mpv_count"),
         "process_total_mpv_count": process.get("total_mpv_count"),
         "service_active": checks.get("service_active"),
+        "panfrost_faults_delta_present": checks.get("panfrost_faults_delta_present"),
+        "panfrost_faults_delta_zero": checks.get("panfrost_faults_delta_zero"),
+        "panfrost_faults_clean_for_policy": checks.get("panfrost_faults_clean_for_policy"),
+        "panfrost_faults_clean_for_policy_present": "panfrost_faults_clean_for_policy" in checks,
+        "ext4_errors_present": checks.get("ext4_errors_present"),
+        "ext4_errors_zero": checks.get("ext4_errors_zero"),
+        "mmc_timeout_reset_present": checks.get("mmc_timeout_reset_present"),
+        "mmc_timeout_reset_zero": checks.get("mmc_timeout_reset_zero"),
     })
     if result.get("candidate_version") != identity.get("version"):
         blockers.append("setup_contention_candidate_version_mismatch")
     if result.get("passed") is not False:
         blockers.append("setup_contention_result_not_failed")
-    if failures != SETUP_CONTENTION_FAILURE_REASONS:
+    if not SETUP_CONTENTION_FAILURE_REASONS.issubset(failures) or not failures <= SETUP_CONTENTION_ALLOWED_FAILURE_REASONS:
         blockers.append("setup_contention_failure_reasons_mismatch")
+    if optional_absolute_faults:
+        if (
+            checks.get("panfrost_faults_delta_present") is not True
+            or checks.get("panfrost_faults_delta_zero") is not True
+            or "panfrost_faults_clean_for_policy" not in checks
+        ):
+            blockers.append("setup_contention_panfrost_delta_not_clean_or_missing")
+        if (
+            checks.get("ext4_errors_present") is not True
+            or checks.get("ext4_errors_zero") is not True
+            or checks.get("mmc_timeout_reset_present") is not True
+            or checks.get("mmc_timeout_reset_zero") is not True
+        ):
+            blockers.append("setup_contention_storage_fault_seen_or_missing")
     if int(counters.get("total_mpv_count") or 0) < 2 or int(process.get("total_mpv_count") or 0) < 2:
         blockers.append("setup_contention_total_mpv_count")
     if checks.get("service_active") is not True:
@@ -253,6 +316,91 @@ def setup_contention_evidence(candidate_health_dir: Path | None, identity: dict[
         blockers.append("setup_contention_drm_master_marker_missing")
     if "Error opening/initializing the selected video_out" not in mpv_log:
         blockers.append("setup_contention_video_out_marker_missing")
+    return not blockers, blockers, details
+
+
+def setup_contention_reason_allowed(reason: str) -> bool:
+    reasons = set(reason.split(","))
+    return (
+        SETUP_CONTENTION_FAILURE_REASONS.issubset(reasons)
+        and reasons <= SETUP_CONTENTION_ALLOWED_FAILURE_REASONS
+    )
+
+
+def prior_panfrost_absolute_retry_evidence(
+    candidate_health_dir: Path | None,
+    identity: dict[str, Any],
+) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["prior_panfrost_absolute_evidence_missing"], details
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    try:
+        result = read_json(result_path)
+    except Exception as exc:
+        return False, [f"prior_panfrost_absolute_result_read_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    teardown = result.get("candidate_teardown") if isinstance(result.get("candidate_teardown"), dict) else {}
+    missing_functional = sorted(
+        check for check in PRIOR_PANFROST_FUNCTIONAL_CHECKS if checks.get(check) is not True
+    )
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "panfrost_fault_policy": counters.get("panfrost_fault_policy"),
+        "panfrost_faults": counters.get("panfrost_faults"),
+        "panfrost_faults_start": counters.get("panfrost_faults_start"),
+        "panfrost_faults_delta": counters.get("panfrost_faults_delta"),
+        "ext4_errors_delta": counters.get("ext4_errors_delta"),
+        "mmc_timeout_reset_delta": counters.get("mmc_timeout_reset_delta"),
+        "mpv_count": counters.get("mpv_count"),
+        "total_mpv_count": counters.get("total_mpv_count"),
+        "ipc_success": counters.get("ipc_success"),
+        "hwdec_expected_samples": counters.get("hwdec_expected_samples"),
+        "vo_configured_true_samples": counters.get("vo_configured_true_samples"),
+        "media_load_failed": counters.get("media_load_failed"),
+        "mpv_restart": counters.get("mpv_restart"),
+        "nrestarts_delta": counters.get("nrestarts_delta"),
+        "teardown_passed": teardown.get("passed"),
+        "teardown_gpu_faults_delta": teardown.get("gpu_faults_delta"),
+        "missing_functional_checks": missing_functional,
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("prior_panfrost_absolute_candidate_version_mismatch")
+    if result.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+        blockers.append("prior_panfrost_absolute_kiosk_identity_mismatch")
+    if result.get("observed_tree_sha256") != identity.get("tree_sha256"):
+        blockers.append("prior_panfrost_absolute_tree_identity_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("prior_panfrost_absolute_result_not_failed")
+    if failures != PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS:
+        blockers.append("prior_panfrost_absolute_failure_reasons_mismatch")
+    if counters.get("panfrost_fault_policy") != "absolute":
+        blockers.append("prior_panfrost_absolute_policy_not_absolute")
+    if missing_functional:
+        blockers.append("prior_panfrost_absolute_functional_checks_missing")
+    if int(counters.get("panfrost_faults_delta") or 0) != 0:
+        blockers.append("prior_panfrost_absolute_panfrost_delta_nonzero")
+    if int(counters.get("ext4_errors_delta") or 0) != 0 or int(counters.get("mmc_timeout_reset_delta") or 0) != 0:
+        blockers.append("prior_panfrost_absolute_storage_delta_nonzero")
+    if int(counters.get("mpv_count") or 0) != 1 or int(counters.get("total_mpv_count") or 0) != 1:
+        blockers.append("prior_panfrost_absolute_not_single_mpv")
+    if int(counters.get("ipc_success") or 0) <= 0:
+        blockers.append("prior_panfrost_absolute_no_ipc_success")
+    if int(counters.get("hwdec_expected_samples") or 0) <= 0:
+        blockers.append("prior_panfrost_absolute_no_hwdec_samples")
+    if int(counters.get("vo_configured_true_samples") or 0) <= 0:
+        blockers.append("prior_panfrost_absolute_no_vo_samples")
+    if int(counters.get("media_load_failed") or 0) != 0 or int(counters.get("mpv_restart") or 0) != 0:
+        blockers.append("prior_panfrost_absolute_runtime_fault_seen")
+    if int(counters.get("nrestarts_delta") or 0) != 0:
+        blockers.append("prior_panfrost_absolute_service_restart_seen")
+    if teardown.get("passed") is not True or int(teardown.get("gpu_faults_delta") or 0) != 0:
+        blockers.append("prior_panfrost_absolute_teardown_not_clean")
     return not blockers, blockers, details
 
 
@@ -493,16 +641,19 @@ def quarantine_reason_allowed(entry: dict[str, Any],
                               setup_contention_ok: bool,
                               no_canary_retry_ok: bool,
                               harness_ipc_drm_retry_ok: bool,
-                              startup_status_retry_ok: bool) -> bool:
+                              startup_status_retry_ok: bool,
+                              prior_panfrost_absolute_ok: bool) -> bool:
     reason = str(entry.get("reason") or "")
     if reset_scope == SETUP_CONTENTION_SCOPE:
-        return setup_contention_ok and set(reason.split(",")) == SETUP_CONTENTION_FAILURE_REASONS
+        return setup_contention_ok and setup_contention_reason_allowed(reason)
     if reset_scope == NO_CANARY_SCOPE:
         return no_canary_retry_ok and set(reason.split(",")) == NO_CANARY_FAILURE_REASONS
     if reset_scope == HARNESS_IPC_DRM_SCOPE:
         return harness_ipc_drm_retry_ok and set(reason.split(",")) == HARNESS_IPC_DRM_FAILURE_REASONS
     if reset_scope == STARTUP_STATUS_SCOPE:
         return startup_status_retry_ok and set(reason.split(",")) == STARTUP_STATUS_FAILURE_REASONS
+    if reset_scope == PRIOR_PANFROST_ABSOLUTE_SCOPE:
+        return prior_panfrost_absolute_ok and set(reason.split(",")) == PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS
     return reason in ALLOWED_QUARANTINE_REASONS
 
 
@@ -513,7 +664,8 @@ def matches_target(entry: dict[str, Any],
                    setup_contention_ok: bool,
                    no_canary_retry_ok: bool,
                    harness_ipc_drm_retry_ok: bool,
-                   startup_status_retry_ok: bool) -> bool:
+                   startup_status_retry_ok: bool,
+                   prior_panfrost_absolute_ok: bool) -> bool:
     return identity_matches_target(entry, identity) and quarantine_reason_allowed(
         entry,
         reset_scope=reset_scope,
@@ -521,6 +673,7 @@ def matches_target(entry: dict[str, Any],
         no_canary_retry_ok=no_canary_retry_ok,
         harness_ipc_drm_retry_ok=harness_ipc_drm_retry_ok,
         startup_status_retry_ok=startup_status_retry_ok,
+        prior_panfrost_absolute_ok=prior_panfrost_absolute_ok,
     )
 
 
@@ -616,6 +769,10 @@ def main(argv: list[str]) -> int:
         args.failed_candidate_health_dir,
         identity,
     ) if args.reset_scope == STARTUP_STATUS_SCOPE else (False, [], {})
+    prior_panfrost_ok, prior_panfrost_blockers, prior_panfrost_details = prior_panfrost_absolute_retry_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == PRIOR_PANFROST_ABSOLUTE_SCOPE else (False, [], {})
     target_link = f"releases/{identity.get('version')}"
     active_links = [
         name
@@ -641,6 +798,7 @@ def main(argv: list[str]) -> int:
             no_canary_retry_ok=no_canary_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
             startup_status_retry_ok=startup_status_ok,
+            prior_panfrost_absolute_ok=prior_panfrost_ok,
         )
     ]
     removed = [
@@ -652,6 +810,7 @@ def main(argv: list[str]) -> int:
             no_canary_retry_ok=no_canary_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
             startup_status_retry_ok=startup_status_ok,
+            prior_panfrost_absolute_ok=prior_panfrost_ok,
         )
     ]
     blockers: list[str] = []
@@ -667,6 +826,7 @@ def main(argv: list[str]) -> int:
     blockers.extend(no_canary_blockers)
     blockers.extend(harness_ipc_drm_blockers)
     blockers.extend(startup_status_blockers)
+    blockers.extend(prior_panfrost_blockers)
     if blockers:
         still_quarantined, quarantine_reason = updatectl._player_runtime_is_quarantined(identity, state)
         after_snapshot = runtime_snapshot()
@@ -689,6 +849,7 @@ def main(argv: list[str]) -> int:
             "no_canary_retry_evidence": no_canary_details,
             "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
             "startup_status_retry_evidence": startup_status_details,
+            "prior_panfrost_absolute_retry_evidence": prior_panfrost_details,
             "still_quarantined": still_quarantined,
             "quarantine_reason": quarantine_reason,
             "links_unchanged": (
@@ -802,6 +963,7 @@ def main(argv: list[str]) -> int:
         "no_canary_retry_evidence": no_canary_details,
         "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
         "startup_status_retry_evidence": startup_status_details,
+        "prior_panfrost_absolute_retry_evidence": prior_panfrost_details,
         "reverted": reverted,
         "still_quarantined": still_quarantined,
         "quarantine_reason": quarantine_reason,

@@ -2395,6 +2395,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("C18_PLAYER_RUNTIME_ALLOW_DEVICE_DATA_ROOT", lab_apply)
         self.assertIn("--lab-only-apply", lab_apply)
         self.assertIn("--allow-device-data-root", lab_apply)
+        self.assertIn("--panfrost-fault-policy", lab_apply)
+        self.assertIn('"panfrost_fault_policy": args.panfrost_fault_policy', lab_apply)
         self.assertIn('work_dir / "data"', lab_apply)
         self.assertIn("public_cli_apply_still_frozen", lab_apply)
         self.assertIn("release_gate.validate_release", lab_apply)

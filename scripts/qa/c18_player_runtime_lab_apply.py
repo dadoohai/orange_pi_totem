@@ -163,6 +163,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--duration-sec", type=float, default=30.0)
     parser.add_argument("--interval-sec", type=float, default=1.0)
     parser.add_argument("--startup-wait-sec", type=float, default=5.0)
+    parser.add_argument("--panfrost-fault-policy", choices=("absolute", "delta"), default="absolute")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
@@ -196,6 +197,7 @@ def main(argv: list[str]) -> int:
             duration_sec=args.duration_sec,
             interval_sec=args.interval_sec,
             startup_wait_sec=args.startup_wait_sec,
+            panfrost_fault_policy=args.panfrost_fault_policy,
         )
 
     previous_hook = updatectl.PLAYER_RUNTIME_HEALTH_HOOK
@@ -235,6 +237,7 @@ def main(argv: list[str]) -> int:
         "before": before_snapshot,
         "after": after_snapshot,
         "reapply_linked_previous": bool(args.allow_reapply_linked_previous),
+        "panfrost_fault_policy": args.panfrost_fault_policy,
         "data_root": str(data_root),
         "device_data_root": data_root.resolve() == Path("/data"),
         "output_dir": str(work_dir),
