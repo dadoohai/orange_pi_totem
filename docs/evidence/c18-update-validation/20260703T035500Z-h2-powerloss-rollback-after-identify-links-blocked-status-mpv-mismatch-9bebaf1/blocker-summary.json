@@ -1,0 +1,49 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_blocker.v1",
+  "checkpoint": "rollback_after_identify_links",
+  "captured_at_utc": "2026-07-03T03:55:00Z",
+  "target_runtime": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "previous_runtime": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "checkpoint_hit_at_utc": "2026-07-03T03:36:26Z",
+  "observed_resume_direction": {
+    "before_reconcile_source": "data",
+    "before_reconcile_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "interpretation": "boot adopted the expected previous runtime before explicit resume reconcile"
+  },
+  "blocker": {
+    "check": "status_mpv_path_aligned",
+    "reason": "public player status advanced through media aliases while MPV stayed on one alias",
+    "resume_health_passed": false,
+    "live_pre_restart_health_passed": false
+  },
+  "failed_resume_counters": {
+    "samples": 59,
+    "status_unique_aliases": 7,
+    "mpv_unique_aliases": 1,
+    "status_advanced_without_mpv": true,
+    "status_mpv_max_consecutive_mismatches": 53,
+    "status_mpv_max_transition_lag_seconds": 53.139,
+    "status_mpv_unexplained_mismatch_samples": 53
+  },
+  "live_pre_restart_counters": {
+    "samples": 45,
+    "status_unique_aliases": 4,
+    "mpv_unique_aliases": 1,
+    "status_advanced_without_mpv": true,
+    "status_mpv_max_consecutive_mismatches": 24,
+    "status_mpv_max_transition_lag_seconds": 23.473,
+    "status_mpv_unexplained_mismatch_samples": 24
+  },
+  "recovery": {
+    "action": "systemctl restart kiosky-player.service",
+    "post_restart_health_passed": true,
+    "post_restart_status_advanced_without_mpv": false,
+    "post_restart_mpv_unique_aliases": 6
+  },
+  "non_claims": [
+    "stable_or_production",
+    "public_player_runtime_thaw",
+    "h2_powerloss_checkpoint_pass",
+    "restart_recovery_equivalent_to_powerloss_pass"
+  ]
+}

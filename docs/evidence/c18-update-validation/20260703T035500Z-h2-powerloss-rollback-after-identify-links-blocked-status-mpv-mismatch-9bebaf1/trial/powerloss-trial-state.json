@@ -1,0 +1,7 @@
+{
+  "armed_at_utc": "2026-07-03T03:36:26Z",
+  "checkpoint": "rollback_after_identify_links",
+  "data_root": "/data",
+  "phase": "arm-rollback",
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}

@@ -1,0 +1,111 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-07-03T03:29:12Z",
+      "rollback_reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "rolled_back_to": "previous",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-07-03T03:28:26Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "quarantine_count": 2,
+    "quarantine_versions": [
+      "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    ],
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": null
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-07-03T03:29:12Z",
+      "rollback_reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "rolled_back_to": "previous",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-07-03T03:28:26Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "quarantine_count": 2,
+    "quarantine_versions": [
+      "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+      "c18.player-runtime-m6-b2-20260610T072826Z-29ff33b"
+    ],
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": null
+  },
+  "blockers": [
+    "target_identity_quarantined"
+  ],
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "non_claims": [
+    "not_powerloss_evidence",
+    "not_17_17",
+    "not_pilot_authorization",
+    "not_stable_or_production",
+    "not_public_thaw",
+    "does_not_fetch_or_publish_releases",
+    "does_not_apply_or_rollback_runtime"
+  ],
+  "output_dir": "/data/c18-evidence/h2-powerloss-resume-7-20260703T023000Z/rollback_after_identify_links/setup/topology-reset",
+  "passed": false,
+  "previous_identity": {
+    "kiosk_py_sha256": "d63cfd9d31700823d93c7b3c238c4bc8c86330f386f184d2b62bd025f4e221f7",
+    "payload_sha256": "2dac1f1be3ffc71e4c4539772b7f82d955336e08c6f61eea1d0b55b841a9ca28",
+    "tree_sha256": "e8359959d7bb8b2e03f500cad07798d562085a921947b4f5f269421896179d91",
+    "version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "public_cli_apply_frozen_before_reset": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_frozen_before_reset": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_frozen_before_reset": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "removed_target_release_dir": null,
+  "reset_reason": "h2_powerloss_resume_rollback_after_identify_links",
+  "result_claim": "player_runtime_lab_topology_reset_blocked",
+  "schema": "dadooh.c18.player_runtime.lab_topology_reset.v1",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_identity": {
+    "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "target_release_prevalidation": "target_release_dir_absent",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

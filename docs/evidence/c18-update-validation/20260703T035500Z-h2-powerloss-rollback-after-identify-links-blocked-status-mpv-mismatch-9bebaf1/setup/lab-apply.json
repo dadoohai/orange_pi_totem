@@ -1,0 +1,63 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "last_operation": {
+      "finished_at_utc": "2026-07-03T03:35:16Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+      "started_at_utc": "2026-07-03T03:34:31Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_current_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "state_previous_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "last_operation": {
+      "finished_at_utc": "2026-07-03T03:33:57Z",
+      "non_claims": [
+        "not_a_public_thaw",
+        "not_stable_or_production",
+        "does_not_apply_or_rollback_runtime"
+      ],
+      "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+      "reason": "h2_rollback_setup_retry_after_service_drm_contention",
+      "removed_count": 1,
+      "reset_scope": "p0_setup_contention_retry",
+      "started_at_utc": "2026-07-03T03:33:57Z",
+      "status": "success",
+      "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+      "type": "lab_quarantine_reset",
+      "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/data/c18-evidence/h2-powerloss-resume-7-20260703T023000Z/rollback_after_identify_links/setup/apply",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

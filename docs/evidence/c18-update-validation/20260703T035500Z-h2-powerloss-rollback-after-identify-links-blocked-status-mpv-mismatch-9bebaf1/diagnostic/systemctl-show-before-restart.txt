@@ -1,0 +1,5 @@
+NRestarts=0
+ExecMainPID=1060
+ActiveState=active
+SubState=running
+FragmentPath=/etc/systemd/system/kiosky-player.service
