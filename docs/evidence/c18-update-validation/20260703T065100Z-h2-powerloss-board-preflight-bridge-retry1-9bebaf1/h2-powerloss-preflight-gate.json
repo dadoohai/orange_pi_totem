@@ -1,0 +1,45 @@
+{
+  "blockers": [],
+  "evaluated_at_utc": "2026-07-03T06:30:01.997486Z",
+  "freshness": {
+    "age_sec": 0,
+    "captured_at_utc": "2026-07-03T06:30:01Z",
+    "evaluated_at_utc": "2026-07-03T06:30:01.997486Z",
+    "max_age_sec": 14400,
+    "required": true
+  },
+  "matrix": {
+    "missing_apply_checkpoints": [],
+    "missing_checkpoints": [
+      "rollback_after_identify_links",
+      "rollback_after_current_unlinked"
+    ]
+  },
+  "matrix_plan": "docs/evidence/c18-update-validation/20260703T065000Z-h2-powerloss-matrix-plan-15of17-bridge-retry1-9bebaf1/powerloss-matrix-plan.json",
+  "missing_preflight_non_claims": [],
+  "non_claims": [
+    "this_gate_does_not_claim_powerloss_evidence",
+    "this_gate_does_not_claim_17_17",
+    "this_gate_does_not_run_board_commands",
+    "this_gate_does_not_authorize_stable_or_production",
+    "this_gate_does_not_thaw_player_runtime"
+  ],
+  "passed": true,
+  "preflight": "docs/evidence/c18-update-validation/20260703T065100Z-h2-powerloss-board-preflight-bridge-retry1-9bebaf1/board-preflight.json",
+  "result_claim": "h2_powerloss_board_preflight_accepted",
+  "schema": "dadooh.c18.player_runtime.h2_powerloss_board_preflight_gate.v1",
+  "target_package": {
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "topology_analysis": {
+    "blocked_apply_checkpoints_when_target_linked": [],
+    "missing_apply_checkpoints": [],
+    "requires_custom_setup_checkpoints": [
+      "rollback_after_current_unlinked"
+    ],
+    "target_linked": true,
+    "target_quarantined": false
+  }
+}
