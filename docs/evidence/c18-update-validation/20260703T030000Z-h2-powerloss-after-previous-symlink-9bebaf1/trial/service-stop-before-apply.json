@@ -1,0 +1,11 @@
+{
+  "phase": "arm-apply",
+  "result": {
+    "action": "systemctl stop kiosky-player.service",
+    "passed": true,
+    "returncode": 0,
+    "stderr_tail": "",
+    "stdout_tail": ""
+  },
+  "schema": "dadooh.c18.player_runtime.powerloss_trial.v1"
+}
