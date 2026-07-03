@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=before_stage_cleanup action=apply evidence=/data/c18-evidence/h2-powerloss-resume-7-20260703T023000Z/before_stage_cleanup/trial/powerloss-checkpoint
