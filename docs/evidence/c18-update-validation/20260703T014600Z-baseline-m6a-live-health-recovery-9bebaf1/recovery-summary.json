@@ -1,0 +1,41 @@
+{
+  "schema": "dadooh.c18.baseline_live_health_recovery.v1",
+  "result_claim": "baseline_m6a_recovered_by_controlled_service_restart",
+  "runtime": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "target_package_context": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "pre_restart": {
+    "artifact": "pre-restart-health-public.json",
+    "passed": false,
+    "failure_reasons": [
+      "playback_progressed",
+      "status_mpv_path_aligned"
+    ],
+    "estimated_frame_progressed": false,
+    "status_mpv_unexplained_mismatch_samples": 9,
+    "mpv_unique_aliases": 4,
+    "status_unique_aliases": 3
+  },
+  "recovery_action": "systemctl restart kiosky-player.service",
+  "post_restart": {
+    "artifact": "post-restart-health-public.json",
+    "passed": true,
+    "failure_reasons": [],
+    "estimated_frame_progressed": true,
+    "status_mpv_unexplained_mismatch_samples": 0,
+    "mpv_unique_aliases": 5,
+    "status_unique_aliases": 5
+  },
+  "decisions": [
+    "leave_board_operable_after_recovery",
+    "do_not_count_recovery_as_h2_powerloss_pass",
+    "do_not_resume_physical_cuts_until_baseline_strategy_is_decided"
+  ],
+  "non_claims": [
+    "h2_powerloss_checkpoint_passed",
+    "h2_powerloss_17_of_17_complete",
+    "soak_24h_complete",
+    "stable_promotion",
+    "production_readiness",
+    "public_player_runtime_thaw"
+  ]
+}
