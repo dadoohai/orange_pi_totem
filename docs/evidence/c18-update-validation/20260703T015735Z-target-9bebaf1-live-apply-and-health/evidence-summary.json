@@ -1,0 +1,150 @@
+{
+  "files": [
+    {
+      "bytes": 1161,
+      "file": "README.md",
+      "sha256": "6efc4f444d08b615e3d74f6325f66a0ab50231820b919b54d1280feae69b8579"
+    },
+    {
+      "bytes": 4588,
+      "file": "candidate-health-public.json",
+      "sha256": "fdac26ec90f995bfa7ad5cd58a96fabbc249ad931c994d0af8bc05396df80b2d"
+    },
+    {
+      "bytes": 2012,
+      "file": "lab-apply.json",
+      "sha256": "a2d243afdc097352028495d1294e7e0fa06fd5e3875c430770769b1939eee61f"
+    },
+    {
+      "bytes": 335,
+      "file": "post-reboot-health-60s/deep-health-kernel.json",
+      "sha256": "710b6307b272af9c8255e8acbcc246dcee3343c77052debb6ac8411aa971c5fc"
+    },
+    {
+      "bytes": 49,
+      "file": "post-reboot-health-60s/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "post-reboot-health-60s/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "post-reboot-health-60s/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4643,
+      "file": "post-reboot-health-60s/playback-deep-health-public.json",
+      "sha256": "8fe434be34b2bc9536637ce3f6ae03266c6f9d57ba3d25988029864761012628"
+    },
+    {
+      "bytes": 66808,
+      "file": "post-reboot-health-60s/playback-samples.tsv",
+      "sha256": "458dd6a13436e466d0a61dbc36152ad01f98f19cdf642c6fd4312a2dab0c7d2e"
+    },
+    {
+      "bytes": 27522,
+      "file": "post-reboot-health-60s/status-samples.ndjson",
+      "sha256": "3928a7fb00a95c05c558664b1fbca23a2afe548e83fe80d63fbd564745bba2c0"
+    },
+    {
+      "bytes": 1241,
+      "file": "public-freeze.json",
+      "sha256": "5ea2b2b385cf65d95c258850577de6f08613a97065906d374c5c246e2d09f279"
+    },
+    {
+      "bytes": 1207,
+      "file": "service-adoption.json",
+      "sha256": "af7bc35f89c6dccc16cc0f582dcb596cc12b27ab531cbb4e42b2d6c31a50b4f8"
+    },
+    {
+      "bytes": 1949,
+      "file": "service-after-apply.json",
+      "sha256": "d9cf430c00081ece1328f615b3d2f3ad2f461dd42521f920e60e8a583b358ea1"
+    },
+    {
+      "bytes": 1198,
+      "file": "service-before-apply.json",
+      "sha256": "67c1b881f051c656467f04795cad31c874d9d703762807186bbc7dfe9e770c26"
+    },
+    {
+      "bytes": 336,
+      "file": "service-health-180s/deep-health-kernel.json",
+      "sha256": "f1fdf6c38c65fb0c34513714257e9dc765674273085e8d2684d1259559a53675"
+    },
+    {
+      "bytes": 49,
+      "file": "service-health-180s/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "service-health-180s/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "service-health-180s/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4624,
+      "file": "service-health-180s/playback-deep-health-public.json",
+      "sha256": "080093e2ccc19a27b94daf0e3f533b3b059efd6c5bf202f0a42bc3f123190b9e"
+    },
+    {
+      "bytes": 208994,
+      "file": "service-health-180s/playback-samples.tsv",
+      "sha256": "c638e4ddf30f6f7c14e4c68a8a669779cdc6f9ab9869f534a935c4694720f7f6"
+    },
+    {
+      "bytes": 86460,
+      "file": "service-health-180s/status-samples.ndjson",
+      "sha256": "8aa81ef82ee529875b89e96b2bd1fdd927dc72215aa37830b15388ddd7de7b99"
+    }
+  ],
+  "health_counters": {
+    "ext4_errors": 0,
+    "media_load_failed": 0,
+    "mmc_timeout_reset": 0,
+    "mpv_restart": 0,
+    "mpv_unique_aliases": 9,
+    "panfrost_faults": 0,
+    "samples": 163,
+    "status_mpv_unexplained_mismatch_samples": 0,
+    "status_unique_aliases": 9,
+    "unique_aliases": 9
+  },
+  "lab_apply_passed": true,
+  "non_claims": [
+    "h2_powerloss_checkpoint_passed",
+    "h2_powerloss_17_of_17_complete",
+    "soak_24h_complete",
+    "stable_promotion",
+    "production_readiness",
+    "public_player_runtime_thaw"
+  ],
+  "post_reboot_health_60s_counters": {
+    "estimated_frame_progressed": true,
+    "ext4_errors": 0,
+    "media_load_failed": 0,
+    "mmc_timeout_reset": 0,
+    "mpv_restart": 0,
+    "mpv_unique_aliases": 6,
+    "panfrost_faults": 0,
+    "samples": 52,
+    "status_mpv_unexplained_mismatch_samples": 0,
+    "status_unique_aliases": 4,
+    "unique_aliases": 4
+  },
+  "post_reboot_health_60s_passed": true,
+  "public_freeze_preserved": true,
+  "result_claim": "target_9bebaf1_live_apply_and_short_health_passed",
+  "schema": "dadooh.c18.target_live_apply_summary.v1",
+  "service_adoption_passed": true,
+  "service_health_180s_passed": true,
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+}

@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "apply_local": {
+      "frozen": true,
+      "returncode": 44,
+      "stderr_tail": "2026-07-03T02:03:50Z WARN apply_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware\ncomponent_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware\n"
+    },
+    "reconcile": {
+      "frozen": true,
+      "returncode": 44,
+      "stderr_tail": "player_runtime_reconcile_guard_required: pass --allow-player-runtime-maintenance and set C18_PLAYER_RUNTIME_RECONCILE=1\n2026-07-03T02:03:52Z WARN reconcile_blocked_component_frozen component=player-runtime\n"
+    },
+    "rollback": {
+      "frozen": true,
+      "returncode": 44,
+      "stderr_tail": "component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware\n2026-07-03T02:03:51Z WARN rollback_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware\n"
+    }
+  },
+  "component": "player-runtime",
+  "schema": "dadooh.c18.public_freeze_probe.v1"
+}

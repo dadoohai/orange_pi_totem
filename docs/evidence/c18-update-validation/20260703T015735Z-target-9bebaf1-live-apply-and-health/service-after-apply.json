@@ -1,0 +1,50 @@
+{
+  "current": {
+    "applied_at_utc": "2026-07-03T01:59:18Z",
+    "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+    "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "via": "player_runtime_reconcile"
+  },
+  "current_link": "/data/player-runtime/releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "last_operation": {
+    "finished_at_utc": "2026-07-03T01:59:18Z",
+    "reason": "manual_reconcile",
+    "started_at_utc": "2026-07-03T01:59:18Z",
+    "status": "current_verified",
+    "type": "reconcile",
+    "verified": "releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+  },
+  "previous": {
+    "applied_at_utc": "2026-07-03T01:45:28Z",
+    "kiosk_py_sha256": "d63cfd9d31700823d93c7b3c238c4bc8c86330f386f184d2b62bd025f4e221f7",
+    "path": "/data/player-runtime/releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "payload_sha256": "2dac1f1be3ffc71e4c4539772b7f82d955336e08c6f61eea1d0b55b841a9ca28",
+    "tree_sha256": "e8359959d7bb8b2e03f500cad07798d562085a921947b4f5f269421896179d91",
+    "version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "via": "player_runtime_reconcile"
+  },
+  "previous_link": "/data/player-runtime/releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "service_active": {
+    "cmd": [
+      "systemctl",
+      "is-active",
+      "kiosky-player.service"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "active"
+  },
+  "timer_enabled": {
+    "cmd": [
+      "systemctl",
+      "is-enabled",
+      "totem-update-agent.timer"
+    ],
+    "returncode": 1,
+    "stderr": "",
+    "stdout": "disabled"
+  }
+}
