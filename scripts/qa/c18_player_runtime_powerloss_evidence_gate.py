@@ -897,7 +897,7 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
     if "failure_recovery" in summary:
         failure_recovery = summary.get("failure_recovery")
         non_claims = set(summary.get("non_claims") if isinstance(summary.get("non_claims"), list) else [])
-        if summary.get("passed") is True:
+        if summary.get("passed") is True and failure_recovery is not None:
             errors.append("failure_recovery_present_in_passing_summary")
         if failure_recovery is not None:
             if "failure_recovery_does_not_make_checkpoint_pass" not in non_claims:
@@ -1361,6 +1361,17 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_fixture(root)
+            self.assertTrue(validate(root)["passed"])
+
+    def test_null_failure_recovery_is_absent_for_passing_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root)
+            summary_path = root / "trial/powerloss-summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["failure_recovery"] = None
+            write_json(summary_path, summary)
+            self.refresh_manifest_files(root)
             self.assertTrue(validate(root)["passed"])
 
     def test_failure_recovery_cannot_make_checkpoint_pass(self) -> None:
