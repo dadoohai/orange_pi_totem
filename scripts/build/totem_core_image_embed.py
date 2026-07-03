@@ -44,6 +44,7 @@ CORE_FILES = [
 IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
     "totem-kiosky-launcher.sh",
+    "totem_player_status_mpv_watchdog.py",
 ]
 IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
     (
@@ -376,6 +377,11 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
             and "shutdown_waiting_for_child" in player_service_launcher
             and "shutdown_child_exited" in player_service_launcher
             and 'wait_child_after_stop "$child_pid" "$rc"' in player_service_launcher
+        ),
+        "image_fixed_player_launcher_has_status_mpv_watchdog": (
+            "TOTEM_PLAYER_STATUS_MPV_WATCHDOG" in player_service_launcher
+            and "start_player_health_watchdog" in player_service_launcher
+            and "status-mpv-watchdog.json" in player_service_launcher
         ),
     }
     for core_file in CORE_FILES:

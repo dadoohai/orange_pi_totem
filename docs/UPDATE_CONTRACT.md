@@ -139,9 +139,13 @@ energia. Esses continuam gates de homologacao. O slot governado de runtime e
 do fallback de imagem e nao deve sombrear o player validado pelo caminho legado
 `/data/apps/kiosky-player/current`.
 
-`kiosky_service_launcher.sh` e arquivo de `player-runtime`: a imagem deve
-fornece-lo como arquivo fixo em `/opt/totem/bin`, e releases OTA de
-`totem-core` nao devem inclui-lo em `bin/`.
+`kiosky_service_launcher.sh`, `totem-kiosky-launcher.sh` e o watchdog externo
+`totem_player_status_mpv_watchdog.py` sao arquivos de `player-runtime` fixos da
+imagem: a imagem deve fornece-los em `/opt/totem/bin`, e releases OTA de
+`totem-core` nao devem inclui-los em `bin/`. O watchdog existe para recuperar
+runtimes antigos adotados por rollback quando o status publico avanca mas o MPV
+fica preso no mesmo arquivo; essa recuperacao nao substitui deep-health nem
+torna um checkpoint de power-loss verde por si so.
 
 Uma release `totem-core` que precisa alterar como o player sobe deve ser tratada
 como frente de `player-runtime`, com imagem/homologacao ou pacote C18-aware

@@ -22,6 +22,12 @@ TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 TOTEM_STATUS_RENDERER="${TOTEM_STATUS_RENDERER:-/opt/totem/bin/totem_status_renderer.sh}"
 TOTEM_STATUS_SVG="${TOTEM_STATUS_SVG:-/tmp/dadooh-status/status.svg}"
 TOTEM_VISUAL_SPLASH="${TOTEM_VISUAL_SPLASH:-/opt/totem/bin/totem_visual_splash.py}"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG:-/opt/totem/bin/totem_player_status_mpv_watchdog.py}"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_ENABLED="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG_ENABLED:-1}"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC:-2}"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MAX_MISMATCH_SEC="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MAX_MISMATCH_SEC:-20}"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MIN_ADVANCES="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MIN_ADVANCES:-2}"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_STATE_FILE="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG_STATE_FILE:-$STATE_DIR/status-mpv-watchdog.json}"
 TOTEM_PLAYER_SPLASH_SKIP_FILE="${TOTEM_PLAYER_SPLASH_SKIP_FILE:-/tmp/kiosky/player-splash-rendered}"
 TOTEM_SETTINGS_SESSION_LOCK="${TOTEM_SETTINGS_SESSION_LOCK:-/run/totem/settings-session.lock}"
 TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
@@ -47,6 +53,7 @@ CHILD_PID=""
 SLEEP_PID=""
 STATUS_REFRESH_PID=""
 STATUS_RENDERER_PID=""
+PLAYER_HEALTH_WATCHDOG_PID=""
 LAST_STATUS_FILE=""
 STOP_REQUESTED=0
 LAST_DISPLAY_LOG_EPOCH=0
@@ -109,6 +116,9 @@ TOTEM_STATUS_REFRESH_SEC="$(positive_integer_or_default "$TOTEM_STATUS_REFRESH_S
 TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC" 3)"
 TOTEM_SETUP_LOCAL_TTY="$(positive_integer_or_default "$TOTEM_SETUP_LOCAL_TTY" 2)"
 TOTEM_SETUP_LOCAL_MAX_RUNS="$(positive_integer_or_default "$TOTEM_SETUP_LOCAL_MAX_RUNS" 1)"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC="$(positive_integer_or_default "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC" 2)"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MAX_MISMATCH_SEC="$(positive_integer_or_default "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MAX_MISMATCH_SEC" 20)"
+TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MIN_ADVANCES="$(positive_integer_or_default "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MIN_ADVANCES" 2)"
 STATUS_AGGREGATOR_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_AGGREGATOR_WARN_INTERVAL_SEC" 60)"
 STATUS_RENDERER_WARN_INTERVAL_SEC="$(positive_integer_or_default "$STATUS_RENDERER_WARN_INTERVAL_SEC" 60)"
 
@@ -269,6 +279,36 @@ stop_status_refresh() {
   fi
 
   STATUS_REFRESH_PID=""
+}
+
+stop_player_health_watchdog() {
+  if [ -n "$PLAYER_HEALTH_WATCHDOG_PID" ] && kill -0 "$PLAYER_HEALTH_WATCHDOG_PID" >/dev/null 2>&1; then
+    kill -TERM "$PLAYER_HEALTH_WATCHDOG_PID" >/dev/null 2>&1 || true
+    wait "$PLAYER_HEALTH_WATCHDOG_PID" 2>/dev/null || true
+  fi
+
+  PLAYER_HEALTH_WATCHDOG_PID=""
+}
+
+start_player_health_watchdog() {
+  stop_player_health_watchdog
+
+  [ "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_ENABLED" = "1" ] || return 0
+  [ -n "$CHILD_PID" ] || return 0
+  if [ ! -r "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG" ]; then
+    return 0
+  fi
+
+  /usr/bin/python3 "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG" \
+    --config "$CONFIG_PATH" \
+    --status "$TOTEM_PLAYER_STATUS_FILE" \
+    --state-file "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_STATE_FILE" \
+    --pid "$CHILD_PID" \
+    --interval-sec "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC" \
+    --max-mismatch-sec "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MAX_MISMATCH_SEC" \
+    --min-status-advances "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_MIN_ADVANCES" &
+  PLAYER_HEALTH_WATCHDOG_PID="$!"
+  log "player_status_mpv_watchdog_started pid=$PLAYER_HEALTH_WATCHDOG_PID child_pid=$CHILD_PID"
 }
 
 start_status_refresh() {
@@ -678,6 +718,7 @@ request_stop() {
   log "shutdown_requested"
 
   stop_status_refresh
+  stop_player_health_watchdog
   stop_status_renderer || true
 
   if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" >/dev/null 2>&1; then
@@ -740,12 +781,14 @@ run_app_once() {
   LAST_SPLASH_MODE="player_running"
   write_status "running" "true"
   start_status_refresh "$LAST_STATUS_FILE"
+  start_player_health_watchdog
 
   wait "$child_pid"
   rc="$?"
   wait_child_after_stop "$child_pid" "$rc"
   rc="$?"
   stop_status_refresh
+  stop_player_health_watchdog
   CHILD_PID=""
 
   if [ "$STOP_REQUESTED" -ne 0 ]; then

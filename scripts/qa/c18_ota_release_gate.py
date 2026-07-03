@@ -90,6 +90,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_teardown_evidence_gate.py",
     "scripts/qa/c18_player_runtime_teardown_static_test.py",
     "scripts/board/c18_player_runtime_teardown_trial.py",
+    "scripts/board/totem_player_status_mpv_watchdog.py",
     "scripts/qa/c18_playback_deep_health_fixture_test.py",
     "scripts/qa/c18_ota_release_gate.py",
     "player-runtime/kiosky-player/kiosk.py",
@@ -123,6 +124,7 @@ TEST_COMMANDS = (
     ("c18_player_runtime_teardown_evidence_gate_self_test", ["python3", "scripts/qa/c18_player_runtime_teardown_evidence_gate.py", "--self-test"]),
     ("c18_player_runtime_teardown_static", ["python3", "scripts/qa/c18_player_runtime_teardown_static_test.py"]),
     ("c18_player_runtime_teardown_trial_self_test", ["python3", "scripts/board/c18_player_runtime_teardown_trial.py", "--self-test"]),
+    ("totem_player_status_mpv_watchdog_self_test", ["python3", "scripts/board/totem_player_status_mpv_watchdog.py", "--self-test"]),
     ("c18_playback_soak_collect_self_test", ["python3", "scripts/board/c18_playback_soak_collect.py", "--self-test"]),
     ("c18_coldboot_evidence_current", [
         "python3",
@@ -214,6 +216,7 @@ TOTEM_CORE_ALLOWED_TAR_FILES = {
 PLAYER_RUNTIME_DIFF_PATHS = {
     "releases/player-runtime/",
     "scripts/board/kiosky_service_launcher.sh",
+    "scripts/board/totem_player_status_mpv_watchdog.py",
     "scripts/board/totem-kiosky-launcher.sh",
     "scripts/board/kiosky-player.service",
     "scripts/board/systemd/kiosky-player.service.d/20-dadooh-launcher.conf",

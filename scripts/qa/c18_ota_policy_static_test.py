@@ -101,6 +101,7 @@ PLAYER_RUNTIME_H2_POWERLOSS_PREFLIGHT_GATE_PATH = (
 PLAYER_RUNTIME_KIOSK_PATH = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 KIOSKY_SERVICE_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 KIOSKY_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "totem-kiosky-launcher.sh"
+STATUS_MPV_WATCHDOG_PATH = REPO_ROOT / "scripts" / "board" / "totem_player_status_mpv_watchdog.py"
 KIOSKY_LAUNCHER_DROPIN_PATH = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "kiosky-player.service.d" / "20-dadooh-launcher.conf"
 )
@@ -292,6 +293,18 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         clear_child = launcher.index('CHILD_PID=""', wait_after_stop)
         self.assertLess(wait_start, wait_after_stop)
         self.assertLess(wait_after_stop, clear_child)
+
+    def test_kiosky_service_launcher_has_external_status_mpv_watchdog(self) -> None:
+        launcher = KIOSKY_SERVICE_LAUNCHER_PATH.read_text(encoding="utf-8")
+        watchdog = STATUS_MPV_WATCHDOG_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(STATUS_MPV_WATCHDOG_PATH), "--self-test"], check=True)
+        self.assertIn("TOTEM_PLAYER_STATUS_MPV_WATCHDOG", launcher)
+        self.assertIn("start_player_health_watchdog", launcher)
+        self.assertIn("stop_player_health_watchdog", launcher)
+        self.assertIn("status-mpv-watchdog.json", launcher)
+        self.assertIn("status_advanced_without_mpv", watchdog)
+        self.assertIn("terminate_player_child", watchdog)
+        self.assertIn("safe_alias", watchdog)
 
     def test_image_embed_writes_policy_service_and_disables_timer(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")
@@ -1035,8 +1048,10 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("IMAGE_FIXED_PLAYER_SYSTEMD_FILES", embed)
         self.assertIn('"kiosky_service_launcher.sh"', embed)
         self.assertIn('"totem-kiosky-launcher.sh"', embed)
+        self.assertIn('"totem_player_status_mpv_watchdog.py"', embed)
         self.assertIn("20-dadooh-launcher.conf", embed)
         self.assertIn("image_fixed_player_dropin_reconciles_player_runtime", embed)
+        self.assertIn("image_fixed_player_launcher_has_status_mpv_watchdog", embed)
         self.assertIn("not_totem_core_wrapper", embed)
 
     def test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher(self) -> None:
@@ -1051,6 +1066,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertIn("IMAGE_FIXED_PLAYER_FILES", c17_7)
         self.assertIn("image_fixed_player_launcher_not_totem_core_wrapper", c17_7)
+        self.assertIn('"totem_player_status_mpv_watchdog.py"', c17_7)
 
     def test_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at(self) -> None:
         updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
@@ -3167,6 +3183,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn('"releases/image-lab-readonly/"', gate)
         self.assertIn('"releases/installable-rc/"', gate)
         self.assertIn('"scripts/board/kiosky_service_launcher.sh"', gate)
+        self.assertIn('"scripts/board/totem_player_status_mpv_watchdog.py"', gate)
         self.assertIn('"scripts/board/totem_updatectl.py"', gate)
         self.assertIn('"scripts/board/mpv_"', gate)
         self.assertIn("responsibility_matrix_diff_guard", gate)

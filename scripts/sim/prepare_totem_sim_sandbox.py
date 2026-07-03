@@ -46,6 +46,7 @@ CORE_FILES = (
 
 IMAGE_FIXED_PLAYER_FILES = (
     "kiosky_service_launcher.sh",
+    "totem_player_status_mpv_watchdog.py",
 )
 
 

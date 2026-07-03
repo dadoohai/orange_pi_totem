@@ -72,6 +72,7 @@ CORE_FILES = [
 IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
     "totem-kiosky-launcher.sh",
+    "totem_player_status_mpv_watchdog.py",
 ]
 
 
@@ -401,6 +402,9 @@ def validate_c17_7(rootfs: Path, image_name: str, *, repo_root: Path) -> dict[st
     checks["splash_service_uses_wrapper"] = "/opt/totem/bin/totem_visual_splash.py boot" in splash_service
     checks["totem_updatectl_multi_component"] = "totem-core" in updatectl and "_totem_core_health_check" in updatectl
     checks["image_fixed_player_launcher_present"] = executable(rootfs, "/opt/totem/bin/kiosky_service_launcher.sh")
+    checks["image_fixed_player_status_mpv_watchdog_present"] = executable(
+        rootfs, "/opt/totem/bin/totem_player_status_mpv_watchdog.py"
+    )
     checks["image_fixed_player_launcher_not_totem_core_wrapper"] = "TOTEM_CORE_EXEC_WRAPPER" not in player_launcher
     checks["totem_core_release_excludes_player_launcher"] = not is_file(
         rootfs, f"/data/core/totem/releases/{TOTEM_CORE_VERSION}/bin/kiosky_service_launcher.sh"
