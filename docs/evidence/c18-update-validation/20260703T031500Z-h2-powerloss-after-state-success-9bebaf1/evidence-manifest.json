@@ -1,0 +1,158 @@
+{
+  "artifact_id": "c18-player-runtime-h2-powerloss-after_state_success-20260703T031500Z-h2-powerloss-after-state-success-9bebaf1",
+  "board_image_marker": "c18-hwdecode-lab-1x-image",
+  "checkpoint": "after_state_success",
+  "component": "player-runtime",
+  "expected_active_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "files": [
+    {
+      "bytes": 580,
+      "file": "README.md",
+      "sha256": "98f2cbcaf81f3211c490313900e02ff2c8b91eae6ed887b9733e6ceccdd58e11"
+    },
+    {
+      "bytes": 3920,
+      "file": "setup/topology-reset.json",
+      "sha256": "04b54b31dc173046c9117eeecd2f8eac9542266319bbfa4af8fef32d7aa68ed8"
+    },
+    {
+      "bytes": 172,
+      "file": "trial/powerloss-checkpoint/CUT_POWER_NOW.txt",
+      "sha256": "c7bdd8199c5288246d9a3bbc07fc41d2b2596c8311fb7958b147eadc2a5168f4"
+    },
+    {
+      "bytes": 2326,
+      "file": "trial/powerloss-checkpoint/checkpoint.json",
+      "sha256": "41f3988171a4eeeffbb719a1e1d20e676db1827faf352aca2c961e163f11668f"
+    },
+    {
+      "bytes": 8395,
+      "file": "trial/powerloss-summary.json",
+      "sha256": "6b7bbb245e09eec84596ae300445bfaa570d1a2c7577280675410f7eb5021fe2"
+    },
+    {
+      "bytes": 640,
+      "file": "trial/powerloss-trial-state.json",
+      "sha256": "c682d0238a326026c066e6bf4fe014b8466eb7ebf0020735c9e146096cda71fe"
+    },
+    {
+      "bytes": 1226,
+      "file": "trial/resume/after-reconcile-adoption.json",
+      "sha256": "054ccc9318bc292eea08bfbdaa3b183952251839cf640623240f4adaee9913cd"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/resume/after-reconcile-health/deep-health-kernel.json",
+      "sha256": "c9677fce8644e5aaa17d6ad2c46264ae9bc19740e964b7a345cf48868d584d88"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/after-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/after-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/after-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4617,
+      "file": "trial/resume/after-reconcile-health/playback-deep-health-public.json",
+      "sha256": "6feec6b538c855adb42f0f21ebc9294c2ac8ee764e909e21de9e8ee840a39cdf"
+    },
+    {
+      "bytes": 56652,
+      "file": "trial/resume/after-reconcile-health/playback-samples.tsv",
+      "sha256": "998662f2f309c99cb084b2a26222f55a642a3e9ed45a8b8f5cc7bbde514019ef"
+    },
+    {
+      "bytes": 23379,
+      "file": "trial/resume/after-reconcile-health/status-samples.ndjson",
+      "sha256": "ccb9b558ec0c9f9272c16076228ece26fb8dd9aa994941374b2247853e63e151"
+    },
+    {
+      "bytes": 4636,
+      "file": "trial/resume/after-reconcile-health.json",
+      "sha256": "292e684bc1d280664d886b8b872b2ad2145c752e084d721a21b71b9fd5100c4c"
+    },
+    {
+      "bytes": 1226,
+      "file": "trial/resume/before-reconcile-adoption.json",
+      "sha256": "054ccc9318bc292eea08bfbdaa3b183952251839cf640623240f4adaee9913cd"
+    },
+    {
+      "bytes": 332,
+      "file": "trial/resume/before-reconcile-health/deep-health-kernel.json",
+      "sha256": "b92f919b8c72e6b05255e6dcbaa4d1cf338d57f2004cfdd546fa723a5b1c1bcc"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/before-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/before-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/before-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4619,
+      "file": "trial/resume/before-reconcile-health/playback-deep-health-public.json",
+      "sha256": "7ea08fc149692ab0d2bbe3465308764e4c948ba39564ffe88230d6b27271f11b"
+    },
+    {
+      "bytes": 50490,
+      "file": "trial/resume/before-reconcile-health/playback-samples.tsv",
+      "sha256": "4924d37bd0054bdcf8ac60d62a417a237de01aaa8b9403c015f163989a81223d"
+    },
+    {
+      "bytes": 20756,
+      "file": "trial/resume/before-reconcile-health/status-samples.ndjson",
+      "sha256": "ba8cd57e5c4fe3a7c128c466c9bd49f6811e325984010999d8240dd0d20c5896"
+    },
+    {
+      "bytes": 4638,
+      "file": "trial/resume/before-reconcile-health.json",
+      "sha256": "90d9f8009fc9f65c14371d881fa53f5496cd928b61c9094538e99e5803360c8d"
+    },
+    {
+      "bytes": 244,
+      "file": "trial/resume/reconcile/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 2520,
+      "file": "trial/resume/reconcile.json",
+      "sha256": "1a67a17ce97ef303aa0c9b2648d0e1aab18ce47506e143e4459dc96806ea2152"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/service-runtime-mask-before-apply.json",
+      "sha256": "28df649fb5d982440cef8e74779196d41c5aa4c9f6ff16a63024a55f1c181111"
+    },
+    {
+      "bytes": 246,
+      "file": "trial/service-stop-before-apply.json",
+      "sha256": "97b55aa39844d700d393a52fa2937f1cf6c06479bc4cd424daba141575574b48"
+    }
+  ],
+  "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+  "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+  "image_tag": "c18-hwdecode-lab-1x",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
+  "setup_candidate_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "setup_expected_active_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+}
