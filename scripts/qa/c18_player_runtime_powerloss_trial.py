@@ -531,6 +531,33 @@ def run_restore_rollback(args: argparse.Namespace) -> dict[str, Any]:
     return run_json(cmd, args.evidence_root / "resume" / "restore-rollback.json", env=env)
 
 
+def run_failure_recovery(args: argparse.Namespace, failed_labels: list[str]) -> dict[str, Any]:
+    resume_dir = args.evidence_root / "resume"
+    recovery: dict[str, Any] = {
+        "schema": SCHEMA,
+        "phase": "failure-recovery",
+        "passed": False,
+        "reason": "health_failure_after_powerloss_resume",
+        "triggered_by": failed_labels,
+        "non_claims": [
+            "checkpoint_passed",
+            "h2_powerloss_evidence",
+            "production_readiness",
+        ],
+    }
+    restart = run_systemctl("restart", resume_dir / "failure-recovery-restart.json")
+    recovery["restart"] = restart
+    if restart.get("passed") is True:
+        time.sleep(max(args.startup_wait_sec, 0.0))
+        adoption = collect_adoption(args, "after-failure-recovery", "any", None)
+        health = collect_health(args, "after-failure-recovery")
+        recovery["adoption"] = adoption
+        recovery["health_passed"] = health.get("passed") is True
+        recovery["passed"] = adoption.get("passed") is True and health.get("passed") is True
+    write_json_fsync(resume_dir / "failure-recovery.json", recovery)
+    return recovery
+
+
 def run_resume(args: argparse.Namespace) -> int:
     checkpoint_path = args.evidence_root / "powerloss-checkpoint" / "checkpoint.json"
     if not checkpoint_path.is_file():
@@ -559,6 +586,13 @@ def run_resume(args: argparse.Namespace) -> int:
             args.restore_expect_rolled_to,
         )
         restore_health = collect_health(args, "after-restore-rollback")
+    failed_health_labels: list[str] = []
+    if before_health.get("passed") is not True:
+        failed_health_labels.append("before_reconcile_health")
+    if after_health.get("passed") is not True:
+        failed_health_labels.append("after_reconcile_health")
+    if restore_health is not None and restore_health.get("passed") is not True:
+        failed_health_labels.append("restore_health")
     passed = (
         before.get("passed") is True
         and before_health.get("passed") is True
@@ -572,6 +606,9 @@ def run_resume(args: argparse.Namespace) -> int:
             and restore_health is not None and restore_health.get("passed") is True
         ))
     )
+    failure_recovery = None
+    if args.recover_on_health_failure and failed_health_labels:
+        failure_recovery = run_failure_recovery(args, failed_health_labels)
     summary = {
         "schema": SCHEMA,
         "phase": "resume",
@@ -587,10 +624,12 @@ def run_resume(args: argparse.Namespace) -> int:
         "restore_restart": restore_restart,
         "restore_adoption": restore_adoption,
         "restore_health_passed": restore_health.get("passed") is True if restore_health else None,
+        "failure_recovery": failure_recovery,
         "non_claims": [
             "covers_only_the_named_checkpoint",
             "public_player_runtime_thaw",
             "stable_or_production",
+            "failure_recovery_does_not_make_checkpoint_pass",
         ],
     }
     write_json_fsync(args.evidence_root / "powerloss-summary.json", summary)
@@ -611,6 +650,7 @@ def self_test() -> None:
         'run_systemctl_service("stop")',
         'run_systemctl_service("mask", "--runtime")',
         "restart_service_best_effort",
+        "failure_recovery_does_not_make_checkpoint_pass",
         "service-runtime-mask-before-apply.json",
         "--allow-reapply-linked-previous",
     ):
@@ -653,6 +693,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--restore-rollback", action="store_true")
     parser.add_argument("--restore-expect-rolled-to")
     parser.add_argument("--restore-expected-source", choices=("data", "fallback", "any"), default="data")
+    parser.add_argument(
+        "--recover-on-health-failure",
+        action="store_true",
+        help="restart service and collect post-recovery health when resume health fails; checkpoint still fails",
+    )
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     return parser.parse_args(argv)

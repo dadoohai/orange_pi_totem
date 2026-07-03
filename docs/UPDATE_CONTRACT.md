@@ -446,6 +446,13 @@ Antes de rodar a camada fisica, o preflight H2
 imagem, policy/timer e topologia contra o plano da matriz; ele e preparatorio e
 nao substitui evidencia de corte real.
 
+Se o resume fisico falhar por deep-health do player, o operador pode executar
+um recovery controlado de laboratorio (`--recover-on-health-failure`) para
+reiniciar o servico e coletar novo adoption/deep-health. Esse recovery serve
+para devolver a placa a um estado operavel e preservar diagnostico; ele nao
+transforma o checkpoint em evidencia H2. O gate de power-loss deve rejeitar
+qualquer resumo que tente declarar `passed=true` junto com `failure_recovery`.
+
 Para uma evidencia A->B->A ser aceita como rollback para `previous` real, ela
 precisa declarar `rollback_expectation=data-previous`, conter
 `service-before-apply`, provar que A estava ativa e verificada em `/data`,

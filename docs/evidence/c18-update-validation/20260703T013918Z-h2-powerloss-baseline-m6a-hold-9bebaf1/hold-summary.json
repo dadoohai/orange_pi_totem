@@ -1,0 +1,47 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_campaign_hold.v1",
+  "result_claim": "h2_powerloss_campaign_blocked_pending_baseline_strategy",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "source_commit_at_blocker": "90ea6c1",
+  "accumulated_powerloss_checkpoints_passed": 10,
+  "total_required_powerloss_checkpoints": 17,
+  "new_checkpoints_passed_this_round": [
+    "after_payload_staged",
+    "after_release_dir_created",
+    "after_extract",
+    "after_state_verifying",
+    "after_health_passed"
+  ],
+  "blocked_checkpoint": "after_release_tree_fsync",
+  "blocked_evidence_dir": "docs/evidence/c18-update-validation/20260703T012000Z-h2-powerloss-after-release-tree-fsync-blocked-status-mpv-mismatch-9bebaf1",
+  "blocked_failure": {
+    "failure_reason": "status_mpv_path_aligned",
+    "active_runtime_after_resume": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "target_contains_status_mpv_guard": true,
+    "active_baseline_contains_status_mpv_guard": false,
+    "operational_recovery": "controlled_service_restart",
+    "post_restart_health_passed": true
+  },
+  "decisions": [
+    "do_not_relax_status_mpv_path_aligned",
+    "do_not_count_failure_recovery_as_h2_powerloss_pass",
+    "rerun_after_release_tree_fsync_cleanly_before_h2",
+    "keep_stable_production_public_thaw_blocked"
+  ],
+  "remaining_checkpoints": [
+    "after_release_tree_fsync",
+    "after_marker_written",
+    "after_previous_symlink",
+    "after_state_success",
+    "before_stage_cleanup",
+    "rollback_after_identify_links",
+    "rollback_after_current_unlinked"
+  ],
+  "non_claims": [
+    "h2_powerloss_17_of_17_complete",
+    "soak_24h_complete",
+    "stable_promotion",
+    "production_readiness",
+    "public_player_runtime_thaw"
+  ]
+}
