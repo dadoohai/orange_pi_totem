@@ -303,7 +303,11 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("stop_player_health_watchdog", launcher)
         self.assertIn("status-mpv-watchdog.json", launcher)
         self.assertIn("status_advanced_without_mpv", watchdog)
+        self.assertIn("realign_mpv_to_status", watchdog)
+        self.assertIn("loadfile", watchdog)
         self.assertIn("terminate_player_child", watchdog)
+        self.assertIn("--post-realign-wait-sec", launcher)
+        self.assertIn("TOTEM_PLAYER_STATUS_MPV_WATCHDOG_POST_REALIGN_WAIT_SEC", launcher)
         self.assertIn("safe_alias", watchdog)
 
     def test_image_embed_writes_policy_service_and_disables_timer(self) -> None:
@@ -2271,6 +2275,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("estimated_frame_trailing_nonprogress_steps", summary)
         self.assertIn("panfrost_faults_delta_zero", summary)
         self.assertIn("panfrost_faults_start", summary)
+        self.assertIn("WATCHDOG_RECOVERY_ACTIONS", summary)
+        self.assertIn("status_mpv_watchdog_recovery_absent", summary)
 
         service_observer = SERVICE_OBSERVER_PATH.read_text(encoding="utf-8")
         self.assertIn("c18_playback_health_summary.py", service_observer)
@@ -2292,6 +2298,8 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("deep-health-process.json", collector)
         self.assertIn("deep-health-kernel.json", collector)
         self.assertIn("deep-health-player-counters.json", collector)
+        self.assertIn("deep-health-watchdog.json", collector)
+        self.assertIn("watchdog_state_snapshot", collector)
         self.assertIn("playback-deep-health-public.json", collector)
         self.assertIn("journalctl\", \"-k\", \"-b\"", collector)
         self.assertIn("kernel_event_counts", collector)

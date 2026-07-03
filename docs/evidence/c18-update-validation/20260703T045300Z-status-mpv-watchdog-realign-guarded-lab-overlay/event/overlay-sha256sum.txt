@@ -1,0 +1,2 @@
+12de7cf9594fbaee85546f8c3fbdadefc02e633bb27b23249add37dd63c89017  /opt/totem/bin/kiosky_service_launcher.sh
+9e2eaaa3e98fff61228ddd1fe5a2cd4128cad30457865348c3fd29d9d0f19fde  /opt/totem/bin/totem_player_status_mpv_watchdog.py

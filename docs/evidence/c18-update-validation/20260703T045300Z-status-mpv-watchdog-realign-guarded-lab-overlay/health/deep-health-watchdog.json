@@ -1,0 +1,32 @@
+{
+  "action_during_window": "realign_mpv_to_status",
+  "collection_finished_at_utc": "2026-07-03T04:53:05Z",
+  "collection_started_at_utc": "2026-07-03T04:43:05Z",
+  "end": {
+    "event": {
+      "action": "realign_mpv_to_status",
+      "reason": "status_advanced_without_mpv",
+      "recorded_at_utc": "2026-07-03T04:52:40Z",
+      "schema": "dadooh.player.status_mpv_watchdog.v1"
+    },
+    "exists": true,
+    "mtime_ns": 1783054360346285974,
+    "path": "/data/state/kiosky-player/status-mpv-watchdog.json",
+    "sha256": "88bc211934f5c044b5d119ba2216bc02487558dd1cd9d2496239a4c165fcdf87"
+  },
+  "event_changed_during_window": true,
+  "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+  "start": {
+    "event": {
+      "action": "realign_mpv_to_status",
+      "reason": "status_advanced_without_mpv",
+      "recorded_at_utc": "2026-07-03T04:42:39Z",
+      "schema": "dadooh.player.status_mpv_watchdog.v1"
+    },
+    "exists": true,
+    "mtime_ns": 1783053759581948237,
+    "path": "/data/state/kiosky-player/status-mpv-watchdog.json",
+    "sha256": "e92c15b409942d45808db7a5d47335ca946de797f391cc71d1c1e31d72967b60"
+  },
+  "state_file": "/data/state/kiosky-player/status-mpv-watchdog.json"
+}

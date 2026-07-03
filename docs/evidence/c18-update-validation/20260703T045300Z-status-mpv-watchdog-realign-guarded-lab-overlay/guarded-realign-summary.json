@@ -1,0 +1,60 @@
+{
+  "claim": "guarded_deep_health_detected_watchdog_recovery_and_kept_evidence_red",
+  "counter_audit": {
+    "local_player_counter_claim_clean": false,
+    "service_journal_media_load_failed_lines_in_window": 4,
+    "service_journal_mpv_restart_lines_in_window": 1,
+    "summary": "original collector scanned local MPV logs only; captured service journal shows an MPV restart in the collection window"
+  },
+  "final_watchdog_state": {
+    "action": "realign_mpv_to_status",
+    "realign_passed": true,
+    "reason": "status_advanced_without_mpv",
+    "recorded_at_utc": "2026-07-03T04:53:34Z"
+  },
+  "health_failure_reasons": [
+    "status_mpv_path_aligned",
+    "status_mpv_watchdog_recovery_absent"
+  ],
+  "health_passed": false,
+  "non_claims": [
+    "not_h2_powerloss_checkpoint_pass",
+    "not_stable_or_production_readiness",
+    "not_public_player_runtime_thaw",
+    "does_not_prove_watchdog_realign_solves_status_mpv_loop"
+  ],
+  "repo_head_at_collection": "uncommitted-watchdog-realign-guard-patch-after-0ff553a",
+  "schema": "dadooh.c18.status_mpv_watchdog_realign_guarded_lab_overlay.v1",
+  "status_mpv_summary": {
+    "ipc_error_after_first_success": 1,
+    "media_load_failed": 0,
+    "mpv_restart": 0,
+    "mpv_unique_aliases": 9,
+    "nrestarts_delta": 0,
+    "samples": 572,
+    "status_advanced_without_mpv": false,
+    "status_mpv_long_transition_lag_runs": 0,
+    "status_mpv_max_consecutive_mismatches": 34,
+    "status_mpv_mismatch_samples": 240,
+    "status_mpv_unexplained_mismatch_runs": 8,
+    "status_unique_aliases": 9
+  },
+  "watchdog_action_during_window": "realign_mpv_to_status",
+  "watchdog_event_changed": true,
+  "watchdog_sidecar": {
+    "action_during_window": "realign_mpv_to_status",
+    "end_event": {
+      "action": "realign_mpv_to_status",
+      "reason": "status_advanced_without_mpv",
+      "recorded_at_utc": "2026-07-03T04:52:40Z",
+      "schema": "dadooh.player.status_mpv_watchdog.v1"
+    },
+    "event_changed_during_window": true,
+    "start_event": {
+      "action": "realign_mpv_to_status",
+      "reason": "status_advanced_without_mpv",
+      "recorded_at_utc": "2026-07-03T04:42:39Z",
+      "schema": "dadooh.player.status_mpv_watchdog.v1"
+    }
+  }
+}

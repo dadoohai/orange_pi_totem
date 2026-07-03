@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -59,12 +60,14 @@ class Fixture:
             writer.writerows(rows)
 
     def result(self) -> dict:
+        watchdog_path = self.path("watchdog.json")
         return health.evaluate(
             samples_path=self.path("playback-samples.tsv"),
             systemd_path=self.path("systemd.json"),
             process_path=self.path("process.json"),
             kernel_path=self.path("kernel.json"),
             player_counters_path=self.path("player-counters.json"),
+            watchdog_path=watchdog_path if watchdog_path.exists() else None,
         )
 
     def result_with_panfrost_policy(self, policy: str) -> dict:
@@ -946,6 +949,58 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertIn("media_load_failed_zero", result["failure_reasons"])
         self.assertIn("mpv_restart_zero", result["failure_reasons"])
 
+    def test_rejects_watchdog_recovery_during_health_window(self) -> None:
+        fixture = self.with_case()
+        fixture.write_json("watchdog.json", {
+            "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+            "event_changed_during_window": True,
+            "action_during_window": "realign_mpv_to_status",
+            "start": {"exists": False},
+            "end": {
+                "exists": True,
+                "event": {
+                    "schema": "dadooh.player.status_mpv_watchdog.v1",
+                    "action": "realign_mpv_to_status",
+                    "reason": "status_advanced_without_mpv",
+                    "recorded_at_utc": "2026-07-03T04:00:00Z",
+                },
+            },
+        })
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertIn("status_mpv_watchdog_recovery_absent", result["failure_reasons"])
+        self.assertEqual(
+            result["counters"]["status_mpv_watchdog_action_during_window"],
+            "realign_mpv_to_status",
+        )
+
+    def test_ignores_prior_watchdog_recovery_outside_health_window(self) -> None:
+        fixture = self.with_case()
+        fixture.write_json("watchdog.json", {
+            "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+            "event_changed_during_window": False,
+            "action_during_window": "",
+            "start": {
+                "exists": True,
+                "event": {
+                    "schema": "dadooh.player.status_mpv_watchdog.v1",
+                    "action": "realign_mpv_to_status",
+                    "reason": "status_advanced_without_mpv",
+                    "recorded_at_utc": "2026-07-03T03:00:00Z",
+                },
+            },
+            "end": {
+                "exists": True,
+                "event": {
+                    "schema": "dadooh.player.status_mpv_watchdog.v1",
+                    "action": "realign_mpv_to_status",
+                    "reason": "status_advanced_without_mpv",
+                    "recorded_at_utc": "2026-07-03T03:00:00Z",
+                },
+            },
+        })
+        self.assertTrue(fixture.result()["passed"])
+
     def test_rejects_kernel_fault_counters(self) -> None:
         fixture = self.with_case()
         fixture.mutate_json("kernel.json", panfrost_faults=1, mmc_timeout_reset=1, ext4_errors=1)
@@ -1026,12 +1081,59 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertIn("--target-mode", source)
         self.assertIn("--match-process-ipc", source)
         self.assertIn("process_filter", source)
+        self.assertIn("deep-health-watchdog.json", source)
+        self.assertIn("watchdog_state_snapshot", source)
+        self.assertIn("journalctl", source)
+        self.assertIn("journal_media_load_failed", source)
 
     def test_collector_matches_candidate_ipc_argv(self) -> None:
         ipc = Path("/tmp/c18-candidate/mpv.sock")
         self.assertTrue(collector.argv_matches_ipc([f"--input-ipc-server={ipc}"], ipc))
         self.assertTrue(collector.argv_matches_ipc(["--input-ipc-server", str(ipc)], ipc))
         self.assertFalse(collector.argv_matches_ipc(["--input-ipc-server=/tmp/other.sock"], ipc))
+
+    def test_collector_counts_service_journal_player_events(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-player-counters-") as tmp:
+            root = Path(tmp)
+            mpv_log = root / "mpv.log"
+            gen_dir = root / "gen"
+            gen_dir.mkdir()
+            mpv_log.write_text("local media_load_failed\n", encoding="utf-8")
+            journal = "Restarting MPV reason=media_load_failed:media-123\n"
+            proc = mock.Mock(returncode=0, stdout=journal)
+            with mock.patch.object(collector, "run", return_value=proc):
+                counters = collector.count_player_log_counters(
+                    mpv_log,
+                    gen_dir,
+                    service="kiosky-player.service",
+                    start_utc="2026-07-03T04:43:05Z",
+                    end_utc="2026-07-03T04:53:05Z",
+                )
+        self.assertEqual(counters["file_media_load_failed"], 1)
+        self.assertEqual(counters["journal_media_load_failed"], 1)
+        self.assertEqual(counters["journal_mpv_restart"], 1)
+        self.assertEqual(counters["media_load_failed"], 2)
+        self.assertEqual(counters["mpv_restart"], 1)
+
+    def test_collector_fails_closed_when_service_journal_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-player-counters-") as tmp:
+            root = Path(tmp)
+            mpv_log = root / "mpv.log"
+            gen_dir = root / "gen"
+            gen_dir.mkdir()
+            mpv_log.write_text("", encoding="utf-8")
+            proc = mock.Mock(returncode=1, stdout="")
+            with mock.patch.object(collector, "run", return_value=proc):
+                counters = collector.count_player_log_counters(
+                    mpv_log,
+                    gen_dir,
+                    service="kiosky-player.service",
+                    start_utc="2026-07-03T04:43:05Z",
+                    end_utc="2026-07-03T04:53:05Z",
+                )
+        self.assertTrue(counters["journal_query_failed"])
+        self.assertEqual(counters["media_load_failed"], -1)
+        self.assertEqual(counters["mpv_restart"], -1)
 
     def test_candidate_health_config_is_isolated_and_sanitized(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-candidate-config-") as tmp:

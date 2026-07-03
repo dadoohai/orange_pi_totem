@@ -32,6 +32,7 @@ DEFAULT_CONFIG = Path("/data/config/config.json")
 DEFAULT_STATUS = Path("/tmp/kiosky-status.json")
 DEFAULT_MPV_LOG = Path("/tmp/kiosky/mpv.log")
 DEFAULT_MPV_GENERATION_DIR = Path("/tmp/kiosky")
+DEFAULT_WATCHDOG_STATE = Path("/data/state/kiosky-player/status-mpv-watchdog.json")
 DEFAULT_DURATION_SEC = 60
 DEFAULT_INTERVAL_SEC = 1.0
 DEFAULT_IPC_TIMEOUT_SEC = 0.8
@@ -564,7 +565,27 @@ def write_kernel_sidecar(out_dir: Path, start_counts: dict[str, int], start_upti
     write_json(out_dir / "deep-health-kernel.json", payload)
 
 
-def count_player_log_counters(mpv_log: Path, generation_dir: Path) -> dict[str, int]:
+def count_player_event_patterns(text: str) -> dict[str, int]:
+    return {
+        "media_load_failed": len(re.findall(r"media_load_failed|Failed to load media", text, re.I)),
+        "mpv_restart": len(re.findall(r"\bRestarting MPV\b", text)),
+    }
+
+
+def journalctl_utc_arg(value: str) -> str:
+    if value.endswith("Z") and "T" in value:
+        return value[:-1].replace("T", " ") + " UTC"
+    return value
+
+
+def count_player_log_counters(
+    mpv_log: Path,
+    generation_dir: Path,
+    *,
+    service: str,
+    start_utc: str,
+    end_utc: str,
+) -> dict[str, Any]:
     log_text = ""
     paths = [mpv_log]
     try:
@@ -576,14 +597,119 @@ def count_player_log_counters(mpv_log: Path, generation_dir: Path) -> dict[str, 
             log_text += path.read_text(encoding="utf-8", errors="replace") + "\n"
         except Exception:
             continue
+    file_counts = count_player_event_patterns(log_text)
+    journal_counts = {"media_load_failed": 0, "mpv_restart": 0}
+    journal_query_failed = False
+    if service:
+        proc = run([
+            "journalctl",
+            "-u",
+            service,
+            "--since",
+            journalctl_utc_arg(start_utc),
+            "--until",
+            journalctl_utc_arg(end_utc),
+            "--no-pager",
+            "--output=cat",
+        ])
+        if proc.returncode == 0:
+            journal_counts = count_player_event_patterns(proc.stdout)
+        else:
+            journal_query_failed = True
+    media_load_failed = file_counts["media_load_failed"] + journal_counts["media_load_failed"]
+    mpv_restart = file_counts["mpv_restart"] + journal_counts["mpv_restart"]
+    if journal_query_failed:
+        media_load_failed = -1
+        mpv_restart = -1
     return {
-        "media_load_failed": len(re.findall(r"media_load_failed|Failed to load media", log_text, re.I)),
-        "mpv_restart": len(re.findall(r"\bRestarting MPV\b", log_text)),
+        "media_load_failed": media_load_failed,
+        "mpv_restart": mpv_restart,
+        "file_media_load_failed": file_counts["media_load_failed"],
+        "file_mpv_restart": file_counts["mpv_restart"],
+        "journal_media_load_failed": journal_counts["media_load_failed"],
+        "journal_mpv_restart": journal_counts["mpv_restart"],
+        "journal_query_failed": journal_query_failed,
     }
 
 
-def write_player_counter_sidecar(out_dir: Path, mpv_log: Path, generation_dir: Path) -> None:
-    write_json(out_dir / "deep-health-player-counters.json", count_player_log_counters(mpv_log, generation_dir))
+def write_player_counter_sidecar(
+    out_dir: Path,
+    mpv_log: Path,
+    generation_dir: Path,
+    *,
+    service: str,
+    start_utc: str,
+    end_utc: str,
+) -> None:
+    write_json(
+        out_dir / "deep-health-player-counters.json",
+        count_player_log_counters(
+            mpv_log,
+            generation_dir,
+            service=service,
+            start_utc=start_utc,
+            end_utc=end_utc,
+        ),
+    )
+
+
+def watchdog_state_snapshot(path: Path) -> dict[str, Any]:
+    try:
+        stat = path.stat()
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return {"exists": False, "path": str(path)}
+    except OSError:
+        return {"exists": False, "path": str(path), "read_error": "present"}
+    data: Any
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    event = {
+        "schema": data.get("schema"),
+        "action": data.get("action"),
+        "reason": data.get("reason"),
+        "recorded_at_utc": data.get("recorded_at_utc"),
+    }
+    return {
+        "exists": True,
+        "path": str(path),
+        "mtime_ns": stat.st_mtime_ns,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "event": {key: value for key, value in event.items() if value not in (None, "")},
+    }
+
+
+def write_watchdog_sidecar(
+    out_dir: Path,
+    watchdog_state: Path,
+    *,
+    start: dict[str, Any],
+    start_utc: str,
+    end_utc: str,
+) -> None:
+    end = watchdog_state_snapshot(watchdog_state)
+    changed = (
+        start.get("exists") != end.get("exists")
+        or start.get("mtime_ns") != end.get("mtime_ns")
+        or start.get("sha256") != end.get("sha256")
+    )
+    action = ""
+    if changed and isinstance(end.get("event"), dict):
+        action = str(end["event"].get("action") or "")
+    write_json(out_dir / "deep-health-watchdog.json", {
+        "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+        "state_file": str(watchdog_state),
+        "collection_started_at_utc": start_utc,
+        "collection_finished_at_utc": end_utc,
+        "event_changed_during_window": changed,
+        "action_during_window": action,
+        "start": start,
+        "end": end,
+    })
 
 
 def evaluate_artifacts(out_dir: Path, artifact_id: str, *, panfrost_fault_policy: str = "absolute") -> dict[str, Any]:
@@ -593,6 +719,7 @@ def evaluate_artifacts(out_dir: Path, artifact_id: str, *, panfrost_fault_policy
         process_path=out_dir / "deep-health-process.json",
         kernel_path=out_dir / "deep-health-kernel.json",
         player_counters_path=out_dir / "deep-health-player-counters.json",
+        watchdog_path=out_dir / "deep-health-watchdog.json",
         panfrost_fault_policy=panfrost_fault_policy,
     )
     result["artifact_id"] = artifact_id
@@ -620,6 +747,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--process-ipc-path", type=Path, default=None, help="count only the mpv process using this IPC socket")
     parser.add_argument("--mpv-log", type=Path, default=DEFAULT_MPV_LOG)
     parser.add_argument("--mpv-generation-dir", type=Path, default=DEFAULT_MPV_GENERATION_DIR)
+    parser.add_argument("--watchdog-state", type=Path, default=DEFAULT_WATCHDOG_STATE)
     parser.add_argument("--panfrost-fault-policy", choices=sorted(health.PANFROST_FAULT_POLICIES), default="absolute")
     parser.add_argument("--json", action="store_true", help="print sanitized public summary JSON to stdout")
     return parser.parse_args(argv)
@@ -641,6 +769,8 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     nrestarts_start = service_nrestarts(args.service) if args.target_mode == "service" else 0
     kernel_start_counts = kernel_event_counts()
     kernel_start_uptime_sec = uptime_sec()
+    watchdog_start_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    watchdog_start = watchdog_state_snapshot(args.watchdog_state)
     collect_samples(
         out_dir,
         config_path=args.config,
@@ -649,6 +779,7 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
         interval_sec=max(float(args.interval_sec), 0.1),
         ipc_timeout_sec=max(float(args.ipc_timeout_sec), 0.05),
     )
+    watchdog_end_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     write_systemd_sidecar(
         out_dir,
         args.service,
@@ -658,7 +789,21 @@ def collect(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     )
     write_process_sidecar(out_dir, args.app_user, process_ipc_path)
     write_kernel_sidecar(out_dir, kernel_start_counts, kernel_start_uptime_sec)
-    write_player_counter_sidecar(out_dir, args.mpv_log, args.mpv_generation_dir)
+    write_player_counter_sidecar(
+        out_dir,
+        args.mpv_log,
+        args.mpv_generation_dir,
+        service=args.service if args.target_mode == "service" else "",
+        start_utc=watchdog_start_utc,
+        end_utc=watchdog_end_utc,
+    )
+    write_watchdog_sidecar(
+        out_dir,
+        args.watchdog_state,
+        start=watchdog_start,
+        start_utc=watchdog_start_utc,
+        end_utc=watchdog_end_utc,
+    )
     result = evaluate_artifacts(out_dir, out_dir.name, panfrost_fault_policy=args.panfrost_fault_policy)
     write_json(out_dir / "playback-deep-health-public.json", result)
     return out_dir, result

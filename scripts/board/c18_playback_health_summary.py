@@ -31,6 +31,7 @@ MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 TRANSIENT_MISSING_SOCKET_LONG_RUN_SAMPLE_WINDOW = 180
 MAX_TRANSIENT_MISSING_SOCKET_LONG_RUN_CAP = 6
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
+WATCHDOG_RECOVERY_ACTIONS = {"realign_mpv_to_status", "terminate_player_child"}
 
 
 def read_json(path: Path | None, label: str) -> dict[str, Any]:
@@ -41,6 +42,14 @@ def read_json(path: Path | None, label: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"{label} sidecar must be a JSON object")
     return data
+
+
+def read_optional_json(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as fh:
+        data = json.load(fh)
+    return data if isinstance(data, dict) else {}
 
 
 def as_int(value: Any) -> int:
@@ -602,6 +611,7 @@ def evaluate(
     process_path: Path | None,
     kernel_path: Path | None,
     player_counters_path: Path | None,
+    watchdog_path: Path | None = None,
     panfrost_fault_policy: str = "absolute",
 ) -> dict[str, Any]:
     if panfrost_fault_policy not in PANFROST_FAULT_POLICIES:
@@ -611,6 +621,7 @@ def evaluate(
     process = read_json(process_path, "process")
     kernel = read_json(kernel_path, "kernel")
     player_counters = read_json(player_counters_path, "player counters")
+    watchdog = read_optional_json(watchdog_path)
 
     success_rows = [row for row in rows if row.get("ipc_result") == "success"]
     seen_success = False
@@ -707,6 +718,10 @@ def evaluate(
     media_load_failed = as_int(player_counters.get("media_load_failed"))
     mpv_restart_present = "mpv_restart" in player_counters
     mpv_restart = as_int(player_counters.get("mpv_restart"))
+    watchdog_present = bool(watchdog)
+    watchdog_event_changed = bool(watchdog.get("event_changed_during_window"))
+    watchdog_action = str(watchdog.get("action_during_window") or "")
+    watchdog_recovery_during_window = watchdog_event_changed and watchdog_action in WATCHDOG_RECOVERY_ACTIONS
     playlist_size = max_playlist_size(rows)
     transition_required = playlist_size >= 2
     unique_aliases = len(aliases)
@@ -798,6 +813,7 @@ def evaluate(
         "media_load_failed_zero": media_load_failed == 0,
         "mpv_restart_present": mpv_restart_present,
         "mpv_restart_zero": mpv_restart == 0,
+        "status_mpv_watchdog_recovery_absent": not watchdog_recovery_during_window,
         "panfrost_faults_present": panfrost_faults_present,
         "panfrost_faults_zero": panfrost_faults_zero,
         "panfrost_faults_delta_present": not panfrost_faults_delta_required or panfrost_faults_delta_present,
@@ -889,6 +905,9 @@ def evaluate(
             "total_mpv_count": total_mpv_count,
             "media_load_failed": media_load_failed,
             "mpv_restart": mpv_restart,
+            "status_mpv_watchdog_sidecar_present": watchdog_present,
+            "status_mpv_watchdog_event_changed": watchdog_event_changed,
+            "status_mpv_watchdog_action_during_window": watchdog_action,
             "panfrost_faults_start": panfrost_faults_start,
             "panfrost_faults": panfrost_faults,
             "panfrost_faults_delta": panfrost_faults_delta,
@@ -910,6 +929,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--process", required=True, type=Path)
     parser.add_argument("--kernel", required=True, type=Path)
     parser.add_argument("--player-counters", required=True, type=Path)
+    parser.add_argument("--watchdog", type=Path)
     parser.add_argument("--panfrost-fault-policy", choices=sorted(PANFROST_FAULT_POLICIES), default="absolute")
     parser.add_argument("--output", type=Path)
     return parser.parse_args(argv)
@@ -923,6 +943,7 @@ def main(argv: list[str]) -> int:
         process_path=args.process,
         kernel_path=args.kernel,
         player_counters_path=args.player_counters,
+        watchdog_path=args.watchdog,
         panfrost_fault_policy=args.panfrost_fault_policy,
     )
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"

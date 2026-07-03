@@ -144,8 +144,16 @@ do fallback de imagem e nao deve sombrear o player validado pelo caminho legado
 imagem: a imagem deve fornece-los em `/opt/totem/bin`, e releases OTA de
 `totem-core` nao devem inclui-los em `bin/`. O watchdog existe para recuperar
 runtimes antigos adotados por rollback quando o status publico avanca mas o MPV
-fica preso no mesmo arquivo; essa recuperacao nao substitui deep-health nem
-torna um checkpoint de power-loss verde por si so.
+fica preso no mesmo arquivo. Ele deve tentar realinhar o MPV para a midia local
+atual do status por IPC antes de encerrar o processo do player; o restart do
+player e fallback, nao a primeira acao. Essa recuperacao nao substitui
+deep-health nem torna um checkpoint de power-loss verde por si so. O coletor de
+deep-health deve registrar o estado do watchdog antes/depois da janela; qualquer
+acao de recuperacao do watchdog durante a janela deve reprovar a evidencia, para
+nao mascarar H2/power-loss com um realinhamento automatico. Os contadores
+`media_load_failed` e `mpv_restart` devem considerar tanto os logs locais do MPV
+quanto o journal do servico dentro da janela coletada; se o journal esperado nao
+puder ser lido, a evidencia deve falhar fechada em vez de assumir zero eventos.
 
 Uma release `totem-core` que precisa alterar como o player sobe deve ser tratada
 como frente de `player-runtime`, com imagem/homologacao ou pacote C18-aware
