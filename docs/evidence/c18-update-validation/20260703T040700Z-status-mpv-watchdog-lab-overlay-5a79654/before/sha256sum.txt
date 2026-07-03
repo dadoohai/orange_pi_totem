@@ -1,0 +1,1 @@
+d00c76ab17299f5a76ceeb81cff32d916185807d0727eb37d86aef4fbd607d58  /opt/totem/bin/kiosky_service_launcher.sh

@@ -1,0 +1,42 @@
+{
+  "schema": "dadooh.c18.status_mpv_watchdog_lab_overlay.v1",
+  "repo_head": "5a79654",
+  "installed_at_utc": "2026-07-03T04:07:12Z",
+  "overlay_type": "lab_only_image_fixed_player_supervisor_overlay",
+  "installed_files": [
+    "/opt/totem/bin/kiosky_service_launcher.sh",
+    "/opt/totem/bin/totem_player_status_mpv_watchdog.py"
+  ],
+  "before": {
+    "kiosky_service_launcher_sha256": "d00c76ab17299f5a76ceeb81cff32d916185807d0727eb37d86aef4fbd607d58",
+    "service_active": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "after": {
+    "kiosky_service_launcher_sha256": "373e00516097738cd6f2f47e70f1fd6ce5fc8208cfa8ff07c62b9db6efea9455",
+    "status_mpv_watchdog_sha256": "52474ae68ed05980f8c20808290b55182a7f3e510a8eccac7dd8065114de0c1b",
+    "service_active": true,
+    "watchdog_process_observed": true,
+    "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+    "previous_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+  },
+  "health_90s": {
+    "passed": true,
+    "samples": 81,
+    "mpv_unique_aliases": 8,
+    "status_unique_aliases": 7,
+    "status_advanced_without_mpv": false,
+    "status_mpv_max_consecutive_mismatches": 9,
+    "mpv_restart": 0,
+    "nrestarts_delta": 0
+  },
+  "non_claims": [
+    "not_flashed_image_identity",
+    "not_h2_powerloss_checkpoint_pass",
+    "not_stable_or_production",
+    "not_public_player_runtime_thaw",
+    "not_live_mismatch_recovery_proof"
+  ],
+  "source_archive_sha256": "1d04c7941438a7c360b44ef25888f47d98542ff416f66bc5418e4070dbaddbb9"
+}

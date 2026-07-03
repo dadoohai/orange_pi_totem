@@ -1,0 +1,1 @@
+   3628    3561 python3         /usr/bin/python3 /opt/totem/bin/totem_player_status_mpv_watchdog.py --config /data/config/config.json --status /tmp/kiosky-status.json --state-file /data/state/kiosky-player/status-mpv-watchdog.json --pid 3616 --interval-sec 2 --max-mismatch-sec 20 --min-status-advances 2
