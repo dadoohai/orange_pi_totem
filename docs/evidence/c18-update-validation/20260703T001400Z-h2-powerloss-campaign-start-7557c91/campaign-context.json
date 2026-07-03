@@ -1,0 +1,48 @@
+{
+  "schema": "dadooh.c18.h2_powerloss_campaign_context.v1",
+  "created_at_utc": "2026-07-03T00:14:00Z",
+  "repo_head": "7557c91f5cc6c0b29d49df8414d7ac4e585e63fb",
+  "branch": "foundation-v0.1",
+  "target_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "mission": "close the remaining C18 H2 physical power-loss evidence front without making any production, stable, auto-pull, or public-thaw claim",
+  "starting_macro_state": {
+    "homologation_pilot_roundtrip": "passed",
+    "board_topology_restored_to_baseline": true,
+    "public_player_runtime_freeze_rc": 44,
+    "h2_production_readiness": "blocked"
+  },
+  "matrix": {
+    "plan": "docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/powerloss-matrix-plan.json",
+    "operator_runbook": "docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/operator-runbook.md",
+    "required_checkpoints": 17,
+    "covered_checkpoints": [
+      "after_current_symlink",
+      "rollback_after_current_to_previous",
+      "rollback_after_previous_removed",
+      "rollback_after_quarantine",
+      "rollback_after_state_success"
+    ],
+    "remaining_checkpoints": [
+      "after_payload_staged",
+      "after_release_dir_created",
+      "after_extract",
+      "after_state_verifying",
+      "after_health_passed",
+      "after_release_tree_fsync",
+      "after_marker_written",
+      "after_previous_symlink",
+      "after_state_success",
+      "before_stage_cleanup",
+      "rollback_after_identify_links",
+      "rollback_after_current_unlinked"
+    ]
+  },
+  "non_claims": [
+    "does_not_claim_production_ready",
+    "does_not_claim_stable_promotion",
+    "does_not_claim_auto_pull_enabled",
+    "does_not_claim_public_thaw",
+    "does_not_claim_24h_soak"
+  ]
+}
