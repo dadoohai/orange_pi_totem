@@ -1,0 +1,69 @@
+{
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "operation": {
+    "action": "reconcile",
+    "after": {
+      "current_exists": true,
+      "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+      "last_operation": {
+        "finished_at_utc": "2026-07-03T00:44:56Z",
+        "reason": "physical_powerloss_trial_resume",
+        "started_at_utc": "2026-07-03T00:44:56Z",
+        "status": "current_verified",
+        "type": "reconcile",
+        "verified": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+      },
+      "previous_exists": false,
+      "previous_link": null,
+      "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+      "state_previous_version": null
+    },
+    "before": {
+      "current_exists": true,
+      "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+      "last_operation": {
+        "finished_at_utc": "2026-07-03T00:17:09Z",
+        "gc_removed_releases": [
+          "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+        ],
+        "reason": "manual_reconcile",
+        "started_at_utc": "2026-07-03T00:17:09Z",
+        "status": "current_verified",
+        "type": "reconcile",
+        "verified": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+      },
+      "previous_exists": false,
+      "previous_link": null,
+      "state_current_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+      "state_previous_version": null
+    },
+    "rc": 0,
+    "reconcile": {
+      "component": "player-runtime",
+      "current_link": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+      "status": "current_verified",
+      "verified": "releases/c18.player-runtime-m6-a-20260610T0501Z-29ff33b"
+    },
+    "result": "current_verified"
+  },
+  "output_dir": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/after_state_verifying/trial/resume/reconcile",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "returncode": 0,
+  "schema": "dadooh.c18.player_runtime.lab_rollback.v1"
+}

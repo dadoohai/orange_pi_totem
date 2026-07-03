@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=after_state_verifying action=apply evidence=/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1/after_state_verifying/trial/powerloss-checkpoint
