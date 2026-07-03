@@ -1,6 +1,6 @@
 {
   "manifest_path": "docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_identify_links/evidence-manifest.json",
-  "manifest_sha256": "2ceed44bea2277e51c6400bd4ada648904b63a9a8d92d718c603409cf60d0c6b",
+  "manifest_sha256": "fbf50263b386f9b32731e28244391bc723f971007b3068b59028d726c0f9349c",
   "passed": true,
   "result_claim": "powerloss_evidence_manifest_written",
   "schema": "dadooh.c18.powerloss.evidence_manifest.v1"

@@ -71,36 +71,6 @@
       "sha256": "c5e085cd74a2b453efa684ac897c824926c58ecc09ceb3bf1098ac761dc58efe"
     },
     {
-      "bytes": 5473,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/955B8A68885D3743C2E5D991F0B74AEB6E8D734DA13BBF14FFDCF122D9EB976B",
-      "sha256": "afb26229ed3c76c5d11238fb5a52a3ad5454d1d3c732e85b875704a1dda44d47"
-    },
-    {
-      "bytes": 6145,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/9AD1C12CA1752EED332B466B6E5A7C04C1F797D74454D5FC8F7A3AF53778E205",
-      "sha256": "d5221d489e620ae15a6edf357dbbbbc878c2ad35a109556f4c835ef021313974"
-    },
-    {
-      "bytes": 6173,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/B1E34AB76B17662FBF7240EE4E167F270D88169350937530F32DF17823CC5E04",
-      "sha256": "df9855a5b1e2fedf105d124da970fb04a5cff1cb141fb0097c48bf6465740227"
-    },
-    {
-      "bytes": 5621,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/BA5FB4C3449ECA625EC50DBBB65472FB4104A4BD66EF89616844E3F2D5B5DAB8",
-      "sha256": "cbad4e2a051b80122063eb59c7f13dd6b4326b3c24c0629e12fa6b1b43ca3529"
-    },
-    {
-      "bytes": 5453,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/D1B95DE1436160C51F46A584DA81D219D646BD6506F7235F76A05287D4F77D41",
-      "sha256": "aad0e107ebcaacc8dcc04e72ab2e2dd27095ac690b0a84c26f650afe2c3a8f3c"
-    },
-    {
-      "bytes": 5453,
-      "file": "setup/apply/candidate-health/home/.cache/mpv/D683AAC24DF9D59935CF2662437127DD6583BBC016E90CBCF9F9FE75F658FE2B",
-      "sha256": "b458e59c90ad415abf3621b24ebdea82a03184c6a024e694ea354532d6cdb132"
-    },
-    {
       "bytes": 18418,
       "file": "setup/apply/candidate-health/kiosk.log",
       "sha256": "64e2601d60d5afb6ad1fcdbcfc765460b7552c779e17591f1eefb3b3e40a1c78"
