@@ -1,0 +1,3 @@
+stopping kiosky-player before candidate health
+stop_rc=0
+inactive

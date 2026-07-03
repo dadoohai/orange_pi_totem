@@ -1,0 +1,1 @@
+CUT_POWER_NOW checkpoint=rollback_after_identify_links action=rollback evidence=/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1-bridge-final-a214064-retry1/rollback_after_identify_links/trial/powerloss-checkpoint

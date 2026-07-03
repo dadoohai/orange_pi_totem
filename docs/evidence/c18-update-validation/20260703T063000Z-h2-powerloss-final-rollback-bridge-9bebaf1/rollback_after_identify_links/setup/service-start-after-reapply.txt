@@ -1,0 +1,3 @@
+starting kiosky-player after candidate health
+start_rc=0
+active

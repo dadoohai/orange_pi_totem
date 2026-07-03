@@ -317,10 +317,13 @@ O snapshot H2 rastreavel do alvo `9bebaf1` esta versionado em
 producao.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
-checkpoints possuem validadores. O que ainda falta para H2 e a evidencia fisica
-dos 17 checkpoints do alvo `9bebaf1`. O planner corrente
+checkpoints possuem validadores. O que ainda falta para H2 e fechar a evidencia
+fisica completa do alvo `9bebaf1`: em 2026-07-03 a matriz chegou a 16/17 com
+`rollback_after_identify_links` verde na topologia bridge, restando apenas
+`rollback_after_current_unlinked`.
+O planner historico
 `docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/`
-registra 5/17 checkpoints cobertos pelo P0 aceito e 12/17 pendentes, sem
+registrava 5/17 checkpoints cobertos pelo P0 aceito e 12/17 pendentes, sem
 reivindicar evidencia fisica completa.
 O runbook operacional corrente em
 `docs/evidence/c18-update-validation/20260618T080100Z-h2-powerloss-operator-runbook-remaining-12-9bebaf1/`
@@ -400,12 +403,13 @@ Radar atualizado apos a rodada fisica de 2026-07-03:
    `rc=1`, blocker `rollout_state_empty`) e o self-test cobre esse caso. O
    achado de contra-auditoria fica preservado como historico, nao como pendencia
    aberta.
-2. A matriz power-loss do alvo `9bebaf1` esta em 15/17 checkpoints aceitos. Os
-   dois restantes sao `rollback_after_identify_links` e
-   `rollback_after_current_unlinked`.
-3. A tentativa de `rollback_after_identify_links` voltou para o runtime legado
-   `m6-a`/`29ff33b`, mas nao ficou verde: o status avancou enquanto o MPV ficou
-   preso. O watchdog pode recuperar a experiencia, mas qualquer recuperacao do
+2. A matriz power-loss do alvo `9bebaf1` esta em 16/17 checkpoints aceitos. O
+   unico restante e `rollback_after_current_unlinked`.
+3. A tentativa inicial de `rollback_after_identify_links` voltou para o runtime
+   legado `m6-a`/`29ff33b`, mas nao ficou verde: o status avancou enquanto o
+   MPV ficou preso. A repeticao com a ponte rollback-safe passou em
+   `docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_identify_links/`.
+   O watchdog pode recuperar a experiencia, mas qualquer recuperacao do
    watchdog durante health continua reprovando H2.
 4. A topologia de rollback segura foi preparada em 2026-07-03 usando uma ponte
    de baseline governada em homologacao como `previous` rollback-safe:
@@ -434,8 +438,7 @@ Proximo caminho minimo revisado:
 
 1. Recoletar preflight/autorizacao atuais antes de qualquer nova operacao na
    placa.
-2. Completar os 2 checkpoints fisicos restantes para fechar 17/17:
-   `rollback_after_identify_links` com bridge como `previous` e
+2. Completar o checkpoint fisico restante para fechar 17/17:
    `rollback_after_current_unlinked` como fallback de imagem.
 3. Rodar soak 24h.
 4. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
