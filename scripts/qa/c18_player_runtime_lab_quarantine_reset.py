@@ -41,8 +41,10 @@ RESET_SCOPES = {
     "lab_no_canary_retry",
     "lab_harness_ipc_drm_retry",
     "lab_candidate_startup_status_retry",
+    "h2_rollback_arm_timeout_previous_linked",
 }
 ALLOWED_QUARANTINE_REASONS = {"physical_powerloss_trial"}
+ARM_TIMEOUT_PREVIOUS_LINKED_SCOPE = "h2_rollback_arm_timeout_previous_linked"
 SETUP_CONTENTION_SCOPE = "p0_setup_contention_retry"
 NO_CANARY_SCOPE = "lab_no_canary_retry"
 HARNESS_IPC_DRM_SCOPE = "lab_harness_ipc_drm_retry"
@@ -623,6 +625,12 @@ def main(argv: list[str]) -> int:
         )
         if link == target_link
     ]
+    previous_linked_reset_allowed = (
+        args.reset_scope == ARM_TIMEOUT_PREVIOUS_LINKED_SCOPE
+        and active_links == ["previous"]
+        and before_snapshot.get("current_link") != target_link
+        and before_snapshot.get("state_current_version") != identity.get("version")
+    )
     matching_entries = [entry for entry in before_quarantine if identity_matches_target(entry, identity)]
     disallowed_entries = [
         entry for entry in matching_entries
@@ -649,7 +657,7 @@ def main(argv: list[str]) -> int:
     blockers: list[str] = []
     if not all(item["frozen"] for item in public_before.values()):
         blockers.append("public_cli_not_frozen_before_reset")
-    if active_links:
+    if active_links and not previous_linked_reset_allowed:
         blockers.append("target_linked_active")
     if disallowed_entries:
         blockers.append("target_quarantine_reason_not_allowed")
@@ -676,6 +684,7 @@ def main(argv: list[str]) -> int:
             "removed_entries": [],
             "matching_disallowed_entries": disallowed_entries,
             "active_links": active_links,
+            "previous_linked_reset_allowed": previous_linked_reset_allowed,
             "setup_contention_evidence": setup_details,
             "no_canary_retry_evidence": no_canary_details,
             "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
@@ -788,6 +797,7 @@ def main(argv: list[str]) -> int:
         "removed_entries": removed,
         "matching_disallowed_entries": [],
         "active_links": active_links,
+        "previous_linked_reset_allowed": previous_linked_reset_allowed,
         "setup_contention_evidence": setup_details,
         "no_canary_retry_evidence": no_canary_details,
         "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,

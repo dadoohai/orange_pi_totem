@@ -286,6 +286,72 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             self.assertIn("target_linked_active", result["blockers"])
             self.assertEqual(result["active_links"], ["current"])
 
+    def test_arm_timeout_scope_removes_previous_linked_target_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-previous-only")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(
+                data_root,
+                out,
+                [{**identity, "reason": "physical_powerloss_trial"}],
+                current_link="releases/runtime-reset-bridge",
+                previous_link="releases/runtime-reset-previous-only",
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "h2_rollback_arm_timeout_previous_linked",
+                "--reason", "unit-arm-timeout-previous-linked",
+            ])
+
+            self.assertEqual(rc, 0)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(entries, [])
+            self.assertEqual(reset.updatectl._read_symlink_target(reset.updatectl.CURRENT_LINK), "releases/runtime-reset-bridge")
+            self.assertEqual(reset.updatectl._read_symlink_target(reset.updatectl.PREVIOUS_LINK), "releases/runtime-reset-previous-only")
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["active_links"], ["previous"])
+            self.assertTrue(result["previous_linked_reset_allowed"])
+
+    def test_arm_timeout_scope_still_rejects_current_linked_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-current-timeout")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(
+                data_root,
+                out,
+                [{**identity, "reason": "physical_powerloss_trial"}],
+                current_link="releases/runtime-reset-current-timeout",
+                previous_link="releases/runtime-reset-bridge",
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "h2_rollback_arm_timeout_previous_linked",
+                "--reason", "unit-arm-timeout-current-linked",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("target_linked_active", result["blockers"])
+            self.assertEqual(result["active_links"], ["current"])
+            self.assertFalse(result["previous_linked_reset_allowed"])
+
     def test_rejects_non_powerloss_quarantine_reason(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
