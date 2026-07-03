@@ -1,6 +1,6 @@
 {
-  "manifest_path": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_health_passed/evidence-manifest.json",
-  "manifest_sha256": "b730a980a3de72649be1384de6a2f5f57cea81e2926bac3a2f14a9b83326162a",
+  "manifest_path": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_health_passed/evidence-manifest.json",
+  "manifest_sha256": "f917da4675e7304286b7bf59a7efe50a4533e3abd19c0dc544d9270189342c85",
   "passed": true,
   "result_claim": "powerloss_evidence_manifest_written",
   "schema": "dadooh.c18.powerloss.evidence_manifest.v1"
