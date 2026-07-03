@@ -1,0 +1,153 @@
+{
+  "artifact_id": "c18-player-runtime-h2-powerloss-after_marker_written-20260703T024900Z-h2-powerloss-after-marker-written-9bebaf1",
+  "board_image_marker": "c18-hwdecode-lab-1x-image",
+  "checkpoint": "after_marker_written",
+  "component": "player-runtime",
+  "expected_active_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "files": [
+    {
+      "bytes": 810,
+      "file": "README.md",
+      "sha256": "658a3a0215297efdedd01fcae66cb101d31a25b3e08641c7cfea6d26c2caa7f3"
+    },
+    {
+      "bytes": 174,
+      "file": "trial/powerloss-checkpoint/CUT_POWER_NOW.txt",
+      "sha256": "0c1f4869106ca208a9d0669ce2999f180d29d5dda58bdd58eefda4c2a2fe17b1"
+    },
+    {
+      "bytes": 3515,
+      "file": "trial/powerloss-checkpoint/checkpoint.json",
+      "sha256": "8dd3aa1772b6bb50d76d1f40cca51c80b241a691742858ce5d9c31fae7b6c69d"
+    },
+    {
+      "bytes": 9047,
+      "file": "trial/powerloss-summary.json",
+      "sha256": "95f878e253609c3cc32d2f7c22bc9ba433954a01dbe73c2d046ff7f7c74a06cf"
+    },
+    {
+      "bytes": 641,
+      "file": "trial/powerloss-trial-state.json",
+      "sha256": "bb3156f637ca1e79e9babca982c01d15bc32bc28a85d6c45a8f051219154415a"
+    },
+    {
+      "bytes": 1074,
+      "file": "trial/resume/after-reconcile-adoption.json",
+      "sha256": "45b5bac2c63b05ad39cb7572138699fb6c19d2240e0c45e31c0eafd1e05c4439"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/resume/after-reconcile-health/deep-health-kernel.json",
+      "sha256": "db76e047e7c9e3143d2049cb830d3810bebccaaeb11d3e2ee297c4a62fa32711"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/after-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/after-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/after-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4605,
+      "file": "trial/resume/after-reconcile-health/playback-deep-health-public.json",
+      "sha256": "d72f7dc80385c9a474e895873720368f6eefa5ef3c78639f2431a04483c8bbde"
+    },
+    {
+      "bytes": 50339,
+      "file": "trial/resume/after-reconcile-health/playback-samples.tsv",
+      "sha256": "40e8386123a56973f3c285f087b12093acd692cdb08ea196325c20b3ca2360ee"
+    },
+    {
+      "bytes": 20675,
+      "file": "trial/resume/after-reconcile-health/status-samples.ndjson",
+      "sha256": "ceda9a5d86593b7541c8c0a0401f26bafa3b3ba47534710c985ddca01431aabf"
+    },
+    {
+      "bytes": 4624,
+      "file": "trial/resume/after-reconcile-health.json",
+      "sha256": "ebddfd50a3f2fdc4db0fae720edc5297e89232719fb8671821fe16514b386e37"
+    },
+    {
+      "bytes": 1074,
+      "file": "trial/resume/before-reconcile-adoption.json",
+      "sha256": "45b5bac2c63b05ad39cb7572138699fb6c19d2240e0c45e31c0eafd1e05c4439"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/resume/before-reconcile-health/deep-health-kernel.json",
+      "sha256": "e2d106f06a24d5099e42053676d6b6c59ca073c5f49d065f9e5f5e9a0c2b32d5"
+    },
+    {
+      "bytes": 49,
+      "file": "trial/resume/before-reconcile-health/deep-health-player-counters.json",
+      "sha256": "54e3ab2d3b233cf8470a60edec802803e2e8b8d96d8fbd5a07c59788cc10993f"
+    },
+    {
+      "bytes": 114,
+      "file": "trial/resume/before-reconcile-health/deep-health-process.json",
+      "sha256": "fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b"
+    },
+    {
+      "bytes": 261,
+      "file": "trial/resume/before-reconcile-health/deep-health-systemd.json",
+      "sha256": "c4932e8162d7bb7e1d9177131a46ff4a4cfaee121ad68666052317933fa34f86"
+    },
+    {
+      "bytes": 4619,
+      "file": "trial/resume/before-reconcile-health/playback-deep-health-public.json",
+      "sha256": "ce16e4d589c7018680f030c9fda7b3c11716b14513a5f429b78fe0bcb829bfb3"
+    },
+    {
+      "bytes": 57912,
+      "file": "trial/resume/before-reconcile-health/playback-samples.tsv",
+      "sha256": "53584454486af58ac176b3d690fc5be2570c923f99f4ca55eb6b5bf67d94b9ab"
+    },
+    {
+      "bytes": 23902,
+      "file": "trial/resume/before-reconcile-health/status-samples.ndjson",
+      "sha256": "4d9cc901b6c069a6f7d5b080c367f59efb2f8bafc6cded23ed72c6e0a8350433"
+    },
+    {
+      "bytes": 4638,
+      "file": "trial/resume/before-reconcile-health.json",
+      "sha256": "796a045822c340fe21c369a7e8e5accec44db8819c409118eec77aaa7d6b0d0a"
+    },
+    {
+      "bytes": 244,
+      "file": "trial/resume/reconcile/lab-policy.json",
+      "sha256": "645af7ee9134865ddc96bb83cc0e95c76c7777b133a0a2f8cef6373fd7ceda8d"
+    },
+    {
+      "bytes": 2241,
+      "file": "trial/resume/reconcile.json",
+      "sha256": "a078bd2a0cc82560ebc0ccb440994e567f85a68aec2d538be732d0adc70fae22"
+    },
+    {
+      "bytes": 333,
+      "file": "trial/service-runtime-mask-before-apply.json",
+      "sha256": "28df649fb5d982440cef8e74779196d41c5aa4c9f6ff16a63024a55f1c181111"
+    },
+    {
+      "bytes": 246,
+      "file": "trial/service-stop-before-apply.json",
+      "sha256": "97b55aa39844d700d393a52fa2937f1cf6c06479bc4cd424daba141575574b48"
+    }
+  ],
+  "image_marker_sha256": "59739f57cdb3f79ac4c8ce5e5e1f9c4aa6d9dae58f704010f8423e66abe2bb9e",
+  "image_sha256": "1a853f569b5da9e856439897c95612d719fd3059f12349fa1040a6350c3df2f2",
+  "image_tag": "c18-hwdecode-lab-1x",
+  "schema": "dadooh.c18.powerloss.evidence_manifest.v1",
+  "setup_candidate_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "setup_expected_active_version": "c18.player-runtime-m6-a-20260610T0501Z-29ff33b",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0"
+}
