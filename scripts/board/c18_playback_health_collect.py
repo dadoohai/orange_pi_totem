@@ -137,11 +137,26 @@ def run(args: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with tmp.open("w", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
     try:
         os.chmod(path, 0o600)
     except OSError:
         pass
+    fsync_dir(path.parent)
+
+
+def fsync_dir(path: Path) -> None:
+    fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def load_json_file(path: Path) -> Any:
@@ -310,6 +325,9 @@ def collect_samples(out_dir: Path,
     with samples_path.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, delimiter="\t", fieldnames=SAMPLE_FIELDS, lineterminator="\n")
         writer.writeheader()
+        fh.flush()
+        os.fsync(fh.fileno())
+    fsync_dir(samples_path.parent)
 
     while time.monotonic() < deadline or seq == 0:
         seq += 1
@@ -355,8 +373,13 @@ def collect_samples(out_dir: Path,
         with samples_path.open("a", encoding="utf-8", newline="") as fh:
             writer = csv.DictWriter(fh, delimiter="\t", fieldnames=SAMPLE_FIELDS, lineterminator="\n")
             writer.writerow(row)
+            fh.flush()
+            os.fsync(fh.fileno())
         with status_samples_path.open("a", encoding="utf-8") as fh:
             fh.write(compact_json({"seq": seq, "rel_sec": round(rel_sec, 3), "status": status}) + "\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        fsync_dir(out_dir)
 
         next_sample = time.monotonic() + interval_sec
         while time.monotonic() < deadline and time.monotonic() < next_sample:
