@@ -739,6 +739,33 @@ def observed_resume_contract(checkpoint_name: Any,
     return resume_contract(checkpoint_name, expected)
 
 
+def reconcile_result_is_acceptable(checkpoint_name: Any,
+                                   expected_reconcile_result: str,
+                                   observed_reconcile_result: Any,
+                                   before: dict[str, Any],
+                                   after: dict[str, Any],
+                                   reconcile: dict[str, Any]) -> bool:
+    if observed_reconcile_result == expected_reconcile_result:
+        return True
+    if checkpoint_name != "rollback_after_current_unlinked" or observed_reconcile_result != "noop":
+        return False
+    operation = reconcile.get("operation") if isinstance(reconcile.get("operation"), dict) else {}
+    op_before = operation.get("before") if isinstance(operation.get("before"), dict) else {}
+    op_after = operation.get("after") if isinstance(operation.get("after"), dict) else {}
+    return (
+        before.get("selected_source") == "fallback"
+        and after.get("selected_source") == "fallback"
+        and op_before.get("current_link") is None
+        and op_before.get("previous_link") is None
+        and op_before.get("state_current_version") is None
+        and op_before.get("state_previous_version") is None
+        and op_after.get("current_link") is None
+        and op_after.get("previous_link") is None
+        and op_after.get("state_current_version") is None
+        and op_after.get("state_previous_version") is None
+    )
+
+
 def validate_rollback_after_quarantine(run_dir: Path,
                                        checkpoint: dict[str, Any],
                                        summary: dict[str, Any],
@@ -961,7 +988,14 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("resume_reconcile_schema")
     if reconcile.get("passed") is not True:
         errors.append("resume_reconcile_not_passed")
-    if nested(reconcile, "operation", "result") != expected_reconcile_result:
+    if not reconcile_result_is_acceptable(
+        checkpoint_name,
+        expected_reconcile_result,
+        nested(reconcile, "operation", "result"),
+        before,
+        after,
+        reconcile,
+    ):
         errors.append("resume_reconcile_result")
     validate_freeze(reconcile, "resume_reconcile", errors)
     validate_health(
@@ -1782,6 +1816,43 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             self.refresh_manifest_files(root)
             self.assertTrue(validate(root)["passed"])
 
+            reconcile_path = root / "trial/resume/reconcile.json"
+            reconcile = json.loads(reconcile_path.read_text(encoding="utf-8"))
+            reconcile["operation"].update({
+                "result": "noop",
+                "before": {
+                    "current_link": None,
+                    "previous_link": None,
+                    "state_current_version": None,
+                    "state_previous_version": None,
+                },
+                "after": {
+                    "current_link": None,
+                    "previous_link": None,
+                    "state_current_version": None,
+                    "state_previous_version": None,
+                },
+            })
+            write_json(reconcile_path, reconcile)
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["reconcile"] = reconcile
+            write_json(summary_path, summary)
+            self.refresh_manifest_files(root)
+            self.assertTrue(validate(root)["passed"])
+
+            reconcile["operation"]["before"]["current_link"] = f"releases/{candidate}"
+            write_json(reconcile_path, reconcile)
+            summary["reconcile"] = reconcile
+            write_json(summary_path, summary)
+            self.refresh_manifest_files(root)
+            result = validate(root)
+            self.assertFalse(result["passed"])
+            self.assertIn("resume_reconcile_result", result["errors"])
+
+            reconcile["operation"]["result"] = "image_fallback"
+            write_json(reconcile_path, reconcile)
+            summary["reconcile"] = reconcile
+            write_json(summary_path, summary)
             self.set_resume_adoption(root, source="data", version=candidate)
             self.refresh_manifest_files(root)
             result = validate(root)

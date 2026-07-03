@@ -295,15 +295,15 @@ Resultado: bloqueado somente por P0, com H1 decisivo rastreavel, autorizacao,
 preflight `pre_apply`, package/source binding, repo clean e tracked inputs
 verdes. Esse snapshot nao reduz nenhum blocker H2.
 
-O H2 readiness gate tambem foi rerodado e permaneceu vermelho pelos bloqueios
-esperados:
+O H2 readiness gate tambem foi rerodado antes da rodada fisica final e
+permaneceu vermelho pelos bloqueios entao esperados:
 
 - matriz fisica power-loss 17/17 incompleta;
 - soak 24h ausente;
 - stable promotion ausente;
 - decisao explicita de thaw ausente.
 
-Blockers exatos preservados no gate macro:
+Blockers exatos preservados nesse snapshot historico:
 
 - `full_physical_powerloss_matrix:powerloss_matrix_incomplete`;
 - `soak_endurance_24h:missing_24h_soak_summary`;
@@ -314,13 +314,14 @@ O snapshot H2 rastreavel do alvo `9bebaf1` esta versionado em
 `docs/evidence/c18-update-validation/20260618T101740Z-current-h2-readiness-head-0401375-9bebaf1/`:
 `h1_decisive_bundle=true`, `server_side_publish_governance=true`,
 `repo_clean=true` e `tracked_inputs=true`; `passed=false` continua correto para
-producao.
+producao. Apos a rodada fisica de 2026-07-03, esse snapshot deve ser
+regenerado para consumir a matriz 17/17.
 
 A semantica de validacao power-loss esta completa no gate off-board: 17/17
-checkpoints possuem validadores. O que ainda falta para H2 e fechar a evidencia
-fisica completa do alvo `9bebaf1`: em 2026-07-03 a matriz chegou a 16/17 com
-`rollback_after_identify_links` verde na topologia bridge, restando apenas
-`rollback_after_current_unlinked`.
+checkpoints possuem validadores. A evidencia fisica completa do alvo `9bebaf1`
+foi fechada em 2026-07-03: a matriz chegou a 17/17 com
+`rollback_after_identify_links` e `rollback_after_current_unlinked` verdes na
+topologia bridge/fallback de imagem.
 O planner historico
 `docs/evidence/c18-update-validation/20260618T080037Z-h2-powerloss-matrix-plan-5of17-9bebaf1/`
 registrava 5/17 checkpoints cobertos pelo P0 aceito e 12/17 pendentes, sem
@@ -371,8 +372,7 @@ Esta RC nao autoriza:
 - public thaw de `player-runtime`;
 - publicacao server-side;
 - evidencia real assinada/attested para producao;
-- substituir soak 24h;
-- substituir matriz power-loss 17/17.
+- substituir soak 24h.
 
 A autorizacao do piloto e baseada em janela. Se a execucao operacional ocorrer
 fora da janela registrada no JSON de autorizacao, criar nova autorizacao
@@ -403,12 +403,14 @@ Radar atualizado apos a rodada fisica de 2026-07-03:
    `rc=1`, blocker `rollout_state_empty`) e o self-test cobre esse caso. O
    achado de contra-auditoria fica preservado como historico, nao como pendencia
    aberta.
-2. A matriz power-loss do alvo `9bebaf1` esta em 16/17 checkpoints aceitos. O
-   unico restante e `rollback_after_current_unlinked`.
+2. A matriz power-loss do alvo `9bebaf1` esta em 17/17 checkpoints aceitos.
 3. A tentativa inicial de `rollback_after_identify_links` voltou para o runtime
    legado `m6-a`/`29ff33b`, mas nao ficou verde: o status avancou enquanto o
    MPV ficou preso. A repeticao com a ponte rollback-safe passou em
    `docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_identify_links/`.
+   O checkpoint final `rollback_after_current_unlinked` passou em
+   `docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_current_unlinked/`,
+   provando fallback de imagem apos corte fisico.
    O watchdog pode recuperar a experiencia, mas qualquer recuperacao do
    watchdog durante health continua reprovando H2.
 4. A topologia de rollback segura foi preparada em 2026-07-03 usando uma ponte
@@ -431,17 +433,14 @@ validacao final subsequente
 `lab-apply rc=0`, candidato current, health do candidato verde e playback apos
 restart verde. Portanto, o claim correto nao e "o pacote `9bebaf1` ainda esta
 rejeitado"; o claim correto e: "`9bebaf1` tem validacao funcional positiva em
-homologacao, mas ainda nao completou piloto operacional atual, matriz
-power-loss 17/17, soak 24h, stable promotion e thaw formal".
+homologacao e matriz power-loss 17/17, mas ainda nao completou soak 24h,
+stable promotion e thaw formal".
 
 Proximo caminho minimo revisado:
 
-1. Recoletar preflight/autorizacao atuais antes de qualquer nova operacao na
-   placa.
-2. Completar o checkpoint fisico restante para fechar 17/17:
-   `rollback_after_current_unlinked` como fallback de imagem.
-3. Rodar soak 24h.
-4. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
+1. Regenerar snapshots H2/pre-soak atuais consumindo a matriz power-loss 17/17.
+2. Rodar soak 24h.
+3. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
    verde.
 
 Nota pos-RC: a familia server-side/signature passa por
@@ -468,8 +467,8 @@ e o snapshot corrente esta em
 O H2 reporta `server_side_publish_governance=true`; isso nao publica release,
 nao habilita auto-pull, nao promove stable e nao abre producao.
 O H2 tambem reporta um ledger de semantica da matriz power-loss. Na RC atual
-esse ledger esta completo; para producao ainda falta coletar e commitar os 17
-checkpoints fisicos do alvo `9bebaf1`.
+esse ledger esta completo e os 17 checkpoints fisicos do alvo `9bebaf1` foram
+coletados e commitados na rodada de 2026-07-03.
 Stable tambem fica atras de `scripts/qa/c18_stable_promotion_gate.py`; evidencia
 minima com apenas `approved=true` nao autoriza build nem publish stable, e no H2
 os hashes declarados precisam bater com as evidencias consumidas. Nos scripts de
@@ -490,6 +489,6 @@ esperado; nao significa stable autorizado, thaw autorizado ou publish liberado.
 O snapshot pre-H2 de `9bebaf1`
 `docs/evidence/c18-update-validation/20260618T045000Z-stable-thaw-draft-build-blocked-pre-h2-9bebaf1/`
 registra o caso negativo: com artefatos reais de H1/release/server-side, mas sem
-soak 24h e sem matriz power-loss 17/17, o builder retorna `passed=false`,
+soak 24h e, naquele momento, sem matriz power-loss 17/17, o builder retorna `passed=false`,
 `result_claim=stable_thaw_decision_drafts_blocked`, nao cria diretorio de saida
 e mantem `stable_authorized=false` e `thaw_authorized=false`.

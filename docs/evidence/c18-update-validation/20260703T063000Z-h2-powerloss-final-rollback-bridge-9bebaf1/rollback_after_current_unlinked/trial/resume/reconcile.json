@@ -1,0 +1,67 @@
+{
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "operation": {
+    "action": "reconcile",
+    "after": {
+      "current_exists": false,
+      "current_link": null,
+      "last_operation": {
+        "finished_at_utc": "2026-07-03T07:06:02Z",
+        "reason": "physical_powerloss_trial_resume",
+        "started_at_utc": "2026-07-03T07:06:02Z",
+        "status": "noop",
+        "type": "reconcile"
+      },
+      "previous_exists": false,
+      "previous_link": null,
+      "state_current_version": null,
+      "state_previous_version": null
+    },
+    "before": {
+      "current_exists": false,
+      "current_link": null,
+      "last_operation": {
+        "finished_at_utc": "2026-07-03T06:22:42Z",
+        "gc_removed_releases": [
+          "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+        ],
+        "reason": "manual_reconcile",
+        "reject_reason": "no_current_symlink",
+        "started_at_utc": "2026-07-03T06:22:42Z",
+        "status": "image_fallback",
+        "type": "reconcile"
+      },
+      "previous_exists": false,
+      "previous_link": null,
+      "state_current_version": null,
+      "state_previous_version": null
+    },
+    "rc": 0,
+    "reconcile": {
+      "component": "player-runtime",
+      "current_link": null,
+      "status": "noop"
+    },
+    "result": "noop"
+  },
+  "output_dir": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1-bridge-final-a214064-retry1/rollback_after_current_unlinked/trial/resume/reconcile",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_rollback_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "returncode": 0,
+  "schema": "dadooh.c18.player_runtime.lab_rollback.v1"
+}

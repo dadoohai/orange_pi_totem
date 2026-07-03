@@ -1,0 +1,16 @@
+{
+  "action_during_window": "",
+  "collection_finished_at_utc": "2026-07-03T06:57:00Z",
+  "collection_started_at_utc": "2026-07-03T06:56:30Z",
+  "end": {
+    "exists": false,
+    "path": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1-bridge-final-a214064-retry1/rollback_after_current_unlinked/setup/apply/candidate-health/status-mpv-watchdog.json"
+  },
+  "event_changed_during_window": false,
+  "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+  "start": {
+    "exists": false,
+    "path": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1-bridge-final-a214064-retry1/rollback_after_current_unlinked/setup/apply/candidate-health/status-mpv-watchdog.json"
+  },
+  "state_file": "/data/c18-evidence/h2-mpv-stuck-fix-9bebaf1-bridge-final-a214064-retry1/rollback_after_current_unlinked/setup/apply/candidate-health/status-mpv-watchdog.json"
+}
