@@ -894,13 +894,16 @@ def validate_semantics(run_dir: Path, manifest: dict[str, Any], errors: list[str
         errors.append("checkpoint_operator_instruction")
     if summary.get("passed") is not True:
         errors.append("summary_not_passed")
-    failure_recovery = summary.get("failure_recovery")
-    if isinstance(failure_recovery, dict) and failure_recovery:
+    if "failure_recovery" in summary:
+        failure_recovery = summary.get("failure_recovery")
         non_claims = set(summary.get("non_claims") if isinstance(summary.get("non_claims"), list) else [])
-        if "failure_recovery_does_not_make_checkpoint_pass" not in non_claims:
-            errors.append("failure_recovery_non_claim_missing")
         if summary.get("passed") is True:
             errors.append("failure_recovery_present_in_passing_summary")
+        if failure_recovery is not None:
+            if "failure_recovery_does_not_make_checkpoint_pass" not in non_claims:
+                errors.append("failure_recovery_non_claim_missing")
+            if not isinstance(failure_recovery, dict) or not failure_recovery:
+                errors.append("failure_recovery_invalid")
     if manifest.get("checkpoint") in SEMANTICALLY_VALIDATED_CHECKPOINTS:
         validate_boot_transition(checkpoint, summary, errors)
     checkpoint_name = manifest.get("checkpoint")
@@ -1378,6 +1381,23 @@ class PowerlossEvidenceGateSelfTest(unittest.TestCase):
             result = validate(root)
             self.assertFalse(result["passed"])
             self.assertIn("failure_recovery_present_in_passing_summary", result["errors"])
+
+    def test_malformed_failure_recovery_cannot_make_checkpoint_pass(self) -> None:
+        for recovery_value in ({}, [], "diagnostic-present", 1):
+            with self.subTest(recovery_value=repr(recovery_value)):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    write_fixture(root)
+                    summary_path = root / "trial/powerloss-summary.json"
+                    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+                    summary.setdefault("non_claims", []).append("failure_recovery_does_not_make_checkpoint_pass")
+                    summary["failure_recovery"] = recovery_value
+                    write_json(summary_path, summary)
+                    self.refresh_manifest_files(root)
+                    result = validate(root)
+                    self.assertFalse(result["passed"])
+                    self.assertIn("failure_recovery_present_in_passing_summary", result["errors"])
+                    self.assertIn("failure_recovery_invalid", result["errors"])
 
     def test_hash_tamper_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
