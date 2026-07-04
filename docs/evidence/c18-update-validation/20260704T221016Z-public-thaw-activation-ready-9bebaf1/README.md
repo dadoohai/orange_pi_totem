@@ -7,13 +7,14 @@ target:
 - package: `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`
 - source commit: `9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522`
 - payload SHA256: `d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`
-- evaluated at: `2026-07-04T22:10:16Z`
+- evaluated at: `2026-07-04T22:23:18Z`
 
 Result:
 
 - `passed=true`
 - `result_claim=public_thaw_activation_ready`
 - `blockers=[]`
+- `server_side_validated=true`
 
 This is still not the execution itself. It does not publish a release, fetch a
 release, enable auto-pull, execute public thaw, mutate a device, or override the

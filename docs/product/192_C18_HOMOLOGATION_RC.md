@@ -1,12 +1,15 @@
 # 192 - C18 Homologation RC
 
-Status em 2026-06-18: **Homologation RC reancorada em `9bebaf1`, piloto
-assistido liberado, H2/producao ainda bloqueados**. O alvo corrigido
+Status atual em 2026-07-04: **Homologation RC `9bebaf1` com H2 final verde por
+excecao formal de negocio e prontidao de ativacao publica validada, ainda sem
+execucao de publish/thaw/auto-pull**. Historicamente, em 2026-06-18, o alvo corrigido
 `c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` passou release
 gate, lab apply/adoption/deep-health curto, server-side governance, preflight
 H2 apos reset/topologia, P0 power-loss seletivo assistido e validacao final
-target-current/service-stopped em placa real. Producao/stable continuam
-bloqueados por H2.
+target-current/service-stopped em placa real. Em 2026-07-04, a matriz
+power-loss 17/17, o soak HDMI-event aceito por excecao, a stable promotion, a
+decisao formal de thaw e o H2 final foram commitados; a execucao publica segue
+como etapa operacional separada.
 
 A evidencia
 `docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`
@@ -22,7 +25,8 @@ commitado e do snapshot macro pos-P0 reancorado.
 Este documento consolida o norte macro da C18 para a RC de homologacao. Ele nao
 substitui `docs/UPDATE_CONTRACT.md`; apenas torna explicito o estado de
 entrega: OTA funcional em laboratorio/homologacao controlada, com piloto
-assistido pronto e producao/stable ainda bloqueados pelos gates H2.
+assistido pronto, H2 final verde por excecao para `9bebaf1` e execucao
+publica de `player-runtime` ainda nao realizada.
 
 ## Objetivo
 

@@ -19,6 +19,11 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from c18_server_side_publish_governance_gate import (
+    evaluate as evaluate_server_side,
+    write_signed_fixture_release,
+    write_trust_anchor_for_key,
+)
 from c18_player_runtime_thaw_decision_gate import evaluate as evaluate_thaw_decision
 
 
@@ -211,11 +216,18 @@ def validate_manifest_payload_release_gate(
     manifest_path: Path,
     payload_path: Path,
     release_gate_path: Path,
+    h2: dict[str, Any],
     target: dict[str, str],
     blockers: list[str],
 ) -> dict[str, Any]:
     manifest = read_json(manifest_path, blockers, "manifest")
     release_gate = read_json(release_gate_path, blockers, "release_gate")
+    thaw_check = h2.get("checks", {}).get("explicit_operator_thaw_decision", {})
+    gate_result = thaw_check.get("gate_result") if isinstance(thaw_check, dict) else {}
+    expected_hashes = gate_result.get("expected_hashes") if isinstance(gate_result, dict) else {}
+    if not isinstance(expected_hashes, dict):
+        expected_hashes = {}
+    compare_hash(blockers, "release_gate", release_gate_path, expected_hashes.get("release_gate_sha256"))
     if manifest.get("schema") != MANIFEST_SCHEMA:
         blockers.append("manifest_schema")
     if manifest.get("component") != COMPONENT:
@@ -252,6 +264,57 @@ def validate_manifest_payload_release_gate(
     if package.get("channel") != "homologation":
         blockers.append("release_gate_channel_not_homologation_carrier")
     return manifest
+
+
+def validate_server_side_evidence(
+    *,
+    server_side_path: Path,
+    trusted_key_pems: list[Path],
+    trust_anchor_evidence: Path | None,
+    h2: dict[str, Any],
+    target: dict[str, str],
+    blockers: list[str],
+) -> dict[str, Any]:
+    server_side = read_json(server_side_path, blockers, "server_side_evidence")
+    thaw_check = h2.get("checks", {}).get("explicit_operator_thaw_decision", {})
+    gate_result = thaw_check.get("gate_result") if isinstance(thaw_check, dict) else {}
+    expected_hashes = gate_result.get("expected_hashes") if isinstance(gate_result, dict) else {}
+    if not isinstance(expected_hashes, dict):
+        expected_hashes = {}
+    compare_hash(
+        blockers,
+        "server_side_evidence",
+        server_side_path,
+        expected_hashes.get("server_side_evidence_sha256"),
+    )
+    server_gate = evaluate_server_side(
+        server_side_path,
+        expected_component=COMPONENT,
+        allow_test_fixtures=False,
+        trusted_key_pems=trusted_key_pems,
+        trust_anchor_evidence=trust_anchor_evidence,
+    )
+    if server_gate.get("passed") is not True:
+        blockers.extend(f"server_side_gate:{item}" for item in server_gate.get("blockers", []))
+    release_assets = server_side.get("release_assets") if isinstance(server_side.get("release_assets"), dict) else {}
+    manifest_rel = release_assets.get("manifest")
+    if not isinstance(manifest_rel, str) or not manifest_rel:
+        blockers.append("server_side_release_manifest_missing")
+    else:
+        manifest_path = server_side_path.parent / manifest_rel
+        manifest = read_json(manifest_path, blockers, "server_side_manifest") if manifest_path.is_file() else {}
+        if not manifest_path.is_file():
+            blockers.append("server_side_manifest_missing")
+        if manifest.get("version") != target.get("package_version"):
+            blockers.append("server_side_manifest_version_target_mismatch")
+        if manifest.get("source_commit") != target.get("source_commit"):
+            blockers.append("server_side_manifest_source_commit_target_mismatch")
+        if manifest.get("payload_sha256") != target.get("payload_sha256"):
+            blockers.append("server_side_manifest_payload_sha256_target_mismatch")
+    return {
+        "server_side_evidence_sha256": sha256_file(server_side_path),
+        "server_side_gate": server_gate,
+    }
 
 
 def validate_stable_and_thaw(
@@ -320,6 +383,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "operator_thaw_decision": args.operator_thaw_decision,
         "release_gate": args.release_gate_summary,
         "server_side_evidence": args.server_side_evidence,
+        "server_side_trust_anchor_evidence": args.server_side_trust_anchor_evidence,
         "manifest": args.manifest,
         "payload": args.payload,
     }
@@ -354,6 +418,15 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         manifest_path=args.manifest,
         payload_path=args.payload,
         release_gate_path=args.release_gate_summary,
+        h2=h2,
+        target=target,
+        blockers=blockers,
+    )
+    server_side_result = validate_server_side_evidence(
+        server_side_path=args.server_side_evidence,
+        trusted_key_pems=list(args.server_side_trusted_key_pem or []),
+        trust_anchor_evidence=args.server_side_trust_anchor_evidence,
+        h2=h2,
         target=target,
         blockers=blockers,
     )
@@ -382,6 +455,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             "h2_readiness_passed": h2.get("passed") is True,
             "stable_promotion_validated": "stable_promotion_schema" not in blockers,
             "thaw_decision_validated": decision.get("thaw_gate", {}).get("passed") is True,
+            "server_side_validated": server_side_result.get("server_side_gate", {}).get("passed") is True,
             "clean_soak_passed": h2.get("checks", {}).get("soak_endurance_24h", {}).get("clean_soak_passed"),
             "accepted_by_soak_exception": h2.get("checks", {}).get("soak_endurance_24h", {}).get("accepted_by_exception"),
             "publish_executed": False,
@@ -389,6 +463,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             "public_thaw_executed": False,
         },
         "inputs": {label: str(path) for label, path in paths.items()},
+        "trusted_key_pems": [str(path) for path in args.server_side_trusted_key_pem or []],
         "input_hashes": {
             label: sha256_file(path)
             for label, path in paths.items()
@@ -405,6 +480,21 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def build_fixture(root: Path, *, active: bool = True, tamper_payload: bool = False) -> argparse.Namespace:
+    server, public_key = write_signed_fixture_release(root / "server-side-release", component=COMPONENT)
+    trust_anchor = write_trust_anchor_for_key(root / "server-side-trust-anchor.json", public_key)
+    server_data = json.loads(server.read_text(encoding="utf-8"))
+    release_assets = server_data["release_assets"]
+    manifest = server.parent / release_assets["manifest"]
+    payload = server.parent / release_assets["payload"]
+    release_gate = server.parent / release_assets["release_gate"]
+    manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+    if tamper_payload:
+        payload.write_bytes(b"tampered")
+    target = {
+        "package_version": manifest_data["version"],
+        "source_commit": manifest_data["source_commit"],
+        "payload_sha256": manifest_data["payload_sha256"],
+    }
     stable = root / "stable.json"
     write_json(stable, {
         "schema": STABLE_SCHEMA,
@@ -417,12 +507,12 @@ def build_fixture(root: Path, *, active: bool = True, tamper_payload: bool = Fal
     stable_sha = sha256_file(stable)
     hashes = {
         "h1_release_gate_sha256": "1" * 64,
-        "release_gate_sha256": "2" * 64,
+        "release_gate_sha256": sha256_file(release_gate),
         "powerloss_matrix_sha256": "3" * 64,
         "soak_summary_sha256": "4" * 64,
-        "server_side_evidence_sha256": "5" * 64,
+        "server_side_evidence_sha256": sha256_file(server),
         "server_side_current_snapshot_sha256": "6" * 64,
-        "server_side_trust_anchor_evidence_sha256": "7" * 64,
+        "server_side_trust_anchor_evidence_sha256": sha256_file(trust_anchor),
         "stable_promotion_evidence_sha256": stable_sha,
     }
     now = dt.datetime(2026, 7, 4, 22, 0, tzinfo=dt.timezone.utc)
@@ -434,11 +524,6 @@ def build_fixture(root: Path, *, active: bool = True, tamper_payload: bool = Fal
         start = "2026-07-04T18:00:00Z"
         end = "2026-07-04T20:00:00Z"
         now_raw = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    target = {
-        "package_version": "c18.player-runtime-homolog-test-abcdef0",
-        "source_commit": "a" * 40,
-        "payload_sha256": "b" * 64,
-    }
     thaw = root / "thaw.json"
     thaw_payload = {
         "schema": THAW_SCHEMA,
@@ -467,39 +552,6 @@ def build_fixture(root: Path, *, active: bool = True, tamper_payload: bool = Fal
     }
     write_json(thaw, thaw_payload)
     thaw_sha = sha256_file(thaw)
-    manifest = root / f"dadooh-{COMPONENT}-{target['package_version']}.manifest.json"
-    payload = root / f"dadooh-{COMPONENT}-{target['package_version']}.tar.gz"
-    payload.write_bytes(b"payload" + (b"tamper" if tamper_payload else b""))
-    target["payload_sha256"] = sha256_file(payload)
-    thaw_payload["target_payload_sha256"] = target["payload_sha256"]
-    write_json(thaw, thaw_payload)
-    thaw_sha = sha256_file(thaw)
-    write_json(manifest, {
-        "schema": MANIFEST_SCHEMA,
-        "component": COMPONENT,
-        "version": target["package_version"],
-        "channel": "homologation",
-        "created_at_utc": "2026-07-04T21:00:00Z",
-        "source_commit": target["source_commit"],
-        "source_dirty": False,
-        "payload": payload.name,
-        "payload_sha256": target["payload_sha256"],
-        "requires": {},
-    })
-    release_gate = root / "release-gate.json"
-    write_json(release_gate, {
-        "schema": RELEASE_GATE_SCHEMA,
-        "passed": True,
-        "package": {
-            "component": COMPONENT,
-            "version": target["package_version"],
-            "channel": "homologation",
-            "source_commit": target["source_commit"],
-            "payload_sha256": target["payload_sha256"],
-        },
-    })
-    server = root / "server-side.json"
-    write_json(server, {"schema": "server", "passed": True})
     h2 = root / "h2.json"
     checks = {name: {"passed": True, "blockers": []} for name in REQUIRED_H2_CHECKS}
     checks["soak_endurance_24h"].update({"clean_soak_passed": False, "accepted_by_exception": True})
@@ -528,6 +580,8 @@ def build_fixture(root: Path, *, active: bool = True, tamper_payload: bool = Fal
         operator_thaw_decision=thaw,
         release_gate_summary=release_gate,
         server_side_evidence=server,
+        server_side_trust_anchor_evidence=trust_anchor,
+        server_side_trusted_key_pem=[public_key],
         manifest=manifest,
         payload=payload,
         now_utc=now_raw,
@@ -549,6 +603,8 @@ class PublicThawActivationGateSelfTest(unittest.TestCase):
             operator_thaw_decision=None,
             release_gate_summary=None,
             server_side_evidence=None,
+            server_side_trust_anchor_evidence=None,
+            server_side_trusted_key_pem=[],
             manifest=None,
             payload=None,
             now_utc=None,
@@ -571,6 +627,26 @@ class PublicThawActivationGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("payload_sha256_mismatch", result["blockers"])
 
+    def test_tampered_server_side_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = build_fixture(Path(tmp))
+            data = json.loads(args.server_side_evidence.read_text(encoding="utf-8"))
+            data["auto_pull_enabled"] = True
+            write_json(args.server_side_evidence, data)
+            result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn("server_side_evidence_sha256_mismatch", result["blockers"])
+
+    def test_tampered_release_gate_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = build_fixture(Path(tmp))
+            data = json.loads(args.release_gate_summary.read_text(encoding="utf-8"))
+            data["passed"] = False
+            write_json(args.release_gate_summary, data)
+            result = evaluate(args)
+        self.assertFalse(result["passed"])
+        self.assertIn("release_gate_sha256_mismatch", result["blockers"])
+
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -579,6 +655,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--operator-thaw-decision", type=Path)
     parser.add_argument("--release-gate-summary", type=Path)
     parser.add_argument("--server-side-evidence", type=Path)
+    parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
+    parser.add_argument("--server-side-trust-anchor-evidence", type=Path)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--payload", type=Path)
     parser.add_argument("--now-utc")

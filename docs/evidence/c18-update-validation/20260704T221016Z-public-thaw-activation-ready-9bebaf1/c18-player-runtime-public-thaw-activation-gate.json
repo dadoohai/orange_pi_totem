@@ -6,11 +6,12 @@
     "h2_readiness_passed": true,
     "public_thaw_executed": false,
     "publish_executed": false,
+    "server_side_validated": true,
     "stable_promotion_validated": true,
     "thaw_decision_validated": true
   },
   "blockers": [],
-  "evaluated_at_utc": "2026-07-04T22:10:16Z",
+  "evaluated_at_utc": "2026-07-04T22:23:18Z",
   "input_hashes": {
     "h2_readiness": "f37adcd49944a42db9923a5918073a666afd59b7f8c3abd35fb094520ec335d5",
     "manifest": "e7c9b3d538ee865ab0eb7108931ce38bc06d235dd66ea74267bec35d90a5c0be",
@@ -18,6 +19,7 @@
     "payload": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
     "release_gate": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
     "server_side_evidence": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+    "server_side_trust_anchor_evidence": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67",
     "stable_promotion": "70887cbfa142a79894d11fc5e91d3a09723f080c2cb9112d8c9161778a2f4d76"
   },
   "inputs": {
@@ -27,6 +29,7 @@
     "payload": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
     "release_gate": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
     "server_side_evidence": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+    "server_side_trust_anchor_evidence": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json",
     "stable_promotion": "docs/evidence/c18-update-validation/20260704T212900Z-stable-promotion-business-exception-9bebaf1/c18-stable-promotion.json"
   },
   "non_claims": [
@@ -50,5 +53,8 @@
   "thaw_window": {
     "end_utc": "2026-07-05T00:59:00Z",
     "start_utc": "2026-07-04T21:00:00Z"
-  }
+  },
+  "trusted_key_pems": [
+    "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-release-signing-key.pub.pem"
+  ]
 }
