@@ -30,6 +30,9 @@ assistido pronto, H2 final verde por excecao para `9bebaf1` e execucao
 publica de `player-runtime` ja realizada como GitHub Release, sem consumo/thaw
 em placa.
 
+Para decidir a proxima etapa operacional de OTA remoto, usar o radar curto
+`docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md`.
+
 ## Objetivo
 
 Fechar uma C18 Homologation RC: OTA C18 funcional ponta a ponta em
@@ -371,15 +374,16 @@ profundidade para payloads:
 
 ## Limites da RC
 
-Esta RC nao autoriza:
+Esta RC, mesmo com H2 final por excecao e GitHub Release publicada, ainda nao
+autoriza por si so:
 
-- producao;
-- `stable`;
 - auto-pull;
-- public thaw de `player-runtime`;
-- publicacao server-side;
-- evidencia real assinada/attested para producao;
-- substituir soak 24h.
+- public thaw/consumo em placa sem etapa operacional propria;
+- rollout automatico ou amplo de frota;
+- reaproveitar a excecao do soak HDMI-event para outros targets;
+- tratar o soak HDMI-event como soak limpo generico;
+- usar publisher de `totem-core` ou scripts legados de `kiosky-player` para
+  aplicar `player-runtime`.
 
 A autorizacao do piloto e baseada em janela. Se a execucao operacional ocorrer
 fora da janela registrada no JSON de autorizacao, criar nova autorizacao

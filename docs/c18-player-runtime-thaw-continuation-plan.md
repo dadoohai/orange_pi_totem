@@ -1,7 +1,11 @@
 # C18 player-runtime — thaw continuation plan & gate ledger
 
-Status: H1 TEARDOWN/PANFROST EVIDENCE COMPLETE FOR THE CURRENT LAB SCOPE (no thaw,
-no stable/publish). Baseline ANCHOR: `6871f21`
+Status: historical gate ledger. For the current post-publication operating
+truth, use `docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md` and
+`docs/product/192_C18_HOMOLOGATION_RC.md`. As of 2026-07-04, H2 final is green
+by formal business exception and the `player-runtime` GitHub Release for
+`9bebaf1` is published; consumption/thaw on a board and auto-pull remain not
+executed. Historical baseline ANCHOR: `6871f21`
 — by construction this ledger commits AT-OR-AFTER its anchor, so the anchor may sit one
 commit behind the live HEAD; ALWAYS resolve the real HEAD via `git rev-parse` (the resume
 rituals do). Tree clean at anchor time. Gates, ALWAYS pinned to their invocation: baseline `c18_ota_release_gate.py`
@@ -17,12 +21,12 @@ evidence is complete for the measured paths: main teardown/M6 path + req#4 reach
 healthy Python-kiosk SIGTERM stop via IPC quit, all image-bound to `1x` and panfrost-delta
 clean under the matcher." Inline caveats: GR4b fresh-IPC success, mpv-SIGTERM fallback,
 wedged/ipc_unresponsive cleanup, full launcher/systemd cgroup cleanup, power-loss/soak,
-server-side publish, stable promotion, and public thaw remain NON-CLAIMS.
+server-side publish, stable promotion, and public thaw were NON-CLAIMS for this
+historical H1 scope.
 
-This is the single authoritative ledger of what stands between the committed
-teardown/panfrost detector and a safe player-runtime thaw, plus the ordered
-continuation path. Grounded in code/contract; cross-checked by a 5-front
-investigation (2026-06-09).
+This remains the detailed historical ledger for the thaw workstream. It is no
+longer the only operational source of truth for next actions after the
+2026-07-04 publication; use the short source-of-truth document for that.
 
 ## Two horizons (thaw is not one decision)
 
@@ -75,10 +79,10 @@ The two core invariants hold **by construction** and were re-verified this round
 | `mpv_path`/config-real boot-time assertion (baseline-regression vector) | **DONE** (boot guard landed `4ed4829`; adoption proven on HW) | H1 — adjacent (baseline) |
 | H2 image-identity split (`1u` golden vs `1x` decisive evidence) | **FORMALIZED (Option B)**: `current-golden.json` remains `1u` for recovery/delivery baseline; H1 decisive player-runtime evidence is image-bound to `1x` and does not promote baseline/fallback | evidence-integrity precondition — DONE for H1 |
 | Offline power-loss semantics matrix (17/17) | **DONE (off-board)**: producer arms 17/17; evidence gate has semantic validators for every required checkpoint and H2 reports an empty `semantics_not_implemented_checkpoints` ledger. This does not replace physical evidence. | H2 governance foundation — DONE |
-| Physical power-cut (apply/rollback) | **PARTIAL**: P0 selective set is complete for pilot (5/17); H2 still requires the remaining 12 physical checkpoints. | H2 physical validation |
-| 24h soak/endurance | **ABSENT** | LATER (production) |
-| player-runtime stable-promotion authorization | **GATE PARAMETERIZED (off-board, default-deny)**: `stable_promotion.v1` now supports `expected_component=player-runtime`; H2 rejects `totem-core` stable evidence for player-runtime thaw. Stable/H2 now consume a dedicated `dadooh.c18.player_runtime.thaw_decision.v1` artifact via `scripts/qa/c18_player_runtime_thaw_decision_gate.py`, so a boolean operator approval is not enough. Real approved stable + thaw-decision evidence is still absent. | H2 production evidence |
-| Server-side publish gate / signature / auto-pull | **GATE HARDENED (off-board, default-deny for prod)**: evidence gate now rejects boolean-only claims, symlink/out-of-dir assets and fixture evidence; it requires artifact-bound manifest/payload/release-gate/audit-log files, per-asset attestation proofs or detached signatures, channel, auto-pull, allowlist, staged rollout, rollback and audit log structure. Detached signatures are verified offline with an explicit external trust key, SPKI DER fingerprint, canonical JSON proof, release-set hash, and separate trust-anchor evidence hash-bound by H2/stable. H2 for `player-runtime` consumes this with `expected_component=player-runtime`, so `totem-core` server-side evidence cannot satisfy the player-runtime thaw. The local `player-runtime` builder now preserves `c18-player-runtime-release-gate.json` next to payload/manifest as the future server-side signing input. Real production signing evidence is still absent. | H2 production evidence |
+| Physical power-cut (apply/rollback) | **DONE for target `9bebaf1` (2026-07-04)**: H2 now has 17/17 physical checkpoints versioned and accepted. Historical P0 subset remains the pilot bridge. | H2 physical validation — DONE for this target |
+| 24h soak/endurance | **ACCEPTED BY BUSINESS EXCEPTION for target `9bebaf1` (2026-07-04)**: HDMI-event soak remains negative as clean soak, but product accepted it explicitly for this target. Do not generalize to future targets. | H2 exception — DONE for this target |
+| player-runtime stable-promotion authorization | **DONE for target `9bebaf1` (2026-07-04)**: stable promotion and explicit thaw decision evidence exist and H2 is green by formal business exception. The gate remains default-deny for new targets. | H2 production evidence — DONE for this target |
+| Server-side publish gate / signature / auto-pull | **PUBLISHED for target `9bebaf1` (2026-07-04)**: GitHub Release exists with signed/governed assets; this still does not enable auto-pull or execute board thaw. The gate remains default-deny for new targets. | Publication done; board consumption pending |
 | Homologation pilot readiness (H1.5) | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_pilot_readiness_gate.py` authorizes only `ring=pilot`, `channel=homologation`, operator-assisted delivery, allowlisted hashed devices, board preflight, and P0 power-loss subset. It keeps `stable`, auto-pull, public thaw, 24h soak, 17/17 power-loss, and signature/attestation as non-claims. | H1.5 controlled pilot / governance |
 | H2 readiness evaluator | **DONE (off-board, default-deny)**: `scripts/qa/c18_player_runtime_h2_readiness_gate.py` aggregates H1 decisive evidence, 17/17 physical power-loss checkpoints, 24h soak, server-side publish/signature governance, stable-promotion evidence, and explicit operator thaw decision validated by the dedicated thaw-decision gate. It reports blockers; it does not thaw. | H2 planning / governance |
 | Public thaw barriers (`:123` toggle + `:967` stable block) | **ACTIVATION DESIGN-ONLY**: the operator decision artifact gate exists, but the public thaw execution path remains a separate authorized step. | gating mechanism |

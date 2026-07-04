@@ -6,6 +6,10 @@ Documento operacional curto para OTA C18 futuro. Complementa o gate tecnico de
 autoritativa; o estado operacional vigente esta neste documento e em
 `docs/UPDATE_CONTRACT.md`.
 
+Nota pos-2026-07-04: depois da publicacao da GitHub Release de
+`player-runtime`, o radar curto da proxima etapa operacional e
+`docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md`.
+
 ## Regra principal
 
 OTA C18 e um fluxo manual, acionado por operador, para `totem-core` somente.

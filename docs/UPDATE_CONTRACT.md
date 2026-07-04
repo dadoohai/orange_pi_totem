@@ -7,6 +7,10 @@ Estado live/baseline validado deve ser consultado em
 `docs/product/189_C18_OTA_READINESS_GATE.md`. Este contrato define regras; o 189
 registra qual imagem/release esta em laboratório em cada rodada.
 
+Para a etapa operacional pos-publicacao do `player-runtime` em 2026-07-04, usar
+tambem o radar curto `docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md`. Ele nao
+substitui este contrato; apenas consolida o proximo caminho de execucao.
+
 ## Regra Principal
 
 OTA C18 e manual/operator-triggered e restrito a `totem-core` operacional.
