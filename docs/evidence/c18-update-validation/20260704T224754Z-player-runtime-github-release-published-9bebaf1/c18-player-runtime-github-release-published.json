@@ -1,0 +1,58 @@
+{
+  "schema": "dadooh.c18.player_runtime.github_release_publication.v1",
+  "passed": true,
+  "result_claim": "player_runtime_github_release_published",
+  "repo": "dadoohai/orange_pi_totem",
+  "release_url": "https://github.com/dadoohai/orange_pi_totem/releases/tag/player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "tag": "player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_commitish": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "published_at_utc": "2026-07-04T22:47:54Z",
+  "observed_at_utc": "2026-07-04T22:48:00Z",
+  "is_draft": false,
+  "is_prerelease": false,
+  "asset_count": 18,
+  "asset_names": [
+    "audit-log.ndjson",
+    "audit-log.sig",
+    "audit-log.signature.json",
+    "c18-ota-release-gate.sig",
+    "c18-ota-release-gate.signature.json",
+    "c18-player-runtime-activation-nMUMxU.json",
+    "c18-player-runtime-release-gate.json",
+    "c18-player-runtime-thaw-decision.json",
+    "c18-server-side-publish-governance.json",
+    "c18-server-side-trust-anchor.json",
+    "c18-stable-promotion.json",
+    "dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+    "dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "h2-readiness-business-exception.json",
+    "manifest.sig",
+    "manifest.signature.json",
+    "payload.sig",
+    "payload.signature.json"
+  ],
+  "publication_route": "scripts/deploy/publish_player_runtime_github_release.sh --publish",
+  "preconditions_enforced": [
+    "public_thaw_activation_gate_passed",
+    "h2_readiness_passed_by_business_exception",
+    "stable_promotion_evidence_present",
+    "operator_thaw_decision_present_and_in_window",
+    "server_side_governance_validated",
+    "release_tag_absent_before_publish",
+    "source_commit_present_in_remote_history",
+    "gh_auth_valid",
+    "ALLOW_C18_PLAYER_RUNTIME_PUBLICATION=1"
+  ],
+  "verification": {
+    "release_view_command": "gh release view player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1 --repo dadoohai/orange_pi_totem --json tagName,url,isDraft,isPrerelease,targetCommitish,createdAt,publishedAt,assets",
+    "tag_remote_command": "git ls-remote --tags origin refs/tags/player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "tag_remote_sha": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+  },
+  "non_claims": [
+    "this_publication_does_not_enable_auto_pull",
+    "this_publication_does_not_execute_public_thaw_on_device",
+    "this_publication_does_not_apply_release_to_board",
+    "this_publication_does_not_mutate_device_freeze_policy",
+    "manifest_channel_remains_homologation_with_stable_decision_as_separate_evidence"
+  ]
+}

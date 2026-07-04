@@ -627,6 +627,13 @@ nao estiver no remoto, o publish falha fechado com
 `remote_source_commit_missing`. Esse publisher nao toca placa, nao habilita
 auto-pull, nao executa public thaw e nao altera policy/updater no device.
 
+Em `2026-07-04`, essa rota publicou a GitHub Release
+`player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` e
+registrou a evidencia em
+`docs/evidence/c18-update-validation/20260704T224754Z-player-runtime-github-release-published-9bebaf1/`.
+Essa evidencia prova publicacao de assets, nao consumo em placa, auto-pull,
+public thaw executado ou mudanca do freeze `rc=44`.
+
 Para reduzir erro operacional quando os testes fisicos terminarem, o scaffold
 fail-closed dos artefatos finais deve ser gerado por
 `scripts/qa/c18_player_runtime_stable_decision_draft_build.py`. O builder e

@@ -464,11 +464,14 @@ Proximo caminho minimo revisado apos os artefatos de `2026-07-04`:
 5. A prontidao de ativacao publica, ainda sem executar publish/thaw/auto-pull,
    foi registrada em
    `20260704T221016Z-public-thaw-activation-ready-9bebaf1`.
+6. A publicacao GitHub Release do `player-runtime` foi executada pela rota
+   guardada e registrada em
+   `20260704T224754Z-player-runtime-github-release-published-9bebaf1`.
 
-O caminho minimo agora nao e repetir soak/power-loss/stable/thaw; e executar a
-etapa operacional separada de ativacao/publicacao de `player-runtime`, sem
-usar publisher de `totem-core`, scripts legados, auto-pull ou manifest stable
-inventado.
+O caminho minimo agora nao e repetir soak/power-loss/stable/thaw nem republicar
+o artefato; e executar a etapa operacional separada de consumo/thaw de
+`player-runtime` na placa/rota de cliente, sem usar publisher de `totem-core`,
+scripts legados, auto-pull ou manifest stable inventado.
 
 Nota pos-RC: a familia server-side/signature passa por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida
