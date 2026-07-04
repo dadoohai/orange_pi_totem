@@ -616,6 +616,17 @@ thaw e nao remove o freeze `rc=44` por si so. Em `2026-07-04`, o alvo
 `9bebaf1` produziu `public_thaw_activation_ready` em
 `docs/evidence/c18-update-validation/20260704T221016Z-public-thaw-activation-ready-9bebaf1/`.
 
+A rota de publicacao para esse artefato e
+`scripts/deploy/publish_player_runtime_github_release.sh`. Por padrao ela roda
+somente em `--prepare-only`: reexecuta o gate de ativacao com a hora atual,
+coleta os assets server-side assinados, adiciona H2/stable/thaw/activation aos
+assets de release, e nao chama `gh`. O modo `--publish` exige
+`ALLOW_C18_PLAYER_RUNTIME_PUBLICATION=1`, `gh auth` valido, tag inexistente e
+`source_commit` presente em alguma ref remota do repositorio alvo; se o commit
+nao estiver no remoto, o publish falha fechado com
+`remote_source_commit_missing`. Esse publisher nao toca placa, nao habilita
+auto-pull, nao executa public thaw e nao altera policy/updater no device.
+
 Para reduzir erro operacional quando os testes fisicos terminarem, o scaffold
 fail-closed dos artefatos finais deve ser gerado por
 `scripts/qa/c18_player_runtime_stable_decision_draft_build.py`. O builder e
