@@ -5,9 +5,17 @@
   "soak_started_at_utc": "2026-07-03T19:55:57Z",
   "soak_ended_at_utc": "2026-07-04T19:58:22Z",
   "hdmi_disconnected_operator_estimate_local": "2026-07-03T20:30:00-03:00",
+  "hdmi_last_healthy_playback_sample_local": "2026-07-03T20:19:58-03:00",
+  "hdmi_first_sustained_video_loss_sample_local": "2026-07-03T20:20:00-03:00",
+  "hdmi_disconnect_inferred_window_local": {
+    "start": "2026-07-03T20:19:58-03:00",
+    "end": "2026-07-03T20:20:00-03:00"
+  },
   "hdmi_reconnected_operator_reported_local": "2026-07-04T16:29:00-03:00",
-  "disconnect_timestamp_precision": "operator_estimate",
-  "reconnect_timestamp_precision": "operator_reported",
+  "hdmi_reconnect_kernel_event_local": "2026-07-04T16:29:54-03:00",
+  "hdmi_first_healthy_playback_sample_after_reconnect_local": "2026-07-04T16:29:58-03:00",
+  "disconnect_timestamp_precision": "playback_sample_window_2s",
+  "reconnect_timestamp_precision": "kernel_event_plus_playback_sample",
   "classification": "negative_for_clean_h2_soak_positive_for_runtime_resilience",
   "expected_gate_result": {
     "clean_h2_soak": false,

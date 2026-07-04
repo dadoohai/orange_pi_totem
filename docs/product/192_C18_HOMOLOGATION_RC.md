@@ -440,8 +440,9 @@ Evidencia posterior de soak: em `2026-07-04`, foi coletado e versionado um soak
 de 24h do alvo `9bebaf1` em
 `docs/evidence/c18-update-validation/20260704T195822Z-soak-24h-hdmi-event-9bebaf1/`.
 O resultado e negativo para H2 limpo (`passed=false`) porque houve evento HDMI:
-desconexao estimada pelo operador em `2026-07-03 20:30-03:00` e reconexao
-reportada em `2026-07-04 16:29-03:00`. O valor positivo dessa evidencia e
+a telemetria de playback delimita a desconexao entre `2026-07-03 20:19:58-03:00`
+e `2026-07-03 20:20:00-03:00`; o kernel registrou a reconexao em
+`2026-07-04 16:29:54-03:00`. O valor positivo dessa evidencia e
 operacional: sem restart do MPV, sem incremento de restart systemd, sem delta
 panfrost, sem timeout/reset MMC, sem erro ext4 e sem falha de media load. Isso
 nao autoriza producao, `stable` ou public thaw.

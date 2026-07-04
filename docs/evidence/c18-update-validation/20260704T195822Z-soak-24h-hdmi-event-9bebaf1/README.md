@@ -14,9 +14,15 @@ Run window:
 - ended local BRT: `2026-07-04 16:58:22-03:00`
 
 Operator HDMI event:
-- HDMI disconnected: approximately `2026-07-03 20:30:00-03:00`
-- HDMI reconnected: `2026-07-04 16:29:00-03:00`
-- exact disconnect timestamp is operator-estimated, not device-observed.
+- HDMI last confirmed healthy by playback samples: `2026-07-03 20:19:58-03:00`
+- HDMI first sustained video/HW decode loss by playback samples:
+  `2026-07-03 20:20:00-03:00`
+- HDMI physical disconnect inferred window: between `2026-07-03 20:19:58-03:00`
+  and `2026-07-03 20:20:00-03:00`
+- HDMI reconnect kernel event: `2026-07-04 16:29:54-03:00`
+- first healthy playback sample after reconnect: `2026-07-04 16:29:58-03:00`
+- operator estimate before log/sample analysis was approximately
+  `2026-07-03 20:30:00-03:00`.
 
 Result:
 - `soak-summary.json` reports `passed=false`.
