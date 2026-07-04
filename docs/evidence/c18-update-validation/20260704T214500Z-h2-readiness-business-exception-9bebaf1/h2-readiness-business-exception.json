@@ -1,0 +1,424 @@
+{
+  "blockers": [],
+  "checks": {
+    "explicit_operator_thaw_decision": {
+      "blockers": [],
+      "evidence_path": "docs/evidence/c18-update-validation/20260704T213100Z-thaw-decision-business-exception-9bebaf1/c18-player-runtime-thaw-decision.json",
+      "evidence_sha256": "085e44614a7006ee3025b72331e774cc9ee90e6ee3b8047a36b31e56fe43d5c8",
+      "expected_target": {
+        "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+        "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+        "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+      },
+      "expected_target_errors": [],
+      "gate_result": {
+        "blockers": [],
+        "evidence_path": "docs/evidence/c18-update-validation/20260704T213100Z-thaw-decision-business-exception-9bebaf1/c18-player-runtime-thaw-decision.json",
+        "expected_hashes": {
+          "h1_release_gate_sha256": "004619b3c6a1bf4124d7f34fcda3c9fd6505deaef837a316af378b6bbe94cac1",
+          "powerloss_matrix_sha256": "a65de7c25d81cecc4494506ddd040f529632a075e4a2f4fd19d1d6e98f79d060",
+          "release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+          "server_side_current_snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7",
+          "server_side_evidence_sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+          "server_side_trust_anchor_evidence_sha256": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67",
+          "soak_exception_evidence_sha256": "96cf1f75ca1765520bea98c1f4ffd342634e31d9ea3f53e7a662238357cf8126",
+          "soak_operator_event_sha256": "a58b1b6a6a5a95e3bd424467541c6d34a787cdaca5b3824955122a90e6a949ef",
+          "soak_summary_sha256": "aa36df18d5b6966d79cd256c57a2a369a6496f0ddaf0cccaf2dbe3604614315b",
+          "stable_promotion_evidence_sha256": "70887cbfa142a79894d11fc5e91d3a09723f080c2cb9112d8c9161778a2f4d76"
+        },
+        "non_claims": [
+          "this_gate_does_not_thaw_player_runtime",
+          "this_gate_does_not_publish_or_fetch_releases",
+          "this_gate_does_not_override_freeze_rc_44"
+        ],
+        "passed": true,
+        "result_claim": "thaw_decision_ready",
+        "schema": "dadooh.c18.player_runtime.thaw_decision_gate.v1"
+      },
+      "passed": true
+    },
+    "full_physical_powerloss_matrix": {
+      "blockers": [],
+      "duplicate_checkpoints": [],
+      "extra_checkpoints": [],
+      "gate_results": {
+        "after_current_symlink": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/after_current_symlink",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_extract": {
+          "dir": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_extract",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_health_passed": {
+          "dir": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_health_passed",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_marker_written": {
+          "dir": "docs/evidence/c18-update-validation/20260703T024900Z-h2-powerloss-after-marker-written-9bebaf1",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_payload_staged": {
+          "dir": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_payload_staged",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_previous_symlink": {
+          "dir": "docs/evidence/c18-update-validation/20260703T030000Z-h2-powerloss-after-previous-symlink-9bebaf1",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_release_dir_created": {
+          "dir": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_release_dir_created",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_release_tree_fsync": {
+          "dir": "docs/evidence/c18-update-validation/20260703T023000Z-h2-powerloss-after-release-tree-fsync-9bebaf1",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_state_success": {
+          "dir": "docs/evidence/c18-update-validation/20260703T031500Z-h2-powerloss-after-state-success-9bebaf1",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "after_state_verifying": {
+          "dir": "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_state_verifying",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "before_stage_cleanup": {
+          "dir": "docs/evidence/c18-update-validation/20260703T032400Z-h2-powerloss-before-stage-cleanup-9bebaf1",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_current_to_previous": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_current_to_previous",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_current_unlinked": {
+          "dir": "docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_current_unlinked",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_identify_links": {
+          "dir": "docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_identify_links",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_previous_removed": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_previous_removed",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_quarantine": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_quarantine",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        },
+        "rollback_after_state_success": {
+          "dir": "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_state_success",
+          "gate_passed": true,
+          "gate_returncode": 0,
+          "gate_stderr_tail": "",
+          "manifest_errors": []
+        }
+      },
+      "missing_checkpoints": [],
+      "observed_checkpoints": [
+        "after_current_symlink",
+        "after_extract",
+        "after_health_passed",
+        "after_marker_written",
+        "after_payload_staged",
+        "after_previous_symlink",
+        "after_release_dir_created",
+        "after_release_tree_fsync",
+        "after_state_success",
+        "after_state_verifying",
+        "before_stage_cleanup",
+        "rollback_after_current_to_previous",
+        "rollback_after_current_unlinked",
+        "rollback_after_identify_links",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_state_success"
+      ],
+      "passed": true,
+      "required_checkpoints": [
+        "after_payload_staged",
+        "after_release_dir_created",
+        "after_extract",
+        "after_state_verifying",
+        "after_health_passed",
+        "after_release_tree_fsync",
+        "after_marker_written",
+        "after_previous_symlink",
+        "after_current_symlink",
+        "after_state_success",
+        "before_stage_cleanup",
+        "rollback_after_identify_links",
+        "rollback_after_current_to_previous",
+        "rollback_after_previous_removed",
+        "rollback_after_quarantine",
+        "rollback_after_current_unlinked",
+        "rollback_after_state_success"
+      ],
+      "semantics_ledger": {
+        "evidence_gate_contract_mismatch": [],
+        "evidence_gate_matrix_checkpoints": [
+          "after_current_symlink",
+          "after_extract",
+          "after_health_passed",
+          "after_marker_written",
+          "after_payload_staged",
+          "after_previous_symlink",
+          "after_release_dir_created",
+          "after_release_tree_fsync",
+          "after_state_success",
+          "after_state_verifying",
+          "before_stage_cleanup",
+          "rollback_after_current_to_previous",
+          "rollback_after_current_unlinked",
+          "rollback_after_identify_links",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_state_success"
+        ],
+        "required_checkpoints": [
+          "after_payload_staged",
+          "after_release_dir_created",
+          "after_extract",
+          "after_state_verifying",
+          "after_health_passed",
+          "after_release_tree_fsync",
+          "after_marker_written",
+          "after_previous_symlink",
+          "after_current_symlink",
+          "after_state_success",
+          "before_stage_cleanup",
+          "rollback_after_identify_links",
+          "rollback_after_current_to_previous",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_current_unlinked",
+          "rollback_after_state_success"
+        ],
+        "semantically_validated_checkpoints": [
+          "after_current_symlink",
+          "after_extract",
+          "after_health_passed",
+          "after_marker_written",
+          "after_payload_staged",
+          "after_previous_symlink",
+          "after_release_dir_created",
+          "after_release_tree_fsync",
+          "after_state_success",
+          "after_state_verifying",
+          "before_stage_cleanup",
+          "rollback_after_current_to_previous",
+          "rollback_after_current_unlinked",
+          "rollback_after_identify_links",
+          "rollback_after_previous_removed",
+          "rollback_after_quarantine",
+          "rollback_after_state_success"
+        ],
+        "semantics_not_implemented_checkpoints": []
+      }
+    },
+    "h1_decisive_bundle": {
+      "blockers": [],
+      "passed": true,
+      "step_count": 66,
+      "summary_path": "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json"
+    },
+    "player_runtime_release_gate": {
+      "blockers": [],
+      "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+      "passed": true
+    },
+    "repo_clean": {
+      "blockers": [],
+      "passed": true,
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    "server_side_current_snapshot": {
+      "blockers": [],
+      "passed": true,
+      "result_claim": "server_side_publish_governance_ready",
+      "run_dir": "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+      "snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7"
+    },
+    "server_side_publish_governance": {
+      "blockers": [],
+      "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+      "gate_result": {
+        "blockers": [],
+        "evidence_path": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+        "non_claims": [
+          "this_gate_does_not_publish_releases",
+          "this_gate_does_not_enable_auto_pull",
+          "this_gate_does_not_promote_stable",
+          "this_gate_does_not_thaw_player_runtime"
+        ],
+        "passed": true,
+        "result_claim": "server_side_publish_governance_ready",
+        "schema": "dadooh.c18.server_side_publish_governance_gate.v1"
+      },
+      "passed": true
+    },
+    "soak_endurance_24h": {
+      "accepted_by_exception": true,
+      "blockers": [],
+      "clean_soak_passed": false,
+      "duration_sec": 86400.0,
+      "exception_evidence_path": "docs/evidence/c18-update-validation/20260704T212428Z-soak-exception-business-release-9bebaf1/c18-playback-soak-exception.json",
+      "exception_gate_result": {
+        "blockers": [],
+        "evidence_path": "docs/evidence/c18-update-validation/20260704T212428Z-soak-exception-business-release-9bebaf1/c18-playback-soak-exception.json",
+        "non_claims": [
+          "this_gate_does_not_make_the_soak_clean",
+          "this_gate_does_not_publish_releases",
+          "this_gate_does_not_enable_auto_pull",
+          "this_gate_does_not_execute_public_thaw"
+        ],
+        "passed": true,
+        "result_claim": "soak_exception_accepted",
+        "schema": "dadooh.c18.playback.soak_exception_gate.v1"
+      },
+      "original_clean_blockers": [
+        "soak_not_passed"
+      ],
+      "passed": true,
+      "summary_path": "docs/evidence/c18-update-validation/20260704T195822Z-soak-24h-hdmi-event-9bebaf1/soak-summary.json"
+    },
+    "stable_promotion_authorization": {
+      "blockers": [],
+      "evidence_path": "docs/evidence/c18-update-validation/20260704T212900Z-stable-promotion-business-exception-9bebaf1/c18-stable-promotion.json",
+      "expected_hashes": {
+        "h1_release_gate_sha256": "004619b3c6a1bf4124d7f34fcda3c9fd6505deaef837a316af378b6bbe94cac1",
+        "h2_readiness_sha256": "263d27d98999049cb51091f37aba7b190bfee7d6676c8620e5094c8bec0be73d",
+        "powerloss_matrix_sha256": "a65de7c25d81cecc4494506ddd040f529632a075e4a2f4fd19d1d6e98f79d060",
+        "release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+        "server_side_current_snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7",
+        "server_side_evidence_sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+        "server_side_trust_anchor_evidence_sha256": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67",
+        "soak_exception_evidence_sha256": "96cf1f75ca1765520bea98c1f4ffd342634e31d9ea3f53e7a662238357cf8126",
+        "soak_operator_event_sha256": "a58b1b6a6a5a95e3bd424467541c6d34a787cdaca5b3824955122a90e6a949ef",
+        "soak_summary_sha256": "aa36df18d5b6966d79cd256c57a2a369a6496f0ddaf0cccaf2dbe3604614315b"
+      },
+      "gate_result": {
+        "artifact_semantics": null,
+        "blockers": [],
+        "evidence_path": "docs/evidence/c18-update-validation/20260704T212900Z-stable-promotion-business-exception-9bebaf1/c18-stable-promotion.json",
+        "expected_hashes": {
+          "h1_release_gate_sha256": "004619b3c6a1bf4124d7f34fcda3c9fd6505deaef837a316af378b6bbe94cac1",
+          "h2_readiness_sha256": "263d27d98999049cb51091f37aba7b190bfee7d6676c8620e5094c8bec0be73d",
+          "powerloss_matrix_sha256": "a65de7c25d81cecc4494506ddd040f529632a075e4a2f4fd19d1d6e98f79d060",
+          "release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+          "server_side_current_snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7",
+          "server_side_evidence_sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+          "server_side_trust_anchor_evidence_sha256": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67",
+          "soak_exception_evidence_sha256": "96cf1f75ca1765520bea98c1f4ffd342634e31d9ea3f53e7a662238357cf8126",
+          "soak_operator_event_sha256": "a58b1b6a6a5a95e3bd424467541c6d34a787cdaca5b3824955122a90e6a949ef",
+          "soak_summary_sha256": "aa36df18d5b6966d79cd256c57a2a369a6496f0ddaf0cccaf2dbe3604614315b"
+        },
+        "non_claims": [
+          "this_gate_does_not_publish_releases",
+          "this_gate_does_not_enable_auto_pull",
+          "this_gate_does_not_thaw_player_runtime"
+        ],
+        "passed": true,
+        "result_claim": "stable_promotion_evidence_ready",
+        "schema": "dadooh.c18.stable_promotion_gate.v1"
+      },
+      "passed": true
+    },
+    "tracked_inputs": {
+      "blockers": [],
+      "ignored": [],
+      "manifest_untracked_entries": [],
+      "outside_repo": [],
+      "passed": true,
+      "paths": [
+        "docs/evidence/c18-update-validation/20260612T194911Z-1x-h1-decisive-traceability-refresh-7e40e80/h1-release-gate.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/after_current_symlink",
+        "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_extract",
+        "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_health_passed",
+        "docs/evidence/c18-update-validation/20260703T024900Z-h2-powerloss-after-marker-written-9bebaf1",
+        "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_payload_staged",
+        "docs/evidence/c18-update-validation/20260703T030000Z-h2-powerloss-after-previous-symlink-9bebaf1",
+        "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_release_dir_created",
+        "docs/evidence/c18-update-validation/20260703T023000Z-h2-powerloss-after-release-tree-fsync-9bebaf1",
+        "docs/evidence/c18-update-validation/20260703T031500Z-h2-powerloss-after-state-success-9bebaf1",
+        "docs/evidence/c18-update-validation/20260703T002200Z-h2-powerloss-remaining-12-9bebaf1/after_state_verifying",
+        "docs/evidence/c18-update-validation/20260703T032400Z-h2-powerloss-before-stage-cleanup-9bebaf1",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_current_to_previous",
+        "docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_current_unlinked",
+        "docs/evidence/c18-update-validation/20260703T063000Z-h2-powerloss-final-rollback-bridge-9bebaf1/rollback_after_identify_links",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_previous_removed",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_quarantine",
+        "docs/evidence/c18-update-validation/20260618T034601Z-pilot-p0-powerloss-9bebaf1/rollback_after_state_success",
+        "docs/evidence/c18-update-validation/20260704T195822Z-soak-24h-hdmi-event-9bebaf1/soak-summary.json",
+        "docs/evidence/c18-update-validation/20260704T212428Z-soak-exception-business-release-9bebaf1/c18-playback-soak-exception.json",
+        "docs/evidence/c18-update-validation/20260704T195822Z-soak-24h-hdmi-event-9bebaf1/operator-hdmi-event.json",
+        "docs/evidence/c18-update-validation/20260704T212900Z-stable-promotion-business-exception-9bebaf1/c18-stable-promotion.json",
+        "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-trust-anchor.json",
+        "docs/evidence/c18-update-validation/20260617T191658Z-server-side-governance-mpv-stuck-fix-9bebaf1/c18-server-side-release-signing-key.pub.pem",
+        "docs/evidence/c18-update-validation/20260617T191658Z-server-side-current-mpv-stuck-fix-9bebaf1",
+        "docs/evidence/c18-update-validation/20260704T213100Z-thaw-decision-business-exception-9bebaf1/c18-player-runtime-thaw-decision.json",
+        "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+      ],
+      "untracked": []
+    }
+  },
+  "non_claims": [
+    "this_gate_does_not_thaw_player_runtime",
+    "this_gate_does_not_publish_or_fetch_releases",
+    "this_gate_does_not_override_freeze_rc_44",
+    "this_gate_does_not_promote_stable_without_operator_decision"
+  ],
+  "passed": true,
+  "result_claim": "h2_readiness_all_required_evidence_present",
+  "schema": "dadooh.c18.player_runtime.h2_readiness.v1"
+}
