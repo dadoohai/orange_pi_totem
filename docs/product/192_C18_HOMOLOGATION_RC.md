@@ -447,14 +447,24 @@ operacional: sem restart do MPV, sem incremento de restart systemd, sem delta
 panfrost, sem timeout/reset MMC, sem erro ext4 e sem falha de media load. Isso
 nao autoriza producao, `stable` ou public thaw.
 
-Proximo caminho minimo revisado:
+Proximo caminho minimo revisado apos os artefatos de `2026-07-04`:
 
-1. Regenerar snapshots H2/pre-soak atuais consumindo a matriz power-loss 17/17
-   e o soak HDMI-event como evidencia negativa/operacional.
-2. Fechar um soak aceito/limpo com criterio explicito, ou registrar excecao
-   formal se o produto aceitar o evento HDMI como suficiente para esta fase.
-3. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
-   verde.
+1. A excecao formal do soak HDMI-event foi registrada em
+   `20260704T212428Z-soak-exception-business-release-9bebaf1`.
+2. A stable promotion foi registrada em
+   `20260704T212900Z-stable-promotion-business-exception-9bebaf1`.
+3. A decisao formal de thaw foi registrada em
+   `20260704T213100Z-thaw-decision-business-exception-9bebaf1`.
+4. O H2 final verde por excecao foi registrado em
+   `20260704T214500Z-h2-readiness-business-exception-9bebaf1`.
+5. A prontidao de ativacao publica, ainda sem executar publish/thaw/auto-pull,
+   foi registrada em
+   `20260704T221016Z-public-thaw-activation-ready-9bebaf1`.
+
+O caminho minimo agora nao e repetir soak/power-loss/stable/thaw; e executar a
+etapa operacional separada de ativacao/publicacao de `player-runtime`, sem
+usar publisher de `totem-core`, scripts legados, auto-pull ou manifest stable
+inventado.
 
 Nota pos-RC: a familia server-side/signature passa por
 `scripts/qa/c18_server_side_publish_governance_gate.py` antes de ser consumida

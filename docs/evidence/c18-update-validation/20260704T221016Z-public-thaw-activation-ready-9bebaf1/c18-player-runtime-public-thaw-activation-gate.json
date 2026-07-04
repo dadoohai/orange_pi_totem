@@ -1,0 +1,54 @@
+{
+  "activation_state": {
+    "accepted_by_soak_exception": true,
+    "auto_pull_enabled": false,
+    "clean_soak_passed": false,
+    "h2_readiness_passed": true,
+    "public_thaw_executed": false,
+    "publish_executed": false,
+    "stable_promotion_validated": true,
+    "thaw_decision_validated": true
+  },
+  "blockers": [],
+  "evaluated_at_utc": "2026-07-04T22:10:16Z",
+  "input_hashes": {
+    "h2_readiness": "f37adcd49944a42db9923a5918073a666afd59b7f8c3abd35fb094520ec335d5",
+    "manifest": "e7c9b3d538ee865ab0eb7108931ce38bc06d235dd66ea74267bec35d90a5c0be",
+    "operator_thaw_decision": "085e44614a7006ee3025b72331e774cc9ee90e6ee3b8047a36b31e56fe43d5c8",
+    "payload": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "release_gate": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+    "server_side_evidence": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+    "stable_promotion": "70887cbfa142a79894d11fc5e91d3a09723f080c2cb9112d8c9161778a2f4d76"
+  },
+  "inputs": {
+    "h2_readiness": "docs/evidence/c18-update-validation/20260704T214500Z-h2-readiness-business-exception-9bebaf1/h2-readiness-business-exception.json",
+    "manifest": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json",
+    "operator_thaw_decision": "docs/evidence/c18-update-validation/20260704T213100Z-thaw-decision-business-exception-9bebaf1/c18-player-runtime-thaw-decision.json",
+    "payload": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.tar.gz",
+    "release_gate": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-player-runtime-release-gate.json",
+    "server_side_evidence": "releases/player-runtime/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/c18-server-side-publish-governance.json",
+    "stable_promotion": "docs/evidence/c18-update-validation/20260704T212900Z-stable-promotion-business-exception-9bebaf1/c18-stable-promotion.json"
+  },
+  "non_claims": [
+    "this_gate_does_not_publish_releases",
+    "this_gate_does_not_fetch_releases",
+    "this_gate_does_not_enable_auto_pull",
+    "this_gate_does_not_execute_public_thaw",
+    "this_gate_does_not_override_freeze_rc_44_by_itself"
+  ],
+  "passed": true,
+  "result_claim": "public_thaw_activation_ready",
+  "schema": "dadooh.c18.player_runtime.public_thaw_activation_gate.v1",
+  "target": {
+    "component": "player-runtime",
+    "manifest_channel": "homologation",
+    "package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+    "stable_promotion_channel": "stable"
+  },
+  "thaw_window": {
+    "end_utc": "2026-07-05T00:59:00Z",
+    "start_utc": "2026-07-04T21:00:00Z"
+  }
+}

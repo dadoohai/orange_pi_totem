@@ -606,6 +606,16 @@ non-claims explicitos. Esse gate nao executa thaw, nao publica release, nao
 habilita auto-pull e nao substitui H2 verde; ele apenas torna a autorizacao
 auditavel e artifact-bound.
 
+A passagem entre autorizacao e execucao publica deve passar por
+`scripts/qa/c18_player_runtime_public_thaw_activation_gate.py`. Esse gate
+consome o H2 final verde, a stable promotion, a decisao de thaw, o release gate
+do `player-runtime`, o manifest/payload e a evidencia server-side. Ele valida a
+janela de thaw ativa e os hashes do alvo, mas continua sendo offline: nao
+publica release, nao baixa assets, nao habilita auto-pull, nao executa public
+thaw e nao remove o freeze `rc=44` por si so. Em `2026-07-04`, o alvo
+`9bebaf1` produziu `public_thaw_activation_ready` em
+`docs/evidence/c18-update-validation/20260704T221016Z-public-thaw-activation-ready-9bebaf1/`.
+
 Para reduzir erro operacional quando os testes fisicos terminarem, o scaffold
 fail-closed dos artefatos finais deve ser gerado por
 `scripts/qa/c18_player_runtime_stable_decision_draft_build.py`. O builder e
