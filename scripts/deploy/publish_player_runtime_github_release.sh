@@ -182,9 +182,18 @@ append_asset "$OPERATOR_THAW"
 append_asset "$ACTIVATION_TMP"
 
 REMOTE_SOURCE_COMMIT_PRESENT=0
-if git ls-remote "https://github.com/${REPO}.git" 2>/dev/null | awk '{print $1}' | grep -Fxq "$SOURCE_COMMIT"; then
-  REMOTE_SOURCE_COMMIT_PRESENT=1
-fi
+while read -r REMOTE_SHA REMOTE_REF; do
+  [[ -n "${REMOTE_SHA:-}" && -n "${REMOTE_REF:-}" ]] || continue
+  if [[ "$REMOTE_SHA" == "$SOURCE_COMMIT" ]]; then
+    REMOTE_SOURCE_COMMIT_PRESENT=1
+    break
+  fi
+  if git cat-file -e "${REMOTE_SHA}^{commit}" 2>/dev/null \
+    && git merge-base --is-ancestor "$SOURCE_COMMIT" "$REMOTE_SHA" 2>/dev/null; then
+    REMOTE_SOURCE_COMMIT_PRESENT=1
+    break
+  fi
+done < <(git ls-remote --heads --tags "https://github.com/${REPO}.git" 2>/dev/null || true)
 
 log "repo=${REPO}"
 log "tag=${TAG}"
