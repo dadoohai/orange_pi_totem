@@ -34,6 +34,11 @@ REQUIRED_HASH_FIELDS = (
     "server_side_trust_anchor_evidence_sha256",
     "stable_promotion_evidence_sha256",
 )
+OPTIONAL_HASH_FIELDS = (
+    "soak_exception_evidence_sha256",
+    "soak_operator_event_sha256",
+)
+SUPPORTED_HASH_FIELDS = REQUIRED_HASH_FIELDS + OPTIONAL_HASH_FIELDS
 REQUIRED_NON_CLAIMS = (
     "this_decision_does_not_execute_thaw",
     "this_decision_does_not_publish_releases",
@@ -145,13 +150,18 @@ def validate_data(
     for field in REQUIRED_HASH_FIELDS:
         if not is_sha256(data.get(field)):
             blockers.append(f"thaw_decision_{field}_missing_or_invalid")
+    for field in OPTIONAL_HASH_FIELDS:
+        if field in data and not is_sha256(data.get(field)):
+            blockers.append(f"thaw_decision_{field}_missing_or_invalid")
     if require_expected_hashes:
         missing_expected = sorted(set(REQUIRED_HASH_FIELDS) - set(expected))
         if missing_expected:
             blockers.append("thaw_decision_expected_hashes_missing")
             blockers.extend(f"thaw_decision_expected_hash_missing:{field}" for field in missing_expected)
     for field, value in expected.items():
-        if field in REQUIRED_HASH_FIELDS and data.get(field) != value:
+        if field in OPTIONAL_HASH_FIELDS and not is_sha256(data.get(field)):
+            blockers.append(f"thaw_decision_{field}_missing_or_invalid")
+        if field in SUPPORTED_HASH_FIELDS and data.get(field) != value:
             blockers.append(f"thaw_decision_{field}_mismatch")
     non_claims = data.get("non_claims")
     if not isinstance(non_claims, list):
@@ -303,6 +313,30 @@ class ThawDecisionGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("thaw_decision_server_side_current_snapshot_sha256_mismatch", result["blockers"])
 
+    def test_optional_soak_exception_hashes_are_checked_when_expected(self) -> None:
+        data = valid_fixture(
+            soak_exception_evidence_sha256="3" * 64,
+            soak_operator_event_sha256="4" * 64,
+        )
+        result = validate_data(
+            data,
+            expected_hashes={
+                "soak_exception_evidence_sha256": "0" * 64,
+                "soak_operator_event_sha256": "4" * 64,
+            },
+            now_utc=dt.datetime(2099, 1, 1, 12, 0, tzinfo=dt.timezone.utc),
+        )
+        self.assertFalse(result["passed"])
+        self.assertIn("thaw_decision_soak_exception_evidence_sha256_mismatch", result["blockers"])
+
+        result = validate_data(
+            valid_fixture(),
+            expected_hashes={"soak_operator_event_sha256": "4" * 64},
+            now_utc=dt.datetime(2099, 1, 1, 12, 0, tzinfo=dt.timezone.utc),
+        )
+        self.assertFalse(result["passed"])
+        self.assertIn("thaw_decision_soak_operator_event_sha256_missing_or_invalid", result["blockers"])
+
     def test_window_and_execution_guards_deny(self) -> None:
         data = valid_fixture(auto_pull_enabled=True, thaw_execution_performed=True)
         result = validate_data(
@@ -345,6 +379,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--expected-release-gate-sha256")
     parser.add_argument("--expected-powerloss-matrix-sha256")
     parser.add_argument("--expected-soak-summary-sha256")
+    parser.add_argument("--expected-soak-exception-evidence-sha256")
+    parser.add_argument("--expected-soak-operator-event-sha256")
     parser.add_argument("--expected-server-side-evidence-sha256")
     parser.add_argument("--expected-server-side-current-snapshot-sha256")
     parser.add_argument("--expected-server-side-trust-anchor-evidence-sha256")
@@ -363,6 +399,8 @@ def expected_hashes_from_cli(args: argparse.Namespace) -> dict[str, str]:
         "release_gate_sha256": args.expected_release_gate_sha256,
         "powerloss_matrix_sha256": args.expected_powerloss_matrix_sha256,
         "soak_summary_sha256": args.expected_soak_summary_sha256,
+        "soak_exception_evidence_sha256": args.expected_soak_exception_evidence_sha256,
+        "soak_operator_event_sha256": args.expected_soak_operator_event_sha256,
         "server_side_evidence_sha256": args.expected_server_side_evidence_sha256,
         "server_side_current_snapshot_sha256": args.expected_server_side_current_snapshot_sha256,
         "server_side_trust_anchor_evidence_sha256": args.expected_server_side_trust_anchor_evidence_sha256,

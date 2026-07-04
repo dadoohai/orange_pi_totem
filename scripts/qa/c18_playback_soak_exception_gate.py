@@ -263,20 +263,22 @@ def evaluate(
     event_data = None
     expected_summary_sha = None
     expected_event_sha = None
-    if soak_summary is not None:
-        if not soak_summary.is_file():
-            blockers.append("soak_exception_soak_summary_not_file")
-        else:
-            summary_data, summary_errors = read_json(soak_summary)
-            blockers.extend(f"soak_exception_summary:{item}" for item in summary_errors)
-            expected_summary_sha = sha256_file(soak_summary)
-    if operator_event is not None:
-        if not operator_event.is_file():
-            blockers.append("soak_exception_operator_event_not_file")
-        else:
-            event_data, event_errors = read_json(operator_event)
-            blockers.extend(f"soak_exception_operator_event:{item}" for item in event_errors)
-            expected_event_sha = sha256_file(operator_event)
+    if soak_summary is None:
+        blockers.append("missing_soak_summary")
+    elif not soak_summary.is_file():
+        blockers.append("soak_exception_soak_summary_not_file")
+    else:
+        summary_data, summary_errors = read_json(soak_summary)
+        blockers.extend(f"soak_exception_summary:{item}" for item in summary_errors)
+        expected_summary_sha = sha256_file(soak_summary)
+    if operator_event is None:
+        blockers.append("missing_operator_event")
+    elif not operator_event.is_file():
+        blockers.append("soak_exception_operator_event_not_file")
+    else:
+        event_data, event_errors = read_json(operator_event)
+        blockers.extend(f"soak_exception_operator_event:{item}" for item in event_errors)
+        expected_event_sha = sha256_file(operator_event)
     result = validate_data(
         data,
         evidence_path=str(evidence),
@@ -387,6 +389,15 @@ class SoakExceptionGateSelfTest(unittest.TestCase):
                 expected_payload_sha256="d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
             )
         self.assertTrue(result["passed"], result)
+
+    def test_summary_and_operator_event_are_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = Path(tmp) / "exception.json"
+            write_json(evidence, valid_exception())
+            result = evaluate(evidence)
+        self.assertFalse(result["passed"])
+        self.assertIn("missing_soak_summary", result["blockers"])
+        self.assertIn("missing_operator_event", result["blockers"])
 
     def test_clean_soak_claim_fails(self) -> None:
         data = valid_exception()

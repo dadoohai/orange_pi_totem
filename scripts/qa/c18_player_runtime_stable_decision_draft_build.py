@@ -96,7 +96,7 @@ def build_thaw_draft(args: argparse.Namespace, stable_promotion_sha256: str) -> 
     hashes = {
         key: value
         for key, value in stable_hashes(args).items()
-        if key in thaw_gate.REQUIRED_HASH_FIELDS
+        if key in thaw_gate.SUPPORTED_HASH_FIELDS
     }
     hashes["stable_promotion_evidence_sha256"] = stable_promotion_sha256
     data: dict[str, Any] = {
@@ -231,7 +231,7 @@ def validate_draft_shape(
     target = target_from_server_side(args)
     thaw_hashes = {
         key: thaw_draft[key]
-        for key in thaw_gate.REQUIRED_HASH_FIELDS
+        for key in thaw_gate.SUPPORTED_HASH_FIELDS
         if isinstance(thaw_draft.get(key), str) and thaw_draft[key]
     }
     thaw_result = thaw_gate.validate_data(
