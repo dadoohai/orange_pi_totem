@@ -1,15 +1,16 @@
 # 192 - C18 Homologation RC
 
 Status atual em 2026-07-04: **Homologation RC `9bebaf1` com H2 final verde por
-excecao formal de negocio e prontidao de ativacao publica validada, ainda sem
-execucao de publish/thaw/auto-pull**. Historicamente, em 2026-06-18, o alvo corrigido
-`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` passou release
-gate, lab apply/adoption/deep-health curto, server-side governance, preflight
-H2 apos reset/topologia, P0 power-loss seletivo assistido e validacao final
+excecao formal de negocio, prontidao de ativacao publica validada e GitHub
+Release de `player-runtime` publicada, ainda sem thaw em placa e sem
+auto-pull**. Historicamente, em 2026-06-18, o alvo corrigido
+`c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1` passou release gate,
+lab apply/adoption/deep-health curto, server-side governance, preflight H2 apos
+reset/topologia, P0 power-loss seletivo assistido e validacao final
 target-current/service-stopped em placa real. Em 2026-07-04, a matriz
 power-loss 17/17, o soak HDMI-event aceito por excecao, a stable promotion, a
-decisao formal de thaw e o H2 final foram commitados; a execucao publica segue
-como etapa operacional separada.
+decisao formal de thaw, o H2 final e a publicacao GitHub Release foram
+commitados; o consumo/thaw em placa segue como etapa operacional separada.
 
 A evidencia
 `docs/evidence/c18-update-validation/20260617T174316Z-h2-powerloss-after-payload-staged-mpv-stuck-135f397/`
@@ -26,7 +27,8 @@ Este documento consolida o norte macro da C18 para a RC de homologacao. Ele nao
 substitui `docs/UPDATE_CONTRACT.md`; apenas torna explicito o estado de
 entrega: OTA funcional em laboratorio/homologacao controlada, com piloto
 assistido pronto, H2 final verde por excecao para `9bebaf1` e execucao
-publica de `player-runtime` ainda nao realizada.
+publica de `player-runtime` ja realizada como GitHub Release, sem consumo/thaw
+em placa.
 
 ## Objetivo
 
@@ -42,7 +44,8 @@ homologacao, com:
 - gates verdes para homologacao;
 - evidencia versionada e auditavel.
 
-Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
+Stable promotion e H2 final estao aprovados por excecao formal para este alvo.
+Auto-pull e public thaw em placa permanecem nao executados.
 
 ## Matriz de responsabilidade
 
@@ -52,8 +55,8 @@ Producao, `stable`, auto-pull e public thaw permanecem bloqueados.
 | `player-runtime` | `kiosk.py`, launcher do player, flags de MPV, timing/sync/duracao/playlist | Alvo `9bebaf1` funcional em lab apply/adoption/deep-health curto e server-side; piloto assistido liberado pelo P0 seletivo; a frente e mais ampla, mas o payload C18-aware atual esta restrito a `kiosk.py`; nao e public thaw |
 | `media-system` | MPV, ffmpeg, hwdecode, panfrost, wrapper, HDMI/display, kernel, DTB, U-Boot e BSP | Congelado nesta RC; guardrails executaveis bloqueiam vazamento para OTA comum; qualquer mudanca exige imagem/homologacao propria |
 | `field-data` | config real, seed, midia, cache, playlist e estado local | Operacional em `/data`; guardrails executaveis bloqueiam vazamento para release de software; snapshot publico C18/C7 coleta apenas estado sanitizado e metadados, com evidencia read-only em placa |
-| `server-side/publish` | server-side/signature, trust anchor, lista de assets, allowlist, staged rollout e audit | Verde para os artefatos de homologacao `9bebaf1`; nao publica, nao promove `stable`, nao liga auto-pull e nao abre thaw publico |
-| `H2/prod` | gates de producao/stable, power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw | Intencionalmente vermelho antes de H2; nenhuma conclusao de producao pode ser inferida da RC ou do piloto assistido |
+| `server-side/publish` | server-side/signature, trust anchor, lista de assets, allowlist, staged rollout e audit | Verde para os artefatos de homologacao `9bebaf1`; GitHub Release publicada pela rota guardada; nao liga auto-pull e nao abre thaw publico em placa |
+| `H2/prod` | gates de producao/stable, power-loss 17/17, soak 24h, stable promotion e decisao formal de thaw | H2 final verde por excecao formal de negocio para `9bebaf1`; o soak limpo nao foi reclassificado, foi aceito por decisao explicita |
 
 ## Roots canonicos de artefatos
 
