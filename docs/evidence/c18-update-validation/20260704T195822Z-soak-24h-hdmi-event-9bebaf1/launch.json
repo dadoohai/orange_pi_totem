@@ -1,0 +1,11 @@
+{
+  "schema": "dadooh.c18.playback.soak.launch.v1",
+  "started_at_utc": "2026-07-03T19:55:56Z",
+  "target_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "collector": "/data/c18-p0-bundle-a0dcb13fd78d/scripts/board/c18_playback_soak_collect.py",
+  "output_dir": "/data/evidence/c18-playback-soak-24h-20260703T195556Z-9bebaf1",
+  "cycles": 24,
+  "cycle_duration_sec": 3600,
+  "panfrost_fault_policy": "delta",
+  "non_claims": ["not_stable_or_production", "not_public_thaw", "not_powerloss"]
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "dadooh.c18.playback.soak.operator_event.v1",
+  "component": "player-runtime",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "soak_started_at_utc": "2026-07-03T19:55:57Z",
+  "soak_ended_at_utc": "2026-07-04T19:58:22Z",
+  "hdmi_disconnected_operator_estimate_local": "2026-07-03T20:30:00-03:00",
+  "hdmi_reconnected_operator_reported_local": "2026-07-04T16:29:00-03:00",
+  "disconnect_timestamp_precision": "operator_estimate",
+  "reconnect_timestamp_precision": "operator_reported",
+  "classification": "negative_for_clean_h2_soak_positive_for_runtime_resilience",
+  "expected_gate_result": {
+    "clean_h2_soak": false,
+    "reason": "HDMI was disconnected for most of the run, causing HW decode presence checks to fail."
+  },
+  "non_claims": [
+    "not_clean_constant_hdmi_soak",
+    "not_h2_green",
+    "not_stable_promotion",
+    "not_public_thaw",
+    "not_production_authorization"
+  ]
+}

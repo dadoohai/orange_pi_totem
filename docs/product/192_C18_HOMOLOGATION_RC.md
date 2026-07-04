@@ -436,10 +436,22 @@ rejeitado"; o claim correto e: "`9bebaf1` tem validacao funcional positiva em
 homologacao e matriz power-loss 17/17, mas ainda nao completou soak 24h,
 stable promotion e thaw formal".
 
+Evidencia posterior de soak: em `2026-07-04`, foi coletado e versionado um soak
+de 24h do alvo `9bebaf1` em
+`docs/evidence/c18-update-validation/20260704T195822Z-soak-24h-hdmi-event-9bebaf1/`.
+O resultado e negativo para H2 limpo (`passed=false`) porque houve evento HDMI:
+desconexao estimada pelo operador em `2026-07-03 20:30-03:00` e reconexao
+reportada em `2026-07-04 16:29-03:00`. O valor positivo dessa evidencia e
+operacional: sem restart do MPV, sem incremento de restart systemd, sem delta
+panfrost, sem timeout/reset MMC, sem erro ext4 e sem falha de media load. Isso
+nao autoriza producao, `stable` ou public thaw.
+
 Proximo caminho minimo revisado:
 
-1. Regenerar snapshots H2/pre-soak atuais consumindo a matriz power-loss 17/17.
-2. Rodar soak 24h.
+1. Regenerar snapshots H2/pre-soak atuais consumindo a matriz power-loss 17/17
+   e o soak HDMI-event como evidencia negativa/operacional.
+2. Fechar um soak aceito/limpo com criterio explicito, ou registrar excecao
+   formal se o produto aceitar o evento HDMI como suficiente para esta fase.
 3. Somente depois gerar stable promotion, decisao formal de thaw e H2 final
    verde.
 
