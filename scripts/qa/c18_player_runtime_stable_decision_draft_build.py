@@ -86,8 +86,8 @@ def build_stable_draft(args: argparse.Namespace) -> dict[str, Any]:
             "this_draft_requires_h2_green_before_approval",
         ],
     }
-    for field in stable_gate.REQUIRED_SHA256_FIELDS:
-        data[field] = hashes.get(field, "")
+    for field, value in hashes.items():
+        data[field] = value
     return data
 
 
@@ -181,6 +181,10 @@ def validate_artifact_inputs(args: argparse.Namespace) -> list[str]:
         if path is None:
             blockers.append(f"{field}_missing")
         elif not path.is_file():
+            blockers.append(f"{field}_not_file:{path}")
+    for field in ("soak_exception_evidence", "soak_operator_event"):
+        path = getattr(args, field, None)
+        if path is not None and not path.is_file():
             blockers.append(f"{field}_not_file:{path}")
     current_dir = getattr(args, "server_side_current_dir", None)
     if current_dir is None:
@@ -293,6 +297,9 @@ Required sequence:
 
 1. Complete and commit the full 17/17 physical power-loss matrix.
 2. Complete and commit the 24h soak summary.
+   If production proceeds by explicit business exception instead of a clean soak,
+   pass `--soak-exception-evidence` and `--soak-operator-event`; the failed soak
+   must stay failed and the exception must bind to the target and exact soak.
 3. Keep server-side/signature evidence green, current, and hash-bound to the target package.
 4. Fill the stable promotion decision, then regenerate or update the thaw
    decision so `stable_promotion_evidence_sha256` matches the final stable file.
@@ -319,6 +326,8 @@ Inputs:
 - server-side current snapshot: `{args.server_side_current_dir}`
 - server-side trust anchor: `{args.server_side_trust_anchor_evidence}`
 - soak summary: `{args.soak_summary}`
+- soak exception: `{getattr(args, "soak_exception_evidence", None)}`
+- soak operator event: `{getattr(args, "soak_operator_event", None)}`
 - power-loss dirs: `{len(args.powerloss_evidence_dir or [])}`
 
 Draft validation:
@@ -441,6 +450,8 @@ def write_fixture_inputs(root: Path) -> argparse.Namespace:
         server_side_trusted_key_pem=[],
         server_side_trust_anchor_evidence=trust_anchor,
         soak_summary=soak,
+        soak_exception_evidence=None,
+        soak_operator_event=None,
         powerloss_evidence_dir=powerloss_dirs,
         expect_image_tag="c18-hwdecode-lab-1x",
         expect_image_sha256="1" * 64,
@@ -501,6 +512,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--server-side-current-dir", type=Path)
     parser.add_argument("--server-side-trust-anchor-evidence", type=Path)
     parser.add_argument("--soak-summary", type=Path)
+    parser.add_argument("--soak-exception-evidence", type=Path)
+    parser.add_argument("--soak-operator-event", type=Path)
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--expect-image-tag")
     parser.add_argument("--expect-image-sha256")

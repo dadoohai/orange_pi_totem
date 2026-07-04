@@ -1,0 +1,38 @@
+{
+  "acknowledges_h2_evidence": true,
+  "approved": true,
+  "auto_pull_enabled": false,
+  "channel": "stable",
+  "component": "player-runtime",
+  "created_at_utc": "2026-07-04T21:31:00Z",
+  "explicit_operator_decision": true,
+  "h1_release_gate_sha256": "004619b3c6a1bf4124d7f34fcda3c9fd6505deaef837a316af378b6bbe94cac1",
+  "non_claims": [
+    "this_decision_does_not_execute_thaw",
+    "this_decision_does_not_publish_releases",
+    "this_decision_does_not_enable_auto_pull",
+    "this_decision_does_not_override_freeze_rc_44_by_itself",
+    "this_decision_requires_h2_green"
+  ],
+  "operator": "operator-user-approved-chat-20260704",
+  "powerloss_matrix_sha256": "a65de7c25d81cecc4494506ddd040f529632a075e4a2f4fd19d1d6e98f79d060",
+  "release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+  "rollback_owner": "rollback-owner-dadooh-operator",
+  "rollback_ready": true,
+  "schema": "dadooh.c18.player_runtime.thaw_decision.v1",
+  "server_side_current_snapshot_sha256": "b41e479f1cdef0425680bd7eed7dd872c520108d893b5d1f66995452584578d7",
+  "server_side_evidence_sha256": "78a5bc47367e41ad03bb761f986a124ab48a08b493a8560336fa28a7f61e8319",
+  "server_side_trust_anchor_evidence_sha256": "68f5b132841ecd9a166e6f0a06d720014902de3cd5939d80ea71cc2fbdc99d67",
+  "soak_exception_evidence_sha256": "96cf1f75ca1765520bea98c1f4ffd342634e31d9ea3f53e7a662238357cf8126",
+  "soak_operator_event_sha256": "a58b1b6a6a5a95e3bd424467541c6d34a787cdaca5b3824955122a90e6a949ef",
+  "soak_summary_sha256": "aa36df18d5b6966d79cd256c57a2a369a6496f0ddaf0cccaf2dbe3604614315b",
+  "stable_promotion_evidence_sha256": "70887cbfa142a79894d11fc5e91d3a09723f080c2cb9112d8c9161778a2f4d76",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "target_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "thaw_execution_performed": false,
+  "window": {
+    "end_utc": "2026-07-05T00:59:00Z",
+    "start_utc": "2026-07-04T21:00:00Z"
+  }
+}

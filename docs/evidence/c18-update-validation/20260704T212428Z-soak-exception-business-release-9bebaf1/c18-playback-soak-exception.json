@@ -1,0 +1,29 @@
+{
+  "accepted": true,
+  "auto_pull_enabled": false,
+  "clean_soak_passed": false,
+  "component": "player-runtime",
+  "created_at_utc": "2026-07-04T21:24:28Z",
+  "exception_reason": "hdmi_sink_unavailable_during_soak",
+  "explicit_business_decision": true,
+  "failed_soak_accepted": true,
+  "non_claims": [
+    "this_exception_does_not_make_the_soak_clean",
+    "this_exception_is_not_a_generic_soak_bypass",
+    "this_exception_does_not_publish_releases",
+    "this_exception_does_not_enable_auto_pull",
+    "this_exception_does_not_execute_public_thaw",
+    "this_exception_is_bound_to_one_target_and_one_soak"
+  ],
+  "operator": "operator-user-approved-chat-20260704",
+  "operator_event_sha256": "a58b1b6a6a5a95e3bd424467541c6d34a787cdaca5b3824955122a90e6a949ef",
+  "production_rollout_started": false,
+  "public_thaw_executed": false,
+  "risk_owner": "business-owner-user-approved-chat-20260704",
+  "rollback_owner": "rollback-owner-dadooh-operator",
+  "schema": "dadooh.c18.playback.soak_exception.v1",
+  "soak_summary_sha256": "aa36df18d5b6966d79cd256c57a2a369a6496f0ddaf0cccaf2dbe3604614315b",
+  "target_package_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "target_payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "target_source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522"
+}

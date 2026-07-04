@@ -27,6 +27,7 @@ from c18_player_runtime_powerloss_evidence_gate import (
     SEMANTICALLY_VALIDATED_CHECKPOINTS as SEMANTICALLY_VALIDATED_POWERLOSS_CHECKPOINTS,
 )
 from c18_player_runtime_thaw_decision_gate import evaluate as evaluate_thaw_decision_gate
+from c18_playback_soak_exception_gate import evaluate as evaluate_soak_exception_gate
 from c18_server_side_publish_governance_gate import evaluate as evaluate_server_side_gate
 from c18_server_side_publish_governance_gate import write_fixture_release as write_server_side_fixture_release
 from c18_server_side_rollout_state_gate import validate_rollout_state
@@ -71,7 +72,6 @@ REQUIRED_TRUE_FIELDS = (
     "physical_homologation_passed",
     "powerloss_matrix_passed",
     "powerloss_semantics_complete",
-    "soak_endurance_passed",
     "server_side_governance_passed",
     "release_gate_passed",
     "h2_readiness_passed",
@@ -297,6 +297,8 @@ def h2_input_bundle_sha256(args: argparse.Namespace, evidence_hashes: dict[str, 
         "server_side_current_snapshot_sha256": evidence_hashes.get("server_side_current_snapshot_sha256"),
         "server_side_trust_anchor_evidence_sha256": evidence_hashes.get("server_side_trust_anchor_evidence_sha256"),
         "soak_summary_sha256": evidence_hashes.get("soak_summary_sha256"),
+        "soak_exception_evidence_sha256": evidence_hashes.get("soak_exception_evidence_sha256"),
+        "soak_operator_event_sha256": evidence_hashes.get("soak_operator_event_sha256"),
         "expect_image_tag": args.expect_image_tag,
         "expect_image_sha256": args.expect_image_sha256,
         "expect_image_marker_sha256": args.expect_image_marker_sha256,
@@ -321,6 +323,12 @@ def expected_hashes_from_args(args: argparse.Namespace) -> dict[str, str]:
         hashes["server_side_trust_anchor_evidence_sha256"] = sha256_file(trust_anchor)
     if args.soak_summary is not None and args.soak_summary.is_file():
         hashes["soak_summary_sha256"] = sha256_file(args.soak_summary)
+    soak_exception = getattr(args, "soak_exception_evidence", None)
+    if soak_exception is not None and soak_exception.is_file():
+        hashes["soak_exception_evidence_sha256"] = sha256_file(soak_exception)
+    soak_operator_event = getattr(args, "soak_operator_event", None)
+    if soak_operator_event is not None and soak_operator_event.is_file():
+        hashes["soak_operator_event_sha256"] = sha256_file(soak_operator_event)
     if args.powerloss_evidence_dir:
         hashes["powerloss_matrix_sha256"] = powerloss_matrix_sha256(list(args.powerloss_evidence_dir))
     if {
@@ -345,6 +353,8 @@ def thaw_decision_expected_hashes_from_args(args: argparse.Namespace) -> dict[st
             "h1_release_gate_sha256",
             "powerloss_matrix_sha256",
             "soak_summary_sha256",
+            "soak_exception_evidence_sha256",
+            "soak_operator_event_sha256",
             "server_side_evidence_sha256",
             "server_side_current_snapshot_sha256",
             "server_side_trust_anchor_evidence_sha256",
@@ -461,7 +471,13 @@ def soak_total_duration(summary: dict[str, Any]) -> float:
     return 0.0
 
 
-def evaluate_soak_summary(path: Path | None) -> dict[str, Any]:
+def evaluate_soak_summary(
+    path: Path | None,
+    *,
+    exception_path: Path | None = None,
+    operator_event_path: Path | None = None,
+    expected_target: dict[str, str] | None = None,
+) -> dict[str, Any]:
     data, errors = read_artifact(path, "soak_summary")
     blockers = list(errors)
     duration = 0.0
@@ -477,7 +493,47 @@ def evaluate_soak_summary(path: Path | None) -> dict[str, Any]:
         for key in ("max_panfrost_faults_delta", "max_mmc_timeout_reset_delta", "max_ext4_errors_delta"):
             if counters.get(key) not in (0, 0.0):
                 blockers.append(f"soak_summary_{key}_nonzero_or_missing")
-    return step(not blockers, blockers, evidence_path=str(path) if path is not None else None, duration_sec=duration)
+    clean_blockers = list(blockers)
+    if clean_blockers and exception_path is not None:
+        exception_result = evaluate_soak_exception_gate(
+            exception_path,
+            soak_summary=path,
+            operator_event=operator_event_path,
+            expected_package_version=(expected_target or {}).get("package_version"),
+            expected_source_commit=(expected_target or {}).get("source_commit"),
+            expected_payload_sha256=(expected_target or {}).get("payload_sha256"),
+        )
+        if exception_result.get("passed") is True:
+            return step(
+                True,
+                [],
+                evidence_path=str(path) if path is not None else None,
+                duration_sec=duration,
+                clean_soak_passed=False,
+                accepted_by_exception=True,
+                original_clean_blockers=clean_blockers,
+                exception_evidence_path=str(exception_path),
+                exception_gate_result=exception_result,
+            )
+        blockers.extend(f"soak_exception:{item}" for item in exception_result.get("blockers", []))
+        return step(
+            False,
+            blockers,
+            evidence_path=str(path) if path is not None else None,
+            duration_sec=duration,
+            clean_soak_passed=False,
+            accepted_by_exception=False,
+            exception_evidence_path=str(exception_path),
+            exception_gate_result=exception_result,
+        )
+    return step(
+        not blockers,
+        blockers,
+        evidence_path=str(path) if path is not None else None,
+        duration_sec=duration,
+        clean_soak_passed=not blockers,
+        accepted_by_exception=False,
+    )
 
 
 def manifest_image_errors(
@@ -776,6 +832,7 @@ def evaluate_operator_decision(args: argparse.Namespace) -> dict[str, Any]:
 
 def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
     expected_component = getattr(args, "expected_component", "totem-core")
+    expected_target, _target_errors = thaw_decision_expected_target_from_args(args)
     checks = {
         "h1_decisive_bundle": evaluate_h1_release_gate_summary(
             getattr(args, "h1_release_gate_summary", None),
@@ -785,7 +842,12 @@ def evaluate_artifact_semantics(args: argparse.Namespace) -> dict[str, Any]:
             expected_component=expected_component,
         ),
         "powerloss_matrix": evaluate_powerloss_matrix(args),
-        "soak_summary": evaluate_soak_summary(args.soak_summary),
+        "soak_summary": evaluate_soak_summary(
+            args.soak_summary,
+            exception_path=getattr(args, "soak_exception_evidence", None),
+            operator_event_path=getattr(args, "soak_operator_event", None),
+            expected_target=expected_target,
+        ),
         "server_side_governance": evaluate_server_side_artifact(
             args,
             expected_component=expected_component,
@@ -828,6 +890,18 @@ def validate_data(data: dict[str, Any],
     for key in REQUIRED_TRUE_FIELDS:
         if data.get(key) is not True:
             blockers.append(f"stable_promotion_{key}_missing_or_false")
+    clean_soak_passed = data.get("soak_endurance_passed") is True
+    exception_soak_accepted = data.get("soak_endurance_accepted_by_exception") is True
+    if not clean_soak_passed and not exception_soak_accepted:
+        blockers.append("stable_promotion_soak_endurance_missing_or_false")
+    if clean_soak_passed and exception_soak_accepted:
+        blockers.append("stable_promotion_soak_endurance_conflicting_claims")
+    if exception_soak_accepted:
+        if data.get("soak_endurance_passed") is not False:
+            blockers.append("stable_promotion_exception_requires_failed_clean_soak")
+        for field in ("soak_exception_evidence_sha256", "soak_operator_event_sha256"):
+            if not is_sha256(data.get(field)):
+                blockers.append(f"stable_promotion_{field}_missing_or_invalid")
     for key in REQUIRED_STRING_FIELDS:
         if not isinstance(data.get(key), str) or not data.get(key).strip():
             blockers.append(f"stable_promotion_{key}_missing")
@@ -848,6 +922,12 @@ def validate_data(data: dict[str, Any],
         if data.get(field) != expected:
             blockers.append(f"stable_promotion_{field}_mismatch")
     if artifact_semantics is not None:
+        soak_semantics = artifact_semantics.get("checks", {}).get("soak_summary", {})
+        if isinstance(soak_semantics, dict) and soak_semantics.get("accepted_by_exception") is True:
+            if data.get("soak_endurance_accepted_by_exception") is not True:
+                blockers.append("stable_promotion_soak_exception_not_acknowledged")
+            if data.get("soak_endurance_passed") is not False:
+                blockers.append("stable_promotion_soak_exception_clean_claim")
         blockers.extend(f"stable_promotion_artifact_semantics:{blocker}" for blocker in artifact_semantics.get("blockers", []))
     return {
         "schema": GATE_SCHEMA,
@@ -1180,6 +1260,24 @@ class StablePromotionGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("stable_promotion_public_player_runtime_thaw_enabled", result["blockers"])
 
+    def test_stable_promotion_can_acknowledge_soak_exception(self) -> None:
+        data = valid_fixture(component="player-runtime")
+        data["soak_endurance_passed"] = False
+        data["soak_endurance_accepted_by_exception"] = True
+        data["soak_exception_evidence_sha256"] = "1" * 64
+        data["soak_operator_event_sha256"] = "2" * 64
+        result = validate_data(data, expected_component="player-runtime")
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_stable_promotion_rejects_conflicting_soak_claims(self) -> None:
+        data = valid_fixture(component="player-runtime")
+        data["soak_endurance_accepted_by_exception"] = True
+        data["soak_exception_evidence_sha256"] = "1" * 64
+        data["soak_operator_event_sha256"] = "2" * 64
+        result = validate_data(data, expected_component="player-runtime")
+        self.assertFalse(result["passed"])
+        self.assertIn("stable_promotion_soak_endurance_conflicting_claims", result["blockers"])
+
     def test_stable_evidence_rejects_positive_publish_claims(self) -> None:
         for key in ("published", "release_published", "stable_publish_executed"):
             with self.subTest(key=key):
@@ -1195,6 +1293,90 @@ class StablePromotionGateSelfTest(unittest.TestCase):
             write_json(path, valid_fixture())
             result = evaluate(path)
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_failed_soak_requires_target_bound_exception(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            soak = root / "soak-summary.json"
+            operator_event = root / "operator-hdmi-event.json"
+            exception = root / "soak-exception.json"
+            target = {
+                "package_version": "c18.player-runtime-homolog-test",
+                "source_commit": "a" * 40,
+                "payload_sha256": "b" * 64,
+            }
+            write_json(soak, {
+                "schema": SOAK_SCHEMA,
+                "passed": False,
+                "collection_policy": {"cycles": 24, "cycle_duration_sec": 60 * 60},
+                "failure_reasons": ["cycle_failed", "hwdec_expected_ratio_below_min"],
+                "counters": {
+                    "max_panfrost_faults_delta": 0,
+                    "max_mmc_timeout_reset_delta": 0,
+                    "max_ext4_errors_delta": 0,
+                    "max_mpv_restart": 0,
+                    "max_nrestarts_delta": 0,
+                    "max_media_load_failed": 0,
+                },
+            })
+            failed_result = evaluate_soak_summary(soak)
+            self.assertFalse(failed_result["passed"])
+            self.assertIn("soak_summary_not_passed", failed_result["blockers"])
+            write_json(operator_event, {
+                "schema": "dadooh.c18.playback.soak.operator_event.v1",
+                "component": "player-runtime",
+                "version": target["package_version"],
+                "classification": "negative_for_clean_h2_soak_positive_for_runtime_resilience",
+                "hdmi_disconnect_inferred_window_local": {
+                    "start": "2026-07-03T20:19:58-03:00",
+                    "end": "2026-07-03T20:20:00-03:00",
+                },
+                "hdmi_reconnect_kernel_event_local": "2026-07-04T16:29:54-03:00",
+                "expected_gate_result": {"clean_h2_soak": False},
+                "non_claims": [
+                    "not_clean_constant_hdmi_soak",
+                    "not_h2_green",
+                    "not_stable_promotion",
+                    "not_public_thaw",
+                ],
+            })
+            write_json(exception, {
+                "schema": "dadooh.c18.playback.soak_exception.v1",
+                "component": "player-runtime",
+                "exception_reason": "hdmi_sink_unavailable_during_soak",
+                "accepted": True,
+                "explicit_business_decision": True,
+                "clean_soak_passed": False,
+                "failed_soak_accepted": True,
+                "operator": "operator-prod-01",
+                "rollback_owner": "rollback-owner-01",
+                "risk_owner": "product-owner-01",
+                "target_package_version": target["package_version"],
+                "target_source_commit": target["source_commit"],
+                "target_payload_sha256": target["payload_sha256"],
+                "soak_summary_sha256": sha256_file(soak),
+                "operator_event_sha256": sha256_file(operator_event),
+                "auto_pull_enabled": False,
+                "public_thaw_executed": False,
+                "production_rollout_started": False,
+                "non_claims": [
+                    "this_exception_does_not_make_the_soak_clean",
+                    "this_exception_is_not_a_generic_soak_bypass",
+                    "this_exception_does_not_publish_releases",
+                    "this_exception_does_not_enable_auto_pull",
+                    "this_exception_does_not_execute_public_thaw",
+                    "this_exception_is_bound_to_one_target_and_one_soak",
+                ],
+            })
+            exception_result = evaluate_soak_summary(
+                soak,
+                exception_path=exception,
+                operator_event_path=operator_event,
+                expected_target=target,
+            )
+        self.assertTrue(exception_result["passed"], exception_result)
+        self.assertTrue(exception_result["accepted_by_exception"])
+        self.assertFalse(exception_result["clean_soak_passed"])
 
     def test_artifact_binding_required_when_requested(self) -> None:
         data = valid_fixture()
@@ -1470,6 +1652,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--server-side-trusted-key-pem", type=Path, action="append", default=[])
     parser.add_argument("--server-side-trust-anchor-evidence", type=Path, default=None)
     parser.add_argument("--soak-summary", type=Path, default=None)
+    parser.add_argument("--soak-exception-evidence", type=Path, default=None)
+    parser.add_argument("--soak-operator-event", type=Path, default=None)
     parser.add_argument("--powerloss-evidence-dir", type=Path, action="append", default=[])
     parser.add_argument("--operator-thaw-decision", type=Path, default=None)
     parser.add_argument("--expect-image-tag", default=None)
