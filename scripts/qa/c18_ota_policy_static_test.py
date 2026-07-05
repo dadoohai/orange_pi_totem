@@ -36,6 +36,10 @@ BUILD_PLAYER_RUNTIME_PATH = REPO_ROOT / "scripts" / "deploy" / "build_player_run
 UPDATECTL_PATH = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
 BOOTSTRAP_C17_5_PATH = REPO_ROOT / "scripts" / "remote" / "bootstrap_c17_5_totem_core_on_board.sh"
 DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_embedded_image.py"
+DERIVE_C18_IMAGE_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwdecode.py"
+DERIVE_C18_PRODUCTION_IMAGE_PATH = (
+    REPO_ROOT / "scripts" / "build" / "derive_c18_image_production_1_hwdecode.py"
+)
 BUILD_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "build_kiosky_player_release_package.sh"
 PUBLISH_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_kiosky_player_github_release.sh"
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
@@ -366,6 +370,28 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(production["timer_enabled"], True)
         with self.assertRaisesRegex(RuntimeError, "unsupported_totem_core_embed_profile"):
             mod.resolve_totem_core_embed_profile("latest")
+
+    def test_c18_image_deriver_has_explicit_production_path(self) -> None:
+        derive = DERIVE_C18_IMAGE_PATH.read_text(encoding="utf-8")
+        wrapper = DERIVE_C18_PRODUCTION_IMAGE_PATH.read_text(encoding="utf-8")
+        self.assertIn('ap.add_argument("--image-profile", choices=("lab", "production"), default="lab")', derive)
+        self.assertIn('ap.add_argument("--totem-core-profile", choices=("homologation", "production"))', derive)
+        self.assertIn("argparse.ArgumentParser(allow_abbrev=False)", derive)
+        self.assertIn("production image requires totem-core production profile", derive)
+        self.assertIn("production totem-core profile requires --image-profile production", derive)
+        self.assertIn("production_image=true", derive)
+        self.assertIn("artifact_private=false", derive)
+        self.assertIn('"not_for_distribution" not in marker_now', derive)
+        self.assertIn('"not_for_production" not in marker_now', derive)
+        self.assertIn("profile=totem_core_profile", derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-1"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.1"', derive)
+        self.assertNotIn("artifact_private; not_for_production", derive)
+        self.assertIn('"--image-profile": "production"', wrapper)
+        self.assertIn('"--totem-core-profile": "production"', wrapper)
+        self.assertNotIn('"--image-version":', wrapper)
+        self.assertNotIn('"--image-tag":', wrapper)
+        self.assertIn("production builder cannot select lab image profile", wrapper)
 
     def test_totem_core_ota_payload_excludes_player_launcher(self) -> None:
         build = BUILD_CORE_PATH.read_text(encoding="utf-8")

@@ -16,7 +16,9 @@ rebuild, no apt, no board, no card). It copies the hardware-validated C17.4.2 im
   * embeds the C17.6 totem-core update layout so wizard/core fixes are OTA-ready
     from first boot (/data/core/totem current release, /opt fallback scripts and
     wrappers);
-  * writes the image-lab marker (artifact_private/final_image=false/not_for_production).
+  * writes the image marker. The default remains image-lab
+    (artifact_private/final_image=false/not_for_production); production identity
+    requires --image-profile production.
 
 It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB/BSP,
 real config, media/cache, or secrets.
@@ -52,6 +54,9 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
+PRODUCTION_TAG = "c18-hwdecode-prod-1"
+PRODUCTION_VERSION = "c18.image-prod.1"
+PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -116,7 +121,7 @@ PANFROST_UNIT_BODY = (
 
 WRAPPER_SH = (
     "#!/bin/sh\n"
-    "# C18 HW-decode wrapper (artifact_private; not_for_production). Forces the\n"
+    "# C18 HW-decode wrapper. Forces the\n"
     "# copy-back fallback path (override-last) + scoped LD_LIBRARY_PATH; preserves\n"
     "# IPC/rotation/etc. C18.IMAGE-LAB.1d uses v4l2request-copy because the zero-copy\n"
     "# drm_prime->panfrost path generated runtime panfrost js faults on some portrait\n"
@@ -177,12 +182,26 @@ def repo_identity() -> dict:
     }
 
 
+def image_profile_for_tag(tag: str) -> str:
+    if tag.startswith("c18-hwdecode-prod-"):
+        return "production"
+    return "lab"
+
+
 def image_round_name(tag: str) -> str:
+    profile = image_profile_for_tag(tag)
+    if profile == "production":
+        suffix = tag.removeprefix("c18-hwdecode-prod-")
+        return f"C18.IMAGE-PROD.{suffix}"
     suffix = tag.removeprefix("c18-hwdecode-lab-")
     return f"C18.IMAGE-LAB.{suffix}"
 
 
 def image_version_for_tag(tag: str) -> str:
+    profile = image_profile_for_tag(tag)
+    if profile == "production":
+        suffix = tag.removeprefix("c18-hwdecode-prod-")
+        return f"c18.image-prod.{suffix}"
     suffix = tag.removeprefix("c18-hwdecode-lab-")
     return f"c18.image-lab.{suffix}"
 
@@ -211,26 +230,42 @@ def validate_player_runtime_snapshot(source_data: dict, kiosk_snapshot: str, kio
         raise SystemExit("BLOCKED: player-runtime kiosk.py teardown governance mismatch")
 
 
-def validate_candidate_identity(tag: str, version: str, marker: str) -> None:
+def validate_candidate_identity(tag: str, version: str, marker: str,
+                                *, image_profile: str = "lab") -> None:
     if "/" in tag or tag.startswith(".") or ".." in Path(tag).parts:
         raise SystemExit(f"BLOCKED: unsafe image tag {tag!r}")
-    if not tag.startswith("c18-hwdecode-lab-"):
-        raise SystemExit("BLOCKED: image tag must start with c18-hwdecode-lab-")
-    if not version.startswith("c18.image-lab."):
-        raise SystemExit("BLOCKED: image version must start with c18.image-lab.")
+    if image_profile == "production":
+        if not tag.startswith("c18-hwdecode-prod-"):
+            raise SystemExit("BLOCKED: production image tag must start with c18-hwdecode-prod-")
+        if not version.startswith("c18.image-prod."):
+            raise SystemExit("BLOCKED: production image version must start with c18.image-prod.")
+    else:
+        if not tag.startswith("c18-hwdecode-lab-"):
+            raise SystemExit("BLOCKED: image tag must start with c18-hwdecode-lab-")
+        if not version.startswith("c18.image-lab."):
+            raise SystemExit("BLOCKED: image version must start with c18.image-lab.")
     if not marker.startswith("/etc/dadooh/") or "/" in marker.removeprefix("/etc/dadooh/"):
         raise SystemExit("BLOCKED: image marker must be an /etc/dadooh/<file> path")
 
 
 def main():
     global TAG, VERSION, OUT_IMAGE, OUT_SHA, MARKER
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(allow_abbrev=False)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--image-tag", help="explicit candidate image tag; defaults to current-golden.json")
     ap.add_argument("--image-version", help="explicit candidate image version; defaults from --image-tag")
     ap.add_argument("--image-marker", help="explicit candidate marker path; defaults to /etc/dadooh/<image-tag>-image")
+    ap.add_argument("--image-profile", choices=("lab", "production"), default="lab")
+    ap.add_argument("--totem-core-profile", choices=("homologation", "production"))
     ap.add_argument("--allow-dirty", action="store_true", help="allow exploratory builds from a dirty repo")
     args = ap.parse_args()
+    totem_core_profile = args.totem_core_profile or (
+        "production" if args.image_profile == "production" else "homologation"
+    )
+    if args.image_profile == "production" and totem_core_profile != "production":
+        raise SystemExit("BLOCKED: production image requires totem-core production profile")
+    if args.image_profile == "lab" and totem_core_profile == "production":
+        raise SystemExit("BLOCKED: production totem-core profile requires --image-profile production")
     repo = repo_identity()
     if repo["repo_dirty"] and not args.allow_dirty:
         raise SystemExit("BLOCKED: source repo dirty; commit first or pass --allow-dirty for exploratory builds")
@@ -239,7 +274,15 @@ def main():
         TAG = args.image_tag
         VERSION = args.image_version or image_version_for_tag(TAG)
         MARKER = args.image_marker or f"/etc/dadooh/{TAG}-image"
-        validate_candidate_identity(TAG, VERSION, MARKER)
+        validate_candidate_identity(TAG, VERSION, MARKER, image_profile=args.image_profile)
+        OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
+                           f"6.12.58-{TAG}_minimal.img")
+        OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
+    elif args.image_profile == "production":
+        TAG = PRODUCTION_TAG
+        VERSION = PRODUCTION_VERSION
+        MARKER = PRODUCTION_MARKER
+        validate_candidate_identity(TAG, VERSION, MARKER, image_profile=args.image_profile)
         OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                            f"6.12.58-{TAG}_minimal.img")
         OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
@@ -322,10 +365,20 @@ def main():
     # ---- wrapper + marker temp files ----
     wrap_tmp = work / "totem-mpv-hwdecode"; wrap_tmp.write_text(WRAPPER_SH, encoding="utf-8")
     marker_tmp = work / "marker"
+    marker_scope_lines = (
+        [
+            "artifact_private=false", "final_image=true",
+            "production_image=true",
+        ]
+        if args.image_profile == "production"
+        else [
+            "artifact_private=true", "final_image=false",
+            "not_for_production=true", "not_for_distribution=true",
+        ]
+    )
     marker_tmp.write_text("\n".join([
         f"image_tag={TAG}", f"image_version={VERSION}",
-        "artifact_private=true", "final_image=false",
-        "not_for_production=true", "not_for_distribution=true",
+        *marker_scope_lines,
         "base_image_line=c17.4.2", "c17_7_used_as_base=false",
         "kernel_touched=false", "u_boot_touched=false", "dtb_touched=false",
         "c12_readonly_touched=false",
@@ -337,8 +390,9 @@ def main():
         "r4_updater_perms=injected",
         "totem_core_current_embedded=true",
         f"totem_core_current_version={totem_core_image_embed.TOTEM_CORE_VERSION}",
+        f"totem_core_embed_profile={totem_core_profile}",
         "totem_update_policy_embedded=true",
-        "totem_update_timer_enabled=false",
+        f"totem_update_timer_enabled={str(totem_core_profile == 'production').lower()}",
         "player_runtime_launcher_fixed_by_image=true",
         "player_runtime_verified_marker_required=true",
         "player_runtime_reconcile_available=true",
@@ -419,7 +473,12 @@ def main():
             L("  " + ln)
 
     # ---- embed OTA-ready totem-core current/fallback/wrapper layout ----
-    totem_core_embed = totem_core_image_embed.write_totem_core_embed(rootfs, work, REPO_ROOT)
+    totem_core_embed = totem_core_image_embed.write_totem_core_embed(
+        rootfs,
+        work,
+        REPO_ROOT,
+        profile=totem_core_profile,
+    )
     L(
         "totem-core embedded "
         f"version={totem_core_embed['totem_core_current_version']} "
@@ -461,7 +520,7 @@ def main():
     seed_verify_file = work / "private-values.seed.verify.json"
     base.debugfs(vroot, f"dump {HOMOLOGATION_SEED} {seed_verify_file}")
     seed_verify = json.loads(seed_verify_file.read_text(encoding="utf-8")) if seed_verify_file.exists() else {}
-    totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot)
+    totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot, profile=totem_core_profile)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
     player_runtime_gate = sh([
         sys.executable,
@@ -585,7 +644,20 @@ def main():
         "totem_core_ota_ready": totem_core_validation["ok"],
         "totem_in_video_group": "totem" in video_line.split(":")[-1].split(","),
         "marker_present": present(MARKER),
-        "marker_final_image_false": "final_image=false" in marker_now,
+        "marker_scope_matches_profile": (
+            (
+                "final_image=true" in marker_now
+                and "production_image=true" in marker_now
+                and "artifact_private=false" in marker_now
+                and "not_for_production" not in marker_now
+                and "not_for_distribution" not in marker_now
+            )
+            if args.image_profile == "production"
+            else (
+                "final_image=false" in marker_now
+                and "not_for_production=true" in marker_now
+            )
+        ),
         "homologation_seed_mpv_path_points_to_wrapper": seed_verify.get("mpv_path") == WRAPPER,
         "no_real_config_embedded": not present("/data/config/config.json"),
         "no_player_runtime_current_embedded": not present("/data/player-runtime/current"),
@@ -609,12 +681,14 @@ def main():
     image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
     manifest = {
         "round": round_name, "image_tag": TAG, "image_version": VERSION,
+        "image_profile": args.image_profile,
+        "totem_core_embed_profile": totem_core_profile,
         **repo,
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": image_bytes,
         "artifact_promoted": artifact_promoted,
-        "artifact_private": True, "final_image": False,
-        "not_for_production": True, "not_for_distribution": True,
+        "artifact_private": args.image_profile != "production",
+        "final_image": args.image_profile == "production",
         "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
         "base_image": BASE_IMAGE.name,
         "kernel_touched": False, "kernel_rebuild_executed": False,
@@ -667,9 +741,15 @@ def main():
         "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
         "ready_for_manual_card_flash": offline_ok,
         "ready_for_c18_image_lab_2_clean_board_validation": offline_ok,
+        "ready_for_c18_production_candidate_validation": offline_ok if args.image_profile == "production" else False,
         "hardware_validation_required": True,
         "card_written": False, "board_touched": False, "ssh_used": False,
     }
+    if args.image_profile == "lab":
+        manifest["not_for_production"] = True
+        manifest["not_for_distribution"] = True
+    else:
+        manifest["production_image"] = True
     print(f"\n=== {round_name} RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))

@@ -50,6 +50,7 @@ PY_COMPILE_TARGETS = (
     "scripts/board/c18_player_runtime_h2_powerloss_preflight_collect.py",
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_c18_image_lab_1_hwdecode.py",
+    "scripts/build/derive_c18_image_production_1_hwdecode.py",
     "scripts/sim/run_totem_core_sandbox.py",
     "scripts/sim/run_player_runtime_sandbox.py",
     "scripts/qa/c18_ota_policy_static_test.py",
