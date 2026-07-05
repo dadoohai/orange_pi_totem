@@ -95,6 +95,11 @@ imagem/fallback quando nao houver.
   real, executou rollback com `rc=0`, e terminou restaurada no alvo
   `9bebaf1` com health estabilizada verde. Evidencia em
   `docs/evidence/c18-update-validation/20260705T150628Z-player-runtime-github-m2-hdmi-9bebaf1/`.
+- Marco 3 caminho de imagem producao: iniciado em 2026-07-05. O repo agora tem
+  um builder explicito para imagem C18 producao e um perfil de embed
+  `totem-core` producao com policy `stable`, `allowed_components=["totem-core"]`
+  e timer habilitado. Isso ainda nao e imagem gravada em placa: falta construir,
+  gravar, bootar e validar o timer real.
 
 ## Estado operacional atual
 
@@ -155,11 +160,15 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- Decidir formalmente a politica de public thaw/auto-pull/rollout por grupos.
-- Definir se novas placas saem com imagem ja consolidada ou se recebem
-  `player-runtime` via OTA assistido no provisionamento.
+- Construir uma imagem C18 producao candidata a partir do builder explicito.
+- Gravar essa imagem na placa lab e validar boot, player, policy e timer.
+- Provar o timer real aplicando um update remoto `totem-core` e rollbackando.
+- Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
+  imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem
   reabrir o caminho legado `kiosky-player`.
+- Decidir formalmente a politica de public thaw/auto-pull/rollout por grupos
+  para `player-runtime`, se esse update automatico for requerido agora.
 - Separar futuras evolucoes de produto: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player.
 
@@ -220,5 +229,7 @@ podemos escolher entre:
 3. Corrigir textos historicos que confundam publicacao com consumo em placa.
 4. Marco 1 (`totem-core` remoto) fechado.
 5. Marco 2 (`player-runtime` remoto) fechado.
-6. Proxima rodada: decidir empacotamento operacional para novas placas e
-   postura de public thaw/auto-pull/rollout amplo.
+6. Marco 3: builder de imagem producao e perfil auto-pull `totem-core`
+   implementados no repo.
+7. Proxima rodada: construir a imagem producao, gravar na placa, validar boot e
+   provar o timer real de `totem-core` aplicando update remoto com rollback.
