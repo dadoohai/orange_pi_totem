@@ -377,6 +377,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn("player_runtime_reconcile_corrupt_state_fail_closed", derive)
         self.assertIn('PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"', derive)
         self.assertIn("PLAYER_RUNTIME_KIOSK_SHA256", derive)
+        self.assertIn(f'PLAYER_RUNTIME_KIOSK_SHA256 = "{EXPECTED_SNAPSHOT_SHA256}"', derive)
         self.assertIn("PLAYER_RUNTIME_REQUIRED_PATCHES", derive)
         self.assertIn("PLAYER_RUNTIME_TEARDOWN_TOKENS", derive)
         self.assertIn("validate_player_runtime_snapshot", derive)

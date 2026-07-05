@@ -65,7 +65,7 @@ HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
-PLAYER_RUNTIME_KIOSK_SHA256 = "defa3341e2399fb4046fa7c1b181787747d91e69e884961907f2d3f31fad0c2c"
+PLAYER_RUNTIME_KIOSK_SHA256 = "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413"
 PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
     "MPVController._stop_locked": (
