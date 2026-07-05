@@ -4,10 +4,9 @@
 # Uses gh on the builder only. Never prints or persists tokens.
 #
 # Stable publishes are production-gated. They require
-# ALLOW_C18_STABLE_PROMOTION=1 plus artifact paths for release gate,
-# H1 release gate, server-side evidence/current snapshot, server-side trusted
-# key, server-side trust anchor, soak, power-loss matrix, operator thaw
-# decision, and expected image identity.
+# ALLOW_C18_STABLE_PROMOTION=1 plus totem-core-specific stable evidence,
+# production image build evidence, package validation, and release gate output.
+# They do not thaw player-runtime.
 
 set -euo pipefail
 
@@ -21,6 +20,8 @@ DRAFT=0
 MODE="publish"
 STABLE_H1_RELEASE_GATE_SUMMARY=""
 STABLE_RELEASE_GATE_SUMMARY=""
+STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST=""
+STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION=""
 STABLE_SERVER_SIDE_EVIDENCE=""
 STABLE_SERVER_SIDE_CURRENT_DIR=""
 STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE=""
@@ -52,6 +53,10 @@ while [[ $# -gt 0 ]]; do
     --stable-h1-release-gate-summary) shift; STABLE_H1_RELEASE_GATE_SUMMARY="${1:-}" ;;
     --stable-release-gate-summary=*) STABLE_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
     --stable-release-gate-summary) shift; STABLE_RELEASE_GATE_SUMMARY="${1:-}" ;;
+    --stable-production-image-build-manifest=*) STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST="${arg#*=}" ;;
+    --stable-production-image-build-manifest) shift; STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST="${1:-}" ;;
+    --stable-production-image-offline-validation=*) STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION="${arg#*=}" ;;
+    --stable-production-image-offline-validation) shift; STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION="${1:-}" ;;
     --stable-server-side-evidence=*) STABLE_SERVER_SIDE_EVIDENCE="${arg#*=}" ;;
     --stable-server-side-evidence) shift; STABLE_SERVER_SIDE_EVIDENCE="${1:-}" ;;
     --stable-server-side-current-dir=*) STABLE_SERVER_SIDE_CURRENT_DIR="${arg#*=}" ;;
@@ -143,54 +148,25 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1)"
   [[ -f "$STABLE_EVIDENCE" ]] \
     || die "stable channel requires $STABLE_EVIDENCE"
-  [[ -n "$STABLE_H1_RELEASE_GATE_SUMMARY" && -f "$STABLE_H1_RELEASE_GATE_SUMMARY" ]] \
-    || die "stable channel requires --stable-h1-release-gate-summary=<json>"
-  [[ -n "$STABLE_RELEASE_GATE_SUMMARY" && -f "$STABLE_RELEASE_GATE_SUMMARY" ]] \
-    || die "stable channel requires --stable-release-gate-summary=<json>"
-  STABLE_RELEASE_GATE_SUMMARY_SHA="$(sha256sum "$STABLE_RELEASE_GATE_SUMMARY" | awk '{print $1}')"
-  [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
-    || die "stable channel requires --stable-server-side-evidence=<json>"
-  [[ -n "$STABLE_SERVER_SIDE_CURRENT_DIR" && -d "$STABLE_SERVER_SIDE_CURRENT_DIR" ]] \
-    || die "stable channel requires --stable-server-side-current-dir=<dir>"
-  (( ${#STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]} > 0 )) \
-    || die "stable channel requires at least one --stable-server-side-trusted-key-pem=<pem>"
-  [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
-    || die "stable channel requires --stable-server-side-trust-anchor-evidence=<json>"
-  [[ -n "$STABLE_SOAK_SUMMARY" && -f "$STABLE_SOAK_SUMMARY" ]] \
-    || die "stable channel requires --stable-soak-summary=<json>"
-  [[ -n "$STABLE_OPERATOR_THAW_DECISION" && -f "$STABLE_OPERATOR_THAW_DECISION" ]] \
-    || die "stable channel requires --stable-operator-thaw-decision=<json>"
+  [[ -n "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" && -f "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" ]] \
+    || die "stable channel requires --stable-production-image-build-manifest=<json>"
+  [[ -n "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" && -f "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" ]] \
+    || die "stable channel requires --stable-production-image-offline-validation=<json>"
   [[ -n "$STABLE_EXPECT_IMAGE_TAG" ]] || die "stable channel requires --stable-expect-image-tag"
   [[ -n "$STABLE_EXPECT_IMAGE_SHA256" ]] || die "stable channel requires --stable-expect-image-sha256"
-  [[ -n "$STABLE_EXPECT_IMAGE_MARKER_SHA256" ]] || die "stable channel requires --stable-expect-image-marker-sha256"
-  (( ${#STABLE_POWERLOSS_EVIDENCE_DIRS[@]} > 0 )) \
-    || die "stable channel requires at least one --stable-powerloss-evidence-dir=<dir>"
   STABLE_GATE_CMD=(
-    python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py"
+    python3 "$REPO_ROOT/scripts/qa/c18_totem_core_stable_promotion_gate.py"
     --evidence "$STABLE_EVIDENCE" \
-    --h1-release-gate-summary "$STABLE_H1_RELEASE_GATE_SUMMARY" \
-    --release-gate-summary "$STABLE_RELEASE_GATE_SUMMARY" \
-    --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
-    --server-side-current-dir "$STABLE_SERVER_SIDE_CURRENT_DIR" \
-    --server-side-trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
-    --soak-summary "$STABLE_SOAK_SUMMARY" \
-    --operator-thaw-decision "$STABLE_OPERATOR_THAW_DECISION" \
+    --production-image-build-manifest "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" \
+    --production-image-offline-validation "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" \
+    --package-manifest "$MANIFEST" \
     --expect-image-tag "$STABLE_EXPECT_IMAGE_TAG" \
     --expect-image-sha256 "$STABLE_EXPECT_IMAGE_SHA256" \
-    --expect-image-marker-sha256 "$STABLE_EXPECT_IMAGE_MARKER_SHA256" \
     --json
   )
-  for run_dir in "${STABLE_POWERLOSS_EVIDENCE_DIRS[@]}"; do
-    [[ -d "$run_dir" ]] || die "stable powerloss evidence dir not found: $run_dir"
-    STABLE_GATE_CMD+=( --powerloss-evidence-dir "$run_dir" )
-  done
-  for key_pem in "${STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]}"; do
-    [[ -f "$key_pem" ]] || die "stable server-side trusted key not found: $key_pem"
-    STABLE_GATE_CMD+=( --server-side-trusted-key-pem "$key_pem" )
-  done
   if ! "${STABLE_GATE_CMD[@]}" >/dev/null
   then
-    die "stable promotion evidence failed scripts/qa/c18_stable_promotion_gate.py"
+    die "stable promotion evidence failed scripts/qa/c18_totem_core_stable_promotion_gate.py"
   fi
   [[ "$STABLE_EVIDENCE_SHA" =~ ^[0-9a-f]{64}$ ]] \
     || die "stable manifest must include stable_promotion_evidence_sha256"
@@ -217,18 +193,24 @@ python3 "$REPO_ROOT/scripts/qa/c18_ota_release_gate.py" \
   || die "c18 OTA release gate failed; refusing to publish"
 mv -f "$TMP_GATE_EVIDENCE" "$GATE_EVIDENCE"
 if [[ "$CHANNEL" == "stable" ]]; then
-  ACTUAL_GATE_EVIDENCE_SHA="$(sha256sum "$GATE_EVIDENCE" | awk '{print $1}')"
-  [[ "$ACTUAL_GATE_EVIDENCE_SHA" == "$STABLE_RELEASE_GATE_SUMMARY_SHA" ]] \
-    || die "stable release gate summary sha256 mismatch after generation: actual=$ACTUAL_GATE_EVIDENCE_SHA expected=$STABLE_RELEASE_GATE_SUMMARY_SHA"
-  STABLE_SERVER_SIDE_ASSET_LIST="$(
-    PYTHONDONTWRITEBYTECODE=1 python3 "$REPO_ROOT/scripts/qa/c18_server_side_publish_asset_collect.py" \
-      --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
-      --trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
-      --expected-release-gate-sha256 "$STABLE_RELEASE_GATE_SUMMARY_SHA"
-  )" || die "stable server-side publish assets could not be collected from evidence"
-  while IFS= read -r asset; do
-    [[ -n "$asset" ]] && STABLE_SERVER_SIDE_ASSETS+=( "$asset" )
-  done <<< "$STABLE_SERVER_SIDE_ASSET_LIST"
+  "${STABLE_GATE_CMD[@]}" --release-gate-summary "$GATE_EVIDENCE" >/dev/null \
+    || die "stable release gate summary failed scripts/qa/c18_totem_core_stable_promotion_gate.py"
+  if [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" || -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]]; then
+    [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
+      || die "stable server-side assets require --stable-server-side-evidence=<json>"
+    [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
+      || die "stable server-side assets require --stable-server-side-trust-anchor-evidence=<json>"
+    ACTUAL_GATE_EVIDENCE_SHA="$(sha256sum "$GATE_EVIDENCE" | awk '{print $1}')"
+    STABLE_SERVER_SIDE_ASSET_LIST="$(
+      PYTHONDONTWRITEBYTECODE=1 python3 "$REPO_ROOT/scripts/qa/c18_server_side_publish_asset_collect.py" \
+        --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
+        --trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
+        --expected-release-gate-sha256 "$ACTUAL_GATE_EVIDENCE_SHA"
+    )" || die "stable server-side publish assets could not be collected from evidence"
+    while IFS= read -r asset; do
+      [[ -n "$asset" ]] && STABLE_SERVER_SIDE_ASSETS+=( "$asset" )
+    done <<< "$STABLE_SERVER_SIDE_ASSET_LIST"
+  fi
 fi
 
 PUBLISH_ASSET_CMD=(
@@ -239,7 +221,11 @@ PUBLISH_ASSET_CMD=(
   --channel "$CHANNEL"
 )
 if [[ "$CHANNEL" == "stable" ]]; then
-  PUBLISH_ASSET_CMD+=( --stable-evidence "$STABLE_EVIDENCE" )
+  PUBLISH_ASSET_CMD+=(
+    --stable-evidence "$STABLE_EVIDENCE"
+    --stable-image-build-manifest "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST"
+    --stable-image-offline-validation "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION"
+  )
   for asset in "${STABLE_SERVER_SIDE_ASSETS[@]}"; do
     PUBLISH_ASSET_CMD+=( --stable-server-side-asset "$asset" )
   done
@@ -300,8 +286,8 @@ log "base_ref        = $BASE_REF"
 log "gate_evidence   = $GATE_EVIDENCE"
 if [[ "$CHANNEL" == "stable" ]]; then
   log "stable_evidence = $STABLE_EVIDENCE"
-  log "stable_server_side_evidence = $STABLE_SERVER_SIDE_EVIDENCE"
-  log "stable_server_side_trust_anchor = $STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE"
+  log "stable_image_build_manifest = $STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST"
+  log "stable_image_offline_validation = $STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION"
   log "stable_server_side_assets = ${#STABLE_SERVER_SIDE_ASSETS[@]}"
 fi
 log "publish_assets  = ${#ASSETS[@]}"

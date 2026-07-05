@@ -546,50 +546,35 @@ devem ser copiados para procedimentos C18.
 
 ## Stable E Producao
 
-`stable` nao e apenas `channel=stable`. Antes de stable/batch, exigir gate de
-promocao proprio, homologacao fisica, policy stable, `allow_prerelease=false`,
-rollback definido, evidencia sanitizada e decisao explicita sobre imagem final.
-Os builders/publishers C18 devem falhar fechados para `stable` sem
-`ALLOW_C18_STABLE_PROMOTION=1` e uma evidencia JSON aprovada
+`stable` nao e apenas `channel=stable`, e tambem nao e global por inferencia. A
+promocao e componente-amarrada.
+
+Para `totem-core`, `stable` autoriza somente o caminho de auto-pull do core na
+imagem de producao. Os builders/publishers C18 devem falhar fechados sem
+`ALLOW_C18_STABLE_PROMOTION=1`, uma evidencia
+`dadooh.c18.totem_core_stable_promotion.v1` validada por
+`scripts/qa/c18_totem_core_stable_promotion_gate.py`, manifesto/offline
+validation da imagem de producao, `rollback_ready=true`, decisao explicita de
+operador, `auto_pull_enabled=true` e `auto_pull_scope=totem-core-only`. Essa
+evidencia nao publica release por si so, nao abre thaw de `player-runtime`, nao
+autoriza `player-runtime` stable, nao atualiza `media-system` e nao substitui a
+validacao da placa.
+
+No publish de `totem-core` stable, a release deve anexar pelo menos: manifest,
+payload, `c18-ota-release-gate.json`, `c18-stable-promotion-evidence.json`,
+`c18-production-image-build-manifest.json` e
+`c18-production-image-offline-validation.json`. A lista final de assets entregue
+ao GitHub Release e montada por
+`scripts/qa/c18_totem_core_publish_asset_list.py`, rejeitando anexos stable em
+canais nao-stable, deduplicando sem remover artefatos obrigatorios e aceitando a
+familia server-side apenas como evidencia opcional quando existir.
+
+Para `player-runtime`, a promocao continua no caminho pesado:
 `dadooh.c18.stable_promotion.v1` validada por
-`scripts/qa/c18_stable_promotion_gate.py`. Esse gate exige H2 readiness,
-power-loss 17/17, semantica power-loss completa, soak 24h, governanca
-server-side, release gate, operador, rollback owner e hashes das evidencias; um
-JSON minimo com `approved=true` nao e suficiente. Quando consumido pelo H2,
-o gate e componente-amarrado: `player-runtime` exige
-`expected_component=player-runtime`, e evidencia `totem-core` nao satisfaz thaw
-de `player-runtime`. Tambem fora do H2, a CLI aceita `--expected-component` e
-mantem `totem-core` como default para os fluxos atuais. Nessa avaliacao,
-esses hashes devem bater com os arquivos de evidencia efetivamente passados ao
-avaliador (`release_gate`, server-side, trust anchor server-side, soak, matriz
-power-loss e bundle H2 pre-stable); hashes arbitrarios ou stale nao fecham a
-promocao. O publisher de
-`totem-core` deve preservar `c18-ota-release-gate.json` junto da release para
-manter a trilha de auditoria. O release gate de `player-runtime` tambem emite
-um bloco `package` portavel (`manifest`, `payload`, `payload_sha256`,
-`source_commit`, `component`, `channel`) para ser consumido por
-assinatura/attestation server-side; o builder de `player-runtime` preserva esse
-JSON junto do payload e manifest no diretorio da release. O stable gate tambem
-aceita esses caminhos como argumentos para validar os hashes em modo
-artifact-bound fora do H2. No caminho CLI/build/publish de `stable`, esses
-argumentos sao obrigatorios; chamar o gate somente com `--evidence` falha
-fechado para impedir promocao baseada em hashes declarados sem arquivos reais.
-O gate tambem valida a semantica dos artefatos
-recebidos nesse caminho: release gate precisa estar verde, matriz power-loss
-precisa estar completa e passar seus subgates, soak precisa cobrir 24h,
-server-side precisa passar com chave publica confiavel externa + trust anchor, e
-a decisao do operador precisa estar aprovada.
-No publish de `totem-core` stable, o release gate final gerado deve manter o
-mesmo SHA do `--stable-release-gate-summary` validado pela stable evidence, e o
-publisher deve anexar a familia server-side validada: evidence JSON,
-manifest/payload/release-gate/audit-log apontados por `release_assets`, provas
-ou assinaturas apontadas por `asset_attestations`, e a trust-anchor evidence
-externa. A chave publica confiavel continua entrada externa de validacao; ela
-nao e promovida como payload de updater. A lista final de assets entregue ao
-GitHub Release e montada por `scripts/qa/c18_totem_core_publish_asset_list.py`
-apos esses gates, exigindo `c18-stable-promotion-evidence.json` e ao menos um
-asset server-side em `stable`, rejeitando anexos stable em canais nao-stable e
-deduplicando sem remover os artefatos obrigatorios.
+`scripts/qa/c18_stable_promotion_gate.py`, com H2 readiness, power-loss 17/17,
+semantica power-loss completa, soak 24h, governanca server-side, release gate,
+operador, rollback owner e hashes das evidencias. Evidencia de `totem-core`
+nao satisfaz thaw de `player-runtime`.
 
 Para `player-runtime`, a leitura H2 antes de qualquer thaw publico deve passar
 por `scripts/qa/c18_player_runtime_h2_readiness_gate.py`. Esse avaliador e

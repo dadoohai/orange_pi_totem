@@ -46,6 +46,8 @@ def build_asset_list(
     gate_evidence: Path,
     channel: str,
     stable_evidence: Path | None = None,
+    stable_image_build_manifest: Path | None = None,
+    stable_image_offline_validation: Path | None = None,
     stable_server_side_assets: list[Path] | None = None,
 ) -> list[Path]:
     if channel not in VALID_CHANNELS:
@@ -60,13 +62,34 @@ def build_asset_list(
     if channel == "stable":
         if stable_evidence is None:
             raise ValueError("publish_asset_stable_evidence_missing")
-        if not stable_assets:
-            raise ValueError("publish_asset_stable_server_side_assets_missing")
+        if stable_image_build_manifest is None:
+            raise ValueError("publish_asset_stable_image_build_manifest_missing")
+        if stable_image_offline_validation is None:
+            raise ValueError("publish_asset_stable_image_offline_validation_missing")
         append_unique(assets, resolve_regular_file(stable_evidence, label="stable_evidence"))
+        append_unique(
+            assets,
+            resolve_regular_file(
+                stable_image_build_manifest,
+                label="stable_image_build_manifest",
+            ),
+        )
+        append_unique(
+            assets,
+            resolve_regular_file(
+                stable_image_offline_validation,
+                label="stable_image_offline_validation",
+            ),
+        )
         for index, asset in enumerate(stable_assets, 1):
             append_unique(assets, resolve_regular_file(asset, label=f"stable_server_side_asset:{index}"))
     else:
-        if stable_evidence is not None or stable_assets:
+        if (
+            stable_evidence is not None
+            or stable_image_build_manifest is not None
+            or stable_image_offline_validation is not None
+            or stable_assets
+        ):
             raise ValueError("publish_asset_stable_assets_on_non_stable_channel")
     return assets
 
@@ -85,6 +108,8 @@ class TotemCorePublishAssetListSelfTest(unittest.TestCase):
             payload = self.write_file(root, "payload.tar.gz")
             gate = self.write_file(root, "c18-ota-release-gate.json")
             stable = self.write_file(root, "c18-stable-promotion-evidence.json")
+            image_manifest = self.write_file(root, "production-image-build-manifest.json")
+            image_offline = self.write_file(root, "production-image-offline-validation.json")
             server_side = self.write_file(root, "server-side.json")
             audit = self.write_file(root, "audit-log.ndjson")
 
@@ -94,6 +119,8 @@ class TotemCorePublishAssetListSelfTest(unittest.TestCase):
                 gate_evidence=gate,
                 channel="stable",
                 stable_evidence=stable,
+                stable_image_build_manifest=image_manifest,
+                stable_image_offline_validation=image_offline,
                 stable_server_side_assets=[server_side, audit, server_side],
             )
 
@@ -104,23 +131,37 @@ class TotemCorePublishAssetListSelfTest(unittest.TestCase):
                 "payload.tar.gz",
                 "c18-ota-release-gate.json",
                 "c18-stable-promotion-evidence.json",
+                "production-image-build-manifest.json",
+                "production-image-offline-validation.json",
                 "server-side.json",
                 "audit-log.ndjson",
             ],
         )
 
-    def test_stable_requires_server_side_assets(self) -> None:
+    def test_stable_allows_core_promotion_without_server_side_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with self.assertRaisesRegex(ValueError, "publish_asset_stable_server_side_assets_missing"):
-                build_asset_list(
-                    manifest=self.write_file(root, "manifest.json"),
-                    payload=self.write_file(root, "payload.tar.gz"),
-                    gate_evidence=self.write_file(root, "gate.json"),
-                    channel="stable",
-                    stable_evidence=self.write_file(root, "stable.json"),
-                    stable_server_side_assets=[],
-                )
+            assets = build_asset_list(
+                manifest=self.write_file(root, "manifest.json"),
+                payload=self.write_file(root, "payload.tar.gz"),
+                gate_evidence=self.write_file(root, "gate.json"),
+                channel="stable",
+                stable_evidence=self.write_file(root, "stable.json"),
+                stable_image_build_manifest=self.write_file(root, "image-build.json"),
+                stable_image_offline_validation=self.write_file(root, "image-offline.json"),
+                stable_server_side_assets=[],
+            )
+        self.assertEqual(
+            [path.name for path in assets],
+            [
+                "manifest.json",
+                "payload.tar.gz",
+                "gate.json",
+                "stable.json",
+                "image-build.json",
+                "image-offline.json",
+            ],
+        )
 
     def test_non_stable_rejects_stable_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -132,6 +173,8 @@ class TotemCorePublishAssetListSelfTest(unittest.TestCase):
                     gate_evidence=self.write_file(root, "gate.json"),
                     channel="homologation",
                     stable_evidence=self.write_file(root, "stable.json"),
+                    stable_image_build_manifest=self.write_file(root, "image-build.json"),
+                    stable_image_offline_validation=self.write_file(root, "image-offline.json"),
                     stable_server_side_assets=[],
                 )
 
@@ -170,6 +213,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gate-evidence", type=Path)
     parser.add_argument("--channel", choices=sorted(VALID_CHANNELS))
     parser.add_argument("--stable-evidence", type=Path)
+    parser.add_argument("--stable-image-build-manifest", type=Path)
+    parser.add_argument("--stable-image-offline-validation", type=Path)
     parser.add_argument("--stable-server-side-asset", type=Path, action="append", default=[])
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
@@ -191,6 +236,8 @@ def main(argv: list[str] | None = None) -> int:
             gate_evidence=args.gate_evidence,
             channel=args.channel,
             stable_evidence=args.stable_evidence,
+            stable_image_build_manifest=args.stable_image_build_manifest,
+            stable_image_offline_validation=args.stable_image_offline_validation,
             stable_server_side_assets=args.stable_server_side_asset,
         )
     except ValueError as exc:

@@ -65,7 +65,8 @@ imagem/fallback quando nao houver.
    cache, systemd, kernel ou updater novo.
 3. `player-runtime` nao pode carregar MPV/ffmpeg/kernel/midia/config/cache; o
    pacote atual e deliberadamente estreito.
-4. Auto-pull geral continua desligado ate a rotina remota ser provada na placa.
+4. Auto-pull de `totem-core` e o alvo de producao pragmatica; auto-pull geral
+   de `player-runtime`/frota continua separado ate ter rotina publica propria.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
 6. Toda atualizacao real precisa ter dry-run, apply, validacao e rollback.
@@ -104,6 +105,10 @@ imagem/fallback quando nao houver.
   Evidencia em
   `docs/evidence/c18-update-validation/20260705T175747Z-prod-image-build-44bfbd0/`.
   Isso ainda nao e placa validada: falta gravar, bootar e validar o timer real.
+- Separacao de `totem-core stable`: o caminho de stable do core passa a ter gate
+  proprio, evidencia propria, assets de imagem de producao e non-claims
+  explicitos. Isso autoriza somente auto-pull do core; nao abre thaw nem stable
+  de `player-runtime`.
 
 ## Estado operacional atual
 
@@ -165,6 +170,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 ## O que falta para producao automatizada/ampla
 
 - Gravar essa imagem na placa lab e validar boot, player, policy e timer.
+- Gerar evidencia `totem-core stable`, buildar/publicar uma release stable de
+  core e provar que a imagem de producao aplica essa release pelo timer.
 - Provar o timer real aplicando um update remoto `totem-core` e rollbackando.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
   imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.

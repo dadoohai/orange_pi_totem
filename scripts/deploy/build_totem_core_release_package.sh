@@ -11,10 +11,8 @@
 # self-update.
 #
 # Stable builds are production-gated. They require ALLOW_C18_STABLE_PROMOTION=1
-# plus --stable-promotion-evidence and artifact paths for release gate,
-# H1 release gate, server-side evidence/current snapshot, server-side trusted
-# key, server-side trust anchor, soak, power-loss matrix, operator thaw
-# decision, and expected image identity.
+# plus totem-core-specific stable evidence, production image build evidence, and
+# expected production image identity. They do not thaw player-runtime.
 
 set -euo pipefail
 
@@ -26,6 +24,8 @@ SOURCE_REPO_FULL="${SOURCE_REPO_FULL:-dadoohai/orange_pi_totem}"
 REQUIRED_BASE_IMAGE_MIN="${REQUIRED_BASE_IMAGE_MIN:-c17.4.2}"
 REQUIRED_DEVICE_TRACK="${REQUIRED_DEVICE_TRACK:-c18-hwdecode}"
 STABLE_PROMOTION_EVIDENCE="${STABLE_PROMOTION_EVIDENCE:-}"
+STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST="${STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST:-}"
+STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION="${STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION:-}"
 STABLE_H1_RELEASE_GATE_SUMMARY="${STABLE_H1_RELEASE_GATE_SUMMARY:-}"
 STABLE_RELEASE_GATE_SUMMARY="${STABLE_RELEASE_GATE_SUMMARY:-}"
 STABLE_SERVER_SIDE_EVIDENCE="${STABLE_SERVER_SIDE_EVIDENCE:-}"
@@ -71,6 +71,8 @@ for arg in "$@"; do
     --out-base=*) OUT_BASE="${arg#*=}" ;;
     --channel=*) CHANNEL="${arg#*=}" ;;
     --stable-promotion-evidence=*) STABLE_PROMOTION_EVIDENCE="${arg#*=}" ;;
+    --stable-production-image-build-manifest=*) STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST="${arg#*=}" ;;
+    --stable-production-image-offline-validation=*) STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION="${arg#*=}" ;;
     --stable-h1-release-gate-summary=*) STABLE_H1_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
     --stable-release-gate-summary=*) STABLE_RELEASE_GATE_SUMMARY="${arg#*=}" ;;
     --stable-server-side-evidence=*) STABLE_SERVER_SIDE_EVIDENCE="${arg#*=}" ;;
@@ -141,53 +143,24 @@ if [[ "$CHANNEL" == "stable" ]]; then
     || die "stable channel is locked until explicit production promotion (set ALLOW_C18_STABLE_PROMOTION=1 and provide --stable-promotion-evidence)"
   [[ -n "$STABLE_PROMOTION_EVIDENCE" && -f "$STABLE_PROMOTION_EVIDENCE" ]] \
     || die "stable channel requires --stable-promotion-evidence=<json>"
-  [[ -n "$STABLE_H1_RELEASE_GATE_SUMMARY" && -f "$STABLE_H1_RELEASE_GATE_SUMMARY" ]] \
-    || die "stable channel requires --stable-h1-release-gate-summary=<json>"
-  [[ -n "$STABLE_RELEASE_GATE_SUMMARY" && -f "$STABLE_RELEASE_GATE_SUMMARY" ]] \
-    || die "stable channel requires --stable-release-gate-summary=<json>"
-  [[ -n "$STABLE_SERVER_SIDE_EVIDENCE" && -f "$STABLE_SERVER_SIDE_EVIDENCE" ]] \
-    || die "stable channel requires --stable-server-side-evidence=<json>"
-  [[ -n "$STABLE_SERVER_SIDE_CURRENT_DIR" && -d "$STABLE_SERVER_SIDE_CURRENT_DIR" ]] \
-    || die "stable channel requires --stable-server-side-current-dir=<dir>"
-  (( ${#STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]} > 0 )) \
-    || die "stable channel requires at least one --stable-server-side-trusted-key-pem=<pem>"
-  [[ -n "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" && -f "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" ]] \
-    || die "stable channel requires --stable-server-side-trust-anchor-evidence=<json>"
-  [[ -n "$STABLE_SOAK_SUMMARY" && -f "$STABLE_SOAK_SUMMARY" ]] \
-    || die "stable channel requires --stable-soak-summary=<json>"
-  [[ -n "$STABLE_OPERATOR_THAW_DECISION" && -f "$STABLE_OPERATOR_THAW_DECISION" ]] \
-    || die "stable channel requires --stable-operator-thaw-decision=<json>"
+  [[ -n "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" && -f "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" ]] \
+    || die "stable channel requires --stable-production-image-build-manifest=<json>"
+  [[ -n "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" && -f "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" ]] \
+    || die "stable channel requires --stable-production-image-offline-validation=<json>"
   [[ -n "$STABLE_EXPECT_IMAGE_TAG" ]] || die "stable channel requires --stable-expect-image-tag"
   [[ -n "$STABLE_EXPECT_IMAGE_SHA256" ]] || die "stable channel requires --stable-expect-image-sha256"
-  [[ -n "$STABLE_EXPECT_IMAGE_MARKER_SHA256" ]] || die "stable channel requires --stable-expect-image-marker-sha256"
-  (( ${#STABLE_POWERLOSS_EVIDENCE_DIRS[@]} > 0 )) \
-    || die "stable channel requires at least one --stable-powerloss-evidence-dir=<dir>"
   STABLE_GATE_CMD=(
-    python3 "$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py"
+    python3 "$REPO_ROOT/scripts/qa/c18_totem_core_stable_promotion_gate.py"
     --evidence "$STABLE_PROMOTION_EVIDENCE" \
-    --h1-release-gate-summary "$STABLE_H1_RELEASE_GATE_SUMMARY" \
-    --release-gate-summary "$STABLE_RELEASE_GATE_SUMMARY" \
-    --server-side-evidence "$STABLE_SERVER_SIDE_EVIDENCE" \
-    --server-side-current-dir "$STABLE_SERVER_SIDE_CURRENT_DIR" \
-    --server-side-trust-anchor-evidence "$STABLE_SERVER_SIDE_TRUST_ANCHOR_EVIDENCE" \
-    --soak-summary "$STABLE_SOAK_SUMMARY" \
-    --operator-thaw-decision "$STABLE_OPERATOR_THAW_DECISION" \
+    --production-image-build-manifest "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" \
+    --production-image-offline-validation "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" \
     --expect-image-tag "$STABLE_EXPECT_IMAGE_TAG" \
     --expect-image-sha256 "$STABLE_EXPECT_IMAGE_SHA256" \
-    --expect-image-marker-sha256 "$STABLE_EXPECT_IMAGE_MARKER_SHA256" \
     --json
   )
-  for run_dir in "${STABLE_POWERLOSS_EVIDENCE_DIRS[@]}"; do
-    [[ -d "$run_dir" ]] || die "stable powerloss evidence dir not found: $run_dir"
-    STABLE_GATE_CMD+=( --powerloss-evidence-dir "$run_dir" )
-  done
-  for key_pem in "${STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS[@]}"; do
-    [[ -f "$key_pem" ]] || die "stable server-side trusted key not found: $key_pem"
-    STABLE_GATE_CMD+=( --server-side-trusted-key-pem "$key_pem" )
-  done
   if ! "${STABLE_GATE_CMD[@]}" >/dev/null
   then
-    die "stable promotion evidence failed scripts/qa/c18_stable_promotion_gate.py"
+    die "stable promotion evidence failed scripts/qa/c18_totem_core_stable_promotion_gate.py"
   fi
   STABLE_PROMOTION_EVIDENCE_SHA256="$(sha256sum "$STABLE_PROMOTION_EVIDENCE" | awk '{print $1}')"
 fi
@@ -297,6 +270,8 @@ fi
 mkdir -p "$OUT_DIR"
 if [[ "$CHANNEL" == "stable" ]]; then
   cp -f "$STABLE_PROMOTION_EVIDENCE" "$OUT_DIR/c18-stable-promotion-evidence.json"
+  cp -f "$STABLE_PRODUCTION_IMAGE_BUILD_MANIFEST" "$OUT_DIR/c18-production-image-build-manifest.json"
+  cp -f "$STABLE_PRODUCTION_IMAGE_OFFLINE_VALIDATION" "$OUT_DIR/c18-production-image-offline-validation.json"
 fi
 tar \
   --owner=0 --group=0 --numeric-owner \
@@ -364,6 +339,10 @@ with open(sys.argv[1], "w", encoding="utf-8") as f:
 PY
 
 python3 -m json.tool "$MANIFEST_PATH" >/dev/null || die "manifest JSON failed to validate"
+if [[ "$CHANNEL" == "stable" ]]; then
+  "${STABLE_GATE_CMD[@]}" --package-manifest "$MANIFEST_PATH" >/dev/null \
+    || die "stable package manifest failed scripts/qa/c18_totem_core_stable_promotion_gate.py"
+fi
 
 log "build_package=true"
 log "payload_path=${PAYLOAD_PATH}"

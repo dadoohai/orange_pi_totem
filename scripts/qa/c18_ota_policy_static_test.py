@@ -82,6 +82,9 @@ PLAYER_RUNTIME_M6_COLDBOOT_TRIAL_PATH = REPO_ROOT / "scripts" / "qa" / "c18_play
 PLAYER_RUNTIME_LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_pilot_readiness_gate.py"
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
+TOTEM_CORE_STABLE_PROMOTION_GATE_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_totem_core_stable_promotion_gate.py"
+)
 PLAYER_RUNTIME_THAW_DECISION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_thaw_decision_gate.py"
 PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH = (
     REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_stable_decision_draft_build.py"
@@ -776,23 +779,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         publish = PUBLISH_CORE_PATH.read_text(encoding="utf-8")
         for script in (build, publish):
             self.assertIn("ALLOW_C18_STABLE_PROMOTION", script)
-            self.assertIn("c18_stable_promotion_gate.py", script)
+            self.assertIn("c18_totem_core_stable_promotion_gate.py", script)
             self.assertIn("stable promotion evidence failed", script)
-            self.assertIn("--stable-h1-release-gate-summary", script)
-            self.assertIn("--stable-release-gate-summary", script)
-            self.assertIn("--stable-server-side-evidence", script)
-            self.assertIn("--stable-server-side-current-dir", script)
-            self.assertIn("--stable-server-side-trusted-key-pem", script)
-            self.assertIn("--stable-server-side-trust-anchor-evidence", script)
-            self.assertIn("--stable-soak-summary", script)
-            self.assertIn("--stable-powerloss-evidence-dir", script)
-            self.assertIn("--stable-operator-thaw-decision", script)
+            self.assertIn("--stable-production-image-build-manifest", script)
+            self.assertIn("--stable-production-image-offline-validation", script)
             self.assertIn("--stable-expect-image-tag", script)
             self.assertIn("--stable-expect-image-sha256", script)
-            self.assertIn("--stable-expect-image-marker-sha256", script)
+            self.assertNotIn("python3 \"$REPO_ROOT/scripts/qa/c18_stable_promotion_gate.py\"", script)
         self.assertIn("--stable-promotion-evidence", build)
-        self.assertIn("--h1-release-gate-summary", build)
-        self.assertIn("--server-side-current-dir", build)
+        self.assertIn("--package-manifest \"$MANIFEST_PATH\"", build)
+        self.assertIn("c18-production-image-build-manifest.json", build)
+        self.assertIn("c18-production-image-offline-validation.json", build)
         self.assertIn("c18-stable-promotion-evidence.json", publish)
         self.assertIn("stable_promotion_evidence_sha256", publish)
         self.assertIn("stable evidence sha256 mismatch", publish)
@@ -801,17 +798,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("--server-side-evidence", publish)
         self.assertIn("--trust-anchor-evidence", publish)
         self.assertIn("--expected-release-gate-sha256", publish)
+        self.assertIn("--release-gate-summary \"$GATE_EVIDENCE\"", publish)
         self.assertIn("STABLE_SERVER_SIDE_ASSETS", publish)
         self.assertIn("c18_totem_core_publish_asset_list.py", publish)
         self.assertIn("PUBLISH_ASSET_CMD", publish)
         self.assertIn("--stable-server-side-asset", publish)
+        self.assertIn("--stable-image-build-manifest", publish)
+        self.assertIn("--stable-image-offline-validation", publish)
         self.assertIn("publish assets could not be assembled from validated evidence", publish)
         self.assertIn("publish_assets  =", publish)
-        self.assertIn("stable release gate summary sha256 mismatch after generation", publish)
-        self.assertIn("--h1-release-gate-summary", publish)
-        self.assertIn("--server-side-current-dir", publish)
         self.assertIn("stable_server_side_assets =", publish)
         self.assertIn('log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"', publish)
+        core_gate = TOTEM_CORE_STABLE_PROMOTION_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("dadooh.c18.totem_core_stable_promotion.v1", core_gate)
+        self.assertIn("EVIDENCE_ALLOWED_FIELDS", core_gate)
+        self.assertIn("this_does_not_thaw_player_runtime", core_gate)
+        self.assertIn("board_validation_still_required", core_gate)
+        self.assertIn("test_player_runtime_thaw_claim_denies", core_gate)
+        self.assertIn("test_nested_positive_claim_denies", core_gate)
+        self.assertIn("test_top_level_production_claim_denies", core_gate)
         asset_collect = SERVER_SIDE_PUBLISH_ASSET_COLLECT_PATH.read_text(encoding="utf-8")
         self.assertIn("release_assets", asset_collect)
         self.assertIn("asset_attestations", asset_collect)
@@ -821,7 +826,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("test_signed_fixture_collects_proofs_signatures_and_trust_anchor", asset_collect)
         self.assertIn("test_release_gate_hash_mismatch_fails", asset_collect)
         asset_list = TOTEM_CORE_PUBLISH_ASSET_LIST_PATH.read_text(encoding="utf-8")
-        self.assertIn("publish_asset_stable_server_side_assets_missing", asset_list)
+        self.assertIn("test_stable_allows_core_promotion_without_server_side_assets", asset_list)
+        self.assertIn("publish_asset_stable_image_build_manifest_missing", asset_list)
+        self.assertIn("publish_asset_stable_image_offline_validation_missing", asset_list)
         self.assertIn("publish_asset_stable_assets_on_non_stable_channel", asset_list)
         self.assertIn("test_stable_list_includes_base_stable_and_server_side_assets_once", asset_list)
         self.assertIn("test_missing_asset_fails_closed", asset_list)
@@ -949,7 +956,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             release_gate = release_dir / "c18-ota-release-gate.json"
             stable_evidence = release_dir / "c18-stable-promotion-evidence.json"
             stable_evidence.write_text(
-                json.dumps({"schema": "dadooh.c18.stable_promotion.v1"}, sort_keys=True),
+                json.dumps({"schema": "dadooh.c18.totem_core_stable_promotion.v1"}, sort_keys=True),
+                encoding="utf-8",
+            )
+            image_manifest = root / "production-image-build-manifest.json"
+            image_offline_validation = root / "production-image-offline-validation.json"
+            image_manifest.write_text(
+                json.dumps({"image_tag": EVIDENCE_1X_IMAGE_TAG}, sort_keys=True),
+                encoding="utf-8",
+            )
+            image_offline_validation.write_text(
+                json.dumps({"offline_validation_fixture": True}, sort_keys=True),
                 encoding="utf-8",
             )
             manifest_path = next(release_dir.glob("dadooh-totem-core-*.manifest.json"))
@@ -1021,7 +1038,7 @@ exec "$C18_REAL_GIT" "$@"
                 """#!/usr/bin/env bash
 set -euo pipefail
 case "${1:-}" in
-  */scripts/qa/c18_stable_promotion_gate.py)
+  */scripts/qa/c18_totem_core_stable_promotion_gate.py)
     printf '%s\\0' "$@" > "$C18_STABLE_GATE_CAPTURE"
     exit 0
     ;;
@@ -1058,30 +1075,18 @@ exec "$C18_REAL_PYTHON3" "$@"
                     "HEAD",
                     "--repo",
                     "example.invalid/repo",
-                    "--stable-h1-release-gate-summary",
-                    str(release_gate),
-                    "--stable-release-gate-summary",
-                    str(release_gate),
+                    "--stable-production-image-build-manifest",
+                    str(image_manifest),
+                    "--stable-production-image-offline-validation",
+                    str(image_offline_validation),
                     "--stable-server-side-evidence",
                     str(evidence_path),
-                    "--stable-server-side-current-dir",
-                    str(server_side_current),
-                    "--stable-server-side-trusted-key-pem",
-                    str(public_key),
                     "--stable-server-side-trust-anchor-evidence",
                     str(trust_anchor),
-                    "--stable-soak-summary",
-                    str(soak),
-                    "--stable-powerloss-evidence-dir",
-                    str(powerloss_dir),
-                    "--stable-operator-thaw-decision",
-                    str(thaw),
                     "--stable-expect-image-tag",
                     EVIDENCE_1X_IMAGE_TAG,
                     "--stable-expect-image-sha256",
                     EVIDENCE_1X_IMAGE_SHA256,
-                    "--stable-expect-image-marker-sha256",
-                    EVIDENCE_1X_IMAGE_MARKER_SHA256,
                 ],
                 cwd=REPO_ROOT,
                 env=env,
@@ -1094,10 +1099,12 @@ exec "$C18_REAL_PYTHON3" "$@"
             self.assertTrue(stable_gate_capture.is_file(), msg=result.stdout + result.stderr)
 
             stable_gate_argv = [part.decode() for part in stable_gate_capture.read_bytes().split(b"\0") if part]
-            self.assertIn("--h1-release-gate-summary", stable_gate_argv)
+            self.assertIn("--production-image-build-manifest", stable_gate_argv)
+            self.assertIn(str(image_manifest), stable_gate_argv)
+            self.assertIn("--production-image-offline-validation", stable_gate_argv)
+            self.assertIn(str(image_offline_validation), stable_gate_argv)
+            self.assertIn("--release-gate-summary", stable_gate_argv)
             self.assertIn(str(release_gate), stable_gate_argv)
-            self.assertIn("--server-side-current-dir", stable_gate_argv)
-            self.assertIn(str(server_side_current), stable_gate_argv)
 
             argv = [part.decode() for part in gh_capture.read_bytes().split(b"\0") if part]
             self.assertEqual(argv[:2], ["release", "create"])
@@ -1110,7 +1117,15 @@ exec "$C18_REAL_PYTHON3" "$@"
                 expected_release_gate_sha256=hashlib.sha256(release_gate.read_bytes()).hexdigest(),
             )
             expected_paths: list[Path] = []
-            for path in [manifest_path, payload_path, release_gate, stable_evidence, *collected]:
+            for path in [
+                manifest_path,
+                payload_path,
+                release_gate,
+                stable_evidence,
+                image_manifest,
+                image_offline_validation,
+                *collected,
+            ]:
                 resolved = path.resolve(strict=True)
                 if resolved not in expected_paths:
                     expected_paths.append(resolved)
