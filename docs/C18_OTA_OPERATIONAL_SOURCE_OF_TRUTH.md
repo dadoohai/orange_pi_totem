@@ -5,6 +5,11 @@ passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
 
+Direcao macro da fase atual: `docs/C18_MACRO_STEERING.md`.
+
+Spec de execucao da fase de producao com auto-pull:
+`docs/C18_PRODUCTION_AUTOPULL_SPEC.md`.
+
 ## Definicao pratica
 
 Para produto, "OTA em producao" significa: uma placa consegue receber uma
@@ -157,6 +162,39 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   reabrir o caminho legado `kiosky-player`.
 - Separar futuras evolucoes de produto: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player.
+
+## Direcao de producao por decisao de negocio
+
+Decisao operacional em 2026-07-05: o cliente quer escala rapidamente e aceita o
+risco de negocio. A direcao passa a ser producao em escala com auto-pull como
+padrao, preservando a governanca tecnica minima para nao quebrar placa e manter
+rollback.
+
+Leitura pratica:
+
+- novas placas devem sair preferencialmente com imagem de producao consolidada,
+  ja contendo o `player-runtime 9bebaf1` aprovado por excecao de negocio;
+- `totem-core` deve ser o primeiro auto-pull padrao, porque ja tem apply remoto,
+  health, rollback e escopo estreito provados na placa;
+- `player-runtime` tambem deve entrar no objetivo de auto-pull, mas nao por
+  reaproveitamento cego do harness de laboratorio: precisa de caminho publico
+  pinado/hash-bound, health real, rollback e criterio claro de thaw;
+- como ainda nao ha infraestrutura real de grupos, dashboard ou monitoramento
+  de frota, a primeira producao deve assumir rollout simples/global e registrar
+  isso como risco aceito, com inventario manual e procedimento de emergencia;
+- staged rollout, allowlist por grupos, assinatura consumida no device,
+  kill-switch e telemetria ficam no roadmap de robustez, nao como bloqueio para
+  a primeira entrega se a decisao de negocio for avancar.
+
+Consequencia: o proximo trabalho nao e mais provar homologacao assistida. E
+materializar uma linha de producao pragmatica:
+
+1. imagem de producao C18, sem marcador `not_for_production`;
+2. policy de producao e timer habilitado para auto-pull de `totem-core`;
+3. teste real do timer aplicando update remoto e rollbackando;
+4. especificacao curta para devs e fabrica;
+5. ponte publica segura para auto-pull de `player-runtime`, se o cliente exigir
+   update automatico do player alem do core.
 
 ## Imagem para novas placas
 
