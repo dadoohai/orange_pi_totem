@@ -1678,6 +1678,7 @@ exec "$C18_REAL_PYTHON3" "$@"
 
         allowed_lab_thaw_assignment_files = {
             "scripts/qa/c18_player_runtime_lab_apply.py",
+            "scripts/qa/c18_player_runtime_github_lab_apply.py",
             "scripts/qa/c18_player_runtime_lab_rollback.py",
             "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
             "scripts/qa/c18_runtime_3_release_perms_test.py",

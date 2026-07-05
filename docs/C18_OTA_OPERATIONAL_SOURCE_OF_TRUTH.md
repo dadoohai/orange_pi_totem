@@ -79,6 +79,11 @@ imagem/fallback quando nao houver.
   `rc=0`, manteve `kiosky-player.service` ativo e rollbackou com `rc=0`.
   Evidencia em
   `docs/evidence/c18-update-validation/20260705T002405Z-totem-core-remote-m1-140e706/`.
+- Marco 2 `player-runtime` remoto: executor assistido por tag exata
+  implementado em `scripts/qa/c18_player_runtime_github_lab_apply.py`. O
+  dry-run local validou a GitHub Release publicada, 18 assets, payload SHA e
+  release gate, mantendo o CLI publico congelado com `rc=44`. Ainda falta
+  executar na placa com deep-health real e rollback.
 
 ## O que falta para chamar OTA remoto de operacional
 
@@ -107,6 +112,8 @@ Depois desse marco, melhorias de wizard e produto podem seguir pelo OTA
 ### Marco 2 - `player-runtime` remoto na placa
 
 Objetivo: provar que a release publicada do player pode ser consumida pela placa.
+
+Status: executor assistido criado; execucao em placa pendente.
 
 Checklist minimo:
 
