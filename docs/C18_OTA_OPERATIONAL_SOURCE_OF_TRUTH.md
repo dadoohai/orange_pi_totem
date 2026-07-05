@@ -115,6 +115,12 @@ imagem/fallback quando nao houver.
   `613d9d6d1099636d7ca956c72e3927d502f1281068f8b0830b2d5f3ba2af0355` e tag
   apontando para o `source_commit`
   `ccaf5a11775d122dd08512c9f5cf1e3027e5a29b`.
+- Prova lab `totem-core stable`: a placa lab, com policy temporariamente
+  alterada para `stable`, selecionou a release publicada, aplicou com sucesso,
+  passou self-test, manteve `kiosky-player.service` ativo com `NRestarts=0`,
+  rollbackou para `c17.6-environment-input-20260514T211247Z` e teve a policy
+  original restaurada. Evidencia em
+  `docs/evidence/c18-update-validation/20260705T185806Z-totem-core-stable-lab-apply-rollback-ccaf5a1/`.
 
 ## Estado operacional atual
 
@@ -176,8 +182,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 ## O que falta para producao automatizada/ampla
 
 - Gravar essa imagem na placa lab e validar boot, player, policy e timer.
-- Provar que a imagem de producao aplica a release stable de `totem-core` pelo
-  timer real e rollbacka.
+- Gravar/bootar a imagem de producao e provar que ela aplica a release stable de
+  `totem-core` pelo timer real e rollbacka.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
   imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem

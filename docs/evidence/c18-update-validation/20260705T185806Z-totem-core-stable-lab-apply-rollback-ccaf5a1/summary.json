@@ -1,0 +1,27 @@
+{
+  "apply_result": "success",
+  "board_policy_restored_sha256": "103077363d42cc1e0afaf282e8ffeb8d64317693c60d6d49758adcf138c124e0",
+  "component": "totem-core",
+  "current_after_rollback": "c17.6-environment-input-20260514T211247Z",
+  "final_board_state": "final-board-state.txt",
+  "kiosky_player_active_after_apply": true,
+  "kiosky_player_nrestarts_after_apply": 0,
+  "non_claims": [
+    "not_booted_from_c18_hwdecode_prod_1",
+    "production_timer_not_proven",
+    "player_runtime_not_thawed",
+    "media_system_not_updated"
+  ],
+  "payload_sha256": "613d9d6d1099636d7ca956c72e3927d502f1281068f8b0830b2d5f3ba2af0355",
+  "policy_restored": true,
+  "rollback_result": "success",
+  "schema": "dadooh.c18.totem_core_stable_lab_apply_rollback.v1",
+  "selected_tag": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "source_commit": "ccaf5a11775d122dd08512c9f5cf1e3027e5a29b",
+  "stable_version": "c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "temporary_policy": {
+    "allow_prerelease": false,
+    "device_channel": "stable"
+  },
+  "totem_core_self_test_after_apply": true
+}
