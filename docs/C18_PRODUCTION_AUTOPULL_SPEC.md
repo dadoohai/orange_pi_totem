@@ -128,6 +128,9 @@ Testes/evidencias:
 - teste negativo para pacote fora da allowlist.
 - boot com timer habilitado e release ja aplicada: deve ser no-op;
 - evidencia M2 propria para timer real, separada da evidencia M1 manual.
+- coleta/gate do marco: `scripts/board/c18_totem_core_production_timer_collect.py`
+  e `scripts/qa/c18_totem_core_production_timer_evidence_gate.py`, com coleta
+  pos-timer e coleta pos-rollback.
 
 Fora desta vertical:
 

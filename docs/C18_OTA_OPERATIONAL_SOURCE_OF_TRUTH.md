@@ -10,6 +10,9 @@ Direcao macro da fase atual: `docs/C18_MACRO_STEERING.md`.
 Spec de execucao da fase de producao com auto-pull:
 `docs/C18_PRODUCTION_AUTOPULL_SPEC.md`.
 
+Runbook do proximo marco fisico:
+`docs/c18-totem-core-production-timer-runbook.md`.
+
 ## Definicao pratica
 
 Para produto, "OTA em producao" significa: uma placa consegue receber uma
@@ -183,7 +186,9 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 - Gravar essa imagem na placa lab e validar boot, player, policy e timer.
 - Gravar/bootar a imagem de producao e provar que ela aplica a release stable de
-  `totem-core` pelo timer real e rollbacka.
+  `totem-core` pelo timer real e rollbacka. O coletor e o gate desse marco sao
+  `scripts/board/c18_totem_core_production_timer_collect.py` e
+  `scripts/qa/c18_totem_core_production_timer_evidence_gate.py`.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
   imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem

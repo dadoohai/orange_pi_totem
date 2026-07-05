@@ -68,6 +68,9 @@ PRE_SOAK_SCALE_GOVERNANCE_GATE_PATH = (
 HOMOLOGATION_PILOT_PREFLIGHT_COLLECT_PATH = (
     REPO_ROOT / "scripts" / "board" / "c18_homologation_pilot_preflight_collect.py"
 )
+TOTEM_CORE_PRODUCTION_TIMER_COLLECT_PATH = (
+    REPO_ROOT / "scripts" / "board" / "c18_totem_core_production_timer_collect.py"
+)
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
@@ -84,6 +87,9 @@ PLAYER_RUNTIME_PILOT_READINESS_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_p
 STABLE_PROMOTION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_stable_promotion_gate.py"
 TOTEM_CORE_STABLE_PROMOTION_GATE_PATH = (
     REPO_ROOT / "scripts" / "qa" / "c18_totem_core_stable_promotion_gate.py"
+)
+TOTEM_CORE_PRODUCTION_TIMER_EVIDENCE_GATE_PATH = (
+    REPO_ROOT / "scripts" / "qa" / "c18_totem_core_production_timer_evidence_gate.py"
 )
 PLAYER_RUNTIME_THAW_DECISION_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_thaw_decision_gate.py"
 PLAYER_RUNTIME_STABLE_DECISION_DRAFT_BUILD_PATH = (
@@ -259,6 +265,28 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("player-runtime", service.split("ExecStart=", 1)[1])
         self.assertNotIn("kiosky-player", service.split("ExecStart=", 1)[1])
         self.assertNotIn("dadoohai/kiosky-player", service + timer)
+
+    def test_totem_core_production_timer_validation_is_wired(self) -> None:
+        collector = TOTEM_CORE_PRODUCTION_TIMER_COLLECT_PATH.read_text(encoding="utf-8")
+        gate = TOTEM_CORE_PRODUCTION_TIMER_EVIDENCE_GATE_PATH.read_text(encoding="utf-8")
+        release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        runbook = (REPO_ROOT / "docs" / "c18-totem-core-production-timer-runbook.md").read_text(encoding="utf-8")
+        source = (REPO_ROOT / "docs" / "C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md").read_text(encoding="utf-8")
+
+        self.assertIn("dadooh.c18.totem_core.production_timer_collect.v1", collector)
+        self.assertIn("--probe-frozen-player-runtime", collector)
+        self.assertIn("totem-update-agent.timer", collector)
+        self.assertIn("dadooh.c18.totem_core.production_timer_evidence_gate.v1", gate)
+        self.assertIn("DEFAULT_EXPECTED_RELEASE_TAG", gate)
+        self.assertIn("DEFAULT_EXPECTED_ROLLBACK_VERSION", gate)
+        self.assertIn("test_valid_fixture_with_rollback_passes", gate)
+        self.assertIn("c18_totem_core_production_timer_collect", release_gate)
+        self.assertIn("c18_totem_core_production_timer_evidence_gate", release_gate)
+        self.assertIn("--rollback-summary", runbook)
+        self.assertIn("post-timer-summary.json", runbook)
+        self.assertIn("post-rollback-summary.json", runbook)
+        self.assertIn("c18_totem_core_production_timer_collect.py", source)
+        self.assertIn("c18_totem_core_production_timer_evidence_gate.py", source)
 
     def test_timer_is_manifested_disabled(self) -> None:
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
