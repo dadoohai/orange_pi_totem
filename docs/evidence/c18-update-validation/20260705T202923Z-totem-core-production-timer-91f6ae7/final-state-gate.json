@@ -1,0 +1,17 @@
+{
+  "blockers": [],
+  "expected_image_tag": "c18-hwdecode-prod-1",
+  "expected_release_tag": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "expected_rollback_version": "c17.6-environment-input-20260514T211247Z",
+  "expected_version": "c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "non_claims": [
+    "does_not_thaw_player_runtime",
+    "does_not_update_media_system",
+    "does_not_publish_release"
+  ],
+  "passed": true,
+  "result_claim": "totem_core_production_timer_ready",
+  "rollback_summary": null,
+  "schema": "dadooh.c18.totem_core.production_timer_evidence_gate.v1",
+  "summary": "docs/evidence/c18-update-validation/20260705T202923Z-totem-core-production-timer-91f6ae7/final-state-summary.json"
+}

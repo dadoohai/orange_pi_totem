@@ -129,7 +129,8 @@ imagem/fallback quando nao houver.
   `totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1`, manteve
   `kiosky-player.service` ativo com `NRestarts=0`, preservou o freeze publico
   de `player-runtime` com `rc=44`, e rollbackou para
-  `c17.6-environment-input-20260514T211247Z`. Evidencia em
+  `c17.6-environment-input-20260514T211247Z`. Depois da prova de rollback, foi
+  restaurada para a release stable pretendida via servico governado. Evidencia em
   `docs/evidence/c18-update-validation/20260705T202923Z-totem-core-production-timer-91f6ae7/`.
   Coletor/gate desse marco:
   `scripts/board/c18_totem_core_production_timer_collect.py` e
@@ -194,9 +195,6 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- Decidir se a placa de bancada deve permanecer rollbackada para a versao
-  embutida da imagem ou deixar o timer reaplicar a release stable novamente
-  como estado final operacional.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
   imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem

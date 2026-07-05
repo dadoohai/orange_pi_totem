@@ -16,12 +16,15 @@ Evidence:
 - `post-timer-gate.json`: offline gate result for the post-timer collection.
 - `post-rollback-summary.json`: live board collection after governed totem-core rollback.
 - `production-timer-complete-gate.json`: offline gate result for timer plus rollback.
+- `final-state-summary.json`: live board collection after restoring the intended stable production state.
+- `final-state-gate.json`: offline gate result for the final production state.
 
 Result:
 
 - Production timer was enabled and active.
 - The timer applied the expected stable totem-core release.
 - Governed rollback returned to the embedded totem-core version.
+- After rollback proof, the board was restored to the intended stable production release through the governed update service.
 - `kiosky-player.service` stayed active with `NRestarts=0` in both collections.
 - Public player-runtime rollback remained frozen with rc=44.
 
