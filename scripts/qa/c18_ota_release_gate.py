@@ -888,6 +888,14 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def is_full_git_sha(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 40
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
 def normalize_tar_name(name: str) -> str:
     normalized = name
     while normalized.startswith("./"):
@@ -955,11 +963,24 @@ def validate_package(manifest_path: Path, payload_path: Path | None, *, allow_di
         stderr=subprocess.PIPE,
         check=False,
     )
-    checks["source_commit_is_head"] = (
-        head.returncode == 0
-        and isinstance(data.get("source_commit"), str)
-        and data.get("source_commit") == head.stdout.strip()
-    )
+    head_sha = head.stdout.strip() if head.returncode == 0 else ""
+    source_commit = data.get("source_commit")
+    result["head"] = head_sha or None
+    result["source_commit_is_head"] = isinstance(source_commit, str) and source_commit == head_sha
+    checks["source_commit_full_sha"] = is_full_git_sha(source_commit)
+    if checks["source_commit_full_sha"] and head_sha:
+        ancestor = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", str(source_commit), "HEAD"],
+            cwd=REPO_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        result["source_commit_is_ancestor_of_head"] = ancestor.returncode == 0
+        checks["source_commit_reachable_from_head"] = ancestor.returncode == 0
+    else:
+        result["source_commit_is_ancestor_of_head"] = False
+        checks["source_commit_reachable_from_head"] = False
     checks["payload_name_exact"] = data.get("payload") == expected_payload and payload_path.name == expected_payload
     checks["created_at_utc_utc_timestamp"] = is_utc_timestamp(data.get("created_at_utc"))
     checks["requires_device"] = (data.get("requires") or {}).get("device") == "orangepizero3"
@@ -1276,7 +1297,13 @@ class PlayerRuntimeDataEvidenceGitGuardSelfTest(unittest.TestCase):
 
 
 class TotemCorePayloadBoundarySelfTest(unittest.TestCase):
-    def _write_package(self, root: Path, entries: dict[str, str]) -> tuple[Path, Path]:
+    def _write_package(
+        self,
+        root: Path,
+        entries: dict[str, str],
+        *,
+        source_commit: str | None = None,
+    ) -> tuple[Path, Path]:
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
         version = "selftest-c18-boundary"
         payload = root / f"dadooh-totem-core-{version}.tar.gz"
@@ -1292,7 +1319,7 @@ class TotemCorePayloadBoundarySelfTest(unittest.TestCase):
             "version": version,
             "channel": "homologation",
             "created_at_utc": "2026-06-12T00:00:00Z",
-            "source_commit": head,
+            "source_commit": source_commit or head,
             "source_dirty": False,
             "payload": payload.name,
             "payload_sha256": sha256_file(payload),
@@ -1327,6 +1354,29 @@ class TotemCorePayloadBoundarySelfTest(unittest.TestCase):
             self.assertIn("totem_core_tar_allowlist_exact", result["errors"])
             self.assertIn("opt/totem/bin/totem-mpv-hwdecode", result["totem_core_tar_unexpected_entries"])
             self.assertIn("data/media/playlist.json", result["totem_core_tar_unexpected_entries"])
+
+    def test_package_source_commit_may_be_committed_release_ancestor(self) -> None:
+        ancestor = subprocess.check_output(["git", "rev-parse", "HEAD^"], cwd=REPO_ROOT, text=True).strip()
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, payload = self._write_package(
+                Path(tmp),
+                {"bin/totem_status_renderer.sh": "#!/bin/sh\nexit 0\n"},
+                source_commit=ancestor,
+            )
+            result = validate_package(manifest, payload, allow_dirty=True)
+        self.assertTrue(result["checks"]["source_commit_reachable_from_head"], msg=json.dumps(result, indent=2))
+        self.assertFalse(result["source_commit_is_head"])
+
+    def test_package_source_commit_must_be_reachable_from_head(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, payload = self._write_package(
+                Path(tmp),
+                {"bin/totem_status_renderer.sh": "#!/bin/sh\nexit 0\n"},
+                source_commit="a" * 40,
+            )
+            result = validate_package(manifest, payload, allow_dirty=True)
+        self.assertFalse(result["passed"])
+        self.assertIn("source_commit_reachable_from_head", result["errors"])
 
 
 class RepoCleanGuardSelfTest(unittest.TestCase):

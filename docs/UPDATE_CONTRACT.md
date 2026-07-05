@@ -272,7 +272,9 @@ O gate deve provar, no minimo:
 - device-side `totem_updatectl.py` recusando pacote `totem-core` fora da mesma
   allowlist antes de trocar `current`/`previous`;
 - release GitHub publicada a partir do `source_commit` declarado no manifest,
-  nunca do default branch implicito do `gh`;
+  nunca do default branch implicito do `gh`; quando o pacote e versionado no
+  proprio repo, esse `source_commit` pode ser ancestral do HEAD que adiciona os
+  assets de release, mas nao pode ser inexistente nem desconectado;
 - policy/service/timer C18 coerentes;
 - freeze de `kiosky-player` preservado;
 - scripts historicos de release de `kiosky-player` falhando por padrao; qualquer
