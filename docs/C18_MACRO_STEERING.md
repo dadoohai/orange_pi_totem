@@ -63,7 +63,7 @@ Essa decisao nao libera caminho inseguro. Ela muda a ordem de entrega:
 
 ### M2 - Auto-Pull Real De `totem-core`
 
-Status: proximo marco.
+Status: feito em 2026-07-05.
 
 Valor: permitir atualizar wizard, UX operacional, status e scripts Dadooh sem
 operador.
@@ -75,26 +75,29 @@ Este marco fecha quando uma placa:
 - aplica;
 - continua com player saudavel;
 - consegue rollback;
-- nao reaplica inutilmente a mesma release.
+- preserva contrato de no-op para release repetida. A prova fisica especifica
+  de timer repetido com a mesma release fica como hardening, nao como blocker
+  deste marco.
 
 ### M3 - Imagem C18 De Producao
 
-Status: pendente.
+Status: feito em 2026-07-05.
 
-Valor: novas placas saem prontas para cliente, com o player aprovado ja
-consolidado.
+Valor: novas placas saem prontas para cliente, com o player aprovado como
+baseline inicial da imagem.
 
 Este marco fecha quando existe imagem C18 de producao:
 
 - sem marcador `not_for_production`;
-- com `player-runtime 9bebaf1` consolidado;
+- com snapshot/base `player-runtime 9bebaf1` aprovado;
 - com auto-pull `totem-core` configurado;
 - validada em placa gravada do zero;
-- com runbook de fabrica.
+- com runbook de gravacao/validacao de bancada. Checklist completo de
+  fabrica/lote fica em M4.
 
 ### M4 - Operacao Inicial De Lote
 
-Status: pendente.
+Status: em andamento, leve e paralelo.
 
 Valor: permitir entrega para cliente com risco conhecido e controle minimo.
 
@@ -109,10 +112,17 @@ Este marco fecha quando temos:
 
 ### M5 - Auto-Pull Publico De `player-runtime`
 
-Status: pendente, depois de M2/M3.
+Status: marco ativo agora.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
+
+Decisao de negocio em 2026-07-05: o cliente exige auto-pull tambem para
+`player-runtime` e aceita o risco de uma primeira producao sem grupos,
+dashboard ou telemetria de frota. Isso muda a prioridade: M5 deixa de ser
+roadmap opcional e vira o proximo ponteiro de valor. A decisao nao autoriza
+`latest` amplo, pacote futuro sem nova aprovacao, nem retorno ao caminho legado
+`kiosky-player`.
 
 Este marco nao fecha removendo o freeze de forma ampla. Fecha apenas quando
 existir caminho publico por alvo exato, com:
@@ -160,8 +170,9 @@ rebaixada.
 
 Enquanto nada mudar, a ordem de execucao e:
 
-1. Fechar M2: auto-pull real de `totem-core`.
-2. Fechar M3: imagem C18 de producao.
-3. Fechar M4: operacao inicial de lote.
-4. Atacar M5: auto-pull publico de `player-runtime`.
-5. Evoluir M6 conforme escala e incidentes reais.
+1. Atacar M5: auto-pull publico de `player-runtime` por alvo exato.
+2. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
+   criterio de pausa.
+3. Preservar M2/M3 como baseline de producao: `totem-core` auto-pull e imagem
+   C18 gravavel.
+4. Evoluir M6 conforme escala e incidentes reais.

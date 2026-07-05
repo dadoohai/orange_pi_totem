@@ -10,7 +10,7 @@ Direcao macro da fase atual: `docs/C18_MACRO_STEERING.md`.
 Spec de execucao da fase de producao com auto-pull:
 `docs/C18_PRODUCTION_AUTOPULL_SPEC.md`.
 
-Runbook do proximo marco fisico:
+Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
 
 ## Definicao pratica
@@ -21,15 +21,15 @@ rollback se necessario.
 
 Hoje a C18 tem duas coisas diferentes:
 
-- `totem-core`: caminho OTA manual/operator-triggered ja e a frente mais pronta.
+- `totem-core`: auto-pull de producao fechado em imagem C18 gravada do zero.
 - `player-runtime`: pacote aprovado, publicado no GitHub e consumido pela placa
-  em janela assistida. Public thaw, auto-pull e rollout amplo continuam
-  separados.
+  em janela assistida. Public thaw/ativacao estao autorizados por evidencia, mas
+  o caminho publico de auto-pull ainda precisa ser materializado no updater,
+  timer/policy e prova de placa.
 
-Portanto, os dois caminhos praticos de software C18 ja possuem prova remota de
-laboratorio: `totem-core` como OTA manual comum e `player-runtime` como apply
-assistido por operador, com rollback e health real. Isso ainda nao significa
-auto-pull amplo nem producao automatica.
+Portanto, o proximo marco ativo e V3/M5: transformar o apply assistido de
+`player-runtime` em auto-pull publico por alvo exato, preservando rollback,
+health real e bloqueio para qualquer alvo nao autorizado.
 
 ## Repositorio de entrega
 
@@ -53,8 +53,8 @@ imagem/fallback quando nao houver.
 
 | Frente | O que entra | Caminho permitido agora |
 | --- | --- | --- |
-| `totem-core` | wizard, splash, status, writer, helpers, validadores, settings e UX operacional da placa | OTA C18 manual/remoto, com dry-run, apply e rollback |
-| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | release C18-aware `player-runtime`; consumo remoto assistido provado na placa; public thaw/auto-pull continuam separados |
+| `totem-core` | wizard, splash, status, writer, helpers, validadores, settings e UX operacional da placa | auto-pull de producao fechado; dry-run, apply, timer e rollback provados |
+| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | release C18-aware `player-runtime`; consumo remoto assistido provado; proximo marco e auto-pull publico por alvo exato |
 | `kiosky-player` legado | rota historica do player | nao usar como caminho de release C18 |
 | `media-system` | MPV, ffmpeg, hwdecode, kernel, DTB, U-Boot, BSP, imagem base | nova imagem + homologacao, nao OTA comum |
 | `field-data` | midia, config real, cache, playlist, estado local | fluxo operacional de dados, nao release de software |
@@ -68,8 +68,8 @@ imagem/fallback quando nao houver.
    cache, systemd, kernel ou updater novo.
 3. `player-runtime` nao pode carregar MPV/ffmpeg/kernel/midia/config/cache; o
    pacote atual e deliberadamente estreito.
-4. Auto-pull de `totem-core` e o alvo de producao pragmatica; auto-pull geral
-   de `player-runtime`/frota continua separado ate ter rotina publica propria.
+4. Auto-pull de `totem-core` ja esta fechado; auto-pull de `player-runtime`
+   agora e o marco ativo, mas somente por rotina publica propria e alvo exato.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
 6. Toda atualizacao real precisa ter dry-run, apply, validacao e rollback.
@@ -123,7 +123,8 @@ imagem/fallback quando nao houver.
   rollbackou para `c17.6-environment-input-20260514T211247Z` e teve a policy
   original restaurada. Evidencia em
   `docs/evidence/c18-update-validation/20260705T185806Z-totem-core-stable-lab-apply-rollback-ccaf5a1/`.
-- Marco 5 `totem-core` auto-pull em imagem de producao: fechado em 2026-07-05.
+- Marco anterior `totem-core` auto-pull em imagem de producao: fechado em
+  2026-07-05.
   A placa foi gravada com a imagem `c18-hwdecode-prod-1`, bootou com policy
   `stable`, timer habilitado, aplicou automaticamente a release stable
   `totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1`, manteve
@@ -195,16 +196,18 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
-  imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
+- Decidir se novas placas saem com `player-runtime 9bebaf1` como baseline
+  inicial aprovado da imagem ou se recebem `player-runtime` via OTA assistido no
+  provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem
   reabrir o caminho legado `kiosky-player`.
-- Decidir formalmente a politica de public thaw/auto-pull/rollout por grupos
-  para `player-runtime`, se esse update automatico for requerido agora.
+- Materializar a politica de public thaw/auto-pull de `player-runtime` no
+  updater, timer/policy e prova de placa. Rollout por grupos continua roadmap.
 - Separar futuras evolucoes de produto: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player.
 
-Hardenings nao bloqueantes apontados pela auditoria do Marco 5:
+Hardenings nao bloqueantes apontados pela auditoria do marco anterior de
+`totem-core` auto-pull:
 
 - pinning mais forte do resumo `c18-ota-release-gate.json` anexado a releases
   `totem-core stable`, para evitar aceitar um summary verde porem antigo;
@@ -222,11 +225,12 @@ rollback.
 
 Leitura pratica:
 
-- novas placas devem sair preferencialmente com imagem de producao consolidada,
-  ja contendo o `player-runtime 9bebaf1` aprovado por excecao de negocio;
+- novas placas devem sair preferencialmente com imagem de producao contendo o
+  `player-runtime 9bebaf1` como baseline inicial aprovado por excecao de
+  negocio;
 - `totem-core` deve ser o primeiro auto-pull padrao, porque ja tem apply remoto,
   health, rollback e escopo estreito provados na placa;
-- `player-runtime` tambem deve entrar no objetivo de auto-pull, mas nao por
+- `player-runtime` entra agora no objetivo de auto-pull, mas nao por
   reaproveitamento cego do harness de laboratorio: precisa de caminho publico
   pinado/hash-bound, health real, rollback e criterio claro de thaw;
 - como ainda nao ha infraestrutura real de grupos, dashboard ou monitoramento
@@ -243,8 +247,41 @@ materializar uma linha de producao pragmatica:
 2. policy de producao e timer habilitado para auto-pull de `totem-core`;
 3. teste real do timer aplicando update remoto e rollbackando;
 4. especificacao curta para devs e fabrica;
-5. ponte publica segura para auto-pull de `player-runtime`, se o cliente exigir
-   update automatico do player alem do core.
+5. ponte publica segura para auto-pull de `player-runtime`, agora exigida pelo
+   cliente e assumida como proximo marco.
+
+## Rodada atual - V3/M5 `player-runtime` auto-pull
+
+Decisao: avancar com auto-pull de `player-runtime` em producao pragmatica,
+assumindo risco de negocio e preservando as barreiras tecnicas que evitam
+regressao silenciosa.
+
+Claim permitido ao final da rodada: uma placa C18 em imagem de producao aplicou
+automaticamente o `player-runtime` exato `9bebaf1`, validou hashes/manifest,
+gerou marker valido no device, passou health real, manteve rollback e recusou
+alvos nao autorizados.
+
+Nao-claims:
+
+- nao e `latest` amplo para qualquer `player-runtime` futuro;
+- nao publica direto pelo repo/caminho legado `kiosky-player`;
+- nao altera MPV, ffmpeg, kernel, imagem, midia, config ou cache;
+- nao entrega dashboard, grupos/canary, telemetria ou kill switch completo;
+- nao reclassifica evidencia antiga como prova de novo alvo.
+
+Passos minimos:
+
+1. autorizacao production hash-bound para o alvo `9bebaf1`;
+2. caminho publico no updater sem env lab, permitido somente para alvo
+   autorizado;
+3. health real, marker, quarentena, state e rollback reaproveitando o
+   verify-then-promote existente;
+4. timer/service explicito para `player-runtime`, sem concorrer com
+   `totem-core`;
+5. evidencia de placa: dry-run, apply automatico, deep-health, rollback, no-op e
+   negativos de alvo errado/hash errado/canal errado/sem autorizacao;
+6. auditoria final focada em regressao: `totem-core` continua funcionando,
+   `kiosky-player` legado continua fora e `media-system` continua fora do OTA.
 
 ## Imagem para novas placas
 
@@ -252,7 +289,7 @@ Com os marcos `totem-core` e `player-runtime` remotos fechados em laboratorio,
 podemos escolher entre:
 
 - imagem base enxuta + atualizacao OTA no provisionamento;
-- imagem ja consolidada com `player-runtime 9bebaf1`;
+- imagem com `player-runtime 9bebaf1` como baseline inicial aprovado;
 - rollout remoto por grupos para placas ja instaladas.
 
 ## Regra para os devs
@@ -272,8 +309,7 @@ podemos escolher entre:
 5. Marco 2 (`player-runtime` remoto) fechado.
 6. Marco 3: imagem producao C18 gerada offline e validada por manifesto.
 7. Marco 4: `totem-core stable` publicado e validado por apply/rollback lab.
-8. Marco 5: imagem producao bootada e timer real de `totem-core` provado com
-   rollback.
-9. Proxima rodada: definir estado final da placa de bancada, fechar runbook de
-   fabrica/devs e decidir se V3 `player-runtime` publico entra agora ou fica
-   como roadmap controlado.
+8. Marco anterior: imagem producao bootada e timer real de `totem-core` provado
+   com rollback.
+9. Rodada atual: executar V3/M5 `player-runtime` auto-pull publico por alvo
+   exato, mantendo M4 minimo em paralelo.

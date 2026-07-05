@@ -69,7 +69,8 @@ Spec minima:
 - `final_image=true`, tag/SHA/marker/repo commit proprios;
 - base congelada: sem `apt upgrade`, `armbian-upgrade` ou troca de
   kernel/DTB/U-Boot/MPV nesta vertical;
-- `player-runtime 9bebaf1` consolidado como baseline inicial;
+- `player-runtime 9bebaf1` como baseline inicial aprovado da imagem, sem
+  confundir isso com adocao runtime em `/data/player-runtime/current`;
 - `totem-core` atual embutido ou imediatamente atualizavel;
 - policy de producao instalada;
 - update timer instalado conforme V2;
@@ -85,8 +86,9 @@ Testes/evidencias:
 - policy presente;
 - timer no estado esperado;
 - gate global C18 verde apos registro.
-- smoke de fabrica por placa ou por amostra definida: microSD, serial/lote,
-  SHA gravado, boot, config e playback.
+- smoke de bancada por placa ou por amostra definida: microSD, serial/lote,
+  SHA gravado, boot, config e playback. Checklist completo de fabrica/lote fica
+  em V4.
 
 Fora desta vertical:
 
@@ -126,7 +128,9 @@ Testes/evidencias:
 - rollback real;
 - player permanece saudavel depois do update;
 - teste negativo para pacote fora da allowlist.
-- boot com timer habilitado e release ja aplicada: deve ser no-op;
+- boot com timer habilitado e release ja aplicada: deve ser no-op. Se nao houver
+  prova fisica especifica do timer repetido, manter como hardening operacional,
+  pois o contrato ja e coberto pelo updater/gates.
 - evidencia M2 propria para timer real, separada da evidencia M1 manual.
 - coleta/gate do marco: `scripts/board/c18_totem_core_production_timer_collect.py`
   e `scripts/qa/c18_totem_core_production_timer_evidence_gate.py`, com coleta
@@ -143,6 +147,12 @@ Fora desta vertical:
 
 Valor: mudancas futuras no comportamento do player tambem entram no fluxo OTA,
 sem voltar ao repo/caminho legado.
+
+Status: vertical ativa agora. A decisao de negocio em 2026-07-05 e liberar
+auto-pull de `player-runtime` como capacidade de producao pragmatica, aceitando
+rollout simples/global e adiando grupos, dashboard e telemetria. A execucao
+tecnica continua estreita: alvo exato, hashes, health real, rollback e
+fail-closed para qualquer coisa fora da autorizacao.
 
 Spec minima:
 
@@ -185,6 +195,7 @@ Fora desta vertical:
 - publicar direto pelo `kiosky-player`;
 - auto-pull por grupos sofisticados;
 - stable manifest falso para contornar freeze.
+- `latest` amplo que possa pegar um `player-runtime` futuro sem nova evidencia.
 
 ### V4 - Operacao De Producao Simples
 
@@ -262,14 +273,32 @@ Act:
 
 ## Primeira Sequencia Recomendada
 
-1. Congelar esta spec como norte da rodada.
-2. Fazer V2 em modo lab: timer real para `totem-core`, no-op seguro e rollback.
-3. Adaptar V1: imagem de producao com `player-runtime 9bebaf1` consolidado e
-   timer de `totem-core`.
-4. Validar uma placa gravada do zero.
-5. Definir V3 como proximo slice se o cliente precisar atualizar player por
-   auto-pull, e nao apenas receber placas ja com o player atual.
-6. Registrar V4 antes de entregar lote: inventario, rollback owner e emergencia.
+1. Feito: congelar esta spec como norte da rodada.
+2. Feito: V2 com timer real para `totem-core`, no-op seguro e rollback.
+3. Feito: V1 com imagem de producao, `player-runtime 9bebaf1` como baseline
+   inicial aprovado e timer de `totem-core`.
+4. Feito: placa gravada do zero e validada com auto-pull real do core.
+5. Agora: executar V3 como proximo slice, porque o cliente quer atualizar player
+   por auto-pull e aceita risco de negocio.
+6. Em paralelo: registrar V4 minimo antes de entregar lote: inventario, rollback
+   owner, emergencia e criterio de pausa.
+
+## Caminho Minimo V3
+
+1. Criar autorizacao de producao para o alvo exato `9bebaf1`, amarrando tag,
+   version, source commit, payload SHA, manifest SHA, release gate, stable
+   promotion, thaw decision e public activation.
+2. Adicionar caminho publico no updater que aplica somente esse alvo autorizado,
+   sem env lab e sem `latest` amplo.
+3. Reusar o verify-then-promote existente: download, hash, extracao estreita,
+   health real, marker, troca atomica de `current`, state e quarentena.
+4. Abrir rollback publico apenas para estado governado/autorizado, preservando
+   fallback de imagem e `previous`.
+5. Criar timer ou service explicitamente componenteado para `player-runtime`,
+   com lock/ordenacao para nao concorrer com `totem-core`.
+6. Provar na placa: dry-run, apply automatico, deep-health, rollback, reapply
+   no-op e negativos de alvo errado, hash errado, canal errado e ausencia de
+   autorizacao.
 
 ## Definicao De Pronto Desta Spec
 
