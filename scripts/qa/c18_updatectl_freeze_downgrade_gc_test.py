@@ -404,6 +404,140 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(reason, "current_version_payload_sha256_mismatch")
 
+    def test_totem_core_same_current_identity_is_noop_before_payload_io(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl._ensure_dirs()
+            updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+
+            version = "core-current"
+            sha = "a" * 64
+            release_dir = updatectl.RELEASES_DIR / version
+            release_dir.mkdir(parents=True)
+            updatectl._atomic_symlink(f"releases/{version}", updatectl.CURRENT_LINK)
+            updatectl._atomic_symlink("releases/core-previous", updatectl.PREVIOUS_LINK)
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "totem-core",
+                "current": {
+                    "version": version,
+                    "payload_sha256": sha,
+                    "manifest_created_at_utc": "2026-06-02T10:00:00Z",
+                },
+                "previous": {
+                    "version": "core-previous",
+                    "payload_sha256": "b" * 64,
+                    "manifest_created_at_utc": "2026-06-02T09:00:00Z",
+                },
+                "last_operation": {"type": "apply", "status": "success"},
+            })
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest(version, sha=sha), sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            state_before = updatectl.STATE_FILE.read_bytes()
+            current_before = updatectl._read_symlink_target(updatectl.CURRENT_LINK)
+            previous_before = updatectl._read_symlink_target(updatectl.PREVIOUS_LINK)
+
+            def fail_if_called(*_args, **_kwargs):
+                raise AssertionError("already-current apply must not mutate or touch payload")
+
+            old_download = updatectl._http_download
+            old_extract = updatectl._safe_extract_tar
+            old_symlink = updatectl._atomic_symlink
+            old_write_state = updatectl._write_state
+            old_health = updatectl._totem_core_health_check
+            old_systemd = updatectl._systemd_unit_state
+            old_settings_lock = updatectl.SETTINGS_LOCK
+            try:
+                updatectl._http_download = fail_if_called
+                updatectl._safe_extract_tar = fail_if_called
+                updatectl._atomic_symlink = fail_if_called
+                updatectl._write_state = fail_if_called
+                updatectl._totem_core_health_check = fail_if_called
+                updatectl._systemd_unit_state = lambda _unit: "inactive"
+                updatectl.SETTINGS_LOCK = root / "missing-settings.lock"
+
+                rc = updatectl._apply_from_manifest_path_unfrozen(
+                    manifest_path,
+                    payload_url="https://example.invalid/dadooh-totem-core-core-current.tar.gz",
+                    source="unit-already-current",
+                )
+            finally:
+                updatectl._http_download = old_download
+                updatectl._safe_extract_tar = old_extract
+                updatectl._atomic_symlink = old_symlink
+                updatectl._write_state = old_write_state
+                updatectl._totem_core_health_check = old_health
+                updatectl._systemd_unit_state = old_systemd
+                updatectl.SETTINGS_LOCK = old_settings_lock
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(updatectl.STATE_FILE.read_bytes(), state_before)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), current_before)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), previous_before)
+            self.assertTrue(release_dir.is_dir())
+            self.assertFalse((updatectl.INCOMING_DIR / version).exists())
+            log_text = updatectl.LOG_FILE.read_text(encoding="utf-8")
+            self.assertIn("apply_noop_already_current", log_text)
+            self.assertNotIn("downloading_payload", log_text)
+
+    def test_totem_core_same_version_different_sha_is_rejected_before_payload_io(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl._ensure_dirs()
+            updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+
+            version = "core-current"
+            updatectl._atomic_symlink(f"releases/{version}", updatectl.CURRENT_LINK)
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "totem-core",
+                "current": {
+                    "version": version,
+                    "payload_sha256": "b" * 64,
+                    "manifest_created_at_utc": "2026-06-02T10:00:00Z",
+                },
+                "previous": None,
+                "last_operation": {"type": "apply", "status": "success"},
+            })
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest(version, sha="a" * 64), sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            state_before = updatectl.STATE_FILE.read_bytes()
+
+            old_download = updatectl._http_download
+            old_systemd = updatectl._systemd_unit_state
+            old_settings_lock = updatectl.SETTINGS_LOCK
+            try:
+                updatectl._http_download = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                    AssertionError("rejected manifest must not download payload")
+                )
+                updatectl._systemd_unit_state = lambda _unit: "inactive"
+                updatectl.SETTINGS_LOCK = root / "missing-settings.lock"
+                rc = updatectl._apply_from_manifest_path_unfrozen(
+                    manifest_path,
+                    payload_url="https://example.invalid/dadooh-totem-core-core-current.tar.gz",
+                    source="unit-sha-mismatch",
+                )
+            finally:
+                updatectl._http_download = old_download
+                updatectl._systemd_unit_state = old_systemd
+                updatectl.SETTINGS_LOCK = old_settings_lock
+
+            self.assertEqual(rc, 45)
+            self.assertEqual(updatectl.STATE_FILE.read_bytes(), state_before)
+            self.assertFalse((updatectl.INCOMING_DIR / version).exists())
+            self.assertIn(
+                "current_version_payload_sha256_mismatch",
+                updatectl.LOG_FILE.read_text(encoding="utf-8"),
+            )
+
     def test_downgrade_rejects_previous_identity_without_policy_permission(self) -> None:
         state = {
             "current": {

@@ -1742,6 +1742,17 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
 
     version = manifest["version"]
     sha = manifest["payload_sha256"].lower()
+    release_target = f"releases/{version}"
+    if (
+        COMPONENT == "totem-core"
+        and reason == "same_current_identity"
+        and _read_symlink_target(CURRENT_LINK) == release_target
+        and (RELEASES_DIR / version).is_dir()
+    ):
+        log("INFO", "apply_noop_already_current", component=COMPONENT,
+            version=version, payload_sha256=sha, current=release_target)
+        return 0
+
     payload_name = manifest["payload"]
 
     # Stage payload
