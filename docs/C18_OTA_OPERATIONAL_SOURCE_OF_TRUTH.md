@@ -109,6 +109,12 @@ imagem/fallback quando nao houver.
   proprio, evidencia propria, assets de imagem de producao e non-claims
   explicitos. Isso autoriza somente auto-pull do core; nao abre thaw nem stable
   de `player-runtime`.
+- Marco 4 `totem-core stable`: fechado em 2026-07-05. A GitHub Release
+  `totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1` foi publicada como
+  `stable`/nao-prerelease, com 6 assets validados, payload SHA256
+  `613d9d6d1099636d7ca956c72e3927d502f1281068f8b0830b2d5f3ba2af0355` e tag
+  apontando para o `source_commit`
+  `ccaf5a11775d122dd08512c9f5cf1e3027e5a29b`.
 
 ## Estado operacional atual
 
@@ -170,9 +176,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 ## O que falta para producao automatizada/ampla
 
 - Gravar essa imagem na placa lab e validar boot, player, policy e timer.
-- Gerar evidencia `totem-core stable`, buildar/publicar uma release stable de
-  core e provar que a imagem de producao aplica essa release pelo timer.
-- Provar o timer real aplicando um update remoto `totem-core` e rollbackando.
+- Provar que a imagem de producao aplica a release stable de `totem-core` pelo
+  timer real e rollbacka.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
   imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem
