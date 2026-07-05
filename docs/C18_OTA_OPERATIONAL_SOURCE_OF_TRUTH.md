@@ -107,7 +107,6 @@ imagem/fallback quando nao houver.
   `9b10788031b9bf4884cd49169799b56d995fa56f8cb185c846bb7b485e1dc89e`.
   Evidencia em
   `docs/evidence/c18-update-validation/20260705T175747Z-prod-image-build-44bfbd0/`.
-  Isso ainda nao e placa validada: falta gravar, bootar e validar o timer real.
 - Separacao de `totem-core stable`: o caminho de stable do core passa a ter gate
   proprio, evidencia propria, assets de imagem de producao e non-claims
   explicitos. Isso autoriza somente auto-pull do core; nao abre thaw nem stable
@@ -124,6 +123,17 @@ imagem/fallback quando nao houver.
   rollbackou para `c17.6-environment-input-20260514T211247Z` e teve a policy
   original restaurada. Evidencia em
   `docs/evidence/c18-update-validation/20260705T185806Z-totem-core-stable-lab-apply-rollback-ccaf5a1/`.
+- Marco 5 `totem-core` auto-pull em imagem de producao: fechado em 2026-07-05.
+  A placa foi gravada com a imagem `c18-hwdecode-prod-1`, bootou com policy
+  `stable`, timer habilitado, aplicou automaticamente a release stable
+  `totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1`, manteve
+  `kiosky-player.service` ativo com `NRestarts=0`, preservou o freeze publico
+  de `player-runtime` com `rc=44`, e rollbackou para
+  `c17.6-environment-input-20260514T211247Z`. Evidencia em
+  `docs/evidence/c18-update-validation/20260705T202923Z-totem-core-production-timer-91f6ae7/`.
+  Coletor/gate desse marco:
+  `scripts/board/c18_totem_core_production_timer_collect.py` e
+  `scripts/qa/c18_totem_core_production_timer_evidence_gate.py`.
 
 ## Estado operacional atual
 
@@ -184,11 +194,9 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- Gravar essa imagem na placa lab e validar boot, player, policy e timer.
-- Gravar/bootar a imagem de producao e provar que ela aplica a release stable de
-  `totem-core` pelo timer real e rollbacka. O coletor e o gate desse marco sao
-  `scripts/board/c18_totem_core_production_timer_collect.py` e
-  `scripts/qa/c18_totem_core_production_timer_evidence_gate.py`.
+- Decidir se a placa de bancada deve permanecer rollbackada para a versao
+  embutida da imagem ou deixar o timer reaplicar a release stable novamente
+  como estado final operacional.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
   imagem ou se recebem `player-runtime` via OTA assistido no provisionamento.
 - Transformar o caminho assistido em rotina operacional de release, sem
@@ -256,5 +264,9 @@ podemos escolher entre:
 4. Marco 1 (`totem-core` remoto) fechado.
 5. Marco 2 (`player-runtime` remoto) fechado.
 6. Marco 3: imagem producao C18 gerada offline e validada por manifesto.
-7. Proxima rodada: gravar a imagem na placa, validar boot e provar o timer real
-   de `totem-core` aplicando update remoto com rollback.
+7. Marco 4: `totem-core stable` publicado e validado por apply/rollback lab.
+8. Marco 5: imagem producao bootada e timer real de `totem-core` provado com
+   rollback.
+9. Proxima rodada: definir estado final da placa de bancada, fechar runbook de
+   fabrica/devs e decidir se V3 `player-runtime` publico entra agora ou fica
+   como roadmap controlado.
