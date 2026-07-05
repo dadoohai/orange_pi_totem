@@ -95,11 +95,15 @@ imagem/fallback quando nao houver.
   real, executou rollback com `rc=0`, e terminou restaurada no alvo
   `9bebaf1` com health estabilizada verde. Evidencia em
   `docs/evidence/c18-update-validation/20260705T150628Z-player-runtime-github-m2-hdmi-9bebaf1/`.
-- Marco 3 caminho de imagem producao: iniciado em 2026-07-05. O repo agora tem
-  um builder explicito para imagem C18 producao e um perfil de embed
-  `totem-core` producao com policy `stable`, `allowed_components=["totem-core"]`
-  e timer habilitado. Isso ainda nao e imagem gravada em placa: falta construir,
-  gravar, bootar e validar o timer real.
+- Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
+  builder explicito para imagem C18 producao e o build gerou
+  `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,
+  policy `stable`, `allowed_components=["totem-core"]` e timer habilitado.
+  SHA da imagem:
+  `9b10788031b9bf4884cd49169799b56d995fa56f8cb185c846bb7b485e1dc89e`.
+  Evidencia em
+  `docs/evidence/c18-update-validation/20260705T175747Z-prod-image-build-44bfbd0/`.
+  Isso ainda nao e placa validada: falta gravar, bootar e validar o timer real.
 
 ## Estado operacional atual
 
@@ -160,7 +164,6 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- Construir uma imagem C18 producao candidata a partir do builder explicito.
 - Gravar essa imagem na placa lab e validar boot, player, policy e timer.
 - Provar o timer real aplicando um update remoto `totem-core` e rollbackando.
 - Decidir se novas placas saem com `player-runtime 9bebaf1` consolidado na
@@ -229,7 +232,6 @@ podemos escolher entre:
 3. Corrigir textos historicos que confundam publicacao com consumo em placa.
 4. Marco 1 (`totem-core` remoto) fechado.
 5. Marco 2 (`player-runtime` remoto) fechado.
-6. Marco 3: builder de imagem producao e perfil auto-pull `totem-core`
-   implementados no repo.
-7. Proxima rodada: construir a imagem producao, gravar na placa, validar boot e
-   provar o timer real de `totem-core` aplicando update remoto com rollback.
+6. Marco 3: imagem producao C18 gerada offline e validada por manifesto.
+7. Proxima rodada: gravar a imagem na placa, validar boot e provar o timer real
+   de `totem-core` aplicando update remoto com rollback.
