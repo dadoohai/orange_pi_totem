@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -35,6 +37,7 @@ import tarfile
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -46,6 +49,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 SCHEMA_MANIFEST = "dadooh.totem.update.v1"
 SCHEMA_STATE = "dadooh.totem.update.state.v1"
 SCHEMA_POLICY = "dadooh.totem.update.policy.v1"
+SCHEMA_PLAYER_RUNTIME_PRODUCTION_AUTOPULL = "dadooh.c18.player_runtime.production_autopull_authorization.v1"
 DEFAULT_COMPONENT = "kiosky-player"  # legacy default; C18 operational OTA must pass --component totem-core.
 COMPONENT = DEFAULT_COMPONENT
 SUPPORTED_COMPONENTS = ("kiosky-player", "player-runtime", "totem-core")
@@ -86,6 +90,13 @@ OTA_FROZEN_COMPONENTS = {
 DATA_ROOT = Path(os.environ.get("TOTEM_DATA_ROOT", "/data"))
 UPDATES_DIR = DATA_ROOT / "updates"
 POLICY_FILE = UPDATES_DIR / "policy.json"
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE = Path(
+    os.environ.get(
+        "TOTEM_PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE",
+        str(UPDATES_DIR / "player-runtime-production-autopull.json"),
+    )
+)
+UPDATE_LOCK_FILE = Path(os.environ.get("TOTEM_UPDATE_LOCK_FILE", "/run/totem-updatectl.lock"))
 APP_BASE = DATA_ROOT / "apps" / COMPONENT
 RELEASES_DIR = APP_BASE / "releases"
 CURRENT_LINK = APP_BASE / "current"
@@ -111,6 +122,7 @@ GITHUB_RELEASE_PAGE_LIMIT = 10
 HTTP_TIMEOUT_S = 30
 DOWNLOAD_TIMEOUT_S = 300
 USER_AGENT = "dadooh-totem-updatectl/0.2 (+orangepizero3)"
+PLAYER_RUNTIME_RELEASE_GATE_ASSET = "c18-player-runtime-release-gate.json"
 
 HEALTH_GRACE_SECONDS = int(os.environ.get("TOTEM_HEALTH_GRACE_SECONDS", "12"))
 HEALTH_CHECK_TIMEOUT_S = int(os.environ.get("TOTEM_HEALTH_CHECK_TIMEOUT_S", "30"))
@@ -154,7 +166,7 @@ TOTEM_CORE_ALLOWED_TAR_FILES = (
 def configure_component(component: str) -> None:
     """Select paths and behavior for a supported update component."""
     global COMPONENT, APP_BASE, RELEASES_DIR, CURRENT_LINK, PREVIOUS_LINK
-    global INCOMING_DIR, STATE_FILE
+    global INCOMING_DIR, STATE_FILE, PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE
 
     if component not in SUPPORTED_COMPONENTS:
         raise RuntimeError(f"unsupported component: {component}")
@@ -176,6 +188,42 @@ def configure_component(component: str) -> None:
     RELEASES_DIR = APP_BASE / "releases"
     CURRENT_LINK = APP_BASE / "current"
     PREVIOUS_LINK = APP_BASE / "previous"
+    if "TOTEM_PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE" not in os.environ:
+        PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE = (
+            UPDATES_DIR / "player-runtime-production-autopull.json"
+        )
+
+
+@contextlib.contextmanager
+def _update_lock(operation: str):
+    """Serialize mutating update operations across components."""
+    lock_path = UPDATE_LOCK_FILE
+    fallback_path = UPDATES_DIR / "updatectl.lock"
+    fh = None
+    try:
+        try:
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            fh = lock_path.open("a+")
+        except OSError:
+            fallback_path.parent.mkdir(parents=True, exist_ok=True)
+            fh = fallback_path.open("a+")
+            lock_path = fallback_path
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            log("WARN", "update_lock_busy", operation=operation, lock=str(lock_path))
+            print(f"update_lock_busy:{operation}", file=sys.stderr)
+            yield False
+            return
+        log("INFO", "update_lock_acquired", operation=operation, lock=str(lock_path))
+        yield True
+    finally:
+        if fh is not None:
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+            fh.close()
 
 
 # ----------------------------------------------------------------------------
@@ -837,6 +885,150 @@ def _load_update_policy() -> Dict[str, Any]:
         return policy
 
 
+def _json_object(path: Path, label: str) -> Dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise RuntimeError(f"{label}_read_failed:{e}") from e
+    if not isinstance(data, dict):
+        raise RuntimeError(f"{label}_not_object")
+    return data
+
+
+def _require_text(data: Dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value:
+        raise RuntimeError(f"authorization_missing_{key}")
+    return value
+
+
+def _require_hex(data: Dict[str, Any], key: str, length: int = 64) -> str:
+    value = _require_text(data, key).lower()
+    if len(value) != length or any(c not in "0123456789abcdef" for c in value):
+        raise RuntimeError(f"authorization_invalid_{key}")
+    return value
+
+
+def _load_player_runtime_production_authorization(path: Path) -> Dict[str, Any]:
+    if not path.is_file() or path.is_symlink():
+        raise RuntimeError("player_runtime_authorization_missing")
+    data = _json_object(path, "player_runtime_authorization")
+    if data.get("schema") != SCHEMA_PLAYER_RUNTIME_PRODUCTION_AUTOPULL:
+        raise RuntimeError("player_runtime_authorization_schema")
+    if data.get("enabled") is not True:
+        raise RuntimeError("player_runtime_authorization_disabled")
+    if data.get("component") != "player-runtime":
+        raise RuntimeError("player_runtime_authorization_component")
+    if data.get("auto_pull_enabled") is not True:
+        raise RuntimeError("player_runtime_authorization_autopull_not_enabled")
+    if data.get("channel") != "homologation":
+        raise RuntimeError("player_runtime_authorization_channel")
+    if data.get("allow_latest") is True:
+        raise RuntimeError("player_runtime_authorization_latest_not_allowed")
+    _require_text(data, "repo")
+    _require_text(data, "tag_name")
+    _require_text(data, "version")
+    _require_hex(data, "source_commit", 40)
+    _require_hex(data, "payload_sha256")
+    _require_hex(data, "manifest_sha256")
+    _require_hex(data, "release_gate_sha256")
+    non_claims = data.get("non_claims")
+    if not isinstance(non_claims, list) or "not_latest_broad" not in non_claims:
+        raise RuntimeError("player_runtime_authorization_non_claims")
+    return data
+
+
+def _player_runtime_authorization_policy(auth: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "schema": SCHEMA_POLICY,
+        "device_channel": auth.get("channel"),
+        "device_track": auth.get("device_track", DEVICE_TRACK_DEFAULT),
+        "allowed_components": ["player-runtime"],
+        "allow_prerelease": bool(auth.get("allow_prerelease", False)),
+        "allow_downgrade": False,
+        "policy_source": "player_runtime_production_authorization",
+    }
+
+
+def _validate_player_runtime_authorization_release_gate(
+    auth: Dict[str, Any],
+    release_gate_path: Path,
+) -> None:
+    release_gate_sha = _sha256_file(release_gate_path).lower()
+    if release_gate_sha != str(auth.get("release_gate_sha256", "")).lower():
+        raise RuntimeError("player_runtime_release_gate_sha_mismatch")
+    gate = _json_object(release_gate_path, "player_runtime_release_gate")
+    if gate.get("schema") != "dadooh.c18.player_runtime.release_gate.v1":
+        raise RuntimeError("player_runtime_release_gate_schema")
+    if gate.get("passed") is not True:
+        raise RuntimeError("player_runtime_release_gate_not_passed")
+    if gate.get("component") != "player-runtime":
+        raise RuntimeError("player_runtime_release_gate_component")
+    package = gate.get("package") if isinstance(gate.get("package"), dict) else {}
+    manifest = gate.get("manifest") if isinstance(gate.get("manifest"), dict) else {}
+    expected_version = auth.get("version")
+    expected_source = auth.get("source_commit")
+    expected_payload = auth.get("payload_sha256")
+    expected_channel = auth.get("channel")
+    if package.get("source_commit") != expected_source or manifest.get("source_commit") != expected_source:
+        raise RuntimeError("player_runtime_release_gate_source_commit_mismatch")
+    if package.get("payload_sha256") != expected_payload or manifest.get("payload_sha256") != expected_payload:
+        raise RuntimeError("player_runtime_release_gate_payload_mismatch")
+    if package.get("channel") != expected_channel or manifest.get("channel") != expected_channel:
+        raise RuntimeError("player_runtime_release_gate_channel_mismatch")
+    if manifest.get("version") != expected_version:
+        raise RuntimeError("player_runtime_release_gate_version_mismatch")
+
+
+def _validate_player_runtime_authorization_manifest(
+    auth: Dict[str, Any],
+    manifest: Dict[str, Any],
+    manifest_path: Path,
+    release_gate_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    manifest_sha = _sha256_file(manifest_path).lower()
+    if manifest_sha != str(auth.get("manifest_sha256", "")).lower():
+        raise RuntimeError("player_runtime_manifest_sha_mismatch")
+    policy = _player_runtime_authorization_policy(auth)
+    _validate_manifest(manifest, policy=policy, component="player-runtime")
+    expected = {
+        "version": auth.get("version"),
+        "channel": auth.get("channel"),
+        "source_commit": auth.get("source_commit"),
+        "payload_sha256": auth.get("payload_sha256"),
+        "source_repo": auth.get("repo"),
+    }
+    for key, value in expected.items():
+        if manifest.get(key) != value:
+            raise RuntimeError(f"player_runtime_manifest_{key}_mismatch")
+    if release_gate_path is not None:
+        _validate_player_runtime_authorization_release_gate(auth, release_gate_path)
+    return policy
+
+
+def _player_runtime_state_entry_matches_authorization(
+    entry: Any,
+    auth: Dict[str, Any],
+) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    return (
+        entry.get("version") == auth.get("version")
+        and str(entry.get("payload_sha256") or "").lower()
+        == str(auth.get("payload_sha256") or "").lower()
+    )
+
+
+def _player_runtime_state_mentions_authorized_target(
+    state: Dict[str, Any],
+    auth: Dict[str, Any],
+) -> bool:
+    return (
+        _player_runtime_state_entry_matches_authorization(state.get("current"), auth)
+        or _player_runtime_state_entry_matches_authorization(state.get("previous"), auth)
+    )
+
+
 def _policy_allows_manifest(policy: Dict[str, Any],
                             component: str,
                             manifest_channel: str) -> Tuple[bool, str]:
@@ -1481,6 +1673,34 @@ def _download_manifest_asset(asset: Dict[str, Any], dest_dir: Path) -> Path:
     return dest
 
 
+def _gh_release_by_tag(repo: str, tag: str) -> Dict[str, Any]:
+    safe_tag = urllib.parse.quote(tag, safe="")
+    url = f"{GITHUB_API}/repos/{repo}/releases/tags/{safe_tag}"
+    data = _http_get_json(url)
+    if not isinstance(data, dict):
+        raise RuntimeError("unexpected /releases/tags response shape")
+    return data
+
+
+def _gh_asset_by_name(rel: Dict[str, Any], name: str) -> Dict[str, Any]:
+    for asset in rel.get("assets") or []:
+        if isinstance(asset, dict) and asset.get("name") == name:
+            return asset
+    raise RuntimeError(f"release {rel.get('tag_name')} missing asset: {name}")
+
+
+def _download_named_asset(rel: Dict[str, Any], name: str, dest_dir: Path,
+                          expected_sha256: Optional[str] = None) -> Path:
+    asset = _gh_asset_by_name(rel, name)
+    url = asset.get("browser_download_url")
+    if not isinstance(url, str) or not url:
+        raise RuntimeError(f"asset {name} missing browser_download_url")
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / _safe_stage_name(name)
+    _http_download(url, dest, expected_sha256=expected_sha256)
+    return dest
+
+
 def _gh_select_latest_release(repo: str,
                               stage_dir: Path) -> Dict[str, Any]:
     releases = _gh_list_releases(repo)
@@ -1706,16 +1926,20 @@ def _apply_from_manifest_path(manifest_path: Path, payload_url: Optional[str],
 
 def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optional[str],
                                        source: str,
-                                       payload_path_override: Optional[Path] = None) -> int:
+                                       payload_path_override: Optional[Path] = None,
+                                       player_runtime_policy_override: Optional[Dict[str, Any]] = None,
+                                       player_runtime_production_authorized: bool = False) -> int:
     """Internal apply path. Tests may call this for frozen components."""
     if COMPONENT == "player-runtime":
-        if not PLAYER_RUNTIME_LAB_THAW_ENABLED:
+        if not PLAYER_RUNTIME_LAB_THAW_ENABLED and not player_runtime_production_authorized:
             raise RuntimeError("player-runtime unfrozen apply requires explicit lab thaw guard")
         return _apply_player_runtime_from_manifest_path_unfrozen(
             manifest_path,
             payload_url,
             source,
             payload_path_override=payload_path_override,
+            policy_override=player_runtime_policy_override,
+            production_authorized=player_runtime_production_authorized,
         )
 
     started_at = _utcnow_iso()
@@ -1923,11 +2147,15 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     payload_url: Optional[str],
     source: str,
     payload_path_override: Optional[Path] = None,
+    policy_override: Optional[Dict[str, Any]] = None,
+    production_authorized: bool = False,
 ) -> int:
     """C18 player-runtime candidate verify-then-promote path for lab thaw tests."""
     started_at = _utcnow_iso()
     if COMPONENT != "player-runtime":
         raise RuntimeError("player-runtime apply path called for wrong component")
+    if not PLAYER_RUNTIME_LAB_THAW_ENABLED and not production_authorized:
+        raise RuntimeError("player-runtime unfrozen apply requires explicit lab thaw guard")
     _ensure_dirs()
 
     try:
@@ -1936,7 +2164,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     except (OSError, json.JSONDecodeError) as e:
         log("ERROR", "manifest_read_failed", err=str(e))
         return 4
-    policy = _load_update_policy()
+    policy = policy_override or _load_update_policy()
     _validate_manifest(manifest, policy=policy, component="player-runtime")
     state = _read_state()
     ok, reason = _downgrade_policy_allows_manifest(policy, manifest, state)
@@ -1948,6 +2176,18 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     version = manifest["version"]
     sha = str(manifest["payload_sha256"]).lower()
     payload_name = manifest["payload"]
+    linked_target = f"releases/{version}"
+    if (
+        reason == "same_current_identity"
+        and _read_symlink_target(CURRENT_LINK) == linked_target
+        and (RELEASES_DIR / version).is_dir()
+    ):
+        marker_ok, marker_reason, _marker = _validate_player_runtime_marker(RELEASES_DIR / version, state)
+        if marker_ok:
+            log("INFO", "player_runtime_apply_noop_already_current",
+                version=version, payload_sha256=sha, current=linked_target)
+            return 0
+        log("WARN", "player_runtime_current_marker_invalid_no_noop", reason=marker_reason)
     stage = INCOMING_DIR / version
     stage.mkdir(parents=True, exist_ok=True)
     payload_local = stage / payload_name
@@ -1973,7 +2213,6 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     _player_runtime_fault("after_payload_staged", version=version, stage=str(stage))
 
     release_dir = RELEASES_DIR / version
-    linked_target = f"releases/{version}"
     current_target = _read_symlink_target(CURRENT_LINK)
     previous_target = _read_symlink_target(PREVIOUS_LINK)
     if current_target == linked_target or previous_target == linked_target:
@@ -2264,11 +2503,12 @@ def _rollback_with_reason(state: Dict[str, Any], started_at: str, reason: str) -
 
 
 def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
-                                      quarantine_current: bool = False) -> int:
+                                      quarantine_current: bool = False,
+                                      production_authorized: bool = False) -> int:
     """Rollback player-runtime current->previous, or fall back to image."""
     if COMPONENT != "player-runtime":
         raise RuntimeError("player-runtime rollback path called for wrong component")
-    if not PLAYER_RUNTIME_LAB_THAW_ENABLED:
+    if not PLAYER_RUNTIME_LAB_THAW_ENABLED and not production_authorized:
         raise RuntimeError("player-runtime unfrozen rollback requires explicit lab thaw guard")
     started_at = _utcnow_iso()
     state = _read_state()
@@ -2511,6 +2751,38 @@ def _reconcile_player_runtime_state(
     return finish("noop")
 
 
+def _production_player_runtime_health_hook(
+    auth: Dict[str, Any],
+    *,
+    duration_sec: float,
+    interval_sec: float,
+    startup_wait_sec: float,
+    panfrost_fault_policy: str,
+) -> Callable[[Path, Dict[str, Any]], Dict[str, Any]]:
+    def _hook(release_dir: Path, identity: Dict[str, Any]) -> Dict[str, Any]:
+        script_dir = Path(__file__).resolve().parent
+        if str(script_dir) not in sys.path:
+            sys.path.insert(0, str(script_dir))
+        import c18_player_runtime_candidate_health as candidate_health  # type: ignore
+
+        output_dir = (
+            LOG_DIR
+            / "player-runtime-candidate-health"
+            / f"{_safe_stage_name(str(auth.get('version') or release_dir.name))}-{int(time.time())}"
+        )
+        return candidate_health.run_candidate_health(
+            release_dir,
+            identity,
+            output_dir=output_dir,
+            duration_sec=duration_sec,
+            interval_sec=interval_sec,
+            startup_wait_sec=startup_wait_sec,
+            panfrost_fault_policy=panfrost_fault_policy,
+        )
+
+    return _hook
+
+
 # ----------------------------------------------------------------------------
 # Subcommands
 # ----------------------------------------------------------------------------
@@ -2659,6 +2931,15 @@ def cmd_list_github(args: argparse.Namespace) -> int:
 
 def cmd_apply_github_latest(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    if not args.dry_run and not getattr(args, "_update_lock_held", False):
+        with _update_lock(f"apply-github-latest:{COMPONENT}") as locked:
+            if not locked:
+                return 49
+            args._update_lock_held = True
+            try:
+                return cmd_apply_github_latest(args)
+            finally:
+                args._update_lock_held = False
     if not args.dry_run:
         frozen_rc = _block_frozen_apply()
         if frozen_rc is not None:
@@ -2720,8 +3001,126 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
             _cleanup_stage(stage)
 
 
+def cmd_apply_player_runtime_authorized(args: argparse.Namespace) -> int:
+    configure_component("player-runtime")
+    if not args.dry_run and not getattr(args, "_update_lock_held", False):
+        with _update_lock("apply-player-runtime-authorized") as locked:
+            if not locked:
+                return 49
+            args._update_lock_held = True
+            try:
+                return cmd_apply_player_runtime_authorized(args)
+            finally:
+                args._update_lock_held = False
+    auth_path = Path(args.authorization or PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE)
+    try:
+        auth = _load_player_runtime_production_authorization(auth_path)
+        repo = args.repo or str(auth.get("repo") or "")
+        tag = args.tag or str(auth.get("tag_name") or "")
+        if repo != auth.get("repo"):
+            raise RuntimeError("player_runtime_authorized_repo_mismatch")
+        if tag != auth.get("tag_name"):
+            raise RuntimeError("player_runtime_authorized_tag_mismatch")
+    except Exception as e:
+        log("ERROR", "player_runtime_authorization_rejected", err=str(e))
+        print(f"player_runtime_authorization_rejected:{e}", file=sys.stderr)
+        return 44
+    _ensure_dirs()
+
+    tmp = tempfile.TemporaryDirectory(prefix="totem-player-runtime-authorized-dry-run-") if args.dry_run else None
+    stage = Path(tmp.name) if tmp is not None else INCOMING_DIR / f"authorized-select-{int(time.time())}"
+    try:
+        try:
+            rel = _gh_release_by_tag(repo, tag)
+            if rel.get("draft"):
+                raise RuntimeError("player_runtime_authorized_release_is_draft")
+            if rel.get("prerelease") and not bool(auth.get("allow_prerelease", False)):
+                raise RuntimeError("player_runtime_authorized_prerelease_not_allowed")
+            manifest_asset, payload_asset = _gh_pick_assets(rel, "player-runtime")
+            manifest_path = _download_manifest_asset(manifest_asset, stage / _safe_stage_name(tag))
+            manifest = _json_object(manifest_path, "player_runtime_manifest")
+            release_gate_name = str(auth.get("release_gate_asset_name") or PLAYER_RUNTIME_RELEASE_GATE_ASSET)
+            release_gate_path = _download_named_asset(
+                rel,
+                release_gate_name,
+                stage / _safe_stage_name(tag),
+                expected_sha256=str(auth.get("release_gate_sha256") or ""),
+            )
+            policy = _validate_player_runtime_authorization_manifest(
+                auth,
+                manifest,
+                manifest_path,
+                release_gate_path=release_gate_path,
+            )
+            if payload_asset.get("name") != manifest.get("payload"):
+                raise RuntimeError("player_runtime_payload_asset_name_mismatch")
+            payload_url = payload_asset.get("browser_download_url")
+            if not isinstance(payload_url, str) or not payload_url:
+                raise RuntimeError("player_runtime_payload_url_missing")
+        except HttpError as e:
+            if e.code == 404:
+                print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
+                      else "GITHUB_RELEASE_ASSET_NOT_ACCESSIBLE_FROM_DEVICE",
+                      file=sys.stderr)
+                log("ERROR", "player_runtime_authorized_github_404", repo=repo, tag=tag)
+                return 20
+            log("ERROR", "player_runtime_authorized_github_http_error", code=e.code, reason=e.reason)
+            return 21
+        except Exception as e:
+            log("ERROR", "player_runtime_authorized_selection_failed", err=str(e))
+            print(f"player_runtime_authorized_selection_failed:{e}", file=sys.stderr)
+            return 45
+
+        if args.dry_run:
+            out = {
+                "dry_run": True,
+                "component": "player-runtime",
+                "repo": repo,
+                "tag_name": tag,
+                "authorized_version": auth.get("version"),
+                "manifest_version": manifest.get("version"),
+                "manifest_channel": manifest.get("channel"),
+                "payload_sha256": manifest.get("payload_sha256"),
+                "policy_source": policy.get("policy_source"),
+                "state_changed": False,
+            }
+            print(json.dumps(out, indent=2, sort_keys=True))
+            return 0
+
+        previous_hook = PLAYER_RUNTIME_HEALTH_HOOK
+        try:
+            globals()["PLAYER_RUNTIME_HEALTH_HOOK"] = _production_player_runtime_health_hook(
+                auth,
+                duration_sec=float(args.duration_sec),
+                interval_sec=float(args.interval_sec),
+                startup_wait_sec=float(args.startup_wait_sec),
+                panfrost_fault_policy=str(args.panfrost_fault_policy),
+            )
+            source = f"github-authorized:{repo}:{tag}"
+            return _apply_from_manifest_path_unfrozen(
+                manifest_path,
+                str(payload_url),
+                source,
+                player_runtime_policy_override=policy,
+                player_runtime_production_authorized=True,
+            )
+        finally:
+            globals()["PLAYER_RUNTIME_HEALTH_HOOK"] = previous_hook
+    finally:
+        _cleanup_stage(stage)
+
+
 def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    if not getattr(args, "_update_lock_held", False):
+        with _update_lock(f"apply-manifest-url:{COMPONENT}") as locked:
+            if not locked:
+                return 49
+            args._update_lock_held = True
+            try:
+                return cmd_apply_manifest_url(args)
+            finally:
+                args._update_lock_held = False
     frozen_rc = _block_frozen_apply()
     if frozen_rc is not None:
         return frozen_rc
@@ -2757,6 +3156,15 @@ def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
 
 def cmd_apply_local(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    if not getattr(args, "_update_lock_held", False):
+        with _update_lock(f"apply-local:{COMPONENT}") as locked:
+            if not locked:
+                return 49
+            args._update_lock_held = True
+            try:
+                return cmd_apply_local(args)
+            finally:
+                args._update_lock_held = False
     frozen_rc = _block_frozen_apply()
     if frozen_rc is not None:
         return frozen_rc
@@ -2789,6 +3197,15 @@ def cmd_apply_local(args: argparse.Namespace) -> int:
 
 def cmd_rollback(args: argparse.Namespace) -> int:
     configure_component(args.component)
+    if not getattr(args, "_update_lock_held", False):
+        with _update_lock(f"rollback:{COMPONENT}") as locked:
+            if not locked:
+                return 49
+            args._update_lock_held = True
+            try:
+                return cmd_rollback(args)
+            finally:
+                args._update_lock_held = False
     frozen_reason = _apply_frozen_reason()
     if frozen_reason:
         print(f"component_frozen_for_ota: {COMPONENT}: {frozen_reason}", file=sys.stderr)
@@ -2882,6 +3299,44 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rollback_player_runtime_authorized(args: argparse.Namespace) -> int:
+    configure_component("player-runtime")
+    if not getattr(args, "_update_lock_held", False):
+        with _update_lock("rollback-player-runtime-authorized") as locked:
+            if not locked:
+                return 49
+            args._update_lock_held = True
+            try:
+                return cmd_rollback_player_runtime_authorized(args)
+            finally:
+                args._update_lock_held = False
+    auth_path = Path(args.authorization or PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE)
+    try:
+        auth = _load_player_runtime_production_authorization(auth_path)
+    except Exception as e:
+        log("ERROR", "player_runtime_rollback_authorization_rejected", err=str(e))
+        print(f"player_runtime_rollback_authorization_rejected:{e}", file=sys.stderr)
+        return 44
+    _ensure_dirs()
+    state = _read_state()
+    if not _player_runtime_state_mentions_authorized_target(state, auth):
+        log("ERROR", "player_runtime_rollback_authorization_target_mismatch")
+        print("player_runtime_rollback_authorization_target_mismatch", file=sys.stderr)
+        return 45
+    rc = _rollback_player_runtime_unfrozen(
+        reason=str(args.reason or "production_authorized_rollback"),
+        quarantine_current=bool(args.quarantine_current),
+        production_authorized=True,
+    )
+    if rc == 0:
+        print(json.dumps({
+            "rollback": "ok",
+            "component": "player-runtime",
+            "authorized_version": auth.get("version"),
+        }, indent=2, sort_keys=True))
+    return rc
+
+
 def cmd_reconcile(args: argparse.Namespace) -> int:
     configure_component(args.component)
     if COMPONENT == "player-runtime":
@@ -2957,6 +3412,26 @@ def main(argv: List[str]) -> int:
     p_apply.add_argument("--dry-run", action="store_true",
                          help="Select and validate a release without applying it")
 
+    p_runtime_auth = sub.add_parser("apply-player-runtime-authorized",
+        help="Apply the exact authorized C18 player-runtime target; never selects latest",
+    )
+    p_runtime_auth.add_argument("--repo", default="", help="owner/repo; defaults to authorization repo")
+    p_runtime_auth.add_argument("--tag", default="", help="exact GitHub release tag; defaults to authorization tag")
+    p_runtime_auth.add_argument(
+        "--authorization",
+        default="",
+        help="path to production player-runtime authorization JSON",
+    )
+    p_runtime_auth.add_argument("--dry-run", action="store_true")
+    p_runtime_auth.add_argument("--duration-sec", type=float, default=30.0)
+    p_runtime_auth.add_argument("--interval-sec", type=float, default=1.0)
+    p_runtime_auth.add_argument("--startup-wait-sec", type=float, default=5.0)
+    p_runtime_auth.add_argument(
+        "--panfrost-fault-policy",
+        choices=("absolute", "delta"),
+        default="absolute",
+    )
+
     p_url = sub.add_parser("apply-manifest-url",
                            parents=[component_parent],
                            help="Apply from an explicit manifest URL")
@@ -2969,6 +3444,16 @@ def main(argv: List[str]) -> int:
 
     sub.add_parser("rollback", parents=[component_parent],
                    help="Roll back current -> previous")
+    p_runtime_rollback = sub.add_parser("rollback-player-runtime-authorized",
+        help="Rollback player-runtime under production authorization",
+    )
+    p_runtime_rollback.add_argument(
+        "--authorization",
+        default="",
+        help="path to production player-runtime authorization JSON",
+    )
+    p_runtime_rollback.add_argument("--reason", default="production_authorized_rollback")
+    p_runtime_rollback.add_argument("--quarantine-current", action="store_true")
     p_reconcile = sub.add_parser("reconcile", parents=[component_parent],
                                  help="Reconcile stale state; player-runtime falls closed to verified current or image fallback")
     p_reconcile.add_argument(
@@ -2984,9 +3469,11 @@ def main(argv: List[str]) -> int:
         "check-github-latest": cmd_check_github_latest,
         "list-github": cmd_list_github,
         "apply-github-latest": cmd_apply_github_latest,
+        "apply-player-runtime-authorized": cmd_apply_player_runtime_authorized,
         "apply-manifest-url": cmd_apply_manifest_url,
         "apply-local": cmd_apply_local,
         "rollback": cmd_rollback,
+        "rollback-player-runtime-authorized": cmd_rollback_player_runtime_authorized,
         "reconcile": cmd_reconcile,
     }
     return handlers[args.cmd](args)

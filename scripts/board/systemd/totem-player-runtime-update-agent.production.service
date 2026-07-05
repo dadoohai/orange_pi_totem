@@ -1,0 +1,30 @@
+[Unit]
+Description=Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull)
+Documentation=https://github.com/dadoohai/orange_pi_totem
+After=network-online.target kiosky-player.service
+Wants=network-online.target
+
+# Production C18 V3: exact-target player-runtime auto-pull. This path never
+# selects latest broadly; the updater must validate the local authorization.
+ConditionPathExists=/opt/totem/bin/totem-updatectl
+ConditionPathExists=/data/updates/player-runtime-production-autopull.json
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/totem/bin/totem-updatectl apply-player-runtime-authorized --authorization /data/updates/player-runtime-production-autopull.json
+
+# Best-effort isolation; /data must remain writable so updater can stage payloads.
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+TimeoutStartSec=900
+
+# Exit codes from totem-updatectl:
+#   0 success/no-op ; 10/11 rejected candidate/rollback path ; 20 GitHub access
+#   blocked; 44 missing/disabled authorization/frozen; 49 update lock busy.
+RestartPreventExitStatus=10 11 20 44 49
+
+# Static oneshot. The production image enables the paired timer.

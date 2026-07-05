@@ -21,18 +21,30 @@ UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
 UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-update-agent.timer"
+PLAYER_RUNTIME_AUTH_TARGET = "/data/updates/player-runtime-production-autopull.json"
+PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.service"
+PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.timer"
+PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-player-runtime-update-agent.timer"
 TOTEM_CORE_EMBED_PROFILES = {
     "homologation": {
         "policy_file": "totem_update_policy.json",
         "service_file": "totem-update-agent.service",
         "timer_file": "totem-update-agent.timer",
         "timer_enabled": False,
+        "player_runtime_authorization_file": None,
+        "player_runtime_service_file": None,
+        "player_runtime_timer_file": None,
+        "player_runtime_timer_enabled": False,
     },
     "production": {
         "policy_file": "totem_update_policy_production.json",
         "service_file": "totem-update-agent.production.service",
         "timer_file": "totem-update-agent.production.timer",
         "timer_enabled": True,
+        "player_runtime_authorization_file": "player_runtime_production_autopull_9bebaf1.json",
+        "player_runtime_service_file": "totem-player-runtime-update-agent.production.service",
+        "player_runtime_timer_file": "totem-player-runtime-update-agent.production.timer",
+        "player_runtime_timer_enabled": True,
     },
 }
 
@@ -59,6 +71,9 @@ IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
     "totem-kiosky-launcher.sh",
     "totem_player_status_mpv_watchdog.py",
+    "c18_player_runtime_candidate_health.py",
+    "c18_playback_health_collect.py",
+    "totem_updatectl.py",
 ]
 IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
     (
@@ -111,21 +126,43 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
     wrappers_bin = "/opt/totem/bin"
     wrapper_py = repo_root / "scripts/board/totem_core_exec.py"
     wrapper_sh = repo_root / "scripts/board/totem_core_exec.sh"
+    updatectl_py = repo_root / "scripts/board/totem_updatectl.py"
     update_policy = repo_root / "scripts/board" / str(profile_config["policy_file"])
     update_agent_service = repo_root / "scripts/board/systemd" / str(profile_config["service_file"])
     update_agent_timer = repo_root / "scripts/board/systemd" / str(profile_config["timer_file"])
-    for required in (wrapper_py, wrapper_sh, update_policy, update_agent_service, update_agent_timer):
+    player_runtime_authorization = (
+        repo_root / "scripts/board" / str(profile_config["player_runtime_authorization_file"])
+        if profile_config.get("player_runtime_authorization_file")
+        else None
+    )
+    player_runtime_service = (
+        repo_root / "scripts/board/systemd" / str(profile_config["player_runtime_service_file"])
+        if profile_config.get("player_runtime_service_file")
+        else None
+    )
+    player_runtime_timer = (
+        repo_root / "scripts/board/systemd" / str(profile_config["player_runtime_timer_file"])
+        if profile_config.get("player_runtime_timer_file")
+        else None
+    )
+    for required in (wrapper_py, wrapper_sh, updatectl_py, update_policy, update_agent_service, update_agent_timer):
         if not required.is_file():
+            raise RuntimeError(f"missing_totem_core_embed_input:{required}")
+    for required in (player_runtime_authorization, player_runtime_service, player_runtime_timer):
+        if required is not None and not required.is_file():
             raise RuntimeError(f"missing_totem_core_embed_input:{required}")
 
     commands: list[str] = []
-    for directory in (
+    wanted_directories = (
         "/data/updates",
         "/data/updates/incoming",
         "/data/updates/incoming/totem-core",
+        "/data/updates/incoming/player-runtime",
         "/data/core",
         "/data/core/totem",
         "/data/core/totem/releases",
+        "/data/player-runtime",
+        "/data/player-runtime/releases",
         release_root,
         release_bin,
         f"{release_root}/health",
@@ -135,7 +172,13 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
         wrappers_bin,
         "/etc/systemd/system",
         "/etc/systemd/system/timers.target.wants",
-    ):
+    )
+    mkdir_directories: list[str] = []
+    for directory in wanted_directories:
+        for parent in base.parent_dirs(f"{directory}/.keep"):
+            if parent != "/" and parent not in mkdir_directories:
+                mkdir_directories.append(parent)
+    for directory in mkdir_directories:
         commands.append(f"mkdir {directory}")
 
     commands.extend(write_file_commands(update_policy, UPDATE_POLICY_TARGET, "0644"))
@@ -144,8 +187,31 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
     commands.append(f"rm {UPDATE_AGENT_TIMER_WANTS}")
     if profile_config["timer_enabled"]:
         commands.append(f"symlink {UPDATE_AGENT_TIMER_WANTS} {UPDATE_AGENT_TIMER_TARGET}")
+    commands.append(f"rm {PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS}")
+    commands.append(f"rm {PLAYER_RUNTIME_AUTH_TARGET}")
+    commands.append(f"rm {PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET}")
+    commands.append(f"rm {PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET}")
+    if player_runtime_authorization is not None:
+        commands.extend(write_file_commands(player_runtime_authorization, PLAYER_RUNTIME_AUTH_TARGET, "0644"))
+    if player_runtime_service is not None:
+        commands.extend(write_file_commands(
+            player_runtime_service,
+            PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET,
+            "0644",
+        ))
+    if player_runtime_timer is not None:
+        commands.extend(write_file_commands(
+            player_runtime_timer,
+            PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET,
+            "0644",
+        ))
+    if profile_config.get("player_runtime_timer_enabled"):
+        commands.append(
+            f"symlink {PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS} {PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET}"
+        )
     commands.extend(write_file_commands(wrapper_py, f"{wrappers_bin}/totem_core_exec.py"))
     commands.extend(write_file_commands(wrapper_sh, f"{wrappers_bin}/totem_core_exec.sh"))
+    commands.extend(write_file_commands(updatectl_py, f"{wrappers_bin}/totem-updatectl"))
     for core_file in core_files:
         if "/" in core_file or core_file.startswith("."):
             raise RuntimeError(f"unsafe_totem_core_file:{core_file}")
@@ -345,14 +411,23 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
     update_agent_service = _dump_text(rootfs, UPDATE_AGENT_SERVICE_TARGET)
     player_service_launcher = _dump_text(rootfs, "/opt/totem/bin/kiosky_service_launcher.sh")
     player_dropin = _dump_text(rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf")
+    player_runtime_auth_text = _dump_text(rootfs, PLAYER_RUNTIME_AUTH_TARGET)
+    player_runtime_service = _dump_text(rootfs, PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET)
     policy_text = _dump_text(rootfs, UPDATE_POLICY_TARGET)
     try:
         update_policy = json.loads(policy_text)
     except json.JSONDecodeError:
         update_policy = {}
+    try:
+        player_runtime_auth = json.loads(player_runtime_auth_text)
+    except json.JSONDecodeError:
+        player_runtime_auth = {}
     policy_stat = base.stat_file(rootfs, UPDATE_POLICY_TARGET)
     current_target = _symlink_target(rootfs, "/data/core/totem/current")
     timer_enabled = bool(base.stat_file(rootfs, UPDATE_AGENT_TIMER_WANTS).get("present", False))
+    player_runtime_timer_enabled = bool(
+        base.stat_file(rootfs, PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS).get("present", False)
+    )
 
     checks: dict[str, bool] = {
         "totem_core_current_symlink_present": _is_symlink(rootfs, "/data/core/totem/current"),
@@ -385,6 +460,31 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
             )
             if profile == "production"
             else update_policy.get("device_channel") in {"lab", "homologation"}
+        ),
+        "player_runtime_authorization_matches_profile": (
+            (
+                player_runtime_auth.get("schema")
+                == "dadooh.c18.player_runtime.production_autopull_authorization.v1"
+                and player_runtime_auth.get("component") == "player-runtime"
+                and player_runtime_auth.get("auto_pull_enabled") is True
+                and player_runtime_auth.get("allow_latest") is False
+                and player_runtime_auth.get("tag_name")
+                == "player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+            )
+            if profile == "production"
+            else not _is_file(rootfs, PLAYER_RUNTIME_AUTH_TARGET)
+        ),
+        "player_runtime_update_agent_service_matches_profile": (
+            (
+                "apply-player-runtime-authorized" in player_runtime_service
+                and PLAYER_RUNTIME_AUTH_TARGET in player_runtime_service
+                and "apply-github-latest" not in player_runtime_service
+            )
+            if profile == "production"
+            else not _is_file(rootfs, PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET)
+        ),
+        "player_runtime_update_timer_matches_profile": (
+            player_runtime_timer_enabled is bool(profile_config["player_runtime_timer_enabled"])
         ),
         "image_fixed_player_dropin_present": _is_file(
             rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf"

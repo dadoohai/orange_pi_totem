@@ -376,6 +376,10 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("totem-update-agent.timer", embed)
         self.assertIn("totem_core_update_timer_disabled", embed)
         self.assertIn("totem_core_update_policy_restricts_core", embed)
+        self.assertIn("PLAYER_RUNTIME_AUTH_TARGET", embed)
+        self.assertIn("player_runtime_authorization_matches_profile", embed)
+        self.assertIn("player_runtime_update_agent_service_matches_profile", embed)
+        self.assertIn("player_runtime_update_timer_matches_profile", embed)
 
     def test_image_embed_has_explicit_production_profile(self) -> None:
         sys.path.insert(0, str(REPO_ROOT / "scripts" / "build"))
@@ -395,10 +399,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         production = mod.resolve_totem_core_embed_profile("production")
         self.assertEqual(homologation["policy_file"], "totem_update_policy.json")
         self.assertEqual(homologation["timer_enabled"], False)
+        self.assertEqual(homologation["player_runtime_authorization_file"], None)
+        self.assertEqual(homologation["player_runtime_timer_enabled"], False)
         self.assertEqual(production["policy_file"], "totem_update_policy_production.json")
         self.assertEqual(production["service_file"], "totem-update-agent.production.service")
         self.assertEqual(production["timer_file"], "totem-update-agent.production.timer")
         self.assertEqual(production["timer_enabled"], True)
+        self.assertEqual(
+            production["player_runtime_authorization_file"],
+            "player_runtime_production_autopull_9bebaf1.json",
+        )
+        self.assertEqual(
+            production["player_runtime_service_file"],
+            "totem-player-runtime-update-agent.production.service",
+        )
+        self.assertEqual(
+            production["player_runtime_timer_file"],
+            "totem-player-runtime-update-agent.production.timer",
+        )
+        self.assertEqual(production["player_runtime_timer_enabled"], True)
         with self.assertRaisesRegex(RuntimeError, "unsupported_totem_core_embed_profile"):
             mod.resolve_totem_core_embed_profile("latest")
 
@@ -1752,7 +1771,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("_gc_player_runtime_invalid_orphan_releases", updatectl)
         self.assertIn("_fsync_release_tree(release_dir)", updatectl)
 
-    def test_public_player_runtime_thaw_activation_has_no_public_path(self) -> None:
+    def test_public_player_runtime_path_is_exact_authorized_only(self) -> None:
         updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
         expected_public_commands = {
             "status",
@@ -1760,9 +1779,11 @@ exec "$C18_REAL_PYTHON3" "$@"
             "check-github-latest",
             "list-github",
             "apply-github-latest",
+            "apply-player-runtime-authorized",
             "apply-manifest-url",
             "apply-local",
             "rollback",
+            "rollback-player-runtime-authorized",
             "reconcile",
         }
         parser_commands = set(re.findall(r'sub\.add_parser\("([^"]+)"', updatectl))
@@ -1776,6 +1797,12 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("OTA_FROZEN_COMPONENTS", updatectl)
         self.assertIn("def _apply_frozen_reason", updatectl)
         self.assertIn("def _block_frozen_apply", updatectl)
+        self.assertIn("SCHEMA_PLAYER_RUNTIME_PRODUCTION_AUTOPULL", updatectl)
+        self.assertIn("player_runtime_authorization_missing", updatectl)
+        self.assertIn("player_runtime_authorization_latest_not_allowed", updatectl)
+        self.assertIn("_validate_player_runtime_authorization_manifest", updatectl)
+        self.assertIn("apply-player-runtime-authorized", updatectl)
+        self.assertIn("never selects latest", updatectl)
 
         governance_paths = [
             PLAYER_RUNTIME_H2_READINESS_GATE_PATH,

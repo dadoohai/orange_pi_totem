@@ -1,0 +1,38 @@
+{
+  "schema": "dadooh.c18.player_runtime.production_autopull_authorization.v1",
+  "enabled": true,
+  "component": "player-runtime",
+  "auto_pull_enabled": true,
+  "allow_latest": false,
+  "allow_prerelease": false,
+  "allow_downgrade": false,
+  "repo": "dadoohai/orange_pi_totem",
+  "tag_name": "player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+  "channel": "homologation",
+  "device_track": "c18-hwdecode",
+  "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
+  "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+  "manifest_sha256": "e7c9b3d538ee865ab0eb7108931ce38bc06d235dd66ea74267bec35d90a5c0be",
+  "release_gate_asset_name": "c18-player-runtime-release-gate.json",
+  "release_gate_sha256": "e2dd3c0768c46d1aeecc7afd00173126bb46db004636fd7b19718516a9cae272",
+  "stable_promotion_sha256": "70887cbfa142a79894d11fc5e91d3a09723f080c2cb9112d8c9161778a2f4d76",
+  "thaw_decision_sha256": "085e44614a7006ee3025b72331e774cc9ee90e6ee3b8047a36b31e56fe43d5c8",
+  "public_activation_sha256": "2a3260e726a557fd1e9d95f0135512482699fd58caa4f1a4c580c914de54716c",
+  "github_release_published_sha256": "50e8bc39806f33ced4773d71960732079dd9b676a6ca8fe98e8582aa0bcad584",
+  "business_decision": {
+    "risk_accepted": true,
+    "rollout_mode": "simple_global",
+    "operator": "business-approved-c18-production",
+    "rollback_owner": "dadooh-operator",
+    "accepted_at_local_date": "2026-07-05"
+  },
+  "non_claims": [
+    "not_latest_broad",
+    "not_future_player_runtime_targets",
+    "not_kiosky_player_legacy_release_path",
+    "not_media_system_update",
+    "not_dashboard_or_canary_groups",
+    "not_device_side_signature_enforcement"
+  ]
+}

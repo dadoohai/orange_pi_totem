@@ -1,0 +1,14 @@
+[Unit]
+Description=Dadooh Totem Player Runtime Update Timer (production exact-target auto-pull)
+Documentation=https://github.com/dadoohai/orange_pi_totem
+
+[Timer]
+# Starts after the core auto-pull timer and uses updater-level locking.
+OnBootSec=20min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
+Persistent=true
+Unit=totem-player-runtime-update-agent.service
+
+[Install]
+WantedBy=timers.target

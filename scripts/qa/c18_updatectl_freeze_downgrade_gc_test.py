@@ -93,6 +93,9 @@ def player_runtime_manifest(
         "version": version,
         "channel": channel,
         "created_at_utc": "2026-06-02T10:00:00Z",
+        "source_repo": "dadoohai/orange_pi_totem",
+        "source_branch": "foundation-v0.1",
+        "source_commit": "9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522",
         "source_dirty": False,
         "payload": f"dadooh-player-runtime-{version}.tar.gz",
         "payload_sha256": "a" * 64,
@@ -169,6 +172,56 @@ def write_player_runtime_payload(root: Path, version: str, *, kiosk_text: str | 
     return manifest_path, payload
 
 
+def write_player_runtime_release_gate(root: Path, manifest_data: dict, payload_path: Path) -> Path:
+    gate = {
+        "schema": "dadooh.c18.player_runtime.release_gate.v1",
+        "passed": True,
+        "component": "player-runtime",
+        "package": {
+            "component": "player-runtime",
+            "channel": manifest_data["channel"],
+            "manifest": f"dadooh-player-runtime-{manifest_data['version']}.manifest.json",
+            "payload": manifest_data["payload"],
+            "payload_sha256": manifest_data["payload_sha256"],
+            "source_commit": manifest_data.get("source_commit"),
+        },
+        "manifest": {
+            "version": manifest_data["version"],
+            "channel": manifest_data["channel"],
+            "payload_sha256": manifest_data["payload_sha256"],
+            "source_commit": manifest_data.get("source_commit"),
+        },
+        "payload": {
+            "kiosk_py_sha256": "b" * 64,
+            "tree_sha256": "c" * 64,
+        },
+    }
+    path = root / "pkg" / manifest_data["version"] / "c18-player-runtime-release-gate.json"
+    path.write_text(json.dumps(gate, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def player_runtime_authorization(manifest_path: Path, release_gate_path: Path, manifest_data: dict) -> dict:
+    return {
+        "schema": updatectl.SCHEMA_PLAYER_RUNTIME_PRODUCTION_AUTOPULL,
+        "enabled": True,
+        "component": "player-runtime",
+        "auto_pull_enabled": True,
+        "allow_latest": False,
+        "allow_prerelease": False,
+        "repo": manifest_data.get("source_repo") or "dadoohai/orange_pi_totem",
+        "tag_name": f"player-runtime-{manifest_data['version']}",
+        "version": manifest_data["version"],
+        "channel": manifest_data["channel"],
+        "device_track": "c18-hwdecode",
+        "source_commit": manifest_data["source_commit"],
+        "payload_sha256": manifest_data["payload_sha256"],
+        "manifest_sha256": updatectl._sha256_file(manifest_path),
+        "release_gate_sha256": updatectl._sha256_file(release_gate_path),
+        "non_claims": ["not_latest_broad"],
+    }
+
+
 def passing_player_runtime_health(release_dir: Path, identity: dict) -> dict:
     return {
         "schema": updatectl.PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
@@ -234,6 +287,123 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertEqual(rc_url, 44)
             self.assertEqual(rc_gh, 44)
             self.assertFalse((root / "data" / "player-runtime").exists())
+
+    def test_player_runtime_authorized_apply_missing_auth_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "missing-auth.json"),
+                dry_run=True,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, 44)
+            self.assertFalse(updatectl.STATE_FILE.exists())
+
+    def test_player_runtime_authorization_is_manifest_and_release_gate_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            manifest_path, payload_path = write_player_runtime_payload(root, "runtime-auth")
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            release_gate_path = write_player_runtime_release_gate(root, manifest_data, payload_path)
+            auth = player_runtime_authorization(manifest_path, release_gate_path, manifest_data)
+
+            policy_override = updatectl._validate_player_runtime_authorization_manifest(
+                auth,
+                manifest_data,
+                manifest_path,
+                release_gate_path=release_gate_path,
+            )
+            self.assertEqual(policy_override["policy_source"], "player_runtime_production_authorization")
+            self.assertEqual(policy_override["allowed_components"], ["player-runtime"])
+            self.assertEqual(policy_override["device_channel"], "homologation")
+
+            bad_auth = dict(auth)
+            bad_auth["manifest_sha256"] = "0" * 64
+            with self.assertRaisesRegex(RuntimeError, "player_runtime_manifest_sha_mismatch"):
+                updatectl._validate_player_runtime_authorization_manifest(
+                    bad_auth,
+                    manifest_data,
+                    manifest_path,
+                    release_gate_path=release_gate_path,
+                )
+
+    def test_player_runtime_authorized_same_current_identity_is_noop_without_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            write_player_runtime_policy(root)
+            updatectl._ensure_dirs()
+            _release, manifest_data, identity = write_verified_player_runtime_release("runtime-current")
+            manifest_path = root / "runtime-current.manifest.json"
+            manifest_path.write_text(json.dumps(manifest_data, sort_keys=True) + "\n", encoding="utf-8")
+            updatectl._atomic_symlink("releases/runtime-current", updatectl.CURRENT_LINK)
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "player-runtime",
+                "current": {
+                    "version": "runtime-current",
+                    "payload_sha256": manifest_data["payload_sha256"],
+                    "kiosk_py_sha256": identity["kiosk_py_sha256"],
+                    "tree_sha256": identity["tree_sha256"],
+                },
+                "previous": None,
+            })
+
+            rc = updatectl._apply_from_manifest_path_unfrozen(
+                manifest_path,
+                payload_url=None,
+                source="unit-authorized-noop",
+                player_runtime_policy_override=player_runtime_policy(),
+                player_runtime_production_authorized=True,
+            )
+            self.assertEqual(rc, 0)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/runtime-current")
+            self.assertFalse((updatectl.INCOMING_DIR / "runtime-current").exists())
+
+    def test_player_runtime_authorized_rollback_requires_matching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            manifest_path, payload_path = write_player_runtime_payload(root, "runtime-auth")
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            release_gate_path = write_player_runtime_release_gate(root, manifest_data, payload_path)
+            auth_path = root / "auth.json"
+            auth_path.write_text(
+                json.dumps(
+                    player_runtime_authorization(manifest_path, release_gate_path, manifest_data),
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            updatectl._ensure_dirs()
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "player-runtime",
+                "current": {
+                    "version": "runtime-other",
+                    "payload_sha256": "b" * 64,
+                },
+                "previous": None,
+            })
+            args = argparse.Namespace(
+                authorization=str(auth_path),
+                reason="unit-test",
+                quarantine_current=False,
+            )
+
+            rc = updatectl.cmd_rollback_player_runtime_authorized(args)
+
+            self.assertEqual(rc, 45)
+            self.assertEqual(updatectl._read_state()["current"]["version"], "runtime-other")
 
     def test_player_runtime_rollback_is_frozen(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

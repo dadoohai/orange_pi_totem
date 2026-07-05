@@ -134,6 +134,13 @@ existir caminho publico por alvo exato, com:
 - no-op seguro;
 - timer ou execucao automatica sem harness lab.
 
+Estado tecnico em 2026-07-05: a direcao aprovada para M5 e o comando publico
+`totem-updatectl apply-player-runtime-authorized`, alimentado por uma
+autorizacao local hash-bound ao alvo `9bebaf1`. O caminho generico
+`apply-github-latest --component player-runtime` continua congelado, e a imagem
+`production` deve carregar um timer separado para esse alvo exato. A imagem
+`homologation` nao deve carregar autorizacao nem timer de `player-runtime`.
+
 ### M6 - Robustez De Frota
 
 Status: roadmap.
