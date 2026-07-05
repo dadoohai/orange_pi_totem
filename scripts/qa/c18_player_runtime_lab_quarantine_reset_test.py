@@ -219,6 +219,53 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
         }, sort_keys=True) + "\n", encoding="utf-8")
         return health_dir
 
+    def write_canary_display_contention_evidence(
+        self,
+        root: Path,
+        identity: dict,
+        *,
+        total_mpv_count: int = 2,
+        ipc_success: int = 30,
+    ) -> Path:
+        health_dir = root / "failed-canary-display-contention-health"
+        (health_dir / "health").mkdir(parents=True, exist_ok=True)
+        (health_dir / "candidate-health-result.json").write_text(json.dumps({
+            "schema": "dadooh.c18.playback.deep_health.v1",
+            "candidate_version": identity["version"],
+            "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+            "observed_tree_sha256": identity["tree_sha256"],
+            "canary_media_used": True,
+            "passed": False,
+            "failure_reasons": sorted(reset.SETUP_CONTENTION_FAILURE_REASONS),
+            "checks": {
+                "service_active": True,
+                "media_load_failed_zero": True,
+                "panfrost_faults_delta_zero": True,
+                "ext4_errors_zero": True,
+                "mmc_timeout_reset_zero": True,
+            },
+            "counters": {
+                "playlist_size_max": 1,
+                "mpv_count": 1,
+                "total_mpv_count": total_mpv_count,
+                "ipc_success": ipc_success,
+                "media_load_failed": 0,
+                "status_failure_samples": 0,
+            },
+            "candidate_teardown": {
+                "gpu_faults_delta": 0,
+                "stop": {
+                    "method": "sigterm",
+                    "returncode": 0,
+                },
+            },
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        (health_dir / "health" / "deep-health-process.json").write_text(json.dumps({
+            "mpv_count": 1,
+            "total_mpv_count": total_mpv_count,
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        return health_dir
+
     def write_harness_ipc_drm_retry_evidence(
         self,
         root: Path,
@@ -888,6 +935,154 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             self.assertEqual(len(entries), 1)
             result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
             self.assertIn("no_canary_retry_canary_was_used", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_canary_display_contention_retry_requires_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-canary-contention-missing")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--reason", "unit-canary-contention-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("canary_display_contention_evidence_missing", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_canary_display_contention_retry_removes_matching_quarantine_with_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-canary-contention")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_canary_display_contention_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-canary-contention-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(entries, [])
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["removed_count"], 1)
+            evidence = result["canary_display_contention_retry_evidence"]
+            self.assertTrue(evidence["canary_media_used"])
+            self.assertEqual(evidence["total_mpv_count"], 2)
+            self.assertEqual(evidence["ipc_success"], 30)
+
+    def test_canary_display_contention_retry_rejects_without_second_mpv(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-canary-contention-single")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_canary_display_contention_evidence(root, identity, total_mpv_count=1)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-canary-contention-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("canary_display_contention_total_mpv_not_contended", result["blockers"])
+            self.assertIn("target_quarantine_reason_not_allowed", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_canary_display_contention_retry_rejects_generic_quarantine_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-canary-contention-generic")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(data_root, out, [{**identity, "reason": "physical_powerloss_trial"}])
+            health_dir = self.write_canary_display_contention_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-canary-contention-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("target_quarantine_reason_not_allowed", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_canary_display_contention_retry_rejects_current_linked_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-canary-contention-current")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.SETUP_CONTENTION_FAILURE_REASONS))
+            self.seed_state(
+                data_root,
+                out,
+                [{**identity, "reason": reason}],
+                current_link="releases/runtime-reset-canary-contention-current",
+            )
+            health_dir = self.write_canary_display_contention_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-canary-contention-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            entries = reset.updatectl._quarantine_entries(reset.updatectl._read_state())
+            self.assertEqual(len(entries), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("target_linked_active", result["blockers"])
+            self.assertEqual(result["active_links"], ["current"])
             self.assertEqual(result["removed_count"], 0)
 
     def test_harness_ipc_drm_retry_removes_matching_quarantine_with_evidence(self) -> None:

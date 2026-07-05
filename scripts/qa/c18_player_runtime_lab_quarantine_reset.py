@@ -39,6 +39,7 @@ RESET_SCOPES = {
     "p0_isolation_reset",
     "p0_setup_contention_retry",
     "lab_no_canary_retry",
+    "lab_canary_display_contention_retry",
     "lab_harness_ipc_drm_retry",
     "lab_candidate_startup_status_retry",
     "lab_prior_panfrost_absolute_retry",
@@ -48,6 +49,7 @@ ALLOWED_QUARANTINE_REASONS = {"physical_powerloss_trial"}
 ARM_TIMEOUT_PREVIOUS_LINKED_SCOPE = "h2_rollback_arm_timeout_previous_linked"
 SETUP_CONTENTION_SCOPE = "p0_setup_contention_retry"
 NO_CANARY_SCOPE = "lab_no_canary_retry"
+CANARY_DISPLAY_CONTENTION_SCOPE = "lab_canary_display_contention_retry"
 HARNESS_IPC_DRM_SCOPE = "lab_harness_ipc_drm_retry"
 STARTUP_STATUS_SCOPE = "lab_candidate_startup_status_retry"
 PRIOR_PANFROST_ABSOLUTE_SCOPE = "lab_prior_panfrost_absolute_retry"
@@ -465,6 +467,75 @@ def no_canary_retry_evidence(candidate_health_dir: Path | None, identity: dict[s
     return not blockers, blockers, details
 
 
+def canary_display_contention_retry_evidence(
+    candidate_health_dir: Path | None,
+    identity: dict[str, Any],
+) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["canary_display_contention_evidence_missing"], details
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    process_path = candidate_health_dir / "health" / "deep-health-process.json"
+    try:
+        result = read_json(result_path)
+    except Exception as exc:
+        return False, [f"canary_display_contention_result_read_failed:{type(exc).__name__}"], details
+    try:
+        process = read_json(process_path)
+    except Exception as exc:
+        return False, [f"canary_display_contention_process_read_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    teardown = result.get("candidate_teardown") if isinstance(result.get("candidate_teardown"), dict) else {}
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "canary_media_used": result.get("canary_media_used"),
+        "playlist_size_max": counters.get("playlist_size_max"),
+        "mpv_count": counters.get("mpv_count"),
+        "total_mpv_count": counters.get("total_mpv_count"),
+        "process_total_mpv_count": process.get("total_mpv_count"),
+        "ipc_success": counters.get("ipc_success"),
+        "status_failure_samples": counters.get("status_failure_samples"),
+        "gpu_faults_delta": teardown.get("gpu_faults_delta"),
+        "service_active": checks.get("service_active"),
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("canary_display_contention_candidate_version_mismatch")
+    if result.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+        blockers.append("canary_display_contention_kiosk_identity_mismatch")
+    if result.get("observed_tree_sha256") != identity.get("tree_sha256"):
+        blockers.append("canary_display_contention_tree_identity_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("canary_display_contention_result_not_failed")
+    if result.get("canary_media_used") is not True:
+        blockers.append("canary_display_contention_canary_missing")
+    if failures != SETUP_CONTENTION_FAILURE_REASONS:
+        blockers.append("canary_display_contention_failure_reasons_mismatch")
+    if int(counters.get("playlist_size_max") or 0) < 1:
+        blockers.append("canary_display_contention_playlist_missing")
+    if int(counters.get("mpv_count") or 0) != 1:
+        blockers.append("canary_display_contention_candidate_mpv_missing")
+    if int(counters.get("total_mpv_count") or 0) < 2 or int(process.get("total_mpv_count") or 0) < 2:
+        blockers.append("canary_display_contention_total_mpv_not_contended")
+    if int(counters.get("ipc_success") or 0) <= 0:
+        blockers.append("canary_display_contention_no_ipc_success")
+    if int(counters.get("media_load_failed") or 0) != 0 or checks.get("media_load_failed_zero") is not True:
+        blockers.append("canary_display_contention_media_load_failed")
+    if checks.get("panfrost_faults_delta_zero") is not True:
+        blockers.append("canary_display_contention_gpu_fault_delta_seen")
+    if checks.get("ext4_errors_zero") is not True or checks.get("mmc_timeout_reset_zero") is not True:
+        blockers.append("canary_display_contention_storage_fault_seen")
+    if checks.get("service_active") is not True:
+        blockers.append("canary_display_contention_service_not_active")
+    if teardown.get("gpu_faults_delta") not in (0, None):
+        blockers.append("canary_display_contention_teardown_gpu_fault_delta")
+    return not blockers, blockers, details
+
+
 def harness_ipc_drm_retry_evidence(candidate_health_dir: Path | None, identity: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
     blockers: list[str] = []
     details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
@@ -640,6 +711,7 @@ def quarantine_reason_allowed(entry: dict[str, Any],
                               reset_scope: str,
                               setup_contention_ok: bool,
                               no_canary_retry_ok: bool,
+                              canary_display_contention_ok: bool,
                               harness_ipc_drm_retry_ok: bool,
                               startup_status_retry_ok: bool,
                               prior_panfrost_absolute_ok: bool) -> bool:
@@ -648,6 +720,8 @@ def quarantine_reason_allowed(entry: dict[str, Any],
         return setup_contention_ok and setup_contention_reason_allowed(reason)
     if reset_scope == NO_CANARY_SCOPE:
         return no_canary_retry_ok and set(reason.split(",")) == NO_CANARY_FAILURE_REASONS
+    if reset_scope == CANARY_DISPLAY_CONTENTION_SCOPE:
+        return canary_display_contention_ok and set(reason.split(",")) == SETUP_CONTENTION_FAILURE_REASONS
     if reset_scope == HARNESS_IPC_DRM_SCOPE:
         return harness_ipc_drm_retry_ok and set(reason.split(",")) == HARNESS_IPC_DRM_FAILURE_REASONS
     if reset_scope == STARTUP_STATUS_SCOPE:
@@ -663,6 +737,7 @@ def matches_target(entry: dict[str, Any],
                    reset_scope: str,
                    setup_contention_ok: bool,
                    no_canary_retry_ok: bool,
+                   canary_display_contention_ok: bool,
                    harness_ipc_drm_retry_ok: bool,
                    startup_status_retry_ok: bool,
                    prior_panfrost_absolute_ok: bool) -> bool:
@@ -671,6 +746,7 @@ def matches_target(entry: dict[str, Any],
         reset_scope=reset_scope,
         setup_contention_ok=setup_contention_ok,
         no_canary_retry_ok=no_canary_retry_ok,
+        canary_display_contention_ok=canary_display_contention_ok,
         harness_ipc_drm_retry_ok=harness_ipc_drm_retry_ok,
         startup_status_retry_ok=startup_status_retry_ok,
         prior_panfrost_absolute_ok=prior_panfrost_absolute_ok,
@@ -761,6 +837,10 @@ def main(argv: list[str]) -> int:
         args.failed_candidate_health_dir,
         identity,
     ) if args.reset_scope == NO_CANARY_SCOPE else (False, [], {})
+    canary_display_contention_ok, canary_display_contention_blockers, canary_display_contention_details = canary_display_contention_retry_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == CANARY_DISPLAY_CONTENTION_SCOPE else (False, [], {})
     harness_ipc_drm_ok, harness_ipc_drm_blockers, harness_ipc_drm_details = harness_ipc_drm_retry_evidence(
         args.failed_candidate_health_dir,
         identity,
@@ -796,6 +876,7 @@ def main(argv: list[str]) -> int:
             reset_scope=args.reset_scope,
             setup_contention_ok=setup_ok,
             no_canary_retry_ok=no_canary_ok,
+            canary_display_contention_ok=canary_display_contention_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
             startup_status_retry_ok=startup_status_ok,
             prior_panfrost_absolute_ok=prior_panfrost_ok,
@@ -808,6 +889,7 @@ def main(argv: list[str]) -> int:
             reset_scope=args.reset_scope,
             setup_contention_ok=setup_ok,
             no_canary_retry_ok=no_canary_ok,
+            canary_display_contention_ok=canary_display_contention_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
             startup_status_retry_ok=startup_status_ok,
             prior_panfrost_absolute_ok=prior_panfrost_ok,
@@ -824,6 +906,7 @@ def main(argv: list[str]) -> int:
         blockers.append("target_quarantine_not_found")
     blockers.extend(setup_blockers)
     blockers.extend(no_canary_blockers)
+    blockers.extend(canary_display_contention_blockers)
     blockers.extend(harness_ipc_drm_blockers)
     blockers.extend(startup_status_blockers)
     blockers.extend(prior_panfrost_blockers)
@@ -847,6 +930,7 @@ def main(argv: list[str]) -> int:
             "previous_linked_reset_allowed": previous_linked_reset_allowed,
             "setup_contention_evidence": setup_details,
             "no_canary_retry_evidence": no_canary_details,
+            "canary_display_contention_retry_evidence": canary_display_contention_details,
             "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
             "startup_status_retry_evidence": startup_status_details,
             "prior_panfrost_absolute_retry_evidence": prior_panfrost_details,
@@ -961,6 +1045,7 @@ def main(argv: list[str]) -> int:
         "previous_linked_reset_allowed": previous_linked_reset_allowed,
         "setup_contention_evidence": setup_details,
         "no_canary_retry_evidence": no_canary_details,
+        "canary_display_contention_retry_evidence": canary_display_contention_details,
         "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
         "startup_status_retry_evidence": startup_status_details,
         "prior_panfrost_absolute_retry_evidence": prior_panfrost_details,
