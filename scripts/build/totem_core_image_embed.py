@@ -73,6 +73,7 @@ IMAGE_FIXED_PLAYER_FILES = [
     "totem_player_status_mpv_watchdog.py",
     "c18_player_runtime_candidate_health.py",
     "c18_playback_health_collect.py",
+    "c18_playback_health_summary.py",
     "totem_updatectl.py",
 ]
 IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [

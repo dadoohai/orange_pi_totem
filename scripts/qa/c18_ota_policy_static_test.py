@@ -1189,6 +1189,12 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn('"kiosky_service_launcher.sh"', embed)
         self.assertIn('"totem-kiosky-launcher.sh"', embed)
         self.assertIn('"totem_player_status_mpv_watchdog.py"', embed)
+        self.assertIn('"c18_playback_health_collect.py"', embed)
+        self.assertIn('"c18_playback_health_summary.py"', embed)
+        self.assertLess(
+            embed.index('"c18_playback_health_collect.py"'),
+            embed.index('"c18_playback_health_summary.py"'),
+        )
         self.assertIn("20-dadooh-launcher.conf", embed)
         self.assertIn("image_fixed_player_dropin_reconciles_player_runtime", embed)
         self.assertIn("image_fixed_player_launcher_has_status_mpv_watchdog", embed)
