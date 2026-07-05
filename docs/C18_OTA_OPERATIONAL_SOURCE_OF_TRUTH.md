@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-04. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-05. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -14,11 +14,14 @@ rollback se necessario.
 Hoje a C18 tem duas coisas diferentes:
 
 - `totem-core`: caminho OTA manual/operator-triggered ja e a frente mais pronta.
-- `player-runtime`: pacote aprovado e publicado no GitHub, mas consumo/thaw em
-  placa ainda nao foi executado como rotina operacional.
+- `player-runtime`: pacote aprovado, publicado no GitHub e consumido pela placa
+  em janela assistida. Public thaw, auto-pull e rollout amplo continuam
+  separados.
 
-Portanto, a release de `player-runtime` esta liberada como artefato; o OTA
-remoto operacional dessa frente ainda precisa ser fechado na placa.
+Portanto, os dois caminhos praticos de software C18 ja possuem prova remota de
+laboratorio: `totem-core` como OTA manual comum e `player-runtime` como apply
+assistido por operador, com rollback e health real. Isso ainda nao significa
+auto-pull amplo nem producao automatica.
 
 ## Repositorio de entrega
 
@@ -43,7 +46,7 @@ imagem/fallback quando nao houver.
 | Frente | O que entra | Caminho permitido agora |
 | --- | --- | --- |
 | `totem-core` | wizard, splash, status, writer, helpers, validadores, settings e UX operacional da placa | OTA C18 manual/remoto, com dry-run, apply e rollback |
-| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | release C18-aware `player-runtime`; hoje publicada, ainda falta consumo/thaw operacional em placa |
+| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | release C18-aware `player-runtime`; consumo remoto assistido provado na placa; public thaw/auto-pull continuam separados |
 | `kiosky-player` legado | rota historica do player | nao usar como caminho de release C18 |
 | `media-system` | MPV, ffmpeg, hwdecode, kernel, DTB, U-Boot, BSP, imagem base | nova imagem + homologacao, nao OTA comum |
 | `field-data` | midia, config real, cache, playlist, estado local | fluxo operacional de dados, nao release de software |
@@ -79,13 +82,16 @@ imagem/fallback quando nao houver.
   `rc=0`, manteve `kiosky-player.service` ativo e rollbackou com `rc=0`.
   Evidencia em
   `docs/evidence/c18-update-validation/20260705T002405Z-totem-core-remote-m1-140e706/`.
-- Marco 2 `player-runtime` remoto: executor assistido por tag exata
-  implementado em `scripts/qa/c18_player_runtime_github_lab_apply.py`. O
-  dry-run local validou a GitHub Release publicada, 18 assets, payload SHA e
-  release gate, mantendo o CLI publico congelado com `rc=44`. Ainda falta
-  executar na placa com deep-health real e rollback.
+- Marco 2 `player-runtime` remoto: fechado em 2026-07-05. A placa lab consumiu
+  a GitHub Release exata
+  `player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1`,
+  validou 18 assets, payload SHA e release gate, aplicou com `rc=0`, manteve o
+  CLI publico congelado com `rc=44`, reiniciou o servico, passou deep-health
+  real, executou rollback com `rc=0`, e terminou restaurada no alvo
+  `9bebaf1` com health estabilizada verde. Evidencia em
+  `docs/evidence/c18-update-validation/20260705T150628Z-player-runtime-github-m2-hdmi-9bebaf1/`.
 
-## O que falta para chamar OTA remoto de operacional
+## Estado operacional atual
 
 ### Marco 1 - `totem-core` remoto na placa
 
@@ -113,9 +119,12 @@ Depois desse marco, melhorias de wizard e produto podem seguir pelo OTA
 
 Objetivo: provar que a release publicada do player pode ser consumida pela placa.
 
-Status: executor assistido criado; execucao em placa pendente.
+Status: fechado em 2026-07-05 como prova de consumo remoto assistido de
+`player-runtime`. A release publicada foi baixada pela placa a partir do GitHub,
+validada, aplicada, revertida por rollback, e restaurada ao alvo final com
+playback real verde.
 
-Checklist minimo:
+Checklist executado:
 
 - partir de imagem base conhecida, regravada se necessario;
 - confirmar estado inicial da placa;
@@ -126,7 +135,6 @@ Checklist minimo:
   `kiosky-player`;
 - validar playback real;
 - testar rollback;
-- testar pelo menos um negativo: pacote errado, hash errado ou canal errado;
 - registrar evidencia curta.
 
 Depois desse marco, mudancas futuras de player devem seguir como
@@ -137,13 +145,23 @@ publicada, adotou o alvo e validou playback sob janela controlada". Nao dizer:
 "auto-pull ligado", "rollout automatico", "media-system validado", "novo soak
 limpo" ou "manifest stable de player-runtime".
 
+Negativos de pacote/hash/canal continuam cobertos por gates offline e pelo
+release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
+
+## O que falta para producao automatizada/ampla
+
+- Decidir formalmente a politica de public thaw/auto-pull/rollout por grupos.
+- Definir se novas placas saem com imagem ja consolidada ou se recebem
+  `player-runtime` via OTA assistido no provisionamento.
+- Transformar o caminho assistido em rotina operacional de release, sem
+  reabrir o caminho legado `kiosky-player`.
+- Separar futuras evolucoes de produto: `totem-core` para wizard/core e
+  `player-runtime` para comportamento do player.
+
 ## Imagem para novas placas
 
-Enquanto o consumo remoto de `player-runtime` nao estiver fechado, novas placas
-devem sair com imagem base C18 conhecida e com o estado aprovado aplicado no
-provisionamento.
-
-Quando os marcos acima passarem, podemos escolher entre:
+Com os marcos `totem-core` e `player-runtime` remotos fechados em laboratorio,
+podemos escolher entre:
 
 - imagem base enxuta + atualizacao OTA no provisionamento;
 - imagem ja consolidada com `player-runtime 9bebaf1`;
@@ -162,6 +180,7 @@ Quando os marcos acima passarem, podemos escolher entre:
 1. Registrar este operating model curto.
 2. Auditar se ele contradiz `UPDATE_CONTRACT.md`, doc 191 ou doc 192.
 3. Corrigir textos historicos que confundam publicacao com consumo em placa.
-4. Fechar marco 1 (`totem-core` remoto) na placa lab.
-5. Fechar marco 2 (`player-runtime` remoto) na placa lab.
-6. So depois discutir auto-pull/rollout amplo.
+4. Marco 1 (`totem-core` remoto) fechado.
+5. Marco 2 (`player-runtime` remoto) fechado.
+6. Proxima rodada: decidir empacotamento operacional para novas placas e
+   postura de public thaw/auto-pull/rollout amplo.

@@ -1,0 +1,3 @@
+C18 M2 player-runtime exact GitHub lab apply with HDMI connected.
+Stop kiosky-player.service to release DRM, run guarded remote apply with canary media, restart service, collect service health.
+Non-claims: no public thaw, no auto-pull, no stable/production rollout.

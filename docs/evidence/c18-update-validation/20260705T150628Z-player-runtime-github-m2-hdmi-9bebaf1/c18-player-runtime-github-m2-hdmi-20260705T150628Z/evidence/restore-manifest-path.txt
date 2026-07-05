@@ -1,0 +1,1 @@
+MANIFEST=/tmp/c18-player-runtime-github-m2-hdmi-20260705T150628Z/github-apply/github-release/player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1/dadooh-player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1.manifest.json

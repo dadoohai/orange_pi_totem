@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "/tmp/c18-player-runtime-github-m2-20260705T004507Z/tools2/scripts/qa/c18_player_runtime_lab_apply.py", line 255, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "/tmp/c18-player-runtime-github-m2-20260705T004507Z/tools2/scripts/qa/c18_player_runtime_lab_apply.py", line 184, in main
+    manifest = read_json(args.manifest)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/c18-player-runtime-github-m2-20260705T004507Z/tools2/scripts/qa/c18_player_runtime_lab_apply.py", line 44, in read_json
+    data = json.loads(path.read_text(encoding="utf-8"))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+IsADirectoryError: [Errno 21] Is a directory: '.'
