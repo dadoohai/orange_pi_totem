@@ -73,12 +73,21 @@ imagem/fallback quando nao houver.
   `9bebaf1d37d4574ff2fec69ae8db2a9ffdf7b522`; payload SHA256
   `d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0`.
 - Gate global C18: verde em `5890218`.
+- Marco 1 `totem-core` remoto: fechado em 2026-07-05. A placa lab selecionou
+  a GitHub Release
+  `totem-core-c18.ota-core-m1-20260705T001743Z-140e706`, aplicou com
+  `rc=0`, manteve `kiosky-player.service` ativo e rollbackou com `rc=0`.
+  Evidencia em
+  `docs/evidence/c18-update-validation/20260705T002405Z-totem-core-remote-m1-140e706/`.
 
 ## O que falta para chamar OTA remoto de operacional
 
 ### Marco 1 - `totem-core` remoto na placa
 
 Objetivo: provar que conseguimos atualizar wizard/produto remotamente.
+
+Status: fechado em 2026-07-05 como prova mecanica de OTA remoto `totem-core`.
+O pacote foi fresco a partir do HEAD e nao introduziu mudanca funcional de UX.
 
 Checklist minimo:
 

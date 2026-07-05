@@ -1,0 +1,15 @@
+{
+  "applied_version": "c18.ota-core-m1-20260705T001743Z-140e706",
+  "component": "totem-core",
+  "evidence": [
+    "apply.log",
+    "status-after-apply.json",
+    "self-test-after-apply.json",
+    "kiosky-player-active-after-apply.txt"
+  ],
+  "payload_sha256": "75165e7ad74243a968c86bee5f500fd50ea244372d31fb54b48b2d4566b2e986",
+  "result": "success",
+  "returncode": 0,
+  "schema": "dadooh.c18.totem_core_remote_apply_result.v1",
+  "source": "github:dadoohai/orange_pi_totem:totem-core-c18.ota-core-m1-20260705T001743Z-140e706"
+}

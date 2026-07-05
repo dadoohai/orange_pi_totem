@@ -1,0 +1,12 @@
+{
+  "component": "totem-core",
+  "device_channel": "homologation",
+  "dry_run": true,
+  "manifest_channel": "homologation",
+  "manifest_version": "c18.ota-core-m1-20260705T001743Z-140e706",
+  "payload_asset": "dadooh-totem-core-c18.ota-core-m1-20260705T001743Z-140e706.tar.gz",
+  "prerelease": true,
+  "repo": "dadoohai/orange_pi_totem",
+  "state_changed": false,
+  "tag_name": "totem-core-c18.ota-core-m1-20260705T001743Z-140e706"
+}

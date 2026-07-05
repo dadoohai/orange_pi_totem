@@ -1,0 +1,15 @@
+{
+  "component": "totem-core",
+  "evidence": [
+    "rollback.log",
+    "rollback.rc",
+    "rollback.json",
+    "status-after-rollback.json",
+    "self-test-after-rollback.json",
+    "kiosky-player-active-after-rollback.txt"
+  ],
+  "result": "success",
+  "returncode": 0,
+  "rolled_to": "c17.6-environment-input-20260514T211247Z",
+  "schema": "dadooh.c18.totem_core_remote_rollback_result.v1"
+}

@@ -1,0 +1,9 @@
+2026-07-05T00:29:05Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c18.ota-core-m1-20260705T001743Z-140e706/dadooh-totem-core-c18.ota-core-m1-20260705T001743Z-140e706.manifest.json dest=/data/updates/incoming/totem-core/github-select-1783211345/totem-core-c18.ota-core-m1-20260705T001743Z-140e706/dadooh-totem-core-c18.ota-core-m1-20260705T001743Z-140e706.manifest.json
+2026-07-05T00:29:06Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c18.ota-core-m1-20260705T001743Z-140e706 manifest=/data/updates/incoming/totem-core/github-select-1783211345/totem-core-c18.ota-core-m1-20260705T001743Z-140e706/dadooh-totem-core-c18.ota-core-m1-20260705T001743Z-140e706.manifest.json
+2026-07-05T00:29:06Z INFO downloading_payload version=c18.ota-core-m1-20260705T001743Z-140e706 dest=/data/updates/incoming/totem-core/c18.ota-core-m1-20260705T001743Z-140e706/dadooh-totem-core-c18.ota-core-m1-20260705T001743Z-140e706.tar.gz
+2026-07-05T00:29:07Z INFO payload_downloaded bytes=130495 sha256=75165e7ad74243a968c86bee5f500fd50ea244372d31fb54b48b2d4566b2e986
+2026-07-05T00:29:07Z WARN release_dir_exists_will_overwrite path=/data/core/totem/releases/c18.ota-core-m1-20260705T001743Z-140e706
+2026-07-05T00:29:09Z INFO totem_core_health_check_starting
+2026-07-05T00:29:12Z INFO apply_success version=c18.ota-core-m1-20260705T001743Z-140e706
+2026-07-05T00:29:12Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c18.ota-core-m1-20260705T001743Z-140e706
+2026-07-05T00:29:12Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1783211345
