@@ -1,0 +1,31 @@
+[Unit]
+Description=Dadooh Totem Update Agent (production core auto-pull)
+Documentation=https://github.com/dadoohai/orange_pi_totem
+After=network-online.target
+Wants=network-online.target
+
+# Production C18: stable-only totem-core auto-pull. Player/runtime/hwdecode
+# components stay outside this path unless their own public gates thaw them.
+ConditionPathExists=/opt/totem/bin/totem-updatectl
+ConditionPathExists=/data/updates/policy.json
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/totem/bin/totem-updatectl apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem
+
+# Best-effort isolation; /data must remain writable so updater can stage payloads.
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+TimeoutStartSec=600
+
+# Exit codes from totem-updatectl:
+#   0 success ; 10 auto-rolled-back (still treated as failure for restart logic)
+#   20 GitHub access blocked (private/forbidden) ; 21+ other errors
+# The timer retries on the next OnUnitActiveSec window.
+RestartPreventExitStatus=10 20
+
+# Static oneshot. The production image enables totem-update-agent.timer.

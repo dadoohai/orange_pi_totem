@@ -239,7 +239,7 @@ SYSTEM_IMAGE_DIFF_PATHS = {
     "releases/image-lab-readonly/",
     "releases/installable-rc/",
     "scripts/board/totem_updatectl.py",
-    "scripts/board/totem_update_policy.json",
+    "scripts/board/totem_update_policy*",
     "scripts/board/totem_appliance_manifest.json",
     "scripts/board/systemd/",
     "scripts/build/totem_core_image_embed.py",

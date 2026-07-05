@@ -1,0 +1,10 @@
+{
+  "schema": "dadooh.totem.update.policy.v1",
+  "device_channel": "stable",
+  "device_track": "c18-hwdecode",
+  "allowed_components": [
+    "totem-core"
+  ],
+  "allow_prerelease": false,
+  "allow_downgrade": false
+}

@@ -24,7 +24,10 @@ from types import SimpleNamespace
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = REPO_ROOT / "scripts" / "board" / "totem_update_policy.json"
+PRODUCTION_POLICY_PATH = REPO_ROOT / "scripts" / "board" / "totem_update_policy_production.json"
 SERVICE_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.service"
+PRODUCTION_SERVICE_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.production.service"
+PRODUCTION_TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.production.timer"
 MANIFEST_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json"
 EMBED_PATH = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
 BUILD_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
@@ -224,11 +227,31 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertFalse(policy["allow_downgrade"])
         self.assertIn(policy["device_channel"], {"lab", "homologation", "stable"})
 
+    def test_production_policy_is_stable_totem_core_only(self) -> None:
+        policy = json.loads(PRODUCTION_POLICY_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(policy["schema"], "dadooh.totem.update.policy.v1")
+        self.assertEqual(policy["device_channel"], "stable")
+        self.assertEqual(policy["device_track"], "c18-hwdecode")
+        self.assertEqual(policy["allowed_components"], ["totem-core"])
+        self.assertFalse(policy["allow_prerelease"])
+        self.assertFalse(policy["allow_downgrade"])
+
     def test_update_agent_service_targets_totem_core_repo(self) -> None:
         service = SERVICE_PATH.read_text(encoding="utf-8")
         self.assertIn("ConditionPathExists=/data/updates/policy.json", service)
         self.assertIn("apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem", service)
         self.assertNotIn("dadoohai/kiosky-player", service)
+
+    def test_production_update_agent_profile_targets_only_totem_core(self) -> None:
+        service = PRODUCTION_SERVICE_PATH.read_text(encoding="utf-8")
+        timer = PRODUCTION_TIMER_PATH.read_text(encoding="utf-8")
+        self.assertIn("production core auto-pull", service)
+        self.assertIn("apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem", service)
+        self.assertIn("Unit=totem-update-agent.service", timer)
+        self.assertIn("WantedBy=timers.target", timer)
+        self.assertNotIn("player-runtime", service.split("ExecStart=", 1)[1])
+        self.assertNotIn("kiosky-player", service.split("ExecStart=", 1)[1])
+        self.assertNotIn("dadoohai/kiosky-player", service + timer)
 
     def test_timer_is_manifested_disabled(self) -> None:
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -318,6 +341,31 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("totem-update-agent.timer", embed)
         self.assertIn("totem_core_update_timer_disabled", embed)
         self.assertIn("totem_core_update_policy_restricts_core", embed)
+
+    def test_image_embed_has_explicit_production_profile(self) -> None:
+        sys.path.insert(0, str(REPO_ROOT / "scripts" / "build"))
+        try:
+            spec = importlib.util.spec_from_file_location("totem_core_image_embed_profile_test", EMBED_PATH)
+            self.assertIsNotNone(spec)
+            self.assertIsNotNone(spec.loader)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+        finally:
+            try:
+                sys.path.remove(str(REPO_ROOT / "scripts" / "build"))
+            except ValueError:
+                pass
+
+        homologation = mod.resolve_totem_core_embed_profile("homologation")
+        production = mod.resolve_totem_core_embed_profile("production")
+        self.assertEqual(homologation["policy_file"], "totem_update_policy.json")
+        self.assertEqual(homologation["timer_enabled"], False)
+        self.assertEqual(production["policy_file"], "totem_update_policy_production.json")
+        self.assertEqual(production["service_file"], "totem-update-agent.production.service")
+        self.assertEqual(production["timer_file"], "totem-update-agent.production.timer")
+        self.assertEqual(production["timer_enabled"], True)
+        with self.assertRaisesRegex(RuntimeError, "unsupported_totem_core_embed_profile"):
+            mod.resolve_totem_core_embed_profile("latest")
 
     def test_totem_core_ota_payload_excludes_player_launcher(self) -> None:
         build = BUILD_CORE_PATH.read_text(encoding="utf-8")

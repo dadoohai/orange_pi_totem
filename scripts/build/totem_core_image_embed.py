@@ -21,6 +21,20 @@ UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
 UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-update-agent.timer"
+TOTEM_CORE_EMBED_PROFILES = {
+    "homologation": {
+        "policy_file": "totem_update_policy.json",
+        "service_file": "totem-update-agent.service",
+        "timer_file": "totem-update-agent.timer",
+        "timer_enabled": False,
+    },
+    "production": {
+        "policy_file": "totem_update_policy_production.json",
+        "service_file": "totem-update-agent.production.service",
+        "timer_file": "totem-update-agent.production.timer",
+        "timer_enabled": True,
+    },
+}
 
 CORE_FILES = [
     "totem_setup_visual_wizard.py",
@@ -76,8 +90,16 @@ def write_file_commands(source: Path, target: str, mode_text: str = "0755") -> l
     return commands
 
 
-def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dict[str, Any]:
+def resolve_totem_core_embed_profile(profile: str) -> dict[str, Any]:
+    if profile not in TOTEM_CORE_EMBED_PROFILES:
+        raise RuntimeError(f"unsupported_totem_core_embed_profile:{profile}")
+    return dict(TOTEM_CORE_EMBED_PROFILES[profile])
+
+
+def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
+                           *, profile: str = "homologation") -> dict[str, Any]:
     """Embed C17.6 totem-core as image current + /opt fallback/wrappers."""
+    profile_config = resolve_totem_core_embed_profile(profile)
     manifest_path = repo_root / "scripts/board/totem_appliance_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     embed = manifest.get("totem_core_image_embed") or {}
@@ -89,9 +111,9 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
     wrappers_bin = "/opt/totem/bin"
     wrapper_py = repo_root / "scripts/board/totem_core_exec.py"
     wrapper_sh = repo_root / "scripts/board/totem_core_exec.sh"
-    update_policy = repo_root / "scripts/board/totem_update_policy.json"
-    update_agent_service = repo_root / "scripts/board/systemd/totem-update-agent.service"
-    update_agent_timer = repo_root / "scripts/board/systemd/totem-update-agent.timer"
+    update_policy = repo_root / "scripts/board" / str(profile_config["policy_file"])
+    update_agent_service = repo_root / "scripts/board/systemd" / str(profile_config["service_file"])
+    update_agent_timer = repo_root / "scripts/board/systemd" / str(profile_config["timer_file"])
     for required in (wrapper_py, wrapper_sh, update_policy, update_agent_service, update_agent_timer):
         if not required.is_file():
             raise RuntimeError(f"missing_totem_core_embed_input:{required}")
@@ -120,6 +142,8 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
     commands.extend(write_file_commands(update_agent_service, UPDATE_AGENT_SERVICE_TARGET, "0644"))
     commands.extend(write_file_commands(update_agent_timer, UPDATE_AGENT_TIMER_TARGET, "0644"))
     commands.append(f"rm {UPDATE_AGENT_TIMER_WANTS}")
+    if profile_config["timer_enabled"]:
+        commands.append(f"symlink {UPDATE_AGENT_TIMER_WANTS} {UPDATE_AGENT_TIMER_TARGET}")
     commands.extend(write_file_commands(wrapper_py, f"{wrappers_bin}/totem_core_exec.py"))
     commands.extend(write_file_commands(wrapper_sh, f"{wrappers_bin}/totem_core_exec.sh"))
     for core_file in core_files:
@@ -266,9 +290,12 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path) -> dic
     output = base.debugfs_batch(rootfs, commands, work_dir)
     return {
         "totem_core_current_version": TOTEM_CORE_VERSION,
+        "totem_core_embed_profile": profile,
         "totem_core_files_embedded": len(core_files),
         "image_fixed_player_files_embedded": len(IMAGE_FIXED_PLAYER_FILES),
         "image_fixed_player_systemd_files_embedded": len(IMAGE_FIXED_PLAYER_SYSTEMD_FILES),
+        "totem_core_update_policy_source": str(profile_config["policy_file"]),
+        "totem_core_update_timer_enabled": bool(profile_config["timer_enabled"]),
         "totem_core_embed_debugfs_output_lines": len(output.splitlines()),
     }
 
@@ -308,8 +335,9 @@ def _symlink_target(rootfs: Path, path: str) -> str:
     return ""
 
 
-def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
+def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") -> dict[str, Any]:
     """Return an offline validation bundle for the totem-core image layout."""
+    profile_config = resolve_totem_core_embed_profile(profile)
     release_root = f"/data/core/totem/releases/{TOTEM_CORE_VERSION}"
     state = base.cat_file(rootfs, "/data/core/totem/state.json") or ""
     updatectl = base.cat_file(rootfs, "/opt/totem/bin/totem-updatectl") or ""
@@ -324,6 +352,7 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
         update_policy = {}
     policy_stat = base.stat_file(rootfs, UPDATE_POLICY_TARGET)
     current_target = _symlink_target(rootfs, "/data/core/totem/current")
+    timer_enabled = bool(base.stat_file(rootfs, UPDATE_AGENT_TIMER_WANTS).get("present", False))
 
     checks: dict[str, bool] = {
         "totem_core_current_symlink_present": _is_symlink(rootfs, "/data/core/totem/current"),
@@ -348,7 +377,15 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
             and "dadoohai/kiosky-player" not in update_agent_service
         ),
         "totem_core_update_timer_unit_present": _is_file(rootfs, UPDATE_AGENT_TIMER_TARGET),
-        "totem_core_update_timer_disabled": not base.stat_file(rootfs, UPDATE_AGENT_TIMER_WANTS).get("present", False),
+        "totem_core_update_timer_matches_profile": timer_enabled is bool(profile_config["timer_enabled"]),
+        "totem_core_update_policy_matches_profile": (
+            (
+                update_policy.get("device_channel") == "stable"
+                and update_policy.get("allow_prerelease") is False
+            )
+            if profile == "production"
+            else update_policy.get("device_channel") in {"lab", "homologation"}
+        ),
         "image_fixed_player_dropin_present": _is_file(
             rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf"
         ),
@@ -384,6 +421,10 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
             and "status-mpv-watchdog.json" in player_service_launcher
         ),
     }
+    if profile == "homologation":
+        checks["totem_core_update_timer_disabled"] = not timer_enabled
+    elif profile == "production":
+        checks["totem_core_update_timer_enabled"] = timer_enabled
     for core_file in CORE_FILES:
         checks[f"totem_core_release_{core_file}"] = _has_exec(rootfs, f"{release_root}/bin/{core_file}")
         checks[f"totem_core_fallback_{core_file}"] = _has_exec(rootfs, f"/opt/totem/core-fallback/bin/{core_file}")
@@ -397,5 +438,6 @@ def validate_totem_core_embed(rootfs: Path) -> dict[str, Any]:
     return {
         "ok": all(checks.values()),
         "checks": checks,
+        "totem_core_embed_profile": profile,
         "totem_core_current_version": TOTEM_CORE_VERSION,
     }

@@ -1,0 +1,14 @@
+[Unit]
+Description=Dadooh Totem Update Timer (production core auto-pull)
+Documentation=https://github.com/dadoohai/orange_pi_totem
+
+[Timer]
+# Production cadence for stable-only totem-core releases.
+OnBootSec=10min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
+Persistent=true
+Unit=totem-update-agent.service
+
+[Install]
+WantedBy=timers.target
