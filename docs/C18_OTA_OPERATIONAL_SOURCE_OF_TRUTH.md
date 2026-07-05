@@ -204,6 +204,15 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - Separar futuras evolucoes de produto: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player.
 
+Hardenings nao bloqueantes apontados pela auditoria do Marco 5:
+
+- pinning mais forte do resumo `c18-ota-release-gate.json` anexado a releases
+  `totem-core stable`, para evitar aceitar um summary verde porem antigo;
+- pinning explicito do SHA da imagem e do SHA do marker no production timer
+  gate, alem dos campos do marker ja validados;
+- revalidacao completa de timer/policy no resumo de rollback, nao apenas no
+  resumo pos-timer e no estado final.
+
 ## Direcao de producao por decisao de negocio
 
 Decisao operacional em 2026-07-05: o cliente quer escala rapidamente e aceita o
