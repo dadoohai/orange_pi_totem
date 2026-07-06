@@ -1,0 +1,50 @@
+{
+  "collected_at_utc": "2026-07-06T05:26:20Z",
+  "collection_mode": "assisted_ssh_read_only",
+  "files": [
+    {
+      "bytes": 1930,
+      "path": "appliance-status.json",
+      "sha256": "6c46e454d074dd40c65f0ab6d079d5c632c96256c4c19899b054fb6bb741fa4d"
+    },
+    {
+      "bytes": 1825,
+      "path": "c18-display-status.json",
+      "sha256": "b4ad0ee308967a605d7bd8a0fd5b28475d5a7ab4b7fdc2ba67cf6b125cc337a2"
+    },
+    {
+      "bytes": 1018,
+      "path": "summary.txt",
+      "sha256": "03cf9b2a174e85a09f7a27d7de6b5b436133cfe261c57509f8e130cea107a707"
+    }
+  ],
+  "non_claims": [
+    "this_evidence_does_not_start_stop_restart_or_signal_player",
+    "this_evidence_does_not_read_config_content_media_edid_framebuffer_journal_or_network",
+    "this_evidence_does_not_validate_playback_decode_health",
+    "this_evidence_does_not_replace_powerloss_or_soak",
+    "this_evidence_does_not_complete_h2",
+    "this_evidence_does_not_publish_promote_stable_enable_auto_pull_or_thaw"
+  ],
+  "privacy_scan": {
+    "passed": true,
+    "raw_config_content_included": false,
+    "raw_journal_included": false,
+    "raw_media_paths_included": false,
+    "raw_network_identifiers_included": false
+  },
+  "repo_commit": "73bb20426d9932373fd38259323b1468cc4e65a9",
+  "result_claims": [
+    "read_only_appliance_public_state_collected",
+    "read_only_display_status_collected"
+  ],
+  "schema": "dadooh.c18.board_readonly_diagnostics_evidence.v1",
+  "summary": {
+    "appliance_config_content_read": false,
+    "appliance_playback_state": "playing",
+    "appliance_privacy_scan": "ok",
+    "appliance_public_state": "player_running",
+    "display_classification": "unknown",
+    "display_visible_state": "unknown"
+  }
+}

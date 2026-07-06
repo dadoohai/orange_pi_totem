@@ -160,6 +160,24 @@ Inclui:
 Nao deve bloquear M2, M3 e M4 se a decisao de negocio continuar sendo avancar
 com risco aceito.
 
+### M7 - Display Profile / Compatibilidade De Tela
+
+Status: frente aberta em 2026-07-06, subordinada ao macro.
+
+Valor: reduzir risco de displays que nao negociam resolucao/taxa corretamente,
+sem confundir problema de HDMI/sink com regressao de player ou OTA.
+
+Registro da frente: `docs/C18_DISPLAY_PROFILE_STEERING.md`.
+
+Direcao atual:
+
+- observabilidade primeiro;
+- perfil de tela somente depois de baseline real;
+- forcar resolucao/taxa pertence a `media-system`/imagem, nao OTA comum;
+- `totem-core` pode carregar diagnostico/status;
+- `player-runtime` so entra se a mudanca for comportamento do player;
+- a frente nao bloqueia M5/M4 salvo se virar risco direto de lote.
+
 ## Checklist Contra Hiperfoco
 
 Antes de abrir ou continuar uma tarefa, responder:

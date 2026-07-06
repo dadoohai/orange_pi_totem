@@ -1,0 +1,34 @@
+Dadooh C7 appliance status snapshot
+
+schema_version: dadooh-c7-appliance-status.v0
+c18_governance_schema: dadooh.c18.appliance_public_state.governance.v1
+c18_result_claim: read_only_appliance_public_state_collected
+c18_responsibility: field-data
+generated_at: 2026-07-06T05:26:20.040580Z
+privacy_scan: ok
+public_status_source: present
+player_status_source: present
+config_file_source: present
+public_state: player_running
+public_config_state: valid
+public_player_state: running
+public_service_state: active
+playback_state: playing
+mpv_running: true
+playlist_size_present: true
+current_index_present: true
+last_poll_success_present: true
+config_file_exists: true
+config_file_mode: 640
+config_file_owner_group_category: root_totem
+config_file_content_read: false
+service_observed: unknown
+renderer_active: unknown
+kiosk_active: unknown
+mpv_process_count: unknown
+network_access: false
+commands_executed: false
+writes_only_under_tmp: true
+not_ota_release_payload: true
+not_h2_or_production_readiness: true
+warnings: none

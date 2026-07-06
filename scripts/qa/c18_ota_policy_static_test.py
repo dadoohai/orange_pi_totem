@@ -53,6 +53,10 @@ SERVICE_OBSERVER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_observ
 COLDBOOT_STATE_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_coldboot_state_collect.py"
 APPLIANCE_STATUS_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_status_snapshot.py"
 DISPLAY_STATUS_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_display_status_collect.py"
+DISPLAY_PROFILE_BASELINE_COLLECTOR_PATH = (
+    REPO_ROOT / "scripts" / "board" / "c18_display_profile_baseline_collect.py"
+)
+DISPLAY_PROFILE_BASELINE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_display_profile_baseline_gate.py"
 PLAYBACK_HEALTH_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_health_collect.py"
 PLAYBACK_SOAK_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_soak_collect.py"
 PLAYBACK_INCIDENT_COLLECTOR_PATH = REPO_ROOT / "scripts" / "board" / "c18_playback_incident_collect.py"
@@ -498,6 +502,35 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotRegex(collector, r"(xset|modetest|kmsprint|drm_info|chvt|fbset)")
         self.assertNotIn("/dev/fb", collector)
         self.assertNotIn("/data/config/config.json", collector)
+
+    def test_display_profile_baseline_is_sanitized_read_only_d1(self) -> None:
+        collector = DISPLAY_PROFILE_BASELINE_COLLECTOR_PATH.read_text(encoding="utf-8")
+        gate = DISPLAY_PROFILE_BASELINE_GATE_PATH.read_text(encoding="utf-8")
+        subprocess.run(["python3", str(DISPLAY_PROFILE_BASELINE_COLLECTOR_PATH), "--self-test"], check=True)
+        subprocess.run(["python3", str(DISPLAY_PROFILE_BASELINE_GATE_PATH), "--self-test"], check=True)
+        no_args = subprocess.run(
+            ["python3", str(DISPLAY_PROFILE_BASELINE_GATE_PATH), "--json"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertIn('SCHEMA = "dadooh.c18.display_profile_baseline.v1"', collector)
+        self.assertIn("edid_summary", collector)
+        self.assertIn('"reads_edid_size_and_hash": True', collector)
+        self.assertIn('"includes_raw_edid": False', collector)
+        self.assertIn('"raw_edid_included": False', collector)
+        self.assertIn('"raw_cmdline_included": False', collector)
+        self.assertIn("this_collector_does_not_force_resolution_or_modeset", collector)
+        self.assertIn("this_collector_does_not_include_raw_edid_or_framebuffer", collector)
+        self.assertNotRegex(collector, r"systemctl[^\n]*(stop|start|restart|reload|reset-failed)")
+        self.assertNotRegex(collector, r"(xset|modetest|kmsprint|drm_info|chvt|fbset)")
+        self.assertNotIn("/dev/fb", collector)
+        self.assertNotIn("/data/config/config.json", collector)
+        self.assertIn('BASELINE_SCHEMA = "dadooh.c18.display_profile_baseline.v1"', gate)
+        self.assertIn("baseline_required", no_args.stdout)
+        self.assertNotEqual(no_args.returncode, 0)
 
     def test_appliance_status_snapshot_is_read_only_field_data_governance(self) -> None:
         collector = APPLIANCE_STATUS_COLLECTOR_PATH.read_text(encoding="utf-8")

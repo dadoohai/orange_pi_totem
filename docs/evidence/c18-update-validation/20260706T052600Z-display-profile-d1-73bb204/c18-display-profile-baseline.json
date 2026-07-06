@@ -1,0 +1,85 @@
+{
+  "classification": "edid_missing_low_mode_fallback",
+  "cmdline": {
+    "raw_cmdline_included": false,
+    "video_override_present": false,
+    "video_overrides": []
+  },
+  "collection_policy": {
+    "includes_raw_edid": false,
+    "mutates_display": false,
+    "mutates_player": false,
+    "raw_cmdline_included": false,
+    "read_only": true,
+    "reads_config_content": false,
+    "reads_edid_size_and_hash": true,
+    "reads_framebuffer_pixels": false,
+    "reads_journal": false,
+    "reads_media": false,
+    "uses_network": false
+  },
+  "collector_version": 1,
+  "drm": {
+    "connected_count": 1,
+    "connected_enabled_count": 1,
+    "connected_low_mode_only_count": 1,
+    "connected_with_empty_edid_count": 1,
+    "connected_with_modes_count": 1,
+    "connectors": [
+      {
+        "connector": "HDMI-A-1",
+        "dpms": "On",
+        "edid": {
+          "bytes": 0,
+          "empty": true,
+          "present": true,
+          "raw_edid_included": false,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "enabled": "enabled",
+        "max_mode_area": 786432,
+        "mode": "",
+        "mode_present": false,
+        "modes": [
+          "1024x768",
+          "800x600",
+          "848x480",
+          "640x480"
+        ],
+        "modes_count": 4,
+        "status": "connected"
+      }
+    ],
+    "present": true
+  },
+  "ended_at_utc": "2026-07-06T05:26:20.973512Z",
+  "non_claims": [
+    "this_collector_does_not_start_stop_restart_or_signal_player",
+    "this_collector_does_not_force_resolution_or_modeset",
+    "this_collector_does_not_include_raw_edid_or_framebuffer",
+    "this_collector_does_not_read_config_content_media_journal_or_network",
+    "this_collector_does_not_validate_playback_decode_health",
+    "this_collector_does_not_replace_powerloss_soak_h2_stable_or_thaw"
+  ],
+  "passed": true,
+  "player_status": {
+    "black_screen_risk_reason": "null",
+    "current_index": 4,
+    "first_frame_ready": true,
+    "last_render_error": "null",
+    "mpv_running": true,
+    "playback_state": "playing",
+    "player_state": "playing",
+    "playlist_size": 9,
+    "present": true,
+    "startup_phase": "playing"
+  },
+  "result_claim": "read_only_display_profile_baseline_collected",
+  "schema": "dadooh.c18.display_profile_baseline.v1",
+  "service": {
+    "active_state": "active",
+    "returncode": 0,
+    "service": "kiosky-player.service"
+  },
+  "started_at_utc": "2026-07-06T05:26:20.970869Z"
+}
