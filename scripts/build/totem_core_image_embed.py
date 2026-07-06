@@ -22,6 +22,8 @@ UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
 UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-update-agent.timer"
 PLAYER_RUNTIME_AUTH_TARGET = "/data/updates/player-runtime-production-autopull.json"
+PLAYER_RUNTIME_CANARY_SOURCE = "assets/c18-canary-h264.mp4"
+PLAYER_RUNTIME_CANARY_TARGET = "/data/media/c18-canary-h264.mp4"
 PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.service"
 PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.timer"
 PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-player-runtime-update-agent.timer"
@@ -164,6 +166,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
         "/data/core/totem/releases",
         "/data/player-runtime",
         "/data/player-runtime/releases",
+        "/data/media",
         release_root,
         release_bin,
         f"{release_root}/health",
@@ -210,6 +213,11 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
         commands.append(
             f"symlink {PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS} {PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET}"
         )
+    if profile == "production":
+        canary_media = repo_root / "scripts/board" / PLAYER_RUNTIME_CANARY_SOURCE
+        if not canary_media.is_file():
+            raise RuntimeError(f"missing_player_runtime_canary_media:{PLAYER_RUNTIME_CANARY_SOURCE}")
+        commands.extend(write_file_commands(canary_media, PLAYER_RUNTIME_CANARY_TARGET, "0644"))
     commands.extend(write_file_commands(wrapper_py, f"{wrappers_bin}/totem_core_exec.py"))
     commands.extend(write_file_commands(wrapper_sh, f"{wrappers_bin}/totem_core_exec.sh"))
     commands.extend(write_file_commands(updatectl_py, f"{wrappers_bin}/totem-updatectl"))
@@ -524,8 +532,16 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
     }
     if profile == "homologation":
         checks["totem_core_update_timer_disabled"] = not timer_enabled
+        checks["player_runtime_production_canary_not_embedded"] = not _is_file(
+            rootfs,
+            PLAYER_RUNTIME_CANARY_TARGET,
+        )
     elif profile == "production":
         checks["totem_core_update_timer_enabled"] = timer_enabled
+        checks["player_runtime_production_canary_embedded"] = _is_file(
+            rootfs,
+            PLAYER_RUNTIME_CANARY_TARGET,
+        )
     for core_file in CORE_FILES:
         checks[f"totem_core_release_{core_file}"] = _has_exec(rootfs, f"{release_root}/bin/{core_file}")
         checks[f"totem_core_fallback_{core_file}"] = _has_exec(rootfs, f"/opt/totem/core-fallback/bin/{core_file}")

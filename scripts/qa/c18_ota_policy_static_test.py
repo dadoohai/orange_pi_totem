@@ -72,6 +72,7 @@ TOTEM_CORE_PRODUCTION_TIMER_COLLECT_PATH = (
     REPO_ROOT / "scripts" / "board" / "c18_totem_core_production_timer_collect.py"
 )
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
+PLAYER_RUNTIME_CANARY_MEDIA_PATH = REPO_ROOT / "scripts" / "board" / "assets" / "c18-canary-h264.mp4"
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
 PLAYER_RUNTIME_LAB_TOPOLOGY_RESET_PATH = (
@@ -1181,6 +1182,7 @@ exec "$C18_REAL_PYTHON3" "$@"
 
     def test_image_embed_keeps_player_launcher_fixed_to_image(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")
+        updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
         core_files_block = embed.split("CORE_FILES = [", 1)[1].split("]", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
@@ -1199,6 +1201,34 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("image_fixed_player_dropin_reconciles_player_runtime", embed)
         self.assertIn("image_fixed_player_launcher_has_status_mpv_watchdog", embed)
         self.assertIn("not_totem_core_wrapper", embed)
+        self.assertTrue(PLAYER_RUNTIME_CANARY_MEDIA_PATH.is_file())
+        self.assertGreater(PLAYER_RUNTIME_CANARY_MEDIA_PATH.stat().st_size, 1024)
+        canary_bytes = PLAYER_RUNTIME_CANARY_MEDIA_PATH.read_bytes()
+        mvhd_idx = canary_bytes.find(b"mvhd")
+        self.assertNotEqual(mvhd_idx, -1)
+        mvhd_version = canary_bytes[mvhd_idx + 4]
+        if mvhd_version == 0:
+            timescale = int.from_bytes(canary_bytes[mvhd_idx + 16:mvhd_idx + 20], "big")
+            duration = int.from_bytes(canary_bytes[mvhd_idx + 20:mvhd_idx + 24], "big")
+        else:
+            timescale = int.from_bytes(canary_bytes[mvhd_idx + 28:mvhd_idx + 32], "big")
+            duration = int.from_bytes(canary_bytes[mvhd_idx + 32:mvhd_idx + 40], "big")
+        self.assertGreater(timescale, 0)
+        self.assertGreaterEqual(duration / timescale, 60.0)
+        self.assertIn("PLAYER_RUNTIME_CANARY_SOURCE", embed)
+        self.assertIn("assets/c18-canary-h264.mp4", embed)
+        self.assertIn("/data/media/c18-canary-h264.mp4", embed)
+        self.assertIn("player_runtime_production_canary_embedded", embed)
+        self.assertIn("player_runtime_production_canary_not_embedded", embed)
+        self.assertIn("PLAYER_RUNTIME_PRODUCTION_CANARY_MEDIA", updatectl)
+        self.assertIn('"media" / "c18-canary-h264.mp4"', updatectl)
+        self.assertIn("canary_media=canary_media", updatectl)
+        self.assertIn("production_canary_media_missing", updatectl)
+        self.assertIn('raise RuntimeError("production_canary_media_missing")', updatectl)
+        self.assertIn("production_service_stopped_for_candidate_health", updatectl)
+        self.assertIn("production_service_restart_required_after_promotion", updatectl)
+        self.assertIn("player_runtime_post_promotion_service_restart", updatectl)
+        self.assertIn("_restore_service_after_unpromoted_player_runtime_candidate", updatectl)
 
     def test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher(self) -> None:
         bootstrap = BOOTSTRAP_C17_5_PATH.read_text(encoding="utf-8")

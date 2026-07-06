@@ -96,6 +96,12 @@ PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE = Path(
         str(UPDATES_DIR / "player-runtime-production-autopull.json"),
     )
 )
+PLAYER_RUNTIME_PRODUCTION_CANARY_MEDIA = Path(
+    os.environ.get(
+        "TOTEM_PLAYER_RUNTIME_PRODUCTION_CANARY_MEDIA",
+        str(DATA_ROOT / "media" / "c18-canary-h264.mp4"),
+    )
+)
 UPDATE_LOCK_FILE = Path(os.environ.get("TOTEM_UPDATE_LOCK_FILE", "/run/totem-updatectl.lock"))
 APP_BASE = DATA_ROOT / "apps" / COMPONENT
 RELEASES_DIR = APP_BASE / "releases"
@@ -1749,6 +1755,21 @@ def _service_restart() -> Tuple[bool, str]:
     return True, "restart issued"
 
 
+def _service_stop() -> Tuple[bool, str]:
+    r = _systemctl("stop", SERVICE_NAME)
+    if r.returncode != 0:
+        return False, (r.stderr or r.stdout).strip()
+    return True, "stop issued"
+
+
+def _restore_service_after_unpromoted_player_runtime_candidate(health: Dict[str, Any]) -> None:
+    if not bool(health.get("production_service_restart_required_after_promotion")):
+        return
+    ok, info = _service_restart()
+    if not ok:
+        log("ERROR", "production_service_restore_failed_before_candidate_promotion", err=info)
+
+
 def _service_health_check() -> Tuple[bool, str]:
     """
     Health check:
@@ -2344,6 +2365,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             "rolled_back_to": "previous" if old_current else "image_fallback",
         }
         _write_state(state)
+        _restore_service_after_unpromoted_player_runtime_candidate(health)
         _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 48
@@ -2367,6 +2389,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             "rolled_back_to": "previous" if old_current else "image_fallback",
         }
         _write_state(state)
+        _restore_service_after_unpromoted_player_runtime_candidate(health)
         _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 48
@@ -2399,6 +2422,7 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
             "rolled_back_to": "previous" if old_current else "image_fallback",
         }
         _write_state(state)
+        _restore_service_after_unpromoted_player_runtime_candidate(health)
         _cleanup_unpromoted_release(release_dir)
         _cleanup_stage(stage)
         return 12
@@ -2434,6 +2458,46 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
     }
     _write_state(state)
     _player_runtime_fault("after_state_success", version=version, identity=identity)
+    if production_authorized and bool(health.get("production_service_restart_required_after_promotion")):
+        log("INFO", "player_runtime_post_promotion_service_restart", service=SERVICE_NAME)
+        ok, info = _service_restart()
+        if not ok:
+            log("ERROR", "player_runtime_post_promotion_service_restart_failed", err=info)
+            rollback_rc = _rollback_player_runtime_unfrozen(
+                "post_promotion_service_restart_failed",
+                quarantine_current=True,
+                production_authorized=True,
+            )
+            _service_restart()
+            _cleanup_stage(stage)
+            return 10 if rollback_rc == 0 else rollback_rc
+        ok, info = _service_health_check()
+        if not ok:
+            log("ERROR", "player_runtime_post_promotion_service_health_failed", reason=info)
+            rollback_rc = _rollback_player_runtime_unfrozen(
+                f"post_promotion_service_health_failed:{info}",
+                quarantine_current=True,
+                production_authorized=True,
+            )
+            _service_restart()
+            _cleanup_stage(stage)
+            return 10 if rollback_rc == 0 else rollback_rc
+        state = _read_state()
+        last_operation = state.get("last_operation")
+        state["last_operation"] = {
+            "type": "apply",
+            "status": "success",
+            "started_at_utc": started_at,
+            "finished_at_utc": _utcnow_iso(),
+            "version": version,
+            "source": source,
+            "production_service_restarted_after_promotion": True,
+            "production_service_restart_health": info,
+            "post_promotion_reconcile_status": (
+                last_operation.get("status") if isinstance(last_operation, dict) else None
+            ),
+        }
+        _write_state(state)
     _player_runtime_fault("before_stage_cleanup", version=version, stage=str(stage))
     _cleanup_stage(stage)
     return 0
@@ -2770,15 +2834,74 @@ def _production_player_runtime_health_hook(
             / "player-runtime-candidate-health"
             / f"{_safe_stage_name(str(auth.get('version') or release_dir.name))}-{int(time.time())}"
         )
-        return candidate_health.run_candidate_health(
-            release_dir,
-            identity,
-            output_dir=output_dir,
-            duration_sec=duration_sec,
-            interval_sec=interval_sec,
-            startup_wait_sec=startup_wait_sec,
-            panfrost_fault_policy=panfrost_fault_policy,
+        canary_media = PLAYER_RUNTIME_PRODUCTION_CANARY_MEDIA
+        if not canary_media.is_file():
+            result = {
+                "schema": PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                "candidate_health_schema": "dadooh.c18.player_runtime.candidate_health.v1",
+                "passed": False,
+                "failure_reasons": ["production_canary_media_missing"],
+                "observed_kiosk_py_sha256": identity.get("kiosk_py_sha256"),
+                "observed_tree_sha256": identity.get("tree_sha256"),
+                "candidate_version": identity.get("version"),
+                "canary_media_used": False,
+                "artifact_id": "production_canary_media_missing",
+            }
+            _atomic_write_json(output_dir / "candidate-health-result.json", result)
+            raise RuntimeError("production_canary_media_missing")
+        service_was_active = _service_is_active()
+        service_stopped = False
+        if service_was_active:
+            ok, info = _service_stop()
+            if not ok:
+                result = {
+                    "schema": PLAYER_RUNTIME_DEEP_HEALTH_SCHEMA,
+                    "candidate_health_schema": "dadooh.c18.player_runtime.candidate_health.v1",
+                    "passed": False,
+                    "failure_reasons": ["production_service_stop_failed_before_candidate_health"],
+                    "observed_kiosk_py_sha256": identity.get("kiosk_py_sha256"),
+                    "observed_tree_sha256": identity.get("tree_sha256"),
+                    "candidate_version": identity.get("version"),
+                    "canary_media_used": True,
+                    "artifact_id": "production_service_stop_failed",
+                    "service_stop_error": info,
+                }
+                _atomic_write_json(output_dir / "candidate-health-result.json", result)
+                raise RuntimeError("production_service_stop_failed_before_candidate_health")
+            service_stopped = True
+        try:
+            result = candidate_health.run_candidate_health(
+                release_dir,
+                identity,
+                output_dir=output_dir,
+                canary_media=canary_media,
+                duration_sec=duration_sec,
+                interval_sec=interval_sec,
+                startup_wait_sec=startup_wait_sec,
+                panfrost_fault_policy=panfrost_fault_policy,
+            )
+        except Exception:
+            if service_stopped:
+                ok, info = _service_restart()
+                if not ok:
+                    log("ERROR", "production_service_restore_failed_after_candidate_exception", err=info)
+            raise
+        result["production_service_was_active_before_candidate_health"] = service_was_active
+        result["production_service_stopped_for_candidate_health"] = service_stopped
+        result["production_service_restart_required_after_promotion"] = (
+            service_stopped and bool(result.get("passed"))
         )
+        if service_stopped and not bool(result.get("passed")):
+            ok, info = _service_restart()
+            result["production_service_restored_after_candidate_rejection"] = ok
+            if not ok:
+                result.setdefault("failure_reasons", []).append(
+                    "production_service_restore_failed_after_candidate_health"
+                )
+                result["service_restore_error"] = info
+                result["passed"] = False
+        _atomic_write_json(output_dir / "candidate-health-result.json", result)
+        return result
 
     return _hook
 
