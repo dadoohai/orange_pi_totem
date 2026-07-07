@@ -1,0 +1,8 @@
+2026-07-07T17:29:30-03:00 begin
+2026-07-07T17:29:35-03:00 send_key enter_orientation
+2026-07-07T17:29:37-03:00 send_key enter_confirm
+2026-07-07T17:29:41-03:00 send_key down_wifi
+2026-07-07T17:29:42-03:00 send_key enter_wifi
+2026-07-07T17:29:49-03:00 capture wifi-signal
+2026-07-07T17:29:50-03:00 send_key cancel_global
+2026-07-07T17:30:14-03:00 end

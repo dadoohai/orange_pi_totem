@@ -1,0 +1,26 @@
+{
+  "candidate_generated": false,
+  "generated_at_utc": "2026-07-07T20:15:22.773926Z",
+  "guardrails": {
+    "display_changed": false,
+    "main_player_mpv_called": false,
+    "network_changed": false,
+    "nmcli_called": false,
+    "player_started": false,
+    "real_config_read": false,
+    "real_config_written": false,
+    "visual_renderer_mpv_called": false,
+    "writer_called": false,
+    "writes_only_under_tmp": true
+  },
+  "interface_mode": "local_visual_mpv_drm_keyboard_controlled",
+  "privacy": {
+    "candidate_payload_copied": false,
+    "credential_value_written": false,
+    "environment_identifier_raw_written": false,
+    "network_metadata_written": false,
+    "raw_logs_written": false
+  },
+  "schema_version": "dadooh-c9.9-visual-wizard-local.v1",
+  "state": "setup_cancelled"
+}

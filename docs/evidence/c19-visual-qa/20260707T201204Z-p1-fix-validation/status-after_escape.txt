@@ -1,0 +1,12 @@
+snapshot=after_escape
+2026-07-07T17:12:37-03:00
+Result=success
+ExecMainCode=0
+ExecMainStatus=0
+ActiveState=activating
+OPEN_ACTIVE=activating
+PLAYER_ACTIVE=inactive
+LOCK=present
+REQUEST=absent
+MPV_COUNT=0
+PLAYER_STATUS=playing

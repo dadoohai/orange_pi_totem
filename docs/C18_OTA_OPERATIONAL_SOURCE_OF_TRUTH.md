@@ -10,6 +10,9 @@ Direcao macro da fase atual: `docs/C18_MACRO_STEERING.md`.
 Spec de execucao da fase de producao com auto-pull:
 `docs/C18_PRODUCTION_AUTOPULL_SPEC.md`.
 
+Fluxo curto de QA visual do wizard/settings na placa:
+`docs/C19_VISUAL_QA_FLOW.md`.
+
 Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
 
@@ -282,6 +285,44 @@ Passos minimos:
    negativos de alvo errado/hash errado/canal errado/sem autorizacao;
 6. auditoria final focada em regressao: `totem-core` continua funcionando,
    `kiosky-player` legado continua fora e `media-system` continua fora do OTA.
+
+## Rodada C19 - pacote `totem-core` de wizard/settings
+
+Decisao em 2026-07-07: C19.2 + C19.3 formam um candidato pequeno e coerente de
+`totem-core`, mas ainda nao devem ser publicados no estado local sujo.
+
+Claim permitido do pacote:
+
+- melhoria visual e operacional do wizard/settings;
+- lista Wi-Fi em paisagem sem invadir rodape;
+- PageDown/PageUp coerentes com a pagina visivel;
+- `Esc` na tela inicial encerrando settings sem deixar service `failed`;
+- indicador de sinal Wi-Fi legivel em ASCII;
+- sem escrita real de Wi-Fi/config.
+
+Nao-claims:
+
+- nao valida Wi-Fi real/persistente em campo;
+- nao valida escrita real de `/data/config/config.json`;
+- nao corrige EDID/resolucao/display fallback;
+- nao muda player, MPV, media-system, field-data, updater ou kernel;
+- nao substitui M5 `player-runtime` auto-pull.
+
+Proxima sequencia recomendada:
+
+1. Commit limpo contendo codigo, docs e evidencias C19 intencionais.
+2. Gerar pacote `totem-core` sem `--allow-dirty`.
+3. Rodar release gate especifico do pacote e gate global C18.
+4. Validar na placa: dry-run selecionando alvo exato, apply, self-test/health,
+   player saudavel e rollback.
+5. So depois decidir se publica como release controlada ou promove para stable.
+
+Decisoes de escopo:
+
+- Display/EDID segue na frente M7/display-profile. Forcar resolucao pertence a
+  `media-system`/imagem, nao a `totem-core` comum.
+- Wi-Fi real/config real segue como frente de bancada separada. Nao bloqueia o
+  pacote C19 se o claim continuar visual/operacional.
 
 ## Imagem para novas placas
 

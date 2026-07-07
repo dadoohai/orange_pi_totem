@@ -516,7 +516,7 @@ restore_service() {
 }
 
 kill_visual_if_running() {
-  python3 - "$VISUAL" "$WIZARD_OUT_DIR" <<'PY'
+  python3 - "$VISUAL" "$WIZARD_OUT_DIR" "$$" "$BASHPID" <<'PY'
 import os
 import pathlib
 import signal
@@ -524,16 +524,24 @@ import sys
 import time
 visual = sys.argv[1]
 out = sys.argv[2]
+skip = {os.getpid(), os.getppid()}
+for raw in sys.argv[3:]:
+    try:
+        skip.add(int(raw))
+    except ValueError:
+        pass
 pids = []
 for proc in pathlib.Path("/proc").iterdir():
-    if not proc.name.isdigit() or int(proc.name) == os.getpid():
+    if not proc.name.isdigit() or int(proc.name) in skip:
         continue
     try:
         parts = [part.decode("utf-8", "ignore") for part in (proc / "cmdline").read_bytes().split(b"\0") if part]
     except OSError:
         continue
     joined = " ".join(parts)
-    if visual in joined or out in joined:
+    if "totem_open_settings_session.sh" in joined:
+        continue
+    if visual in joined and out in joined:
         pids.append(int(proc.name))
 for pid in pids:
     try:
@@ -1164,11 +1172,28 @@ fi
 set -e
 c15_trace "after_wizard WIZARD_RC=$WIZARD_RC"
 
+SETUP_CANCELLED="false"
+if [ -f "$WIZARD_OUT_DIR/setup-cancelled.json" ] || [ "$WIZARD_RC" = "130" ]; then
+  SETUP_CANCELLED="true"
+  c15_trace "wizard_cancelled_restore_path"
+fi
+
+if [ "$SETUP_CANCELLED" = "true" ]; then
+  case "$EXPECTED_RESULT" in
+    any|cancelled)
+      ;;
+    *)
+      echo "wizard_cancelled_before_expected_result" >&2
+      exit 43
+      ;;
+  esac
+fi
+
 if [ "$EXPECTED_RESULT" = "preview" ] && [ ! -d "$WIZARD_OUT_DIR/screens" ]; then
   echo "preview_not_generated" >&2
   exit 41
 fi
-if [ "$EXPECTED_RESULT" = "cancelled" ] && [ ! -f "$WIZARD_OUT_DIR/setup-cancelled.json" ] && [ "$WIZARD_RC" != "130" ]; then
+if [ "$EXPECTED_RESULT" = "cancelled" ] && [ "$SETUP_CANCELLED" != "true" ]; then
   echo "expected_cancel_not_observed" >&2
   exit 43
 fi
@@ -1180,7 +1205,12 @@ if [ -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
   SELECTED_ROTATION_DEG="$(selected_rotation_from_candidate)"
 fi
 
-if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
+if [ "$SETUP_CANCELLED" = "true" ]; then
+  cleanup_private_artifacts || true
+  cleanup_apply_policy || true
+fi
+
+if [ "$SETUP_CANCELLED" != "true" ] && { [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; }; then
   if [ ! -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
     echo "candidate_not_generated" >&2
     exit 44
@@ -1208,7 +1238,7 @@ if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
   fi
 fi
 
-if [ "$APPLY_MODE" = "dry-run" ]; then
+if [ "$SETUP_CANCELLED" != "true" ] && [ "$APPLY_MODE" = "dry-run" ]; then
   python3 "$CONTRACT" \
     --candidate "$HANDOFF_OUT_DIR/config.candidate.private.json" \
     --real-dry-run \
@@ -1217,7 +1247,7 @@ if [ "$APPLY_MODE" = "dry-run" ]; then
   cleanup_apply_policy || true
 fi
 
-if [ "$APPLY_MODE" = "real-write" ]; then
+if [ "$SETUP_CANCELLED" != "true" ] && [ "$APPLY_MODE" = "real-write" ]; then
   show_transition saving "$SELECTED_ROTATION_DEG" || true
   WRITER_CALLED="true"
   c1523_phase "writer_start"

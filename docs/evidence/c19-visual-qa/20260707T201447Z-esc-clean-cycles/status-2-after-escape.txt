@@ -1,0 +1,15 @@
+snapshot=2-after-escape
+2026-07-07T17:15:46-03:00
+ControlPID=0
+Result=success
+ExecMainPID=449549
+ExecMainCode=1
+ExecMainStatus=0
+ActiveState=inactive
+SubState=dead
+OPEN=inactive
+PLAYER=active
+LOCK=absent
+REQUEST=absent
+MPV=1
+PLAYER_STATUS=playing

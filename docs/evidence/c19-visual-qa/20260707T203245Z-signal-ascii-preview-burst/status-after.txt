@@ -1,0 +1,6 @@
+2026-07-07T17:33:05-03:00
+Result=success
+ExecMainStatus=0
+ActiveState=inactive
+PLAYER_AFTER=active
+MPV_AFTER=1

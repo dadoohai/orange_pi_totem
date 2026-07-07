@@ -1,0 +1,15 @@
+snapshot=1-opened
+2026-07-07T17:14:51-03:00
+ControlPID=0
+Result=success
+ExecMainPID=448917
+ExecMainCode=0
+ExecMainStatus=0
+ActiveState=activating
+SubState=start
+OPEN=activating
+PLAYER=inactive
+LOCK=present
+REQUEST=absent
+MPV=0
+PLAYER_STATUS=playing

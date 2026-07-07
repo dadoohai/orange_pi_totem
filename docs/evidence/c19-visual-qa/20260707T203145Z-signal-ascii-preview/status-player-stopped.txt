@@ -1,0 +1,11 @@
+snapshot=player-stopped
+2026-07-07T17:31:48-03:00
+Result=success
+ExecMainCode=1
+ExecMainStatus=0
+ActiveState=inactive
+SubState=dead
+PLAYER=inactive
+MPV=0
+LOCK=absent
+REQUEST=absent

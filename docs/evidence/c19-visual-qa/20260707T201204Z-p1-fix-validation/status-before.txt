@@ -1,0 +1,12 @@
+snapshot=before
+2026-07-07T17:12:04-03:00
+Result=success
+ExecMainCode=2
+ExecMainStatus=15
+ActiveState=inactive
+OPEN_ACTIVE=inactive
+PLAYER_ACTIVE=active
+LOCK=absent
+REQUEST=absent
+MPV_COUNT=1
+PLAYER_STATUS=playing

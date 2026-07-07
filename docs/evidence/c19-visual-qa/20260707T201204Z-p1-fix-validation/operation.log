@@ -1,0 +1,16 @@
+2026-07-07T17:12:04-03:00 begin
+2026-07-07T17:12:09-03:00 capture 00-orientation
+2026-07-07T17:12:10-03:00 send_key enter_1
+2026-07-07T17:12:12-03:00 capture 01-orientation-confirm
+2026-07-07T17:12:13-03:00 send_key enter_2
+2026-07-07T17:12:17-03:00 capture 02-connection
+2026-07-07T17:12:18-03:00 send_key down_wifi
+2026-07-07T17:12:18-03:00 send_key enter_wifi
+2026-07-07T17:12:26-03:00 capture 03-wifi-page1
+2026-07-07T17:12:26-03:00 send_key pagedown
+2026-07-07T17:12:28-03:00 capture 04-wifi-pagedown
+2026-07-07T17:12:29-03:00 send_key pageup
+2026-07-07T17:12:31-03:00 capture 05-wifi-pageup
+2026-07-07T17:12:31-03:00 send_key escape
+2026-07-07T17:12:37-03:00 service_not_failed_after_escape
+2026-07-07T17:12:37-03:00 end

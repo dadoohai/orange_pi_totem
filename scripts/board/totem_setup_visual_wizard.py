@@ -55,6 +55,7 @@ WIFI_TIMEOUT_SEC = 45
 WIFI_LIST_REFRESH_SEC = 10.0
 WIFI_LIST_TIMEOUT_SEC = 4
 WIFI_LIST_PAGE_SIZE = 5
+WIFI_LIST_LANDSCAPE_PAGE_SIZE = 4
 MAX_PANEL_ITEMS = 3
 TEXT_INPUT_MIN_RENDER_INTERVAL_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_RENDER_INTERVAL_SEC", "0.10"))
 TEXT_INPUT_REPEAT_DRAIN_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_REPEAT_DRAIN_SEC", "0.035"))
@@ -206,6 +207,10 @@ def screen_layout(layout_rotation_deg: int = 0) -> ScreenLayout:
         return ScreenLayout(rotation, PORTRAIT_CANVAS_WIDTH, PORTRAIT_CANVAS_HEIGHT, "portrait", note, 56)
     note = "Layout invertido" if rotation == 180 else "Layout paisagem"
     return ScreenLayout(rotation, LANDSCAPE_CANVAS_WIDTH, LANDSCAPE_CANVAS_HEIGHT, "landscape", note, 96)
+
+
+def wifi_list_page_size(layout_rotation_deg: int = 0) -> int:
+    return WIFI_LIST_PAGE_SIZE if screen_layout(layout_rotation_deg).portrait else WIFI_LIST_LANDSCAPE_PAGE_SIZE
 
 
 NETWORK_OPTIONS = (
@@ -2021,12 +2026,12 @@ def signal_percent(network: dict[str, Any]) -> int:
 
 def signal_bars(percent: int) -> str:
     if percent >= 90:
-        return "████"
+        return "[####]"
     if percent >= 70:
-        return "███"
+        return "[###.]"
     if percent >= 40:
-        return "██"
-    return "█"
+        return "[##..]"
+    return "[#...]"
 
 
 def signal_label(percent: int) -> str:
@@ -2114,10 +2119,11 @@ def wifi_list_screen_svg(
     layout_rotation_deg: int,
     refreshing: bool = False,
 ) -> str:
+    page_size = wifi_list_page_size(layout_rotation_deg)
     visible_networks, page_start, page_end, page_index, page_count = page_items(
         networks,
         selected_index,
-        WIFI_LIST_PAGE_SIZE,
+        page_size,
     )
     options = [wifi_option_for_network(page_start + index, network) for index, network in enumerate(visible_networks)]
     selected_on_page = max(0, selected_index - page_start) if options else 0
@@ -2176,6 +2182,7 @@ def choose_wifi_network(
         timeout_sec=WIFI_LIST_TIMEOUT_SEC,
         rescan=True,
     )
+    page_size = wifi_list_page_size(layout_rotation_deg)
     selected_index = 0
     last_refresh = time.monotonic()
     refresh_message = ""
@@ -2263,12 +2270,12 @@ def choose_wifi_network(
             needs_render = True
             continue
         if key == "pageup" and networks:
-            selected_index = max(0, selected_index - WIFI_LIST_PAGE_SIZE)
+            selected_index = max(0, selected_index - page_size)
             refresh_message = ""
             needs_render = True
             continue
         if key == "pagedown" and networks:
-            selected_index = min(len(networks) - 1, selected_index + WIFI_LIST_PAGE_SIZE)
+            selected_index = min(len(networks) - 1, selected_index + page_size)
             refresh_message = ""
             needs_render = True
             continue
@@ -3425,7 +3432,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "02-wifi-list-page-2",
         wifi_list_screen_svg(
             networks=preview_networks,
-            selected_index=WIFI_LIST_PAGE_SIZE + 1,
+            selected_index=wifi_list_page_size(90) + 1,
             list_status="ok",
             updated_age_sec=8,
             refresh_message="Setas continuam alem da area visivel.",
@@ -3614,7 +3621,7 @@ def show_wifi_list_preview(
             "02-wifi-list-preview-page-2",
             wifi_list_screen_svg(
                 networks=networks,
-                selected_index=WIFI_LIST_PAGE_SIZE + 1,
+                selected_index=wifi_list_page_size(layout_rotation_deg) + 1,
                 list_status=list_status,
                 updated_age_sec=8,
                 refresh_message="Setas continuam alem da area visivel.",
@@ -3998,6 +4005,14 @@ def run_self_test() -> None:
         assert_true((start_1, end_1, len(page_1)) == (0, 8, 8), "pagination page 1 should show 1-8")
         assert_true((start_2, end_2, len(page_2)) == (8, 16, 8), "pagination page 2 should show 9-16")
         assert_true((start_3, end_3, len(page_3)) == (16, 18, 2), "pagination page 3 should show 17-18")
+        assert_true(wifi_list_page_size(0) == 4, "landscape Wi-Fi list should show 4 networks")
+        assert_true(wifi_list_page_size(90) == 5, "portrait Wi-Fi list should keep 5 networks")
+        landscape_footer_y = screen_layout(0).height - 82
+        landscape_last_card_bottom = 262 + (wifi_list_page_size(0) - 1) * (82 + 14) + 82
+        assert_true(landscape_last_card_bottom < landscape_footer_y, "landscape Wi-Fi cards should not touch footer")
+        portrait_footer_y = screen_layout(90).height - 82
+        portrait_last_card_bottom = 354 + (wifi_list_page_size(90) - 1) * (98 + 14) + 98
+        assert_true(portrait_last_card_bottom < portrait_footer_y, "portrait Wi-Fi cards should not touch footer")
         preserved_index, preserved = refresh_selected_index(page_fixture[:3], [page_fixture[2], page_fixture[1]], 1)
         assert_true(preserved and preserved_index == 1, "refresh should preserve selected SSID")
         disappeared_networks, disappeared_index, disappeared_message = apply_wifi_refresh_result(
@@ -4012,10 +4027,10 @@ def run_self_test() -> None:
         failed_networks, failed_index, failed_message = apply_wifi_refresh_result(page_fixture[:3], [], "timeout", 1)
         assert_true(failed_networks == page_fixture[:3], "failed refresh should keep last valid list")
         assert_true(failed_index == 1 and "lista anterior" in failed_message, "failed refresh should keep safe selection")
-        assert_true(signal_bars(90) == "████" and signal_label(90) == "Forte", "90 signal should be four bars")
-        assert_true(signal_bars(70) == "███" and signal_label(70) in {"Forte", "Bom"}, "70 signal should be three bars")
-        assert_true(signal_bars(40) == "██" and signal_label(40) == "Medio", "40 signal should be two bars")
-        assert_true(signal_bars(20) == "█" and signal_label(20) == "Fraco", "20 signal should be one bar")
+        assert_true(signal_bars(90) == "[####]" and signal_label(90) == "Forte", "90 signal should be four bars")
+        assert_true(signal_bars(70) == "[###.]" and signal_label(70) in {"Forte", "Bom"}, "70 signal should be three bars")
+        assert_true(signal_bars(40) == "[##..]" and signal_label(40) == "Medio", "40 signal should be two bars")
+        assert_true(signal_bars(20) == "[#...]" and signal_label(20) == "Fraco", "20 signal should be one bar")
 
         preview_dir = require_tmp_dir(str(root / "preview"))
         prepare_private_dir(preview_dir)
@@ -4044,7 +4059,7 @@ def run_self_test() -> None:
         wifi_preview_text = wifi_preview_page.read_text(encoding="utf-8")
         assert_true("TEST_WIFI_STRONG" in wifi_preview_text, "synthetic Wi-Fi preview should show local SSID")
         assert_true("Mostrando 1-5 de" in wifi_preview_text, "Wi-Fi preview should show pagination position")
-        assert_true("96%" in wifi_preview_text and "████" in wifi_preview_text, "Wi-Fi preview should show signal clarity")
+        assert_true("96%" in wifi_preview_text and "[####]" in wifi_preview_text, "Wi-Fi preview should show signal clarity")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-list-empty.svg")), "Wi-Fi preview should include empty state")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-hidden.svg")), "Wi-Fi preview should include hidden password")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-visible.svg")), "Wi-Fi preview should include visible password")
@@ -4059,6 +4074,14 @@ def run_self_test() -> None:
             display_enabled=False,
         )
         wifi_preview_public_text = (wifi_preview_dir / "wifi-list-preview-status.json").read_text(encoding="utf-8")
+        landscape_wifi_preview = next((wifi_preview_dir / "screens").glob("*-02-wifi-list-preview-page-1.svg"))
+        landscape_wifi_preview_text = landscape_wifi_preview.read_text(encoding="utf-8")
+        assert_true("Mostrando 1-4 de" in landscape_wifi_preview_text, "landscape Wi-Fi preview should show 1-4")
+        assert_true(
+            landscape_wifi_preview_text.count('width="760" height="82"') == wifi_list_page_size(0),
+            "landscape Wi-Fi preview should render 4 network cards",
+        )
+        assert_true("TEST_WIFI_COUNTER" not in landscape_wifi_preview_text, "landscape Wi-Fi preview should not render a fifth card")
         assert_true(wifi_preview_status["paginated_wifi_list"] is True, "Wi-Fi list preview should be paginated")
         assert_true(wifi_preview_status["password_show_toggle_key"] == "F2", "password toggle should use F2")
         assert_true(wifi_preview_status["password_show_toggle_fallback_key"] == "Ctrl+P", "password fallback should use Ctrl+P")
