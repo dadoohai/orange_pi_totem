@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-05. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-07. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -76,6 +76,27 @@ imagem/fallback quando nao houver.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
 6. Toda atualizacao real precisa ter dry-run, apply, validacao e rollback.
+
+## Modo De Acumulo Para Proxima Imagem
+
+Decisao em 2026-07-07: as proximas rodadas de produto devem ser acumuladas como
+marcos validados, em vez de publicadas individualmente por padrao.
+
+Regra pratica:
+
+- cada rodada pequena deve ter escopo claro, evidencia e non-claims;
+- quando passar em placa/gates, entra no radar como `validada para acumulo`;
+- o pendente macro passa a ser gerar o pacote/update consolidado e, depois, a
+  nova imagem de referencia;
+- nao publicar/promover cada rodada isolada salvo decisao explicita;
+- se uma rodada tocar outra frente (`player-runtime`, display, Wi-Fi real,
+  media-system), ela deve continuar separada e nao contaminar o pacote de
+  `totem-core`.
+
+Fila atual para consolidacao:
+
+- C19 wizard/settings visual: validada para acumulo em `totem-core`; pendente
+  entrar no pacote/update consolidado e na proxima imagem de referencia.
 
 ## O que fechamos
 
@@ -332,11 +353,13 @@ Evidencia:
 - `releases/core-updates/c19.visual-settings-20260707T205630Z-5df93c1/`;
 - `docs/evidence/c19-totem-core-ota/20260707T211121Z-apply-rollback/`.
 
-Proxima decisao:
+Intencao macro:
 
-- publicar/promover C19 ou juntar com proximas alteracoes de `totem-core`.
-  Ate essa decisao, C19 esta validado em homologacao, mas nao publicado como
-  stable.
+- acumular C19 com as proximas rodadas pequenas de `totem-core`;
+- depois gerar pacote/update consolidado;
+- depois compilar a nova imagem de referencia com esse conjunto validado.
+  Ate essa consolidacao, C19 esta validado em homologacao, mas nao publicado
+  isoladamente como stable.
 
 Decisoes de escopo:
 
