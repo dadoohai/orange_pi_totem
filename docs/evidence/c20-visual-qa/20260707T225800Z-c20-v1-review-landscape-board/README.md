@@ -22,6 +22,12 @@ Resultado:
 - `totem-open-settings.service=inactive`;
 - sem lock/request apos a sessao.
 
+Leitura visual:
+
+- `captures/fb-*.png` sao capturas brutas do framebuffer e podem abrir
+  transparentes em alguns viewers;
+- `captures/fb-*-visible.jpg` sao as versoes para revisao humana.
+
 Non-claims:
 
 - nao valida salvamento real;
