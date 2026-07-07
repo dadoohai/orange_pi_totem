@@ -1,0 +1,18 @@
+{
+  "fallback_safe": false,
+  "generated_at_utc": "2026-07-07T22:50:24Z",
+  "layout_mode": "landscape",
+  "mode": "player",
+  "network_identifiers_published": false,
+  "orientation_contract_supported": true,
+  "orientation_source": "public_orientation",
+  "public_orientation_path_supported": true,
+  "raw_logs_written": false,
+  "real_config_read": false,
+  "real_config_written": false,
+  "rendered": true,
+  "rotation_deg": 0,
+  "schema_version": "dadooh-c10.5-visual-splash.v2",
+  "wifi_changed": false,
+  "writer_called": false
+}

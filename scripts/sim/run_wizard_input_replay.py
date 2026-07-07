@@ -205,6 +205,7 @@ def orientation_screen(selected_index: int = 0, layout_rotation_deg: int = 0) ->
         panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
         extra_svg=wizard.orientation_preview(str(selected_rotation["key"]), layout_rotation_deg=layout_rotation_deg),
         layout_rotation_deg=layout_rotation_deg,
+        suppress_landscape_info_panel=True,
     )
 
 

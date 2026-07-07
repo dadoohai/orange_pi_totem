@@ -342,6 +342,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
             extra_svg=wizard.orientation_preview("landscape"),
             layout_rotation_deg=0,
+            suppress_landscape_info_panel=True,
         ),
     )
 

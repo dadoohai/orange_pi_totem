@@ -377,6 +377,39 @@ Decisoes de escopo:
 - Wi-Fi real/config real segue como frente de bancada separada. Nao bloqueia o
   pacote C19 se o claim continuar visual/operacional.
 
+## Rodada C20 - acumulacao UX de wizard/settings
+
+Decisao em 2026-07-07: C20 continua a linha de acumular melhorias pequenas de
+`totem-core` antes de gerar um pacote consolidado e uma nova imagem de
+referencia.
+
+Estado atual:
+
+- C20 V0 validada: primeira tela de orientacao sem sobreposicao entre preview e
+  painel lateral.
+- C20 V1 validada: wizard recalibrado para o framebuffer atual `1024x768`,
+  lista Wi-Fi em paisagem com 4 itens sem invadir rodape e revisao com resumo
+  publico no corpo principal.
+
+Evidencias principais:
+
+- `docs/evidence/c20-visual-qa/20260707T192000-c20-v0-final-preview-board/`;
+- `docs/evidence/c20-visual-qa/20260707T224916Z-c20-v1-layout-preview-board/`;
+- `docs/evidence/c20-visual-qa/20260707T225600Z-c20-v1-wifi-landscape-board-clean/`;
+- `docs/evidence/c20-visual-qa/20260707T225800Z-c20-v1-review-landscape-board/`.
+
+Non-claims:
+
+- C20 ainda nao foi empacotado nem publicado por OTA;
+- nao mexe em player-runtime, Wi-Fi real, display/EDID, updater, imagem ou
+  media-system;
+- captura de preview nao substitui fluxo completo por teclado quando a rodada
+  depender de interacao real.
+
+Proximo marco recomendado: continuar V2/V3 ou fechar um pacote consolidado de
+`totem-core` quando o conjunto de UX estiver suficiente para uma imagem de
+referencia.
+
 ## Imagem para novas placas
 
 Com os marcos `totem-core` e `player-runtime` remotos fechados em laboratorio,

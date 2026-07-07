@@ -75,10 +75,10 @@ HOMOLOGATION_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE", "fal
     "yes",
 }
 
-LANDSCAPE_CANVAS_WIDTH = 1280
-LANDSCAPE_CANVAS_HEIGHT = 720
-PORTRAIT_CANVAS_WIDTH = 720
-PORTRAIT_CANVAS_HEIGHT = 1280
+LANDSCAPE_CANVAS_WIDTH = 1024
+LANDSCAPE_CANVAS_HEIGHT = 768
+PORTRAIT_CANVAS_WIDTH = 768
+PORTRAIT_CANVAS_HEIGHT = 1024
 CANVAS_WIDTH = LANDSCAPE_CANVAS_WIDTH
 CANVAS_HEIGHT = LANDSCAPE_CANVAS_HEIGHT
 BRAND = "Dadooh"
@@ -204,9 +204,9 @@ def screen_layout(layout_rotation_deg: int = 0) -> ScreenLayout:
     rotation = normalize_rotation_deg(layout_rotation_deg)
     if rotation in {90, 270}:
         note = "Layout retrato para direita" if rotation == 90 else "Layout retrato para esquerda"
-        return ScreenLayout(rotation, PORTRAIT_CANVAS_WIDTH, PORTRAIT_CANVAS_HEIGHT, "portrait", note, 56)
+        return ScreenLayout(rotation, PORTRAIT_CANVAS_WIDTH, PORTRAIT_CANVAS_HEIGHT, "portrait", note, 48)
     note = "Layout invertido" if rotation == 180 else "Layout paisagem"
-    return ScreenLayout(rotation, LANDSCAPE_CANVAS_WIDTH, LANDSCAPE_CANVAS_HEIGHT, "landscape", note, 96)
+    return ScreenLayout(rotation, LANDSCAPE_CANVAS_WIDTH, LANDSCAPE_CANVAS_HEIGHT, "landscape", note, 76)
 
 
 def wifi_list_page_size(layout_rotation_deg: int = 0) -> int:
@@ -352,28 +352,28 @@ def svg_lines(
 def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
     parts = []
     layout = screen_layout(layout_rotation_deg)
-    x = 48 if layout.portrait else 86
-    y = 96
+    x = layout.margin_x
+    y = 86 if layout.portrait else 92
     for index, step in enumerate(STEPS):
         active = index == active_step
         fill = VISUAL["surface_active"] if active else "#172033"
         stroke = VISUAL["accent_strong"] if active else VISUAL["border_muted"]
         text_fill = VISUAL["text"] if active else VISUAL["text_muted"]
-        width = 116 if layout.portrait else (180 if index in {0, 4} else 176)
+        width = 124 if layout.portrait else (140 if index in {0, 4} else 136)
         label = step if not layout.portrait else step[:7]
-        font_size = 14 if layout.portrait else 17
+        font_size = 14 if layout.portrait else 16
         rail = (
-            f'<rect x="{x}" y="{y}" width="5" height="44" rx="3" fill="{VISUAL["accent_strong"]}"/>'
+            f'<rect x="{x}" y="{y}" width="5" height="42" rx="3" fill="{VISUAL["accent_strong"]}"/>'
             if active
             else ""
         )
         parts.append(
-            f'<rect x="{x}" y="{y}" width="{width}" height="44" rx="8" fill="{fill}" stroke="{stroke}"/>'
+            f'<rect x="{x}" y="{y}" width="{width}" height="42" rx="8" fill="{fill}" stroke="{stroke}"/>'
             f"{rail}"
-            f'<text x="{x + 13}" y="{y + 29}" font-family="Arial, DejaVu Sans, sans-serif" '
+            f'<text x="{x + 12}" y="{y + 28}" font-family="Arial, DejaVu Sans, sans-serif" '
             f'font-size="{font_size}" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(label)}</text>'
         )
-        x += width + (8 if layout.portrait else 14)
+        x += width + (8 if layout.portrait else 12)
     return "\n  ".join(parts)
 
 
@@ -381,11 +381,11 @@ def option_cards(options: list[Option], selected_index: int, *, layout_rotation_
     parts = []
     layout = screen_layout(layout_rotation_deg)
     x = layout.margin_x
-    y = 354 if layout.portrait else 262
-    card_width = layout.width - (layout.margin_x * 2) if layout.portrait else 760
+    y = 314 if layout.portrait else 266
+    card_width = layout.width - (layout.margin_x * 2) if layout.portrait else 608
     card_height = 98 if layout.portrait else 82
-    label_width = 31 if layout.portrait else 34
-    description_width = 47 if layout.portrait else 54
+    label_width = 34 if layout.portrait else 28
+    description_width = 50 if layout.portrait else 42
     for index, option in enumerate(options[:5]):
         active = index == selected_index
         fill = VISUAL["surface_active"] if active else VISUAL["surface"]
@@ -417,11 +417,11 @@ def info_panel(
     if not items:
         return ""
     layout = screen_layout(layout_rotation_deg)
-    panel_x = layout.margin_x if layout.portrait else 888
-    panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 300
-    panel_y = panel_y if panel_y is not None else (920 if layout.portrait else 220)
+    panel_x = layout.margin_x if layout.portrait else 708
+    panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 240
+    panel_y = panel_y if panel_y is not None else (760 if layout.portrait else 230)
     panel_height = min(300 if layout.portrait else 330, max(190, layout.height - panel_y - 104))
-    text_width = 50 if layout.portrait else 30
+    text_width = 50 if layout.portrait else 24
     y = panel_y + 58
     bullet_parts = []
     for item in items[:MAX_PANEL_ITEMS]:
@@ -441,8 +441,8 @@ def info_panel(
 def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: int = 0) -> str:
     layout = screen_layout(layout_rotation_deg)
     panel_x = layout.margin_x
-    panel_y = 390 if layout.portrait else 300
-    panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 760
+    panel_y = 360 if layout.portrait else 300
+    panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 608
     text_width = 40 if layout.portrait else 44
     value_svg = svg_lines(
         value_hint,
@@ -462,6 +462,25 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
   {value_svg}
   <text x="{panel_x + 36}" y="{panel_y + 174}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">{escape_text(note)}</text>
 """
+
+
+def summary_rows_svg(rows: list[tuple[str, str]], *, layout_rotation_deg: int = 0) -> str:
+    layout = screen_layout(layout_rotation_deg)
+    x = layout.margin_x
+    y = 292 if layout.portrait else 282
+    width = layout.width - (layout.margin_x * 2) if layout.portrait else 608
+    row_height = 82 if layout.portrait else 76
+    gap = 12
+    parts = []
+    for index, (label, value) in enumerate(rows[:4]):
+        row_y = y + index * (row_height + gap)
+        parts.append(
+            f'<rect x="{x}" y="{row_y}" width="{width}" height="{row_height}" rx="8" fill="{VISUAL["surface"]}" stroke="{VISUAL["border"]}" stroke-width="2"/>'
+            f'<rect x="{x}" y="{row_y}" width="8" height="{row_height}" rx="4" fill="{VISUAL["accent"]}"/>'
+            f'<text x="{x + 32}" y="{row_y + 32}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="{VISUAL["text_dim"]}">{escape_text(label)}</text>'
+            f'{svg_lines(value, x=x + 32, y=row_y + 62, size=22, fill=VISUAL["text"], width=42 if layout.portrait else 34, line_gap=26, max_lines=1, weight=700)}'
+        )
+    return "\n  ".join(parts)
 
 
 def footer_text(text: str, *, layout_rotation_deg: int = 0) -> str:
@@ -560,9 +579,9 @@ def orientation_preview(
     outer_w = 116 if is_portrait else 176
     outer_h = 176 if is_portrait else 116
     if x is None:
-        x = (layout.width - outer_w) // 2 if layout.portrait else 918
+        x = (layout.width - outer_w) // 2 if layout.portrait else 756
     if y is None:
-        y = 690 if layout.portrait else 300
+        y = 610 if layout.portrait else 300
     inner_w = outer_w - 28
     inner_h = outer_h - 28
     marker = {
@@ -614,26 +633,27 @@ def build_screen_svg(
     )
     if layout.portrait:
         if field_label is not None:
-            panel_y = 610
+            panel_y = 590
         elif extra_svg:
-            panel_y = 960
+            panel_y = 770
         else:
-            panel_y = 930 if options and len(options) >= 5 else 740
-        title_y = 220
-        subtitle_y = 258
+            panel_y = 760 if options and len(options) >= 5 else 650
+        title_y = 188
+        subtitle_y = 224
         subtitle_width = 46
         note_x = layout.margin_x
-        note_y = 162
+        note_y = 144
     else:
-        panel_y = 220
-        title_y = 200
-        subtitle_y = 236
-        subtitle_width = 62
-        note_x = 1030
-        note_y = 58
+        panel_y = 230
+        title_y = 198
+        subtitle_y = 234
+        subtitle_width = 52
+        note_x = layout.width - layout.margin_x - 156
+        note_y = 54
     safe_panel_items = panel_items or []
     if suppress_landscape_info_panel and not layout.portrait:
         safe_panel_items = []
+    layout_note = layout.note if active_step == 0 else ""
     panel_svg = info_panel(
         safe_panel_items,
         title=panel_title,
@@ -644,14 +664,14 @@ def build_screen_svg(
 <svg xmlns="http://www.w3.org/2000/svg" width="{layout.width}" height="{layout.height}" viewBox="0 0 {layout.width} {layout.height}" data-display-rotation-deg="{layout.rotation_deg}" data-layout-mode="{layout.mode}" role="img" aria-label="Dadooh setup visual wizard">
   <rect width="{layout.width}" height="{layout.height}" fill="{VISUAL["bg"]}"/>
   <rect x="0" y="0" width="{layout.width}" height="12" fill="{accent}"/>
-  <rect x="0" y="12" width="{layout.width}" height="148" fill="{VISUAL["surface"]}"/>
-  <rect x="{layout.margin_x}" y="32" width="132" height="42" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}"/>
-  <text x="{layout.margin_x + 22}" y="60" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" font-weight="700" fill="{VISUAL["text"]}">{BRAND}</text>
-  <text x="{layout.margin_x + 154}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="{VISUAL["text_dim"]}">{TITLE}</text>
-  <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="{VISUAL["text_dim"]}">{escape_text(layout.note)}</text>
+  <rect x="0" y="12" width="{layout.width}" height="136" fill="{VISUAL["surface"]}"/>
+  <rect x="{layout.margin_x}" y="32" width="120" height="38" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}"/>
+  <text x="{layout.margin_x + 18}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="{VISUAL["text"]}">{BRAND}</text>
+  <text x="{layout.margin_x + 140}" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{TITLE}</text>
+  <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="{VISUAL["text_dim"]}">{escape_text(layout_note)}</text>
   {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg)}
-  <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="44" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
-  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=21, fill=VISUAL["text_muted"], width=subtitle_width, line_gap=28, max_lines=1)}
+  <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
+  {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=19, fill=VISUAL["text_muted"], width=subtitle_width, line_gap=28, max_lines=1)}
   {options_svg}
   {field_svg}
   {panel_svg}
@@ -2055,7 +2075,7 @@ def wifi_option_for_network(index: int, network: dict[str, Any]) -> Option:
     return Option(
         f"wifi-{index}",
         local_display_value(str(network["ssid"])),
-        f"{percent}% {signal_bars(percent)} {signal_label(percent)} | {security_label(network.get('security_present'))}",
+        f"{percent}% {signal_label(percent)} | {security_label(network.get('security_present'))}",
     )
 
 
@@ -2148,8 +2168,8 @@ def wifi_list_screen_svg(
     return build_screen_svg(
         active_step=1,
         title="Selecionar Wi-Fi",
-        subtitle=f"{updated_line}. Sinal em percentual e barras.",
-        footer="Setas rolam | Enter escolhe | R atualiza/Esc volta",
+        subtitle=f"{updated_line}. Sinal e seguranca.",
+        footer="Setas rolam | Enter escolhe | R atualiza | Esc volta",
         options=options,
         selected_index=selected_on_page,
         panel_title="Lista local",
@@ -3052,11 +3072,15 @@ def review_and_confirm(
             subtitle=subtitle,
             footer=footer,
             panel_title="Resumo publico",
-            panel_items=[
-                f"Conexao: {network_note}",
-                "Ambiente informado: sim",
-                f"Tela: {rotation['label']}",
-            ],
+            panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
+            extra_svg=summary_rows_svg(
+                [
+                    ("Tela", str(rotation["label"])),
+                    ("Conexao", network_note),
+                    ("Ambiente", "Informado"),
+                ],
+                layout_rotation_deg=int(rotation["rotation_deg"]),
+            ),
             layout_rotation_deg=int(rotation["rotation_deg"]),
         ),
     )
@@ -3579,7 +3603,16 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             title="Revisao",
             subtitle="Confira antes de concluir.",
             footer="Enter conclui | Esc volta",
-            panel_items=["Conexao definida.", "Ambiente informado.", "Tela escolhida."],
+            panel_title="Resumo publico",
+            panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
+            extra_svg=summary_rows_svg(
+                [
+                    ("Tela", "Retrato para direita"),
+                    ("Conexao", "Wi-Fi configurado"),
+                    ("Ambiente", "Informado"),
+                ],
+                layout_rotation_deg=90,
+            ),
             layout_rotation_deg=90,
         ),
     )
@@ -4033,10 +4066,10 @@ def run_self_test() -> None:
         assert_true(wifi_list_page_size(0) == 4, "landscape Wi-Fi list should show 4 networks")
         assert_true(wifi_list_page_size(90) == 5, "portrait Wi-Fi list should keep 5 networks")
         landscape_footer_y = screen_layout(0).height - 82
-        landscape_last_card_bottom = 262 + (wifi_list_page_size(0) - 1) * (82 + 14) + 82
+        landscape_last_card_bottom = 266 + (wifi_list_page_size(0) - 1) * (82 + 14) + 82
         assert_true(landscape_last_card_bottom < landscape_footer_y, "landscape Wi-Fi cards should not touch footer")
         portrait_footer_y = screen_layout(90).height - 82
-        portrait_last_card_bottom = 354 + (wifi_list_page_size(90) - 1) * (98 + 14) + 98
+        portrait_last_card_bottom = 314 + (wifi_list_page_size(90) - 1) * (98 + 14) + 98
         assert_true(portrait_last_card_bottom < portrait_footer_y, "portrait Wi-Fi cards should not touch footer")
         preserved_index, preserved = refresh_selected_index(page_fixture[:3], [page_fixture[2], page_fixture[1]], 1)
         assert_true(preserved and preserved_index == 1, "refresh should preserve selected SSID")
@@ -4099,7 +4132,7 @@ def run_self_test() -> None:
         portrait_connection = next((preview_dir / "screens").glob("*-02-connection.svg"))
         portrait_connection_text = portrait_connection.read_text(encoding="utf-8")
         assert_true('id="info-panel"' in portrait_connection_text, "screens without preview should keep info panel")
-        assert_true('width="720" height="1280"' in portrait_connection_text, "portrait preview should use native portrait canvas")
+        assert_true('width="768" height="1024"' in portrait_connection_text, "portrait preview should use native portrait canvas")
         assert_true(
             'data-display-rotation-deg="90"' in portrait_connection_text,
             "portrait preview should carry display rotation contract",
@@ -4108,7 +4141,7 @@ def run_self_test() -> None:
         wifi_preview_text = wifi_preview_page.read_text(encoding="utf-8")
         assert_true("TEST_WIFI_STRONG" in wifi_preview_text, "synthetic Wi-Fi preview should show local SSID")
         assert_true("Mostrando 1-5 de" in wifi_preview_text, "Wi-Fi preview should show pagination position")
-        assert_true("96%" in wifi_preview_text and "[####]" in wifi_preview_text, "Wi-Fi preview should show signal clarity")
+        assert_true("96%" in wifi_preview_text and "Forte" in wifi_preview_text, "Wi-Fi preview should show signal clarity")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-list-empty.svg")), "Wi-Fi preview should include empty state")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-hidden.svg")), "Wi-Fi preview should include hidden password")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-visible.svg")), "Wi-Fi preview should include visible password")
@@ -4127,7 +4160,7 @@ def run_self_test() -> None:
         landscape_wifi_preview_text = landscape_wifi_preview.read_text(encoding="utf-8")
         assert_true("Mostrando 1-4 de" in landscape_wifi_preview_text, "landscape Wi-Fi preview should show 1-4")
         assert_true(
-            landscape_wifi_preview_text.count('width="760" height="82"') == wifi_list_page_size(0),
+            landscape_wifi_preview_text.count('width="608" height="82"') == wifi_list_page_size(0),
             "landscape Wi-Fi preview should render 4 network cards",
         )
         assert_true("TEST_WIFI_COUNTER" not in landscape_wifi_preview_text, "landscape Wi-Fi preview should not render a fifth card")

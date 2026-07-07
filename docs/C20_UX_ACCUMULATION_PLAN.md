@@ -77,23 +77,43 @@ Evidencia:
 
 ### V1 - Hierarquia E Densidade Do Wizard
 
+Status: validada para acumulo em 2026-07-07.
+
 Objetivo do usuario: entender rapidamente a etapa atual e agir sem ler texto
 demais.
 
-Mudancas candidatas:
+Mudancas aplicadas:
 
-- reduzir painel lateral quando ele repete o obvio;
-- limitar bullets a no maximo 3 itens realmente uteis;
-- padronizar titulo, subtitulo, area principal e rodape;
-- revisar contraste e tamanho de texto secundario em 1024x768.
+- canvas nativo alinhado ao framebuffer atual: `1024x768` em paisagem e
+  `768x1024` em retrato;
+- cabecalho, etapa, titulo, area principal e painel lateral recalibrados para
+  1024x768;
+- lista Wi-Fi em paisagem mantida com 4 itens, descricao mais curta e rodape
+  em uma linha;
+- nota de layout fica restrita a etapa de orientacao;
+- tela de revisao passa a mostrar resumo publico no corpo principal;
+- geradores offline C20/C19 alinhados com a correcao V0.
 
 Aceite:
 
-- screenshots reais de orientacao, conexao, Wi-Fi, senha, revisao e conclusao;
+- captura real de orientacao, Wi-Fi e revisao em paisagem;
 - sem sobreposicao com rodape;
 - rodape em uma linha;
 - lista Wi-Fi continua com 4 itens em paisagem;
 - nenhuma tela vira manual tecnico.
+
+Evidencia:
+
+- `docs/evidence/c20-visual-qa/20260707T224916Z-c20-v1-layout-preview-board/`;
+- `docs/evidence/c20-visual-qa/20260707T225600Z-c20-v1-wifi-landscape-board-clean/`;
+- `docs/evidence/c20-visual-qa/20260707T225800Z-c20-v1-review-landscape-board/`.
+
+Non-claims:
+
+- nao publica OTA;
+- nao valida fluxo completo por teclado;
+- nao altera Wi-Fi real, display/EDID, player, updater ou imagem;
+- nao substitui pacote consolidado de `totem-core`.
 
 ### V2 - Navegacao E Cancelamento Previsiveis
 
