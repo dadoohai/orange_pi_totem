@@ -13,6 +13,9 @@ Spec de execucao da fase de producao com auto-pull:
 Fluxo curto de QA visual do wizard/settings na placa:
 `docs/C19_VISUAL_QA_FLOW.md`.
 
+Plano de acumulo UX/produto para a proxima imagem:
+`docs/C20_UX_ACCUMULATION_PLAN.md`.
+
 Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
 
@@ -97,6 +100,8 @@ Fila atual para consolidacao:
 
 - C19 wizard/settings visual: validada para acumulo em `totem-core`; pendente
   entrar no pacote/update consolidado e na proxima imagem de referencia.
+- C20 UX geral: plano aberto para novas rodadas acumulaveis de `totem-core`,
+  comecando por hierarquia/densidade do wizard e navegacao previsivel.
 
 ## O que fechamos
 
