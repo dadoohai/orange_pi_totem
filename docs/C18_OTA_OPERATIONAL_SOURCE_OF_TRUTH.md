@@ -288,8 +288,17 @@ Passos minimos:
 
 ## Rodada C19 - pacote `totem-core` de wizard/settings
 
-Decisao em 2026-07-07: C19.2 + C19.3 formam um candidato pequeno e coerente de
-`totem-core`, mas ainda nao devem ser publicados no estado local sujo.
+Decisao em 2026-07-07: C19.2 + C19.3 formam um pacote pequeno e coerente de
+`totem-core`, validado como homologacao controlada na placa.
+
+Pacote:
+
+- versao: `c19.visual-settings-20260707T205630Z-5df93c1`;
+- canal: `homologation`;
+- source commit: `5df93c1`;
+- pacote/gate commitado em `df7865e`;
+- gate especifico C18: verde;
+- apply/rollback local em placa: verde.
 
 Claim permitido do pacote:
 
@@ -308,14 +317,26 @@ Nao-claims:
 - nao muda player, MPV, media-system, field-data, updater ou kernel;
 - nao substitui M5 `player-runtime` auto-pull.
 
-Proxima sequencia recomendada:
+Sequencia executada:
 
 1. Commit limpo contendo codigo, docs e evidencias C19 intencionais.
-2. Gerar pacote `totem-core` sem `--allow-dirty`.
-3. Rodar release gate especifico do pacote e gate global C18.
-4. Validar na placa: dry-run selecionando alvo exato, apply, self-test/health,
-   player saudavel e rollback.
-5. So depois decidir se publica como release controlada ou promove para stable.
+2. Pacote `totem-core` gerado sem `--allow-dirty`.
+3. Release gate especifico do pacote e gate global C18 verdes.
+4. Validacao na placa com policy temporaria de homologacao:
+   apply-local, self-test, playback deep-health curto, rollback e restauracao.
+5. Estado final da placa restaurado: `stable`, `allow_prerelease=false`,
+   timer ativo/habilitado, `current` C18 e `previous` C17.6.
+
+Evidencia:
+
+- `releases/core-updates/c19.visual-settings-20260707T205630Z-5df93c1/`;
+- `docs/evidence/c19-totem-core-ota/20260707T211121Z-apply-rollback/`.
+
+Proxima decisao:
+
+- publicar/promover C19 ou juntar com proximas alteracoes de `totem-core`.
+  Ate essa decisao, C19 esta validado em homologacao, mas nao publicado como
+  stable.
 
 Decisoes de escopo:
 

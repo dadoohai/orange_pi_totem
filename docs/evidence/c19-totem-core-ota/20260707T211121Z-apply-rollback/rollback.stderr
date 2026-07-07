@@ -1,0 +1,2 @@
+2026-07-07T21:11:53Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-07T21:11:55Z INFO manual_rollback_ok rolled_to=c18.ota-core-prod-20260705T184013Z-ccaf5a1

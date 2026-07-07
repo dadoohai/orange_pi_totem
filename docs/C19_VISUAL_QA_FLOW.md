@@ -247,6 +247,38 @@ Pendencias fora desta rodada:
 - display segue em `1024x768` fallback;
 - QA visual de escrita real de Wi-Fi/config continua fora de escopo.
 
+## C19.4 Pacote Totem-Core
+
+Rodada: `20260707T211121Z-apply-rollback`.
+
+Pacote:
+`c19.visual-settings-20260707T205630Z-5df93c1`.
+
+Resultado:
+
+- pacote `totem-core` de homologacao gerado sem dirty tree;
+- gate C18 especifico do manifest/payload passou;
+- apply local na placa passou;
+- `current` apos apply virou o pacote C19;
+- self-test do updater e self-test do wizard passaram;
+- playback deep-health curto passou apos apply;
+- rollback voltou para `c18.ota-core-prod-20260705T184013Z-ccaf5a1`;
+- playback deep-health curto passou apos rollback;
+- cleanup restaurou a topologia inicial: policy `stable`,
+  `allow_prerelease=false`, timer ativo/habilitado, `current` C18 e
+  `previous` C17.6.
+
+Evidencia:
+
+- `releases/core-updates/c19.visual-settings-20260707T205630Z-5df93c1/`;
+- `docs/evidence/c19-totem-core-ota/20260707T211121Z-apply-rollback/`.
+
+Nao-claims:
+
+- C19 nao foi publicado;
+- C19 nao foi promovido para `stable`;
+- Wi-Fi real/config real e display/EDID seguem fora do escopo desta rodada.
+
 ## Regra Curta
 
 Para QA visual confiavel: abrir wizard pelo fluxo real, capturar durante a

@@ -1,0 +1,9 @@
+2026-07-07T21:11:21Z start version=c19.visual-settings-20260707T205630Z-5df93c1 run_dir=/tmp/c19-totem-core-apply-rollback-20260707T211121Z
+2026-07-07T21:11:22Z timer_before enabled=enabled active=active
+2026-07-07T21:11:23Z apply_start
+2026-07-07T21:11:29Z apply_done
+2026-07-07T21:11:52Z rollback_start
+2026-07-07T21:11:56Z rollback_done
+2026-07-07T21:12:17Z validation_done
+2026-07-07T21:12:17Z cleanup_start rc=0 applied=1 rolled_back=1
+2026-07-07T21:12:19Z cleanup_done run_dir=/tmp/c19-totem-core-apply-rollback-20260707T211121Z
