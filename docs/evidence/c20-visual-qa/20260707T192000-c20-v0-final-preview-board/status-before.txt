@@ -1,0 +1,7 @@
+snapshot=before
+2026-07-07T19:19:12-03:00
+active
+inactive
+inactive
+lock_rc=1
+request_rc=1

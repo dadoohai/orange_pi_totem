@@ -53,6 +53,8 @@ Fora deste pacote:
 
 ### V0 - Sobreposicao No Preview De Orientacao
 
+Status: validada para acumulo em 2026-07-07.
+
 Objetivo do usuario: a primeira tela do wizard deve parecer limpa e legivel.
 
 Achado:
@@ -64,10 +66,14 @@ Achado:
 
 Aceite:
 
-- capturas reais da orientacao e confirmacao sem sobreposicao;
-- paisagem e retrato verificados;
+- captura real da orientacao em paisagem sem sobreposicao;
+- preview em retrato sem sobreposicao;
 - self-test do wizard verde;
-- F10 -> Esc restaura player.
+- preview auto-exit restaura player;
+- non-claim: nao valida fluxo interativo completo por teclado.
+
+Evidencia:
+`docs/evidence/c20-visual-qa/20260707T192000-c20-v0-final-preview-board/`.
 
 ### V1 - Hierarquia E Densidade Do Wizard
 
@@ -212,6 +218,10 @@ Aceite:
 8. Marcar como `validada para acumulo` somente com evidencia completa.
 9. Ao final de um conjunto, gerar pacote/update consolidado e validar
    apply/rollback antes da nova imagem de referencia.
+
+Nota: rodadas que validam somente preview auto-exit devem registrar esse limite
+explicitamente. Fluxos de navegacao por teclado precisam de captura interativa
+se o claim depender de entrada real do usuario.
 
 ## Auditorias
 

@@ -431,7 +431,7 @@ def info_panel(
         )
         y += 54 if layout.portrait else 66
     return f"""
-  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" rx="8" fill="{VISUAL["surface_raised"]}" stroke="{VISUAL["border"]}"/>
+  <rect id="info-panel" x="{panel_x}" y="{panel_y}" width="{panel_width}" height="{panel_height}" rx="8" fill="{VISUAL["surface_raised"]}" stroke="{VISUAL["border"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="7" height="{panel_height}" rx="4" fill="{VISUAL["accent"]}"/>
   <text x="{panel_x + 32}" y="{panel_y + 40}" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
   {' '.join(bullet_parts)}
@@ -576,7 +576,7 @@ def orientation_preview(
     marker_x, marker_y, marker_w, marker_h = marker
     return f"""
   <g id="orientation-preview">
-    <rect x="{x - 30}" y="{y - 54}" width="292" height="286" rx="8" fill="#111827" stroke="#334155"/>
+    <rect id="orientation-preview-shell" x="{x - 30}" y="{y - 54}" width="292" height="286" rx="8" fill="#111827" stroke="#334155"/>
     <text x="{x}" y="{y - 20}" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Preview</text>
     <rect x="{x}" y="{y}" width="{outer_w}" height="{outer_h}" rx="12" fill="#e0f2fe" stroke="#06b6d4" stroke-width="4"/>
     <rect x="{x + 14}" y="{y + 14}" width="{inner_w}" height="{inner_h}" rx="8" fill="#0f172a"/>
@@ -603,6 +603,7 @@ def build_screen_svg(
     extra_svg: str = "",
     accent: str = "#06b6d4",
     layout_rotation_deg: int = 0,
+    suppress_landscape_info_panel: bool = False,
 ) -> str:
     layout = screen_layout(layout_rotation_deg)
     options_svg = option_cards(options, selected_index, layout_rotation_deg=layout_rotation_deg) if options else ""
@@ -630,8 +631,11 @@ def build_screen_svg(
         subtitle_width = 62
         note_x = 1030
         note_y = 58
+    safe_panel_items = panel_items or []
+    if suppress_landscape_info_panel and not layout.portrait:
+        safe_panel_items = []
     panel_svg = info_panel(
-        panel_items or [],
+        safe_panel_items,
         title=panel_title,
         layout_rotation_deg=layout_rotation_deg,
         panel_y=panel_y,
@@ -1280,6 +1284,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                         layout_rotation_deg=current_layout_rotation_deg,
                     ),
                     layout_rotation_deg=current_layout_rotation_deg,
+                    suppress_landscape_info_panel=True,
                 ),
             )
             needs_render = False
@@ -1326,6 +1331,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     ],
                     extra_svg=orientation_preview(str(rotation["key"]), layout_rotation_deg=layout_rotation_deg),
                     layout_rotation_deg=layout_rotation_deg,
+                    suppress_landscape_info_panel=True,
                 ),
             )
             confirm_key = read_key()
@@ -3384,6 +3390,24 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             selected_index=0,
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
             extra_svg=orientation_preview("landscape"),
+            suppress_landscape_info_panel=True,
+        ),
+    )
+    display.show(
+        "01-orientation-confirm-landscape",
+        build_screen_svg(
+            active_step=0,
+            title="Usar esta orientacao?",
+            subtitle="Confira o sentido antes de continuar.",
+            footer="Setas escolhem | Enter confirma | Esc volta",
+            options=[
+                Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
+                Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
+            ],
+            selected_index=0,
+            panel_items=["Preview local.", "Sem alterar player agora.", "Pode voltar."],
+            extra_svg=orientation_preview("landscape"),
+            suppress_landscape_info_panel=True,
         ),
     )
     display.show(
@@ -3401,6 +3425,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             panel_items=["Preview local.", "Sem alterar player agora.", "Pode voltar."],
             extra_svg=orientation_preview("portrait_right", layout_rotation_deg=90),
             layout_rotation_deg=90,
+            suppress_landscape_info_panel=True,
         ),
     )
     display.show(
@@ -4038,18 +4063,42 @@ def run_self_test() -> None:
         orientation_preview_path = next((preview_dir / "screens").glob("*-01-orientation.svg"))
         orientation_preview_text = orientation_preview_path.read_text(encoding="utf-8")
         assert_true("orientation-preview" in orientation_preview_text, "orientation step should include visual preview")
+        assert_true('id="orientation-preview-shell"' in orientation_preview_text, "orientation preview should expose shell marker")
+        assert_true('id="info-panel"' not in orientation_preview_text, "landscape orientation preview should omit info panel")
+        assert_true("Escolha a posicao." not in orientation_preview_text, "landscape orientation preview should omit side-panel bullets")
+        assert_true("Confira o preview." not in orientation_preview_text, "landscape orientation preview should not render overlapping panel")
         assert_true("DADOOH" not in orientation_preview_text, "orientation marker should use vector blocks, not text")
+        landscape_confirm = next((preview_dir / "screens").glob("*-01-orientation-confirm-landscape.svg"))
+        landscape_confirm_text = landscape_confirm.read_text(encoding="utf-8")
+        assert_true("orientation-preview" in landscape_confirm_text, "landscape confirmation should keep visual preview")
+        assert_true('id="info-panel"' not in landscape_confirm_text, "landscape confirmation should omit info panel")
+        assert_true("Preview local." not in landscape_confirm_text, "landscape confirmation should omit overlapping panel")
         assert_true(
             any((preview_dir / "screens").glob("*-01-orientation-confirm-portrait.svg")),
             "preview should generate orientation confirmation screen",
         )
-        portrait_confirm = next((preview_dir / "screens").glob("*-01-orientation-confirm-portrait.svg"))
-        assert_true(
-            "orientation-preview" in portrait_confirm.read_text(encoding="utf-8"),
-            "orientation confirmation should keep visual preview",
+        landscape_without_preview = build_screen_svg(
+            active_step=1,
+            title="Conexao",
+            subtitle="Escolha a rede.",
+            footer="Setas escolhem | Enter confirma | Esc volta",
+            options=list(NETWORK_OPTIONS),
+            selected_index=0,
+            panel_items=["Lista local."],
+            layout_rotation_deg=0,
         )
+        assert_true(
+            'id="info-panel"' in landscape_without_preview,
+            "landscape screens without orientation preview should keep info panel",
+        )
+        portrait_confirm = next((preview_dir / "screens").glob("*-01-orientation-confirm-portrait.svg"))
+        portrait_confirm_text = portrait_confirm.read_text(encoding="utf-8")
+        assert_true("orientation-preview" in portrait_confirm_text, "orientation confirmation should keep visual preview")
+        assert_true('id="info-panel"' in portrait_confirm_text, "portrait confirmation should keep non-overlapping info panel")
+        assert_true("Preview local." in portrait_confirm_text, "portrait confirmation should keep non-overlapping panel")
         portrait_connection = next((preview_dir / "screens").glob("*-02-connection.svg"))
         portrait_connection_text = portrait_connection.read_text(encoding="utf-8")
+        assert_true('id="info-panel"' in portrait_connection_text, "screens without preview should keep info panel")
         assert_true('width="720" height="1280"' in portrait_connection_text, "portrait preview should use native portrait canvas")
         assert_true(
             'data-display-rotation-deg="90"' in portrait_connection_text,

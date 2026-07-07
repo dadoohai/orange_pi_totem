@@ -100,8 +100,12 @@ Fila atual para consolidacao:
 
 - C19 wizard/settings visual: validada para acumulo em `totem-core`; pendente
   entrar no pacote/update consolidado e na proxima imagem de referencia.
-- C20 UX geral: plano aberto para novas rodadas acumulaveis de `totem-core`,
-  comecando por hierarquia/densidade do wizard e navegacao previsivel.
+- C20 V0 orientation preview: validada para acumulo em `totem-core`; corrige a
+  sobreposicao do preview de orientacao em paisagem e preserva retrato sem
+  sobreposicao no preview auto-exit. Evidencia em
+  `docs/evidence/c20-visual-qa/20260707T192000-c20-v0-final-preview-board/`.
+- C20 UX geral: plano aberto para novas rodadas acumulaveis de `totem-core`;
+  proximos focos seguem hierarquia/densidade do wizard e navegacao previsivel.
 
 ## O que fechamos
 
