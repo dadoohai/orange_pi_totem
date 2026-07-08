@@ -60,11 +60,15 @@ PAIRING_DIRNAME = "qr-pairing"
 PAIRING_SESSION_SCHEMA = "dadooh.c21.totem_qr_pairing.session.v1"
 PAIRING_RESULT_SCHEMA = "dadooh.c21.totem_qr_pairing.result.v1"
 PAIRING_PRIVATE_VALUES_SCHEMA = "dadooh.c21.totem_qr_pairing.private_values.v1"
-PAIRING_DEFAULT_AUTHORIZE_BASE_URL = "https://home.dadooh.ai/totem/authorize"
+PAIRING_DEFAULT_AUTHORIZE_BASE_URL = "https://home.dadooh.ai/totem/activate"
+PAIRING_DEFAULT_BACKEND_BASE_URL = "https://api-lbyvh5uf6q-uc.a.run.app"
 PAIRING_DEFAULT_API_URL = "https://api-lbyvh5uf6q-uc.a.run.app/search"
 PAIRING_DEFAULT_ENVIRONMENT_ID = "11111111-2222-4333-8444-555555555555"
 PAIRING_DEFAULT_STATION_ID = "22222222-3333-4444-8555-666666666666"
 PAIRING_DEFAULT_MOCK_API_KEY = "C21_MOCK_DEVICE_KEY_NOT_FOR_PROD_1234567890"
+PAIRING_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MODE", "mock").strip().lower()
+PAIRING_REAL_TIMEOUT_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_TIMEOUT_SEC", "300"))
+PAIRING_REAL_HTTP_TIMEOUT_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_HTTP_TIMEOUT_SEC", "8"))
 PAIRING_STATES = {
     "pending",
     "authorized",
@@ -2081,6 +2085,31 @@ def http_json_request(
         return int(resp.status), body
 
 
+def http_json_request_no_auth(
+    url: str,
+    *,
+    method: str,
+    payload: dict[str, Any] | None = None,
+    timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+) -> tuple[int, dict[str, Any] | None]:
+    data = None
+    headers = {"Accept": "application/json"}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    req = urllib_request.Request(url, data=data, headers=headers, method=method)
+    with urllib_request.urlopen(req, timeout=max(1.0, timeout_sec)) as resp:
+        raw = resp.read(256 * 1024)
+        body: dict[str, Any] | None = None
+        if raw:
+            try:
+                parsed = json.loads(raw.decode("utf-8"))
+                body = parsed if isinstance(parsed, dict) else None
+            except Exception:
+                body = None
+        return int(resp.status), body
+
+
 def response_has_content(data: dict[str, Any] | None) -> tuple[str, bool]:
     if not isinstance(data, dict):
         return "unknown", False
@@ -3817,6 +3846,177 @@ def run_embedded_mock_pairing(out_dir: pathlib.Path, *, state: str, code: str) -
     return result
 
 
+def pairing_real_enabled() -> bool:
+    return PAIRING_MODE in {"real", "backend", "totem-auth", "production"}
+
+
+def normalize_pairing_backend_base_url(raw: str | None = None) -> str:
+    value = str(raw or os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL", PAIRING_DEFAULT_BACKEND_BASE_URL)).strip()
+    parsed = urllib_parse.urlsplit(value)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise VisualWizardError("backend de pareamento invalido")
+    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
+
+
+def pairing_backend_endpoint(path: str) -> str:
+    base = normalize_pairing_backend_base_url()
+    return f"{base}{path}"
+
+
+def validate_pairing_https_url(value: str, field: str) -> str:
+    raw = str(value or "").strip()
+    parsed = urllib_parse.urlsplit(raw)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise VisualWizardError(f"{field} invalida")
+    return raw
+
+
+def validate_pairing_api_key(value: str) -> str:
+    raw = str(value or "").strip()
+    if len(raw) < 16:
+        raise VisualWizardError("credencial de pareamento curta")
+    lowered = raw.lower()
+    if "placeholder" in lowered or "preencher" in lowered or "mock" in lowered:
+        raise VisualWizardError("credencial de pareamento invalida")
+    return raw
+
+
+def normalize_runtime_api_url(value: str) -> str:
+    raw = validate_pairing_https_url(value, "api_url")
+    parsed = urllib_parse.urlsplit(raw)
+    path = parsed.path.rstrip("/")
+    if path in {"", "/"}:
+        path = "/search"
+    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def device_fingerprint() -> str:
+    hostname = socket.gethostname() or "totem"
+    machine_id = ""
+    for candidate in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
+        try:
+            machine_id = pathlib.Path(candidate).read_text(encoding="utf-8").strip()
+            if machine_id:
+                break
+        except Exception:
+            continue
+    seed = f"{hostname}:{machine_id or 'no-machine-id'}"
+    digest = uuid.uuid5(uuid.NAMESPACE_DNS, seed).hex[:12]
+    safe_hostname = re.sub(r"[^a-zA-Z0-9_.-]", "-", hostname)[:48] or "totem"
+    return f"{safe_hostname}-{digest}"
+
+
+def create_real_pairing_session(out_dir: pathlib.Path) -> dict[str, Any]:
+    pairing_dir = require_pairing_mock_out_dir(out_dir / PAIRING_DIRNAME)
+    status, body = http_json_request_no_auth(
+        pairing_backend_endpoint("/totem-auth/activations"),
+        method="POST",
+        payload={"device_fingerprint": device_fingerprint()},
+        timeout_sec=PAIRING_REAL_HTTP_TIMEOUT_SEC,
+    )
+    if not (200 <= status < 300) or not isinstance(body, dict):
+        raise VisualWizardError("backend de pareamento indisponivel")
+
+    activation_id = validate_environment_id(str(body.get("activation_id", "")))
+    code = validate_pairing_code(str(body.get("user_code", "")))
+    device_secret = str(body.get("device_secret", "")).strip()
+    if len(device_secret) < 24:
+        raise VisualWizardError("segredo de dispositivo invalido")
+    authorize_url = validate_pairing_https_url(str(body.get("qr_url", "")), "authorize_url")
+    expires_at = str(body.get("expires_at") or utc_timestamp())
+    poll_interval_ms = body.get("poll_interval_ms")
+    poll_after_sec = 2.0
+    if isinstance(poll_interval_ms, (int, float)) and poll_interval_ms > 0:
+        poll_after_sec = max(1.0, min(10.0, float(poll_interval_ms) / 1000.0))
+
+    public_session = {
+        "schema": PAIRING_SESSION_SCHEMA,
+        "mode": "real_totem_auth",
+        "session_id": activation_id,
+        "state": "pending",
+        "pairing_code": code,
+        "authorize_url": authorize_url,
+        "expires_at_utc": expires_at,
+        "poll_after_sec": poll_after_sec,
+        "poll_token_public": False,
+        "credential_public": False,
+        "human_firebase_token_on_device": False,
+        "private_values_written": False,
+        "non_claims": [
+            "not_written_to_final_config_yet",
+            "not_human_firebase_token_on_device",
+        ],
+    }
+    session_path = pairing_dir / "pairing-session.public.json"
+    write_pairing_json(session_path, public_session, pairing_dir)
+    return {
+        "session_id": activation_id,
+        "pairing_code": code,
+        "authorize_url": authorize_url,
+        "device_secret": device_secret,
+        "poll_after_sec": poll_after_sec,
+        "session_public_path": str(session_path),
+        "pairing_dir": str(pairing_dir),
+    }
+
+
+def poll_real_pairing_once(session_id: str, device_secret: str) -> dict[str, Any]:
+    status, body = http_json_request_no_auth(
+        pairing_backend_endpoint(f"/totem-auth/activations/{urllib_parse.quote(session_id, safe='')}/poll"),
+        method="POST",
+        payload={"device_secret": device_secret},
+        timeout_sec=PAIRING_REAL_HTTP_TIMEOUT_SEC,
+    )
+    if not (200 <= status < 300) or not isinstance(body, dict):
+        raise VisualWizardError("poll de pareamento indisponivel")
+    return body
+
+
+def write_real_pairing_result(
+    out_dir: pathlib.Path,
+    *,
+    state: str,
+    session_path: pathlib.Path,
+    credential: dict[str, Any] | None,
+) -> dict[str, Any]:
+    private_path = out_dir / "private-values.json"
+    private_written = False
+    if state == "authorized" and credential is not None:
+        environment_id = validate_environment_id(str(credential.get("environment_id", "")))
+        station_id_raw = str(credential.get("station_id") or "").strip()
+        private_values: dict[str, Any] = {
+            "schema": PAIRING_PRIVATE_VALUES_SCHEMA,
+            "api_url": normalize_runtime_api_url(str(credential.get("api_url", ""))),
+            "api_key": validate_pairing_api_key(str(credential.get("api_key", ""))),
+            "environment_id": environment_id,
+            "issued_by": "c21-real-totem-auth",
+            "human_firebase_token_on_device": False,
+        }
+        if station_id_raw:
+            private_values["station_id"] = validate_environment_id(station_id_raw)
+        api_token_id = str(credential.get("api_token_id") or "").strip()
+        if api_token_id:
+            private_values["api_token_id"] = api_token_id
+        write_pairing_json(private_path, private_values, out_dir)
+        private_written = True
+    elif private_path.exists():
+        private_path.unlink()
+
+    result = {
+        "schema": PAIRING_RESULT_SCHEMA,
+        "passed": state == "authorized",
+        "state": state,
+        "session_public_path": str(session_path),
+        "pairing_card_svg_path": None,
+        "private_values_path": str(private_path) if private_written else None,
+        "private_values_mode": "0600" if private_written else None,
+        "public_artifacts_sanitized": True,
+        "human_firebase_token_on_device": False,
+    }
+    write_pairing_json(out_dir / "pairing-result.public.json", result, out_dir)
+    return result
+
+
 def load_pairing_environment_id(private_values_path: str | None) -> str:
     if not private_values_path:
         raise VisualWizardError("pareamento sem credencial privada")
@@ -3917,6 +4117,143 @@ def run_mock_environment_pairing(
     if key in {"enter", "b", "B", "back", "escape"}:
         return None
     raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
+def run_real_environment_pairing(
+    display: VisualDisplay,
+    out_dir: pathlib.Path,
+    *,
+    layout_rotation_deg: int,
+) -> tuple[str, EnvironmentPreflight] | None:
+    display.show(
+        "03-environment-pairing-real-start",
+        build_screen_svg(
+            active_step=2,
+            title="Autorizar totem",
+            subtitle="Criando codigo no servidor...",
+            footer="Aguarde",
+            panel_title="Pareamento",
+            panel_items=["Celular autoriza.", "Sem login na placa.", "Nada aplicado ainda."],
+            layout_rotation_deg=layout_rotation_deg,
+        ),
+    )
+    try:
+        session = create_real_pairing_session(out_dir)
+    except Exception:
+        key = show_environment_validation_status(
+            display,
+            title="Pareamento indisponivel",
+            subtitle="Nao foi possivel criar o codigo agora.",
+            footer="Enter tenta de novo | Esc volta",
+            panel_items=["Nada foi salvo.", "Use ID manual.", "Verifique a internet."],
+            accent="#f59e0b",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key in {"enter", "b", "B", "back", "escape"}:
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    pairing_dir = pathlib.Path(str(session["pairing_dir"]))
+    session_path = pathlib.Path(str(session["session_public_path"]))
+    code = str(session["pairing_code"])
+    url = str(session["authorize_url"])
+    poll_after_sec = float(session["poll_after_sec"])
+    deadline = time.monotonic() + max(30.0, PAIRING_REAL_TIMEOUT_SEC)
+    state = "pending"
+
+    while time.monotonic() < deadline:
+        display.show(
+            "03-environment-pairing-real-wait",
+            build_screen_svg(
+                active_step=2,
+                title="Autorizar pelo celular",
+                subtitle="Abra o link e escolha o ambiente.",
+                footer="Esc volta | atualiza automatico",
+                field_label="Codigo",
+                field_value_hint=code,
+                field_note=url,
+                panel_title="Aguardando",
+                panel_items=["Nao desligue.", "Token humano nao fica.", "Nada aplicado ainda."],
+                accent="#38bdf8",
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        key = read_key(timeout_sec=poll_after_sec)
+        if key in {"b", "B", "back", "escape"}:
+            write_real_pairing_result(pairing_dir, state="denied", session_path=session_path, credential=None)
+            return None
+        try:
+            poll = poll_real_pairing_once(str(session["session_id"]), str(session["device_secret"]))
+        except Exception:
+            state = "backend_unavailable"
+            break
+        state = str(poll.get("status") or "pending")
+        if state == "authorized":
+            result = write_real_pairing_result(
+                pairing_dir,
+                state="authorized",
+                session_path=session_path,
+                credential=poll,
+            )
+            environment_id = load_pairing_environment_id(str(result.get("private_values_path") or ""))
+            display.show(
+                "03-environment-pairing-real-authorized",
+                build_screen_svg(
+                    active_step=2,
+                    title="Totem autorizado",
+                    subtitle="Ambiente recebido pelo pareamento.",
+                    footer="Enter continua | Esc volta",
+                    field_label="Codigo",
+                    field_value_hint=code,
+                    field_note=url,
+                    panel_title="Seguranca",
+                    panel_items=["Credencial privada.", "Token humano nao fica.", "Nada aplicado ainda."],
+                    accent="#22c55e",
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+            key = read_key()
+            if key == "enter":
+                return environment_id, environment_preflight_pairing_authorized()
+            if key in {"b", "B", "back", "escape"}:
+                return None
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+        if state in {"expired", "denied", "already_used"}:
+            break
+
+    if state == "pending":
+        state = "expired"
+    write_real_pairing_result(pairing_dir, state=state, session_path=session_path, credential=None)
+    title_by_state = {
+        "expired": "Codigo expirado",
+        "denied": "Autorizacao cancelada",
+        "backend_unavailable": "Servidor indisponivel",
+        "empty_environment_list": "Sem ambientes",
+        "already_used": "Codigo ja usado",
+    }
+    key = show_environment_validation_status(
+        display,
+        title=title_by_state.get(state, "Pareamento nao concluido"),
+        subtitle="Use Enter para tentar de novo ou Esc para voltar.",
+        footer="Enter tenta de novo | Esc volta",
+        panel_items=["Nada foi salvo.", "Manual continua disponivel.", "Sem token humano."],
+        accent="#f59e0b",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+    if key in {"enter", "b", "B", "back", "escape"}:
+        return None
+    raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
+def run_environment_pairing(
+    display: VisualDisplay,
+    out_dir: pathlib.Path,
+    *,
+    layout_rotation_deg: int,
+) -> tuple[str, EnvironmentPreflight] | None:
+    if pairing_real_enabled():
+        return run_real_environment_pairing(display, out_dir, layout_rotation_deg=layout_rotation_deg)
+    return run_mock_environment_pairing(display, out_dir, layout_rotation_deg=layout_rotation_deg)
 
 
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
@@ -4084,7 +4421,7 @@ def run_visual_wizard(
                             entry_focus_area = "content"
                             continue
                         if entry_method.key == "qr_pairing":
-                            paired = run_mock_environment_pairing(
+                            paired = run_environment_pairing(
                                 display,
                                 out_dir,
                                 layout_rotation_deg=layout_rotation_deg,
@@ -4951,6 +5288,78 @@ def run_self_test() -> None:
         denied_pairing = create_mock_pairing_artifacts(pairing_dir, state="already_used")
         assert_true(denied_pairing["passed"] is False, "already_used pairing mock should not pass")
         assert_true(denied_pairing["private_values_path"] is None, "already_used pairing should not write private values")
+
+        original_pairing_request = globals()["http_json_request_no_auth"]
+        original_pairing_base = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL")
+        try:
+            os.environ["TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL"] = "https://api.example.com"
+            real_activation_id = "33333333-4444-4555-8666-777777777777"
+            real_environment_id = "44444444-5555-4666-8777-888888888888"
+            real_station_id = "55555555-6666-4777-8888-999999999999"
+            real_api_key = "REAL_DEVICE_KEY_FOR_SELF_TEST_123456789"
+
+            def fake_pairing_request(
+                url: str,
+                *,
+                method: str,
+                payload: dict[str, Any] | None = None,
+                timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+            ) -> tuple[int, dict[str, Any] | None]:
+                if url.endswith("/totem-auth/activations") and method == "POST":
+                    assert_true(payload is not None and payload.get("device_fingerprint"), "real pairing should send fingerprint")
+                    return 201, {
+                        "activation_id": real_activation_id,
+                        "device_secret": "device-secret-self-test-1234567890",
+                        "user_code": "ZXCV9876",
+                        "qr_url": f"https://home.dadooh.ai/totem/activate?code=ZXCV9876&activation_id={real_activation_id}",
+                        "expires_at": "2026-07-08T15:00:00Z",
+                        "poll_interval_ms": 1000,
+                    }
+                if url.endswith(f"/totem-auth/activations/{real_activation_id}/poll") and method == "POST":
+                    assert_true(
+                        payload is not None and payload.get("device_secret") == "device-secret-self-test-1234567890",
+                        "poll should use device_secret",
+                    )
+                    return 200, {
+                        "status": "authorized",
+                        "credential_public": False,
+                        "api_url": "https://api.example.com/search",
+                        "api_key": real_api_key,
+                        "api_token_id": "token-self-test",
+                        "token_type": "x-api-key",
+                        "environment_id": real_environment_id,
+                        "station_id": real_station_id,
+                    }
+                raise AssertionError(f"unexpected pairing request {method} {url}")
+
+            globals()["http_json_request_no_auth"] = fake_pairing_request
+            real_pairing_dir = require_tmp_dir(str(root / "pairing-real"))
+            real_session = create_real_pairing_session(real_pairing_dir)
+            real_poll = poll_real_pairing_once(str(real_session["session_id"]), str(real_session["device_secret"]))
+            real_result = write_real_pairing_result(
+                pathlib.Path(str(real_session["pairing_dir"])),
+                state=str(real_poll["status"]),
+                session_path=pathlib.Path(str(real_session["session_public_path"])),
+                credential=real_poll,
+            )
+            assert_true(real_result["passed"] is True, "real pairing authorized response should pass")
+            real_private_path = pathlib.Path(str(real_result["private_values_path"]))
+            assert_true(file_mode(real_private_path) == setup.PRIVATE_FILE_MODE, "real pairing private values should be 0600")
+            real_private = json.loads(real_private_path.read_text(encoding="utf-8"))
+            assert_true(real_private["api_url"].endswith("/search"), "real pairing should keep runtime search endpoint")
+            real_public = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in sorted(pathlib.Path(str(real_session["pairing_dir"])).glob("*"))
+                if path.name != "private-values.json"
+            )
+            for forbidden in (real_api_key, real_environment_id, real_station_id):
+                assert_true(forbidden not in real_public, "real pairing public artifacts should not leak private values")
+        finally:
+            globals()["http_json_request_no_auth"] = original_pairing_request
+            if original_pairing_base is None:
+                os.environ.pop("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL", None)
+            else:
+                os.environ["TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL"] = original_pairing_base
         assert_true(
             text_field_apply_key("ab", "v", max_length=128, error="")[0] == "abv",
             "lowercase v should remain a printable password character",

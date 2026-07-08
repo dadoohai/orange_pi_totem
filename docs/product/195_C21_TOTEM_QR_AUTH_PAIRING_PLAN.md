@@ -309,6 +309,34 @@ Pendencias antes de chamar isso de fluxo ponta a ponta:
 - rodar fluxo real placa + celular + backend + homeHabitat;
 - empacotar em `totem-core`, aplicar por OTA e registrar evidencia visual.
 
+## C21.4 - Wizard Com Backend Real Por Flag
+
+Implementado no `totem_setup_visual_wizard.py` sem adicionar arquivo novo ao
+pacote OTA:
+
+- modo padrao continua `mock`, preservando comportamento ja aplicado em placa;
+- modo real entra por `TOTEM_VISUAL_WIZARD_PAIRING_MODE=real`;
+- o wizard cria sessao em `POST /totem-auth/activations`;
+- mostra codigo e URL `/totem/activate?...` para o operador;
+- faz polling em `/totem-auth/activations/:id/poll`;
+- ao autorizar, grava `api_url`, `api_key`, `environment_id`, `station_id` e
+  `api_token_id` apenas em `private-values.json` com permissao `0600`;
+- artefatos publicos continuam sem `api_key`, `environment_id` e `station_id`;
+- Esc/cancelamento volta sem aplicar configuracao final.
+
+Validacao offline:
+
+- `totem_setup_visual_wizard.py --self-test` cobre o caminho real com backend
+  simulado, garantindo contrato, permissao do arquivo privado e ausencia de
+  vazamento publico.
+
+Non-claims:
+
+- ainda nao rodado contra backend real vivo;
+- ainda nao aplicado na placa por OTA nesta fatia;
+- ainda nao escreve config final automaticamente;
+- ainda nao decidiu politica de estacao existente versus nova.
+
 Non-claims desta fatia:
 
 - ainda nao ha polling real;
