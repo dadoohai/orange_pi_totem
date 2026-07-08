@@ -1,0 +1,68 @@
+
+2026-07-07T23:00:32-03:00
+b2d8936f92d0467b6552a4ac8d027ca41223760de3e3afc74309daec20afbeb4  /tmp/c20-2-step-navigation-20260708T030000Z/dadooh-totem-core-c20.2.step-navigation-20260708T022700Z-1fa33d2.manifest.json
+3700d115c801217b79ccbf6369040a954774757a2ba29cf8e1ff4157985374ae  /tmp/c20-2-step-navigation-20260708T030000Z/dadooh-totem-core-c20.2.step-navigation-20260708T022700Z-1fa33d2.tar.gz
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.1.environment-copy-20260708T011500Z-7a29d1a",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.visual-settings-20260708T003000Z-4e3a13d",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T01:24:49Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T01:15:52Z",
+      "path": "/data/core/totem/releases/c20.1.environment-copy-20260708T011500Z-7a29d1a",
+      "payload_sha256": "8c363a44c5c3536453c28ab00297c2e25ecb8244f425173fabd1f056fba4ef31",
+      "source": "local:dadooh-totem-core-c20.1.environment-copy-20260708T011500Z-7a29d1a.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "7a29d1a4d2ba7ebeaa2b643de4d07310d5db7c71",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.1.environment-copy-20260708T011500Z-7a29d1a"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T01:24:52Z",
+      "source": "local:dadooh-totem-core-c20.1.environment-copy-20260708T011500Z-7a29d1a.manifest.json",
+      "started_at_utc": "2026-07-08T01:24:46Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.1.environment-copy-20260708T011500Z-7a29d1a"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T00:43:53Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T00:36:43Z",
+      "path": "/data/core/totem/releases/c20.visual-settings-20260708T003000Z-4e3a13d",
+      "payload_sha256": "db87544bb98de03055490bae53703460dde345d75cb5d4b9988d7c1c10c945a0",
+      "source": "local:dadooh-totem-core-c20.visual-settings-20260708T003000Z-4e3a13d.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "4e3a13dc820aac3d46c5655f9f82e7421df5a908",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.visual-settings-20260708T003000Z-4e3a13d"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+active
+inactive
+
+__EXPECT_EXIT_CODE__=0
