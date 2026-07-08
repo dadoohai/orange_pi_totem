@@ -51,9 +51,7 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T012412Z-c20-1-environment-copy-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
-## Proximo Marco
-
-## C20.2 Fechado Para Pacote
+## C20.2 Fechado
 
 - `Tab` abre o menu de etapas do wizard.
 - O operador pode ir para Tela, Conexao, Ambiente ou Revisao sem completar a
@@ -63,9 +61,17 @@ rodada posterior, sem bloquear o pacote C20.1.
 - Nenhuma candidata e gerada quando falta rede ou ambiente validado.
 - Testes offline cobrem self-test, galeria visual e replay de entrada
   `step_menu_pending_review`.
+- Pacote `totem-core` criado:
+  `c20.2.step-navigation-20260708T022700Z-1fa33d2`.
+- Gate de release verde e commitado junto do pacote.
+- Aplicado na placa por `totem-updatectl apply-local`.
+- Capturas reais do framebuffer do menu de etapas e da revisao bloqueada
+  registradas em:
+  `docs/evidence/c20-totem-core-ota/20260708T030000Z-c20-2-step-navigation-board-apply/`.
+- Deve entrar no pacote acumulado da proxima imagem de referencia.
 
 ## Proximo Marco
 
-Empacotar C20.2 por `totem-core`, aplicar na placa, capturar framebuffer real do
-menu de etapas/revisao bloqueada e manter tudo no pacote acumulado da proxima
-imagem de referencia.
+Continuar as melhorias de UX do wizard por verticais pequenas, sempre com:
+self-test, galeria visual, replay quando houver fluxo de teclado, pacote
+`totem-core`, aplicacao na placa e captura real antes de marcar como fechado.
