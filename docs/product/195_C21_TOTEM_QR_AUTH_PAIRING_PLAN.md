@@ -340,29 +340,29 @@ Nota posterior: a aplicacao por OTA na placa foi fechada na fatia C21.5 abaixo.
 O non-claim restante desta fatia e somente que o modo real nao havia sido
 exercitado contra backend vivo.
 
-## C21.5 - Pacote OTA E Placa
+## C21.6 - Pacote OTA E Placa
 
 Fechado em 2026-07-08.
 
 - pacote `totem-core` homologation:
-  `c21.5-qr-auth-real-wizard-20260708T142824Z-25d2183`;
-- source commit do pacote: `25d218374c8549a27407a7fb584f52f16cc071fe`;
+  `c21.6-qr-auth-real-wizard-final-20260708T144044Z-e97db68`;
+- source commit do pacote: `e97db686eef96b44f2fa8e3cc348148acc32f8a9`;
 - payload SHA256:
-  `59b0190a982acffd60e8cdccf5003a125b5b53de332905ef90c0c9d2a5b95eb6`;
+  `fd71a62cd340dcda75bc74f15100e7f80fb76735ba78c11c7bcdb6924d16765e`;
 - `c18_ota_release_gate.py` verde em arvore limpa;
 - pacote aplicado na placa por `totem_updatectl.py apply-local --component
   totem-core`;
 - `current` da placa:
-  `c21.5-qr-auth-real-wizard-20260708T142824Z-25d2183`;
+  `c21.6-qr-auth-real-wizard-final-20260708T144044Z-e97db68`;
 - `previous` da placa:
-  `c21.2-qr-pairing-wizard-ota-compatible-20260708T134735Z-20f7b20`;
+  `c21.5-qr-auth-real-wizard-20260708T142824Z-25d2183`;
 - `kiosky-player.service` ativo apos apply;
 - settings lock ausente apos apply;
 - `totem_setup_visual_wizard.py --self-test` verde na placa.
 
 Evidencia:
 
-- `docs/evidence/c21-qr-pairing/20260708T143451Z-board-c21-5-real-mode-ota/README.md`
+- `docs/evidence/c21-qr-pairing/20260708T144355Z-board-c21-6-final-real-mode-ota/README.md`
 
 Pendencia real restante:
 
