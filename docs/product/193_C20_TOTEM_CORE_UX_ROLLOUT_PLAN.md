@@ -127,6 +127,17 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T041000Z-c20-5-f10-transition-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
+## C20.6 Em Fechamento
+
+- Refinar a navegacao superior para se comportar como menu de BIOS/TV.
+- Quando o foco esta no menu superior, `esquerda/direita` mudam a etapa ativa
+  imediatamente e o conteudo abaixo ja acompanha a etapa destacada.
+- `baixo` deixa de ser necessario para renderizar a etapa; ele apenas entra no
+  primeiro controle do conteudo ja exibido.
+- A regra vale para Tela, Conexao, Ambiente e Revisao.
+- Validacoes esperadas: self-test cobrindo salto imediato, pacote `totem-core`,
+  apply na placa e captura real das telas apos navegacao.
+
 ## Proximo Marco
 
 Continuar as melhorias de UX do wizard por verticais pequenas, sempre com:

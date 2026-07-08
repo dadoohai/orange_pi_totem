@@ -162,9 +162,10 @@ class VisualWizardError(RuntimeError):
 class VisualWizardStepJump(RuntimeError):
     """Raised when the operator chooses another top-level wizard step."""
 
-    def __init__(self, step: int) -> None:
+    def __init__(self, step: int, *, focus_area: str = "content") -> None:
         self.step = step
-        super().__init__(f"wizard step jump: {step}")
+        self.focus_area = focus_area
+        super().__init__(f"wizard step jump: {step} focus={focus_area}")
 
 
 @dataclass(frozen=True)
@@ -1357,9 +1358,15 @@ def option_footer(*, focus_area: str, primary: str, allow_back: bool) -> str:
 
 def handle_step_focus_key(key: str, *, focused_step: int, active_step: int) -> tuple[str, int]:
     if key == "left":
-        return "steps", adjacent_navigable_step(focused_step, -1)
+        next_step = adjacent_navigable_step(focused_step, -1)
+        if next_step != active_step:
+            raise VisualWizardStepJump(next_step, focus_area="steps")
+        return "steps", next_step
     if key == "right":
-        return "steps", adjacent_navigable_step(focused_step, 1)
+        next_step = adjacent_navigable_step(focused_step, 1)
+        if next_step != active_step:
+            raise VisualWizardStepJump(next_step, focus_area="steps")
+        return "steps", next_step
     if key in {"enter", "down"}:
         if focused_step == active_step:
             return "content", focused_step
@@ -1379,9 +1386,10 @@ def choose_option(
     allow_back: bool = False,
     layout_rotation_deg: int = 0,
     initial_selected_index: int = 0,
+    initial_focus_area: str = "content",
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
-    focus_area = "content"
+    focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = active_step
     while True:
         footer = option_footer(focus_area=focus_area, primary="Enter confirma", allow_back=allow_back)
@@ -1438,11 +1446,16 @@ def selected_orientation_index_for_rotation(rotation_deg: int) -> int:
     return 0
 
 
-def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0) -> dict[str, str | int]:
+def choose_orientation(
+    display: VisualDisplay,
+    *,
+    initial_rotation_deg: int = 0,
+    initial_focus_area: str = "content",
+) -> dict[str, str | int]:
     options = [Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS]
     selected = selected_orientation_index_for_rotation(initial_rotation_deg)
     current_layout_rotation_deg = normalize_rotation_deg(initial_rotation_deg)
-    focus_area = "content"
+    focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = 0
     needs_render = True
     while True:
@@ -1712,15 +1725,18 @@ def read_text_field(
     custom_footer: str | None = None,
     escape_returns_back: bool = False,
     validation_error_message: str = "Formato invalido.",
+    initial_focus_area: str = "content",
 ) -> str | None:
     value = str(initial_value or "")[:max_length]
     cursor = len(value)
     error = ""
     reveal_hidden_value = False
+    focus_area = "steps" if initial_focus_area == "steps" else "content"
+    focused_step = active_step
     needs_render = True
     force_render = True
     last_render_at = 0.0
-    last_visual_state: tuple[str, str, bool, int] | None = None
+    last_visual_state: tuple[str, str, bool, int, str, int] | None = None
     while True:
         if needs_render:
             now = time.monotonic()
@@ -1732,6 +1748,25 @@ def read_text_field(
                 key = read_key(timeout_sec=TEXT_INPUT_MIN_RENDER_INTERVAL_SEC - (now - last_render_at))
                 if key != "timeout":
                     for drained_key in drain_key_repeats(key):
+                        if focus_area == "steps":
+                            if allow_back and drained_key in {"back", "escape"}:
+                                return None
+                            if drained_key in {"escape", "q", "Q"}:
+                                raise VisualWizardAbort("setup visual cancelado pelo operador")
+                            focus_area, focused_step = handle_step_focus_key(
+                                drained_key,
+                                focused_step=focused_step,
+                                active_step=active_step,
+                            )
+                            needs_render = True
+                            force_render = True
+                            break
+                        if drained_key == "up":
+                            focus_area = "steps"
+                            focused_step = active_step
+                            needs_render = True
+                            force_render = True
+                            break
                         if drained_key == "enter":
                             candidate = value.strip() if not hidden else value
                             if len(candidate) < min_length:
@@ -1793,7 +1828,9 @@ def read_text_field(
             if hidden and allow_hidden_toggle:
                 toggle_label = "oculta" if reveal_hidden_value else "mostra"
                 footer = f"Enter confirma | Esc volta | F2 {toggle_label}"
-            visual_state = (hint, note, reveal_hidden_value, cursor)
+            if focus_area == "steps":
+                footer = option_footer(focus_area=focus_area, primary="Enter edita", allow_back=allow_back)
+            visual_state = (hint, note, reveal_hidden_value, cursor, focus_area, focused_step)
             if visual_state != last_visual_state:
                 display.show(
                     screen_id,
@@ -1802,6 +1839,8 @@ def read_text_field(
                         title=title,
                         subtitle=subtitle,
                         footer=footer,
+                        focused_step=focused_step,
+                        focus_area=focus_area,
                         field_label=label,
                         field_value_hint=hint,
                         field_note=note,
@@ -1817,6 +1856,25 @@ def read_text_field(
 
         key = read_key()
         for drained_key in drain_key_repeats(key):
+            if focus_area == "steps":
+                if allow_back and drained_key in {"back", "escape"}:
+                    return None
+                if drained_key in {"escape", "q", "Q"}:
+                    raise VisualWizardAbort("setup visual cancelado pelo operador")
+                focus_area, focused_step = handle_step_focus_key(
+                    drained_key,
+                    focused_step=focused_step,
+                    active_step=active_step,
+                )
+                needs_render = True
+                force_render = True
+                break
+            if drained_key == "up":
+                focus_area = "steps"
+                focused_step = active_step
+                needs_render = True
+                force_render = True
+                break
             if drained_key == "enter":
                 candidate = value.strip() if not hidden else value
                 if len(candidate) < min_length:
@@ -3335,11 +3393,12 @@ def review_and_confirm(
     environment_preflight: EnvironmentPreflight | None = None,
     rotation_status: str = "confirmed",
     network_status: str = "confirmed",
+    initial_focus_area: str = "content",
 ) -> bool:
     ready = bool(network is not None and environment_id.strip() and environment_preflight is not None)
     network_note = network_review_note(network, network_status)
     environment_note = environment_review_note(environment_id, environment_preflight)
-    focus_area = "content"
+    focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = 3
     while True:
         if APPLY_CONTEXT == "real-write":
@@ -3611,6 +3670,7 @@ def run_visual_wizard(
     initial_environment_id = str(private_context.get("environment_id", ""))
     state = initial_wizard_state(initial_rotation_deg, initial_environment_id)
     active_step = 0
+    entry_focus_area = "content"
     try:
         with RawKeyboard():
             while True:
@@ -3620,9 +3680,11 @@ def run_visual_wizard(
                         state.rotation = choose_orientation(
                             display,
                             initial_rotation_deg=int(state.rotation["rotation_deg"]),
+                            initial_focus_area=entry_focus_area,
                         )
                         state.rotation_status = "confirmed"
                         active_step = 1
+                        entry_focus_area = "content"
                         continue
 
                     if active_step == 1:
@@ -3643,9 +3705,11 @@ def run_visual_wizard(
                             initial_selected_index=network_option_index_for_step(
                                 state.network.get("network_step") if state.network else None
                             ),
+                            initial_focus_area=entry_focus_area,
                         )
                         if selected_network is None:
                             active_step = 0
+                            entry_focus_area = "content"
                             continue
                         try:
                             if selected_network.key == "configured_wifi":
@@ -3666,6 +3730,7 @@ def run_visual_wizard(
                                 c1523_phase("wifi_step_done", network_step=state.network["network_step"])
                             state.network_status = "confirmed"
                             active_step = 2
+                            entry_focus_area = "content"
                             continue
                         except VisualWizardError as exc:
                             display.show(
@@ -3718,9 +3783,11 @@ def run_visual_wizard(
                             validation_error_message="ID invalido. Verifique e tente novamente.",
                             layout_rotation_deg=layout_rotation_deg,
                             initial_value=state.environment_id,
+                            initial_focus_area=entry_focus_area,
                         )
                         if environment_id is None:
                             active_step = 1
+                            entry_focus_area = "content"
                             continue
                         if environment_id != state.environment_id:
                             state.environment_preflight = None
@@ -3736,6 +3803,7 @@ def run_visual_wizard(
                         state.environment_preflight = environment_preflight
                         state.environment_status = "confirmed"
                         active_step = 3
+                        entry_focus_area = "content"
                         continue
 
                     if active_step == 3:
@@ -3747,6 +3815,7 @@ def run_visual_wizard(
                             environment_preflight=state.environment_preflight,
                             rotation_status=state.rotation_status,
                             network_status=state.network_status,
+                            initial_focus_area=entry_focus_area,
                         )
                         if confirmed and wizard_can_commit(state):
                             status = write_visual_artifacts(
@@ -3760,11 +3829,13 @@ def run_visual_wizard(
                             show_complete(display, status)
                             return status
                         active_step = first_incomplete_step(state) if not wizard_can_commit(state) else 2
+                        entry_focus_area = "content"
                         continue
 
                     active_step = 0
                 except VisualWizardStepJump as exc:
                     active_step = int(exc.step)
+                    entry_focus_area = exc.focus_area
     finally:
         display.stop()
 
@@ -4260,13 +4331,19 @@ def run_self_test() -> None:
         )
         assert_true(adjacent_navigable_step(0, 1) == 1, "right on focused steps should move to connection")
         assert_true(adjacent_navigable_step(0, -1) == 3, "left on focused steps should wrap to review")
+        try:
+            handle_step_focus_key("right", focused_step=0, active_step=0)
+            instant_step_jump_ok = False
+        except VisualWizardStepJump as exc:
+            instant_step_jump_ok = exc.step == 1 and exc.focus_area == "steps"
+        assert_true(instant_step_jump_ok, "right on top menu should immediately render the next step")
         focus_area, focused_step = handle_step_focus_key("down", focused_step=0, active_step=0)
         assert_true(focus_area == "content" and focused_step == 0, "down on active step should return to content")
         try:
             handle_step_focus_key("enter", focused_step=3, active_step=0)
             step_jump_ok = False
         except VisualWizardStepJump as exc:
-            step_jump_ok = exc.step == 3
+            step_jump_ok = exc.step == 3 and exc.focus_area == "content"
         assert_true(step_jump_ok, "enter on another focused step should jump to that step")
         navigation_state = initial_wizard_state(270, "")
         assert_true(navigation_state.rotation_status == "default", "initial orientation should be a default")
