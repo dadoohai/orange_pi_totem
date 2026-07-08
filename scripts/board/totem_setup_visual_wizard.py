@@ -84,6 +84,7 @@ CANVAS_HEIGHT = LANDSCAPE_CANVAS_HEIGHT
 BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
 STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
+PORTRAIT_STEP_LABELS = ("Tela", "Conexao", "Amb.", "Revisao", "Fim")
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
     "bg": "#07111f",
@@ -362,7 +363,7 @@ def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
         stroke = VISUAL["accent_strong"] if active else VISUAL["border_muted"]
         text_fill = VISUAL["text"] if active else VISUAL["text_muted"]
         width = 124 if layout.portrait else (140 if index in {0, 4} else 136)
-        label = step if not layout.portrait else step[:7]
+        label = step if not layout.portrait else PORTRAIT_STEP_LABELS[index]
         font_size = 14 if layout.portrait else 16
         rail = (
             f'<rect x="{x}" y="{y}" width="5" height="42" rx="3" fill="{VISUAL["accent_strong"]}"/>'
@@ -449,6 +450,19 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
     panel_y = 360 if layout.portrait else 300
     panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 608
     text_width = 40 if layout.portrait else 44
+    label_width = 40 if layout.portrait else 42
+    note_width = 48 if layout.portrait else 44
+    label_svg = svg_lines(
+        label,
+        x=panel_x + 36,
+        y=panel_y + 46,
+        size=20,
+        fill=VISUAL["text_muted"],
+        width=label_width,
+        line_gap=24,
+        max_lines=1,
+        weight=700,
+    )
     value_svg = svg_lines(
         value_hint,
         x=panel_x + 36,
@@ -464,9 +478,9 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
   <rect x="{panel_x + 8}" y="{panel_y + 8}" width="{panel_width}" height="142" rx="8" fill="#0a1628"/>
   <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="142" rx="8" fill="{VISUAL["surface_raised"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="8" height="142" rx="4" fill="{VISUAL["accent"]}"/>
-  <text x="{panel_x + 36}" y="{panel_y + 46}" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="{VISUAL["text_muted"]}">{escape_text(label)}</text>
+  {label_svg}
   {value_svg}
-  <text x="{panel_x + 36}" y="{panel_y + 174}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{escape_text(note)}</text>
+  {svg_lines(note, x=panel_x + 36, y=panel_y + 174, size=18, fill=VISUAL["text_dim"], width=note_width, line_gap=22, max_lines=1)}
 """
 
 
@@ -1620,9 +1634,9 @@ def read_text_field(
                 cursor_index=cursor if show_cursor and not hidden and effective_show_plain_value else None,
             )
             note = error or ("Senha oculta." if hidden and not effective_show_plain_value else "Entrada local.")
-            footer = custom_footer or "Enter confirma | Ctrl+U limpa | Esc cancela"
+            footer = custom_footer or "Enter confirma | Esc cancela"
             if allow_back:
-                footer = custom_footer or "Enter confirma | Esc volta | Ctrl+U limpa"
+                footer = custom_footer or "Enter confirma | Esc volta"
             if hidden and allow_hidden_toggle:
                 toggle_label = "oculta" if reveal_hidden_value else "mostra"
                 footer = f"Enter confirma | Esc volta | F2 {toggle_label}"
@@ -3394,19 +3408,19 @@ def run_visual_wizard(
                         active_step=2,
                         title="Ambiente",
                         subtitle="Digite o ID do ambiente",
-                        label="Environment ID",
+                        label="ID do ambiente",
                         hidden=False,
                         min_length=36,
                         max_length=36,
                         validator=validate_environment_id,
                         panel_items=[
                             "UUID do ambiente.",
-                            "Corrija sem apagar tudo.",
+                            "Backspace corrige.",
                             "Enter valida.",
                         ],
                         show_plain_value=True,
                         show_cursor=True,
-                        custom_footer="Enter valida | Esc volta | Setas/Ctrl+U editam",
+                        custom_footer="Enter valida | Esc volta",
                         escape_returns_back=True,
                         validation_error_message="ID invalido. Verifique e tente novamente.",
                         layout_rotation_deg=layout_rotation_deg,
@@ -3581,8 +3595,8 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=2,
             title="Ambiente",
             subtitle="Digite o ID do ambiente",
-            footer="Enter valida | Esc volta | Setas/Ctrl+U editam",
-            field_label="Environment ID",
+            footer="Enter valida | Esc volta",
+            field_label="ID do ambiente",
             field_value_hint=text_field_display_hint(
                 "11111111-2222-4333-8444-555555555555",
                 hidden=False,
@@ -3590,7 +3604,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
                 cursor_index=14,
             ),
             field_note="Entrada local.",
-            panel_items=["UUID do ambiente.", "Corrija no meio.", "Enter valida."],
+            panel_items=["UUID do ambiente.", "Backspace corrige.", "Enter valida."],
             layout_rotation_deg=90,
         ),
     )

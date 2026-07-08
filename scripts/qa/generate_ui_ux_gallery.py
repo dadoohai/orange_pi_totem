@@ -526,12 +526,12 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
         (
             "wizard.environment",
             "Ambiente",
-            "Digite o identificador.",
-            "Enter valida | Esc volta | Setas/Ctrl+U editam",
-            "Identificador do ambiente",
-            "TEST_ENV_01",
+            "Digite o ID do ambiente.",
+            "Enter valida | Esc volta",
+            "ID do ambiente",
+            "11111111-2222-4333-8444-555555555555",
             "Entrada local.",
-            ["3 a 128 caracteres.", "Use letras e numeros.", "Enter confirma."],
+            ["UUID do ambiente.", "Backspace corrige.", "Enter valida."],
         ),
         (
             "wizard.review",
@@ -621,7 +621,11 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 }[screen_id],
                 operator_task="Aguardar." if screen_id.endswith("saving") else "Confirmar o proximo passo.",
                 primary_action="Aguardar" if screen_id.endswith("saving") else ("Enter volta" if is_error else "Enter"),
-                secondary_action="Esc cancela" if is_error else ("Esc volta" if screen_id.endswith("review") else "Nenhuma."),
+                secondary_action=(
+                    "Esc cancela"
+                    if is_error
+                    else ("Esc volta" if screen_id in {"wizard.environment", "wizard.review"} else "Nenhuma.")
+                ),
                 message_main=title,
                 system_state=screen_id.replace(".", "_"),
                 next_step_expected={
@@ -887,9 +891,9 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
             "next_step_expected": "Revisao.",
             "confusion_risk": "medium",
             "title": "Ambiente",
-            "subtitle": "Digite o identificador do ambiente.",
-            "items": ["Valor sintetico: TEST_ENV", "API sintetica: TEST_API"],
-            "footer": "Enter valida | Esc volta | Setas/Ctrl+U editam",
+            "subtitle": "Digite o ID do ambiente.",
+            "items": ["UUID do ambiente.", "Backspace corrige.", "Enter valida."],
+            "footer": "Enter valida | Esc volta",
             "accent": "#06b6d4",
             "back_applicable": True,
         },
@@ -1748,11 +1752,21 @@ def run_interaction_stress() -> dict[str, Any]:
     }
 
 
+def svg_dimensions(svg_path: pathlib.Path) -> tuple[int, int]:
+    text = svg_path.read_text(encoding="utf-8", errors="ignore")[:800]
+    width = re.search(r'width="(\d+)"', text)
+    height = re.search(r'height="(\d+)"', text)
+    if width and height:
+        return int(width.group(1)), int(height.group(1))
+    return 1024, 768
+
+
 def render_pngs(gallery_dir: pathlib.Path) -> dict[str, Any]:
     converters = [
         ("rsvg-convert", shutil.which("rsvg-convert")),
         ("inkscape", shutil.which("inkscape")),
         ("magick", shutil.which("magick")),
+        ("chrome", shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")),
         ("convert", shutil.which("convert")),
     ]
     converter_name = ""
@@ -1778,6 +1792,18 @@ def render_pngs(gallery_dir: pathlib.Path) -> dict[str, Any]:
             cmd = [converter_path, str(svg_path), "-o", str(png_path)]
         elif converter_name == "inkscape":
             cmd = [converter_path, str(svg_path), "--export-filename", str(png_path)]
+        elif converter_name == "chrome":
+            width, height = svg_dimensions(svg_path)
+            cmd = [
+                converter_path,
+                "--headless",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--hide-scrollbars",
+                f"--window-size={width},{height}",
+                f"--screenshot={png_path}",
+                f"file://{svg_path.resolve()}",
+            ]
         else:
             cmd = [converter_path, str(svg_path), str(png_path)]
         try:
