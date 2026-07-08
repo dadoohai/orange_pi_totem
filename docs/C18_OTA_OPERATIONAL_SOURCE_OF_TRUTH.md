@@ -390,13 +390,21 @@ Estado atual:
 - C20 V1 validada: wizard recalibrado para o framebuffer atual `1024x768`,
   lista Wi-Fi em paisagem com 4 itens sem invadir rodape e revisao com resumo
   publico no corpo principal.
+- C20 V2 validada: cards mais solidos, marcador renderizavel no framebuffer,
+  rodape como barra de acoes, `Esc` preservado em rodapes longos, campo de
+  entrada integrado ao tema escuro e revisao reposicionada como decisao
+  `Pronto para concluir`.
 
 Evidencias principais:
 
 - `docs/evidence/c20-visual-qa/20260707T192000-c20-v0-final-preview-board/`;
 - `docs/evidence/c20-visual-qa/20260707T224916Z-c20-v1-layout-preview-board/`;
 - `docs/evidence/c20-visual-qa/20260707T225600Z-c20-v1-wifi-landscape-board-clean/`;
-- `docs/evidence/c20-visual-qa/20260707T225800Z-c20-v1-review-landscape-board/`.
+- `docs/evidence/c20-visual-qa/20260707T225800Z-c20-v1-review-landscape-board/`;
+- `docs/evidence/c20-visual-qa/20260707T235900Z-c20-v2-pdca1-board-preview/`;
+- `docs/evidence/c20-visual-qa/20260708T000400Z-c20-v2-pdca2-board-preview/`;
+- `docs/evidence/c20-visual-qa/20260708T000700Z-c20-v2-review-decision-board/`;
+- `docs/evidence/c20-visual-qa/20260708T001336Z-c20-v2-final-local-verification/`.
 
 Non-claims:
 
@@ -406,7 +414,7 @@ Non-claims:
 - captura de preview nao substitui fluxo completo por teclado quando a rodada
   depender de interacao real.
 
-Proximo marco recomendado: continuar V2/V3 ou fechar um pacote consolidado de
+Proximo marco recomendado: continuar V3/V8 ou fechar um pacote consolidado de
 `totem-core` quando o conjunto de UX estiver suficiente para uma imagem de
 referencia.
 

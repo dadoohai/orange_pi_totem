@@ -86,10 +86,11 @@ TITLE = "Configuracao do Totem"
 STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
-    "bg": "#0b1220",
+    "bg": "#07111f",
     "surface": "#111827",
     "surface_raised": "#151d2a",
-    "surface_active": "#13263a",
+    "surface_active": "#12324a",
+    "surface_selected": "#0f3a55",
     "surface_input": "#f8fafc",
     "border": "#2f3d4a",
     "border_muted": "#334155",
@@ -99,9 +100,10 @@ VISUAL = {
     "text_dark": "#111827",
     "accent": "#06b6d4",
     "accent_strong": "#22d3ee",
+    "accent_soft": "#164e63",
     "success": "#22c55e",
     "warning": "#f59e0b",
-    "footer": "#07111f",
+    "footer": "#050b14",
 }
 
 CANDIDATE_FILENAME = "config.candidate.json"
@@ -388,20 +390,23 @@ def option_cards(options: list[Option], selected_index: int, *, layout_rotation_
     description_width = 50 if layout.portrait else 42
     for index, option in enumerate(options[:5]):
         active = index == selected_index
-        fill = VISUAL["surface_active"] if active else VISUAL["surface"]
-        stroke = VISUAL["accent_strong"] if active else VISUAL["border"]
+        fill = VISUAL["surface_selected"] if active else VISUAL["surface"]
+        underlay_fill = "#0a1628" if active else "#0a111f"
         title_fill = VISUAL["text"] if active else "#eef5ff"
         body_fill = VISUAL["text_muted"] if active else "#aebbd0"
-        marker_fill = VISUAL["accent"] if active else "#475569"
-        rail_fill = VISUAL["accent_strong"] if active else "#263244"
+        marker_fill = VISUAL["accent_strong"] if active else "#263244"
+        marker_text_fill = VISUAL["text_dark"] if active else VISUAL["text_dim"]
+        rail_fill = VISUAL["accent_strong"] if active else "#334155"
+        marker = ">" if active else str(index + 1)
         parts.append(
-            f'<rect x="{x}" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
+            f'<rect x="{x + 8}" y="{y + 8}" width="{card_width}" height="{card_height}" rx="8" fill="{underlay_fill}"/>'
+            f'<rect data-option-card="true" x="{x}" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}"/>'
             f'<rect x="{x}" y="{y}" width="8" height="{card_height}" rx="4" fill="{rail_fill}"/>'
-            f'<circle cx="{x + 36}" cy="{y + 48}" r="18" fill="{marker_fill}"/>'
-            f'<text x="{x + 30}" y="{y + 55}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" '
-            f'font-weight="700" fill="#ffffff">{escape_text(">" if active else "")}</text>'
-            f'{svg_lines(option.label, x=x + 72, y=y + 37, size=23, fill=title_fill, width=label_width, line_gap=28, max_lines=1, weight=700)}'
-            f'{svg_lines(option.description, x=x + 72, y=y + 68, size=17, fill=body_fill, width=description_width, line_gap=22, max_lines=1)}'
+            f'<rect x="{x + 26}" y="{y + 20}" width="42" height="42" rx="8" fill="{marker_fill}"/>'
+            f'<text x="{x + 38}" y="{y + 48}" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" '
+            f'font-weight="700" fill="{marker_text_fill}">{escape_text(marker)}</text>'
+            f'{svg_lines(option.label, x=x + 88, y=y + 37, size=23, fill=title_fill, width=label_width, line_gap=28, max_lines=1, weight=700)}'
+            f'{svg_lines(option.description, x=x + 88, y=y + 68, size=17, fill=body_fill, width=description_width, line_gap=22, max_lines=1)}'
         )
         y += card_height + 14
     return "\n  ".join(parts)
@@ -449,18 +454,19 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
         x=panel_x + 36,
         y=panel_y + 92,
         size=26,
-        fill="#111827",
+        fill=VISUAL["text"],
         width=text_width,
         line_gap=34,
         max_lines=2,
         weight=700,
     )
     return f"""
-  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="142" rx="8" fill="{VISUAL["surface_input"]}" stroke="{VISUAL["accent_strong"]}" stroke-width="2"/>
+  <rect x="{panel_x + 8}" y="{panel_y + 8}" width="{panel_width}" height="142" rx="8" fill="#0a1628"/>
+  <rect x="{panel_x}" y="{panel_y}" width="{panel_width}" height="142" rx="8" fill="{VISUAL["surface_raised"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="8" height="142" rx="4" fill="{VISUAL["accent"]}"/>
-  <text x="{panel_x + 36}" y="{panel_y + 46}" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#0f172a">{escape_text(label)}</text>
+  <text x="{panel_x + 36}" y="{panel_y + 46}" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="{VISUAL["text_muted"]}">{escape_text(label)}</text>
   {value_svg}
-  <text x="{panel_x + 36}" y="{panel_y + 174}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#475569">{escape_text(note)}</text>
+  <text x="{panel_x + 36}" y="{panel_y + 174}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{escape_text(note)}</text>
 """
 
 
@@ -483,35 +489,65 @@ def summary_rows_svg(rows: list[tuple[str, str]], *, layout_rotation_deg: int = 
     return "\n  ".join(parts)
 
 
+def footer_chip_width(action: str, layout: ScreenLayout) -> int:
+    return max(132 if not layout.portrait else 116, len(action) * (11 if not layout.portrait else 10) + 42)
+
+
+def visible_footer_actions(actions: list[str], layout: ScreenLayout) -> list[str]:
+    if not actions:
+        return []
+    chip_gap = 12 if not layout.portrait else 8
+    max_width = layout.width - (layout.margin_x * 2)
+
+    def total_width(indices: list[int]) -> int:
+        if not indices:
+            return 0
+        return sum(footer_chip_width(actions[index], layout) for index in indices) + chip_gap * (len(indices) - 1)
+
+    required = {0}
+    required.update(index for index, action in enumerate(actions) if action.lower().startswith("esc"))
+    selected = sorted(required)
+    if total_width(selected) > max_width:
+        selected = [0]
+    for index in range(len(actions)):
+        if index in selected:
+            continue
+        candidate = sorted([*selected, index])
+        if total_width(candidate) <= max_width:
+            selected = candidate
+    return [actions[index] for index in selected]
+
+
 def footer_text(text: str, *, layout_rotation_deg: int = 0) -> str:
     layout = screen_layout(layout_rotation_deg)
     footer_h = 82
     footer_y = layout.height - footer_h
     actions = [part.strip() for part in str(text or "").split("|") if part.strip()]
     primary = actions[0] if actions else str(text or "")
-    secondary = " | ".join(actions[1:])
-    primary_w = min(layout.width - (layout.margin_x * 2), max(158, len(primary) * 12 + 48))
-    secondary_x = layout.margin_x + primary_w + 22
-    secondary_chars = max(10, int((layout.width - secondary_x - layout.margin_x) / 9))
-    secondary_svg = (
-        svg_lines(
-            secondary,
-            x=secondary_x,
-            y=footer_y + 50,
-            size=17,
-            fill=VISUAL["text_muted"],
-            width=secondary_chars,
-            line_gap=21,
-            max_lines=1,
+    chip_gap = 12 if not layout.portrait else 8
+    x = layout.margin_x
+    chips = []
+    for index, action in enumerate(visible_footer_actions(actions, layout)):
+        width = footer_chip_width(action, layout)
+        if index == 0:
+            fill = VISUAL["accent_strong"]
+            text_fill = VISUAL["text_dark"]
+        else:
+            fill = VISUAL["surface_active"] if index == 1 else VISUAL["surface"]
+            text_fill = VISUAL["text"]
+        chips.append(
+            f'<rect x="{x}" y="{footer_y + 18}" width="{width}" height="46" rx="8" fill="{fill}"/>'
+            f'<text x="{x + 22}" y="{footer_y + 48}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{text_fill}">{escape_text(action)}</text>'
         )
-        if secondary and secondary_x < layout.width - layout.margin_x
-        else ""
-    )
+        x += width + chip_gap
+    if not chips and primary:
+        chips.append(
+            f'<text x="{layout.margin_x}" y="{footer_y + 50}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{VISUAL["text"]}">{escape_text(primary)}</text>'
+        )
     return f"""
   <rect x="0" y="{footer_y}" width="{layout.width}" height="{footer_h}" fill="{VISUAL["footer"]}"/>
-  <rect x="{layout.margin_x}" y="{footer_y + 19}" width="{primary_w}" height="44" rx="8" fill="{VISUAL["surface_active"]}" stroke="{VISUAL["accent"]}"/>
-  <text x="{layout.margin_x + 24}" y="{footer_y + 48}" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="{VISUAL["text"]}">{escape_text(primary)}</text>
-  {secondary_svg}
+  <rect x="0" y="{footer_y}" width="{layout.width}" height="3" fill="{VISUAL["accent_soft"]}"/>
+  {' '.join(chips)}
 """
 
 
@@ -1239,9 +1275,9 @@ def choose_option(
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
     while True:
-        footer = "Setas escolhem | Enter confirma | Esc cancela"
+        footer = "Enter confirma | Setas escolhem | Esc cancela"
         if allow_back:
-            footer = "Setas escolhem | Enter confirma | Esc volta"
+            footer = "Enter confirma | Setas escolhem | Esc volta"
         display.show(
             screen_id,
             build_screen_svg(
@@ -1290,7 +1326,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     active_step=0,
                     title="Orientacao da tela",
                     subtitle="Escolha como o totem esta instalado.",
-                    footer="Setas escolhem | Enter visualiza | Esc cancela",
+                    footer="Enter visualiza | Setas escolhem | Esc cancela",
                     options=options,
                     selected_index=selected,
                     panel_title="Tela",
@@ -1340,7 +1376,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     active_step=0,
                     title="Usar esta orientacao?",
                     subtitle="Confira o sentido antes de continuar.",
-                    footer="Setas escolhem | Enter confirma | Esc volta",
+                    footer="Enter confirma | Setas escolhem | Esc volta",
                     options=confirm_options,
                     selected_index=confirm_selected,
                     panel_title="Confirmar",
@@ -2169,7 +2205,7 @@ def wifi_list_screen_svg(
         active_step=1,
         title="Selecionar Wi-Fi",
         subtitle=f"{updated_line}. Sinal e seguranca.",
-        footer="Setas rolam | Enter escolhe | R atualiza | Esc volta",
+        footer="Enter escolhe | Setas rolam | R atualiza | Esc volta",
         options=options,
         selected_index=selected_on_page,
         panel_title="Lista local",
@@ -3068,10 +3104,10 @@ def review_and_confirm(
         "05-review",
         build_screen_svg(
             active_step=3,
-            title="Revisao",
+            title="Pronto para concluir",
             subtitle=subtitle,
             footer=footer,
-            panel_title="Resumo publico",
+            panel_title="Seguranca",
             panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
             extra_svg=summary_rows_svg(
                 [
@@ -3409,7 +3445,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Orientacao da tela",
             subtitle="Escolha como o totem esta instalado.",
-            footer="Setas escolhem | Enter confirma | Esc cancela",
+            footer="Enter confirma | Setas escolhem | Esc cancela",
             options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
             selected_index=0,
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
@@ -3423,7 +3459,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
-            footer="Setas escolhem | Enter confirma | Esc volta",
+            footer="Enter confirma | Setas escolhem | Esc volta",
             options=[
                 Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
@@ -3440,7 +3476,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
-            footer="Setas escolhem | Enter confirma | Esc volta",
+            footer="Enter confirma | Setas escolhem | Esc volta",
             options=[
                 Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
@@ -3458,7 +3494,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Conexao",
             subtitle="Escolha a conexao.",
-            footer="Setas escolhem | Enter confirma | Esc cancela",
+            footer="Enter confirma | Setas escolhem | Esc cancela",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
             panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
@@ -3600,10 +3636,10 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "05-review",
         build_screen_svg(
             active_step=3,
-            title="Revisao",
+            title="Pronto para concluir",
             subtitle="Confira antes de concluir.",
             footer="Enter conclui | Esc volta",
-            panel_title="Resumo publico",
+            panel_title="Seguranca",
             panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
             extra_svg=summary_rows_svg(
                 [
@@ -4114,7 +4150,7 @@ def run_self_test() -> None:
             active_step=1,
             title="Conexao",
             subtitle="Escolha a rede.",
-            footer="Setas escolhem | Enter confirma | Esc volta",
+            footer="Enter confirma | Setas escolhem | Esc volta",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
             panel_items=["Lista local."],
@@ -4160,10 +4196,23 @@ def run_self_test() -> None:
         landscape_wifi_preview_text = landscape_wifi_preview.read_text(encoding="utf-8")
         assert_true("Mostrando 1-4 de" in landscape_wifi_preview_text, "landscape Wi-Fi preview should show 1-4")
         assert_true(
-            landscape_wifi_preview_text.count('width="608" height="82"') == wifi_list_page_size(0),
+            landscape_wifi_preview_text.count('data-option-card="true"') == wifi_list_page_size(0),
             "landscape Wi-Fi preview should render 4 network cards",
         )
+        assert_true("<circle" not in landscape_wifi_preview_text, "option cards must use framebuffer-rendered rect markers")
         assert_true("TEST_WIFI_COUNTER" not in landscape_wifi_preview_text, "landscape Wi-Fi preview should not render a fifth card")
+        portrait_footer_probe = footer_text(
+            "Enter confirma | Setas escolhem | R atualiza | Esc volta",
+            layout_rotation_deg=90,
+        )
+        assert_true("Enter confirma" in portrait_footer_probe, "footer should preserve primary action")
+        assert_true("Esc volta" in portrait_footer_probe, "footer should preserve escape action before optional actions")
+        long_footer_probe = footer_text(
+            "Enter confirma | Setas escolhem | R atualiza | PageDown | Esc volta",
+            layout_rotation_deg=90,
+        )
+        assert_true("Enter confirma" in long_footer_probe, "long footer should preserve primary action")
+        assert_true("Esc volta" in long_footer_probe, "long footer should preserve escape action beyond the fourth item")
         assert_true(wifi_preview_status["paginated_wifi_list"] is True, "Wi-Fi list preview should be paginated")
         assert_true(wifi_preview_status["password_show_toggle_key"] == "F2", "password toggle should use F2")
         assert_true(wifi_preview_status["password_show_toggle_fallback_key"] == "Ctrl+P", "password fallback should use Ctrl+P")

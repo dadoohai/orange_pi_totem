@@ -51,6 +51,45 @@ Fora deste pacote:
 
 ## Verticais C20
 
+### V2 - Hierarquia De Acao E Produto Visual
+
+Status: validada para acumulo em 2026-07-08.
+
+Objetivo do usuario: a tela deve parecer mais produto profissional e menos
+formulario tecnico, mantendo eficiencia.
+
+Mudancas aplicadas:
+
+- cards mais solidos, com marcador retangular renderizavel no framebuffer;
+- remocao da dependencia visual de `<circle>` nos cards;
+- rodape transformado em barra de acoes, com acao principal em destaque;
+- protecao para `Esc` nao sumir silenciosamente em rodapes longos;
+- campo de senha/entrada reintegrado ao tema escuro;
+- revisao reescrita como tela de decisao: `Pronto para concluir`;
+- paleta escura ligeiramente mais profunda e focada em acento ciano.
+
+Aceite:
+
+- self-test do wizard verde;
+- preview, Wi-Fi preview, replay e galeria verdes;
+- capturas reais de orientacao, Wi-Fi, senha e revisao em paisagem;
+- hash do wizard da placa restaurado apos as sessoes;
+- player ativo, settings inativo e sem lock/request apos as sessoes.
+
+Evidencia:
+
+- `docs/evidence/c20-visual-qa/20260707T235900Z-c20-v2-pdca1-board-preview/`;
+- `docs/evidence/c20-visual-qa/20260708T000400Z-c20-v2-pdca2-board-preview/`;
+- `docs/evidence/c20-visual-qa/20260708T000700Z-c20-v2-review-decision-board/`;
+- `docs/evidence/c20-visual-qa/20260708T001336Z-c20-v2-final-local-verification/`.
+
+Non-claims:
+
+- nao publica OTA;
+- nao valida fluxo completo por teclado;
+- nao grava configuracao real;
+- nao altera Wi-Fi real, display/EDID, player-runtime, updater ou imagem.
+
 ### V0 - Sobreposicao No Preview De Orientacao
 
 Status: validada para acumulo em 2026-07-07.
@@ -115,7 +154,7 @@ Non-claims:
 - nao altera Wi-Fi real, display/EDID, player, updater ou imagem;
 - nao substitui pacote consolidado de `totem-core`.
 
-### V2 - Navegacao E Cancelamento Previsiveis
+### V3 - Navegacao E Cancelamento Previsiveis
 
 Objetivo do usuario: saber quando esta voltando uma etapa e quando esta saindo
 da configuracao.
@@ -134,7 +173,7 @@ Aceite:
 - lock/request ausentes apos saida;
 - nenhuma escrita real de Wi-Fi/config.
 
-### V3 - Entrada E Saida De Settings
+### V4 - Entrada E Saida De Settings
 
 Objetivo do usuario: perceber que a placa entendeu o comando e voltou para a
 midia sem parecer travada.
@@ -152,7 +191,7 @@ Aceite:
 - splash/transicao nao fica tempo demais na tela;
 - nenhum terminal aparente.
 
-### V4 - Status Publico Simplificado
+### V5 - Status Publico Simplificado
 
 Objetivo do usuario: entender o estado da placa em poucos segundos quando nao
 ha midia normal.
@@ -171,7 +210,7 @@ Aceite:
 - renderer nao disputa com o player;
 - evidencia visual por estado.
 
-### V5 - Revisao E Conclusao Sem Dados Privados
+### V6 - Revisao E Conclusao Sem Dados Privados
 
 Objetivo do usuario: confirmar o que sera aplicado sem expor segredo nem
 tecnicismo.
@@ -189,7 +228,7 @@ Aceite:
 - cancelamento ainda restaura player;
 - summary evidencia non-claims.
 
-### V6 - Splash E Gramatica Visual Consistente
+### V7 - Splash E Gramatica Visual Consistente
 
 Objetivo do usuario: reconhecer estados do produto sem ruido visual.
 
@@ -206,7 +245,7 @@ Aceite:
 - orientacao respeitada;
 - mensagens curtas e consistentes.
 
-### V7 - Contrato De QA Visual Acumulavel
+### V8 - Contrato De QA Visual Acumulavel
 
 Objetivo do time: qualquer rodada UX so entra no acumulo com evidencia
 comparavel.
@@ -260,8 +299,9 @@ atualiza este plano quando houver aprendizado real.
 
 1. V0: corrigir a sobreposicao painel/preview na orientacao.
 2. V1: revisar hierarquia/densidade das telas principais do wizard.
-3. V2: revisar navegacao e cancelamento previsiveis.
-4. V7: criar manifesto minimo de QA visual por rodada.
+3. V2: reforcar hierarquia de acao e produto visual.
+4. V3: revisar navegacao e cancelamento previsiveis.
+5. V8: criar manifesto minimo de QA visual por rodada.
 
 Regras para todas:
 
