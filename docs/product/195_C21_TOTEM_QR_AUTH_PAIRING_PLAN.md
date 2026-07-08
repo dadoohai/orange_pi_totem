@@ -333,17 +333,43 @@ Validacao offline:
 Non-claims:
 
 - ainda nao rodado contra backend real vivo;
-- ainda nao aplicado na placa por OTA nesta fatia;
 - ainda nao escreve config final automaticamente;
 - ainda nao decidiu politica de estacao existente versus nova.
 
-Non-claims desta fatia:
+Nota posterior: a aplicacao por OTA na placa foi fechada na fatia C21.5 abaixo.
+O non-claim restante desta fatia e somente que o modo real nao havia sido
+exercitado contra backend vivo.
 
-- ainda nao ha polling real;
-- ainda nao ha QR escaneavel final;
-- ainda nao ha tela real em `homeHabitat`;
-- ainda nao ha backend `/totem-pairing`;
-- ainda nao ha escrita real de configuracao no final do fluxo QR.
+## C21.5 - Pacote OTA E Placa
+
+Fechado em 2026-07-08.
+
+- pacote `totem-core` homologation:
+  `c21.5-qr-auth-real-wizard-20260708T142824Z-25d2183`;
+- source commit do pacote: `25d218374c8549a27407a7fb584f52f16cc071fe`;
+- payload SHA256:
+  `59b0190a982acffd60e8cdccf5003a125b5b53de332905ef90c0c9d2a5b95eb6`;
+- `c18_ota_release_gate.py` verde em arvore limpa;
+- pacote aplicado na placa por `totem_updatectl.py apply-local --component
+  totem-core`;
+- `current` da placa:
+  `c21.5-qr-auth-real-wizard-20260708T142824Z-25d2183`;
+- `previous` da placa:
+  `c21.2-qr-pairing-wizard-ota-compatible-20260708T134735Z-20f7b20`;
+- `kiosky-player.service` ativo apos apply;
+- settings lock ausente apos apply;
+- `totem_setup_visual_wizard.py --self-test` verde na placa.
+
+Evidencia:
+
+- `docs/evidence/c21-qr-pairing/20260708T143451Z-board-c21-5-real-mode-ota/README.md`
+
+Pendencia real restante:
+
+- backend/front precisam estar publicados em ambiente acessivel para exercitar
+  `placa -> /totem-auth -> home.dadooh.ai/totem/activate -> poll -> credencial`
+  contra servicos vivos. Nesta maquina, `firebase` nao estava autenticado e o
+  homeHabitat nao tinha `.env` local, entao esse teste nao foi forjado.
 
 ## C21.2 - Compatibilidade OTA Em Campo
 
