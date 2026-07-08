@@ -302,8 +302,53 @@ def add_splash_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
 def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> None:
     display_options = [wizard.Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in wizard.DISPLAY_OPTIONS]
     network_options = list(wizard.NETWORK_OPTIONS)
+    pending_state = wizard.initial_wizard_state(0, "")
     wifi3 = synthetic_wifi_networks(3)
     wifi18 = synthetic_wifi_networks(18)
+
+    add_screen(
+        specs,
+        gallery_dir,
+        ScreenSpec(
+            screen_id="wizard.step_menu",
+            journey="wizard",
+            screen_type="wizard",
+            orientation="landscape",
+            function="Navegar entre etapas sem salvar estado incompleto.",
+            operator_task="Escolher qual etapa revisar ou preencher.",
+            primary_action="Enter abre",
+            secondary_action="Esc volta",
+            message_main="Ir para etapa",
+            system_state="wizard_step_menu",
+            next_step_expected="Abrir a etapa selecionada.",
+            confusion_risk="low",
+            dependencies=["keyboard", "wizard state"],
+            dynamic_feedback_needed=True,
+            error_state_needed=False,
+            preview_covered=True,
+            title="Ir para etapa",
+            subtitle="Voce pode revisar sem salvar incompleto.",
+            body_items=["Revisao bloqueia pendencias.", "Nada salva sozinho.", "Volte quando quiser."],
+            footer="Enter abre | Setas escolhem | Esc volta",
+            option_text=[f"{wizard.STEPS[step]}: {wizard.step_status_label(pending_state, step)}" for step in wizard.NAVIGABLE_STEPS],
+            status_feedback=True,
+            back_applicable=True,
+        ),
+        wizard.build_screen_svg(
+            active_step=0,
+            title="Ir para etapa",
+            subtitle="Voce pode revisar sem salvar incompleto.",
+            footer="Enter abre | Setas escolhem | Esc volta",
+            options=[
+                wizard.Option(str(step), wizard.STEPS[step], wizard.step_status_label(pending_state, step))
+                for step in wizard.NAVIGABLE_STEPS
+            ],
+            selected_index=0,
+            panel_title="Estado",
+            panel_items=["Revisao bloqueia pendencias.", "Nada salva sozinho.", "Volte quando quiser."],
+            layout_rotation_deg=0,
+        ),
+    )
 
     add_screen(
         specs,
@@ -328,7 +373,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             title="Orientacao da tela",
             subtitle="Escolha como o totem esta instalado.",
             body_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
-            footer="Setas escolhem | Enter confirma | Esc cancela",
+            footer="Enter visualiza | Setas escolhem | Tab etapas | Esc cancela",
             option_text=wizard_option_text(display_options),
             back_applicable=False,
         ),
@@ -336,7 +381,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             active_step=0,
             title="Orientacao da tela",
             subtitle="Escolha como o totem esta instalado.",
-            footer="Setas escolhem | Enter confirma | Esc cancela",
+            footer="Enter visualiza | Setas escolhem | Tab etapas | Esc cancela",
             options=display_options,
             selected_index=0,
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
@@ -369,7 +414,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
             body_items=["Preview local.", "Sem alterar player agora.", "Pode voltar."],
-            footer="Setas escolhem | Enter confirma | Esc volta",
+            footer="Enter confirma | Setas escolhem | Tab etapas | Esc volta",
             option_text=["Usar esta orientacao", "Voltar e escolher outra"],
             back_applicable=True,
         ),
@@ -377,7 +422,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             active_step=0,
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
-            footer="Setas escolhem | Enter confirma | Esc volta",
+            footer="Enter confirma | Setas escolhem | Tab etapas | Esc volta",
             options=[
                 wizard.Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 wizard.Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
@@ -412,7 +457,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             title="Conexao",
             subtitle="Escolha a conexao.",
             body_items=["Lista local.", "Senha oculta.", "Sem portal."],
-            footer="Setas escolhem | Enter confirma | Esc cancela",
+            footer="Enter confirma | Setas escolhem | Tab etapas | Esc cancela",
             option_text=wizard_option_text(network_options),
             back_applicable=False,
             error_recovery_available=True,
@@ -421,7 +466,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             active_step=1,
             title="Conexao",
             subtitle="Escolha a conexao.",
-            footer="Setas escolhem | Enter confirma | Esc cancela",
+            footer="Enter confirma | Setas escolhem | Tab etapas | Esc cancela",
             options=network_options,
             selected_index=0,
             panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
@@ -527,7 +572,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             "wizard.environment",
             "Ambiente",
             "Digite o ID do ambiente.",
-            "Enter valida | Esc volta",
+            "Enter valida | Tab etapas | Esc volta",
             "ID do ambiente",
             "11111111-2222-4333-8444-555555555555",
             "Entrada local.",
@@ -535,13 +580,23 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
         ),
         (
             "wizard.review",
-            "Revisao",
+            "Pronto para concluir",
             "Confira antes de concluir.",
-            "Enter conclui | Esc volta",
+            "Enter conclui | Tab etapas | Esc volta",
             "",
             "",
             "",
             ["Conexao definida.", "Ambiente informado.", "Tela escolhida."],
+        ),
+        (
+            "wizard.review_pending",
+            "Pendencias antes de concluir",
+            "Complete os itens pendentes antes de salvar.",
+            "Enter corrige | Tab etapas | Esc volta",
+            "",
+            "",
+            "",
+            ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
         ),
         (
             "wizard.saving",
@@ -603,6 +658,30 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                     "field_note": field_note,
                 }
             )
+        if screen_id == "wizard.review":
+            svg_kwargs["extra_svg"] = wizard.summary_rows_svg(
+                [
+                    ("Tela", "Paisagem (Confirmado)"),
+                    ("Conexao", "Wi-Fi atual"),
+                    ("Ambiente", "Validado"),
+                ],
+                layout_rotation_deg=90,
+            )
+        if screen_id == "wizard.review_pending":
+            svg_kwargs.update(
+                {
+                    "panel_title": "Bloqueado",
+                    "accent": "#f59e0b",
+                    "extra_svg": wizard.summary_rows_svg(
+                        [
+                            ("Tela", "Paisagem (Default)"),
+                            ("Conexao", "Pendente"),
+                            ("Ambiente", "Pendente"),
+                        ],
+                        layout_rotation_deg=90,
+                    ),
+                }
+            )
         add_screen(
             specs,
             gallery_dir,
@@ -614,6 +693,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 function={
                     "wizard.environment": "Coletar identificador de ambiente.",
                     "wizard.review": "Revisar escolhas antes de gravar.",
+                    "wizard.review_pending": "Bloquear conclusao enquanto faltam etapas obrigatorias.",
                     "wizard.saving": "Indicar operacao ocupada de salvamento.",
                     "wizard.complete": "Encerrar fluxo com sucesso.",
                     "wizard.cancel": "Encerrar fluxo por cancelamento explicito.",
@@ -624,19 +704,20 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 secondary_action=(
                     "Esc cancela"
                     if is_error
-                    else ("Esc volta" if screen_id in {"wizard.environment", "wizard.review"} else "Nenhuma.")
+                    else ("Tab etapas | Esc volta" if screen_id in {"wizard.environment", "wizard.review", "wizard.review_pending"} else "Nenhuma.")
                 ),
                 message_main=title,
                 system_state=screen_id.replace(".", "_"),
                 next_step_expected={
                     "wizard.environment": "Ir para revisao.",
                     "wizard.review": "Salvar ou voltar.",
+                    "wizard.review_pending": "Corrigir primeira pendencia ou abrir menu de etapas.",
                     "wizard.saving": "Concluir e restaurar player.",
                     "wizard.complete": "Sair para player.",
                     "wizard.cancel": "Restaurar player.",
                     "wizard.error": "Voltar para escolha anterior.",
                 }[screen_id],
-                confusion_risk="medium" if screen_id in {"wizard.review", "wizard.error"} else "low",
+                confusion_risk="medium" if screen_id in {"wizard.review", "wizard.review_pending", "wizard.error"} else "low",
                 dependencies=["keyboard", "writer gated flow"] if screen_id in {"wizard.review", "wizard.saving"} else ["keyboard"],
                 dynamic_feedback_needed=screen_id.endswith("saving"),
                 error_state_needed=screen_id == "wizard.environment",
@@ -647,7 +728,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 footer=footer,
                 option_text=[],
                 status_feedback=screen_id.endswith("saving"),
-                back_applicable=screen_id in {"wizard.environment", "wizard.review", "wizard.error"},
+                back_applicable=screen_id in {"wizard.environment", "wizard.review", "wizard.review_pending", "wizard.error"},
                 error_recovery_available=is_error or screen_id == "wizard.environment",
             ),
             wizard.build_screen_svg(**svg_kwargs),

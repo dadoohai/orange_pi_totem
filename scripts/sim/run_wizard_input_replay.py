@@ -26,6 +26,7 @@ wizard: Any | None = None
 SCENARIOS = [
     "happy_path_synthetic",
     "back_navigation",
+    "step_menu_pending_review",
     "environment_invalid_uuid",
     "environment_edit_middle",
     "wifi_wrong_password_fake",
@@ -198,7 +199,7 @@ def orientation_screen(selected_index: int = 0, layout_rotation_deg: int = 0) ->
         active_step=0,
         title="Orientacao da tela",
         subtitle="Escolha como o totem esta instalado.",
-        footer="Setas escolhem | Enter confirma | Esc cancela",
+        footer="Enter visualiza | Setas escolhem | Tab etapas | Esc cancela",
         options=options,
         selected_index=selected_index,
         panel_title="Tela",
@@ -214,7 +215,7 @@ def connection_screen() -> str:
         active_step=1,
         title="Conexao",
         subtitle="Escolha a conexao.",
-        footer="Setas escolhem | Enter confirma | Esc cancela",
+        footer="Enter confirma | Setas escolhem | Tab etapas | Esc cancela",
         options=list(wizard.NETWORK_OPTIONS),
         selected_index=2,
         panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
@@ -233,11 +234,11 @@ def environment_screen(value: str, cursor: int | None = None, *, error: str = ""
         active_step=2,
         title="Ambiente",
         subtitle="Digite o ID do ambiente",
-        footer="Enter valida | Esc volta | Setas/Ctrl+U editam",
-        field_label="Environment ID",
+        footer="Enter valida | Tab etapas | Esc volta",
+        field_label="ID do ambiente",
         field_value_hint=hint,
         field_note=error or "Entrada local.",
-        panel_items=["UUID do ambiente.", "Corrija no meio.", "Enter valida."],
+        panel_items=["UUID do ambiente.", "Backspace corrige.", "Enter valida."],
         accent="#ef4444" if error else "#06b6d4",
         layout_rotation_deg=90,
     )
@@ -246,12 +247,57 @@ def environment_screen(value: str, cursor: int | None = None, *, error: str = ""
 def review_screen() -> str:
     return wizard.build_screen_svg(
         active_step=3,
-        title="Revisao",
+        title="Pronto para concluir",
         subtitle="Confira antes de concluir.",
-        footer="Enter prepara candidata | Esc volta",
-        panel_title="Resumo publico",
-        panel_items=["Conexao: Bancada", "Ambiente informado: sim", "Tela: Retrato para direita"],
+        footer="Enter prepara candidata | Tab etapas | Esc volta",
+        panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
+        extra_svg=wizard.summary_rows_svg(
+            [
+                ("Tela", "Retrato para direita (Confirmado)"),
+                ("Conexao", "Bancada"),
+                ("Ambiente", "Validado"),
+            ],
+            layout_rotation_deg=90,
+        ),
         layout_rotation_deg=90,
+    )
+
+
+def step_menu_screen(state: Any) -> str:
+    return wizard.build_screen_svg(
+        active_step=0,
+        title="Ir para etapa",
+        subtitle="Voce pode revisar sem salvar incompleto.",
+        footer="Enter abre | Setas escolhem | Esc volta",
+        options=[
+            wizard.Option(str(step), wizard.STEPS[step], wizard.step_status_label(state, step))
+            for step in wizard.NAVIGABLE_STEPS
+        ],
+        selected_index=0,
+        panel_title="Estado",
+        panel_items=["Revisao bloqueia pendencias.", "Nada salva sozinho.", "Volte quando quiser."],
+        layout_rotation_deg=0,
+    )
+
+
+def review_pending_screen(state: Any) -> str:
+    return wizard.build_screen_svg(
+        active_step=3,
+        title="Pendencias antes de concluir",
+        subtitle="Complete os itens pendentes antes de salvar.",
+        footer="Enter corrige | Tab etapas | Esc volta",
+        panel_title="Bloqueado",
+        panel_items=["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
+        extra_svg=wizard.summary_rows_svg(
+            [
+                ("Tela", f"{state.rotation['label']} ({wizard.step_status_label(state, 0)})"),
+                ("Conexao", wizard.network_review_note(state.network, state.network_status)),
+                ("Ambiente", wizard.environment_review_note(state.environment_id, state.environment_preflight)),
+            ],
+            layout_rotation_deg=int(state.rotation["rotation_deg"]),
+        ),
+        layout_rotation_deg=int(state.rotation["rotation_deg"]),
+        accent="#f59e0b",
     )
 
 
@@ -301,6 +347,18 @@ def replay_back_navigation(r: Replay) -> None:
     r.screen(scenario, "connection", "02-connection", connection_screen(), "enter", "continue")
     r.assert_true(scenario, "esc_returns_to_previous_screen", True)
     r.assert_true(scenario, "no_save_on_back", True)
+
+
+def replay_step_menu_pending_review(r: Replay) -> None:
+    scenario = "step_menu_pending_review"
+    state = wizard.initial_wizard_state(0, "")
+    r.screen(scenario, "orientation", "01-orientation", orientation_screen(), "tab", "open_step_menu")
+    r.screen(scenario, "step_menu", "00-step-menu", step_menu_screen(state), "down,down,down,enter", "jump_to_review")
+    r.screen(scenario, "review_pending", "05-review-pending", review_pending_screen(state), "enter", "blocked_first_pending")
+    r.assert_true(scenario, "partial_state_cannot_commit", not wizard.wizard_can_commit(state))
+    r.assert_true(scenario, "first_pending_is_connection", wizard.first_incomplete_step(state) == 1)
+    r.assert_true(scenario, "review_status_blocked", wizard.step_status_label(state, 3) == "Bloqueado")
+    r.assert_true(scenario, "candidate_not_generated_for_partial_state", not (r.out_dir / "config.candidate.json").exists())
 
 
 def replay_environment_invalid_uuid(r: Replay) -> None:
@@ -433,6 +491,7 @@ def replay_cancel_flow(r: Replay) -> None:
 SCENARIO_RUNNERS: dict[str, Callable[[Replay], None]] = {
     "happy_path_synthetic": replay_happy_path,
     "back_navigation": replay_back_navigation,
+    "step_menu_pending_review": replay_step_menu_pending_review,
     "environment_invalid_uuid": replay_environment_invalid_uuid,
     "environment_edit_middle": replay_environment_edit_middle,
     "wifi_wrong_password_fake": replay_wifi_wrong_password,

@@ -85,6 +85,8 @@ BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
 STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
 PORTRAIT_STEP_LABELS = ("Tela", "Conexao", "Amb.", "Revisao", "Fim")
+STEP_MENU_KEYS = {"tab"}
+NAVIGABLE_STEPS = (0, 1, 2, 3)
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
     "bg": "#07111f",
@@ -158,6 +160,10 @@ class VisualWizardError(RuntimeError):
     """Public-safe visual wizard error."""
 
 
+class VisualWizardStepMenu(RuntimeError):
+    """Raised when the operator asks to jump through the step menu."""
+
+
 @dataclass(frozen=True)
 class Option:
     key: str
@@ -177,6 +183,17 @@ class EnvironmentPreflight:
     content_empty: bool
     requires_confirmation: bool
     confirmed_by_operator: bool
+
+
+@dataclass
+class WizardState:
+    rotation: dict[str, str | int]
+    rotation_status: str
+    network: dict[str, Any] | None = None
+    network_status: str = "pending"
+    environment_id: str = ""
+    environment_preflight: EnvironmentPreflight | None = None
+    environment_status: str = "pending"
 
 
 @dataclass(frozen=True)
@@ -685,7 +702,7 @@ def build_screen_svg(
         if field_label is not None:
             panel_y = 590
         elif extra_svg:
-            panel_y = 770
+            panel_y = 650 if active_step == 3 else 770
         else:
             panel_y = 760 if options and len(options) >= 5 else 650
         title_y = 188
@@ -1148,6 +1165,8 @@ def read_key(timeout_sec: float | None = None) -> str:
         return "enter"
     if data in {b"\x7f", b"\x08"}:
         return "backspace"
+    if data == b"\t":
+        return "tab"
     if data == b"\x02":
         return "back"
     if data == b"\x10":
@@ -1289,9 +1308,9 @@ def choose_option(
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
     while True:
-        footer = "Enter confirma | Setas escolhem | Esc cancela"
+        footer = "Enter confirma | Setas escolhem | Tab etapas | Esc cancela"
         if allow_back:
-            footer = "Enter confirma | Setas escolhem | Esc volta"
+            footer = "Enter confirma | Setas escolhem | Tab etapas | Esc volta"
         display.show(
             screen_id,
             build_screen_svg(
@@ -1306,6 +1325,8 @@ def choose_option(
             ),
         )
         key = read_key()
+        if key in STEP_MENU_KEYS:
+            raise VisualWizardStepMenu()
         if key in {"up", "left"}:
             selected = (selected - 1) % len(options)
         elif key in {"down", "right"}:
@@ -1340,7 +1361,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     active_step=0,
                     title="Orientacao da tela",
                     subtitle="Escolha como o totem esta instalado.",
-                    footer="Enter visualiza | Setas escolhem | Esc cancela",
+                    footer="Enter visualiza | Setas escolhem | Tab etapas | Esc cancela",
                     options=options,
                     selected_index=selected,
                     panel_title="Tela",
@@ -1359,6 +1380,8 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
             )
             needs_render = False
         key = read_key()
+        if key in STEP_MENU_KEYS:
+            raise VisualWizardStepMenu()
         if key in {"up", "left"}:
             selected = (selected - 1) % len(options)
             needs_render = True
@@ -1390,7 +1413,7 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                     active_step=0,
                     title="Usar esta orientacao?",
                     subtitle="Confira o sentido antes de continuar.",
-                    footer="Enter confirma | Setas escolhem | Esc volta",
+                    footer="Enter confirma | Setas escolhem | Tab etapas | Esc volta",
                     options=confirm_options,
                     selected_index=confirm_selected,
                     panel_title="Confirmar",
@@ -1405,6 +1428,8 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                 ),
             )
             confirm_key = read_key()
+            if confirm_key in STEP_MENU_KEYS:
+                raise VisualWizardStepMenu()
             if confirm_key in {"up", "left", "down", "right"}:
                 confirm_selected = 1 - confirm_selected
                 continue
@@ -1579,6 +1604,8 @@ def read_text_field(
                 key = read_key(timeout_sec=TEXT_INPUT_MIN_RENDER_INTERVAL_SEC - (now - last_render_at))
                 if key != "timeout":
                     for drained_key in drain_key_repeats(key):
+                        if drained_key in STEP_MENU_KEYS:
+                            raise VisualWizardStepMenu()
                         if drained_key == "enter":
                             candidate = value.strip() if not hidden else value
                             if len(candidate) < min_length:
@@ -1664,6 +1691,8 @@ def read_text_field(
 
         key = read_key()
         for drained_key in drain_key_repeats(key):
+            if drained_key in STEP_MENU_KEYS:
+                raise VisualWizardStepMenu()
             if drained_key == "enter":
                 candidate = value.strip() if not hidden else value
                 if len(candidate) < min_length:
@@ -2007,6 +2036,11 @@ def resolve_display_selection(rotation_key: str) -> dict[str, str | int]:
     }
 
 
+def rotation_selection_from_degrees(rotation_deg: int) -> dict[str, str | int]:
+    option = DISPLAY_OPTIONS[selected_orientation_index_for_rotation(rotation_deg)]
+    return resolve_display_selection(str(option["key"]))
+
+
 def network_defaults(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "network_step": "bench_mock",
@@ -2032,6 +2066,83 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
     }
     payload.update(overrides)
     return payload
+
+
+def initial_wizard_state(initial_rotation_deg: int, initial_environment_id: str) -> WizardState:
+    return WizardState(
+        rotation=rotation_selection_from_degrees(initial_rotation_deg),
+        rotation_status="default",
+        environment_id=str(initial_environment_id or ""),
+        environment_status="pending",
+    )
+
+
+def network_option_index_for_step(network_step: str | None) -> int:
+    key_by_step = {
+        "existing_configured_wifi": "configured_wifi",
+        "wifi_persistent": "wifi_select",
+        "bench_mock": "bench_mock",
+    }
+    key = key_by_step.get(str(network_step or ""), "configured_wifi")
+    for index, option in enumerate(NETWORK_OPTIONS):
+        if option.key == key:
+            return index
+    return 0
+
+
+def network_review_note(network: dict[str, Any] | None, status: str = "pending") -> str:
+    if network is None:
+        return "Pendente"
+    base = {
+        "existing_configured_wifi": "Wi-Fi atual",
+        "wifi_persistent": "Wi-Fi dedicado",
+        "bench_mock": "Bancada",
+    }.get(str(network.get("network_step", "")), "Rede")
+    if status == "default":
+        return f"{base} (default)"
+    return base
+
+
+def environment_review_note(environment_id: str, preflight: EnvironmentPreflight | None) -> str:
+    if not str(environment_id or "").strip():
+        return "Pendente"
+    if preflight is None:
+        return "Precisa validar"
+    if preflight.content_empty:
+        return "Validado sem midia"
+    if preflight.requires_confirmation and preflight.confirmed_by_operator:
+        return "Confirmado"
+    return "Validado"
+
+
+def wizard_can_commit(state: WizardState) -> bool:
+    return bool(state.network is not None and state.environment_id.strip() and state.environment_preflight is not None)
+
+
+def first_incomplete_step(state: WizardState) -> int:
+    if state.network is None:
+        return 1
+    if not state.environment_id.strip() or state.environment_preflight is None:
+        return 2
+    return 3
+
+
+def step_status_label(state: WizardState, step: int) -> str:
+    if step == 0:
+        return "Confirmado" if state.rotation_status == "confirmed" else "Default"
+    if step == 1:
+        if state.network is None:
+            return "Pendente"
+        return "Confirmado"
+    if step == 2:
+        if not state.environment_id.strip():
+            return "Pendente"
+        if state.environment_preflight is None:
+            return "Precisa validar"
+        return "Validado"
+    if step == 3:
+        return "Pronto" if wizard_can_commit(state) else "Bloqueado"
+    return "Indisponivel"
 
 
 def dedicated_profile_present() -> bool | str:
@@ -3091,43 +3202,95 @@ def write_failed_artifact(out_dir: pathlib.Path, reason: str) -> None:
     atomic_write_private_json(out_dir / FAILED_FILENAME, status, out_dir)
 
 
+def choose_step_from_menu(display: VisualDisplay, state: WizardState, *, active_step: int) -> int:
+    options = [
+        Option(str(step), STEPS[step], step_status_label(state, step))
+        for step in NAVIGABLE_STEPS
+    ]
+    selected = max(0, min(len(options) - 1, int(active_step)))
+    layout_rotation_deg = int(state.rotation["rotation_deg"])
+    while True:
+        display.show(
+            "00-step-menu",
+            build_screen_svg(
+                active_step=selected,
+                title="Ir para etapa",
+                subtitle="Voce pode revisar sem salvar incompleto.",
+                footer="Enter abre | Setas escolhem | Esc volta",
+                options=options,
+                selected_index=selected,
+                panel_title="Estado",
+                panel_items=[
+                    "Revisao bloqueia pendencias.",
+                    "Nada salva sozinho.",
+                    "Volte quando quiser.",
+                ],
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        key = read_key()
+        if key in {"up", "left"}:
+            selected = (selected - 1) % len(options)
+        elif key in {"down", "right"}:
+            selected = (selected + 1) % len(options)
+        elif key == "enter":
+            return int(options[selected].key)
+        elif key in {"escape", "back"}:
+            return active_step
+        elif key in {"q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
 def review_and_confirm(
     display: VisualDisplay,
     environment_id: str,
     rotation: dict[str, str | int],
-    network: dict[str, Any],
+    network: dict[str, Any] | None,
+    *,
+    environment_preflight: EnvironmentPreflight | None = None,
+    rotation_status: str = "confirmed",
+    network_status: str = "confirmed",
 ) -> bool:
-    network_note = {
-        "existing_configured_wifi": "Wi-Fi atual",
-        "wifi_persistent": "Wi-Fi dedicado",
-        "bench_mock": "Bancada",
-    }.get(network["network_step"], "Rede")
+    ready = bool(network is not None and environment_id.strip() and environment_preflight is not None)
+    network_note = network_review_note(network, network_status)
+    environment_note = environment_review_note(environment_id, environment_preflight)
     if APPLY_CONTEXT == "real-write":
         if HOMOLOGATION_MODE:
             subtitle = "Salvar aplica a configuracao nesta placa."
         else:
             subtitle = "Salvar aplica as mudancas."
-        footer = "Enter salva | Esc volta"
+        footer = "Enter salva | Tab etapas | Esc volta"
     elif APPLY_CONTEXT == "dry-run":
         subtitle = "Concluir valida sem aplicar."
-        footer = "Enter valida | Esc volta"
+        footer = "Enter valida | Tab etapas | Esc volta"
     else:
         subtitle = "Concluir prepara a candidata."
-        footer = "Enter prepara candidata | Esc volta"
+        footer = "Enter prepara candidata | Tab etapas | Esc volta"
+    title = "Pronto para concluir"
+    panel_title = "Seguranca"
+    panel_items = ["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."]
+    if not ready:
+        title = "Pendencias antes de concluir"
+        subtitle = "Complete os itens pendentes antes de salvar."
+        footer = "Enter corrige | Tab etapas | Esc volta"
+        panel_title = "Bloqueado"
+        panel_items = ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."]
+    elif rotation_status == "default":
+        panel_items = ["Tela usa default atual.", "Dados privados ocultos.", "Esc volta."]
     display.show(
         "05-review",
         build_screen_svg(
             active_step=3,
-            title="Pronto para concluir",
+            title=title,
             subtitle=subtitle,
             footer=footer,
-            panel_title="Seguranca",
-            panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
+            panel_title=panel_title,
+            panel_items=panel_items,
             extra_svg=summary_rows_svg(
                 [
-                    ("Tela", str(rotation["label"])),
+                    ("Tela", f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})'),
                     ("Conexao", network_note),
-                    ("Ambiente", "Informado"),
+                    ("Ambiente", environment_note),
                 ],
                 layout_rotation_deg=int(rotation["rotation_deg"]),
             ),
@@ -3135,8 +3298,10 @@ def review_and_confirm(
         ),
     )
     key = read_key()
+    if key in STEP_MENU_KEYS:
+        raise VisualWizardStepMenu()
     if key == "enter":
-        return True
+        return ready
     if key in {"b", "B", "back", "escape"}:
         return False
     raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -3165,7 +3330,10 @@ def show_environment_validation_status(
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    return read_key()
+    key = read_key()
+    if key in STEP_MENU_KEYS:
+        raise VisualWizardStepMenu()
+    return key
 
 
 def run_environment_preflight(
@@ -3336,123 +3504,187 @@ def run_visual_wizard(
     private_context = load_private_settings_context(private_settings_context_path) if private_settings_context_path else {}
     initial_rotation_deg = initial_rotation_from_context(private_context)
     initial_environment_id = str(private_context.get("environment_id", ""))
-    initial_network_index = 0 if private_context.get("network_step") == "existing_configured_wifi" else 0
+    state = initial_wizard_state(initial_rotation_deg, initial_environment_id)
+    active_step = 0
     try:
         with RawKeyboard():
-            rotation = choose_orientation(display, initial_rotation_deg=initial_rotation_deg)
-            layout_rotation_deg = int(rotation["rotation_deg"])
             while True:
-                c1523_phase("wifi_step_entered", mode="selection")
-                selected_network = choose_option(
-                    display,
-                    screen_id="02-connection",
-                    active_step=1,
-                    title="Conexao",
-                    subtitle="Escolha a conexao.",
-                    options=list(NETWORK_OPTIONS),
-                    panel_items=[
-                        "Lista local.",
-                        "Senha oculta.",
-                        "Sem portal.",
-                    ],
-                    layout_rotation_deg=layout_rotation_deg,
-                    initial_selected_index=initial_network_index,
-                )
-                if selected_network is None:
-                    continue
+                layout_rotation_deg = int(state.rotation["rotation_deg"])
                 try:
-                    if selected_network.key == "configured_wifi":
-                        network = use_configured_wifi_network()
-                        c1523_phase("wifi_step_done", network_step="existing_configured_wifi")
-                    elif selected_network.key == "wifi_select":
-                        maybe_network = run_wifi_persistent(display, out_dir, layout_rotation_deg=layout_rotation_deg)
-                        if maybe_network is None:
-                            continue
-                        network = maybe_network
-                        c1523_phase(
-                            "wifi_step_done",
-                            network_step=network["network_step"],
-                            wifi_activation_result=network["wifi_activation_result"],
+                    if active_step == 0:
+                        state.rotation = choose_orientation(
+                            display,
+                            initial_rotation_deg=int(state.rotation["rotation_deg"]),
                         )
-                    else:
-                        network = network_defaults()
-                        c1523_phase("wifi_step_done", network_step=network["network_step"])
-                except VisualWizardError as exc:
-                    display.show(
-                        "02-connection-error",
-                        build_screen_svg(
-                            active_step=1,
-                            title="Conexao nao confirmada",
-                            subtitle=str(exc),
-                            footer="Enter volta | Esc",
-                            panel_title="Tente de novo",
-                            panel_items=[
-                                "Nada foi salvo.",
-                                "Escolha outro caminho.",
-                                "Pode cancelar.",
-                            ],
-                            accent="#ef4444",
-                            layout_rotation_deg=layout_rotation_deg,
-                        ),
-                    )
-                    key = read_key()
-                    if key == "enter":
+                        state.rotation_status = "confirmed"
+                        active_step = 1
                         continue
-                    raise VisualWizardAbort("setup visual cancelado pelo operador")
 
-                while True:
-                    c1523_phase("environment_input_entered", network_step=network["network_step"])
-                    environment_id = read_text_field(
-                        display,
-                        screen_id="03-environment",
-                        active_step=2,
-                        title="Ambiente",
-                        subtitle="Digite o ID do ambiente",
-                        label="ID do ambiente",
-                        hidden=False,
-                        min_length=36,
-                        max_length=36,
-                        validator=validate_environment_id,
-                        panel_items=[
-                            "UUID do ambiente.",
-                            "Backspace corrige.",
-                            "Enter valida.",
-                        ],
-                        show_plain_value=True,
-                        show_cursor=True,
-                        custom_footer="Enter valida | Esc volta",
-                        escape_returns_back=True,
-                        validation_error_message="ID invalido. Verifique e tente novamente.",
-                        layout_rotation_deg=layout_rotation_deg,
-                        initial_value=initial_environment_id,
-                    )
-                    if environment_id is None:
-                        break
-                    environment_preflight = run_environment_preflight(
-                        display,
-                        environment_id,
-                        layout_rotation_deg=layout_rotation_deg,
-                    )
-                    if environment_preflight is None:
+                    if active_step == 1:
+                        c1523_phase("wifi_step_entered", mode="selection")
+                        selected_network = choose_option(
+                            display,
+                            screen_id="02-connection",
+                            active_step=1,
+                            title="Conexao",
+                            subtitle="Escolha a conexao.",
+                            options=list(NETWORK_OPTIONS),
+                            panel_items=[
+                                "Lista local.",
+                                "Senha oculta.",
+                                "Sem portal.",
+                            ],
+                            layout_rotation_deg=layout_rotation_deg,
+                            initial_selected_index=network_option_index_for_step(
+                                state.network.get("network_step") if state.network else None
+                            ),
+                        )
+                        if selected_network is None:
+                            active_step = 0
+                            continue
+                        try:
+                            if selected_network.key == "configured_wifi":
+                                state.network = use_configured_wifi_network()
+                                c1523_phase("wifi_step_done", network_step="existing_configured_wifi")
+                            elif selected_network.key == "wifi_select":
+                                maybe_network = run_wifi_persistent(display, out_dir, layout_rotation_deg=layout_rotation_deg)
+                                if maybe_network is None:
+                                    continue
+                                state.network = maybe_network
+                                c1523_phase(
+                                    "wifi_step_done",
+                                    network_step=state.network["network_step"],
+                                    wifi_activation_result=state.network["wifi_activation_result"],
+                                )
+                            else:
+                                state.network = network_defaults()
+                                c1523_phase("wifi_step_done", network_step=state.network["network_step"])
+                            state.network_status = "confirmed"
+                            active_step = 2
+                            continue
+                        except VisualWizardError as exc:
+                            display.show(
+                                "02-connection-error",
+                                build_screen_svg(
+                                    active_step=1,
+                                    title="Conexao nao confirmada",
+                                    subtitle=str(exc),
+                                    footer="Enter volta | Tab etapas | Esc cancela",
+                                    panel_title="Tente de novo",
+                                    panel_items=[
+                                        "Nada foi salvo.",
+                                        "Escolha outro caminho.",
+                                        "Pode cancelar.",
+                                    ],
+                                    accent="#ef4444",
+                                    layout_rotation_deg=layout_rotation_deg,
+                                ),
+                            )
+                            key = read_key()
+                            if key in STEP_MENU_KEYS:
+                                raise VisualWizardStepMenu()
+                            if key == "enter":
+                                continue
+                            raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+                    if active_step == 2:
+                        c1523_phase(
+                            "environment_input_entered",
+                            network_step=state.network["network_step"] if state.network else "pending",
+                        )
+                        environment_id = read_text_field(
+                            display,
+                            screen_id="03-environment",
+                            active_step=2,
+                            title="Ambiente",
+                            subtitle="Digite o ID do ambiente",
+                            label="ID do ambiente",
+                            hidden=False,
+                            min_length=36,
+                            max_length=36,
+                            validator=validate_environment_id,
+                            panel_items=[
+                                "UUID do ambiente.",
+                                "Backspace corrige.",
+                                "Enter valida.",
+                            ],
+                            show_plain_value=True,
+                            show_cursor=True,
+                            custom_footer="Enter valida | Tab etapas | Esc volta",
+                            escape_returns_back=True,
+                            validation_error_message="ID invalido. Verifique e tente novamente.",
+                            layout_rotation_deg=layout_rotation_deg,
+                            initial_value=state.environment_id,
+                        )
+                        if environment_id is None:
+                            active_step = 1
+                            continue
+                        if environment_id != state.environment_id:
+                            state.environment_preflight = None
+                            state.environment_status = "pending"
+                        state.environment_id = environment_id
+                        environment_preflight = run_environment_preflight(
+                            display,
+                            environment_id,
+                            layout_rotation_deg=layout_rotation_deg,
+                        )
+                        if environment_preflight is None:
+                            continue
+                        state.environment_preflight = environment_preflight
+                        state.environment_status = "confirmed"
+                        active_step = 3
                         continue
-                    if not review_and_confirm(display, environment_id, rotation, network):
+
+                    if active_step == 3:
+                        confirmed = review_and_confirm(
+                            display,
+                            state.environment_id,
+                            state.rotation,
+                            state.network,
+                            environment_preflight=state.environment_preflight,
+                            rotation_status=state.rotation_status,
+                            network_status=state.network_status,
+                        )
+                        if confirmed and wizard_can_commit(state):
+                            status = write_visual_artifacts(
+                                out_dir,
+                                state.environment_id,
+                                state.rotation,
+                                state.network,
+                                public_orientation_path=public_orientation_path,
+                                environment_preflight=state.environment_preflight,
+                            )
+                            show_complete(display, status)
+                            return status
+                        active_step = first_incomplete_step(state) if not wizard_can_commit(state) else 2
                         continue
-                    status = write_visual_artifacts(
-                        out_dir,
-                        environment_id,
-                        rotation,
-                        network,
-                        public_orientation_path=public_orientation_path,
-                        environment_preflight=environment_preflight,
-                    )
-                    show_complete(display, status)
-                    return status
+
+                    active_step = 0
+                except VisualWizardStepMenu:
+                    active_step = choose_step_from_menu(display, state, active_step=active_step)
     finally:
         display.stop()
 
 
 def generate_preview_screens(out_dir: pathlib.Path) -> None:
     display = VisualDisplay(out_dir, enabled=False)
+    pending_state = initial_wizard_state(0, "")
+    display.show(
+        "00-step-menu-pending",
+        build_screen_svg(
+            active_step=0,
+            title="Ir para etapa",
+            subtitle="Voce pode revisar sem salvar incompleto.",
+            footer="Enter abre | Setas escolhem | Esc volta",
+            options=[
+                Option(str(step), STEPS[step], step_status_label(pending_state, step))
+                for step in NAVIGABLE_STEPS
+            ],
+            selected_index=0,
+            panel_title="Estado",
+            panel_items=["Revisao bloqueia pendencias.", "Nada salva sozinho.", "Volte quando quiser."],
+        ),
+    )
     display.show(
         "01-orientation",
         build_screen_svg(
@@ -3465,6 +3697,25 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
             extra_svg=orientation_preview("landscape"),
             suppress_landscape_info_panel=True,
+        ),
+    )
+    display.show(
+        "05-review-pending",
+        build_screen_svg(
+            active_step=3,
+            title="Pendencias antes de concluir",
+            subtitle="Complete os itens pendentes antes de salvar.",
+            footer="Enter corrige | Tab etapas | Esc volta",
+            panel_title="Bloqueado",
+            panel_items=["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
+            extra_svg=summary_rows_svg(
+                [
+                    ("Tela", "Paisagem (Default)"),
+                    ("Conexao", "Pendente"),
+                    ("Ambiente", "Pendente"),
+                ],
+                layout_rotation_deg=0,
+            ),
         ),
     )
     display.show(
@@ -3921,6 +4172,26 @@ def run_self_test() -> None:
             text_field_display_hint("abcd", hidden=False, show_plain_value=True, cursor_index=2) == "ab|cd",
             "cursor should render inside visible environment field",
         )
+        assert_true("tab" in STEP_MENU_KEYS, "Tab should open the step menu")
+        navigation_state = initial_wizard_state(270, "")
+        assert_true(navigation_state.rotation_status == "default", "initial orientation should be a default")
+        assert_true(not wizard_can_commit(navigation_state), "empty navigation state should not commit")
+        assert_true(first_incomplete_step(navigation_state) == 1, "network should be the first required pending step")
+        assert_true(step_status_label(navigation_state, 3) == "Bloqueado", "review should block partial state")
+        navigation_state.network = network_defaults(network_step="bench_mock")
+        navigation_state.network_status = "confirmed"
+        assert_true(first_incomplete_step(navigation_state) == 2, "environment should be pending after network")
+        navigation_state.environment_id = primary_environment_id
+        assert_true(
+            environment_review_note(navigation_state.environment_id, navigation_state.environment_preflight)
+            == "Precisa validar",
+            "environment with UUID but no preflight should stay pending",
+        )
+        navigation_state.environment_preflight = preflight_with_confirmation(
+            environment_preflight_unavailable(requires_confirmation=True)
+        )
+        assert_true(wizard_can_commit(navigation_state), "validated navigation state should commit")
+        assert_true(first_incomplete_step(navigation_state) == 3, "ready state should land on review")
         assert_true(MAX_PANEL_ITEMS == 3, "operator panels should stay limited to three items")
         panel_limit_svg = info_panel(["one", "two", "three", "four"])
         assert_true("four" not in panel_limit_svg, "operator panel should not render more than three items")

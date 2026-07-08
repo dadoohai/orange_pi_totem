@@ -1,0 +1,23 @@
+[
+  {
+    "key": "tab",
+    "result": "open_step_menu",
+    "scenario": "step_menu_pending_review",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "down,down,down,enter",
+    "result": "jump_to_review",
+    "scenario": "step_menu_pending_review",
+    "screen_id": "00-step-menu",
+    "step": "step_menu"
+  },
+  {
+    "key": "enter",
+    "result": "blocked_first_pending",
+    "scenario": "step_menu_pending_review",
+    "screen_id": "05-review-pending",
+    "step": "review_pending"
+  }
+]

@@ -53,6 +53,19 @@ rodada posterior, sem bloquear o pacote C20.1.
 
 ## Proximo Marco
 
-Desenhar a navegacao livre por etapas como vertical propria. O menu superior pode
-virar navegavel, mas precisa antes de estado centralizado para nao salvar
-configuracao incompleta por acidente.
+## C20.2 Fechado Para Pacote
+
+- `Tab` abre o menu de etapas do wizard.
+- O operador pode ir para Tela, Conexao, Ambiente ou Revisao sem completar a
+  etapa anterior.
+- A Revisao mostra `Default`, `Pendente`, `Precisa validar`, `Validado` ou
+  `Bloqueado`.
+- Nenhuma candidata e gerada quando falta rede ou ambiente validado.
+- Testes offline cobrem self-test, galeria visual e replay de entrada
+  `step_menu_pending_review`.
+
+## Proximo Marco
+
+Empacotar C20.2 por `totem-core`, aplicar na placa, capturar framebuffer real do
+menu de etapas/revisao bloqueada e manter tudo no pacote acumulado da proxima
+imagem de referencia.
