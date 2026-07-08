@@ -383,6 +383,13 @@
       "mode": "0755"
     },
     {
+      "source": "scripts/board/totem_qr_pairing_client.py",
+      "target": "/opt/totem/bin/totem_qr_pairing_client.py",
+      "owner": "root",
+      "group": "root",
+      "mode": "0755"
+    },
+    {
       "source": "scripts/board/totem_open_settings_session.sh",
       "target": "/opt/totem/bin/totem_open_settings_session.sh",
       "owner": "root",
@@ -959,6 +966,7 @@
       "totem_status_aggregate.py",
       "totem_status_render_preview.py",
       "totem_config_contract_validate.py",
+      "totem_qr_pairing_client.py",
       "totem_open_settings_session.sh",
       "totem_visual_tty_guard.sh",
       "totem_firstboot_gate.sh",

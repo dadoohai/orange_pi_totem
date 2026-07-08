@@ -35,6 +35,7 @@ CORE_FILES=(
   totem_status_aggregate.py
   totem_status_render_preview.py
   totem_config_contract_validate.py
+  totem_qr_pairing_client.py
   totem_open_settings_session.sh
   totem_visual_tty_guard.sh
   totem_firstboot_gate.sh
@@ -89,6 +90,7 @@ CORE_FILES=(
   totem_status_aggregate.py
   totem_status_render_preview.py
   totem_config_contract_validate.py
+  totem_qr_pairing_client.py
   totem_open_settings_session.sh
   totem_visual_tty_guard.sh
   totem_firstboot_gate.sh
@@ -174,6 +176,7 @@ TOTEM_CORE_DISABLE_DATA=1 /usr/bin/python3 /opt/totem/bin/totem_setup_visual_wiz
 TOTEM_CORE_DISABLE_DATA=1 /usr/bin/python3 /opt/totem/bin/totem_wifi_nm_adapter.py --self-test >/dev/null
 TOTEM_CORE_DISABLE_DATA=1 /usr/bin/python3 /opt/totem/bin/totem_visual_splash.py --self-test >/dev/null
 TOTEM_CORE_DISABLE_DATA=1 /usr/bin/python3 /opt/totem/bin/totem_config_contract_validate.py --self-test >/dev/null
+TOTEM_CORE_DISABLE_DATA=1 /usr/bin/python3 /opt/totem/bin/totem_qr_pairing_client.py --self-test >/dev/null
 TOTEM_CORE_DISABLE_DATA=1 /opt/totem/bin/totem_open_settings_session.sh --help >/dev/null
 
 /opt/totem/bin/totem-updatectl self-test --component totem-core > "$EVIDENCE_DIR/totem-core-self-test.json"

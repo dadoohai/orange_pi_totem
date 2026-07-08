@@ -151,11 +151,84 @@ existente versus nova estacao.
 Essas decisoes nao bloqueiam C21.0 com mock e contrato; bloqueiam somente a
 integracao real.
 
+## Contrato Backend V0
+
+Prefixo proposto: `/totem-pairing`.
+
+- `POST /totem-pairing/sessions`
+  - Chamado pela placa sem Firebase.
+  - Cria sessao curta com `session_id`, `code`, `authorize_url`,
+    `expires_at`, `poll_interval_seconds` e `poll_token`.
+  - `poll_token` nao entra no QR, nao vai ao browser e deve ser hashado no
+    backend.
+
+- `GET /totem-pairing/sessions/lookup?code=...`
+  - Chamado pelo front com Firebase Bearer.
+  - Nao deve aceitar `x-user-id` como autenticacao efetiva.
+  - Mostra ao usuario somente estado publico da sessao/dispositivo.
+
+- `POST /totem-pairing/sessions/:session_id/authorize`
+  - Chamado pelo front com Firebase Bearer.
+  - Valida permissao do usuario no ambiente escolhido.
+  - Autoriza ambiente e opcionalmente estacao.
+  - Nunca retorna `api_key` ao browser.
+
+- `GET /totem-pairing/sessions/:session_id`
+  - Chamado pelo totem com `x-pairing-token`.
+  - Enquanto pendente, retorna `pending`.
+  - Quando autorizado, retorna credencial de maquina:
+    `api_url`, `api_key`, `environment_id`, `station_id` opcional,
+    `token_type=x-api-key`, `api_token_id` e validade.
+
+Estados backend: `pending`, `authorized`, `expired`, `denied`,
+`already_used`.
+
+Estados cliente/totem adicionais: `backend_unavailable` e
+`empty_environment_list`.
+
+Riscos bloqueantes do backend real:
+
+- decidir se token de maquina impersona operador ou usa principal de
+  dispositivo;
+- garantir enforcement global de `allowed_root_ids` para `x-api-key`;
+- rejeitar fallback por `x-user-id` nas rotas de pareamento;
+- persistir sessoes/dispositivos com hashes de codigo e `poll_token`;
+- rate limit especifico para codigo curto;
+- retorno ao `authorize_url` apos login no `homeHabitat`.
+
 ## Proximo Passo
 
 Executar C21.0: escrever o contrato tecnico minimo e os mocks de teste. Em
 seguida, implementar o caminho `candidate-only` no wizard antes de qualquer
 escrita real de configuracao ou mudanca de producao.
+
+## C21.0 - Resultado Inicial
+
+Implementado o primeiro slice executavel em `totem-core`:
+
+- helper `scripts/board/totem_qr_pairing_client.py`;
+- contrato mock com estados `pending`, `authorized`, `expired`, `denied`,
+  `backend_unavailable`, `empty_environment_list` e `already_used`;
+- artefatos publicos:
+  `pairing-session.public.json`, `pairing-result.public.json` e
+  `pairing-card.svg`;
+- credencial de maquina somente em `private-values.json` com modo `0600`;
+- self-test cobrindo autorizacao, estados nao-autorizados, path seguro em
+  `/tmp` e ausencia de vazamento de segredo nos artefatos publicos;
+- helper incluido no build `totem-core`, no health check do updater e no gate
+  OTA.
+
+Non-claims desta fatia:
+
+- ainda nao e backend real;
+- ainda nao e login real do usuario;
+- ainda nao e QR escaneavel final;
+- ainda nao escreve configuracao real;
+- ainda nao altera placa ou producao.
+
+Proximo slice robusto: integrar esse helper no wizard como fluxo
+`Entrar com codigo/QR`, em modo `candidate-only`, preservando o campo manual de
+ambiente como fallback.
 
 ## Auditoria Da Abertura
 

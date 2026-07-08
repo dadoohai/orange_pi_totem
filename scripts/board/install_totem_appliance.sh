@@ -541,6 +541,7 @@ def ensure_totem_core_image_embed():
             "python3 bin/totem_wifi_nm_adapter.py --self-test",
             "python3 bin/totem_visual_splash.py --self-test",
             "python3 bin/totem_config_contract_validate.py --self-test",
+            "python3 bin/totem_qr_pairing_client.py --self-test",
             "bash -n bin/totem_open_settings_session.sh",
             "bash -n bin/totem_visual_tty_guard.sh",
             "bash -n bin/totem_firstboot_gate.sh",
