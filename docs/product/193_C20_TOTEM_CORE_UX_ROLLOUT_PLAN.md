@@ -195,6 +195,14 @@ rodada posterior, sem bloquear o pacote C20.1.
   ao fallback `Hora nao ajustada`.
 - Escopo: apenas `totem-core`; sem alterar hora do sistema, timezone, NTP, RTC,
   player-runtime ou midias.
+- Pacote aplicado na placa:
+  `c20.8-clock-all-steps-20260708T045317Z-661c582`.
+- Current da placa:
+  `releases/c20.8-clock-all-steps-20260708T045317Z-661c582`.
+- Rollback/previous:
+  `releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00`.
+- Evidencia de placa:
+  `docs/evidence/c20-totem-core-ota/20260708T045500Z-c20-8-clock-all-steps-board-apply/`.
 
 ## Proximo Marco
 

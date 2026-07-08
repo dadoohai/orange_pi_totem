@@ -317,12 +317,16 @@ Atualizacao C20.8:
 
 Evidencia de implementacao/aplicacao:
 
-- pacote: `c20.7-clock-metadata-20260708T042733Z-b9d8a00`;
+- pacote: `c20.8-clock-all-steps-20260708T045317Z-661c582`;
 - gate OTA verde: 66 checks;
-- current da placa: `releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00`;
-- captura real: `docs/evidence/c20-totem-core-ota/20260708T043500Z-c20-7-clock-board-apply/captures/clock-preview.png`;
+- current da placa: `releases/c20.8-clock-all-steps-20260708T045317Z-661c582`;
+- rollback/previous: `releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00`;
+- galeria visual gerada na placa:
+  `docs/evidence/c20-totem-core-ota/20260708T045500Z-c20-8-clock-all-steps-board-apply/direct-preview-svgs/`;
+- PNGs renderizados para inspeccao:
+  `docs/evidence/c20-totem-core-ota/20260708T045500Z-c20-8-clock-all-steps-board-apply/rendered/`;
 - diretorio de evidencia:
-  `docs/evidence/c20-totem-core-ota/20260708T043500Z-c20-7-clock-board-apply/`.
+  `docs/evidence/c20-totem-core-ota/20260708T045500Z-c20-8-clock-all-steps-board-apply/`.
 
 Aceite futuro:
 
