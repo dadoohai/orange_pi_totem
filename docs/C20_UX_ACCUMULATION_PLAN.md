@@ -267,7 +267,7 @@ Aceite:
 
 ### V9 - Data/Hora Discreta No Wizard
 
-Status: em planejamento em 2026-07-08.
+Status: design aprovado em 2026-07-08; implementacao ainda pendente.
 
 Objetivo do usuario: permitir que operador/suporte vejam data/hora durante a
 configuracao local sem poluir a tela nem criar uma nova decisao desnecessaria.
@@ -276,6 +276,12 @@ Direcao consolidada:
 
 - primeira rodada read-only e visual;
 - exibir data/hora como metadado passivo no cabecalho comum;
+- em paisagem, reutilizar o slot de nota do cabecalho;
+- em retrato, colocar data/hora na linha superior do cabecalho, a direita do
+  titulo;
+- na etapa 0, preservar a nota de layout;
+- nas etapas 1-4, exibir `DD/MM/YYYY HH:MM`;
+- se o relogio for implausivel, exibir `Hora nao ajustada`;
 - nao usar rodape nem painel lateral para informacao passiva;
 - nao criar botao de ajustes nesta etapa;
 - nao configurar hora, timezone, NTP, RTC ou servicos do sistema via wizard.
@@ -283,8 +289,22 @@ Direcao consolidada:
 Risco principal:
 
 - se o relogio do sistema estiver errado, a UI pode dar falsa confianca. A
-  mitigacao minima e nao mostrar segundos, nao prometer sincronismo e, se
-  necessario, ocultar/rotular quando a hora nao estiver confiavel.
+  mitigacao minima e nao mostrar segundos, nao prometer sincronismo e trocar
+  data implausivel por `Hora nao ajustada`.
+
+Auditoria/convergencia:
+
+- mockup inicial foi insuficiente porque nao tratava a colisao com `Layout
+  paisagem` na etapa Tela;
+- Sonnet trouxe esse achado e a regra final incorporou a exclusao por etapa;
+- a R2 foi aprovada parcialmente, mas apontou que o retrato deixava a data/hora
+  solta entre os passos e o titulo;
+- a R3 moveu a data/hora de retrato para a linha superior do cabecalho e foi
+  aprovada por tres auditores xhigh sem blockers.
+
+Evidencia visual:
+
+- `docs/evidence/c20-visual-qa/20260708T-c20-7-clock-pdca-design/round3/`.
 
 Aceite futuro:
 

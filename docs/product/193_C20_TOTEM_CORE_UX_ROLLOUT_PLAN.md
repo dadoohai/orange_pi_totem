@@ -144,14 +144,21 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T032600Z-c20-6-top-step-preview-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
-## C20.7 Em Planejamento - Data/Hora No Wizard
+## C20.7 Design Aprovado - Data/Hora No Wizard
 
 - Objetivo: exibir data/hora de forma discreta para operador/suporte, sem
   transformar o wizard em painel tecnico.
-- Decisao de design recomendada: texto passivo no cabecalho comum do wizard,
-  sem foco, sem botao novo e sem rodape.
-- Formato inicial recomendado: `DD/MM/YYYY HH:MM`, sem segundos e sem relogio
-  vivo. O valor atualiza quando a tela e renderizada, nao a cada segundo.
+- Decisao de design aprovada: metadado passivo no cabecalho, sem foco, sem
+  botao novo, sem rodape e sem item no painel lateral.
+- Regra visual aprovada:
+  - em paisagem, reutilizar o slot de nota do cabecalho;
+  - em retrato, prender a data/hora na linha superior do cabecalho, a direita
+    de `Configuracao do Totem`;
+  - na etapa 0, preservar `Layout paisagem/retrato` no lugar da data/hora;
+  - nas etapas 1-4, exibir `DD/MM/YYYY HH:MM`;
+  - se o relogio for implausivel, exibir `Hora nao ajustada`.
+- Sem segundos e sem relogio vivo. O valor atualiza quando a tela e
+  renderizada, nao a cada segundo.
 - Escopo permitido nesta primeira rodada:
   - renderizar data/hora local como metadado visual;
   - manter tudo dentro de `totem_setup_visual_wizard.py`;
@@ -162,11 +169,16 @@ rodada posterior, sem bloquear o pacote C20.1.
   - mexer em NTP/chrony/timesyncd;
   - escrever `/etc/localtime`, `hwclock`, systemd ou qualquer politica de base.
 - Risco central: hora errada em placa sem NTP/RTC pode confundir. Se isso for
-  relevante no teste visual, a primeira implementacao deve ocultar ou rotular a
-  hora como nao confirmada, em vez de permitir ajuste manual.
-- Auditorias desta abertura convergiram em: cabecalho discreto/read-only,
-  configuracao real de hora como vertical posterior de sistema/imagem, nao como
-  ajuste leve do wizard.
+  relevante no teste visual, a primeira implementacao deve mostrar `Hora nao
+  ajustada` quando a data for implausivel, sem permitir ajuste manual.
+- Auditorias desta abertura: Sonnet apontou colisao com `Layout paisagem` no
+  mockup inicial; a regra final incorporou isso. Tres auditores xhigh aprovaram
+  a R3 sem blockers.
+- Evidencia visual aprovada:
+  `docs/evidence/c20-visual-qa/20260708T-c20-7-clock-pdca-design/round3/`.
+- Non-claims: nao declara horario correto, sincronizado, NTP ativo, RTC
+  ajustado ou timezone configurado; o horario nao e criterio de sucesso do
+  wizard.
 
 ## Proximo Marco
 
