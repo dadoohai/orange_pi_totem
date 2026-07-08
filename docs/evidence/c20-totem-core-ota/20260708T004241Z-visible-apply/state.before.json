@@ -1,0 +1,35 @@
+{
+  "component": "totem-core",
+  "current": {
+    "applied_at_utc": "2026-07-05T23:42:56Z",
+    "channel": "stable",
+    "manifest_created_at_utc": "2026-07-05T18:41:09Z",
+    "path": "/data/core/totem/releases/c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+    "payload_sha256": "613d9d6d1099636d7ca956c72e3927d502f1281068f8b0830b2d5f3ba2af0355",
+    "source": "github:dadoohai/orange_pi_totem:totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+    "source_branch": "foundation-v0.1",
+    "source_commit": "ccaf5a11775d122dd08512c9f5cf1e3027e5a29b",
+    "source_repo": "dadoohai/orange_pi_totem",
+    "version": "c18.ota-core-prod-20260705T184013Z-ccaf5a1"
+  },
+  "last_operation": {
+    "finished_at_utc": "2026-07-05T23:42:58Z",
+    "source": "github:dadoohai/orange_pi_totem:totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+    "started_at_utc": "2026-07-05T23:42:53Z",
+    "status": "success",
+    "type": "apply",
+    "version": "c18.ota-core-prod-20260705T184013Z-ccaf5a1"
+  },
+  "previous": {
+    "manifest_created_at_utc": "2026-05-14T21:12:47Z",
+    "path": "releases/c17.6-environment-input-20260514T211247Z",
+    "payload_sha256": "e6b643429709ba9f747d86bb113abc35ab9645da23216eb81455dbc2f5a9acb9",
+    "source": "image_embed",
+    "source_branch": "foundation-v0.1",
+    "source_commit": "73831d310895b40435279dfa4f4ba05332346455",
+    "source_repo": "dadoohai/orange_pi_totem",
+    "version": "c17.6-environment-input-20260514T211247Z"
+  },
+  "schema": "dadooh.totem.update.state.v1",
+  "updated_at": "2026-07-05T23:09:53Z"
+}

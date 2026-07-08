@@ -1,0 +1,6 @@
+2026-07-08T00:43:50Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-08T00:43:50Z INFO apply_start source=local:dadooh-totem-core-c20.visual-settings-20260708T003000Z-4e3a13d.manifest.json manifest=/tmp/c20.visual-settings-20260708T003000Z-4e3a13d/dadooh-totem-core-c20.visual-settings-20260708T003000Z-4e3a13d.manifest.json
+2026-07-08T00:43:50Z INFO local_payload_staged bytes=132115 sha256=db87544bb98de03055490bae53703460dde345d75cb5d4b9988d7c1c10c945a0
+2026-07-08T00:43:53Z INFO totem_core_health_check_starting
+2026-07-08T00:43:56Z INFO apply_success version=c20.visual-settings-20260708T003000Z-4e3a13d
+2026-07-08T00:43:56Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c20.visual-settings-20260708T003000Z-4e3a13d

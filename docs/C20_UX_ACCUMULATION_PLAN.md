@@ -299,6 +299,36 @@ Uso esperado:
 - quando uma rodada depender de comportamento real, complementar com captura
   framebuffer/HDMI da placa.
 
+## OTA Local Para Inspecao Na Placa
+
+Em 2026-07-08 foi gerado e aplicado localmente um pacote `totem-core` C20 para
+inspecao visual real na placa.
+
+Pacote:
+`c20.visual-settings-20260708T003000Z-4e3a13d`.
+
+Evidencias:
+
+- `releases/core-updates/c20.visual-settings-20260708T003000Z-4e3a13d/`;
+- `docs/evidence/c20-totem-core-ota/20260708T004241Z-visible-apply/`.
+
+Claim permitido:
+
+- a placa recebeu C20 via apply local governado de `totem-core` e abriu o wizard
+  atualizado para inspeção humana.
+
+Pendencia macro:
+
+- decidir apos a inspeção se C20 fica aplicado ou se a placa volta para C18;
+- gerar pacote/update consolidado;
+- incluir o conjunto C20 na proxima imagem de referencia.
+
+Non-claims:
+
+- C20 nao foi publicado como GitHub Release;
+- C20 nao foi promovido para `stable`;
+- C20 ainda nao entrou em nova imagem de referencia.
+
 ## Auditorias
 
 Rodadas C20 devem usar auditorias paralelas quando agregarem valor:

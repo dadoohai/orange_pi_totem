@@ -418,6 +418,17 @@ Proximo marco recomendado: continuar V3/V8 ou fechar um pacote consolidado de
 `totem-core` quando o conjunto de UX estiver suficiente para uma imagem de
 referencia.
 
+Rodada de inspeção em placa em 2026-07-08:
+
+- pacote `totem-core` de homologacao
+  `c20.visual-settings-20260708T003000Z-4e3a13d` gerado e aplicado localmente;
+- a placa ficou com C20 como `current` e wizard aberto para inspeção humana;
+- evidencia em
+  `docs/evidence/c20-totem-core-ota/20260708T004241Z-visible-apply/`;
+- pendente: rollback/restauracao apos inspeção ou decisão explicita de manter
+  C20 aplicado; depois consolidar no pacote/update final e na proxima imagem de
+  referencia.
+
 ## Imagem para novas placas
 
 Com os marcos `totem-core` e `player-runtime` remotos fechados em laboratorio,
