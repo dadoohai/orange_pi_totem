@@ -1,0 +1,9 @@
+
+uinput_down=ok
+0001-01-orientation.svg 14356
+0002-01-orientation.svg 14359
+0003-02-connection.svg 6609
+0004-02-connection.svg 6605
+-rw-r--r-- 1 root root 85K Jul  8 00:29 /tmp/c20-6-captures/04-after-down-enters-content.jpg
+
+__EXPECT_EXIT_CODE__=0

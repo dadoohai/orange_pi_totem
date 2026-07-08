@@ -1,0 +1,14 @@
+
+wizard_seen_at=5s
+===services===
+activating
+inactive
+===processes===
+ 513024 Ss   bash            bash /data/core/totem/current/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+ 513180 Ss   openvt          openvt -c 2 -s -f -w -- env TERM=linux PYTHONPATH=/data/core/totem/current/bin TOTEM_VISUAL_WIZARD_APPLY_CONTEXT=real-write TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE=true /usr/bin/python3 /data/core/totem/current/bin/totem_setup_visual_wizard.py --out-dir /tmp/dadooh-c10-6-2-visual-wizard --private-settings-context-path /data/state/totem-settings/last-settings.json
+ 513183 Rs+  python3         /usr/bin/python3 /data/core/totem/current/bin/totem_setup_visual_wizard.py --out-dir /tmp/dadooh-c10-6-2-visual-wizard --private-settings-context-path /data/state/totem-settings/last-settings.json
+tiocsti_injection=ok
+-rw-r--r-- 1 root root 88K Jul  8 00:27 /tmp/c20-6-captures/01-initial-orientation.jpg
+-rw-r--r-- 1 root root 88K Jul  8 00:27 /tmp/c20-6-captures/02-after-up-right.jpg
+
+__EXPECT_EXIT_CODE__=0

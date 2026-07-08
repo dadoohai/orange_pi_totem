@@ -1,0 +1,68 @@
+
+2026-07-08T00:26:41-03:00
+===services_after_close===
+failed
+active
+===status_after_close===
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T03:07:31Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T02:59:20Z",
+      "path": "/data/core/totem/releases/c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b",
+      "payload_sha256": "fcef52866f6d723f416e6525502b355cab1cc5ab4739e14e60385209a471edad",
+      "source": "local:dadooh-totem-core-c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "6ef0b0b747a69819e939676b33ffd300f97417ee",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T03:07:34Z",
+      "source": "local:dadooh-totem-core-c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b.manifest.json",
+      "started_at_utc": "2026-07-08T03:07:29Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T02:55:30Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T02:52:31Z",
+      "path": "/data/core/totem/releases/c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d",
+      "payload_sha256": "12140293c9afb6728aba898ea8b7ef61d550e2795a1a2d380373ff4d2fc382db",
+      "source": "local:dadooh-totem-core-c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "d54341d51470ac9e78a6a31ba54cecae4448655d",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+
+__EXPECT_EXIT_CODE__=0

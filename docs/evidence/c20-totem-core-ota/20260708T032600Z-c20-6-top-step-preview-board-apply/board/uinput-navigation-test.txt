@@ -1,0 +1,8 @@
+
+uinput_injection=ok
+0001-01-orientation.svg 14356
+0002-01-orientation.svg 14359
+0003-02-connection.svg 6609
+-rw-r--r-- 1 root root 84K Jul  8 00:28 /tmp/c20-6-captures/03-after-uinput-up-right.jpg
+
+__EXPECT_EXIT_CODE__=0
