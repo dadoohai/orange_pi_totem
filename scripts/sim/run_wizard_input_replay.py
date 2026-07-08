@@ -26,7 +26,7 @@ wizard: Any | None = None
 SCENARIOS = [
     "happy_path_synthetic",
     "back_navigation",
-    "step_menu_pending_review",
+    "step_focus_pending_review",
     "environment_invalid_uuid",
     "environment_edit_middle",
     "wifi_wrong_password_fake",
@@ -199,7 +199,7 @@ def orientation_screen(selected_index: int = 0, layout_rotation_deg: int = 0) ->
         active_step=0,
         title="Orientacao da tela",
         subtitle="Escolha como o totem esta instalado.",
-        footer="Enter visualiza | Setas escolhem | Tab etapas | Esc cancela",
+        footer="Enter visualiza | Cima menu | Baixo escolhe | Esc cancela",
         options=options,
         selected_index=selected_index,
         panel_title="Tela",
@@ -215,7 +215,7 @@ def connection_screen() -> str:
         active_step=1,
         title="Conexao",
         subtitle="Escolha a conexao.",
-        footer="Enter confirma | Setas escolhem | Tab etapas | Esc cancela",
+        footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
         options=list(wizard.NETWORK_OPTIONS),
         selected_index=2,
         panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
@@ -234,7 +234,7 @@ def environment_screen(value: str, cursor: int | None = None, *, error: str = ""
         active_step=2,
         title="Ambiente",
         subtitle="Digite o ID do ambiente",
-        footer="Enter valida | Tab etapas | Esc volta",
+        footer="Enter valida | Esc volta",
         field_label="ID do ambiente",
         field_value_hint=hint,
         field_note=error or "Entrada local.",
@@ -249,7 +249,7 @@ def review_screen() -> str:
         active_step=3,
         title="Pronto para concluir",
         subtitle="Confira antes de concluir.",
-        footer="Enter prepara candidata | Tab etapas | Esc volta",
+        footer="Enter prepara candidata | Cima menu | Esc volta",
         panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
         extra_svg=wizard.summary_rows_svg(
             [
@@ -263,20 +263,22 @@ def review_screen() -> str:
     )
 
 
-def step_menu_screen(state: Any) -> str:
+def orientation_step_focus_screen(focused_step: int = 3) -> str:
+    options = [wizard.Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in wizard.DISPLAY_OPTIONS]
     return wizard.build_screen_svg(
         active_step=0,
-        title="Ir para etapa",
-        subtitle="Voce pode revisar sem salvar incompleto.",
-        footer="Enter abre | Setas escolhem | Esc volta",
-        options=[
-            wizard.Option(str(step), wizard.STEPS[step], wizard.step_status_label(state, step))
-            for step in wizard.NAVIGABLE_STEPS
-        ],
+        focused_step=focused_step,
+        focus_area="steps",
+        title="Orientacao da tela",
+        subtitle="Escolha como o totem esta instalado.",
+        footer="Enter abre | Esquerda/Direita etapas | Baixo opcoes | Esc volta",
+        options=options,
         selected_index=0,
-        panel_title="Estado",
-        panel_items=["Revisao bloqueia pendencias.", "Nada salva sozinho.", "Volte quando quiser."],
+        panel_title="Tela",
+        panel_items=["Foco no topo.", "Itens mantem selecao.", "Sem menu modal."],
+        extra_svg=wizard.orientation_preview("landscape"),
         layout_rotation_deg=0,
+        suppress_landscape_info_panel=True,
     )
 
 
@@ -285,7 +287,7 @@ def review_pending_screen(state: Any) -> str:
         active_step=3,
         title="Pendencias antes de concluir",
         subtitle="Complete os itens pendentes antes de salvar.",
-        footer="Enter corrige | Tab etapas | Esc volta",
+        footer="Enter corrige | Cima menu | Esc volta",
         panel_title="Bloqueado",
         panel_items=["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
         extra_svg=wizard.summary_rows_svg(
@@ -349,11 +351,11 @@ def replay_back_navigation(r: Replay) -> None:
     r.assert_true(scenario, "no_save_on_back", True)
 
 
-def replay_step_menu_pending_review(r: Replay) -> None:
-    scenario = "step_menu_pending_review"
+def replay_step_focus_pending_review(r: Replay) -> None:
+    scenario = "step_focus_pending_review"
     state = wizard.initial_wizard_state(0, "")
-    r.screen(scenario, "orientation", "01-orientation", orientation_screen(), "tab", "open_step_menu")
-    r.screen(scenario, "step_menu", "00-step-menu", step_menu_screen(state), "down,down,down,enter", "jump_to_review")
+    r.screen(scenario, "orientation", "01-orientation", orientation_screen(), "up", "focus_top_menu")
+    r.screen(scenario, "step_focus", "01-orientation-step-focus", orientation_step_focus_screen(3), "right,right,right,enter", "jump_to_review")
     r.screen(scenario, "review_pending", "05-review-pending", review_pending_screen(state), "enter", "blocked_first_pending")
     r.assert_true(scenario, "partial_state_cannot_commit", not wizard.wizard_can_commit(state))
     r.assert_true(scenario, "first_pending_is_connection", wizard.first_incomplete_step(state) == 1)
@@ -491,7 +493,7 @@ def replay_cancel_flow(r: Replay) -> None:
 SCENARIO_RUNNERS: dict[str, Callable[[Replay], None]] = {
     "happy_path_synthetic": replay_happy_path,
     "back_navigation": replay_back_navigation,
-    "step_menu_pending_review": replay_step_menu_pending_review,
+    "step_focus_pending_review": replay_step_focus_pending_review,
     "environment_invalid_uuid": replay_environment_invalid_uuid,
     "environment_edit_middle": replay_environment_edit_middle,
     "wifi_wrong_password_fake": replay_wifi_wrong_password,

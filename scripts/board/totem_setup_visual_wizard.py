@@ -85,7 +85,6 @@ BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
 STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
 PORTRAIT_STEP_LABELS = ("Tela", "Conexao", "Amb.", "Revisao", "Fim")
-STEP_MENU_KEYS = {"tab"}
 NAVIGABLE_STEPS = (0, 1, 2, 3)
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
@@ -160,8 +159,12 @@ class VisualWizardError(RuntimeError):
     """Public-safe visual wizard error."""
 
 
-class VisualWizardStepMenu(RuntimeError):
-    """Raised when the operator asks to jump through the step menu."""
+class VisualWizardStepJump(RuntimeError):
+    """Raised when the operator chooses another top-level wizard step."""
+
+    def __init__(self, step: int) -> None:
+        self.step = step
+        super().__init__(f"wizard step jump: {step}")
 
 
 @dataclass(frozen=True)
@@ -369,26 +372,53 @@ def svg_lines(
     )
 
 
-def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
+def step_indicator(
+    active_step: int,
+    *,
+    layout_rotation_deg: int = 0,
+    focused_step: int | None = None,
+    focus_area: str = "content",
+) -> str:
     parts = []
     layout = screen_layout(layout_rotation_deg)
     x = layout.margin_x
     y = 86 if layout.portrait else 92
+    focused = active_step if focused_step is None else focused_step
+    step_focus = focus_area == "steps"
     for index, step in enumerate(STEPS):
         active = index == active_step
-        fill = VISUAL["surface_active"] if active else "#172033"
-        stroke = VISUAL["accent_strong"] if active else VISUAL["border_muted"]
-        text_fill = VISUAL["text"] if active else VISUAL["text_muted"]
+        focused_item = step_focus and index == focused
+        if active:
+            fill = VISUAL["surface_active"]
+            text_fill = VISUAL["text"]
+        elif focused_item:
+            fill = "#1c2a3c"
+            text_fill = VISUAL["text"]
+        else:
+            fill = "#172033"
+            text_fill = VISUAL["text_muted"]
+        if focused_item:
+            stroke = VISUAL["accent_strong"]
+            rail_fill = VISUAL["accent_strong"]
+            stroke_width = 3
+        elif active:
+            stroke = VISUAL["accent_soft"]
+            rail_fill = "#64748b"
+            stroke_width = 1
+        else:
+            stroke = VISUAL["border_muted"]
+            rail_fill = ""
+            stroke_width = 1
         width = 124 if layout.portrait else (140 if index in {0, 4} else 136)
         label = step if not layout.portrait else PORTRAIT_STEP_LABELS[index]
         font_size = 14 if layout.portrait else 16
         rail = (
-            f'<rect x="{x}" y="{y}" width="5" height="42" rx="3" fill="{VISUAL["accent_strong"]}"/>'
-            if active
+            f'<rect x="{x}" y="{y}" width="6" height="42" rx="3" fill="{rail_fill}"/>'
+            if active or focused_item
             else ""
         )
         parts.append(
-            f'<rect x="{x}" y="{y}" width="{width}" height="42" rx="8" fill="{fill}" stroke="{stroke}"/>'
+            f'<rect x="{x}" y="{y}" width="{width}" height="42" rx="8" fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}"/>'
             f"{rail}"
             f'<text x="{x + 12}" y="{y + 28}" font-family="Arial, DejaVu Sans, sans-serif" '
             f'font-size="{font_size}" font-weight="700" fill="{text_fill}">{index + 1}. {escape_text(label)}</text>'
@@ -397,7 +427,13 @@ def step_indicator(active_step: int, *, layout_rotation_deg: int = 0) -> str:
     return "\n  ".join(parts)
 
 
-def option_cards(options: list[Option], selected_index: int, *, layout_rotation_deg: int = 0) -> str:
+def option_cards(
+    options: list[Option],
+    selected_index: int,
+    *,
+    layout_rotation_deg: int = 0,
+    has_focus: bool = True,
+) -> str:
     parts = []
     layout = screen_layout(layout_rotation_deg)
     x = layout.margin_x
@@ -408,14 +444,14 @@ def option_cards(options: list[Option], selected_index: int, *, layout_rotation_
     description_width = 50 if layout.portrait else 42
     for index, option in enumerate(options[:5]):
         active = index == selected_index
-        fill = VISUAL["surface_selected"] if active else VISUAL["surface"]
-        underlay_fill = "#0a1628" if active else "#0a111f"
+        fill = VISUAL["surface_selected"] if active and has_focus else ("#183047" if active else VISUAL["surface"])
+        underlay_fill = "#0a1628" if active and has_focus else "#0a111f"
         title_fill = VISUAL["text"] if active else "#eef5ff"
         body_fill = VISUAL["text_muted"] if active else "#aebbd0"
-        marker_fill = VISUAL["accent_strong"] if active else "#263244"
-        marker_text_fill = VISUAL["text_dark"] if active else VISUAL["text_dim"]
-        rail_fill = VISUAL["accent_strong"] if active else "#334155"
-        marker = ">" if active else str(index + 1)
+        marker_fill = VISUAL["accent_strong"] if active and has_focus else ("#64748b" if active else "#263244")
+        marker_text_fill = VISUAL["text_dark"] if active and has_focus else VISUAL["text_dim"]
+        rail_fill = VISUAL["accent_strong"] if active and has_focus else ("#64748b" if active else "#334155")
+        marker = ">" if active and has_focus else str(index + 1)
         parts.append(
             f'<rect x="{x + 8}" y="{y + 8}" width="{card_width}" height="{card_height}" rx="8" fill="{underlay_fill}"/>'
             f'<rect data-option-card="true" x="{x}" y="{y}" width="{card_width}" height="{card_height}" rx="8" fill="{fill}"/>'
@@ -690,9 +726,20 @@ def build_screen_svg(
     accent: str = "#06b6d4",
     layout_rotation_deg: int = 0,
     suppress_landscape_info_panel: bool = False,
+    focus_area: str = "content",
+    focused_step: int | None = None,
 ) -> str:
     layout = screen_layout(layout_rotation_deg)
-    options_svg = option_cards(options, selected_index, layout_rotation_deg=layout_rotation_deg) if options else ""
+    options_svg = (
+        option_cards(
+            options,
+            selected_index,
+            layout_rotation_deg=layout_rotation_deg,
+            has_focus=focus_area == "content",
+        )
+        if options
+        else ""
+    )
     field_svg = (
         field_panel(field_label, field_value_hint, field_note, layout_rotation_deg=layout_rotation_deg)
         if field_label is not None
@@ -736,7 +783,7 @@ def build_screen_svg(
   <text x="{layout.margin_x + 18}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="{VISUAL["text"]}">{BRAND}</text>
   <text x="{layout.margin_x + 140}" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{TITLE}</text>
   <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="{VISUAL["text_dim"]}">{escape_text(layout_note)}</text>
-  {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg)}
+  {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg, focused_step=focused_step, focus_area=focus_area)}
   <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
   {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=19, fill=VISUAL["text_muted"], width=subtitle_width, line_gap=28, max_lines=1)}
   {options_svg}
@@ -1293,6 +1340,33 @@ def wait_enter_or_cancel() -> None:
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
+def adjacent_navigable_step(step: int, delta: int) -> int:
+    steps = list(NAVIGABLE_STEPS)
+    if step not in steps:
+        return steps[0]
+    index = steps.index(step)
+    return steps[(index + delta) % len(steps)]
+
+
+def option_footer(*, focus_area: str, primary: str, allow_back: bool) -> str:
+    if focus_area == "steps":
+        return "Enter abre | Esquerda/Direita etapas | Baixo opcoes | Esc volta"
+    suffix = "Esc volta" if allow_back else "Esc cancela"
+    return f"{primary} | Cima menu | Baixo escolhe | {suffix}"
+
+
+def handle_step_focus_key(key: str, *, focused_step: int, active_step: int) -> tuple[str, int]:
+    if key == "left":
+        return "steps", adjacent_navigable_step(focused_step, -1)
+    if key == "right":
+        return "steps", adjacent_navigable_step(focused_step, 1)
+    if key in {"enter", "down"}:
+        if focused_step == active_step:
+            return "content", focused_step
+        raise VisualWizardStepJump(focused_step)
+    return "steps", focused_step
+
+
 def choose_option(
     display: VisualDisplay,
     *,
@@ -1307,14 +1381,16 @@ def choose_option(
     initial_selected_index: int = 0,
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
+    focus_area = "content"
+    focused_step = active_step
     while True:
-        footer = "Enter confirma | Setas escolhem | Tab etapas | Esc cancela"
-        if allow_back:
-            footer = "Enter confirma | Setas escolhem | Tab etapas | Esc volta"
+        footer = option_footer(focus_area=focus_area, primary="Enter confirma", allow_back=allow_back)
         display.show(
             screen_id,
             build_screen_svg(
                 active_step=active_step,
+                focused_step=focused_step,
+                focus_area=focus_area,
                 title=title,
                 subtitle=subtitle,
                 footer=footer,
@@ -1325,12 +1401,27 @@ def choose_option(
             ),
         )
         key = read_key()
-        if key in STEP_MENU_KEYS:
-            raise VisualWizardStepMenu()
-        if key in {"up", "left"}:
-            selected = (selected - 1) % len(options)
-        elif key in {"down", "right"}:
-            selected = (selected + 1) % len(options)
+        if focus_area == "steps":
+            if allow_back and key in {"b", "B", "back", "escape"}:
+                return None
+            if key in {"q", "Q"} or (key == "escape" and not allow_back):
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
+            focus_area, focused_step = handle_step_focus_key(
+                key,
+                focused_step=focused_step,
+                active_step=active_step,
+            )
+            continue
+        if key == "up":
+            if selected == 0:
+                focus_area = "steps"
+                focused_step = active_step
+            else:
+                selected -= 1
+        elif key == "down":
+            selected = min(len(options) - 1, selected + 1)
+        elif key in {"1", "2", "3", "4", "5"} and int(key) <= len(options):
+            selected = int(key) - 1
         elif key == "enter":
             return options[selected]
         elif allow_back and key in {"b", "B", "back", "escape"}:
@@ -1351,6 +1442,8 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
     options = [Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS]
     selected = selected_orientation_index_for_rotation(initial_rotation_deg)
     current_layout_rotation_deg = normalize_rotation_deg(initial_rotation_deg)
+    focus_area = "content"
+    focused_step = 0
     needs_render = True
     while True:
         if needs_render:
@@ -1359,9 +1452,11 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                 "01-orientation",
                 build_screen_svg(
                     active_step=0,
+                    focused_step=focused_step,
+                    focus_area=focus_area,
                     title="Orientacao da tela",
                     subtitle="Escolha como o totem esta instalado.",
-                    footer="Enter visualiza | Setas escolhem | Tab etapas | Esc cancela",
+                    footer=option_footer(focus_area=focus_area, primary="Enter visualiza", allow_back=False),
                     options=options,
                     selected_index=selected,
                     panel_title="Tela",
@@ -1380,14 +1475,26 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
             )
             needs_render = False
         key = read_key()
-        if key in STEP_MENU_KEYS:
-            raise VisualWizardStepMenu()
-        if key in {"up", "left"}:
-            selected = (selected - 1) % len(options)
+        if focus_area == "steps":
+            if key in {"escape", "q", "Q"}:
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
+            focus_area, focused_step = handle_step_focus_key(
+                key,
+                focused_step=focused_step,
+                active_step=0,
+            )
             needs_render = True
             continue
-        if key in {"down", "right"}:
-            selected = (selected + 1) % len(options)
+        if key == "up":
+            if selected == 0:
+                focus_area = "steps"
+                focused_step = 0
+            else:
+                selected -= 1
+            needs_render = True
+            continue
+        if key == "down":
+            selected = min(len(options) - 1, selected + 1)
             needs_render = True
             continue
         if key in {"1", "2", "3", "4"}:
@@ -1406,14 +1513,18 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
             Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
         ]
         confirm_selected = 0
+        confirm_focus_area = "content"
+        confirm_focused_step = 0
         while True:
             display.show(
                 "01-orientation-confirm",
                 build_screen_svg(
                     active_step=0,
+                    focused_step=confirm_focused_step,
+                    focus_area=confirm_focus_area,
                     title="Usar esta orientacao?",
                     subtitle="Confira o sentido antes de continuar.",
-                    footer="Enter confirma | Setas escolhem | Tab etapas | Esc volta",
+                    footer=option_footer(focus_area=confirm_focus_area, primary="Enter confirma", allow_back=True),
                     options=confirm_options,
                     selected_index=confirm_selected,
                     panel_title="Confirmar",
@@ -1428,10 +1539,27 @@ def choose_orientation(display: VisualDisplay, *, initial_rotation_deg: int = 0)
                 ),
             )
             confirm_key = read_key()
-            if confirm_key in STEP_MENU_KEYS:
-                raise VisualWizardStepMenu()
-            if confirm_key in {"up", "left", "down", "right"}:
-                confirm_selected = 1 - confirm_selected
+            if confirm_focus_area == "steps":
+                if confirm_key in {"b", "B", "back", "escape"}:
+                    needs_render = True
+                    break
+                if confirm_key in {"q", "Q"}:
+                    raise VisualWizardAbort("setup visual cancelado pelo operador")
+                confirm_focus_area, confirm_focused_step = handle_step_focus_key(
+                    confirm_key,
+                    focused_step=confirm_focused_step,
+                    active_step=0,
+                )
+                continue
+            if confirm_key == "up":
+                if confirm_selected == 0:
+                    confirm_focus_area = "steps"
+                    confirm_focused_step = 0
+                else:
+                    confirm_selected -= 1
+                continue
+            if confirm_key == "down":
+                confirm_selected = min(len(confirm_options) - 1, confirm_selected + 1)
                 continue
             if confirm_key == "enter":
                 if confirm_options[confirm_selected].key == "confirm":
@@ -1604,8 +1732,6 @@ def read_text_field(
                 key = read_key(timeout_sec=TEXT_INPUT_MIN_RENDER_INTERVAL_SEC - (now - last_render_at))
                 if key != "timeout":
                     for drained_key in drain_key_repeats(key):
-                        if drained_key in STEP_MENU_KEYS:
-                            raise VisualWizardStepMenu()
                         if drained_key == "enter":
                             candidate = value.strip() if not hidden else value
                             if len(candidate) < min_length:
@@ -1691,8 +1817,6 @@ def read_text_field(
 
         key = read_key()
         for drained_key in drain_key_repeats(key):
-            if drained_key in STEP_MENU_KEYS:
-                raise VisualWizardStepMenu()
             if drained_key == "enter":
                 candidate = value.strip() if not hidden else value
                 if len(candidate) < min_length:
@@ -3202,45 +3326,6 @@ def write_failed_artifact(out_dir: pathlib.Path, reason: str) -> None:
     atomic_write_private_json(out_dir / FAILED_FILENAME, status, out_dir)
 
 
-def choose_step_from_menu(display: VisualDisplay, state: WizardState, *, active_step: int) -> int:
-    options = [
-        Option(str(step), STEPS[step], step_status_label(state, step))
-        for step in NAVIGABLE_STEPS
-    ]
-    selected = max(0, min(len(options) - 1, int(active_step)))
-    layout_rotation_deg = int(state.rotation["rotation_deg"])
-    while True:
-        display.show(
-            "00-step-menu",
-            build_screen_svg(
-                active_step=selected,
-                title="Ir para etapa",
-                subtitle="Voce pode revisar sem salvar incompleto.",
-                footer="Enter abre | Setas escolhem | Esc volta",
-                options=options,
-                selected_index=selected,
-                panel_title="Estado",
-                panel_items=[
-                    "Revisao bloqueia pendencias.",
-                    "Nada salva sozinho.",
-                    "Volte quando quiser.",
-                ],
-                layout_rotation_deg=layout_rotation_deg,
-            ),
-        )
-        key = read_key()
-        if key in {"up", "left"}:
-            selected = (selected - 1) % len(options)
-        elif key in {"down", "right"}:
-            selected = (selected + 1) % len(options)
-        elif key == "enter":
-            return int(options[selected].key)
-        elif key in {"escape", "back"}:
-            return active_step
-        elif key in {"q", "Q"}:
-            raise VisualWizardAbort("setup visual cancelado pelo operador")
-
-
 def review_and_confirm(
     display: VisualDisplay,
     environment_id: str,
@@ -3254,57 +3339,80 @@ def review_and_confirm(
     ready = bool(network is not None and environment_id.strip() and environment_preflight is not None)
     network_note = network_review_note(network, network_status)
     environment_note = environment_review_note(environment_id, environment_preflight)
-    if APPLY_CONTEXT == "real-write":
-        if HOMOLOGATION_MODE:
-            subtitle = "Salvar aplica a configuracao nesta placa."
+    focus_area = "content"
+    focused_step = 3
+    while True:
+        if APPLY_CONTEXT == "real-write":
+            if HOMOLOGATION_MODE:
+                subtitle = "Salvar aplica a configuracao nesta placa."
+            else:
+                subtitle = "Salvar aplica as mudancas."
+            primary = "Enter salva"
+        elif APPLY_CONTEXT == "dry-run":
+            subtitle = "Concluir valida sem aplicar."
+            primary = "Enter valida"
         else:
-            subtitle = "Salvar aplica as mudancas."
-        footer = "Enter salva | Tab etapas | Esc volta"
-    elif APPLY_CONTEXT == "dry-run":
-        subtitle = "Concluir valida sem aplicar."
-        footer = "Enter valida | Tab etapas | Esc volta"
-    else:
-        subtitle = "Concluir prepara a candidata."
-        footer = "Enter prepara candidata | Tab etapas | Esc volta"
-    title = "Pronto para concluir"
-    panel_title = "Seguranca"
-    panel_items = ["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."]
-    if not ready:
-        title = "Pendencias antes de concluir"
-        subtitle = "Complete os itens pendentes antes de salvar."
-        footer = "Enter corrige | Tab etapas | Esc volta"
-        panel_title = "Bloqueado"
-        panel_items = ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."]
-    elif rotation_status == "default":
-        panel_items = ["Tela usa default atual.", "Dados privados ocultos.", "Esc volta."]
-    display.show(
-        "05-review",
-        build_screen_svg(
-            active_step=3,
-            title=title,
-            subtitle=subtitle,
-            footer=footer,
-            panel_title=panel_title,
-            panel_items=panel_items,
-            extra_svg=summary_rows_svg(
-                [
-                    ("Tela", f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})'),
-                    ("Conexao", network_note),
-                    ("Ambiente", environment_note),
-                ],
+            subtitle = "Concluir prepara a candidata."
+            primary = "Enter prepara candidata"
+        title = "Pronto para concluir"
+        panel_title = "Seguranca"
+        panel_items = ["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."]
+        if not ready:
+            title = "Pendencias antes de concluir"
+            subtitle = "Complete os itens pendentes antes de salvar."
+            primary = "Enter corrige"
+            panel_title = "Bloqueado"
+            panel_items = ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."]
+        elif rotation_status == "default":
+            panel_items = ["Tela usa default atual.", "Dados privados ocultos.", "Esc volta."]
+        footer = (
+            "Enter abre | Esquerda/Direita etapas | Baixo revisao | Esc volta"
+            if focus_area == "steps"
+            else f"{primary} | Cima menu | Esc volta"
+        )
+        display.show(
+            "05-review",
+            build_screen_svg(
+                active_step=3,
+                focused_step=focused_step,
+                focus_area=focus_area,
+                title=title,
+                subtitle=subtitle,
+                footer=footer,
+                panel_title=panel_title,
+                panel_items=panel_items,
+                extra_svg=summary_rows_svg(
+                    [
+                        ("Tela", f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})'),
+                        ("Conexao", network_note),
+                        ("Ambiente", environment_note),
+                    ],
+                    layout_rotation_deg=int(rotation["rotation_deg"]),
+                ),
                 layout_rotation_deg=int(rotation["rotation_deg"]),
             ),
-            layout_rotation_deg=int(rotation["rotation_deg"]),
-        ),
-    )
-    key = read_key()
-    if key in STEP_MENU_KEYS:
-        raise VisualWizardStepMenu()
-    if key == "enter":
-        return ready
-    if key in {"b", "B", "back", "escape"}:
-        return False
-    raise VisualWizardAbort("setup visual cancelado pelo operador")
+        )
+        key = read_key()
+        if focus_area == "steps":
+            if key in {"b", "B", "back", "escape"}:
+                return False
+            if key in {"q", "Q"}:
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
+            focus_area, focused_step = handle_step_focus_key(
+                key,
+                focused_step=focused_step,
+                active_step=3,
+            )
+            continue
+        if key == "up":
+            focus_area = "steps"
+            focused_step = 3
+            continue
+        if key == "enter":
+            return ready
+        if key in {"b", "B", "back", "escape"}:
+            return False
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
 def show_environment_validation_status(
@@ -3330,10 +3438,7 @@ def show_environment_validation_status(
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    key = read_key()
-    if key in STEP_MENU_KEYS:
-        raise VisualWizardStepMenu()
-    return key
+    return read_key()
 
 
 def run_environment_preflight(
@@ -3569,7 +3674,7 @@ def run_visual_wizard(
                                     active_step=1,
                                     title="Conexao nao confirmada",
                                     subtitle=str(exc),
-                                    footer="Enter volta | Tab etapas | Esc cancela",
+                                    footer="Enter volta | Esc cancela",
                                     panel_title="Tente de novo",
                                     panel_items=[
                                         "Nada foi salvo.",
@@ -3581,8 +3686,6 @@ def run_visual_wizard(
                                 ),
                             )
                             key = read_key()
-                            if key in STEP_MENU_KEYS:
-                                raise VisualWizardStepMenu()
                             if key == "enter":
                                 continue
                             raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -3610,7 +3713,7 @@ def run_visual_wizard(
                             ],
                             show_plain_value=True,
                             show_cursor=True,
-                            custom_footer="Enter valida | Tab etapas | Esc volta",
+                            custom_footer="Enter valida | Esc volta",
                             escape_returns_back=True,
                             validation_error_message="ID invalido. Verifique e tente novamente.",
                             layout_rotation_deg=layout_rotation_deg,
@@ -3660,38 +3763,21 @@ def run_visual_wizard(
                         continue
 
                     active_step = 0
-                except VisualWizardStepMenu:
-                    active_step = choose_step_from_menu(display, state, active_step=active_step)
+                except VisualWizardStepJump as exc:
+                    active_step = int(exc.step)
     finally:
         display.stop()
 
 
 def generate_preview_screens(out_dir: pathlib.Path) -> None:
     display = VisualDisplay(out_dir, enabled=False)
-    pending_state = initial_wizard_state(0, "")
-    display.show(
-        "00-step-menu-pending",
-        build_screen_svg(
-            active_step=0,
-            title="Ir para etapa",
-            subtitle="Voce pode revisar sem salvar incompleto.",
-            footer="Enter abre | Setas escolhem | Esc volta",
-            options=[
-                Option(str(step), STEPS[step], step_status_label(pending_state, step))
-                for step in NAVIGABLE_STEPS
-            ],
-            selected_index=0,
-            panel_title="Estado",
-            panel_items=["Revisao bloqueia pendencias.", "Nada salva sozinho.", "Volte quando quiser."],
-        ),
-    )
     display.show(
         "01-orientation",
         build_screen_svg(
             active_step=0,
             title="Orientacao da tela",
             subtitle="Escolha como o totem esta instalado.",
-            footer="Enter confirma | Setas escolhem | Esc cancela",
+            footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
             selected_index=0,
             panel_items=["Escolha a posicao.", "Confira o preview.", "Salve ao final."],
@@ -3705,7 +3791,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=3,
             title="Pendencias antes de concluir",
             subtitle="Complete os itens pendentes antes de salvar.",
-            footer="Enter corrige | Tab etapas | Esc volta",
+            footer="Enter corrige | Cima menu | Esc volta",
             panel_title="Bloqueado",
             panel_items=["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
             extra_svg=summary_rows_svg(
@@ -3724,7 +3810,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
-            footer="Enter confirma | Setas escolhem | Esc volta",
+            footer="Enter confirma | Cima menu | Baixo escolhe | Esc volta",
             options=[
                 Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
@@ -3741,7 +3827,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=0,
             title="Usar esta orientacao?",
             subtitle="Confira o sentido antes de continuar.",
-            footer="Enter confirma | Setas escolhem | Esc volta",
+            footer="Enter confirma | Cima menu | Baixo escolhe | Esc volta",
             options=[
                 Option("confirm", "Usar esta orientacao", "A configuracao continuara neste formato."),
                 Option("cancel", "Voltar e escolher outra", "Nada e gravado ate confirmar."),
@@ -3759,7 +3845,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             active_step=1,
             title="Conexao",
             subtitle="Escolha a conexao.",
-            footer="Enter confirma | Setas escolhem | Esc cancela",
+            footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
             panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
@@ -4172,7 +4258,16 @@ def run_self_test() -> None:
             text_field_display_hint("abcd", hidden=False, show_plain_value=True, cursor_index=2) == "ab|cd",
             "cursor should render inside visible environment field",
         )
-        assert_true("tab" in STEP_MENU_KEYS, "Tab should open the step menu")
+        assert_true(adjacent_navigable_step(0, 1) == 1, "right on focused steps should move to connection")
+        assert_true(adjacent_navigable_step(0, -1) == 3, "left on focused steps should wrap to review")
+        focus_area, focused_step = handle_step_focus_key("down", focused_step=0, active_step=0)
+        assert_true(focus_area == "content" and focused_step == 0, "down on active step should return to content")
+        try:
+            handle_step_focus_key("enter", focused_step=3, active_step=0)
+            step_jump_ok = False
+        except VisualWizardStepJump as exc:
+            step_jump_ok = exc.step == 3
+        assert_true(step_jump_ok, "enter on another focused step should jump to that step")
         navigation_state = initial_wizard_state(270, "")
         assert_true(navigation_state.rotation_status == "default", "initial orientation should be a default")
         assert_true(not wizard_can_commit(navigation_state), "empty navigation state should not commit")
@@ -4435,7 +4530,7 @@ def run_self_test() -> None:
             active_step=1,
             title="Conexao",
             subtitle="Escolha a rede.",
-            footer="Enter confirma | Setas escolhem | Esc volta",
+            footer="Enter confirma | Cima menu | Baixo escolhe | Esc volta",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
             panel_items=["Lista local."],
@@ -4487,13 +4582,13 @@ def run_self_test() -> None:
         assert_true("<circle" not in landscape_wifi_preview_text, "option cards must use framebuffer-rendered rect markers")
         assert_true("TEST_WIFI_COUNTER" not in landscape_wifi_preview_text, "landscape Wi-Fi preview should not render a fifth card")
         portrait_footer_probe = footer_text(
-            "Enter confirma | Setas escolhem | R atualiza | Esc volta",
+            "Enter confirma | Cima/Baixo escolhe | R atualiza | Esc volta",
             layout_rotation_deg=90,
         )
         assert_true("Enter confirma" in portrait_footer_probe, "footer should preserve primary action")
         assert_true("Esc volta" in portrait_footer_probe, "footer should preserve escape action before optional actions")
         long_footer_probe = footer_text(
-            "Enter confirma | Setas escolhem | R atualiza | PageDown | Esc volta",
+            "Enter confirma | Cima/Baixo escolhe | R atualiza | PageDown | Esc volta",
             layout_rotation_deg=90,
         )
         assert_true("Enter confirma" in long_footer_probe, "long footer should preserve primary action")

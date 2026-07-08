@@ -1,0 +1,26 @@
+[
+  {
+    "assertion": "partial_state_cannot_commit",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "first_pending_is_connection",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "review_status_blocked",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "candidate_not_generated_for_partial_state",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  }
+]

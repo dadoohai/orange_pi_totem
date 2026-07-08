@@ -69,6 +69,26 @@ rodada posterior, sem bloquear o pacote C20.1.
   registradas em:
   `docs/evidence/c20-totem-core-ota/20260708T030000Z-c20-2-step-navigation-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
+- Observacao: C20.2 ficou funcional, mas a UX por `Tab` foi rejeitada em teste
+  real porque nao deixava claro onde estava o foco. C20.3 substitui essa
+  navegacao por foco unico com setas.
+
+## C20.3 Em Fechamento
+
+- Remover a navegacao por `Tab`/menu modal.
+- Usar foco unico, no padrao controle remoto/TV:
+  - foco no conteudo: `cima` no primeiro item sobe para o menu superior;
+  - foco no menu superior: `esquerda/direita` escolhem etapa;
+  - `baixo` volta para os itens da etapa atual;
+  - `Enter` abre a etapa focada ou confirma o item focado.
+- Diferenciar visualmente etapa ativa e foco real:
+  - etapa ativa permanece marcada;
+  - foco real recebe destaque forte;
+  - item interno fica atenuado quando o foco esta no menu superior.
+- Manter a regra de seguranca: revisar estado parcial e bloquear salvamento
+  incompleto.
+- Validacoes esperadas: self-test, replay de foco, galeria visual, pacote
+  `totem-core`, aplicacao na placa e captura real.
 
 ## Proximo Marco
 

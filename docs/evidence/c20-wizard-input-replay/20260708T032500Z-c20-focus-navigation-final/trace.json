@@ -1,0 +1,23 @@
+[
+  {
+    "key": "up",
+    "result": "focus_top_menu",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "right,right,right,enter",
+    "result": "jump_to_review",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "01-orientation-step-focus",
+    "step": "step_focus"
+  },
+  {
+    "key": "enter",
+    "result": "blocked_first_pending",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "05-review-pending",
+    "step": "review_pending"
+  }
+]
