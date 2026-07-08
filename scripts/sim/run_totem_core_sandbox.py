@@ -32,7 +32,6 @@ CORE_FILES = (
     "totem_status_aggregate.py",
     "totem_status_render_preview.py",
     "totem_config_contract_validate.py",
-    "totem_qr_pairing_client.py",
     "totem_open_settings_session.sh",
     "totem_visual_tty_guard.sh",
     "totem_firstboot_gate.sh",

@@ -41,9 +41,13 @@ from urllib import request as urllib_request
 sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
-import totem_qr_pairing_client as pairing_client
 import totem_setup_minimal_server as setup
 import totem_wifi_nm_adapter as wifi_adapter
+
+try:
+    import totem_qr_pairing_client as pairing_client
+except ModuleNotFoundError:
+    pairing_client = None
 
 
 SCHEMA_VERSION = "dadooh-c9.9-visual-wizard-local.v1"
@@ -53,6 +57,23 @@ DEFAULT_OUT_DIR = "/tmp/dadooh-c9-9-visual-wizard"
 DEFAULT_WIFI_SECRETS_DIR = "/tmp/dadooh-c9-9-visual-wifi-secrets"
 WIFI_APPLY_DIRNAME = "wifi-persistent"
 PAIRING_DIRNAME = "qr-pairing"
+PAIRING_SESSION_SCHEMA = "dadooh.c21.totem_qr_pairing.session.v1"
+PAIRING_RESULT_SCHEMA = "dadooh.c21.totem_qr_pairing.result.v1"
+PAIRING_PRIVATE_VALUES_SCHEMA = "dadooh.c21.totem_qr_pairing.private_values.v1"
+PAIRING_DEFAULT_AUTHORIZE_BASE_URL = "https://home.dadooh.ai/totem/authorize"
+PAIRING_DEFAULT_API_URL = "https://api-lbyvh5uf6q-uc.a.run.app/search"
+PAIRING_DEFAULT_ENVIRONMENT_ID = "11111111-2222-4333-8444-555555555555"
+PAIRING_DEFAULT_STATION_ID = "22222222-3333-4444-8555-666666666666"
+PAIRING_DEFAULT_MOCK_API_KEY = "C21_MOCK_DEVICE_KEY_NOT_FOR_PROD_1234567890"
+PAIRING_STATES = {
+    "pending",
+    "authorized",
+    "expired",
+    "denied",
+    "backend_unavailable",
+    "empty_environment_list",
+    "already_used",
+}
 WIFI_TIMEOUT_SEC = 45
 WIFI_LIST_REFRESH_SEC = 10.0
 WIFI_LIST_TIMEOUT_SEC = 4
@@ -3667,25 +3688,133 @@ def run_environment_preflight(
 
 
 def create_mock_pairing_artifacts(out_dir: pathlib.Path, *, state: str | None = None) -> dict[str, Any]:
-    pairing_dir = pairing_client.require_tmp_out_dir(str(out_dir / PAIRING_DIRNAME))
+    pairing_dir = require_pairing_mock_out_dir(out_dir / PAIRING_DIRNAME)
     requested_state = (
         state
         or os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MOCK_STATE", "authorized").strip()
         or "authorized"
     )
     requested_code = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_CODE", "").strip()
-    code = pairing_client.validate_code(requested_code) if requested_code else pairing_client.generate_code()
-    return pairing_client.run_mock_pairing(
-        out_dir=pairing_dir,
-        state=requested_state,
-        code=code,
-        authorize_base_url=pairing_client.DEFAULT_AUTHORIZE_BASE_URL,
-        api_url=pairing_client.DEFAULT_API_URL,
-        api_key=pairing_client.DEFAULT_MOCK_API_KEY,
-        environment_id=pairing_client.DEFAULT_ENVIRONMENT_ID,
-        station_id=pairing_client.DEFAULT_STATION_ID,
-        expires_in_sec=600,
+    if pairing_client is not None:
+        code = pairing_client.validate_code(requested_code) if requested_code else pairing_client.generate_code()
+        return pairing_client.run_mock_pairing(
+            out_dir=pairing_dir,
+            state=requested_state,
+            code=code,
+            authorize_base_url=PAIRING_DEFAULT_AUTHORIZE_BASE_URL,
+            api_url=PAIRING_DEFAULT_API_URL,
+            api_key=PAIRING_DEFAULT_MOCK_API_KEY,
+            environment_id=PAIRING_DEFAULT_ENVIRONMENT_ID,
+            station_id=PAIRING_DEFAULT_STATION_ID,
+            expires_in_sec=600,
+        )
+    code = validate_pairing_code(requested_code) if requested_code else generate_pairing_code()
+    return run_embedded_mock_pairing(pairing_dir, state=requested_state, code=code)
+
+
+def require_pairing_mock_out_dir(path: pathlib.Path) -> pathlib.Path:
+    if not path.is_absolute():
+        raise VisualWizardError("pareamento exige diretorio absoluto")
+    if path == setup.TMP_ROOT or not setup.path_is_under(path, setup.TMP_ROOT):
+        raise VisualWizardError("pareamento deve usar diretorio dedicado em /tmp")
+    if path.exists() and not path.is_dir():
+        raise VisualWizardError("diretorio de pareamento invalido")
+    if path.is_symlink() or path.parent.is_symlink():
+        raise VisualWizardError("diretorio de pareamento inseguro")
+    path.mkdir(parents=True, exist_ok=True)
+    path.chmod(setup.PRIVATE_DIR_MODE)
+    return path
+
+
+def generate_pairing_code() -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    seed = uuid.uuid4().hex.upper()
+    return "".join(alphabet[int(seed[i : i + 2], 16) % len(alphabet)] for i in range(0, 16, 2))
+
+
+def validate_pairing_code(value: str) -> str:
+    raw = str(value or "").strip().upper().replace("-", "")
+    if len(raw) != 8 or any(ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" for ch in raw):
+        raise VisualWizardError("codigo de pareamento invalido")
+    return raw
+
+
+def pairing_authorize_url(code: str) -> str:
+    parsed = urllib_parse.urlsplit(PAIRING_DEFAULT_AUTHORIZE_BASE_URL)
+    query = urllib_parse.parse_qsl(parsed.query, keep_blank_values=True)
+    query.append(("code", code))
+    return urllib_parse.urlunsplit(
+        (parsed.scheme, parsed.netloc, parsed.path, urllib_parse.urlencode(query), parsed.fragment)
     )
+
+
+def utc_timestamp() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def write_pairing_json(path: pathlib.Path, payload: dict[str, Any], out_dir: pathlib.Path) -> None:
+    setup.atomic_write_private_json(path, payload, out_dir)
+
+
+def run_embedded_mock_pairing(out_dir: pathlib.Path, *, state: str, code: str) -> dict[str, Any]:
+    if state not in PAIRING_STATES:
+        raise VisualWizardError("estado de pareamento invalido")
+    authorize_url = pairing_authorize_url(code)
+    public_session = {
+        "schema": PAIRING_SESSION_SCHEMA,
+        "mode": "mock_embedded",
+        "session_id": "mock-session-not-production",
+        "state": state,
+        "pairing_code": code,
+        "authorize_url": authorize_url,
+        "created_at_utc": utc_timestamp(),
+        "expires_in_sec": 600,
+        "poll_after_sec": 2,
+        "poll_token_public": False,
+        "credential_public": False,
+        "human_firebase_token_on_device": False,
+        "private_values_written": state == "authorized",
+        "non_claims": [
+            "not_production_backend",
+            "not_scannable_qr_yet",
+            "not_real_user_auth",
+            "not_real_device_token",
+        ],
+    }
+    session_path = out_dir / "pairing-session.public.json"
+    result_path = out_dir / "pairing-result.public.json"
+    private_path = out_dir / "private-values.json"
+    write_pairing_json(session_path, public_session, out_dir)
+
+    private_written = False
+    if state == "authorized":
+        private_values = {
+            "schema": PAIRING_PRIVATE_VALUES_SCHEMA,
+            "api_url": PAIRING_DEFAULT_API_URL,
+            "api_key": PAIRING_DEFAULT_MOCK_API_KEY,
+            "environment_id": PAIRING_DEFAULT_ENVIRONMENT_ID,
+            "station_id": PAIRING_DEFAULT_STATION_ID,
+            "issued_by": "c21-embedded-mock-pairing",
+            "human_firebase_token_on_device": False,
+        }
+        write_pairing_json(private_path, private_values, out_dir)
+        private_written = True
+    elif private_path.exists():
+        private_path.unlink()
+
+    result = {
+        "schema": PAIRING_RESULT_SCHEMA,
+        "passed": state == "authorized",
+        "state": state,
+        "session_public_path": str(session_path),
+        "pairing_card_svg_path": None,
+        "private_values_path": str(private_path) if private_written else None,
+        "private_values_mode": "0600" if private_written else None,
+        "public_artifacts_sanitized": True,
+        "human_firebase_token_on_device": False,
+    }
+    write_pairing_json(result_path, result, out_dir)
+    return result
 
 
 def load_pairing_environment_id(private_values_path: str | None) -> str:
@@ -4804,7 +4933,7 @@ def run_self_test() -> None:
         assert_true(file_mode(pairing_private_path) == setup.PRIVATE_FILE_MODE, "pairing private values should be 0600")
         pairing_environment = load_pairing_environment_id(str(pairing_private_path))
         assert_true(
-            pairing_environment == pairing_client.DEFAULT_ENVIRONMENT_ID,
+            pairing_environment == PAIRING_DEFAULT_ENVIRONMENT_ID,
             "pairing mock should provide a validated environment id",
         )
         pairing_public = "\n".join(
@@ -4813,10 +4942,10 @@ def run_self_test() -> None:
             if path.name != "private-values.json"
         )
         for forbidden in (
-            pairing_client.DEFAULT_MOCK_API_KEY,
-            pairing_client.DEFAULT_API_URL,
-            pairing_client.DEFAULT_ENVIRONMENT_ID,
-            pairing_client.DEFAULT_STATION_ID,
+            PAIRING_DEFAULT_MOCK_API_KEY,
+            PAIRING_DEFAULT_API_URL,
+            PAIRING_DEFAULT_ENVIRONMENT_ID,
+            PAIRING_DEFAULT_STATION_ID,
         ):
             assert_true(forbidden not in pairing_public, "pairing public artifacts should not leak private values")
         denied_pairing = create_mock_pairing_artifacts(pairing_dir, state="already_used")

@@ -202,6 +202,12 @@ Executar C21.0: escrever o contrato tecnico minimo e os mocks de teste. Em
 seguida, implementar o caminho `candidate-only` no wizard antes de qualquer
 escrita real de configuracao ou mudanca de producao.
 
+Nota de governanca: para slices OTA em placas ja em campo, nao basta o HEAD
+aceitar novos arquivos. O pacote precisa ser aceito pelo updater que ja esta
+instalado na placa. Quando possivel, preferir evoluir o wizard dentro dos
+binarios ja permitidos; helpers novos podem ficar no repo/na proxima imagem,
+mas nao devem bloquear o OTA atual.
+
 ## C21.0 - Resultado Inicial
 
 Implementado o primeiro slice executavel em `totem-core`:
@@ -214,9 +220,11 @@ Implementado o primeiro slice executavel em `totem-core`:
   `pairing-card.svg`;
 - credencial de maquina somente em `private-values.json` com modo `0600`;
 - self-test cobrindo autorizacao, estados nao-autorizados, path seguro em
-  `/tmp` e ausencia de vazamento de segredo nos artefatos publicos;
-- helper incluido no build `totem-core`, no health check do updater e no gate
-  OTA.
+  `/tmp` e ausencia de vazamento de segredo nos artefatos publicos.
+
+Nota posterior C21.2: o helper ficou como contrato/teste no repo, mas nao deve
+ser exigido pelo pacote OTA enquanto houver placas com updater anterior que nao
+aceita esse arquivo novo na allowlist.
 
 Non-claims desta fatia:
 
@@ -257,6 +265,31 @@ Non-claims desta fatia:
 - ainda nao ha tela real em `homeHabitat`;
 - ainda nao ha backend `/totem-pairing`;
 - ainda nao ha escrita real de configuracao no final do fluxo QR.
+
+## C21.2 - Compatibilidade OTA Em Campo
+
+Achado de placa: o pacote C21.1 passou nos gates locais, mas a placa em C20.9
+recusou o apply porque o updater instalado ainda nao permitia o novo arquivo
+`totem_qr_pairing_client.py` no tar `totem-core`.
+
+Correcao aplicada ao desenho:
+
+- o helper C21 permanece no repo como contrato/teste para o backend real e para
+  imagem futura;
+- o wizard passa a ter fallback embutido para o mock de pareamento, sem exigir
+  binario novo no pacote OTA;
+- o pacote `totem-core` deixa de incluir o helper novo;
+- o health check do pacote nao exige o helper;
+- o objetivo de placa desta fatia e: pacote aceito pelo updater atual, wizard
+  abre com a opcao de codigo/QR, artefatos privados seguem sanitizados, player
+  volta ativo e rollback permanece disponivel.
+
+Non-claims desta fatia:
+
+- ainda nao e backend real;
+- ainda nao e autorizacao real em `home.dadooh.ai`;
+- ainda nao emite credencial real de maquina;
+- ainda nao substitui o contrato backend C21 planejado.
 
 ## Auditoria Da Abertura
 
