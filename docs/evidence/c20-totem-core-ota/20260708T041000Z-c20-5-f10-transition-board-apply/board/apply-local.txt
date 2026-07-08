@@ -1,0 +1,9 @@
+
+2026-07-08T03:07:29Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-08T03:07:29Z INFO apply_start source=local:dadooh-totem-core-c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b.manifest.json manifest=/tmp/c20-5-f10-transition/dadooh-totem-core-c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b.manifest.json
+2026-07-08T03:07:29Z INFO local_payload_staged bytes=135700 sha256=fcef52866f6d723f416e6525502b355cab1cc5ab4739e14e60385209a471edad
+2026-07-08T03:07:31Z INFO totem_core_health_check_starting
+2026-07-08T03:07:34Z INFO apply_success version=c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b
+2026-07-08T03:07:34Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b
+
+__EXPECT_EXIT_CODE__=0

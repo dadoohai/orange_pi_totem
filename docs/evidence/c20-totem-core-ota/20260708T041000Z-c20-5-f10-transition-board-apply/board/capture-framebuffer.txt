@@ -1,0 +1,4 @@
+
+-rw-r--r-- 1 root root 88K Jul  8 00:08 /tmp/c20-5-captures/f10-wizard-open-framebuffer.jpg
+
+__EXPECT_EXIT_CODE__=0

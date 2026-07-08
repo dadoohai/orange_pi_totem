@@ -98,7 +98,7 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T034000Z-c20-3-focus-navigation-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
-## C20.4 Em Fechamento
+## C20.4 Fechado
 
 - Corrigir regressao operacional do F10 apos C20.3.
 - Sintoma real: F10 era detectado, mas `totem-open-settings.service` ficava
@@ -106,18 +106,26 @@ rodada posterior, sem bloquear o pacote C20.1.
 - Causa: operacoes de escrita/limpeza em `/dev/tty2` podiam bloquear sem timeout.
 - Correcao: cada operacao sensivel do guard passa a rodar com timeout curto,
   sem impedir que o wizard abra.
-- Validacoes esperadas: `bash -n`, teste do guard em `/tmp` na placa,
-  pacote `totem-core`, apply na placa e abertura real do settings service.
+- Validado: `bash -n`, teste do guard em `/tmp` na placa, pacote `totem-core`,
+  gate verde e apply por `totem-updatectl`.
+- Limite honesto: C20.4 removeu o bloqueio do `ExecStartPre`, mas revelou um
+  segundo bloqueio no `show_transition`. C20.5 fecha esse segundo ponto.
 
-## C20.5 Em Fechamento
+## C20.5 Fechado
 
 - Completar a correcao do F10 no script de sessao.
 - Sintoma apos C20.4: `ExecStartPre` passou, mas `show_transition` ainda podia
   bloquear ao escrever splash diretamente em `/dev/tty2`.
 - Correcao: `chvt`, limpeza do TTY, `printf` e splash passam por helpers com
   timeout curto.
-- Validacoes esperadas: `bash -n`, self-test do wizard, pacote `totem-core`,
-  apply na placa e abertura real do service ate o wizard.
+- Validado: `bash -n`, self-test do wizard, pacote `totem-core`, gate verde,
+  apply por `totem-updatectl`, abertura real do service ate o processo do wizard
+  e captura real do framebuffer.
+- Pacote `totem-core` criado:
+  `c20.5-f10-transition-timeout-20260708T040500Z-6ef0b0b`.
+- Evidencia:
+  `docs/evidence/c20-totem-core-ota/20260708T041000Z-c20-5-f10-transition-board-apply/`.
+- Deve entrar no pacote acumulado da proxima imagem de referencia.
 
 ## Proximo Marco
 

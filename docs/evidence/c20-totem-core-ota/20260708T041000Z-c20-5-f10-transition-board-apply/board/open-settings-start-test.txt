@@ -1,0 +1,106 @@
+
+wizard_process_seen_at=1s
+===states===
+activating
+active
+===processes===
+ 510729 Ss   bash            bash /data/core/totem/current/bin/totem_visual_tty_guard.sh --clear --tty 2
+===files===
+===trace===
+2026-07-07T22:50:04.959300753 pid=473295 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-07-07T22:50:04.965106601 pid=473295 phase=before_systemctl_stop_kiosky
+2026-07-07T22:50:06.080342647 pid=473295 phase=after_systemctl_stop_kiosky
+2026-07-07T22:50:06.262274783 pid=473295 phase=after_drain_wait counts=0,0,0,0
+2026-07-07T22:50:06.444656879 pid=473295 phase=before_show_transition_2
+2026-07-07T22:50:06.957549620 pid=473295 phase=after_show_transition_2
+2026-07-07T22:50:07.116338488 pid=473295 phase=before_openvt
+2026-07-07T22:50:23.707298820 pid=473295 phase=after_wizard WIZARD_RC=8
+2026-07-07T22:50:23.716180343 pid=473295 phase=release_session_lock_for_restore_begin
+2026-07-07T22:50:23.766271556 pid=473295 phase=release_session_lock_for_restore_done
+2026-07-07T23:06:47.435427618 pid=476804 phase=session_sh_start argv=0 pid=476804 ppid=1
+2026-07-07T23:06:47.776783910 pid=476804 phase=before_getty_stop
+2026-07-07T23:06:47.923693245 pid=476804 phase=before_show_transition_1
+2026-07-07T23:06:48.492144036 pid=476804 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-07-07T23:06:48.497838467 pid=476804 phase=before_systemctl_stop_kiosky
+2026-07-07T23:06:49.563128906 pid=476804 phase=after_systemctl_stop_kiosky
+2026-07-07T23:06:49.725255780 pid=476804 phase=after_drain_wait counts=0,0,0,0
+2026-07-07T23:06:49.883658102 pid=476804 phase=before_show_transition_2
+2026-07-07T23:06:50.396704834 pid=476804 phase=after_show_transition_2
+2026-07-07T23:06:50.556187201 pid=476804 phase=before_openvt
+2026-07-07T23:06:50.597968142 pid=476804 phase=openvt_started pid=476912
+2026-07-07T23:06:50.608293918 pid=476804 phase=openvt_timeout_clock=monotonic start=171794 deadline=178994
+2026-07-07T23:07:16.810388458 pid=476804 phase=openvt_exited WIZARD_RC=8
+2026-07-07T23:07:16.814705136 pid=476804 phase=after_wizard WIZARD_RC=8
+2026-07-07T23:07:16.819057147 pid=476804 phase=wizard_cancelled_restore_path
+2026-07-07T23:07:16.830341676 pid=476804 phase=release_session_lock_for_restore_begin
+2026-07-07T23:07:16.873158411 pid=476804 phase=release_session_lock_for_restore_done
+2026-07-08T00:22:06.771158970 pid=487830 phase=session_sh_start argv=0 pid=487830 ppid=1
+2026-07-08T00:22:07.119240333 pid=487830 phase=before_getty_stop
+2026-07-08T00:22:07.266253655 pid=487830 phase=before_show_transition_1
+2026-07-08T00:22:07.824070455 pid=487830 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-07-08T00:22:07.829859803 pid=487830 phase=before_systemctl_stop_kiosky
+2026-07-08T00:22:08.928382401 pid=487830 phase=after_systemctl_stop_kiosky
+2026-07-08T00:22:09.091391306 pid=487830 phase=after_drain_wait counts=0,0,0,0
+2026-07-08T00:22:09.251245952 pid=487830 phase=before_show_transition_2
+2026-07-08T00:22:09.767289231 pid=487830 phase=after_show_transition_2
+2026-07-08T00:22:09.925222248 pid=487830 phase=before_openvt
+2026-07-08T00:22:09.967775270 pid=487830 phase=openvt_started pid=487939
+2026-07-08T00:22:09.978303004 pid=487830 phase=openvt_timeout_clock=monotonic start=176313 deadline=183513
+2026-07-08T00:22:26.085816065 pid=487830 phase=openvt_exited WIZARD_RC=8
+2026-07-08T00:22:26.090138992 pid=487830 phase=after_wizard WIZARD_RC=8
+2026-07-08T00:22:26.094456336 pid=487830 phase=wizard_cancelled_restore_path
+2026-07-08T00:22:26.105907989 pid=487830 phase=release_session_lock_for_restore_begin
+2026-07-08T00:22:26.149696306 pid=487830 phase=release_session_lock_for_restore_done
+2026-07-08T00:45:08.126371120 pid=491418 phase=session_sh_start argv=0 pid=491418 ppid=1
+2026-07-08T00:45:08.463691204 pid=491418 phase=before_getty_stop
+2026-07-08T00:45:08.607758644 pid=491418 phase=before_show_transition_1
+2026-07-08T00:45:09.165632107 pid=491418 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-07-08T00:45:09.171242871 pid=491418 phase=before_systemctl_stop_kiosky
+2026-07-08T00:45:10.229832865 pid=491418 phase=after_systemctl_stop_kiosky
+2026-07-08T00:45:10.392924851 pid=491418 phase=after_drain_wait counts=0,0,0,0
+2026-07-08T00:45:10.552218120 pid=491418 phase=before_show_transition_2
+2026-07-08T00:45:11.063116759 pid=491418 phase=after_show_transition_2
+2026-07-08T00:45:11.223716573 pid=491418 phase=before_openvt
+2026-07-08T00:45:11.263418380 pid=491418 phase=openvt_started pid=491526
+2026-07-08T00:45:11.273912947 pid=491418 phase=openvt_timeout_clock=monotonic start=177694 deadline=184894
+2026-07-08T00:55:06.471154325 pid=491418 phase=openvt_exited WIZARD_RC=8
+2026-07-08T00:55:06.476686171 pid=491418 phase=after_wizard WIZARD_RC=8
+2026-07-08T00:55:06.480969807 pid=491418 phase=wizard_cancelled_restore_path
+2026-07-08T00:55:06.492317501 pid=491418 phase=release_session_lock_for_restore_begin
+2026-07-08T00:55:06.535021103 pid=491418 phase=release_session_lock_for_restore_done
+2026-07-08T02:09:40.208978953 pid=503138 phase=session_sh_start argv=0 pid=503138 ppid=1
+2026-07-08T02:09:40.561256270 pid=503138 phase=before_getty_stop
+2026-07-08T02:09:40.700266609 pid=503138 phase=before_show_transition_1
+2026-07-08T02:09:41.264469319 pid=503138 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-07-08T02:09:41.269041122 pid=503138 phase=before_systemctl_stop_kiosky
+2026-07-08T02:09:42.305431025 pid=503138 phase=after_systemctl_stop_kiosky
+2026-07-08T02:09:42.468756673 pid=503138 phase=after_drain_wait counts=0,0,0,0
+2026-07-08T02:09:42.627822811 pid=503138 phase=before_show_transition_2
+2026-07-08T02:09:43.135668967 pid=503138 phase=after_show_transition_2
+2026-07-08T02:09:43.295486607 pid=503138 phase=before_openvt
+2026-07-08T02:09:43.340255382 pid=503138 phase=openvt_started pid=503247
+2026-07-08T02:09:43.350585408 pid=503138 phase=openvt_timeout_clock=monotonic start=182766 deadline=189966
+2026-07-08T02:36:36.772568281 pid=503138 phase=trap_signal=TERM rc=143
+2026-07-08T02:36:36.778159295 pid=503138 phase=on_exit_begin rc=0
+2026-07-08T02:55:52.988463711 pid=508776 phase=session_sh_start argv=0 pid=508776 ppid=1
+2026-07-08T02:55:53.304019048 pid=508776 phase=before_getty_stop
+2026-07-08T02:55:53.441913577 pid=508776 phase=before_show_transition_1
+2026-07-08T02:58:45.392640056 pid=508776 phase=trap_signal=TERM rc=1
+2026-07-08T02:58:45.399563693 pid=508776 phase=on_exit_begin rc=0
+===status===
+● totem-open-settings.service - Dadooh Open Totem Settings
+     Loaded: loaded (/etc/systemd/system/totem-open-settings.service; static)
+     Active: activating (start-pre) since Wed 2026-07-08 00:07:48 -03; 1s ago
+  Cntrl PID: 510729 (bash)
+      Tasks: 4 (limit: 2192)
+     Memory: 1.1M
+        CPU: 64ms
+     CGroup: /system.slice/totem-open-settings.service
+             ├─510729 bash /data/core/totem/current/bin/totem_visual_tty_guard.sh --clear --tty 2
+             ├─510741 timeout -k 0.2s 0.8s /usr/bin/env bash -c "TERM=linux setterm --clear all --cursor off > \"\$1\"" _ /dev/tty2
+             ├─510742 bash -c "TERM=linux setterm --clear all --cursor off > \"\$1\"" _ /dev/tty2
+             └─510744 setterm --clear all --cursor off
+
+Jul 08 00:07:48 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings...
+
+__EXPECT_EXIT_CODE__=0
