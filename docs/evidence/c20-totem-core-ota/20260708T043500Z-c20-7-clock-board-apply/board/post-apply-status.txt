@@ -1,0 +1,80 @@
+
+---status
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.6-top-step-preview-20260708T031956Z-5686f83",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T04:35:24Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T04:27:33Z",
+      "path": "/data/core/totem/releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00",
+      "payload_sha256": "01ab5cc921379366597719857ed55ab0360b052001d50c1ced896c4f881d5ec5",
+      "source": "local:dadooh-totem-core-c20.7-clock-metadata-20260708T042733Z-b9d8a00.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "b9d8a00962af7bac9dc1084c785afa37df60290f",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.7-clock-metadata-20260708T042733Z-b9d8a00"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T04:35:26Z",
+      "source": "local:dadooh-totem-core-c20.7-clock-metadata-20260708T042733Z-b9d8a00.manifest.json",
+      "started_at_utc": "2026-07-08T04:35:21Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.7-clock-metadata-20260708T042733Z-b9d8a00"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T03:26:47Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T03:19:56Z",
+      "path": "/data/core/totem/releases/c20.6-top-step-preview-20260708T031956Z-5686f83",
+      "payload_sha256": "5746b7b4dc969d8f04c0ef4c09778c82fb651431f2ef1f2a2a82ac7ed1856d54",
+      "source": "local:dadooh-totem-core-c20.6-top-step-preview-20260708T031956Z-5686f83.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "5686f8332dd145dd2b4117b1fe6169c7d468f3d8",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.6-top-step-preview-20260708T031956Z-5686f83"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+---selftest
+self-test: ok
+---service
+active
+---sha
+02a9930e7377eb0c2b71dfffac07f945460173e59f1db60c54b925729fe04f8e  /data/core/totem/current/bin/totem_setup_visual_wizard.py
+91d7a23946385555f8e2cf9596047af63abed03267fc1af65f626cfb0ed56abd  /data/core/totem/current/manifest-fragment/totem-core.json
+bfb2cb2f0af2cc45de14f5fdffc7ee53f62f9df3976052ad79b5bc4661cea55c  /data/core/totem/current/health/totem-core-health.json
+---locks
+/run/dadooh-settings:
+total 12
+drwx------  2 root root 100 Jul  8 01:38 .
+drwxr-xr-x 30 root root 800 Jul  8 01:38 ..
+-rw-------  1 root root 431 Jul  8 01:34 open-settings-cleanup-status.json
+-rw-------  1 root root 476 Jul  8 01:38 summary.txt
+-rw-------  1 root root 605 Jul  8 01:38 trigger-status.json
+
+__EXPECT_EXIT_CODE__=0

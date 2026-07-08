@@ -267,7 +267,8 @@ Aceite:
 
 ### V9 - Data/Hora Discreta No Wizard
 
-Status: design aprovado em 2026-07-08; implementacao ainda pendente.
+Status: implementado, empacotado por `totem-core` e aplicado na placa em
+2026-07-08.
 
 Objetivo do usuario: permitir que operador/suporte vejam data/hora durante a
 configuracao local sem poluir a tela nem criar uma nova decisao desnecessaria.
@@ -305,6 +306,15 @@ Auditoria/convergencia:
 Evidencia visual:
 
 - `docs/evidence/c20-visual-qa/20260708T-c20-7-clock-pdca-design/round3/`.
+
+Evidencia de implementacao/aplicacao:
+
+- pacote: `c20.7-clock-metadata-20260708T042733Z-b9d8a00`;
+- gate OTA verde: 66 checks;
+- current da placa: `releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00`;
+- captura real: `docs/evidence/c20-totem-core-ota/20260708T043500Z-c20-7-clock-board-apply/captures/clock-preview.png`;
+- diretorio de evidencia:
+  `docs/evidence/c20-totem-core-ota/20260708T043500Z-c20-7-clock-board-apply/`.
 
 Aceite futuro:
 

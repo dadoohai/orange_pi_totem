@@ -1,0 +1,2 @@
+local_manifest_sha256 249c9865c9abf3982c644e83fe6d71c237eb41200dd4fe321c698ceff85ed9e0  releases/core-updates/c20.7-clock-metadata-20260708T042733Z-b9d8a00/dadooh-totem-core-c20.7-clock-metadata-20260708T042733Z-b9d8a00.manifest.json
+local_payload_sha256 01ab5cc921379366597719857ed55ab0360b052001d50c1ced896c4f881d5ec5  releases/core-updates/c20.7-clock-metadata-20260708T042733Z-b9d8a00/dadooh-totem-core-c20.7-clock-metadata-20260708T042733Z-b9d8a00.tar.gz

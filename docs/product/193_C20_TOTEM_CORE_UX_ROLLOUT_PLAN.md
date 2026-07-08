@@ -144,7 +144,7 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T032600Z-c20-6-top-step-preview-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
-## C20.7 Design Aprovado - Data/Hora No Wizard
+## C20.7 Aplicado - Data/Hora No Wizard
 
 - Objetivo: exibir data/hora de forma discreta para operador/suporte, sem
   transformar o wizard em painel tecnico.
@@ -176,6 +176,13 @@ rodada posterior, sem bloquear o pacote C20.1.
   a R3 sem blockers.
 - Evidencia visual aprovada:
   `docs/evidence/c20-visual-qa/20260708T-c20-7-clock-pdca-design/round3/`.
+- Implementado em `totem-core`:
+  `c20.7-clock-metadata-20260708T042733Z-b9d8a00`.
+- Gate OTA: verde, 66 checks.
+- Aplicado na placa com current:
+  `releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00`.
+- Evidencia de placa:
+  `docs/evidence/c20-totem-core-ota/20260708T043500Z-c20-7-clock-board-apply/`.
 - Non-claims: nao declara horario correto, sincronizado, NTP ativo, RTC
   ajustado ou timezone configurado; o horario nao e criterio de sucesso do
   wizard.
