@@ -43,7 +43,7 @@ a ela uma credencial de maquina, limitada ao ambiente escolhido.
 2. Depois de rede disponivel, o totem pede ao backend uma sessao curta de
    pareamento.
 3. O totem mostra QR code, codigo curto e tempo de expiracao.
-4. O celular abre `home.dadooh.ai/totem/authorize?code=...`.
+4. O celular abre `home.dadooh.ai/totem/activate?code=...&activation_id=...`.
 5. Se necessario, o usuario faz login.
 6. O front mostra os ambientes permitidos para aquele usuario.
 7. O usuario escolhe o ambiente e confirma a autorizacao do totem.
@@ -153,6 +153,17 @@ integracao real.
 
 ## Contrato Backend V0
 
+Estado em 2026-07-08: o contrato real implementado usa prefixo
+`/totem-auth`, nao `/totem-pairing`. A estrutura conceitual abaixo continua
+valida, mas os nomes efetivos sao:
+
+- `POST /totem-auth/activations`
+- `GET /totem-auth/activations/lookup?code=...&activation_id=...`
+- `POST /totem-auth/activations/:activationId/approve`
+- `POST /totem-auth/activations/:activationId/poll`
+
+O front efetivo e `home.dadooh.ai/totem/activate`.
+
 Prefixo proposto: `/totem-pairing`.
 
 - `POST /totem-pairing/sessions`
@@ -257,6 +268,46 @@ Implementado o slice de wizard sem backend real e sem escrita real:
 - self-test do wizard cobre pareamento autorizado, `already_used`, permissao
   `0600` da credencial privada e ausencia de vazamento nos artefatos publicos
   do pareamento.
+
+## C21.3 - Backend E Front Reais
+
+Implementado o primeiro slice real fora da placa:
+
+- `Habitat/functions`:
+  - sessao de ativacao criada pela placa sem Firebase;
+  - codigo e segredo do dispositivo persistidos somente como hash;
+  - aprovacao exige Firebase Bearer real, nao apenas fallback por `x-user-id`;
+  - browser nunca recebe `api_key` nem `device_secret`;
+  - poll da placa exige `device_secret` e entrega `x-api-key` uma unica vez;
+  - token de maquina recebe `allowed_root_ids` e o middleware passou a enforcar
+    esse limite em permissoes e rotas environment-scoped usadas por dispositivo;
+  - migration limpa corrigida para criar `api_tokens` antes do indice.
+
+- `homeHabitat`:
+  - rota `/totem/activate` criada fora do dashboard;
+  - preserva `code` e `activation_id` do QR;
+  - login acontece inline, sem perder a URL do QR;
+  - lista ambientes acessiveis e envia aprovacao para o backend;
+  - nao chama `poll` e nao recebe credencial do dispositivo.
+
+Validacoes feitas:
+
+- backend: ESLint dos arquivos alterados, typecheck filtrado sem erro C21 e
+  transpilacao SWC dos modulos novos;
+- front: rota `/totem/activate?...` compilou no Next dev server e respondeu
+  `200 OK`;
+- typecheck/build globais dos repos continuam vermelhos por dividas antigas
+  fora do C21, portanto nao sao usados como criterio isolado desta fatia.
+
+Pendencias antes de chamar isso de fluxo ponta a ponta:
+
+- trocar o mock do wizard pelo backend real `/totem-auth`;
+- decidir se a aprovacao seleciona estacao existente, cria estacao nova ou fica
+  inicialmente somente em nivel de ambiente;
+- remover ou substituir chaves hardcoded legadas em front antigo antes de tratar
+  a credencial por dispositivo como postura final de seguranca;
+- rodar fluxo real placa + celular + backend + homeHabitat;
+- empacotar em `totem-core`, aplicar por OTA e registrar evidencia visual.
 
 Non-claims desta fatia:
 
