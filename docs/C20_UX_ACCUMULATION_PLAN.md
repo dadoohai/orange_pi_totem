@@ -14,6 +14,8 @@ para um pacote/update consolidado e para a proxima imagem de referencia.
 - Sem excesso de atalhos, bullets ou diagnostico bruto.
 - Cada rodada deve poder ser validada visualmente e revertida.
 - C20 acumula melhorias; nao publica/promove cada uma isoladamente por padrao.
+- Cada melhoria fechada por OTA entra no pacote `totem-core` acumulado e fica
+  marcada para a proxima imagem de referencia.
 
 ## Leituras De Auditoria
 
@@ -460,6 +462,25 @@ incorporada foi:
 
 O metodo final esta registrado em:
 `docs/product/194_C20_WIZARD_E2E_RC_METHOD.md`.
+
+## Pacote Acumulado Atual
+
+Estado: C20.1-C20.9 aplicados e validados incrementalmente na placa por
+`totem-core`.
+
+Current observado apos C20.9:
+`releases/c20.9-wifi-step-copy-20260708T060338Z-34a9537`.
+
+Rollback imediato:
+`releases/c20.8-clock-all-steps-20260708T045317Z-661c582`.
+
+Ultimo pacote/evidencia:
+`docs/evidence/c20-totem-core-ota/20260708T061500Z-c20-9-wifi-step-copy-board-apply/`.
+
+Intencao macro: continuar acumulando apenas melhorias fechadas e reversiveis do
+wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
+de referencia. Mudancas de player-runtime, MPV/kernel/display baixo nivel,
+midia/config/cache e politica de OTA continuam fora deste pacote UX.
 
 ## Primeiras Rodadas Recomendadas
 

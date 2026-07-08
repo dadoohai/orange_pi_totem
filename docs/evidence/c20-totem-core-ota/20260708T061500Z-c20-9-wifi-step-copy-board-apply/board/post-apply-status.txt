@@ -1,0 +1,72 @@
+
+2026-07-08T03:11:33-03:00
+--status--
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.9-wifi-step-copy-20260708T060338Z-34a9537",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T06:10:25Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T06:03:39Z",
+      "path": "/data/core/totem/releases/c20.9-wifi-step-copy-20260708T060338Z-34a9537",
+      "payload_sha256": "410a38fcff874c329906f2abf654b84050265d787451d3a058f8e40bbad9eb3e",
+      "source": "local:dadooh-totem-core-c20.9-wifi-step-copy-20260708T060338Z-34a9537.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "34a953710059266598d476488b9a006d41c73019",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.9-wifi-step-copy-20260708T060338Z-34a9537"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T06:10:27Z",
+      "source": "local:dadooh-totem-core-c20.9-wifi-step-copy-20260708T060338Z-34a9537.manifest.json",
+      "started_at_utc": "2026-07-08T06:10:22Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.9-wifi-step-copy-20260708T060338Z-34a9537"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T04:56:50Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T04:53:17Z",
+      "path": "/data/core/totem/releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+      "payload_sha256": "78604b737baba1afc16c93075c6a3a5979e221d7f6999b1dd53e9408b0484ff8",
+      "source": "local:dadooh-totem-core-c20.8-clock-all-steps-20260708T045317Z-661c582.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "661c5824113c5500f238f91a02c265f4796dc28d",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.8-clock-all-steps-20260708T045317Z-661c582"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+--services--
+player=active
+settings=inactive
+--self-test--
+self-test: ok
+--guard--
+True settings_session_inactive
+
+__EXPECT_EXIT_CODE__=0

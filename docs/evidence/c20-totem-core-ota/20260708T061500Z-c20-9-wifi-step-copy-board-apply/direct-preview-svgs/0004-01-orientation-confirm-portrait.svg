@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024" data-display-rotation-deg="90" data-layout-mode="portrait" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="768" height="1024" fill="#07111f"/>
+  <rect x="0" y="0" width="768" height="12" fill="#06b6d4"/>
+  <rect x="0" y="12" width="768" height="136" fill="#111827"/>
+  <rect x="48" y="32" width="120" height="38" rx="8" fill="#12324a" stroke="#06b6d4"/>
+  <text x="66" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <text x="188" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#94a3b8">Configuracao do Totem</text>
+  <text x="500" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">08/07/2026 03:10</text>
+  <rect x="48" y="86" width="124" height="42" rx="8" fill="#12324a" stroke="#164e63" stroke-width="1"/><rect x="48" y="86" width="6" height="42" rx="3" fill="#64748b"/><text x="60" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">1. Tela</text>
+  <rect x="180" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="192" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">2. Wi-Fi</text>
+  <rect x="312" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="324" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">3. Amb.</text>
+  <rect x="444" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="456" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">4. Revisao</text>
+  <rect x="576" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="588" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">5. Fim</text>
+  <text x="48" y="188" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">Usar esta orientacao?</text>
+  <text x="50" y="224" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" fill="#cbd5e1"><tspan x="50" dy="0">Confira o sentido antes de continuar.</tspan></text>
+  <rect x="56" y="322" width="672" height="98" rx="8" fill="#0a1628"/><rect data-option-card="true" x="48" y="314" width="672" height="98" rx="8" fill="#0f3a55"/><rect x="48" y="314" width="8" height="98" rx="4" fill="#22d3ee"/><rect x="74" y="334" width="42" height="42" rx="8" fill="#22d3ee"/><text x="86" y="362" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#111827">&gt;</text><text x="136" y="351" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#f8fafc" font-weight="700"><tspan x="136" dy="0">Usar esta orientacao</tspan></text><text x="136" y="382" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="136" dy="0">A configuracao continuara neste formato.</tspan></text>
+  <rect x="56" y="434" width="672" height="98" rx="8" fill="#0a111f"/><rect data-option-card="true" x="48" y="426" width="672" height="98" rx="8" fill="#111827"/><rect x="48" y="426" width="8" height="98" rx="4" fill="#334155"/><rect x="74" y="446" width="42" height="42" rx="8" fill="#263244"/><text x="86" y="474" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#94a3b8">2</text><text x="136" y="463" font-family="Arial, DejaVu Sans, sans-serif" font-size="23" fill="#eef5ff" font-weight="700"><tspan x="136" dy="0">Voltar e escolher outra</tspan></text><text x="136" y="494" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#aebbd0"><tspan x="136" dy="0">Nada e gravado ate confirmar.</tspan></text>
+  
+  
+  <rect id="info-panel" x="48" y="770" width="672" height="190" rx="8" fill="#151d2a" stroke="#2f3d4a"/>
+  <rect x="48" y="770" width="7" height="190" rx="4" fill="#06b6d4"/>
+  <text x="80" y="810" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Nesta etapa</text>
+  <rect x="79" y="815" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="828" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Preview local.</tspan></text> <rect x="79" y="869" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="882" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Sem alterar player agora.</tspan></text> <rect x="79" y="923" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="936" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Pode voltar.</tspan></text>
+
+  
+  <g id="orientation-preview">
+    <rect id="orientation-preview-shell" x="296" y="556" width="292" height="286" rx="8" fill="#111827" stroke="#334155"/>
+    <text x="326" y="590" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Preview</text>
+    <rect x="326" y="610" width="116" height="176" rx="12" fill="#e0f2fe" stroke="#06b6d4" stroke-width="4"/>
+    <rect x="340" y="624" width="88" height="148" rx="8" fill="#0f172a"/>
+    <rect x="416" y="624" width="12" height="148" rx="4" fill="#22c55e"/>
+    <rect x="389" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="673" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="675" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="677" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="679" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="679" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="679" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="679" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="679" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="671" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="673" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="675" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="677" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="685" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="687" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="689" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="683" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="691" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="683" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="691" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="683" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="685" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="687" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="689" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="691" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="683" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="691" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="683" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="691" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="683" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="691" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="697" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="699" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="701" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="703" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="703" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="703" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="703" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="703" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="695" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="697" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="699" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="701" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="709" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="711" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="713" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="707" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="715" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="707" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="715" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="707" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="715" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="707" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="715" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="707" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="715" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="709" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="711" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="713" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="721" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="723" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="725" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="719" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="727" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="719" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="727" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="719" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="727" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="719" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="727" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="719" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="727" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="721" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="723" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="725" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="389" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="387" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="385" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="733" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="735" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="737" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="383" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="381" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="379" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="731" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <rect x="377" y="739" width="2" height="2" rx="1" fill="#f8fafc"/>
+    <text x="326" y="828" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#cbd5e1">Retrato para direita</text>
+  </g>
+
+  
+  <rect x="0" y="942" width="768" height="82" fill="#050b14"/>
+  <rect x="0" y="942" width="768" height="3" fill="#164e63"/>
+  <rect x="48" y="960" width="182" height="46" rx="8" fill="#22d3ee"/><text x="70" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#111827">Enter confirma</text> <rect x="238" y="960" width="132" height="46" rx="8" fill="#12324a"/><text x="260" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">Cima menu</text> <rect x="378" y="960" width="172" height="46" rx="8" fill="#111827"/><text x="400" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">Baixo escolhe</text> <rect x="558" y="960" width="132" height="46" rx="8" fill="#111827"/><text x="580" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">Esc volta</text>
+
+</svg>

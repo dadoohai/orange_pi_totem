@@ -204,6 +204,26 @@ rodada posterior, sem bloquear o pacote C20.1.
 - Evidencia de placa:
   `docs/evidence/c20-totem-core-ota/20260708T045500Z-c20-8-clock-all-steps-board-apply/`.
 
+### C20.9 Ajuste Direto - Copy De Wi-Fi E Rodape
+
+- Decisao: tratar a segunda etapa como `Wi-Fi`, nao `Conexao`, porque o fluxo
+  atual e de escolha/uso de Wi-Fi.
+- Removidas do rodape as indicacoes que confundiam o operador:
+  `Esquerda/Direita etapas`, `Baixo opcoes` e `Baixo revisao`.
+- Mantidos os comandos essenciais no foco superior: `Enter abre | Esc volta`.
+- Escopo: apenas copy/rodape do wizard em `totem-core`; sem alterar Wi-Fi real,
+  NetworkManager, player-runtime, updater, politicas ou imagem.
+- Pacote aplicado na placa:
+  `c20.9-wifi-step-copy-20260708T060338Z-34a9537`.
+- Current da placa:
+  `releases/c20.9-wifi-step-copy-20260708T060338Z-34a9537`.
+- Rollback/previous:
+  `releases/c20.8-clock-all-steps-20260708T045317Z-661c582`.
+- Gate OTA: verde, 66 checks.
+- Evidencia de placa:
+  `docs/evidence/c20-totem-core-ota/20260708T061500Z-c20-9-wifi-step-copy-board-apply/`.
+- Deve entrar no pacote acumulado da proxima imagem de referencia.
+
 ## Proximo Marco
 
 O proximo marco deixa de ser mais um refinamento isolado e passa a ser o
@@ -214,7 +234,7 @@ Metodo central:
 
 Direcao:
 
-- tratar C20.1-C20.8 como incrementos validados para acumulo;
+- tratar C20.1-C20.9 como incrementos validados para acumulo;
 - rodar uma auditoria de jornada completa do wizard atual;
 - classificar achados como blocker, non-blocker ou backlog;
 - gerar o proximo pacote apenas com ajustes que movem o RC;
