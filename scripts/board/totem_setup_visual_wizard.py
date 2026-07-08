@@ -86,8 +86,8 @@ CANVAS_WIDTH = LANDSCAPE_CANVAS_WIDTH
 CANVAS_HEIGHT = LANDSCAPE_CANVAS_HEIGHT
 BRAND = "Dadooh"
 TITLE = "Configuracao do Totem"
-STEPS = ("Tela", "Conexao", "Ambiente", "Revisao", "Concluir")
-PORTRAIT_STEP_LABELS = ("Tela", "Conexao", "Amb.", "Revisao", "Fim")
+STEPS = ("Tela", "Wi-Fi", "Ambiente", "Revisao", "Concluir")
+PORTRAIT_STEP_LABELS = ("Tela", "Wi-Fi", "Amb.", "Revisao", "Fim")
 NAVIGABLE_STEPS = (0, 1, 2, 3)
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
@@ -1374,7 +1374,7 @@ def adjacent_navigable_step(step: int, delta: int) -> int:
 
 def option_footer(*, focus_area: str, primary: str, allow_back: bool) -> str:
     if focus_area == "steps":
-        return "Enter abre | Esquerda/Direita etapas | Baixo opcoes | Esc volta"
+        return "Enter abre | Esc volta"
     suffix = "Esc volta" if allow_back else "Esc cancela"
     return f"{primary} | Cima menu | Baixo escolhe | {suffix}"
 
@@ -3447,11 +3447,7 @@ def review_and_confirm(
             panel_items = ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."]
         elif rotation_status == "default":
             panel_items = ["Tela usa default atual.", "Dados privados ocultos.", "Esc volta."]
-        footer = (
-            "Enter abre | Esquerda/Direita etapas | Baixo revisao | Esc volta"
-            if focus_area == "steps"
-            else f"{primary} | Cima menu | Esc volta"
-        )
+        footer = "Enter abre | Esc volta" if focus_area == "steps" else f"{primary} | Cima menu | Esc volta"
         display.show(
             "05-review",
             build_screen_svg(
@@ -3466,7 +3462,7 @@ def review_and_confirm(
                 extra_svg=summary_rows_svg(
                     [
                         ("Tela", f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})'),
-                        ("Conexao", network_note),
+                        ("Wi-Fi", network_note),
                         ("Ambiente", environment_note),
                     ],
                     layout_rotation_deg=int(rotation["rotation_deg"]),
@@ -3716,8 +3712,8 @@ def run_visual_wizard(
                             display,
                             screen_id="02-connection",
                             active_step=1,
-                            title="Conexao",
-                            subtitle="Escolha a conexao.",
+                            title="Wi-Fi",
+                            subtitle="Escolha o Wi-Fi.",
                             options=list(NETWORK_OPTIONS),
                             panel_items=[
                                 "Lista local.",
@@ -3760,7 +3756,7 @@ def run_visual_wizard(
                                 "02-connection-error",
                                 build_screen_svg(
                                     active_step=1,
-                                    title="Conexao nao confirmada",
+                                    title="Wi-Fi nao confirmado",
                                     subtitle=str(exc),
                                     footer="Enter volta | Esc cancela",
                                     panel_title="Tente de novo",
@@ -3891,7 +3887,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             extra_svg=summary_rows_svg(
                 [
                     ("Tela", "Paisagem (Default)"),
-                    ("Conexao", "Pendente"),
+                    ("Wi-Fi", "Pendente"),
                     ("Ambiente", "Pendente"),
                 ],
                 layout_rotation_deg=0,
@@ -3937,8 +3933,8 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "02-connection",
         build_screen_svg(
             active_step=1,
-            title="Conexao",
-            subtitle="Escolha a conexao.",
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
@@ -4089,7 +4085,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             extra_svg=summary_rows_svg(
                 [
                     ("Tela", "Retrato para direita"),
-                    ("Conexao", "Wi-Fi configurado"),
+                    ("Wi-Fi", "Wi-Fi configurado"),
                     ("Ambiente", "Informado"),
                 ],
                 layout_rotation_deg=90,
@@ -4421,8 +4417,8 @@ def run_self_test() -> None:
         assert_true('x="792" y="54"' in clock_step0_svg, "step 0 landscape clock should use the header clock slot")
         clock_step1_svg = build_screen_svg(
             active_step=1,
-            title="Conexao",
-            subtitle="Escolha a conexao.",
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
             footer="Enter confirma",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
@@ -4432,8 +4428,8 @@ def run_self_test() -> None:
         assert_true('x="792" y="54"' in clock_step1_svg, "landscape clock should reuse the header note slot")
         clock_portrait_svg = build_screen_svg(
             active_step=1,
-            title="Conexao",
-            subtitle="Escolha a conexao.",
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
             footer="Enter confirma",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
@@ -4444,8 +4440,8 @@ def run_self_test() -> None:
         assert_true('x="500" y="58"' in clock_portrait_svg, "portrait clock should stay attached to header row")
         clock_portrait_left_svg = build_screen_svg(
             active_step=1,
-            title="Conexao",
-            subtitle="Escolha a conexao.",
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
             footer="Enter confirma",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
@@ -4456,8 +4452,8 @@ def run_self_test() -> None:
         assert_true('x="500" y="58"' in clock_portrait_left_svg, "portrait-left clock should stay attached to header row")
         clock_inverted_svg = build_screen_svg(
             active_step=1,
-            title="Conexao",
-            subtitle="Escolha a conexao.",
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
             footer="Enter confirma",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
@@ -4468,8 +4464,8 @@ def run_self_test() -> None:
         assert_true('x="792" y="54"' in clock_inverted_svg, "landscape-inverted clock should reuse the header note slot")
         clock_invalid_svg = build_screen_svg(
             active_step=1,
-            title="Conexao",
-            subtitle="Escolha a conexao.",
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
             footer="Enter confirma",
             options=list(NETWORK_OPTIONS),
             selected_index=0,
@@ -4710,7 +4706,7 @@ def run_self_test() -> None:
         )
         landscape_without_preview = build_screen_svg(
             active_step=1,
-            title="Conexao",
+            title="Wi-Fi",
             subtitle="Escolha a rede.",
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc volta",
             options=list(NETWORK_OPTIONS),

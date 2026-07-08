@@ -213,8 +213,8 @@ def orientation_screen(selected_index: int = 0, layout_rotation_deg: int = 0) ->
 def connection_screen() -> str:
     return wizard.build_screen_svg(
         active_step=1,
-        title="Conexao",
-        subtitle="Escolha a conexao.",
+        title="Wi-Fi",
+        subtitle="Escolha o Wi-Fi.",
         footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
         options=list(wizard.NETWORK_OPTIONS),
         selected_index=2,
@@ -254,7 +254,7 @@ def review_screen() -> str:
         extra_svg=wizard.summary_rows_svg(
             [
                 ("Tela", "Retrato para direita (Confirmado)"),
-                ("Conexao", "Bancada"),
+                ("Wi-Fi", "Bancada"),
                 ("Ambiente", "Validado"),
             ],
             layout_rotation_deg=90,
@@ -271,7 +271,7 @@ def orientation_step_focus_screen(focused_step: int = 3) -> str:
         focus_area="steps",
         title="Orientacao da tela",
         subtitle="Escolha como o totem esta instalado.",
-        footer="Enter abre | Esquerda/Direita etapas | Baixo opcoes | Esc volta",
+        footer="Enter abre | Esc volta",
         options=options,
         selected_index=0,
         panel_title="Tela",
@@ -293,7 +293,7 @@ def review_pending_screen(state: Any) -> str:
         extra_svg=wizard.summary_rows_svg(
             [
                 ("Tela", f"{state.rotation['label']} ({wizard.step_status_label(state, 0)})"),
-                ("Conexao", wizard.network_review_note(state.network, state.network_status)),
+                ("Wi-Fi", wizard.network_review_note(state.network, state.network_status)),
                 ("Ambiente", wizard.environment_review_note(state.environment_id, state.environment_preflight)),
             ],
             layout_rotation_deg=int(state.rotation["rotation_deg"]),
