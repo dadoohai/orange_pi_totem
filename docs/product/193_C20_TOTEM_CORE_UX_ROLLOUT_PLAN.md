@@ -41,8 +41,18 @@ A Revisao pode mostrar pendencias/defaults, mas salvar/concluir so deve liberar
 quando os obrigatorios estiverem validos. Essa vertical fica planejada para
 rodada posterior, sem bloquear o pacote C20.1.
 
+## C20.1 Fechado
+
+- Pacote `totem-core` criado:
+  `c20.1.environment-copy-20260708T011500Z-7a29d1a`.
+- Gate de release verde e commitado junto do pacote.
+- Aplicado na placa por `totem-updatectl apply-local`.
+- Captura real do framebuffer da tela Ambiente registrada em:
+  `docs/evidence/c20-totem-core-ota/20260708T012412Z-c20-1-environment-copy-board-apply/`.
+- Deve entrar no pacote acumulado da proxima imagem de referencia.
+
 ## Proximo Marco
 
-Aplicar C20.1 por `totem-core` OTA na placa, abrir o wizard e capturar framebuffer
-real da tela Ambiente. Se aprovado, manter como pacote acumulado para a imagem de
-referencia seguinte.
+Desenhar a navegacao livre por etapas como vertical propria. O menu superior pode
+virar navegavel, mas precisa antes de estado centralizado para nao salvar
+configuracao incompleta por acidente.

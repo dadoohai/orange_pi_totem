@@ -1,0 +1,9 @@
+
+2026-07-08T01:24:46Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-08T01:24:46Z INFO apply_start source=local:dadooh-totem-core-c20.1.environment-copy-20260708T011500Z-7a29d1a.manifest.json manifest=/tmp/c20-1-environment-copy-20260708T012412Z/dadooh-totem-core-c20.1.environment-copy-20260708T011500Z-7a29d1a.manifest.json
+2026-07-08T01:24:46Z INFO local_payload_staged bytes=132195 sha256=8c363a44c5c3536453c28ab00297c2e25ecb8244f425173fabd1f056fba4ef31
+2026-07-08T01:24:49Z INFO totem_core_health_check_starting
+2026-07-08T01:24:52Z INFO apply_success version=c20.1.environment-copy-20260708T011500Z-7a29d1a
+2026-07-08T01:24:52Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c20.1.environment-copy-20260708T011500Z-7a29d1a
+
+__EXPECT_EXIT_CODE__=0
