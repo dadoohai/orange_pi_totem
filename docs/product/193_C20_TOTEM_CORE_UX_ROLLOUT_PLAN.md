@@ -98,6 +98,17 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T034000Z-c20-3-focus-navigation-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
+## C20.4 Em Fechamento
+
+- Corrigir regressao operacional do F10 apos C20.3.
+- Sintoma real: F10 era detectado, mas `totem-open-settings.service` ficava
+  preso no `ExecStartPre` do `totem_visual_tty_guard.sh`.
+- Causa: operacoes de escrita/limpeza em `/dev/tty2` podiam bloquear sem timeout.
+- Correcao: cada operacao sensivel do guard passa a rodar com timeout curto,
+  sem impedir que o wizard abra.
+- Validacoes esperadas: `bash -n`, teste do guard em `/tmp` na placa,
+  pacote `totem-core`, apply na placa e abertura real do settings service.
+
 ## Proximo Marco
 
 Continuar as melhorias de UX do wizard por verticais pequenas, sempre com:

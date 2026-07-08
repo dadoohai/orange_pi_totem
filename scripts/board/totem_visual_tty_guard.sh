@@ -66,21 +66,48 @@ for tty in "${TTYS[@]}"; do
   esac
 done
 
+run_guard_cmd() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout -k 0.2s 0.8s "$@" 2>/dev/null || true
+  else
+    "$@" 2>/dev/null || true
+  fi
+}
+
+write_tty() {
+  local device="$1"
+  local payload="$2"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout -k 0.2s 0.8s /usr/bin/env bash -c 'printf "%b" "$1" > "$2"' _ "$payload" "$device" 2>/dev/null || true
+  else
+    /usr/bin/env bash -c 'printf "%b" "$1" > "$2"' _ "$payload" "$device" 2>/dev/null || true
+  fi
+}
+
+clear_tty() {
+  local device="$1"
+  if command -v setterm >/dev/null 2>&1; then
+    if command -v timeout >/dev/null 2>&1; then
+      timeout -k 0.2s 0.8s /usr/bin/env bash -c 'TERM=linux setterm --clear all --cursor off > "$1"' _ "$device" 2>/dev/null || true
+    else
+      TERM=linux setterm --clear all --cursor off > "$device" 2>/dev/null || true
+    fi
+  fi
+}
+
 apply_guard() {
   local tty="$1"
   local device="/dev/tty$tty"
   [ -e "$device" ] || return 0
-  /usr/bin/stty -F "$device" -echo -icanon min 0 time 0 2>/dev/null || true
-  printf '\033[?25l' > "$device" 2>/dev/null || true
+  run_guard_cmd /usr/bin/stty -F "$device" -echo -icanon min 0 time 0
+  write_tty "$device" '\033[?25l'
   if [ "$MODE" = "clear" ]; then
-    if command -v setterm >/dev/null 2>&1; then
-      TERM=linux setterm --clear all --cursor off > "$device" 2>/dev/null || true
-    fi
-    printf '\033[?25l\033[2J\033[3J\033[H' > "$device" 2>/dev/null || true
+    clear_tty "$device"
+    write_tty "$device" '\033[?25l\033[2J\033[3J\033[H'
     sleep 0.05
-    printf '\033[?25l\033[2J\033[3J\033[H' > "$device" 2>/dev/null || true
+    write_tty "$device" '\033[?25l\033[2J\033[3J\033[H'
   fi
-  /usr/bin/stty -F "$device" -echo -icanon min 0 time 0 2>/dev/null || true
+  run_guard_cmd /usr/bin/stty -F "$device" -echo -icanon min 0 time 0
 }
 
 for tty in "${TTYS[@]}"; do
