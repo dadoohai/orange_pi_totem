@@ -313,6 +313,33 @@ for path in "$VISUAL" "$SPLASH" "$AGGREGATE"; do
   fi
 done
 
+run_short() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout -k 0.2s 1.0s "$@" >/dev/null 2>&1 || true
+  else
+    "$@" >/dev/null 2>&1 || true
+  fi
+}
+
+write_tty_payload() {
+  local payload="$1"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout -k 0.2s 1.0s /usr/bin/env bash -c 'printf "%b" "$1" > "$2"' _ "$payload" "$TTY_DEVICE" >/dev/null 2>&1 || true
+  else
+    /usr/bin/env bash -c 'printf "%b" "$1" > "$2"' _ "$payload" "$TTY_DEVICE" >/dev/null 2>&1 || true
+  fi
+}
+
+run_tty_command() {
+  local timeout_sec="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout -k 0.2s "$timeout_sec" /usr/bin/env bash -c 'tty_device="$1"; shift; exec "$@" <"$tty_device" >"$tty_device"' _ "$TTY_DEVICE" "$@" >/dev/null 2>&1 || true
+  else
+    "$@" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
+  fi
+}
+
 write_private_settings_context() {
   local source_json="$1"
   local context_source="$2"
@@ -451,17 +478,17 @@ wait_player_running() {
 show_transition() {
   local mode="$1"
   local rotation="${2:-}"
-  command -v chvt >/dev/null 2>&1 && chvt "$REMOTE_TTY" >/dev/null 2>&1 || true
+  command -v chvt >/dev/null 2>&1 && run_short chvt "$REMOTE_TTY"
   if [ -x "$TTY_GUARD" ]; then
-    "$TTY_GUARD" --clear --tty "$REMOTE_TTY" >/dev/null 2>&1 || true
+    run_short "$TTY_GUARD" --clear --tty "$REMOTE_TTY"
   fi
-  printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
+  write_tty_payload '\033c\033[2J\033[3J\033[H\033[?25l'
   sleep 0.05
-  printf '\033c\033[2J\033[3J\033[H\033[?25l' > "$TTY_DEVICE" 2>/dev/null || true
+  write_tty_payload '\033c\033[2J\033[3J\033[H\033[?25l'
   if [ -n "$rotation" ] && [ "$rotation" != "unknown" ]; then
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --rotation-deg "$rotation" --status-out "$OUT_DIR/splash-$mode-status.json" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
+    run_tty_command 4s env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --rotation-deg "$rotation" --status-out "$OUT_DIR/splash-$mode-status.json"
   else
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --status-out "$OUT_DIR/splash-$mode-status.json" <"$TTY_DEVICE" >"$TTY_DEVICE" 2>/dev/null || true
+    run_tty_command 4s env TERM=linux PYTHONPATH="$SCRIPT_DIR" python3 "$SPLASH" "$mode" --status-out "$OUT_DIR/splash-$mode-status.json"
   fi
 }
 
@@ -472,7 +499,7 @@ restore_getty() {
       systemctl stop "$unit" >/dev/null 2>&1 || true
     done
     if [ -x "$TTY_GUARD" ]; then
-      "$TTY_GUARD" --quiet --tty 1 --tty "$REMOTE_TTY" >/dev/null 2>&1 || true
+      run_short "$TTY_GUARD" --quiet --tty 1 --tty "$REMOTE_TTY"
     fi
     return 0
   fi

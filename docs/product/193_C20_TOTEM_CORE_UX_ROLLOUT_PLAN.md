@@ -109,6 +109,16 @@ rodada posterior, sem bloquear o pacote C20.1.
 - Validacoes esperadas: `bash -n`, teste do guard em `/tmp` na placa,
   pacote `totem-core`, apply na placa e abertura real do settings service.
 
+## C20.5 Em Fechamento
+
+- Completar a correcao do F10 no script de sessao.
+- Sintoma apos C20.4: `ExecStartPre` passou, mas `show_transition` ainda podia
+  bloquear ao escrever splash diretamente em `/dev/tty2`.
+- Correcao: `chvt`, limpeza do TTY, `printf` e splash passam por helpers com
+  timeout curto.
+- Validacoes esperadas: `bash -n`, self-test do wizard, pacote `totem-core`,
+  apply na placa e abertura real do service ate o wizard.
+
 ## Proximo Marco
 
 Continuar as melhorias de UX do wizard por verticais pequenas, sempre com:
