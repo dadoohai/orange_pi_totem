@@ -144,6 +144,30 @@ rodada posterior, sem bloquear o pacote C20.1.
   `docs/evidence/c20-totem-core-ota/20260708T032600Z-c20-6-top-step-preview-board-apply/`.
 - Deve entrar no pacote acumulado da proxima imagem de referencia.
 
+## C20.7 Em Planejamento - Data/Hora No Wizard
+
+- Objetivo: exibir data/hora de forma discreta para operador/suporte, sem
+  transformar o wizard em painel tecnico.
+- Decisao de design recomendada: texto passivo no cabecalho comum do wizard,
+  sem foco, sem botao novo e sem rodape.
+- Formato inicial recomendado: `DD/MM/YYYY HH:MM`, sem segundos e sem relogio
+  vivo. O valor atualiza quando a tela e renderizada, nao a cada segundo.
+- Escopo permitido nesta primeira rodada:
+  - renderizar data/hora local como metadado visual;
+  - manter tudo dentro de `totem_setup_visual_wizard.py`;
+  - validar em preview, self-test, OTA `totem-core` e captura real da placa.
+- Fora desta primeira rodada:
+  - configurar hora manualmente;
+  - alterar timezone;
+  - mexer em NTP/chrony/timesyncd;
+  - escrever `/etc/localtime`, `hwclock`, systemd ou qualquer politica de base.
+- Risco central: hora errada em placa sem NTP/RTC pode confundir. Se isso for
+  relevante no teste visual, a primeira implementacao deve ocultar ou rotular a
+  hora como nao confirmada, em vez de permitir ajuste manual.
+- Auditorias desta abertura convergiram em: cabecalho discreto/read-only,
+  configuracao real de hora como vertical posterior de sistema/imagem, nao como
+  ajuste leve do wizard.
+
 ## Proximo Marco
 
 Continuar as melhorias de UX do wizard por verticais pequenas, sempre com:

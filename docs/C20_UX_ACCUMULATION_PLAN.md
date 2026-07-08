@@ -265,6 +265,36 @@ Aceite:
 - SVG nunca e decisivo;
 - retorno ao player e guardrails registrados.
 
+### V9 - Data/Hora Discreta No Wizard
+
+Status: em planejamento em 2026-07-08.
+
+Objetivo do usuario: permitir que operador/suporte vejam data/hora durante a
+configuracao local sem poluir a tela nem criar uma nova decisao desnecessaria.
+
+Direcao consolidada:
+
+- primeira rodada read-only e visual;
+- exibir data/hora como metadado passivo no cabecalho comum;
+- nao usar rodape nem painel lateral para informacao passiva;
+- nao criar botao de ajustes nesta etapa;
+- nao configurar hora, timezone, NTP, RTC ou servicos do sistema via wizard.
+
+Risco principal:
+
+- se o relogio do sistema estiver errado, a UI pode dar falsa confianca. A
+  mitigacao minima e nao mostrar segundos, nao prometer sincronismo e, se
+  necessario, ocultar/rotular quando a hora nao estiver confiavel.
+
+Aceite futuro:
+
+- self-test cobre formato/ausencia de overflow;
+- preview/galeria mostram cabecalho em paisagem e retrato;
+- captura real da placa confirma legibilidade;
+- `Esc` restaura player;
+- non-claims registram `time_changed=false`, `timezone_changed=false`,
+  `ntp_changed=false`, `rtc_written=false`.
+
 ## Protocolo Minimo Por Rodada
 
 1. Definir objetivo, escopo e non-claims.
