@@ -282,6 +282,23 @@ Nota: rodadas que validam somente preview auto-exit devem registrar esse limite
 explicitamente. Fluxos de navegacao por teclado precisam de captura interativa
 se o claim depender de entrada real do usuario.
 
+## Galeria Completa De Inspecao
+
+Em 2026-07-08 foi criada uma galeria completa para evitar revisao visual
+baseada em poucas capturas.
+
+Evidencia:
+`docs/evidence/c20-visual-qa/20260708T002900Z-c20-full-gallery-inspection/`.
+
+Uso esperado:
+
+- abrir `index.html` ou `contact-sheet-*.jpg` para revisao rapida;
+- abrir `visible/*.jpg` para inspecao tela a tela;
+- usar a galeria como base de decisao visual, mas nao como prova de interacao
+  real na placa;
+- quando uma rodada depender de comportamento real, complementar com captura
+  framebuffer/HDMI da placa.
+
 ## Auditorias
 
 Rodadas C20 devem usar auditorias paralelas quando agregarem valor:
