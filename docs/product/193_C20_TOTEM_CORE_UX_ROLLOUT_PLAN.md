@@ -73,7 +73,7 @@ rodada posterior, sem bloquear o pacote C20.1.
   real porque nao deixava claro onde estava o foco. C20.3 substitui essa
   navegacao por foco unico com setas.
 
-## C20.3 Em Fechamento
+## C20.3 Fechado
 
 - Remover a navegacao por `Tab`/menu modal.
 - Usar foco unico, no padrao controle remoto/TV:
@@ -87,8 +87,16 @@ rodada posterior, sem bloquear o pacote C20.1.
   - item interno fica atenuado quando o foco esta no menu superior.
 - Manter a regra de seguranca: revisar estado parcial e bloquear salvamento
   incompleto.
-- Validacoes esperadas: self-test, replay de foco, galeria visual, pacote
-  `totem-core`, aplicacao na placa e captura real.
+- Testes offline cobrem self-test, galeria visual e replay de foco
+  `step_focus_pending_review`.
+- Pacote `totem-core` criado:
+  `c20.3.focus-navigation-20260708T033000Z-f343c99`.
+- Gate de release verde e commitado junto do pacote.
+- Aplicado na placa por `totem-updatectl apply-local`.
+- Capturas reais do framebuffer do foco no conteudo e foco no topo registradas
+  em:
+  `docs/evidence/c20-totem-core-ota/20260708T034000Z-c20-3-focus-navigation-board-apply/`.
+- Deve entrar no pacote acumulado da proxima imagem de referencia.
 
 ## Proximo Marco
 

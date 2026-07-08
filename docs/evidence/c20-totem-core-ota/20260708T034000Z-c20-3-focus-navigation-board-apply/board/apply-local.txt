@@ -1,0 +1,9 @@
+
+2026-07-08T02:38:45Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-08T02:38:45Z INFO apply_start source=local:dadooh-totem-core-c20.3.focus-navigation-20260708T033000Z-f343c99.manifest.json manifest=/tmp/c20-3-focus-navigation/dadooh-totem-core-c20.3.focus-navigation-20260708T033000Z-f343c99.manifest.json
+2026-07-08T02:38:45Z INFO local_payload_staged bytes=135382 sha256=189970485c6b80558d15ace49e9d9cc2f4dd42c398c4ec474738559d21d65c0e
+2026-07-08T02:38:47Z INFO totem_core_health_check_starting
+2026-07-08T02:38:50Z INFO apply_success version=c20.3.focus-navigation-20260708T033000Z-f343c99
+2026-07-08T02:38:50Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c20.3.focus-navigation-20260708T033000Z-f343c99
+
+__EXPECT_EXIT_CODE__=0

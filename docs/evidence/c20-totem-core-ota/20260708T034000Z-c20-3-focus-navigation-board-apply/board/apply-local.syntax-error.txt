@@ -1,0 +1,7 @@
+
+usage: totem-updatectl [-h]
+                       {status,self-test,check-github-latest,list-github,apply-github-latest,apply-player-runtime-authorized,apply-manifest-url,apply-local,rollback,rollback-player-runtime-authorized,reconcile}
+                       ...
+totem-updatectl: error: unrecognized arguments: --manifest
+
+__EXPECT_EXIT_CODE__=2
