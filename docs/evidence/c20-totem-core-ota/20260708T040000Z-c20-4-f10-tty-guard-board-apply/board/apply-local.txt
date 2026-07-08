@@ -1,0 +1,9 @@
+
+2026-07-08T02:55:27Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-08T02:55:27Z INFO apply_start source=local:dadooh-totem-core-c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d.manifest.json manifest=/tmp/c20-4-f10-tty-guard/dadooh-totem-core-c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d.manifest.json
+2026-07-08T02:55:27Z INFO local_payload_staged bytes=135520 sha256=12140293c9afb6728aba898ea8b7ef61d550e2795a1a2d380373ff4d2fc382db
+2026-07-08T02:55:30Z INFO totem_core_health_check_starting
+2026-07-08T02:55:33Z INFO apply_success version=c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d
+2026-07-08T02:55:33Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c20.4-f10-tty-guard-timeout-20260708T035500Z-d54341d
+
+__EXPECT_EXIT_CODE__=0

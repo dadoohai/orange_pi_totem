@@ -1,0 +1,66 @@
+
+2026-07-07T23:55:25-03:00
+active
+inactive
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.3.focus-navigation-20260708T033000Z-f343c99",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.2.step-navigation-20260708T022700Z-1fa33d2",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T02:38:47Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T02:31:06Z",
+      "path": "/data/core/totem/releases/c20.3.focus-navigation-20260708T033000Z-f343c99",
+      "payload_sha256": "189970485c6b80558d15ace49e9d9cc2f4dd42c398c4ec474738559d21d65c0e",
+      "source": "local:dadooh-totem-core-c20.3.focus-navigation-20260708T033000Z-f343c99.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "f343c99d65a8ea58ed2add3134b9cec9e7d8d79d",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.3.focus-navigation-20260708T033000Z-f343c99"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T02:38:50Z",
+      "source": "local:dadooh-totem-core-c20.3.focus-navigation-20260708T033000Z-f343c99.manifest.json",
+      "started_at_utc": "2026-07-08T02:38:45Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.3.focus-navigation-20260708T033000Z-f343c99"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T02:00:52Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T01:51:45Z",
+      "path": "/data/core/totem/releases/c20.2.step-navigation-20260708T022700Z-1fa33d2",
+      "payload_sha256": "3700d115c801217b79ccbf6369040a954774757a2ba29cf8e1ff4157985374ae",
+      "source": "local:dadooh-totem-core-c20.2.step-navigation-20260708T022700Z-1fa33d2.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "1fa33d29e455e31a3ae4d3003cecf6daac111662",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.2.step-navigation-20260708T022700Z-1fa33d2"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+
+__EXPECT_EXIT_CODE__=0

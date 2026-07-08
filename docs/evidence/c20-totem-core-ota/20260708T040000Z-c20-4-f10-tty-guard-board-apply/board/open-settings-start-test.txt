@@ -1,0 +1,26 @@
+
+2026-07-07T23:55:45-03:00
+direct_guard_rc=0
+===start-process===
+508741
+===states===
+activating
+active
+ 508776 bash            bash /data/core/totem/current/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+ 508827 bash            bash /data/core/totem/current/bin/totem_visual_tty_guard.sh --clear --tty 2
+===status===
+● totem-open-settings.service - Dadooh Open Totem Settings
+     Loaded: loaded (/etc/systemd/system/totem-open-settings.service; static)
+     Active: activating (start) since Tue 2026-07-07 23:55:48 -03; 8s ago
+    Process: 508743 ExecStartPre=/opt/totem/bin/totem_visual_tty_guard.sh --clear --tty 2 (code=exited, status=0/SUCCESS)
+    Process: 508767 ExecStartPre=/opt/totem/bin/totem_settings_lab_apply_policy.sh --enable-from-homologation-seed-if-present --seed-path /data/state/totem-settings/private-values.seed.json --policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings (code=exited, status=0/SUCCESS)
+   Main PID: 508776 (bash)
+      Tasks: 1 (limit: 2192)
+     Memory: 1.0M
+        CPU: 1.465s
+     CGroup: /system.slice/totem-open-settings.service
+             └─508776 bash /data/core/totem/current/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+
+Jul 07 23:55:48 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings...
+
+__EXPECT_EXIT_CODE__=0
