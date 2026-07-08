@@ -41,6 +41,7 @@ from urllib import request as urllib_request
 sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
+import totem_qr_pairing_client as pairing_client
 import totem_setup_minimal_server as setup
 import totem_wifi_nm_adapter as wifi_adapter
 
@@ -51,6 +52,7 @@ INTERFACE_MODE = "local_visual_mpv_drm_keyboard_controlled"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c9-9-visual-wizard"
 DEFAULT_WIFI_SECRETS_DIR = "/tmp/dadooh-c9-9-visual-wifi-secrets"
 WIFI_APPLY_DIRNAME = "wifi-persistent"
+PAIRING_DIRNAME = "qr-pairing"
 WIFI_TIMEOUT_SEC = 45
 WIFI_LIST_REFRESH_SEC = 10.0
 WIFI_LIST_TIMEOUT_SEC = 4
@@ -256,6 +258,19 @@ NETWORK_OPTIONS = (
         "bench_mock",
         "Continuar em modo de bancada",
         "Segue sem alterar a rede.",
+    ),
+)
+
+ENVIRONMENT_ENTRY_OPTIONS = (
+    Option(
+        "qr_pairing",
+        "Entrar com codigo/QR",
+        "Autoriza pelo celular e escolhe ambiente.",
+    ),
+    Option(
+        "manual_environment",
+        "Digitar ID manual",
+        "Usa o caminho tecnico de suporte.",
     ),
 )
 
@@ -2082,6 +2097,21 @@ def environment_preflight_unavailable(endpoint: str = "none", *, requires_confir
     )
 
 
+def environment_preflight_pairing_authorized() -> EnvironmentPreflight:
+    return EnvironmentPreflight(
+        endpoint="qr_pairing_mock",
+        environment_exists="true",
+        environment_not_found=False,
+        invalid_environment_id=False,
+        validation_auth_required=False,
+        validation_unavailable=False,
+        content_available="unknown",
+        content_empty=False,
+        requires_confirmation=False,
+        confirmed_by_operator=True,
+    )
+
+
 def validate_environment_remote(environment_id: str) -> EnvironmentPreflight:
     credentials = load_environment_validation_credentials()
     if credentials is None:
@@ -3636,6 +3666,130 @@ def run_environment_preflight(
     raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
+def create_mock_pairing_artifacts(out_dir: pathlib.Path, *, state: str | None = None) -> dict[str, Any]:
+    pairing_dir = pairing_client.require_tmp_out_dir(str(out_dir / PAIRING_DIRNAME))
+    requested_state = (
+        state
+        or os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MOCK_STATE", "authorized").strip()
+        or "authorized"
+    )
+    requested_code = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_CODE", "").strip()
+    code = pairing_client.validate_code(requested_code) if requested_code else pairing_client.generate_code()
+    return pairing_client.run_mock_pairing(
+        out_dir=pairing_dir,
+        state=requested_state,
+        code=code,
+        authorize_base_url=pairing_client.DEFAULT_AUTHORIZE_BASE_URL,
+        api_url=pairing_client.DEFAULT_API_URL,
+        api_key=pairing_client.DEFAULT_MOCK_API_KEY,
+        environment_id=pairing_client.DEFAULT_ENVIRONMENT_ID,
+        station_id=pairing_client.DEFAULT_STATION_ID,
+        expires_in_sec=600,
+    )
+
+
+def load_pairing_environment_id(private_values_path: str | None) -> str:
+    if not private_values_path:
+        raise VisualWizardError("pareamento sem credencial privada")
+    path = pathlib.Path(private_values_path)
+    if path.is_symlink() or path.parent.is_symlink() or not path.is_file():
+        raise VisualWizardError("credencial privada invalida")
+    if not setup.path_is_under(path.resolve(strict=True), setup.TMP_ROOT):
+        raise VisualWizardError("credencial privada fora de /tmp")
+    if file_mode(path) != setup.PRIVATE_FILE_MODE:
+        raise VisualWizardError("credencial privada com permissao invalida")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise VisualWizardError("credencial privada invalida")
+    return validate_environment_id(str(data.get("environment_id", "")))
+
+
+def run_mock_environment_pairing(
+    display: VisualDisplay,
+    out_dir: pathlib.Path,
+    *,
+    layout_rotation_deg: int,
+) -> tuple[str, EnvironmentPreflight] | None:
+    display.show(
+        "03-environment-pairing-start",
+        build_screen_svg(
+            active_step=2,
+            title="Autorizar totem",
+            subtitle="Criando codigo de pareamento...",
+            footer="Aguarde",
+            panel_title="Pareamento",
+            panel_items=["Celular autoriza.", "Sem login na placa.", "Nada aplicado ainda."],
+            layout_rotation_deg=layout_rotation_deg,
+        ),
+    )
+    try:
+        result = create_mock_pairing_artifacts(out_dir)
+    except Exception:
+        key = show_environment_validation_status(
+            display,
+            title="Pareamento indisponivel",
+            subtitle="Nao foi possivel gerar o codigo agora.",
+            footer="Enter tenta de novo | Esc volta",
+            panel_items=["Nada foi salvo.", "Use ID manual.", "Tente de novo."],
+            accent="#f59e0b",
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        if key in {"enter", "b", "B", "back", "escape"}:
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    session_path = pathlib.Path(str(result["session_public_path"]))
+    session = json.loads(session_path.read_text(encoding="utf-8"))
+    state = str(result.get("state") or session.get("state") or "unknown")
+    code = str(session.get("pairing_code") or "")
+    url = str(session.get("authorize_url") or "")
+    if result.get("passed") is True:
+        environment_id = load_pairing_environment_id(str(result.get("private_values_path") or ""))
+        display.show(
+            "03-environment-pairing-authorized",
+            build_screen_svg(
+                active_step=2,
+                title="Totem autorizado",
+                subtitle="Ambiente recebido pelo pareamento.",
+                footer="Enter continua | Esc volta",
+                field_label="Codigo",
+                field_value_hint=code,
+                field_note=url,
+                panel_title="Seguranca",
+                panel_items=["Credencial privada.", "Token humano nao fica.", "Nada aplicado ainda."],
+                accent="#22c55e",
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        key = read_key()
+        if key == "enter":
+            return environment_id, environment_preflight_pairing_authorized()
+        if key in {"b", "B", "back", "escape"}:
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+    title_by_state = {
+        "pending": "Aguardando autorizacao",
+        "expired": "Codigo expirado",
+        "denied": "Autorizacao negada",
+        "backend_unavailable": "Servidor indisponivel",
+        "empty_environment_list": "Sem ambientes",
+        "already_used": "Codigo ja usado",
+    }
+    key = show_environment_validation_status(
+        display,
+        title=title_by_state.get(state, "Pareamento nao concluido"),
+        subtitle="Use Enter para tentar de novo ou Esc para voltar.",
+        footer="Enter tenta de novo | Esc volta",
+        panel_items=["Nada foi salvo.", "Manual continua disponivel.", "Sem token humano."],
+        accent="#f59e0b",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+    if key in {"enter", "b", "B", "back", "escape"}:
+        return None
+    raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
     if APPLY_CONTEXT == "real-write":
@@ -3779,11 +3933,50 @@ def run_visual_wizard(
                             "environment_input_entered",
                             network_step=state.network["network_step"] if state.network else "pending",
                         )
-                        environment_id = read_text_field(
+                        entry_method = choose_option(
                             display,
                             screen_id="03-environment",
                             active_step=2,
                             title="Ambiente",
+                            subtitle="Como deseja autorizar este totem?",
+                            options=list(ENVIRONMENT_ENTRY_OPTIONS),
+                            panel_items=[
+                                "Celular e mais simples.",
+                                "Manual fica para suporte.",
+                                "Nada salvo agora.",
+                            ],
+                            allow_back=True,
+                            layout_rotation_deg=layout_rotation_deg,
+                            initial_selected_index=1 if state.environment_id.strip() else 0,
+                            initial_focus_area=entry_focus_area,
+                        )
+                        if entry_method is None:
+                            active_step = 1
+                            entry_focus_area = "content"
+                            continue
+                        if entry_method.key == "qr_pairing":
+                            paired = run_mock_environment_pairing(
+                                display,
+                                out_dir,
+                                layout_rotation_deg=layout_rotation_deg,
+                            )
+                            if paired is None:
+                                continue
+                            environment_id, environment_preflight = paired
+                            if environment_id != state.environment_id:
+                                state.environment_preflight = None
+                                state.environment_status = "pending"
+                            state.environment_id = environment_id
+                            state.environment_preflight = environment_preflight
+                            state.environment_status = "confirmed"
+                            active_step = 3
+                            entry_focus_area = "content"
+                            continue
+                        environment_id = read_text_field(
+                            display,
+                            screen_id="03-environment-manual",
+                            active_step=2,
+                            title="Ambiente manual",
                             subtitle="Digite o ID do ambiente",
                             label="ID do ambiente",
                             hidden=False,
@@ -3802,10 +3995,10 @@ def run_visual_wizard(
                             validation_error_message="ID invalido. Verifique e tente novamente.",
                             layout_rotation_deg=layout_rotation_deg,
                             initial_value=state.environment_id,
-                            initial_focus_area=entry_focus_area,
+                            initial_focus_area="content",
                         )
                         if environment_id is None:
-                            active_step = 1
+                            active_step = 2
                             entry_focus_area = "content"
                             continue
                         if environment_id != state.environment_id:
@@ -4021,6 +4214,19 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=2,
             title="Ambiente",
+            subtitle="Como deseja autorizar este totem?",
+            footer="Enter confirma | Cima menu | Baixo escolhe | Esc volta",
+            options=list(ENVIRONMENT_ENTRY_OPTIONS),
+            selected_index=0,
+            panel_items=["Celular e mais simples.", "Manual fica para suporte.", "Nada salvo agora."],
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "03-environment-manual",
+        build_screen_svg(
+            active_step=2,
+            title="Ambiente manual",
             subtitle="Digite o ID do ambiente",
             footer="Enter valida | Esc volta",
             field_label="ID do ambiente",
@@ -4032,6 +4238,22 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             ),
             field_note="Entrada local.",
             panel_items=["UUID do ambiente.", "Backspace corrige.", "Enter valida."],
+            layout_rotation_deg=90,
+        ),
+    )
+    display.show(
+        "03-environment-pairing-authorized",
+        build_screen_svg(
+            active_step=2,
+            title="Totem autorizado",
+            subtitle="Ambiente recebido pelo pareamento.",
+            footer="Enter continua | Esc volta",
+            field_label="Codigo",
+            field_value_hint="ABCD1234",
+            field_note="https://home.dadooh.ai/totem/authorize?code=ABCD1234",
+            panel_title="Seguranca",
+            panel_items=["Credencial privada.", "Token humano nao fica.", "Nada aplicado ainda."],
+            accent="#22c55e",
             layout_rotation_deg=90,
         ),
     )
@@ -4575,6 +4797,31 @@ def run_self_test() -> None:
         finally:
             globals()["load_environment_validation_credentials"] = original_load_credentials
             globals()["http_json_request"] = original_http_json_request
+        pairing_dir = require_tmp_dir(str(root / "pairing-mock"))
+        pairing_result = create_mock_pairing_artifacts(pairing_dir, state="authorized")
+        assert_true(pairing_result["passed"] is True, "authorized pairing mock should pass")
+        pairing_private_path = pathlib.Path(str(pairing_result["private_values_path"]))
+        assert_true(file_mode(pairing_private_path) == setup.PRIVATE_FILE_MODE, "pairing private values should be 0600")
+        pairing_environment = load_pairing_environment_id(str(pairing_private_path))
+        assert_true(
+            pairing_environment == pairing_client.DEFAULT_ENVIRONMENT_ID,
+            "pairing mock should provide a validated environment id",
+        )
+        pairing_public = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((pairing_dir / PAIRING_DIRNAME).glob("*"))
+            if path.name != "private-values.json"
+        )
+        for forbidden in (
+            pairing_client.DEFAULT_MOCK_API_KEY,
+            pairing_client.DEFAULT_API_URL,
+            pairing_client.DEFAULT_ENVIRONMENT_ID,
+            pairing_client.DEFAULT_STATION_ID,
+        ):
+            assert_true(forbidden not in pairing_public, "pairing public artifacts should not leak private values")
+        denied_pairing = create_mock_pairing_artifacts(pairing_dir, state="already_used")
+        assert_true(denied_pairing["passed"] is False, "already_used pairing mock should not pass")
+        assert_true(denied_pairing["private_values_path"] is None, "already_used pairing should not write private values")
         assert_true(
             text_field_apply_key("ab", "v", max_length=128, error="")[0] == "abv",
             "lowercase v should remain a printable password character",

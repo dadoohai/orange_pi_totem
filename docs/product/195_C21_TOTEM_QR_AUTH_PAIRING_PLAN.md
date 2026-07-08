@@ -230,6 +230,34 @@ Proximo slice robusto: integrar esse helper no wizard como fluxo
 `Entrar com codigo/QR`, em modo `candidate-only`, preservando o campo manual de
 ambiente como fallback.
 
+## C21.1 - Wizard Candidate-Only
+
+Implementado o slice de wizard sem backend real e sem escrita real:
+
+- etapa `Ambiente` agora oferece:
+  - `Entrar com codigo/QR`;
+  - `Digitar ID manual`;
+- o caminho manual preserva validacao UUID e preflight existentes;
+- o caminho `codigo/QR` usa o helper C21 mock, gera artefatos em subdir privado
+  sob `/tmp`, le somente o `environment_id` do `private-values.json` e avanca
+  para Revisao;
+- estados nao autorizados voltam para a escolha de Ambiente sem abortar o
+  wizard;
+- se ja existir ambiente preenchido, o wizard favorece o caminho manual para
+  edicao/suporte;
+- galeria offline inclui a tela de escolha, manual e pareamento autorizado;
+- self-test do wizard cobre pareamento autorizado, `already_used`, permissao
+  `0600` da credencial privada e ausencia de vazamento nos artefatos publicos
+  do pareamento.
+
+Non-claims desta fatia:
+
+- ainda nao ha polling real;
+- ainda nao ha QR escaneavel final;
+- ainda nao ha tela real em `homeHabitat`;
+- ainda nao ha backend `/totem-pairing`;
+- ainda nao ha escrita real de configuracao no final do fluxo QR.
+
 ## Auditoria Da Abertura
 
 Esta especificacao foi montada a partir de leitura local dos tres repositorios e
