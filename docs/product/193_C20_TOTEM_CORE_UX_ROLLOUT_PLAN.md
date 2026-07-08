@@ -206,6 +206,20 @@ rodada posterior, sem bloquear o pacote C20.1.
 
 ## Proximo Marco
 
-Continuar as melhorias de UX do wizard por verticais pequenas, sempre com:
-self-test, galeria visual, replay quando houver fluxo de teclado, pacote
-`totem-core`, aplicacao na placa e captura real antes de marcar como fechado.
+O proximo marco deixa de ser mais um refinamento isolado e passa a ser o
+**C20 Wizard E2E RC**.
+
+Metodo central:
+`docs/product/194_C20_WIZARD_E2E_RC_METHOD.md`.
+
+Direcao:
+
+- tratar C20.1-C20.8 como incrementos validados para acumulo;
+- rodar uma auditoria de jornada completa do wizard atual;
+- classificar achados como blocker, non-blocker ou backlog;
+- gerar o proximo pacote apenas com ajustes que movem o RC;
+- validar o RC por self-test, replay, galeria, apply na placa, fluxo real,
+  retorno ao player e rollback.
+
+Non-claim: C20 Wizard E2E RC nao significa stable/producao por inferencia e nao
+valida Wi-Fi/config real enquanto essas escritas continuarem fora do escopo.

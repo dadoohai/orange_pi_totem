@@ -56,6 +56,25 @@ Regra curta: OTA C18 comum é manual/operator-triggered e restrito a
 `totem-core`; `kiosky-player`, launcher do player, MPV/hwdecode, systemd,
 kernel/display, updater e imagem base não entram no OTA comum.
 
+## Atualizacao C20 Wizard
+
+A linha C20 acumula melhorias de configuracao local via `totem-core` OTA. O
+marco vigente nao e mais uma sequencia de refinamentos isolados; e o
+**C20 Wizard E2E RC**, que deve provar o fluxo completo do wizard na placa, com
+retorno ao player, rollback e fronteira `totem-core` preservados.
+
+Para qualquer decisao de UX/settings C20, consultar:
+
+- `docs/product/194_C20_WIZARD_E2E_RC_METHOD.md` para o metodo central, blockers
+  e definicao de pronto do RC E2E;
+- `docs/product/193_C20_TOTEM_CORE_UX_ROLLOUT_PLAN.md` para o historico de
+  C20.1-C20.8 e o proximo marco;
+- `docs/C20_UX_ACCUMULATION_PLAN.md` para o acumulo das verticais e evidencias.
+
+Regra curta: C20 atualiza wizard/settings por `totem-core`; nao valida
+stable/producao por inferencia e nao autoriza escrita real de Wi-Fi/config,
+player-runtime, display/kernel, timezone/NTP/RTC ou updater fora de escopo.
+
 ---
 
 ## 2. Documentos gerados

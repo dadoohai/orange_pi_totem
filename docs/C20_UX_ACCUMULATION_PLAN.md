@@ -339,6 +339,13 @@ Aceite futuro:
 
 ## Protocolo Minimo Por Rodada
 
+Metodo central atualizado:
+`docs/product/194_C20_WIZARD_E2E_RC_METHOD.md`.
+
+Decisao de 2026-07-08: C20.x sao incrementos validados para acumulo. O marco de
+produto e o **C20 Wizard E2E RC**, que prova a jornada completa do wizard em
+`totem-core` sem promover stable/producao por inferencia.
+
 1. Definir objetivo, escopo e non-claims.
 2. Iterar localmente com preview/galeria quando possivel.
 3. Rodar self-tests do script tocado.
@@ -413,6 +420,23 @@ Rodadas C20 devem usar auditorias paralelas quando agregarem valor:
 
 O decisor central consolida os retornos, descarta sugestoes fora de escopo e
 atualiza este plano quando houver aprendizado real.
+
+## Sintese Da Auditoria De Metodo C20 E2E
+
+Em 2026-07-08, auditores independentes revisaram a metodologia C20. A conclusao
+incorporada foi:
+
+- o plano e robusto para verticais isoladas, mas precisava de um RC E2E unico;
+- screenshots e SVGs ajudam, mas nao substituem fluxo real na placa quando o
+  claim depende de comportamento humano/hardware;
+- o pacote acumulado deve provar player ativo, settings limpo, rollback e
+  fronteira `totem-core`;
+- auditoria paralela deve ser usada em mudanca de navegacao, risco operacional
+  ou fechamento RC, nao em todo microcopy;
+- nao bloquear por polimento quando o usuario entende e a operacao esta segura.
+
+O metodo final esta registrado em:
+`docs/product/194_C20_WIZARD_E2E_RC_METHOD.md`.
 
 ## Primeiras Rodadas Recomendadas
 
