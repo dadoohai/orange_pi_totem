@@ -57,6 +57,9 @@ WIFI_LIST_TIMEOUT_SEC = 4
 WIFI_LIST_PAGE_SIZE = 5
 WIFI_LIST_LANDSCAPE_PAGE_SIZE = 4
 MAX_PANEL_ITEMS = 3
+CLOCK_IMPLAUSIBLE_LABEL = "Hora nao ajustada"
+CLOCK_MIN_PLAUSIBLE_YEAR = 2024
+CLOCK_MAX_PLAUSIBLE_YEAR = 2100
 TEXT_INPUT_MIN_RENDER_INTERVAL_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_RENDER_INTERVAL_SEC", "0.10"))
 TEXT_INPUT_REPEAT_DRAIN_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_REPEAT_DRAIN_SEC", "0.035"))
 TEXT_INPUT_MAX_DRAIN_KEYS = int(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_MAX_DRAIN_KEYS", "80"))
@@ -149,6 +152,7 @@ RECT_RE = re.compile(r"<rect\b([^>]*)/?>", re.IGNORECASE)
 TEXT_RE = re.compile(r"<text\b([^>]*)>(.*?)</text>", re.IGNORECASE | re.DOTALL)
 TSPAN_RE = re.compile(r"<tspan\b([^>]*)>(.*?)</tspan>", re.IGNORECASE | re.DOTALL)
 SVG_RE = re.compile(r"<svg\b([^>]*)>", re.IGNORECASE)
+_CLOCK_LABEL_AUTO = object()
 
 
 class VisualWizardAbort(RuntimeError):
@@ -371,6 +375,35 @@ def svg_lines(
         + "".join(tspans)
         + "</text>"
     )
+
+
+def local_datetime_label(now: time.struct_time | None = None) -> str:
+    current = now if now is not None else time.localtime()
+    if current.tm_year < CLOCK_MIN_PLAUSIBLE_YEAR or current.tm_year > CLOCK_MAX_PLAUSIBLE_YEAR:
+        return CLOCK_IMPLAUSIBLE_LABEL
+    return f"{current.tm_mday:02d}/{current.tm_mon:02d}/{current.tm_year:04d} {current.tm_hour:02d}:{current.tm_min:02d}"
+
+
+def header_note_label(
+    active_step: int,
+    layout: ScreenLayout,
+    clock_label: object = _CLOCK_LABEL_AUTO,
+) -> str:
+    if active_step == 0:
+        return layout.note
+    if clock_label is _CLOCK_LABEL_AUTO:
+        return local_datetime_label()
+    if clock_label is None:
+        return ""
+    return str(clock_label)
+
+
+def header_note_position(active_step: int, layout: ScreenLayout) -> tuple[int, int]:
+    if layout.portrait:
+        if active_step == 0:
+            return layout.margin_x, 144
+        return layout.width - layout.margin_x - 220, 58
+    return layout.width - layout.margin_x - 156, 54
 
 
 def step_indicator(
@@ -729,6 +762,7 @@ def build_screen_svg(
     suppress_landscape_info_panel: bool = False,
     focus_area: str = "content",
     focused_step: int | None = None,
+    clock_label: object = _CLOCK_LABEL_AUTO,
 ) -> str:
     layout = screen_layout(layout_rotation_deg)
     options_svg = (
@@ -756,19 +790,16 @@ def build_screen_svg(
         title_y = 188
         subtitle_y = 224
         subtitle_width = 46
-        note_x = layout.margin_x
-        note_y = 144
     else:
         panel_y = 230
         title_y = 198
         subtitle_y = 234
         subtitle_width = 52
-        note_x = layout.width - layout.margin_x - 156
-        note_y = 54
+    note_x, note_y = header_note_position(active_step, layout)
     safe_panel_items = panel_items or []
     if suppress_landscape_info_panel and not layout.portrait:
         safe_panel_items = []
-    layout_note = layout.note if active_step == 0 else ""
+    layout_note = header_note_label(active_step, layout, clock_label)
     panel_svg = info_panel(
         safe_panel_items,
         title=panel_title,
@@ -4371,6 +4402,87 @@ def run_self_test() -> None:
             len(wrap_text("one two three four five six seven", width=8, max_lines=1)) == 1,
             "wizard subtitles should be constrained to one visual line",
         )
+        fixed_clock = "08/07/2026 16:45"
+        assert_true(
+            local_datetime_label(time.struct_time((2026, 7, 8, 16, 45, 0, 2, 190, -1))) == fixed_clock,
+            "wizard clock should render local date and minute without seconds",
+        )
+        assert_true(
+            local_datetime_label(time.struct_time((1970, 1, 1, 0, 0, 0, 3, 1, -1))) == CLOCK_IMPLAUSIBLE_LABEL,
+            "wizard clock should not render implausible epoch dates",
+        )
+        assert_true(
+            local_datetime_label(time.struct_time((2201, 1, 1, 0, 0, 0, 3, 1, -1))) == CLOCK_IMPLAUSIBLE_LABEL,
+            "wizard clock should not render implausible future dates",
+        )
+        clock_step0_svg = build_screen_svg(
+            active_step=0,
+            title="Orientacao",
+            subtitle="Escolha a tela.",
+            footer="Enter confirma",
+            options=[Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS],
+            selected_index=0,
+            clock_label=fixed_clock,
+        )
+        assert_true("Layout paisagem" in clock_step0_svg, "step 0 should preserve layout note instead of clock")
+        assert_true(fixed_clock not in clock_step0_svg, "step 0 should not render clock over layout note")
+        clock_step1_svg = build_screen_svg(
+            active_step=1,
+            title="Conexao",
+            subtitle="Escolha a conexao.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            selected_index=0,
+            clock_label=fixed_clock,
+        )
+        assert_true(fixed_clock in clock_step1_svg, "steps after orientation should render the clock label")
+        assert_true('x="792" y="54"' in clock_step1_svg, "landscape clock should reuse the header note slot")
+        clock_portrait_svg = build_screen_svg(
+            active_step=1,
+            title="Conexao",
+            subtitle="Escolha a conexao.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            selected_index=0,
+            layout_rotation_deg=90,
+            clock_label=fixed_clock,
+        )
+        assert_true(fixed_clock in clock_portrait_svg, "portrait screens should render the clock label")
+        assert_true('x="500" y="58"' in clock_portrait_svg, "portrait clock should stay attached to header row")
+        clock_portrait_left_svg = build_screen_svg(
+            active_step=1,
+            title="Conexao",
+            subtitle="Escolha a conexao.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            selected_index=0,
+            layout_rotation_deg=270,
+            clock_label=fixed_clock,
+        )
+        assert_true(fixed_clock in clock_portrait_left_svg, "portrait-left screens should render the clock label")
+        assert_true('x="500" y="58"' in clock_portrait_left_svg, "portrait-left clock should stay attached to header row")
+        clock_inverted_svg = build_screen_svg(
+            active_step=1,
+            title="Conexao",
+            subtitle="Escolha a conexao.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            selected_index=0,
+            layout_rotation_deg=180,
+            clock_label=fixed_clock,
+        )
+        assert_true(fixed_clock in clock_inverted_svg, "landscape-inverted screens should render the clock label")
+        assert_true('x="792" y="54"' in clock_inverted_svg, "landscape-inverted clock should reuse the header note slot")
+        clock_invalid_svg = build_screen_svg(
+            active_step=1,
+            title="Conexao",
+            subtitle="Escolha a conexao.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            selected_index=0,
+            clock_label=CLOCK_IMPLAUSIBLE_LABEL,
+        )
+        assert_true(CLOCK_IMPLAUSIBLE_LABEL in clock_invalid_svg, "invalid clocks should render the approved fallback")
         assert_true(
             text_field_apply_key("abcdef", "backspace", max_length=128, error="")[0] == "abcde",
             "Backspace should remove one character semantically",
