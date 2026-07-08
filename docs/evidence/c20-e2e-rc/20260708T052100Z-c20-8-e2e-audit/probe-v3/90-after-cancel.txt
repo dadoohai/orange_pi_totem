@@ -1,0 +1,82 @@
+---90-after-cancel
+2026-07-08T02:32:27-03:00
+kiosky-player=inactive
+open-settings-active=activating
+open-settings-failed=activating
+---processes
+ 529322       1 Ss   bash            bash /data/core/totem/current/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+---locks
+/run/dadooh-settings:
+total 16
+drwx------  2 root root 120 Jul  8 02:32 .
+drwxr-xr-x 30 root root 800 Jul  8 02:32 ..
+-rw-------  1 root root 567 Jul  8 02:32 apply-policy.json
+-rw-------  1 root root 438 Jul  8 02:32 open-settings-cleanup-status.json
+-rw-------  1 root root 476 Jul  8 02:32 summary.txt
+-rw-------  1 root root 605 Jul  8 02:32 trigger-status.json
+
+/run/totem/settings-session.lock:
+total 0
+drwxr-xr-x 2 root root 40 Jul  8 02:32 .
+drwxr-xr-x 3 root root 60 Jul  8 02:32 ..
+---totem-core-status
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": false,
+  "component_apply_guard_reason": "open_settings_service_activating",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": false,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T04:56:50Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T04:53:17Z",
+      "path": "/data/core/totem/releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+      "payload_sha256": "78604b737baba1afc16c93075c6a3a5979e221d7f6999b1dd53e9408b0484ff8",
+      "source": "local:dadooh-totem-core-c20.8-clock-all-steps-20260708T045317Z-661c582.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "661c5824113c5500f238f91a02c265f4796dc28d",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.8-clock-all-steps-20260708T045317Z-661c582"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T04:56:53Z",
+      "source": "local:dadooh-totem-core-c20.8-clock-all-steps-20260708T045317Z-661c582.manifest.json",
+      "started_at_utc": "2026-07-08T04:56:47Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.8-clock-all-steps-20260708T045317Z-661c582"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T04:35:24Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T04:27:33Z",
+      "path": "/data/core/totem/releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00",
+      "payload_sha256": "01ab5cc921379366597719857ed55ab0360b052001d50c1ced896c4f881d5ec5",
+      "source": "local:dadooh-totem-core-c20.7-clock-metadata-20260708T042733Z-b9d8a00.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "b9d8a00962af7bac9dc1084c785afa37df60290f",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.7-clock-metadata-20260708T042733Z-b9d8a00"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

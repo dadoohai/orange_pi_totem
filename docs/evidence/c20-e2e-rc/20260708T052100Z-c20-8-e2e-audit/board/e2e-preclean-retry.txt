@@ -1,0 +1,15 @@
+
+---pre
+2026-07-08T02:25:03-03:00
+active
+inactive
+inactive
+{
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "service_active": true,
+  "current_symlink_target": "releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+  "previous_symlink_target": "releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00"
+}
+
+__EXPECT_EXIT_CODE__=0

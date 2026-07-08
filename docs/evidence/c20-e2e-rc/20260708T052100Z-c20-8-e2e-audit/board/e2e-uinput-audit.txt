@@ -1,0 +1,156 @@
+
+---before
+2026-07-08T02:22:54-03:00
+active
+inactive
+inactive
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-08T04:56:50Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T04:53:17Z",
+      "path": "/data/core/totem/releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+      "payload_sha256": "78604b737baba1afc16c93075c6a3a5979e221d7f6999b1dd53e9408b0484ff8",
+      "source": "local:dadooh-totem-core-c20.8-clock-all-steps-20260708T045317Z-661c582.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "661c5824113c5500f238f91a02c265f4796dc28d",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.8-clock-all-steps-20260708T045317Z-661c582"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-08T04:56:53Z",
+      "source": "local:dadooh-totem-core-c20.8-clock-all-steps-20260708T045317Z-661c582.manifest.json",
+      "started_at_utc": "2026-07-08T04:56:47Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.8-clock-all-steps-20260708T045317Z-661c582"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T04:35:24Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T04:27:33Z",
+      "path": "/data/core/totem/releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00",
+      "payload_sha256": "01ab5cc921379366597719857ed55ab0360b052001d50c1ced896c4f881d5ec5",
+      "source": "local:dadooh-totem-core-c20.7-clock-metadata-20260708T042733Z-b9d8a00.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "b9d8a00962af7bac9dc1084c785afa37df60290f",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.7-clock-metadata-20260708T042733Z-b9d8a00"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+---start
+start_pid=527267
+wizard_seen_at=1s
+---opened
+activating
+active
+527256 bash -c set -u; rm -rf /tmp/c20-e2e-rc; mkdir -p /tmp/c20-e2e-rc/captures; echo ---before; date -Is; systemctl is-active kiosky-player.service || true; systemctl is-active totem-open-settings.service || true; systemctl is-failed totem-open-settings.service || true; /opt/totem/bin/totem-updatectl status --component totem-core; echo ---start; systemctl start totem-open-settings.service & echo start_pid=$!; for i in $(seq 1 20); do if pgrep -af "totem_setup_visual_wizard.py" >/tmp/c20-e2e-rc/wizard-process.txt; then echo wizard_seen_at=${i}s; break; fi; sleep 1; done; echo ---opened; systemctl is-active totem-open-settings.service || true; systemctl is-active kiosky-player.service || true; cat /tmp/c20-e2e-rc/wizard-process.txt 2>/dev/null || true; ffmpeg -hide_banner -loglevel error -f fbdev -i /dev/fb0 -frames:v 1 -update 1 /tmp/c20-e2e-rc/captures/01-opened.jpg || true; python3 - <<PY import os, struct, time UINPUT=/dev/uinput EV_SYN=0x00; EV_KEY=0x01 SYN_REPORT=0 UI_DEV_CREATE=0x5501; UI_DEV_DESTROY=0x5502; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565 KEY_UP=103; KEY_DOWN=108; KEY_LEFT=105; KEY_RIGHT=106; KEY_ENTER=28; KEY_ESC=1 # Linux input_event timeval(long,long), type ushort, code ushort, value int EVENT=llHHI def emit(fd, typ, code, val):     fd.write(struct.pack(EVENT, 0, 0, typ, code, val)); fd.flush() def tap(fd, key, delay=0.25):     emit(fd, EV_KEY, key, 1); emit(fd, EV_SYN, SYN_REPORT, 0); time.sleep(0.05)     emit(fd, EV_KEY, key, 0); emit(fd, EV_SYN, SYN_REPORT, 0); time.sleep(delay) with open(UINPUT, wb, buffering=0) as fd:     import fcntl     fcntl.ioctl(fd, UI_SET_EVBIT, EV_KEY)     for key in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_ENTER, KEY_ESC]:         fcntl.ioctl(fd, UI_SET_KEYBIT, key)     name=bc20-e2e-virtual-keyboard + b0*(80-len(bc20-e2e-virtual-keyboard))     # uinput_user_dev: name[80], id bustype/vendor/product/version, ff_effects_max, absmax/min/fuzz/flat arrays     uidev = name + struct.pack(HHHHI, 0x03, 0x1234, 0x5678, 1, 0) + bytes(4*64*4)     fd.write(uidev); fd.flush()     fcntl.ioctl(fd, UI_DEV_CREATE)     time.sleep(0.5)     # top menu: up, right => Conexao, right => Ambiente, right => Revisao, down => content, esc => back/cancel     for key in [KEY_UP, KEY_RIGHT]:         tap(fd, key)     time.sleep(0.8) PY  echo ---after-nav-connection; ls -l /tmp/dadooh-c10-6-2-visual-wizard/screens 2>/dev/null | tail -20 || true; ffmpeg -hide_banner -loglevel error -f fbdev -i /dev/fb0 -frames:v 1 -update 1 /tmp/c20-e2e-rc/captures/02-connection.jpg || true; python3 - <<PY import os, struct, time, fcntl UINPUT=/dev/uinput; EV_SYN=0; EV_KEY=1; SYN_REPORT=0; UI_DEV_CREATE=0x5501; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565 KEY_RIGHT=106; KEY_DOWN=108; KEY_ESC=1 EVENT=llHHI def emit(fd,t,c,v): fd.write(struct.pack(EVENT,0,0,t,c,v)); fd.flush() def tap(fd,k,d=0.35): emit(fd,EV_KEY,k,1); emit(fd,EV_SYN,SYN_REPORT,0); time.sleep(.05); emit(fd,EV_KEY,k,0); emit(fd,EV_SYN,SYN_REPORT,0); time.sleep(d) with open(UINPUT,wb,buffering=0) as fd:     fcntl.ioctl(fd,UI_SET_EVBIT,EV_KEY)     for k in [KEY_RIGHT,KEY_DOWN,KEY_ESC]: fcntl.ioctl(fd,UI_SET_KEYBIT,k)     name=bc20-e2e-virtual-keyboard-2+b0*(80-len(bc20-e2e-virtual-keyboard-2))     fd.write(name+struct.pack(HHHHI,3,0x1234,0x5679,1,0)+bytes(4*64*4)); fd.flush(); fcntl.ioctl(fd,UI_DEV_CREATE); time.sleep(.5)     tap(fd,KEY_RIGHT); time.sleep(.8) PY  echo ---after-nav-environment; ls -l /tmp/dadooh-c10-6-2-visual-wizard/screens 2>/dev/null | tail -20 || true; ffmpeg -hide_banner -loglevel error -f fbdev -i /dev/fb0 -frames:v 1 -update 1 /tmp/c20-e2e-rc/captures/03-environment.jpg || true; python3 - <<PY import os, struct, time, fcntl UINPUT=/dev/uinput; EV_SYN=0; EV_KEY=1; SYN_REPORT=0; UI_DEV_CREATE=0x5501; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565 KEY_RIGHT=106; KEY_ESC=1 EVENT=llHHI def emit(fd,t,c,v): fd.write(struct.pack(EVENT,0,0,t,c,v)); fd.flush() def tap(fd,k,d=0.35): emit(fd,EV_KEY,k,1); emit(fd,EV_SYN,SYN_REPORT,0); time.sleep(.05); emit(fd,EV_KEY,k,0); emit(fd,EV_SYN,SYN_REPORT,0); time.sleep(d) with open(UINPUT,wb,buffering=0) as fd:     fcntl.ioctl(fd,UI_SET_EVBIT,EV_KEY)     for k in [KEY_RIGHT,KEY_ESC]: fcntl.ioctl(fd,UI_SET_KEYBIT,k)     name=bc20-e2e-virtual-keyboard-3+b0*(80-len(bc20-e2e-virtual-keyboard-3))     fd.write(name+struct.pack(HHHHI,3,0x1234,0x5680,1,0)+bytes(4*64*4)); fd.flush(); fcntl.ioctl(fd,UI_DEV_CREATE); time.sleep(.5)     tap(fd,KEY_RIGHT); time.sleep(.8) PY  echo ---after-nav-review; ls -l /tmp/dadooh-c10-6-2-visual-wizard/screens 2>/dev/null | tail -20 || true; ffmpeg -hide_banner -loglevel error -f fbdev -i /dev/fb0 -frames:v 1 -update 1 /tmp/c20-e2e-rc/captures/04-review.jpg || true; python3 - <<PY import os, struct, time, fcntl UINPUT=/dev/uinput; EV_SYN=0; EV_KEY=1; SYN_REPORT=0; UI_DEV_CREATE=0x5501; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565 KEY_ESC=1 EVENT=llHHI def emit(fd,t,c,v): fd.write(struct.pack(EVENT,0,0,t,c,v)); fd.flush() def tap(fd,k,d=0.35): emit(fd,EV_KEY,k,1); emit(fd,EV_SYN,SYN_REPORT,0); time.sleep(.05); emit(fd,EV_KEY,k,0); emit(fd,EV_SYN,SYN_REPORT,0); time.sleep(d) with open(UINPUT,wb,buffering=0) as fd:     fcntl.ioctl(fd,UI_SET_EVBIT,EV_KEY); fcntl.ioctl(fd,UI_SET_KEYBIT,KEY_ESC)     name=bc20-e2e-virtual-keyboard-esc+b0*(80-len(bc20-e2e-virtual-keyboard-esc))     fd.write(name+struct.pack(HHHHI,3,0x1234,0x5681,1,0)+bytes(4*64*4)); fd.flush(); fcntl.ioctl(fd,UI_DEV_CREATE); time.sleep(.5)     tap(fd,KEY_ESC); tap(fd,KEY_ESC); tap(fd,KEY_ESC); time.sleep(2) PY  echo ---after-esc; sleep 5; systemctl stop totem-open-settings.service >/dev/null 2>&1 || true; /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-audit >/dev/null 2>&1 || true; systemctl start kiosky-player.service >/dev/null 2>&1 || true; sleep 3; echo ---final; date -Is; systemctl is-active kiosky-player.service || true; systemctl is-active totem-open-settings.service || true; systemctl is-failed totem-open-settings.service || true; ls -la /run/totem/settings-session.lock /run/dadooh-settings/request.json /run/dadooh-settings 2>/dev/null || true; /opt/totem/bin/totem-updatectl status --component totem-core; echo ---files; find /tmp/c20-e2e-rc -maxdepth 3 -type f -printf "%p %s\n" | sort; echo ---screens; find /tmp/dadooh-c10-6-2-visual-wizard/screens -maxdepth 1 -type f -printf "%f %s\n" 2>/dev/null | sort | tail -40
+  File "<stdin>", line 2
+    UINPUT=/dev/uinput
+           ^
+SyntaxError: invalid syntax
+---after-nav-connection
+-rw------- 1 root root  6625 Jul  8 01:49 0013-02-connection.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0014-02-connection.svg
+-rw------- 1 root root  5055 Jul  8 01:49 0014-03-environment.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0015-03-environment.svg
+-rw------- 1 root root  5794 Jul  8 01:49 0015-05-review.svg
+-rw------- 1 root root  5055 Jul  8 01:49 0016-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0016-05-review.svg
+-rw------- 1 root root  6625 Jul  8 01:49 0017-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0017-03-environment.svg
+-rw------- 1 root root 14359 Jul  8 01:49 0018-01-orientation.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0018-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0019-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0020-05-review.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0021-03-environment.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0022-02-connection.svg
+-rw------- 1 root root 14359 Jul  8 00:34 0023-01-orientation.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0024-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0025-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0026-05-review.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0027-03-environment.svg
+  File "<stdin>", line 2
+    UINPUT=/dev/uinput; EV_SYN=0; EV_KEY=1; SYN_REPORT=0; UI_DEV_CREATE=0x5501; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565
+           ^
+SyntaxError: invalid syntax
+---after-nav-environment
+-rw------- 1 root root  6625 Jul  8 01:49 0013-02-connection.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0014-02-connection.svg
+-rw------- 1 root root  5055 Jul  8 01:49 0014-03-environment.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0015-03-environment.svg
+-rw------- 1 root root  5794 Jul  8 01:49 0015-05-review.svg
+-rw------- 1 root root  5055 Jul  8 01:49 0016-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0016-05-review.svg
+-rw------- 1 root root  6625 Jul  8 01:49 0017-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0017-03-environment.svg
+-rw------- 1 root root 14359 Jul  8 01:49 0018-01-orientation.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0018-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0019-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0020-05-review.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0021-03-environment.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0022-02-connection.svg
+-rw------- 1 root root 14359 Jul  8 00:34 0023-01-orientation.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0024-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0025-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0026-05-review.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0027-03-environment.svg
+  File "<stdin>", line 2
+    UINPUT=/dev/uinput; EV_SYN=0; EV_KEY=1; SYN_REPORT=0; UI_DEV_CREATE=0x5501; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565
+           ^
+SyntaxError: invalid syntax
+---after-nav-review
+-rw------- 1 root root  6625 Jul  8 01:49 0013-02-connection.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0014-02-connection.svg
+-rw------- 1 root root  5055 Jul  8 01:49 0014-03-environment.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0015-03-environment.svg
+-rw------- 1 root root  5794 Jul  8 01:49 0015-05-review.svg
+-rw------- 1 root root  5055 Jul  8 01:49 0016-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0016-05-review.svg
+-rw------- 1 root root  6625 Jul  8 01:49 0017-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0017-03-environment.svg
+-rw------- 1 root root 14359 Jul  8 01:49 0018-01-orientation.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0018-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0019-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0020-05-review.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0021-03-environment.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0022-02-connection.svg
+-rw------- 1 root root 14359 Jul  8 00:34 0023-01-orientation.svg
+-rw------- 1 root root  6609 Jul  8 00:34 0024-02-connection.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0025-03-environment.svg
+-rw------- 1 root root  5778 Jul  8 00:34 0026-05-review.svg
+-rw------- 1 root root  5039 Jul  8 00:34 0027-03-environment.svg
+  File "<stdin>", line 2
+    UINPUT=/dev/uinput; EV_SYN=0; EV_KEY=1; SYN_REPORT=0; UI_DEV_CREATE=0x5501; UI_SET_EVBIT=0x40045564; UI_SET_KEYBIT=0x40045565
+           ^
+SyntaxError: invalid syntax
+---after-esc
+Job for totem-open-settings.service canceled.
+
+__EXPECT_EXIT_CODE__=255

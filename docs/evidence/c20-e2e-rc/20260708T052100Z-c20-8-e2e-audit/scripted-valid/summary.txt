@@ -1,0 +1,78 @@
+Dadooh C9.9 setup visual local
+
+schema_version: dadooh-c9.9-visual-wizard-local.v1
+generated_at_utc: 2026-07-08T05:34:22.573251Z
+state: candidate_ready
+flow: setup_product_local_v0_visual
+interface_mode: local_visual_mpv_drm_keyboard_controlled
+operator_input: keyboard_only
+free_shell_available: false
+linux_prompt_visible: false
+browser_required: false
+chromium_used: false
+desktop_used: false
+xorg_used: false
+wayland_used: false
+compositor_used: false
+visual_renderer: framebuffer_svg
+mpv_video_mode: drm
+orientation_contract: orientation.json
+orientation_layout_mode: landscape
+network_step: existing_configured_wifi
+connectivity: unknown
+connection_type: wifi
+wifi_activation_result: not_run
+rollback_after_test: not_run
+dedicated_profile_present_final: True
+dedicated_profile_persistent: true
+network_changed: false
+credentials_collected: false
+credential_file_removed: false
+wifi_networks_found_count: unknown
+selected_network_present: false
+selected_network_signal_bucket: unknown
+selected_network_security_present: unknown
+environment_id_present: true
+environment_id_valid: true
+environment_uuid_format_validation: true
+environment_validation_endpoint: none
+environment_exists: not_checked
+content_available: not_checked
+validation_unavailable_requires_confirmation: false
+validation_confirmed_by_operator: false
+rotation_degrees: 0
+splash_rotation_supported: true
+player_rotation_contract: config.rotation_deg
+contract_validator: C5.1 allow-mock
+contract_allow_mock_valid: true
+contract_real_dry_run_expected_failure: true
+
+Guardrails:
+writes_only_under_tmp: true
+real_config_read: false
+real_config_written: false
+writer_called: false
+allowlisted_data_state_written: false
+data_written: false
+opt_written: false
+commands_executed: false
+systemctl_called: false
+service_changed: false
+main_player_mpv_called: false
+visual_renderer_mpv_called: false
+nmcli_called: false
+network_changed: false
+backend_preflight_attempted: false
+backend_preflight_raw_values_written: false
+display_changed: false
+rotation_applied: false
+hotspot_created: false
+portal_created: false
+
+Privacy:
+candidate_payload_copied_to_summary: false
+environment_identifier_raw_written_to_summary: false
+credential_values_public: false
+private_url_written_to_summary: false
+network_identifiers_public: false
+raw_logs_written: false

@@ -1,0 +1,10 @@
+2026-07-08T02:40:11-03:00
+trigger=active
+player=active
+settings=inactive
+failed=inactive
+uinput_sequence_sent count=1
+after_trigger_settings=inactive
+531195 bash -c rm -rf /tmp/c20-f10-uinput-probe; mkdir -p /tmp/c20-f10-uinput-probe; { date -Is; echo trigger=$(systemctl is-active totem-settings-trigger.service || true); echo player=$(systemctl is-active kiosky-player.service || true); echo settings=$(systemctl is-active totem-open-settings.service || true); echo failed=$(systemctl is-failed totem-open-settings.service || true); /tmp/c20_uinput_key_sequence.py --keys f10 --hold-sec 7 --delay-sec 0.2; sleep 3; echo after_trigger_settings=$(systemctl is-active totem-open-settings.service || true); pgrep -af "totem_setup_visual_wizard|totem_open_settings_session|openvt" || true; } > /tmp/c20-f10-uinput-probe/f10-trigger.log 2>&1; /tmp/c20_board_open_wizard_probe.sh /tmp/c20-f10-uinput-probe/session-probe >> /tmp/c20-f10-uinput-probe/f10-trigger.log 2>&1
+2026-07-08T02:40:22-03:00 c20_open_wizard_probe_start artifact_dir=/tmp/c20-f10-uinput-probe/session-probe
+2026-07-08T02:40:34-03:00 wizard_not_seen

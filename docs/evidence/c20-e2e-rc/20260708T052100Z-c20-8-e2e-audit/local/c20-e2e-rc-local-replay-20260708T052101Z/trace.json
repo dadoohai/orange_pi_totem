@@ -1,0 +1,156 @@
+[
+  {
+    "key": "enter",
+    "result": "confirm_orientation",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "down,down,enter",
+    "result": "bench_mode",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "02-connection",
+    "step": "connection"
+  },
+  {
+    "key": "type_uuid,enter",
+    "result": "valid_uuid",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "enter",
+    "result": "confirmed",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "03-environment-valid",
+    "step": "preflight"
+  },
+  {
+    "key": "enter",
+    "result": "candidate_ready",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "05-review",
+    "step": "review"
+  },
+  {
+    "key": "enter",
+    "result": "done",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "06-complete",
+    "step": "complete"
+  },
+  {
+    "key": "enter",
+    "result": "preview_portrait",
+    "scenario": "back_navigation",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "escape",
+    "result": "back_to_orientation",
+    "scenario": "back_navigation",
+    "screen_id": "01-orientation-confirm",
+    "step": "orientation_confirm"
+  },
+  {
+    "key": "enter",
+    "result": "preview_corrected",
+    "scenario": "back_navigation",
+    "screen_id": "01-orientation",
+    "step": "orientation_again"
+  },
+  {
+    "key": "enter",
+    "result": "continue",
+    "scenario": "back_navigation",
+    "screen_id": "02-connection",
+    "step": "connection"
+  },
+  {
+    "key": "up",
+    "result": "focus_top_menu",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "right,right,right,enter",
+    "result": "jump_to_review",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "01-orientation-step-focus",
+    "step": "step_focus"
+  },
+  {
+    "key": "enter",
+    "result": "blocked_first_pending",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "05-review-pending",
+    "step": "review_pending"
+  },
+  {
+    "key": "enter",
+    "result": "validation_error",
+    "scenario": "environment_invalid_uuid",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "escape",
+    "result": "stays_unsaved",
+    "scenario": "environment_invalid_uuid",
+    "screen_id": "03-environment-error",
+    "step": "environment_error"
+  },
+  {
+    "key": "left,backspace,4,enter",
+    "result": "corrected",
+    "scenario": "environment_edit_middle",
+    "screen_id": "03-environment-edit-middle",
+    "step": "environment_edit"
+  },
+  {
+    "key": "enter",
+    "result": "selected",
+    "scenario": "wifi_wrong_password_fake",
+    "screen_id": "02-wifi-list",
+    "step": "wifi_list"
+  },
+  {
+    "key": "enter",
+    "result": "fake_failure",
+    "scenario": "wifi_wrong_password_fake",
+    "screen_id": "02-wifi-psk",
+    "step": "wifi_password"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_wrong_password_fake",
+    "screen_id": "02-wifi-wrong-password",
+    "step": "wifi_error"
+  },
+  {
+    "key": "enter",
+    "result": "valid_uuid",
+    "scenario": "api_unavailable_fake",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "enter",
+    "result": "operator_confirmed",
+    "scenario": "api_unavailable_fake",
+    "screen_id": "03-environment-api-unavailable",
+    "step": "api_unavailable"
+  },
+  {
+    "key": "escape",
+    "result": "cancelled",
+    "scenario": "cancel_flow",
+    "screen_id": "01-welcome",
+    "step": "welcome"
+  }
+]

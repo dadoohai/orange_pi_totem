@@ -107,7 +107,42 @@ escopo, RC consolidado ou divergencia real. Nao sao obrigatorias para microcopy.
 
 ## Proximo Passo
 
-Executar uma auditoria E2E do wizard atual em C20.8, classificar achados por
-blocker/non-blocker/backlog e entao gerar o proximo pacote somente com os
-ajustes que movem o RC.
+## Rodada C20.8 E2E - Resultado Inicial
 
+Evidencia:
+`docs/evidence/c20-e2e-rc/20260708T052100Z-c20-8-e2e-audit/`.
+
+Resultado: a primeira rodada E2E fechou os guardrails principais do wizard na
+placa.
+
+Ficou provado:
+
+- trigger F10 por evento de teclado abre settings;
+- wizard abre em framebuffer real;
+- navegacao chega em `Revisao`;
+- revisao bloqueia incompleto e nao gera candidata parcial;
+- `Enter` nao salva quando faltam conexao/ambiente;
+- cancelamento retorna ao player;
+- apos espera curta, settings fica inativo, sem lock/request e com guard verde;
+- current/previous de `totem-core` permanecem coerentes.
+
+Tambem ficou provado por scripted `candidate-only` que o fluxo valido pode gerar
+candidata sem writer real, sem Wi-Fi real e sem backend.
+
+Nao ficou provado nesta rodada: escrita real de Wi-Fi/config, publish remoto,
+stable/producao, player-runtime, display/kernel/MPV, timezone/NTP/RTC ou imagem
+final.
+
+Achado nao-blocker: logo apos cancelar, a unit pode aparecer
+transitoriamente como `activating`; o estado limpa apos espera curta.
+
+## Proximo Passo
+
+Usar a evidencia C20.8 como base do RC e escolher a proxima acao por valor:
+
+1. se o objetivo for liberar pacote de UX, consolidar os scripts de QA e rodar
+   gate/commit;
+2. se o objetivo for RC completo de setup, decidir se o teste de escrita real
+   de Wi-Fi/config entra agora ou se o criterio segue `candidate-only`;
+3. se houver nova melhoria visual, entrar somente se mover clareza/uso real e
+   repetir o ritual E2E sem regressao.

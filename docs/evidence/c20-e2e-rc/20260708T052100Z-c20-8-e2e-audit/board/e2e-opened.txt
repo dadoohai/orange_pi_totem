@@ -1,0 +1,32 @@
+
+---start
+2026-07-08T02:25:18-03:00
+start_pid=527962
+wizard_seen_at=1s
+seen=1
+---opened-status
+activating
+active
+527960 bash -c set -u; echo ---start; date -Is; systemctl start totem-open-settings.service & echo start_pid=$!; seen=0; for i in $(seq 1 20); do if pgrep -af "totem_setup_visual_wizard.py" >/tmp/c20-e2e-rc/wizard-process-opened.txt; then echo wizard_seen_at=${i}s; seen=1; break; fi; sleep 1; done; echo seen=$seen; echo ---opened-status; systemctl is-active totem-open-settings.service || true; systemctl is-active kiosky-player.service || true; cat /tmp/c20-e2e-rc/wizard-process-opened.txt 2>/dev/null || true; sleep 1; ffmpeg -hide_banner -loglevel error -f fbdev -i /dev/fb0 -frames:v 1 -update 1 /tmp/c20-e2e-rc/captures/01-opened.jpg || true; ls -l /tmp/c20-e2e-rc/captures/01-opened.jpg 2>/dev/null || true; find /tmp/dadooh-c10-6-2-visual-wizard/screens -maxdepth 1 -type f -printf "%f %s\n" 2>/dev/null | sort | tail -20
+-rw-r--r-- 1 root root 9419 Jul  8 02:25 /tmp/c20-e2e-rc/captures/01-opened.jpg
+0013-02-connection.svg 6625
+0014-02-connection.svg 6609
+0014-03-environment.svg 5055
+0015-03-environment.svg 5039
+0015-05-review.svg 5794
+0016-03-environment.svg 5055
+0016-05-review.svg 5778
+0017-02-connection.svg 6625
+0017-03-environment.svg 5039
+0018-01-orientation.svg 14359
+0018-02-connection.svg 6609
+0019-03-environment.svg 5039
+0020-05-review.svg 5778
+0021-03-environment.svg 5039
+0022-02-connection.svg 6609
+0023-01-orientation.svg 14359
+0024-02-connection.svg 6609
+0025-03-environment.svg 5039
+0026-05-review.svg 5778
+0027-03-environment.svg 5039
+EXPECT_TIMEOUT

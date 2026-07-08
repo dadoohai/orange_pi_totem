@@ -250,6 +250,29 @@ Aceite:
 Objetivo do time: qualquer rodada UX so entra no acumulo com evidencia
 comparavel.
 
+Status: primeira rodada E2E executada em 2026-07-08.
+
+Evidencia:
+`docs/evidence/c20-e2e-rc/20260708T052100Z-c20-8-e2e-audit/`.
+
+Resultado consolidado:
+
+- replay offline do wizard passou;
+- probe em placa abriu wizard, navegou ate revisao, bloqueou incompleto e
+  cancelou;
+- F10 por evento de teclado abriu settings e repetiu o mesmo caminho critico;
+- apos espera curta, player ficou ativo, settings inativo, sem lock/request e
+  guard verde;
+- fluxo valido foi coberto por scripted `candidate-only`, sem writer real.
+
+Nao-claims:
+
+- sem escrita real de Wi-Fi/config;
+- sem stable/producao;
+- sem player-runtime;
+- sem display/kernel/MPV;
+- sem timezone/NTP/RTC.
+
 Mudancas candidatas:
 
 - criar manifesto por rodada visual;

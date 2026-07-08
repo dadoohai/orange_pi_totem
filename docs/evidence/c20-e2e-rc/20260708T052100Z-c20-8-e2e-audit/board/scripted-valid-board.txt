@@ -1,0 +1,187 @@
+
+scripted_rc=0
+{
+  "contract_validation": {
+    "allow_mock": {
+      "environment_id_valid": true,
+      "invalid_fields_count": 0,
+      "missing_fields_count": 0,
+      "placeholder_findings_count": 2,
+      "station_id_valid": true,
+      "valid": true
+    },
+    "contract": "C5.1",
+    "real_dry_run": {
+      "environment_id_valid": true,
+      "invalid_fields_count": 3,
+      "missing_fields_count": 0,
+      "placeholder_findings_count": 2,
+      "station_id_valid": true,
+      "valid": false
+    },
+    "real_dry_run_expected_failure": true,
+    "validator": "totem_config_contract_validate.py"
+  },
+  "environment": {
+    "environment_id_present": true,
+    "environment_id_valid": true,
+    "environment_identifier_raw_written_to_status": false,
+    "mode": "manual_advanced",
+    "remote_preflight": {
+      "available": false,
+      "confirmed_by_operator": false,
+      "content_available": "not_checked",
+      "content_empty": false,
+      "endpoint": "none",
+      "environment_exists": "not_checked",
+      "environment_not_found": false,
+      "invalid_environment_id": false,
+      "raw_values_written": false,
+      "requires_confirmation": false,
+      "validation_auth_required": false,
+      "validation_unavailable": false
+    },
+    "uuid_format_validation": true
+  },
+  "files": {
+    "candidate_config": "config.candidate.json",
+    "orientation_contract": "orientation.json",
+    "screens": "screens",
+    "status": "setup-status.json",
+    "summary": "summary.txt"
+  },
+  "flow": "setup_product_local_v0_visual",
+  "generated_at_utc": "2026-07-08T05:34:22.573251Z",
+  "guardrails": {
+    "allowlisted_data_state_written": false,
+    "backend_called": false,
+    "backend_preflight_attempted": false,
+    "backend_preflight_raw_values_written": false,
+    "candidate_generated": true,
+    "commands_executed": false,
+    "data_written": false,
+    "display_changed": false,
+    "hotspot_created": false,
+    "main_player_mpv_called": false,
+    "network_changed": false,
+    "network_external_access": false,
+    "nmcli_called": false,
+    "opt_written": false,
+    "player_started": false,
+    "player_stopped": false,
+    "portal_created": false,
+    "real_config_read": false,
+    "real_config_written": false,
+    "rotation_applied": false,
+    "service_changed": false,
+    "systemctl_called": false,
+    "visual_renderer_mpv_called": false,
+    "wifi_changed": false,
+    "writer_called": false,
+    "writer_real_mode_called": false,
+    "writes_only_under_tmp": true
+  },
+  "interface": {
+    "browser_required": false,
+    "chromium_used": false,
+    "compositor_used": false,
+    "desktop_used": false,
+    "free_shell_available": false,
+    "linux_prompt_visible": false,
+    "mode": "local_visual_mpv_drm_keyboard_controlled",
+    "mpv_video_mode": "drm",
+    "operator_input": "keyboard_only",
+    "screens_generated": true,
+    "visual_renderer": "framebuffer_svg",
+    "wayland_used": false,
+    "xorg_used": false
+  },
+  "network": {
+    "connected": "yes",
+    "connection_type": "wifi",
+    "connectivity": "unknown",
+    "credentials_collected": false,
+    "dedicated_profile_persistent": true,
+    "dedicated_profile_present_final": true,
+    "dns_written_to_public_status": false,
+    "internet_external_check": false,
+    "ip_written_to_public_status": false,
+    "mac_written_to_public_status": false,
+    "network_changed": false,
+    "network_step": "existing_configured_wifi",
+    "password_written_to_public_status": false,
+    "read_only_check": true,
+    "rollback_after_test": "not_run",
+    "secrets_file_removed": false,
+    "selected_network_present": false,
+    "selected_network_security_present": "unknown",
+    "selected_network_signal_bucket": "unknown",
+    "ssid_written_to_public_status": false,
+    "wifi_activation_result": "not_run",
+    "wifi_networks_found_count": "unknown",
+    "wifi_real_test_attempted": false
+  },
+  "orientation": {
+    "contract_file": "orientation.json",
+    "media_rotation_contract": "config.rotation_deg",
+    "orientation_label": "landscape",
+    "player_rotation_contract": "config.rotation_deg",
+    "public_orientation_contract_written": false,
+    "public_orientation_path_allowlisted": false,
+    "rotation_deg": 0,
+    "splash_rotation_supported": true,
+    "wizard_layout_mode": "landscape"
+  },
+  "privacy": {
+    "candidate_payload_copied_to_status": false,
+    "candidate_payload_copied_to_summary": false,
+    "credential_value_written_to_status": false,
+    "credential_value_written_to_summary": false,
+    "environment_identifier_raw_written_to_status": false,
+    "environment_identifier_raw_written_to_summary": false,
+    "network_metadata_written_to_status": false,
+    "network_metadata_written_to_summary": false,
+    "private_url_written_to_status": false,
+    "private_url_written_to_summary": false,
+    "raw_logs_written": false,
+    "wifi_network_name_written_to_status": false,
+    "wifi_network_name_written_to_summary": false
+  },
+  "schema_version": "dadooh-c9.9-visual-wizard-local.v1",
+  "state": "candidate_ready",
+  "validation": {
+    "backend_validation": "none",
+    "content_available": "not_checked",
+    "display": "candidate_only",
+    "environment_exists": "not_checked",
+    "environment_id": "uuid_format_validated",
+    "network_validation": "unknown",
+    "rotation_degrees": 0,
+    "rotation_label_written_to_status": false,
+    "wifi_activation_result": "not_run"
+  }
+}
+/tmp/c20-e2e-rc-scripted-valid/config.candidate.json 1353
+/tmp/c20-e2e-rc-scripted-valid/orientation.json 256
+/tmp/c20-e2e-rc-scripted-valid/screens/0001-01-orientation.svg 14356
+/tmp/c20-e2e-rc-scripted-valid/screens/0001-06-complete-scripted.svg 3747
+/tmp/c20-e2e-rc-scripted-valid/screens/0002-05-review-pending.svg 5578
+/tmp/c20-e2e-rc-scripted-valid/screens/0003-01-orientation-confirm-landscape.svg 12916
+/tmp/c20-e2e-rc-scripted-valid/screens/0004-01-orientation-confirm-portrait.svg 13881
+/tmp/c20-e2e-rc-scripted-valid/screens/0005-02-connection.svg 6596
+/tmp/c20-e2e-rc-scripted-valid/screens/0006-02-wifi-list-page-1.svg 8067
+/tmp/c20-e2e-rc-scripted-valid/screens/0007-02-wifi-list-page-2.svg 8077
+/tmp/c20-e2e-rc-scripted-valid/screens/0008-02-wifi-list-refreshing.svg 8060
+/tmp/c20-e2e-rc-scripted-valid/screens/0009-02-wifi-list-empty.svg 4374
+/tmp/c20-e2e-rc-scripted-valid/screens/0010-02-wifi-psk-hidden.svg 4841
+/tmp/c20-e2e-rc-scripted-valid/screens/0011-02-wifi-psk-visible.svg 4856
+/tmp/c20-e2e-rc-scripted-valid/screens/0012-03-environment.svg 4649
+/tmp/c20-e2e-rc-scripted-valid/screens/0013-03-environment-validating.svg 3725
+/tmp/c20-e2e-rc-scripted-valid/screens/0014-03-environment-empty-content.svg 3984
+/tmp/c20-e2e-rc-scripted-valid/screens/0015-03-environment-not-found.svg 3954
+/tmp/c20-e2e-rc-scripted-valid/screens/0016-05-review.svg 5335
+/tmp/c20-e2e-rc-scripted-valid/screens/0017-06-complete.svg 3731
+/tmp/c20-e2e-rc-scripted-valid/setup-status.json 5407
+/tmp/c20-e2e-rc-scripted-valid/summary.txt 2308
+
+__EXPECT_EXIT_CODE__=0

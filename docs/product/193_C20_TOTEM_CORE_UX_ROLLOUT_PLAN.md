@@ -223,3 +223,38 @@ Direcao:
 
 Non-claim: C20 Wizard E2E RC nao significa stable/producao por inferencia e nao
 valida Wi-Fi/config real enquanto essas escritas continuarem fora do escopo.
+
+## C20.8 E2E Audit - Guardrails Fechados
+
+Rodada:
+`docs/evidence/c20-e2e-rc/20260708T052100Z-c20-8-e2e-audit/`.
+
+Estado: a primeira auditoria E2E do C20.8 passou para o caminho de guardrails.
+
+Fechado:
+
+- F10/trigger abre settings na placa;
+- wizard renderiza em framebuffer real;
+- navegacao chega em `Revisao`;
+- revisao incompleta bloqueia salvamento parcial;
+- `Enter` nao salva quando faltam conexao/ambiente;
+- cancelamento volta ao player;
+- apos espera curta, settings fica inativo, sem lock/request e guard de apply
+  verde;
+- rollback de `totem-core` segue disponivel para C20.7.
+
+Auxiliar:
+
+- fluxo valido `candidate-only` gera candidata sem writer real, Wi-Fi real ou
+  backend;
+- probes de QA foram adicionados para repetir F10, revisao bloqueada e retorno
+  ao player.
+
+Pendente para RC completo:
+
+- decidir se a proxima validacao deve incluir escrita real de Wi-Fi/config ou
+  se `candidate-only` e suficiente para a fase atual;
+- decidir se o estado transitorio `activating` apos cancelamento exige polimento
+  ou segue como nao-blocker operacional;
+- gerar pacote consolidado ou seguir para a proxima melhoria apenas se mover o
+  uso real.

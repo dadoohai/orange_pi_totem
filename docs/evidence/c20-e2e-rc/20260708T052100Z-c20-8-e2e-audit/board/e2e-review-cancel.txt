@@ -1,0 +1,128 @@
+
+---nav-review-start
+2026-07-08T02:27:26-03:00
+---after-nav-review
+1783486167.1529972950 0008-03-environment.svg 5055
+1783486167.6809980150 0009-02-connection.svg 6625
+1783486168.1849987020 0010-01-orientation.svg 14359
+1783486169.0169998370 0011-01-orientation.svg 14356
+1783486170.0010011790 0012-01-orientation.svg 14359
+1783486170.6530020680 0013-02-connection.svg 6625
+1783486171.3530030230 0014-03-environment.svg 5055
+1783486171.9370038200 0015-05-review.svg 5794
+1783486172.9290051730 0016-03-environment.svg 5055
+1783486173.4650059040 0017-02-connection.svg 6625
+1783486174.0810067440 0018-01-orientation.svg 14359
+1783488323.6209338770 0001-01-orientation.svg 14357
+-rw-r--r-- 1 root root 55917 Jul  8 02:27 /tmp/c20-e2e-rc/captures/04-review-blocked.jpg
+---after-enter-on-review
+1783486167.1529972950 0008-03-environment.svg 5055
+1783486167.6809980150 0009-02-connection.svg 6625
+1783486168.1849987020 0010-01-orientation.svg 14359
+1783486169.0169998370 0011-01-orientation.svg 14356
+1783486170.0010011790 0012-01-orientation.svg 14359
+1783486170.6530020680 0013-02-connection.svg 6625
+1783486171.3530030230 0014-03-environment.svg 5055
+1783486171.9370038200 0015-05-review.svg 5794
+1783486172.9290051730 0016-03-environment.svg 5055
+1783486173.4650059040 0017-02-connection.svg 6625
+1783486174.0810067440 0018-01-orientation.svg 14359
+1783488323.6209338770 0001-01-orientation.svg 14357
+---after-q
+activating
+activating
+inactive
+ 528001       1 Ss   bash            bash /data/core/totem/current/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+ 528160  528001 Ss   openvt          openvt -c 2 -s -f -w -- env TERM=linux PYTHONPATH=/data/core/totem/current/bin TOTEM_VISUAL_WIZARD_APPLY_CONTEXT=real-write TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE=true /usr/bin/python3 /data/core/totem/current/bin/totem_setup_visual_wizard.py --out-dir /tmp/dadooh-c10-6-2-visual-wizard --private-settings-context-path /data/state/totem-settings/last-settings.json
+ 528163  528160 Ss+  python3         /usr/bin/python3 /data/core/totem/current/bin/totem_setup_visual_wizard.py --out-dir /tmp/dadooh-c10-6-2-visual-wizard --private-settings-context-path /data/state/totem-settings/last-settings.json
+/run/dadooh-settings:
+total 16
+drwx------  2 root root 120 Jul  8 02:27 .
+drwxr-xr-x 30 root root 800 Jul  8 02:27 ..
+-rw-------  1 root root 567 Jul  8 02:25 apply-policy.json
+-rw-------  1 root root 438 Jul  8 02:25 open-settings-cleanup-status.json
+-rw-------  1 root root 476 Jul  8 02:27 summary.txt
+-rw-------  1 root root 605 Jul  8 02:27 trigger-status.json
+
+/run/totem/settings-session.lock:
+total 0
+drwxr-xr-x 2 root root 40 Jul  8 02:25 .
+drwxr-xr-x 3 root root 60 Jul  8 02:25 ..
+---session-status
+{
+    "active_config_rotation_deg_matches": "unknown",
+    "active_config_rotation_deg_public_check": "unknown",
+    "apply_mode": "real-write",
+    "apply_policy_removed": true,
+    "backup_created": false,
+    "config_content_published": false,
+    "credential_values_published": false,
+    "environment_identifier_raw_published": false,
+    "expected_result": "any",
+    "expected_rotation_deg": "unknown",
+    "handoff_rc": "not_run",
+    "homologation_seed_mode": true,
+    "hotspot_created": false,
+    "linux_prompt_visible": false,
+    "mode": "interactive",
+    "network_identifiers_published": false,
+    "network_step": "unknown",
+    "networkmanager_changed": false,
+    "nrestarts": "0",
+    "orientation_category": "unknown",
+    "orientation_json_rotation_matches": false,
+    "orientation_json_updated": false,
+    "permissions_ok": true,
+    "playback": "playing",
+    "policy_private_source": "homologation-seed",
+    "policy_used": true,
+    "portal_created": false,
+    "power_cut_tested": false,
+    "private_candidate_real_dry_run_passed": false,
+    "private_candidate_removed": false,
+    "private_settings_context_seeded": false,
+    "private_settings_context_updated": false,
+    "private_settings_context_values_published": false,
+    "private_source_temp_removed": false,
+    "process_counts": {
+        "mpv": 1,
+        "player": 1,
+        "renderer": 0,
+        "setup": 0
+    },
+    "public_state": "player_running",
+    "raw_logs_written": false,
+    "real_config_read": false,
+    "real_config_read_authorized_for_private_source": false,
+    "real_config_written": false,
+    "root_read_only_enabled": false,
+    "rotation_degrees": "unknown",
+    "schema_version": "dadooh-c10.6.2-open-settings-session.v1",
+    "selected_rotation_deg": "unknown",
+    "service_active": "active",
+    "service_enabled": "enabled",
+    "service_initial_active": "active",
+    "service_initial_enabled": "enabled",
+    "service_restore_attempted": true,
+    "service_stop_attempted": true,
+    "setup_cancelled": false,
+    "splash_orientation_source": "public_orientation_json",
+    "trigger_opens_wizard_directly": true,
+    "visual_candidate_generated": false,
+    "visual_wizard_opened": true,
+    "wifi_changed": false,
+    "wizard_rc": "143",
+    "writer_called": false,
+    "writer_rc": "not_run",
+    "writer_result": "not_available"
+}
+---totem-status
+{
+  "component_apply_guard_ok": false,
+  "component_apply_guard_reason": "settings_session_lock_present",
+  "service_active": false,
+  "current_symlink_target": "releases/c20.8-clock-all-steps-20260708T045317Z-661c582",
+  "previous_symlink_target": "releases/c20.7-clock-metadata-20260708T042733Z-b9d8a00"
+}
+
+__EXPECT_EXIT_CODE__=0

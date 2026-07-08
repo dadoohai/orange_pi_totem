@@ -1,0 +1,14 @@
+/tmp/c20-f10-uinput-probe-v2/session-probe/00-current.txt 4607
+/tmp/c20-f10-uinput-probe-v2/session-probe/90-after-cancel.txt 3666
+/tmp/c20-f10-uinput-probe-v2/session-probe/99-final.txt 4557
+/tmp/c20-f10-uinput-probe-v2/session-probe/cancel-status.txt 19
+/tmp/c20-f10-uinput-probe-v2/session-probe/captures/01-current-opened.jpg 55900
+/tmp/c20-f10-uinput-probe-v2/session-probe/captures/02-review.jpg 51274
+/tmp/c20-f10-uinput-probe-v2/session-probe/captures/03-enter-after-review.jpg 49155
+/tmp/c20-f10-uinput-probe-v2/session-probe/file-list.txt 0
+/tmp/c20-f10-uinput-probe-v2/session-probe/probe.log 2159
+/tmp/c20-f10-uinput-probe-v2/session-probe/review-screen-status.txt 24
+/tmp/c20-f10-uinput-probe-v2/session-probe/screens/01-current-opened-0001-01-orientation.svg 14357
+/tmp/c20-f10-uinput-probe-v2/session-probe/screens/02-review-0005-05-review.svg 5794
+/tmp/c20-f10-uinput-probe-v2/session-probe/screens/03-enter-after-review-0006-05-review.svg 5578
+/tmp/c20-f10-uinput-probe-v2/session-probe/wizard-process.txt 575

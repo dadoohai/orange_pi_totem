@@ -1,0 +1,42 @@
+
+---before-reset
+failed
+failed
+× totem-open-settings.service - Dadooh Open Totem Settings
+     Loaded: loaded (/etc/systemd/system/totem-open-settings.service; static)
+     Active: failed (Result: signal) since Wed 2026-07-08 01:56:13 -03; 25min ago
+   Main PID: 522234 (code=killed, signal=KILL)
+        CPU: 12.598s
+
+Jul 08 01:49:04 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings...
+Jul 08 01:56:10 orangepizero3 systemd[1]: totem-open-settings.service: Main process exited, code=killed, status=9/KILL
+Jul 08 01:56:13 orangepizero3 systemd[1]: totem-open-settings.service: Failed with result 'signal'.
+Jul 08 01:56:13 orangepizero3 systemd[1]: Failed to start totem-open-settings.service - Dadooh Open Totem Settings.
+Jul 08 01:56:13 orangepizero3 systemd[1]: totem-open-settings.service: Consumed 12.598s CPU time.
+---reset
+---after-reset
+inactive
+inactive
+○ totem-open-settings.service - Dadooh Open Totem Settings
+     Loaded: loaded (/etc/systemd/system/totem-open-settings.service; static)
+     Active: inactive (dead) since Wed 2026-07-08 01:56:13 -03; 25min ago
+   Main PID: 522234 (code=killed, signal=KILL)
+        CPU: 12.598s
+
+Jul 08 01:49:04 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings...
+Jul 08 01:56:10 orangepizero3 systemd[1]: totem-open-settings.service: Main process exited, code=killed, status=9/KILL
+Jul 08 01:56:13 orangepizero3 systemd[1]: totem-open-settings.service: Failed with result 'signal'.
+Jul 08 01:56:13 orangepizero3 systemd[1]: Failed to start totem-open-settings.service - Dadooh Open Totem Settings.
+Jul 08 01:56:13 orangepizero3 systemd[1]: totem-open-settings.service: Consumed 12.598s CPU time.
+---player
+active
+---locks
+/run/dadooh-settings:
+total 12
+drwx------  2 root root 100 Jul  8 02:21 .
+drwxr-xr-x 30 root root 800 Jul  8 02:21 ..
+-rw-------  1 root root 431 Jul  8 01:56 open-settings-cleanup-status.json
+-rw-------  1 root root 476 Jul  8 02:21 summary.txt
+-rw-------  1 root root 605 Jul  8 02:21 trigger-status.json
+
+__EXPECT_EXIT_CODE__=0

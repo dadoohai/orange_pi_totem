@@ -75,6 +75,16 @@ Regra curta: C20 atualiza wizard/settings por `totem-core`; nao valida
 stable/producao por inferencia e nao autoriza escrita real de Wi-Fi/config,
 player-runtime, display/kernel, timezone/NTP/RTC ou updater fora de escopo.
 
+Estado C20 mais recente: a primeira auditoria E2E do wizard C20.8 fechou os
+guardrails principais na placa: F10/trigger abre settings, revisao incompleta
+bloqueia salvamento parcial, cancelamento retorna ao player e o guard de apply
+volta verde apos espera curta. Evidencia:
+`docs/evidence/c20-e2e-rc/20260708T052100Z-c20-8-e2e-audit/`.
+
+Pendente macro C20: decidir se o proximo RC exige escrita real de Wi-Fi/config
+ou se a fase atual segue com `candidate-only`; consolidar pacote/update e
+carregar tudo para a proxima imagem de referencia.
+
 ---
 
 ## 2. Documentos gerados

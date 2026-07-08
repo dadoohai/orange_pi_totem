@@ -1,0 +1,27 @@
+2026-07-08T02:42:36-03:00 c20_open_wizard_probe_start artifact_dir=/tmp/c20-f10-uinput-probe-v2/session-probe
+2026-07-08T02:42:37-03:00 wizard_seen_at=1s
+0a569dcd42417c8038c962f63e1a4224979bdb4e81003a89a12ff64d1b727679  /tmp/c20-f10-uinput-probe-v2/session-probe/captures/01-current-opened.jpg
+2026-07-08T02:42:38-03:00 latest_screen 01-current-opened 0001-01-orientation.svg
+2026-07-08T02:42:38-03:00 navigate_to_review_from_current_session
+2026-07-08T02:42:38-03:00 RUN /tmp/c20_uinput_key_sequence.py --keys up,right,right,right --delay-sec 0.45
+uinput_sequence_sent count=4
+2026-07-08T02:42:41-03:00 RC 0 :: /tmp/c20_uinput_key_sequence.py --keys up,right,right,right --delay-sec 0.45
+cc1ee1f2d91c7c401e0335c43b9422d147a67ae8b68698f46bdffce99fd6b326  /tmp/c20-f10-uinput-probe-v2/session-probe/captures/02-review.jpg
+2026-07-08T02:42:44-03:00 latest_screen 02-review 0005-05-review.svg
+2026-07-08T02:42:44-03:00 enter_on_review
+2026-07-08T02:42:44-03:00 RUN /tmp/c20_uinput_key_sequence.py --keys enter --delay-sec 0.45
+uinput_sequence_sent count=1
+2026-07-08T02:42:45-03:00 RC 0 :: /tmp/c20_uinput_key_sequence.py --keys enter --delay-sec 0.45
+e579d1b6ee4da18abe98b48872e352c4fa3f64e63bb1c6f1947338196edc7791  /tmp/c20-f10-uinput-probe-v2/session-probe/captures/03-enter-after-review.jpg
+2026-07-08T02:42:48-03:00 latest_screen 03-enter-after-review 0006-05-review.svg
+2026-07-08T02:42:48-03:00 cancel_with_q
+2026-07-08T02:42:48-03:00 RUN /tmp/c20_uinput_key_sequence.py --keys q --delay-sec 0.45
+uinput_sequence_sent count=1
+2026-07-08T02:42:49-03:00 RC 0 :: /tmp/c20_uinput_key_sequence.py --keys q --delay-sec 0.45
+2026-07-08T02:42:51-03:00 RUN /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-open-wizard-probe-final
+2026-07-08T02:42:51-03:00 RC 0 :: /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-open-wizard-probe-final
+2026-07-08T02:42:51-03:00 RUN systemctl reset-failed totem-open-settings.service
+2026-07-08T02:42:51-03:00 RC 0 :: systemctl reset-failed totem-open-settings.service
+2026-07-08T02:42:51-03:00 RUN systemctl start kiosky-player.service
+2026-07-08T02:42:51-03:00 RC 0 :: systemctl start kiosky-player.service
+2026-07-08T02:42:55-03:00 c20_open_wizard_probe_done
