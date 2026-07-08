@@ -1,0 +1,21 @@
+{
+  "assertions_count": 18,
+  "assertions_passed": true,
+  "back_action_clarity_score": 4.5,
+  "backend_called": false,
+  "board_touched": false,
+  "critical_screens_below_4": false,
+  "footer_consistency_score": 4.6,
+  "implemented": true,
+  "networkmanager_touched": false,
+  "operator_confusion_risk": "low",
+  "primary_action_clarity_score": 4.5,
+  "real_config_written": false,
+  "scenario_count": 8,
+  "schema_version": "c17.8.1-wizard-input-replay.v1",
+  "screens_count": 22,
+  "secrets_published": false,
+  "ssh_used": false,
+  "uses_only_test_data": true,
+  "writer_called": false
+}

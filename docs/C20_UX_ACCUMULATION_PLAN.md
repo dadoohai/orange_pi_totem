@@ -280,8 +280,8 @@ Direcao consolidada:
 - em paisagem, reutilizar o slot de nota do cabecalho;
 - em retrato, colocar data/hora na linha superior do cabecalho, a direita do
   titulo;
-- na etapa 0, preservar a nota de layout;
-- nas etapas 1-4, exibir `DD/MM/YYYY HH:MM`;
+- exibir `DD/MM/YYYY HH:MM` em todas as etapas, inclusive `Tela`;
+- nao usar mais `Layout paisagem/retrato` nesse slot;
 - se o relogio for implausivel, exibir `Hora nao ajustada`;
 - nao usar rodape nem painel lateral para informacao passiva;
 - nao criar botao de ajustes nesta etapa;
@@ -306,6 +306,14 @@ Auditoria/convergencia:
 Evidencia visual:
 
 - `docs/evidence/c20-visual-qa/20260708T-c20-7-clock-pdca-design/round3/`.
+
+Atualizacao C20.8:
+
+- a excecao da etapa `Tela` foi removida por decisao de produto;
+- o slot do cabecalho passa a ser exclusivamente de data/hora ou `Hora nao
+  ajustada`;
+- a informacao de orientacao continua disponivel no conteudo/preview da propria
+  tela, sem ocupar o metadado global do cabecalho.
 
 Evidencia de implementacao/aplicacao:
 

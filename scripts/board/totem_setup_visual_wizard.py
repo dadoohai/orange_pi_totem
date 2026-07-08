@@ -384,13 +384,7 @@ def local_datetime_label(now: time.struct_time | None = None) -> str:
     return f"{current.tm_mday:02d}/{current.tm_mon:02d}/{current.tm_year:04d} {current.tm_hour:02d}:{current.tm_min:02d}"
 
 
-def header_note_label(
-    active_step: int,
-    layout: ScreenLayout,
-    clock_label: object = _CLOCK_LABEL_AUTO,
-) -> str:
-    if active_step == 0:
-        return layout.note
+def header_note_label(clock_label: object = _CLOCK_LABEL_AUTO) -> str:
     if clock_label is _CLOCK_LABEL_AUTO:
         return local_datetime_label()
     if clock_label is None:
@@ -398,10 +392,8 @@ def header_note_label(
     return str(clock_label)
 
 
-def header_note_position(active_step: int, layout: ScreenLayout) -> tuple[int, int]:
+def header_note_position(layout: ScreenLayout) -> tuple[int, int]:
     if layout.portrait:
-        if active_step == 0:
-            return layout.margin_x, 144
         return layout.width - layout.margin_x - 220, 58
     return layout.width - layout.margin_x - 156, 54
 
@@ -795,11 +787,11 @@ def build_screen_svg(
         title_y = 198
         subtitle_y = 234
         subtitle_width = 52
-    note_x, note_y = header_note_position(active_step, layout)
+    note_x, note_y = header_note_position(layout)
     safe_panel_items = panel_items or []
     if suppress_landscape_info_panel and not layout.portrait:
         safe_panel_items = []
-    layout_note = header_note_label(active_step, layout, clock_label)
+    layout_note = header_note_label(clock_label)
     panel_svg = info_panel(
         safe_panel_items,
         title=panel_title,
@@ -4424,8 +4416,9 @@ def run_self_test() -> None:
             selected_index=0,
             clock_label=fixed_clock,
         )
-        assert_true("Layout paisagem" in clock_step0_svg, "step 0 should preserve layout note instead of clock")
-        assert_true(fixed_clock not in clock_step0_svg, "step 0 should not render clock over layout note")
+        assert_true(fixed_clock in clock_step0_svg, "step 0 should render the clock label")
+        assert_true("Layout paisagem" not in clock_step0_svg, "step 0 should not render the redundant layout note")
+        assert_true('x="792" y="54"' in clock_step0_svg, "step 0 landscape clock should use the header clock slot")
         clock_step1_svg = build_screen_svg(
             active_step=1,
             title="Conexao",

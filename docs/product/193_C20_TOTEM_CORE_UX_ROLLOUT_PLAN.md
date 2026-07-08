@@ -154,8 +154,8 @@ rodada posterior, sem bloquear o pacote C20.1.
   - em paisagem, reutilizar o slot de nota do cabecalho;
   - em retrato, prender a data/hora na linha superior do cabecalho, a direita
     de `Configuracao do Totem`;
-  - na etapa 0, preservar `Layout paisagem/retrato` no lugar da data/hora;
-  - nas etapas 1-4, exibir `DD/MM/YYYY HH:MM`;
+  - exibir `DD/MM/YYYY HH:MM` em todas as etapas, inclusive `Tela`;
+  - nao exibir mais `Layout paisagem/retrato` nesse slot;
   - se o relogio for implausivel, exibir `Hora nao ajustada`.
 - Sem segundos e sem relogio vivo. O valor atualiza quando a tela e
   renderizada, nao a cada segundo.
@@ -186,6 +186,15 @@ rodada posterior, sem bloquear o pacote C20.1.
 - Non-claims: nao declara horario correto, sincronizado, NTP ativo, RTC
   ajustado ou timezone configurado; o horario nao e criterio de sucesso do
   wizard.
+
+### C20.8 Ajuste Direto - Hora Tambem Na Etapa Tela
+
+- Decisao: remover a excecao da etapa `Tela`; a tag `Layout paisagem/retrato`
+  era redundante porque a propria tela ja mostra orientacao e preview.
+- Novo contrato: o slot superior do cabecalho pertence somente a data/hora ou
+  ao fallback `Hora nao ajustada`.
+- Escopo: apenas `totem-core`; sem alterar hora do sistema, timezone, NTP, RTC,
+  player-runtime ou midias.
 
 ## Proximo Marco
 
