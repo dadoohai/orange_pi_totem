@@ -14,6 +14,7 @@
     "C18 teardown hardening requests MPV IPC quit, using a fresh IPC connection if needed, before falling back to process signals to avoid panfrost faults on relaunch.",
     "C18 playback hardening verifies the real MPV path after loadfile and playlist-next before trusting preloaded media state.",
     "C18 disables preload_next by default so legacy configs without the field inherit the safe path.",
+    "C18 image playback hardening prepares still images as local H.264 sidecars before playlist admission because the C18 custom MPV/FFmpeg stack is video-focused and may not decode PNG/JPEG directly.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -36,12 +37,17 @@
       "field": "DEFAULT_CONFIG.preload_next",
       "from": true,
       "to": false
+    },
+    {
+      "field": "download_media/media_items_from_saved/media_items_from_cache",
+      "from": "image extensions are admitted directly into MPV",
+      "to": "still images are prepared as local H.264 MP4 sidecars before playlist admission"
     }
   ],
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413"
+    "sha256": "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

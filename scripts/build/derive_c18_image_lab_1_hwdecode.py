@@ -65,7 +65,7 @@ HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
-PLAYER_RUNTIME_KIOSK_SHA256 = "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413"
+PLAYER_RUNTIME_KIOSK_SHA256 = "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97"
 PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
     "MPVController._stop_locked": (
@@ -75,6 +75,10 @@ PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "MPVController.load_file/preload_next": (
         "IPC write success implies media switch",
         "fresh IPC path verification before trusting loadfile or preloaded playlist-next",
+    ),
+    "download_media/media_items_from_saved/media_items_from_cache": (
+        "image extensions are admitted directly into MPV",
+        "still images are prepared as local H.264 MP4 sidecars before playlist admission",
     ),
 }
 PLAYER_RUNTIME_TEARDOWN_TOKENS = (

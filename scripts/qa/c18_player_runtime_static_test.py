@@ -34,7 +34,7 @@ CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413"
+EXPECTED_SNAPSHOT_SHA256 = "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -192,6 +192,10 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             "fresh IPC path verification before trusting loadfile or preloaded playlist-next",
         )
         self.assertEqual(patches["DEFAULT_CONFIG.preload_next"]["to"], False)
+        self.assertEqual(
+            patches["download_media/media_items_from_saved/media_items_from_cache"]["to"],
+            "still images are prepared as local H.264 MP4 sidecars before playlist admission",
+        )
 
     def test_snapshot_sha_matches_source_metadata(self) -> None:
         self.assertEqual(sha256_file(KIOSK_PATH), source()["snapshot"]["sha256"])
@@ -347,6 +351,115 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIsNone(status.snapshot().get("next_item"))
         self.assertTrue(mpv.restart_reasons)
         self.assertEqual(mpv.append_calls, [])
+
+    def test_still_image_prepare_creates_h264_sidecar_for_c18_mpv(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-image-transcode-") as tmp:
+            source = Path(tmp) / "media.png"
+            source.write_bytes(b"fake-png")
+            calls: list[list[str]] = []
+
+            def fake_run(command: list[str], **_kwargs: object) -> object:
+                calls.append(command)
+                Path(command[-1]).write_bytes(b"fake-h264")
+                return object()
+
+            original_run = kiosk.subprocess.run
+            kiosk.subprocess.run = fake_run
+            try:
+                cfg = {
+                    "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
+                    "image_transcode_timeout_sec": 5,
+                }
+                playback_path = kiosk.prepare_media_file_for_playback(cfg, str(source), 5000)
+                self.assertEqual(playback_path, f"{source}.h264.mp4")
+                self.assertEqual(Path(playback_path).read_bytes(), b"fake-h264")
+                self.assertEqual(len(calls), 1)
+                self.assertIn("-c:v", calls[0])
+                self.assertIn("libx264", calls[0])
+                self.assertIn("-f", calls[0])
+                self.assertEqual(calls[0][calls[0].index("-f") + 1], "mp4")
+
+                reused_path = kiosk.prepare_media_file_for_playback(cfg, str(source), 5000)
+                self.assertEqual(reused_path, playback_path)
+                self.assertEqual(len(calls), 1)
+            finally:
+                kiosk.subprocess.run = original_run
+
+    def test_download_media_uses_h264_sidecar_for_cached_png(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-download-image-transcode-") as tmp:
+            cache_dir = Path(tmp) / "cache"
+            state_dir = Path(tmp) / "state"
+            cache_dir.mkdir()
+            state_dir.mkdir()
+            url = "https://example.invalid/media/current.png"
+            source = Path(kiosk.cache_path(str(cache_dir), url))
+            source.write_bytes(b"fake-png")
+
+            def fake_run(command: list[str], **_kwargs: object) -> object:
+                Path(command[-1]).write_bytes(b"fake-h264")
+                return object()
+
+            original_run = kiosk.subprocess.run
+            kiosk.subprocess.run = fake_run
+            try:
+                cfg = {
+                    "cache_dir": str(cache_dir),
+                    "state_dir": str(state_dir),
+                    "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
+                    "image_transcode_timeout_sec": 5,
+                }
+                cache_index = kiosk.CacheIndex(cfg)
+                items = kiosk.download_media(
+                    cfg,
+                    [{
+                        "url": url,
+                        "duration_ms": 5000,
+                        "campaign_id": "campaign-1",
+                        "campaign_name": "Campaign 1",
+                    }],
+                    cache_index,
+                )
+            finally:
+                kiosk.subprocess.run = original_run
+
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0].path, f"{source}.h264.mp4")
+            self.assertEqual(items[0].source_path, str(source))
+            index_meta = cache_index.snapshot()[items[0].path]
+            self.assertEqual(index_meta["source_path"], str(source))
+            self.assertEqual(index_meta["url"], url)
+
+    def test_saved_playlist_preserves_image_source_and_playback_paths(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-saved-image-paths-") as tmp:
+            cache_dir = Path(tmp) / "cache"
+            state_dir = Path(tmp) / "state"
+            cache_dir.mkdir()
+            state_dir.mkdir()
+            source = cache_dir / "media.png"
+            playback = cache_dir / "media.png.h264.mp4"
+            source.write_bytes(b"fake-png")
+            playback.write_bytes(b"fake-h264")
+            cfg = {"cache_dir": str(cache_dir), "state_dir": str(state_dir)}
+            item = kiosk.MediaItem(
+                url="https://example.invalid/media/current.png",
+                duration_ms=5000,
+                path=str(playback),
+                campaign_id="campaign-1",
+                campaign_name="Campaign 1",
+                source_path=str(source),
+            )
+            kiosk.save_playlist_state(cfg, [item], "fixture")
+            self.assertEqual(kiosk.saved_playlist_paths(cfg), {str(source), str(playback)})
+
+            raw_items, _fingerprint, _saved_at = kiosk.load_playlist_state(cfg)
+            restored, payload = kiosk.media_items_from_saved(cfg, raw_items)
+            self.assertEqual(len(restored), 1)
+            self.assertEqual(restored[0].path, str(playback))
+            self.assertEqual(restored[0].source_path, str(source))
+            self.assertEqual(payload[0]["source_path"], str(source))
 
     def test_c18_deriver_uses_governed_snapshot(self) -> None:
         derive = DERIVE_C18_PATH.read_text(encoding="utf-8")

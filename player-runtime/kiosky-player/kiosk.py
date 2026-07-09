@@ -104,6 +104,9 @@ DEFAULT_CONFIG = {
     "mpv_watchdog_grace_after_load_sec": 0,
     "mpv_watchdog_grace_after_restart_sec": 0,
     "media_load_retry_cooldown_sec": 60,
+    "image_transcode_enabled": True,
+    "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
+    "image_transcode_timeout_sec": 60,
     "tmp_max_age_sec": 3600,
     "status_file": "",
     "status_interval_sec": 5,
@@ -130,6 +133,7 @@ class MediaItem:
     path: str
     campaign_id: str
     campaign_name: str
+    source_path: str = ""
 
 
 @dataclass(frozen=True)
@@ -497,6 +501,7 @@ def save_playlist_state(cfg: Dict, items: List["MediaItem"], fingerprint: str) -
                 "url": item.url,
                 "duration_ms": item.duration_ms,
                 "path": item.path,
+                "source_path": item.source_path,
                 "campaign_id": item.campaign_id,
                 "campaign_name": item.campaign_name,
             }
@@ -528,6 +533,11 @@ def saved_playlist_paths(cfg: Dict) -> set:
         path = item.get("path")
         if path and isinstance(path, str) and os.path.exists(path):
             keep_paths.add(path)
+        source_path = item.get("source_path")
+        if source_path and isinstance(source_path, str) and os.path.exists(source_path):
+            keep_paths.add(source_path)
+            continue
+        if path and isinstance(path, str) and os.path.exists(path):
             continue
         url = item.get("url")
         if not url:
@@ -565,17 +575,29 @@ def media_items_from_saved(cfg: Dict, raw_items: List[Dict]) -> Tuple[List["Medi
             continue
         if (safe_getsize(resolved_path) or 0) <= 0:
             continue
+        source_path = str(item.get("source_path") or "")
+        playback_path = prepare_media_file_for_playback(cfg, resolved_path, duration_ms)
+        if not playback_path:
+            continue
+        if not source_path and playback_path != resolved_path:
+            source_path = resolved_path
         resolved_url = str(url) if url else f"cache://{os.path.basename(resolved_path)}"
         items.append(
             MediaItem(
                 url=resolved_url,
                 duration_ms=duration_ms,
-                path=resolved_path,
+                path=playback_path,
                 campaign_id=str(item.get("campaign_id", "")),
                 campaign_name=str(item.get("campaign_name", "")),
+                source_path=source_path,
             )
         )
-        fingerprint_items_payload.append({"url": resolved_url, "duration_ms": duration_ms, "path": resolved_path})
+        fingerprint_items_payload.append({
+            "url": resolved_url,
+            "duration_ms": duration_ms,
+            "path": playback_path,
+            "source_path": source_path,
+        })
     return items, fingerprint_items_payload
 
 
@@ -603,6 +625,8 @@ def media_items_from_cache(
         if not os.path.isfile(path):
             return
         if path.endswith(".tmp"):
+            return
+        if cfg.get("image_transcode_enabled", True) and is_image_path(path) and os.path.exists(transcoded_image_path(path)):
             return
         if not is_supported_media_path(path, allow_bin=bool(meta.get("url"))):
             return
@@ -644,16 +668,28 @@ def media_items_from_cache(
         url = str(meta.get("url") or f"cache://{os.path.basename(path)}")
         campaign_id = str(meta.get("campaign_id", ""))
         campaign_name = str(meta.get("campaign_name", ""))
+        source_path = str(meta.get("source_path") or "")
+        playback_path = prepare_media_file_for_playback(cfg, path, duration_ms)
+        if not playback_path:
+            continue
+        if not source_path and playback_path != path:
+            source_path = path
         items.append(
             MediaItem(
                 url=url,
                 duration_ms=duration_ms,
-                path=path,
+                path=playback_path,
                 campaign_id=campaign_id,
                 campaign_name=campaign_name,
+                source_path=source_path,
             )
         )
-        fingerprint_items_payload.append({"url": url, "duration_ms": duration_ms, "path": path})
+        fingerprint_items_payload.append({
+            "url": url,
+            "duration_ms": duration_ms,
+            "path": playback_path,
+            "source_path": source_path,
+        })
 
     return items, fingerprint_items_payload
 
@@ -1021,6 +1057,7 @@ class CacheIndex:
                     "duration_ms": item.duration_ms,
                     "campaign_id": item.campaign_id,
                     "campaign_name": item.campaign_name,
+                    "source_path": item.source_path,
                     "last_used": iso_now(),
                     "size": safe_getsize(item.path) or meta.get("size"),
                 }
@@ -1037,6 +1074,7 @@ class CacheIndex:
                     "duration_ms": item.duration_ms,
                     "campaign_id": item.campaign_id,
                     "campaign_name": item.campaign_name,
+                    "source_path": item.source_path,
                     "last_used": iso_now(),
                     "size": safe_getsize(item.path) or meta.get("size"),
                 }
@@ -1171,7 +1209,7 @@ def advance_to_preloaded_media(mpv: "MPVController", item: MediaItem, index: int
 
 
 def apply_item_offset(mpv: "MPVController", item: MediaItem, offset_ms: int) -> None:
-    if offset_ms > 0 and not is_image_path(item.path):
+    if offset_ms > 0 and not is_still_image_item(item):
         offset_seconds = offset_ms / 1000.0
         if not mpv.seek_absolute(offset_seconds):
             mpv.set_property("time-pos", offset_seconds)
@@ -1206,6 +1244,88 @@ def is_supported_media_path(path: str, allow_bin: bool = False) -> bool:
     if ext in IMAGE_EXTENSIONS or ext in VIDEO_EXTENSIONS:
         return True
     return allow_bin and ext == ".bin"
+
+
+def is_still_image_item(item: MediaItem) -> bool:
+    return is_image_path(item.path) or bool(item.source_path and is_image_path(item.source_path))
+
+
+def transcoded_image_path(path: str) -> str:
+    return f"{path}.h264.mp4"
+
+
+def prepare_media_file_for_playback(cfg: Dict, path: str, duration_ms: int) -> Optional[str]:
+    if not is_image_path(path):
+        return path
+    if not cfg.get("image_transcode_enabled", True):
+        return path
+
+    output_path = transcoded_image_path(path)
+    try:
+        source_mtime = os.path.getmtime(path)
+        if (
+            os.path.exists(output_path)
+            and (safe_getsize(output_path) or 0) > 0
+            and os.path.getmtime(output_path) >= source_mtime
+        ):
+            return output_path
+    except OSError:
+        return None
+
+    tmp_path = f"{output_path}.tmp"
+    ffmpeg_path = str(cfg.get("image_transcode_ffmpeg_path") or "/usr/bin/ffmpeg")
+    timeout_sec = max(int(cfg.get("image_transcode_timeout_sec") or 0), 5)
+    command = [
+        ffmpeg_path,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-loop",
+        "1",
+        "-i",
+        path,
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=1280:-2,format=yuv420p",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        tmp_path,
+    ]
+    try:
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=timeout_sec)
+        if (safe_getsize(tmp_path) or 0) <= 0:
+            raise IOError("empty transcoded image output")
+        os.replace(tmp_path, output_path)
+        logging.info(
+            "Prepared still image for MPV playback source=%s output=%s",
+            safe_media_path_for_log(path),
+            safe_media_path_for_log(output_path),
+        )
+        return output_path
+    except Exception as exc:
+        logging.warning(
+            "Failed to prepare still image for MPV playback source=%s output=%s error=%s",
+            safe_media_path_for_log(path),
+            safe_media_path_for_log(output_path),
+            exc,
+        )
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
+        return None
 
 
 def fetch_media_list(cfg: Dict) -> List[Dict]:
@@ -1310,12 +1430,22 @@ def download_media(cfg: Dict, raw_items: List[Dict], cache_index: Optional[Cache
                 else:
                     continue
 
+        playback_path = prepare_media_file_for_playback(cfg, dest, int(item["duration_ms"]))
+        if not playback_path:
+            logging.warning(
+                "Skipping media that cannot be prepared for playback alias=%s path=%s",
+                alias,
+                safe_dest,
+            )
+            continue
+        source_path = dest if playback_path != dest else ""
         media_item = MediaItem(
             url=url,
             duration_ms=int(item["duration_ms"]),
-            path=dest,
+            path=playback_path,
             campaign_id=item.get("campaign_id", ""),
             campaign_name=item.get("campaign_name", ""),
+            source_path=source_path,
         )
         items.append(media_item)
         if cache_index is not None:
@@ -1329,7 +1459,7 @@ def fingerprint_items(raw_items: List[Dict]) -> str:
 
 
 def items_signature(items: List[MediaItem]) -> str:
-    payload = [{"path": i.path, "duration_ms": i.duration_ms} for i in items]
+    payload = [{"path": i.path, "source_path": i.source_path, "duration_ms": i.duration_ms} for i in items]
     return sha1_hex(json.dumps(payload, sort_keys=True))
 
 
@@ -2554,12 +2684,17 @@ def poller(
                 if updated:
                     status_snapshot = status.snapshot()
                     keep_paths = {item.path for item in items}
+                    keep_paths.update({item.source_path for item in items if item.source_path})
                     current = status_snapshot.get("current_item") or {}
                     next_item = status_snapshot.get("next_item") or {}
                     if isinstance(current, dict) and current.get("path"):
                         keep_paths.add(current["path"])
+                    if isinstance(current, dict) and current.get("source_path"):
+                        keep_paths.add(current["source_path"])
                     if isinstance(next_item, dict) and next_item.get("path"):
                         keep_paths.add(next_item["path"])
+                    if isinstance(next_item, dict) and next_item.get("source_path"):
+                        keep_paths.add(next_item["source_path"])
                     removed = cleanup_cache_dir(
                         cfg_snapshot["cache_dir"],
                         keep_paths,
@@ -3006,14 +3141,19 @@ def cleanup_worker(
                 continue
         items, _ = state.get()
         keep_paths = {item.path for item in items}
+        keep_paths.update({item.source_path for item in items if item.source_path})
         keep_paths.update(saved_playlist_paths(cfg_snapshot))
         snapshot = status.snapshot()
         current = snapshot.get("current_item") or {}
         next_item = snapshot.get("next_item") or {}
         if isinstance(current, dict) and current.get("path"):
             keep_paths.add(current["path"])
+        if isinstance(current, dict) and current.get("source_path"):
+            keep_paths.add(current["source_path"])
         if isinstance(next_item, dict) and next_item.get("path"):
             keep_paths.add(next_item["path"])
+        if isinstance(next_item, dict) and next_item.get("source_path"):
+            keep_paths.add(next_item["source_path"])
 
         removed = cleanup_cache_dir(cfg_snapshot["cache_dir"], keep_paths, cache_index, cfg_snapshot)
         status.update(last_cleanup=iso_now(), last_cleanup_removed=removed + temp_removed)
@@ -3339,6 +3479,7 @@ def playback_loop(
             current_item={
                 "url": item.url,
                 "path": item.path,
+                "source_path": item.source_path,
                 "duration_ms": item_duration_ms,
                 "campaign_id": item.campaign_id,
                 "campaign_name": item.campaign_name,
@@ -3349,6 +3490,7 @@ def playback_loop(
                 {
                     "url": next_item.url,
                     "path": next_item.path,
+                    "source_path": next_item.source_path,
                     "duration_ms": next_item.duration_ms,
                     "campaign_id": next_item.campaign_id,
                     "campaign_name": next_item.campaign_name,
