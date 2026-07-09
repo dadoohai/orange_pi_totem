@@ -21,6 +21,7 @@ PRIVATE_SETTINGS_CONTEXT_PATH="/data/state/totem-settings/last-settings.json"
 LOCK_DIR="/run/totem/settings-session.lock"
 RESTORE_GETTY_AFTER_SETTINGS="${TOTEM_RESTORE_GETTY_AFTER_SETTINGS:-0}"
 TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
+PAIRING_PRIVATE_VALUES_USED="false"
 
 usage() {
   cat <<'USAGE'
@@ -713,6 +714,72 @@ if mode & 0o077 or not (mode & 0o600):
 PY
 }
 
+select_qr_pairing_private_values_if_available() {
+  if [ "$APPLY_MODE" != "dry-run" ] && [ "$APPLY_MODE" != "real-write" ]; then
+    return 0
+  fi
+  local result_path="$WIZARD_OUT_DIR/qr-pairing/pairing-result.public.json"
+  if [ ! -f "$result_path" ]; then
+    return 0
+  fi
+  eval "$(
+    python3 - "$result_path" <<'PY'
+import json
+import pathlib
+import shlex
+import stat
+import sys
+
+result_path = pathlib.Path(sys.argv[1])
+if result_path.is_symlink() or result_path.parent.is_symlink():
+    raise SystemExit("pairing_result_symlink")
+try:
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit("pairing_result_invalid") from exc
+if not isinstance(result, dict):
+    raise SystemExit("pairing_result_not_object")
+if result.get("passed") is not True or result.get("state") != "authorized":
+    raise SystemExit(0)
+raw_private = result.get("private_values_path")
+if not isinstance(raw_private, str) or not raw_private.strip():
+    raise SystemExit("pairing_private_values_missing")
+private_path = pathlib.Path(raw_private)
+if private_path.is_symlink() or private_path.parent.is_symlink():
+    raise SystemExit("pairing_private_values_symlink")
+try:
+    resolved = private_path.resolve(strict=True)
+except OSError as exc:
+    raise SystemExit("pairing_private_values_missing") from exc
+if not str(resolved).startswith("/tmp/"):
+    raise SystemExit("pairing_private_values_not_tmp")
+if not resolved.is_file():
+    raise SystemExit("pairing_private_values_not_file")
+parent_mode = stat.S_IMODE(resolved.parent.stat().st_mode)
+file_mode = stat.S_IMODE(resolved.stat().st_mode)
+if parent_mode & 0o077:
+    raise SystemExit("pairing_private_values_parent_permissive")
+if file_mode & 0o077 or not (file_mode & 0o600):
+    raise SystemExit("pairing_private_values_file_permissive")
+try:
+    private_values = json.loads(resolved.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit("pairing_private_values_invalid_json") from exc
+if not isinstance(private_values, dict):
+    raise SystemExit("pairing_private_values_not_object")
+for field in ("api_url", "api_key", "environment_id"):
+    value = private_values.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit("pairing_private_values_required_missing")
+print(f"PRIVATE_VALUES={shlex.quote(str(resolved))}")
+print("POLICY_PRIVATE_SOURCE=tmp-file")
+print("HOMOLOGATION_SEED_MODE=false")
+print("PAIRING_PRIVATE_VALUES_USED=true")
+PY
+  )"
+  validate_private_values_metadata
+}
+
 selected_rotation_from_candidate() {
   python3 - "$WIZARD_OUT_DIR/config.candidate.json" <<'PY'
 import json
@@ -768,6 +835,12 @@ cleanup_private_artifacts() {
   fi
   if [ "$POLICY_PRIVATE_SOURCE" = "active-config" ]; then
     rm -rf "$(dirname "$PRIVATE_VALUES")" || true
+    if [ ! -e "$PRIVATE_VALUES" ]; then
+      PRIVATE_SOURCE_TEMP_REMOVED="true"
+    fi
+  fi
+  if [ "$PAIRING_PRIVATE_VALUES_USED" = "true" ]; then
+    rm -f "$PRIVATE_VALUES" || true
     if [ ! -e "$PRIVATE_VALUES" ]; then
       PRIVATE_SOURCE_TEMP_REMOVED="true"
     fi
@@ -1230,6 +1303,10 @@ if [ "$EXPECTED_RESULT" = "candidate_ready" ] && [ ! -f "$WIZARD_OUT_DIR/config.
 fi
 if [ -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
   SELECTED_ROTATION_DEG="$(selected_rotation_from_candidate)"
+fi
+
+if [ "$SETUP_CANCELLED" != "true" ]; then
+  select_qr_pairing_private_values_if_available
 fi
 
 if [ "$SETUP_CANCELLED" = "true" ]; then
