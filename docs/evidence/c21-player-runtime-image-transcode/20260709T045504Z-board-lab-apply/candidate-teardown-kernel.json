@@ -1,0 +1,16 @@
+{
+  "failure_reasons": [],
+  "gpu_faults_after": 0,
+  "gpu_faults_before": 0,
+  "gpu_faults_delta": 0,
+  "measured": true,
+  "new_fault_lines_sanitized": [],
+  "passed": true,
+  "process_stopped_cleanly": true,
+  "schema": "dadooh.c18.player_runtime.candidate_teardown.v1",
+  "stop": {
+    "elapsed_ms": 567,
+    "method": "sigterm",
+    "returncode": 0
+  }
+}

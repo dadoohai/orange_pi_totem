@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-07. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-09. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -28,10 +28,14 @@ rollback se necessario.
 Hoje a C18 tem duas coisas diferentes:
 
 - `totem-core`: auto-pull de producao fechado em imagem C18 gravada do zero.
-- `player-runtime`: pacote aprovado, publicado no GitHub e consumido pela placa
-  em janela assistida. Public thaw/ativacao estao autorizados por evidencia, mas
-  o caminho publico de auto-pull ainda precisa ser materializado no updater,
-  timer/policy e prova de placa.
+- `player-runtime`: pacote `9bebaf1` foi aprovado/publicado/consumido, mas a
+  RCA C21 mostrou falha com midia PNG. O novo candidato lab
+  `c18.player-runtime-homolog-20260709-image-transcode-50919f5` corrige o caso
+  reproduzido de PNG e prepara imagens estaticas suportadas via sidecar H.264.
+  Ele passou apply lab em placa, mas ainda nao foi consumido pelo fluxo
+  remoto/publico de `player-runtime`. O caminho publico de auto-pull ainda
+  precisa ser materializado no updater, timer/policy e prova de placa, agora
+  mirando o candidato corrigido ou seu sucessor.
 
 Portanto, o proximo marco ativo e V3/M5: transformar o apply assistido de
 `player-runtime` em auto-pull publico por alvo exato, preservando rollback,
@@ -132,6 +136,12 @@ Fila atual para consolidacao:
   real, executou rollback com `rc=0`, e terminou restaurada no alvo
   `9bebaf1` com health estabilizada verde. Evidencia em
   `docs/evidence/c18-update-validation/20260705T150628Z-player-runtime-github-m2-hdmi-9bebaf1/`.
+- RCA C21 de tela preta por PNG: fechado em 2026-07-09. A placa lab aplicou o
+  release `c18.player-runtime-homolog-20260709-image-transcode-50919f5`, saiu
+  de `waiting_for_media/all_media_temporarily_blocked` para `playing` com
+  `current_item.path=*.png.h264.mp4` e `source_path` no PNG original.
+  Evidencia em
+  `docs/evidence/c21-player-runtime-image-transcode/20260709T045504Z-board-lab-apply/`.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou
   `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,
@@ -290,21 +300,30 @@ assumindo risco de negocio e preservando as barreiras tecnicas que evitam
 regressao silenciosa.
 
 Claim permitido ao final da rodada: uma placa C18 em imagem de producao aplicou
-automaticamente o `player-runtime` exato `9bebaf1`, validou hashes/manifest,
+automaticamente o `player-runtime` exato autorizado, validou hashes/manifest,
 gerou marker valido no device, passou health real, manteve rollback e recusou
 alvos nao autorizados.
+
+Atualizacao de alvo em 2026-07-09: `9bebaf1` nao deve ser o alvo final sozinho
+para cliente se houver midias de imagem. O alvo publico deve ser rebaselined
+para `c18.player-runtime-homolog-20260709-image-transcode-50919f5` ou sucessor,
+mantendo a mesma governanca de alvo exato.
 
 Nao-claims:
 
 - nao e `latest` amplo para qualquer `player-runtime` futuro;
 - nao publica direto pelo repo/caminho legado `kiosky-player`;
-- nao altera MPV, ffmpeg, kernel, imagem, midia, config ou cache;
+- nao altera MPV, ffmpeg, kernel, imagem base, midia original ou config;
+- sidecar/cache local de playback faz parte do `player-runtime` corrigido;
 - nao entrega dashboard, grupos/canary, telemetria ou kill switch completo;
 - nao reclassifica evidencia antiga como prova de novo alvo.
 
 Passos minimos:
 
-1. autorizacao production hash-bound para o alvo `9bebaf1`;
+1. autorizacao production hash-bound para o alvo corrigido
+   `c18.player-runtime-homolog-20260709-image-transcode-50919f5` ou sucessor;
+   a autorizacao publica existente ainda aponta para `9bebaf1` e nao deve ser
+   reaproveitada como aprovacao do alvo novo;
 2. caminho publico no updater sem env lab, permitido somente para alvo
    autorizado;
 3. health real, marker, quarentena, state e rollback reaproveitando o
@@ -482,17 +501,56 @@ Non-claims:
 
 - C21 prova o slice E2E real em laboratorio, mas nao prova todos os cenarios
   negativos de campo;
-- nao altera `player-runtime`, MPV, kernel, media-system ou field-data;
+- o slice inicial de QR/auth nao altera `player-runtime`, MPV, kernel,
+  media-system ou field-data; a RCA posterior de tela preta abriu uma subrodada
+  separada de `player-runtime`;
 - nao resolve por si so monitoramento, rollout por grupos ou revogacao
   automatica de tokens antigos.
 
+## Subrodada C21 - RCA tela preta apos ativacao
+
+Problema observado: apos QR/auth real e selecao de ambiente, a API entregou uma
+playlist valida com 1 PNG. O player antigo tentou carregar o PNG direto no MPV
+C18, falhou, bloqueou a unica midia e ficou em `waiting_for_media`.
+
+RCA fechado:
+
+- a placa tinha `playlist_size=1` e arquivo PNG local baixado;
+- o MPV custom C18 nao decodificou PNG nesse caminho;
+- converter a imagem para H.264 MP4 fez o mesmo MPV carregar a midia;
+- a midia tambem e visualmente escura, mas isso e qualidade de conteudo, nao a
+  causa tecnica do bloqueio.
+
+Correcao aplicada no candidato `50919f5`:
+
+- imagens estaticas sao preparadas como sidecar local `.h264.mp4` antes de
+  entrar na playlist;
+- `source_path` preserva o arquivo original;
+- cache/saved playlist/offline path respeitam o sidecar e nao apagam a fonte;
+- testes estaticos C18 passaram `31/31`;
+- apply lab em placa passou, com marker verificado e rollback anterior mantido
+  como `previous`; rollback nao foi executado nesta subrodada.
+
+Pendente desta subrodada:
+
+- publicar/consumir este novo alvo pelo fluxo remoto/publico de player-runtime,
+  se ele virar alvo de escala;
+- gerar nova autorizacao/policy hash-bound para este alvo ou sucessor; a
+  autorizacao antiga de `player-runtime` continua amarrada ao `9bebaf1`;
+- definir validacao de qualidade visual de midias muito escuras/pequenas no
+  backend ou no produto;
+- decidir se imagens devem ser convertidas no player, no backend, ou nos dois
+  em camadas.
+
 ## Imagem para novas placas
 
-Com os marcos `totem-core` e `player-runtime` remotos fechados em laboratorio,
+Com o marco remoto de `totem-core` fechado, o marco remoto de `player-runtime`
+fechado para `9bebaf1`, e a RCA C21 incorporada como candidato lab corrigido,
 podemos escolher entre:
 
 - imagem base enxuta + atualizacao OTA no provisionamento;
-- imagem com `player-runtime 9bebaf1` como baseline inicial aprovado;
+- imagem com o `player-runtime` corrigido como baseline inicial a validar e
+  aprovar;
 - rollout remoto por grupos para placas ja instaladas.
 
 ## Regra para os devs

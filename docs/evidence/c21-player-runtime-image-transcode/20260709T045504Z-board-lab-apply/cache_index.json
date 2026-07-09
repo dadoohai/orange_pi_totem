@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "updated_at": "2026-07-09T04:54:54Z",
+  "items": {
+    "/tmp/c21-player-runtime-apply/canary.mp4": {
+      "url": "cache://canary.mp4",
+      "duration_ms": 10000,
+      "campaign_id": "c18-canary",
+      "campaign_name": "C18 canary",
+      "source_path": "",
+      "last_used": "2026-07-09T04:54:54Z",
+      "size": 14803
+    }
+  }
+}

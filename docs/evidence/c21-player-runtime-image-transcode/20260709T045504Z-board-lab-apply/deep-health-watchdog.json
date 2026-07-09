@@ -1,0 +1,16 @@
+{
+  "action_during_window": "",
+  "collection_finished_at_utc": "2026-07-09T04:54:57Z",
+  "collection_started_at_utc": "2026-07-09T04:54:37Z",
+  "end": {
+    "exists": false,
+    "path": "/tmp/c21-player-runtime-apply/candidate-health/status-mpv-watchdog.json"
+  },
+  "event_changed_during_window": false,
+  "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+  "start": {
+    "exists": false,
+    "path": "/tmp/c21-player-runtime-apply/candidate-health/status-mpv-watchdog.json"
+  },
+  "state_file": "/tmp/c21-player-runtime-apply/candidate-health/status-mpv-watchdog.json"
+}

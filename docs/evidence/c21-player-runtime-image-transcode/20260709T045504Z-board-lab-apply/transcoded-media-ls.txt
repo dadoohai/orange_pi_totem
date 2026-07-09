@@ -1,0 +1,1 @@
+-rw------- 1 totem totem 6512 Jul  9 01:55 /data/media/kiosky-player/20198b0e7dd71ec7b0b830214d441ab46f25444d.png.h264.mp4

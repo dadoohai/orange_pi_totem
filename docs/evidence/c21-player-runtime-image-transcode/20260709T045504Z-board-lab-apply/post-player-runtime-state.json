@@ -1,0 +1,31 @@
+{
+  "component": "player-runtime",
+  "current": {
+    "applied_at_utc": "2026-07-09T04:55:05Z",
+    "kiosk_py_sha256": "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97",
+    "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+    "payload_sha256": "b9b3464aa68a85c87ec26e60a2a0b22e95e67b85cdbbecd7ef5a2098514f3597",
+    "tree_sha256": "0aa60aec3d4d80d27f55d4ec98faf2a17e402058394352c83c16d8246073be57",
+    "version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+    "via": "player_runtime_reconcile"
+  },
+  "last_operation": {
+    "finished_at_utc": "2026-07-09T04:55:05Z",
+    "reason": "manual_reconcile",
+    "started_at_utc": "2026-07-09T04:55:05Z",
+    "status": "current_verified",
+    "type": "reconcile",
+    "verified": "releases/c18.player-runtime-homolog-20260709-image-transcode-50919f5"
+  },
+  "previous": {
+    "applied_at_utc": "2026-07-09T04:18:32Z",
+    "kiosk_py_sha256": "7bc2384b6d4b81a7222d84cc89ef7e53dac18248c410e51041d9ee49a448f413",
+    "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "payload_sha256": "d363fe3af9e3ca267123d3d4c324faefb2392cf04d4884d36e153074e6b758a0",
+    "tree_sha256": "995b0483655c449ead1e679380a61e9f7c90778173f60f34af7a78b25114ba1b",
+    "version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "via": "player_runtime_reconcile"
+  },
+  "quarantine": [],
+  "schema": "dadooh.totem.update.state.v1"
+}
