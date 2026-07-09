@@ -1,0 +1,18 @@
+{
+  "authorize_url": "https://home.dadooh.ai/totem/activate?code=UC4WSRQW&activation_id=5105a092-1516-4b99-a2b8-071f66f52768",
+  "credential_public": false,
+  "expires_at_utc": "2026-07-09T04:26:40.999Z",
+  "human_firebase_token_on_device": false,
+  "mode": "real_totem_auth",
+  "non_claims": [
+    "not_written_to_final_config_yet",
+    "not_human_firebase_token_on_device"
+  ],
+  "pairing_code": "UC4WSRQW",
+  "poll_after_sec": 2.0,
+  "poll_token_public": false,
+  "private_values_written": false,
+  "schema": "dadooh.c21.totem_qr_pairing.session.v1",
+  "session_id": "5105a092-1516-4b99-a2b8-071f66f52768",
+  "state": "pending"
+}

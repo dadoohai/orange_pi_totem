@@ -1,0 +1,11 @@
+{
+  "human_firebase_token_on_device": false,
+  "pairing_card_svg_path": null,
+  "passed": true,
+  "private_values_mode": "0600",
+  "private_values_path": "/tmp/dadooh-c10-6-2-visual-wizard/qr-pairing/private-values.json",
+  "public_artifacts_sanitized": true,
+  "schema": "dadooh.c21.totem_qr_pairing.result.v1",
+  "session_public_path": "/tmp/dadooh-c10-6-2-visual-wizard/qr-pairing/pairing-session.public.json",
+  "state": "authorized"
+}

@@ -1,0 +1,60 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.6-qr-auth-real-wizard-final-20260708T144044Z-e97db68",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-09T04:10:32Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-09T04:04:40Z",
+      "path": "/data/core/totem/releases/c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b",
+      "payload_sha256": "a9c6982ac5aa9cfc874cecc5a00c3b18da07d9296152e628fb1aeacd05a9c93f",
+      "source": "local:dadooh-totem-core-c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "208274b1edd2ddd9bfb7bc5a4829ce011c62cabf",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-09T04:10:35Z",
+      "source": "local:dadooh-totem-core-c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b.manifest.json",
+      "started_at_utc": "2026-07-09T04:10:29Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-08T14:43:53Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-08T14:40:45Z",
+      "path": "/data/core/totem/releases/c21.6-qr-auth-real-wizard-final-20260708T144044Z-e97db68",
+      "payload_sha256": "fd71a62cd340dcda75bc74f15100e7f80fb76735ba78c11c7bcdb6924d16765e",
+      "source": "local:dadooh-totem-core-c21.6-qr-auth-real-wizard-final-20260708T144044Z-e97db68.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "e97db686eef96b44f2fa8e3cc348148acc32f8a9",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.6-qr-auth-real-wizard-final-20260708T144044Z-e97db68"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-05T23:09:53Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

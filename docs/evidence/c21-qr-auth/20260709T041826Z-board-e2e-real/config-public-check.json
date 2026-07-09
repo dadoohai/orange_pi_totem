@@ -1,0 +1,9 @@
+{
+  "api_key_present": true,
+  "api_url_present": true,
+  "environment_id_present": true,
+  "exists": true,
+  "mode": "0o640",
+  "setup_source": "c10.0-visual-setup-writer-handoff",
+  "station_id_present": true
+}

@@ -1,0 +1,19 @@
+{
+  "checked_at_utc": "2026-07-09T04:24:31Z",
+  "checks": [
+    {
+      "curl_rc": 0,
+      "http_status": "200",
+      "name": "api_health",
+      "url": "https://api-lbyvh5uf6q-uc.a.run.app/health"
+    },
+    {
+      "curl_rc": 0,
+      "http_status": "200",
+      "name": "home_activate_dummy",
+      "url": "https://home.dadooh.ai/totem/activate?code=ABCD1234&activation_id=33333333-4444-4555-8666-777777777777"
+    }
+  ],
+  "home_activate_marker_present": true,
+  "schema": "dadooh.c21.external_public_check.v1"
+}

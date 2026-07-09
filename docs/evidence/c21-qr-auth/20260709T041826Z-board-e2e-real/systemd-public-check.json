@@ -1,0 +1,14 @@
+{
+  "kiosky-player.service": {
+    "ActiveState": "active",
+    "ExecMainStatus": "0",
+    "NRestarts": "0",
+    "Result": "success"
+  },
+  "totem-open-settings.service": {
+    "ActiveState": "inactive",
+    "ExecMainStatus": "0",
+    "NRestarts": "0",
+    "Result": "success"
+  }
+}

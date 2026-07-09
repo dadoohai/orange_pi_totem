@@ -441,13 +441,17 @@ Estado em 2026-07-09:
 - backend C21 esta em producao em `api-00476-rix`, com rollback pronto em
   `api-00469-gus`;
 - `POST /totem-auth/activations` no endpoint principal retorna `201`;
-- `homeHabitat` branch `feat/pills-media-doc` contem `/totem/activate` e o
-  `pnpm build` local passou, mas `https://home.dadooh.ai/totem/activate`
-  ainda responde `404` ate a EC2 ser atualizada;
-- `totem-core` C21.6 de homologacao ja foi aplicado na placa e contem modo real
-  por `TOTEM_VISUAL_WIZARD_PAIRING_MODE=real`;
-- wizard self-test passou, mas o E2E real `placa -> backend -> home -> placa ->
-  config -> player` ainda nao foi exercitado e nao deve ser inferido.
+- `homeHabitat` branch `feat/pills-media-doc` esta publicado na EC2 e
+  `https://home.dadooh.ai/totem/activate?...` responde com a pagina de
+  autorizacao;
+- `totem-core` C21.7 de homologacao foi aplicado na placa:
+  `c21.7-qr-auth-credential-handoff-20260709T040439Z-208274b`;
+- o E2E real `placa -> backend -> home -> placa -> config -> player` foi
+  exercitado em laboratorio e registrado em
+  `docs/evidence/c21-qr-auth/20260709T041826Z-board-e2e-real/`;
+- a rodada passou com `policy_private_source=tmp-file`,
+  `homologation_seed_mode=false`, `writer_rc=0`, `real_config_written=true`,
+  config final presente em `0640` e player ativo.
 
 Decisoes e riscos ainda vivos:
 
@@ -465,18 +469,19 @@ Decisoes e riscos ainda vivos:
 
 Proximo marco de maior valor:
 
-1. atualizar `home.dadooh.ai`/EC2 com `origin/feat/pills-media-doc`;
-2. confirmar que `/totem/activate?code=...&activation_id=...` abre no dominio
-   publico;
-3. rodar E2E real na placa em modo `TOTEM_VISUAL_WIZARD_PAIRING_MODE=real`;
-4. validar que a placa grava `/data/config/config.json`, reinicia/retoma o
-   player e busca midia/config com a credencial recebida;
-5. registrar evidencia sanitizada: sem chave, sem segredo, com apenas
-   `api_key_present=true`, config ativa, player ativo e rota de rollback.
+1. manter C21.7 como pacote acumulado para a proxima imagem de referencia;
+2. decidir se o primeiro produto aceita ativacao por ambiente ou se exige
+   amarracao forte por estacao antes de escalar;
+3. criar o procedimento operacional de revogacao/novo codigo quando um poll
+   autorizado for consumido mas a placa nao persistir a credencial;
+4. endurecer casos negativos de campo: expirado, negado, `already_used`,
+   usuario sem permissao e sem internet;
+5. levar C21.7 para o pacote/update consolidado de `totem-core`.
 
 Non-claims:
 
-- C21 ainda nao prova producao plena de ativacao ate o E2E real acima passar;
+- C21 prova o slice E2E real em laboratorio, mas nao prova todos os cenarios
+  negativos de campo;
 - nao altera `player-runtime`, MPV, kernel, media-system ou field-data;
 - nao resolve por si so monitoramento, rollout por grupos ou revogacao
   automatica de tokens antigos.
