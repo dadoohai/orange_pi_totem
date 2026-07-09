@@ -429,6 +429,58 @@ Rodada de inspeção em placa em 2026-07-08:
   C20 aplicado; depois consolidar no pacote/update final e na proxima imagem de
   referencia.
 
+## Rodada C21 - ativacao real por QR/codigo
+
+Objetivo macro: uma placa nova deve conseguir nascer sem operador digitando
+segredo. O fluxo alvo e: placa mostra QR/codigo, usuario logado no
+`home.dadooh.ai` escolhe o ambiente, backend autoriza, placa recebe credencial
+propria, grava config real e volta ao player.
+
+Estado em 2026-07-09:
+
+- backend C21 esta em producao em `api-00476-rix`, com rollback pronto em
+  `api-00469-gus`;
+- `POST /totem-auth/activations` no endpoint principal retorna `201`;
+- `homeHabitat` branch `feat/pills-media-doc` contem `/totem/activate` e o
+  `pnpm build` local passou, mas `https://home.dadooh.ai/totem/activate`
+  ainda responde `404` ate a EC2 ser atualizada;
+- `totem-core` C21.6 de homologacao ja foi aplicado na placa e contem modo real
+  por `TOTEM_VISUAL_WIZARD_PAIRING_MODE=real`;
+- wizard self-test passou, mas o E2E real `placa -> backend -> home -> placa ->
+  config -> player` ainda nao foi exercitado e nao deve ser inferido.
+
+Decisoes e riscos ainda vivos:
+
+- para o primeiro slice, ativacao por ambiente e aceitavel se a UI disser isso
+  claramente; vinculacao forte por `station_id` fica como decisao/endurcimento
+  seguinte ou deve ser feita agora se o produto exigir identidade por totem;
+- a placa nao deve expor `api_key`, `device_secret` ou token humano em tela,
+  log, evidencia publica ou repositorio;
+- a troca de credencial e sensivel: se o primeiro `poll` autorizado falhar
+  antes da persistencia local, precisa haver procedimento de gerar novo codigo
+  e revogar o token antigo;
+- rollback de `totem-core` nao revoga token nem restaura sozinho
+  `/data/config/config.json`; rollback operacional precisa cobrir config e
+  revogacao.
+
+Proximo marco de maior valor:
+
+1. atualizar `home.dadooh.ai`/EC2 com `origin/feat/pills-media-doc`;
+2. confirmar que `/totem/activate?code=...&activation_id=...` abre no dominio
+   publico;
+3. rodar E2E real na placa em modo `TOTEM_VISUAL_WIZARD_PAIRING_MODE=real`;
+4. validar que a placa grava `/data/config/config.json`, reinicia/retoma o
+   player e busca midia/config com a credencial recebida;
+5. registrar evidencia sanitizada: sem chave, sem segredo, com apenas
+   `api_key_present=true`, config ativa, player ativo e rota de rollback.
+
+Non-claims:
+
+- C21 ainda nao prova producao plena de ativacao ate o E2E real acima passar;
+- nao altera `player-runtime`, MPV, kernel, media-system ou field-data;
+- nao resolve por si so monitoramento, rollout por grupos ou revogacao
+  automatica de tokens antigos.
+
 ## Imagem para novas placas
 
 Com os marcos `totem-core` e `player-runtime` remotos fechados em laboratorio,
