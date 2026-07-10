@@ -16,11 +16,11 @@ from typing import Any
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c17.6-environment-input-20260514T211247Z"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c17.6-environment-input-20260514T211247Z"
-TOTEM_CORE_PAYLOAD_SHA256 = "e6b643429709ba9f747d86bb113abc35ab9645da23216eb81455dbc2f5a9acb9"
-TOTEM_CORE_CREATED_AT_UTC = "2026-05-14T21:12:47Z"
-TOTEM_CORE_SOURCE_COMMIT = "2e023f1a7619ef8552c9d1ea5ecfb38815006e2c"
+TOTEM_CORE_VERSION = "c21.8-production-settings-policy-20260710T161120Z-d79e4bd"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c21.8-production-settings-policy-20260710T161120Z-d79e4bd"
+TOTEM_CORE_PAYLOAD_SHA256 = "4a1f58ba5caecb3f124d02c834a5d3f71b6c2701a8f2f596f22dad0d594cd105"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-10T16:11:21Z"
+TOTEM_CORE_SOURCE_COMMIT = "d79e4bdb0d77b11441d5abe9473bfce1cd4426f2"
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"

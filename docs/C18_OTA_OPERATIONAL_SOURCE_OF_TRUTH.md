@@ -186,6 +186,12 @@ Fila atual para consolidacao:
   chamava a politica lab/homologacao. `prod-7` substitui esse caminho por
   politica de producao fail-closed e remove o helper lab. Prod-1 a prod-6 nao
   sao distribuicao M5.
+- Proveniencia do core em `prod-7`: o current embarcado e
+  `c21.8-production-settings-policy-20260710T161120Z-d79e4bd`, gerado do commit
+  `d79e4bdb0d77b11441d5abe9473bfce1cd4426f2` e preso ao payload SHA256
+  `4a1f58ba5caecb3f124d02c834a5d3f71b6c2701a8f2f596f22dad0d594cd105`.
+  O builder compara cada arquivo de `bin/` com esse pacote antes de criar a
+  imagem.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou
   `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,

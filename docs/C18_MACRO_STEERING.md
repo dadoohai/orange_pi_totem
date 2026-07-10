@@ -179,6 +179,9 @@ removeu esses itens, mas a auditoria encontrou o servico do wizard ainda
 chamando uma politica de homologacao; ambos estao bloqueados e preservados como
 evidencia negativa. A referencia seguinte e `prod-7`, com politica de producao
 para placa nova ou ja configurada e bloqueio executavel contra o helper lab. A
+imagem tambem passa a embutir o pacote `totem-core`
+`c21.8-production-settings-policy-20260710T161120Z-d79e4bd`, preso ao payload e
+ao commit de origem, em vez de rotular o wizard atual como a antiga `c17.6`. A
 release C22 ainda nao foi publicada nem a imagem gravada. O proximo limite real
 e construir/auditar `prod-7`, publicar o alvo exato sem mover
 `latest` e executar as cinco fases na placa. Nao repetir
