@@ -302,14 +302,8 @@ def deep_health_output_dir(args: argparse.Namespace) -> Path:
     return Path(tempfile.mkdtemp(prefix="c18-player-runtime-autopull-deep-health-"))
 
 
-def collect_deep_health(args: argparse.Namespace) -> dict[str, Any]:
-    if args.skip_deep_health:
-        return {"ran": False, "reason": "skip_deep_health_requested"}
-    script = Path(__file__).resolve().with_name("c18_playback_health_collect.py")
-    if not script.is_file():
-        return {"ran": False, "reason": "collector_missing", "script": str(script)}
-    out_dir = deep_health_output_dir(args)
-    cmd = [
+def deep_health_command(args: argparse.Namespace, *, script: Path, out_dir: Path) -> list[str]:
+    return [
         sys.executable,
         str(script),
         "--output-dir",
@@ -320,9 +314,18 @@ def collect_deep_health(args: argparse.Namespace) -> dict[str, Any]:
         str(args.deep_health_interval_sec),
         "--target-mode",
         "service",
-        "--match-process-ipc",
         "--json",
     ]
+
+
+def collect_deep_health(args: argparse.Namespace) -> dict[str, Any]:
+    if args.skip_deep_health:
+        return {"ran": False, "reason": "skip_deep_health_requested"}
+    script = Path(__file__).resolve().with_name("c18_playback_health_collect.py")
+    if not script.is_file():
+        return {"ran": False, "reason": "collector_missing", "script": str(script)}
+    out_dir = deep_health_output_dir(args)
+    cmd = deep_health_command(args, script=script, out_dir=out_dir)
     result = run_cmd(cmd, timeout=max(int(float(args.deep_health_duration_sec) + 90), 120))
     summary = parse_json_from_text(str(result["stdout"]))
     summary_path = out_dir / "playback-deep-health-public.json"
@@ -446,6 +449,16 @@ class CollectSelfTest(unittest.TestCase):
             snap = file_snapshot(path, parse_json=True)
         self.assertEqual(snap["data"], {"a": 1, "b": 2})
         self.assertEqual(snap["canonical_json_sha256"], canonical_json_sha256(snap["data"]))
+
+    def test_service_deep_health_does_not_filter_processes(self) -> None:
+        args = argparse.Namespace(deep_health_duration_sec=30.0, deep_health_interval_sec=1.0)
+        cmd = deep_health_command(
+            args,
+            script=Path("/opt/totem/bin/c18_playback_health_collect.py"),
+            out_dir=Path("/tmp/deep-health"),
+        )
+        self.assertEqual(cmd[cmd.index("--target-mode") + 1], "service")
+        self.assertNotIn("--match-process-ipc", cmd)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

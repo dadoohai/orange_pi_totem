@@ -46,7 +46,7 @@ DEFAULT_EXPECTED_UPDATER_SHA256 = hashlib.sha256(
     (REPO_ROOT / "scripts" / "board" / "totem_updatectl.py").read_bytes()
 ).hexdigest()
 DEFAULT_TARGET_VERSION = "c18.player-runtime-homolog-20260710-c22-c023eae"
-DEFAULT_BASELINE_VERSION = "c18.player-runtime-homolog-20260709-image-transcode-50919f5"
+DEFAULT_BASELINE_VERSION = "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
 DEFAULT_ROLLBACK_REASON = "production_authorized_rollback"
 PHASES = ("pre", "post_apply", "noop", "rollback", "restored")
 REQUIRED_NON_CLAIMS = (

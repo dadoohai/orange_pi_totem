@@ -379,7 +379,10 @@ Passos minimos:
 1. construir e inspecionar a imagem production nova com updater e autorizacao
    C22 exatos;
 2. publicar tag/assets C22 pelo publisher exact-target, sem alterar `latest`;
-3. preparar C21 como current de bancada e coletar o preflight M5;
+3. preparar o bridge rollback-safe
+   `c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63` como current de
+   bancada e coletar o preflight M5; C21 foi rejeitado pelo health nesta
+   preparacao e permanece corretamente em quarantine;
 4. deixar o timer real aplicar C22 e coletar deep-health/marker/state;
 5. executar no-op, rollback autorizado e segunda troca autorizada para
    restaurar C22;

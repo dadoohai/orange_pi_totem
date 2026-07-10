@@ -10,7 +10,12 @@ player com health real.
 - tag: `player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae`
 - autorizacao: `scripts/board/player_runtime_production_autopull.json`
 - imagem prevista: `c18-hwdecode-prod-7` / `c18.image-prod.7`
-- baseline de bancada: C21 `c18.player-runtime-homolog-20260709-image-transcode-50919f5`
+- baseline de bancada: bridge rollback-safe
+  `c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63`
+
+C21 `c18.player-runtime-homolog-20260709-image-transcode-50919f5` foi rejeitado
+corretamente pelo health de candidato durante a preparacao desta rodada. Ele
+permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
 
 ## Ordem
 
@@ -19,10 +24,12 @@ player com health real.
 3. Publicar somente manifest, payload e release gate com `--latest=false` e
    salvar o JSON final do publisher como evidencia de publicacao.
 4. Gravar a imagem e, com o timer parado apenas durante o setup da bancada,
-   deixar C21 como `current` e C22 fora de `current/previous`.
+   deixar o bridge rollback-safe como `current` e C22 fora de
+   `current/previous`.
 5. Ligar o timer e coletar `pre` e `post_apply`.
 6. Rodar novamente a unit para provar `noop` sem alterar state/symlinks.
-7. Rodar `rollback-player-runtime-authorized` para C21 e coletar `rollback`.
+7. Rodar `rollback-player-runtime-authorized` para o bridge e coletar
+   `rollback`.
 8. Rodar o mesmo rollback autorizado outra vez para restaurar C22 e coletar
    `restored`.
 9. Copiar cada snapshot junto de seu diretorio `<fase>-deep-health`, sem
@@ -45,7 +52,8 @@ player com health real.
 - rollback reinicia e verifica o player antes de reportar sucesso;
 - CLI generico de player-runtime continua bloqueado com `rc=44`;
 - timer de `totem-core` continua independente;
-- estado final: C22 `current`, C21 `previous`, alvo fora de quarantine.
+- estado final: C22 `current`, bridge `previous`, alvo fora de quarantine;
+- C21 rejeitado continua em quarantine, sem contaminar o round-trip aprovado.
 
 Non-claims: nao e `latest` amplo, stable de qualquer pacote futuro, rollout por
 grupos, assinatura consumida no device ou atualizacao de media-system. O gate
