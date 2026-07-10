@@ -1,0 +1,42 @@
+{
+  "asset_count": 3,
+  "assets": [
+    {
+      "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae.manifest.json",
+      "sha256": "040e26a8b6c4585acaa99d53a41bf818f70cf471ff9b195d3ff77cdeebb1a59e"
+    },
+    {
+      "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae.tar.gz",
+      "sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16"
+    },
+    {
+      "name": "c18-player-runtime-release-gate.json",
+      "sha256": "6f18bd3eb3e47ec23261a078028f9026f319b008dd712eb6415996c69f7dc860"
+    }
+  ],
+  "authorization_gate": "passed",
+  "latest_after": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "latest_before": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "manifest_channel": "homologation",
+  "mode": "publish",
+  "non_claims": [
+    "this_route_does_not_promote_stable",
+    "this_route_does_not_update_latest",
+    "this_route_does_not_create_or_push_tags",
+    "this_route_does_not_publish_extra_assets",
+    "this_route_does_not_enable_broad_latest_autopull",
+    "this_route_does_not_create_draft_or_prerelease"
+  ],
+  "passed": true,
+  "published": true,
+  "release_exists": true,
+  "release_url": "https://github.com/dadoohai/orange_pi_totem/releases/tag/player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+  "remote_exact_tag_verified": true,
+  "remote_source_commit_present": true,
+  "repo": "dadoohai/orange_pi_totem",
+  "schema": "dadooh.c18.player_runtime.exact_target_publication_result.v1",
+  "tag": "player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+  "target_source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd",
+  "version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+  "would_publish": true
+}

@@ -187,7 +187,9 @@ foi reduzido: `prod-7` foi construida no commit `17b58c0`, SHA256
 `c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7`,
 passou validacao offline e auditoria de artefato e esta aprovada para a prova
 M5 na placa, ainda nao para distribuicao. Falta publicar o alvo exato sem mover
-`latest` e executar as cinco fases na placa. Nao repetir
+`latest` e executar as cinco fases na placa. A publicacao exata foi fechada em
+2026-07-10: tres assets, hashes remotos conferidos e `latest` permaneceu no
+`totem-core`. Portanto, resta gravar `prod-7` e executar as cinco fases. Nao repetir
 soak ou a matriz de power-loss nesta rodada; C22 mudou o payload do player, mas
 o objetivo M5 e provar a entrega automatica e seu retorno usando as evidencias
 rapidas ja fechadas para o pacote.

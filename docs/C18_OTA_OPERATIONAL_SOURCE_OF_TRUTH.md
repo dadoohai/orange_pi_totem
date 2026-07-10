@@ -293,7 +293,7 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   com o wizard usando politica de producao: **fechado off-board** no SHA256
   `c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7`;
 - sincronizar branch/tag remotas e publicar os tres assets C22 sem mover
-  `latest`;
+  `latest`: **fechado** em 2026-07-10, com re-download e hashes conferidos;
 - gravar a imagem na placa e preparar C21 como estado anterior controlado;
 - provar o timer adotando C22, no-op sem mutacao, rollback autorizado e
   restauracao C22 com playback real;

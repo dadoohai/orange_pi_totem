@@ -1,0 +1,23 @@
+{
+  "assets": [
+    {
+      "name": "c18-player-runtime-release-gate.json",
+      "sha256": "6f18bd3eb3e47ec23261a078028f9026f319b008dd712eb6415996c69f7dc860"
+    },
+    {
+      "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae.manifest.json",
+      "sha256": "040e26a8b6c4585acaa99d53a41bf818f70cf471ff9b195d3ff77cdeebb1a59e"
+    },
+    {
+      "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae.tar.gz",
+      "sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16"
+    }
+  ],
+  "draft": false,
+  "latest_after": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+  "passed": true,
+  "prerelease": false,
+  "schema": "dadooh.c18.player_runtime.exact_target_remote_verification.v1",
+  "tag": "player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+  "target_commit": "c023eae869e781d0aee115aa247d04e196d58fbd"
+}
