@@ -74,6 +74,9 @@ SPLASH="$SCRIPT_DIR/totem_visual_splash.py"
 TTY_GUARD="$SCRIPT_DIR/totem_visual_tty_guard.sh"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 STATUS_OUT="$OUT_DIR/open-settings-cleanup-status.json"
+PLAYER_RESTORE_ATTEMPTED="false"
+PLAYER_RESTORE_START_MODE="none"
+PLAYER_RESTORE_START_RC="not_attempted"
 
 mkdir -p "$REQUEST_DIR" "$OUT_DIR"
 chmod 700 "$REQUEST_DIR" "$OUT_DIR" 2>/dev/null || true
@@ -165,14 +168,28 @@ restore_product_state() {
     else
       show_transition config_pending || true
     fi
-    systemctl start kiosky-player.service >/dev/null 2>&1 || true
+    PLAYER_RESTORE_ATTEMPTED="true"
+    PLAYER_RESTORE_START_MODE="no-block"
+    if /usr/bin/timeout -k 1s 5s systemctl start --no-block kiosky-player.service >/dev/null 2>&1; then
+      PLAYER_RESTORE_START_RC="0"
+    else
+      PLAYER_RESTORE_START_RC="$?"
+      return "$PLAYER_RESTORE_START_RC"
+    fi
   fi
 }
 
 write_status() {
   local skipped="$1"
   local visual_killed_count="$2"
-  python3 - "$STATUS_OUT" "$REASON" "$skipped" "$visual_killed_count" "$LOCK_DIR" "$REQUEST_DIR" <<'PY'
+  env \
+    PLAYER_RESTORE_ATTEMPTED="$PLAYER_RESTORE_ATTEMPTED" \
+    PLAYER_RESTORE_START_MODE="$PLAYER_RESTORE_START_MODE" \
+    PLAYER_RESTORE_START_RC="$PLAYER_RESTORE_START_RC" \
+    PLAYER_SERVICE_ACTIVE_AFTER="$(systemctl is-active kiosky-player.service 2>/dev/null || true)" \
+    PLAYER_SERVICE_RESULT_AFTER="$(systemctl show kiosky-player.service -p Result --value 2>/dev/null || true)" \
+    PLAYER_SERVICE_EXEC_MAIN_STATUS_AFTER="$(systemctl show kiosky-player.service -p ExecMainStatus --value 2>/dev/null || true)" \
+    python3 - "$STATUS_OUT" "$REASON" "$skipped" "$visual_killed_count" "$LOCK_DIR" "$REQUEST_DIR" <<'PY'
 import json
 import os
 import pathlib
@@ -180,6 +197,7 @@ import sys
 import time
 
 target = pathlib.Path(sys.argv[1])
+restore_rc_raw = os.environ.get("PLAYER_RESTORE_START_RC", "not_attempted")
 payload = {
     "schema_version": "dadooh-open-settings-cleanup.v1",
     "cleaned_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -193,6 +211,13 @@ payload = {
     "real_config_written": False,
     "wifi_changed": False,
     "input_values_published": False,
+    "player_restore_attempted": os.environ.get("PLAYER_RESTORE_ATTEMPTED") == "true",
+    "player_restore_start_mode": os.environ.get("PLAYER_RESTORE_START_MODE", "none"),
+    "player_restore_start_rc": int(restore_rc_raw) if restore_rc_raw.isdigit() else None,
+    "player_restore_enqueued": os.environ.get("PLAYER_RESTORE_ATTEMPTED") == "true" and restore_rc_raw == "0",
+    "player_service_active_after": os.environ.get("PLAYER_SERVICE_ACTIVE_AFTER") or "unknown",
+    "player_service_result_after": os.environ.get("PLAYER_SERVICE_RESULT_AFTER") or "unknown",
+    "player_service_exec_main_status_after": os.environ.get("PLAYER_SERVICE_EXEC_MAIN_STATUS_AFTER") or "unknown",
 }
 tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
 tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

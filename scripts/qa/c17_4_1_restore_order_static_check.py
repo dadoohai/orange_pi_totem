@@ -10,6 +10,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SESSION = ROOT / "scripts" / "board" / "totem_open_settings_session.sh"
+CLEANUP = ROOT / "scripts" / "board" / "totem_open_settings_cleanup.sh"
 
 
 def section(text: str, start: str, end: str) -> str:
@@ -20,14 +21,24 @@ def section(text: str, start: str, end: str) -> str:
 
 def main() -> int:
     text = SESSION.read_text(encoding="utf-8")
+    cleanup = CLEANUP.read_text(encoding="utf-8")
     restore = section(text, "restore_service() {", "\n}\n\nkill_visual_if_running()")
     release = section(text, "release_session_lock_for_restore() {", "\n}\n\nwrite_final_status()")
-    final_status = section(text, "write_final_status() {", "\n  python3 - ")
+    final_status = section(text, "write_final_status() {", "\nimport json\n")
     normal = section(text, 'c1523_phase "session_cleanup_start rc=0"', 'c1523_phase "session_done rc=0"')
+    nonblocking_start = "systemctl start --no-block kiosky-player.service"
+    bounded_start = f"/usr/bin/timeout -k 1s 5s {nonblocking_start}"
 
     checks = {
         "restore_has_lock_guard": '[ -e "$LOCK_DIR" ]' in restore,
-        "restore_guard_before_start": restore.index('[ -e "$LOCK_DIR" ]') < restore.index("systemctl start kiosky-player.service"),
+        "restore_has_nonblocking_start": nonblocking_start in restore,
+        "restore_start_is_bounded": bounded_start in restore,
+        "restore_guard_before_start": restore.index('[ -e "$LOCK_DIR" ]') < restore.index(nonblocking_start),
+        "restore_records_start_rc": "SERVICE_RESTORE_START_RC" in restore,
+        "cleanup_has_nonblocking_start": nonblocking_start in cleanup,
+        "cleanup_start_is_bounded": bounded_start in cleanup,
+        "cleanup_records_start_rc": "PLAYER_RESTORE_START_RC" in cleanup,
+        "cleanup_status_records_restore": '"player_restore_enqueued"' in cleanup,
         "release_removes_request": "cleanup_trigger_request" in release,
         "release_removes_lock": "cleanup_session_lock" in release,
         "release_logs_before_restore": "session_lock_released_before_restore" in release,

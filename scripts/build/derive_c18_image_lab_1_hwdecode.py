@@ -754,6 +754,7 @@ def main():
         "player_points_to_wrapper": MPV_PATH_NEW in kiosk_clean,
         "player_no_longer_default_mpv": MPV_PATH_OLD not in kiosk_clean,
         "kiosk_py_compiles": kiosk_compiles,
+        "settings_restore_timeout_present": present("/usr/bin/timeout") and execu("/usr/bin/timeout"),
         "panfrost_rebind_script_present": present(PANFROST_SH) and execu(PANFROST_SH),
         "panfrost_rebind_unit_present": present(PANFROST_UNIT),
         "panfrost_rebind_enabled": present(PANFROST_WANTS),

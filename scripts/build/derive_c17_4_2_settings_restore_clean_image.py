@@ -140,11 +140,13 @@ def restore_order_checks(session: str) -> dict[str, bool]:
     try:
         restore = section(session, "restore_service() {", "\n}\n\nkill_visual_if_running()")
         release = section(session, "release_session_lock_for_restore() {", "\n}\n\nwrite_final_status()")
-        final_status = section(session, "write_final_status() {", "\n  python3 - ")
+        final_status = section(session, "write_final_status() {", "\nimport json\n")
         normal = section(session, 'c1523_phase "session_cleanup_start rc=0"', 'c1523_phase "session_done rc=0"')
     except ValueError:
         return {
             "restore_has_lock_guard": False,
+            "restore_has_nonblocking_start": False,
+            "restore_start_is_bounded": False,
             "restore_guard_before_start": False,
             "release_removes_request": False,
             "release_removes_lock": False,
@@ -157,11 +159,15 @@ def restore_order_checks(session: str) -> dict[str, bool]:
             "final_status_wait_guarded_by_lock_absence": False,
         }
 
+    nonblocking_start = "systemctl start --no-block kiosky-player.service"
+    bounded_start = f"/usr/bin/timeout -k 1s 5s {nonblocking_start}"
     checks["restore_has_lock_guard"] = '[ -e "$LOCK_DIR" ]' in restore
+    checks["restore_has_nonblocking_start"] = nonblocking_start in restore
+    checks["restore_start_is_bounded"] = bounded_start in restore
     checks["restore_guard_before_start"] = (
         checks["restore_has_lock_guard"]
-        and "systemctl start kiosky-player.service" in restore
-        and restore.index('[ -e "$LOCK_DIR" ]') < restore.index("systemctl start kiosky-player.service")
+        and nonblocking_start in restore
+        and restore.index('[ -e "$LOCK_DIR" ]') < restore.index(nonblocking_start)
     )
     checks["release_removes_request"] = "cleanup_trigger_request" in release
     checks["release_removes_lock"] = "cleanup_session_lock" in release

@@ -2083,8 +2083,10 @@ def _run_health_cmd(args: List[str], timeout_s: int = 45) -> Tuple[bool, str]:
 
 def _restore_order_static_check(bin_dir: Path) -> Tuple[bool, str]:
     session = bin_dir / "totem_open_settings_session.sh"
+    cleanup_path = bin_dir / "totem_open_settings_cleanup.sh"
     try:
         text = session.read_text(encoding="utf-8")
+        cleanup = cleanup_path.read_text(encoding="utf-8")
         restore_start = text.index("restore_service() {")
         restore_end = text.index("\n}\n\nkill_visual_if_running()", restore_start)
         release_start = text.index("release_session_lock_for_restore() {")
@@ -2097,12 +2099,21 @@ def _restore_order_static_check(bin_dir: Path) -> Tuple[bool, str]:
     restore = text[restore_start:restore_end]
     release = text[release_start:release_end]
     normal = text[normal_start:normal_end]
+    nonblocking_start = "systemctl start --no-block kiosky-player.service"
+    bounded_start = f"/usr/bin/timeout -k 1s 5s {nonblocking_start}"
     checks = {
         "restore_has_lock_guard": '[ -e "$LOCK_DIR" ]' in restore,
+        "restore_has_nonblocking_start": nonblocking_start in restore,
+        "restore_start_is_bounded": bounded_start in restore,
+        "restore_records_start_rc": "SERVICE_RESTORE_START_RC" in restore,
+        "cleanup_has_nonblocking_start": nonblocking_start in cleanup,
+        "cleanup_start_is_bounded": bounded_start in cleanup,
+        "cleanup_records_start_rc": "PLAYER_RESTORE_START_RC" in cleanup,
+        "cleanup_status_records_restore": '"player_restore_enqueued"' in cleanup,
         "restore_guard_before_start": (
             '[ -e "$LOCK_DIR" ]' in restore
-            and "systemctl start kiosky-player.service" in restore
-            and restore.index('[ -e "$LOCK_DIR" ]') < restore.index("systemctl start kiosky-player.service")
+            and nonblocking_start in restore
+            and restore.index('[ -e "$LOCK_DIR" ]') < restore.index(nonblocking_start)
         ),
         "release_removes_lock": "cleanup_session_lock" in release,
         "release_logs_before_restore": "session_lock_released_before_restore" in release,

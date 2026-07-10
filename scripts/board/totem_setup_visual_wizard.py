@@ -67,7 +67,11 @@ PAIRING_DEFAULT_ENVIRONMENT_ID = "11111111-2222-4333-8444-555555555555"
 PAIRING_DEFAULT_STATION_ID = "22222222-3333-4444-8555-666666666666"
 PAIRING_DEFAULT_MOCK_API_KEY = "C21_MOCK_DEVICE_KEY_NOT_FOR_PROD_1234567890"
 PAIRING_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MODE", "mock").strip().lower()
-PAIRING_REAL_TIMEOUT_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_TIMEOUT_SEC", "300"))
+PAIRING_REAL_TIMEOUT_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_TIMEOUT_SEC", "1800"))
+PAIRING_REAL_MIN_WATCHDOG_SEC = 600.0
+PAIRING_REAL_MAX_SERVER_TIMEOUT_SEC = float(
+    os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MAX_SERVER_TIMEOUT_SEC", "1800")
+)
 PAIRING_REAL_HTTP_TIMEOUT_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_HTTP_TIMEOUT_SEC", "8"))
 PAIRING_STATES = {
     "pending",
@@ -77,7 +81,11 @@ PAIRING_STATES = {
     "backend_unavailable",
     "empty_environment_list",
     "already_used",
+    "local_timeout",
 }
+PAIRING_REAL_TERMINAL_STATES = frozenset(
+    {"expired", "denied", "backend_unavailable", "already_used", "empty_environment_list", "local_timeout"}
+)
 WIFI_TIMEOUT_SEC = 45
 WIFI_LIST_REFRESH_SEC = 10.0
 WIFI_LIST_TIMEOUT_SEC = 4
@@ -3881,6 +3889,18 @@ def validate_pairing_api_key(value: str) -> str:
     return raw
 
 
+def pairing_real_watchdog_seconds() -> float:
+    max_timeout = max(PAIRING_REAL_MIN_WATCHDOG_SEC, PAIRING_REAL_MAX_SERVER_TIMEOUT_SEC)
+    return min(max(PAIRING_REAL_MIN_WATCHDOG_SEC, PAIRING_REAL_TIMEOUT_SEC), max_timeout)
+
+
+def pairing_real_state_after_poll(raw_state: object, *, final_poll: bool) -> str:
+    state = str(raw_state or "pending")
+    if final_poll and state != "authorized" and state not in PAIRING_REAL_TERMINAL_STATES:
+        return "local_timeout"
+    return state
+
+
 def normalize_runtime_api_url(value: str) -> str:
     raw = validate_pairing_https_url(value, "api_url")
     parsed = urllib_parse.urlsplit(raw)
@@ -3923,7 +3943,7 @@ def create_real_pairing_session(out_dir: pathlib.Path) -> dict[str, Any]:
     if len(device_secret) < 24:
         raise VisualWizardError("segredo de dispositivo invalido")
     authorize_url = validate_pairing_https_url(str(body.get("qr_url", "")), "authorize_url")
-    expires_at = str(body.get("expires_at") or utc_timestamp())
+    expires_at = str(body.get("expires_at") or "").strip()
     poll_interval_ms = body.get("poll_interval_ms")
     poll_after_sec = 2.0
     if isinstance(poll_interval_ms, (int, float)) and poll_interval_ms > 0:
@@ -3954,6 +3974,7 @@ def create_real_pairing_session(out_dir: pathlib.Path) -> dict[str, Any]:
         "pairing_code": code,
         "authorize_url": authorize_url,
         "device_secret": device_secret,
+        "expires_at_utc": expires_at,
         "poll_after_sec": poll_after_sec,
         "session_public_path": str(session_path),
         "pairing_dir": str(pairing_dir),
@@ -4158,36 +4179,39 @@ def run_real_environment_pairing(
     code = str(session["pairing_code"])
     url = str(session["authorize_url"])
     poll_after_sec = float(session["poll_after_sec"])
-    deadline = time.monotonic() + max(30.0, PAIRING_REAL_TIMEOUT_SEC)
+    deadline = time.monotonic() + pairing_real_watchdog_seconds()
     state = "pending"
 
-    while time.monotonic() < deadline:
-        display.show(
-            "03-environment-pairing-real-wait",
-            build_screen_svg(
-                active_step=2,
-                title="Autorizar pelo celular",
-                subtitle="Abra o link e escolha o ambiente.",
-                footer="Esc volta | atualiza automatico",
-                field_label="Codigo",
-                field_value_hint=code,
-                field_note=url,
-                panel_title="Aguardando",
-                panel_items=["Nao desligue.", "Token humano nao fica.", "Nada aplicado ainda."],
-                accent="#38bdf8",
-                layout_rotation_deg=layout_rotation_deg,
-            ),
-        )
-        key = read_key(timeout_sec=poll_after_sec)
-        if key in {"b", "B", "back", "escape"}:
-            write_real_pairing_result(pairing_dir, state="denied", session_path=session_path, credential=None)
-            return None
+    while True:
+        remaining_sec = deadline - time.monotonic()
+        final_poll = remaining_sec <= 0.0
+        if not final_poll:
+            display.show(
+                "03-environment-pairing-real-wait",
+                build_screen_svg(
+                    active_step=2,
+                    title="Autorizar pelo celular",
+                    subtitle="Abra o link e escolha o ambiente.",
+                    footer="Esc volta | atualiza automatico",
+                    field_label="Codigo",
+                    field_value_hint=code,
+                    field_note=url,
+                    panel_title="Aguardando",
+                    panel_items=["Nao desligue.", "Token humano nao fica.", "Nada aplicado ainda."],
+                    accent="#38bdf8",
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+            key = read_key(timeout_sec=min(poll_after_sec, max(0.05, remaining_sec)))
+            if key in {"b", "B", "back", "escape"}:
+                write_real_pairing_result(pairing_dir, state="denied", session_path=session_path, credential=None)
+                return None
         try:
             poll = poll_real_pairing_once(str(session["session_id"]), str(session["device_secret"]))
         except Exception:
             state = "backend_unavailable"
             break
-        state = str(poll.get("status") or "pending")
+        state = pairing_real_state_after_poll(poll.get("status"), final_poll=final_poll)
         if state == "authorized":
             result = write_real_pairing_result(
                 pairing_dir,
@@ -4218,11 +4242,8 @@ def run_real_environment_pairing(
             if key in {"b", "B", "back", "escape"}:
                 return None
             raise VisualWizardAbort("setup visual cancelado pelo operador")
-        if state in {"expired", "denied", "already_used"}:
+        if state in PAIRING_REAL_TERMINAL_STATES:
             break
-
-    if state == "pending":
-        state = "expired"
     write_real_pairing_result(pairing_dir, state=state, session_path=session_path, credential=None)
     title_by_state = {
         "expired": "Codigo expirado",
@@ -4230,6 +4251,7 @@ def run_real_environment_pairing(
         "backend_unavailable": "Servidor indisponivel",
         "empty_environment_list": "Sem ambientes",
         "already_used": "Codigo ja usado",
+        "local_timeout": "Tempo de autorizacao encerrado",
     }
     key = show_environment_validation_status(
         display,
@@ -5289,6 +5311,35 @@ def run_self_test() -> None:
         assert_true(denied_pairing["passed"] is False, "already_used pairing mock should not pass")
         assert_true(denied_pairing["private_values_path"] is None, "already_used pairing should not write private values")
 
+        watchdog_timeout = min(
+            max(PAIRING_REAL_MIN_WATCHDOG_SEC, PAIRING_REAL_TIMEOUT_SEC),
+            max(PAIRING_REAL_MIN_WATCHDOG_SEC, PAIRING_REAL_MAX_SERVER_TIMEOUT_SEC),
+        )
+        assert_true(
+            pairing_real_watchdog_seconds() == watchdog_timeout and watchdog_timeout >= 600.0,
+            "pairing watchdog should outlive the server default TTL without using the board wall clock",
+        )
+        assert_true(
+            PAIRING_REAL_TERMINAL_STATES.issubset(PAIRING_STATES),
+            "all real pairing terminal states should be modeled explicitly",
+        )
+        assert_true(
+            pairing_real_state_after_poll("authorized", final_poll=True) == "authorized",
+            "authorization on the final poll should still win",
+        )
+        assert_true(
+            pairing_real_state_after_poll("pending", final_poll=True) == "local_timeout",
+            "pending on the final watchdog poll should not be mislabeled as server expiry",
+        )
+        assert_true(
+            pairing_real_state_after_poll("processing", final_poll=True) == "local_timeout",
+            "unknown final state should close the watchdog without a busy poll loop",
+        )
+        assert_true(
+            pairing_real_state_after_poll("empty_environment_list", final_poll=False) == "empty_environment_list",
+            "empty environment response should preserve its terminal state",
+        )
+
         original_pairing_request = globals()["http_json_request_no_auth"]
         original_pairing_base = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL")
         try:
@@ -5335,6 +5386,10 @@ def run_self_test() -> None:
             globals()["http_json_request_no_auth"] = fake_pairing_request
             real_pairing_dir = require_tmp_dir(str(root / "pairing-real"))
             real_session = create_real_pairing_session(real_pairing_dir)
+            assert_true(
+                real_session["expires_at_utc"] == "2026-07-08T15:00:00Z",
+                "real pairing should carry the server expiry into the polling session",
+            )
             real_poll = poll_real_pairing_once(str(real_session["session_id"]), str(real_session["device_secret"]))
             real_result = write_real_pairing_result(
                 pathlib.Path(str(real_session["pairing_dir"])),

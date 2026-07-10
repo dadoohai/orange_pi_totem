@@ -264,6 +264,8 @@ HANDOFF_RC="not_run"
 WRITER_RC="not_run"
 SERVICE_STOP_ATTEMPTED="false"
 SERVICE_RESTORE_ATTEMPTED="false"
+SERVICE_RESTORE_START_MODE="none"
+SERVICE_RESTORE_START_RC="not_attempted"
 WRITER_CALLED="false"
 REAL_CONFIG_READ="false"
 REAL_CONFIG_WRITTEN="false"
@@ -538,8 +540,16 @@ restore_service() {
     else
       show_transition config_pending "$SELECTED_ROTATION_DEG" || true
     fi
-    systemctl start kiosky-player.service >/dev/null 2>&1 || true
-    c1523_phase "player_restore_done active=$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
+    SERVICE_RESTORE_START_MODE="no-block"
+    if /usr/bin/timeout -k 1s 5s systemctl start --no-block kiosky-player.service >/dev/null 2>&1; then
+      SERVICE_RESTORE_START_RC="0"
+    else
+      SERVICE_RESTORE_START_RC="$?"
+    fi
+    c1523_phase "player_restore_enqueued mode=$SERVICE_RESTORE_START_MODE rc=$SERVICE_RESTORE_START_RC active=$(systemctl is-active kiosky-player.service 2>/dev/null || true)"
+    if [ "$SERVICE_RESTORE_START_RC" != "0" ]; then
+      return "$SERVICE_RESTORE_START_RC"
+    fi
   fi
 }
 
@@ -898,7 +908,12 @@ write_final_status() {
   else
     wait_player_running || true
   fi
-  python3 - "$FINAL_STATUS" "$OUT_DIR" "$WIZARD_OUT_DIR" "$MODE" "$EXPECTED_RESULT" "$WIZARD_RC" \
+  env \
+    SERVICE_RESTORE_START_MODE="$SERVICE_RESTORE_START_MODE" \
+    SERVICE_RESTORE_START_RC="$SERVICE_RESTORE_START_RC" \
+    SERVICE_RESULT_AFTER="$(systemctl show kiosky-player.service -p Result --value 2>/dev/null || true)" \
+    SERVICE_EXEC_MAIN_STATUS_AFTER="$(systemctl show kiosky-player.service -p ExecMainStatus --value 2>/dev/null || true)" \
+    python3 - "$FINAL_STATUS" "$OUT_DIR" "$WIZARD_OUT_DIR" "$MODE" "$EXPECTED_RESULT" "$WIZARD_RC" \
     "$INITIAL_SERVICE_ACTIVE" "$INITIAL_SERVICE_ENABLED" "$SERVICE_STOP_ATTEMPTED" "$SERVICE_RESTORE_ATTEMPTED" \
     "$(systemctl is-active kiosky-player.service 2>/dev/null || true)" \
     "$(systemctl is-enabled kiosky-player.service 2>/dev/null || true)" \
@@ -1061,6 +1076,15 @@ payload = {
     "service_initial_enabled": initial_enabled,
     "service_stop_attempted": service_stop_attempted,
     "service_restore_attempted": service_restore_attempted,
+    "service_restore_start_mode": os.environ.get("SERVICE_RESTORE_START_MODE", "none"),
+    "service_restore_start_rc": (
+        int(os.environ["SERVICE_RESTORE_START_RC"])
+        if os.environ.get("SERVICE_RESTORE_START_RC", "").isdigit()
+        else None
+    ),
+    "service_restore_enqueued": service_restore_attempted and os.environ.get("SERVICE_RESTORE_START_RC") == "0",
+    "service_result_after": os.environ.get("SERVICE_RESULT_AFTER") or "unknown",
+    "service_exec_main_status_after": os.environ.get("SERVICE_EXEC_MAIN_STATUS_AFTER") or "unknown",
     "service_active": service_active,
     "service_enabled": service_enabled,
     "nrestarts": nrestarts,
