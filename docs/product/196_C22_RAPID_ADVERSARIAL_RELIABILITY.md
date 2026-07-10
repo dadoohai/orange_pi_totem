@@ -1,9 +1,8 @@
 # C22 - campanha adversarial rapida de confiabilidade
 
-Estado: implementacao, prova adversarial de placa e pacote de homologacao
-concluidos em 2026-07-10. O roundtrip apply/rollback/reapply do pacote na placa
-e o ultimo passo deste marco; nenhuma publicacao externa ou promocao `stable`
-faz parte dele.
+Estado: implementacao, prova adversarial, pacote de homologacao e roundtrip
+apply/rollback/reapply na placa concluidos em 2026-07-10. Nenhuma publicacao
+externa ou promocao `stable` faz parte deste marco.
 
 ## Objetivo
 
@@ -88,7 +87,10 @@ Pacote alvo:
 `c18.player-runtime-homolog-20260710-c22-c023eae`, payload SHA256
 `4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16`.
 
-1. aplicar, validar, rollbackar e reaplicar pela rota governada na placa;
-2. manter publicacao externa e auto-pull separados no marco M5;
+Roundtrip fechado em:
+`docs/evidence/c22-rapid-adversarial/20260710T050658Z-package-roundtrip-c023eae/`.
+
+1. reancorar autorizacao, release e timer exatos no marco M5;
+2. provar selecao remota, auto-pull e rollback do alvo publicado;
 3. carregar a verificacao optica/HDMI de transicao como hardening posterior,
    sem bloquear as protecoes de integridade e disponibilidade fechadas aqui.

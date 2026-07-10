@@ -1,0 +1,155 @@
+{
+  "collected_at_utc": "2026-07-10T05:06:58Z",
+  "final": {
+    "collected_at_utc": "2026-07-10T05:06:58Z",
+    "core_timer": {
+      "ActiveState": "inactive",
+      "SubState": "dead"
+    },
+    "current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+    "marker": {
+      "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+      "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+      "tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621",
+      "verdict": "verified",
+      "version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+    },
+    "mpv": {
+      "hwdec_current": "v4l2request-copy",
+      "idle_active": false,
+      "vo_configured": true
+    },
+    "previous_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+    "runtime_agent": {
+      "ActiveState": "failed",
+      "NRestarts": "0",
+      "SubState": "failed"
+    },
+    "runtime_timer": {
+      "ActiveState": "active",
+      "SubState": "waiting"
+    },
+    "schema": "dadooh.c22.player_runtime.final_live.v1",
+    "service": {
+      "ActiveState": "active",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "status": {
+      "black_screen_risk_reason": null,
+      "first_frame_ready": true,
+      "mpv_running": true,
+      "playback_state": "playing",
+      "playlist_size": 1
+    }
+  },
+  "guardrails": {
+    "external_release_published": false,
+    "github_used": false,
+    "network_required": false,
+    "public_cli_freeze_preserved_rc": 44,
+    "runtime_timer_authorization_rebound": false
+  },
+  "initial": {
+    "core_timer": {
+      "ActiveState": "inactive",
+      "SubState": "dead"
+    },
+    "current_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+    "previous_version": "c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1",
+    "runtime_agent": {
+      "ActiveState": "failed",
+      "NRestarts": "0",
+      "SubState": "failed"
+    },
+    "runtime_timer": {
+      "ActiveState": "active",
+      "SubState": "waiting"
+    },
+    "service": {
+      "ActiveState": "active",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "non_claims": [
+    "not_stable",
+    "not_public_rollout",
+    "not_new_autopull_authorization",
+    "not_zero_black_frame_proof"
+  ],
+  "passed": true,
+  "schema": "dadooh.c22.player_runtime_roundtrip.v1",
+  "steps": {
+    "apply": {
+      "candidate_health_passed": true,
+      "failure_reasons": [],
+      "live": {
+        "black_screen_risk_reason": null,
+        "current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "passed": true,
+        "playback_state": "playing",
+        "playlist_size": 1,
+        "previous_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+        "service_active": true,
+        "state_current_version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+      },
+      "passed": true,
+      "public_cli_apply_rc": 44,
+      "public_cli_reconcile_rc": 44,
+      "rc": 0
+    },
+    "reapply": {
+      "candidate_health_passed": true,
+      "failure_reasons": [],
+      "linked_previous": true,
+      "live": {
+        "black_screen_risk_reason": null,
+        "current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "passed": true,
+        "playback_state": "playing",
+        "playlist_size": 1,
+        "previous_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+        "service_active": true,
+        "state_current_version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+      },
+      "passed": true,
+      "public_cli_apply_rc": 44,
+      "public_cli_reconcile_rc": 44,
+      "rc": 0
+    },
+    "rollback": {
+      "live": {
+        "black_screen_risk_reason": null,
+        "current_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "passed": true,
+        "playback_state": "playing",
+        "playlist_size": 1,
+        "previous_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+        "service_active": true,
+        "state_current_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5"
+      },
+      "passed": true,
+      "public_cli_apply_rc": 44,
+      "public_cli_reconcile_rc": 44,
+      "public_cli_rollback_rc": 44,
+      "rolled_back_to": "c18.player-runtime-homolog-20260709-image-transcode-50919f5"
+    }
+  },
+  "target": {
+    "channel": "homologation",
+    "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+    "manifest_sha256": "040e26a8b6c4585acaa99d53a41bf818f70cf471ff9b195d3ff77cdeebb1a59e",
+    "package_commit": "82f7576",
+    "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+    "source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd",
+    "tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621",
+    "version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+  }
+}

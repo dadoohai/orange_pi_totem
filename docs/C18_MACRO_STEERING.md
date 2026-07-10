@@ -141,6 +141,23 @@ autorizacao local hash-bound ao alvo `9bebaf1`. O caminho generico
 `production` deve carregar um timer separado para esse alvo exato. A imagem
 `homologation` nao deve carregar autorizacao nem timer de `player-runtime`.
 
+Atualizacao em 2026-07-10: o sucessor C22
+`c18.player-runtime-homolog-20260710-c22-c023eae` passou pacote local,
+deep-health, apply, rollback e reapply na placa. Isso fecha C22, mas ainda nao
+fecha M5. Antes de reancorar o timer e obrigatorio:
+
+- publicar os tres assets exatos do pacote e provar selecao remota por tag;
+- gerar autorizacao nova hash-bound aos hashes C22, sem `latest`;
+- colocar a placa em estado anterior ao alvo para provar apply automatico real;
+- executar no device o updater C22 endurecido, hoje ainda diferente do binario
+  embarcado na placa;
+- provar no-op, negativos de autorizacao/hash e rollback pelo caminho publico
+  autorizado.
+
+O timer atual continua apontando para `9bebaf1` e rejeita downgrade com
+`rc=45`. Nao trocar apenas o arquivo de autorizacao para silenciar esse estado;
+release, updater, autorizacao e teste do timer formam uma unica mudanca M5.
+
 ### M6 - Robustez De Frota
 
 Status: roadmap.

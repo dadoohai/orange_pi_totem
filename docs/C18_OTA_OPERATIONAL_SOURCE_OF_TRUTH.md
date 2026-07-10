@@ -158,13 +158,16 @@ Fila atual para consolidacao:
   O pacote governado alvo e
   `c18.player-runtime-homolog-20260710-c22-c023eae`, payload SHA256
   `4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16`.
-  Non-claim: zero frame preto requer captura HDMI; o pacote ainda precisa passar
-  apply/rollback/reapply na placa antes de entrar no M5.
+  O roundtrip apply/rollback/reapply passou na placa, com dois deep-health
+  verdes, playback real em cada etapa e C22 final em `current`; evidencia em
+  `docs/evidence/c22-rapid-adversarial/20260710T050658Z-package-roundtrip-c023eae/`.
+  Non-claim: zero frame preto requer captura HDMI; publicacao e reancoragem do
+  auto-pull pertencem ao M5.
 - Drift operacional observado em 2026-07-10: o timer de `player-runtime` da
   placa lab segue ativo com autorizacao exata do alvo antigo `9bebaf1`. Como o
   current e mais novo, o downgrade guard responde `rc=45` e preserva o player,
   mas a unit periodica fica `failed`. O M5 deve substituir autorizacao e alvo do
-  timer de forma atomica depois que o sucessor C22 passar pacote/apply/rollback;
+  timer de forma atomica agora que o sucessor C22 passou pacote/apply/rollback;
   nao desabilitar a protecao para silenciar o erro.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou

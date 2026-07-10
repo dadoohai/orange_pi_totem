@@ -1,0 +1,43 @@
+{
+  "collected_at_utc": "2026-07-10T05:06:58Z",
+  "core_timer": {
+    "ActiveState": "inactive",
+    "SubState": "dead"
+  },
+  "current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+  "marker": {
+    "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+    "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+    "tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621",
+    "verdict": "verified",
+    "version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+  },
+  "mpv": {
+    "hwdec_current": "v4l2request-copy",
+    "idle_active": false,
+    "vo_configured": true
+  },
+  "previous_version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5",
+  "runtime_agent": {
+    "ActiveState": "failed",
+    "NRestarts": "0",
+    "SubState": "failed"
+  },
+  "runtime_timer": {
+    "ActiveState": "active",
+    "SubState": "waiting"
+  },
+  "schema": "dadooh.c22.player_runtime.final_live.v1",
+  "service": {
+    "ActiveState": "active",
+    "NRestarts": "0",
+    "SubState": "running"
+  },
+  "status": {
+    "black_screen_risk_reason": null,
+    "first_frame_ready": true,
+    "mpv_running": true,
+    "playback_state": "playing",
+    "playlist_size": 1
+  }
+}

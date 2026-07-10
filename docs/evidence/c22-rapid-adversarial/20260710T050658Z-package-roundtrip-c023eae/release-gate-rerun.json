@@ -1,0 +1,23 @@
+{
+  "component": "player-runtime",
+  "manifest": {
+    "channel": "homologation",
+    "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+    "source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd",
+    "version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+  },
+  "package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "manifest": "manifest.json",
+    "payload": "payload.tar.gz",
+    "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+    "source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd"
+  },
+  "passed": true,
+  "payload": {
+    "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+    "tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621"
+  },
+  "schema": "dadooh.c18.player_runtime.release_gate.v1"
+}
