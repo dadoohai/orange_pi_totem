@@ -77,6 +77,12 @@ TOTEM_CORE_PRODUCTION_TIMER_COLLECT_PATH = (
 )
 PLAYER_RUNTIME_CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
 PLAYER_RUNTIME_CANARY_MEDIA_PATH = REPO_ROOT / "scripts" / "board" / "assets" / "c18-canary-h264.mp4"
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_PATH = (
+    REPO_ROOT / "scripts" / "board" / "player_runtime_production_autopull.json"
+)
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_HISTORICAL_9BEBAF1_PATH = (
+    REPO_ROOT / "scripts" / "board" / "player_runtime_production_autopull_9bebaf1.json"
+)
 PLAYER_RUNTIME_LAB_APPLY_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_apply.py"
 PLAYER_RUNTIME_LAB_ROLLBACK_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_rollback.py"
 PLAYER_RUNTIME_LAB_TOPOLOGY_RESET_PATH = (
@@ -387,6 +393,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("player_runtime_update_timer_matches_profile", embed)
 
     def test_image_embed_has_explicit_production_profile(self) -> None:
+        embed = EMBED_PATH.read_text(encoding="utf-8")
         sys.path.insert(0, str(REPO_ROOT / "scripts" / "build"))
         try:
             spec = importlib.util.spec_from_file_location("totem_core_image_embed_profile_test", EMBED_PATH)
@@ -412,7 +419,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(production["timer_enabled"], True)
         self.assertEqual(
             production["player_runtime_authorization_file"],
-            "player_runtime_production_autopull_9bebaf1.json",
+            "player_runtime_production_autopull.json",
         )
         self.assertEqual(
             production["player_runtime_service_file"],
@@ -423,6 +430,64 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             "totem-player-runtime-update-agent.production.timer",
         )
         self.assertEqual(production["player_runtime_timer_enabled"], True)
+        self.assertIn("PLAYER_RUNTIME_PRODUCTION_AUTH_ESSENTIAL_FIELDS", embed)
+        self.assertIn("business_decision_risk_not_accepted", embed)
+        self.assertNotIn("player_runtime_production_autopull_9bebaf1.json", embed)
+        self.assertNotIn("player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1", embed)
+        self.assertTrue(PLAYER_RUNTIME_PRODUCTION_AUTOPULL_HISTORICAL_9BEBAF1_PATH.is_file())
+
+        auth = json.loads(PLAYER_RUNTIME_PRODUCTION_AUTOPULL_PATH.read_text(encoding="utf-8"))
+        self.assertTrue(mod.validate_player_runtime_production_authorization(auth))
+        self.assertEqual(auth["version"], "c18.player-runtime-homolog-20260710-c22-c023eae")
+        self.assertEqual(
+            auth["tag_name"],
+            "player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+        )
+        self.assertEqual(auth["source_commit"], "c023eae869e781d0aee115aa247d04e196d58fbd")
+        self.assertEqual(
+            auth["payload_sha256"],
+            "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+        )
+        self.assertEqual(
+            auth["manifest_sha256"],
+            "040e26a8b6c4585acaa99d53a41bf818f70cf471ff9b195d3ff77cdeebb1a59e",
+        )
+        self.assertEqual(
+            auth["release_gate_sha256"],
+            "6f18bd3eb3e47ec23261a078028f9026f319b008dd712eb6415996c69f7dc860",
+        )
+        self.assertEqual(auth["channel"], "homologation")
+        self.assertFalse(auth["allow_latest"])
+        self.assertFalse(auth["allow_prerelease"])
+        self.assertFalse(auth["allow_downgrade"])
+        self.assertEqual(auth["business_decision"]["accepted_at_local_date"], "2026-07-10")
+        self.assertTrue(auth["business_decision"]["risk_accepted"])
+        self.assertEqual(
+            set(auth["non_claims"]),
+            {
+                "not_latest_broad",
+                "not_future_player_runtime_targets",
+                "not_kiosky_player_legacy_release_path",
+                "not_media_system_update",
+                "not_dashboard_or_canary_groups",
+                "not_device_side_signature_enforcement",
+            },
+        )
+        risk_rejected = dict(auth)
+        risk_rejected["business_decision"] = dict(auth["business_decision"], risk_accepted=False)
+        self.assertFalse(mod.validate_player_runtime_production_authorization(risk_rejected))
+        latest_allowed = dict(auth, allow_latest=True)
+        self.assertFalse(mod.validate_player_runtime_production_authorization(latest_allowed))
+        extra_field = dict(auth, unexpected=True)
+        self.assertFalse(mod.validate_player_runtime_production_authorization(extra_field))
+        wrong_tag = dict(auth, tag_name="player-runtime-wrong")
+        self.assertFalse(mod.validate_player_runtime_production_authorization(wrong_tag))
+        blank_operator = json.loads(json.dumps(auth))
+        blank_operator["business_decision"]["operator"] = "   "
+        self.assertFalse(mod.validate_player_runtime_production_authorization(blank_operator))
+        invalid_date = json.loads(json.dumps(auth))
+        invalid_date["business_decision"]["accepted_at_local_date"] = "2026-02-30"
+        self.assertFalse(mod.validate_player_runtime_production_authorization(invalid_date))
         with self.assertRaisesRegex(RuntimeError, "unsupported_totem_core_embed_profile"):
             mod.resolve_totem_core_embed_profile("latest")
 
@@ -439,8 +504,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-1"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.1"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-5"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.5"', derive)
+        self.assertIn("validate_production_player_runtime_authorization", derive)
+        self.assertIn("production_seed_sensitive_fields", derive)
+        self.assertIn("production_seed_has_no_device_identity_or_secret", derive)
+        self.assertIn("player_runtime_production_authorization_gate_passed", derive)
         self.assertNotIn("artifact_private; not_for_production", derive)
         self.assertIn('"--image-profile": "production"', wrapper)
         self.assertIn('"--totem-core-profile": "production"', wrapper)

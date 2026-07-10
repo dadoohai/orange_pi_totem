@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 import tempfile
@@ -27,6 +28,43 @@ PLAYER_RUNTIME_CANARY_TARGET = "/data/media/c18-canary-h264.mp4"
 PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.service"
 PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.timer"
 PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-player-runtime-update-agent.timer"
+PLAYER_RUNTIME_PRODUCTION_AUTH_SCHEMA = "dadooh.c18.player_runtime.production_autopull_authorization.v1"
+PLAYER_RUNTIME_PRODUCTION_AUTH_REPO = "dadoohai/orange_pi_totem"
+PLAYER_RUNTIME_PRODUCTION_AUTH_ESSENTIAL_FIELDS = (
+    "schema",
+    "enabled",
+    "component",
+    "auto_pull_enabled",
+    "allow_latest",
+    "allow_prerelease",
+    "allow_downgrade",
+    "repo",
+    "tag_name",
+    "version",
+    "channel",
+    "device_track",
+    "source_commit",
+    "payload_sha256",
+    "manifest_sha256",
+    "release_gate_asset_name",
+    "release_gate_sha256",
+)
+PLAYER_RUNTIME_PRODUCTION_AUTH_FIELDS = frozenset(
+    {*PLAYER_RUNTIME_PRODUCTION_AUTH_ESSENTIAL_FIELDS, "business_decision", "non_claims"}
+)
+PLAYER_RUNTIME_PRODUCTION_AUTH_BUSINESS_FIELDS = frozenset(
+    {"risk_accepted", "rollout_mode", "operator", "rollback_owner", "accepted_at_local_date"}
+)
+PLAYER_RUNTIME_PRODUCTION_AUTH_REQUIRED_NON_CLAIMS = frozenset(
+    {
+        "not_latest_broad",
+        "not_future_player_runtime_targets",
+        "not_kiosky_player_legacy_release_path",
+        "not_media_system_update",
+        "not_dashboard_or_canary_groups",
+        "not_device_side_signature_enforcement",
+    }
+)
 TOTEM_CORE_EMBED_PROFILES = {
     "homologation": {
         "policy_file": "totem_update_policy.json",
@@ -43,7 +81,7 @@ TOTEM_CORE_EMBED_PROFILES = {
         "service_file": "totem-update-agent.production.service",
         "timer_file": "totem-update-agent.production.timer",
         "timer_enabled": True,
-        "player_runtime_authorization_file": "player_runtime_production_autopull_9bebaf1.json",
+        "player_runtime_authorization_file": "player_runtime_production_autopull.json",
         "player_runtime_service_file": "totem-player-runtime-update-agent.production.service",
         "player_runtime_timer_file": "totem-player-runtime-update-agent.production.timer",
         "player_runtime_timer_enabled": True,
@@ -115,6 +153,117 @@ def resolve_totem_core_embed_profile(profile: str) -> dict[str, Any]:
     return dict(TOTEM_CORE_EMBED_PROFILES[profile])
 
 
+def _hex_digest(value: Any, length: int = 64) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == length
+        and all(char in "0123456789abcdef" for char in value.lower())
+    )
+
+
+def _player_runtime_production_authorization_failures(auth: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    if set(auth) != PLAYER_RUNTIME_PRODUCTION_AUTH_FIELDS:
+        failures.append("fields_mismatch")
+    expected_values = {
+        "schema": PLAYER_RUNTIME_PRODUCTION_AUTH_SCHEMA,
+        "enabled": True,
+        "component": "player-runtime",
+        "auto_pull_enabled": True,
+        "allow_latest": False,
+        "allow_prerelease": False,
+        "allow_downgrade": False,
+        "channel": "homologation",
+        "device_track": "c18-hwdecode",
+    }
+    for key, value in expected_values.items():
+        if auth.get(key) != value:
+            failures.append(f"{key}_mismatch")
+    for key in ("repo", "tag_name", "version", "release_gate_asset_name"):
+        if not isinstance(auth.get(key), str) or not auth.get(key):
+            failures.append(f"{key}_missing")
+    if auth.get("repo") != PLAYER_RUNTIME_PRODUCTION_AUTH_REPO:
+        failures.append("repo_invalid")
+    if isinstance(auth.get("version"), str) and auth.get("tag_name") != f"player-runtime-{auth['version']}":
+        failures.append("tag_name_version_mismatch")
+    if auth.get("release_gate_asset_name") != "c18-player-runtime-release-gate.json":
+        failures.append("release_gate_asset_name_mismatch")
+    if not _hex_digest(auth.get("source_commit"), 40):
+        failures.append("source_commit_invalid")
+    for key in ("payload_sha256", "manifest_sha256", "release_gate_sha256"):
+        if not _hex_digest(auth.get(key)):
+            failures.append(f"{key}_invalid")
+    decision = auth.get("business_decision")
+    if (
+        not isinstance(decision, dict)
+        or set(decision) != PLAYER_RUNTIME_PRODUCTION_AUTH_BUSINESS_FIELDS
+        or decision.get("risk_accepted") is not True
+    ):
+        failures.append("business_decision_risk_not_accepted")
+    else:
+        if decision.get("rollout_mode") != "simple_global":
+            failures.append("business_decision_rollout_mode_mismatch")
+        for key in ("operator", "rollback_owner"):
+            if not isinstance(decision.get(key), str) or not decision[key].strip():
+                failures.append(f"business_decision_{key}_missing")
+        accepted_date = decision.get("accepted_at_local_date")
+        try:
+            parsed_date = dt.date.fromisoformat(accepted_date) if isinstance(accepted_date, str) else None
+        except ValueError:
+            parsed_date = None
+        if parsed_date is None or parsed_date.isoformat() != accepted_date:
+            failures.append("business_decision_date_invalid")
+    non_claims = auth.get("non_claims")
+    if not isinstance(non_claims, list) or not all(isinstance(item, str) for item in non_claims):
+        failures.append("non_claims_invalid")
+    elif (
+        len(non_claims) != len(PLAYER_RUNTIME_PRODUCTION_AUTH_REQUIRED_NON_CLAIMS)
+        or set(non_claims) != PLAYER_RUNTIME_PRODUCTION_AUTH_REQUIRED_NON_CLAIMS
+    ):
+        failures.append("non_claims_missing_required")
+    return failures
+
+
+def validate_player_runtime_production_authorization(auth: dict[str, Any]) -> bool:
+    return not _player_runtime_production_authorization_failures(auth)
+
+
+def load_player_runtime_production_authorization(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        raise RuntimeError(f"missing_player_runtime_production_authorization:{path}")
+    try:
+        auth = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"invalid_player_runtime_authorization_json:{path}") from exc
+    if not isinstance(auth, dict):
+        raise RuntimeError(f"invalid_player_runtime_authorization_json:{path}")
+    failures = _player_runtime_production_authorization_failures(auth)
+    if failures:
+        raise RuntimeError(f"invalid_player_runtime_production_authorization:{path}:{','.join(failures)}")
+    return auth
+
+
+def _profile_authorization_path(profile_config: dict[str, Any], repo_root: Path) -> Path | None:
+    authorization_file = profile_config.get("player_runtime_authorization_file")
+    if not authorization_file:
+        return None
+    return repo_root / "scripts/board" / str(authorization_file)
+
+
+def _player_runtime_authorization_matches_expected(
+    embedded: dict[str, Any],
+    expected: dict[str, Any],
+) -> bool:
+    if not validate_player_runtime_production_authorization(embedded):
+        return False
+    for field in PLAYER_RUNTIME_PRODUCTION_AUTH_ESSENTIAL_FIELDS:
+        if embedded.get(field) != expected.get(field):
+            return False
+    if set(embedded.get("non_claims") or []) != set(expected.get("non_claims") or []):
+        return False
+    return embedded.get("business_decision") == expected.get("business_decision")
+
+
 def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
                            *, profile: str = "homologation") -> dict[str, Any]:
     """Embed C17.6 totem-core as image current + /opt fallback/wrappers."""
@@ -134,11 +283,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
     update_policy = repo_root / "scripts/board" / str(profile_config["policy_file"])
     update_agent_service = repo_root / "scripts/board/systemd" / str(profile_config["service_file"])
     update_agent_timer = repo_root / "scripts/board/systemd" / str(profile_config["timer_file"])
-    player_runtime_authorization = (
-        repo_root / "scripts/board" / str(profile_config["player_runtime_authorization_file"])
-        if profile_config.get("player_runtime_authorization_file")
-        else None
-    )
+    player_runtime_authorization = _profile_authorization_path(profile_config, repo_root)
     player_runtime_service = (
         repo_root / "scripts/board/systemd" / str(profile_config["player_runtime_service_file"])
         if profile_config.get("player_runtime_service_file")
@@ -155,6 +300,10 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
     for required in (player_runtime_authorization, player_runtime_service, player_runtime_timer):
         if required is not None and not required.is_file():
             raise RuntimeError(f"missing_totem_core_embed_input:{required}")
+    if profile == "production":
+        if player_runtime_authorization is None:
+            raise RuntimeError("missing_player_runtime_production_authorization_profile")
+        load_player_runtime_production_authorization(player_runtime_authorization)
 
     commands: list[str] = []
     wanted_directories = (
@@ -415,6 +564,15 @@ def _symlink_target(rootfs: Path, path: str) -> str:
 def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") -> dict[str, Any]:
     """Return an offline validation bundle for the totem-core image layout."""
     profile_config = resolve_totem_core_embed_profile(profile)
+    repo_root = Path(__file__).resolve().parents[2]
+    expected_player_runtime_auth: dict[str, Any] = {}
+    expected_auth_path = _profile_authorization_path(profile_config, repo_root)
+    if profile == "production":
+        if expected_auth_path is not None:
+            try:
+                expected_player_runtime_auth = load_player_runtime_production_authorization(expected_auth_path)
+            except RuntimeError:
+                expected_player_runtime_auth = {}
     release_root = f"/data/core/totem/releases/{TOTEM_CORE_VERSION}"
     state = base.cat_file(rootfs, "/data/core/totem/state.json") or ""
     updatectl = base.cat_file(rootfs, "/opt/totem/bin/totem-updatectl") or ""
@@ -473,14 +631,9 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
             else update_policy.get("device_channel") in {"lab", "homologation"}
         ),
         "player_runtime_authorization_matches_profile": (
-            (
-                player_runtime_auth.get("schema")
-                == "dadooh.c18.player_runtime.production_autopull_authorization.v1"
-                and player_runtime_auth.get("component") == "player-runtime"
-                and player_runtime_auth.get("auto_pull_enabled") is True
-                and player_runtime_auth.get("allow_latest") is False
-                and player_runtime_auth.get("tag_name")
-                == "player-runtime-c18.player-runtime-homolog-20260617-mpv-stuck-fix-9bebaf1"
+            _player_runtime_authorization_matches_expected(
+                player_runtime_auth,
+                expected_player_runtime_auth,
             )
             if profile == "production"
             else not _is_file(rootfs, PLAYER_RUNTIME_AUTH_TARGET)

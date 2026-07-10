@@ -117,20 +117,23 @@ PAYLOAD_BASENAME="$(read_json "$MANIFEST" payload)"
 ACTUAL_PAYLOAD_SHA="$(sha256sum "$PAYLOAD" | awk '{print $1}')"
 [[ "$ACTUAL_PAYLOAD_SHA" == "$PAYLOAD_SHA" ]] || die "payload sha256 mismatch"
 
-if [[ -n "$TAG_OVERRIDE" ]]; then
-  TAG="$TAG_OVERRIDE"
-else
-  TAG="player-runtime-${VERSION}"
+EXPECTED_TAG="player-runtime-${VERSION}"
+if [[ -n "$TAG_OVERRIDE" && "$TAG_OVERRIDE" != "$EXPECTED_TAG" ]]; then
+  die "tag override must exactly match ${EXPECTED_TAG}"
 fi
+TAG="${TAG_OVERRIDE:-$EXPECTED_TAG}"
+[[ "$TAG" == "$EXPECTED_TAG" ]] || die "tag must exactly match ${EXPECTED_TAG}"
 [[ "$TAG" =~ ^[A-Za-z0-9._-]+$ ]] || die "unsafe tag: $TAG"
 TITLE="${TITLE_OVERRIDE:-Dadooh player-runtime ${VERSION}}"
 
 NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ACTIVATION_TMP="$(mktemp -t c18-player-runtime-activation-XXXXXX.json)"
 SERVER_ASSETS_TMP="$(mktemp -t c18-player-runtime-server-assets-XXXXXX.json)"
+REMOTE_REFS_TMP="$(mktemp -t c18-player-runtime-remote-XXXXXX.txt)"
+READBACK_TMP="$(mktemp -t c18-player-runtime-readback-XXXXXX.json)"
 NOTES_FILE=""
 cleanup() {
-  rm -f "$ACTIVATION_TMP" "$SERVER_ASSETS_TMP"
+  rm -f "$ACTIVATION_TMP" "$SERVER_ASSETS_TMP" "$REMOTE_REFS_TMP" "$READBACK_TMP"
   [[ -n "$NOTES_FILE" ]] && rm -f "$NOTES_FILE"
   return 0
 }
@@ -181,19 +184,34 @@ append_asset "$STABLE_PROMOTION"
 append_asset "$OPERATOR_THAW"
 append_asset "$ACTIVATION_TMP"
 
-REMOTE_SOURCE_COMMIT_PRESENT=0
-while read -r REMOTE_SHA REMOTE_REF; do
-  [[ -n "${REMOTE_SHA:-}" && -n "${REMOTE_REF:-}" ]] || continue
-  if [[ "$REMOTE_SHA" == "$SOURCE_COMMIT" ]]; then
-    REMOTE_SOURCE_COMMIT_PRESENT=1
-    break
-  fi
-  if git cat-file -e "${REMOTE_SHA}^{commit}" 2>/dev/null \
-    && git merge-base --is-ancestor "$SOURCE_COMMIT" "$REMOTE_SHA" 2>/dev/null; then
-    REMOTE_SOURCE_COMMIT_PRESENT=1
-    break
-  fi
-done < <(git ls-remote --heads --tags "https://github.com/${REPO}.git" 2>/dev/null || true)
+git ls-remote --heads --tags "https://github.com/${REPO}.git" >"$REMOTE_REFS_TMP" \
+  || die "failed to inspect remote refs for ${REPO}"
+
+read -r REMOTE_SOURCE_COMMIT_PRESENT REMOTE_EXACT_TAG_PRESENT REMOTE_EXACT_TAG_VERIFIED < <(
+  python3 - "$REMOTE_REFS_TMP" "$SOURCE_COMMIT" "$TAG" <<'PY'
+import sys
+from pathlib import Path
+
+refs: list[tuple[str, str]] = []
+for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+    parts = line.split()
+    if len(parts) >= 2:
+        refs.append((parts[0], parts[1]))
+source_commit = sys.argv[2]
+tag = sys.argv[3]
+tag_refs = [
+    sha for sha, ref in refs
+    if ref == f"refs/tags/{tag}" or ref == f"refs/tags/{tag}^{{}}"
+]
+source_present = any(sha == source_commit for sha, _ref in refs)
+tag_points_to_source = any(sha == source_commit for sha in tag_refs)
+print(
+    "1" if source_present or tag_points_to_source else "0",
+    "1" if tag_refs else "0",
+    "1" if tag_points_to_source else "0",
+)
+PY
+)
 
 log "repo=${REPO}"
 log "tag=${TAG}"
@@ -208,16 +226,24 @@ log "payload_sha256=${PAYLOAD_SHA}"
 log "activation_gate=passed"
 log "asset_count=${#ASSETS[@]}"
 log "remote_source_commit_present=${REMOTE_SOURCE_COMMIT_PRESENT}"
+log "remote_exact_tag_present=${REMOTE_EXACT_TAG_PRESENT}"
+log "remote_exact_tag_verified=${REMOTE_EXACT_TAG_VERIFIED}"
 log "auto_pull_enabled=false"
 log "public_thaw_executed=false"
 
 if [[ "$MODE" == "prepare-only" ]]; then
-  if [[ "$REMOTE_SOURCE_COMMIT_PRESENT" -eq 1 ]]; then
+  if [[ "$REMOTE_SOURCE_COMMIT_PRESENT" -eq 1 && "$REMOTE_EXACT_TAG_VERIFIED" -eq 1 ]]; then
     PUBLISH_ALLOWED_JSON="true"
     PUBLISH_BLOCKER_JSON="null"
-  else
+  elif [[ "$REMOTE_SOURCE_COMMIT_PRESENT" -ne 1 ]]; then
     PUBLISH_ALLOWED_JSON="false"
     PUBLISH_BLOCKER_JSON="\"remote_source_commit_missing\""
+  elif [[ "$REMOTE_EXACT_TAG_PRESENT" -ne 1 ]]; then
+    PUBLISH_ALLOWED_JSON="false"
+    PUBLISH_BLOCKER_JSON="\"remote_exact_tag_missing\""
+  else
+    PUBLISH_ALLOWED_JSON="false"
+    PUBLISH_BLOCKER_JSON="\"remote_exact_tag_not_source_commit\""
   fi
   printf '{\n'
   printf '  "schema": "dadooh.c18.player_runtime.publication_prepare.v1",\n'
@@ -229,6 +255,7 @@ if [[ "$MODE" == "prepare-only" ]]; then
   printf '  "tag": "%s",\n' "$TAG"
   printf '  "target_source_commit": "%s",\n' "$SOURCE_COMMIT"
   printf '  "asset_count": %s,\n' "${#ASSETS[@]}"
+  printf '  "remote_exact_tag_verified": %s,\n' "$([[ "$REMOTE_EXACT_TAG_VERIFIED" -eq 1 ]] && printf true || printf false)"
   printf '  "non_claims": ["this_prepare_does_not_publish", "this_prepare_does_not_enable_auto_pull", "this_prepare_does_not_execute_public_thaw"]\n'
   printf '}\n'
   exit 0
@@ -238,6 +265,10 @@ fi
   || die "publish requires ALLOW_C18_PLAYER_RUNTIME_PUBLICATION=1"
 [[ "$REMOTE_SOURCE_COMMIT_PRESENT" -eq 1 ]] \
   || die "source commit is not present in remote refs for ${REPO}; push/sync before publish"
+[[ "$REMOTE_EXACT_TAG_PRESENT" -eq 1 ]] \
+  || die "remote tag '${TAG}' is not present on ${REPO}; create/push the exact governed tag before publish"
+[[ "$REMOTE_EXACT_TAG_VERIFIED" -eq 1 ]] \
+  || die "remote tag '${TAG}' does not point to source commit ${SOURCE_COMMIT}"
 command -v gh >/dev/null 2>&1 || { echo "GITHUB_CLI_NOT_AUTHENTICATED" >&2; die "gh CLI not installed"; }
 if ! gh auth status >/dev/null 2>&1; then
   echo "GITHUB_CLI_NOT_AUTHENTICATED" >&2
@@ -246,6 +277,17 @@ fi
 if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
   die "release with tag '$TAG' already exists on $REPO"
 fi
+
+latest_tag() {
+  local out
+  out="$(gh release view --repo "$REPO" --json tagName 2>/dev/null)" \
+    || die "failed to inspect current latest release for ${REPO}"
+  python3 -c 'import json, sys; tag = json.load(sys.stdin).get("tagName") or ""; print(tag); sys.exit(0 if tag else 1)' <<<"$out" \
+    || die "failed to parse current latest release for ${REPO}"
+}
+
+LATEST_BEFORE="$(latest_tag)"
+log "latest_before=${LATEST_BEFORE:-none}"
 
 NOTES_FILE="$(mktemp -t c18-player-runtime-notes-XXXXXX.md)"
 {
@@ -260,11 +302,39 @@ NOTES_FILE="$(mktemp -t c18-player-runtime-notes-XXXXXX.md)"
   echo "Non-claims: this release does not enable auto-pull and does not execute public thaw by itself."
 } >"$NOTES_FILE"
 
-GH_ARGS=(release create "$TAG" --repo "$REPO" --title "$TITLE" --notes-file "$NOTES_FILE" --target "$SOURCE_COMMIT")
+GH_ARGS=(release create "$TAG" --repo "$REPO" --title "$TITLE" --notes-file "$NOTES_FILE" --target "$SOURCE_COMMIT" --verify-tag --latest=false)
 [[ "$PRERELEASE" == "yes" ]] && GH_ARGS+=(--prerelease)
 [[ "$DRAFT" -eq 1 ]] && GH_ARGS+=(--draft)
 
 log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"
 RELEASE_URL="$(gh "${GH_ARGS[@]}" -- "${ASSETS[@]}")"
 log "release_url=${RELEASE_URL}"
+
+gh release view "$TAG" --repo "$REPO" --json tagName,isDraft,isPrerelease,targetCommitish >"$READBACK_TMP" \
+  || die "published release could not be inspected"
+python3 - "$READBACK_TMP" "$TAG" "$SOURCE_COMMIT" "$DRAFT" "$PRERELEASE" <<'PY' \
+  || die "published release metadata does not match the governed target"
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+tag = sys.argv[2]
+source_commit = sys.argv[3]
+expected_draft = sys.argv[4] == "1"
+expected_prerelease = sys.argv[5] == "yes"
+if data.get("tagName") != tag:
+    raise SystemExit("tagName mismatch")
+if data.get("isDraft") is not expected_draft:
+    raise SystemExit("isDraft mismatch")
+if data.get("isPrerelease") is not expected_prerelease:
+    raise SystemExit("isPrerelease mismatch")
+if data.get("targetCommitish") != source_commit:
+    raise SystemExit("targetCommitish mismatch")
+PY
+
+LATEST_AFTER="$(latest_tag)"
+[[ "$LATEST_AFTER" == "$LATEST_BEFORE" ]] \
+  || die "latest release drifted during governed publish: before='${LATEST_BEFORE:-none}' after='${LATEST_AFTER:-none}'"
+log "latest_after=${LATEST_AFTER:-none}"
 log "published=true"

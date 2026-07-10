@@ -169,6 +169,20 @@ Fila atual para consolidacao:
   mas a unit periodica fica `failed`. O M5 deve substituir autorizacao e alvo do
   timer de forma atomica agora que o sucessor C22 passou pacote/apply/rollback;
   nao desabilitar a protecao para silenciar o erro.
+- Preparacao M5 off-board em 2026-07-10: o alvo passou a ser o C22
+  `c18.player-runtime-homolog-20260710-c22-c023eae`. A autorizacao canonica esta
+  em `scripts/board/player_runtime_production_autopull.json`; ela bloqueia
+  `latest`, prerelease e downgrade e esta presa aos hashes do pacote. A rota
+  `publish_player_runtime_exact_target_release.sh` publica somente os tres
+  assets exatos sem mover GitHub `latest`. O novo gate M5 exige prova de
+  pre-alvo C21, auto-apply C22, no-op sem mutacao, rollback autorizado e
+  restauracao C22. O rollback autorizado tambem passou a reiniciar e verificar
+  o player antes de retornar sucesso.
+- Correcao de imagem M5: a derivacao production anterior preservava no seed de
+  fabrica valores de laboratorio (`api_key`, environment/station e tokens),
+  embora nao gravasse `config.json`. A imagem `c18-hwdecode-prod-5` limpa esses
+  campos e valida a ausencia antes de promover o artefato. Portanto prod-1 a
+  prod-4 permanecem historico/lab e nao devem ser a imagem de distribuicao M5.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou
   `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,
@@ -266,15 +280,15 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- Decidir se novas placas saem com `player-runtime 9bebaf1` como baseline
-  inicial aprovado da imagem ou se recebem `player-runtime` via OTA assistido no
-  provisionamento.
-- Transformar o caminho assistido em rotina operacional de release, sem
-  reabrir o caminho legado `kiosky-player`.
-- Materializar a politica de public thaw/auto-pull de `player-runtime` no
-  updater, timer/policy e prova de placa. Rollout por grupos continua roadmap.
-- Separar futuras evolucoes de produto: `totem-core` para wizard/core e
-  `player-runtime` para comportamento do player.
+- construir e auditar uma nova imagem production com updater/autorizacao C22;
+- sincronizar branch/tag remotas e publicar os tres assets C22 sem mover
+  `latest`;
+- gravar a imagem na placa e preparar C21 como estado anterior controlado;
+- provar o timer adotando C22, no-op sem mutacao, rollback autorizado e
+  restauracao C22 com playback real;
+- manter futuras evolucoes separadas: `totem-core` para wizard/core e
+  `player-runtime` para comportamento do player. Grupos, dashboard e kill
+  switch continuam roadmap M6 e nao bloqueiam a primeira escala aceita.
 
 Hardenings nao bloqueantes apontados pela auditoria do marco anterior de
 `totem-core` auto-pull:
@@ -295,9 +309,9 @@ rollback.
 
 Leitura pratica:
 
-- novas placas devem sair preferencialmente com imagem de producao contendo o
-  `player-runtime 9bebaf1` como baseline inicial aprovado por excecao de
-  negocio;
+- novas placas devem sair com a nova imagem de producao contendo o C22 como
+  fallback e autorizacao exact-target C22; a prova de atualizacao usa C21 como
+  estado anterior apenas na bancada;
 - `totem-core` deve ser o primeiro auto-pull padrao, porque ja tem apply remoto,
   health, rollback e escopo estreito provados na placa;
 - `player-runtime` entra agora no objetivo de auto-pull, mas nao por
@@ -331,10 +345,10 @@ automaticamente o `player-runtime` exato autorizado, validou hashes/manifest,
 gerou marker valido no device, passou health real, manteve rollback e recusou
 alvos nao autorizados.
 
-Atualizacao de alvo em 2026-07-09: `9bebaf1` nao deve ser o alvo final sozinho
-para cliente se houver midias de imagem. O alvo publico deve ser rebaselined
-para `c18.player-runtime-homolog-20260709-image-transcode-50919f5` ou sucessor,
-mantendo a mesma governanca de alvo exato.
+Atualizacao de alvo em 2026-07-10: o sucessor escolhido e
+`c18.player-runtime-homolog-20260710-c22-c023eae`, que inclui o tratamento de
+imagens do C21 e os endurecimentos rapidos C22. `9bebaf1` e C21 permanecem
+historicos/baseline de ensaio, nao alvo de producao atual.
 
 Nao-claims:
 
@@ -347,20 +361,18 @@ Nao-claims:
 
 Passos minimos:
 
-1. autorizacao production hash-bound para o alvo corrigido
-   `c18.player-runtime-homolog-20260709-image-transcode-50919f5` ou sucessor;
-   a autorizacao publica existente ainda aponta para `9bebaf1` e nao deve ser
-   reaproveitada como aprovacao do alvo novo;
-2. caminho publico no updater sem env lab, permitido somente para alvo
-   autorizado;
-3. health real, marker, quarentena, state e rollback reaproveitando o
-   verify-then-promote existente;
-4. timer/service explicito para `player-runtime`, sem concorrer com
-   `totem-core`;
-5. evidencia de placa: dry-run, apply automatico, deep-health, rollback, no-op e
-   negativos de alvo errado/hash errado/canal errado/sem autorizacao;
-6. auditoria final focada em regressao: `totem-core` continua funcionando,
-   `kiosky-player` legado continua fora e `media-system` continua fora do OTA.
+1. construir e inspecionar a imagem production nova com updater e autorizacao
+   C22 exatos;
+2. publicar tag/assets C22 pelo publisher exact-target, sem alterar `latest`;
+3. preparar C21 como current de bancada e coletar o preflight M5;
+4. deixar o timer real aplicar C22 e coletar deep-health/marker/state;
+5. executar no-op, rollback autorizado e segunda troca autorizada para
+   restaurar C22;
+6. rodar o gate de cinco fases e auditoria final de regressao: `totem-core`
+   continua funcionando, `kiosky-player` legado continua fora e `media-system`
+   continua fora do OTA.
+
+Runbook curto: `docs/c18-player-runtime-production-autopull-runbook.md`.
 
 ## Rodada C19 - pacote `totem-core` de wizard/settings
 

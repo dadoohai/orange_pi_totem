@@ -1,0 +1,34 @@
+{
+  "allow_downgrade": false,
+  "allow_latest": false,
+  "allow_prerelease": false,
+  "auto_pull_enabled": true,
+  "business_decision": {
+    "accepted_at_local_date": "2026-07-10",
+    "operator": "operator-user-approved-autonomous-c22-20260710",
+    "risk_accepted": true,
+    "rollback_owner": "dadooh-operator",
+    "rollout_mode": "simple_global"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "device_track": "c18-hwdecode",
+  "enabled": true,
+  "manifest_sha256": "040e26a8b6c4585acaa99d53a41bf818f70cf471ff9b195d3ff77cdeebb1a59e",
+  "non_claims": [
+    "not_latest_broad",
+    "not_future_player_runtime_targets",
+    "not_kiosky_player_legacy_release_path",
+    "not_media_system_update",
+    "not_dashboard_or_canary_groups",
+    "not_device_side_signature_enforcement"
+  ],
+  "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+  "release_gate_asset_name": "c18-player-runtime-release-gate.json",
+  "release_gate_sha256": "6f18bd3eb3e47ec23261a078028f9026f319b008dd712eb6415996c69f7dc860",
+  "repo": "dadoohai/orange_pi_totem",
+  "schema": "dadooh.c18.player_runtime.production_autopull_authorization.v1",
+  "source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd",
+  "tag_name": "player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+  "version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derive the first C18 production HW-decode candidate image.
+"""Derive the current C18 production HW-decode candidate image.
 
 This is a thin wrapper around the validated C18 HW-decode image derivation
 engine. It selects production identity and the production totem-core auto-pull

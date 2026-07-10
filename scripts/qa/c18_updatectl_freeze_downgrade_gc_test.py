@@ -15,6 +15,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -220,6 +221,7 @@ def player_runtime_authorization(manifest_path: Path, release_gate_path: Path, m
         "auto_pull_enabled": True,
         "allow_latest": False,
         "allow_prerelease": False,
+        "allow_downgrade": False,
         "repo": manifest_data.get("source_repo") or "dadoohai/orange_pi_totem",
         "tag_name": f"player-runtime-{manifest_data['version']}",
         "version": manifest_data["version"],
@@ -228,8 +230,16 @@ def player_runtime_authorization(manifest_path: Path, release_gate_path: Path, m
         "source_commit": manifest_data["source_commit"],
         "payload_sha256": manifest_data["payload_sha256"],
         "manifest_sha256": updatectl._sha256_file(manifest_path),
+        "release_gate_asset_name": "c18-player-runtime-release-gate.json",
         "release_gate_sha256": updatectl._sha256_file(release_gate_path),
-        "non_claims": ["not_latest_broad"],
+        "business_decision": {
+            "risk_accepted": True,
+            "rollout_mode": "simple_global",
+            "operator": "unit-operator",
+            "rollback_owner": "unit-rollback-owner",
+            "accepted_at_local_date": "2026-07-10",
+        },
+        "non_claims": sorted(updatectl.PLAYER_RUNTIME_PRODUCTION_AUTOPULL_REQUIRED_NON_CLAIMS),
     }
 
 
@@ -346,6 +356,43 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                     release_gate_path=release_gate_path,
                 )
 
+    def test_player_runtime_authorization_loader_requires_explicit_safety_posture(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            manifest_path, payload_path = write_player_runtime_payload(root, "runtime-auth")
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            release_gate_path = write_player_runtime_release_gate(root, manifest_data, payload_path)
+            auth = player_runtime_authorization(manifest_path, release_gate_path, manifest_data)
+            auth_path = root / "auth.json"
+
+            auth_path.write_text(json.dumps(auth) + "\n", encoding="utf-8")
+            loaded = updatectl._load_player_runtime_production_authorization(auth_path)
+            self.assertEqual(loaded["version"], "runtime-auth")
+
+            for field, malformed_value, expected_error in (
+                ("allow_latest", None, "latest_not_allowed"),
+                ("allow_prerelease", None, "prerelease_not_allowed"),
+                ("allow_downgrade", None, "downgrade_not_allowed"),
+                ("business_decision", {}, "business_decision"),
+            ):
+                malformed = dict(auth)
+                malformed[field] = malformed_value
+                auth_path.write_text(json.dumps(malformed) + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, expected_error):
+                    updatectl._load_player_runtime_production_authorization(auth_path)
+
+            for field, malformed_value in (
+                ("operator", "   "),
+                ("rollback_owner", "\t"),
+                ("accepted_at_local_date", "2026-02-30"),
+            ):
+                malformed = json.loads(json.dumps(auth))
+                malformed["business_decision"][field] = malformed_value
+                auth_path.write_text(json.dumps(malformed) + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, f"business_decision_{field}"):
+                    updatectl._load_player_runtime_production_authorization(auth_path)
+
     def test_player_runtime_authorized_same_current_identity_is_noop_without_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -415,6 +462,156 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
 
             self.assertEqual(rc, 45)
             self.assertEqual(updatectl._read_state()["current"]["version"], "runtime-other")
+
+    def test_player_runtime_authorized_rollback_restarts_and_health_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            updatectl._ensure_dirs()
+
+            target_version = "runtime-auth"
+            baseline_version = "runtime-baseline"
+            manifest_path, payload_path = write_player_runtime_payload(root, target_version)
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            target_release = updatectl.RELEASES_DIR / target_version
+            target_release.mkdir(parents=True)
+            (target_release / "kiosk.py").write_text(
+                f'print("{target_version}")\n',
+                encoding="utf-8",
+            )
+            target_identity = updatectl._player_runtime_identity(target_release, manifest_data)
+            updatectl._write_player_runtime_marker(
+                target_release,
+                manifest_data,
+                target_identity,
+                passing_player_runtime_health(target_release, target_identity),
+            )
+
+            _baseline_release, baseline_manifest, baseline_identity = write_verified_player_runtime_release(
+                baseline_version
+            )
+            updatectl.CURRENT_LINK.symlink_to(f"releases/{target_version}")
+            updatectl.PREVIOUS_LINK.symlink_to(f"releases/{baseline_version}")
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "player-runtime",
+                "current": {
+                    "version": target_version,
+                    "payload_sha256": manifest_data["payload_sha256"],
+                    "kiosk_py_sha256": target_identity["kiosk_py_sha256"],
+                    "tree_sha256": target_identity["tree_sha256"],
+                },
+                "previous": {
+                    "version": baseline_version,
+                    "payload_sha256": baseline_manifest["payload_sha256"],
+                    "kiosk_py_sha256": baseline_identity["kiosk_py_sha256"],
+                    "tree_sha256": baseline_identity["tree_sha256"],
+                },
+                "quarantine": [],
+            })
+
+            release_gate_path = write_player_runtime_release_gate(root, manifest_data, payload_path)
+            auth_path = root / "auth.json"
+            auth_path.write_text(
+                json.dumps(
+                    player_runtime_authorization(manifest_path, release_gate_path, manifest_data),
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                authorization=str(auth_path),
+                reason="production_authorized_rollback",
+                quarantine_current=False,
+            )
+
+            with (
+                mock.patch.object(updatectl, "_service_restart", return_value=(True, "restart issued")) as restart,
+                mock.patch.object(updatectl, "_service_health_check", return_value=(True, "healthy")) as health,
+            ):
+                rc = updatectl.cmd_rollback_player_runtime_authorized(args)
+
+            self.assertEqual(rc, 0)
+            restart.assert_called_once_with()
+            health.assert_called_once_with()
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), f"releases/{baseline_version}")
+            self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), f"releases/{target_version}")
+            last = updatectl._read_state()["last_operation"]
+            self.assertEqual(last["status"], "success")
+            self.assertTrue(last["service_restart_performed"])
+            self.assertTrue(last["service_health_passed"])
+
+    def test_player_runtime_authorized_rollback_reports_activation_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            updatectl._ensure_dirs()
+            target_version = "runtime-auth"
+            baseline_version = "runtime-baseline"
+            _target_release, target_manifest, target_identity = write_verified_player_runtime_release(target_version)
+            _baseline_release, baseline_manifest, baseline_identity = write_verified_player_runtime_release(
+                baseline_version
+            )
+            updatectl.CURRENT_LINK.symlink_to(f"releases/{target_version}")
+            updatectl.PREVIOUS_LINK.symlink_to(f"releases/{baseline_version}")
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "player-runtime",
+                "current": {
+                    "version": target_version,
+                    "payload_sha256": target_manifest["payload_sha256"],
+                    "kiosk_py_sha256": target_identity["kiosk_py_sha256"],
+                    "tree_sha256": target_identity["tree_sha256"],
+                },
+                "previous": {
+                    "version": baseline_version,
+                    "payload_sha256": baseline_manifest["payload_sha256"],
+                    "kiosk_py_sha256": baseline_identity["kiosk_py_sha256"],
+                    "tree_sha256": baseline_identity["tree_sha256"],
+                },
+                "quarantine": [],
+            })
+            manifest_path, payload_path = write_player_runtime_payload(root, target_version)
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest_data["payload_sha256"] = target_manifest["payload_sha256"]
+            manifest_path.write_text(json.dumps(manifest_data, sort_keys=True) + "\n", encoding="utf-8")
+            release_gate_path = write_player_runtime_release_gate(root, manifest_data, payload_path)
+            auth_path = root / "auth.json"
+            auth_path.write_text(
+                json.dumps(
+                    player_runtime_authorization(manifest_path, release_gate_path, manifest_data),
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                authorization=str(auth_path),
+                reason="production_authorized_rollback",
+                quarantine_current=False,
+            )
+
+            def fail_after_observing_pending_state() -> tuple[bool, str]:
+                pending = updatectl._read_state()["last_operation"]
+                self.assertEqual(pending["status"], "activation_pending")
+                self.assertFalse(pending["service_restart_performed"])
+                self.assertFalse(pending["service_health_passed"])
+                return False, "restart failed"
+
+            with mock.patch.object(
+                updatectl,
+                "_service_restart",
+                side_effect=fail_after_observing_pending_state,
+            ):
+                rc = updatectl.cmd_rollback_player_runtime_authorized(args)
+
+            self.assertEqual(rc, 31)
+            last = updatectl._read_state()["last_operation"]
+            self.assertEqual(last["status"], "failed")
+            self.assertFalse(last["service_restart_performed"])
+            self.assertFalse(last["service_health_passed"])
+            self.assertIn("service_restart_failed", last["activation_error"])
 
     def test_player_runtime_rollback_is_frozen(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

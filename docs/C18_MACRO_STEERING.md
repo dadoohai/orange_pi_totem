@@ -158,6 +158,29 @@ O timer atual continua apontando para `9bebaf1` e rejeita downgrade com
 `rc=45`. Nao trocar apenas o arquivo de autorizacao para silenciar esse estado;
 release, updater, autorizacao e teste do timer formam uma unica mudanca M5.
 
+Atualizacao de implementacao em 2026-07-10: a preparacao off-board de M5 foi
+consolidada para o alvo C22. O repo agora possui:
+
+- autorizacao canonica production exact-target gerada e validada contra
+  manifest, payload e release gate;
+- publisher estreito de tres assets que exige a autorizacao real, tag remota e
+  `--latest=false`;
+- perfil de imagem production apontando para a autorizacao C22 e incorporando o
+  updater atual;
+- coletor e gate de cinco fases: pre, auto-apply, no-op, rollback e restauracao;
+- rollback publico autorizado que reinicia e verifica o player antes de
+  reportar sucesso.
+- imagem production que limpa do seed de fabrica API key, environment/station
+  de laboratorio e tokens; imagens prod-1..prod-4 nao sao a referencia de
+  distribuicao M5.
+
+Isso ainda nao fecha M5: a release C22 nao foi publicada e a imagem nova ainda
+nao foi gravada. O proximo limite real e construir/auditar a imagem, publicar o
+alvo exato sem mover `latest` e executar as cinco fases na placa. Nao repetir
+soak ou a matriz de power-loss nesta rodada; C22 mudou o payload do player, mas
+o objetivo M5 e provar a entrega automatica e seu retorno usando as evidencias
+rapidas ja fechadas para o pacote.
+
 ### M6 - Robustez De Frota
 
 Status: roadmap.

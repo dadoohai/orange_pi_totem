@@ -48,20 +48,30 @@ FFMPEG_CLI = Path("/tmp/ffbuild/ffmpeg.stripped")
 R4_UPDATECTL = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
 PLAYER_RUNTIME_KIOSK = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 PLAYER_RUNTIME_SOURCE = REPO_ROOT / "player-runtime" / "kiosky-player" / "SOURCE.json"
+PLAYER_RUNTIME_PRODUCTION_AUTH = REPO_ROOT / "scripts" / "board" / "player_runtime_production_autopull.json"
+PLAYER_RUNTIME_PRODUCTION_AUTH_GATE = (
+    REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_production_autopull_authorization_gate.py"
+)
 
 HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-1"
-PRODUCTION_VERSION = "c18.image-prod.1"
+PRODUCTION_TAG = "c18-hwdecode-prod-5"
+PRODUCTION_VERSION = "c18.image-prod.5"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
 C18_STABILITY_DROPIN = "/etc/systemd/system/kiosky-player.service.d/30-c18-stability.conf"
 HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
+PRODUCTION_SEED_IDENTITY_FIELDS = {
+    "api_key",
+    "environment_id",
+    "station_id",
+    "telemetry_token",
+}
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
@@ -234,6 +244,68 @@ def validate_player_runtime_snapshot(source_data: dict, kiosk_snapshot: str, kio
         raise SystemExit("BLOCKED: player-runtime kiosk.py teardown governance mismatch")
 
 
+def production_seed_sensitive_fields(seed_data: dict) -> set[str]:
+    fields = set(PRODUCTION_SEED_IDENTITY_FIELDS)
+    for key in seed_data:
+        lowered = str(key).lower()
+        if (
+            lowered.endswith("_token")
+            or lowered.endswith("_password")
+            or lowered.endswith("_secret")
+            or lowered in {"token", "password", "secret"}
+        ):
+            fields.add(str(key))
+    return fields
+
+
+def validate_production_player_runtime_authorization() -> dict:
+    try:
+        auth = json.loads(PLAYER_RUNTIME_PRODUCTION_AUTH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SystemExit(f"BLOCKED: production player-runtime authorization unreadable: {exc}") from exc
+    version = str(auth.get("version") or "")
+    if not version:
+        raise SystemExit("BLOCKED: production player-runtime authorization missing version")
+    release_dir = REPO_ROOT / "releases" / "player-runtime" / version
+    manifest = release_dir / f"dadooh-player-runtime-{version}.manifest.json"
+    payload = release_dir / f"dadooh-player-runtime-{version}.tar.gz"
+    release_gate = release_dir / "c18-player-runtime-release-gate.json"
+    cmd = [
+        sys.executable,
+        str(PLAYER_RUNTIME_PRODUCTION_AUTH_GATE),
+        "--authorization",
+        str(PLAYER_RUNTIME_PRODUCTION_AUTH),
+        "--manifest",
+        str(manifest),
+        "--payload",
+        str(payload),
+        "--release-gate",
+        str(release_gate),
+        "--json",
+    ]
+    result = subprocess.run(
+        cmd,
+        cwd=REPO_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    try:
+        evidence = json.loads(result.stdout)
+    except Exception as exc:
+        raise SystemExit(
+            "BLOCKED: production player-runtime authorization gate emitted invalid JSON: "
+            f"{result.stderr[-1000:]}"
+        ) from exc
+    if result.returncode != 0 or evidence.get("passed") is not True:
+        raise SystemExit(
+            "BLOCKED: production player-runtime authorization gate failed: "
+            + ",".join(str(item) for item in evidence.get("blockers", []))
+        )
+    return evidence
+
+
 def validate_candidate_identity(tag: str, version: str, marker: str,
                                 *, image_profile: str = "lab") -> None:
     if "/" in tag or tag.startswith(".") or ".." in Path(tag).parts:
@@ -273,6 +345,11 @@ def main():
     repo = repo_identity()
     if repo["repo_dirty"] and not args.allow_dirty:
         raise SystemExit("BLOCKED: source repo dirty; commit first or pass --allow-dirty for exploratory builds")
+    production_player_runtime_authorization = (
+        validate_production_player_runtime_authorization()
+        if args.image_profile == "production"
+        else {"passed": "n/a", "result_claim": "not_required_for_homologation_image"}
+    )
 
     if args.image_tag:
         TAG = args.image_tag
@@ -363,6 +440,10 @@ def main():
     if not isinstance(seed_data, dict):
         raise SystemExit("BLOCKED: homologation seed root is not an object")
     seed_data["mpv_path"] = WRAPPER
+    if args.image_profile == "production":
+        for key in production_seed_sensitive_fields(seed_data):
+            if key in seed_data:
+                seed_data[key] = ""
     seed_tmp = work / "private-values.seed.json"
     seed_tmp.write_text(json.dumps(seed_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -663,6 +744,16 @@ def main():
             )
         ),
         "homologation_seed_mpv_path_points_to_wrapper": seed_verify.get("mpv_path") == WRAPPER,
+        "production_seed_has_no_device_identity_or_secret": (
+            all(not seed_verify.get(key) for key in production_seed_sensitive_fields(seed_verify))
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "player_runtime_production_authorization_gate_passed": (
+            production_player_runtime_authorization.get("passed") is True
+            if args.image_profile == "production"
+            else "n/a"
+        ),
         "no_real_config_embedded": not present("/data/config/config.json"),
         "no_player_runtime_current_embedded": not present("/data/player-runtime/current"),
         "no_legacy_kiosky_player_current_embedded": not present("/data/apps/kiosky-player/current"),
@@ -726,6 +817,7 @@ def main():
         "r4_updater_perms_preserved": v["r4_updater_perms_present"],
         "totem_core_ota_ready": v["totem_core_ota_ready"],
         "totem_core_embed": totem_core_embed,
+        "player_runtime_production_authorization_gate": production_player_runtime_authorization,
         "totem_core_offline_validation": totem_core_validation,
         "offline_validation_passed": offline_ok,
         "offline_validation_detail": v,

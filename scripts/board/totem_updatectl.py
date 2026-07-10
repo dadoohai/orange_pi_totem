@@ -50,11 +50,48 @@ SCHEMA_MANIFEST = "dadooh.totem.update.v1"
 SCHEMA_STATE = "dadooh.totem.update.state.v1"
 SCHEMA_POLICY = "dadooh.totem.update.policy.v1"
 SCHEMA_PLAYER_RUNTIME_PRODUCTION_AUTOPULL = "dadooh.c18.player_runtime.production_autopull_authorization.v1"
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_REQUIRED_NON_CLAIMS = {
+    "not_latest_broad",
+    "not_future_player_runtime_targets",
+    "not_kiosky_player_legacy_release_path",
+    "not_media_system_update",
+    "not_dashboard_or_canary_groups",
+    "not_device_side_signature_enforcement",
+}
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_FIELDS = {
+    "schema",
+    "enabled",
+    "component",
+    "auto_pull_enabled",
+    "allow_latest",
+    "allow_prerelease",
+    "allow_downgrade",
+    "repo",
+    "tag_name",
+    "version",
+    "channel",
+    "device_track",
+    "source_commit",
+    "payload_sha256",
+    "manifest_sha256",
+    "release_gate_asset_name",
+    "release_gate_sha256",
+    "business_decision",
+    "non_claims",
+}
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_BUSINESS_FIELDS = {
+    "risk_accepted",
+    "rollout_mode",
+    "operator",
+    "rollback_owner",
+    "accepted_at_local_date",
+}
 DEFAULT_COMPONENT = "kiosky-player"  # legacy default; C18 operational OTA must pass --component totem-core.
 COMPONENT = DEFAULT_COMPONENT
 SUPPORTED_COMPONENTS = ("kiosky-player", "player-runtime", "totem-core")
 DEVICE_REQUIRED = "orangepizero3"
 DEVICE_TRACK_DEFAULT = "c18-hwdecode"
+PLAYER_RUNTIME_PRODUCTION_AUTOPULL_REPO = "dadoohai/orange_pi_totem"
 SUPPORTED_DEVICE_TRACKS = ("c18-hwdecode",)
 SUPPORTED_BASE_IMAGE_LINES = ("c17.4.2",)
 TOTEM_CORE_REQUIRED_UPDATER_FEATURES = frozenset({
@@ -1055,6 +1092,8 @@ def _load_player_runtime_production_authorization(path: Path) -> Dict[str, Any]:
     if not path.is_file() or path.is_symlink():
         raise RuntimeError("player_runtime_authorization_missing")
     data = _json_object(path, "player_runtime_authorization")
+    if set(data) != PLAYER_RUNTIME_PRODUCTION_AUTOPULL_FIELDS:
+        raise RuntimeError("player_runtime_authorization_fields")
     if data.get("schema") != SCHEMA_PLAYER_RUNTIME_PRODUCTION_AUTOPULL:
         raise RuntimeError("player_runtime_authorization_schema")
     if data.get("enabled") is not True:
@@ -1065,18 +1104,57 @@ def _load_player_runtime_production_authorization(path: Path) -> Dict[str, Any]:
         raise RuntimeError("player_runtime_authorization_autopull_not_enabled")
     if data.get("channel") != "homologation":
         raise RuntimeError("player_runtime_authorization_channel")
-    if data.get("allow_latest") is True:
+    if data.get("allow_latest") is not False:
         raise RuntimeError("player_runtime_authorization_latest_not_allowed")
-    _require_text(data, "repo")
-    _require_text(data, "tag_name")
-    _require_text(data, "version")
+    if data.get("allow_prerelease") is not False:
+        raise RuntimeError("player_runtime_authorization_prerelease_not_allowed")
+    if data.get("allow_downgrade") is not False:
+        raise RuntimeError("player_runtime_authorization_downgrade_not_allowed")
+    if data.get("device_track") != DEVICE_TRACK_DEFAULT:
+        raise RuntimeError("player_runtime_authorization_device_track")
+    repo = _require_text(data, "repo")
+    if repo != PLAYER_RUNTIME_PRODUCTION_AUTOPULL_REPO:
+        raise RuntimeError("player_runtime_authorization_repo")
+    tag_name = _require_text(data, "tag_name")
+    version = _require_text(data, "version")
+    if tag_name != f"player-runtime-{version}":
+        raise RuntimeError("player_runtime_authorization_tag_name")
     _require_hex(data, "source_commit", 40)
     _require_hex(data, "payload_sha256")
     _require_hex(data, "manifest_sha256")
     _require_hex(data, "release_gate_sha256")
+    if data.get("release_gate_asset_name") != PLAYER_RUNTIME_RELEASE_GATE_ASSET:
+        raise RuntimeError("player_runtime_authorization_release_gate_asset")
     non_claims = data.get("non_claims")
-    if not isinstance(non_claims, list) or "not_latest_broad" not in non_claims:
+    if (
+        not isinstance(non_claims, list)
+        or not all(isinstance(item, str) for item in non_claims)
+        or len(non_claims) != len(PLAYER_RUNTIME_PRODUCTION_AUTOPULL_REQUIRED_NON_CLAIMS)
+        or set(non_claims) != PLAYER_RUNTIME_PRODUCTION_AUTOPULL_REQUIRED_NON_CLAIMS
+    ):
         raise RuntimeError("player_runtime_authorization_non_claims")
+    decision = data.get("business_decision")
+    if (
+        not isinstance(decision, dict)
+        or set(decision) != PLAYER_RUNTIME_PRODUCTION_AUTOPULL_BUSINESS_FIELDS
+        or decision.get("risk_accepted") is not True
+    ):
+        raise RuntimeError("player_runtime_authorization_business_decision")
+    for key in ("operator", "rollback_owner"):
+        value = decision.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise RuntimeError(f"player_runtime_authorization_business_decision_{key}")
+    accepted_date = decision.get("accepted_at_local_date")
+    if not isinstance(accepted_date, str):
+        raise RuntimeError("player_runtime_authorization_business_decision_accepted_at_local_date")
+    try:
+        parsed_date = _dt.date.fromisoformat(accepted_date)
+    except ValueError as exc:
+        raise RuntimeError("player_runtime_authorization_business_decision_accepted_at_local_date") from exc
+    if parsed_date.isoformat() != accepted_date:
+        raise RuntimeError("player_runtime_authorization_business_decision_accepted_at_local_date")
+    if decision.get("rollout_mode") != "simple_global":
+        raise RuntimeError("player_runtime_authorization_business_decision_rollout_mode")
     return data
 
 
@@ -2793,13 +2871,18 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
                 }
             state["last_operation"] = {
                 "type": "rollback",
-                "status": "success",
+                "status": "activation_pending" if production_authorized else "success",
                 "started_at_utc": started_at,
                 "finished_at_utc": _utcnow_iso(),
                 "rollback_reason": reason,
                 "rolled_back_to": rolled_to_version,
                 "quarantined_current": bool(quarantine_current and cur_identity),
             }
+            if production_authorized:
+                state["last_operation"].update({
+                    "service_restart_performed": False,
+                    "service_health_passed": False,
+                })
             _write_state(state)
             _player_runtime_fault("rollback_after_state_success", current=prev_link)
             return 0
@@ -2816,13 +2899,18 @@ def _rollback_player_runtime_unfrozen(reason: str = "manual_rollback",
     state["current"] = None
     state["last_operation"] = {
         "type": "rollback",
-        "status": "success",
+        "status": "activation_pending" if production_authorized else "success",
         "started_at_utc": started_at,
         "finished_at_utc": _utcnow_iso(),
         "rollback_reason": reason,
         "rolled_back_to": "image_fallback",
         "quarantined_current": bool(quarantine_current and cur_identity),
     }
+    if production_authorized:
+        state["last_operation"].update({
+            "service_restart_performed": False,
+            "service_health_passed": False,
+        })
     _write_state(state)
     _player_runtime_fault("rollback_after_state_success", current=None)
     return 0
@@ -3632,13 +3720,56 @@ def cmd_rollback_player_runtime_authorized(args: argparse.Namespace) -> int:
         quarantine_current=bool(args.quarantine_current),
         production_authorized=True,
     )
-    if rc == 0:
-        print(json.dumps({
-            "rollback": "ok",
-            "component": "player-runtime",
-            "authorized_version": auth.get("version"),
-        }, indent=2, sort_keys=True))
-    return rc
+    if rc != 0:
+        return rc
+
+    ok, info = _service_restart()
+    state = _read_state()
+    last_operation = state.get("last_operation")
+    if not isinstance(last_operation, dict):
+        last_operation = {}
+        state["last_operation"] = last_operation
+    if not ok:
+        last_operation.update({
+            "status": "failed",
+            "finished_at_utc": _utcnow_iso(),
+            "service_restart_performed": False,
+            "service_health_passed": False,
+            "activation_error": f"service_restart_failed:{info}",
+        })
+        _write_state(state)
+        log("ERROR", "player_runtime_authorized_rollback_restart_failed", err=info)
+        return 31
+
+    ok, info = _service_health_check()
+    if not ok:
+        last_operation.update({
+            "status": "failed",
+            "finished_at_utc": _utcnow_iso(),
+            "service_restart_performed": True,
+            "service_health_passed": False,
+            "activation_error": f"service_health_failed:{info}",
+        })
+        _write_state(state)
+        log("ERROR", "player_runtime_authorized_rollback_health_failed", reason=info)
+        return 32
+
+    last_operation.update({
+        "status": "success",
+        "finished_at_utc": _utcnow_iso(),
+        "service_restart_performed": True,
+        "service_health_passed": True,
+    })
+    last_operation.pop("activation_error", None)
+    _write_state(state)
+    print(json.dumps({
+        "rollback": "ok",
+        "component": "player-runtime",
+        "authorized_version": auth.get("version"),
+        "service_restart_performed": True,
+        "service_health_passed": True,
+    }, indent=2, sort_keys=True))
+    return 0
 
 
 def cmd_reconcile(args: argparse.Namespace) -> int:

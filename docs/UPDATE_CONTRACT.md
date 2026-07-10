@@ -689,13 +689,38 @@ Para materializar o inventario dos assets que seriam anexados, use
 A saida `dadooh.c18.server_side_publish_asset_list.v1` deve conter paths
 repo-relative, bytes e SHA256; ela e evidencia de inventario, nao publicacao.
 
-Entre H1 e H2 existe somente um caminho intermediario controlado:
+No caminho de homologacao entre H1 e H2 existe um caminho intermediario controlado:
 `scripts/qa/c18_player_runtime_pilot_readiness_gate.py`, para piloto assistido
 com `channel=homologation` e `ring=pilot`. Esse gate exige autorizacao formal,
 preflight da placa com public freeze `rc=44`, pacote homologation alvo, H1
 decisivo image-bound e P0 power-loss seletivo. Ele nao autoriza producao,
 `stable`, auto-pull, thaw publico, soak 24h, power-loss 17/17 ou
 assinatura/attestation.
+
+Por decisao de negocio registrada em 2026-07-05 e renovada para o alvo C22 em
+2026-07-10, existe tambem um caminho production pragmatica estritamente
+exact-target. Ele nao promove o manifest para `stable` e nao abre o freeze
+generico. O device aceita apenas
+`apply-player-runtime-authorized`/`rollback-player-runtime-authorized` com uma
+autorizacao flat `dadooh.c18.player_runtime.production_autopull_authorization.v1`
+embutida na imagem, presa a repo/tag/version/source commit e aos SHA256 de
+manifest, payload e release gate. `latest`, prerelease, downgrade, outro repo e
+qualquer alvo futuro permanecem bloqueados.
+
+Essa excecao usa `scripts/deploy/publish_player_runtime_exact_target_release.sh`,
+que publica somente os tres assets exatos, exige tag remota apontando ao
+`source_commit`, usa `--verify-tag --latest=false` e verifica o resultado
+remoto. A imagem production valida a autorizacao contra os artefatos antes do
+build e limpa credenciais/identidade de laboratorio do seed de fabrica. A prova
+de placa exige timer real, no-op sem mutacao, rollback e restauracao com restart
+e health, usando `c18_player_runtime_production_autopull_evidence_gate.py`.
+
+Non-claims desse caminho: nao e H2/stable generico, nao autoriza pacotes
+futuros, nao entrega rollout por grupos, nao substitui assinatura consumida no
+device e nao atualiza `media-system`. A evidencia offline detecta omissoes e
+inconsistencias entre snapshots, mas nao reivindica resistencia criptografica a
+um operador que fabrique todos os artefatos de forma coerente; isso depende do
+attestation que permanece fora desta excecao.
 
 CI ampliado, bridge de updater e A/B de imagem sao hardening futuro. Ja
 assinatura/attestation operacional nao e futuro para producao: continua requisito
