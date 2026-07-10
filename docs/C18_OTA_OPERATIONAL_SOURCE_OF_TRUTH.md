@@ -392,6 +392,18 @@ Passos minimos:
 
 Runbook curto: `docs/c18-player-runtime-production-autopull-runbook.md`.
 
+Resultado em 2026-07-10: M5 fechado. Na imagem `c18-hwdecode-prod-7`, o timer
+real aplicou o C22 remoto exato, o no-op preservou state/links/marker, o
+rollback autorizado voltou ao bridge e a segunda troca restaurou C22. Todas as
+cinco fases passaram deep-health, mantiveram o freeze publico `rc=44` e deixaram
+C22 ativo com o bridge como `previous`. C21 rejeitado permaneceu em quarantine.
+
+Evidencia decisiva:
+`docs/evidence/c18-update-validation/20260710T190539Z-prod7-m5-production-autopull-c22/`.
+
+O marco fecha auto-pull de `player-runtime` para o alvo C22 explicitamente
+autorizado. Nao abre `latest` amplo nem autoriza releases futuros por inferencia.
+
 ## Rodada C19 - pacote `totem-core` de wizard/settings
 
 Decisao em 2026-07-07: C19.2 + C19.3 formam um pacote pequeno e coerente de

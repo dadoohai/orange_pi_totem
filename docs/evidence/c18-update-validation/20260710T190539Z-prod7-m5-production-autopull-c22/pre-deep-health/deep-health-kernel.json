@@ -1,0 +1,14 @@
+{
+  "boot_id_present": true,
+  "ext4_errors": 0,
+  "ext4_errors_delta": 0,
+  "ext4_errors_start": 0,
+  "mmc_timeout_reset": 0,
+  "mmc_timeout_reset_delta": 0,
+  "mmc_timeout_reset_start": 0,
+  "panfrost_faults": 0,
+  "panfrost_faults_delta": 0,
+  "panfrost_faults_start": 0,
+  "uptime_end_sec": 192.97,
+  "uptime_start_sec": 162.79
+}

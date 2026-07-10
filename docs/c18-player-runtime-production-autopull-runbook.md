@@ -59,3 +59,12 @@ Non-claims: nao e `latest` amplo, stable de qualquer pacote futuro, rollout por
 grupos, assinatura consumida no device ou atualizacao de media-system. O gate
 offline detecta evidencia ausente/inconsistente, mas nao torna artefatos
 coerentemente fabricados resistentes a adulteracao sem attestation no device.
+
+## Execucao decisiva
+
+Fechada em 2026-07-10 na imagem prod7. O timer real aplicou C22 a partir do
+bridge, o no-op nao alterou estado, o rollback voltou ao bridge e a segunda
+troca restaurou C22. As cinco fases passaram deep-health e freeze `rc=44`.
+
+Evidencia:
+`docs/evidence/c18-update-validation/20260710T190539Z-prod7-m5-production-autopull-c22/`.
