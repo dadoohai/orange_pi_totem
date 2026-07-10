@@ -57,6 +57,10 @@ REQUIRED_NON_CLAIMS = (
     "this_gate_does_not_restart_services",
     "this_gate_does_not_provide_device_attestation_or_tamper_proof_evidence",
 )
+PLAYER_RUNTIME_APPLY_SUCCESS_JOURNAL_TOKENS = (
+    "apply_success",
+    "player_runtime_post_promotion_service_restart",
+)
 REQUIRED_PUBLICATION_NON_CLAIMS = {
     "this_route_does_not_promote_stable",
     "this_route_does_not_update_latest",
@@ -640,7 +644,10 @@ def validate_timer_execution(
         blockers.append("noop_service_invocation_not_new")
     post_journal = journal_text(post_apply)
     tag = str_field(authorization.get("tag_name"))
-    if "apply_success" not in post_journal or tag not in post_journal:
+    if (
+        not any(token in post_journal for token in PLAYER_RUNTIME_APPLY_SUCCESS_JOURNAL_TOKENS)
+        or tag not in post_journal
+    ):
         blockers.append("post_apply_timer_journal_missing_apply_success")
 
 
@@ -1529,6 +1536,30 @@ class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
     def test_valid_five_phase_fixture_passes(self) -> None:
         result = self.run_fixture()
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_real_player_runtime_success_journal_passes(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            tag = artifacts["authorization_data"]["tag_name"]
+            data["systemd"]["service"]["journal"]["lines"] = [
+                f"INFO downloading_manifest tag={tag}",
+                "INFO player_runtime_post_promotion_service_restart service=kiosky-player.service",
+            ]
+            write_json(paths["post_apply"], data)
+
+        result = self.run_fixture(mutate)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_missing_post_apply_success_journal_denies(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            tag = artifacts["authorization_data"]["tag_name"]
+            data["systemd"]["service"]["journal"]["lines"] = [f"INFO downloading_manifest tag={tag}"]
+            write_json(paths["post_apply"], data)
+
+        result = self.run_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_timer_journal_missing_apply_success", result["blockers"])
 
     def test_empty_snapshot_denies_fail_closed(self) -> None:
         def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
