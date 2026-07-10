@@ -12,6 +12,8 @@ candidate that replaces the blocked prod5 and prod6 artifacts.
 - image SHA256: `c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7`
 - image bytes: `1971322880`
 - offline validation: passed
+- independent artifact review: approved for board M5 validation, not yet for
+  distribution
 
 ## Closed Blockers
 
@@ -32,3 +34,9 @@ The image has not yet been flashed. Real first boot, QR/save, player playback,
 timer auto-apply, no-op, authorized rollback and restore remain board-only M5
 checks. Shared root-password SSH remains the explicitly accepted first-scale
 risk; per-device credentials remain M6.
+
+One independent review inferred that `overlayroot=tmpfs` in the boot arguments
+would make identity and `/data` volatile. A live check on the same image lineage
+refuted the premise: `/` is mounted directly as ext4 `rw`, no overlay mount is
+active, and machine-id, SSH key and `/data` files predate the current multi-day
+boot. The prod7 first boot must still re-confirm those facts before distribution.

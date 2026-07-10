@@ -1,0 +1,40 @@
+{
+  "artifact_disposition": "approved_for_board_m5_validation_not_yet_distribution",
+  "audit_inputs": {
+    "artifact_sha256_recomputed": true,
+    "independent_artifact_auditors": 2,
+    "live_lineage_persistence_check": true
+  },
+  "blockers": [],
+  "image_sha256": "c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7",
+  "image_tag": "c18-hwdecode-prod-7",
+  "resolved_findings": [
+    {
+      "finding": "overlayroot_would_make_identity_and_data_volatile",
+      "resolution": "refuted_by_live_mount_state",
+      "facts": [
+        "same-lineage board root is /dev/mmcblk0p1 ext4 rw",
+        "no overlay mount exists despite overlayroot=tmpfs token in cmdline",
+        "machine-id, SSH host key and /data state predate the current multi-day boot"
+      ]
+    },
+    {
+      "finding": "homologation_channel_is_unauthorized_for_m5",
+      "resolution": "not_a_blocker_under_explicit_m5_contract",
+      "facts": [
+        "authorization is exact-target C22 and hash-bound",
+        "allow_latest, allow_prerelease and allow_downgrade are false",
+        "the first-scale simple-global risk was explicitly accepted"
+      ]
+    }
+  ],
+  "remaining_board_checks": [
+    "prod7_first_boot_identity_persists",
+    "production_qr_and_real_config_save",
+    "player_playback_and_hwdecode",
+    "timer_exact_target_auto_apply",
+    "timer_noop",
+    "authorized_rollback_and_restore"
+  ],
+  "schema": "dadooh.c18.production_image_independent_audit_decision.v1"
+}

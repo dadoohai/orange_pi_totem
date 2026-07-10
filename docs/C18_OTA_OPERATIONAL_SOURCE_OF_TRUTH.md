@@ -290,7 +290,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 ## O que falta para producao automatizada/ampla
 
 - construir e auditar `prod-7` com updater/autorizacao C22, sem estado lab e
-  com o wizard usando politica de producao;
+  com o wizard usando politica de producao: **fechado off-board** no SHA256
+  `c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7`;
 - sincronizar branch/tag remotas e publicar os tres assets C22 sem mover
   `latest`;
 - gravar a imagem na placa e preparar C21 como estado anterior controlado;
