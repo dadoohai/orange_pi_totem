@@ -198,9 +198,13 @@ Fila atual para consolidacao:
   O QR deixa de depender da hora da placa e espera o estado terminal do
   servidor sob watchdog monotonic bounded; a restauracao do player usa start
   no-block limitado e registra o resultado. A identidade prevista passa a ser
-  `c18-hwdecode-prod-8` / `c18.image-prod.8`. Non-claims: pacote ainda nao
-  aplicado remotamente, imagem ainda nao construida e auto-pull C23 ainda nao
-  provado a partir da prod8.
+  `c18-hwdecode-prod-8` / `c18.image-prod.8`. A imagem final foi construida no
+  commit `314ddd1`, SHA256
+  `6c3801d970d7bc5248f4c8fc5838b4233ea2e9e1f2120de4bffd7bea07f063ee`,
+  e recebeu dois GO independentes para flash de bancada; evidencia em
+  `docs/evidence/c18-update-validation/20260710T232544Z-prod8-build-314ddd1/`.
+  Non-claims: pacote ainda nao aplicado remotamente, primeiro boot/QR ainda nao
+  validados e auto-pull C23 ainda nao provado a partir da prod8.
 - Correcao de imagem M5: `prod-5` limpou o seed do player, mas a auditoria do
   artefato encontrou firstboot privado com Wi-Fi/senhas, servico lab habilitado,
   marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-5`

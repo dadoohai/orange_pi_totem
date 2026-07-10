@@ -1,0 +1,19 @@
+{
+  "approved_for_board_flash": true,
+  "approved_for_broad_production": false,
+  "blockers": [],
+  "image_sha256": "6c3801d970d7bc5248f4c8fc5838b4233ea2e9e1f2120de4bffd7bea07f063ee",
+  "image_tag": "c18-hwdecode-prod-8",
+  "image_version": "c18.image-prod.8",
+  "non_claims": [
+    "not_board_first_boot_validated",
+    "not_qr_onboarding_validated_on_prod8",
+    "not_c23_remote_autopull_validated_from_prod8",
+    "not_fleet_rollout_approved",
+    "not_per_device_ssh_credentials"
+  ],
+  "review_count": 2,
+  "review_scope": "read_only_real_image_artifact_for_controlled_board_flash",
+  "schema": "dadooh.c18.production_image.independent_audit_decision.v1",
+  "source_commit": "314ddd18201aa21f3cc2722ff0d668566831e015"
+}
