@@ -2141,6 +2141,7 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
         ["/usr/bin/python3", str(bin_dir / "totem_setup_visual_wizard.py"), "--self-test"],
         ["/usr/bin/python3", str(bin_dir / "totem_wifi_nm_adapter.py"), "--self-test"],
         ["/usr/bin/python3", str(bin_dir / "totem_visual_splash.py"), "--self-test"],
+        ["/usr/bin/python3", str(bin_dir / "totem_status_render_preview.py"), "--self-test"],
         ["/usr/bin/python3", str(bin_dir / "totem_config_contract_validate.py"), "--self-test"],
         ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_open_settings_session.sh")],
         ["/usr/bin/env", "bash", "-n", str(bin_dir / "totem_visual_tty_guard.sh")],

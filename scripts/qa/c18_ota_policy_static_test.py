@@ -574,6 +574,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("totem_core_tar_unexpected_entries", release_gate)
         self.assertIn('"health/totem-core-health.json"', release_gate)
         self.assertIn('"manifest-fragment/totem-core.json"', release_gate)
+        self.assertIn('str(bin_dir / "totem_status_render_preview.py"), "--self-test"', updatectl)
+        embed = (REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py").read_text(encoding="utf-8")
+        self.assertIn("python3 bin/totem_status_render_preview.py --self-test", embed)
 
     def test_display_status_collector_is_read_only_public_totem_core(self) -> None:
         collector = DISPLAY_STATUS_COLLECTOR_PATH.read_text(encoding="utf-8")
