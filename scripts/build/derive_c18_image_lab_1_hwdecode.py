@@ -52,20 +52,56 @@ PLAYER_RUNTIME_PRODUCTION_AUTH = REPO_ROOT / "scripts" / "board" / "player_runti
 PLAYER_RUNTIME_PRODUCTION_AUTH_GATE = (
     REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_production_autopull_authorization_gate.py"
 )
+PRODUCTION_IDENTITY_SCRIPT_SOURCE = REPO_ROOT / "scripts" / "board" / "totem_production_identity_init.sh"
+PRODUCTION_IDENTITY_UNIT_SOURCE = (
+    REPO_ROOT / "scripts" / "board" / "systemd" / "totem-production-identity-init.service"
+)
+PRODUCTION_SSH_DROPIN_SOURCE = (
+    REPO_ROOT / "scripts" / "board" / "systemd" / "ssh-production-identity.conf"
+)
 
 HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-5"
-PRODUCTION_VERSION = "c18.image-prod.5"
+PRODUCTION_TAG = "c18-hwdecode-prod-6"
+PRODUCTION_VERSION = "c18.image-prod.6"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
 C18_STABILITY_DROPIN = "/etc/systemd/system/kiosky-player.service.d/30-c18-stability.conf"
 HOMOLOGATION_SEED = "/data/state/totem-settings/private-values.seed.json"
+PRODUCTION_IDENTITY_SCRIPT = "/opt/totem/bin/totem-production-identity-init.sh"
+PRODUCTION_IDENTITY_UNIT = "/etc/systemd/system/totem-production-identity-init.service"
+PRODUCTION_IDENTITY_WANTS = (
+    "/etc/systemd/system/multi-user.target.wants/totem-production-identity-init.service"
+)
+PRODUCTION_SSH_DROPIN = "/etc/systemd/system/ssh.service.d/10-dadooh-production-identity.conf"
+PRODUCTION_FORBIDDEN_LAB_PATHS = (
+    "/root/.not_logged_in_yet",
+    "/etc/dadooh/image-lab-firstboot-autoconfig.present",
+    "/etc/dadooh/c12-lab-firstboot-mode",
+    "/etc/dadooh/c13-homologation-build-apt-policy",
+    "/etc/dadooh/c13-homologation-private-seed",
+    "/etc/dadooh/c15-2-4-clean-board-fixes",
+    "/etc/dadooh/c17-4-firstboot-visual-f10-image",
+    "/etc/dadooh/c17-4-2-settings-restore-clean-image",
+    "/etc/systemd/system/multi-user.target.wants/totem-lab-firstboot-autoconfig.service",
+    "/etc/systemd/system/totem-lab-firstboot-autoconfig.service",
+    "/opt/totem/bin/totem_lab_firstboot_autoconfig.sh",
+    "/data/state/totem-settings/homologation-seed.enabled",
+    "/data/state/totem-read-only-image-lab/integration.json",
+)
+PRODUCTION_EMBEDDED_SSH_HOST_KEYS = (
+    "/etc/ssh/ssh_host_rsa_key",
+    "/etc/ssh/ssh_host_rsa_key.pub",
+    "/etc/ssh/ssh_host_ecdsa_key",
+    "/etc/ssh/ssh_host_ecdsa_key.pub",
+    "/etc/ssh/ssh_host_ed25519_key",
+    "/etc/ssh/ssh_host_ed25519_key.pub",
+)
 PRODUCTION_SEED_IDENTITY_FIELDS = {
     "api_key",
     "environment_id",
@@ -377,7 +413,17 @@ def main():
     # ---- preflight ----
     if not shutil.which("debugfs"):
         raise SystemExit("BLOCKED: debugfs_missing")
-    for p in (BASE_IMAGE, BUNDLE / "mpv", BUNDLE / "lib", R4_UPDATECTL, PLAYER_RUNTIME_KIOSK, PLAYER_RUNTIME_SOURCE):
+    for p in (
+        BASE_IMAGE,
+        BUNDLE / "mpv",
+        BUNDLE / "lib",
+        R4_UPDATECTL,
+        PLAYER_RUNTIME_KIOSK,
+        PLAYER_RUNTIME_SOURCE,
+        PRODUCTION_IDENTITY_SCRIPT_SOURCE,
+        PRODUCTION_IDENTITY_UNIT_SOURCE,
+        PRODUCTION_SSH_DROPIN_SOURCE,
+    ):
         if not p.exists():
             raise SystemExit(f"BLOCKED: missing_input {p}")
     if (OUT_IMAGE.exists() or OUT_SHA.exists()) and not args.force:
@@ -491,6 +537,9 @@ def main():
         f"player_runtime_kiosk_source={PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)}",
         f"player_runtime_kiosk_sha256={kiosk_snapshot_sha}",
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
+        f"production_lab_artifacts_removed={str(args.image_profile == 'production').lower()}",
+        f"production_ssh_host_keys_generated_on_device={str(args.image_profile == 'production').lower()}",
+        f"production_shared_root_password_access_risk_accepted={str(args.image_profile == 'production').lower()}",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
         "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates) & 1t (golden delivery before post-M6 reconcile freeze hardware proof) & 1u (golden delivery before physical power-loss/soak/server-side gates)",
@@ -547,6 +596,21 @@ def main():
     put(str(panfrost_unit_tmp), PANFROST_UNIT, "0644")
     cmds.append(f"symlink {PANFROST_WANTS} {PANFROST_UNIT}")
     put(str(stability_dropin_tmp), C18_STABILITY_DROPIN, "0644")
+    if args.image_profile == "production":
+        cmds += [
+            "mkdir /etc/systemd/system/ssh.service.d",
+            "set_inode_field /etc/systemd/system/ssh.service.d mode 040755",
+            "set_inode_field /etc/systemd/system/ssh.service.d uid 0",
+            "set_inode_field /etc/systemd/system/ssh.service.d gid 0",
+        ]
+        put(str(PRODUCTION_IDENTITY_SCRIPT_SOURCE), PRODUCTION_IDENTITY_SCRIPT, "0755")
+        put(str(PRODUCTION_IDENTITY_UNIT_SOURCE), PRODUCTION_IDENTITY_UNIT, "0644")
+        put(str(PRODUCTION_SSH_DROPIN_SOURCE), PRODUCTION_SSH_DROPIN, "0644")
+        cmds.append(f"rm {PRODUCTION_IDENTITY_WANTS}")
+        cmds.append(f"symlink {PRODUCTION_IDENTITY_WANTS} {PRODUCTION_IDENTITY_UNIT}")
+        for path in (*PRODUCTION_FORBIDDEN_LAB_PATHS, *PRODUCTION_EMBEDDED_SSH_HOST_KEYS):
+            cmds.append(f"rm {path}")
+        cmds.append("rmdir /data/state/totem-read-only-image-lab")
 
     L(f"debugfs commands: {len(cmds)} (stack libs real={len(real_files)} symlink={len(symlinks)})")
     out = base.debugfs_batch(rootfs, cmds, work)
@@ -605,6 +669,11 @@ def main():
     seed_verify_file = work / "private-values.seed.verify.json"
     base.debugfs(vroot, f"dump {HOMOLOGATION_SEED} {seed_verify_file}")
     seed_verify = json.loads(seed_verify_file.read_text(encoding="utf-8")) if seed_verify_file.exists() else {}
+    machine_id_verify_file = work / "machine-id.verify"
+    base.debugfs(vroot, f"dump /etc/machine-id {machine_id_verify_file}")
+    production_identity_script_now = base.cat_file(vroot, PRODUCTION_IDENTITY_SCRIPT) or ""
+    production_identity_unit_now = base.cat_file(vroot, PRODUCTION_IDENTITY_UNIT) or ""
+    production_ssh_dropin_now = base.cat_file(vroot, PRODUCTION_SSH_DROPIN) or ""
     totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot, profile=totem_core_profile)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
     player_runtime_gate = sh([
@@ -744,8 +813,48 @@ def main():
             )
         ),
         "homologation_seed_mpv_path_points_to_wrapper": seed_verify.get("mpv_path") == WRAPPER,
-        "production_seed_has_no_device_identity_or_secret": (
+        "production_seed_has_no_totem_identity_or_token": (
             all(not seed_verify.get(key) for key in production_seed_sensitive_fields(seed_verify))
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_lab_firstboot_artifacts_absent": (
+            all(not present(path) for path in PRODUCTION_FORBIDDEN_LAB_PATHS)
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_lab_state_dir_absent": (
+            not present("/data/state/totem-read-only-image-lab")
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_ssh_host_keys_not_embedded": (
+            all(not present(path) for path in PRODUCTION_EMBEDDED_SSH_HOST_KEYS)
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_machine_id_is_empty": (
+            machine_id_verify_file.is_file() and machine_id_verify_file.stat().st_size == 0
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_identity_init_script_present": (
+            present(PRODUCTION_IDENTITY_SCRIPT)
+            and execu(PRODUCTION_IDENTITY_SCRIPT)
+            and "ssh-keygen -A" in production_identity_script_now
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_identity_init_unit_enabled": (
+            present(PRODUCTION_IDENTITY_UNIT)
+            and present(PRODUCTION_IDENTITY_WANTS)
+            and "Before=ssh.service sshd.service" in production_identity_unit_now
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_ssh_requires_identity_init": (
+            present(PRODUCTION_SSH_DROPIN)
+            and "Requires=totem-production-identity-init.service" in production_ssh_dropin_now
             if args.image_profile == "production"
             else "n/a"
         ),
@@ -846,6 +955,13 @@ def main():
         manifest["not_for_distribution"] = True
     else:
         manifest["production_image"] = True
+        manifest["supersedes_production_image"] = (
+            "c18-hwdecode-prod-5 (blocked: inherited lab firstboot credentials, markers and SSH host keys)"
+        )
+        manifest["production_access_nonclaim"] = (
+            "shared root password SSH access remains enabled by explicit first-scale risk acceptance; "
+            "per-device credentials remain roadmap"
+        )
     print(f"\n=== {round_name} RESULT ===")
     print(json.dumps(manifest, indent=2))
     out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))

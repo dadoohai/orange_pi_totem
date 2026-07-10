@@ -170,16 +170,23 @@ consolidada para o alvo C22. O repo agora possui:
 - coletor e gate de cinco fases: pre, auto-apply, no-op, rollback e restauracao;
 - rollback publico autorizado que reinicia e verifica o player antes de
   reportar sucesso.
-- imagem production que limpa do seed de fabrica API key, environment/station
-  de laboratorio e tokens; imagens prod-1..prod-4 nao sao a referencia de
-  distribuicao M5.
+- imagem production que limpa identidade/tokens do seed, remove o firstboot e
+  marcadores de laboratorio e gera chaves SSH unicas no device.
 
-Isso ainda nao fecha M5: a release C22 nao foi publicada e a imagem nova ainda
-nao foi gravada. O proximo limite real e construir/auditar a imagem, publicar o
-alvo exato sem mover `latest` e executar as cinco fases na placa. Nao repetir
+Auditoria do artefato `prod-5` encontrou firstboot privado, Wi-Fi/senhas de lab,
+marcadores contraditorios e chaves SSH clonadas herdados da base; ele esta
+bloqueado e preservado apenas como evidencia negativa. A referencia seguinte e
+`prod-6`. A release C22 ainda nao foi publicada nem a imagem gravada. O proximo
+limite real e construir/auditar `prod-6`, publicar o alvo exato sem mover
+`latest` e executar as cinco fases na placa. Nao repetir
 soak ou a matriz de power-loss nesta rodada; C22 mudou o payload do player, mas
 o objetivo M5 e provar a entrega automatica e seu retorno usando as evidencias
 rapidas ja fechadas para o pacote.
+
+Risco de primeira escala explicitamente aceito: acesso SSH por senha root
+compartilhada permanece; credencial por device fica no M6. Isso nao autoriza
+embutir Wi-Fi, senha em plaintext, identidade de laboratorio ou chaves SSH
+reutilizadas entre placas.
 
 ### M6 - Robustez De Frota
 

@@ -40,8 +40,8 @@ COMPONENT = "player-runtime"
 CHANNEL = "homologation"
 DEVICE_TRACK = "c18-hwdecode"
 PRODUCTION_REPO = "dadoohai/orange_pi_totem"
-DEFAULT_EXPECTED_IMAGE_TAG = "c18-hwdecode-prod-5"
-DEFAULT_EXPECTED_IMAGE_VERSION = "c18.image-prod.5"
+DEFAULT_EXPECTED_IMAGE_TAG = "c18-hwdecode-prod-6"
+DEFAULT_EXPECTED_IMAGE_VERSION = "c18.image-prod.6"
 DEFAULT_EXPECTED_UPDATER_SHA256 = hashlib.sha256(
     (REPO_ROOT / "scripts" / "board" / "totem_updatectl.py").read_bytes()
 ).hexdigest()

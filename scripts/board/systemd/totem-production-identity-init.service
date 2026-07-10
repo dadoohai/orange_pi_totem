@@ -1,0 +1,12 @@
+[Unit]
+Description=Dadooh production device identity initialization
+After=local-fs.target
+Before=ssh.service sshd.service
+ConditionPathExists=!/var/lib/dadooh/production-identity-initialized
+
+[Service]
+Type=oneshot
+ExecStart=/opt/totem/bin/totem-production-identity-init.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -186,6 +186,7 @@ TEST_COMMANDS = (
     ("player_runtime_sandbox", ["python3", "scripts/sim/run_player_runtime_sandbox.py", "--json"]),
 )
 BASH_SYNTAX_TARGETS = (
+    "scripts/board/totem_production_identity_init.sh",
     "scripts/board/kiosky_playback_observer_probe.sh",
     "scripts/board/kiosky_service_observer_probe.sh",
     "scripts/board/mpv_controller_playlist_probe.sh",

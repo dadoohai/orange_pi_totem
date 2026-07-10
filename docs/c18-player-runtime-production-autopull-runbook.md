@@ -9,7 +9,7 @@ player com health real.
 - version: `c18.player-runtime-homolog-20260710-c22-c023eae`
 - tag: `player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae`
 - autorizacao: `scripts/board/player_runtime_production_autopull.json`
-- imagem prevista: `c18-hwdecode-prod-5` / `c18.image-prod.5`
+- imagem prevista: `c18-hwdecode-prod-6` / `c18.image-prod.6`
 - baseline de bancada: C21 `c18.player-runtime-homolog-20260709-image-transcode-50919f5`
 
 ## Ordem

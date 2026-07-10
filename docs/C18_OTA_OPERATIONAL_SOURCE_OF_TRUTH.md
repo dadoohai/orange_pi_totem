@@ -178,11 +178,11 @@ Fila atual para consolidacao:
   pre-alvo C21, auto-apply C22, no-op sem mutacao, rollback autorizado e
   restauracao C22. O rollback autorizado tambem passou a reiniciar e verificar
   o player antes de retornar sucesso.
-- Correcao de imagem M5: a derivacao production anterior preservava no seed de
-  fabrica valores de laboratorio (`api_key`, environment/station e tokens),
-  embora nao gravasse `config.json`. A imagem `c18-hwdecode-prod-5` limpa esses
-  campos e valida a ausencia antes de promover o artefato. Portanto prod-1 a
-  prod-4 permanecem historico/lab e nao devem ser a imagem de distribuicao M5.
+- Correcao de imagem M5: `prod-5` limpou o seed do player, mas a auditoria do
+  artefato encontrou firstboot privado com Wi-Fi/senhas, servico lab habilitado,
+  marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-5`
+  esta bloqueada. A referencia `prod-6` remove esses artefatos e gera chaves SSH
+  unicas no primeiro boot. Prod-1 a prod-5 nao sao distribuicao M5.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou
   `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,
@@ -280,7 +280,7 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- construir e auditar uma nova imagem production com updater/autorizacao C22;
+- construir e auditar `prod-6` com updater/autorizacao C22 e sem estado lab;
 - sincronizar branch/tag remotas e publicar os tres assets C22 sem mover
   `latest`;
 - gravar a imagem na placa e preparar C21 como estado anterior controlado;
@@ -289,6 +289,10 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - manter futuras evolucoes separadas: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player. Grupos, dashboard e kill
   switch continuam roadmap M6 e nao bloqueiam a primeira escala aceita.
+
+Risco aceito para esta primeira escala: SSH root por senha compartilhada
+permanece para suporte; credencial por device e M6. A excecao nao permite senha
+plaintext, Wi-Fi/identidade de lab ou host keys reutilizadas na imagem.
 
 Hardenings nao bloqueantes apontados pela auditoria do marco anterior de
 `totem-core` auto-pull:

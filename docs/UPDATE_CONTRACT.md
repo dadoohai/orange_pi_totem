@@ -711,9 +711,10 @@ Essa excecao usa `scripts/deploy/publish_player_runtime_exact_target_release.sh`
 que publica somente os tres assets exatos, exige tag remota apontando ao
 `source_commit`, usa `--verify-tag --latest=false` e verifica o resultado
 remoto. A imagem production valida a autorizacao contra os artefatos antes do
-build e limpa credenciais/identidade de laboratorio do seed de fabrica. A prova
-de placa exige timer real, no-op sem mutacao, rollback e restauracao com restart
-e health, usando `c18_player_runtime_production_autopull_evidence_gate.py`.
+build; remove firstboot, Wi-Fi/identidade/marcadores de laboratorio e host keys
+herdadas; e gera chaves SSH unicas no primeiro boot. A prova de placa exige
+timer real, no-op sem mutacao, rollback e restauracao com restart e health,
+usando `c18_player_runtime_production_autopull_evidence_gate.py`.
 
 Non-claims desse caminho: nao e H2/stable generico, nao autoriza pacotes
 futuros, nao entrega rollout por grupos, nao substitui assinatura consumida no
@@ -721,6 +722,11 @@ device e nao atualiza `media-system`. A evidencia offline detecta omissoes e
 inconsistencias entre snapshots, mas nao reivindica resistencia criptografica a
 um operador que fabrique todos os artefatos de forma coerente; isso depende do
 attestation que permanece fora desta excecao.
+
+Por decisao de primeira escala, SSH root por senha compartilhada permanece
+habilitado para suporte. E risco operacional aceito, nao claim de seguranca;
+credencial por device fica no M6. Isso nao permite senha plaintext na imagem,
+credencial Wi-Fi, identidade lab ou host keys reutilizadas.
 
 CI ampliado, bridge de updater e A/B de imagem sao hardening futuro. Ja
 assinatura/attestation operacional nao e futuro para producao: continua requisito
