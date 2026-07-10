@@ -191,6 +191,16 @@ Fila atual para consolidacao:
   auto-apply, no-op, rollback autorizado e restauracao. A nova prova production
   C23 deve repetir esse round-trip a partir de uma imagem prod8 que carregue a
   autorizacao C23.
+- Preparacao prod8 off-board em 2026-07-10: o novo core canonico e
+  `c21.9-prod8-pairing-restore-20260710T225825Z-665fc01`, source commit
+  `665fc01ac5b1df19c44ae5bb911d6ae67e3816cd`, payload SHA256
+  `2c4123aed190c243e2e65bd1a477237717e93db14e69716dfb14f8c280fdd01b`.
+  O QR deixa de depender da hora da placa e espera o estado terminal do
+  servidor sob watchdog monotonic bounded; a restauracao do player usa start
+  no-block limitado e registra o resultado. A identidade prevista passa a ser
+  `c18-hwdecode-prod-8` / `c18.image-prod.8`. Non-claims: pacote ainda nao
+  aplicado remotamente, imagem ainda nao construida e auto-pull C23 ainda nao
+  provado a partir da prod8.
 - Correcao de imagem M5: `prod-5` limpou o seed do player, mas a auditoria do
   artefato encontrou firstboot privado com Wi-Fi/senhas, servico lab habilitado,
   marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-5`

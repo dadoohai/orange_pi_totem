@@ -113,7 +113,8 @@ Este marco fecha quando temos:
 ### M5 - Auto-Pull Publico De `player-runtime`
 
 Status: mecanica exata fechada para C22 em 2026-07-10; correcao, placa e
-publicacao exata C23 fechadas; auto-pull C23 na imagem prod8 pendente.
+publicacao exata C23 fechadas; pacote core e bindings da prod8 preparados;
+build e auto-pull C23 na prod8 pendentes.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
@@ -171,6 +172,15 @@ O alvo C23 foi publicado por tag exata com tres assets rebaixados e verificados;
 `docs/evidence/c18-update-validation/20260710T211259Z-c23-exact-publication/`.
 O proximo ponteiro de M5 e incorporar a autorizacao na prod8 e provar o
 auto-pull remoto desse mesmo alvo. A prova local C23 nao antecipa essa etapa.
+
+Preparacao prod8 em 2026-07-10: o pacote `totem-core`
+`c21.9-prod8-pairing-restore-20260710T225825Z-665fc01` foi gerado do commit
+`665fc01` e preso ao payload SHA256
+`2c4123aed190c243e2e65bd1a477237717e93db14e69716dfb14f8c280fdd01b`.
+Ele remove a expiracao local prematura do QR, mantem o servidor como fonte do
+estado e limita o retorno ao player sem esconder o resultado. O builder da
+prod8 esta preso a esse core e a autorizacao exata C23. Non-claim: a imagem
+prod8 ainda nao foi construida nem validada na placa.
 
 Atualizacao de implementacao em 2026-07-10: a preparacao off-board de M5 foi
 consolidada para o alvo C22. O repo agora possui:

@@ -6,10 +6,10 @@ uma janela continua que cubra falhas tardias, sem abrir `latest`.
 
 ## Alvo
 
-- version: `c18.player-runtime-homolog-20260710-c22-c023eae`
-- tag: `player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae`
+- version: `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`
+- tag: `player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`
 - autorizacao: `scripts/board/player_runtime_production_autopull.json`
-- imagem prevista: `c18-hwdecode-prod-7` / `c18.image-prod.7`
+- imagem prevista: `c18-hwdecode-prod-8` / `c18.image-prod.8`
 - baseline de bancada: bridge rollback-safe
   `c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63`
 
@@ -24,13 +24,13 @@ permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
 3. Publicar somente manifest, payload e release gate com `--latest=false` e
    salvar o JSON final do publisher como evidencia de publicacao.
 4. Gravar a imagem e, com o timer parado apenas durante o setup da bancada,
-   deixar o bridge rollback-safe como `current` e C22 fora de
+   deixar o bridge rollback-safe como `current` e C23 fora de
    `current/previous`.
 5. Ligar o timer e coletar `pre` e `post_apply`.
 6. Rodar novamente a unit para provar `noop` sem alterar state/symlinks.
 7. Rodar `rollback-player-runtime-authorized` para o bridge e coletar
    `rollback`.
-8. Rodar o mesmo rollback autorizado outra vez para restaurar C22 e coletar
+8. Rodar o mesmo rollback autorizado outra vez para restaurar C23 e coletar
    `restored` com `--deep-health-duration-sec 600`. Depois do restore terminar,
    aguardar o status declarar `playback_state=playing`, `mpv_running=true` e um
    `current_item` presente; somente entao iniciar a janela continua.
@@ -42,7 +42,7 @@ permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
 
 ## Resultado exigido
 
-- C22 veio da tag GitHub exata e tem hashes/marker corretos;
+- C23 veio da tag GitHub exata e tem hashes/marker corretos;
 - o trigger do timer ocorreu depois do pre e a unit teve nova invocacao para o
   apply e para o no-op;
 - os arquivos reais de amostras/deep-health acompanham cada fase e seus hashes
@@ -57,7 +57,7 @@ permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
 - rollback reinicia e verifica o player antes de reportar sucesso;
 - CLI generico de player-runtime continua bloqueado com `rc=44`;
 - timer de `totem-core` continua independente;
-- estado final: C22 `current`, bridge `previous`, alvo fora de quarantine;
+- estado final: C23 `current`, bridge `previous`, alvo fora de quarantine;
 - C21 rejeitado continua em quarantine, sem contaminar o round-trip aprovado.
 
 Non-claims: nao e `latest` amplo, stable de qualquer pacote futuro, rollout por
@@ -65,9 +65,9 @@ grupos, assinatura consumida no device ou atualizacao de media-system. O gate
 offline detecta evidencia ausente/inconsistente, mas nao torna artefatos
 coerentemente fabricados resistentes a adulteracao sem attestation no device.
 
-## Execucao decisiva
+## Historico e execucao atual
 
-Mecanica fechada em 2026-07-10 na imagem prod7. O timer real aplicou C22 a
+Mecanica C22 fechada em 2026-07-10 na imagem prod7. O timer real aplicou C22 a
 partir do bridge, o no-op nao alterou estado, o rollback voltou ao bridge e a
 segunda troca restaurou C22. As cinco janelas curtas passaram deep-health e
 freeze `rc=44`.
@@ -77,6 +77,10 @@ janelas. A reavaliacao atual preserva `mechanics_passed=true`, mas bloqueia
 `product_distribution_cleanliness_passed` porque o `restored` original durou
 somente 30 segundos. Essa separacao e o requisito continuo formam o schema v2
 do gate. C23 e a recaptura continua de 10 minutos fecham essa claim.
+
+C23 ja passou apply/rollback local e duas observacoes continuas de 10 minutos,
+mas isso nao substitui o auto-pull remoto a partir da prod8. A execucao atual
+deve repetir o round-trip acima usando a autorizacao C23 embutida na imagem.
 
 Evidencia:
 `docs/evidence/c18-update-validation/20260710T190539Z-prod7-m5-production-autopull-c22/`.

@@ -42,12 +42,12 @@ COMPONENT = "player-runtime"
 CHANNEL = "homologation"
 DEVICE_TRACK = "c18-hwdecode"
 PRODUCTION_REPO = "dadoohai/orange_pi_totem"
-DEFAULT_EXPECTED_IMAGE_TAG = "c18-hwdecode-prod-7"
-DEFAULT_EXPECTED_IMAGE_VERSION = "c18.image-prod.7"
+DEFAULT_EXPECTED_IMAGE_TAG = "c18-hwdecode-prod-8"
+DEFAULT_EXPECTED_IMAGE_VERSION = "c18.image-prod.8"
 DEFAULT_EXPECTED_UPDATER_SHA256 = hashlib.sha256(
     (REPO_ROOT / "scripts" / "board" / "totem_updatectl.py").read_bytes()
 ).hexdigest()
-DEFAULT_TARGET_VERSION = "c18.player-runtime-homolog-20260710-c22-c023eae"
+DEFAULT_TARGET_VERSION = "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
 DEFAULT_BASELINE_VERSION = "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
 DEFAULT_ROLLBACK_REASON = "production_authorized_rollback"
 DEFAULT_MIN_CONTINUOUS_RESTORED_SEC = 600.0
