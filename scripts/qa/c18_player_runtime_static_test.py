@@ -34,7 +34,7 @@ CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b"
+EXPECTED_SNAPSHOT_SHA256 = "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -191,6 +191,10 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             patches["MPVController.load_file/preload_next"]["to"],
             "fresh IPC path verification before trusting loadfile or preloaded playlist-next",
         )
+        self.assertEqual(
+            patches["MPVController fresh IPC transport"]["to"],
+            "startup probe closes immediately and every control command uses a serialized fresh request/response",
+        )
         self.assertEqual(patches["DEFAULT_CONFIG.preload_next"]["to"], False)
         self.assertEqual(
             patches["download_media/media_items_from_saved/media_items_from_cache"]["to"],
@@ -289,6 +293,110 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             self.assertEqual(stuck_proc.wait_timeouts, [5, 5, 5])
         finally:
             kiosk.os.killpg = original_killpg
+
+    def test_fresh_ipc_startup_probe_is_not_retained(self) -> None:
+        kiosk = load_kiosk_module()
+
+        class FakeSocket:
+            def __init__(self) -> None:
+                self.closed = False
+                self.connected_to = None
+
+            def settimeout(self, _timeout: float) -> None:
+                return None
+
+            def connect(self, path: str) -> None:
+                self.connected_to = path
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_socket = FakeSocket()
+        controller = kiosk.MPVController(
+            {
+                "ipc_path": "/tmp/c18-fresh-start.sock",
+                "mpv_log_file": "/tmp/c18-fresh-start.log",
+                "mpv_query_uses_fresh_ipc": True,
+                "mpv_startup_timeout_sec": 0.1,
+            }
+        )
+        original_exists = kiosk.os.path.exists
+        original_socket = kiosk.socket.socket
+        kiosk.os.path.exists = lambda path: path == "/tmp/c18-fresh-start.sock"
+        kiosk.socket.socket = lambda *_args, **_kwargs: fake_socket
+        try:
+            self.assertTrue(controller._open_ipc())
+        finally:
+            kiosk.os.path.exists = original_exists
+            kiosk.socket.socket = original_socket
+
+        self.assertEqual(fake_socket.connected_to, "/tmp/c18-fresh-start.sock")
+        self.assertTrue(fake_socket.closed)
+        self.assertIsNone(controller._ipc)
+
+    def test_fresh_ipc_running_process_does_not_require_persistent_socket(self) -> None:
+        kiosk = load_kiosk_module()
+        controller = kiosk.MPVController(
+            {
+                "ipc_path": "/tmp/c18-fresh-running.sock",
+                "mpv_log_file": "/tmp/c18-fresh-running.log",
+                "mpv_query_uses_fresh_ipc": True,
+            }
+        )
+        controller._proc = FakeProc([])
+        controller._ipc = None
+        controller._fresh_ipc_get_property = lambda *_args, **_kwargs: {"error": "success", "data": False}
+        stopped: list[str] = []
+        controller._stop_locked = lambda reason="stop": stopped.append(reason)
+
+        self.assertTrue(controller._start_locked())
+        self.assertEqual(stopped, [])
+
+    def test_fresh_ipc_mode_routes_control_commands_away_from_persistent_socket(self) -> None:
+        kiosk = load_kiosk_module()
+
+        class PoisonPersistentSocket:
+            def sendall(self, _data: bytes) -> None:
+                raise AssertionError("fresh IPC mode must not write to the persistent socket")
+
+        controller = kiosk.MPVController(
+            {
+                "ipc_path": "/tmp/c18-fresh-command.sock",
+                "mpv_log_file": "/tmp/c18-fresh-command.log",
+                "mpv_query_uses_fresh_ipc": True,
+            }
+        )
+        controller._ipc = PoisonPersistentSocket()
+        controller._ipc_socket = True
+        commands: list[list[object]] = []
+
+        def fresh_query(command: list[object], **_kwargs: object) -> dict[str, object]:
+            commands.append(command)
+            return {"error": "success"}
+
+        controller._fresh_ipc_query = fresh_query
+        controller.wait_for_current_path = lambda *_args, **_kwargs: True
+
+        self.assertTrue(controller.load_file("/data/media/a.mp4", alias="media-a"))
+        self.assertTrue(controller.append_file("/data/media/b.mp4"))
+        self.assertTrue(controller.playlist_next())
+        self.assertTrue(controller.playlist_remove(0))
+        self.assertTrue(controller.set_property("pause", False))
+        self.assertTrue(controller.seek_absolute(1.5))
+        self.assertEqual(
+            commands,
+            [
+                ["loadfile", "/data/media/a.mp4", "replace"],
+                ["loadfile", "/data/media/b.mp4", "append"],
+                ["playlist-next", "force"],
+                ["playlist-remove", 0],
+                ["set_property", "pause", False],
+                ["seek", 1.5, "absolute+exact"],
+            ],
+        )
+
+        controller._fresh_ipc_query = lambda *_args, **_kwargs: {"error": "failure"}
+        self.assertFalse(controller.playlist_next())
 
     def test_preloaded_advance_requires_cleanup_and_post_cleanup_verification(self) -> None:
         kiosk = load_kiosk_module()

@@ -112,7 +112,8 @@ Este marco fecha quando temos:
 
 ### M5 - Auto-Pull Publico De `player-runtime`
 
-Status: marco ativo agora.
+Status: mecanica exata fechada para C22 em 2026-07-10; limpeza de playback
+retida para C23.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
@@ -134,29 +135,31 @@ existir caminho publico por alvo exato, com:
 - no-op seguro;
 - timer ou execucao automatica sem harness lab.
 
-Estado tecnico em 2026-07-05: a direcao aprovada para M5 e o comando publico
-`totem-updatectl apply-player-runtime-authorized`, alimentado por uma
-autorizacao local hash-bound ao alvo `9bebaf1`. O caminho generico
-`apply-github-latest --component player-runtime` continua congelado, e a imagem
-`production` deve carregar um timer separado para esse alvo exato. A imagem
-`homologation` nao deve carregar autorizacao nem timer de `player-runtime`.
+Estado final em 2026-07-10: o comando publico estreito
+`totem-updatectl apply-player-runtime-authorized` e o timer production estao
+presos por autorizacao e hashes ao C22
+`c18.player-runtime-homolog-20260710-c22-c023eae`. O caminho generico
+`apply-github-latest --component player-runtime` continua congelado e a imagem
+`homologation` nao carrega essa autorizacao production.
 
-Atualizacao em 2026-07-10: o sucessor C22
-`c18.player-runtime-homolog-20260710-c22-c023eae` passou pacote local,
-deep-health, apply, rollback e reapply na placa. Isso fecha C22, mas ainda nao
-fecha M5. Antes de reancorar o timer e obrigatorio:
+Na placa prod7, o timer real buscou a tag remota exata, aplicou C22 a partir do
+bridge rollback-safe, fez no-op sem mutacao, voltou ao bridge por rollback
+autorizado e restaurou C22. As cinco janelas curtas passaram health e mantiveram
+o freeze publico `rc=44`. O marco nao abre `latest` nem autoriza pacote futuro.
 
-- publicar os tres assets exatos do pacote e provar selecao remota por tag;
-- gerar autorizacao nova hash-bound aos hashes C22, sem `latest`;
-- colocar a placa em estado anterior ao alvo para provar apply automatico real;
-- executar no device o updater C22 endurecido, hoje ainda diferente do binario
-  embarcado na placa;
-- provar no-op, negativos de autorizacao/hash e rollback pelo caminho publico
-  autorizado.
+Uma auditoria posterior encontrou reinicios internos do MPV entre e depois
+dessas janelas. A RCA ao vivo confirmou backpressure no socket IPC persistente:
+a fila de saida do MPV cresceu de `89088` para `213504` bytes, o MPV deixou de
+responder e o novo processo voltou com fila zero. Portanto, M5 continua provando
+a mecanica de entrega/retorno, mas nao prova limpeza continua de playback. A
+evidencia esta em
+`docs/evidence/c22-playback-ipc-backpressure/20260710T193847Z-verified-rca/`.
 
-O timer atual continua apontando para `9bebaf1` e rejeita downgrade com
-`rc=45`. Nao trocar apenas o arquivo de autorizacao para silenciar esse estado;
-release, updater, autorizacao e teste do timer formam uma unica mudanca M5.
+O proximo fechamento de produto e C23: remover a conexao persistente nao lida no
+modo fresh IPC, aplicar por pacote governado e passar uma janela continua de no
+minimo 10 minutos sem `media_load_failed`, restart interno, acao de watchdog ou
+fila persistente. O gate M5 deve preservar a claim mecanica historica e separar
+explicitamente a claim de limpeza para distribuicao.
 
 Atualizacao de implementacao em 2026-07-10: a preparacao off-board de M5 foi
 consolidada para o alvo C22. O repo agora possui:
@@ -181,18 +184,18 @@ evidencia negativa. A referencia seguinte e `prod-7`, com politica de producao
 para placa nova ou ja configurada e bloqueio executavel contra o helper lab. A
 imagem tambem passa a embutir o pacote `totem-core`
 `c21.8-production-settings-policy-20260710T161120Z-d79e4bd`, preso ao payload e
-ao commit de origem, em vez de rotular o wizard atual como a antiga `c17.6`. A
-release C22 ainda nao foi publicada nem a imagem gravada. O proximo limite real
-foi reduzido: `prod-7` foi construida no commit `17b58c0`, SHA256
+ao commit de origem, em vez de rotular o wizard atual como a antiga `c17.6`.
+`prod-7` foi construida no commit `17b58c0`, SHA256
 `c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7`,
-passou validacao offline e auditoria de artefato e esta aprovada para a prova
-M5 na placa, ainda nao para distribuicao. Falta publicar o alvo exato sem mover
-`latest` e executar as cinco fases na placa. A publicacao exata foi fechada em
-2026-07-10: tres assets, hashes remotos conferidos e `latest` permaneceu no
-`totem-core`. Portanto, resta gravar `prod-7` e executar as cinco fases. Nao repetir
-soak ou a matriz de power-loss nesta rodada; C22 mudou o payload do player, mas
-o objetivo M5 e provar a entrega automatica e seu retorno usando as evidencias
-rapidas ja fechadas para o pacote.
+passou validacao offline e auditoria de artefato, foi gravada e fechou a prova
+M5 na placa. A publicacao exata usou tres assets com hashes remotos conferidos e
+nao moveu `latest`, que permaneceu no `totem-core`. A evidencia final esta em
+`docs/evidence/c18-update-validation/20260710T190539Z-prod7-m5-production-autopull-c22/`.
+
+`prod-7` nao e a imagem final de distribuicao: alem da retencao C23 de playback,
+a senha root foi herdada da base e o onboarding revelou ajustes de prazo QR e
+encerramento do wizard. Esses itens formam a rodada prod8; nao reabrem a prova
+mecanica M5 do auto-pull C22.
 
 Risco de primeira escala explicitamente aceito: acesso SSH por senha root
 compartilhada permanece; credencial por device fica no M6. Isso nao autoriza

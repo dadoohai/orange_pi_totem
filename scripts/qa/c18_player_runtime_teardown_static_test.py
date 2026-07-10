@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """Static guard for the kiosk.py ``self._ipc`` teardown invariant.
 
-The C18 teardown/panfrost gate is measurement-based and treats the fresh-IPC
-(C1) quit path as a SECONDARY ``self._ipc is None`` corner. That decision relies
-on a code invariant (verified by reading + adversarial refutation):
+The C18 teardown/panfrost gate is measurement-based. In fresh-IPC mode the
+startup connection is intentionally only a readiness probe, so normal runtime
+keeps ``self._ipc is None`` and teardown uses the fresh-IPC quit path. This
+guard verifies the transport boundary that makes that behavior explicit:
 
   * the ONLY writers of ``self._ipc`` are ``__init__`` (None), ``_open_ipc``
     (live pipe/sock), and ``_close_ipc_locked`` (None); and
-  * ``_open_ipc`` is called ONLY from ``_start_locked`` (there is no IPC
-    reconnect path that re-opens IPC on a still-running mpv).
+  * ``_open_ipc`` is called ONLY from ``_start_locked``; and
+  * fresh mode closes the startup probe and routes control commands through
+    serialized, short-lived request/response connections.
 
-Together these make the fresh-IPC quit SUCCESS path (``_ipc is None`` with a
-live, connectable socket) unreachable in production, so ``_start_locked``'s
-``start_ipc_unavailable`` branch is dead/defensive today.
-
-If a future change breaks either clause, the fresh-IPC quit SUCCESS path could
-become a live but UNTESTED teardown path -- this check fails closed and flags
-that GR4 then needs real hardware proof. It does NOT modify kiosk.py.
+If a future change retains an unread persistent socket in fresh mode, this
+check fails closed. Hardware teardown proof remains required for the live
+fresh-IPC quit path. It does NOT modify kiosk.py.
 """
 
 from __future__ import annotations
@@ -33,6 +31,11 @@ KIOSK_PY = REPO_ROOT / "player-runtime" / "kiosky-player" / "kiosk.py"
 
 ALLOWED_IPC_WRITERS = {"__init__", "_open_ipc", "_close_ipc_locked"}
 ALLOWED_OPEN_IPC_CALLERS = {"_start_locked"}
+REQUIRED_FRESH_TRANSPORT_TOKENS = {
+    "startup_probe_closed": "transport=fresh-socket-probe",
+    "fresh_command_route": "response = self._fresh_ipc_query(command, command_name=command_label, timeout=timeout)",
+    "fresh_command_serialization": "return self._fresh_ipc_query_locked(command, command_name, timeout)",
+}
 
 
 def _enclosing_funcs(tree: ast.AST) -> dict[ast.AST, str]:
@@ -114,6 +117,9 @@ def check(kiosk_py: Path) -> dict[str, Any]:
     for func, lines in sorted(open_ipc_callers.items()):
         if func not in ALLOWED_OPEN_IPC_CALLERS:
             errors.append(f"unexpected_open_ipc_caller:{func}:{lines}")
+    for label, token in REQUIRED_FRESH_TRANSPORT_TOKENS.items():
+        if token not in source:
+            errors.append(f"fresh_transport_invariant_missing:{label}")
 
     return {
         "passed": not errors,
@@ -121,6 +127,7 @@ def check(kiosk_py: Path) -> dict[str, Any]:
         "kiosk_py": str(kiosk_py),
         "self_ipc_writers": {k: sorted(v) for k, v in sorted(ipc_writers.items())},
         "open_ipc_callers": {k: sorted(v) for k, v in sorted(open_ipc_callers.items())},
+        "fresh_transport_tokens": sorted(REQUIRED_FRESH_TRANSPORT_TOKENS),
     }
 
 

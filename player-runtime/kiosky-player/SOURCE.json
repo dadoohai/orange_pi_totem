@@ -17,6 +17,7 @@
     "C18 image playback hardening prepares still images as local H.264 sidecars before playlist admission because the C18 custom MPV/FFmpeg stack is video-focused and may not decode PNG/JPEG directly.",
     "C22 media integrity rejects empty, malformed and first-frame-undecodable cache/download artifacts before playlist adoption and rebuilds invalid image sidecars.",
     "C22 playlist adoption keeps the last-known-good content on API/download failure and exposes stale, pending and failed-media state locally and in additive telemetry fields.",
+    "C23 prevents cyclic MPV IPC backpressure by avoiding an unread persistent client in fresh-IPC mode and requiring a bounded request/response connection for each control command.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -34,6 +35,11 @@
       "field": "MPVController.load_file/preload_next",
       "from": "IPC write success implies media switch",
       "to": "fresh IPC path verification before trusting loadfile or preloaded playlist-next"
+    },
+    {
+      "field": "MPVController fresh IPC transport",
+      "from": "fresh queries plus an unread persistent command socket",
+      "to": "startup probe closes immediately and every control command uses a serialized fresh request/response"
     },
     {
       "field": "DEFAULT_CONFIG.preload_next",
@@ -59,7 +65,7 @@
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b"
+    "sha256": "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

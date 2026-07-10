@@ -121,7 +121,7 @@ PRODUCTION_SEED_IDENTITY_FIELDS = {
 
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
-PLAYER_RUNTIME_KIOSK_SHA256 = "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b"
+PLAYER_RUNTIME_KIOSK_SHA256 = "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5"
 PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
     "MPVController._stop_locked": (
@@ -131,6 +131,10 @@ PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "MPVController.load_file/preload_next": (
         "IPC write success implies media switch",
         "fresh IPC path verification before trusting loadfile or preloaded playlist-next",
+    ),
+    "MPVController fresh IPC transport": (
+        "fresh queries plus an unread persistent command socket",
+        "startup probe closes immediately and every control command uses a serialized fresh request/response",
     ),
     "download_media/media_items_from_saved/media_items_from_cache": (
         "image extensions are admitted directly into MPV",

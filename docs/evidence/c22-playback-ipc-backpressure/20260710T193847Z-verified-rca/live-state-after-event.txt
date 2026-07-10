@@ -1,0 +1,11 @@
+2026-07-10T19:43:45Z
+MainPID=6624
+NRestarts=0
+ActiveState=active
+SubState=running
+  11851    6681      80 44.7 130596 /opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/kiosky/mpv.sock --vo=gpu --gpu-context=drm --ao=null --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/kiosky/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy
+u_str ESTAB  0      62976                             /tmp/kiosky/mpv.sock 48183            * 47069 users:(("mpv",pid=11851,fd=6))                                                                                                                                                                             
+u_str LISTEN 0      10                                /tmp/kiosky/mpv.sock 48182            * 0     users:(("mpv",pid=11851,fd=5))                                                                                                                                                                             
+/data/player-runtime/releases/c18.player-runtime-homolog-20260710-c22-c023eae
+/data/player-runtime/releases/c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63
+3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b  /data/player-runtime/current/kiosk.py

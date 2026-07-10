@@ -112,6 +112,7 @@ def collect_health(args: argparse.Namespace, output_dir: Path) -> dict[str, Any]
         process_ipc_path=args.process_ipc_path,
         mpv_log=args.mpv_log,
         mpv_generation_dir=args.mpv_generation_dir,
+        watchdog_state=args.watchdog_state,
         panfrost_fault_policy=args.panfrost_fault_policy,
     )
     _, result = health_collect.collect(health_args)
@@ -274,6 +275,9 @@ def self_test() -> None:
         raise AssertionError("hash helper did not hash")
     if "startup_screen" not in VISIBLE_RECOVERY_CHOICES:
         raise AssertionError("missing visible recovery choice")
+    parsed = parse_args([])
+    if parsed.watchdog_state != health_collect.DEFAULT_WATCHDOG_STATE:
+        raise AssertionError("incident collector watchdog default drifted from health collector")
     tmp = Path(os.environ.get("TMPDIR", "/tmp")) / f"c18-incident-self-test-{os.getpid()}"
     first = make_run_dir(tmp, "loop_entered")
     second = make_run_dir(tmp, "loop_reentered")
@@ -297,6 +301,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--process-ipc-path", type=Path, default=None)
     parser.add_argument("--mpv-log", type=Path, default=health_collect.DEFAULT_MPV_LOG)
     parser.add_argument("--mpv-generation-dir", type=Path, default=health_collect.DEFAULT_MPV_GENERATION_DIR)
+    parser.add_argument("--watchdog-state", type=Path, default=health_collect.DEFAULT_WATCHDOG_STATE)
     parser.add_argument("--panfrost-fault-policy", choices=("absolute", "delta"), default="delta")
     parser.add_argument("--classify-playlist", action="store_true")
     parser.add_argument("--operator-observed-label", default=None, help="Raw label is hashed/redacted in outputs.")

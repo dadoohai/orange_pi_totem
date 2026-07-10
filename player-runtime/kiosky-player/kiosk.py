@@ -1837,6 +1837,17 @@ class MPVController:
             try:
                 if os.name == "nt" and ipc_path.startswith("\\\\.\\pipe\\"):
                     ipc = open(ipc_path, "r+b", buffering=0)
+                    if self._query_uses_fresh_ipc():
+                        ipc.close()
+                        logging.info(
+                            "MPV IPC startup wait complete transport=fresh-pipe-probe generation=%d pid=%s duration_sec=%.2f timeout_sec=%.2f log_file=%s",
+                            self._generation,
+                            self.pid() or "none",
+                            time.monotonic() - start,
+                            timeout,
+                            self._current_log_file or "none",
+                        )
+                        return True
                     with self._ipc_lock:
                         self._close_ipc_locked()
                         self._ipc = ipc
@@ -1854,6 +1865,18 @@ class MPVController:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.settimeout(2.0)
                     sock.connect(ipc_path)
+                    if self._query_uses_fresh_ipc():
+                        sock.close()
+                        logging.info(
+                            "MPV IPC startup wait complete transport=fresh-socket-probe generation=%d pid=%s duration_sec=%.2f timeout_sec=%.2f ipc_path=%s log_file=%s",
+                            self._generation,
+                            self.pid() or "none",
+                            time.monotonic() - start,
+                            timeout,
+                            ipc_path,
+                            self._current_log_file or "none",
+                        )
+                        return True
                     with self._ipc_lock:
                         self._close_ipc_locked()
                         self._ipc = sock
@@ -1985,10 +2008,16 @@ class MPVController:
         self._cleanup_ipc_path()
 
     def _start_locked(self) -> bool:
-        if self._proc and self._proc.poll() is None and self._ipc is not None:
-            return True
-        if self._proc and self._proc.poll() is None and self._ipc is None:
-            self._stop_locked(reason="start_ipc_unavailable")
+        if self._proc and self._proc.poll() is None:
+            if self._query_uses_fresh_ipc():
+                response = self._fresh_ipc_get_property("idle-active", timeout=self._ipc_timeout())
+                if isinstance(response, dict) and response.get("error") == "success":
+                    return True
+                self._stop_locked(reason="start_fresh_ipc_unavailable")
+            elif self._ipc is not None:
+                return True
+            else:
+                self._stop_locked(reason="start_ipc_unavailable")
 
         self._close_ipc(reason="start_cleanup")
         self._cleanup_ipc_path()
@@ -2094,6 +2123,21 @@ class MPVController:
         if timeout is None:
             timeout = self._ipc_timeout()
         command_label = command_name or str((payload.get("command") or ["unknown"])[0])
+        command = payload.get("command")
+        if self._query_uses_fresh_ipc():
+            if not isinstance(command, list) or not command:
+                logging.warning(
+                    "MPV IPC fresh request rejected malformed command=%s generation=%d pid=%s log_file=%s",
+                    command_label,
+                    self._generation,
+                    self.pid() or "none",
+                    self._current_log_file or "none",
+                )
+                return None if expect_response else False
+            response = self._fresh_ipc_query(command, command_name=command_label, timeout=timeout)
+            if expect_response:
+                return response
+            return isinstance(response, dict) and response.get("error") == "success"
         start = time.monotonic()
         data = (json.dumps(payload) + "\n").encode("utf-8")
         with self._ipc_lock:
@@ -2278,6 +2322,15 @@ class MPVController:
         command_name: str,
         timeout: Optional[float] = None,
     ) -> bool:
+        with self._ipc_lock:
+            return self._fresh_ipc_command_locked(command, command_name, timeout)
+
+    def _fresh_ipc_command_locked(
+        self,
+        command: List[object],
+        command_name: str,
+        timeout: Optional[float] = None,
+    ) -> bool:
         if timeout is None:
             timeout = self._ipc_timeout()
         data = (json.dumps({"command": command}) + "\n").encode("utf-8")
@@ -2320,6 +2373,15 @@ class MPVController:
                     pass
 
     def _fresh_ipc_query(
+        self,
+        command: List[object],
+        command_name: str,
+        timeout: Optional[float] = None,
+    ) -> Optional[Dict]:
+        with self._ipc_lock:
+            return self._fresh_ipc_query_locked(command, command_name, timeout)
+
+    def _fresh_ipc_query_locked(
         self,
         command: List[object],
         command_name: str,
