@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-09. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-10. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -15,6 +15,9 @@ Fluxo curto de QA visual do wizard/settings na placa:
 
 Plano de acumulo UX/produto para a proxima imagem:
 `docs/C20_UX_ACCUMULATION_PLAN.md`.
+
+Campanha adversarial rapida de midia/OTA:
+`docs/product/196_C22_RAPID_ADVERSARIAL_RELIABILITY.md`.
 
 Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
@@ -142,6 +145,24 @@ Fila atual para consolidacao:
   `current_item.path=*.png.h264.mp4` e `source_path` no PNG original.
   Evidencia em
   `docs/evidence/c21-player-runtime-image-transcode/20260709T045504Z-board-lab-apply/`.
+- C22 confiabilidade adversarial rapida: prova de placa fechada em 2026-07-10.
+  O player passou a rejeitar midia que nao decodifica primeiro frame, reconstruir
+  sidecar invalido e preservar last-known-good com estado stale explicito. A
+  campanha real cobriu playlist mista, API 500/vazia, download truncado,
+  sidecar corrompido e recuperacao; observou 8 transicoes, nenhum preto
+  persistente e restaurou o player real saudavel. O updater ganhou limites de
+  pacote compactado/expandido, reserva de disco, staging local verificado,
+  permissoes de extracao normalizadas, staging sem symlink e lock de reconcile.
+  Evidencia:
+  `docs/evidence/c22-rapid-adversarial/20260710T045119Z-board-governed-final/`.
+  Non-claim: zero frame preto requer captura HDMI; o novo runtime ainda precisa
+  virar pacote governado e passar apply/rollback antes de entrar no M5.
+- Drift operacional observado em 2026-07-10: o timer de `player-runtime` da
+  placa lab segue ativo com autorizacao exata do alvo antigo `9bebaf1`. Como o
+  current e mais novo, o downgrade guard responde `rc=45` e preserva o player,
+  mas a unit periodica fica `failed`. O M5 deve substituir autorizacao e alvo do
+  timer de forma atomica depois que o sucessor C22 passar pacote/apply/rollback;
+  nao desabilitar a protecao para silenciar o erro.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou
   `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,

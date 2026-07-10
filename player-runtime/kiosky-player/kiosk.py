@@ -104,6 +104,10 @@ DEFAULT_CONFIG = {
     "mpv_watchdog_grace_after_load_sec": 0,
     "mpv_watchdog_grace_after_restart_sec": 0,
     "media_load_retry_cooldown_sec": 60,
+    "media_probe_enabled": True,
+    "media_probe_ffprobe_path": "/usr/bin/ffprobe",
+    "media_probe_ffmpeg_path": "/usr/bin/ffmpeg",
+    "media_probe_timeout_sec": 20,
     "image_transcode_enabled": True,
     "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
     "image_transcode_timeout_sec": 60,
@@ -573,7 +577,13 @@ def media_items_from_saved(cfg: Dict, raw_items: List[Dict]) -> Tuple[List["Medi
             continue
         if not is_supported_media_path(resolved_path, allow_bin=bool(url)):
             continue
-        if (safe_getsize(resolved_path) or 0) <= 0:
+        valid, reason = probe_media_file(cfg, resolved_path)
+        if not valid:
+            logging.warning(
+                "Saved playlist media rejected path=%s reason=%s",
+                safe_media_path_for_log(resolved_path),
+                reason,
+            )
             continue
         source_path = str(item.get("source_path") or "")
         playback_path = prepare_media_file_for_playback(cfg, resolved_path, duration_ms)
@@ -669,6 +679,14 @@ def media_items_from_cache(
         campaign_id = str(meta.get("campaign_id", ""))
         campaign_name = str(meta.get("campaign_name", ""))
         source_path = str(meta.get("source_path") or "")
+        valid, reason = probe_media_file(cfg, path)
+        if not valid:
+            logging.warning(
+                "Cached offline media rejected path=%s reason=%s",
+                safe_media_path_for_log(path),
+                reason,
+            )
+            continue
         playback_path = prepare_media_file_for_playback(cfg, path, duration_ms)
         if not playback_path:
             continue
@@ -756,6 +774,8 @@ def build_telemetry_payload(
     current = status_snapshot.get("current_item") or {}
     next_item = status_snapshot.get("next_item") or {}
     playlist_size = status_snapshot.get("playlist_size")
+    failed_media_count = int(status_snapshot.get("failed_media_count") or 0)
+    pending_playlist_size = status_snapshot.get("pending_playlist_size")
     preload_size = 1 if isinstance(next_item, dict) and next_item.get("path") else 0
     payload: Dict[str, object] = {
         "environmentId": cfg_snapshot.get("environment_id", ""),
@@ -763,13 +783,18 @@ def build_telemetry_payload(
         "heartbeatType": heartbeat_type,
         "clientTimestamp": client_timestamp_ms(),
         "playlistSize": playlist_size,
+        "playlistUpdateState": status_snapshot.get("playlist_update_state"),
+        "pendingPlaylistSize": pending_playlist_size,
+        "failedMediaCount": failed_media_count,
+        "contentStale": bool(status_snapshot.get("content_stale")),
+        "contentStaleReason": status_snapshot.get("content_stale_reason"),
         "activeCampaignName": current.get("campaign_name") if isinstance(current, dict) else None,
         "nextCampaignName": next_item.get("campaign_name") if isinstance(next_item, dict) else None,
         "rotation": cfg_snapshot.get("rotation_deg"),
         "metrics": {
             "uptimeSeconds": uptime_seconds,
             "preloadSize": preload_size,
-            "pendingEntries": 0,
+            "pendingEntries": failed_media_count,
         },
         "notes": notes,
     }
@@ -845,6 +870,13 @@ class StatusState:
             "last_poll_success": None,
             "last_poll_error": None,
             "playlist_size": None,
+            "playlist_update_state": "not_started",
+            "pending_playlist_size": None,
+            "failed_media_count": 0,
+            "content_stale": False,
+            "content_stale_reason": None,
+            "last_playlist_apply_success": None,
+            "last_playlist_apply_error": None,
             "current_index": None,
             "current_item": None,
             "next_item": None,
@@ -1250,6 +1282,102 @@ def is_still_image_item(item: MediaItem) -> bool:
     return is_image_path(item.path) or bool(item.source_path and is_image_path(item.source_path))
 
 
+def probe_media_file(cfg: Dict, path: str, *, required_codec: str = "") -> Tuple[bool, str]:
+    """Reject empty or structurally invalid media before playlist admission."""
+    try:
+        if not os.path.isfile(path):
+            return False, "file_missing"
+        if (safe_getsize(path) or 0) <= 0:
+            return False, "file_empty"
+    except OSError:
+        return False, "file_stat_failed"
+
+    if not cfg.get("media_probe_enabled", True):
+        return True, "probe_disabled"
+
+    ffprobe_path = str(cfg.get("media_probe_ffprobe_path") or "/usr/bin/ffprobe")
+    timeout_sec = max(int(cfg.get("media_probe_timeout_sec") or 0), 5)
+    command = [
+        ffprobe_path,
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=codec_type,codec_name,width,height",
+        "-of",
+        "json",
+        path,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout_sec,
+        )
+    except FileNotFoundError:
+        return False, "ffprobe_missing"
+    except subprocess.TimeoutExpired:
+        return False, "ffprobe_timeout"
+    except Exception as exc:
+        return False, f"ffprobe_exception:{type(exc).__name__}"
+
+    if int(getattr(result, "returncode", 1)) != 0:
+        return False, "ffprobe_rejected"
+    try:
+        stdout = getattr(result, "stdout", b"") or b""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+        payload = json.loads(stdout or "{}")
+    except Exception:
+        return False, "ffprobe_invalid_json"
+    streams = payload.get("streams") if isinstance(payload, dict) else None
+    if not isinstance(streams, list):
+        return False, "ffprobe_streams_missing"
+    video_streams = [stream for stream in streams if isinstance(stream, dict) and stream.get("codec_type") == "video"]
+    if not video_streams:
+        return False, "video_stream_missing"
+    if required_codec and not any(str(stream.get("codec_name") or "") == required_codec for stream in video_streams):
+        return False, f"required_codec_missing:{required_codec}"
+    if not any(int(stream.get("width") or 0) > 0 and int(stream.get("height") or 0) > 0 for stream in video_streams):
+        return False, "video_dimensions_missing"
+
+    ffmpeg_path = str(cfg.get("media_probe_ffmpeg_path") or "/usr/bin/ffmpeg")
+    decode_command = [
+        ffmpeg_path,
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        path,
+        "-map",
+        "0:v:0",
+        "-frames:v",
+        "1",
+        "-f",
+        "null",
+        "-",
+    ]
+    try:
+        decode_result = subprocess.run(
+            decode_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout_sec,
+        )
+    except FileNotFoundError:
+        return False, "ffmpeg_missing"
+    except subprocess.TimeoutExpired:
+        return False, "first_frame_decode_timeout"
+    except Exception as exc:
+        return False, f"first_frame_decode_exception:{type(exc).__name__}"
+    if int(getattr(decode_result, "returncode", 1)) != 0:
+        return False, "first_frame_decode_failed"
+    return True, "ok"
+
+
 def transcoded_image_path(path: str) -> str:
     return f"{path}.h264.mp4"
 
@@ -1268,7 +1396,15 @@ def prepare_media_file_for_playback(cfg: Dict, path: str, duration_ms: int) -> O
             and (safe_getsize(output_path) or 0) > 0
             and os.path.getmtime(output_path) >= source_mtime
         ):
-            return output_path
+            valid, reason = probe_media_file(cfg, output_path, required_codec="h264")
+            if valid:
+                return output_path
+            logging.warning(
+                "Existing image sidecar rejected; rebuilding source=%s output=%s reason=%s",
+                safe_media_path_for_log(path),
+                safe_media_path_for_log(output_path),
+                reason,
+            )
     except OSError:
         return None
 
@@ -1306,6 +1442,9 @@ def prepare_media_file_for_playback(cfg: Dict, path: str, duration_ms: int) -> O
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=timeout_sec)
         if (safe_getsize(tmp_path) or 0) <= 0:
             raise IOError("empty transcoded image output")
+        valid, reason = probe_media_file(cfg, tmp_path, required_codec="h264")
+        if not valid:
+            raise IOError(f"invalid transcoded image output: {reason}")
         os.replace(tmp_path, output_path)
         logging.info(
             "Prepared still image for MPV playback source=%s output=%s",
@@ -1385,7 +1524,17 @@ def download_media(cfg: Dict, raw_items: List[Dict], cache_index: Optional[Cache
         dest = cache_path(cfg["cache_dir"], url)
         alias = media_alias(dest, url)
         safe_dest = safe_media_path_for_log(dest)
-        if not os.path.exists(dest):
+        cached_valid = False
+        if os.path.exists(dest):
+            cached_valid, cached_reason = probe_media_file(cfg, dest)
+            if not cached_valid:
+                logging.warning(
+                    "Cached media rejected; attempting refresh alias=%s path=%s reason=%s",
+                    alias,
+                    safe_dest,
+                    cached_reason,
+                )
+        if not cached_valid:
             tmp_path = f"{dest}.tmp"
             try:
                 logging.info("Downloading media alias=%s path=%s", alias, safe_dest)
@@ -1417,6 +1566,9 @@ def download_media(cfg: Dict, raw_items: List[Dict], cache_index: Optional[Cache
                     raise IOError(f"Incomplete download ({bytes_written}/{expected_size} bytes)")
                 if expected_size is not None and bytes_written > expected_size:
                     raise IOError(f"Download size mismatch ({bytes_written}/{expected_size} bytes)")
+                valid, reason = probe_media_file(cfg, tmp_path)
+                if not valid:
+                    raise IOError(f"Downloaded media failed validation: {reason}")
                 os.replace(tmp_path, dest)
             except Exception as exc:
                 logging.warning("Failed to download media alias=%s path=%s error=%s", alias, safe_dest, exc)
@@ -1425,7 +1577,7 @@ def download_media(cfg: Dict, raw_items: List[Dict], cache_index: Optional[Cache
                         os.remove(tmp_path)
                 except Exception as cleanup_exc:
                     logging.warning("Failed to cleanup temp file for media alias=%s path=%s error=%s", alias, safe_dest, cleanup_exc)
-                if os.path.exists(dest):
+                if cached_valid and os.path.exists(dest):
                     logging.info("Using cached file for media alias=%s path=%s", alias, safe_dest)
                 else:
                     continue
@@ -2602,6 +2754,7 @@ def poller(
     while not stop_event.is_set():
         cfg_snapshot = config_snapshot(cfg, cfg_lock)
         try:
+            status.update(playlist_update_state="checking")
             update_waiting_status(
                 status,
                 startup_phase="waiting_for_api",
@@ -2618,13 +2771,22 @@ def poller(
             if not raw_items and not cfg_snapshot.get("allow_empty_playlist_from_api", False):
                 current_items, _ = state.get()
                 if current_items:
+                    retained_at = iso_now()
                     logging.warning(
                         "API returned empty playlist; keeping current playlist (%d items).",
                         len(current_items),
                     )
-                    status.update(playlist_size=len(current_items))
-                    status.update(last_poll_success=iso_now(), last_poll_error=None)
-                    save_last_success(cfg_snapshot, iso_now())
+                    status.update(
+                        playlist_size=len(current_items),
+                        playlist_update_state="api_empty_retaining_last_known_good",
+                        pending_playlist_size=0,
+                        failed_media_count=0,
+                        content_stale=True,
+                        content_stale_reason="api_empty_playlist",
+                        last_playlist_apply_error=f"{retained_at} api_empty_playlist",
+                    )
+                    status.update(last_poll_success=retained_at, last_poll_error=None)
+                    save_last_success(cfg_snapshot, retained_at)
                     consecutive_failures = 0
                     status.update(consecutive_failures=consecutive_failures)
                     backoff = 2
@@ -2647,9 +2809,18 @@ def poller(
                             "API returned empty playlist; loaded %d items from local cache.",
                             len(cache_items),
                         )
-                    status.update(playlist_size=len(cache_items))
-                    status.update(last_poll_success=iso_now(), last_poll_error=None)
-                    save_last_success(cfg_snapshot, iso_now())
+                    retained_at = iso_now()
+                    status.update(
+                        playlist_size=len(cache_items),
+                        playlist_update_state="api_empty_using_local_cache",
+                        pending_playlist_size=0,
+                        failed_media_count=0,
+                        content_stale=True,
+                        content_stale_reason="api_empty_playlist",
+                        last_playlist_apply_error=f"{retained_at} api_empty_playlist",
+                    )
+                    status.update(last_poll_success=retained_at, last_poll_error=None)
+                    save_last_success(cfg_snapshot, retained_at)
                     consecutive_failures = 0
                     status.update(consecutive_failures=consecutive_failures)
                     backoff = 2
@@ -2666,14 +2837,24 @@ def poller(
                 black_screen_risk_reason="media_cache_wait",
             )
             items = download_media(cfg_snapshot, raw_items, cache_index)
+            failed_media_count = max(len(raw_items) - len(items), 0)
             switch_ok = True
             if cfg_snapshot.get("require_full_download_before_switch"):
                 switch_ok = len(items) >= len(raw_items)
                 if not switch_ok:
+                    retained_at = iso_now()
                     logging.warning(
                         "Playlist download incomplete (%d/%d). Keeping current playlist.",
                         len(items),
                         len(raw_items),
+                    )
+                    status.update(
+                        playlist_update_state="download_incomplete_retaining_last_known_good",
+                        pending_playlist_size=len(raw_items),
+                        failed_media_count=failed_media_count,
+                        content_stale=True,
+                        content_stale_reason="playlist_download_incomplete",
+                        last_playlist_apply_error=f"{retained_at} playlist_download_incomplete",
                     )
             if switch_ok:
                 updated = state.update(items, fingerprint)
@@ -2681,6 +2862,32 @@ def poller(
                     logging.info("Playlist updated: %d items", len(items))
                 if items and (updated or not os.path.exists(playlist_state_path(cfg_snapshot))):
                     save_playlist_state(cfg_snapshot, items, fingerprint)
+                applied_at = iso_now()
+                partial_playlist = failed_media_count > 0
+                playlist_status = {
+                    "playlist_size": len(items),
+                    "playlist_update_state": (
+                        "partial_playlist_applied"
+                        if partial_playlist and updated
+                        else "partial_playlist_unchanged"
+                        if partial_playlist
+                        else "empty_playlist_applied"
+                        if not items
+                        else "playlist_applied"
+                        if updated
+                        else "playlist_unchanged"
+                    ),
+                    "pending_playlist_size": len(raw_items) if partial_playlist else None,
+                    "failed_media_count": failed_media_count,
+                    "content_stale": partial_playlist,
+                    "content_stale_reason": "partial_playlist" if partial_playlist else None,
+                    "last_playlist_apply_error": (
+                        f"{applied_at} partial_playlist" if partial_playlist else None
+                    ),
+                }
+                if updated:
+                    playlist_status["last_playlist_apply_success"] = applied_at
+                status.update(**playlist_status)
                 if updated:
                     status_snapshot = status.snapshot()
                     keep_paths = {item.path for item in items}
@@ -2711,7 +2918,6 @@ def poller(
                         notes="playlist updated",
                         uptime_seconds=int(time.time() - status.start_time),
                     )
-                status.update(playlist_size=len(items))
             else:
                 current_items, _ = state.get()
                 status.update(playlist_size=len(current_items))
@@ -2729,6 +2935,12 @@ def poller(
                 black_screen_risk_reason="api_playlist_wait",
             )
             status.update(last_poll_error=f"{iso_now()} {exc}")
+            status.update(
+                playlist_update_state="api_error_retaining_last_known_good",
+                content_stale=True,
+                content_stale_reason="api_error",
+                last_playlist_apply_error=f"{iso_now()} api_error",
+            )
             consecutive_failures += 1
             status.update(consecutive_failures=consecutive_failures)
             status_snapshot = status.snapshot()
@@ -2954,6 +3166,7 @@ def telemetry_worker(
         cfg_snapshot = config_snapshot(cfg, cfg_lock)
         status_snapshot = status.snapshot()
         failures = int(status_snapshot.get("consecutive_failures") or 0)
+        content_stale = bool(status_snapshot.get("content_stale"))
         hb_status = "ok"
         error_message = None
         if failures >= 3:
@@ -2962,14 +3175,17 @@ def telemetry_worker(
         elif failures > 0:
             hb_status = "warning"
             error_message = str(status_snapshot.get("last_poll_error") or "")
+        elif content_stale:
+            hb_status = "warning"
+            error_message = str(status_snapshot.get("content_stale_reason") or "content_stale")
 
         ok = send_telemetry(
             cfg_snapshot,
             status_snapshot,
             heartbeat_type="healthcheck",
             status=hb_status,
-            error_code="media_fetch_failed" if failures > 0 else None,
-            error_message=error_message if failures > 0 else None,
+            error_code="media_fetch_failed" if failures > 0 else "content_stale" if content_stale else None,
+            error_message=error_message if failures > 0 or content_stale else None,
             notes="healthcheck",
             uptime_seconds=int(time.time() - status.start_time),
         )
@@ -3682,7 +3898,15 @@ def main() -> int:
             if offline_items:
                 offline_fp = fingerprint_items(fp_payload)
                 state.update(offline_items, offline_fp)
-                status.update(playlist_size=len(offline_items), content_state="offline_playlist_ready")
+                status.update(
+                    playlist_size=len(offline_items),
+                    content_state="offline_playlist_ready",
+                    playlist_update_state="offline_saved_playlist",
+                    pending_playlist_size=None,
+                    failed_media_count=0,
+                    content_stale=True,
+                    content_stale_reason="offline_startup",
+                )
                 logging.info("Loaded offline playlist: %d items", len(offline_items))
                 loaded_offline = True
             else:
@@ -3701,11 +3925,24 @@ def main() -> int:
                 cache_fp = fingerprint_items(cache_payload)
                 state.update(cache_items, cache_fp)
                 save_playlist_state(cfg, cache_items, cache_fp)
-                status.update(playlist_size=len(cache_items), content_state="local_cache_ready")
+                status.update(
+                    playlist_size=len(cache_items),
+                    content_state="local_cache_ready",
+                    playlist_update_state="offline_local_cache",
+                    pending_playlist_size=None,
+                    failed_media_count=0,
+                    content_stale=True,
+                    content_stale_reason="offline_startup",
+                )
                 logging.info("Loaded offline playlist from local cache: %d items", len(cache_items))
 
     current_items, _current_version = state.get()
     if not api_polling_enabled and not current_items:
+        status.update(
+            playlist_update_state="offline_no_content",
+            content_stale=True,
+            content_stale_reason="offline_no_content",
+        )
         if not api_credentials_ready:
             logging.error("api_key/environment_id ausentes e nenhuma midia offline disponivel.")
         elif requests is None:

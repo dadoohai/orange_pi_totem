@@ -15,6 +15,8 @@
     "C18 playback hardening verifies the real MPV path after loadfile and playlist-next before trusting preloaded media state.",
     "C18 disables preload_next by default so legacy configs without the field inherit the safe path.",
     "C18 image playback hardening prepares still images as local H.264 sidecars before playlist admission because the C18 custom MPV/FFmpeg stack is video-focused and may not decode PNG/JPEG directly.",
+    "C22 media integrity rejects empty, malformed and first-frame-undecodable cache/download artifacts before playlist adoption and rebuilds invalid image sidecars.",
+    "C22 playlist adoption keeps the last-known-good content on API/download failure and exposes stale, pending and failed-media state locally and in additive telemetry fields.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -42,12 +44,22 @@
       "field": "download_media/media_items_from_saved/media_items_from_cache",
       "from": "image extensions are admitted directly into MPV",
       "to": "still images are prepared as local H.264 MP4 sidecars before playlist admission"
+    },
+    {
+      "field": "probe_media_file/download_media/prepare_media_file_for_playback",
+      "from": "non-empty size and sidecar mtime are sufficient for media admission",
+      "to": "ffprobe structure plus one decoded frame are required; invalid sidecars are rebuilt"
+    },
+    {
+      "field": "poller/status/telemetry",
+      "from": "a successful API poll can obscure empty, incomplete or partial playlist adoption",
+      "to": "last-known-good playback is retained and stale/partial adoption remains explicit"
     }
   ],
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97"
+    "sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

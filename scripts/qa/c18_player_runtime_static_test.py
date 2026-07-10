@@ -34,7 +34,7 @@ CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97"
+EXPECTED_SNAPSHOT_SHA256 = "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -368,6 +368,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             kiosk.subprocess.run = fake_run
             try:
                 cfg = {
+                    "media_probe_enabled": False,
                     "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
                     "image_transcode_timeout_sec": 5,
                 }
@@ -407,6 +408,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
                 cfg = {
                     "cache_dir": str(cache_dir),
                     "state_dir": str(state_dir),
+                    "media_probe_enabled": False,
                     "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
                     "image_transcode_timeout_sec": 5,
                 }
@@ -431,6 +433,268 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             self.assertEqual(index_meta["source_path"], str(source))
             self.assertEqual(index_meta["url"], url)
 
+    def test_corrupt_existing_image_sidecar_is_rebuilt_before_reuse(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-image-sidecar-rebuild-") as tmp:
+            source = Path(tmp) / "media.png"
+            sidecar = Path(f"{source}.h264.mp4")
+            source.write_bytes(b"source-image")
+            sidecar.write_bytes(b"corrupt-sidecar")
+            os.utime(sidecar, (source.stat().st_mtime + 1, source.stat().st_mtime + 1))
+            calls: list[list[str]] = []
+
+            def fake_run(command: list[str], **_kwargs: object) -> object:
+                calls.append(command)
+                if command[0] == "/usr/bin/ffprobe":
+                    target = Path(command[-1])
+                    if target == sidecar:
+                        return subprocess.CompletedProcess(command, 1, stdout=b"", stderr=b"bad")
+                    return subprocess.CompletedProcess(
+                        command,
+                        0,
+                        stdout=b'{"streams":[{"codec_type":"video","codec_name":"h264","width":1280,"height":720}]}',
+                        stderr=b"",
+                    )
+                if "-f" in command and command[command.index("-f") + 1] == "null":
+                    return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+                Path(command[-1]).write_bytes(b"rebuilt-h264")
+                return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+
+            original_run = kiosk.subprocess.run
+            kiosk.subprocess.run = fake_run
+            try:
+                cfg = {
+                    "media_probe_enabled": True,
+                    "media_probe_ffprobe_path": "/usr/bin/ffprobe",
+                    "media_probe_ffmpeg_path": "/usr/bin/ffmpeg",
+                    "media_probe_timeout_sec": 5,
+                    "image_transcode_ffmpeg_path": "/usr/bin/ffmpeg",
+                    "image_transcode_timeout_sec": 5,
+                }
+                playback_path = kiosk.prepare_media_file_for_playback(cfg, str(source), 5000)
+            finally:
+                kiosk.subprocess.run = original_run
+
+            self.assertEqual(playback_path, str(sidecar))
+            self.assertEqual(sidecar.read_bytes(), b"rebuilt-h264")
+            self.assertEqual(sum(1 for call in calls if call[0] == "/usr/bin/ffmpeg"), 2)
+            self.assertEqual(sum(1 for call in calls if call[0] == "/usr/bin/ffprobe"), 2)
+
+    def test_media_probe_rejects_empty_and_non_video_payloads(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-media-probe-") as tmp:
+            empty = Path(tmp) / "empty.mp4"
+            empty.write_bytes(b"")
+            self.assertEqual(kiosk.probe_media_file({}, str(empty)), (False, "file_empty"))
+
+            invalid = Path(tmp) / "invalid.mp4"
+            invalid.write_bytes(b"not-media")
+            original_run = kiosk.subprocess.run
+            kiosk.subprocess.run = lambda command, **kwargs: subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=b'{"streams":[{"codec_type":"audio","codec_name":"aac"}]}',
+                stderr=b"",
+            )
+            try:
+                self.assertEqual(kiosk.probe_media_file({}, str(invalid)), (False, "video_stream_missing"))
+            finally:
+                kiosk.subprocess.run = original_run
+
+    def test_media_probe_rejects_ffprobe_false_green_when_first_frame_cannot_decode(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-media-decode-probe-") as tmp:
+            truncated = Path(tmp) / "truncated.mp4"
+            truncated.write_bytes(b"truncated-but-ffprobe-visible")
+
+            def fake_run(command: list[str], **_kwargs: object) -> object:
+                if command[0] == "/usr/bin/ffprobe":
+                    return subprocess.CompletedProcess(
+                        command,
+                        0,
+                        stdout=b'{"streams":[{"codec_type":"video","codec_name":"h264","width":1280,"height":720}]}',
+                        stderr=b"decode warnings ignored by ffprobe",
+                    )
+                return subprocess.CompletedProcess(command, 1, stdout=b"", stderr=b"corrupt input packet")
+
+            original_run = kiosk.subprocess.run
+            kiosk.subprocess.run = fake_run
+            try:
+                self.assertEqual(
+                    kiosk.probe_media_file({}, str(truncated)),
+                    (False, "first_frame_decode_failed"),
+                )
+            finally:
+                kiosk.subprocess.run = original_run
+
+    def test_incomplete_playlist_is_explicitly_stale_while_last_known_good_remains(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-playlist-incomplete-") as tmp:
+            cfg = dict(kiosk.DEFAULT_CONFIG)
+            cfg.update({
+                "cache_dir": str(Path(tmp) / "cache"),
+                "state_dir": str(Path(tmp) / "state"),
+                "poll_interval_sec": 1,
+                "require_full_download_before_switch": True,
+                "telemetry_enabled": False,
+            })
+            state = kiosk.PlaylistState()
+            previous = kiosk.MediaItem("", 1000, "/tmp/previous.mp4", "old", "Old")
+            state.update([previous], "previous")
+            status = kiosk.StatusState()
+            stop_event = threading.Event()
+            raw_items = [
+                {"url": f"https://invalid.example/{index}.mp4", "duration_ms": 1000}
+                for index in range(3)
+            ]
+            downloaded = [
+                kiosk.MediaItem("", 1000, f"/tmp/{index}.mp4", str(index), str(index))
+                for index in range(2)
+            ]
+            original_fetch = kiosk.fetch_media_list
+            original_download = kiosk.download_media
+            kiosk.fetch_media_list = lambda _cfg: raw_items
+
+            def fake_download(*_args: object, **_kwargs: object) -> list[object]:
+                stop_event.set()
+                return downloaded
+
+            kiosk.download_media = fake_download
+            try:
+                kiosk.poller(
+                    cfg,
+                    threading.Lock(),
+                    threading.Event(),
+                    state,
+                    status,
+                    kiosk.CacheIndex(cfg),
+                    stop_event,
+                )
+            finally:
+                kiosk.fetch_media_list = original_fetch
+                kiosk.download_media = original_download
+
+            current, _ = state.get()
+            snapshot = status.snapshot()
+            self.assertEqual(current, [previous])
+            self.assertEqual(snapshot["playlist_update_state"], "download_incomplete_retaining_last_known_good")
+            self.assertIs(snapshot["content_stale"], True)
+            self.assertEqual(snapshot["content_stale_reason"], "playlist_download_incomplete")
+            self.assertEqual(snapshot["failed_media_count"], 1)
+            self.assertIsNone(snapshot["last_poll_error"])
+
+    def test_partial_playlist_adoption_stays_explicitly_stale_when_legacy_policy_allows_it(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-playlist-partial-") as tmp:
+            cfg = dict(kiosk.DEFAULT_CONFIG)
+            cfg.update({
+                "cache_dir": str(Path(tmp) / "cache"),
+                "state_dir": str(Path(tmp) / "state"),
+                "poll_interval_sec": 1,
+                "require_full_download_before_switch": False,
+                "telemetry_enabled": False,
+            })
+            state = kiosk.PlaylistState()
+            status = kiosk.StatusState()
+            stop_event = threading.Event()
+            raw_items = [
+                {"url": f"https://invalid.example/{index}.mp4", "duration_ms": 1000}
+                for index in range(2)
+            ]
+            downloaded = [kiosk.MediaItem("", 1000, "/tmp/0.mp4", "0", "0")]
+            original_fetch = kiosk.fetch_media_list
+            original_download = kiosk.download_media
+            kiosk.fetch_media_list = lambda _cfg: raw_items
+
+            def fake_download(*_args: object, **_kwargs: object) -> list[object]:
+                stop_event.set()
+                return downloaded
+
+            kiosk.download_media = fake_download
+            try:
+                kiosk.poller(
+                    cfg,
+                    threading.Lock(),
+                    threading.Event(),
+                    state,
+                    status,
+                    kiosk.CacheIndex(cfg),
+                    stop_event,
+                )
+            finally:
+                kiosk.fetch_media_list = original_fetch
+                kiosk.download_media = original_download
+
+            current, _ = state.get()
+            snapshot = status.snapshot()
+            self.assertEqual(current, downloaded)
+            self.assertEqual(snapshot["playlist_update_state"], "partial_playlist_applied")
+            self.assertIs(snapshot["content_stale"], True)
+            self.assertEqual(snapshot["content_stale_reason"], "partial_playlist")
+            self.assertEqual(snapshot["pending_playlist_size"], 2)
+            self.assertEqual(snapshot["failed_media_count"], 1)
+
+    def test_telemetry_payload_exposes_playlist_adoption_health(self) -> None:
+        kiosk = load_kiosk_module()
+        status = kiosk.StatusState().snapshot()
+        status.update({
+            "playlist_update_state": "download_incomplete_retaining_last_known_good",
+            "pending_playlist_size": 3,
+            "failed_media_count": 1,
+            "content_stale": True,
+            "content_stale_reason": "playlist_download_incomplete",
+        })
+        payload = kiosk.build_telemetry_payload({}, status, "healthcheck", "warning")
+        self.assertEqual(payload["playlistUpdateState"], "download_incomplete_retaining_last_known_good")
+        self.assertEqual(payload["pendingPlaylistSize"], 3)
+        self.assertEqual(payload["failedMediaCount"], 1)
+        self.assertIs(payload["contentStale"], True)
+        self.assertEqual(payload["contentStaleReason"], "playlist_download_incomplete")
+        self.assertEqual(payload["metrics"]["pendingEntries"], 1)
+
+    def test_empty_api_playlist_is_explicitly_stale_while_last_known_good_remains(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-playlist-empty-") as tmp:
+            cfg = dict(kiosk.DEFAULT_CONFIG)
+            cfg.update({
+                "cache_dir": str(Path(tmp) / "cache"),
+                "state_dir": str(Path(tmp) / "state"),
+                "poll_interval_sec": 1,
+                "allow_empty_playlist_from_api": False,
+                "telemetry_enabled": False,
+            })
+            state = kiosk.PlaylistState()
+            previous = kiosk.MediaItem("", 1000, "/tmp/previous.mp4", "old", "Old")
+            state.update([previous], "previous")
+            status = kiosk.StatusState()
+            stop_event = threading.Event()
+            original_fetch = kiosk.fetch_media_list
+
+            def fake_fetch(_cfg: object) -> list[object]:
+                stop_event.set()
+                return []
+
+            kiosk.fetch_media_list = fake_fetch
+            try:
+                kiosk.poller(
+                    cfg,
+                    threading.Lock(),
+                    threading.Event(),
+                    state,
+                    status,
+                    kiosk.CacheIndex(cfg),
+                    stop_event,
+                )
+            finally:
+                kiosk.fetch_media_list = original_fetch
+
+            current, _ = state.get()
+            snapshot = status.snapshot()
+            self.assertEqual(current, [previous])
+            self.assertEqual(snapshot["playlist_update_state"], "api_empty_retaining_last_known_good")
+            self.assertIs(snapshot["content_stale"], True)
+            self.assertEqual(snapshot["content_stale_reason"], "api_empty_playlist")
+
     def test_saved_playlist_preserves_image_source_and_playback_paths(self) -> None:
         kiosk = load_kiosk_module()
         with tempfile.TemporaryDirectory(prefix="c18-saved-image-paths-") as tmp:
@@ -442,7 +706,11 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             playback = cache_dir / "media.png.h264.mp4"
             source.write_bytes(b"fake-png")
             playback.write_bytes(b"fake-h264")
-            cfg = {"cache_dir": str(cache_dir), "state_dir": str(state_dir)}
+            cfg = {
+                "cache_dir": str(cache_dir),
+                "state_dir": str(state_dir),
+                "media_probe_enabled": False,
+            }
             item = kiosk.MediaItem(
                 url="https://example.invalid/media/current.png",
                 duration_ms=5000,

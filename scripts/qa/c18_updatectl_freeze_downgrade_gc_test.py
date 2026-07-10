@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import importlib.util
 import io
@@ -170,6 +171,16 @@ def write_player_runtime_payload(root: Path, version: str, *, kiosk_text: str | 
     manifest_path = pkg / f"dadooh-player-runtime-{version}.manifest.json"
     manifest_path.write_text(json.dumps(raw_manifest, sort_keys=True) + "\n", encoding="utf-8")
     return manifest_path, payload
+
+
+def write_test_payload(path: Path, entries: dict[str, bytes]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(path, "w:gz") as tf:
+        for name, content in entries.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(content)
+            tf.addfile(info, fileobj=io.BytesIO(content))
+    return path
 
 
 def write_player_runtime_release_gate(root: Path, manifest_data: dict, payload_path: Path) -> Path:
@@ -486,6 +497,105 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertFalse(updatectl.CURRENT_LINK.exists())
             state = updatectl._read_state()
             self.assertEqual(state["last_operation"]["status"], "image_fallback")
+
+    def test_player_runtime_reconcile_takes_global_lock_when_authorized(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            old_lock_file = updatectl.UPDATE_LOCK_FILE
+            old_env = os.environ.get(updatectl.PLAYER_RUNTIME_RECONCILE_ENV)
+            try:
+                updatectl.UPDATE_LOCK_FILE = root / "run" / "totem-updatectl.lock"
+                write_verified_player_runtime_release("runtime-a")
+                updatectl._atomic_symlink("releases/runtime-a", updatectl.CURRENT_LINK)
+                os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = "1"
+
+                rc = updatectl.cmd_reconcile(
+                    argparse.Namespace(
+                        component="player-runtime",
+                        allow_player_runtime_maintenance=True,
+                    )
+                )
+
+                self.assertEqual(rc, 0)
+                self.assertEqual(updatectl._read_state()["last_operation"]["status"], "current_verified")
+                self.assertIn(
+                    "update_lock_acquired operation=reconcile:player-runtime",
+                    updatectl.LOG_FILE.read_text(encoding="utf-8"),
+                )
+                with updatectl.UPDATE_LOCK_FILE.open("a+") as fh:
+                    updatectl.fcntl.flock(
+                        fh.fileno(),
+                        updatectl.fcntl.LOCK_EX | updatectl.fcntl.LOCK_NB,
+                    )
+                    updatectl.fcntl.flock(fh.fileno(), updatectl.fcntl.LOCK_UN)
+            finally:
+                updatectl.UPDATE_LOCK_FILE = old_lock_file
+                if old_env is None:
+                    os.environ.pop(updatectl.PLAYER_RUNTIME_RECONCILE_ENV, None)
+                else:
+                    os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = old_env
+
+    def test_player_runtime_reconcile_lock_busy_returns_49_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            old_lock_file = updatectl.UPDATE_LOCK_FILE
+            old_env = os.environ.get(updatectl.PLAYER_RUNTIME_RECONCILE_ENV)
+            lock_fh = None
+            try:
+                updatectl.UPDATE_LOCK_FILE = root / "run" / "totem-updatectl.lock"
+                updatectl.UPDATE_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+                previous, _manifest, _identity = write_verified_player_runtime_release("runtime-a")
+                current = updatectl.RELEASES_DIR / "runtime-b"
+                current.mkdir(parents=True, exist_ok=True)
+                (current / "kiosk.py").write_text("print('unverified')\n", encoding="utf-8")
+                updatectl._atomic_symlink("releases/runtime-b", updatectl.CURRENT_LINK)
+                updatectl._atomic_symlink("releases/runtime-a", updatectl.PREVIOUS_LINK)
+                updatectl._write_state({
+                    "schema": updatectl.SCHEMA_STATE,
+                    "component": "player-runtime",
+                    "current": {"version": "runtime-b", "payload_sha256": "b" * 64},
+                    "previous": {"version": "runtime-a", "payload_sha256": "a" * 64},
+                    "quarantine": [{"payload_sha256": "c" * 64, "tree_sha256": "d" * 64}],
+                })
+                state_before = updatectl.STATE_FILE.read_bytes()
+                current_before = updatectl._read_symlink_target(updatectl.CURRENT_LINK)
+                previous_before = updatectl._read_symlink_target(updatectl.PREVIOUS_LINK)
+
+                lock_fh = updatectl.UPDATE_LOCK_FILE.open("a+")
+                updatectl.fcntl.flock(
+                    lock_fh.fileno(),
+                    updatectl.fcntl.LOCK_EX | updatectl.fcntl.LOCK_NB,
+                )
+                os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = "1"
+
+                rc = updatectl.cmd_reconcile(
+                    argparse.Namespace(
+                        component="player-runtime",
+                        allow_player_runtime_maintenance=True,
+                    )
+                )
+
+                self.assertEqual(rc, 49)
+                self.assertEqual(updatectl.STATE_FILE.read_bytes(), state_before)
+                self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), current_before)
+                self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), previous_before)
+                self.assertTrue(current.is_dir())
+                self.assertTrue(previous.is_dir())
+                self.assertEqual(
+                    updatectl._read_state()["quarantine"],
+                    [{"payload_sha256": "c" * 64, "tree_sha256": "d" * 64}],
+                )
+            finally:
+                if lock_fh is not None:
+                    updatectl.fcntl.flock(lock_fh.fileno(), updatectl.fcntl.LOCK_UN)
+                    lock_fh.close()
+                updatectl.UPDATE_LOCK_FILE = old_lock_file
+                if old_env is None:
+                    os.environ.pop(updatectl.PLAYER_RUNTIME_RECONCILE_ENV, None)
+                else:
+                    os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = old_env
 
     def test_totem_core_rollback_to_image_fallback_still_works(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1383,7 +1493,7 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             self.assertFalse(stage.exists())
             self.assertTrue(other.is_dir())
 
-    def test_cleanup_stage_refuses_symlink_escape(self) -> None:
+    def test_cleanup_stage_unlinks_direct_symlink_without_touching_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             configure_temp(root, "totem-core")
@@ -1396,7 +1506,8 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             updatectl._cleanup_stage(stage)
 
             self.assertTrue(outside.is_dir())
-            self.assertTrue(stage.is_symlink())
+            self.assertFalse(stage.is_symlink())
+            self.assertTrue(outside.is_dir())
 
     def test_apply_sha_mismatch_cleans_payload_stage(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1464,6 +1575,316 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                 self.assertFalse((updatectl.INCOMING_DIR / version).exists())
                 self.assertFalse((updatectl.RELEASES_DIR / version).exists())
                 self.assertIsNone(updatectl._read_symlink_target(updatectl.CURRENT_LINK))
+
+    def test_safe_extract_tar_accepts_small_payload_under_explicit_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = write_test_payload(root / "payload.tar.gz", {"kiosk.py": b"print('ok')\n"})
+            dest = root / "dest"
+
+            updatectl._safe_extract_tar(payload, dest)
+
+            self.assertEqual((dest / "kiosk.py").read_bytes(), b"print('ok')\n")
+
+    def test_safe_extract_tar_rejects_oversized_compressed_payload_and_trailing_gzip_data(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = write_test_payload(root / "payload.tar.gz", {"kiosk.py": b"print('ok')\n"})
+            original_size = payload.stat().st_size
+            with payload.open("ab") as raw:
+                with gzip.GzipFile(fileobj=raw, mode="wb") as trailing:
+                    trailing.write(os.urandom(4096))
+            self.assertGreater(payload.stat().st_size, original_size)
+            dest = root / "dest"
+            old_max_bytes = updatectl.SAFE_TAR_MAX_COMPRESSED_BYTES
+            try:
+                updatectl.SAFE_TAR_MAX_COMPRESSED_BYTES = original_size
+                with self.assertRaisesRegex(RuntimeError, "compressed size exceeds limit"):
+                    updatectl._safe_extract_tar(payload, dest)
+            finally:
+                updatectl.SAFE_TAR_MAX_COMPRESSED_BYTES = old_max_bytes
+
+            self.assertFalse((dest / "kiosk.py").exists())
+
+    def test_http_download_rejects_declared_payload_over_streaming_limit_without_partial_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "payload.tar.gz"
+            with self.assertRaisesRegex(RuntimeError, "download exceeds size limit"):
+                updatectl._http_download(
+                    "data:application/octet-stream;base64,YWJjZA==",
+                    dest,
+                    max_bytes=3,
+                )
+            self.assertFalse(dest.exists())
+            self.assertFalse(dest.with_suffix(dest.suffix + ".part").exists())
+
+    def test_http_download_replaces_dangling_part_symlink_without_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dest = root / "payload.tar.gz"
+            outside = root / "outside-created-by-download"
+            part = dest.with_suffix(dest.suffix + ".part")
+            part.symlink_to(outside)
+
+            size, sha = updatectl._http_download(
+                "data:application/octet-stream;base64,YWJjZA==",
+                dest,
+                max_bytes=4,
+            )
+
+            self.assertEqual(size, 4)
+            self.assertEqual(sha, hashlib.sha256(b"abcd").hexdigest())
+            self.assertEqual(dest.read_bytes(), b"abcd")
+            self.assertFalse(outside.exists())
+            self.assertFalse(part.exists())
+            self.assertFalse(part.is_symlink())
+
+    def test_apply_local_rejects_compressed_payload_limit_before_staging_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl.POLICY_FILE.parent.mkdir(parents=True)
+            updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+            pkg_dir = root / "pkg"
+            pkg_dir.mkdir()
+            version = "core-oversized-local"
+            payload = write_test_payload(
+                pkg_dir / f"dadooh-totem-core-{version}.tar.gz",
+                {"bin/totem_setup_visual_wizard.py": b"print('ok')\n"},
+            )
+            manifest_path = pkg_dir / f"dadooh-totem-core-{version}.manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest(version, sha=updatectl._sha256_file(payload)), sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            old_max_bytes = updatectl.SAFE_TAR_MAX_COMPRESSED_BYTES
+            try:
+                updatectl.SAFE_TAR_MAX_COMPRESSED_BYTES = payload.stat().st_size - 1
+                rc = updatectl._apply_from_manifest_path(
+                    manifest_path,
+                    payload_url=None,
+                    source="local-test",
+                    payload_path_override=payload,
+                )
+            finally:
+                updatectl.SAFE_TAR_MAX_COMPRESSED_BYTES = old_max_bytes
+
+            self.assertEqual(rc, 6)
+            self.assertFalse((updatectl.INCOMING_DIR / version).exists())
+
+    def test_apply_local_verifies_staged_bytes_after_source_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl.POLICY_FILE.parent.mkdir(parents=True)
+            updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+            pkg_dir = root / "pkg"
+            original = write_test_payload(
+                pkg_dir / "original.tar.gz",
+                {"bin/totem_setup_visual_wizard.py": b"print('expected')\n"},
+            )
+            swapped = write_test_payload(
+                pkg_dir / "swapped.tar.gz",
+                {"bin/totem_setup_visual_wizard.py": b"print('swapped')\n"},
+            )
+            version = "core-local-copy-race"
+            manifest_path = pkg_dir / f"dadooh-totem-core-{version}.manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest(version, sha=updatectl._sha256_file(original)), sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            real_copyfile = updatectl.shutil.copyfile
+
+            def copy_swapped(_source, dest, *args, **kwargs):
+                return real_copyfile(swapped, dest, *args, **kwargs)
+
+            try:
+                updatectl.shutil.copyfile = copy_swapped
+                rc = updatectl._apply_from_manifest_path(
+                    manifest_path,
+                    payload_url=None,
+                    source="local-test",
+                    payload_path_override=original,
+                )
+            finally:
+                updatectl.shutil.copyfile = real_copyfile
+
+            self.assertEqual(rc, 6)
+            self.assertFalse((updatectl.INCOMING_DIR / version).exists())
+            self.assertFalse((updatectl.RELEASES_DIR / version).exists())
+
+    def test_apply_local_rejects_incoming_stage_symlink_without_writing_outside(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl.POLICY_FILE.parent.mkdir(parents=True)
+            updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+            version = "core-stage-symlink"
+            payload = write_test_payload(
+                root / "pkg" / f"dadooh-totem-core-{version}.tar.gz",
+                {"bin/totem_setup_visual_wizard.py": b"print('ok')\n"},
+            )
+            manifest_path = root / "pkg" / f"dadooh-totem-core-{version}.manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest(version, sha=updatectl._sha256_file(payload)), sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            outside = root / "outside-stage-target"
+            outside.mkdir()
+            stage = updatectl.INCOMING_DIR / version
+            stage.parent.mkdir(parents=True, exist_ok=True)
+            stage.symlink_to(outside, target_is_directory=True)
+
+            rc = updatectl._apply_from_manifest_path(
+                manifest_path,
+                payload_url=None,
+                source="local-test",
+                payload_path_override=payload,
+            )
+
+            self.assertEqual(rc, 6)
+            self.assertFalse(stage.is_symlink())
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertFalse((updatectl.RELEASES_DIR / version).exists())
+
+    def test_totem_core_apply_rejects_release_symlink_and_cleans_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl.POLICY_FILE.parent.mkdir(parents=True)
+            updatectl.POLICY_FILE.write_text(json.dumps(policy(), sort_keys=True) + "\n", encoding="utf-8")
+            version = "core-release-symlink"
+            payload = write_test_payload(
+                root / "pkg" / f"dadooh-totem-core-{version}.tar.gz",
+                {"bin/totem_setup_visual_wizard.py": b"print('ok')\n"},
+            )
+            manifest_path = root / "pkg" / f"dadooh-totem-core-{version}.manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest(version, sha=updatectl._sha256_file(payload)), sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            outside = root / "outside-release-target"
+            outside.mkdir()
+            release = updatectl.RELEASES_DIR / version
+            release.parent.mkdir(parents=True, exist_ok=True)
+            release.symlink_to(outside, target_is_directory=True)
+
+            rc = updatectl._apply_from_manifest_path(
+                manifest_path,
+                payload_url=None,
+                source="local-test",
+                payload_path_override=payload,
+            )
+
+            self.assertEqual(rc, 7)
+            self.assertFalse(release.is_symlink())
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertFalse((updatectl.INCOMING_DIR / version).exists())
+
+    def test_safe_extract_tar_normalizes_archive_permissions_and_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = root / "unsafe-mode.tar.gz"
+            with tarfile.open(payload, "w:gz") as tf:
+                executable = tarfile.TarInfo("run.sh")
+                executable.mode = 0o4777
+                executable.uid = 1234
+                executable.gid = 5678
+                executable.mtime = 4102444800
+                content = b"#!/bin/sh\nexit 0\n"
+                executable.size = len(content)
+                tf.addfile(executable, fileobj=io.BytesIO(content))
+
+                data = tarfile.TarInfo("config.json")
+                data.mode = 0o666
+                content = b"{}\n"
+                data.size = len(content)
+                tf.addfile(data, fileobj=io.BytesIO(content))
+
+            dest = root / "dest"
+            updatectl._safe_extract_tar(payload, dest)
+
+            self.assertEqual(os.stat(dest / "run.sh").st_mode & 0o7777, 0o755)
+            self.assertEqual(os.stat(dest / "config.json").st_mode & 0o7777, 0o644)
+            self.assertEqual(int(os.stat(dest / "run.sh").st_mtime), 0)
+
+    def test_manifest_asset_download_is_size_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            old_max_bytes = updatectl.SAFE_METADATA_MAX_BYTES
+            try:
+                updatectl.SAFE_METADATA_MAX_BYTES = 3
+                with self.assertRaisesRegex(RuntimeError, "download exceeds size limit"):
+                    updatectl._download_manifest_asset(
+                        {
+                            "name": "manifest.json",
+                            "browser_download_url": "data:application/octet-stream;base64,YWJjZA==",
+                        },
+                        Path(tmp),
+                    )
+            finally:
+                updatectl.SAFE_METADATA_MAX_BYTES = old_max_bytes
+
+            self.assertFalse((Path(tmp) / "manifest.json").exists())
+
+    def test_safe_extract_tar_rejects_excessive_member_count_before_extracting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = write_test_payload(
+                root / "payload.tar.gz",
+                {"a.txt": b"a", "b.txt": b"b", "c.txt": b"c"},
+            )
+            dest = root / "dest"
+            old_max_members = updatectl.SAFE_TAR_MAX_MEMBERS
+            try:
+                updatectl.SAFE_TAR_MAX_MEMBERS = 2
+                with self.assertRaisesRegex(RuntimeError, "too many members"):
+                    updatectl._safe_extract_tar(payload, dest)
+            finally:
+                updatectl.SAFE_TAR_MAX_MEMBERS = old_max_members
+
+            self.assertFalse((dest / "a.txt").exists())
+            self.assertFalse((dest / "b.txt").exists())
+
+    def test_safe_extract_tar_rejects_expanded_size_limit_before_extracting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = write_test_payload(
+                root / "payload.tar.gz",
+                {"a.txt": b"12345", "b.txt": b"6789"},
+            )
+            dest = root / "dest"
+            old_max_bytes = updatectl.SAFE_TAR_MAX_EXPANDED_BYTES
+            try:
+                updatectl.SAFE_TAR_MAX_EXPANDED_BYTES = 8
+                with self.assertRaisesRegex(RuntimeError, "expanded size exceeds limit"):
+                    updatectl._safe_extract_tar(payload, dest)
+            finally:
+                updatectl.SAFE_TAR_MAX_EXPANDED_BYTES = old_max_bytes
+
+            self.assertFalse((dest / "a.txt").exists())
+            self.assertFalse((dest / "b.txt").exists())
+
+    def test_safe_extract_tar_rejects_insufficient_free_space_with_reserve_before_extracting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = write_test_payload(root / "payload.tar.gz", {"a.txt": b"12345678"})
+            dest = root / "dest"
+            old_disk_usage = updatectl.shutil.disk_usage
+            old_reserve = updatectl.SAFE_TAR_FREE_SPACE_RESERVE_BYTES
+
+            class FakeUsage:
+                free = 10
+
+            try:
+                updatectl.SAFE_TAR_FREE_SPACE_RESERVE_BYTES = 16
+                updatectl.shutil.disk_usage = lambda _path: FakeUsage()
+                with self.assertRaisesRegex(RuntimeError, "insufficient free space"):
+                    updatectl._safe_extract_tar(payload, dest)
+            finally:
+                updatectl.shutil.disk_usage = old_disk_usage
+                updatectl.SAFE_TAR_FREE_SPACE_RESERVE_BYTES = old_reserve
+
+            self.assertFalse((dest / "a.txt").exists())
 
 
 def _load_candidate_health():

@@ -1,0 +1,1654 @@
+{
+  "artifacts": {
+    "report": "c22_rapid_media_fault_trial_report.json",
+    "samples": "samples.ndjson"
+  },
+  "errors": [],
+  "evaluation": {
+    "checks": {
+      "api_500_condition_met": true,
+      "api_500_explicit_retaining_lkg_status": true,
+      "api_500_lkg_ipc_and_kms_observed": true,
+      "api_500_lkg_playback_remains_active": true,
+      "api_500_not_false_playlist_applied": true,
+      "empty_playlist_condition_met": true,
+      "empty_playlist_explicit_retaining_lkg_status": true,
+      "empty_playlist_lkg_ipc_and_kms_observed": true,
+      "empty_playlist_lkg_playback_remains_active": true,
+      "empty_playlist_not_false_playlist_applied": true,
+      "kiosk_process_stopped": true,
+      "kms_present_when_valid_media": true,
+      "mixed_condition_met": true,
+      "mixed_three_aliases_observed": true,
+      "mixed_transitions_observed": true,
+      "mixed_visual_changes_observed": true,
+      "no_persistent_raw_black_samples": true,
+      "production_player_healthy_after_restore": true,
+      "protected_path_identity_unchanged": true,
+      "recovery_condition_met": true,
+      "recovery_playlist_valid": true,
+      "sidecar_rebuild_condition_met": true,
+      "sidecar_rebuilt": true,
+      "status_mpv_aligned": true,
+      "status_mpv_mismatch_recovers_quickly": true,
+      "systemd_nrestarts_stable": true,
+      "systemd_restored_final": true,
+      "truncated_download_condition_met": true,
+      "truncated_download_explicit_retaining_lkg_status": true,
+      "truncated_download_lkg_ipc_and_kms_observed": true,
+      "truncated_download_lkg_playback_remains_active": true,
+      "truncated_download_not_false_playlist_applied": true
+    },
+    "counters": {
+      "kms_max_consecutive_raw_black_samples": 0,
+      "kms_raw_black_valid_media_samples": 0,
+      "kms_success_valid_media_samples": 20,
+      "mixed_kms_black_frames": null,
+      "mixed_kms_max_black_duration_ms": null,
+      "mixed_kms_unique_hashes": 6,
+      "mixed_mpv_alias_changes": 8,
+      "mixed_mpv_unique_aliases": 3,
+      "mixed_status_unique_aliases": 3,
+      "status_mpv_comparable_samples": 21,
+      "status_mpv_max_consecutive_mismatch": 2,
+      "status_mpv_mismatch_allowed": 8,
+      "status_mpv_mismatch_ceiling": 8,
+      "status_mpv_mismatch_samples": 6,
+      "status_mpv_valid_transitions": 16
+    },
+    "failure_reasons": [],
+    "passed": true,
+    "warnings": [
+      "continuous_kms_unavailable_across_drm_format_change"
+    ]
+  },
+  "failure_reasons": [],
+  "finished_at_utc": "2026-07-10T04:52:33Z",
+  "http_fixture": {
+    "counts": {
+      "GET:mixed": 3,
+      "GET:recovery": 2,
+      "GET:truncated_download": 1,
+      "POST:api_500": 1,
+      "POST:empty_playlist": 1,
+      "POST:mixed": 3,
+      "POST:recovery": 2,
+      "POST:sidecar_rebuild": 2,
+      "POST:truncated_download": 1
+    },
+    "total": 16
+  },
+  "isolation": {
+    "backend": "127.0.0.1 fixture only",
+    "data_mutation_policy": "candidate_tmp_only; restored services may update operational timestamps",
+    "output_dir_alias": "<path:b6c24eded911>",
+    "real_config_content_read": false,
+    "work_dir_alias": "<path:4d977f30c7ba>"
+  },
+  "passed": true,
+  "process_stop": {
+    "elapsed_ms": 619,
+    "method": "sigterm",
+    "returncode": 0
+  },
+  "scenario_results": {
+    "api_500": {
+      "condition_met": true,
+      "condition_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 1,
+        "content_stale": true,
+        "content_stale_reason": "api_error",
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-40b54e20a675",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:4c4af530c4de>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": "present",
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>"
+        },
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "api_error_retaining_last_known_good",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "final_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 1,
+        "content_stale": true,
+        "content_stale_reason": "api_error",
+        "content_state": "playing",
+        "current_index": 1,
+        "current_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": "present",
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-18b744fe76ea",
+          "duration_ms": 1200,
+          "path_alias": "<path:83c45711fd16>"
+        },
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "api_error_retaining_last_known_good",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "finished_at_utc": "2026-07-10T04:51:55Z",
+      "started_at_utc": "2026-07-10T04:51:51Z"
+    },
+    "empty_playlist": {
+      "condition_met": true,
+      "condition_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": true,
+        "content_stale_reason": "api_empty_playlist",
+        "content_state": "playing",
+        "current_index": 2,
+        "current_item": {
+          "alias": "media-18b744fe76ea",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:83c45711fd16>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-40b54e20a675",
+          "duration_ms": 1200,
+          "path_alias": "<path:4c4af530c4de>"
+        },
+        "pending_playlist_size": 0,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "api_empty_retaining_last_known_good",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "final_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": true,
+        "content_stale_reason": "api_empty_playlist",
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-40b54e20a675",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:4c4af530c4de>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>"
+        },
+        "pending_playlist_size": 0,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "api_empty_retaining_last_known_good",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "finished_at_utc": "2026-07-10T04:51:57Z",
+      "started_at_utc": "2026-07-10T04:51:55Z"
+    },
+    "mixed": {
+      "condition_met": true,
+      "condition_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": false,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-40b54e20a675",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:4c4af530c4de>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>"
+        },
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "playlist_applied",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "continuous_kms": {
+        "elapsed_ms": 1767,
+        "error": "continuous_kmsgrab_failed",
+        "result": "error",
+        "stderr_alias": "stderr-fdc76d477705",
+        "stderr_excerpt": "[kmsgrab @ 0xaaab17d65410] Plane 38 framebuffer format changed: now 34325241.\n[hwdownload @ 0xaaab17d4bb30] Invalid output format bgra for hwframe download.\n[Parsed_hwdownload_0 @ 0xaaab17d69f00] Failed to configure output pad on Parsed_hwdownload_0\nError reinitializing filters!\nFailed to inject frame into filter network: Invalid argument\nError while processing the decoded data for stream #0:0"
+      },
+      "final_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": false,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-40b54e20a675",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:4c4af530c4de>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>"
+        },
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "checking",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "finished_at_utc": "2026-07-10T04:51:51Z",
+      "started_at_utc": "2026-07-10T04:51:30Z"
+    },
+    "recovery": {
+      "condition_met": true,
+      "condition_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": false,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-39077c988ddc",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:fb8c2d524ec0>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-b069351ccae7",
+          "duration_ms": 1200,
+          "path_alias": "<path:a1628611254f>"
+        },
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 2,
+        "playlist_update_state": "playlist_applied",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "final_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": false,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-39077c988ddc",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:fb8c2d524ec0>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-b069351ccae7",
+          "duration_ms": 1200,
+          "path_alias": "<path:a1628611254f>"
+        },
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 2,
+        "playlist_update_state": "playlist_unchanged",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "finished_at_utc": "2026-07-10T04:52:19Z",
+      "started_at_utc": "2026-07-10T04:52:09Z"
+    },
+    "sidecar_rebuild": {
+      "condition_met": true,
+      "condition_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": false,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-e8eeef6ddabb",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:0457c82a0b86>",
+          "source_path_alias": "<path:d29e2d58c422>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {},
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 1,
+        "playlist_update_state": "playlist_applied",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "final_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": false,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-e8eeef6ddabb",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:0457c82a0b86>",
+          "source_path_alias": "<path:d29e2d58c422>",
+          "started_at_present": true
+        },
+        "failed_media_count": 0,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {},
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 1,
+        "playlist_update_state": "checking",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "finished_at_utc": "2026-07-10T04:52:07Z",
+      "started_at_utc": "2026-07-10T04:51:59Z"
+    },
+    "truncated_download": {
+      "condition_met": true,
+      "condition_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": true,
+        "content_stale_reason": "playlist_download_incomplete",
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-40b54e20a675",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:4c4af530c4de>",
+          "started_at_present": true
+        },
+        "failed_media_count": 1,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>"
+        },
+        "pending_playlist_size": 1,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "download_incomplete_retaining_last_known_good",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "final_status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": true,
+        "content_stale_reason": "playlist_download_incomplete",
+        "content_state": "playing",
+        "current_index": 1,
+        "current_item": {
+          "alias": "media-6b9a3ebcb7b4",
+          "duration_ms": 1200,
+          "offset_ms": 0,
+          "path_alias": "<path:e3303449b9e7>",
+          "source_path_alias": "<path:14cd196d0c8b>",
+          "started_at_present": true
+        },
+        "failed_media_count": 1,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {
+          "alias": "media-18b744fe76ea",
+          "duration_ms": 1200,
+          "path_alias": "<path:83c45711fd16>"
+        },
+        "pending_playlist_size": 1,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 3,
+        "playlist_update_state": "download_incomplete_retaining_last_known_good",
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "finished_at_utc": "2026-07-10T04:51:59Z",
+      "started_at_utc": "2026-07-10T04:51:57Z"
+    }
+  },
+  "schema": "dadooh.c22.rapid_media_fault_trial.v1",
+  "sidecar": {
+    "after_sha256": "717d594e715f8db6cfea9b61eda158f55e80f9b16af7059f1ff314f3d84cabb1",
+    "before_sha256": "caef77f367c2e7a4027fc258c26457608a429f5f1d9afb0e234d138690589136",
+    "ffprobe_h264_ok": true,
+    "first_frame_decode_ok": true,
+    "rebuilt": true,
+    "sidecar_alias": "<path:0457c82a0b86>",
+    "source_alias": "<path:d29e2d58c422>"
+  },
+  "snapshot": {
+    "forbidden_after": {
+      "path-4190313bbd0d": {
+        "exists": false
+      },
+      "path-459d7e333fd1": {
+        "exists": true,
+        "kind": "file",
+        "mode": "0o644",
+        "mtime_ns": 1783659141808263245,
+        "size": 1507
+      },
+      "path-512d0b5a3f4b": {
+        "exists": false
+      },
+      "path-5d20f175f9a6": {
+        "exists": true,
+        "kind": "symlink",
+        "mode": "0o777",
+        "mtime_ns": 1783572904260610717,
+        "size": 68,
+        "target_alias": "target-7bee0fa597a7"
+      },
+      "path-73e5b5d65697": {
+        "exists": true,
+        "kind": "directory",
+        "mode": "0o750",
+        "mtime_ns": 1783570709859213237,
+        "size": 4096
+      },
+      "path-7e7a38493994": {
+        "exists": true,
+        "kind": "symlink",
+        "mode": "0o777",
+        "mtime_ns": 1783572904256610707,
+        "size": 66,
+        "target_alias": "target-e46b4bc526bd"
+      },
+      "path-b81b5415603e": {
+        "exists": false
+      },
+      "path-bb56504c55e7": {
+        "exists": false
+      },
+      "path-f4dcb78323c2": {
+        "exists": true,
+        "kind": "directory",
+        "mode": "0o750",
+        "mtime_ns": 1783659147592274219,
+        "size": 4096
+      },
+      "path-f5e33eaf3be1": {
+        "exists": true,
+        "kind": "directory",
+        "mode": "0o755",
+        "mtime_ns": 1783312161312247810,
+        "size": 4096
+      }
+    },
+    "forbidden_before": {
+      "path-4190313bbd0d": {
+        "exists": false
+      },
+      "path-459d7e333fd1": {
+        "exists": true,
+        "kind": "file",
+        "mode": "0o644",
+        "mtime_ns": 1783659014912002299,
+        "size": 1507
+      },
+      "path-512d0b5a3f4b": {
+        "exists": false
+      },
+      "path-5d20f175f9a6": {
+        "exists": true,
+        "kind": "symlink",
+        "mode": "0o777",
+        "mtime_ns": 1783572904260610717,
+        "size": 68,
+        "target_alias": "target-7bee0fa597a7"
+      },
+      "path-73e5b5d65697": {
+        "exists": true,
+        "kind": "directory",
+        "mode": "0o750",
+        "mtime_ns": 1783570709859213237,
+        "size": 4096
+      },
+      "path-7e7a38493994": {
+        "exists": true,
+        "kind": "symlink",
+        "mode": "0o777",
+        "mtime_ns": 1783572904256610707,
+        "size": 66,
+        "target_alias": "target-e46b4bc526bd"
+      },
+      "path-b81b5415603e": {
+        "exists": false
+      },
+      "path-bb56504c55e7": {
+        "exists": false
+      },
+      "path-f4dcb78323c2": {
+        "exists": true,
+        "kind": "directory",
+        "mode": "0o750",
+        "mtime_ns": 1783659075296132431,
+        "size": 4096
+      },
+      "path-f5e33eaf3be1": {
+        "exists": true,
+        "kind": "directory",
+        "mode": "0o755",
+        "mtime_ns": 1783312161312247810,
+        "size": 4096
+      }
+    },
+    "kiosk_path_alias": "<path:3f91e085eef8>",
+    "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+    "mpv_path_alias": "<path:6de21096d9af>",
+    "public_initial": {
+      "collected_at_utc": "2026-07-10T04:51:30Z",
+      "forbidden_paths_stat_only": {
+        "path-4190313bbd0d": {
+          "exists": false
+        },
+        "path-459d7e333fd1": {
+          "exists": true,
+          "kind": "file",
+          "mode": "0o644",
+          "mtime_ns": 1783659014912002299,
+          "size": 1507
+        },
+        "path-512d0b5a3f4b": {
+          "exists": false
+        },
+        "path-5d20f175f9a6": {
+          "exists": true,
+          "kind": "symlink",
+          "mode": "0o777",
+          "mtime_ns": 1783572904260610717,
+          "size": 68,
+          "target_alias": "target-7bee0fa597a7"
+        },
+        "path-73e5b5d65697": {
+          "exists": true,
+          "kind": "directory",
+          "mode": "0o750",
+          "mtime_ns": 1783570709859213237,
+          "size": 4096
+        },
+        "path-7e7a38493994": {
+          "exists": true,
+          "kind": "symlink",
+          "mode": "0o777",
+          "mtime_ns": 1783572904256610707,
+          "size": 66,
+          "target_alias": "target-e46b4bc526bd"
+        },
+        "path-b81b5415603e": {
+          "exists": false
+        },
+        "path-bb56504c55e7": {
+          "exists": false
+        },
+        "path-f4dcb78323c2": {
+          "exists": true,
+          "kind": "directory",
+          "mode": "0o750",
+          "mtime_ns": 1783659089956164024,
+          "size": 4096
+        },
+        "path-f5e33eaf3be1": {
+          "exists": true,
+          "kind": "directory",
+          "mode": "0o755",
+          "mtime_ns": 1783312161312247810,
+          "size": 4096
+        }
+      },
+      "production_status_public": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": null,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-20198b0e7dd7",
+          "duration_ms": 5000,
+          "offset_ms": 0,
+          "path_alias": "<path:86e9211dbe4e>",
+          "source_path_alias": "<path:f9cc45235140>",
+          "started_at_present": true
+        },
+        "failed_media_count": null,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {},
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 1,
+        "playlist_update_state": null,
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "real_config_content_read": false,
+      "unit_state_before_quiesce": {
+        "kiosky-player.service": {
+          "active_state": "active",
+          "load_state": "loaded",
+          "name": "kiosky-player.service",
+          "nrestarts": 0,
+          "sub_state": "running",
+          "unit_file_state": "enabled"
+        },
+        "totem-player-runtime-update-agent.service": {
+          "active_state": "failed",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "failed",
+          "unit_file_state": "static"
+        },
+        "totem-player-runtime-update-agent.timer": {
+          "active_state": "active",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "waiting",
+          "unit_file_state": "enabled"
+        },
+        "totem-update-agent.service": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "dead",
+          "unit_file_state": "static"
+        },
+        "totem-update-agent.timer": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "dead",
+          "unit_file_state": "enabled"
+        }
+      }
+    }
+  },
+  "started_at_utc": "2026-07-10T04:51:19Z",
+  "systemd": {
+    "actions": [
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.timer",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-aa613b9c3266"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.timer",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-63ac40cacc4e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-18573fd42bce"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-91c706188c13"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "stop",
+          "totem-update-agent.timer"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": ""
+      },
+      {
+        "args": [
+          "systemctl",
+          "stop",
+          "totem-player-runtime-update-agent.timer"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": ""
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-18573fd42bce"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-91c706188c13"
+      },
+      {
+        "args": [
+          "systemctl",
+          "stop",
+          "kiosky-player.service"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": ""
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.timer",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-aa613b9c3266"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.timer",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-aa613b9c3266"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-18573fd42bce"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-91c706188c13"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-081b1bc68af3"
+      },
+      {
+        "args": [
+          "systemctl",
+          "start",
+          "kiosky-player.service"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": ""
+      },
+      {
+        "args": [
+          "systemctl",
+          "start",
+          "totem-player-runtime-update-agent.timer"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": ""
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.timer",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-aa613b9c3266"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.timer",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-63ac40cacc4e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-18573fd42bce"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "totem-player-runtime-update-agent.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-91c706188c13"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      },
+      {
+        "args": [
+          "systemctl",
+          "show",
+          "kiosky-player.service",
+          "-p",
+          "ActiveState",
+          "-p",
+          "SubState",
+          "-p",
+          "LoadState",
+          "-p",
+          "UnitFileState",
+          "-p",
+          "NRestarts"
+        ],
+        "returncode": 0,
+        "stderr_alias": "",
+        "stdout_alias": "stdout-f5969d92585e"
+      }
+    ],
+    "nrestarts_delta": 0,
+    "post_restore_health": {
+      "expected_running": true,
+      "ipc": {
+        "current_alias": "<path:86e9211dbe4e>",
+        "duration": 0.04,
+        "elapsed_ms": 3,
+        "eof_reached": false,
+        "error": "",
+        "estimated_frame_number": 0,
+        "filename_alias": "<name:7679da8580a9>",
+        "hwdec_current": "v4l2request-copy",
+        "idle_active": false,
+        "path_alias": "<path:86e9211dbe4e>",
+        "pause": false,
+        "percent_pos": 0.0,
+        "property_errors": {
+          "duration": "success",
+          "eof-reached": "success",
+          "estimated-frame-number": "success",
+          "filename": "success",
+          "hwdec-current": "success",
+          "idle-active": "success",
+          "path": "success",
+          "pause": "success",
+          "percent-pos": "success",
+          "time-pos": "success",
+          "video-params": "success",
+          "vo-configured": "success"
+        },
+        "result": "success",
+        "time_pos": 0.0,
+        "video_params": {
+          "aspect": 2.057878,
+          "dh": 622,
+          "dw": 1280,
+          "h": 622,
+          "par": 1.0,
+          "pixelformat": "nv12",
+          "rotate": 0,
+          "w": 1280
+        },
+        "vo_configured": true
+      },
+      "kms": {
+        "bytes": 3145728,
+        "elapsed_ms": 1291,
+        "error": "",
+        "luma_avg": 7.321,
+        "raw_black": false,
+        "result": "success",
+        "sampled_pixels": 4096,
+        "sha256": "7dc8b9247e2dd066afc8e4689007efd37aa5cf32b0e71e2703ba33d1fb63e449"
+      },
+      "passed": true,
+      "service_active": true,
+      "status": {
+        "black_screen_risk_reason": null,
+        "blocked_media_count": 0,
+        "consecutive_failures": 0,
+        "content_stale": null,
+        "content_stale_reason": null,
+        "content_state": "playing",
+        "current_index": 0,
+        "current_item": {
+          "alias": "media-20198b0e7dd7",
+          "duration_ms": 5000,
+          "offset_ms": 0,
+          "path_alias": "<path:86e9211dbe4e>",
+          "source_path_alias": "<path:f9cc45235140>",
+          "started_at_present": true
+        },
+        "failed_media_count": null,
+        "first_content_load_accepted": true,
+        "first_frame_ready": true,
+        "last_poll_error": null,
+        "last_render_error": null,
+        "mpv_running": true,
+        "next_item": {},
+        "pending_playlist_size": null,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "playlist_size": 1,
+        "playlist_update_state": null,
+        "present": true,
+        "startup_phase": "playing"
+      },
+      "status_fresh": true
+    },
+    "restoration": {
+      "after_stop": {
+        "kiosky-player.service": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "kiosky-player.service",
+          "nrestarts": 0,
+          "sub_state": "dead",
+          "unit_file_state": "enabled"
+        },
+        "totem-player-runtime-update-agent.service": {
+          "active_state": "failed",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "failed",
+          "unit_file_state": "static"
+        },
+        "totem-player-runtime-update-agent.timer": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "dead",
+          "unit_file_state": "enabled"
+        },
+        "totem-update-agent.service": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "dead",
+          "unit_file_state": "static"
+        },
+        "totem-update-agent.timer": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "dead",
+          "unit_file_state": "enabled"
+        }
+      },
+      "attempted": true,
+      "final": {
+        "kiosky-player.service": {
+          "active_state": "active",
+          "load_state": "loaded",
+          "name": "kiosky-player.service",
+          "nrestarts": 0,
+          "sub_state": "running",
+          "unit_file_state": "enabled"
+        },
+        "totem-player-runtime-update-agent.service": {
+          "active_state": "failed",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "failed",
+          "unit_file_state": "static"
+        },
+        "totem-player-runtime-update-agent.timer": {
+          "active_state": "active",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "waiting",
+          "unit_file_state": "enabled"
+        },
+        "totem-update-agent.service": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "dead",
+          "unit_file_state": "static"
+        },
+        "totem-update-agent.timer": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "dead",
+          "unit_file_state": "enabled"
+        }
+      },
+      "initial": {
+        "kiosky-player.service": {
+          "active_state": "active",
+          "load_state": "loaded",
+          "name": "kiosky-player.service",
+          "nrestarts": 0,
+          "sub_state": "running",
+          "unit_file_state": "enabled"
+        },
+        "totem-player-runtime-update-agent.service": {
+          "active_state": "failed",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "failed",
+          "unit_file_state": "static"
+        },
+        "totem-player-runtime-update-agent.timer": {
+          "active_state": "active",
+          "load_state": "loaded",
+          "name": "totem-player-runtime-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "waiting",
+          "unit_file_state": "enabled"
+        },
+        "totem-update-agent.service": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.service",
+          "nrestarts": 0,
+          "sub_state": "dead",
+          "unit_file_state": "static"
+        },
+        "totem-update-agent.timer": {
+          "active_state": "inactive",
+          "load_state": "loaded",
+          "name": "totem-update-agent.timer",
+          "nrestarts": null,
+          "sub_state": "dead",
+          "unit_file_state": "enabled"
+        }
+      },
+      "restored_active_state": true,
+      "started_units": [
+        "kiosky-player.service",
+        "totem-player-runtime-update-agent.timer"
+      ]
+    },
+    "service": "kiosky-player.service",
+    "timers": [
+      "totem-update-agent.timer",
+      "totem-player-runtime-update-agent.timer"
+    ]
+  },
+  "warnings": [
+    "continuous_kms_unavailable_across_drm_format_change"
+  ]
+}

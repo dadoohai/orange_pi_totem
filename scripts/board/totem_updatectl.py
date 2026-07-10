@@ -113,6 +113,11 @@ STATE_FILE = UPDATES_DIR / "state.json"
 LOG_DIR = DATA_ROOT / "logs"
 LOG_FILE = LOG_DIR / "totem-update.log"
 LOG_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB
+SAFE_TAR_MAX_MEMBERS = 4096
+SAFE_TAR_MAX_COMPRESSED_BYTES = 128 * 1024 * 1024  # 128 MiB
+SAFE_TAR_MAX_EXPANDED_BYTES = 512 * 1024 * 1024  # 512 MiB
+SAFE_TAR_FREE_SPACE_RESERVE_BYTES = 128 * 1024 * 1024  # 128 MiB
+SAFE_METADATA_MAX_BYTES = 16 * 1024 * 1024  # 16 MiB
 
 TOKEN_FILE = Path(os.environ.get("TOTEM_DEVICE_GITHUB_TOKEN_FILE",
                                  "/data/secrets/github-release-token"))
@@ -343,14 +348,15 @@ def _http_get_json(url: str) -> Any:
 
 
 def _http_download(url: str, dest: Path,
-                   expected_sha256: Optional[str] = None) -> Tuple[int, str]:
+                   expected_sha256: Optional[str] = None,
+                   max_bytes: Optional[int] = None) -> Tuple[int, str]:
     """
     Stream-download `url` to `dest`. Returns (bytes_downloaded, sha256_hex).
     If expected_sha256 is provided and mismatch, raises and removes file.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
-    if tmp.exists():
+    if tmp.exists() or tmp.is_symlink():
         tmp.unlink()
 
     req = _build_request(url, accept="application/octet-stream")
@@ -360,6 +366,16 @@ def _http_download(url: str, dest: Path,
     try:
         with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT_S) as resp, \
              tmp.open("wb") as f:
+            content_length = resp.headers.get("Content-Length")
+            if max_bytes is not None and content_length:
+                try:
+                    declared_bytes = int(content_length)
+                except (TypeError, ValueError):
+                    declared_bytes = -1
+                if declared_bytes > max_bytes:
+                    raise RuntimeError(
+                        f"download exceeds size limit: declared={declared_bytes} limit={max_bytes}"
+                    )
             while True:
                 buf = resp.read(chunk)
                 if not buf:
@@ -367,18 +383,26 @@ def _http_download(url: str, dest: Path,
                 f.write(buf)
                 hasher.update(buf)
                 total += len(buf)
+                if max_bytes is not None and total > max_bytes:
+                    raise RuntimeError(
+                        f"download exceeds size limit: bytes={total} limit={max_bytes}"
+                    )
     except urllib.error.HTTPError as e:
-        if tmp.exists():
+        if tmp.exists() or tmp.is_symlink():
             tmp.unlink()
         raise HttpError(e.code, e.reason, _safe_url(url))
     except (urllib.error.URLError, socket.timeout, ssl.SSLError) as e:
-        if tmp.exists():
+        if tmp.exists() or tmp.is_symlink():
             tmp.unlink()
         raise RuntimeError(f"network error downloading {_safe_url(url)}: {e}")
+    except Exception:
+        if tmp.exists() or tmp.is_symlink():
+            tmp.unlink()
+        raise
 
     sha = hasher.hexdigest()
     if expected_sha256 and sha.lower() != expected_sha256.lower():
-        if tmp.exists():
+        if tmp.exists() or tmp.is_symlink():
             tmp.unlink()
         raise RuntimeError(
             f"sha256 mismatch downloading {_safe_url(url)}: "
@@ -395,6 +419,47 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             hasher.update(chunk)
     return hasher.hexdigest()
+
+
+def _stage_local_payload(source: Path, dest: Path, expected_sha256: str) -> Tuple[int, str]:
+    """Copy a local payload, then validate the exact staged bytes before use."""
+    source_stat = source.lstat()
+    if not stat.S_ISREG(source_stat.st_mode):
+        raise RuntimeError("local payload must be a regular file")
+    if source_stat.st_size > SAFE_TAR_MAX_COMPRESSED_BYTES:
+        raise RuntimeError(
+            "local payload exceeds compressed size limit: "
+            f"bytes={source_stat.st_size} limit={SAFE_TAR_MAX_COMPRESSED_BYTES}"
+        )
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    try:
+        if tmp.exists() or tmp.is_symlink():
+            tmp.unlink()
+        shutil.copyfile(source, tmp)
+        staged_bytes = tmp.stat().st_size
+        if staged_bytes > SAFE_TAR_MAX_COMPRESSED_BYTES:
+            raise RuntimeError(
+                "staged local payload exceeds compressed size limit: "
+                f"bytes={staged_bytes} limit={SAFE_TAR_MAX_COMPRESSED_BYTES}"
+            )
+        staged_sha = _sha256_file(tmp)
+        if staged_sha.lower() != expected_sha256.lower():
+            raise RuntimeError(
+                "staged local payload sha256 mismatch: "
+                f"expected={expected_sha256} actual={staged_sha}"
+            )
+        os.chmod(tmp, 0o600)
+        tmp.replace(dest)
+        return staged_bytes, staged_sha
+    except Exception:
+        try:
+            if tmp.exists() or tmp.is_symlink():
+                tmp.unlink()
+        except OSError:
+            pass
+        raise
 
 
 # ----------------------------------------------------------------------------
@@ -421,6 +486,19 @@ def _cleanup_stage(stage: Path) -> None:
         if not (stage.exists() or stage.is_symlink()):
             return
         incoming = INCOMING_DIR.resolve()
+        if stage.absolute() == INCOMING_DIR.absolute():
+            log("WARN", "stage_cleanup_refused_incoming_root", path=str(stage))
+            return
+        if stage.is_symlink():
+            parent = stage.parent.resolve()
+            try:
+                parent.relative_to(incoming)
+            except ValueError:
+                log("WARN", "stage_cleanup_refused_outside_incoming", path=str(stage))
+                return
+            stage.unlink()
+            log("INFO", "stage_cleanup_ok", path=str(stage))
+            return
         target = stage.resolve()
         if target == incoming:
             log("WARN", "stage_cleanup_refused_incoming_root", path=str(stage))
@@ -437,6 +515,29 @@ def _cleanup_stage(stage: Path) -> None:
         log("INFO", "stage_cleanup_ok", path=str(stage))
     except Exception as e:
         log("WARN", "stage_cleanup_failed", path=str(stage), err=str(e))
+
+
+def _prepare_incoming_stage(name: str) -> Path:
+    """Create a fresh direct child of INCOMING_DIR without following symlinks."""
+    if not name or Path(name).name != name or name in {".", ".."}:
+        raise RuntimeError(f"unsafe incoming stage name: {name!r}")
+    INCOMING_DIR.mkdir(parents=True, exist_ok=True)
+    incoming = INCOMING_DIR.resolve()
+    stage = INCOMING_DIR / name
+    if stage.is_symlink() or (stage.exists() and not stage.is_dir()):
+        _cleanup_stage(stage)
+        raise RuntimeError(f"unsafe pre-existing incoming stage: {stage}")
+    if stage.exists():
+        _cleanup_stage(stage)
+    if stage.exists() or stage.is_symlink():
+        raise RuntimeError(f"incoming stage could not be reset: {stage}")
+    if stage.parent.resolve() != incoming:
+        raise RuntimeError(f"incoming stage parent escaped root: {stage}")
+    stage.mkdir(mode=0o700)
+    if stage.is_symlink() or stage.resolve().parent != incoming:
+        _cleanup_stage(stage)
+        raise RuntimeError(f"incoming stage escaped root after creation: {stage}")
+    return stage
 
 
 def _cleanup_unpromoted_release(release_dir: Path) -> None:
@@ -597,16 +698,34 @@ def _normalise_tar_member_name(name: str) -> str:
 
 
 def _safe_extract_tar(tar_path: Path, dest: Path, *, component: Optional[str] = None) -> None:
-    """Tar extraction that rejects traversal and anything except regular files/dirs."""
+    """Tar extraction that rejects unsafe metadata before extracting payload bytes."""
+    compressed_bytes = tar_path.stat().st_size
+    if compressed_bytes > SAFE_TAR_MAX_COMPRESSED_BYTES:
+        raise RuntimeError(
+            "tar payload compressed size exceeds limit: "
+            f"compressed={compressed_bytes} limit={SAFE_TAR_MAX_COMPRESSED_BYTES}"
+        )
     dest.mkdir(parents=True, exist_ok=True)
     dest_abs = dest.resolve()
     with tarfile.open(tar_path, mode="r:gz") as tf:
         members = []
-        for m in tf.getmembers():
+        expanded_bytes = 0
+        for m in tf:
+            if len(members) >= SAFE_TAR_MAX_MEMBERS:
+                raise RuntimeError(f"tar payload has too many members: limit={SAFE_TAR_MAX_MEMBERS}")
             if m.name.startswith("/") or ".." in Path(m.name).parts:
                 raise RuntimeError(f"unsafe tar member rejected: {m.name}")
             if not (m.isreg() or m.isdir()):
                 raise RuntimeError(f"unsupported tar member type: {m.name}")
+            if m.isreg():
+                if m.size < 0:
+                    raise RuntimeError(f"tar member has invalid size: {m.name}")
+                expanded_bytes += int(m.size)
+                if expanded_bytes > SAFE_TAR_MAX_EXPANDED_BYTES:
+                    raise RuntimeError(
+                        "tar payload expanded size exceeds limit: "
+                        f"expanded={expanded_bytes} limit={SAFE_TAR_MAX_EXPANDED_BYTES}"
+                    )
             normalised = _normalise_tar_member_name(m.name)
             if component == "totem-core":
                 if m.isdir() and normalised not in TOTEM_CORE_ALLOWED_TAR_DIRS:
@@ -619,8 +738,25 @@ def _safe_extract_tar(tar_path: Path, dest: Path, *, component: Optional[str] = 
                 target_abs.relative_to(dest_abs)
             except ValueError:
                 raise RuntimeError(f"tar member escapes dest: {m.name}")
+            # Release payloads are code/data, never a carrier for ownership or
+            # privilege bits supplied by the archive creator.
+            m.uid = 0
+            m.gid = 0
+            m.uname = ""
+            m.gname = ""
+            m.mode = 0o755 if m.isdir() or (m.mode & 0o111) else 0o644
+            m.mtime = 0
+            m.pax_headers = {}
             members.append(m)
-        tf.extractall(path=str(dest), members=members)
+        required_free = expanded_bytes + SAFE_TAR_FREE_SPACE_RESERVE_BYTES
+        free_bytes = shutil.disk_usage(dest_abs).free
+        if free_bytes < required_free:
+            raise RuntimeError(
+                "insufficient free space for tar extraction: "
+                f"free={free_bytes} required={required_free} "
+                f"expanded={expanded_bytes} reserve={SAFE_TAR_FREE_SPACE_RESERVE_BYTES}"
+            )
+        tf.extractall(path=str(dest), members=members, numeric_owner=True)
     # Ensure the non-root service user can traverse/read the extracted release.
     _make_world_traversable(dest)
     _fsync_release_tree(dest)
@@ -1672,10 +1808,12 @@ def _download_manifest_asset(asset: Dict[str, Any], dest_dir: Path) -> Path:
     if not isinstance(url, str) or not url:
         raise RuntimeError("manifest asset missing browser_download_url")
     name = _safe_stage_name(str(asset.get("name") or "manifest.json"))
+    if dest_dir.is_symlink():
+        raise RuntimeError("manifest destination directory must not be a symlink")
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / name
     log("INFO", "downloading_manifest", url=_safe_url(url), dest=str(dest))
-    _http_download(url, dest, expected_sha256=None)
+    _http_download(url, dest, expected_sha256=None, max_bytes=SAFE_METADATA_MAX_BYTES)
     return dest
 
 
@@ -1701,9 +1839,16 @@ def _download_named_asset(rel: Dict[str, Any], name: str, dest_dir: Path,
     url = asset.get("browser_download_url")
     if not isinstance(url, str) or not url:
         raise RuntimeError(f"asset {name} missing browser_download_url")
+    if dest_dir.is_symlink():
+        raise RuntimeError("asset destination directory must not be a symlink")
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / _safe_stage_name(name)
-    _http_download(url, dest, expected_sha256=expected_sha256)
+    _http_download(
+        url,
+        dest,
+        expected_sha256=expected_sha256,
+        max_bytes=SAFE_METADATA_MAX_BYTES,
+    )
     return dest
 
 
@@ -2001,20 +2146,16 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
     payload_name = manifest["payload"]
 
     # Stage payload
-    stage = INCOMING_DIR / version
-    stage.mkdir(parents=True, exist_ok=True)
+    try:
+        stage = _prepare_incoming_stage(version)
+    except Exception as e:
+        log("ERROR", "incoming_stage_prepare_failed", err=str(e), version=version)
+        return 6
     payload_local = stage / payload_name
 
     if payload_path_override is not None:
         try:
-            actual_sha = _sha256_file(payload_path_override)
-            if actual_sha.lower() != sha:
-                log("ERROR", "local_payload_sha256_mismatch",
-                    expected=sha, actual=actual_sha)
-                _cleanup_stage(stage)
-                return 6
-            shutil.copy2(payload_path_override, payload_local)
-            n = payload_local.stat().st_size
+            n, actual_sha = _stage_local_payload(payload_path_override, payload_local, sha)
         except Exception as e:
             log("ERROR", "local_payload_stage_failed", err=str(e))
             _cleanup_stage(stage)
@@ -2027,7 +2168,12 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
     else:
         log("INFO", "downloading_payload", version=version, dest=str(payload_local))
         try:
-            n, actual_sha = _http_download(payload_url, payload_local, expected_sha256=sha)
+            n, actual_sha = _http_download(
+                payload_url,
+                payload_local,
+                expected_sha256=sha,
+                max_bytes=SAFE_TAR_MAX_COMPRESSED_BYTES,
+            )
         except HttpError as e:
             log("ERROR", "payload_download_http_error", code=e.code, reason=e.reason)
             _cleanup_stage(stage)
@@ -2040,9 +2186,22 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
 
     # Extract
     release_dir = RELEASES_DIR / version
+    if release_dir.is_symlink() or release_dir.is_file():
+        log("ERROR", "unsafe_release_path_rejected", path=str(release_dir))
+        try:
+            release_dir.unlink()
+        except OSError:
+            pass
+        _cleanup_stage(stage)
+        return 7
     if release_dir.exists():
         log("WARN", "release_dir_exists_will_overwrite", path=str(release_dir))
-        shutil.rmtree(release_dir)
+        try:
+            shutil.rmtree(release_dir)
+        except OSError as e:
+            log("ERROR", "release_dir_remove_failed", err=str(e))
+            _cleanup_stage(stage)
+            return 7
     release_dir.mkdir(parents=True, exist_ok=True)
     try:
         _safe_extract_tar(payload_local, release_dir, component=COMPONENT)
@@ -2209,24 +2368,27 @@ def _apply_player_runtime_from_manifest_path_unfrozen(
                 version=version, payload_sha256=sha, current=linked_target)
             return 0
         log("WARN", "player_runtime_current_marker_invalid_no_noop", reason=marker_reason)
-    stage = INCOMING_DIR / version
-    stage.mkdir(parents=True, exist_ok=True)
+    try:
+        stage = _prepare_incoming_stage(version)
+    except Exception as e:
+        log("ERROR", "incoming_stage_prepare_failed", err=str(e), version=version)
+        return 6
     payload_local = stage / payload_name
 
     try:
         if payload_path_override is not None:
-            actual_sha = _sha256_file(payload_path_override)
-            if actual_sha.lower() != sha:
-                log("ERROR", "local_payload_sha256_mismatch", expected=sha, actual=actual_sha)
-                _cleanup_stage(stage)
-                return 6
-            shutil.copy2(payload_path_override, payload_local)
+            _stage_local_payload(payload_path_override, payload_local, sha)
         elif payload_url is None:
             log("ERROR", "apply_failed_no_payload_url")
             _cleanup_stage(stage)
             return 5
         else:
-            _http_download(payload_url, payload_local, expected_sha256=sha)
+            _http_download(
+                payload_url,
+                payload_local,
+                expected_sha256=sha,
+                max_bytes=SAFE_TAR_MAX_COMPRESSED_BYTES,
+            )
     except Exception as e:
         log("ERROR", "player_runtime_payload_stage_failed", err=str(e))
         _cleanup_stage(stage)
@@ -3073,7 +3235,11 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
         tmp = tempfile.TemporaryDirectory(prefix="totem-update-apply-dry-run-")
         stage = Path(tmp.name)
     else:
-        stage = INCOMING_DIR / f"github-select-{int(time.time())}"
+        try:
+            stage = _prepare_incoming_stage(f"github-select-{int(time.time())}")
+        except Exception as e:
+            log("ERROR", "github_stage_prepare_failed", err=str(e))
+            return 21
     try:
         try:
             selected = _gh_select_latest_release(args.repo, stage)
@@ -3151,7 +3317,14 @@ def cmd_apply_player_runtime_authorized(args: argparse.Namespace) -> int:
     _ensure_dirs()
 
     tmp = tempfile.TemporaryDirectory(prefix="totem-player-runtime-authorized-dry-run-") if args.dry_run else None
-    stage = Path(tmp.name) if tmp is not None else INCOMING_DIR / f"authorized-select-{int(time.time())}"
+    if tmp is not None:
+        stage = Path(tmp.name)
+    else:
+        try:
+            stage = _prepare_incoming_stage(f"authorized-select-{int(time.time())}")
+        except Exception as e:
+            log("ERROR", "player_runtime_authorized_stage_prepare_failed", err=str(e))
+            return 45
     try:
         try:
             rel = _gh_release_by_tag(repo, tag)
@@ -3253,12 +3426,20 @@ def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     # use safe_tag from URL basename
     base = manifest_url.rsplit("/", 1)[-1]
     safe = "".join(c for c in base if c.isalnum() or c in "._-") or "manual"
-    stage = INCOMING_DIR / f"manual-{int(time.time())}"
-    stage.mkdir(parents=True, exist_ok=True)
+    try:
+        stage = _prepare_incoming_stage(f"manual-{int(time.time())}")
+    except Exception as e:
+        log("ERROR", "manifest_url_stage_prepare_failed", err=str(e))
+        return 23
     manifest_dest = stage / safe
     try:
         try:
-            _http_download(manifest_url, manifest_dest, expected_sha256=None)
+            _http_download(
+                manifest_url,
+                manifest_dest,
+                expected_sha256=None,
+                max_bytes=SAFE_METADATA_MAX_BYTES,
+            )
         except HttpError as e:
             log("ERROR", "manifest_url_http_error", code=e.code, reason=e.reason)
             return 23
@@ -3463,6 +3644,15 @@ def cmd_rollback_player_runtime_authorized(args: argparse.Namespace) -> int:
 def cmd_reconcile(args: argparse.Namespace) -> int:
     configure_component(args.component)
     if COMPONENT == "player-runtime":
+        if not getattr(args, "_update_lock_held", False):
+            with _update_lock("reconcile:player-runtime") as locked:
+                if not locked:
+                    return 49
+                args._update_lock_held = True
+                try:
+                    return cmd_reconcile(args)
+                finally:
+                    args._update_lock_held = False
         allow_maintenance = bool(getattr(args, "allow_player_runtime_maintenance", False))
         if not allow_maintenance or os.environ.get(PLAYER_RUNTIME_RECONCILE_ENV) != "1":
             print(
