@@ -442,23 +442,23 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         auth = json.loads(PLAYER_RUNTIME_PRODUCTION_AUTOPULL_PATH.read_text(encoding="utf-8"))
         self.assertTrue(mod.validate_player_runtime_production_authorization(auth))
-        self.assertEqual(auth["version"], "c18.player-runtime-homolog-20260710-c22-c023eae")
+        self.assertEqual(auth["version"], "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c")
         self.assertEqual(
             auth["tag_name"],
-            "player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+            "player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
         )
-        self.assertEqual(auth["source_commit"], "c023eae869e781d0aee115aa247d04e196d58fbd")
+        self.assertEqual(auth["source_commit"], "fe4347c81ccc40218c4763fbde68badbd30de2a3")
         self.assertEqual(
             auth["payload_sha256"],
-            "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+            "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
         )
         self.assertEqual(
             auth["manifest_sha256"],
-            "040e26a8b6c4585acaa99d53a41bf818f70cf471ff9b195d3ff77cdeebb1a59e",
+            "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca",
         )
         self.assertEqual(
             auth["release_gate_sha256"],
-            "6f18bd3eb3e47ec23261a078028f9026f319b008dd712eb6415996c69f7dc860",
+            "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72",
         )
         self.assertEqual(auth["channel"], "homologation")
         self.assertFalse(auth["allow_latest"])

@@ -112,8 +112,8 @@ Este marco fecha quando temos:
 
 ### M5 - Auto-Pull Publico De `player-runtime`
 
-Status: mecanica exata fechada para C22 em 2026-07-10; correcao e limpeza de
-playback C23 fechadas na placa; publicacao/auto-pull C23 e prod8 pendentes.
+Status: mecanica exata fechada para C22 em 2026-07-10; correcao, placa e
+publicacao exata C23 fechadas; auto-pull C23 na imagem prod8 pendente.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
@@ -135,12 +135,12 @@ existir caminho publico por alvo exato, com:
 - no-op seguro;
 - timer ou execucao automatica sem harness lab.
 
-Estado final em 2026-07-10: o comando publico estreito
-`totem-updatectl apply-player-runtime-authorized` e o timer production estao
-presos por autorizacao e hashes ao C22
-`c18.player-runtime-homolog-20260710-c22-c023eae`. O caminho generico
+Estado atual em 2026-07-10: a autorizacao canonica no repo esta presa por hashes
+ao C23 `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`. A placa prod7
+ainda carrega no timer a autorizacao C22 embutida na imagem; ela so passa a
+buscar C23 depois da reancoragem prod8. O caminho generico
 `apply-github-latest --component player-runtime` continua congelado e a imagem
-`homologation` nao carrega essa autorizacao production.
+`homologation` nao carrega autorizacao production.
 
 Na placa prod7, o timer real buscou a tag remota exata, aplicou C22 a partir do
 bridge rollback-safe, fez no-op sem mutacao, voltou ao bridge por rollback
@@ -166,10 +166,11 @@ esta em
 O gate M5 preserva a claim mecanica historica e separa explicitamente a claim de
 limpeza para distribuicao.
 
-O proximo ponteiro de M5 e operacional: publicar o alvo C23 exato sem mover
-`latest`, reancorar a autorizacao production e provar o auto-pull remoto desse
-mesmo alvo. A imagem prod8 deve incorporar essa autorizacao e os ajustes de
-onboarding ja registrados; a prova local C23 nao os antecipa.
+O alvo C23 foi publicado por tag exata com tres assets rebaixados e verificados;
+`latest` permaneceu no `totem-core`. Evidencia:
+`docs/evidence/c18-update-validation/20260710T211259Z-c23-exact-publication/`.
+O proximo ponteiro de M5 e incorporar a autorizacao na prod8 e provar o
+auto-pull remoto desse mesmo alvo. A prova local C23 nao antecipa essa etapa.
 
 Atualizacao de implementacao em 2026-07-10: a preparacao off-board de M5 foi
 consolidada para o alvo C22. O repo agora possui:

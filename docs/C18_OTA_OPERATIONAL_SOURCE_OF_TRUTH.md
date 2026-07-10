@@ -172,23 +172,25 @@ Fila atual para consolidacao:
   amostras paralelas mantiveram o mesmo PID e fila de saida zero. A evidencia
   esta em
   `docs/evidence/c23-player-runtime-ipc-backpressure/20260710T195427Z-board-roundtrip/`.
-  Non-claims: C23 ainda nao foi publicado como exact-target remoto, reancorado
-  no auto-pull production ou incorporado a prod8.
-- Drift operacional observado em 2026-07-10: o timer de `player-runtime` da
-  placa lab segue ativo com autorizacao exata do alvo antigo `9bebaf1`. Como o
-  current e mais novo, o downgrade guard responde `rc=45` e preserva o player,
-  mas a unit periodica fica `failed`. O M5 deve substituir autorizacao e alvo do
-  timer de forma atomica agora que o sucessor C22 passou pacote/apply/rollback;
-  nao desabilitar a protecao para silenciar o erro.
-- Preparacao M5 off-board em 2026-07-10: o alvo passou a ser o C22
-  `c18.player-runtime-homolog-20260710-c22-c023eae`. A autorizacao canonica esta
-  em `scripts/board/player_runtime_production_autopull.json`; ela bloqueia
+  O target exato C23 foi publicado com tres assets e hashes remotos conferidos;
+  evidencia em
+  `docs/evidence/c18-update-validation/20260710T211259Z-c23-exact-publication/`.
+  Non-claims: o timer da placa prod7 ainda carrega a autorizacao C22; auto-pull
+  C23 no device e incorporacao a prod8 permanecem pendentes.
+- Drift operacional: o alvo antigo `9bebaf1` do timer foi substituido por C22
+  na prod7. Depois do apply lab C23, a placa executa C23 como `current`, mas o
+  timer production continua autorizado somente para C22 ate a prod8. A
+  protecao de downgrade permanece ativa; o ajuste deve trocar autorizacao e
+  imagem de forma atomica, sem desabilitar o guard.
+- Preparacao M5 off-board em 2026-07-10: o alvo canonico passou a ser o C23
+  `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`. A autorizacao esta em
+  `scripts/board/player_runtime_production_autopull.json`; ela bloqueia
   `latest`, prerelease e downgrade e esta presa aos hashes do pacote. A rota
   `publish_player_runtime_exact_target_release.sh` publica somente os tres
-  assets exatos sem mover GitHub `latest`. O novo gate M5 exige prova de
-  pre-alvo C21, auto-apply C22, no-op sem mutacao, rollback autorizado e
-  restauracao C22. O rollback autorizado tambem passou a reiniciar e verificar
-  o player antes de retornar sucesso.
+  assets exatos sem mover GitHub `latest`. A prova historica C22 cobre
+  auto-apply, no-op, rollback autorizado e restauracao. A nova prova production
+  C23 deve repetir esse round-trip a partir de uma imagem prod8 que carregue a
+  autorizacao C23.
 - Correcao de imagem M5: `prod-5` limpou o seed do player, mas a auditoria do
   artefato encontrou firstboot privado com Wi-Fi/senhas, servico lab habilitado,
   marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-5`
