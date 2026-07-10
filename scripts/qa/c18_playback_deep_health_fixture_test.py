@@ -337,6 +337,49 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertFalse(result["counters"]["estimated_frame_progressed"])
         self.assertGreater(result["counters"]["estimated_frame_trailing_nonprogress_steps"], 1)
 
+    def test_frame_progress_uses_mpv_item_while_status_lags_transition(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:b>"),
+            ],
+        )
+        rows = fixture.rows()
+        frames = ("100", "130", "160", "91", "", "24", "59", "91", "121", "151")
+        for row, frame in zip(rows, frames):
+            row["estimated_frame_number"] = frame
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertTrue(result["checks"]["playback_progressed"])
+        self.assertEqual(result["counters"]["estimated_frame_failed_segments"], 0)
+
+    def test_status_jitter_cannot_hide_frozen_mpv_frames(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for index, row in enumerate(rows):
+            row["estimated_frame_number"] = "275"
+            row["status_current_alias"] = f"media-status-{index % 2}"
+            row["status_path_alias"] = f"<media-path:status-{index % 2}>"
+            row["status_current_index"] = str(index % 2)
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertFalse(result["checks"]["playback_progressed"])
+        self.assertFalse(result["counters"]["estimated_frame_progressed"])
+
     def test_rejects_missing_frame_progress_evidence(self) -> None:
         fixture = self.with_case()
         rows = fixture.rows()

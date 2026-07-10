@@ -31,8 +31,9 @@ permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
 7. Rodar `rollback-player-runtime-authorized` para o bridge e coletar
    `rollback`.
 8. Rodar o mesmo rollback autorizado outra vez para restaurar C22 e coletar
-   `restored` com `--deep-health-duration-sec 600`. Essa janela deve comecar
-   depois do restore terminar.
+   `restored` com `--deep-health-duration-sec 600`. Depois do restore terminar,
+   aguardar o status declarar `playback_state=playing`, `mpv_running=true` e um
+   `current_item` presente; somente entao iniciar a janela continua.
 9. Copiar cada snapshot junto de seu diretorio `<fase>-deep-health`, sem
    separar os arquivos ou alterar nomes.
 10. Rodar `c18_player_runtime_production_autopull_evidence_gate.py` sobre as

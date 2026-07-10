@@ -573,7 +573,8 @@ def frame_progress_segments(rows: list[dict[str, str]]) -> list[list[float | Non
     previous_frame: float | None = None
 
     for row in rows:
-        key = playback_item_key(row)
+        # Frame counters come from MPV; the public status can lag a media switch.
+        key = mpv_item_key(row) or playback_item_key(row)
         frame_value = as_float(row.get("estimated_frame_number"))
         reset = (
             frame_value is not None
