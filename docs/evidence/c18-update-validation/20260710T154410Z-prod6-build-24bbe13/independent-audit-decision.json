@@ -1,0 +1,12 @@
+{
+  "artifact_disposition": "blocked_do_not_flash",
+  "blockers": [
+    "enabled_open_settings_service_calls_lab_policy_helper",
+    "clean_production_seed_can_make_lab_policy_preflight_fail"
+  ],
+  "image_sha256": "1d0e9348cd67e3b425abe461a150f2e27c9d4bf1a33dfe0146aaf82dd7f3edae",
+  "image_tag": "c18-hwdecode-prod-6",
+  "original_offline_validation": "passed_but_insufficient",
+  "replacement_required": "c18-hwdecode-prod-7",
+  "schema": "dadooh.c18.production_image_independent_audit_decision.v1"
+}

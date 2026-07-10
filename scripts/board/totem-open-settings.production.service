@@ -1,0 +1,19 @@
+[Unit]
+Description=Dadooh Open Totem Settings (production)
+After=kiosky-player.service totem-settings-trigger.service totem-visual-tty-guard.service
+Wants=totem-visual-tty-guard.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+TimeoutStopSec=20s
+KillSignal=SIGTERM
+KillMode=control-group
+Environment=TOTEM_VISUAL_WIZARD_PAIRING_MODE=production
+Environment=TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL=https://api-lbyvh5uf6q-uc.a.run.app
+ExecStartPre=/opt/totem/bin/totem_visual_tty_guard.sh --clear --tty 2
+ExecStartPre=/opt/totem/bin/totem_settings_production_apply_policy.py --write --policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings
+ExecStart=/opt/totem/bin/totem_open_settings_session.sh --mode interactive --expect any --tty 2 --timeout-sec 7200 --out-dir /tmp/dadooh-c10-6-2-open-settings/session --wizard-out-dir /tmp/dadooh-c10-6-2-visual-wizard --handoff-out-dir /tmp/dadooh-c10-6-2-handoff --writer-out-dir /tmp/dadooh-c10-6-2-writer --apply-policy-path /run/dadooh-settings/apply-policy.json --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --apply-mode policy --private-settings-context-path /data/state/totem-settings/last-settings.json
+ExecStopPost=/opt/totem/bin/totem_open_settings_cleanup.sh --reason service-stop-post --request-dir /run/dadooh-settings --lock-dir /run/totem/settings-session.lock --tty 2
+StandardOutput=null
+StandardError=null

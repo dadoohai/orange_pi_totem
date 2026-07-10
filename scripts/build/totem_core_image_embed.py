@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import re
+import tarfile
 import tempfile
 import time
 from pathlib import Path
@@ -18,6 +20,7 @@ TOTEM_CORE_VERSION = "c17.6-environment-input-20260514T211247Z"
 TOTEM_CORE_RELEASE_TAG = "totem-core-c17.6-environment-input-20260514T211247Z"
 TOTEM_CORE_PAYLOAD_SHA256 = "e6b643429709ba9f747d86bb113abc35ab9645da23216eb81455dbc2f5a9acb9"
 TOTEM_CORE_CREATED_AT_UTC = "2026-05-14T21:12:47Z"
+TOTEM_CORE_SOURCE_COMMIT = "2e023f1a7619ef8552c9d1ea5ecfb38815006e2c"
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
@@ -96,6 +99,7 @@ CORE_FILES = [
     "totem_status_render_preview.py",
     "totem_config_contract_validate.py",
     "totem_qr_pairing_client.py",
+    "totem_settings_production_apply_policy.py",
     "totem_open_settings_session.sh",
     "totem_visual_tty_guard.sh",
     "totem_firstboot_gate.sh",
@@ -125,8 +129,42 @@ IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
 ]
 
 
-def repo_head(path: Path) -> str:
-    return (base.run(["git", "-C", str(path), "rev-parse", "HEAD"]).stdout or "").strip()
+def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str]) -> dict[str, Any]:
+    release_dir = repo_root / "releases" / "core-updates" / TOTEM_CORE_VERSION
+    manifest_path = release_dir / f"dadooh-totem-core-{TOTEM_CORE_VERSION}.manifest.json"
+    payload_path = release_dir / f"dadooh-totem-core-{TOTEM_CORE_VERSION}.tar.gz"
+    if not manifest_path.is_file() or not payload_path.is_file():
+        raise RuntimeError("totem_core_embed_release_artifacts_missing")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected = {
+        "component": "totem-core",
+        "version": TOTEM_CORE_VERSION,
+        "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+        "payload_sha256": TOTEM_CORE_PAYLOAD_SHA256,
+        "created_at_utc": TOTEM_CORE_CREATED_AT_UTC,
+    }
+    if any(manifest.get(key) != value for key, value in expected.items()):
+        raise RuntimeError("totem_core_embed_manifest_identity_mismatch")
+    payload_sha = hashlib.sha256(payload_path.read_bytes()).hexdigest()
+    if payload_sha != TOTEM_CORE_PAYLOAD_SHA256:
+        raise RuntimeError("totem_core_embed_payload_sha256_mismatch")
+    with tarfile.open(payload_path, "r:gz") as archive:
+        members = {member.name.removeprefix("./"): member for member in archive.getmembers() if member.isfile()}
+        for core_file in core_files:
+            member = members.get(f"bin/{core_file}")
+            extracted = archive.extractfile(member) if member is not None else None
+            if extracted is None:
+                raise RuntimeError(f"totem_core_embed_payload_file_missing:{core_file}")
+            source = repo_root / "scripts" / "board" / core_file
+            if extracted.read() != source.read_bytes():
+                raise RuntimeError(f"totem_core_embed_payload_source_mismatch:{core_file}")
+    return {
+        "version": TOTEM_CORE_VERSION,
+        "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+        "payload_sha256": payload_sha,
+        "manifest": str(manifest_path.relative_to(repo_root)),
+        "payload": str(payload_path.relative_to(repo_root)),
+    }
 
 
 def write_file_commands(source: Path, target: str, mode_text: str = "0755") -> list[str]:
@@ -272,6 +310,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     embed = manifest.get("totem_core_image_embed") or {}
     core_files = list(embed.get("core_files") or CORE_FILES)
+    release_provenance = validate_totem_core_release_provenance(repo_root, core_files)
     current_target = str((embed.get("layout") or {}).get("current_target") or f"releases/{TOTEM_CORE_VERSION}")
     release_root = f"/data/core/totem/releases/{TOTEM_CORE_VERSION}"
     release_bin = f"{release_root}/bin"
@@ -414,6 +453,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
                     "python3 bin/totem_visual_splash.py --self-test",
                     "python3 bin/totem_config_contract_validate.py --self-test",
                     "python3 bin/totem_qr_pairing_client.py --self-test",
+                    "python3 bin/totem_settings_production_apply_policy.py --self-test",
                     "bash -n bin/totem_open_settings_session.sh",
                     "bash -n bin/totem_visual_tty_guard.sh",
                     "bash -n bin/totem_firstboot_gate.sh",
@@ -457,7 +497,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
                     "source": "image_embed",
                     "source_repo": "dadoohai/orange_pi_totem",
                     "source_branch": "foundation-v0.1",
-                    "source_commit": repo_head(repo_root),
+                    "source_commit": TOTEM_CORE_SOURCE_COMMIT,
                     "payload_sha256": TOTEM_CORE_PAYLOAD_SHA256,
                     "manifest_created_at_utc": TOTEM_CORE_CREATED_AT_UTC,
                 },
@@ -523,6 +563,7 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
         "totem_core_update_policy_source": str(profile_config["policy_file"]),
         "totem_core_update_timer_enabled": bool(profile_config["timer_enabled"]),
         "totem_core_embed_debugfs_output_lines": len(output.splitlines()),
+        "totem_core_release_provenance": release_provenance,
     }
 
 
@@ -604,6 +645,8 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         "totem_core_state_present": _is_file(rootfs, "/data/core/totem/state.json"),
         "totem_core_state_records_current_version": TOTEM_CORE_VERSION in state,
         "totem_core_state_records_created_at": TOTEM_CORE_CREATED_AT_UTC in state,
+        "totem_core_state_records_source_commit": TOTEM_CORE_SOURCE_COMMIT in state,
+        "totem_core_state_records_payload_sha256": TOTEM_CORE_PAYLOAD_SHA256 in state,
         "totem_core_release_health_present": _is_file(rootfs, f"{release_root}/health/totem-core-health.json"),
         "totem_core_release_fragment_present": _is_file(rootfs, f"{release_root}/manifest-fragment/totem-core.json"),
         "totem_core_updatectl_capable": "_totem_core_health_check" in updatectl and "_make_world_traversable" in updatectl,

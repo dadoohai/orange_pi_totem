@@ -174,10 +174,13 @@ consolidada para o alvo C22. O repo agora possui:
   marcadores de laboratorio e gera chaves SSH unicas no device.
 
 Auditoria do artefato `prod-5` encontrou firstboot privado, Wi-Fi/senhas de lab,
-marcadores contraditorios e chaves SSH clonadas herdados da base; ele esta
-bloqueado e preservado apenas como evidencia negativa. A referencia seguinte e
-`prod-6`. A release C22 ainda nao foi publicada nem a imagem gravada. O proximo
-limite real e construir/auditar `prod-6`, publicar o alvo exato sem mover
+marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-6`
+removeu esses itens, mas a auditoria encontrou o servico do wizard ainda
+chamando uma politica de homologacao; ambos estao bloqueados e preservados como
+evidencia negativa. A referencia seguinte e `prod-7`, com politica de producao
+para placa nova ou ja configurada e bloqueio executavel contra o helper lab. A
+release C22 ainda nao foi publicada nem a imagem gravada. O proximo limite real
+e construir/auditar `prod-7`, publicar o alvo exato sem mover
 `latest` e executar as cinco fases na placa. Nao repetir
 soak ou a matriz de power-loss nesta rodada; C22 mudou o payload do player, mas
 o objetivo M5 e provar a entrega automatica e seu retorno usando as evidencias

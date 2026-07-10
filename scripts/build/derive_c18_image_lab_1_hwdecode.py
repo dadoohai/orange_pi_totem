@@ -59,14 +59,20 @@ PRODUCTION_IDENTITY_UNIT_SOURCE = (
 PRODUCTION_SSH_DROPIN_SOURCE = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "ssh-production-identity.conf"
 )
+PRODUCTION_SETTINGS_POLICY_SOURCE = (
+    REPO_ROOT / "scripts" / "board" / "totem_settings_production_apply_policy.py"
+)
+PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE = (
+    REPO_ROOT / "scripts" / "board" / "totem-open-settings.production.service"
+)
 
 HWDIR = "/opt/totem/hwdecode"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-6"
-PRODUCTION_VERSION = "c18.image-prod.6"
+PRODUCTION_TAG = "c18-hwdecode-prod-7"
+PRODUCTION_VERSION = "c18.image-prod.7"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -79,6 +85,9 @@ PRODUCTION_IDENTITY_WANTS = (
     "/etc/systemd/system/multi-user.target.wants/totem-production-identity-init.service"
 )
 PRODUCTION_SSH_DROPIN = "/etc/systemd/system/ssh.service.d/10-dadooh-production-identity.conf"
+PRODUCTION_OPEN_SETTINGS_UNIT = "/etc/systemd/system/totem-open-settings.service"
+PRODUCTION_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_production_apply_policy.py"
+PRODUCTION_LAB_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_lab_apply_policy.sh"
 PRODUCTION_FORBIDDEN_LAB_PATHS = (
     "/root/.not_logged_in_yet",
     "/etc/dadooh/image-lab-firstboot-autoconfig.present",
@@ -91,6 +100,7 @@ PRODUCTION_FORBIDDEN_LAB_PATHS = (
     "/etc/systemd/system/multi-user.target.wants/totem-lab-firstboot-autoconfig.service",
     "/etc/systemd/system/totem-lab-firstboot-autoconfig.service",
     "/opt/totem/bin/totem_lab_firstboot_autoconfig.sh",
+    PRODUCTION_LAB_SETTINGS_POLICY,
     "/data/state/totem-settings/homologation-seed.enabled",
     "/data/state/totem-read-only-image-lab/integration.json",
 )
@@ -423,9 +433,25 @@ def main():
         PRODUCTION_IDENTITY_SCRIPT_SOURCE,
         PRODUCTION_IDENTITY_UNIT_SOURCE,
         PRODUCTION_SSH_DROPIN_SOURCE,
+        PRODUCTION_SETTINGS_POLICY_SOURCE,
+        PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE,
     ):
         if not p.exists():
             raise SystemExit(f"BLOCKED: missing_input {p}")
+    if args.image_profile == "production":
+        production_settings_unit_source = PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE.read_text(encoding="utf-8")
+        if (
+            "totem_settings_production_apply_policy.py --write" not in production_settings_unit_source
+            or "TOTEM_VISUAL_WIZARD_PAIRING_MODE=production" not in production_settings_unit_source
+            or "totem_settings_lab_apply_policy" in production_settings_unit_source
+            or "homologation" in production_settings_unit_source.lower()
+        ):
+            raise SystemExit("BLOCKED: production open-settings unit is not production-only")
+        production_settings_policy_test = sh(
+            [sys.executable, str(PRODUCTION_SETTINGS_POLICY_SOURCE), "--self-test"]
+        )
+        if production_settings_policy_test.returncode != 0:
+            raise SystemExit("BLOCKED: production settings policy self-test failed")
     if (OUT_IMAGE.exists() or OUT_SHA.exists()) and not args.force:
         raise SystemExit(f"output exists (use --force): {OUT_IMAGE}")
     L(f"base_image={BASE_IMAGE.name}")
@@ -540,6 +566,8 @@ def main():
         f"production_lab_artifacts_removed={str(args.image_profile == 'production').lower()}",
         f"production_ssh_host_keys_generated_on_device={str(args.image_profile == 'production').lower()}",
         f"production_shared_root_password_access_risk_accepted={str(args.image_profile == 'production').lower()}",
+        f"production_settings_policy_embedded={str(args.image_profile == 'production').lower()}",
+        f"production_lab_settings_policy_removed={str(args.image_profile == 'production').lower()}",
         "panfrost_rebind_service=installed",
         "c17_4_trace_dir=/run/totem/c17-4-firstboot",
         "supersedes=c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates) & 1t (golden delivery before post-M6 reconcile freeze hardware proof) & 1u (golden delivery before physical power-loss/soak/server-side gates)",
@@ -606,6 +634,7 @@ def main():
         put(str(PRODUCTION_IDENTITY_SCRIPT_SOURCE), PRODUCTION_IDENTITY_SCRIPT, "0755")
         put(str(PRODUCTION_IDENTITY_UNIT_SOURCE), PRODUCTION_IDENTITY_UNIT, "0644")
         put(str(PRODUCTION_SSH_DROPIN_SOURCE), PRODUCTION_SSH_DROPIN, "0644")
+        put(str(PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE), PRODUCTION_OPEN_SETTINGS_UNIT, "0644")
         cmds.append(f"rm {PRODUCTION_IDENTITY_WANTS}")
         cmds.append(f"symlink {PRODUCTION_IDENTITY_WANTS} {PRODUCTION_IDENTITY_UNIT}")
         for path in (*PRODUCTION_FORBIDDEN_LAB_PATHS, *PRODUCTION_EMBEDDED_SSH_HOST_KEYS):
@@ -674,6 +703,7 @@ def main():
     production_identity_script_now = base.cat_file(vroot, PRODUCTION_IDENTITY_SCRIPT) or ""
     production_identity_unit_now = base.cat_file(vroot, PRODUCTION_IDENTITY_UNIT) or ""
     production_ssh_dropin_now = base.cat_file(vroot, PRODUCTION_SSH_DROPIN) or ""
+    production_open_settings_unit_now = base.cat_file(vroot, PRODUCTION_OPEN_SETTINGS_UNIT) or ""
     totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot, profile=totem_core_profile)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
     player_runtime_gate = sh([
@@ -855,6 +885,27 @@ def main():
         "production_ssh_requires_identity_init": (
             present(PRODUCTION_SSH_DROPIN)
             and "Requires=totem-production-identity-init.service" in production_ssh_dropin_now
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_settings_policy_embedded_by_totem_core": (
+            present(PRODUCTION_SETTINGS_POLICY)
+            and execu(PRODUCTION_SETTINGS_POLICY)
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_open_settings_uses_production_policy": (
+            present(PRODUCTION_OPEN_SETTINGS_UNIT)
+            and "totem_settings_production_apply_policy.py --write" in production_open_settings_unit_now
+            and "TOTEM_VISUAL_WIZARD_PAIRING_MODE=production" in production_open_settings_unit_now
+            and "TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL=https://" in production_open_settings_unit_now
+            and "totem_settings_lab_apply_policy" not in production_open_settings_unit_now
+            and "homologation" not in production_open_settings_unit_now.lower()
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_lab_settings_policy_absent": (
+            not present(PRODUCTION_LAB_SETTINGS_POLICY)
             if args.image_profile == "production"
             else "n/a"
         ),

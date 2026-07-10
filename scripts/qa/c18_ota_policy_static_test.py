@@ -391,6 +391,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("player_runtime_authorization_matches_profile", embed)
         self.assertIn("player_runtime_update_agent_service_matches_profile", embed)
         self.assertIn("player_runtime_update_timer_matches_profile", embed)
+        self.assertIn("validate_totem_core_release_provenance", embed)
+        self.assertIn("totem_core_embed_payload_source_mismatch", embed)
+        self.assertIn("TOTEM_CORE_SOURCE_COMMIT", embed)
 
     def test_image_embed_has_explicit_production_profile(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")
@@ -504,8 +507,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-6"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.6"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-7"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.7"', derive)
         self.assertIn("validate_production_player_runtime_authorization", derive)
         self.assertIn("production_seed_sensitive_fields", derive)
         self.assertIn("production_seed_has_no_totem_identity_or_token", derive)
@@ -513,18 +516,27 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("production_ssh_host_keys_not_embedded", derive)
         self.assertIn("production_identity_init_unit_enabled", derive)
         self.assertIn("production_ssh_requires_identity_init", derive)
+        self.assertIn("production_open_settings_uses_production_policy", derive)
+        self.assertIn("production_lab_settings_policy_absent", derive)
         self.assertIn('"/root/.not_logged_in_yet"', derive)
         self.assertIn('"/etc/dadooh/c13-homologation-private-seed"', derive)
         self.assertIn('"/data/state/totem-read-only-image-lab/integration.json"', derive)
         identity_script = REPO_ROOT / "scripts" / "board" / "totem_production_identity_init.sh"
         identity_unit = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-production-identity-init.service"
         identity_dropin = REPO_ROOT / "scripts" / "board" / "systemd" / "ssh-production-identity.conf"
+        production_settings_policy = REPO_ROOT / "scripts" / "board" / "totem_settings_production_apply_policy.py"
+        production_settings_unit = REPO_ROOT / "scripts" / "board" / "totem-open-settings.production.service"
         self.assertTrue(identity_script.is_file())
         self.assertTrue(identity_unit.is_file())
         self.assertTrue(identity_dropin.is_file())
+        self.assertTrue(production_settings_policy.is_file())
+        self.assertTrue(production_settings_unit.is_file())
         self.assertIn("ssh-keygen -A", identity_script.read_text(encoding="utf-8"))
         self.assertIn("Before=ssh.service sshd.service", identity_unit.read_text(encoding="utf-8"))
         self.assertIn("Requires=totem-production-identity-init.service", identity_dropin.read_text(encoding="utf-8"))
+        self.assertIn("totem_settings_production_apply_policy.py --write", production_settings_unit.read_text(encoding="utf-8"))
+        self.assertIn("TOTEM_VISUAL_WIZARD_PAIRING_MODE=production", production_settings_unit.read_text(encoding="utf-8"))
+        self.assertNotIn("totem_settings_lab_apply_policy", production_settings_unit.read_text(encoding="utf-8"))
         self.assertIn("player_runtime_production_authorization_gate_passed", derive)
         self.assertNotIn("artifact_private; not_for_production", derive)
         self.assertIn('"--image-profile": "production"', wrapper)
@@ -536,11 +548,18 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
     def test_totem_core_ota_payload_excludes_player_launcher(self) -> None:
         build = BUILD_CORE_PATH.read_text(encoding="utf-8")
         release_gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        updatectl = UPDATECTL_PATH.read_text(encoding="utf-8")
         core_files_block = build.split("CORE_FILES=(", 1)[1].split(")", 1)[0]
         self.assertNotIn("kiosky_service_launcher.sh", core_files_block)
         self.assertNotIn("totem-kiosky-launcher.sh", core_files_block)
         self.assertNotIn("totem_appliance_status_snapshot.py", core_files_block)
         self.assertNotIn("c18_display_status_collect.py", core_files_block)
+        self.assertIn("totem_qr_pairing_client.py", core_files_block)
+        self.assertIn("totem_settings_production_apply_policy.py", core_files_block)
+        self.assertIn("TOTEM_CORE_OPTIONAL_BIN", updatectl)
+        self.assertIn('"totem_qr_pairing_client.py"', updatectl)
+        self.assertIn('"totem_settings_production_apply_policy.py"', updatectl)
+        self.assertIn("if (bin_dir / name).is_file()", updatectl)
         self.assertNotIn("python3 bin/totem_appliance_status_snapshot.py --self-test", build)
         self.assertNotIn("python3 bin/c18_display_status_collect.py --self-test", build)
         self.assertNotIn('"bin/totem_appliance_status_snapshot.py"', release_gate)

@@ -201,9 +201,16 @@ TOTEM_CORE_REQUIRED_BIN = (
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
 )
+TOTEM_CORE_OPTIONAL_BIN = (
+    # Added after the original C17.8 baseline. Keep optional for health so a
+    # governed rollback to an older, previously valid release remains possible.
+    "totem_qr_pairing_client.py",
+    "totem_settings_production_apply_policy.py",
+)
 TOTEM_CORE_ALLOWED_TAR_DIRS = frozenset(("", "bin", "health", "manifest-fragment"))
 TOTEM_CORE_ALLOWED_TAR_FILES = (
     frozenset(f"bin/{name}" for name in TOTEM_CORE_REQUIRED_BIN)
+    | frozenset(f"bin/{name}" for name in TOTEM_CORE_OPTIONAL_BIN)
     | frozenset({
         "health/totem-core-health.json",
         "manifest-fragment/totem-core.json",
@@ -2133,6 +2140,16 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
         ok, info = _run_health_cmd(cmd)
         if not ok:
             return False, info
+
+    optional_checks = (
+        ("totem_qr_pairing_client.py", ["/usr/bin/python3", str(bin_dir / "totem_qr_pairing_client.py"), "--self-test"]),
+        ("totem_settings_production_apply_policy.py", ["/usr/bin/python3", str(bin_dir / "totem_settings_production_apply_policy.py"), "--self-test"]),
+    )
+    for name, cmd in optional_checks:
+        if (bin_dir / name).is_file():
+            ok, info = _run_health_cmd(cmd)
+            if not ok:
+                return False, info
 
     ok, info = _restore_order_static_check(bin_dir)
     if not ok:

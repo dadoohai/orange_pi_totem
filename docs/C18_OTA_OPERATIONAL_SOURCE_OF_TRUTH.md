@@ -181,8 +181,11 @@ Fila atual para consolidacao:
 - Correcao de imagem M5: `prod-5` limpou o seed do player, mas a auditoria do
   artefato encontrou firstboot privado com Wi-Fi/senhas, servico lab habilitado,
   marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-5`
-  esta bloqueada. A referencia `prod-6` remove esses artefatos e gera chaves SSH
-  unicas no primeiro boot. Prod-1 a prod-5 nao sao distribuicao M5.
+  esta bloqueada. `prod-6` removeu esses artefatos e passou a gerar chaves SSH
+  unicas no primeiro boot, mas foi bloqueada porque o servico do wizard ainda
+  chamava a politica lab/homologacao. `prod-7` substitui esse caminho por
+  politica de producao fail-closed e remove o helper lab. Prod-1 a prod-6 nao
+  sao distribuicao M5.
 - Marco 3 imagem producao offline: fechado em 2026-07-05. O repo tem um
   builder explicito para imagem C18 producao e o build gerou
   `c18-hwdecode-prod-1` com `artifact_private=false`, `final_image=true`,
@@ -280,7 +283,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- construir e auditar `prod-6` com updater/autorizacao C22 e sem estado lab;
+- construir e auditar `prod-7` com updater/autorizacao C22, sem estado lab e
+  com o wizard usando politica de producao;
 - sincronizar branch/tag remotas e publicar os tres assets C22 sem mover
   `latest`;
 - gravar a imagem na placa e preparar C21 como estado anterior controlado;
