@@ -31,6 +31,9 @@ restart, recovery, then recurrence minutes later.
   signature.
 - `incident-summary.json`: read-only incident collector output.
 - `live-state-after-event.txt`: player/OTA state after recovery.
+- `m5-current-gate-recheck.json`: current gate re-evaluation preserving the
+  exact OTA mechanics result while blocking product cleanliness for the short
+  final window.
 
 ## Non-claims
 

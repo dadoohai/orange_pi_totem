@@ -714,7 +714,10 @@ remoto. A imagem production valida a autorizacao contra os artefatos antes do
 build; remove firstboot, Wi-Fi/identidade/marcadores de laboratorio e host keys
 herdadas; e gera chaves SSH unicas no primeiro boot. A prova de placa exige
 timer real, no-op sem mutacao, rollback e restauracao com restart e health,
-usando `c18_player_runtime_production_autopull_evidence_gate.py`.
+usando `c18_player_runtime_production_autopull_evidence_gate.py`. O gate v2
+separa `mechanics_passed` da limpeza para distribuicao: a segunda so passa com
+ao menos 10 minutos continuos apos o restore, sem falha de midia, restart,
+watchdog ou erro de IPC.
 
 Non-claims desse caminho: nao e H2/stable generico, nao autoriza pacotes
 futuros, nao entrega rollout por grupos, nao substitui assinatura consumida no

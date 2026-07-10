@@ -1,6 +1,7 @@
 # C18 M5 production auto-pull C22
 
-Resultado: `player_runtime_production_autopull_evidence_ready`, sem blockers.
+Resultado historico v1: `player_runtime_production_autopull_evidence_ready`,
+sem blockers para a mecanica exata.
 
 Escopo:
 
@@ -27,6 +28,17 @@ rejeitado na preparacao, permaneceu em quarantine; C22 nao foi quarentenado.
 
 `m5-evidence-gate.json` liga os snapshots aos hashes do pacote, manifest,
 release gate, autorizacao e evidencia de publicacao exata.
+
+## Reavaliacao posterior
+
+O snapshot `restored` tambem preservou em seu journal um `media_load_failed`
+entre as janelas curtas, e falhas iguais voltaram depois da coleta. A RCA esta
+em `docs/evidence/c22-playback-ipc-backpressure/20260710T193847Z-verified-rca/`.
+
+O gate atual classifica este conjunto como `mechanics_passed=true` e
+`product_distribution_cleanliness_passed=false`: os 30 segundos finais nao
+substituem a janela continua de 10 minutos agora exigida. A evidencia original
+nao foi reescrita nem descartada; sua claim ficou explicitamente limitada.
 
 Non-claims: nao autoriza `latest` amplo, outros alvos futuros, release direto do
 repo legado `kiosky-player`, grupos/canary, assinatura no device ou atualizacao

@@ -2,10 +2,12 @@
 """Validate C18 player-runtime production auto-pull board evidence.
 
 Offline-only gate. It consumes five collector snapshots plus the exact
-authorization, manifest, payload, and release-gate artifacts. It does not fetch
-GitHub, mutate policy/timers, apply player-runtime, rollback, or restart the
-player service. It detects omitted or internally inconsistent evidence; without
-device attestation it cannot make coherently fabricated artifacts tamper-proof.
+authorization, manifest, payload, and release-gate artifacts. The final restored
+snapshot must include a continuous playback window long enough to cover delayed
+failures. It does not fetch GitHub, mutate policy/timers, apply player-runtime,
+rollback, or restart the player service. It detects omitted or internally
+inconsistent evidence; without device attestation it cannot make coherently
+fabricated artifacts tamper-proof.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ import c18_player_runtime_production_autopull_authorization_gate as authorizatio
 
 
 COLLECT_SCHEMA = "dadooh.c18.player_runtime.production_autopull_collect.v1"
-GATE_SCHEMA = "dadooh.c18.player_runtime.production_autopull_evidence_gate.v1"
+GATE_SCHEMA = "dadooh.c18.player_runtime.production_autopull_evidence_gate.v2"
 AUTH_SCHEMA = "dadooh.c18.player_runtime.production_autopull_authorization.v1"
 MANIFEST_SCHEMA = "dadooh.totem.update.v1"
 RELEASE_GATE_SCHEMA = "dadooh.c18.player_runtime.release_gate.v1"
@@ -48,6 +50,7 @@ DEFAULT_EXPECTED_UPDATER_SHA256 = hashlib.sha256(
 DEFAULT_TARGET_VERSION = "c18.player-runtime-homolog-20260710-c22-c023eae"
 DEFAULT_BASELINE_VERSION = "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
 DEFAULT_ROLLBACK_REASON = "production_authorized_rollback"
+DEFAULT_MIN_CONTINUOUS_RESTORED_SEC = 600.0
 PHASES = ("pre", "post_apply", "noop", "rollback", "restored")
 REQUIRED_NON_CLAIMS = (
     "this_gate_does_not_fetch_github",
@@ -108,6 +111,16 @@ REQUIRED_HEALTH_CHECKS = (
     "nrestarts_delta_present",
     "nrestarts_stable",
     "status_no_failures",
+)
+CONTINUOUS_ZERO_COUNTERS = (
+    "media_load_failed",
+    "mpv_restart",
+    "nrestarts_delta",
+    "ipc_timeout_after_first_success",
+    "ipc_error_after_first_success",
+    "panfrost_faults_delta",
+    "mmc_timeout_reset_delta",
+    "ext4_errors_delta",
 )
 
 
@@ -794,6 +807,86 @@ def validate_health_green(snapshot: dict[str, Any], phase: str, blockers: list[s
         blockers.append(f"{phase}_deep_health_frame_steps_insufficient")
 
 
+def validate_continuous_restored_health(
+    snapshot: dict[str, Any],
+    min_duration_sec: float,
+    blockers: list[str],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "min_duration_sec": min_duration_sec,
+        "duration_sec": 0.0,
+        "samples": 0,
+        "started_at_utc": None,
+        "finished_at_utc": None,
+    }
+    if min_duration_sec < 1.0:
+        blockers.append("continuous_restored_min_duration_invalid")
+        return result
+
+    health_block = as_dict(snapshot.get("playback_deep_health"))
+    evidence_path = snapshot.get("_evidence_path")
+    artifact_name = health_block.get("artifact_dir_name")
+    if (
+        not isinstance(evidence_path, str)
+        or not isinstance(artifact_name, str)
+        or not artifact_name
+        or Path(artifact_name).name != artifact_name
+    ):
+        blockers.append("continuous_restored_artifact_dir_invalid")
+        return result
+    artifact_dir = Path(evidence_path).parent / artifact_name
+    watchdog_path = artifact_dir / "deep-health-watchdog.json"
+    try:
+        watchdog = json.loads(watchdog_path.read_text(encoding="utf-8"))
+    except Exception:
+        blockers.append("continuous_restored_watchdog_unavailable")
+        return result
+    if not isinstance(watchdog, dict):
+        blockers.append("continuous_restored_watchdog_not_object")
+        return result
+
+    started = parse_utc(watchdog.get("collection_started_at_utc"))
+    finished = parse_utc(watchdog.get("collection_finished_at_utc"))
+    result["started_at_utc"] = watchdog.get("collection_started_at_utc")
+    result["finished_at_utc"] = watchdog.get("collection_finished_at_utc")
+    if started is None or finished is None or finished <= started:
+        blockers.append("continuous_restored_window_invalid")
+    else:
+        duration_sec = (finished - started).total_seconds()
+        result["duration_sec"] = duration_sec
+        if duration_sec + 0.001 < min_duration_sec:
+            blockers.append("continuous_restored_duration_too_short")
+        collected = parse_utc(snapshot.get("collected_at_utc"))
+        if collected is None or started < collected:
+            blockers.append("continuous_restored_started_before_snapshot_collection")
+        elif (started - collected).total_seconds() > 300:
+            blockers.append("continuous_restored_started_too_late_after_snapshot_collection")
+        last = as_dict(state_summary(snapshot).get("last_operation") or state_file_data(snapshot).get("last_operation"))
+        operation_finished = parse_utc(last.get("finished_at_utc"))
+        if operation_finished is None or started < operation_finished:
+            blockers.append("continuous_restored_started_before_restore_finished")
+
+    if watchdog.get("event_changed_during_window") is not False:
+        blockers.append("continuous_restored_watchdog_event_changed")
+    if str_field(watchdog.get("action_during_window")):
+        blockers.append("continuous_restored_watchdog_action_present")
+
+    health = as_dict(health_block.get("summary"))
+    counters = as_dict(health.get("counters"))
+    try:
+        samples = int(counters.get("samples") or 0)
+    except Exception:
+        samples = 0
+    result["samples"] = samples
+    if samples < int(min_duration_sec * 0.9):
+        blockers.append("continuous_restored_samples_too_few")
+    for name in CONTINUOUS_ZERO_COUNTERS:
+        value = counters.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != 0:
+            blockers.append(f"continuous_restored_counter_not_zero:{name}")
+    return result
+
+
 def validate_distinct_health_evidence(
     snapshots: dict[str, dict[str, Any]],
     blockers: list[str],
@@ -1134,14 +1227,35 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         blockers=blockers,
     )
     validate_distinct_health_evidence(snapshots, blockers)
+    mechanics_blockers = list(blockers)
+    cleanliness_blockers: list[str] = []
+    continuous_playback = validate_continuous_restored_health(
+        snapshots["restored"],
+        args.min_continuous_restored_sec,
+        cleanliness_blockers,
+    )
+    blockers.extend(cleanliness_blockers)
+    mechanics_passed = not mechanics_blockers
+    cleanliness_passed = not cleanliness_blockers
+    passed = mechanics_passed and cleanliness_passed
 
     return {
         "schema": GATE_SCHEMA,
-        "passed": not blockers,
+        "passed": passed,
+        "mechanics_passed": mechanics_passed,
+        "mechanics_blockers": mechanics_blockers,
+        "product_distribution_cleanliness_passed": cleanliness_passed,
+        "continuous_playback_passed": cleanliness_passed,
+        "continuous_playback_blockers": cleanliness_blockers,
+        "continuous_playback": continuous_playback,
         "result_claim": (
             "player_runtime_production_autopull_evidence_ready"
-            if not blockers
-            else "player_runtime_production_autopull_evidence_blocked"
+            if passed
+            else (
+                "player_runtime_production_autopull_mechanics_ready_product_cleanliness_blocked"
+                if mechanics_passed
+                else "player_runtime_production_autopull_evidence_blocked"
+            )
         ),
         "inputs": {
             "authorization": str(args.authorization) if args.authorization is not None else None,
@@ -1159,6 +1273,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             "baseline_version": args.baseline_version,
             "max_player_restarts": args.max_player_restarts,
             "require_freeze_probe": args.require_freeze_probe,
+            "min_continuous_restored_sec": args.min_continuous_restored_sec,
         },
         "target": target,
         "authorization_sha256": authorization_sha,
@@ -1169,7 +1284,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def valid_health() -> dict[str, Any]:
+def valid_health(samples: int = 4) -> dict[str, Any]:
     checks = {key: True for key in REQUIRED_HEALTH_CHECKS}
     return {
         "schema": "dadooh.c18.playback.deep_health.v1",
@@ -1177,11 +1292,12 @@ def valid_health() -> dict[str, Any]:
         "failure_reasons": [],
         "checks": checks,
         "counters": {
-            "samples": 4,
+            "samples": samples,
             "estimated_frame_positive_steps": 3,
             "estimated_frame_required_steps": 2,
             "estimated_frame_trailing_nonprogress_steps": 0,
             "hwdec_current": "v4l2request-copy",
+            **{name: 0 for name in CONTINUOUS_ZERO_COUNTERS},
         },
     }
 
@@ -1290,7 +1406,7 @@ def fixture_snapshot(
 ) -> dict[str, Any]:
     target = artifacts["target"]
     phase_index = PHASES.index(phase)
-    collected_at = f"2026-07-10T12:0{phase_index}:00Z"
+    collected_at = "2026-07-10T12:03:59Z" if phase == "restored" else f"2026-07-10T12:0{phase_index}:00Z"
     if last_operation is not None:
         last_operation = copy.deepcopy(last_operation)
         if phase == "pre":
@@ -1398,7 +1514,11 @@ def fixture_snapshot(
                 "quarantine": [],
             },
         },
-        "playback_deep_health": {"ran": True, "returncode": 0, "summary": valid_health()},
+        "playback_deep_health": {
+            "ran": True,
+            "returncode": 0,
+            "summary": valid_health(600 if phase == "restored" else 4),
+        },
         "freeze_probe": {"ran": True, "returncode": 44},
     }
 
@@ -1473,20 +1593,38 @@ def fixture_run(root: Path) -> tuple[argparse.Namespace, dict[str, Path], dict[s
         health_dir = root / f"{phase}-deep-health"
         health_dir.mkdir()
         health = payload["playback_deep_health"]["summary"]
+        sample_count = int(as_dict(health.get("counters")).get("samples") or 0)
         write_json(health_dir / "playback-deep-health-public.json", health)
         (health_dir / "playback-samples.tsv").write_text(
-            "seq\tframe\n" + "".join(f"{index}\t{index * 10}\n" for index in range(1, 5)),
+            "seq\tframe\n" + "".join(f"{index}\t{index * 10}\n" for index in range(1, sample_count + 1)),
             encoding="utf-8",
         )
         (health_dir / "status-samples.ndjson").write_text(
-            "".join(json.dumps({"seq": index, "status": "playing"}) + "\n" for index in range(1, 5)),
+            "".join(
+                json.dumps({"seq": index, "status": "playing"}) + "\n"
+                for index in range(1, sample_count + 1)
+            ),
             encoding="utf-8",
         )
         for sidecar in sorted(name for name in REQUIRED_HEALTH_ARTIFACTS if name.startswith("deep-health-")):
-            write_json(
-                health_dir / sidecar,
-                {"schema": "dadooh.c18.fixture.v1", "passed": True, "phase": phase},
-            )
+            if sidecar == "deep-health-watchdog.json":
+                watchdog = {
+                    "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+                    "collection_started_at_utc": (
+                        "2026-07-10T12:04:00Z" if phase == "restored" else f"2026-07-10T12:0{PHASES.index(phase)}:00Z"
+                    ),
+                    "collection_finished_at_utc": (
+                        "2026-07-10T12:14:00Z" if phase == "restored" else f"2026-07-10T12:0{PHASES.index(phase)}:30Z"
+                    ),
+                    "event_changed_during_window": False,
+                    "action_during_window": "",
+                }
+                write_json(health_dir / sidecar, watchdog)
+            else:
+                write_json(
+                    health_dir / sidecar,
+                    {"schema": "dadooh.c18.fixture.v1", "passed": True, "phase": phase},
+                )
         health_files = sorted(health_dir.iterdir(), key=lambda item: item.name)
         payload["playback_deep_health"].update({
             "artifact_dir_name": health_dir.name,
@@ -1518,10 +1656,26 @@ def fixture_run(root: Path) -> tuple[argparse.Namespace, dict[str, Path], dict[s
         expected_rollback_reason=DEFAULT_ROLLBACK_REASON,
         max_player_restarts=0,
         require_freeze_probe=True,
+        min_continuous_restored_sec=DEFAULT_MIN_CONTINUOUS_RESTORED_SEC,
         json=False,
         self_test=False,
     )
     return args, paths, artifacts
+
+
+def refresh_fixture_health(paths: dict[str, Path], phase: str) -> None:
+    snapshot = json.loads(paths[phase].read_text(encoding="utf-8"))
+    health_dir = paths[phase].parent / f"{phase}-deep-health"
+    summary_path = health_dir / "playback-deep-health-public.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    health_files = sorted(health_dir.iterdir(), key=lambda item: item.name)
+    snapshot["playback_deep_health"]["summary"] = summary
+    snapshot["playback_deep_health"]["summary_sha256"] = sha256_file(summary_path)
+    snapshot["playback_deep_health"]["artifacts"] = [
+        {"name": item.name, "sha256": sha256_file(item), "bytes": item.stat().st_size}
+        for item in health_files
+    ]
+    write_json(paths[phase], snapshot)
 
 
 class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
@@ -1536,6 +1690,57 @@ class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
     def test_valid_five_phase_fixture_passes(self) -> None:
         result = self.run_fixture()
         self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+        self.assertTrue(result["mechanics_passed"])
+        self.assertTrue(result["product_distribution_cleanliness_passed"])
+        self.assertGreaterEqual(
+            result["continuous_playback"]["duration_sec"],
+            DEFAULT_MIN_CONTINUOUS_RESTORED_SEC,
+        )
+
+    def test_short_restored_window_preserves_mechanics_but_blocks_product_cleanliness(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            watchdog_path = paths["restored"].parent / "restored-deep-health" / "deep-health-watchdog.json"
+            watchdog = json.loads(watchdog_path.read_text(encoding="utf-8"))
+            watchdog["collection_finished_at_utc"] = "2026-07-10T12:04:30Z"
+            write_json(watchdog_path, watchdog)
+            refresh_fixture_health(paths, "restored")
+
+        result = self.run_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertTrue(result["mechanics_passed"])
+        self.assertFalse(result["continuous_playback_passed"])
+        self.assertEqual(
+            result["result_claim"],
+            "player_runtime_production_autopull_mechanics_ready_product_cleanliness_blocked",
+        )
+        self.assertIn("continuous_restored_duration_too_short", result["blockers"])
+
+    def test_continuous_window_restart_counter_blocks_only_product_cleanliness(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            summary_path = paths["restored"].parent / "restored-deep-health" / "playback-deep-health-public.json"
+            health = json.loads(summary_path.read_text(encoding="utf-8"))
+            health["counters"]["mpv_restart"] = 1
+            write_json(summary_path, health)
+            refresh_fixture_health(paths, "restored")
+
+        result = self.run_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertTrue(result["mechanics_passed"])
+        self.assertIn("continuous_restored_counter_not_zero:mpv_restart", result["blockers"])
+
+    def test_continuous_window_must_start_after_restore_operation(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            watchdog_path = paths["restored"].parent / "restored-deep-health" / "deep-health-watchdog.json"
+            watchdog = json.loads(watchdog_path.read_text(encoding="utf-8"))
+            watchdog["collection_started_at_utc"] = "2026-07-10T12:03:00Z"
+            watchdog["collection_finished_at_utc"] = "2026-07-10T12:13:00Z"
+            write_json(watchdog_path, watchdog)
+            refresh_fixture_health(paths, "restored")
+
+        result = self.run_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertTrue(result["mechanics_passed"])
+        self.assertIn("continuous_restored_started_before_restore_finished", result["blockers"])
 
     def test_real_player_runtime_success_journal_passes(self) -> None:
         def mutate(_args: argparse.Namespace, paths: dict[str, Path], artifacts: dict[str, Any]) -> None:
@@ -1770,6 +1975,8 @@ class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
 
         result = self.run_fixture(mutate)
         self.assertFalse(result["passed"])
+        self.assertFalse(result["mechanics_passed"])
+        self.assertTrue(result["product_distribution_cleanliness_passed"])
         self.assertIn("publication_evidence_repo_mismatch", result["blockers"])
         self.assertIn("publication_evidence_asset_hashes_mismatch", result["blockers"])
         self.assertIn("publication_evidence_latest_drift", result["blockers"])
@@ -1816,6 +2023,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--expected-rollback-reason", default=DEFAULT_ROLLBACK_REASON)
     parser.add_argument("--max-player-restarts", type=int, default=0)
     parser.add_argument("--require-freeze-probe", action="store_true")
+    parser.add_argument(
+        "--min-continuous-restored-sec",
+        type=float,
+        default=DEFAULT_MIN_CONTINUOUS_RESTORED_SEC,
+    )
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
