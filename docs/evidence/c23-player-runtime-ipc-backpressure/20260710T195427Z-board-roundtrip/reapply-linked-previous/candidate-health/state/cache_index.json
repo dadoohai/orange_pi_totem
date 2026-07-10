@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "updated_at": "2026-07-10T20:08:11Z",
+  "items": {
+    "/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4": {
+      "url": "cache://749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4",
+      "duration_ms": 10000,
+      "campaign_id": "c18-canary",
+      "campaign_name": "C18 canary",
+      "source_path": "",
+      "last_used": "2026-07-10T20:08:11Z",
+      "size": 443106
+    }
+  }
+}

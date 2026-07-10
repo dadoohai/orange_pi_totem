@@ -1,0 +1,95 @@
+2026-07-10 19:51:44,293 WARNING API credentials missing; startup will run in offline-only mode if local media is available.
+2026-07-10 19:51:45,639 INFO Loaded offline playlist: 1 items
+2026-07-10 19:51:45,642 WARNING API polling disabled; player running with local media only.
+2026-07-10 19:51:45,645 INFO MPV process started pid=13281 generation=1 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:45,646 INFO MPV IPC startup wait begin generation=1 pid=13281 timeout_sec=10.00 ipc_path=/tmp/c18-c23/apply/candidate-health/mpv.sock log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:45,683 INFO MPV IPC startup wait complete transport=fresh-socket-probe generation=1 pid=13281 duration_sec=0.04 timeout_sec=10.00 ipc_path=/tmp/c18-c23/apply/candidate-health/mpv.sock log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:45,688 INFO MPV IPC fresh query begin command=get_property request_id=1 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:45,692 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,078 INFO MPV IPC fresh query ok command=get_property request_id=1 generation=1 pid=13281 duration_sec=0.390 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,079 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.391 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,079 INFO MPV IPC fresh query begin command=loadfile request_id=2 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,081 INFO MPV IPC fresh query ok command=loadfile request_id=2 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,082 INFO MPV IPC fresh query begin command=get_property request_id=3 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,084 INFO MPV IPC fresh query ok command=get_property request_id=3 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,084 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.392 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,085 INFO MPV IPC fresh query begin command=get_property request_id=4 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,087 INFO MPV IPC fresh query ok command=get_property request_id=4 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:46,090 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:51:56,088 INFO MPV IPC fresh query begin command=get_property request_id=5 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,090 INFO MPV IPC fresh query ok command=get_property request_id=5 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,091 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.003 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,101 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,101 INFO MPV IPC fresh query begin command=loadfile request_id=6 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,103 INFO MPV IPC fresh query ok command=loadfile request_id=6 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,104 INFO MPV IPC fresh query begin command=get_property request_id=7 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,106 INFO MPV IPC fresh query ok command=get_property request_id=7 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,106 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.006 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,107 INFO MPV IPC fresh query begin command=get_property request_id=8 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,108 INFO MPV IPC fresh query ok command=get_property request_id=8 generation=1 pid=13281 duration_sec=0.001 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:51:56,111 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:52:06,099 INFO MPV IPC fresh query begin command=get_property request_id=9 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,101 INFO MPV IPC fresh query ok command=get_property request_id=9 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,101 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.003 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,120 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,121 INFO MPV IPC fresh query begin command=loadfile request_id=10 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,122 INFO MPV IPC fresh query ok command=loadfile request_id=10 generation=1 pid=13281 duration_sec=0.001 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,123 INFO MPV IPC fresh query begin command=get_property request_id=11 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,125 INFO MPV IPC fresh query ok command=get_property request_id=11 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,125 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.005 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,126 INFO MPV IPC fresh query begin command=get_property request_id=12 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,127 INFO MPV IPC fresh query ok command=get_property request_id=12 generation=1 pid=13281 duration_sec=0.001 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:06,129 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:52:16,109 INFO MPV IPC fresh query begin command=get_property request_id=13 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,111 INFO MPV IPC fresh query ok command=get_property request_id=13 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,111 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.003 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,140 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,140 INFO MPV IPC fresh query begin command=loadfile request_id=14 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,142 INFO MPV IPC fresh query ok command=loadfile request_id=14 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,143 INFO MPV IPC fresh query begin command=get_property request_id=15 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,145 INFO MPV IPC fresh query ok command=get_property request_id=15 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,146 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.006 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,147 INFO MPV IPC fresh query begin command=get_property request_id=16 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,148 INFO MPV IPC fresh query ok command=get_property request_id=16 generation=1 pid=13281 duration_sec=0.001 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:16,150 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:52:26,117 INFO MPV IPC fresh query begin command=get_property request_id=17 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,119 INFO MPV IPC fresh query ok command=get_property request_id=17 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,120 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.003 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,159 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,160 INFO MPV IPC fresh query begin command=loadfile request_id=18 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,162 INFO MPV IPC fresh query ok command=loadfile request_id=18 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,162 INFO MPV IPC fresh query begin command=get_property request_id=19 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,165 INFO MPV IPC fresh query ok command=get_property request_id=19 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,166 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.007 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,166 INFO MPV IPC fresh query begin command=get_property request_id=20 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,167 INFO MPV IPC fresh query ok command=get_property request_id=20 generation=1 pid=13281 duration_sec=0.001 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:26,169 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:52:36,126 INFO MPV IPC fresh query begin command=get_property request_id=21 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,128 INFO MPV IPC fresh query ok command=get_property request_id=21 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,128 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.003 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,178 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,179 INFO MPV IPC fresh query begin command=loadfile request_id=22 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,181 INFO MPV IPC fresh query ok command=loadfile request_id=22 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,183 INFO MPV IPC fresh query begin command=get_property request_id=23 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,186 INFO MPV IPC fresh query ok command=get_property request_id=23 generation=1 pid=13281 duration_sec=0.003 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,187 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.009 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,188 INFO MPV IPC fresh query begin command=get_property request_id=24 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,469 INFO MPV IPC fresh query ok command=get_property request_id=24 generation=1 pid=13281 duration_sec=0.282 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:36,486 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:52:46,134 INFO MPV IPC fresh query begin command=get_property request_id=25 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,135 INFO MPV IPC fresh query ok command=get_property request_id=25 generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,136 INFO MPV IPC ping ok generation=1 pid=13281 duration_sec=0.002 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,496 INFO MPV loadfile sent alias=media-73d0e2214b media_path=<media-path:31af3d58a2> generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,496 INFO MPV IPC fresh query begin command=loadfile request_id=26 generation=1 pid=13281 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,498 INFO MPV IPC fresh query ok command=loadfile request_id=26 generation=1 pid=13281 duration_sec=0.001 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,499 INFO MPV IPC fresh query begin command=get_property request_id=27 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,500 INFO MPV IPC fresh query ok command=get_property request_id=27 generation=1 pid=13281 duration_sec=0.002 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,501 INFO MPV loadfile result alias=media-73d0e2214b result=success media_path=<media-path:31af3d58a2> generation=1 pid=13281 duration_sec=0.005 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,502 INFO MPV IPC fresh query begin command=get_property request_id=28 generation=1 pid=13281 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,504 INFO MPV IPC fresh query ok command=get_property request_id=28 generation=1 pid=13281 duration_sec=0.003 timeout_sec=0.50 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:46,507 INFO Playing media alias=media-73d0e2214b path=<media-path:31af3d58a2> index=0 duration_ms=10000 offset_ms=0 mpv_generation=1 mpv_pid=13281
+2026-07-10 19:52:48,681 INFO Signal 15 received, stopping...
+2026-07-10 19:52:48,746 INFO MPV IPC fresh command sent command=quit generation=1 pid=13281 duration_sec=0.000 timeout_sec=2.00 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:48,747 INFO MPV IPC quit requested reason=stop generation=1 pid=13281 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:48,779 INFO MPV IPC close waiting for IPC critical section reason=stop generation=1 pid=13281 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log
+2026-07-10 19:52:48,780 INFO MPV IPC close entered IPC critical section reason=stop generation=1 pid=13281 log_file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log

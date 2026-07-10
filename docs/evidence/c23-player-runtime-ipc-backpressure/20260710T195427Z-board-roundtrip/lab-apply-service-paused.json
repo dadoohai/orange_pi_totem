@@ -1,0 +1,64 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T19:55:35Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json",
+      "started_at_utc": "2026-07-10T19:54:27Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+    "state_current_version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "state_previous_version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T19:53:59Z",
+      "non_claims": [
+        "not_a_public_thaw",
+        "not_stable_or_production",
+        "does_not_apply_or_rollback_runtime"
+      ],
+      "payload_sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+      "reason": "candidate_drm_master_contended_by_active_service",
+      "removed_count": 1,
+      "reset_scope": "lab_canary_display_contention_retry",
+      "started_at_utc": "2026-07-10T19:53:59Z",
+      "status": "success",
+      "tree_sha256": "340e44ff7e441ec7863e1d660d66d03dfc1fe29d4195d6e52aa240025b35cf4f",
+      "type": "lab_quarantine_reset",
+      "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "state_current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+    "state_previous_version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/tmp/c18-c23/apply-service-paused",
+  "panfrost_fault_policy": "delta",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+}

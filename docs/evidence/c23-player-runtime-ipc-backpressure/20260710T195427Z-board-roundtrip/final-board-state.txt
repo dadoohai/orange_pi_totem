@@ -1,0 +1,113 @@
+utc=2026-07-10T20:30:49Z
+===updater_status===
+{
+  "component": "player-runtime",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "not totem-core",
+  "component_base": "/data/player-runtime",
+  "current_symlink_target": "releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "player-runtime",
+    "current": {
+      "applied_at_utc": "2026-07-10T20:08:17Z",
+      "kiosk_py_sha256": "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5",
+      "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+      "payload_sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+      "tree_sha256": "340e44ff7e441ec7863e1d660d66d03dfc1fe29d4195d6e52aa240025b35cf4f",
+      "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+      "via": "player_runtime_reconcile"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T20:08:17Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-07-10T20:08:17Z",
+      "status": "current_verified",
+      "type": "reconcile",
+      "verified": "releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-10T19:06:24Z",
+      "channel": "homologation",
+      "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+      "manifest_created_at_utc": "2026-07-10T05:00:51Z",
+      "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+      "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+      "source": "github-authorized:dadoohai/orange_pi_totem:player-runtime-c18.player-runtime-homolog-20260710-c22-c023eae",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621",
+      "verified_marker": {
+        "channel": "homologation",
+        "deep_health": {
+          "artifact_id": "health",
+          "observed_kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+          "observed_tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621",
+          "passed": true,
+          "schema": "dadooh.c18.playback.deep_health.v1"
+        },
+        "kiosk_py_sha256": "3aacb05f011607318c9c147822036251e9744b50419757b85373e02a5fb3f30b",
+        "payload_sha256": "4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16",
+        "schema": "dadooh.c18.player_runtime.verified.v1",
+        "source_commit": "c023eae869e781d0aee115aa247d04e196d58fbd",
+        "tree_sha256": "8c83f542d21593b9daae886196dfabbeb8ff20fc876f96fd0583272bea90b621",
+        "verdict": "verified",
+        "version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+        "written_at_utc": "2026-07-10T19:06:24Z"
+      },
+      "version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+    },
+    "quarantine": [
+      {
+        "kiosk_py_sha256": "0eaf066b0ad960dcc52859151efd781949c4088bcfff9f16c316bd33a7580d97",
+        "payload_sha256": "b9b3464aa68a85c87ec26e60a2a0b22e95e67b85cdbbecd7ef5a2098514f3597",
+        "quarantined_at_utc": "2026-07-10T18:05:20Z",
+        "reason": "ipc_stable_after_success,status_no_failures",
+        "tree_sha256": "0aa60aec3d4d80d27f55d4ec98faf2a17e402058394352c83c16d8246073be57",
+        "version": "c18.player-runtime-homolog-20260709-image-transcode-50919f5"
+      }
+    ],
+    "schema": "dadooh.totem.update.state.v1"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+===freeze_probe===
+2026-07-10T20:30:51Z INFO update_lock_acquired operation=rollback:player-runtime lock=/run/totem-updatectl.lock
+component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware
+2026-07-10T20:30:51Z WARN rollback_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware
+freeze_rc=44
+===service===
+MainPID=18001
+NRestarts=0
+ActiveState=active
+SubState=running
+===timers===
+NextElapseUSecRealtime=
+ActiveState=active
+SubState=waiting
+UnitFileState=enabled
+NextElapseUSecRealtime=
+ActiveState=active
+SubState=waiting
+UnitFileState=enabled
+===processes===
+18061 /usr/bin/python3 /data/player-runtime/current/kiosk.py --config /data/config/config.json
+18182 /opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/kiosky/mpv.sock --vo=gpu --gpu-context=drm --ao=null --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/kiosky/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy
+25353 bash -c set -u; out=/tmp/c18-c23/final-board-state.txt; { date -u +utc=%Y-%m-%dT%H:%M:%SZ; echo ===updater_status===; python3 /opt/totem/bin/totem_updatectl.py status --component player-runtime; echo ===freeze_probe===; python3 /opt/totem/bin/totem_updatectl.py rollback --component player-runtime; echo freeze_rc=$?; echo ===service===; systemctl show kiosky-player.service -p ActiveState -p SubState -p MainPID -p NRestarts --no-pager; echo ===timers===; systemctl show totem-player-runtime-update-agent.timer -p ActiveState -p SubState -p UnitFileState -p NextElapseUSecRealtime --no-pager; systemctl show totem-update-agent.timer -p ActiveState -p SubState -p UnitFileState -p NextElapseUSecRealtime --no-pager; echo ===processes===; pgrep -a -f "kiosk.py|/opt/totem/bin/totem-mpv-hwdecode|/opt/totem/hwdecode/bin/mpv" || true; echo ===status_sanitized===; python3 - <<"PY" import json x=json.load(open("/tmp/kiosky-status.json")) item=x.get("current_item") or {} print(json.dumps({"playback_state":x.get("playback_state"),"mpv_running":x.get("mpv_running"),"playlist_size":x.get("playlist_size"),"current_path_suffix":str(item.get("path","")).rsplit("/",1)[-1],"last_error_present":bool(x.get("last_error")),"consecutive_failures":x.get("consecutive_failures")},sort_keys=True)) PY } > "$out" 2>&1; journalctl -u kiosky-player.service --since "2026-07-10 19:50:00" --no-pager > /tmp/c18-c23/final-board-journal.txt; chmod 600 "$out" /tmp/c18-c23/final-board-journal.txt; cat "$out"
+===status_sanitized===
+{"consecutive_failures": 0, "current_path_suffix": "907addee8b2a245acae69d318d5f25b0aa9e12f4.mp4", "last_error_present": false, "mpv_running": true, "playback_state": "playing", "playlist_size": 9}

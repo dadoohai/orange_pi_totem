@@ -1,0 +1,1031 @@
+[   0.000][d][global] user path: '/tmp/c18-c23/apply/candidate-health/mpv-g001.log' -> '/tmp/c18-c23/apply/candidate-health/mpv-g001.log'
+[   0.006][v][cplayer] mpv 8670d2e-dirty Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects
+[   0.007][v][cplayer]  built on May 30 2026 19:25:16
+[   0.007][v][cplayer] libplacebo version: v6.338.2
+[   0.007][v][cplayer] FFmpeg version: git-2024-08-06-2af4006
+[   0.007][v][cplayer] FFmpeg library versions:
+[   0.007][v][cplayer]    libavcodec      61.11.100
+[   0.007][v][cplayer]    libavdevice     61.2.100
+[   0.007][v][cplayer]    libavfilter     10.2.102
+[   0.007][v][cplayer]    libavformat     61.5.101
+[   0.007][v][cplayer]    libavutil       59.32.100
+[   0.007][v][cplayer]    libswresample   5.2.100
+[   0.007][v][cplayer]    libswscale      8.2.100
+[   0.007][v][cplayer] Configuration: -Dbuildtype=release -Dprefix=/tmp/ffbuild/prefix -Dv4l2request=enabled -Dlibmpv=false -Dcplayer=true -Dgpl=true -Dlua=disabled -Djavascript=disabled -Dvulkan=disabled -Dlibbluray=disabled -Duchardet=disabled -Dvapoursynth=disabled -Dzimg=disabled -Dshaderc=disabled -Dspirv-cross=disabled --cross-file=/tmp/ffbuild/cross.ini
+[   0.007][v][cplayer] List of enabled features: build-date cplugins dmabuf-interop-gl drm dvbin egl egl-drm ffmpeg gbm gl glibc-thread-name glob glob-posix gpl iconv libass libavdevice libdl libplacebo linux-fstatfs memrchr posix posix-shm ppoll pthread-condattr-setclock v4l2request vector vt.h
+[   0.007][v][cplayer] Command line options: '--fs' '--force-window=yes' '--idle=yes' '--keep-open=yes' '--no-terminal' '--loop-file=inf' '--image-display-duration=inf' '--osd-level=0' '--input-ipc-server=/tmp/c18-c23/apply/candidate-health/mpv.sock' '--log-file=/tmp/c18-c23/apply/candidate-health/mpv-g001.log' '--vo=gpu' '--gpu-context=drm' '--ao=null' '--no-input-default-bindings' '--video-rotate=0' '--input-conf=/tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf' '--input-vo-keyboard=yes' '--hwdec=auto' '--vo=gpu' '--gpu-context=drm' '--hwdec=v4l2request-copy'
+[   0.007][v][cplayer] mpv 8670d2e-dirty Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects
+[   0.007][v][cplayer]  built on May 30 2026 19:25:16
+[   0.007][v][cplayer] libplacebo version: v6.338.2
+[   0.007][v][cplayer] FFmpeg version: git-2024-08-06-2af4006
+[   0.007][v][cplayer] FFmpeg library versions:
+[   0.007][v][cplayer]    libavcodec      61.11.100
+[   0.007][v][cplayer]    libavdevice     61.2.100
+[   0.007][v][cplayer]    libavfilter     10.2.102
+[   0.007][v][cplayer]    libavformat     61.5.101
+[   0.007][v][cplayer]    libavutil       59.32.100
+[   0.007][v][cplayer]    libswresample   5.2.100
+[   0.007][v][cplayer]    libswscale      8.2.100
+[   0.007][v][cplayer] Configuration: -Dbuildtype=release -Dprefix=/tmp/ffbuild/prefix -Dv4l2request=enabled -Dlibmpv=false -Dcplayer=true -Dgpl=true -Dlua=disabled -Djavascript=disabled -Dvulkan=disabled -Dlibbluray=disabled -Duchardet=disabled -Dvapoursynth=disabled -Dzimg=disabled -Dshaderc=disabled -Dspirv-cross=disabled --cross-file=/tmp/ffbuild/cross.ini
+[   0.007][v][cplayer] List of enabled features: build-date cplugins dmabuf-interop-gl drm dvbin egl egl-drm ffmpeg gbm gl glibc-thread-name glob glob-posix gpl iconv libass libavdevice libdl libplacebo linux-fstatfs memrchr posix posix-shm ppoll pthread-condattr-setclock v4l2request vector vt.h
+[   0.007][d][global] home path: '' -> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv'
+[   0.007][d][global] user path: '~~home/' -> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv'
+[   0.007][d][global] user path: '~~old_home/' -> '/tmp/c18-c23/apply/candidate-health/home/.mpv'
+[   0.007][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/encoding-profiles.conf'
+[   0.007][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/encoding-profiles.conf'
+[   0.007][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/ffbuild/prefix/etc/mpv/encoding-profiles.conf'
+[   0.007][d][global] config path: 'mpv.conf' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/mpv.conf'
+[   0.007][d][global] config path: 'config' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/config'
+[   0.007][d][global] config path: 'mpv.conf' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/mpv.conf'
+[   0.007][d][global] config path: 'config' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/config'
+[   0.007][d][global] config path: 'mpv.conf' -/-> '/tmp/ffbuild/prefix/etc/mpv/mpv.conf'
+[   0.007][d][global] config path: 'config' -/-> '/tmp/ffbuild/prefix/etc/mpv/config'
+[   0.007][v][cplayer] Setting option 'fs' = '' (flags = 8)
+[   0.008][v][cplayer] Setting option 'force-window' = 'yes' (flags = 8)
+[   0.008][v][cplayer] Setting option 'idle' = 'yes' (flags = 8)
+[   0.008][v][cplayer] Setting option 'keep-open' = 'yes' (flags = 8)
+[   0.008][v][cplayer] Setting option 'terminal' = 'no' (flags = 8)
+[   0.008][v][cplayer] Setting option 'loop-file' = 'inf' (flags = 8)
+[   0.008][v][cplayer] Setting option 'image-display-duration' = 'inf' (flags = 8)
+[   0.008][v][cplayer] Setting option 'osd-level' = '0' (flags = 8)
+[   0.008][v][cplayer] Setting option 'input-ipc-server' = '/tmp/c18-c23/apply/candidate-health/mpv.sock' (flags = 8)
+[   0.008][v][cplayer] Setting option 'log-file' = '/tmp/c18-c23/apply/candidate-health/mpv-g001.log' (flags = 8)
+[   0.008][v][cplayer] Setting option 'vo' = 'gpu' (flags = 8)
+[   0.008][v][cplayer] Setting option 'gpu-context' = 'drm' (flags = 8)
+[   0.008][v][cplayer] Setting option 'ao' = 'null' (flags = 8)
+[   0.008][v][cplayer] Setting option 'input-default-bindings' = 'no' (flags = 8)
+[   0.008][v][cplayer] Setting option 'video-rotate' = '0' (flags = 8)
+[   0.008][v][cplayer] Setting option 'input-conf' = '/tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf' (flags = 8)
+[   0.008][v][cplayer] Setting option 'input-vo-keyboard' = 'yes' (flags = 8)
+[   0.009][v][cplayer] Setting option 'hwdec' = 'auto' (flags = 8)
+[   0.009][v][cplayer] Setting option 'vo' = 'gpu' (flags = 8)
+[   0.009][v][cplayer] Setting option 'gpu-context' = 'drm' (flags = 8)
+[   0.009][v][cplayer] Setting option 'hwdec' = 'v4l2request-copy' (flags = 8)
+[   0.017][d][global] user path: '/tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf' -> '/tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf'
+[   0.017][v][file] Opening /tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf
+[   0.017][d][file] resize stream to 131072 bytes, drop 0 bytes
+[   0.017][d][file] Stream opened successfully.
+[   0.018][v][input] Parsing input config file /tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf
+[   0.018][v][input] Input config file /tmp/c18-c23/apply/candidate-health/runtime/hotkeys.conf parsed: 1 binds
+[   0.018][d][global] user path: '/tmp/c18-c23/apply/candidate-health/mpv-g001.log' -> '/tmp/c18-c23/apply/candidate-health/mpv-g001.log'
+[   0.018][d][global] user path: '/tmp/c18-c23/apply/candidate-health/mpv.sock' -> '/tmp/c18-c23/apply/candidate-health/mpv.sock'
+[   0.019][v][ipc] Starting IPC master
+[   0.019][d][global] config path: 'scripts' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/scripts'
+[   0.019][d][global] config path: 'scripts' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/scripts'
+[   0.019][d][global] config path: 'scripts' -/-> '/tmp/ffbuild/prefix/etc/mpv/scripts'
+[   0.019][v][ipc] Listening to IPC socket.
+[   0.019][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[   0.022][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[   0.022][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[   0.022][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[   0.022][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[   0.022][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[   0.022][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[   0.022][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[   0.022][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[   0.022][v][vo/gpu/drm] DRM Atomic support found
+[   0.022][v][ipc_0] Client connected
+[   0.022][v][ipc_0] Client disconnected
+[   0.022][d][ipc_0] Exiting...
+[   0.022][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[   0.022][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[   0.023][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[   0.023][v][vo/gpu] Supported modifier: 0x0
+[   0.023][v][vo/gpu] Creating GBM device
+[   0.028][v][ipc_1] Client connected
+[   0.376][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[   0.376][v][vo/gpu/opengl] Initializing EGL
+[   0.384][v][vo/gpu/opengl] EGL_VERSION=1.4
+[   0.384][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[   0.384][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[   0.384][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[   0.384][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[   0.384][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[   0.384][d][vo/gpu/opengl] Chosen EGLConfig:
+[   0.384][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[   0.384][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[   0.384][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[   0.384][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[   0.384][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[   0.384][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[   0.384][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[   0.384][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[   0.384][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[   0.390][v][vo/gpu/opengl] Initializing EGL surface
+[   0.397][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[   0.398][v][vo/gpu] Detected desktop OpenGL 3.1.
+[   0.398][v][vo/gpu] GL_VENDOR='Panfrost'
+[   0.398][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[   0.398][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[   0.399][d][vo/gpu] Combined OpenGL extensions string:
+[   0.399][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_sync.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[   0.400][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[   0.400][v][vo/gpu] Loaded extension GL_KHR_debug.
+[   0.400][v][vo/gpu/opengl] Preparing framebuffer
+[   0.400][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[   0.400][v][vo/gpu/drm] crtc is not VRR capable
+[   0.400][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[   0.400][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[   0.400][e][vo/gpu] Failed to commit atomic request: Permission denied
+[   0.400][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[   0.400][e][vo/gpu/drm] Failed to restore previous mode
+[   0.400][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[   0.412][e][vo/gpu] Failed initializing any suitable GPU context!
+[   0.413][f][cplayer] Error opening/initializing the VO window.
+[   0.414][v][ipc_1] Client disconnected
+[   0.414][d][ipc_1] Exiting...
+[   0.416][v][ipc_2] Client connected
+[   0.417][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[   0.417][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[   0.417][e][ipc_2] Read error (Connection reset by peer)
+[   0.417][d][ipc_2] Exiting...
+[   0.417][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[   0.417][d][file] resize stream to 131072 bytes, drop 0 bytes
+[   0.418][d][file] Stream opened successfully.
+[   0.418][v][demux] Trying demuxers for level=normal.
+[   0.418][d][demux] Trying demuxer: disc (force-level: normal)
+[   0.418][d][demux] Trying demuxer: edl (force-level: normal)
+[   0.418][d][demux] Trying demuxer: cue (force-level: normal)
+[   0.418][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[   0.418][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[   0.418][d][demux] Trying demuxer: mkv (force-level: normal)
+[   0.418][d][demux] Trying demuxer: lavf (force-level: normal)
+[   0.419][v][ipc_3] Client connected
+[   0.422][v][ipc_3] Client disconnected
+[   0.422][d][ipc_3] Exiting...
+[   0.422][v][ipc_4] Client connected
+[   0.425][v][ipc_4] Client disconnected
+[   0.426][d][ipc_4] Exiting...
+[   0.432][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[   0.437][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[   0.438][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[   0.439][v][find_files] Loading external files in /data/media/kiosky-player/
+[   0.439][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[   0.439][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[   0.439][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[   0.439][v][lavf] select track 0
+[   0.440][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[   0.440][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[   0.441][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[   0.441][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[   0.443][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[   0.443][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[   0.443][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[   0.443][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[   0.443][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[   0.443][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[   0.445][v][vo/gpu/drm] DRM Atomic support found
+[   0.445][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[   0.445][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[   0.445][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[   0.445][v][vo/gpu] Supported modifier: 0x0
+[   0.445][v][vo/gpu] Creating GBM device
+[   0.696][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[   0.696][v][vo/gpu/opengl] Initializing EGL
+[   0.699][v][vo/gpu/opengl] EGL_VERSION=1.4
+[   0.699][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[   0.699][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[   0.699][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[   0.700][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[   0.700][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[   0.700][d][vo/gpu/opengl] Chosen EGLConfig:
+[   0.700][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[   0.700][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[   0.700][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[   0.700][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[   0.700][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[   0.700][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[   0.700][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[   0.700][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[   0.700][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[   0.705][v][vo/gpu/opengl] Initializing EGL surface
+[   0.709][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[   0.709][v][vo/gpu] Detected desktop OpenGL 3.1.
+[   0.709][v][vo/gpu] GL_VENDOR='Panfrost'
+[   0.709][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[   0.709][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[   0.711][d][vo/gpu] Combined OpenGL extensions string:
+[   0.711][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_sync.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[   0.711][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[   0.711][v][vo/gpu] Loaded extension GL_KHR_debug.
+[   0.712][v][vo/gpu/opengl] Preparing framebuffer
+[   0.712][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[   0.712][v][vo/gpu/drm] crtc is not VRR capable
+[   0.712][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[   0.712][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[   0.712][e][vo/gpu] Failed to commit atomic request: Permission denied
+[   0.712][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[   0.712][e][vo/gpu/drm] Failed to restore previous mode
+[   0.712][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[   0.723][e][vo/gpu] Failed initializing any suitable GPU context!
+[   0.724][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[   0.724][v][lavf] deselect track 0
+[   0.724][i][cplayer] Video: no video
+[   0.724][f][cplayer] No video or audio streams selected.
+[   0.724][d][cplayer] Terminating demuxers...
+[   0.724][d][cplayer] Done terminating demuxers.
+[   0.724][v][cplayer] finished playback, no audio or video data played (reason 4)
+[   2.750][v][ipc_5] Client connected
+[   2.751][v][ipc_5] Client disconnected
+[   2.751][d][ipc_5] Exiting...
+[   3.754][v][ipc_6] Client connected
+[   3.755][v][ipc_6] Client disconnected
+[   3.755][d][ipc_6] Exiting...
+[   4.759][v][ipc_7] Client connected
+[   4.760][v][ipc_7] Client disconnected
+[   4.760][d][ipc_7] Exiting...
+[   5.763][v][ipc_8] Client connected
+[   5.764][v][ipc_8] Client disconnected
+[   5.764][d][ipc_8] Exiting...
+[   6.767][v][ipc_9] Client connected
+[   6.768][v][ipc_9] Client disconnected
+[   6.768][d][ipc_9] Exiting...
+[   7.772][v][ipc_10] Client connected
+[   7.773][v][ipc_10] Client disconnected
+[   7.773][d][ipc_10] Exiting...
+[   8.778][v][ipc_11] Client connected
+[   8.779][v][ipc_11] Client disconnected
+[   8.779][d][ipc_11] Exiting...
+[   9.785][v][ipc_12] Client connected
+[   9.786][v][ipc_12] Client disconnected
+[   9.786][d][ipc_12] Exiting...
+[  10.426][v][ipc_13] Client connected
+[  10.427][v][ipc_13] Client disconnected
+[  10.427][d][ipc_13] Exiting...
+[  10.439][v][ipc_14] Client connected
+[  10.439][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  10.439][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[  10.439][e][ipc_14] Read error (Connection reset by peer)
+[  10.439][d][ipc_14] Exiting...
+[  10.439][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  10.439][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  10.439][d][file] Stream opened successfully.
+[  10.439][v][demux] Trying demuxers for level=normal.
+[  10.439][d][demux] Trying demuxer: disc (force-level: normal)
+[  10.439][d][demux] Trying demuxer: edl (force-level: normal)
+[  10.440][d][demux] Trying demuxer: cue (force-level: normal)
+[  10.440][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  10.440][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  10.440][d][demux] Trying demuxer: mkv (force-level: normal)
+[  10.440][d][demux] Trying demuxer: lavf (force-level: normal)
+[  10.441][v][ipc_15] Client connected
+[  10.444][v][ipc_15] Client disconnected
+[  10.444][d][ipc_15] Exiting...
+[  10.444][v][ipc_16] Client connected
+[  10.444][v][ipc_16] Client disconnected
+[  10.444][d][ipc_16] Exiting...
+[  10.456][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  10.457][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  10.458][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  10.458][v][find_files] Loading external files in /data/media/kiosky-player/
+[  10.459][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[  10.459][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[  10.459][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  10.459][v][lavf] select track 0
+[  10.459][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  10.459][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[  10.459][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[  10.459][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[  10.461][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[  10.461][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[  10.461][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[  10.461][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[  10.461][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[  10.461][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[  10.461][v][vo/gpu/drm] DRM Atomic support found
+[  10.462][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[  10.462][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[  10.462][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[  10.462][v][vo/gpu] Supported modifier: 0x0
+[  10.462][v][vo/gpu] Creating GBM device
+[  10.713][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[  10.713][v][vo/gpu/opengl] Initializing EGL
+[  10.717][v][vo/gpu/opengl] EGL_VERSION=1.4
+[  10.717][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[  10.717][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[  10.717][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[  10.718][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[  10.718][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[  10.718][d][vo/gpu/opengl] Chosen EGLConfig:
+[  10.718][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[  10.718][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[  10.718][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[  10.718][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[  10.718][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[  10.718][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[  10.718][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[  10.718][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[  10.718][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[  10.721][v][vo/gpu/opengl] Initializing EGL surface
+[  10.734][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[  10.734][v][vo/gpu] Detected desktop OpenGL 3.1.
+[  10.734][v][vo/gpu] GL_VENDOR='Panfrost'
+[  10.734][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[  10.734][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[  10.735][d][vo/gpu] Combined OpenGL extensions string:
+[  10.735][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_sync.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[  10.735][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[  10.735][v][vo/gpu] Loaded extension GL_KHR_debug.
+[  10.736][v][vo/gpu/opengl] Preparing framebuffer
+[  10.736][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[  10.736][v][vo/gpu/drm] crtc is not VRR capable
+[  10.736][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  10.736][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[  10.736][e][vo/gpu] Failed to commit atomic request: Permission denied
+[  10.736][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  10.736][e][vo/gpu/drm] Failed to restore previous mode
+[  10.736][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[  10.748][e][vo/gpu] Failed initializing any suitable GPU context!
+[  10.748][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[  10.748][v][lavf] deselect track 0
+[  10.748][i][cplayer] Video: no video
+[  10.748][f][cplayer] No video or audio streams selected.
+[  10.748][d][cplayer] Terminating demuxers...
+[  10.748][d][cplayer] Done terminating demuxers.
+[  10.748][v][cplayer] finished playback, no audio or video data played (reason 4)
+[  10.790][v][ipc_17] Client connected
+[  10.791][v][ipc_17] Client disconnected
+[  10.791][d][ipc_17] Exiting...
+[  11.794][v][ipc_18] Client connected
+[  11.795][v][ipc_18] Client disconnected
+[  11.795][d][ipc_18] Exiting...
+[  12.799][v][ipc_19] Client connected
+[  12.800][v][ipc_19] Client disconnected
+[  12.800][d][ipc_19] Exiting...
+[  13.804][v][ipc_20] Client connected
+[  13.805][v][ipc_20] Client disconnected
+[  13.805][d][ipc_20] Exiting...
+[  14.807][v][ipc_21] Client connected
+[  14.808][v][ipc_21] Client disconnected
+[  14.808][d][ipc_21] Exiting...
+[  15.811][v][ipc_22] Client connected
+[  15.812][v][ipc_22] Client disconnected
+[  15.812][d][ipc_22] Exiting...
+[  16.815][v][ipc_23] Client connected
+[  16.816][v][ipc_23] Client disconnected
+[  16.816][d][ipc_23] Exiting...
+[  17.819][v][ipc_24] Client connected
+[  17.820][v][ipc_24] Client disconnected
+[  17.820][d][ipc_24] Exiting...
+[  18.823][v][ipc_25] Client connected
+[  18.824][v][ipc_25] Client disconnected
+[  18.824][d][ipc_25] Exiting...
+[  19.826][v][ipc_26] Client connected
+[  19.827][v][ipc_26] Client disconnected
+[  19.827][d][ipc_26] Exiting...
+[  20.436][v][ipc_27] Client connected
+[  20.437][v][ipc_27] Client disconnected
+[  20.437][d][ipc_27] Exiting...
+[  20.458][v][ipc_28] Client connected
+[  20.458][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  20.458][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[  20.458][e][ipc_28] Read error (Connection reset by peer)
+[  20.458][d][ipc_28] Exiting...
+[  20.458][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  20.458][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  20.458][d][file] Stream opened successfully.
+[  20.458][v][demux] Trying demuxers for level=normal.
+[  20.458][d][demux] Trying demuxer: disc (force-level: normal)
+[  20.458][d][demux] Trying demuxer: edl (force-level: normal)
+[  20.459][d][demux] Trying demuxer: cue (force-level: normal)
+[  20.459][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  20.459][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  20.459][d][demux] Trying demuxer: mkv (force-level: normal)
+[  20.459][d][demux] Trying demuxer: lavf (force-level: normal)
+[  20.460][v][ipc_29] Client connected
+[  20.461][v][ipc_29] Client disconnected
+[  20.461][d][ipc_29] Exiting...
+[  20.462][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  20.463][v][ipc_30] Client connected
+[  20.463][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  20.463][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  20.464][v][ipc_30] Client disconnected
+[  20.464][d][ipc_30] Exiting...
+[  20.464][v][find_files] Loading external files in /data/media/kiosky-player/
+[  20.464][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[  20.464][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[  20.464][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  20.464][v][lavf] select track 0
+[  20.464][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  20.464][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[  20.464][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[  20.464][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[  20.465][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[  20.465][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[  20.465][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[  20.465][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[  20.465][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[  20.465][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[  20.465][v][vo/gpu/drm] DRM Atomic support found
+[  20.466][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[  20.466][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[  20.466][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[  20.466][v][vo/gpu] Supported modifier: 0x0
+[  20.466][v][vo/gpu] Creating GBM device
+[  20.712][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[  20.712][v][vo/gpu/opengl] Initializing EGL
+[  20.716][v][vo/gpu/opengl] EGL_VERSION=1.4
+[  20.716][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[  20.716][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[  20.716][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[  20.716][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[  20.716][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[  20.716][d][vo/gpu/opengl] Chosen EGLConfig:
+[  20.716][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[  20.716][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[  20.717][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[  20.717][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[  20.717][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[  20.717][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[  20.717][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[  20.717][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[  20.717][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[  20.720][v][vo/gpu/opengl] Initializing EGL surface
+[  20.726][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[  20.726][v][vo/gpu] Detected desktop OpenGL 3.1.
+[  20.726][v][vo/gpu] GL_VENDOR='Panfrost'
+[  20.726][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[  20.726][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[  20.728][d][vo/gpu] Combined OpenGL extensions string:
+[  20.728][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_sync.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[  20.728][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[  20.728][v][vo/gpu] Loaded extension GL_KHR_debug.
+[  20.729][v][vo/gpu/opengl] Preparing framebuffer
+[  20.729][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[  20.729][v][vo/gpu/drm] crtc is not VRR capable
+[  20.729][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  20.729][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[  20.729][e][vo/gpu] Failed to commit atomic request: Permission denied
+[  20.729][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  20.729][e][vo/gpu/drm] Failed to restore previous mode
+[  20.729][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[  20.733][e][vo/gpu] Failed initializing any suitable GPU context!
+[  20.734][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[  20.734][v][lavf] deselect track 0
+[  20.734][i][cplayer] Video: no video
+[  20.734][f][cplayer] No video or audio streams selected.
+[  20.734][d][cplayer] Terminating demuxers...
+[  20.734][d][cplayer] Done terminating demuxers.
+[  20.734][v][cplayer] finished playback, no audio or video data played (reason 4)
+[  20.829][v][ipc_31] Client connected
+[  20.830][v][ipc_31] Client disconnected
+[  20.830][d][ipc_31] Exiting...
+[  21.833][v][ipc_32] Client connected
+[  21.834][v][ipc_32] Client disconnected
+[  21.834][d][ipc_32] Exiting...
+[  22.838][v][ipc_33] Client connected
+[  22.839][v][ipc_33] Client disconnected
+[  22.839][d][ipc_33] Exiting...
+[  23.843][v][ipc_34] Client connected
+[  23.844][v][ipc_34] Client disconnected
+[  23.844][d][ipc_34] Exiting...
+[  24.847][v][ipc_35] Client connected
+[  24.848][v][ipc_35] Client disconnected
+[  24.848][d][ipc_35] Exiting...
+[  25.851][v][ipc_36] Client connected
+[  25.852][v][ipc_36] Client disconnected
+[  25.852][d][ipc_36] Exiting...
+[  26.854][v][ipc_37] Client connected
+[  26.855][v][ipc_37] Client disconnected
+[  26.855][d][ipc_37] Exiting...
+[  27.857][v][ipc_38] Client connected
+[  27.858][v][ipc_38] Client disconnected
+[  27.858][d][ipc_38] Exiting...
+[  28.861][v][ipc_39] Client connected
+[  28.861][v][ipc_39] Client disconnected
+[  28.862][d][ipc_39] Exiting...
+[  29.864][v][ipc_40] Client connected
+[  29.865][v][ipc_40] Client disconnected
+[  29.865][d][ipc_40] Exiting...
+[  30.446][v][ipc_41] Client connected
+[  30.447][v][ipc_41] Client disconnected
+[  30.447][d][ipc_41] Exiting...
+[  30.478][v][ipc_42] Client connected
+[  30.478][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  30.478][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[  30.478][e][ipc_42] Read error (Connection reset by peer)
+[  30.478][d][ipc_42] Exiting...
+[  30.478][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  30.479][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  30.479][d][file] Stream opened successfully.
+[  30.479][v][demux] Trying demuxers for level=normal.
+[  30.479][d][demux] Trying demuxer: disc (force-level: normal)
+[  30.479][d][demux] Trying demuxer: edl (force-level: normal)
+[  30.479][d][demux] Trying demuxer: cue (force-level: normal)
+[  30.479][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  30.479][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  30.479][d][demux] Trying demuxer: mkv (force-level: normal)
+[  30.479][d][demux] Trying demuxer: lavf (force-level: normal)
+[  30.481][v][ipc_43] Client connected
+[  30.482][v][ipc_43] Client disconnected
+[  30.482][d][ipc_43] Exiting...
+[  30.484][v][ipc_44] Client connected
+[  30.484][v][ipc_44] Client disconnected
+[  30.484][d][ipc_44] Exiting...
+[  30.492][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  30.493][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  30.493][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  30.493][v][find_files] Loading external files in /data/media/kiosky-player/
+[  30.493][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[  30.493][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[  30.493][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  30.493][v][lavf] select track 0
+[  30.493][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  30.494][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[  30.494][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[  30.494][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[  30.495][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[  30.495][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[  30.495][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[  30.495][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[  30.495][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[  30.495][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[  30.495][v][vo/gpu/drm] DRM Atomic support found
+[  30.496][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[  30.496][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[  30.496][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[  30.496][v][vo/gpu] Supported modifier: 0x0
+[  30.496][v][vo/gpu] Creating GBM device
+[  30.746][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[  30.746][v][vo/gpu/opengl] Initializing EGL
+[  30.750][v][vo/gpu/opengl] EGL_VERSION=1.4
+[  30.750][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[  30.750][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[  30.750][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[  30.750][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[  30.750][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[  30.750][d][vo/gpu/opengl] Chosen EGLConfig:
+[  30.750][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[  30.750][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[  30.750][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[  30.750][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[  30.750][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[  30.750][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[  30.750][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[  30.750][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[  30.750][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[  30.754][v][vo/gpu/opengl] Initializing EGL surface
+[  30.758][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[  30.758][v][vo/gpu] Detected desktop OpenGL 3.1.
+[  30.758][v][vo/gpu] GL_VENDOR='Panfrost'
+[  30.758][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[  30.758][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[  30.760][d][vo/gpu] Combined OpenGL extensions string:
+[  30.760][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_sync.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[  30.760][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[  30.760][v][vo/gpu] Loaded extension GL_KHR_debug.
+[  30.760][v][vo/gpu/opengl] Preparing framebuffer
+[  30.760][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[  30.760][v][vo/gpu/drm] crtc is not VRR capable
+[  30.760][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  30.760][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[  30.760][e][vo/gpu] Failed to commit atomic request: Permission denied
+[  30.760][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  30.760][e][vo/gpu/drm] Failed to restore previous mode
+[  30.760][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[  30.764][e][vo/gpu] Failed initializing any suitable GPU context!
+[  30.765][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[  30.765][v][lavf] deselect track 0
+[  30.765][i][cplayer] Video: no video
+[  30.765][f][cplayer] No video or audio streams selected.
+[  30.765][d][cplayer] Terminating demuxers...
+[  30.765][d][cplayer] Done terminating demuxers.
+[  30.765][v][cplayer] finished playback, no audio or video data played (reason 4)
+[  30.869][v][ipc_45] Client connected
+[  30.870][v][ipc_45] Client disconnected
+[  30.870][d][ipc_45] Exiting...
+[  31.872][v][ipc_46] Client connected
+[  31.873][v][ipc_46] Client disconnected
+[  31.873][d][ipc_46] Exiting...
+[  32.876][v][ipc_47] Client connected
+[  32.877][v][ipc_47] Client disconnected
+[  32.877][d][ipc_47] Exiting...
+[  33.880][v][ipc_48] Client connected
+[  33.882][v][ipc_48] Client disconnected
+[  33.882][d][ipc_48] Exiting...
+[  34.886][v][ipc_49] Client connected
+[  34.887][v][ipc_49] Client disconnected
+[  34.887][d][ipc_49] Exiting...
+[  35.889][v][ipc_50] Client connected
+[  35.890][v][ipc_50] Client disconnected
+[  35.890][d][ipc_50] Exiting...
+[  36.892][v][ipc_51] Client connected
+[  36.893][v][ipc_51] Client disconnected
+[  36.893][d][ipc_51] Exiting...
+[  37.895][v][ipc_52] Client connected
+[  37.896][v][ipc_52] Client disconnected
+[  37.896][d][ipc_52] Exiting...
+[  38.899][v][ipc_53] Client connected
+[  38.900][v][ipc_53] Client disconnected
+[  38.900][d][ipc_53] Exiting...
+[  39.903][v][ipc_54] Client connected
+[  39.904][v][ipc_54] Client disconnected
+[  39.904][d][ipc_54] Exiting...
+[  40.455][v][ipc_55] Client connected
+[  40.455][v][ipc_55] Client disconnected
+[  40.455][d][ipc_55] Exiting...
+[  40.497][v][ipc_56] Client connected
+[  40.497][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  40.498][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[  40.498][e][ipc_56] Read error (Connection reset by peer)
+[  40.498][d][ipc_56] Exiting...
+[  40.498][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  40.498][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  40.498][d][file] Stream opened successfully.
+[  40.498][v][demux] Trying demuxers for level=normal.
+[  40.498][d][demux] Trying demuxer: disc (force-level: normal)
+[  40.498][d][demux] Trying demuxer: edl (force-level: normal)
+[  40.498][d][demux] Trying demuxer: cue (force-level: normal)
+[  40.498][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  40.498][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  40.498][d][demux] Trying demuxer: mkv (force-level: normal)
+[  40.499][d][demux] Trying demuxer: lavf (force-level: normal)
+[  40.500][v][ipc_57] Client connected
+[  40.501][v][ipc_57] Client disconnected
+[  40.501][d][ipc_57] Exiting...
+[  40.503][v][ipc_58] Client connected
+[  40.503][v][ipc_58] Client disconnected
+[  40.503][d][ipc_58] Exiting...
+[  40.503][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  40.504][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  40.504][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  40.505][v][find_files] Loading external files in /data/media/kiosky-player/
+[  40.505][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[  40.505][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[  40.505][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  40.505][v][lavf] select track 0
+[  40.505][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  40.505][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[  40.505][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[  40.505][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[  40.507][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[  40.507][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[  40.507][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[  40.507][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[  40.507][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[  40.507][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[  40.507][v][vo/gpu/drm] DRM Atomic support found
+[  40.507][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[  40.507][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[  40.507][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[  40.507][v][vo/gpu] Supported modifier: 0x0
+[  40.507][v][vo/gpu] Creating GBM device
+[  40.757][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[  40.757][v][vo/gpu/opengl] Initializing EGL
+[  40.760][v][vo/gpu/opengl] EGL_VERSION=1.4
+[  40.761][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[  40.761][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[  40.761][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[  40.761][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[  40.761][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[  40.761][d][vo/gpu/opengl] Chosen EGLConfig:
+[  40.761][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[  40.761][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[  40.761][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[  40.761][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[  40.761][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[  40.761][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[  40.761][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[  40.761][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[  40.761][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[  40.765][v][vo/gpu/opengl] Initializing EGL surface
+[  40.768][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[  40.768][v][vo/gpu] Detected desktop OpenGL 3.1.
+[  40.768][v][vo/gpu] GL_VENDOR='Panfrost'
+[  40.768][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[  40.768][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[  40.770][d][vo/gpu] Combined OpenGL extensions string:
+[  40.770][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_sync.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[  40.770][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[  40.770][v][vo/gpu] Loaded extension GL_KHR_debug.
+[  40.770][v][vo/gpu/opengl] Preparing framebuffer
+[  40.771][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[  40.771][v][vo/gpu/drm] crtc is not VRR capable
+[  40.771][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  40.771][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[  40.771][e][vo/gpu] Failed to commit atomic request: Permission denied
+[  40.771][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  40.771][e][vo/gpu/drm] Failed to restore previous mode
+[  40.771][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[  40.775][e][vo/gpu] Failed initializing any suitable GPU context!
+[  40.775][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[  40.775][v][lavf] deselect track 0
+[  40.775][i][cplayer] Video: no video
+[  40.775][f][cplayer] No video or audio streams selected.
+[  40.775][d][cplayer] Terminating demuxers...
+[  40.775][d][cplayer] Done terminating demuxers.
+[  40.775][v][cplayer] finished playback, no audio or video data played (reason 4)
+[  40.906][v][ipc_59] Client connected
+[  40.907][v][ipc_59] Client disconnected
+[  40.907][d][ipc_59] Exiting...
+[  41.909][v][ipc_60] Client connected
+[  41.910][v][ipc_60] Client disconnected
+[  41.910][d][ipc_60] Exiting...
+[  42.913][v][ipc_61] Client connected
+[  42.914][v][ipc_61] Client disconnected
+[  42.914][d][ipc_61] Exiting...
+[  43.918][v][ipc_62] Client connected
+[  43.919][v][ipc_62] Client disconnected
+[  43.920][d][ipc_62] Exiting...
+[  44.923][v][ipc_63] Client connected
+[  44.923][v][ipc_63] Client disconnected
+[  44.923][d][ipc_63] Exiting...
+[  45.927][v][ipc_64] Client connected
+[  45.927][v][ipc_64] Client disconnected
+[  45.927][d][ipc_64] Exiting...
+[  46.930][v][ipc_65] Client connected
+[  46.931][v][ipc_65] Client disconnected
+[  46.931][d][ipc_65] Exiting...
+[  47.934][v][ipc_66] Client connected
+[  47.935][v][ipc_66] Client disconnected
+[  47.935][d][ipc_66] Exiting...
+[  48.938][v][ipc_67] Client connected
+[  48.938][v][ipc_67] Client disconnected
+[  48.938][d][ipc_67] Exiting...
+[  49.941][v][ipc_68] Client connected
+[  49.942][v][ipc_68] Client disconnected
+[  49.942][d][ipc_68] Exiting...
+[  50.463][v][ipc_69] Client connected
+[  50.463][v][ipc_69] Client disconnected
+[  50.464][d][ipc_69] Exiting...
+[  50.516][v][ipc_70] Client connected
+[  50.516][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  50.517][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[  50.517][v][ipc_70] Client disconnected
+[  50.517][d][ipc_70] Exiting...
+[  50.517][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  50.518][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  50.518][d][file] Stream opened successfully.
+[  50.518][v][demux] Trying demuxers for level=normal.
+[  50.518][d][demux] Trying demuxer: disc (force-level: normal)
+[  50.518][d][demux] Trying demuxer: edl (force-level: normal)
+[  50.518][d][demux] Trying demuxer: cue (force-level: normal)
+[  50.518][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  50.521][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  50.521][d][demux] Trying demuxer: mkv (force-level: normal)
+[  50.521][d][demux] Trying demuxer: lavf (force-level: normal)
+[  50.521][v][ipc_71] Client connected
+[  50.522][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  50.523][v][ipc_71] Client disconnected
+[  50.523][d][ipc_71] Exiting...
+[  50.524][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  50.524][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  50.524][v][find_files] Loading external files in /data/media/kiosky-player/
+[  50.524][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[  50.524][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[  50.524][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  50.524][v][ipc_72] Client connected
+[  50.524][v][lavf] select track 0
+[  50.525][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  50.525][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[  50.525][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[  50.525][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[  50.527][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[  50.527][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[  50.527][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[  50.527][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[  50.527][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[  50.527][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[  50.527][v][vo/gpu/drm] DRM Atomic support found
+[  50.527][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[  50.527][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[  50.527][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[  50.527][v][vo/gpu] Supported modifier: 0x0
+[  50.528][v][vo/gpu] Creating GBM device
+[  50.782][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[  50.782][v][vo/gpu/opengl] Initializing EGL
+[  50.787][v][vo/gpu/opengl] EGL_VERSION=1.4
+[  50.787][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[  50.787][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[  50.787][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[  50.787][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[  50.787][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[  50.787][d][vo/gpu/opengl] Chosen EGLConfig:
+[  50.787][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[  50.787][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[  50.787][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[  50.787][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[  50.787][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[  50.787][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[  50.787][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[  50.787][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[  50.787][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[  50.792][v][vo/gpu/opengl] Initializing EGL surface
+[  50.796][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[  50.796][v][vo/gpu] Detected desktop OpenGL 3.1.
+[  50.796][v][vo/gpu] GL_VENDOR='Panfrost'
+[  50.796][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[  50.796][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[  50.797][d][vo/gpu] Combined OpenGL extensions string:
+[  50.797][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_sync.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[  50.798][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[  50.798][v][vo/gpu] Loaded extension GL_KHR_debug.
+[  50.798][v][vo/gpu/opengl] Preparing framebuffer
+[  50.798][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[  50.798][v][vo/gpu/drm] crtc is not VRR capable
+[  50.799][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  50.799][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[  50.799][e][vo/gpu] Failed to commit atomic request: Permission denied
+[  50.799][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  50.799][e][vo/gpu/drm] Failed to restore previous mode
+[  50.799][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[  50.804][e][vo/gpu] Failed initializing any suitable GPU context!
+[  50.804][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[  50.805][v][lavf] deselect track 0
+[  50.805][i][cplayer] Video: no video
+[  50.805][f][cplayer] No video or audio streams selected.
+[  50.805][d][cplayer] Terminating demuxers...
+[  50.805][d][cplayer] Done terminating demuxers.
+[  50.805][v][cplayer] finished playback, no audio or video data played (reason 4)
+[  50.805][e][ipc_72] Read error (Connection reset by peer)
+[  50.805][d][ipc_72] Exiting...
+[  50.946][v][ipc_73] Client connected
+[  50.947][v][ipc_73] Client disconnected
+[  50.947][d][ipc_73] Exiting...
+[  51.950][v][ipc_74] Client connected
+[  51.951][v][ipc_74] Client disconnected
+[  51.951][d][ipc_74] Exiting...
+[  52.954][v][ipc_75] Client connected
+[  52.955][v][ipc_75] Client disconnected
+[  52.955][d][ipc_75] Exiting...
+[  53.958][v][ipc_76] Client connected
+[  53.959][v][ipc_76] Client disconnected
+[  53.959][d][ipc_76] Exiting...
+[  54.962][v][ipc_77] Client connected
+[  54.963][v][ipc_77] Client disconnected
+[  54.963][d][ipc_77] Exiting...
+[  55.967][v][ipc_78] Client connected
+[  55.969][v][ipc_78] Client disconnected
+[  55.969][d][ipc_78] Exiting...
+[  56.973][v][ipc_79] Client connected
+[  56.977][v][ipc_79] Client disconnected
+[  56.978][d][ipc_79] Exiting...
+[  57.980][v][ipc_80] Client connected
+[  57.981][v][ipc_80] Client disconnected
+[  57.981][d][ipc_80] Exiting...
+[  58.984][v][ipc_81] Client connected
+[  58.986][v][ipc_81] Client disconnected
+[  58.986][d][ipc_81] Exiting...
+[  59.990][v][ipc_82] Client connected
+[  59.991][v][ipc_82] Client disconnected
+[  59.991][d][ipc_82] Exiting...
+[  60.471][v][ipc_83] Client connected
+[  60.471][v][ipc_83] Client disconnected
+[  60.471][d][ipc_83] Exiting...
+[  60.833][v][ipc_84] Client connected
+[  60.833][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  60.834][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply/candidate-health/home/.local/state/mpv/watch_later'
+[  60.834][e][ipc_84] Read error (Connection reset by peer)
+[  60.834][d][ipc_84] Exiting...
+[  60.834][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  60.834][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  60.834][d][file] Stream opened successfully.
+[  60.834][v][demux] Trying demuxers for level=normal.
+[  60.834][d][demux] Trying demuxer: disc (force-level: normal)
+[  60.834][d][demux] Trying demuxer: edl (force-level: normal)
+[  60.834][d][demux] Trying demuxer: cue (force-level: normal)
+[  60.834][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  60.834][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  60.834][d][demux] Trying demuxer: mkv (force-level: normal)
+[  60.834][d][demux] Trying demuxer: lavf (force-level: normal)
+[  60.836][v][ipc_85] Client connected
+[  60.836][v][ipc_85] Client disconnected
+[  60.836][d][ipc_85] Exiting...
+[  60.837][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  60.838][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  60.839][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  60.839][v][ipc_86] Client connected
+[  60.839][v][find_files] Loading external files in /data/media/kiosky-player/
+[  60.839][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/xdg-config/mpv/sub'
+[  60.839][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply/candidate-health/home/.mpv/sub'
+[  60.839][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  60.840][v][lavf] select track 0
+[  60.840][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  60.840][v][ipc_86] Client disconnected
+[  60.840][d][ipc_86] Exiting...
+[  60.841][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[  60.841][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[  60.841][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[  60.842][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[  60.843][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[  60.843][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[  60.843][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[  60.843][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[  60.843][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[  60.843][v][vo/gpu/drm] DRM Atomic support found
+[  60.844][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[  60.844][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[  60.844][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[  60.844][v][vo/gpu] Supported modifier: 0x0
+[  60.844][v][vo/gpu] Creating GBM device
+[  60.995][v][ipc_87] Client connected
+[  61.093][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[  61.093][v][vo/gpu/opengl] Initializing EGL
+[  61.096][v][vo/gpu/opengl] EGL_VERSION=1.4
+[  61.096][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[  61.096][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[  61.096][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[  61.097][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[  61.097][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[  61.097][d][vo/gpu/opengl] Chosen EGLConfig:
+[  61.097][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[  61.097][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[  61.097][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[  61.097][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[  61.097][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[  61.097][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[  61.097][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[  61.097][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[  61.097][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[  61.100][v][vo/gpu/opengl] Initializing EGL surface
+[  61.103][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[  61.103][v][vo/gpu] Detected desktop OpenGL 3.1.
+[  61.103][v][vo/gpu] GL_VENDOR='Panfrost'
+[  61.103][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[  61.103][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[  61.105][d][vo/gpu] Combined OpenGL extensions string:
+[  61.105][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_sync.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[  61.105][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[  61.105][v][vo/gpu] Loaded extension GL_KHR_debug.
+[  61.105][v][vo/gpu/opengl] Preparing framebuffer
+[  61.105][w][vo/gpu/drm] Failed to acquire DRM master: Permission denied
+[  61.105][v][vo/gpu/drm] crtc is not VRR capable
+[  61.105][e][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  61.105][e][vo/gpu/opengl] Failed to set CRTC for connector 52: Permission denied
+[  61.105][e][vo/gpu] Failed to commit atomic request: Permission denied
+[  61.106][w][vo/gpu/drm] Failed to commit ModeSetting atomic request: Permission denied
+[  61.106][e][vo/gpu/drm] Failed to restore previous mode
+[  61.106][w][vo/gpu/drm] Failed to drop DRM master: Permission denied
+[  61.111][e][vo/gpu] Failed initializing any suitable GPU context!
+[  61.112][f][cplayer] Error opening/initializing the selected video_out (--vo) device.
+[  61.112][v][lavf] deselect track 0
+[  61.112][i][cplayer] Video: no video
+[  61.112][f][cplayer] No video or audio streams selected.
+[  61.112][d][cplayer] Terminating demuxers...
+[  61.112][d][cplayer] Done terminating demuxers.
+[  61.112][v][cplayer] finished playback, no audio or video data played (reason 4)
+[  61.113][v][ipc_87] Client disconnected
+[  61.113][d][ipc_87] Exiting...
+[  62.116][v][ipc_88] Client connected
+[  62.117][v][ipc_88] Client disconnected
+[  62.117][d][ipc_88] Exiting...
+[  63.082][v][ipc_89] Client connected
+[  63.082][d][cplayer] Run command: quit, flags=64, args=[code="0"]
+[  63.082][i][cplayer] Exiting... (Quit)
+[  63.082][d][ipc_89] Exiting...

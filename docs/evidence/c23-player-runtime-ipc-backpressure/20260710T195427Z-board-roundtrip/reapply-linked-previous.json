@@ -1,0 +1,57 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T20:08:15Z",
+      "lab_reapply_linked_previous": true,
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json:linked-previous",
+      "started_at_utc": "2026-07-10T20:07:07Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+    "state_current_version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "state_previous_version": "c18.player-runtime-homolog-20260710-c22-c023eae"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T20:06:44Z",
+      "quarantined_current": false,
+      "rollback_reason": "c23_ipc_fix_roundtrip",
+      "rolled_back_to": "c18.player-runtime-homolog-20260710-c22-c023eae",
+      "started_at_utc": "2026-07-10T20:06:44Z",
+      "status": "success",
+      "type": "rollback"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "state_current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+    "state_previous_version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/tmp/c18-c23/reapply-linked-previous",
+  "panfrost_fault_policy": "delta",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "reapply_linked_previous": true,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+}

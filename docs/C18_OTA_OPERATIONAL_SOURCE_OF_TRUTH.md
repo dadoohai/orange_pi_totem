@@ -163,6 +163,17 @@ Fila atual para consolidacao:
   `docs/evidence/c22-rapid-adversarial/20260710T050658Z-package-roundtrip-c023eae/`.
   Non-claim: zero frame preto requer captura HDMI; publicacao e reancoragem do
   auto-pull pertencem ao M5.
+- C23 backpressure IPC: causa e correcao fechadas na placa em 2026-07-10. O
+  pacote `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`, payload SHA256
+  `88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80`,
+  remove a conexao persistente sem leitura e serializa comandos/consultas em
+  conexoes fresh. Apply, rollback para C22 e reapply passaram. A observacao
+  decisiva de 10 minutos percorreu nove midias sem erro/restart/watchdog; 120
+  amostras paralelas mantiveram o mesmo PID e fila de saida zero. A evidencia
+  esta em
+  `docs/evidence/c23-player-runtime-ipc-backpressure/20260710T195427Z-board-roundtrip/`.
+  Non-claims: C23 ainda nao foi publicado como exact-target remoto, reancorado
+  no auto-pull production ou incorporado a prod8.
 - Drift operacional observado em 2026-07-10: o timer de `player-runtime` da
   placa lab segue ativo com autorizacao exata do alvo antigo `9bebaf1`. Como o
   current e mais novo, o downgrade guard responde `rc=45` e preserva o player,

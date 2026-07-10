@@ -1,0 +1,1819 @@
+[   0.000][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/mpv-g001.log' -> '/tmp/c18-c23/apply-service-paused/candidate-health/mpv-g001.log'
+[   0.006][v][cplayer] mpv 8670d2e-dirty Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects
+[   0.006][v][cplayer]  built on May 30 2026 19:25:16
+[   0.006][v][cplayer] libplacebo version: v6.338.2
+[   0.006][v][cplayer] FFmpeg version: git-2024-08-06-2af4006
+[   0.006][v][cplayer] FFmpeg library versions:
+[   0.006][v][cplayer]    libavcodec      61.11.100
+[   0.006][v][cplayer]    libavdevice     61.2.100
+[   0.006][v][cplayer]    libavfilter     10.2.102
+[   0.006][v][cplayer]    libavformat     61.5.101
+[   0.006][v][cplayer]    libavutil       59.32.100
+[   0.006][v][cplayer]    libswresample   5.2.100
+[   0.006][v][cplayer]    libswscale      8.2.100
+[   0.006][v][cplayer] Configuration: -Dbuildtype=release -Dprefix=/tmp/ffbuild/prefix -Dv4l2request=enabled -Dlibmpv=false -Dcplayer=true -Dgpl=true -Dlua=disabled -Djavascript=disabled -Dvulkan=disabled -Dlibbluray=disabled -Duchardet=disabled -Dvapoursynth=disabled -Dzimg=disabled -Dshaderc=disabled -Dspirv-cross=disabled --cross-file=/tmp/ffbuild/cross.ini
+[   0.006][v][cplayer] List of enabled features: build-date cplugins dmabuf-interop-gl drm dvbin egl egl-drm ffmpeg gbm gl glibc-thread-name glob glob-posix gpl iconv libass libavdevice libdl libplacebo linux-fstatfs memrchr posix posix-shm ppoll pthread-condattr-setclock v4l2request vector vt.h
+[   0.006][v][cplayer] Command line options: '--fs' '--force-window=yes' '--idle=yes' '--keep-open=yes' '--no-terminal' '--loop-file=inf' '--image-display-duration=inf' '--osd-level=0' '--input-ipc-server=/tmp/c18-c23/apply-service-paused/candidate-health/mpv.sock' '--log-file=/tmp/c18-c23/apply-service-paused/candidate-health/mpv-g001.log' '--vo=gpu' '--gpu-context=drm' '--ao=null' '--no-input-default-bindings' '--video-rotate=0' '--input-conf=/tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf' '--input-vo-keyboard=yes' '--hwdec=auto' '--vo=gpu' '--gpu-context=drm' '--hwdec=v4l2request-copy'
+[   0.006][v][cplayer] mpv 8670d2e-dirty Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects
+[   0.006][v][cplayer]  built on May 30 2026 19:25:16
+[   0.006][v][cplayer] libplacebo version: v6.338.2
+[   0.006][v][cplayer] FFmpeg version: git-2024-08-06-2af4006
+[   0.006][v][cplayer] FFmpeg library versions:
+[   0.006][v][cplayer]    libavcodec      61.11.100
+[   0.006][v][cplayer]    libavdevice     61.2.100
+[   0.006][v][cplayer]    libavfilter     10.2.102
+[   0.006][v][cplayer]    libavformat     61.5.101
+[   0.006][v][cplayer]    libavutil       59.32.100
+[   0.006][v][cplayer]    libswresample   5.2.100
+[   0.006][v][cplayer]    libswscale      8.2.100
+[   0.006][v][cplayer] Configuration: -Dbuildtype=release -Dprefix=/tmp/ffbuild/prefix -Dv4l2request=enabled -Dlibmpv=false -Dcplayer=true -Dgpl=true -Dlua=disabled -Djavascript=disabled -Dvulkan=disabled -Dlibbluray=disabled -Duchardet=disabled -Dvapoursynth=disabled -Dzimg=disabled -Dshaderc=disabled -Dspirv-cross=disabled --cross-file=/tmp/ffbuild/cross.ini
+[   0.006][v][cplayer] List of enabled features: build-date cplugins dmabuf-interop-gl drm dvbin egl egl-drm ffmpeg gbm gl glibc-thread-name glob glob-posix gpl iconv libass libavdevice libdl libplacebo linux-fstatfs memrchr posix posix-shm ppoll pthread-condattr-setclock v4l2request vector vt.h
+[   0.006][d][global] home path: '' -> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv'
+[   0.006][d][global] user path: '~~home/' -> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv'
+[   0.006][d][global] user path: '~~old_home/' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv'
+[   0.006][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/encoding-profiles.conf'
+[   0.006][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/encoding-profiles.conf'
+[   0.006][d][global] config path: 'encoding-profiles.conf' -/-> '/tmp/ffbuild/prefix/etc/mpv/encoding-profiles.conf'
+[   0.006][d][global] config path: 'mpv.conf' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/mpv.conf'
+[   0.006][d][global] config path: 'config' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/config'
+[   0.007][d][global] config path: 'mpv.conf' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/mpv.conf'
+[   0.007][d][global] config path: 'config' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/config'
+[   0.007][d][global] config path: 'mpv.conf' -/-> '/tmp/ffbuild/prefix/etc/mpv/mpv.conf'
+[   0.007][d][global] config path: 'config' -/-> '/tmp/ffbuild/prefix/etc/mpv/config'
+[   0.007][v][cplayer] Setting option 'fs' = '' (flags = 8)
+[   0.007][v][cplayer] Setting option 'force-window' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'idle' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'keep-open' = 'yes' (flags = 8)
+[   0.007][v][cplayer] Setting option 'terminal' = 'no' (flags = 8)
+[   0.007][v][cplayer] Setting option 'loop-file' = 'inf' (flags = 8)
+[   0.007][v][cplayer] Setting option 'image-display-duration' = 'inf' (flags = 8)
+[   0.007][v][cplayer] Setting option 'osd-level' = '0' (flags = 8)
+[   0.007][v][cplayer] Setting option 'input-ipc-server' = '/tmp/c18-c23/apply-service-paused/candidate-health/mpv.sock' (flags = 8)
+[   0.007][v][cplayer] Setting option 'log-file' = '/tmp/c18-c23/apply-service-paused/candidate-health/mpv-g001.log' (flags = 8)
+[   0.007][v][cplayer] Setting option 'vo' = 'gpu' (flags = 8)
+[   0.007][v][cplayer] Setting option 'gpu-context' = 'drm' (flags = 8)
+[   0.007][v][cplayer] Setting option 'ao' = 'null' (flags = 8)
+[   0.007][v][cplayer] Setting option 'input-default-bindings' = 'no' (flags = 8)
+[   0.007][v][cplayer] Setting option 'video-rotate' = '0' (flags = 8)
+[   0.008][v][cplayer] Setting option 'input-conf' = '/tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf' (flags = 8)
+[   0.008][v][cplayer] Setting option 'input-vo-keyboard' = 'yes' (flags = 8)
+[   0.008][v][cplayer] Setting option 'hwdec' = 'auto' (flags = 8)
+[   0.008][v][cplayer] Setting option 'vo' = 'gpu' (flags = 8)
+[   0.008][v][cplayer] Setting option 'gpu-context' = 'drm' (flags = 8)
+[   0.008][v][cplayer] Setting option 'hwdec' = 'v4l2request-copy' (flags = 8)
+[   0.016][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf' -> '/tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf'
+[   0.016][v][file] Opening /tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf
+[   0.016][d][file] resize stream to 131072 bytes, drop 0 bytes
+[   0.016][d][file] Stream opened successfully.
+[   0.016][v][input] Parsing input config file /tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf
+[   0.016][v][input] Input config file /tmp/c18-c23/apply-service-paused/candidate-health/runtime/hotkeys.conf parsed: 1 binds
+[   0.016][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/mpv-g001.log' -> '/tmp/c18-c23/apply-service-paused/candidate-health/mpv-g001.log'
+[   0.016][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/mpv.sock' -> '/tmp/c18-c23/apply-service-paused/candidate-health/mpv.sock'
+[   0.017][v][ipc] Starting IPC master
+[   0.017][d][global] config path: 'scripts' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/scripts'
+[   0.017][d][global] config path: 'scripts' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/scripts'
+[   0.017][d][global] config path: 'scripts' -/-> '/tmp/ffbuild/prefix/etc/mpv/scripts'
+[   0.017][v][ipc] Listening to IPC socket.
+[   0.017][v][vo/gpu/opengl] Initializing GPU context 'drm'
+[   0.018][e][vo/gpu/drm] Can't open TTY for VT control: No such device or address
+[   0.018][w][vo/gpu/drm] Failed to set up VT switcher. Terminal switching will be unavailable.
+[   0.018][v][ipc_0] Client connected
+[   0.018][v][ipc_0] Client disconnected
+[   0.018][d][ipc_0] Exiting...
+[   0.023][v][ipc_1] Client connected
+[   0.555][v][vo/gpu/drm] Picked DRM card 1, primary node /dev/dri/card0 as the default.
+[   0.555][v][vo/gpu/drm] Driver: sun4i-drm 1.0.0 (0)
+[   1.074][v][vo/gpu/drm] Connector 52 currently connected to encoder 51
+[   1.074][v][vo/gpu/drm] Selected Encoder 51 with CRTC 50
+[   1.074][w][vo/gpu/drm] Could not find any preferred mode. Picking the first mode.
+[   1.074][v][vo/gpu/drm] Selected mode: 1024x768 (1024x768@60.00Hz)
+[   1.074][v][vo/gpu/drm] DRM Atomic support found
+[   1.595][v][vo/gpu/drm] Using primary plane 38 as draw plane
+[   1.595][v][vo/gpu/drm] Using overlay plane 32 as drmprime plane
+[   1.595][v][vo/gpu] GBM_FORMAT_ARGB8888 supported by draw plane.
+[   1.595][v][vo/gpu] Supported modifier: 0x0
+[   1.595][v][vo/gpu] Creating GBM device
+[   1.929][v][vo/gpu] Initializing GBM surface (1024 x 768)
+[   1.930][v][vo/gpu/opengl] Initializing EGL
+[   1.936][v][vo/gpu/opengl] EGL_VERSION=1.4
+[   1.936][v][vo/gpu/opengl] EGL_VENDOR=Mesa Project
+[   1.936][v][vo/gpu/opengl] EGL_CLIENT_APIS=OpenGL OpenGL_ES 
+[   1.936][v][vo/gpu/opengl] Trying to create Desktop OpenGL context.
+[   1.937][v][vo/gpu/opengl] Attempting to find EGLConfig matching GBM_FORMAT_ARGB8888
+[   1.937][v][vo/gpu/opengl] Found matching EGLConfig for GBM_FORMAT_ARGB8888
+[   1.937][d][vo/gpu/opengl] Chosen EGLConfig:
+[   1.937][d][vo/gpu/opengl]   EGL_CONFIG_ID=0x11
+[   1.937][d][vo/gpu/opengl]   EGL_RED_SIZE=0x8
+[   1.937][d][vo/gpu/opengl]   EGL_GREEN_SIZE=0x8
+[   1.937][d][vo/gpu/opengl]   EGL_BLUE_SIZE=0x8
+[   1.937][d][vo/gpu/opengl]   EGL_ALPHA_SIZE=0x8
+[   1.937][d][vo/gpu/opengl]   EGL_COLOR_BUFFER_TYPE=0x308e
+[   1.937][d][vo/gpu/opengl]   EGL_CONFIG_CAVEAT=0x3038
+[   1.937][d][vo/gpu/opengl]   EGL_CONFORMANT=0x4d
+[   1.937][d][vo/gpu/opengl]   EGL_NATIVE_VISUAL_ID=0x34325241
+[   1.940][v][vo/gpu/opengl] Initializing EGL surface
+[   1.949][v][vo/gpu] GL_VERSION='3.1 Mesa 22.3.6'
+[   1.949][v][vo/gpu] Detected desktop OpenGL 3.1.
+[   1.949][v][vo/gpu] GL_VENDOR='Panfrost'
+[   1.949][v][vo/gpu] GL_RENDERER='Mali-G31 (Panfrost)'
+[   1.949][v][vo/gpu] GL_SHADING_LANGUAGE_VERSION='1.40'
+[   1.950][d][vo/gpu] Combined OpenGL extensions string:
+[   1.950][d][vo/gpu] EGL_ANDROID_blob_cache EGL_EXT_buffer_age EGL_EXT_image_dma_buf_import EGL_EXT_image_dma_buf_import_modifiers EGL_KHR_cl_event2 EGL_KHR_config_attribs EGL_KHR_context_flush_control EGL_KHR_create_context EGL_KHR_create_context_no_error EGL_KHR_fence_sync EGL_KHR_get_all_proc_addresses EGL_KHR_gl_colorspace EGL_KHR_gl_renderbuffer_image EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_3D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_image EGL_KHR_image_base EGL_KHR_image_pixmap EGL_KHR_no_config_context EGL_KHR_partial_update EGL_KHR_reusable_sync EGL_KHR_surfaceless_context EGL_EXT_pixel_format_float EGL_KHR_wait_sync EGL_MESA_configless_context EGL_MESA_drm_image EGL_MESA_image_dma_buf_export EGL_MESA_query_driver EGL_WL_bind_wayland_display  GL_AMD_conservative_depth GL_AMD_depth_clamp_separate GL_AMD_draw_buffers_blend GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_shader_stencil_export GL_AMD_shader_trinary_minmax GL_AMD_texture_texture4 GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_APPLE_packed_pixels GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conditional_render_inverted GL_ARB_conservative_depth GL_ARB_copy_buffer GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_elements_base_vertex GL_ARB_draw_indirect GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_robustness GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_bit_encoding GL_ARB_shader_draw_parameters GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_stencil_export GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_window_pos GL_ATI_blend_equation_separate GL_ATI_draw_buffers GL_ATI_fragment_shader GL_ATI_separate_stencil GL_ATI_texture_compression_3dc GL_ATI_texture_env_combine3 GL_ATI_texture_float GL_EXT_EGL_image_storage GL_EXT_EGL_sync GL_EXT_abgr GL_EXT_bgra GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_copy_texture GL_EXT_debug_label GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_provoking_vertex GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_specular_color GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_image_load_formatted GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_subtexture GL_EXT_texture GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_add GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_integer GL_EXT_texture_lod_bias GL_EXT_texture_object GL_EXT_texture_rectangle GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shared_exponent GL_EXT_texture_snorm GL_EXT_texture_swizzle GL_EXT_transform_feedback GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_IBM_multimode_draw_arrays GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_INGR_blend_func_separate GL_INTEL_blackhole_render GL_KHR_blend_equation_advanced GL_KHR_blend_equation_advanced_coherent GL_KHR_context_flush_control GL_KHR_debug GL_KHR_no_error GL_KHR_parallel_shader_compile GL_KHR_texture_compression_astc_ldr GL_KHR_texture_compression_astc_sliced_3d GL_MESA_pack_invert GL_MESA_shader_integer_functions GL_MESA_texture_signed_rgba GL_MESA_window_pos GL_NV_ES1_1_compatibility GL_NV_blend_square GL_NV_conditional_render GL_NV_copy_image GL_NV_depth_clamp GL_NV_fog_distance GL_NV_half_float GL_NV_light_max_exponent GL_NV_packed_depth_stencil GL_NV_primitive_restart GL_NV_texgen_reflection GL_NV_texture_env_combine4 GL_NV_texture_rectangle GL_OES_EGL_image GL_OES_read_format GL_S3_s3tc GL_SGIS_generate_mipmap GL_SGIS_texture_border_clamp GL_SGIS_texture_edge_clamp GL_SGIS_texture_lod GL_SUN_multi_draw_arrays
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_sync.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_invalidate_subdata.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_get_program_binary.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_buffer_storage.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_shader_image_load_store.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_shader_storage_buffer_object.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_arrays_of_arrays.
+[   1.951][v][vo/gpu] Loaded extension GL_ARB_debug_output.
+[   1.951][v][vo/gpu] Loaded extension GL_KHR_debug.
+[   1.951][v][vo/gpu/opengl] Preparing framebuffer
+[   1.951][v][vo/gpu/drm] crtc is not VRR capable
+[   1.955][v][vo/gpu/drm] Monitor pixel aspect: 1
+[   1.955][v][vo/gpu/opengl] Could not find path to render node.
+[   1.956][d][vo/gpu/opengl] Texture formats:
+[   1.956][d][vo/gpu/opengl]   NAME       COMP*TYPE SIZE           DEPTH PER COMP.
+[   1.956][d][vo/gpu/opengl]   r8         1*unorm   1B    LF CR ST {8}
+[   1.956][d][vo/gpu/opengl]   rg8        2*unorm   2B    LF CR ST {8 8}
+[   1.956][d][vo/gpu/opengl]   rgb8       3*unorm   3B    LF CR ST {8 8 8}
+[   1.956][d][vo/gpu/opengl]   rgba8      4*unorm   4B    LF CR ST {8 8 8 8}
+[   1.956][d][vo/gpu/opengl]   r16        1*unorm   2B    LF CR ST {16}
+[   1.956][d][vo/gpu/opengl]   rg16       2*unorm   4B    LF CR ST {16 16}
+[   1.956][d][vo/gpu/opengl]   rgb16      3*unorm   6B    LF CR ST {16 16 16}
+[   1.956][d][vo/gpu/opengl]   rgba16     4*unorm   8B    LF CR ST {16 16 16 16}
+[   1.956][d][vo/gpu/opengl]   r8ui       1*uint    1B       CR ST {8}
+[   1.956][d][vo/gpu/opengl]   rg8ui      2*uint    2B       CR ST {8 8}
+[   1.956][d][vo/gpu/opengl]   rgb8ui     3*uint    3B          ST {8 8 8}
+[   1.956][d][vo/gpu/opengl]   rgba8ui    4*uint    4B       CR ST {8 8 8 8}
+[   1.956][d][vo/gpu/opengl]   r16ui      1*uint    2B       CR ST {16}
+[   1.956][d][vo/gpu/opengl]   rg16ui     2*uint    4B       CR ST {16 16}
+[   1.956][d][vo/gpu/opengl]   rgb16ui    3*uint    6B          ST {16 16 16}
+[   1.956][d][vo/gpu/opengl]   rgba16ui   4*uint    8B       CR ST {16 16 16 16}
+[   1.956][d][vo/gpu/opengl]   r16f       1*float   4B    LF CR ST {32/16}
+[   1.956][d][vo/gpu/opengl]   rg16f      2*float   8B    LF CR ST {32/16 32/16}
+[   1.956][d][vo/gpu/opengl]   rgb16f     3*float  12B    LF CR ST {32/16 32/16 32/16}
+[   1.956][d][vo/gpu/opengl]   rgba16f    4*float  16B    LF CR ST {32/16 32/16 32/16 32/16}
+[   1.956][d][vo/gpu/opengl]   r32f       1*float   4B    LF CR ST {32}
+[   1.956][d][vo/gpu/opengl]   rg32f      2*float   8B    LF CR ST {32 32}
+[   1.956][d][vo/gpu/opengl]   rgb32f     3*float  12B    LF CR ST {32 32 32}
+[   1.956][d][vo/gpu/opengl]   rgba32f    4*float  16B    LF CR ST {32 32 32 32}
+[   1.956][d][vo/gpu/opengl]   rgb10_a2   4*unorm   4B    LF CR ST {0/10 0/10 0/10 0/2}
+[   1.956][d][vo/gpu/opengl]   rgba12     4*unorm   8B    LF CR ST {16 16 16 16}
+[   1.956][d][vo/gpu/opengl]   rgb10      3*unorm   6B    LF CR ST {16/10 16/10 16/10}
+[   1.956][d][vo/gpu/opengl]   rgb565     3*unorm   2B    LF    ST {0/8 0/8 0/8}
+[   1.956][d][vo/gpu/opengl]  LA = LUMINANCE_ALPHA hack format
+[   1.956][d][vo/gpu/opengl]  LF = linear filterable
+[   1.956][d][vo/gpu/opengl]  CR = can be used for render targets
+[   1.956][d][vo/gpu/opengl]  ST = can be used for storable images
+[   1.956][d][vo/gpu/opengl] Image formats:
+[   1.956][d][vo/gpu/opengl]   yuv444p => 3 planes 1x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.956][d][vo/gpu/opengl]   yuv420p => 3 planes 2x2 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.956][d][vo/gpu/opengl]   gray => 1 planes 1x1 8/0 [r8] (r) [unorm]
+[   1.956][d][vo/gpu/opengl]   gray16 => 1 planes 1x1 16/0 [r16] (r) [unorm]
+[   1.956][d][vo/gpu/opengl]   uyvy422
+[   1.956][d][vo/gpu/opengl]   nv12 => 2 planes 2x2 8/0 [r8/rg8] (r/gb) [unorm]
+[   1.956][d][vo/gpu/opengl]   p010 => 2 planes 2x2 16/6 [r16/rg16] (r/gb) [unorm]
+[   1.956][d][vo/gpu/opengl]   argb => 1 planes 1x1 8/0 [rgba8] (argb) [unorm]
+[   1.956][d][vo/gpu/opengl]   bgra => 1 planes 1x1 8/0 [rgba8] (bgra) [unorm]
+[   1.956][d][vo/gpu/opengl]   abgr => 1 planes 1x1 8/0 [rgba8] (abgr) [unorm]
+[   1.956][d][vo/gpu/opengl]   rgba => 1 planes 1x1 8/0 [rgba8] (rgba) [unorm]
+[   1.956][d][vo/gpu/opengl]   bgr24 => 1 planes 1x1 8/0 [rgb8] (bgr) [unorm]
+[   1.956][d][vo/gpu/opengl]   rgb24 => 1 planes 1x1 8/0 [rgb8] (rgb) [unorm]
+[   1.956][d][vo/gpu/opengl]   0rgb => 1 planes 1x1 8/0 [rgba8] (_rgb) [unorm]
+[   1.956][d][vo/gpu/opengl]   bgr0 => 1 planes 1x1 8/0 [rgba8] (bgr) [unorm]
+[   1.956][d][vo/gpu/opengl]   0bgr => 1 planes 1x1 8/0 [rgba8] (_bgr) [unorm]
+[   1.956][d][vo/gpu/opengl]   rgb0 => 1 planes 1x1 8/0 [rgba8] (rgb) [unorm]
+[   1.956][d][vo/gpu/opengl]   rgba64 => 1 planes 1x1 16/0 [rgba16] (rgba) [unorm]
+[   1.956][d][vo/gpu/opengl]   rgb565 => 1 planes 1x1 0/0 [rgb565] (rgb) [unknown]
+[   1.956][d][vo/gpu/opengl]   pal8
+[   1.957][d][vo/gpu/opengl]   vdpau
+[   1.957][d][vo/gpu/opengl]   d3d11
+[   1.957][d][vo/gpu/opengl]   dxva2_vld
+[   1.957][d][vo/gpu/opengl]   mmal
+[   1.957][d][vo/gpu/opengl]   mediacodec
+[   1.957][d][vo/gpu/opengl]   cuda
+[   1.957][d][vo/gpu/opengl]   yap8 => 2 planes 1x1 8/0 [r8/r8] (r/a) [unorm]
+[   1.957][d][vo/gpu/opengl]   yap16 => 2 planes 1x1 16/0 [r16/r16] (r/a) [unorm]
+[   1.957][d][vo/gpu/opengl]   grayaf32 => 2 planes 1x1 32/0 [r16f/r16f] (r/a) [float]
+[   1.957][d][vo/gpu/opengl]   yuv444pf => 3 planes 1x1 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   1.957][d][vo/gpu/opengl]   yuva444pf => 4 planes 1x1 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   1.957][d][vo/gpu/opengl]   yuv420pf => 3 planes 2x2 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   1.957][d][vo/gpu/opengl]   yuva420pf => 4 planes 2x2 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   1.957][d][vo/gpu/opengl]   yuv422pf => 3 planes 2x1 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   1.957][d][vo/gpu/opengl]   yuva422pf => 4 planes 2x1 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   1.957][d][vo/gpu/opengl]   yuv440pf => 3 planes 1x2 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   1.957][d][vo/gpu/opengl]   yuva440pf => 4 planes 1x2 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   1.957][d][vo/gpu/opengl]   yuv410pf => 3 planes 4x4 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   1.957][d][vo/gpu/opengl]   yuva410pf => 4 planes 4x4 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   1.957][d][vo/gpu/opengl]   yuv411pf => 3 planes 4x1 32/0 [r16f/r16f/r16f] (r/g/b) [float]
+[   1.957][d][vo/gpu/opengl]   yuva411pf => 4 planes 4x1 32/0 [r16f/r16f/r16f/r16f] (r/g/b/a) [float]
+[   1.957][d][vo/gpu/opengl]   rgb30 => 1 planes 1x1 10/0 [rgb10_a2] (bgr) [unknown]
+[   1.957][d][vo/gpu/opengl]   y1 => 1 planes 1x1 8/-7 [r8] (r) [unorm]
+[   1.957][d][vo/gpu/opengl]   gbrp1 => 3 planes 1x1 8/-7 [r8/r8/r8] (g/b/r) [unorm]
+[   1.957][d][vo/gpu/opengl]   gbrp2 => 3 planes 1x1 8/-6 [r8/r8/r8] (g/b/r) [unorm]
+[   1.957][d][vo/gpu/opengl]   gbrp3 => 3 planes 1x1 8/-5 [r8/r8/r8] (g/b/r) [unorm]
+[   1.957][d][vo/gpu/opengl]   gbrp4 => 3 planes 1x1 8/-4 [r8/r8/r8] (g/b/r) [unorm]
+[   1.957][d][vo/gpu/opengl]   gbrp5 => 3 planes 1x1 8/-3 [r8/r8/r8] (g/b/r) [unorm]
+[   1.957][d][vo/gpu/opengl]   gbrp6 => 3 planes 1x1 8/-2 [r8/r8/r8] (g/b/r) [unorm]
+[   1.957][d][vo/gpu/opengl]   vdpau_output
+[   1.957][d][vo/gpu/opengl]   vaapi
+[   1.957][d][vo/gpu/opengl]   videotoolbox
+[   1.957][d][vo/gpu/opengl]   vulkan
+[   1.957][d][vo/gpu/opengl]   drm_prime
+[   1.957][d][vo/gpu/opengl]   yuyv422
+[   1.957][d][vo/gpu/opengl]   yuv422p => 3 planes 2x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuv410p => 3 planes 4x4 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuv411p => 3 planes 4x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   monow
+[   1.957][d][vo/gpu/opengl]   monob
+[   1.957][d][vo/gpu/opengl]   yuvj422p => 3 planes 2x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   uyyvyy411
+[   1.957][d][vo/gpu/opengl]   bgr8
+[   1.957][d][vo/gpu/opengl]   bgr4
+[   1.957][d][vo/gpu/opengl]   bgr4_byte
+[   1.957][d][vo/gpu/opengl]   rgb8
+[   1.957][d][vo/gpu/opengl]   rgb4
+[   1.957][d][vo/gpu/opengl]   rgb4_byte
+[   1.957][d][vo/gpu/opengl]   nv21 => 2 planes 2x2 8/0 [r8/rg8] (r/bg) [unorm]
+[   1.957][d][vo/gpu/opengl]   gray16be
+[   1.957][d][vo/gpu/opengl]   yuv440p => 3 planes 1x2 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuvj440p => 3 planes 1x2 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuva420p => 4 planes 2x2 8/0 [r8/r8/r8/r8] (r/g/b/a) [unorm]
+[   1.957][d][vo/gpu/opengl]   rgb48be
+[   1.957][d][vo/gpu/opengl]   rgb48 => 1 planes 1x1 16/0 [rgb16] (rgb) [unorm]
+[   1.957][d][vo/gpu/opengl]   rgb565be
+[   1.957][d][vo/gpu/opengl]   rgb555be
+[   1.957][d][vo/gpu/opengl]   rgb555
+[   1.957][d][vo/gpu/opengl]   bgr565be
+[   1.957][d][vo/gpu/opengl]   bgr565
+[   1.957][d][vo/gpu/opengl]   bgr555be
+[   1.957][d][vo/gpu/opengl]   bgr555
+[   1.957][d][vo/gpu/opengl]   yuv420p16 => 3 planes 2x2 16/0 [r16/r16/r16] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuv420p16be
+[   1.957][d][vo/gpu/opengl]   yuv422p16 => 3 planes 2x1 16/0 [r16/r16/r16] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuv422p16be
+[   1.957][d][vo/gpu/opengl]   yuv444p16 => 3 planes 1x1 16/0 [r16/r16/r16] (r/g/b) [unorm]
+[   1.957][d][vo/gpu/opengl]   yuv444p16be
+[   1.957][d][vo/gpu/opengl]   rgb444
+[   1.957][d][vo/gpu/opengl]   rgb444be
+[   1.958][d][vo/gpu/opengl]   bgr444
+[   1.958][d][vo/gpu/opengl]   bgr444be
+[   1.958][d][vo/gpu/opengl]   ya8 => 1 planes 1x1 8/0 [rg8] (ra) [unorm]
+[   1.958][d][vo/gpu/opengl]   bgr48be
+[   1.958][d][vo/gpu/opengl]   bgr48 => 1 planes 1x1 16/0 [rgb16] (bgr) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv420p9be
+[   1.958][d][vo/gpu/opengl]   yuv420p9 => 3 planes 2x2 16/-7 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv420p10be
+[   1.958][d][vo/gpu/opengl]   yuv420p10 => 3 planes 2x2 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv422p10be
+[   1.958][d][vo/gpu/opengl]   yuv422p10 => 3 planes 2x1 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv444p9be
+[   1.958][d][vo/gpu/opengl]   yuv444p9 => 3 planes 1x1 16/-7 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv444p10be
+[   1.958][d][vo/gpu/opengl]   yuv444p10 => 3 planes 1x1 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv422p9be
+[   1.958][d][vo/gpu/opengl]   yuv422p9 => 3 planes 2x1 16/-7 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   gbrp => 3 planes 1x1 8/0 [r8/r8/r8] (g/b/r) [unorm]
+[   1.958][d][vo/gpu/opengl]   gbrp9be
+[   1.958][d][vo/gpu/opengl]   gbrp9 => 3 planes 1x1 16/-7 [r16/r16/r16] (g/b/r) [unorm]
+[   1.958][d][vo/gpu/opengl]   gbrp10be
+[   1.958][d][vo/gpu/opengl]   gbrp10 => 3 planes 1x1 16/-6 [r16/r16/r16] (g/b/r) [unorm]
+[   1.958][d][vo/gpu/opengl]   gbrp16be
+[   1.958][d][vo/gpu/opengl]   gbrp16 => 3 planes 1x1 16/0 [r16/r16/r16] (g/b/r) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva422p => 4 planes 2x1 8/0 [r8/r8/r8/r8] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva444p => 4 planes 1x1 8/0 [r8/r8/r8/r8] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva420p9be
+[   1.958][d][vo/gpu/opengl]   yuva420p9 => 4 planes 2x2 16/-7 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva422p9be
+[   1.958][d][vo/gpu/opengl]   yuva422p9 => 4 planes 2x1 16/-7 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva444p9be
+[   1.958][d][vo/gpu/opengl]   yuva444p9 => 4 planes 1x1 16/-7 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva420p10be
+[   1.958][d][vo/gpu/opengl]   yuva420p10 => 4 planes 2x2 16/-6 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva422p10be
+[   1.958][d][vo/gpu/opengl]   yuva422p10 => 4 planes 2x1 16/-6 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva444p10be
+[   1.958][d][vo/gpu/opengl]   yuva444p10 => 4 planes 1x1 16/-6 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva420p16be
+[   1.958][d][vo/gpu/opengl]   yuva420p16 => 4 planes 2x2 16/0 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva422p16be
+[   1.958][d][vo/gpu/opengl]   yuva422p16 => 4 planes 2x1 16/0 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuva444p16be
+[   1.958][d][vo/gpu/opengl]   yuva444p16 => 4 planes 1x1 16/0 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   xyz12 => 1 planes 1x1 16/4 [rgb16] (rgb) [unorm]
+[   1.958][d][vo/gpu/opengl]   xyz12be
+[   1.958][d][vo/gpu/opengl]   nv16 => 2 planes 2x1 8/0 [r8/rg8] (r/gb) [unorm]
+[   1.958][d][vo/gpu/opengl]   nv20 => 2 planes 2x1 16/-6 [r16/rg16] (r/gb) [unorm]
+[   1.958][d][vo/gpu/opengl]   nv20be
+[   1.958][d][vo/gpu/opengl]   rgba64be
+[   1.958][d][vo/gpu/opengl]   bgra64be
+[   1.958][d][vo/gpu/opengl]   bgra64 => 1 planes 1x1 16/0 [rgba16] (bgra) [unorm]
+[   1.958][d][vo/gpu/opengl]   yvyu422
+[   1.958][d][vo/gpu/opengl]   ya16be
+[   1.958][d][vo/gpu/opengl]   ya16 => 1 planes 1x1 16/0 [rg16] (ra) [unorm]
+[   1.958][d][vo/gpu/opengl]   gbrap => 4 planes 1x1 8/0 [r8/r8/r8/r8] (g/b/r/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   gbrap16be
+[   1.958][d][vo/gpu/opengl]   gbrap16 => 4 planes 1x1 16/0 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   1.958][d][vo/gpu/opengl]   qsv
+[   1.958][d][vo/gpu/opengl]   d3d11va_vld
+[   1.958][d][vo/gpu/opengl]   yuv420p12be
+[   1.958][d][vo/gpu/opengl]   yuv420p12 => 3 planes 2x2 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv420p14be
+[   1.958][d][vo/gpu/opengl]   yuv420p14 => 3 planes 2x2 16/-2 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv422p12be
+[   1.958][d][vo/gpu/opengl]   yuv422p12 => 3 planes 2x1 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv422p14be
+[   1.958][d][vo/gpu/opengl]   yuv422p14 => 3 planes 2x1 16/-2 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv444p12be
+[   1.958][d][vo/gpu/opengl]   yuv444p12 => 3 planes 1x1 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   1.958][d][vo/gpu/opengl]   yuv444p14be
+[   1.959][d][vo/gpu/opengl]   yuv444p14 => 3 planes 1x1 16/-2 [r16/r16/r16] (r/g/b) [unorm]
+[   1.959][d][vo/gpu/opengl]   gbrp12be
+[   1.959][d][vo/gpu/opengl]   gbrp12 => 3 planes 1x1 16/-4 [r16/r16/r16] (g/b/r) [unorm]
+[   1.959][d][vo/gpu/opengl]   gbrp14be
+[   1.959][d][vo/gpu/opengl]   gbrp14 => 3 planes 1x1 16/-2 [r16/r16/r16] (g/b/r) [unorm]
+[   1.959][d][vo/gpu/opengl]   yuvj411p => 3 planes 4x1 8/0 [r8/r8/r8] (r/g/b) [unorm]
+[   1.959][d][vo/gpu/opengl]   bayer_bggr8
+[   1.959][d][vo/gpu/opengl]   bayer_rggb8
+[   1.959][d][vo/gpu/opengl]   bayer_gbrg8
+[   1.959][d][vo/gpu/opengl]   bayer_grbg8
+[   1.959][d][vo/gpu/opengl]   bayer_bggr16
+[   1.959][d][vo/gpu/opengl]   bayer_bggr16be
+[   1.959][d][vo/gpu/opengl]   bayer_rggb16
+[   1.959][d][vo/gpu/opengl]   bayer_rggb16be
+[   1.959][d][vo/gpu/opengl]   bayer_gbrg16
+[   1.959][d][vo/gpu/opengl]   bayer_gbrg16be
+[   1.959][d][vo/gpu/opengl]   bayer_grbg16
+[   1.959][d][vo/gpu/opengl]   bayer_grbg16be
+[   1.959][d][vo/gpu/opengl]   yuv440p10 => 3 planes 1x2 16/-6 [r16/r16/r16] (r/g/b) [unorm]
+[   1.959][d][vo/gpu/opengl]   yuv440p10be
+[   1.959][d][vo/gpu/opengl]   yuv440p12 => 3 planes 1x2 16/-4 [r16/r16/r16] (r/g/b) [unorm]
+[   1.959][d][vo/gpu/opengl]   yuv440p12be
+[   1.959][d][vo/gpu/opengl]   ayuv64 => 1 planes 1x1 16/0 [rgba16] (argb) [unorm]
+[   1.959][d][vo/gpu/opengl]   ayuv64be
+[   1.959][d][vo/gpu/opengl]   p010be
+[   1.959][d][vo/gpu/opengl]   gbrap12be
+[   1.959][d][vo/gpu/opengl]   gbrap12 => 4 planes 1x1 16/-4 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   1.959][d][vo/gpu/opengl]   gbrap10be
+[   1.959][d][vo/gpu/opengl]   gbrap10 => 4 planes 1x1 16/-6 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   1.959][d][vo/gpu/opengl]   gray12be
+[   1.959][d][vo/gpu/opengl]   gray12 => 1 planes 1x1 16/-4 [r16] (r) [unorm]
+[   1.959][d][vo/gpu/opengl]   gray10be
+[   1.959][d][vo/gpu/opengl]   gray10 => 1 planes 1x1 16/-6 [r16] (r) [unorm]
+[   1.959][d][vo/gpu/opengl]   p016 => 2 planes 2x2 16/0 [r16/rg16] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   p016be
+[   1.959][d][vo/gpu/opengl]   gray9be
+[   1.959][d][vo/gpu/opengl]   gray9 => 1 planes 1x1 16/-7 [r16] (r) [unorm]
+[   1.959][d][vo/gpu/opengl]   gbrpf32be
+[   1.959][d][vo/gpu/opengl]   gbrpf32 => 3 planes 1x1 32/0 [r16f/r16f/r16f] (g/b/r) [float]
+[   1.959][d][vo/gpu/opengl]   gbrapf32be
+[   1.959][d][vo/gpu/opengl]   gbrapf32 => 4 planes 1x1 32/0 [r16f/r16f/r16f/r16f] (g/b/r/a) [float]
+[   1.959][d][vo/gpu/opengl]   opencl
+[   1.959][d][vo/gpu/opengl]   gray14be
+[   1.959][d][vo/gpu/opengl]   gray14 => 1 planes 1x1 16/-2 [r16] (r) [unorm]
+[   1.959][d][vo/gpu/opengl]   grayf32be
+[   1.959][d][vo/gpu/opengl]   grayf32 => 1 planes 1x1 32/0 [r16f] (r) [float]
+[   1.959][d][vo/gpu/opengl]   yuva422p12be
+[   1.959][d][vo/gpu/opengl]   yuva422p12 => 4 planes 2x1 16/-4 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.959][d][vo/gpu/opengl]   yuva444p12be
+[   1.959][d][vo/gpu/opengl]   yuva444p12 => 4 planes 1x1 16/-4 [r16/r16/r16/r16] (r/g/b/a) [unorm]
+[   1.959][d][vo/gpu/opengl]   nv24 => 2 planes 1x1 8/0 [r8/rg8] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   nv42 => 2 planes 1x1 8/0 [r8/rg8] (r/bg) [unorm]
+[   1.959][d][vo/gpu/opengl]   y210be
+[   1.959][d][vo/gpu/opengl]   y210
+[   1.959][d][vo/gpu/opengl]   x2rgb10be
+[   1.959][d][vo/gpu/opengl]   x2bgr10
+[   1.959][d][vo/gpu/opengl]   x2bgr10be
+[   1.959][d][vo/gpu/opengl]   p210be
+[   1.959][d][vo/gpu/opengl]   p210 => 2 planes 2x1 16/6 [r16/rg16] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   p410be
+[   1.959][d][vo/gpu/opengl]   p410 => 2 planes 1x1 16/6 [r16/rg16] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   p216be
+[   1.959][d][vo/gpu/opengl]   p216 => 2 planes 2x1 16/0 [r16/rg16] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   p416be
+[   1.959][d][vo/gpu/opengl]   p416 => 2 planes 1x1 16/0 [r16/rg16] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   vuya => 1 planes 1x1 8/0 [rgba8] (bgra) [unorm]
+[   1.959][d][vo/gpu/opengl]   rgbaf16be
+[   1.959][d][vo/gpu/opengl]   rgbaf16
+[   1.959][d][vo/gpu/opengl]   vuyx => 1 planes 1x1 8/0 [rgba8] (bgr) [unorm]
+[   1.959][d][vo/gpu/opengl]   p012 => 2 planes 2x2 16/4 [r16/rg16] (r/gb) [unorm]
+[   1.959][d][vo/gpu/opengl]   p012be
+[   1.959][d][vo/gpu/opengl]   y212be
+[   1.960][d][vo/gpu/opengl]   y212
+[   1.960][d][vo/gpu/opengl]   xv30be
+[   1.960][d][vo/gpu/opengl]   xv30
+[   1.960][d][vo/gpu/opengl]   xv36be
+[   1.960][d][vo/gpu/opengl]   xv36 => 1 planes 1x1 16/4 [rgba16] (grb) [unorm]
+[   1.960][d][vo/gpu/opengl]   rgbf32be
+[   1.960][d][vo/gpu/opengl]   rgbf32
+[   1.960][d][vo/gpu/opengl]   rgbaf32be
+[   1.960][d][vo/gpu/opengl]   rgbaf32
+[   1.960][d][vo/gpu/opengl]   p212be
+[   1.960][d][vo/gpu/opengl]   p212 => 2 planes 2x1 16/4 [r16/rg16] (r/gb) [unorm]
+[   1.960][d][vo/gpu/opengl]   p412be
+[   1.960][d][vo/gpu/opengl]   p412 => 2 planes 1x1 16/4 [r16/rg16] (r/gb) [unorm]
+[   1.960][d][vo/gpu/opengl]   gbrap14be
+[   1.960][d][vo/gpu/opengl]   gbrap14 => 4 planes 1x1 16/-2 [r16/r16/r16/r16] (g/b/r/a) [unorm]
+[   1.960][d][vo/gpu/opengl]   d3d12
+[   1.960][v][vo/gpu] Testing FBO format rgba16f
+[   1.960][d][vo/gpu] Resizing texture: 16x16
+[   1.960][v][vo/gpu] Using FBO format rgba16f.
+[   1.960][v][vo/gpu] Disabling HDR peak computation (one or more of the following is not supported: compute shaders=0, SSBO=1).
+[   1.960][d][global] cache path: '' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   1.960][v][vo/gpu] Assuming 60.003840 FPS for display sync.
+[   1.961][v][vo/gpu] reconfig to 960x540 yuv444p auto/auto/auto/auto/auto CL=unknown
+[   1.961][v][vo/gpu] Resize: 1024x768
+[   1.961][v][vo/gpu] Window size: 1024x768 (Borders: l=0 t=0 r=0 b=0)
+[   1.961][v][vo/gpu] Video source: 960x540 (1:1)
+[   1.961][v][vo/gpu] Video display: (0, 0) 960x540 -> (0, 96) 1024x576
+[   1.961][v][vo/gpu] Video scale: 1.066667/1.066667
+[   1.961][v][vo/gpu] OSD borders: l=0 t=96 r=0 b=96
+[   1.961][v][vo/gpu] Video borders: l=0 t=96 r=0 b=96
+[   1.961][v][vo/gpu] Reported display depth: 8
+[   1.961][v][vo/gpu] Texture for plane 0: 960x540
+[   1.961][v][vo/gpu] Texture for plane 1: 960x540
+[   1.962][v][vo/gpu] Texture for plane 2: 960x540
+[   1.963][v][vo/gpu] Testing FBO format rgba16f
+[   1.963][d][vo/gpu] Resizing texture: 16x16
+[   1.963][v][vo/gpu] Using FBO format rgba16f.
+[   1.963][v][ipc_1] Client disconnected
+[   1.963][d][ipc_1] Exiting...
+[   1.967][v][ipc_2] Client connected
+[   1.972][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[   1.972][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[   1.972][e][ipc_2] Read error (Connection reset by peer)
+[   1.972][d][ipc_2] Exiting...
+[   1.972][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[   1.972][d][file] resize stream to 131072 bytes, drop 0 bytes
+[   1.972][d][file] Stream opened successfully.
+[   1.972][v][demux] Trying demuxers for level=normal.
+[   1.972][d][demux] Trying demuxer: disc (force-level: normal)
+[   1.972][d][demux] Trying demuxer: edl (force-level: normal)
+[   1.973][d][demux] Trying demuxer: cue (force-level: normal)
+[   1.973][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[   1.973][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[   1.973][d][demux] Trying demuxer: mkv (force-level: normal)
+[   1.973][d][demux] Trying demuxer: lavf (force-level: normal)
+[   1.974][v][ipc_3] Client connected
+[   1.974][v][ipc_3] Client disconnected
+[   1.974][d][ipc_3] Exiting...
+[   1.976][v][ipc_4] Client connected
+[   1.977][v][ipc_4] Client disconnected
+[   1.977][d][ipc_4] Exiting...
+[   1.986][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[   1.989][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[   1.989][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[   1.990][v][find_files] Loading external files in /data/media/kiosky-player/
+[   1.990][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[   1.990][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[   1.990][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[   1.990][v][lavf] select track 0
+[   1.990][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[   1.991][v][vd] Container reported FPS: 29.743590
+[   1.992][v][vd] Codec list:
+[   1.992][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[   1.992][v][vd] Opening decoder h264
+[   1.993][v][vd] Looking at hwdec h264-v4l2request-copy...
+[   1.993][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[   1.993][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[   1.995][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[   1.995][v][vf] User filter list:
+[   1.995][v][vf]   (empty)
+[   1.995][v][cplayer] Starting playback...
+[   1.996][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[   1.996][v][vd] Codec profile: Baseline (0x42)
+[   1.996][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[   1.997][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[   2.016][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[   2.032][i][vd] Using hardware decoding (v4l2request-copy).
+[   2.032][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.032][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.032][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.032][v][vf] [userdeint] (disabled)
+[   2.032][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.032][v][vf] [autorotate] (disabled)
+[   2.032][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.032][v][vf] [convert] (disabled)
+[   2.032][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.041][i][cplayer] VO: [gpu] 480x848 nv12
+[   2.041][v][cplayer] VO: Description: Shader-based GPU Renderer
+[   2.041][v][vo/gpu] reconfig to 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[   2.041][v][vo/gpu] Resize: 1024x768
+[   2.041][v][vo/gpu] Window size: 1024x768 (Borders: l=0 t=0 r=0 b=0)
+[   2.041][v][vo/gpu] Video source: 480x848 (1:1)
+[   2.041][v][vo/gpu] Video display: (0, 0) 480x848 -> (295, 0) 434x768
+[   2.041][v][vo/gpu] Video scale: 0.904167/0.905660
+[   2.041][v][vo/gpu] OSD borders: l=295 t=0 r=295 b=0
+[   2.041][v][vo/gpu] Video borders: l=295 t=0 r=295 b=0
+[   2.041][v][vo/gpu] Reported display depth: 8
+[   2.041][v][vo/gpu] Texture for plane 0: 480x848
+[   2.042][v][vo/gpu] Texture for plane 1: 240x424
+[   2.043][v][vo/gpu] Testing FBO format rgba16f
+[   2.043][d][vo/gpu] Resizing texture: 16x16
+[   2.043][v][vo/gpu] Using FBO format rgba16f.
+[   2.048][d][vo/gpu] Resizing texture: 240x848
+[   2.049][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   2.091][d][vo/gpu/opengl] vertex shader source:
+[   2.091][d][vo/gpu/opengl] [  1] #version 140
+[   2.091][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.091][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.091][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.091][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   2.091][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   2.091][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   2.091][d][vo/gpu/opengl] [  8] void main() {
+[   2.091][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   2.091][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   2.091][d][vo/gpu/opengl] [ 11] }
+[   2.095][d][vo/gpu/opengl] fragment shader source:
+[   2.095][d][vo/gpu/opengl] [  1] #version 140
+[   2.095][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.095][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.095][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.095][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   2.095][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   2.095][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   2.095][d][vo/gpu/opengl] [  8] uniform sampler2D texture0;
+[   2.095][d][vo/gpu/opengl] [  9] uniform vec2 texture_size0;
+[   2.095][d][vo/gpu/opengl] [ 10] uniform mat2 texture_rot0;
+[   2.095][d][vo/gpu/opengl] [ 11] uniform vec2 texture_off0;
+[   2.095][d][vo/gpu/opengl] [ 12] uniform vec2 pixel_size0;
+[   2.095][d][vo/gpu/opengl] [ 13] void main() {
+[   2.095][d][vo/gpu/opengl] [ 14] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   2.095][d][vo/gpu/opengl] [ 15] // upscaling plane 1
+[   2.095][d][vo/gpu/opengl] [ 16] #undef tex
+[   2.095][d][vo/gpu/opengl] [ 17] #undef texmap
+[   2.095][d][vo/gpu/opengl] [ 18] #define tex texture0
+[   2.095][d][vo/gpu/opengl] [ 19] #define texmap texmap0
+[   2.095][d][vo/gpu/opengl] [ 20] vec2 pos = texcoord0;
+[   2.095][d][vo/gpu/opengl] [ 21] vec2 size = texture_size0;
+[   2.095][d][vo/gpu/opengl] [ 22] vec2 pt = pixel_size0;
+[   2.095][d][vo/gpu/opengl] [ 23] // first pass
+[   2.095][d][vo/gpu/opengl] [ 24] color = vec4(0.0);
+[   2.095][d][vo/gpu/opengl] [ 25] {
+[   2.095][d][vo/gpu/opengl] [ 26] vec2 dir = vec2(0.0, 1.0);
+[   2.095][d][vo/gpu/opengl] [ 27] pt *= dir;
+[   2.095][d][vo/gpu/opengl] [ 28] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   2.095][d][vo/gpu/opengl] [ 29] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   2.095][d][vo/gpu/opengl] [ 30] vec4 c;
+[   2.095][d][vo/gpu/opengl] [ 31] float ypos = LUT_POS(fcoord, 256.0);
+[   2.095][d][vo/gpu/opengl] [ 32] float weights[6];
+[   2.095][d][vo/gpu/opengl] [ 33] c = texture(lut, vec2(0.250000, ypos));
+[   2.095][d][vo/gpu/opengl] [ 34] weights[0] = c[0];
+[   2.095][d][vo/gpu/opengl] [ 35] weights[1] = c[1];
+[   2.095][d][vo/gpu/opengl] [ 36] weights[2] = c[2];
+[   2.095][d][vo/gpu/opengl] [ 37] weights[3] = c[3];
+[   2.095][d][vo/gpu/opengl] [ 38] c = texture(lut, vec2(0.750000, ypos));
+[   2.095][d][vo/gpu/opengl] [ 39] weights[4] = c[0];
+[   2.095][d][vo/gpu/opengl] [ 40] weights[5] = c[1];
+[   2.095][d][vo/gpu/opengl] [ 41] // scaler samples
+[   2.095][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(0.0));
+[   2.095][d][vo/gpu/opengl] [ 43] color += vec4(weights[0]) * c;
+[   2.095][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(1.0));
+[   2.095][d][vo/gpu/opengl] [ 45] color += vec4(weights[1]) * c;
+[   2.095][d][vo/gpu/opengl] [ 46] c = texture(tex, base + pt * vec2(2.0));
+[   2.095][d][vo/gpu/opengl] [ 47] color += vec4(weights[2]) * c;
+[   2.095][d][vo/gpu/opengl] [ 48] c = texture(tex, base + pt * vec2(3.0));
+[   2.095][d][vo/gpu/opengl] [ 49] color += vec4(weights[3]) * c;
+[   2.095][d][vo/gpu/opengl] [ 50] c = texture(tex, base + pt * vec2(4.0));
+[   2.095][d][vo/gpu/opengl] [ 51] color += vec4(weights[4]) * c;
+[   2.095][d][vo/gpu/opengl] [ 52] c = texture(tex, base + pt * vec2(5.0));
+[   2.095][d][vo/gpu/opengl] [ 53] color += vec4(weights[5]) * c;
+[   2.095][d][vo/gpu/opengl] [ 54] }
+[   2.095][d][vo/gpu/opengl] [ 55] color *= 1.000000;
+[   2.095][d][vo/gpu/opengl] [ 56] out_color = color;
+[   2.095][d][vo/gpu/opengl] [ 57] }
+[   2.104][d][vo/gpu/opengl] shader link log (status=1): 
+[   2.104][d][vo/gpu] Writing shader cache file: /tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv/D1B95DE1436160C51F46A584DA81D219D646BD6506F7235F76A05287D4F77D41
+[   2.105][d][vo/gpu] Resizing texture: 480x848
+[   2.108][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   2.110][d][vo/gpu/opengl] vertex shader source:
+[   2.110][d][vo/gpu/opengl] [  1] #version 140
+[   2.110][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.110][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.110][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.110][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   2.110][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   2.110][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   2.110][d][vo/gpu/opengl] [  8] void main() {
+[   2.110][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   2.110][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   2.110][d][vo/gpu/opengl] [ 11] }
+[   2.114][d][vo/gpu/opengl] fragment shader source:
+[   2.114][d][vo/gpu/opengl] [  1] #version 140
+[   2.114][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.114][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.114][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.114][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   2.114][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   2.114][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   2.114][d][vo/gpu/opengl] [  8] uniform sampler2D texture0;
+[   2.114][d][vo/gpu/opengl] [  9] uniform vec2 texture_size0;
+[   2.114][d][vo/gpu/opengl] [ 10] uniform mat2 texture_rot0;
+[   2.114][d][vo/gpu/opengl] [ 11] uniform vec2 texture_off0;
+[   2.114][d][vo/gpu/opengl] [ 12] uniform vec2 pixel_size0;
+[   2.114][d][vo/gpu/opengl] [ 13] void main() {
+[   2.114][d][vo/gpu/opengl] [ 14] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   2.114][d][vo/gpu/opengl] [ 15] #undef tex
+[   2.114][d][vo/gpu/opengl] [ 16] #undef texmap
+[   2.114][d][vo/gpu/opengl] [ 17] #define tex texture0
+[   2.114][d][vo/gpu/opengl] [ 18] #define texmap texmap0
+[   2.114][d][vo/gpu/opengl] [ 19] vec2 pos = texcoord0;
+[   2.114][d][vo/gpu/opengl] [ 20] vec2 size = texture_size0;
+[   2.114][d][vo/gpu/opengl] [ 21] vec2 pt = pixel_size0;
+[   2.114][d][vo/gpu/opengl] [ 22] color = vec4(0.0);
+[   2.114][d][vo/gpu/opengl] [ 23] {
+[   2.114][d][vo/gpu/opengl] [ 24] vec2 dir = vec2(1.0, 0.0);
+[   2.114][d][vo/gpu/opengl] [ 25] pt *= dir;
+[   2.114][d][vo/gpu/opengl] [ 26] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   2.114][d][vo/gpu/opengl] [ 27] vec2 base = pos - fcoord * pt - pt * vec2(2.0);
+[   2.114][d][vo/gpu/opengl] [ 28] vec4 c;
+[   2.114][d][vo/gpu/opengl] [ 29] float ypos = LUT_POS(fcoord, 256.0);
+[   2.114][d][vo/gpu/opengl] [ 30] float weights[6];
+[   2.114][d][vo/gpu/opengl] [ 31] c = texture(lut, vec2(0.250000, ypos));
+[   2.114][d][vo/gpu/opengl] [ 32] weights[0] = c[0];
+[   2.114][d][vo/gpu/opengl] [ 33] weights[1] = c[1];
+[   2.114][d][vo/gpu/opengl] [ 34] weights[2] = c[2];
+[   2.114][d][vo/gpu/opengl] [ 35] weights[3] = c[3];
+[   2.114][d][vo/gpu/opengl] [ 36] c = texture(lut, vec2(0.750000, ypos));
+[   2.114][d][vo/gpu/opengl] [ 37] weights[4] = c[0];
+[   2.114][d][vo/gpu/opengl] [ 38] weights[5] = c[1];
+[   2.114][d][vo/gpu/opengl] [ 39] // scaler samples
+[   2.114][d][vo/gpu/opengl] [ 40] c = texture(tex, base + pt * vec2(0.0));
+[   2.114][d][vo/gpu/opengl] [ 41] color += vec4(weights[0]) * c;
+[   2.114][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(1.0));
+[   2.114][d][vo/gpu/opengl] [ 43] color += vec4(weights[1]) * c;
+[   2.114][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(2.0));
+[   2.114][d][vo/gpu/opengl] [ 45] color += vec4(weights[2]) * c;
+[   2.114][d][vo/gpu/opengl] [ 46] c = texture(tex, base + pt * vec2(3.0));
+[   2.115][d][vo/gpu/opengl] [ 47] color += vec4(weights[3]) * c;
+[   2.115][d][vo/gpu/opengl] [ 48] c = texture(tex, base + pt * vec2(4.0));
+[   2.115][d][vo/gpu/opengl] [ 49] color += vec4(weights[4]) * c;
+[   2.115][d][vo/gpu/opengl] [ 50] c = texture(tex, base + pt * vec2(5.0));
+[   2.115][d][vo/gpu/opengl] [ 51] color += vec4(weights[5]) * c;
+[   2.115][d][vo/gpu/opengl] [ 52] }
+[   2.115][d][vo/gpu/opengl] [ 53] color.b = 0.000000;
+[   2.115][d][vo/gpu/opengl] [ 54] color.a = 1.000000;
+[   2.115][d][vo/gpu/opengl] [ 55] out_color = color;
+[   2.115][d][vo/gpu/opengl] [ 56] }
+[   2.123][d][vo/gpu/opengl] shader link log (status=1): 
+[   2.123][d][vo/gpu] Writing shader cache file: /tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv/955B8A68885D3743C2E5D991F0B74AEB6E8D734DA13BBF14FFDCF122D9EB976B
+[   2.126][d][vo/gpu] Resizing texture: 480x848
+[   2.130][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   2.132][d][vo/gpu/opengl] vertex shader source:
+[   2.132][d][vo/gpu/opengl] [  1] #version 140
+[   2.132][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.132][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.132][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.132][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   2.132][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   2.132][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   2.132][d][vo/gpu/opengl] [  8] in vec2 vertex_texcoord1;
+[   2.132][d][vo/gpu/opengl] [  9] out vec2 texcoord1;
+[   2.132][d][vo/gpu/opengl] [ 10] void main() {
+[   2.132][d][vo/gpu/opengl] [ 11] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   2.132][d][vo/gpu/opengl] [ 12] texcoord0 = vertex_texcoord0;
+[   2.132][d][vo/gpu/opengl] [ 13] texcoord1 = vertex_texcoord1;
+[   2.132][d][vo/gpu/opengl] [ 14] }
+[   2.134][d][vo/gpu/opengl] fragment shader source:
+[   2.134][d][vo/gpu/opengl] [  1] #version 140
+[   2.134][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.134][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.135][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.135][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   2.135][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   2.135][d][vo/gpu/opengl] [  7] in vec2 texcoord1;
+[   2.135][d][vo/gpu/opengl] [  8] uniform mat3 colormatrix;
+[   2.135][d][vo/gpu/opengl] [  9] uniform vec3 colormatrix_c;
+[   2.135][d][vo/gpu/opengl] [ 10] uniform sampler2D texture0;
+[   2.135][d][vo/gpu/opengl] [ 11] uniform vec2 texture_size0;
+[   2.135][d][vo/gpu/opengl] [ 12] uniform mat2 texture_rot0;
+[   2.135][d][vo/gpu/opengl] [ 13] uniform vec2 texture_off0;
+[   2.135][d][vo/gpu/opengl] [ 14] uniform vec2 pixel_size0;
+[   2.135][d][vo/gpu/opengl] [ 15] uniform sampler2D texture1;
+[   2.135][d][vo/gpu/opengl] [ 16] uniform vec2 texture_size1;
+[   2.135][d][vo/gpu/opengl] [ 17] uniform mat2 texture_rot1;
+[   2.135][d][vo/gpu/opengl] [ 18] uniform vec2 texture_off1;
+[   2.135][d][vo/gpu/opengl] [ 19] uniform vec2 pixel_size1;
+[   2.135][d][vo/gpu/opengl] [ 20] void main() {
+[   2.135][d][vo/gpu/opengl] [ 21] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   2.135][d][vo/gpu/opengl] [ 22] color.r = 1.000000 * vec4(texture(texture0, texcoord0)).r;
+[   2.135][d][vo/gpu/opengl] [ 23] color.gb = 1.000000 * vec4(texture(texture1, texcoord1)).rg;
+[   2.135][d][vo/gpu/opengl] [ 24] color = color.rgbr;
+[   2.135][d][vo/gpu/opengl] [ 25] color.rgb = mat3(colormatrix) * color.rgb + colormatrix_c;
+[   2.135][d][vo/gpu/opengl] [ 26] color.a = 1.0;
+[   2.135][d][vo/gpu/opengl] [ 27] // scaler pre-conversion
+[   2.135][d][vo/gpu/opengl] [ 28] // linearize
+[   2.135][d][vo/gpu/opengl] [ 29] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   2.135][d][vo/gpu/opengl] [ 30] color.rgb = pow(color.rgb, vec3(2.4));
+[   2.135][d][vo/gpu/opengl] [ 31] color.rgb *= vec3(1.0/1.000000);
+[   2.135][d][vo/gpu/opengl] [ 32] // main scaling
+[   2.135][d][vo/gpu/opengl] [ 33] out_color = color;
+[   2.135][d][vo/gpu/opengl] [ 34] }
+[   2.141][d][vo/gpu/opengl] shader link log (status=1): 
+[   2.141][d][vo/gpu] Writing shader cache file: /tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv/CC56A5506B89E5014EF30EB0D5FBA406EE59F421905DC6C495E186EB0C2C4FBD
+[   2.142][d][vo/gpu] Resizing texture: 480x768
+[   2.145][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   2.147][d][vo/gpu/opengl] vertex shader source:
+[   2.147][d][vo/gpu/opengl] [  1] #version 140
+[   2.147][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.147][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.147][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.147][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   2.147][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   2.147][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   2.147][d][vo/gpu/opengl] [  8] void main() {
+[   2.147][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   2.147][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   2.147][d][vo/gpu/opengl] [ 11] }
+[   2.151][d][vo/gpu/opengl] fragment shader source:
+[   2.151][d][vo/gpu/opengl] [  1] #version 140
+[   2.151][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.151][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.151][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.151][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   2.151][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   2.151][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   2.151][d][vo/gpu/opengl] [  8] uniform sampler2D texture0;
+[   2.151][d][vo/gpu/opengl] [  9] uniform vec2 texture_size0;
+[   2.151][d][vo/gpu/opengl] [ 10] uniform mat2 texture_rot0;
+[   2.151][d][vo/gpu/opengl] [ 11] uniform vec2 texture_off0;
+[   2.151][d][vo/gpu/opengl] [ 12] uniform vec2 pixel_size0;
+[   2.151][d][vo/gpu/opengl] [ 13] void main() {
+[   2.151][d][vo/gpu/opengl] [ 14] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   2.151][d][vo/gpu/opengl] [ 15] #undef tex
+[   2.151][d][vo/gpu/opengl] [ 16] #undef texmap
+[   2.151][d][vo/gpu/opengl] [ 17] #define tex texture0
+[   2.151][d][vo/gpu/opengl] [ 18] #define texmap texmap0
+[   2.151][d][vo/gpu/opengl] [ 19] vec2 pos = texcoord0;
+[   2.151][d][vo/gpu/opengl] [ 20] vec2 size = texture_size0;
+[   2.151][d][vo/gpu/opengl] [ 21] vec2 pt = pixel_size0;
+[   2.151][d][vo/gpu/opengl] [ 22] // first pass
+[   2.151][d][vo/gpu/opengl] [ 23] color = vec4(0.0);
+[   2.151][d][vo/gpu/opengl] [ 24] {
+[   2.151][d][vo/gpu/opengl] [ 25] vec2 dir = vec2(0.0, 1.0);
+[   2.151][d][vo/gpu/opengl] [ 26] pt *= dir;
+[   2.151][d][vo/gpu/opengl] [ 27] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   2.151][d][vo/gpu/opengl] [ 28] vec2 base = pos - fcoord * pt - pt * vec2(1.0);
+[   2.151][d][vo/gpu/opengl] [ 29] vec4 c;
+[   2.151][d][vo/gpu/opengl] [ 30] float ypos = LUT_POS(fcoord, 256.0);
+[   2.151][d][vo/gpu/opengl] [ 31] float weights[4];
+[   2.151][d][vo/gpu/opengl] [ 32] c = texture(lut, vec2(0.500000, ypos));
+[   2.151][d][vo/gpu/opengl] [ 33] weights[0] = c[0];
+[   2.151][d][vo/gpu/opengl] [ 34] weights[1] = c[1];
+[   2.151][d][vo/gpu/opengl] [ 35] weights[2] = c[2];
+[   2.151][d][vo/gpu/opengl] [ 36] weights[3] = c[3];
+[   2.151][d][vo/gpu/opengl] [ 37] // scaler samples
+[   2.151][d][vo/gpu/opengl] [ 38] c = texture(tex, base + pt * vec2(0.0));
+[   2.151][d][vo/gpu/opengl] [ 39] color += vec4(weights[0]) * c;
+[   2.151][d][vo/gpu/opengl] [ 40] c = texture(tex, base + pt * vec2(1.0));
+[   2.151][d][vo/gpu/opengl] [ 41] color += vec4(weights[1]) * c;
+[   2.151][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(2.0));
+[   2.151][d][vo/gpu/opengl] [ 43] color += vec4(weights[2]) * c;
+[   2.151][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(3.0));
+[   2.151][d][vo/gpu/opengl] [ 45] color += vec4(weights[3]) * c;
+[   2.151][d][vo/gpu/opengl] [ 46] }
+[   2.151][d][vo/gpu/opengl] [ 47] color *= 1.000000;
+[   2.152][d][vo/gpu/opengl] [ 48] out_color = color;
+[   2.152][d][vo/gpu/opengl] [ 49] }
+[   2.158][d][vo/gpu/opengl] shader link log (status=1): 
+[   2.159][d][vo/gpu] Writing shader cache file: /tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv/52F306921D5F6A051DF8375083BE2365707E73B38979C5384E2675513DF70755
+[   2.160][v][vo/gpu] Dither to 8.
+[   2.345][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   2.347][d][vo/gpu/opengl] vertex shader source:
+[   2.347][d][vo/gpu/opengl] [  1] #version 140
+[   2.347][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.347][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.347][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.347][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   2.347][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   2.347][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   2.347][d][vo/gpu/opengl] [  8] void main() {
+[   2.347][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   2.347][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   2.347][d][vo/gpu/opengl] [ 11] }
+[   2.351][d][vo/gpu/opengl] fragment shader source:
+[   2.351][d][vo/gpu/opengl] [  1] #version 140
+[   2.351][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.351][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.351][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.351][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   2.351][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   2.351][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   2.351][d][vo/gpu/opengl] [  8] uniform vec3 src_luma;
+[   2.351][d][vo/gpu/opengl] [  9] uniform vec3 dst_luma;
+[   2.351][d][vo/gpu/opengl] [ 10] uniform sampler2D dither;
+[   2.351][d][vo/gpu/opengl] [ 11] uniform sampler2D texture0;
+[   2.351][d][vo/gpu/opengl] [ 12] uniform vec2 texture_size0;
+[   2.351][d][vo/gpu/opengl] [ 13] uniform mat2 texture_rot0;
+[   2.351][d][vo/gpu/opengl] [ 14] uniform vec2 texture_off0;
+[   2.351][d][vo/gpu/opengl] [ 15] uniform vec2 pixel_size0;
+[   2.351][d][vo/gpu/opengl] [ 16] void main() {
+[   2.351][d][vo/gpu/opengl] [ 17] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   2.351][d][vo/gpu/opengl] [ 18] #undef tex
+[   2.351][d][vo/gpu/opengl] [ 19] #undef texmap
+[   2.351][d][vo/gpu/opengl] [ 20] #define tex texture0
+[   2.351][d][vo/gpu/opengl] [ 21] #define texmap texmap0
+[   2.351][d][vo/gpu/opengl] [ 22] vec2 pos = texcoord0;
+[   2.351][d][vo/gpu/opengl] [ 23] vec2 size = texture_size0;
+[   2.351][d][vo/gpu/opengl] [ 24] vec2 pt = pixel_size0;
+[   2.351][d][vo/gpu/opengl] [ 25] color = vec4(0.0);
+[   2.351][d][vo/gpu/opengl] [ 26] {
+[   2.351][d][vo/gpu/opengl] [ 27] vec2 dir = vec2(1.0, 0.0);
+[   2.351][d][vo/gpu/opengl] [ 28] pt *= dir;
+[   2.351][d][vo/gpu/opengl] [ 29] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   2.351][d][vo/gpu/opengl] [ 30] vec2 base = pos - fcoord * pt - pt * vec2(1.0);
+[   2.351][d][vo/gpu/opengl] [ 31] vec4 c;
+[   2.351][d][vo/gpu/opengl] [ 32] float ypos = LUT_POS(fcoord, 256.0);
+[   2.351][d][vo/gpu/opengl] [ 33] float weights[4];
+[   2.351][d][vo/gpu/opengl] [ 34] c = texture(lut, vec2(0.500000, ypos));
+[   2.351][d][vo/gpu/opengl] [ 35] weights[0] = c[0];
+[   2.351][d][vo/gpu/opengl] [ 36] weights[1] = c[1];
+[   2.351][d][vo/gpu/opengl] [ 37] weights[2] = c[2];
+[   2.351][d][vo/gpu/opengl] [ 38] weights[3] = c[3];
+[   2.351][d][vo/gpu/opengl] [ 39] // scaler samples
+[   2.351][d][vo/gpu/opengl] [ 40] c = texture(tex, base + pt * vec2(0.0));
+[   2.351][d][vo/gpu/opengl] [ 41] color += vec4(weights[0]) * c;
+[   2.351][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(1.0));
+[   2.351][d][vo/gpu/opengl] [ 43] color += vec4(weights[1]) * c;
+[   2.351][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(2.0));
+[   2.351][d][vo/gpu/opengl] [ 45] color += vec4(weights[2]) * c;
+[   2.351][d][vo/gpu/opengl] [ 46] c = texture(tex, base + pt * vec2(3.0));
+[   2.351][d][vo/gpu/opengl] [ 47] color += vec4(weights[3]) * c;
+[   2.351][d][vo/gpu/opengl] [ 48] }
+[   2.351][d][vo/gpu/opengl] [ 49] color.a = 1.000000;
+[   2.351][d][vo/gpu/opengl] [ 50] // scaler post-conversion
+[   2.351][d][vo/gpu/opengl] [ 51] // color mapping
+[   2.351][d][vo/gpu/opengl] [ 52] color.rgb *= vec3(1.000000);
+[   2.351][d][vo/gpu/opengl] [ 53] color.rgb *= vec3(1.000000);
+[   2.351][d][vo/gpu/opengl] [ 54] // delinearize
+[   2.351][d][vo/gpu/opengl] [ 55] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   2.351][d][vo/gpu/opengl] [ 56] color.rgb *= vec3(1.000000);
+[   2.351][d][vo/gpu/opengl] [ 57] color.rgb = pow(color.rgb, vec3(1.0/2.4));
+[   2.351][d][vo/gpu/opengl] [ 58] // dithering
+[   2.351][d][vo/gpu/opengl] [ 59] vec2 dither_coord = vec2(gl_FragCoord.x, 768.0 + -1.000000 * gl_FragCoord.y);vec2 dither_pos = dither_coord * 1.0/64.0;
+[   2.351][d][vo/gpu/opengl] [ 60] float dither_value = texture(dither, dither_pos).r;
+[   2.351][d][vo/gpu/opengl] [ 61] color = floor(color * 255.0 + dither_value + 0.5 / 4096.0) * 1.0/255.0;
+[   2.351][d][vo/gpu/opengl] [ 62] out_color = color;
+[   2.351][d][vo/gpu/opengl] [ 63] }
+[   2.361][d][vo/gpu/opengl] shader link log (status=1): 
+[   2.361][d][vo/gpu] Writing shader cache file: /tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv/821FC0FEAFA8B6473DE2E61A928E0219DA3886C117312169EAB7FFAB9CB5980D
+[   2.362][v][cplayer] first video frame after restart shown
+[   2.362][d][cplayer] starting video playback
+[   2.362][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[   2.372][d][vo/gpu] Resizing texture: 1024x768
+[   2.378][d][global] user path: '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv'
+[   2.380][d][vo/gpu/opengl] vertex shader source:
+[   2.380][d][vo/gpu/opengl] [  1] #version 140
+[   2.380][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.380][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.380][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.380][d][vo/gpu/opengl] [  5] in vec2 vertex_position;
+[   2.380][d][vo/gpu/opengl] [  6] in vec2 vertex_texcoord0;
+[   2.381][d][vo/gpu/opengl] [  7] out vec2 texcoord0;
+[   2.381][d][vo/gpu/opengl] [  8] void main() {
+[   2.381][d][vo/gpu/opengl] [  9] gl_Position = vec4(vertex_position, 1.0, 1.0);
+[   2.381][d][vo/gpu/opengl] [ 10] texcoord0 = vertex_texcoord0;
+[   2.381][d][vo/gpu/opengl] [ 11] }
+[   2.385][d][vo/gpu/opengl] fragment shader source:
+[   2.385][d][vo/gpu/opengl] [  1] #version 140
+[   2.385][d][vo/gpu/opengl] [  2] #define tex1D texture
+[   2.386][d][vo/gpu/opengl] [  3] #define tex3D texture
+[   2.386][d][vo/gpu/opengl] [  4] #define LUT_POS(x, lut_size) mix(0.5 / (lut_size), 1.0 - 0.5 / (lut_size), (x))
+[   2.386][d][vo/gpu/opengl] [  5] out vec4 out_color;
+[   2.386][d][vo/gpu/opengl] [  6] in vec2 texcoord0;
+[   2.386][d][vo/gpu/opengl] [  7] uniform sampler2D lut;
+[   2.386][d][vo/gpu/opengl] [  8] uniform vec3 src_luma;
+[   2.386][d][vo/gpu/opengl] [  9] uniform vec3 dst_luma;
+[   2.386][d][vo/gpu/opengl] [ 10] uniform sampler2D dither;
+[   2.386][d][vo/gpu/opengl] [ 11] uniform sampler2D texture0;
+[   2.386][d][vo/gpu/opengl] [ 12] uniform vec2 texture_size0;
+[   2.386][d][vo/gpu/opengl] [ 13] uniform mat2 texture_rot0;
+[   2.386][d][vo/gpu/opengl] [ 14] uniform vec2 texture_off0;
+[   2.386][d][vo/gpu/opengl] [ 15] uniform vec2 pixel_size0;
+[   2.386][d][vo/gpu/opengl] [ 16] void main() {
+[   2.386][d][vo/gpu/opengl] [ 17] vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+[   2.386][d][vo/gpu/opengl] [ 18] #undef tex
+[   2.386][d][vo/gpu/opengl] [ 19] #undef texmap
+[   2.386][d][vo/gpu/opengl] [ 20] #define tex texture0
+[   2.386][d][vo/gpu/opengl] [ 21] #define texmap texmap0
+[   2.386][d][vo/gpu/opengl] [ 22] vec2 pos = texcoord0;
+[   2.386][d][vo/gpu/opengl] [ 23] vec2 size = texture_size0;
+[   2.386][d][vo/gpu/opengl] [ 24] vec2 pt = pixel_size0;
+[   2.386][d][vo/gpu/opengl] [ 25] color = vec4(0.0);
+[   2.386][d][vo/gpu/opengl] [ 26] {
+[   2.386][d][vo/gpu/opengl] [ 27] vec2 dir = vec2(1.0, 0.0);
+[   2.386][d][vo/gpu/opengl] [ 28] pt *= dir;
+[   2.386][d][vo/gpu/opengl] [ 29] float fcoord = dot(fract(pos * size - vec2(0.5)), dir);
+[   2.386][d][vo/gpu/opengl] [ 30] vec2 base = pos - fcoord * pt - pt * vec2(1.0);
+[   2.386][d][vo/gpu/opengl] [ 31] vec4 c;
+[   2.386][d][vo/gpu/opengl] [ 32] float ypos = LUT_POS(fcoord, 256.0);
+[   2.386][d][vo/gpu/opengl] [ 33] float weights[4];
+[   2.386][d][vo/gpu/opengl] [ 34] c = texture(lut, vec2(0.500000, ypos));
+[   2.386][d][vo/gpu/opengl] [ 35] weights[0] = c[0];
+[   2.386][d][vo/gpu/opengl] [ 36] weights[1] = c[1];
+[   2.386][d][vo/gpu/opengl] [ 37] weights[2] = c[2];
+[   2.386][d][vo/gpu/opengl] [ 38] weights[3] = c[3];
+[   2.386][d][vo/gpu/opengl] [ 39] // scaler samples
+[   2.386][d][vo/gpu/opengl] [ 40] c = texture(tex, base + pt * vec2(0.0));
+[   2.386][d][vo/gpu/opengl] [ 41] color += vec4(weights[0]) * c;
+[   2.386][d][vo/gpu/opengl] [ 42] c = texture(tex, base + pt * vec2(1.0));
+[   2.386][d][vo/gpu/opengl] [ 43] color += vec4(weights[1]) * c;
+[   2.386][d][vo/gpu/opengl] [ 44] c = texture(tex, base + pt * vec2(2.0));
+[   2.386][d][vo/gpu/opengl] [ 45] color += vec4(weights[2]) * c;
+[   2.386][d][vo/gpu/opengl] [ 46] c = texture(tex, base + pt * vec2(3.0));
+[   2.386][d][vo/gpu/opengl] [ 47] color += vec4(weights[3]) * c;
+[   2.386][d][vo/gpu/opengl] [ 48] }
+[   2.386][d][vo/gpu/opengl] [ 49] color.a = 1.000000;
+[   2.386][d][vo/gpu/opengl] [ 50] // scaler post-conversion
+[   2.386][d][vo/gpu/opengl] [ 51] // color mapping
+[   2.386][d][vo/gpu/opengl] [ 52] color.rgb *= vec3(1.000000);
+[   2.386][d][vo/gpu/opengl] [ 53] color.rgb *= vec3(1.000000);
+[   2.386][d][vo/gpu/opengl] [ 54] // delinearize
+[   2.386][d][vo/gpu/opengl] [ 55] color.rgb = clamp(color.rgb, 0.0, 1.0);
+[   2.386][d][vo/gpu/opengl] [ 56] color.rgb *= vec3(1.000000);
+[   2.386][d][vo/gpu/opengl] [ 57] color.rgb = pow(color.rgb, vec3(1.0/2.4));
+[   2.386][d][vo/gpu/opengl] [ 58] // dithering
+[   2.386][d][vo/gpu/opengl] [ 59] vec2 dither_coord = vec2(gl_FragCoord.x, 0.0 + 1.000000 * gl_FragCoord.y);vec2 dither_pos = dither_coord * 1.0/64.0;
+[   2.386][d][vo/gpu/opengl] [ 60] float dither_value = texture(dither, dither_pos).r;
+[   2.386][d][vo/gpu/opengl] [ 61] color = floor(color * 255.0 + dither_value + 0.5 / 4096.0) * 1.0/255.0;
+[   2.386][d][vo/gpu/opengl] [ 62] out_color = color;
+[   2.386][d][vo/gpu/opengl] [ 63] }
+[   2.396][d][vo/gpu/opengl] shader link log (status=1): 
+[   2.396][d][vo/gpu] Writing shader cache file: /tmp/c18-c23/apply-service-paused/candidate-health/home/.cache/mpv/63F49DDE30D1BC8F4B6F689C555592C99BA1D8F023943EEBB29E6E67539BABD2
+[   3.089][v][ipc_5] Client connected
+[   3.090][v][ipc_5] Client disconnected
+[   3.091][d][ipc_5] Exiting...
+[   4.094][v][ipc_6] Client connected
+[   4.095][v][ipc_6] Client disconnected
+[   4.095][d][ipc_6] Exiting...
+[   5.097][v][lavf] EOF reached.
+[   5.099][v][ipc_7] Client connected
+[   5.109][v][ipc_7] Client disconnected
+[   5.109][d][ipc_7] Exiting...
+[   6.113][v][ipc_8] Client connected
+[   6.114][v][ipc_8] Client disconnected
+[   6.114][d][ipc_8] Exiting...
+[   6.163][v][vf] filter input EOF
+[   6.163][v][vf] filter output EOF
+[   6.196][v][cplayer] using demuxer frame duration for last frame
+[   6.196][d][cplayer] video EOF (status=3)
+[   6.246][d][cplayer] video EOF (status=3)
+[   6.262][d][cplayer] video EOF (status=3)
+[   6.263][v][cplayer] video EOF reached
+[   6.263][d][cplayer] video EOF (status=4)
+[   6.263][v][lavf] queuing seek to 0.000000
+[   6.263][v][lavf] execute seek (to 0.000000 flags 32)
+[   6.263][v][cplayer] hr-seek, skipping to 0.000000
+[   6.263][v][lavf] seek done
+[   6.263][v][file] stream level seek from 443106 to 1177
+[   6.265][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[   6.265][v][vd] Codec profile: Baseline (0x42)
+[   6.265][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[   6.266][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[   6.279][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[   6.290][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[   6.301][v][cplayer] first video frame after restart shown
+[   6.301][d][cplayer] starting video playback
+[   6.301][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[   7.118][v][ipc_9] Client connected
+[   7.119][v][ipc_9] Client disconnected
+[   7.119][d][ipc_9] Exiting...
+[   8.123][v][ipc_10] Client connected
+[   8.124][v][ipc_10] Client disconnected
+[   8.124][d][ipc_10] Exiting...
+[   9.035][v][lavf] EOF reached.
+[   9.127][v][ipc_11] Client connected
+[   9.128][v][ipc_11] Client disconnected
+[   9.128][d][ipc_11] Exiting...
+[  10.102][v][vf] filter input EOF
+[  10.102][v][vf] filter output EOF
+[  10.131][v][ipc_12] Client connected
+[  10.133][v][ipc_12] Client disconnected
+[  10.133][d][ipc_12] Exiting...
+[  10.133][v][cplayer] using demuxer frame duration for last frame
+[  10.133][d][cplayer] video EOF (status=3)
+[  10.135][d][cplayer] video EOF (status=3)
+[  10.182][d][cplayer] video EOF (status=3)
+[  10.201][d][cplayer] video EOF (status=3)
+[  10.202][v][cplayer] video EOF reached
+[  10.202][d][cplayer] video EOF (status=4)
+[  10.202][v][lavf] queuing seek to 0.000000
+[  10.202][v][lavf] execute seek (to 0.000000 flags 32)
+[  10.202][v][lavf] seek done
+[  10.202][v][cplayer] hr-seek, skipping to 0.000000
+[  10.202][v][file] stream level seek from 443106 to 1177
+[  10.205][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  10.205][v][vd] Codec profile: Baseline (0x42)
+[  10.205][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  10.205][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  10.216][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  10.227][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  10.238][v][cplayer] first video frame after restart shown
+[  10.238][d][cplayer] starting video playback
+[  10.238][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  11.135][v][ipc_13] Client connected
+[  11.136][v][ipc_13] Client disconnected
+[  11.136][d][ipc_13] Exiting...
+[  11.976][v][ipc_14] Client connected
+[  11.984][v][ipc_14] Client disconnected
+[  11.984][d][ipc_14] Exiting...
+[  11.991][v][ipc_15] Client connected
+[  11.991][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  11.991][v][cplayer] EOF code: 3  
+[  11.991][d][vd] Uninit decoder.
+[  11.991][v][ipc_15] Client disconnected
+[  11.992][d][ipc_15] Exiting...
+[  11.994][v][ipc_16] Client connected
+[  11.997][d][cplayer] Terminating demuxers...
+[  11.998][v][ipc_16] Client disconnected
+[  11.998][d][cplayer] Done terminating demuxers.
+[  11.998][d][ipc_16] Exiting...
+[  11.998][v][cplayer] finished playback, success (reason 2)
+[  11.998][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[  11.998][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  11.998][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  11.999][d][file] Stream opened successfully.
+[  11.999][v][demux] Trying demuxers for level=normal.
+[  11.999][d][demux] Trying demuxer: disc (force-level: normal)
+[  11.999][d][demux] Trying demuxer: edl (force-level: normal)
+[  11.999][d][demux] Trying demuxer: cue (force-level: normal)
+[  11.999][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  11.999][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  11.999][d][demux] Trying demuxer: mkv (force-level: normal)
+[  11.999][d][demux] Trying demuxer: lavf (force-level: normal)
+[  12.001][v][ipc_17] Client connected
+[  12.001][v][ipc_17] Client disconnected
+[  12.001][d][ipc_17] Exiting...
+[  12.021][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  12.023][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  12.023][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  12.023][v][find_files] Loading external files in /data/media/kiosky-player/
+[  12.024][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[  12.024][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[  12.024][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  12.024][v][lavf] select track 0
+[  12.024][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  12.025][v][vd] Container reported FPS: 29.743590
+[  12.027][v][vd] Codec list:
+[  12.027][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  12.027][v][vd] Opening decoder h264
+[  12.027][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  12.027][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  12.027][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  12.028][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  12.028][v][vf] User filter list:
+[  12.028][v][vf]   (empty)
+[  12.029][v][cplayer] Starting playback...
+[  12.029][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  12.029][v][vd] Codec profile: Baseline (0x42)
+[  12.029][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  12.030][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  12.048][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  12.061][i][vd] Using hardware decoding (v4l2request-copy).
+[  12.061][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  12.061][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  12.061][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  12.061][v][vf] [userdeint] (disabled)
+[  12.061][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  12.061][v][vf] [autorotate] (disabled)
+[  12.061][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  12.062][v][vf] [convert] (disabled)
+[  12.062][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  12.076][v][cplayer] first video frame after restart shown
+[  12.076][d][cplayer] starting video playback
+[  12.076][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  12.139][v][ipc_18] Client connected
+[  12.140][v][ipc_18] Client disconnected
+[  12.141][d][ipc_18] Exiting...
+[  13.146][v][ipc_19] Client connected
+[  13.154][v][ipc_19] Client disconnected
+[  13.154][d][ipc_19] Exiting...
+[  14.158][v][ipc_20] Client connected
+[  14.160][v][ipc_20] Client disconnected
+[  14.160][d][ipc_20] Exiting...
+[  14.810][v][lavf] EOF reached.
+[  15.163][v][ipc_21] Client connected
+[  15.164][v][ipc_21] Client disconnected
+[  15.164][d][ipc_21] Exiting...
+[  15.877][v][vf] filter input EOF
+[  15.877][v][vf] filter output EOF
+[  15.910][v][cplayer] using demuxer frame duration for last frame
+[  15.910][d][cplayer] video EOF (status=3)
+[  15.960][d][cplayer] video EOF (status=3)
+[  15.976][d][cplayer] video EOF (status=3)
+[  15.976][v][cplayer] video EOF reached
+[  15.976][d][cplayer] video EOF (status=4)
+[  15.976][v][lavf] queuing seek to 0.000000
+[  15.976][v][lavf] execute seek (to 0.000000 flags 32)
+[  15.976][v][lavf] seek done
+[  15.976][v][cplayer] hr-seek, skipping to 0.000000
+[  15.976][v][file] stream level seek from 443106 to 1177
+[  15.979][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  15.979][v][vd] Codec profile: Baseline (0x42)
+[  15.979][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  15.980][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  15.991][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  16.002][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  16.013][v][cplayer] first video frame after restart shown
+[  16.013][d][cplayer] starting video playback
+[  16.013][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  16.168][v][ipc_22] Client connected
+[  16.169][v][ipc_22] Client disconnected
+[  16.169][d][ipc_22] Exiting...
+[  17.172][v][ipc_23] Client connected
+[  17.173][v][ipc_23] Client disconnected
+[  17.173][d][ipc_23] Exiting...
+[  18.176][v][ipc_24] Client connected
+[  18.177][v][ipc_24] Client disconnected
+[  18.177][d][ipc_24] Exiting...
+[  18.747][v][lavf] EOF reached.
+[  19.180][v][ipc_25] Client connected
+[  19.191][v][ipc_25] Client disconnected
+[  19.191][d][ipc_25] Exiting...
+[  19.814][v][vf] filter input EOF
+[  19.814][v][vf] filter output EOF
+[  19.847][v][cplayer] using demuxer frame duration for last frame
+[  19.847][d][cplayer] video EOF (status=3)
+[  19.897][d][cplayer] video EOF (status=3)
+[  19.913][d][cplayer] video EOF (status=3)
+[  19.913][v][cplayer] video EOF reached
+[  19.913][d][cplayer] video EOF (status=4)
+[  19.913][v][lavf] queuing seek to 0.000000
+[  19.913][v][lavf] execute seek (to 0.000000 flags 32)
+[  19.913][v][lavf] seek done
+[  19.913][v][cplayer] hr-seek, skipping to 0.000000
+[  19.913][v][file] stream level seek from 443106 to 1177
+[  19.916][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  19.916][v][vd] Codec profile: Baseline (0x42)
+[  19.916][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  19.917][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  19.928][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  19.939][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  19.950][v][cplayer] first video frame after restart shown
+[  19.950][d][cplayer] starting video playback
+[  19.950][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  20.194][v][ipc_26] Client connected
+[  20.195][v][ipc_26] Client disconnected
+[  20.195][d][ipc_26] Exiting...
+[  21.198][v][ipc_27] Client connected
+[  21.200][v][ipc_27] Client disconnected
+[  21.200][d][ipc_27] Exiting...
+[  21.994][v][ipc_28] Client connected
+[  21.995][v][ipc_28] Client disconnected
+[  21.995][d][ipc_28] Exiting...
+[  22.013][v][ipc_29] Client connected
+[  22.013][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  22.013][v][cplayer] EOF code: 3  
+[  22.013][d][vd] Uninit decoder.
+[  22.013][v][ipc_29] Client disconnected
+[  22.013][d][ipc_29] Exiting...
+[  22.015][v][ipc_30] Client connected
+[  22.016][d][cplayer] Terminating demuxers...
+[  22.017][e][ipc_30] Read error (Connection reset by peer)
+[  22.017][d][cplayer] Done terminating demuxers.
+[  22.017][d][ipc_30] Exiting...
+[  22.017][v][cplayer] finished playback, success (reason 2)
+[  22.017][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[  22.017][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  22.017][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  22.017][d][file] Stream opened successfully.
+[  22.017][v][demux] Trying demuxers for level=normal.
+[  22.017][d][demux] Trying demuxer: disc (force-level: normal)
+[  22.017][d][demux] Trying demuxer: edl (force-level: normal)
+[  22.017][d][demux] Trying demuxer: cue (force-level: normal)
+[  22.017][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  22.017][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  22.017][d][demux] Trying demuxer: mkv (force-level: normal)
+[  22.017][d][demux] Trying demuxer: lavf (force-level: normal)
+[  22.019][v][ipc_31] Client connected
+[  22.020][v][ipc_31] Client disconnected
+[  22.020][d][ipc_31] Exiting...
+[  22.030][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  22.031][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  22.031][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  22.031][v][find_files] Loading external files in /data/media/kiosky-player/
+[  22.031][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[  22.031][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[  22.031][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  22.031][v][lavf] select track 0
+[  22.031][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  22.032][v][vd] Container reported FPS: 29.743590
+[  22.033][v][vd] Codec list:
+[  22.033][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  22.033][v][vd] Opening decoder h264
+[  22.033][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  22.033][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  22.033][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  22.034][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  22.034][v][vf] User filter list:
+[  22.034][v][vf]   (empty)
+[  22.034][v][cplayer] Starting playback...
+[  22.035][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  22.035][v][vd] Codec profile: Baseline (0x42)
+[  22.035][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  22.036][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  22.048][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  22.058][i][vd] Using hardware decoding (v4l2request-copy).
+[  22.058][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  22.058][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  22.058][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  22.058][v][vf] [userdeint] (disabled)
+[  22.058][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  22.059][v][vf] [autorotate] (disabled)
+[  22.059][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  22.059][v][vf] [convert] (disabled)
+[  22.059][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  22.070][v][cplayer] first video frame after restart shown
+[  22.070][d][cplayer] starting video playback
+[  22.070][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  22.204][v][ipc_32] Client connected
+[  22.215][v][ipc_32] Client disconnected
+[  22.215][d][ipc_32] Exiting...
+[  23.218][v][ipc_33] Client connected
+[  23.219][v][ipc_33] Client disconnected
+[  23.219][d][ipc_33] Exiting...
+[  24.223][v][ipc_34] Client connected
+[  24.224][v][ipc_34] Client disconnected
+[  24.224][d][ipc_34] Exiting...
+[  24.804][v][lavf] EOF reached.
+[  25.227][v][ipc_35] Client connected
+[  25.228][v][ipc_35] Client disconnected
+[  25.228][d][ipc_35] Exiting...
+[  25.871][v][vf] filter input EOF
+[  25.871][v][vf] filter output EOF
+[  25.904][v][cplayer] using demuxer frame duration for last frame
+[  25.904][d][cplayer] video EOF (status=3)
+[  25.954][d][cplayer] video EOF (status=3)
+[  25.970][d][cplayer] video EOF (status=3)
+[  25.970][v][cplayer] video EOF reached
+[  25.970][d][cplayer] video EOF (status=4)
+[  25.970][v][lavf] queuing seek to 0.000000
+[  25.971][v][lavf] execute seek (to 0.000000 flags 32)
+[  25.971][v][lavf] seek done
+[  25.971][v][cplayer] hr-seek, skipping to 0.000000
+[  25.971][v][file] stream level seek from 443106 to 1177
+[  25.974][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  25.974][v][vd] Codec profile: Baseline (0x42)
+[  25.974][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  25.974][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  25.984][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  25.995][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  26.007][v][cplayer] first video frame after restart shown
+[  26.007][d][cplayer] starting video playback
+[  26.007][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  26.231][v][ipc_36] Client connected
+[  26.232][v][ipc_36] Client disconnected
+[  26.232][d][ipc_36] Exiting...
+[  27.235][v][ipc_37] Client connected
+[  27.236][v][ipc_37] Client disconnected
+[  27.236][d][ipc_37] Exiting...
+[  28.240][v][ipc_38] Client connected
+[  28.241][v][ipc_38] Client disconnected
+[  28.241][d][ipc_38] Exiting...
+[  28.741][v][lavf] EOF reached.
+[  29.245][v][ipc_39] Client connected
+[  29.251][v][ipc_39] Client disconnected
+[  29.252][d][ipc_39] Exiting...
+[  29.808][v][vf] filter input EOF
+[  29.808][v][vf] filter output EOF
+[  29.841][v][cplayer] using demuxer frame duration for last frame
+[  29.841][d][cplayer] video EOF (status=3)
+[  29.891][d][cplayer] video EOF (status=3)
+[  29.907][v][cplayer] video EOF reached
+[  29.907][d][cplayer] video EOF (status=4)
+[  29.907][v][lavf] queuing seek to 0.000000
+[  29.907][v][lavf] execute seek (to 0.000000 flags 32)
+[  29.907][v][cplayer] hr-seek, skipping to 0.000000
+[  29.907][v][lavf] seek done
+[  29.907][v][file] stream level seek from 443106 to 1177
+[  29.912][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  29.912][v][vd] Codec profile: Baseline (0x42)
+[  29.912][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  29.913][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  29.928][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  29.940][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  29.953][v][cplayer] first video frame after restart shown
+[  29.954][d][cplayer] starting video playback
+[  29.954][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  30.254][v][ipc_40] Client connected
+[  30.265][v][ipc_40] Client disconnected
+[  30.265][d][ipc_40] Exiting...
+[  31.269][v][ipc_41] Client connected
+[  31.270][v][ipc_41] Client disconnected
+[  31.270][d][ipc_41] Exiting...
+[  32.004][v][ipc_42] Client connected
+[  32.004][v][ipc_42] Client disconnected
+[  32.004][d][ipc_42] Exiting...
+[  32.033][v][ipc_43] Client connected
+[  32.033][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  32.034][v][cplayer] EOF code: 3  
+[  32.034][d][vd] Uninit decoder.
+[  32.034][v][ipc_43] Client disconnected
+[  32.034][d][ipc_43] Exiting...
+[  32.036][v][ipc_44] Client connected
+[  32.037][d][cplayer] Terminating demuxers...
+[  32.037][d][cplayer] Done terminating demuxers.
+[  32.038][v][cplayer] finished playback, success (reason 2)
+[  32.038][v][ipc_44] Client disconnected
+[  32.038][d][ipc_44] Exiting...
+[  32.038][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[  32.038][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  32.038][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  32.038][d][file] Stream opened successfully.
+[  32.038][v][demux] Trying demuxers for level=normal.
+[  32.038][d][demux] Trying demuxer: disc (force-level: normal)
+[  32.038][d][demux] Trying demuxer: edl (force-level: normal)
+[  32.039][d][demux] Trying demuxer: cue (force-level: normal)
+[  32.039][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  32.039][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  32.039][d][demux] Trying demuxer: mkv (force-level: normal)
+[  32.039][d][demux] Trying demuxer: lavf (force-level: normal)
+[  32.041][v][ipc_45] Client connected
+[  32.042][v][ipc_45] Client disconnected
+[  32.042][d][ipc_45] Exiting...
+[  32.043][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  32.044][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  32.044][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  32.045][v][find_files] Loading external files in /data/media/kiosky-player/
+[  32.045][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[  32.045][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[  32.045][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  32.045][v][lavf] select track 0
+[  32.045][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  32.055][v][vd] Container reported FPS: 29.743590
+[  32.056][v][vd] Codec list:
+[  32.056][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  32.056][v][vd] Opening decoder h264
+[  32.056][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  32.056][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  32.056][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  32.057][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  32.057][v][vf] User filter list:
+[  32.057][v][vf]   (empty)
+[  32.057][v][cplayer] Starting playback...
+[  32.058][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  32.058][v][vd] Codec profile: Baseline (0x42)
+[  32.058][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  32.059][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  32.069][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  32.080][i][vd] Using hardware decoding (v4l2request-copy).
+[  32.080][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  32.080][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  32.080][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  32.080][v][vf] [userdeint] (disabled)
+[  32.080][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  32.080][v][vf] [autorotate] (disabled)
+[  32.080][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  32.081][v][vf] [convert] (disabled)
+[  32.081][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  32.092][v][cplayer] first video frame after restart shown
+[  32.092][d][cplayer] starting video playback
+[  32.092][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  32.273][v][ipc_46] Client connected
+[  32.274][v][ipc_46] Client disconnected
+[  32.274][d][ipc_46] Exiting...
+[  33.277][v][ipc_47] Client connected
+[  33.278][v][ipc_47] Client disconnected
+[  33.279][d][ipc_47] Exiting...
+[  34.283][v][ipc_48] Client connected
+[  34.284][v][ipc_48] Client disconnected
+[  34.285][d][ipc_48] Exiting...
+[  34.826][v][lavf] EOF reached.
+[  35.289][v][ipc_49] Client connected
+[  35.290][v][ipc_49] Client disconnected
+[  35.290][d][ipc_49] Exiting...
+[  35.893][v][vf] filter input EOF
+[  35.893][v][vf] filter output EOF
+[  35.926][v][cplayer] using demuxer frame duration for last frame
+[  35.926][d][cplayer] video EOF (status=3)
+[  35.976][d][cplayer] video EOF (status=3)
+[  35.992][d][cplayer] video EOF (status=3)
+[  35.992][v][cplayer] video EOF reached
+[  35.992][d][cplayer] video EOF (status=4)
+[  35.992][v][lavf] queuing seek to 0.000000
+[  35.992][v][lavf] execute seek (to 0.000000 flags 32)
+[  35.992][v][lavf] seek done
+[  35.992][v][cplayer] hr-seek, skipping to 0.000000
+[  35.992][v][file] stream level seek from 443106 to 1177
+[  35.996][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  35.996][v][vd] Codec profile: Baseline (0x42)
+[  35.996][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  35.996][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  36.006][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  36.017][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  36.028][v][cplayer] first video frame after restart shown
+[  36.028][d][cplayer] starting video playback
+[  36.028][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  36.294][v][ipc_50] Client connected
+[  36.295][v][ipc_50] Client disconnected
+[  36.296][d][ipc_50] Exiting...
+[  37.301][v][ipc_51] Client connected
+[  37.306][v][ipc_51] Client disconnected
+[  37.306][d][ipc_51] Exiting...
+[  38.309][v][ipc_52] Client connected
+[  38.310][v][ipc_52] Client disconnected
+[  38.310][d][ipc_52] Exiting...
+[  38.762][v][lavf] EOF reached.
+[  39.313][v][ipc_53] Client connected
+[  39.314][v][ipc_53] Client disconnected
+[  39.314][d][ipc_53] Exiting...
+[  39.829][v][vf] filter input EOF
+[  39.829][v][vf] filter output EOF
+[  39.862][v][cplayer] using demuxer frame duration for last frame
+[  39.862][d][cplayer] video EOF (status=3)
+[  39.912][d][cplayer] video EOF (status=3)
+[  39.928][d][cplayer] video EOF (status=3)
+[  39.928][v][cplayer] video EOF reached
+[  39.928][d][cplayer] video EOF (status=4)
+[  39.928][v][lavf] queuing seek to 0.000000
+[  39.928][v][lavf] execute seek (to 0.000000 flags 32)
+[  39.928][v][lavf] seek done
+[  39.928][v][cplayer] hr-seek, skipping to 0.000000
+[  39.929][v][file] stream level seek from 443106 to 1177
+[  39.932][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  39.932][v][vd] Codec profile: Baseline (0x42)
+[  39.932][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  39.933][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  39.942][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  39.953][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  39.964][v][cplayer] first video frame after restart shown
+[  39.964][d][cplayer] starting video playback
+[  39.964][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  40.318][v][ipc_54] Client connected
+[  40.319][v][ipc_54] Client disconnected
+[  40.319][d][ipc_54] Exiting...
+[  41.322][v][ipc_55] Client connected
+[  41.323][v][ipc_55] Client disconnected
+[  41.323][d][ipc_55] Exiting...
+[  42.014][v][ipc_56] Client connected
+[  42.015][v][ipc_56] Client disconnected
+[  42.015][d][ipc_56] Exiting...
+[  42.054][v][ipc_57] Client connected
+[  42.054][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  42.054][v][cplayer] EOF code: 3  
+[  42.054][d][vd] Uninit decoder.
+[  42.054][v][ipc_57] Client disconnected
+[  42.054][d][ipc_57] Exiting...
+[  42.056][v][ipc_58] Client connected
+[  42.057][d][cplayer] Terminating demuxers...
+[  42.057][v][ipc_58] Client disconnected
+[  42.057][d][ipc_58] Exiting...
+[  42.058][d][cplayer] Done terminating demuxers.
+[  42.058][v][cplayer] finished playback, success (reason 2)
+[  42.058][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[  42.058][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  42.058][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  42.058][d][file] Stream opened successfully.
+[  42.058][v][demux] Trying demuxers for level=normal.
+[  42.058][d][demux] Trying demuxer: disc (force-level: normal)
+[  42.058][d][demux] Trying demuxer: edl (force-level: normal)
+[  42.058][d][demux] Trying demuxer: cue (force-level: normal)
+[  42.058][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  42.058][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  42.058][d][demux] Trying demuxer: mkv (force-level: normal)
+[  42.059][d][demux] Trying demuxer: lavf (force-level: normal)
+[  42.060][v][ipc_59] Client connected
+[  42.061][v][ipc_59] Client disconnected
+[  42.061][d][ipc_59] Exiting...
+[  42.062][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  42.063][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  42.063][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  42.063][v][find_files] Loading external files in /data/media/kiosky-player/
+[  42.063][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[  42.063][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[  42.063][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  42.063][v][lavf] select track 0
+[  42.063][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  42.066][v][vd] Container reported FPS: 29.743590
+[  42.067][v][vd] Codec list:
+[  42.067][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  42.067][v][vd] Opening decoder h264
+[  42.067][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  42.067][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  42.067][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  42.067][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  42.067][v][vf] User filter list:
+[  42.067][v][vf]   (empty)
+[  42.068][v][cplayer] Starting playback...
+[  42.068][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  42.068][v][vd] Codec profile: Baseline (0x42)
+[  42.068][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  42.069][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  42.080][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  42.091][i][vd] Using hardware decoding (v4l2request-copy).
+[  42.091][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  42.091][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  42.091][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  42.091][v][vf] [userdeint] (disabled)
+[  42.091][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  42.091][v][vf] [autorotate] (disabled)
+[  42.091][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  42.092][v][vf] [convert] (disabled)
+[  42.092][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  42.103][v][cplayer] first video frame after restart shown
+[  42.103][d][cplayer] starting video playback
+[  42.103][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  42.327][v][ipc_60] Client connected
+[  42.328][v][ipc_60] Client disconnected
+[  42.328][d][ipc_60] Exiting...
+[  43.331][v][ipc_61] Client connected
+[  43.332][v][ipc_61] Client disconnected
+[  43.332][d][ipc_61] Exiting...
+[  44.335][v][ipc_62] Client connected
+[  44.336][v][ipc_62] Client disconnected
+[  44.336][d][ipc_62] Exiting...
+[  44.837][v][lavf] EOF reached.
+[  45.340][v][ipc_63] Client connected
+[  45.348][v][ipc_63] Client disconnected
+[  45.348][d][ipc_63] Exiting...
+[  45.904][v][vf] filter input EOF
+[  45.904][v][vf] filter output EOF
+[  45.937][v][cplayer] using demuxer frame duration for last frame
+[  45.937][d][cplayer] video EOF (status=3)
+[  45.987][d][cplayer] video EOF (status=3)
+[  46.003][d][cplayer] video EOF (status=3)
+[  46.003][v][cplayer] video EOF reached
+[  46.003][d][cplayer] video EOF (status=4)
+[  46.003][v][lavf] queuing seek to 0.000000
+[  46.003][v][lavf] execute seek (to 0.000000 flags 32)
+[  46.003][v][cplayer] hr-seek, skipping to 0.000000
+[  46.003][v][lavf] seek done
+[  46.003][v][file] stream level seek from 443106 to 1177
+[  46.006][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  46.007][v][vd] Codec profile: Baseline (0x42)
+[  46.007][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  46.007][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  46.018][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  46.029][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  46.040][v][cplayer] first video frame after restart shown
+[  46.040][d][cplayer] starting video playback
+[  46.040][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  46.351][v][ipc_64] Client connected
+[  46.352][v][ipc_64] Client disconnected
+[  46.352][d][ipc_64] Exiting...
+[  47.355][v][ipc_65] Client connected
+[  47.357][v][ipc_65] Client disconnected
+[  47.357][d][ipc_65] Exiting...
+[  48.361][v][ipc_66] Client connected
+[  48.362][v][ipc_66] Client disconnected
+[  48.362][d][ipc_66] Exiting...
+[  48.774][v][lavf] EOF reached.
+[  49.365][v][ipc_67] Client connected
+[  49.366][v][ipc_67] Client disconnected
+[  49.366][d][ipc_67] Exiting...
+[  49.841][v][vf] filter input EOF
+[  49.842][v][vf] filter output EOF
+[  49.875][v][cplayer] using demuxer frame duration for last frame
+[  49.875][d][cplayer] video EOF (status=3)
+[  49.925][d][cplayer] video EOF (status=3)
+[  49.940][d][cplayer] video EOF (status=3)
+[  49.940][v][cplayer] video EOF reached
+[  49.940][d][cplayer] video EOF (status=4)
+[  49.940][v][lavf] queuing seek to 0.000000
+[  49.941][v][lavf] execute seek (to 0.000000 flags 32)
+[  49.941][v][cplayer] hr-seek, skipping to 0.000000
+[  49.941][v][lavf] seek done
+[  49.941][v][file] stream level seek from 443106 to 1177
+[  49.946][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  49.946][v][vd] Codec profile: Baseline (0x42)
+[  49.946][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  49.947][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  49.961][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  49.974][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  49.987][v][cplayer] first video frame after restart shown
+[  49.987][d][cplayer] starting video playback
+[  49.987][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  50.369][v][ipc_68] Client connected
+[  50.370][v][ipc_68] Client disconnected
+[  50.370][d][ipc_68] Exiting...
+[  51.373][v][ipc_69] Client connected
+[  51.375][v][ipc_69] Client disconnected
+[  51.375][d][ipc_69] Exiting...
+[  52.025][v][ipc_70] Client connected
+[  52.032][v][ipc_70] Client disconnected
+[  52.032][d][ipc_70] Exiting...
+[  52.072][v][ipc_71] Client connected
+[  52.073][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  52.073][v][cplayer] EOF code: 3  
+[  52.074][d][vd] Uninit decoder.
+[  52.074][v][ipc_71] Client disconnected
+[  52.074][d][ipc_71] Exiting...
+[  52.075][v][ipc_72] Client connected
+[  52.076][d][cplayer] Terminating demuxers...
+[  52.077][v][ipc_72] Client disconnected
+[  52.077][d][cplayer] Done terminating demuxers.
+[  52.077][d][ipc_72] Exiting...
+[  52.077][v][cplayer] finished playback, success (reason 2)
+[  52.077][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[  52.077][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  52.077][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  52.077][d][file] Stream opened successfully.
+[  52.077][v][demux] Trying demuxers for level=normal.
+[  52.077][d][demux] Trying demuxer: disc (force-level: normal)
+[  52.077][d][demux] Trying demuxer: edl (force-level: normal)
+[  52.077][d][demux] Trying demuxer: cue (force-level: normal)
+[  52.077][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  52.077][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  52.077][d][demux] Trying demuxer: mkv (force-level: normal)
+[  52.077][d][demux] Trying demuxer: lavf (force-level: normal)
+[  52.080][v][ipc_73] Client connected
+[  52.080][v][ipc_73] Client disconnected
+[  52.080][d][ipc_73] Exiting...
+[  52.081][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  52.082][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  52.082][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  52.082][v][find_files] Loading external files in /data/media/kiosky-player/
+[  52.082][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[  52.082][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[  52.082][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  52.082][v][lavf] select track 0
+[  52.082][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  52.089][v][vd] Container reported FPS: 29.743590
+[  52.090][v][vd] Codec list:
+[  52.090][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  52.090][v][vd] Opening decoder h264
+[  52.090][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  52.091][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  52.091][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  52.091][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  52.091][v][vf] User filter list:
+[  52.091][v][vf]   (empty)
+[  52.092][v][cplayer] Starting playback...
+[  52.092][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  52.092][v][vd] Codec profile: Baseline (0x42)
+[  52.092][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  52.093][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  52.103][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  52.114][i][vd] Using hardware decoding (v4l2request-copy).
+[  52.114][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  52.114][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  52.115][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  52.115][v][vf] [userdeint] (disabled)
+[  52.115][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  52.115][v][vf] [autorotate] (disabled)
+[  52.115][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  52.116][v][vf] [convert] (disabled)
+[  52.116][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  52.129][v][cplayer] first video frame after restart shown
+[  52.129][d][cplayer] starting video playback
+[  52.129][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  52.378][v][ipc_74] Client connected
+[  52.379][v][ipc_74] Client disconnected
+[  52.379][d][ipc_74] Exiting...
+[  53.382][v][ipc_75] Client connected
+[  53.383][v][ipc_75] Client disconnected
+[  53.383][d][ipc_75] Exiting...
+[  54.387][v][ipc_76] Client connected
+[  54.388][v][ipc_76] Client disconnected
+[  54.388][d][ipc_76] Exiting...
+[  54.863][v][lavf] EOF reached.
+[  55.392][v][ipc_77] Client connected
+[  55.393][v][ipc_77] Client disconnected
+[  55.393][d][ipc_77] Exiting...
+[  55.930][v][vf] filter input EOF
+[  55.930][v][vf] filter output EOF
+[  55.963][v][cplayer] using demuxer frame duration for last frame
+[  55.963][d][cplayer] video EOF (status=3)
+[  56.013][d][cplayer] video EOF (status=3)
+[  56.029][d][cplayer] video EOF (status=3)
+[  56.029][v][cplayer] video EOF reached
+[  56.029][d][cplayer] video EOF (status=4)
+[  56.029][v][lavf] queuing seek to 0.000000
+[  56.029][v][lavf] execute seek (to 0.000000 flags 32)
+[  56.029][v][lavf] seek done
+[  56.029][v][cplayer] hr-seek, skipping to 0.000000
+[  56.029][v][file] stream level seek from 443106 to 1177
+[  56.033][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  56.033][v][vd] Codec profile: Baseline (0x42)
+[  56.033][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  56.034][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  56.043][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  56.054][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  56.065][v][cplayer] first video frame after restart shown
+[  56.065][d][cplayer] starting video playback
+[  56.065][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  56.397][v][ipc_78] Client connected
+[  56.398][v][ipc_78] Client disconnected
+[  56.398][d][ipc_78] Exiting...
+[  57.402][v][ipc_79] Client connected
+[  57.410][v][ipc_79] Client disconnected
+[  57.410][d][ipc_79] Exiting...
+[  58.413][v][ipc_80] Client connected
+[  58.414][v][ipc_80] Client disconnected
+[  58.414][d][ipc_80] Exiting...
+[  58.800][v][lavf] EOF reached.
+[  59.417][v][ipc_81] Client connected
+[  59.418][v][ipc_81] Client disconnected
+[  59.418][d][ipc_81] Exiting...
+[  59.866][v][vf] filter input EOF
+[  59.866][v][vf] filter output EOF
+[  59.899][v][cplayer] using demuxer frame duration for last frame
+[  59.899][d][cplayer] video EOF (status=3)
+[  59.949][d][cplayer] video EOF (status=3)
+[  59.965][d][cplayer] video EOF (status=3)
+[  59.965][v][cplayer] video EOF reached
+[  59.965][d][cplayer] video EOF (status=4)
+[  59.965][v][lavf] queuing seek to 0.000000
+[  59.965][v][lavf] execute seek (to 0.000000 flags 32)
+[  59.965][v][lavf] seek done
+[  59.965][v][cplayer] hr-seek, skipping to 0.000000
+[  59.965][v][file] stream level seek from 443106 to 1177
+[  59.968][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  59.968][v][vd] Codec profile: Baseline (0x42)
+[  59.969][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  59.969][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  59.979][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  59.990][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  60.001][v][cplayer] first video frame after restart shown
+[  60.001][d][cplayer] starting video playback
+[  60.001][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  60.422][v][ipc_82] Client connected
+[  60.423][v][ipc_82] Client disconnected
+[  60.423][d][ipc_82] Exiting...
+[  61.426][v][ipc_83] Client connected
+[  61.427][v][ipc_83] Client disconnected
+[  61.427][d][ipc_83] Exiting...
+[  62.041][v][ipc_84] Client connected
+[  62.045][v][ipc_84] Client disconnected
+[  62.045][d][ipc_84] Exiting...
+[  62.105][v][ipc_85] Client connected
+[  62.112][d][cplayer] Run command: loadfile, flags=64, args=[url="/data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4", flags="replace", index="-1", options=""]
+[  62.112][v][cplayer] EOF code: 3  
+[  62.112][d][vd] Uninit decoder.
+[  62.112][v][ipc_85] Client disconnected
+[  62.112][d][ipc_85] Exiting...
+[  62.114][v][ipc_86] Client connected
+[  62.115][d][cplayer] Terminating demuxers...
+[  62.116][e][ipc_86] Read error (Connection reset by peer)
+[  62.116][d][ipc_86] Exiting...
+[  62.116][d][cplayer] Done terminating demuxers.
+[  62.116][v][cplayer] finished playback, success (reason 2)
+[  62.116][d][global] state path: 'watch_later' -> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.local/state/mpv/watch_later'
+[  62.117][v][file] Opening /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  62.117][d][file] resize stream to 131072 bytes, drop 0 bytes
+[  62.117][d][file] Stream opened successfully.
+[  62.117][v][demux] Trying demuxers for level=normal.
+[  62.117][d][demux] Trying demuxer: disc (force-level: normal)
+[  62.117][d][demux] Trying demuxer: edl (force-level: normal)
+[  62.117][d][demux] Trying demuxer: cue (force-level: normal)
+[  62.117][d][demux] Trying demuxer: rawaudio (force-level: normal)
+[  62.117][d][demux] Trying demuxer: rawvideo (force-level: normal)
+[  62.117][d][demux] Trying demuxer: mkv (force-level: normal)
+[  62.117][d][demux] Trying demuxer: lavf (force-level: normal)
+[  62.120][v][ipc_87] Client connected
+[  62.120][v][ipc_87] Client disconnected
+[  62.121][d][ipc_87] Exiting...
+[  62.122][v][lavf] Found 'mov,mp4,m4a,3gp,3g2,mj2' at score=100 size=2048.
+[  62.123][v][demux] Detected file format: mov,mp4,m4a,3gp,3g2,mj2 (libavformat)
+[  62.123][v][cplayer] Opening done: /data/media/kiosky-player/749f1db21bb0b74017c13e04b9d03e891f686bf5.mp4
+[  62.123][v][find_files] Loading external files in /data/media/kiosky-player/
+[  62.124][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/xdg-config/mpv/sub'
+[  62.124][d][global] config path: 'sub' -/-> '/tmp/c18-c23/apply-service-paused/candidate-health/home/.mpv/sub'
+[  62.124][d][global] config path: 'sub' -/-> '/tmp/ffbuild/prefix/etc/mpv/sub'
+[  62.124][v][lavf] select track 0
+[  62.124][i][cplayer] ● Video  --vid=1  (h264 480x848 29.7436 fps) [default]
+[  62.136][v][vd] Container reported FPS: 29.743590
+[  62.137][v][vd] Codec list:
+[  62.137][v][vd]     h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  62.137][v][vd] Opening decoder h264
+[  62.137][v][vd] Looking at hwdec h264-v4l2request-copy...
+[  62.137][d][ffmpeg] AVHWDeviceContext: Using V4L2 media driver cedrus (6.12.58)
+[  62.137][v][vd] Trying hardware decoding via h264-v4l2request-copy.
+[  62.137][v][vd] Selected decoder: h264 - H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+[  62.137][v][vf] User filter list:
+[  62.137][v][vf]   (empty)
+[  62.138][v][cplayer] Starting playback...
+[  62.138][v][vd] Pixel formats supported by decoder: drm_prime yuv420p
+[  62.138][v][vd] Codec profile: Baseline (0x42)
+[  62.138][v][vd] Requesting pixfmt 'drm_prime' from decoder.
+[  62.139][v][ffmpeg/video] h264: Using V4L2 media driver cedrus (6.12.58) for S264
+[  62.149][d][ffmpeg/video] h264: Reinit context to 480x848, pix_fmt: drm_prime
+[  62.160][i][vd] Using hardware decoding (v4l2request-copy).
+[  62.160][v][vd] Decoder format: 480x848 [0:1] nv12 bt.709/bt.709/bt.1886/limited/auto CL=mpeg2/4/h264 crop=480x848+0+0
+[  62.160][v][vf] [in] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  62.160][v][vf] [userdeint] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  62.160][v][vf] [userdeint] (disabled)
+[  62.160][v][vf] [autorotate] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  62.160][v][vf] [autorotate] (disabled)
+[  62.160][v][vf] [convert] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  62.161][v][vf] [convert] (disabled)
+[  62.161][v][vf] [out] 480x848 nv12 bt.709/bt.709/bt.1886/limited/display CL=mpeg2/4/h264 crop=480x848+0+0
+[  62.172][v][cplayer] first video frame after restart shown
+[  62.172][d][cplayer] starting video playback
+[  62.172][v][cplayer] playback restart complete @ 0.000000, audio=eof, video=playing
+[  62.430][v][ipc_88] Client connected
+[  62.431][v][ipc_88] Client disconnected
+[  62.431][d][ipc_88] Exiting...
+[  63.649][v][ipc_89] Client connected
+[  63.649][d][cplayer] Run command: quit, flags=64, args=[code="0"]
+[  63.649][v][cplayer] EOF code: 5  
+[  63.649][d][vd] Uninit decoder.
+[  63.649][e][ipc_89] Read error (Connection reset by peer)
+[  63.650][d][ipc_89] Exiting...
+[  63.653][d][cplayer] Terminating demuxers...
+[  63.653][d][cplayer] Done terminating demuxers.
+[  63.653][v][cplayer] finished playback, success (reason 3)
+[  63.653][i][cplayer] Exiting... (Quit)
+[  63.673][d][vo/gpu] flushing shader cache

@@ -1,0 +1,27 @@
+{
+  "errors": [],
+  "fresh_transport_tokens": [
+    "fresh_command_route",
+    "fresh_command_serialization",
+    "startup_probe_closed"
+  ],
+  "kiosk_py": "/tmp/c18-c23/player-runtime/kiosky-player/kiosk.py",
+  "open_ipc_callers": {
+    "_start_locked": [
+      2055
+    ]
+  },
+  "passed": true,
+  "self_ipc_writers": {
+    "__init__": [
+      1768
+    ],
+    "_close_ipc_locked": [
+      1917
+    ],
+    "_open_ipc": [
+      1853,
+      1882
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T19:52:51Z",
+      "rollback_reason": "hwdec_expected_present,vo_configured_present,vo_configured_no_unexpected,estimated_frame_present,playback_progressed",
+      "rolled_back_to": "previous",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json",
+      "started_at_utc": "2026-07-10T19:51:43Z",
+      "status": "candidate_rejected",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "state_current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+    "state_previous_version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+  },
+  "before": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260710-c22-c023eae",
+    "last_operation": {
+      "finished_at_utc": "2026-07-10T19:13:33Z",
+      "quarantined_current": false,
+      "rollback_reason": "production_authorized_rollback",
+      "rolled_back_to": "c18.player-runtime-homolog-20260710-c22-c023eae",
+      "service_health_passed": true,
+      "service_restart_performed": true,
+      "started_at_utc": "2026-07-10T19:13:19Z",
+      "status": "success",
+      "type": "rollback"
+    },
+    "previous_exists": true,
+    "previous_link": "releases/c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "state_current_version": "c18.player-runtime-homolog-20260710-c22-c023eae",
+    "state_previous_version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/tmp/c18-c23/apply",
+  "panfrost_fault_policy": "delta",
+  "passed": false,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 10,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+}

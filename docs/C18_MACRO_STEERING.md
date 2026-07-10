@@ -112,8 +112,8 @@ Este marco fecha quando temos:
 
 ### M5 - Auto-Pull Publico De `player-runtime`
 
-Status: mecanica exata fechada para C22 em 2026-07-10; limpeza de playback
-retida para C23.
+Status: mecanica exata fechada para C22 em 2026-07-10; correcao e limpeza de
+playback C23 fechadas na placa; publicacao/auto-pull C23 e prod8 pendentes.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
@@ -155,11 +155,21 @@ a mecanica de entrega/retorno, mas nao prova limpeza continua de playback. A
 evidencia esta em
 `docs/evidence/c22-playback-ipc-backpressure/20260710T193847Z-verified-rca/`.
 
-O proximo fechamento de produto e C23: remover a conexao persistente nao lida no
-modo fresh IPC, aplicar por pacote governado e passar uma janela continua de no
-minimo 10 minutos sem `media_load_failed`, restart interno, acao de watchdog ou
-fila persistente. O gate M5 deve preservar a claim mecanica historica e separar
-explicitamente a claim de limpeza para distribuicao.
+O fechamento de produto C23 removeu a conexao persistente nao lida no modo
+fresh IPC. O pacote passou apply governado, rollback para C22, reapply e duas
+janelas continuas de 10 minutos na placa. A janela decisiva percorreu nove
+midias com zero `media_load_failed`, restart interno, acao de watchdog ou erro
+de IPC; uma coleta paralela manteve o mesmo PID e `max_send_q=0` em 120
+amostras. A evidencia, incluindo dois falsos vermelhos preservados e explicados,
+esta em
+`docs/evidence/c23-player-runtime-ipc-backpressure/20260710T195427Z-board-roundtrip/`.
+O gate M5 preserva a claim mecanica historica e separa explicitamente a claim de
+limpeza para distribuicao.
+
+O proximo ponteiro de M5 e operacional: publicar o alvo C23 exato sem mover
+`latest`, reancorar a autorizacao production e provar o auto-pull remoto desse
+mesmo alvo. A imagem prod8 deve incorporar essa autorizacao e os ajustes de
+onboarding ja registrados; a prova local C23 nao os antecipa.
 
 Atualizacao de implementacao em 2026-07-10: a preparacao off-board de M5 foi
 consolidada para o alvo C22. O repo agora possui:
