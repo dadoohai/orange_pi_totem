@@ -599,7 +599,9 @@ def _symlink_target(rootfs: Path, path: str) -> str:
         match = re.search(pattern, out)
         if match:
             return match.group(1).strip().strip('"')
-    return ""
+    # ext4 stores longer symlink values in a data block instead of the inode's
+    # fast-link field. debugfs `dump` reads both representations faithfully.
+    return _dump_text(rootfs, path).strip()
 
 
 def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") -> dict[str, Any]:

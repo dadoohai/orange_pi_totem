@@ -394,6 +394,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("validate_totem_core_release_provenance", embed)
         self.assertIn("totem_core_embed_payload_source_mismatch", embed)
         self.assertIn("TOTEM_CORE_SOURCE_COMMIT", embed)
+        self.assertIn("return _dump_text(rootfs, path).strip()", embed)
 
     def test_image_embed_has_explicit_production_profile(self) -> None:
         embed = EMBED_PATH.read_text(encoding="utf-8")
