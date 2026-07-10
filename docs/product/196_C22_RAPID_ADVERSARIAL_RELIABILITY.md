@@ -1,8 +1,9 @@
 # C22 - campanha adversarial rapida de confiabilidade
 
-Estado: implementacao e prova de placa concluidas em 2026-07-10. Novo pacote
-`player-runtime` de homologacao deve ser gerado a partir do commit limpo desta
-rodada; nenhuma publicacao externa ou promocao `stable` faz parte deste marco.
+Estado: implementacao, prova adversarial de placa e pacote de homologacao
+concluidos em 2026-07-10. O roundtrip apply/rollback/reapply do pacote na placa
+e o ultimo passo deste marco; nenhuma publicacao externa ou promocao `stable`
+faz parte dele.
 
 ## Objetivo
 
@@ -83,8 +84,11 @@ novo pacote exato.
 
 ## Proximo marco
 
-1. gerar o novo pacote de homologacao a partir da arvore limpa;
-2. aplicar, validar e rollbackar pela rota governada na placa;
-3. manter publicacao externa e auto-pull separados no marco M5;
-4. carregar a verificacao optica/HDMI de transicao como hardening posterior,
+Pacote alvo:
+`c18.player-runtime-homolog-20260710-c22-c023eae`, payload SHA256
+`4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16`.
+
+1. aplicar, validar, rollbackar e reaplicar pela rota governada na placa;
+2. manter publicacao externa e auto-pull separados no marco M5;
+3. carregar a verificacao optica/HDMI de transicao como hardening posterior,
    sem bloquear as protecoes de integridade e disponibilidade fechadas aqui.

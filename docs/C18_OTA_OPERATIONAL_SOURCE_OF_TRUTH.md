@@ -155,8 +155,11 @@ Fila atual para consolidacao:
   permissoes de extracao normalizadas, staging sem symlink e lock de reconcile.
   Evidencia:
   `docs/evidence/c22-rapid-adversarial/20260710T045119Z-board-governed-final/`.
-  Non-claim: zero frame preto requer captura HDMI; o novo runtime ainda precisa
-  virar pacote governado e passar apply/rollback antes de entrar no M5.
+  O pacote governado alvo e
+  `c18.player-runtime-homolog-20260710-c22-c023eae`, payload SHA256
+  `4b5ee5435be0fb3d21d0cf3661c5eac94a9348aa77e1cd8f5613d5ee66740e16`.
+  Non-claim: zero frame preto requer captura HDMI; o pacote ainda precisa passar
+  apply/rollback/reapply na placa antes de entrar no M5.
 - Drift operacional observado em 2026-07-10: o timer de `player-runtime` da
   placa lab segue ativo com autorizacao exata do alvo antigo `9bebaf1`. Como o
   current e mais novo, o downgrade guard responde `rc=45` e preserva o player,
