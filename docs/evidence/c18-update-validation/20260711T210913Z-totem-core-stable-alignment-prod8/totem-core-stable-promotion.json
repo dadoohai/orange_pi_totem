@@ -1,0 +1,23 @@
+{
+  "approved": true,
+  "auto_pull_enabled": true,
+  "auto_pull_scope": "totem-core-only",
+  "channel": "stable",
+  "component": "totem-core",
+  "explicit_operator_decision": true,
+  "non_claims": [
+    "this_does_not_publish_releases",
+    "this_does_not_thaw_player_runtime",
+    "this_does_not_authorize_player_runtime_stable",
+    "this_does_not_update_media_system",
+    "board_validation_still_required"
+  ],
+  "operator": "dadooh-business-owner-user-authorized-20260711",
+  "production_image_build_manifest_sha256": "967ce9157000bd3a9ed0d990c1469d337bb764e0c883e649d891fdb6ebfcfd71",
+  "production_image_offline_validation_sha256": "ebc52f8540550d37f97ed6f81c52894cdb7b4175d75dcc9fe913f5051f3a12b9",
+  "production_image_sha256": "6c3801d970d7bc5248f4c8fc5838b4233ea2e9e1f2120de4bffd7bea07f063ee",
+  "production_image_tag": "c18-hwdecode-prod-8",
+  "rollback_owner": "dadooh-operator",
+  "rollback_ready": true,
+  "schema": "dadooh.c18.totem_core_stable_promotion.v1"
+}
