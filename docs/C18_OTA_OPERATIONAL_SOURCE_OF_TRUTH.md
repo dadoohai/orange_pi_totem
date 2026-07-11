@@ -384,7 +384,11 @@ materializar uma linha de producao pragmatica:
 5. ponte publica segura para auto-pull de `player-runtime`, agora exigida pelo
    cliente e assumida como proximo marco.
 
-## Rodada atual - V3/M5 `player-runtime` auto-pull
+## Historico V3/M5 - C22/prod7
+
+Esta secao preserva a rodada que abriu a mecanica production exact-target em
+C22/prod7. O estado vigente e seu fechamento C23/prod8 estao no topo deste
+documento e na evidencia de 2026-07-11; este historico nao e a rodada atual.
 
 Decisao: avancar com auto-pull de `player-runtime` em producao pragmatica,
 assumindo risco de negocio e preservando as barreiras tecnicas que evitam

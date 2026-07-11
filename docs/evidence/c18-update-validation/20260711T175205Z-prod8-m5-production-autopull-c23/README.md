@@ -38,6 +38,10 @@ esta em `diagnostic-interval5/` como diagnostico nao decisivo. A evidencia
 decisiva foi recoletada com o intervalo padrao de 1 segundo, sem mudar player,
 gate ou estado OTA.
 
+O snapshot diagnostico preserva `artifact_dir_name=restored-deep-health`, nome
+original no momento da coleta; o diretorio foi arquivado depois como
+`restored-interval5-negative-deep-health` e o JSON nao foi reescrito.
+
 ## Observacao independente de totem-core
 
 Durante a janela, o timer independente de `totem-core` tentou a release stable
