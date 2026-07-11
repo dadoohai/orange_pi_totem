@@ -61,6 +61,7 @@ PAIRING_SESSION_SCHEMA = "dadooh.c21.totem_qr_pairing.session.v1"
 PAIRING_RESULT_SCHEMA = "dadooh.c21.totem_qr_pairing.result.v1"
 PAIRING_PRIVATE_VALUES_SCHEMA = "dadooh.c21.totem_qr_pairing.private_values.v1"
 PAIRING_DEFAULT_AUTHORIZE_BASE_URL = "https://home.dadooh.ai/totem/activate"
+PAIRING_MANUAL_ENTRY_URL = "home.dadooh.ai/totem/activate"
 PAIRING_DEFAULT_BACKEND_BASE_URL = "https://api-lbyvh5uf6q-uc.a.run.app"
 PAIRING_DEFAULT_API_URL = "https://api-lbyvh5uf6q-uc.a.run.app/search"
 PAIRING_DEFAULT_ENVIRONMENT_ID = "11111111-2222-4333-8444-555555555555"
@@ -73,6 +74,11 @@ PAIRING_REAL_MAX_SERVER_TIMEOUT_SEC = float(
     os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MAX_SERVER_TIMEOUT_SEC", "1800")
 )
 PAIRING_REAL_HTTP_TIMEOUT_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_HTTP_TIMEOUT_SEC", "8"))
+PAIRING_REAL_MAX_RENEWALS = max(
+    0,
+    min(3, int(os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_MAX_RENEWALS", "2"))),
+)
+PAIRING_QR_MAX_PAYLOAD_BYTES = 200
 PAIRING_STATES = {
     "pending",
     "authorized",
@@ -3879,6 +3885,74 @@ def validate_pairing_https_url(value: str, field: str) -> str:
     return raw
 
 
+def validate_pairing_authorize_url(value: str, *, code: str, activation_id: str) -> str:
+    raw = validate_pairing_https_url(value, "authorize_url")
+    if len(raw.encode("utf-8")) > PAIRING_QR_MAX_PAYLOAD_BYTES:
+        raise VisualWizardError("authorize_url longa demais")
+    parsed = urllib_parse.urlsplit(raw)
+    expected = urllib_parse.urlsplit(PAIRING_DEFAULT_AUTHORIZE_BASE_URL)
+    try:
+        invalid_authority = bool(parsed.username or parsed.password or parsed.port is not None)
+    except ValueError as exc:
+        raise VisualWizardError("authorize_url com autoridade invalida") from exc
+    if invalid_authority:
+        raise VisualWizardError("authorize_url com autoridade invalida")
+    if parsed.hostname != expected.hostname or parsed.path.rstrip("/") != expected.path.rstrip("/"):
+        raise VisualWizardError("authorize_url fora do fluxo Dadooh")
+    if parsed.fragment:
+        raise VisualWizardError("authorize_url com fragmento invalido")
+    query = urllib_parse.parse_qsl(parsed.query, keep_blank_values=True)
+    keys = [key for key, _value in query]
+    if keys.count("code") != 1 or keys.count("activation_id") > 1:
+        raise VisualWizardError("authorize_url com parametros invalidos")
+    if any(key not in {"code", "activation_id"} for key in keys):
+        raise VisualWizardError("authorize_url com parametros inesperados")
+    values = dict(query)
+    if validate_pairing_code(values.get("code", "")) != code:
+        raise VisualWizardError("authorize_url nao corresponde ao codigo")
+    linked_activation_id = values.get("activation_id", "").strip()
+    if "activation_id" in values and not linked_activation_id:
+        raise VisualWizardError("authorize_url com sessao vazia")
+    if linked_activation_id and validate_environment_id(linked_activation_id) != activation_id:
+        raise VisualWizardError("authorize_url nao corresponde a sessao")
+    return raw
+
+
+def pairing_wait_content_svg(url: str, code: str, *, layout_rotation_deg: int) -> str:
+    if pairing_client is None or not hasattr(pairing_client, "qr_rects_svg"):
+        raise VisualWizardError("encoder QR indisponivel")
+    layout = screen_layout(layout_rotation_deg)
+    display_code = f"{code[:4]} {code[4:]}"
+    if layout.portrait:
+        qr_x, qr_y, qr_size = (layout.width - 340) // 2, 282, 340
+        code_x, code_y, code_width = layout.margin_x, 642, layout.width - layout.margin_x * 2
+        manual_y = 782
+        qr_label_x, qr_label_y = qr_x + 45, 272
+        status_y = 918
+        code_value_x, code_value_y = code_x + 34, code_y + 82
+    else:
+        qr_x, qr_y, qr_size = 650, 278, 300
+        code_x, code_y, code_width = layout.margin_x, 302, 520
+        manual_y = 462
+        qr_label_x, qr_label_y = qr_x + 35, 266
+        status_y = 624
+        code_value_x, code_value_y = code_x + 34, code_y + 88
+    qr_svg = pairing_client.qr_rects_svg(url, x=qr_x, y=qr_y, target_size=qr_size)
+    return f"""
+  <text data-qr-label="true" x="{qr_label_x}" y="{qr_label_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{VISUAL['text_muted']}">Escaneie com a camera</text>
+  {qr_svg}
+  <rect x="{code_x + 8}" y="{code_y + 8}" width="{code_width}" height="126" rx="8" fill="#0a1628"/>
+  <rect x="{code_x}" y="{code_y}" width="{code_width}" height="126" rx="8" fill="{VISUAL['surface_raised']}" stroke="{VISUAL['border']}"/>
+  <rect x="{code_x}" y="{code_y}" width="8" height="126" rx="4" fill="{VISUAL['accent']}"/>
+  <text x="{code_x + 34}" y="{code_y + 38}" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{VISUAL['text_muted']}">Codigo do totem</text>
+  <text data-pairing-code="true" x="{code_value_x}" y="{code_value_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="{VISUAL['text']}">{escape_text(display_code)}</text>
+  <rect x="{code_x}" y="{manual_y}" width="{code_width}" height="108" rx="8" fill="{VISUAL['surface']}" stroke="{VISUAL['border']}"/>
+  <text x="{code_x + 28}" y="{manual_y + 36}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="{VISUAL['text_muted']}">Ou acesse no navegador:</text>
+  <text data-pairing-manual-url="true" x="{code_x + 28}" y="{manual_y + 76}" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="700" fill="{VISUAL['text']}">{escape_text(PAIRING_MANUAL_ENTRY_URL)}</text>
+  <text x="{layout.margin_x}" y="{status_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="{VISUAL['text_dim']}">O codigo renova automaticamente ao expirar.</text>
+"""
+
+
 def validate_pairing_api_key(value: str) -> str:
     raw = str(value or "").strip()
     if len(raw) < 16:
@@ -3942,7 +4016,14 @@ def create_real_pairing_session(out_dir: pathlib.Path) -> dict[str, Any]:
     device_secret = str(body.get("device_secret", "")).strip()
     if len(device_secret) < 24:
         raise VisualWizardError("segredo de dispositivo invalido")
-    authorize_url = validate_pairing_https_url(str(body.get("qr_url", "")), "authorize_url")
+    authorize_url = validate_pairing_authorize_url(
+        str(body.get("qr_url", "")),
+        code=code,
+        activation_id=activation_id,
+    )
+    if pairing_client is None or not hasattr(pairing_client, "qr_matrix"):
+        raise VisualWizardError("encoder QR indisponivel")
+    pairing_client.qr_matrix(authorize_url)
     expires_at = str(body.get("expires_at") or "").strip()
     poll_interval_ms = body.get("poll_interval_ms")
     poll_after_sec = 2.0
@@ -3967,6 +4048,10 @@ def create_real_pairing_session(out_dir: pathlib.Path) -> dict[str, Any]:
             "not_human_firebase_token_on_device",
         ],
     }
+    for stale_name in ("pairing-result.public.json", "private-values.json"):
+        stale_path = pairing_dir / stale_name
+        if stale_path.exists() and not stale_path.is_symlink():
+            stale_path.unlink()
     session_path = pairing_dir / "pairing-session.public.json"
     write_pairing_json(session_path, public_session, pairing_dir)
     return {
@@ -4181,6 +4266,7 @@ def run_real_environment_pairing(
     poll_after_sec = float(session["poll_after_sec"])
     deadline = time.monotonic() + pairing_real_watchdog_seconds()
     state = "pending"
+    renewal_count = 0
 
     while True:
         remaining_sec = deadline - time.monotonic()
@@ -4191,15 +4277,13 @@ def run_real_environment_pairing(
                 build_screen_svg(
                     active_step=2,
                     title="Autorizar pelo celular",
-                    subtitle="Abra o link e escolha o ambiente.",
-                    footer="Esc volta | atualiza automatico",
-                    field_label="Codigo",
-                    field_value_hint=code,
-                    field_note=url,
-                    panel_title="Aguardando",
-                    panel_items=["Nao desligue.", "Token humano nao fica.", "Nada aplicado ainda."],
+                    subtitle="Escaneie o QR ou use o endereco e o codigo.",
+                    footer="Esc volta",
+                    panel_items=[],
+                    extra_svg=pairing_wait_content_svg(url, code, layout_rotation_deg=layout_rotation_deg),
                     accent="#38bdf8",
                     layout_rotation_deg=layout_rotation_deg,
+                    suppress_landscape_info_panel=True,
                 ),
             )
             key = read_key(timeout_sec=min(poll_after_sec, max(0.05, remaining_sec)))
@@ -4242,6 +4326,38 @@ def run_real_environment_pairing(
             if key in {"b", "B", "back", "escape"}:
                 return None
             raise VisualWizardAbort("setup visual cancelado pelo operador")
+        if (
+            state == "expired"
+            and renewal_count < PAIRING_REAL_MAX_RENEWALS
+            and deadline - time.monotonic() > 0.0
+        ):
+            write_real_pairing_result(pairing_dir, state="expired", session_path=session_path, credential=None)
+            display.show(
+                "03-environment-pairing-real-renewing",
+                build_screen_svg(
+                    active_step=2,
+                    title="Atualizando codigo",
+                    subtitle="A sessao expirou. Gerando outro QR...",
+                    footer="Esc volta",
+                    panel_title="Pareamento",
+                    panel_items=["Codigo antigo encerrado.", "Novo QR em instantes.", "Nada foi salvo."],
+                    accent="#38bdf8",
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+            try:
+                session = create_real_pairing_session(out_dir)
+            except Exception:
+                state = "backend_unavailable"
+                break
+            pairing_dir = pathlib.Path(str(session["pairing_dir"]))
+            session_path = pathlib.Path(str(session["session_public_path"]))
+            code = str(session["pairing_code"])
+            url = str(session["authorize_url"])
+            poll_after_sec = float(session["poll_after_sec"])
+            renewal_count += 1
+            state = "pending"
+            continue
         if state in PAIRING_REAL_TERMINAL_STATES:
             break
     write_real_pairing_result(pairing_dir, state=state, session_path=session_path, credential=None)
@@ -4730,6 +4846,24 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         ),
     )
     display.show(
+        "03-environment-pairing-wait",
+        build_screen_svg(
+            active_step=2,
+            title="Autorizar pelo celular",
+            subtitle="Escaneie o QR ou use o endereco e o codigo.",
+            footer="Esc volta",
+            panel_items=[],
+            extra_svg=pairing_wait_content_svg(
+                "https://home.dadooh.ai/totem/activate?code=ABCD1234",
+                "ABCD1234",
+                layout_rotation_deg=90,
+            ),
+            accent="#38bdf8",
+            layout_rotation_deg=90,
+            suppress_landscape_info_panel=True,
+        ),
+    )
+    display.show(
         "03-environment-pairing-authorized",
         build_screen_svg(
             active_step=2,
@@ -4738,7 +4872,7 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             footer="Enter continua | Esc volta",
             field_label="Codigo",
             field_value_hint="ABCD1234",
-            field_note="https://home.dadooh.ai/totem/authorize?code=ABCD1234",
+            field_note=PAIRING_MANUAL_ENTRY_URL,
             panel_title="Seguranca",
             panel_items=["Credencial privada.", "Token humano nao fica.", "Nada aplicado ainda."],
             accent="#22c55e",
@@ -5341,6 +5475,7 @@ def run_self_test() -> None:
         )
 
         original_pairing_request = globals()["http_json_request_no_auth"]
+        original_pairing_read_key = globals()["read_key"]
         original_pairing_base = os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL")
         try:
             os.environ["TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL"] = "https://api.example.com"
@@ -5362,7 +5497,7 @@ def run_self_test() -> None:
                         "activation_id": real_activation_id,
                         "device_secret": "device-secret-self-test-1234567890",
                         "user_code": "ZXCV9876",
-                        "qr_url": f"https://home.dadooh.ai/totem/activate?code=ZXCV9876&activation_id={real_activation_id}",
+                        "qr_url": "https://home.dadooh.ai/totem/activate?code=ZXCV9876",
                         "expires_at": "2026-07-08T15:00:00Z",
                         "poll_interval_ms": 1000,
                     }
@@ -5390,6 +5525,55 @@ def run_self_test() -> None:
                 real_session["expires_at_utc"] == "2026-07-08T15:00:00Z",
                 "real pairing should carry the server expiry into the polling session",
             )
+            assert_true(
+                "activation_id=" not in str(real_session["authorize_url"]),
+                "new QR URL should keep the activation id internal",
+            )
+            legacy_url = (
+                "https://home.dadooh.ai/totem/activate?code=ZXCV9876"
+                f"&activation_id={real_activation_id}"
+            )
+            assert_true(
+                validate_pairing_authorize_url(
+                    legacy_url,
+                    code="ZXCV9876",
+                    activation_id=real_activation_id,
+                )
+                == legacy_url,
+                "legacy QR URLs should remain accepted during migration",
+            )
+            for invalid_authorize_url in (
+                "https://example.com/totem/activate?code=ZXCV9876",
+                "https://home.dadooh.ai/totem/activate?code=BADQ1234",
+                "https://home.dadooh.ai/totem/activate?code=ZXCV9876&activation_id=",
+                "https://home.dadooh.ai/totem/activate?code=ZXCV9876&utm_source=unexpected",
+            ):
+                try:
+                    validate_pairing_authorize_url(
+                        invalid_authorize_url,
+                        code="ZXCV9876",
+                        activation_id=real_activation_id,
+                    )
+                    raise AssertionError("unsafe pairing authorize URL accepted")
+                except VisualWizardError:
+                    pass
+            landscape_pairing_svg = pairing_wait_content_svg(
+                str(real_session["authorize_url"]),
+                "ZXCV9876",
+                layout_rotation_deg=0,
+            )
+            portrait_pairing_svg = pairing_wait_content_svg(
+                str(real_session["authorize_url"]),
+                "ZXCV9876",
+                layout_rotation_deg=270,
+            )
+            for pairing_svg in (landscape_pairing_svg, portrait_pairing_svg):
+                assert_true(
+                    pairing_svg.count('data-qr-module="true"') > 100,
+                    "pairing screen should contain a real QR matrix",
+                )
+                assert_true(PAIRING_MANUAL_ENTRY_URL in pairing_svg, "pairing screen should show manual URL")
+                assert_true("ZXCV 9876" in pairing_svg, "pairing screen should group the short code")
             real_poll = poll_real_pairing_once(str(real_session["session_id"]), str(real_session["device_secret"]))
             real_result = write_real_pairing_result(
                 pathlib.Path(str(real_session["pairing_dir"])),
@@ -5409,8 +5593,85 @@ def run_self_test() -> None:
             )
             for forbidden in (real_api_key, real_environment_id, real_station_id):
                 assert_true(forbidden not in real_public, "real pairing public artifacts should not leak private values")
+
+            renewal_activation_ids = (
+                "66666666-7777-4888-8999-aaaaaaaaaaaa",
+                "77777777-8888-4999-8aaa-bbbbbbbbbbbb",
+            )
+            renewal_codes = ("OLDQ1234", "NEWQ5678")
+            renewal_create_count = 0
+
+            def fake_renewing_pairing_request(
+                url: str,
+                *,
+                method: str,
+                payload: dict[str, Any] | None = None,
+                timeout_sec: float = ENVIRONMENT_VALIDATION_TIMEOUT_SEC,
+            ) -> tuple[int, dict[str, Any] | None]:
+                nonlocal renewal_create_count
+                if url.endswith("/totem-auth/activations") and method == "POST":
+                    index = min(renewal_create_count, 1)
+                    renewal_create_count += 1
+                    return 201, {
+                        "activation_id": renewal_activation_ids[index],
+                        "device_secret": f"renew-device-secret-{index}-1234567890",
+                        "user_code": renewal_codes[index],
+                        "qr_url": f"https://home.dadooh.ai/totem/activate?code={renewal_codes[index]}",
+                        "expires_at": "2026-07-08T15:00:00Z",
+                        "poll_interval_ms": 1000,
+                    }
+                if url.endswith(f"/totem-auth/activations/{renewal_activation_ids[0]}/poll"):
+                    return 200, {"status": "expired", "credential_public": False}
+                if url.endswith(f"/totem-auth/activations/{renewal_activation_ids[1]}/poll"):
+                    return 200, {
+                        "status": "authorized",
+                        "credential_public": False,
+                        "api_url": "https://api.example.com/search",
+                        "api_key": real_api_key,
+                        "api_token_id": "token-renew-self-test",
+                        "token_type": "x-api-key",
+                        "environment_id": real_environment_id,
+                        "station_id": real_station_id,
+                    }
+                raise AssertionError(f"unexpected renewing pairing request {method} {url}")
+
+            class PairingDisplayProbe:
+                def __init__(self) -> None:
+                    self.screens: list[tuple[str, str]] = []
+
+                def show(self, name: str, svg: str) -> None:
+                    self.screens.append((name, svg))
+
+            def fake_pairing_read_key(timeout_sec: float | None = None) -> str | None:
+                return None if timeout_sec is not None else "enter"
+
+            globals()["http_json_request_no_auth"] = fake_renewing_pairing_request
+            globals()["read_key"] = fake_pairing_read_key
+            renewal_display = PairingDisplayProbe()
+            renewal_result = run_real_environment_pairing(
+                renewal_display,  # type: ignore[arg-type]
+                require_tmp_dir(str(root / "pairing-real-renewal")),
+                layout_rotation_deg=0,
+            )
+            assert_true(renewal_create_count == 2, "expired pairing should create exactly one replacement session")
+            assert_true(
+                renewal_result is not None and renewal_result[0] == real_environment_id,
+                "replacement QR session should complete authorization",
+            )
+            renewal_screen_names = [name for name, _svg in renewal_display.screens]
+            assert_true(
+                "03-environment-pairing-real-renewing" in renewal_screen_names,
+                "expired pairing should visibly enter renewal",
+            )
+            waiting_svgs = [svg for name, svg in renewal_display.screens if name == "03-environment-pairing-real-wait"]
+            assert_true(
+                any("OLDQ 1234" in svg for svg in waiting_svgs)
+                and any("NEWQ 5678" in svg for svg in waiting_svgs),
+                "renewal should replace both the visible code and QR payload",
+            )
         finally:
             globals()["http_json_request_no_auth"] = original_pairing_request
+            globals()["read_key"] = original_pairing_read_key
             if original_pairing_base is None:
                 os.environ.pop("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL", None)
             else:
