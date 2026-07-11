@@ -1,0 +1,68 @@
+{
+  "schema": "dadooh.c21.totem_core_stable_alignment_operation.v1",
+  "collected_at_utc": "2026-07-11T21:40:06Z",
+  "image": {
+    "tag": "c18-hwdecode-prod-8",
+    "version": "c18.image-prod.8"
+  },
+  "release": {
+    "tag": "totem-core-c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "version": "c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "channel": "stable",
+    "source_commit": "ff7810c08808969f98c265f1409d40d13ff512e4",
+    "payload_sha256": "28780da5c105b0b224c9393318ed582cef9de6f62f7af10d2c248168028879af",
+    "is_latest": true,
+    "asset_count": 6
+  },
+  "precondition": {
+    "current_version": "c21.9-prod8-pairing-restore-20260710T225825Z-665fc01",
+    "previous_version": null,
+    "observed_remote_candidate": "c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+    "observed_remote_candidate_result_rc": 45
+  },
+  "apply": {
+    "entrypoint": "totem-update-agent.service",
+    "returncode": 0,
+    "current_version": "c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "previous_version": "c21.9-prod8-pairing-restore-20260710T225825Z-665fc01",
+    "self_test_returncode": 0
+  },
+  "noop": {
+    "entrypoint": "totem-update-agent.service",
+    "returncode": 0,
+    "state_sha256_before": "1b6e024155970d650508692f900e67c372a22584960ca7a336d6ebb8665a68e9",
+    "state_sha256_after": "1b6e024155970d650508692f900e67c372a22584960ca7a336d6ebb8665a68e9",
+    "current_and_previous_unchanged": true
+  },
+  "rollback": {
+    "entrypoint": "totem-updatectl rollback --component totem-core",
+    "returncode": 0,
+    "current_version": "c21.9-prod8-pairing-restore-20260710T225825Z-665fc01",
+    "previous_version": "c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "self_test_returncode": 0
+  },
+  "restore": {
+    "entrypoint": "totem-update-agent.service",
+    "returncode": 0,
+    "current_version": "c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "previous_version": "c21.9-prod8-pairing-restore-20260710T225825Z-665fc01",
+    "self_test_returncode": 0
+  },
+  "final_state": {
+    "totem_core_timer_active": true,
+    "totem_core_timer_enabled": true,
+    "player_runtime_current_version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "player_runtime_public_freeze_rc": 44,
+    "player_service_active": true,
+    "player_service_restarts": 0,
+    "mpv_process_count": 1,
+    "player_content_state": "playing",
+    "failed_systemd_units": 0
+  },
+  "non_claims": [
+    "does_not_change_player_runtime",
+    "does_not_update_media_system_or_field_data",
+    "does_not_prove_visual_hdmi_output_while_hdmi_is_disconnected",
+    "does_not_enable_rollout_groups_or_external_server_side_publish"
+  ]
+}
