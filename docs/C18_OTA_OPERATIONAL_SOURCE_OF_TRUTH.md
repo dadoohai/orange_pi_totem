@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-10. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-11. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -28,21 +28,18 @@ Para produto, "OTA em producao" significa: uma placa consegue receber uma
 atualizacao remota, validar o pacote, aplicar, continuar funcional e voltar por
 rollback se necessario.
 
-Hoje a C18 tem duas coisas diferentes:
+Hoje a C18 tem dois caminhos reais:
 
-- `totem-core`: auto-pull de producao fechado em imagem C18 gravada do zero.
-- `player-runtime`: pacote `9bebaf1` foi aprovado/publicado/consumido, mas a
-  RCA C21 mostrou falha com midia PNG. O novo candidato lab
-  `c18.player-runtime-homolog-20260709-image-transcode-50919f5` corrige o caso
-  reproduzido de PNG e prepara imagens estaticas suportadas via sidecar H.264.
-  Ele passou apply lab em placa, mas ainda nao foi consumido pelo fluxo
-  remoto/publico de `player-runtime`. O caminho publico de auto-pull ainda
-  precisa ser materializado no updater, timer/policy e prova de placa, agora
-  mirando o candidato corrigido ou seu sucessor.
+- `totem-core`: auto-pull de producao provado em imagem C18 gravada do zero;
+- `player-runtime`: auto-pull de producao fechado somente para o alvo exato C23
+  `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`. A prod8 foi gravada do
+  zero e provou timer remoto, no-op, rollback, restauracao e 600 segundos
+  continuos limpos. Qualquer alvo futuro continua bloqueado ate nova
+  autorizacao presa por hashes.
 
-Portanto, o proximo marco ativo e V3/M5: transformar o apply assistido de
-`player-runtime` em auto-pull publico por alvo exato, preservando rollback,
-health real e bloqueio para qualquer alvo nao autorizado.
+O proximo trabalho operacional nao e reabrir M5. E alinhar a publicacao stable
+de `totem-core` ao C21.9 ja embutido e fechar M4, a operacao inicial de lote.
+Grupos, dashboard, assinatura no device e credencial individual continuam M6.
 
 ## Repositorio de entrega
 
@@ -67,7 +64,7 @@ imagem/fallback quando nao houver.
 | Frente | O que entra | Caminho permitido agora |
 | --- | --- | --- |
 | `totem-core` | wizard, splash, status, writer, helpers, validadores, settings e UX operacional da placa | auto-pull de producao fechado; dry-run, apply, timer e rollback provados |
-| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | release C18-aware `player-runtime`; consumo remoto assistido provado; proximo marco e auto-pull publico por alvo exato |
+| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | auto-pull production fechado para C23 exato; futuros alvos exigem nova autorizacao hash-bound |
 | `kiosky-player` legado | rota historica do player | nao usar como caminho de release C18 |
 | `media-system` | MPV, ffmpeg, hwdecode, kernel, DTB, U-Boot, BSP, imagem base | nova imagem + homologacao, nao OTA comum |
 | `field-data` | midia, config real, cache, playlist, estado local | fluxo operacional de dados, nao release de software |
@@ -81,8 +78,8 @@ imagem/fallback quando nao houver.
    cache, systemd, kernel ou updater novo.
 3. `player-runtime` nao pode carregar MPV/ffmpeg/kernel/midia/config/cache; o
    pacote atual e deliberadamente estreito.
-4. Auto-pull de `totem-core` ja esta fechado; auto-pull de `player-runtime`
-   agora e o marco ativo, mas somente por rotina publica propria e alvo exato.
+4. Auto-pull de `totem-core` e de `player-runtime` C23 estao provados; isso nao
+   autoriza `latest` amplo nem futuros pacotes de player por inferencia.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
 6. Toda atualizacao real precisa ter dry-run, apply, validacao e rollback.
@@ -175,8 +172,8 @@ Fila atual para consolidacao:
   O target exato C23 foi publicado com tres assets e hashes remotos conferidos;
   evidencia em
   `docs/evidence/c18-update-validation/20260710T211259Z-c23-exact-publication/`.
-  Non-claims: o timer da placa prod7 ainda carrega a autorizacao C22; auto-pull
-  C23 no device e incorporacao a prod8 permanecem pendentes.
+  A prova local nao substituiu a prova production: ela foi completada na prod8
+  em 2026-07-11, conforme o marco abaixo.
 - Drift operacional: o alvo antigo `9bebaf1` do timer foi substituido por C22
   na prod7. Depois do apply lab C23, a placa executa C23 como `current`, mas o
   timer production continua autorizado somente para C22 ate a prod8. A
@@ -203,8 +200,19 @@ Fila atual para consolidacao:
   `6c3801d970d7bc5248f4c8fc5838b4233ea2e9e1f2120de4bffd7bea07f063ee`,
   e recebeu dois GO independentes para flash de bancada; evidencia em
   `docs/evidence/c18-update-validation/20260710T232544Z-prod8-build-314ddd1/`.
-  Non-claims: pacote ainda nao aplicado remotamente, primeiro boot/QR ainda nao
-  validados e auto-pull C23 ainda nao provado a partir da prod8.
+  Validacao em placa em 2026-07-11: primeiro boot, wizard/QR, writer privado e
+  playback passaram. O timer production original aplicou o C23 remoto exato;
+  no-op, rollback para o bridge e restauracao C23 passaram. A janela final de
+  600 segundos ficou limpa e o gate M5 v2 passou com mecanica e limpeza para
+  distribuicao verdes, sem blockers. Evidencia em
+  `docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/`.
+  O freeze generico continua em `rc=44`; o resultado autoriza somente o alvo
+  C23 preso por hashes, nao `latest` amplo nem pacotes futuros.
+
+  Observacao paralela: o timer de `totem-core` tentou a stable remota antiga e
+  recebeu `rc=45` por downgrade sobre o C21.9 embutido, sem mutar o core. O
+  alinhamento da publicacao/promotion do core atual e pendencia operacional
+  separada e nao invalida o round-trip C23.
 - Correcao de imagem M5: `prod-5` limpou o seed do player, mas a auditoria do
   artefato encontrou firstboot privado com Wi-Fi/senhas, servico lab habilitado,
   marcadores contraditorios e chaves SSH clonadas herdados da base. `prod-5`

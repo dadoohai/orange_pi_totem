@@ -1,0 +1,163 @@
+{
+  "authorization_gate": {
+    "authorization_path": "scripts/board/player_runtime_production_autopull.json",
+    "blockers": [],
+    "expected": {
+      "allow_downgrade": false,
+      "allow_latest": false,
+      "allow_prerelease": false,
+      "auto_pull_enabled": true,
+      "business_decision": {
+        "accepted_at_local_date": "2026-07-10",
+        "operator": "operator-user-approved-autonomous-c23-20260710",
+        "risk_accepted": true,
+        "rollback_owner": "dadooh-operator",
+        "rollout_mode": "simple_global"
+      },
+      "channel": "homologation",
+      "component": "player-runtime",
+      "device_track": "c18-hwdecode",
+      "enabled": true,
+      "manifest_sha256": "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca",
+      "non_claims": [
+        "not_latest_broad",
+        "not_future_player_runtime_targets",
+        "not_kiosky_player_legacy_release_path",
+        "not_media_system_update",
+        "not_dashboard_or_canary_groups",
+        "not_device_side_signature_enforcement"
+      ],
+      "payload_sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+      "release_gate_asset_name": "c18-player-runtime-release-gate.json",
+      "release_gate_sha256": "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72",
+      "repo": "dadoohai/orange_pi_totem",
+      "schema": "dadooh.c18.player_runtime.production_autopull_authorization.v1",
+      "source_commit": "fe4347c81ccc40218c4763fbde68badbd30de2a3",
+      "tag_name": "player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+      "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+    },
+    "input_hashes": {
+      "authorization_sha256": "a1396705bd5ec8ed181aa4f9e69053cb7289320c92c23a8cb262c5d16ab0974e",
+      "manifest_sha256": "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca",
+      "payload_sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+      "release_gate_sha256": "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72"
+    },
+    "inputs": {
+      "manifest": "releases/player-runtime/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c/dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json",
+      "payload": "releases/player-runtime/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c/dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.tar.gz",
+      "release_gate": "releases/player-runtime/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c/c18-player-runtime-release-gate.json"
+    },
+    "non_claims": [
+      "this_gate_does_not_publish_releases",
+      "this_gate_does_not_fetch_releases",
+      "this_gate_does_not_modify_device_policy_or_timer",
+      "this_gate_does_not_apply_player_runtime"
+    ],
+    "passed": true,
+    "result_claim": "production_autopull_authorization_ready",
+    "schema": "dadooh.c18.player_runtime.production_autopull_authorization_gate.v1"
+  },
+  "authorization_sha256": "a1396705bd5ec8ed181aa4f9e69053cb7289320c92c23a8cb262c5d16ab0974e",
+  "blockers": [],
+  "continuous_playback": {
+    "duration_sec": 600.0,
+    "finished_at_utc": "2026-07-11T18:02:06Z",
+    "min_duration_sec": 600.0,
+    "samples": 564,
+    "started_at_utc": "2026-07-11T17:52:06Z"
+  },
+  "continuous_playback_blockers": [],
+  "continuous_playback_passed": true,
+  "expected": {
+    "baseline_version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "image_tag": "c18-hwdecode-prod-8",
+    "image_version": "c18.image-prod.8",
+    "max_player_restarts": 0,
+    "min_continuous_restored_sec": 600.0,
+    "require_freeze_probe": true,
+    "target_version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "updater_sha256": "721538cc1fa3296828a789432c7be631a526350b7f460632f0b78bcd6b303e0b"
+  },
+  "inputs": {
+    "authorization": "scripts/board/player_runtime_production_autopull.json",
+    "manifest": "releases/player-runtime/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c/dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json",
+    "noop": "docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/noop.json",
+    "payload": "releases/player-runtime/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c/dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.tar.gz",
+    "post_apply": "docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/post_apply.json",
+    "pre": "docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/pre.json",
+    "publication_evidence": "docs/evidence/c18-update-validation/20260710T211259Z-c23-exact-publication/publication-result.json",
+    "release_gate": "releases/player-runtime/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c/c18-player-runtime-release-gate.json",
+    "restored": "docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/restored.json",
+    "rollback": "docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/rollback.json"
+  },
+  "mechanics_blockers": [],
+  "mechanics_passed": true,
+  "non_claims": [
+    "this_gate_does_not_fetch_github",
+    "this_gate_does_not_apply_player_runtime",
+    "this_gate_does_not_rollback_player_runtime",
+    "this_gate_does_not_modify_device_policy_or_timer",
+    "this_gate_does_not_restart_services",
+    "this_gate_does_not_provide_device_attestation_or_tamper_proof_evidence"
+  ],
+  "passed": true,
+  "product_distribution_cleanliness_passed": true,
+  "publication_evidence": {
+    "asset_count": 3,
+    "assets": [
+      {
+        "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json",
+        "sha256": "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca"
+      },
+      {
+        "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.tar.gz",
+        "sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80"
+      },
+      {
+        "name": "c18-player-runtime-release-gate.json",
+        "sha256": "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72"
+      }
+    ],
+    "authorization_gate": "passed",
+    "latest_after": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+    "latest_before": "totem-core-c18.ota-core-prod-20260705T184013Z-ccaf5a1",
+    "manifest_channel": "homologation",
+    "mode": "publish",
+    "non_claims": [
+      "this_route_does_not_promote_stable",
+      "this_route_does_not_update_latest",
+      "this_route_does_not_create_or_push_tags",
+      "this_route_does_not_publish_extra_assets",
+      "this_route_does_not_enable_broad_latest_autopull",
+      "this_route_does_not_create_draft_or_prerelease"
+    ],
+    "passed": true,
+    "published": true,
+    "release_exists": true,
+    "release_url": "https://github.com/dadoohai/orange_pi_totem/releases/tag/player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "remote_exact_tag_verified": true,
+    "remote_source_commit_present": true,
+    "repo": "dadoohai/orange_pi_totem",
+    "schema": "dadooh.c18.player_runtime.exact_target_publication_result.v1",
+    "tag": "player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "target_source_commit": "fe4347c81ccc40218c4763fbde68badbd30de2a3",
+    "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+    "would_publish": true
+  },
+  "result_claim": "player_runtime_production_autopull_evidence_ready",
+  "schema": "dadooh.c18.player_runtime.production_autopull_evidence_gate.v2",
+  "target": {
+    "kiosk_py_sha256": "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5",
+    "manifest_name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.manifest.json",
+    "manifest_sha256": "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca",
+    "payload_bytes": 29815,
+    "payload_name": "dadooh-player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c.tar.gz",
+    "payload_sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+    "release_gate_name": "c18-player-runtime-release-gate.json",
+    "release_gate_sha256": "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72",
+    "source_commit": "fe4347c81ccc40218c4763fbde68badbd30de2a3",
+    "source_repo": "dadoohai/orange_pi_totem",
+    "tree_sha256": "340e44ff7e441ec7863e1d660d66d03dfc1fe29d4195d6e52aa240025b35cf4f",
+    "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+  }
+}

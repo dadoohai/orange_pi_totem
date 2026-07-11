@@ -112,9 +112,7 @@ Este marco fecha quando temos:
 
 ### M5 - Auto-Pull Publico De `player-runtime`
 
-Status: mecanica exata fechada para C22 em 2026-07-10; correcao, placa e
-publicacao exata C23 fechadas; prod8 construida e auditada para flash de
-bancada; primeiro boot e auto-pull C23 na prod8 pendentes.
+Status: fechado para o alvo exato C23 na prod8 em 2026-07-11.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
@@ -170,8 +168,8 @@ limpeza para distribuicao.
 O alvo C23 foi publicado por tag exata com tres assets rebaixados e verificados;
 `latest` permaneceu no `totem-core`. Evidencia:
 `docs/evidence/c18-update-validation/20260710T211259Z-c23-exact-publication/`.
-O proximo ponteiro de M5 e incorporar a autorizacao na prod8 e provar o
-auto-pull remoto desse mesmo alvo. A prova local C23 nao antecipa essa etapa.
+Esse ponteiro foi fechado na prod8 em 2026-07-11; a prova local anterior nao
+foi usada como substituta da execucao production.
 
 Preparacao prod8 em 2026-07-10: o pacote `totem-core`
 `c21.9-prod8-pairing-restore-20260710T225825Z-665fc01` foi gerado do commit
@@ -185,8 +183,20 @@ no commit `314ddd1`, SHA256
 passou o gate `78/78` e duas auditorias do artefato real sem blocker para flash
 de bancada. Evidencia em
 `docs/evidence/c18-update-validation/20260710T232544Z-prod8-build-314ddd1/`.
-Non-claim: primeiro boot, QR e auto-pull C23 ainda nao foram validados nessa
-imagem.
+Resultado em placa em 2026-07-11: a prod8 foi gravada do zero; wizard, QR,
+writer privado e playback real passaram. O timer production original buscou e
+adotou o C23 exato a partir do bridge rollback-safe. No-op, rollback autorizado
+e restauracao passaram, e a janela final canonica de 600 segundos terminou sem
+falha de midia, restart, watchdog, erro de IPC, GPU, MMC ou ext4. O gate M5
+passou com `mechanics_passed=true`,
+`product_distribution_cleanliness_passed=true` e zero blockers. Evidencia:
+`docs/evidence/c18-update-validation/20260711T175205Z-prod8-m5-production-autopull-c23/`.
+
+Achado paralelo, sem invalidar M5/C23: o timer independente de `totem-core`
+selecionou a release stable remota antiga e o updater bloqueou corretamente o
+downgrade sobre o C21.9 embutido (`rc=45`). A frente de publicacao/promotion de
+`totem-core` deve alinhar o remoto ao core atual para remover a unit failed
+recorrente; nao reabrir a prova de `player-runtime` por esse motivo.
 
 Atualizacao de implementacao em 2026-07-10: a preparacao off-board de M5 foi
 consolidada para o alvo C22. O repo agora possui:

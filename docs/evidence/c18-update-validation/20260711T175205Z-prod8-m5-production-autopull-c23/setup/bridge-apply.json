@@ -1,0 +1,54 @@
+{
+  "after": {
+    "current_exists": true,
+    "current_link": "releases/c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "last_operation": {
+      "finished_at_utc": "2026-07-11T16:54:27Z",
+      "source": "lab-local:dadooh-player-runtime-c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63.manifest.json",
+      "started_at_utc": "2026-07-11T16:53:49Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63",
+    "state_previous_version": null
+  },
+  "before": {
+    "current_exists": false,
+    "current_link": null,
+    "last_operation": {
+      "finished_at_utc": "2026-07-11T16:45:01Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-07-11T16:45:01Z",
+      "status": "noop",
+      "type": "reconcile"
+    },
+    "previous_exists": false,
+    "previous_link": null,
+    "state_current_version": null,
+    "state_previous_version": null
+  },
+  "channel": "homologation",
+  "component": "player-runtime",
+  "data_root": "/data",
+  "device_data_root": true,
+  "github_used": false,
+  "network_required": false,
+  "output_dir": "/tmp/prod8-c23-autopull-20260711/bridge-apply",
+  "panfrost_fault_policy": "absolute",
+  "passed": true,
+  "public_cli_apply_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "public_cli_reconcile_still_frozen": {
+    "frozen": true,
+    "returncode": 44
+  },
+  "rc": 0,
+  "reapply_linked_previous": false,
+  "schema": "dadooh.c18.player_runtime.lab_apply.v1",
+  "version": "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+}
