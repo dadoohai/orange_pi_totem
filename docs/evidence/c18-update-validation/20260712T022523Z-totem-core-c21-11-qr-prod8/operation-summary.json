@@ -1,6 +1,6 @@
 {
   "board_end_state": {
-    "current_version": "c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "current_version": "c21.11-qr-pairing-20260712T021729Z-4068839",
     "player_active": true,
     "player_restarts": 0,
     "player_runtime_freeze_rc": 44,
@@ -14,8 +14,14 @@
   },
   "checks": {
     "apply_local": true,
+    "backend_legacy_smoke": true,
+    "backend_source_matches_git": true,
+    "backend_source_without_env_file": true,
     "global_release_gate_78_of_78": true,
+    "home_code_only_and_legacy_smoke": true,
     "noop": true,
+    "qr_authorization_consumed_on_board": true,
+    "qr_decoded_from_real_framebuffer_capture": true,
     "qr_self_test_on_board": true,
     "rollback_to_c21_10": true,
     "wizard_self_test_on_board": true
@@ -23,9 +29,9 @@
   "non_claims": [
     "not_published",
     "not_remote_timer_validated",
-    "not_backend_promoted",
-    "not_home_ec2_validated"
+    "not_final_config_write",
+    "not_physical_hdmi_observation"
   ],
   "passed": true,
-  "schema": "dadooh.c21.totem_core_qr_local_validation.v1"
+  "schema": "dadooh.c21.qr_pre_publish_validation.v1"
 }

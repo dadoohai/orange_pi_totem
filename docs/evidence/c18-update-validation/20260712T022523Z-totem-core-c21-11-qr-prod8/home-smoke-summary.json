@@ -1,0 +1,11 @@
+{
+  "checks": {
+    "code_only_url_accepted": true,
+    "legacy_url_accepted": true,
+    "manual_code_entry_available": true,
+    "manual_code_grouping_normalized": true
+  },
+  "deployed_git_commit": "5ca00bb",
+  "schema": "dadooh.c21.home_activation_smoke.v1",
+  "url": "https://home.dadooh.ai/totem/activate"
+}

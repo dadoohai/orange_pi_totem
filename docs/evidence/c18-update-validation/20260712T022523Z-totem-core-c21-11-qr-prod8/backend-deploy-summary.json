@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "activation_code_only_url": true,
+    "activation_id_kept_out_of_url": true,
+    "activation_pending_poll_without_api_key": true,
+    "deployed_source_matches_git": true,
+    "deployed_source_without_env_file": true,
+    "health_200": true,
+    "station_by_id_200": true,
+    "station_fake_404": true,
+    "station_list_200": true,
+    "visual_fx_field_present": true
+  },
+  "firebase_functions_hash": "f0a8fb09961dc07ea28675d4b5e3965139139519",
+  "git_commit": "a9306c25cac9b3ff535d2cc4e8a9dc8c0c7f0a30",
+  "revision": "api-00481-naf",
+  "schema": "dadooh.c21.totem_auth_deploy_summary.v1",
+  "source_generation": "1783825057460588",
+  "traffic_changed_by_this_round": false
+}

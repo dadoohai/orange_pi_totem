@@ -1,7 +1,7 @@
 # C21.11 QR pairing - local board validation
 
-Status em 2026-07-12: candidata validada localmente e restaurada; ainda nao
-publicada.
+Status em 2026-07-12: pacote, Home, backend e pareamento real validados; C21.11
+ainda nao publicada.
 
 ## Resultado
 
@@ -12,21 +12,30 @@ publicada.
 - self-tests do wizard e QR na placa: passaram;
 - segunda aplicacao do mesmo pacote: no-op;
 - rollback para C21.10: passou;
+- Home Dadooh aceitou entrada manual, URL somente com `code` e URL legada;
+- backend integrado ao `main` foi implantado em `api-00481-naf`;
+- source generation implantado bateu com o Git e nao conteve `.env`;
+- captura real do framebuffer foi decodificada como
+  `https://home.dadooh.ai/totem/activate?code=8SC6Z9JM`;
+- autorizacao foi consumida pela placa com resultado publico sanitizado e
+  credencial somente em arquivo privado 0600;
 - player permaneceu ativo, sem restart, e player-runtime continuou congelado
   com rc=44;
-- placa terminou novamente em C21.10, como estava antes da operacao.
+- C21.11 foi reaplicada localmente para a prova real.
 
 ## Limite
 
-Esta rodada prova o pacote e o rollback local. Ela nao prova o download pelo
-timer porque C21.11 ainda nao foi publicada. O gate de timer deve ser executado
-somente depois da publicacao e do apply remoto.
+Esta rodada prova o pacote, rollback local e pareamento real. Ela nao prova o
+download pelo timer porque C21.11 ainda nao foi publicada. O gate de timer deve
+ser executado somente depois da publicacao e do apply remoto.
 
-## Dependencias externas antes da publicacao
+O HDMI estava desconectado. O framebuffer foi usado como evidencia tecnica,
+mas nao substitui observacao fisica. O wizard nao salvou configuracao final:
+a revisao mostrou Wi-Fi pendente enquanto a placa usava Ethernet, e a sessao
+foi cancelada de forma limpa.
 
-- Home Dadooh na EC2 precisa estar em `5ca00bb` e aceitar URL apenas com
-  `code`;
-- a autenticacao do Firebase CLI precisa ser renovada;
-- o backend `bf4065c` deve ser implantado como candidata sem trafego, auditado
-  e promovido somente depois do Home.
+## Restante
 
+- publicar C21.11 no GitHub Releases;
+- provar selecao, download, no-op, rollback e restauracao pelo timer;
+- repetir a observacao visual fisica quando o HDMI estiver disponivel.
