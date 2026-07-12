@@ -251,8 +251,9 @@ Inclui:
 - dashboard;
 - telemetria;
 - kill switch;
-- assinatura consumida no device;
-- ponteiro stable assinado;
+- assinatura/attestation de frota e canais gerais alem do controle exact-target
+  minimo promovido para M8;
+- ponteiro stable generico alem do controle exact-target de `player-runtime`;
 - A/B ou solucao equivalente para imagem/media-system.
 
 Nao deve bloquear M2, M3 e M4 se a decisao de negocio continuar sendo avancar
@@ -276,6 +277,27 @@ Direcao atual:
 - `player-runtime` so entra se a mudanca for comportamento do player;
 - a frente nao bloqueia M5/M4 salvo se virar risco direto de lote.
 
+### M8 - Fonte Unica E Atualizacoes Futuras Do Player
+
+Status: decisao consolidada em 2026-07-12; implementacao pendente.
+
+Valor: permitir que C24, C25 e seguintes sejam desenvolvidos em uma fonte clara
+e cheguem as placas sem regravar imagem para cada versao.
+
+Este marco fecha quando:
+
+- `kiosky-player/appliance-v0.1` e o `player-runtime` C23 estiverem
+  reconciliados sem perder correcoes de nenhum lado;
+- `orange_pi_totem` importar um commit exato e recusar edicao manual do
+  snapshot;
+- uma nova imagem carregar a chave publica e o controle remoto assinado;
+- o controle selecionar somente alvo exato, nunca `latest` amplo;
+- apply, pause, no-op, release ruim, rollback e quarentena passarem na placa;
+- depois dessa imagem, uma nova versao do player chegar por OTA sem regravacao.
+
+Plano de decisao e criterios:
+`docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`.
+
 ## Checklist Contra Hiperfoco
 
 Antes de abrir ou continuar uma tarefa, responder:
@@ -286,16 +308,17 @@ Antes de abrir ou continuar uma tarefa, responder:
 4. Ela esta tentando resolver roadmap antes do minimo produtivo?
 5. Se esta tarefa travar, qual vertical pode avancar em paralelo?
 
-Se nenhuma resposta apontar para M2, M3, M4 ou M5, a tarefa deve ser pausada ou
-rebaixada.
+Se nenhuma resposta apontar para M2, M3, M4, M5 ou M8, a tarefa deve ser
+pausada ou rebaixada.
 
 ## Proxima Decisao Padrao
 
 Enquanto nada mudar, a ordem de execucao e:
 
-1. Atacar M5: auto-pull publico de `player-runtime` por alvo exato.
+1. Atacar M8 em duas verticais: convergencia da fonte e controle assinado de
+   novos alvos.
 2. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
    criterio de pausa.
-3. Preservar M2/M3 como baseline de producao: `totem-core` auto-pull e imagem
-   C18 gravavel.
-4. Evoluir M6 conforme escala e incidentes reais.
+3. Preservar M2/M3/M5 como baseline: `totem-core` auto-pull, imagem gravavel e
+   C23 exact-target funcional.
+4. Evoluir grupos, dashboard e telemetria conforme escala e incidentes reais.

@@ -11,6 +11,12 @@ Para a etapa operacional pos-publicacao do `player-runtime` em 2026-07-04, usar
 tambem o radar curto `docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md`. Ele nao
 substitui este contrato; apenas consolida o proximo caminho de execucao.
 
+A decisao C24 para reconciliar a fonte editavel e permitir novos alvos por
+controle remoto assinado esta em
+`docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`. Ela e direcao de
+implementacao, nao altera o comportamento vigente ate passar pelos gates e por
+uma nova imagem validada.
+
 ## Regra Principal
 
 OTA C18 e manual/operator-triggered e restrito a `totem-core` operacional.
@@ -99,6 +105,11 @@ Esse snapshot e fonte governada para imagem/gate, nao pacote OTA. Mudancas nele,
 no launcher/drop-in do player ou em outros arquivos fixos por imagem devem
 bloquear o gate OTA comum de `totem-core` e exigir gate separado de
 `player-runtime`, nova imagem ou homologacao.
+
+Ate a convergencia C24 fechar, esse snapshot C23 continua sendo a verdade
+funcional. Depois dela, ele deve ser importado de commit remoto exato de
+`kiosky-player/appliance-v0.1`, com provenance e guard contra edicao manual;
+`orange_pi_totem` continua sendo o unico repo de entrega para placas.
 
 Qualquer pacote futuro de `player-runtime` deve passar antes por
 `scripts/qa/c18_player_runtime_release_gate.py`. Esse gate abre o payload,
@@ -725,6 +736,10 @@ device e nao atualiza `media-system`. A evidencia offline detecta omissoes e
 inconsistencias entre snapshots, mas nao reivindica resistencia criptografica a
 um operador que fabrique todos os artefatos de forma coerente; isso depende do
 attestation que permanece fora desta excecao.
+
+Para C24 e seguintes, a decisao 198 promove somente a assinatura consumida no
+device e o controle exact-target remoto para o proximo slice. Isso nao libera
+`latest` de player nem antecipa grupos, dashboard ou telemetria de frota.
 
 Por decisao de primeira escala, SSH root por senha compartilhada permanece
 habilitado para suporte. E risco operacional aceito, nao claim de seguranca;

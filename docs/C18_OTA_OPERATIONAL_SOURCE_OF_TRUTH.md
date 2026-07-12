@@ -19,6 +19,9 @@ Plano de acumulo UX/produto para a proxima imagem:
 Campanha adversarial rapida de midia/OTA:
 `docs/product/196_C22_RAPID_ADVERSARIAL_RELIABILITY.md`.
 
+Decisao para fonte do player e futuros alvos sem regravacao:
+`docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`.
+
 Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
 
@@ -37,9 +40,11 @@ Hoje a C18 tem dois caminhos reais:
   continuos limpos. Qualquer alvo futuro continua bloqueado ate nova
   autorizacao presa por hashes.
 
-O proximo trabalho operacional nao e reabrir M5. E alinhar a publicacao stable
-de `totem-core` ao C21.9 ja embutido e fechar M4, a operacao inicial de lote.
-Grupos, dashboard, assinatura no device e credencial individual continuam M6.
+O M5 nao deve ser reaberto: C23 esta provado. A proxima evolucao do player e
+C24: reconciliar a fonte editavel e instalar, em uma nova imagem de referencia,
+o controle assinado que autoriza alvos futuros sem regravacao. M4, a operacao
+inicial de lote, continua em paralelo. Grupos, dashboard e telemetria seguem no
+roadmap.
 
 ## Repositorio de entrega
 
@@ -49,10 +54,11 @@ Ele contem imagem/SO, wizard, scripts de boot, OTA, gates, documentacao,
 empacotamento e o snapshot governado do player em
 `player-runtime/kiosky-player/kiosk.py`.
 
-O repo antigo `kiosky-player` pode continuar existindo como origem de
-desenvolvimento do player, mas nao deve publicar direto para placas C18. Toda
-entrega de player para cliente deve passar pela frente `player-runtime` dentro
-do fluxo C18.
+O repo `kiosky-player`, branch `appliance-v0.1`, sera a fonte editavel do
+comportamento depois da convergencia C24. Ele nao publica direto para placas.
+Toda entrega para cliente continua passando por um snapshot de commit exato na
+frente `player-runtime` do fluxo C18. Ate a convergencia fechar, o snapshot C23
+continua sendo a verdade funcional em producao.
 
 Nota de nome: em runtime o servico ainda pode se chamar `kiosky-player.service`.
 Isso nao torna `kiosky-player` uma rota de release C18. O launcher C18 deve

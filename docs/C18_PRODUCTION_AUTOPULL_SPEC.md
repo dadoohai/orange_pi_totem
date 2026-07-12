@@ -9,6 +9,14 @@ sem regressao.
 
 Direcao macro e marcos da fase atual: `docs/C18_MACRO_STEERING.md`.
 
+Atualizacao de direcao em 2026-07-12: o C23 exact-target foi fechado, e o
+proximo slice de player esta em
+`docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`. O controle assinado
+no device foi promovido para permitir C24+ sem regravacao; grupos, dashboard e
+telemetria continuam roadmap. Essa direcao exige uma nova imagem uma vez e nao
+promete que placas prod8 consumam o novo controle sem reflash ou bootstrap
+assistido validado.
+
 Quando documentos antigos disserem que auto-pull esta fora de escopo, esta spec
 registra a nova decisao operacional. O contrato de seguranca continua valido:
 escopos, allowlists, hashes, health, rollback e bloqueios de componente so mudam
