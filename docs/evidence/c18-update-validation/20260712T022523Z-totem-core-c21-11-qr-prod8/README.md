@@ -1,7 +1,7 @@
 # C21.11 QR pairing - local board validation
 
-Status em 2026-07-12: pacote, Home, backend e pareamento real validados; C21.11
-ainda nao publicada.
+Status em 2026-07-12: fechado. Pacote, Home, backend, pareamento real,
+publicacao stable e auto-pull validados.
 
 ## Resultado
 
@@ -22,20 +22,26 @@ ainda nao publicada.
 - player permaneceu ativo, sem restart, e player-runtime continuou congelado
   com rc=44;
 - C21.11 foi reaplicada localmente para a prova real.
+- GitHub Release C21.11 foi publicada como `latest`, sem draft/prerelease;
+- timer selecionou C21.11 e fez no-op;
+- rollback voltou a C21.10;
+- timer baixou o payload remoto, verificou SHA256 e restaurou C21.11;
+- no-op remoto final e gate de evidencia do timer passaram sem blockers.
 
 ## Limite
 
-Esta rodada prova o pacote, rollback local e pareamento real. Ela nao prova o
-download pelo timer porque C21.11 ainda nao foi publicada. O gate de timer deve
-ser executado somente depois da publicacao e do apply remoto.
+Esta rodada prova o pacote, rollback local, pareamento real e download pelo
+timer. Ela nao muda player-runtime, media-system ou imagem base.
 
 O HDMI estava desconectado. O framebuffer foi usado como evidencia tecnica,
 mas nao substitui observacao fisica. O wizard nao salvou configuracao final:
 a revisao mostrou Wi-Fi pendente enquanto a placa usava Ethernet, e a sessao
 foi cancelada de forma limpa.
 
-## Restante
+## Restante nao bloqueante
 
-- publicar C21.11 no GitHub Releases;
-- provar selecao, download, no-op, rollback e restauracao pelo timer;
-- repetir a observacao visual fisica quando o HDMI estiver disponivel.
+- repetir a observacao visual fisica quando o HDMI estiver disponivel;
+- o salvamento final do wizard nao foi repetido nesta rodada porque a revisao
+  exigiu Wi-Fi e a placa estava somente em Ethernet;
+- atualizar Node.js 20 antes da data de desativacao de deploy informada pelo
+  Firebase (2026-10-30).

@@ -18,20 +18,29 @@
     "backend_source_matches_git": true,
     "backend_source_without_env_file": true,
     "global_release_gate_78_of_78": true,
+    "github_release_latest_stable": true,
     "home_code_only_and_legacy_smoke": true,
     "noop": true,
     "qr_authorization_consumed_on_board": true,
     "qr_decoded_from_real_framebuffer_capture": true,
     "qr_self_test_on_board": true,
+    "remote_download_apply": true,
+    "remote_noop": true,
+    "remote_rollback_restore": true,
     "rollback_to_c21_10": true,
+    "timer_evidence_gate": true,
     "wizard_self_test_on_board": true
   },
   "non_claims": [
-    "not_published",
-    "not_remote_timer_validated",
     "not_final_config_write",
     "not_physical_hdmi_observation"
   ],
+  "release": {
+    "is_draft": false,
+    "is_latest": true,
+    "is_prerelease": false,
+    "tag": "totem-core-c21.11-qr-pairing-20260712T021729Z-4068839"
+  },
   "passed": true,
   "schema": "dadooh.c21.qr_pre_publish_validation.v1"
 }
