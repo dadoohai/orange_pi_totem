@@ -1,0 +1,31 @@
+{
+  "board_end_state": {
+    "current_version": "c21.10-prod8-stable-alignment-20260711T211510Z-ff7810c",
+    "player_active": true,
+    "player_restarts": 0,
+    "player_runtime_freeze_rc": 44,
+    "timer_active": true
+  },
+  "candidate": {
+    "channel": "stable",
+    "payload_sha256": "8cb669b75ac446f5992da5237c981473dbd3dddc823beea326da2c53063ce27c",
+    "source_commit": "4068839c6e82545c0ad8805653c277787ace6da6",
+    "version": "c21.11-qr-pairing-20260712T021729Z-4068839"
+  },
+  "checks": {
+    "apply_local": true,
+    "global_release_gate_78_of_78": true,
+    "noop": true,
+    "qr_self_test_on_board": true,
+    "rollback_to_c21_10": true,
+    "wizard_self_test_on_board": true
+  },
+  "non_claims": [
+    "not_published",
+    "not_remote_timer_validated",
+    "not_backend_promoted",
+    "not_home_ec2_validated"
+  ],
+  "passed": true,
+  "schema": "dadooh.c21.totem_core_qr_local_validation.v1"
+}
