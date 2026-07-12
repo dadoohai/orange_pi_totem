@@ -1633,7 +1633,7 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             release = Path(tmp) / "release"
             bin_dir = release / "bin"
             bin_dir.mkdir(parents=True)
-            for name in updatectl.TOTEM_CORE_REQUIRED_BIN:
+            for name in (*updatectl.TOTEM_CORE_REQUIRED_BIN, *updatectl.TOTEM_CORE_OPTIONAL_BIN):
                 source = REPO_ROOT / "scripts" / "board" / name
                 self.assertNotEqual(name, "kiosky_service_launcher.sh")
                 shutil.copy2(source, bin_dir / name)
@@ -1641,6 +1641,20 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             ok, reason = updatectl._totem_core_health_check(release)
 
             self.assertTrue(ok, reason)
+
+    def test_current_totem_core_health_check_fails_closed_without_qr_companion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            release = Path(tmp) / "release"
+            bin_dir = release / "bin"
+            bin_dir.mkdir(parents=True)
+            for name in updatectl.TOTEM_CORE_REQUIRED_BIN:
+                source = REPO_ROOT / "scripts" / "board" / name
+                shutil.copy2(source, bin_dir / name)
+
+            ok, reason = updatectl._totem_core_health_check(release)
+
+            self.assertFalse(ok)
+            self.assertIn("totem_setup_visual_wizard.py:error", reason)
 
     def test_older_created_at_is_rejected_without_downgrade_permission(self) -> None:
         state = {
