@@ -40,11 +40,11 @@ Hoje a C18 tem dois caminhos reais:
   continuos limpos. Qualquer alvo futuro continua bloqueado ate nova
   autorizacao presa por hashes.
 
-O M5 nao deve ser reaberto: C23 esta provado. A proxima evolucao do player e
-C24: reconciliar a fonte editavel e instalar, em uma nova imagem de referencia,
-o controle assinado que autoriza alvos futuros sem regravacao. M4, a operacao
-inicial de lote, continua em paralelo. Grupos, dashboard e telemetria seguem no
-roadmap.
+O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
+a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
+para roadmap. A prioridade atual volta a ser produto visivel por `totem-core`,
+fechamento E2E do conjunto acumulado e nova imagem de referencia. M4 continua
+em paralelo; grupos, dashboard e telemetria seguem no roadmap.
 
 ## Repositorio de entrega
 
@@ -108,14 +108,23 @@ Regra pratica:
 
 Fila atual para consolidacao:
 
-- C19 wizard/settings visual: validada para acumulo em `totem-core`; pendente
-  entrar no pacote/update consolidado e na proxima imagem de referencia.
-- C20 V0 orientation preview: validada para acumulo em `totem-core`; corrige a
-  sobreposicao do preview de orientacao em paisagem e preserva retrato sem
-  sobreposicao no preview auto-exit. Evidencia em
-  `docs/evidence/c20-visual-qa/20260707T192000-c20-v0-final-preview-board/`.
-- C20 UX geral: plano aberto para novas rodadas acumulaveis de `totem-core`;
-  proximos focos seguem hierarquia/densidade do wizard e navegacao previsivel.
+- C19/C20 e o QR C21 ja foram consolidados e publicados no `totem-core`
+  C21.11. Nao aguardam outro pacote para funcionar; aguardam apenas entrar como
+  baseline da proxima imagem de referencia.
+- Fechar na versao atual a jornada real completa: Wi-Fi, QR, ambiente, escrita,
+  conclusao e retorno ao player, com captura visual quando o HDMI estiver
+  disponivel.
+- Melhorar os estados que o usuario ve fora da midia: abertura/saida de
+  settings, carregando conteudo, config pendente, sem midia e erro recuperavel,
+  sem expor diagnostico tecnico.
+- Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
+  uso por rodada, preservando o QA C19/C20.
+- Retomar a matriz de compatibilidade de display quando as telas alvo estiverem
+  disponiveis; ate la, manter apenas diagnostico read-only.
+- Depois desse conjunto, gerar a nova imagem de referencia com C21.11 e as
+  melhorias acumuladas como baseline.
+- A convergencia C24 e o controle assinado de novos players ficam no roadmap
+  conforme a decisao 198.
 
 ## O que fechamos
 

@@ -14,8 +14,8 @@ substitui este contrato; apenas consolida o proximo caminho de execucao.
 A decisao C24 para reconciliar a fonte editavel e permitir novos alvos por
 controle remoto assinado esta em
 `docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`. Ela e direcao de
-implementacao, nao altera o comportamento vigente ate passar pelos gates e por
-uma nova imagem validada.
+roadmap, nao prioridade imediata, e nao altera o comportamento vigente ate
+passar pelos gates e por uma nova imagem validada.
 
 ## Regra Principal
 

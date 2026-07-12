@@ -279,7 +279,8 @@ Direcao atual:
 
 ### M8 - Fonte Unica E Atualizacoes Futuras Do Player
 
-Status: decisao consolidada em 2026-07-12; implementacao pendente.
+Status: roadmap aprovado em 2026-07-12; implementacao adiada por prioridade de
+produto.
 
 Valor: permitir que C24, C25 e seguintes sejam desenvolvidos em uma fonte clara
 e cheguem as placas sem regravar imagem para cada versao.
@@ -315,10 +316,13 @@ pausada ou rebaixada.
 
 Enquanto nada mudar, a ordem de execucao e:
 
-1. Atacar M8 em duas verticais: convergencia da fonte e controle assinado de
-   novos alvos.
-2. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
+1. Priorizar melhorias visiveis de wizard, jornada de configuracao, status e
+   transicoes que caibam em `totem-core`.
+2. Fechar o E2E real do pacote acumulado e gerar a proxima imagem de referencia
+   quando o conjunto estiver maduro.
+3. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
    criterio de pausa.
-3. Preservar M2/M3/M5 como baseline: `totem-core` auto-pull, imagem gravavel e
+4. Preservar M2/M3/M5 como baseline: `totem-core` auto-pull, imagem gravavel e
    C23 exact-target funcional.
-4. Evoluir grupos, dashboard e telemetria conforme escala e incidentes reais.
+5. Retomar M8 somente pelos gatilhos registrados na decisao 198.
+6. Evoluir grupos, dashboard e telemetria conforme escala e incidentes reais.

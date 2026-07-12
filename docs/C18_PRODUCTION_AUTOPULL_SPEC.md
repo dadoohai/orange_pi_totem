@@ -15,7 +15,8 @@ proximo slice de player esta em
 no device foi promovido para permitir C24+ sem regravacao; grupos, dashboard e
 telemetria continuam roadmap. Essa direcao exige uma nova imagem uma vez e nao
 promete que placas prod8 consumam o novo controle sem reflash ou bootstrap
-assistido validado.
+assistido validado. A implementacao foi adiada por prioridade de produto e so
+retorna pelos gatilhos registrados na decisao 198.
 
 Quando documentos antigos disserem que auto-pull esta fora de escopo, esta spec
 registra a nova decisao operacional. O contrato de seguranca continua valido:

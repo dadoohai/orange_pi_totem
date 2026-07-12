@@ -1,7 +1,28 @@
 # 198 - C24 fonte do player e atualizacao em escala
 
-Estado em 2026-07-12: decisao arquitetural consolidada; implementacao ainda nao
-iniciada.
+Estado em 2026-07-12: decisao arquitetural consolidada e preservada como
+roadmap; implementacao adiada para priorizar melhorias de impacto direto ao
+usuario.
+
+## Decisao De Prioridade
+
+Esta frente nao e o proximo trabalho. C23 continua como baseline funcional e a
+estrutura atual nao sera reaberta enquanto as rodadas de produto puderem
+avancar por `totem-core` sem tocar o player.
+
+Retomar esta decisao quando ocorrer pelo menos um destes gatilhos:
+
+- existir uma mudanca de player que precise chegar a placas em campo sem
+  regravacao;
+- a divergencia entre os dois repositorios impedir ou atrasar uma correcao
+  real;
+- formos fechar a nova imagem de referencia que deve carregar o controle
+  assinado;
+- a operacao de lote exigir pause/rollback remoto de player em escala.
+
+Ate la, uma correcao urgente de player continua usando o snapshot governado e
+o caminho exact-target ja existente. Isso e uma ponte operacional, nao a
+arquitetura final descrita abaixo.
 
 ## Objetivo
 

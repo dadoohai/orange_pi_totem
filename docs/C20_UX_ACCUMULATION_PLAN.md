@@ -6,6 +6,13 @@ Objetivo: evoluir a experiencia visual e operacional do produto em rodadas
 pequenas de `totem-core`, validando cada uma na placa e acumulando o conjunto
 para um pacote/update consolidado e para a proxima imagem de referencia.
 
+Atualizacao em 2026-07-12: C19/C20 e o pareamento C21 ja estao consolidados no
+`totem-core` C21.11 stable e aplicados na placa. O pendente nao e reconstruir
+esses pacotes; e fechar a jornada E2E na versao atual, evoluir somente estados
+visiveis de impacto real e incorporar o conjunto na proxima imagem de
+referencia. A arquitetura C24 de player foi preservada como roadmap e nao
+compete com esta fila de UX.
+
 ## Direcao
 
 - UX de produto, nao dashboard tecnico.
