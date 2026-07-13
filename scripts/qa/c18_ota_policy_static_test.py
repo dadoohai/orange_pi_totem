@@ -442,29 +442,29 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
         auth = json.loads(PLAYER_RUNTIME_PRODUCTION_AUTOPULL_PATH.read_text(encoding="utf-8"))
         self.assertTrue(mod.validate_player_runtime_production_authorization(auth))
-        self.assertEqual(auth["version"], "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c")
+        self.assertEqual(auth["version"], "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4")
         self.assertEqual(
             auth["tag_name"],
-            "player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+            "player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
         )
-        self.assertEqual(auth["source_commit"], "fe4347c81ccc40218c4763fbde68badbd30de2a3")
+        self.assertEqual(auth["source_commit"], "54308e4a09ef693dbfb3d6b31ce9626908ca0c16")
         self.assertEqual(
             auth["payload_sha256"],
-            "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+            "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
         )
         self.assertEqual(
             auth["manifest_sha256"],
-            "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca",
+            "d3199e34a42e992ec40567b0a7c9620c73bfab4979454c7024d1bea74e83e55d",
         )
         self.assertEqual(
             auth["release_gate_sha256"],
-            "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72",
+            "f03fa5e295530459dbb0d0b324186567a3a82b8f5f6aeb9fcba8b7dad38a250f",
         )
         self.assertEqual(auth["channel"], "homologation")
         self.assertFalse(auth["allow_latest"])
         self.assertFalse(auth["allow_prerelease"])
         self.assertFalse(auth["allow_downgrade"])
-        self.assertEqual(auth["business_decision"]["accepted_at_local_date"], "2026-07-10")
+        self.assertEqual(auth["business_decision"]["accepted_at_local_date"], "2026-07-13")
         self.assertTrue(auth["business_decision"]["risk_accepted"])
         self.assertEqual(
             set(auth["non_claims"]),
@@ -508,8 +508,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-8"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.8"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-9"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.9"', derive)
+        self.assertIn("validate_player_runtime_baseline_package", derive)
+        self.assertIn('"system_ffmpeg_present"', derive)
+        self.assertIn('"system_ffprobe_present"', derive)
+        self.assertIn('"c25_surface_fonts_present"', derive)
         self.assertIn("validate_production_player_runtime_authorization", derive)
         self.assertIn("production_seed_sensitive_fields", derive)
         self.assertIn("production_seed_has_no_totem_identity_or_token", derive)

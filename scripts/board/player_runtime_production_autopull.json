@@ -4,8 +4,8 @@
   "allow_prerelease": false,
   "auto_pull_enabled": true,
   "business_decision": {
-    "accepted_at_local_date": "2026-07-10",
-    "operator": "operator-user-approved-autonomous-c23-20260710",
+    "accepted_at_local_date": "2026-07-13",
+    "operator": "operator-user-approved-autonomous-c25-20260713",
     "risk_accepted": true,
     "rollback_owner": "dadooh-operator",
     "rollout_mode": "simple_global"
@@ -14,7 +14,7 @@
   "component": "player-runtime",
   "device_track": "c18-hwdecode",
   "enabled": true,
-  "manifest_sha256": "e24671aa48088d371b69538c0f7980e72e695cb3f77412e17f9d896fd76230ca",
+  "manifest_sha256": "d3199e34a42e992ec40567b0a7c9620c73bfab4979454c7024d1bea74e83e55d",
   "non_claims": [
     "not_latest_broad",
     "not_future_player_runtime_targets",
@@ -23,12 +23,12 @@
     "not_dashboard_or_canary_groups",
     "not_device_side_signature_enforcement"
   ],
-  "payload_sha256": "88471756039a492a6857c2b8c37fbac4a4ff56602f0934729960fc77d6d94f80",
+  "payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
   "release_gate_asset_name": "c18-player-runtime-release-gate.json",
-  "release_gate_sha256": "115efa5b26442671f8e18b8e2a33ee6df659914b485b4cc789d301cc52e1be72",
+  "release_gate_sha256": "f03fa5e295530459dbb0d0b324186567a3a82b8f5f6aeb9fcba8b7dad38a250f",
   "repo": "dadoohai/orange_pi_totem",
   "schema": "dadooh.c18.player_runtime.production_autopull_authorization.v1",
-  "source_commit": "fe4347c81ccc40218c4763fbde68badbd30de2a3",
-  "tag_name": "player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
-  "version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
+  "source_commit": "54308e4a09ef693dbfb3d6b31ce9626908ca0c16",
+  "tag_name": "player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
 }

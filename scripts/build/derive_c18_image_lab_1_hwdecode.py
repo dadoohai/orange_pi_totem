@@ -24,7 +24,7 @@ It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB
 real config, media/cache, or secrets.
 """
 from __future__ import annotations
-import argparse, atexit, json, os, shutil, subprocess, sys, tempfile
+import argparse, atexit, json, os, shutil, subprocess, sys, tarfile, tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -71,8 +71,8 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-8"
-PRODUCTION_VERSION = "c18.image-prod.8"
+PRODUCTION_TAG = "c18-hwdecode-prod-9"
+PRODUCTION_VERSION = "c18.image-prod.9"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -122,6 +122,17 @@ PRODUCTION_SEED_IDENTITY_FIELDS = {
 MPV_PATH_OLD = '"mpv_path": "mpv",'
 MPV_PATH_NEW = f'"mpv_path": "{WRAPPER}",'
 PLAYER_RUNTIME_KIOSK_SHA256 = "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0"
+PLAYER_RUNTIME_BASELINE_VERSION = "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
+PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT = "54308e4a09ef693dbfb3d6b31ce9626908ca0c16"
+PLAYER_RUNTIME_BASELINE_PAYLOAD_SHA256 = "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d"
+PLAYER_RUNTIME_BASELINE_MANIFEST_SHA256 = "d3199e34a42e992ec40567b0a7c9620c73bfab4979454c7024d1bea74e83e55d"
+PLAYER_RUNTIME_BASELINE_RELEASE_GATE_SHA256 = "f03fa5e295530459dbb0d0b324186567a3a82b8f5f6aeb9fcba8b7dad38a250f"
+C25_SYSTEM_FFMPEG = "/usr/bin/ffmpeg"
+C25_SYSTEM_FFPROBE = "/usr/bin/ffprobe"
+C25_SURFACE_FONTS = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+)
 PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
     "MPVController._stop_locked": (
@@ -139,6 +150,18 @@ PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "download_media/media_items_from_saved/media_items_from_cache": (
         "image extensions are admitted directly into MPV",
         "still images are prepared as local H.264 MP4 sidecars before playlist admission",
+    ),
+    "MPVController.wait_for_local_frame_evidence/playback status": (
+        "path acceptance alone can publish first_frame_ready",
+        "one stable MPV generation, matching path, configured VO and video parameters are required; video requires frame progress and still-image sidecars require frame availability",
+    ),
+    "startup feedback/public surface": (
+        "one legacy landscape placeholder with path-only acceptance",
+        "C25 public loading, unavailable and recovery surfaces with landscape/portrait layout and local VO/frame evidence",
+    ),
+    "startup feedback/MPV transport": (
+        "direct SVG load, unsupported by the production MPV decoder set",
+        "versioned one-frame H.264 generated atomically by the image-bound ffmpeg and verified before load",
     ),
 }
 PLAYER_RUNTIME_TEARDOWN_TOKENS = (
@@ -292,6 +315,53 @@ def validate_player_runtime_snapshot(source_data: dict, kiosk_snapshot: str, kio
     missing_tokens = [token for token in PLAYER_RUNTIME_TEARDOWN_TOKENS if token not in kiosk_snapshot]
     if missing_tokens:
         raise SystemExit("BLOCKED: player-runtime kiosk.py teardown governance mismatch")
+
+
+def validate_player_runtime_baseline_package() -> dict:
+    release_dir = REPO_ROOT / "releases" / "player-runtime" / PLAYER_RUNTIME_BASELINE_VERSION
+    manifest_path = release_dir / f"dadooh-player-runtime-{PLAYER_RUNTIME_BASELINE_VERSION}.manifest.json"
+    payload_path = release_dir / f"dadooh-player-runtime-{PLAYER_RUNTIME_BASELINE_VERSION}.tar.gz"
+    release_gate_path = release_dir / "c18-player-runtime-release-gate.json"
+    for path in (manifest_path, payload_path, release_gate_path):
+        if not path.is_file():
+            raise SystemExit(f"BLOCKED: player-runtime baseline artifact missing: {path}")
+    expected_hashes = {
+        manifest_path: PLAYER_RUNTIME_BASELINE_MANIFEST_SHA256,
+        payload_path: PLAYER_RUNTIME_BASELINE_PAYLOAD_SHA256,
+        release_gate_path: PLAYER_RUNTIME_BASELINE_RELEASE_GATE_SHA256,
+    }
+    for path, expected_sha in expected_hashes.items():
+        actual_sha = base.file_sha256(path)
+        if actual_sha != expected_sha:
+            raise SystemExit(f"BLOCKED: player-runtime baseline artifact hash mismatch: {path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected_manifest = {
+        "component": "player-runtime",
+        "version": PLAYER_RUNTIME_BASELINE_VERSION,
+        "channel": "homologation",
+        "source_commit": PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT,
+        "payload_sha256": PLAYER_RUNTIME_BASELINE_PAYLOAD_SHA256,
+    }
+    if any(manifest.get(key) != value for key, value in expected_manifest.items()):
+        raise SystemExit("BLOCKED: player-runtime baseline manifest identity mismatch")
+    features = set((manifest.get("requires") or {}).get("updater_features") or [])
+    if "c25-player-surface-health-v1" not in features:
+        raise SystemExit("BLOCKED: player-runtime baseline lacks C25 surface health contract")
+    with tarfile.open(payload_path, "r:gz") as archive:
+        try:
+            payload_kiosk = archive.extractfile("kiosk.py")
+        except KeyError as exc:
+            raise SystemExit("BLOCKED: player-runtime baseline payload lacks kiosk.py") from exc
+        if payload_kiosk is None or payload_kiosk.read() != PLAYER_RUNTIME_KIOSK.read_bytes():
+            raise SystemExit("BLOCKED: image player snapshot differs from exact C25B payload")
+    return {
+        "version": PLAYER_RUNTIME_BASELINE_VERSION,
+        "source_commit": PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT,
+        "payload_sha256": PLAYER_RUNTIME_BASELINE_PAYLOAD_SHA256,
+        "manifest_sha256": PLAYER_RUNTIME_BASELINE_MANIFEST_SHA256,
+        "release_gate_sha256": PLAYER_RUNTIME_BASELINE_RELEASE_GATE_SHA256,
+        "kiosk_py_sha256": PLAYER_RUNTIME_KIOSK_SHA256,
+    }
 
 
 def production_seed_sensitive_fields(seed_data: dict) -> set[str]:
@@ -506,6 +576,7 @@ def main():
     kiosk_snapshot_sha = base.file_sha256(PLAYER_RUNTIME_KIOSK)
     source_data = json.loads(PLAYER_RUNTIME_SOURCE.read_text(encoding="utf-8"))
     validate_player_runtime_snapshot(source_data, kiosk_snapshot, kiosk_snapshot_sha)
+    player_runtime_baseline = validate_player_runtime_baseline_package()
     kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_snapshot, encoding="utf-8")
 
     seed_orig = work / "private-values.seed.orig.json"
@@ -556,6 +627,9 @@ def main():
         f"totem_update_timer_enabled={str(totem_core_profile == 'production').lower()}",
         "player_runtime_launcher_fixed_by_image=true",
         "player_runtime_verified_marker_required=true",
+        f"player_runtime_baseline_version={PLAYER_RUNTIME_BASELINE_VERSION}",
+        f"player_runtime_baseline_payload_sha256={PLAYER_RUNTIME_BASELINE_PAYLOAD_SHA256}",
+        "c25_visible_product_states_embedded=true",
         "player_runtime_reconcile_available=true",
         "player_runtime_lab_thaw_guard=true",
         "player_runtime_gate_semantic_mpv_args=true",
@@ -746,6 +820,9 @@ def main():
     v = {
         "custom_mpv_installed": present(f"{HWDIR}/bin/mpv") and execu(f"{HWDIR}/bin/mpv"),
         "custom_ffmpeg_installed": present(f"{HWDIR}/bin/ffmpeg") if ffmpeg_included else "n/a",
+        "system_ffmpeg_present": present(C25_SYSTEM_FFMPEG) and execu(C25_SYSTEM_FFMPEG),
+        "system_ffprobe_present": present(C25_SYSTEM_FFPROBE) and execu(C25_SYSTEM_FFPROBE),
+        "c25_surface_fonts_present": all(present(path) for path in C25_SURFACE_FONTS),
         "all_stack_libs_present": all(libs_present.values()),
         "wrapper_present": present(WRAPPER) and execu(WRAPPER),
         "wrapper_forces_hwdec": "--hwdec=v4l2request-copy" in wrap_now and "--vo=gpu" in wrap_now
@@ -965,6 +1042,7 @@ def main():
         "player_uses_custom_mpv": True, "player_hwdec_flag": "v4l2request-copy",
         "player_runtime_kiosk_source": str(PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)),
         "player_runtime_kiosk_sha256": kiosk_snapshot_sha,
+        "player_runtime_baseline_package": player_runtime_baseline,
         "player_runtime_snapshot_governed": True,
         "player_runtime_verified_marker_required": v["totem_kiosky_launcher_requires_verified_marker"],
         "player_runtime_reconcile_available": v["player_runtime_updatectl_reconcile_available"],
