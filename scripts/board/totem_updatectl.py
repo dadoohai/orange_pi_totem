@@ -2129,6 +2129,27 @@ def _restore_order_static_check(bin_dir: Path) -> Tuple[bool, str]:
     return True, "restore order ok"
 
 
+def _totem_core_declared_self_tests(release_dir: Path) -> Tuple[Optional[set[str]], str]:
+    health_path = release_dir / "health" / "totem-core-health.json"
+    if not health_path.exists():
+        return set(), "health metadata absent"
+    try:
+        if health_path.is_symlink() or not health_path.is_file():
+            return None, "health_metadata_unsafe"
+        size = health_path.stat().st_size
+        if size <= 0 or size > 65536:
+            return None, "health_metadata_size_invalid"
+        payload = json.loads(health_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        return None, f"health_metadata_invalid:{e}"
+    if not isinstance(payload, dict) or payload.get("schema") != "dadooh.totem.core.health.v1":
+        return None, "health_metadata_schema_invalid"
+    raw_tests = payload.get("self_tests")
+    if not isinstance(raw_tests, list) or not all(isinstance(item, str) and item for item in raw_tests):
+        return None, "health_metadata_self_tests_invalid"
+    return set(raw_tests), "ok"
+
+
 def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
     bin_dir = release_dir / "bin"
     if not bin_dir.is_dir():
@@ -2162,6 +2183,37 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
             ok, info = _run_health_cmd(cmd)
             if not ok:
                 return False, info
+
+    declared_tests, metadata_info = _totem_core_declared_self_tests(release_dir)
+    if declared_tests is None:
+        return False, metadata_info
+    metadata_checks = {
+        "python3 bin/totem_status_aggregate.py --self-test": [
+            "/usr/bin/python3", str(bin_dir / "totem_status_aggregate.py"), "--self-test"
+        ],
+        "bash bin/totem_status_renderer.sh --self-test": [
+            "/usr/bin/env", "bash", str(bin_dir / "totem_status_renderer.sh"), "--self-test"
+        ],
+        "python3 bin/totem_config_writer_real.py --self-test": [
+            "/usr/bin/python3", str(bin_dir / "totem_config_writer_real.py"), "--self-test"
+        ],
+    }
+    aggregate_text = (bin_dir / "totem_status_aggregate.py").read_text(encoding="utf-8", errors="replace")
+    renderer_text = (bin_dir / "totem_status_renderer.sh").read_text(encoding="utf-8", errors="replace")
+    required_declarations = set()
+    if 'SCHEMA_VERSION = "totem-status.v1"' in aggregate_text:
+        required_declarations.add("python3 bin/totem_status_aggregate.py --self-test")
+    if 'STATUS_SVG" = "--self-test"' in renderer_text:
+        required_declarations.add("bash bin/totem_status_renderer.sh --self-test")
+    missing_declarations = sorted(required_declarations - declared_tests)
+    if missing_declarations:
+        return False, "health_metadata_missing_self_tests:" + ",".join(missing_declarations)
+    for declaration, cmd in metadata_checks.items():
+        if declaration not in declared_tests:
+            continue
+        ok, info = _run_health_cmd(cmd)
+        if not ok:
+            return False, info
 
     ok, info = _restore_order_static_check(bin_dir)
     if not ok:
@@ -3672,6 +3724,11 @@ def cmd_rollback(args: argparse.Namespace) -> int:
 
     started_at = _utcnow_iso()
     cur_link = _read_symlink_target(CURRENT_LINK)
+    if COMPONENT == "totem-core":
+        ok, info = _totem_core_health_check(APP_BASE / prev_link)
+        if not ok:
+            log("ERROR", "manual_rollback_target_health_failed", reason=info, target=prev_link)
+            return 32
     _atomic_symlink(prev_link, CURRENT_LINK)
     if cur_link:
         _atomic_symlink(cur_link, PREVIOUS_LINK)  # swap
@@ -3688,6 +3745,14 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     else:
         ok, info = _totem_core_health_check(APP_BASE / prev_link)
         if not ok:
+            try:
+                if cur_link:
+                    _atomic_symlink(cur_link, CURRENT_LINK)
+                elif CURRENT_LINK.is_symlink() or CURRENT_LINK.exists():
+                    CURRENT_LINK.unlink()
+                _atomic_symlink(prev_link, PREVIOUS_LINK)
+            except OSError as restore_error:
+                log("ERROR", "manual_rollback_link_restore_failed", err=str(restore_error))
             log("ERROR", "manual_rollback_health_failed", reason=info)
             return 32
 

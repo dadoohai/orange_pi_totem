@@ -811,6 +811,38 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             state = updatectl._read_state()
             self.assertEqual(state["last_operation"]["rolled_back_to"], "fallback")
 
+    def test_totem_core_rollback_rejects_unhealthy_previous_without_swapping_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl._ensure_dirs()
+            current = updatectl.RELEASES_DIR / "core-current-good"
+            previous = updatectl.RELEASES_DIR / "core-previous-bad"
+            for release in (current, previous):
+                bin_dir = release / "bin"
+                bin_dir.mkdir(parents=True)
+                for name in (*updatectl.TOTEM_CORE_REQUIRED_BIN, *updatectl.TOTEM_CORE_OPTIONAL_BIN):
+                    shutil.copy2(REPO_ROOT / "scripts" / "board" / name, bin_dir / name)
+            (previous / "bin" / "totem_setup_visual_wizard.py").write_text(
+                "#!/usr/bin/env python3\nraise SystemExit(1)\n", encoding="utf-8"
+            )
+            updatectl._atomic_symlink("releases/core-current-good", updatectl.CURRENT_LINK)
+            updatectl._atomic_symlink("releases/core-previous-bad", updatectl.PREVIOUS_LINK)
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "totem-core",
+                "current": {"version": "core-current-good"},
+                "previous": {"version": "core-previous-bad"},
+            })
+            state_before = updatectl.STATE_FILE.read_bytes()
+
+            rc = updatectl.cmd_rollback(argparse.Namespace(component="totem-core"))
+
+            self.assertEqual(rc, 32)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/core-current-good")
+            self.assertEqual(updatectl._read_symlink_target(updatectl.PREVIOUS_LINK), "releases/core-previous-bad")
+            self.assertEqual(updatectl.STATE_FILE.read_bytes(), state_before)
+
     def test_policy_may_name_player_runtime_but_apply_stays_frozen(self) -> None:
         raw = policy()
         raw["allowed_components"] = ["totem-core", "player-runtime"]
@@ -1637,10 +1669,59 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                 source = REPO_ROOT / "scripts" / "board" / name
                 self.assertNotEqual(name, "kiosky_service_launcher.sh")
                 shutil.copy2(source, bin_dir / name)
+            health_dir = release / "health"
+            health_dir.mkdir()
+            (health_dir / "totem-core-health.json").write_text(
+                json.dumps({
+                    "schema": "dadooh.totem.core.health.v1",
+                    "self_tests": [
+                        "python3 bin/totem_status_aggregate.py --self-test",
+                        "bash bin/totem_status_renderer.sh --self-test",
+                        "python3 bin/totem_config_writer_real.py --self-test",
+                    ],
+                }) + "\n",
+                encoding="utf-8",
+            )
 
             ok, reason = updatectl._totem_core_health_check(release)
 
             self.assertTrue(ok, reason)
+
+    def test_totem_core_health_check_accepts_legacy_aggregate_without_self_test(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            release = Path(tmp) / "legacy-release"
+            bin_dir = release / "bin"
+            bin_dir.mkdir(parents=True)
+            for name in (*updatectl.TOTEM_CORE_REQUIRED_BIN, *updatectl.TOTEM_CORE_OPTIONAL_BIN):
+                shutil.copy2(REPO_ROOT / "scripts" / "board" / name, bin_dir / name)
+            legacy_aggregate = bin_dir / "totem_status_aggregate.py"
+            legacy_aggregate.write_text(
+                "#!/usr/bin/env python3\n"
+                "import sys\n"
+                "raise SystemExit(2 if '--self-test' in sys.argv else 0)\n",
+                encoding="utf-8",
+            )
+            legacy_aggregate.chmod(0o755)
+            legacy_renderer = bin_dir / "totem_status_renderer.sh"
+            legacy_renderer.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            legacy_renderer.chmod(0o755)
+
+            ok, reason = updatectl._totem_core_health_check(release)
+
+            self.assertTrue(ok, reason)
+
+    def test_totem_core_health_check_requires_declared_c25_self_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            release = Path(tmp) / "release"
+            bin_dir = release / "bin"
+            bin_dir.mkdir(parents=True)
+            for name in (*updatectl.TOTEM_CORE_REQUIRED_BIN, *updatectl.TOTEM_CORE_OPTIONAL_BIN):
+                shutil.copy2(REPO_ROOT / "scripts" / "board" / name, bin_dir / name)
+
+            ok, reason = updatectl._totem_core_health_check(release)
+
+            self.assertFalse(ok)
+            self.assertIn("health_metadata_missing_self_tests", reason)
 
     def test_current_totem_core_health_check_fails_closed_without_qr_companion(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
