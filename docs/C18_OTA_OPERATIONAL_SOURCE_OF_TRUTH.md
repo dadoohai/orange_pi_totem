@@ -701,5 +701,9 @@ podemos escolher entre:
 7. Marco 4: `totem-core stable` publicado e validado por apply/rollback lab.
 8. Marco anterior: imagem producao bootada e timer real de `totem-core` provado
    com rollback.
-9. Rodada atual: executar V3/M5 `player-runtime` auto-pull publico por alvo
-   exato, mantendo M4 minimo em paralelo.
+9. M5 fechado para o alvo exato C23; nao reabrir sua prova por causa de um
+   pacote futuro.
+10. C25A e o alvo exato C25B validados e reversiveis em homologacao.
+11. Rodada atual: consolidar o conjunto C25 e os hooks image-bound na proxima
+    imagem de referencia, mantendo M4 minimo em paralelo. C25B nao herda
+    `stable` ou auto-pull de C23 por inferencia.

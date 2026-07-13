@@ -1,0 +1,50 @@
+{
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "21a0dad773d5405e2009dd0ebd14ac3722f61813ce397777d9d4a5845a2beff4"
+    },
+    {
+      "file": "board-final-state.json",
+      "sha256": "1432ae305352e0b18750963fb02dcb68cebfb1fb966e6f96b301d00b21e8c99d"
+    },
+    {
+      "file": "c23-health-after-rollback.json",
+      "sha256": "34089c688761aae3f76928155a1a0e8211472bfa3c9946ed8487a3f5c84a2729"
+    },
+    {
+      "file": "content-unavailable-live-probe.json",
+      "sha256": "9d6faa00862923657e5ab047d702c9960ca84b0ee7b70138825d2bc472e4fe8c"
+    },
+    {
+      "file": "final-service-health.json",
+      "sha256": "4a5fa36b3cdc0e639ef4f9db1e7cc9892e075e1475f489a47baff60ebc1c2b8d"
+    },
+    {
+      "file": "governed-reapply.json",
+      "sha256": "df2979726eef6741f158c54b2ad2825af93eb2b84472ce540095df1facc9d0cf"
+    },
+    {
+      "file": "governed-rollback.json",
+      "sha256": "d01f735f847c760d9cb75e76ab950992e0380b04e04e9f00f622c7a71b48111a"
+    },
+    {
+      "file": "inconclusive-terminal-window-negative.json",
+      "sha256": "e82c2794184ecfc288b46066153823a7cd16533343a923f90cc0766f3a23061e"
+    },
+    {
+      "file": "package-identity.json",
+      "sha256": "71fe3e8117e3401b16356cc15891adafc12005062dad3bad6da32739d2e588dd"
+    },
+    {
+      "file": "recovery-live-probe.json",
+      "sha256": "a4866dcfd4080f7d4370fd2c00f33f48d7bf51ea3a8b9ac0ca24e509f07b03ad"
+    },
+    {
+      "file": "validation-gates.json",
+      "sha256": "8bc83fec72e46ce73a973cea4696438308babbda3c42114a1c657e1422337ac1"
+    }
+  ],
+  "package_version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "schema": "dadooh.c25.evidence_manifest.v1"
+}

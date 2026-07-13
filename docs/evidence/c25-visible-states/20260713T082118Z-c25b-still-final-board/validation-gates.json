@@ -1,0 +1,47 @@
+{
+  "ota_release_gate": {
+    "failed_steps": [],
+    "passed": true,
+    "repo_dirty": false,
+    "steps": 82
+  },
+  "passed": true,
+  "player_runtime_release_gate": {
+    "kiosk_py_sha256": "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0",
+    "passed": true,
+    "payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+    "source_commit": "54308e4a09ef693dbfb3d6b31ce9626908ca0c16",
+    "tree_sha256": "a7baf69dc249c39b2f6f8653873171fa8d799c814acbe8bc95c3eeed2c7136fc",
+    "version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
+  },
+  "recorded_at_utc": "2026-07-13T08:37:08Z",
+  "schema": "dadooh.c25.player_runtime.final_validation.v1",
+  "tests": [
+    {
+      "count": 95,
+      "name": "playback_deep_health_fixtures",
+      "passed": true
+    },
+    {
+      "count": 59,
+      "name": "player_runtime_static",
+      "passed": true
+    },
+    {
+      "count": 36,
+      "name": "lab_quarantine_reset",
+      "passed": true
+    },
+    {
+      "count": 68,
+      "name": "ota_policy_static",
+      "passed": true
+    },
+    {
+      "count": 31,
+      "name": "player_runtime_release_gate_self_test",
+      "passed": true
+    }
+  ],
+  "validated_repo_head": "361886e743aac7e7dc1f6c17c0ff0716ceffe8e9"
+}

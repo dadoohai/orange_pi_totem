@@ -72,8 +72,9 @@ Erro de API nunca deve ser rotulado automaticamente como falta de internet.
   na proxima imagem de referencia; ele nao sera atribuido ao pacote OTA comum.
 - O renderer de `totem-core` aparece somente quando o player nao possui DRM.
 - Enquanto o processo do player esta vivo, seu placeholder continua sendo a
-  superficie visivel. A atualizacao dinamica desse placeholder e uma fatia
-  separada de `player-runtime`, nao uma claim desta rodada.
+  superficie visivel. A atualizacao dinamica desse placeholder foi separada de
+  C25A por pertencer a `player-runtime` e foi fechada na fatia C25B registrada
+  abaixo; ela nao passa a pertencer ao payload `totem-core`.
 - `first_frame_ready` confirma hoje a aceitacao do caminho pelo MPV, nao um
   pixel fisico no HDMI. Por isso C25A nao usa esse sinal para afirmar na tela
   que um frame foi comprovadamente apresentado; essa prova pertence a C25B.
