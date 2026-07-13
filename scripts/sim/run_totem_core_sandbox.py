@@ -43,6 +43,22 @@ CORE_FILES = (
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
 )
+CORE_SELF_TESTS = [
+    "python3 bin/totem_setup_visual_wizard.py --self-test",
+    "python3 bin/totem_wifi_nm_adapter.py --self-test",
+    "python3 bin/totem_visual_splash.py --self-test",
+    "python3 bin/totem_status_render_preview.py --self-test",
+    "python3 bin/totem_status_aggregate.py --self-test",
+    "bash bin/totem_status_renderer.sh --self-test",
+    "python3 bin/totem_config_contract_validate.py --self-test",
+    "python3 bin/totem_qr_pairing_client.py --self-test",
+    "python3 bin/totem_settings_production_apply_policy.py --self-test",
+    "bash -n bin/totem_open_settings_session.sh",
+    "bash -n bin/totem_visual_tty_guard.sh",
+    "bash -n bin/totem_firstboot_gate.sh",
+    "bash -n bin/totem_status_renderer.sh",
+    "restore-order-static-check",
+]
 
 
 def timestamp() -> str:
@@ -184,6 +200,7 @@ def create_initial_release(sandbox: Path) -> None:
                 "schema": "dadooh.totem.core.health.v1",
                 "component": "totem-core",
                 "sandbox_initial": True,
+                "self_tests": CORE_SELF_TESTS,
             },
             indent=2,
             sort_keys=True,
@@ -263,7 +280,15 @@ def build_fake_package(sandbox: Path, version: str) -> tuple[Path, Path, bool]:
     (stage / "health").mkdir(parents=True, exist_ok=True)
     (stage / "manifest-fragment").mkdir(parents=True, exist_ok=True)
     (stage / "health" / "totem-core-health.json").write_text(
-        json.dumps({"schema": "dadooh.totem.core.health.v1", "component": "totem-core"}, sort_keys=True) + "\n",
+        json.dumps(
+            {
+                "schema": "dadooh.totem.core.health.v1",
+                "component": "totem-core",
+                "self_tests": CORE_SELF_TESTS,
+            },
+            sort_keys=True,
+        )
+        + "\n",
         encoding="utf-8",
     )
     payload = package_dir / f"dadooh-totem-core-{version}.tar.gz"
