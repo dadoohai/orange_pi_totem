@@ -9,13 +9,14 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25a_totem_core_accepted_on_homologation_board
-scope=totem-core_plus_image_bound_launcher_hook
+status=c25a_totem_core_validated_on_homologation_board
+scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_requires_next_image=true
 offline_tests=passed
 generated_visual_review=passed
-hdmi_c25a_visual_acceptance=passed
+board_framebuffer_flow_validation=passed
+hdmi_camera_flicker_acceptance=pending
 writer_mutating_e2e=not_repeated_in_this_round
 package_not_yet_promoted=true
 next_reference_image_pending=true
@@ -180,7 +181,7 @@ Proxima ordem objetiva:
 Estado atual:
 
 ```text
-c25a_totem_core=accepted_on_homologation_board
+c25a_totem_core=applied_on_homologation_board
 package=c25.1-visible-states-20260713T001600Z-7f204d7
 package_source_commit=7f204d725d4d10d4add85909a1a6d0fc99b23fd8
 package_payload_sha256=4407e407bae3badf041e109215cb16e15af6b70563f71c238c4d580ee95f1178
@@ -189,6 +190,7 @@ board_apply=passed
 wizard_navigation_and_cancel=passed_on_real_board
 incomplete_review_block=passed_on_real_board
 writer_state_layout=passed_on_real_framebuffer
+framebuffer_transition_atomicity=not_proven
 player_return=passed
 policy_restore=byte_identical
 rollback_target=c21.11-qr-pairing-20260712T021729Z-4068839
@@ -199,9 +201,10 @@ c25b_player_owned_live_states=pending_separate_slice
 
 O pacote `totem-core` foi aplicado pelo updater governado. A placa abriu o
 wizard real, navegou ate a Revisao, recusou conclusao incompleta, cancelou sem
-salvar e voltou a reproduzir midia. As telas de confirmacao, gravacao, sucesso
-e falha foram inspecionadas no framebuffer real e ficaram legiveis, sem corte
-ou sobreposicao.
+salvar e voltou a reproduzir midia. As telas estaveis de confirmacao, gravacao,
+sucesso e falha ficaram legiveis e sem overflow. Uma captura feita durante a
+transicao, porem, mostrou o quadro sendo desenhado progressivamente; esse
+achado reabriu o aceite e originou C25.2.
 
 Para nao alterar novamente uma configuracao funcional, esta sessao nao repetiu
 uma escrita real de Wi-Fi/ambiente. Portanto, o resultado confirma a navegacao,
@@ -210,7 +213,8 @@ cria uma nova claim de writer E2E mutante.
 
 A policy temporariamente aberta para `homologation` foi restaurada byte a byte
 para `stable`, o timer ficou ativo, o servico voltou ativo e o rollback para
-C21.11 permanece disponivel. C25A fica aceita na bancada, sem promocao publica.
+C21.11 permaneceu disponivel. Este checkpoint prova o apply e o fluxo inicial,
+mas sua claim visual final foi substituida pelo checkpoint C25.2 abaixo.
 
 Evidencia:
 `docs/evidence/c25-visible-states/20260713T003029Z-board-hdmi-acceptance/`.
@@ -222,3 +226,49 @@ Proxima ordem objetiva:
    enquanto o player possui a tela;
 3. promover C25A somente dentro do fluxo OTA governado, sem inferir que o
    aceite desta placa valida automaticamente uma nova imagem.
+
+## Checkpoint C25.2 - Quadro Composto Antes Da Publicacao - 2026-07-13
+
+Estado atual:
+
+```text
+c25a_totem_core=validated_on_homologation_board
+package=c25.2-frame-publish-20260713T004706Z-3267ecf
+package_source_commit=3267ecf8e68e557d93ca3a60bd995c0af6c18796
+package_payload_sha256=9841eb8b25883c9e91fd12dbb6f4aafb55bc14b3ea39eb91f41a982628116067
+release_gate=82_of_82_clean
+sandbox_apply_rollback=passed
+board_apply=passed
+policy_restore=byte_identical
+wizard_navigation_guard_cancel_return=passed
+progressive_frame_composition=closed
+stable_frame_series=10_of_10_byte_identical
+scanout_atomicity=not_claimed
+hdmi_camera_flicker_acceptance=pending
+stable_promotion=not_authorized
+image_bound_launcher_hook=pending_reference_image
+c25b_player_owned_live_states=pending_separate_slice
+```
+
+A auditoria independente rejeitou corretamente a claim ampla do primeiro
+aceite: captura de framebuffer nao equivale a camera HDMI, o writer real nao
+foi repetido e o hook de app-exit depende da proxima imagem. Alem disso, uma
+captura transitoria revelou desenho progressivo.
+
+A causa localizada foi corrigida: o renderer agora compoe o quadro em memoria
+e somente depois o publica. Um erro no meio da composicao preserva o quadro
+anterior, coberto por self-test. Na placa, vinte transicoes levaram entre
+`0,153 s` e `0,183 s`; a serie estavel ficou identica em dez capturas.
+
+O framebuffer desta placa nao oferece um segundo quadro virtual. Leitura
+concorrente de alta frequencia ainda pode atravessar a copia final, portanto
+C25.2 nao promete page flip atomico nem ausencia absoluta de tearing por
+camera. Isso fica como limite conhecido, distinto do desenho progressivo ja
+fechado.
+
+Veredito: C25.2 esta aceita para homologacao funcional do `totem-core`, sem
+promocao `stable`. A proxima imagem deve incorporar o hook image-bound; C25B e
+o aceite perceptivo por camera continuam fatias separadas e rastreadas.
+
+Evidencia:
+`docs/evidence/c25-visible-states/20260713T010245Z-board-frame-publish-fix/`.

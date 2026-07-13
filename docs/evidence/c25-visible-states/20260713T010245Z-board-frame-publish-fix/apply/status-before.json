@@ -1,0 +1,60 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c25.1-visible-states-20260713T001600Z-7f204d7",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.11-qr-pairing-20260712T021729Z-4068839",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-13T00:21:13Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-13T00:13:20Z",
+      "path": "/data/core/totem/releases/c25.1-visible-states-20260713T001600Z-7f204d7",
+      "payload_sha256": "4407e407bae3badf041e109215cb16e15af6b70563f71c238c4d580ee95f1178",
+      "source": "local:dadooh-totem-core-c25.1-visible-states-20260713T001600Z-7f204d7.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "7f204d725d4d10d4add85909a1a6d0fc99b23fd8",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c25.1-visible-states-20260713T001600Z-7f204d7"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-13T00:21:19Z",
+      "source": "local:dadooh-totem-core-c25.1-visible-states-20260713T001600Z-7f204d7.manifest.json",
+      "started_at_utc": "2026-07-13T00:21:07Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c25.1-visible-states-20260713T001600Z-7f204d7"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-12T03:17:36Z",
+      "channel": "stable",
+      "manifest_created_at_utc": "2026-07-12T02:17:30Z",
+      "path": "/data/core/totem/releases/c21.11-qr-pairing-20260712T021729Z-4068839",
+      "payload_sha256": "8cb669b75ac446f5992da5237c981473dbd3dddc823beea326da2c53063ce27c",
+      "source": "github:dadoohai/orange_pi_totem:totem-core-c21.11-qr-pairing-20260712T021729Z-4068839",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "4068839c6e82545c0ad8805653c277787ace6da6",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.11-qr-pairing-20260712T021729Z-4068839"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-10T23:25:07Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

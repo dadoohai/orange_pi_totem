@@ -1,0 +1,10 @@
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-01.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-02.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-03.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-04.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-05.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-06.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-07.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-08.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-09.jpg
+34630a06d622b33c32f7600586ada1dced80a180ad60616b972ebe63650fcc2d  /tmp/c25-2-hdmi-acceptance/stable-review/review-10.jpg

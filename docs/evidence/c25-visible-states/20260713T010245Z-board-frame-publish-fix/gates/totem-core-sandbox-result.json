@@ -1,0 +1,1 @@
+{"apply_blocked_when_settings_active": true, "apply_local_passed": true, "output": "/tmp/c25-2-sandbox-evidence/totem-core-sandbox.json", "result": "passed", "rollback_passed": true, "sandbox_created": true, "settings_lock_guard_passed": true, "wrapper_fallback_passed": true}

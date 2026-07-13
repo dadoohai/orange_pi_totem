@@ -1,0 +1,6 @@
+2026-07-13T00:56:18Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-13T00:56:18Z INFO apply_start source=local:dadooh-totem-core-c25.2-frame-publish-20260713T004706Z-3267ecf.manifest.json manifest=/tmp/c25-final-package-2/dadooh-totem-core-c25.2-frame-publish-20260713T004706Z-3267ecf.manifest.json
+2026-07-13T00:56:18Z INFO local_payload_staged bytes=172282 sha256=9841eb8b25883c9e91fd12dbb6f4aafb55bc14b3ea39eb91f41a982628116067
+2026-07-13T00:56:25Z INFO totem_core_health_check_starting
+2026-07-13T00:56:31Z INFO apply_success version=c25.2-frame-publish-20260713T004706Z-3267ecf
+2026-07-13T00:56:31Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c25.2-frame-publish-20260713T004706Z-3267ecf
