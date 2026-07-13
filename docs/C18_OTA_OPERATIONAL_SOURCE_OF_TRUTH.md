@@ -44,9 +44,10 @@ Estado de distribuicao vigente: `prod8` + C23 continua sendo a referencia
 aceita em placa. `prod9` foi bloqueada antes da gravacao por residuos em blocos
 livres e overlayroot ambiguo. `prod10` corrigiu integralmente essa higiene, mas
 tambem foi bloqueada antes do flash: a senha root curta herdada da base foi
-quebrada em segundos por auditoria offline. A proxima candidata e `prod11`, com
-credencial forte externa ao Git e prova byte a byte de que o plaintext nao foi
-embutido.
+quebrada em segundos por auditoria offline. `prod11` corrigiu a credencial e
+passou a composicao offline, mas foi bloqueada porque o primeiro boot tinha dois
+geradores sucessivos de host keys SSH. A proxima candidata e `prod12`, que deve
+desativar somente a regeneracao redundante do Armbian.
 
 O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
@@ -126,9 +127,9 @@ Fila atual para consolidacao:
   validados e reversiveis na placa de homologacao. O alvo C25B final e
   `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com playback,
   `content_unavailable`, recuperacao, rollback e reaplicacao comprovados. Ele
-  foi incorporado, junto com o launcher/updater correspondentes, em `prod9` e
-  `prod10`, ambas bloqueadas antes do flash por achados forenses distintos. O
-  mesmo conjunto segue para `prod11`, ainda sem publicacao remota ou claim de
+  foi incorporado, junto com o launcher/updater correspondentes, em `prod9`,
+  `prod10` e `prod11`, todos bloqueados antes do flash por achados distintos. O
+  mesmo conjunto segue para `prod12`, ainda sem publicacao remota ou claim de
   distribuicao ate o aceite da imagem na placa. Contrato e evidencias estao em
   `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md` e
   `docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
@@ -149,7 +150,14 @@ Fila atual para consolidacao:
   quebrou a senha root curta herdada em cerca de 17 segundos. Tambem foi
   bloqueada antes do flash. Evidencia negativa em
   `docs/evidence/c18-update-validation/20260713T162710Z-prod10-build-94ee655/`.
-- O pendente agora e construir `prod11` com credencial forte, repetir as
+- `prod11`, commit `777e1fd`, SHA256
+  `675b9c9f8c3eb1bcbd90b5fa8fe398841d05d3d55a24d7df36b4ac571ec58922`,
+  fechou a credencial forte e toda a higiene anterior. A auditoria encontrou,
+  porem, o inicializador Dadooh criando host keys antes do SSH e o
+  `armbian-firstrun` apagando-as e recriando-as depois. Nenhuma placa recebeu a
+  imagem. Evidencia negativa em
+  `docs/evidence/c18-update-validation/20260713T191534Z-prod11-build-777e1fd/`.
+- O pendente agora e construir `prod12`, repetir as
   auditorias, grava-la do zero e fechar auto-pull/no-op/rollback dos alvos
   remotos exatos antes de torna-la a nova referencia de distribuicao.
   Seu construtor de producao recusa arvore suja, identidade de candidata
@@ -380,11 +388,13 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   residuos forenses do prod9, mas manteve uma senha root herdada de quatro
   digitos; seu SHA256 e
   `fb1ba57e0ac2cffdd74169c96b57cde03cccd8b576c9628642a6f51621cc8026`;
-- construir e auditar `prod11` com credencial de suporte forte externa ao Git,
-  hash substituido em `/etc/shadow` e `/etc/shadow-`, plaintext e verificador
-  antigo ausentes de todos os bytes da imagem, espaco livre ext4 zerado,
-  overlayroot removido, identidade SSH persistente, proveniencia correta e modo
-  de arquivo restrito;
+- `prod11` tambem esta **bloqueada e nao deve ser gravada**. Ela fechou
+  credencial e higiene, mas recriaria a identidade SSH duas vezes no primeiro
+  boot; seu SHA256 e
+  `675b9c9f8c3eb1bcbd90b5fa8fe398841d05d3d55a24d7df36b4ac571ec58922`;
+- construir e auditar `prod12` preservando a credencial forte e toda a higiene,
+  desativando a regeneracao SSH redundante do Armbian e mantendo ativa a
+  expansao automatica do rootfs;
 - gravar a sucessora do zero e validar boot, wizard/QR, gravacao da configuracao,
   retorno a midia, playback e estados C25;
 - publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar
@@ -392,7 +402,7 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - gerar/promover o core consolidado em `stable` e provar o timer de
   `totem-core`, evitando que a stable antiga tente downgrade sobre a imagem;
 - executar auditoria final e, somente com essas provas verdes, substituir
-  `prod8` por `prod11` como imagem de referencia;
+  `prod8` pela sucessora aprovada como imagem de referencia;
 - manter futuras evolucoes separadas: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player. Grupos, dashboard e kill
   switch continuam roadmap M6 e nao bloqueiam a primeira escala aceita.

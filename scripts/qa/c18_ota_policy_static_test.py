@@ -511,15 +511,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("production totem-core profile requires --image-profile production", derive)
         self.assertIn("production images never allow dirty source trees", derive)
         self.assertIn("production source tree changed during image construction", derive)
-        self.assertIn("production candidate identity must match the pinned prod11 release", derive)
+        self.assertIn("production candidate identity must match the pinned prod12 release", derive)
         self.assertIn("binary image inputs changed during construction", derive)
         self.assertIn("production_image=true", derive)
         self.assertIn("artifact_private=false", derive)
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-11"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.11"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-12"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.12"', derive)
         self.assertIn("validate_player_runtime_baseline_package", derive)
         self.assertIn("validate_binary_build_inputs", derive)
         self.assertIn('BASE_IMAGE_SHA256 = "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af"', derive)
@@ -534,6 +534,13 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("production_ssh_host_keys_not_embedded", derive)
         self.assertIn("production_identity_init_unit_enabled", derive)
         self.assertIn("production_ssh_requires_identity_init", derive)
+        self.assertIn("production_armbian_host_key_regeneration_disabled", derive)
+        self.assertIn("production_rootfs_auto_expand_enabled", derive)
+        self.assertIn("production_armbian_firstrun_wants_target", derive)
+        self.assertIn("production_rootfs_resize_wants_target", derive)
+        self.assertIn("systemd_unit_has_exact_directive", derive)
+        self.assertIn('"/usr/lib/armbian/armbian-firstrun start"', derive)
+        self.assertIn('"/usr/lib/armbian/armbian-resize-filesystem start"', derive)
         self.assertIn("production_open_settings_uses_production_policy", derive)
         self.assertIn("production_lab_settings_policy_absent", derive)
         self.assertIn("production_overlayroot_disabled", derive)
@@ -735,22 +742,15 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 module.load_production_support_password(link)
 
             module.validate_candidate_identity(
-                "c18-hwdecode-prod-11",
-                "c18.image-prod.11",
-                "/etc/dadooh/c18-hwdecode-prod-11-image",
+                "c18-hwdecode-prod-12",
+                "c18.image-prod.12",
+                "/etc/dadooh/c18-hwdecode-prod-12-image",
                 image_profile="production",
             )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
-                    "c18-hwdecode-prod-11",
-                    "c18.image-prod.12",
-                    "/etc/dadooh/c18-hwdecode-prod-11-image",
-                    image_profile="production",
-                )
-            with self.assertRaises(SystemExit):
-                module.validate_candidate_identity(
                     "c18-hwdecode-prod-12",
-                    "c18.image-prod.12",
+                    "c18.image-prod.11",
                     "/etc/dadooh/c18-hwdecode-prod-12-image",
                     image_profile="production",
                 )
@@ -758,8 +758,95 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 module.validate_candidate_identity(
                     "c18-hwdecode-prod-11",
                     "c18.image-prod.11",
-                    "/etc/dadooh/c18-hwdecode-prod-11-image\nrm /etc/shadow",
+                    "/etc/dadooh/c18-hwdecode-prod-11-image",
                     image_profile="production",
+                )
+            with self.assertRaises(SystemExit):
+                module.validate_candidate_identity(
+                    "c18-hwdecode-prod-12",
+                    "c18.image-prod.12",
+                    "/etc/dadooh/c18-hwdecode-prod-12-image\nrm /etc/shadow",
+                    image_profile="production",
+                )
+
+            firstrun = (
+                "# configuration values for the armbian-firstrun service\n"
+                "# OPENSSHD_REGENERATE_HOST_KEYS=true is documented below\n"
+                "OPENSSHD_REGENERATE_HOST_KEYS=true\n"
+            )
+            sanitized_firstrun = module.sanitize_production_armbian_firstrun(firstrun)
+            self.assertIn("OPENSSHD_REGENERATE_HOST_KEYS=false", sanitized_firstrun)
+            self.assertIn(
+                "# OPENSSHD_REGENERATE_HOST_KEYS=true is documented below",
+                sanitized_firstrun,
+            )
+            self.assertNotIn("\nOPENSSHD_REGENERATE_HOST_KEYS=true\n", sanitized_firstrun)
+            with self.assertRaises(SystemExit):
+                module.sanitize_production_armbian_firstrun(
+                    firstrun + "OPENSSHD_REGENERATE_HOST_KEYS=true\n"
+                )
+            with self.assertRaises(SystemExit):
+                module.sanitize_production_armbian_firstrun(
+                    "OPENSSHD_REGENERATE_HOST_KEYS=false\n"
+                )
+
+            original_debugfs = module.base.debugfs
+            try:
+                module.base.debugfs = lambda _rootfs, _request: (
+                    'Inode: 12   Type: symlink\n'
+                    'Fast link dest: "/lib/systemd/system/example.service"\n'
+                )
+                self.assertEqual(
+                    module.debugfs_fast_symlink_target(Path("unused"), "/example"),
+                    "/lib/systemd/system/example.service",
+                )
+                module.base.debugfs = lambda _rootfs, _request: "Type: regular\n"
+                self.assertEqual(
+                    module.debugfs_fast_symlink_target(Path("unused"), "/example"),
+                    "",
+                )
+            finally:
+                module.base.debugfs = original_debugfs
+
+            firstrun_unit = (
+                "[Unit]\n"
+                "After=ssh.service\n"
+                "[Service]\n"
+                "EnvironmentFile=/etc/default/armbian-firstrun\n"
+                "ExecStart=/usr/lib/armbian/armbian-firstrun start\n"
+            )
+            self.assertTrue(
+                module.systemd_unit_has_exact_directive(
+                    firstrun_unit,
+                    "ExecStart",
+                    "/usr/lib/armbian/armbian-firstrun start",
+                )
+            )
+            self.assertTrue(
+                module.systemd_unit_directive_has_token(
+                    firstrun_unit,
+                    "After",
+                    "ssh.service",
+                )
+            )
+            for divergent_unit in (
+                firstrun_unit.replace(
+                    "armbian-firstrun start\n",
+                    "armbian-firstrun start --extra\n",
+                ),
+                firstrun_unit.replace(
+                    "ExecStart=/usr/lib/armbian/armbian-firstrun start\n",
+                    "# ExecStart=/usr/lib/armbian/armbian-firstrun start\n"
+                    "ExecStart=/bin/false\n",
+                ),
+                firstrun_unit + "ExecStart=/usr/lib/armbian/armbian-firstrun start\n",
+            ):
+                self.assertFalse(
+                    module.systemd_unit_has_exact_directive(
+                        divergent_unit,
+                        "ExecStart",
+                        "/usr/lib/armbian/armbian-firstrun start",
+                    )
                 )
 
             allowed_debugfs = (

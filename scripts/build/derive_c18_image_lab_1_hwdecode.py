@@ -78,8 +78,8 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-11"
-PRODUCTION_VERSION = "c18.image-prod.11"
+PRODUCTION_TAG = "c18-hwdecode-prod-12"
+PRODUCTION_VERSION = "c18.image-prod.12"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -96,6 +96,18 @@ PRODUCTION_OPEN_SETTINGS_UNIT = "/etc/systemd/system/totem-open-settings.service
 PRODUCTION_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_production_apply_policy.py"
 PRODUCTION_LAB_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_lab_apply_policy.sh"
 PRODUCTION_ARMBIAN_ENV = "/boot/armbianEnv.txt"
+PRODUCTION_ARMBIAN_FIRSTRUN_CONFIG = "/etc/default/armbian-firstrun"
+PRODUCTION_ARMBIAN_FIRSTRUN_SCRIPT = "/usr/lib/armbian/armbian-firstrun"
+PRODUCTION_ARMBIAN_FIRSTRUN_UNIT = "/lib/systemd/system/armbian-firstrun.service"
+PRODUCTION_ARMBIAN_FIRSTRUN_WANTS = (
+    "/etc/systemd/system/multi-user.target.wants/armbian-firstrun.service"
+)
+PRODUCTION_ROOTFS_RESIZE_SCRIPT = "/usr/lib/armbian/armbian-resize-filesystem"
+PRODUCTION_ROOTFS_RESIZE_UNIT = "/lib/systemd/system/armbian-resize-filesystem.service"
+PRODUCTION_ROOTFS_RESIZE_WANTS = (
+    "/etc/systemd/system/basic.target.wants/armbian-resize-filesystem.service"
+)
+PRODUCTION_ROOTFS_RESIZE_DISABLE_MARKER = "/root/.no_rootfs_resize"
 KIOSKY_PLAYER_COMMIT_MARKER = "/opt/totem/kiosky-player/.kiosky_player_commit"
 PRODUCTION_SHADOW_PATHS = ("/etc/shadow", "/etc/shadow-")
 PRODUCTION_SUPPORT_PASSWORD_MIN_LENGTH = 48
@@ -426,6 +438,53 @@ def sanitize_production_armbian_env(text: str) -> str:
     if "overlayroot=" in result:
         raise SystemExit("BLOCKED: overlayroot boot argument survived production sanitization")
     return result
+
+
+def sanitize_production_armbian_firstrun(text: str) -> str:
+    expected = "OPENSSHD_REGENERATE_HOST_KEYS=true"
+    lines = text.splitlines()
+    if lines.count(expected) != 1:
+        raise SystemExit(
+            "BLOCKED: expected exactly one enabled Armbian SSH host-key regeneration setting"
+        )
+    lines[lines.index(expected)] = "OPENSSHD_REGENERATE_HOST_KEYS=false"
+    result = "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+    if (
+        result.splitlines().count(expected) != 0
+        or result.splitlines().count("OPENSSHD_REGENERATE_HOST_KEYS=false") != 1
+    ):
+        raise SystemExit("BLOCKED: failed to disable Armbian SSH host-key regeneration")
+    return result
+
+
+def debugfs_fast_symlink_target(rootfs: Path, path: str) -> str:
+    output = base.debugfs(rootfs, f"stat {path}")
+    match = re.search(r'^Fast link dest: "([^"]+)"$', output, flags=re.MULTILINE)
+    return match.group(1) if match else ""
+
+
+def systemd_active_directive_values(unit_text: str, directive: str) -> list[str]:
+    pattern = re.compile(rf"^\s*{re.escape(directive)}\s*=\s*(.*)$")
+    values = []
+    for raw_line in unit_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        match = pattern.fullmatch(raw_line)
+        if match:
+            values.append(match.group(1).strip())
+    return values
+
+
+def systemd_unit_has_exact_directive(unit_text: str, directive: str, value: str) -> bool:
+    return systemd_active_directive_values(unit_text, directive) == [value]
+
+
+def systemd_unit_directive_has_token(unit_text: str, directive: str, token: str) -> bool:
+    return any(
+        token in value.split()
+        for value in systemd_active_directive_values(unit_text, directive)
+    )
 
 
 def resolve_zerofree(explicit: str | None) -> Path:
@@ -898,7 +957,7 @@ def validate_candidate_identity(tag: str, version: str, marker: str,
     if image_profile == "production" and (
         tag != PRODUCTION_TAG or version != PRODUCTION_VERSION or marker != PRODUCTION_MARKER
     ):
-        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod11 release")
+        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod12 release")
 
 
 def main():
@@ -1148,6 +1207,7 @@ def main():
     seed_tmp.write_text(json.dumps(seed_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     production_armbian_env_tmp = work / "armbianEnv.production.txt"
+    production_armbian_firstrun_tmp = work / "armbian-firstrun.production"
     kiosky_commit_tmp = work / ".kiosky_player_commit"
     production_shadow_entries: dict[str, dict] = {}
     production_base_root_password_hashes: set[str] = set()
@@ -1166,6 +1226,20 @@ def main():
             raise SystemExit(f"BLOCKED: production boot environment invalid at {PRODUCTION_ARMBIAN_ENV}") from exc
         production_armbian_env_tmp.write_text(
             sanitize_production_armbian_env(production_armbian_env_original),
+            encoding="utf-8",
+        )
+        try:
+            production_armbian_firstrun_original = debugfs_read_bytes(
+                rootfs,
+                PRODUCTION_ARMBIAN_FIRSTRUN_CONFIG,
+            ).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise SystemExit(
+                f"BLOCKED: Armbian first-run configuration invalid at "
+                f"{PRODUCTION_ARMBIAN_FIRSTRUN_CONFIG}"
+            ) from exc
+        production_armbian_firstrun_tmp.write_text(
+            sanitize_production_armbian_firstrun(production_armbian_firstrun_original),
             encoding="utf-8",
         )
         kiosky_commit_tmp.write_text(PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT + "\n", encoding="utf-8")
@@ -1254,6 +1328,8 @@ def main():
         f"production_private_lab_inputs_removed={str(args.image_profile == 'production').lower()}",
         f"production_free_space_zeroed={str(args.image_profile == 'production').lower()}",
         f"production_ssh_host_keys_generated_on_device={str(args.image_profile == 'production').lower()}",
+        f"production_armbian_host_key_regeneration_disabled={str(args.image_profile == 'production').lower()}",
+        f"production_rootfs_auto_expand_enabled={str(args.image_profile == 'production').lower()}",
         f"production_shared_support_credential_rotated={str(args.image_profile == 'production').lower()}",
         f"production_support_credential_csprng_provenance={str(args.image_profile == 'production').lower()}",
         f"production_per_device_credentials_pending={str(args.image_profile == 'production').lower()}",
@@ -1327,6 +1403,11 @@ def main():
         put(str(PRODUCTION_SSH_DROPIN_SOURCE), PRODUCTION_SSH_DROPIN, "0644")
         put(str(PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE), PRODUCTION_OPEN_SETTINGS_UNIT, "0644")
         put(str(production_armbian_env_tmp), PRODUCTION_ARMBIAN_ENV, "0644")
+        put(
+            str(production_armbian_firstrun_tmp),
+            PRODUCTION_ARMBIAN_FIRSTRUN_CONFIG,
+            "0644",
+        )
         put(str(kiosky_commit_tmp), KIOSKY_PLAYER_COMMIT_MARKER, "0644")
         for shadow_path, shadow_entry in production_shadow_entries.items():
             put(str(shadow_entry["tmp"]), shadow_path, f"{shadow_entry['mode']:04o}")
@@ -1475,6 +1556,34 @@ def main():
     production_ssh_dropin_now = base.cat_file(vroot, PRODUCTION_SSH_DROPIN) or ""
     production_open_settings_unit_now = base.cat_file(vroot, PRODUCTION_OPEN_SETTINGS_UNIT) or ""
     production_armbian_env_now = base.cat_file(vroot, PRODUCTION_ARMBIAN_ENV) or ""
+    production_armbian_firstrun_config_now = (
+        base.cat_file(vroot, PRODUCTION_ARMBIAN_FIRSTRUN_CONFIG) or ""
+    )
+    production_armbian_firstrun_script_now = (
+        base.cat_file(vroot, PRODUCTION_ARMBIAN_FIRSTRUN_SCRIPT) or ""
+    )
+    production_armbian_firstrun_unit_now = (
+        base.cat_file(vroot, PRODUCTION_ARMBIAN_FIRSTRUN_UNIT) or ""
+    )
+    production_armbian_firstrun_wants_stat = base.stat_file(
+        vroot,
+        PRODUCTION_ARMBIAN_FIRSTRUN_WANTS,
+    )
+    production_armbian_firstrun_wants_target = debugfs_fast_symlink_target(
+        vroot,
+        PRODUCTION_ARMBIAN_FIRSTRUN_WANTS,
+    )
+    production_rootfs_resize_unit_now = (
+        base.cat_file(vroot, PRODUCTION_ROOTFS_RESIZE_UNIT) or ""
+    )
+    production_rootfs_resize_wants_stat = base.stat_file(
+        vroot,
+        PRODUCTION_ROOTFS_RESIZE_WANTS,
+    )
+    production_rootfs_resize_wants_target = debugfs_fast_symlink_target(
+        vroot,
+        PRODUCTION_ROOTFS_RESIZE_WANTS,
+    )
     kiosky_commit_verify_file = work / "kiosky-player-commit.verify"
     base.debugfs(vroot, f"dump {KIOSKY_PLAYER_COMMIT_MARKER} {kiosky_commit_verify_file}")
     kiosky_commit_marker_now = (
@@ -1669,6 +1778,55 @@ def main():
             if args.image_profile == "production"
             else "n/a"
         ),
+        "production_armbian_host_key_regeneration_disabled": (
+            present(PRODUCTION_ARMBIAN_FIRSTRUN_CONFIG)
+            and production_armbian_firstrun_config_now.splitlines().count(
+                "OPENSSHD_REGENERATE_HOST_KEYS=false"
+            ) == 1
+            and production_armbian_firstrun_config_now.splitlines().count(
+                "OPENSSHD_REGENERATE_HOST_KEYS=true"
+            ) == 0
+            and present(PRODUCTION_ARMBIAN_FIRSTRUN_SCRIPT)
+            and "if [[ \"${OPENSSHD_REGENERATE_HOST_KEYS}\" = true ]]"
+            in production_armbian_firstrun_script_now
+            and "rm -f /etc/ssh/ssh_host*" in production_armbian_firstrun_script_now
+            and present(PRODUCTION_ARMBIAN_FIRSTRUN_UNIT)
+            and systemd_unit_directive_has_token(
+                production_armbian_firstrun_unit_now,
+                "After",
+                "ssh.service",
+            )
+            and systemd_unit_has_exact_directive(
+                production_armbian_firstrun_unit_now,
+                "EnvironmentFile",
+                "/etc/default/armbian-firstrun",
+            )
+            and systemd_unit_has_exact_directive(
+                production_armbian_firstrun_unit_now,
+                "ExecStart",
+                "/usr/lib/armbian/armbian-firstrun start",
+            )
+            and production_armbian_firstrun_wants_stat.get("type") == "symlink"
+            and production_armbian_firstrun_wants_target
+            == PRODUCTION_ARMBIAN_FIRSTRUN_UNIT
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_rootfs_auto_expand_enabled": (
+            present(PRODUCTION_ROOTFS_RESIZE_SCRIPT)
+            and execu(PRODUCTION_ROOTFS_RESIZE_SCRIPT)
+            and present(PRODUCTION_ROOTFS_RESIZE_UNIT)
+            and systemd_unit_has_exact_directive(
+                production_rootfs_resize_unit_now,
+                "ExecStart",
+                "/usr/lib/armbian/armbian-resize-filesystem start",
+            )
+            and production_rootfs_resize_wants_stat.get("type") == "symlink"
+            and production_rootfs_resize_wants_target == PRODUCTION_ROOTFS_RESIZE_UNIT
+            and not present(PRODUCTION_ROOTFS_RESIZE_DISABLE_MARKER)
+            if args.image_profile == "production"
+            else "n/a"
+        ),
         "production_free_space_zeroed": verify_free_space_zeroed,
         "production_kiosky_commit_marker_matches_c25b": (
             kiosky_commit_marker_now == PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT
@@ -1803,6 +1961,10 @@ def main():
         "c12_readonly_blocked": args.image_profile == "production",
         "production_rootfs_mode": "ext4_rw" if args.image_profile == "production" else "n/a",
         "production_overlayroot_disabled": v["production_overlayroot_disabled"],
+        "production_armbian_host_key_regeneration_disabled": v[
+            "production_armbian_host_key_regeneration_disabled"
+        ],
+        "production_rootfs_auto_expand_enabled": v["production_rootfs_auto_expand_enabled"],
         "production_free_space_zeroed": v["production_free_space_zeroed"],
         "production_zerofree_summary": verify_zerofree_summary,
         "production_zerofree_tool_sha256": zerofree_tool_sha256,
@@ -1875,8 +2037,8 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-10 (blocked pre-flash: inherited four-digit root password "
-            "was recoverable by a short offline brute-force audit)"
+            "c18-hwdecode-prod-11 (blocked pre-flash: Armbian first-run would regenerate "
+            "Dadooh SSH host keys after ssh.service started)"
         )
         manifest["production_access_nonclaim"] = (
             "CSPRNG-generated shared support password SSH access remains enabled by explicit "

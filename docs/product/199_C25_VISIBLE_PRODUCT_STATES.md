@@ -9,7 +9,7 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_prod9_and_prod10_blocked_prod11_pending
+status=c25_validated_prod9_prod10_prod11_blocked_prod12_pending
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_preserved_in_candidate_chain=true
@@ -27,7 +27,8 @@ remote_targets_not_yet_promoted=true
 next_reference_image_successor_pending=true
 prod9_board_acceptance=blocked_do_not_flash
 prod10_board_acceptance=blocked_do_not_flash
-prod11_board_acceptance=pending_build_and_forensic_audit
+prod11_board_acceptance=blocked_do_not_flash
+prod12_board_acceptance=pending_build_and_forensic_audit
 ```
 
 ## Contrato Publico V1
@@ -427,3 +428,35 @@ suja, identidade divergente e falha silenciosa de ferramenta; seu marcador final
 fecha imagem, hash e evidencias, mas nao substitui o aceite forense para flash.
 Evidencia negativa:
 `docs/evidence/c18-update-validation/20260713T162710Z-prod10-build-94ee655/`.
+
+## Checkpoint Prod11 - Credencial Verde, Identidade SSH Bloqueada - 2026-07-13
+
+O prod11 substituiu a senha root herdada por uma credencial externa forte,
+preservou `/etc/shadow` e `/etc/shadow-`, zerou os blocos livres e removeu
+plaintext, verificadores antigos, host keys e identidades de laboratorio. A
+composicao offline passou integralmente.
+
+A auditoria da imagem encontrou um blocker de primeiro boot: o inicializador
+Dadooh criaria host keys antes do SSH, mas o `armbian-firstrun`, executado depois
+do SSH, estava configurado para apaga-las, recria-las e reiniciar o servico. A
+identidade final seria unica, mas poderia mudar durante o primeiro acesso. A
+expansao automatica do rootfs foi confirmada separadamente e nao e blocker.
+
+```text
+candidate_image=c18-hwdecode-prod-11
+image_sha256=675b9c9f8c3eb1bcbd90b5fa8fe398841d05d3d55a24d7df36b4ac571ec58922
+image_repo_commit=777e1fd730d6c6f6915310a18b6af5ec7a2d8294
+credential_hygiene=passed
+free_blocks_zeroed=58530_of_58530
+rootfs_auto_expand=enabled
+ssh_host_identity=blocked_double_regeneration_on_first_boot
+board_flash=blocked_do_not_flash
+distribution_reference=still_prod8
+next_candidate=c18-hwdecode-prod-12
+```
+
+O prod12 deve usar o controle oficial
+`OPENSSHD_REGENERATE_HOST_KEYS=false`, mantendo as demais tarefas do primeiro
+boot do Armbian e deixando somente o inicializador Dadooh como dono da identidade
+SSH. Build e auditoria forense devem ser repetidos antes do flash. Evidencia:
+`docs/evidence/c18-update-validation/20260713T191534Z-prod11-build-777e1fd/`.

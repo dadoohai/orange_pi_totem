@@ -1,0 +1,35 @@
+{
+  "schema": "dadooh.c18.production_image_forensic_blocker.v1",
+  "candidate": {
+    "image_tag": "c18-hwdecode-prod-11",
+    "image_version": "c18.image-prod.11",
+    "image_sha256": "675b9c9f8c3eb1bcbd90b5fa8fe398841d05d3d55a24d7df36b4ac571ec58922",
+    "repo_commit": "777e1fd730d6c6f6915310a18b6af5ec7a2d8294"
+  },
+  "positive_findings": {
+    "offline_validation_passed": true,
+    "free_ext4_blocks_zeroed": true,
+    "support_credential_plaintext_absent": true,
+    "inherited_root_verifier_absent": true,
+    "embedded_ssh_host_keys_absent": true,
+    "rootfs_auto_expand_enabled": true,
+    "filesystem_clean": true
+  },
+  "blocker": {
+    "category": "first_boot_ssh_host_key_double_regeneration",
+    "dadooh_identity_init_before_ssh": true,
+    "armbian_firstrun_after_ssh": true,
+    "armbian_opensshd_regenerate_host_keys": true,
+    "impact": "ssh host identity may change after first access and restart the support session"
+  },
+  "accepted_non_blocking_risks": {
+    "shared_high_entropy_support_password": true,
+    "exact_target_player_runtime_without_device_signature_enforcement": true
+  },
+  "decision": {
+    "flash_allowed": false,
+    "distribution_allowed": false,
+    "production_reference_unchanged": "c18-hwdecode-prod-8",
+    "next_candidate": "c18-hwdecode-prod-12"
+  }
+}
