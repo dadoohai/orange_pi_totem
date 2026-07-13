@@ -102,6 +102,7 @@ SUPPORTED_UPDATER_FEATURES = {
     "c18-safe-payload-v1",
     "c18-track-v1",
     "c18-player-runtime-verify-then-promote-v1",
+    "c25-player-surface-health-v1",
 }
 REQUIRED_UPDATER_FEATURES = {
     "c18-player-runtime-verify-then-promote-v1",
@@ -520,7 +521,12 @@ def validate_lab_rollback(run_dir: Path, package_manifest: dict[str, Any]) -> tu
     return errors, data
 
 
-def validate_candidate_result(run_dir: Path, marker: dict[str, Any]) -> list[str]:
+def validate_candidate_result(
+    run_dir: Path,
+    marker: dict[str, Any],
+    *,
+    require_startup_surface_health: bool = False,
+) -> list[str]:
     errors: list[str] = []
     data = load_json_object(run_dir / "candidate-health-result.json", "candidate_health_result", errors)
     if data.get("schema") != PLAYBACK_SCHEMA:
@@ -529,6 +535,13 @@ def validate_candidate_result(run_dir: Path, marker: dict[str, Any]) -> list[str
         errors.append("candidate_health_result_candidate_schema")
     if data.get("passed") is not True:
         errors.append("candidate_health_result_not_passed")
+    if require_startup_surface_health:
+        checks = data.get("checks")
+        if (
+            not isinstance(checks, dict)
+            or checks.get("candidate_startup_surface_local_evidence") is not True
+        ):
+            errors.append("candidate_health_startup_surface_local_evidence")
     teardown = data.get("candidate_teardown")
     teardown_sidecar = load_json_object(run_dir / "candidate-teardown-kernel.json", "candidate_teardown", errors)
     if not isinstance(teardown, dict):
@@ -630,7 +643,21 @@ def validate_semantics(run_dir: Path) -> list[str]:
     errors.extend(validate_lab_apply(run_dir, package_manifest))
     rollback_errors, rollback = validate_lab_rollback(run_dir, package_manifest)
     errors.extend(rollback_errors)
-    errors.extend(validate_candidate_result(run_dir, marker))
+    package_features = (
+        (package_manifest.get("requires") or {}).get("updater_features")
+        if isinstance(package_manifest.get("requires"), dict)
+        else []
+    )
+    errors.extend(
+        validate_candidate_result(
+            run_dir,
+            marker,
+            require_startup_surface_health=(
+                isinstance(package_features, list)
+                and "c25-player-surface-health-v1" in package_features
+            ),
+        )
+    )
     errors.extend(validate_playback_summary(run_dir, "candidate-health/playback-deep-health-public.json", "candidate_health"))
     before_adoption: dict[str, Any] = {}
     before_version: str | None = None
@@ -818,6 +845,7 @@ def self_test() -> None:
                 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
         checks = {key: True for key in REQUIRED_HEALTH_CHECKS}
+        checks["candidate_startup_surface_local_evidence"] = True
         counters = {
             "samples": 4,
             "estimated_frame_positive_steps": 3,
@@ -1110,6 +1138,19 @@ def self_test() -> None:
         assert ok["passed"], ok
         candidate_result_path = run / "candidate-health-result.json"
         candidate_result_clean = json.loads(candidate_result_path.read_text(encoding="utf-8"))
+        candidate_result_missing_surface = json.loads(json.dumps(candidate_result_clean))
+        candidate_result_missing_surface["checks"].pop(
+            "candidate_startup_surface_local_evidence",
+            None,
+        )
+        put("candidate-health-result.json", candidate_result_missing_surface)
+        refresh_manifest("image-fallback")
+        missing_surface = validate(run)
+        assert not missing_surface["passed"], missing_surface
+        assert (
+            "candidate_health_startup_surface_local_evidence" in missing_surface["errors"]
+        ), missing_surface
+        put("candidate-health-result.json", candidate_result_clean)
         candidate_result_missing_teardown = json.loads(json.dumps(candidate_result_clean))
         candidate_result_missing_teardown.pop("candidate_teardown", None)
         put("candidate-health-result.json", candidate_result_missing_teardown)

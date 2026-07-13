@@ -49,9 +49,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SNAPSHOT="$REPO_ROOT/player-runtime/kiosky-player/kiosk.py"
 RELEASE_GATE="$REPO_ROOT/scripts/qa/c18_player_runtime_release_gate.py"
+STATIC_GATE="$REPO_ROOT/scripts/qa/c18_player_runtime_static_test.py"
 
 [[ -f "$SNAPSHOT" ]] || die "governed player-runtime snapshot not found: $SNAPSHOT"
 [[ -f "$RELEASE_GATE" ]] || die "player-runtime release gate not found: $RELEASE_GATE"
+[[ -f "$STATIC_GATE" ]] || die "player-runtime static gate not found: $STATIC_GATE"
 [[ "$CHANNEL" =~ ^(lab|homologation)$ ]] || die "unsupported channel: $CHANNEL (player-runtime lab builder only supports lab or homologation)"
 
 pushd "$REPO_ROOT" >/dev/null
@@ -76,6 +78,9 @@ if [[ -z "$VERSION_OVERRIDE" ]]; then
 else
   VERSION="$VERSION_OVERRIDE"
 fi
+
+PYTHONDONTWRITEBYTECODE=1 python3 "$STATIC_GATE" >/dev/null \
+  || die "governed player-runtime snapshot failed static gate"
 [[ "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || die "unsafe version: $VERSION"
 [[ -z "$LAB_VARIANT" || "$LAB_VARIANT" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || die "unsafe lab variant: $LAB_VARIANT"
 
@@ -157,6 +162,7 @@ manifest = {
             "c18-safe-payload-v1",
             "c18-track-v1",
             "c18-player-runtime-verify-then-promote-v1",
+            "c25-player-surface-health-v1",
         ],
         "media_stack_id": "c18-hwdecode-v4l2request-copy",
         "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",

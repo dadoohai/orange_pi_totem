@@ -66,6 +66,7 @@ SUPPORTED_UPDATER_FEATURES = {
     "c18-safe-payload-v1",
     "c18-track-v1",
     "c18-player-runtime-verify-then-promote-v1",
+    "c25-player-surface-health-v1",
 }
 REQUIRED_UPDATER_FEATURES = {
     "c18-player-runtime-verify-then-promote-v1",

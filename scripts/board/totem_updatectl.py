@@ -103,7 +103,14 @@ TOTEM_CORE_REQUIRED_UPDATER_FEATURES = frozenset({
 PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES = frozenset({
     "c18-player-runtime-verify-then-promote-v1",
 })
-UPDATER_FEATURES = TOTEM_CORE_REQUIRED_UPDATER_FEATURES | PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES
+PLAYER_RUNTIME_OPTIONAL_UPDATER_FEATURES = frozenset({
+    "c25-player-surface-health-v1",
+})
+UPDATER_FEATURES = (
+    TOTEM_CORE_REQUIRED_UPDATER_FEATURES
+    | PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES
+    | PLAYER_RUNTIME_OPTIONAL_UPDATER_FEATURES
+)
 KNOWN_REQUIRES_KEYS = frozenset({
     "device",
     "base_image_min",
@@ -3153,6 +3160,7 @@ def _production_player_runtime_health_hook(
     interval_sec: float,
     startup_wait_sec: float,
     panfrost_fault_policy: str,
+    require_startup_surface_health: bool,
 ) -> Callable[[Path, Dict[str, Any]], Dict[str, Any]]:
     def _hook(release_dir: Path, identity: Dict[str, Any]) -> Dict[str, Any]:
         script_dir = Path(__file__).resolve().parent
@@ -3210,6 +3218,7 @@ def _production_player_runtime_health_hook(
                 interval_sec=interval_sec,
                 startup_wait_sec=startup_wait_sec,
                 panfrost_fault_policy=panfrost_fault_policy,
+                require_startup_surface_health=require_startup_surface_health,
             )
         except Exception:
             if service_stopped:
@@ -3560,6 +3569,10 @@ def cmd_apply_player_runtime_authorized(args: argparse.Namespace) -> int:
                 interval_sec=float(args.interval_sec),
                 startup_wait_sec=float(args.startup_wait_sec),
                 panfrost_fault_policy=str(args.panfrost_fault_policy),
+                require_startup_surface_health=(
+                    "c25-player-surface-health-v1"
+                    in ((manifest.get("requires") or {}).get("updater_features") or [])
+                ),
             )
             source = f"github-authorized:{repo}:{tag}"
             return _apply_from_manifest_path_unfrozen(

@@ -37,6 +37,7 @@ SUPPORTED_UPDATER_FEATURES = {
     "c18-safe-payload-v1",
     "c18-track-v1",
     "c18-player-runtime-verify-then-promote-v1",
+    "c25-player-surface-health-v1",
 }
 REQUIRED_UPDATER_FEATURES = {
     "c18-player-runtime-verify-then-promote-v1",
@@ -187,6 +188,7 @@ def validate_manifest(manifest: dict[str, Any], payload: Path) -> dict[str, Any]
         "payload_sha256": manifest["payload_sha256"].lower(),
         "source_commit": manifest.get("source_commit"),
         "channel": manifest.get("channel"),
+        "updater_features": list(updater_features),
     }
 
 
@@ -654,6 +656,7 @@ def validate_payload(payload: Path) -> dict[str, Any]:
     return {
         "kiosk_py_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
         "tree_sha256": tree,
+        "requires_c25_player_surface_health": 'data-visual-system="c25-visible-state-ui.v1"' in source,
     }
 
 
@@ -661,6 +664,13 @@ def validate_release(manifest_path: Path, payload_path: Path) -> dict[str, Any]:
     manifest = load_json(manifest_path)
     manifest_result = validate_manifest(manifest, payload_path)
     payload_result = validate_payload(payload_path)
+    if (
+        payload_result.get("requires_c25_player_surface_health") is True
+        and "c25-player-surface-health-v1" not in manifest_result.get("updater_features", [])
+    ):
+        raise GateError(
+            "C25 player surface payload requires updater feature c25-player-surface-health-v1"
+        )
     return {
         "schema": SCHEMA,
         "passed": True,
@@ -802,6 +812,19 @@ class C18PlayerRuntimeReleaseGateSelfTest(unittest.TestCase):
         data["requires"]["updater_features"].append("c18-unknown-future-feature")
         manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(GateError, "unsupported features"):
+            validate_release(manifest, payload)
+
+    def test_rejects_c25_surface_without_platform_health_feature(self) -> None:
+        manifest, payload, tmp = self.with_case("missing-c25-surface-health")
+        self.addCleanup(tmp.cleanup)
+        data = load_json(manifest)
+        data["requires"]["updater_features"] = [
+            item
+            for item in data["requires"]["updater_features"]
+            if item != "c25-player-surface-health-v1"
+        ]
+        manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(GateError, "requires updater feature c25-player-surface-health-v1"):
             validate_release(manifest, payload)
 
     def test_rejects_stock_mpv_default(self) -> None:

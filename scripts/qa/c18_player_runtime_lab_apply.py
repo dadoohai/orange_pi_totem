@@ -198,6 +198,9 @@ def main(argv: list[str]) -> int:
             interval_sec=args.interval_sec,
             startup_wait_sec=args.startup_wait_sec,
             panfrost_fault_policy=args.panfrost_fault_policy,
+            require_startup_surface_health=(
+                candidate_health.manifest_requires_startup_surface_health(manifest)
+            ),
         )
 
     previous_hook = updatectl.PLAYER_RUNTIME_HEALTH_HOOK

@@ -7,6 +7,7 @@ enable player OTA and must stay separate from the ordinary totem-core OTA path.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib.util
 import json
@@ -14,6 +15,7 @@ import os
 import py_compile
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -29,12 +31,18 @@ DERIVE_C18_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwde
 RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_ota_release_gate.py"
 LAB_THAW_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_lab_thaw.py"
 CANDIDATE_HEALTH_PATH = REPO_ROOT / "scripts" / "board" / "c18_player_runtime_candidate_health.py"
+PLAYER_RUNTIME_BUILDER_PATH = REPO_ROOT / "scripts" / "deploy" / "build_player_runtime_release_package.sh"
+UPDATECTL_PATH = REPO_ROOT / "scripts" / "board" / "totem_updatectl.py"
+PLAYER_RUNTIME_RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_release_gate.py"
+PLAYER_RUNTIME_EVIDENCE_GATE_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_evidence_gate.py"
+PLAYER_RUNTIME_COLDBOOT_PATH = REPO_ROOT / "scripts" / "qa" / "c18_player_runtime_m6_coldboot_trial.py"
 INNER_LAUNCHER_PATH = REPO_ROOT / "scripts" / "board" / "kiosky_service_launcher.sh"
 CONFIG_CONTRACT_VALIDATOR_PATH = REPO_ROOT / "scripts" / "board" / "totem_config_contract_validate.py"
+STATUS_AGGREGATE_PATH = REPO_ROOT / "scripts" / "board" / "totem_status_aggregate.py"
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5"
+EXPECTED_SNAPSHOT_SHA256 = "c116c2e20a8e9e40a7f4bf2934bfa7590754883aa019eaf43f2078372c3efc2c"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -57,6 +65,20 @@ def load_kiosk_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load_status_aggregate_module():
+    board_dir = str(STATUS_AGGREGATE_PATH.parent)
+    sys.path.insert(0, board_dir)
+    try:
+        spec = importlib.util.spec_from_file_location("c18_status_aggregate_under_test", STATUS_AGGREGATE_PATH)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("failed to load totem_status_aggregate.py spec")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path.remove(board_dir)
 
 
 class FakeProc:
@@ -128,8 +150,14 @@ class FakeMismatchMPV:
     def generation(self) -> int:
         return 1
 
-    def wait_for_current_path(self, _path: str) -> bool:
+    def wait_for_current_path(self, _path: str, timeout: float | None = None) -> bool:
         return False
+
+    def wait_for_local_frame_evidence(self, _path: str, **_kwargs: object) -> bool:
+        return False
+
+    def process_guard(self):
+        return contextlib.nullcontext()
 
     def load_file(self, path: str, alias: str = "") -> bool:
         self.load_calls.append(f"{path}|{alias}")
@@ -147,6 +175,81 @@ class FakeMismatchMPV:
 
     def restart(self, reason: str = "restart") -> None:
         self.restart_reasons.append(reason)
+
+    def is_running(self) -> bool:
+        return True
+
+    def pid(self) -> int:
+        return 1234
+
+
+class FakeSurfaceMPV:
+    def __init__(self) -> None:
+        self.current_generation = 1
+        self.load_calls: list[str] = []
+        self.current_path_matches = True
+
+    def generation(self) -> int:
+        return self.current_generation
+
+    def load_file(self, path: str, alias: str = "") -> bool:
+        self.load_calls.append(f"{path}|{alias}")
+        return True
+
+    def wait_for_local_frame_evidence(self, _path: str, **_kwargs: object) -> bool:
+        return self.current_path_matches
+
+    def wait_for_current_path(self, _path: str, timeout: float | None = None) -> bool:
+        return self.current_path_matches
+
+    def process_guard(self):
+        return contextlib.nullcontext()
+
+
+class FakeGenerationRecoveryMPV:
+    def __init__(self) -> None:
+        self.current_generation = 1
+        self.running = True
+        self.load_calls: list[str] = []
+        self.frame_checks = 0
+
+    def ensure_running(self) -> None:
+        if not self.running:
+            self.running = True
+            self.current_generation += 1
+
+    def is_running(self) -> bool:
+        return self.running
+
+    def generation(self) -> int:
+        return self.current_generation
+
+    def wait_for_current_path(self, _path: str, timeout: float | None = None) -> bool:
+        return True
+
+    def wait_for_local_frame_evidence(self, path: str, **_kwargs: object) -> bool:
+        if "startup-feedback" in path:
+            return True
+        self.frame_checks += 1
+        if self.frame_checks == 1:
+            self.running = False
+        return True
+
+    def process_guard(self):
+        return contextlib.nullcontext()
+
+    def load_file(self, path: str, alias: str = "") -> bool:
+        self.load_calls.append(f"{path}|{alias}")
+        return True
+
+    def seek_absolute(self, _seconds: float) -> bool:
+        return True
+
+    def set_property(self, _name: str, _value: object) -> bool:
+        return True
+
+    def append_file(self, _path: str) -> bool:
+        return True
 
     def pid(self) -> int:
         return 1234
@@ -167,6 +270,36 @@ class StopOnMismatchStatus:
 
     def snapshot(self) -> dict[str, object]:
         return dict(self._data)
+
+
+class StopOnRecoveredStatus(StopOnMismatchStatus):
+    def __init__(self, stop_event: threading.Event) -> None:
+        super().__init__(stop_event)
+        self.saw_recovery = False
+
+    def update(self, **kwargs: object) -> None:
+        super().update(**kwargs)
+        if kwargs.get("error_code") == "player_recovering":
+            self.saw_recovery = True
+        if self.saw_recovery and kwargs.get("content_state") == "playing":
+            self.stop_event.set()
+
+
+class FakeDeadMPV:
+    def __init__(self) -> None:
+        self.ensure_calls = 0
+
+    def ensure_running(self) -> None:
+        self.ensure_calls += 1
+
+    def is_running(self) -> bool:
+        return False
+
+    def generation(self) -> int:
+        return 0
+
+    def pid(self) -> None:
+        return None
 
 
 class C18PlayerRuntimeStaticTest(unittest.TestCase):
@@ -226,6 +359,202 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn("MPV loadfile verification failed", text)
         self.assertIn("MPV playlist-next verification failed", text)
         self.assertIn("MPV playlist-next post-cleanup verification failed", text)
+
+    def test_public_surfaces_use_product_copy_without_internal_causes(self) -> None:
+        kiosk = load_kiosk_module()
+        cases = {
+            "waiting_for_content": "Carregando conteúdo",
+            "error_no_content": "Conteúdo ainda não disponível",
+            "error_player_start": "Recuperando a exibição",
+        }
+        for state, expected_title in cases.items():
+            svg = kiosk.build_startup_feedback_svg(state)
+            self.assertIn(expected_title, svg)
+            self.assertIn('data-visual-system="c25-visible-state-ui.v1"', svg)
+            self.assertNotIn("STATUS:", svg)
+            self.assertNotIn(state, svg)
+            self.assertNotRegex(svg.lower(), r"\b(api|cache|internet|playlist|mpv)\b")
+            portrait_svg = kiosk.build_startup_feedback_svg(state, width=720, height=1280)
+            self.assertIn('viewBox="0 0 720 1280"', portrait_svg)
+            self.assertIn(expected_title.split()[0], portrait_svg)
+            self.assertNotRegex(portrait_svg.lower(), r"\b(api|cache|internet|playlist|mpv)\b")
+
+    def test_desired_public_surface_preserves_media_and_stratifies_failures(self) -> None:
+        kiosk = load_kiosk_module()
+        self.assertIsNone(
+            kiosk.desired_startup_feedback_state(
+                {"first_frame_ready": True, "playback_state": "playing"}
+            )
+        )
+        self.assertEqual(
+            kiosk.desired_startup_feedback_state(
+                {"first_frame_ready": False, "content_state": "media_load_failed"}
+            ),
+            "error_no_content",
+        )
+        self.assertEqual(
+            kiosk.desired_startup_feedback_state(
+                {"first_frame_ready": False, "error_code": "player_recovering"}
+            ),
+            "error_player_start",
+        )
+
+    def test_public_surface_is_loaded_once_per_state_and_mpv_generation(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-public-surface-") as tmp:
+            cfg = {"runtime_dir": tmp, "startup_feedback_enabled": True}
+            status = kiosk.StatusState()
+            mpv = FakeSurfaceMPV()
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_content"))
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_media"))
+            self.assertEqual(len(mpv.load_calls), 1)
+            mpv.current_path_matches = False
+            self.assertFalse(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_content"))
+            self.assertEqual(len(mpv.load_calls), 2)
+            mpv.current_path_matches = True
+            mpv.current_generation += 1
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_content"))
+            self.assertEqual(len(mpv.load_calls), 3)
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "error_no_content"))
+            self.assertEqual(len(mpv.load_calls), 4)
+
+    def test_local_frame_evidence_rejects_path_only_and_accepts_vo_frame(self) -> None:
+        kiosk = load_kiosk_module()
+        controller = kiosk.MPVController(
+            {"ipc_path": "/tmp/c18-frame.sock", "mpv_log_file": "/tmp/c18-frame.log"}
+        )
+        controller.current_path = lambda **_kwargs: "/data/media/a.mp4"
+        path_only = {
+            "vo-configured": False,
+            "estimated-frame-number": None,
+            "time-pos": None,
+            "video-params": None,
+        }
+        controller.get_property = lambda name, **_kwargs: path_only.get(name)
+        self.assertFalse(controller.wait_for_local_frame_evidence("/data/media/a.mp4", timeout=0))
+
+        static_frame = {
+            "vo-configured": True,
+            "estimated-frame-number": 0,
+            "time-pos": 0.0,
+            "video-params": {"w": 1920, "h": 1080},
+        }
+        controller.get_property = lambda name, **_kwargs: static_frame.get(name)
+        self.assertFalse(controller.wait_for_local_frame_evidence("/data/media/a.mp4", timeout=0.06))
+
+        clock_only = dict(static_frame, **{"estimated-frame-number": None})
+        controller.get_property = lambda name, **_kwargs: clock_only.get(name)
+        self.assertFalse(
+            controller.wait_for_local_frame_evidence(
+                "/data/media/a.mp4",
+                timeout=0,
+                require_progress=False,
+            )
+        )
+
+        frame_queries = 0
+
+        def advancing_property(name: str, **_kwargs: object) -> object:
+            nonlocal frame_queries
+            if name == "estimated-frame-number":
+                frame_queries += 1
+                return frame_queries - 1
+            return static_frame.get(name)
+
+        controller.get_property = advancing_property
+        self.assertTrue(controller.wait_for_local_frame_evidence("/data/media/a.mp4", timeout=0.2))
+
+        controller._generation = 1
+        original_current_path = controller.current_path
+        path_queries = 0
+
+        def generation_changing_path(**kwargs: object) -> str:
+            nonlocal path_queries
+            path_queries += 1
+            if path_queries == 1:
+                controller._generation = 2
+            return original_current_path(**kwargs)
+
+        controller.current_path = generation_changing_path
+        self.assertFalse(
+            controller.wait_for_local_frame_evidence(
+                "/data/media/a.mp4",
+                timeout=0.2,
+                expected_generation=1,
+            )
+        )
+
+    def test_process_guard_is_the_restart_lock_and_enforces_exclusion(self) -> None:
+        kiosk = load_kiosk_module()
+        controller = kiosk.MPVController(
+            {"ipc_path": "/tmp/c18-guard.sock", "mpv_log_file": "/tmp/c18-guard.log"}
+        )
+        guard = controller.process_guard()
+        self.assertIs(guard, controller._lock)
+        acquired = threading.Event()
+
+        def acquire_same_guard() -> None:
+            with controller.process_guard():
+                acquired.set()
+
+        guard.acquire()
+        thread = threading.Thread(target=acquire_same_guard)
+        thread.start()
+        try:
+            self.assertFalse(acquired.wait(timeout=0.05))
+        finally:
+            guard.release()
+        thread.join(timeout=1)
+        self.assertFalse(thread.is_alive())
+        self.assertTrue(acquired.is_set())
+
+    def test_player_surface_and_public_aggregate_converge(self) -> None:
+        kiosk = load_kiosk_module()
+        aggregate = load_status_aggregate_module()
+        launcher = {"state": "running", "display_connected": True, "last_app_exit_code": None}
+        with tempfile.TemporaryDirectory(prefix="c18-public-truth-") as tmp:
+            cfg = {"runtime_dir": tmp, "startup_feedback_enabled": True}
+            status = kiosk.StatusState()
+            mpv = FakeSurfaceMPV()
+
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "error_no_content"))
+            self.assertEqual(
+                aggregate.build_status(
+                    launcher_status=launcher,
+                    player_status=status.snapshot(),
+                    state_override=None,
+                )["state"],
+                "content_unavailable",
+            )
+
+            kiosk.mark_player_recovering(status, "test_restart")
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "error_player_start"))
+            self.assertEqual(
+                aggregate.build_status(
+                    launcher_status=launcher,
+                    player_status=status.snapshot(),
+                    state_override=None,
+                )["state"],
+                "player_error",
+            )
+
+            status.update(
+                playback_state="playing",
+                player_state="playing",
+                mpv_running=True,
+                first_frame_ready=True,
+                current_item={"path": str(KIOSK_PATH)},
+                public_surface_state="media",
+                error_code=None,
+            )
+            self.assertEqual(
+                aggregate.build_status(
+                    launcher_status=launcher,
+                    player_status=status.snapshot(),
+                    state_override=None,
+                )["state"],
+                "player_running",
+            )
 
     def test_snapshot_has_single_default_mpv_path_assignment(self) -> None:
         text = KIOSK_PATH.read_text(encoding="utf-8")
@@ -459,6 +788,100 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIsNone(status.snapshot().get("next_item"))
         self.assertTrue(mpv.restart_reasons)
         self.assertEqual(mpv.append_calls, [])
+
+    def test_playback_loop_exposes_recovery_when_mpv_generation_changes(self) -> None:
+        kiosk = load_kiosk_module()
+        stop_event = threading.Event()
+        status = StopOnRecoveredStatus(stop_event)
+        state = kiosk.PlaylistState()
+        item = kiosk.MediaItem(
+            url="cache://current.mp4",
+            duration_ms=10000,
+            path="/data/media/current.mp4",
+            campaign_id="campaign-1",
+            campaign_name="Campaign 1",
+        )
+        self.assertTrue(state.update([item], "fixture"))
+        with tempfile.TemporaryDirectory(prefix="c18-generation-recovery-") as tmp:
+            cfg = {
+                "state_dir": tmp,
+                "runtime_dir": tmp,
+                "startup_feedback_enabled": True,
+                "sync_enabled": False,
+                "preload_next": False,
+            }
+            mpv = FakeGenerationRecoveryMPV()
+            kiosk.playback_loop(cfg, threading.Lock(), state, status, mpv, kiosk.CacheIndex(cfg), stop_event)
+
+        self.assertEqual(mpv.current_generation, 2)
+        self.assertEqual(mpv.frame_checks, 2)
+        self.assertTrue(any("startup-feedback:error_player_start" in call for call in mpv.load_calls))
+        media_load_calls = [call for call in mpv.load_calls if "/data/media/current.mp4" in call]
+        self.assertEqual(len(media_load_calls), 2)
+        self.assertEqual(status.snapshot().get("content_state"), "playing")
+        self.assertEqual(status.snapshot().get("public_surface_presented_state"), "media")
+        self.assertEqual(status.snapshot().get("public_surface_generation"), 2)
+        self.assertIsNone(status.snapshot().get("error_code"))
+
+    def test_playback_loop_exits_after_bounded_mpv_recovery_failures(self) -> None:
+        kiosk = load_kiosk_module()
+        state = kiosk.PlaylistState()
+        item = kiosk.MediaItem(
+            url="cache://current.mp4",
+            duration_ms=10000,
+            path="/data/media/current.mp4",
+            campaign_id="campaign-1",
+            campaign_name="Campaign 1",
+        )
+        self.assertTrue(state.update([item], "fixture"))
+        with tempfile.TemporaryDirectory(prefix="c18-dead-mpv-") as tmp:
+            cfg = {
+                "state_dir": tmp,
+                "sync_enabled": False,
+                "preload_next": False,
+                "mpv_recovery_max_attempts": 2,
+            }
+            status = kiosk.StatusState()
+            mpv = FakeDeadMPV()
+            failure = kiosk.playback_loop(
+                cfg,
+                threading.Lock(),
+                state,
+                status,
+                mpv,
+                kiosk.CacheIndex(cfg),
+                threading.Event(),
+            )
+
+        self.assertEqual(failure, "mpv_recovery_exhausted")
+        self.assertEqual(mpv.ensure_calls, 2)
+        self.assertEqual(status.snapshot().get("player_state"), "error")
+        self.assertEqual(status.snapshot().get("error_code"), "player_start_failed")
+
+    def test_empty_playlist_also_exits_after_bounded_mpv_recovery_failures(self) -> None:
+        kiosk = load_kiosk_module()
+        state = kiosk.PlaylistState()
+        with tempfile.TemporaryDirectory(prefix="c18-empty-dead-mpv-") as tmp:
+            cfg = {
+                "state_dir": tmp,
+                "sync_enabled": False,
+                "mpv_recovery_max_attempts": 2,
+            }
+            status = kiosk.StatusState()
+            mpv = FakeDeadMPV()
+            failure = kiosk.playback_loop(
+                cfg,
+                threading.Lock(),
+                state,
+                status,
+                mpv,
+                kiosk.CacheIndex(cfg),
+                threading.Event(),
+            )
+
+        self.assertEqual(failure, "mpv_recovery_exhausted")
+        self.assertEqual(mpv.ensure_calls, 2)
+        self.assertEqual(status.snapshot().get("black_screen_risk_reason"), "mpv_recovery_exhausted")
 
     def test_still_image_prepare_creates_h264_sidecar_for_c18_mpv(self) -> None:
         kiosk = load_kiosk_module()
@@ -907,6 +1330,52 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertIn('panfrost_fault_policy: str = "absolute"', candidate_health)
         self.assertIn('choices=("absolute", "delta")', candidate_health)
         self.assertIn("panfrost_fault_policy=panfrost_fault_policy", candidate_health)
+        self.assertIn('"startup_feedback_enabled": require_startup_surface_health', candidate_health)
+        self.assertIn('"candidate_startup_surface_local_evidence"', candidate_health)
+
+    def test_candidate_surface_health_requirement_preserves_historical_packages(self) -> None:
+        candidate_health = load_candidate_health_module()
+        historical = {
+            "requires": {
+                "updater_features": ["c18-player-runtime-verify-then-promote-v1"]
+            }
+        }
+        c25 = {
+            "requires": {
+                "updater_features": [
+                    "c18-player-runtime-verify-then-promote-v1",
+                    "c25-player-surface-health-v1",
+                ]
+            }
+        }
+        self.assertFalse(candidate_health.manifest_requires_startup_surface_health(historical))
+        self.assertTrue(candidate_health.manifest_requires_startup_surface_health(c25))
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-config-") as tmp:
+            work = Path(tmp)
+            historical_cfg = candidate_health.candidate_config(
+                None,
+                work / "historical",
+            )
+            c25_cfg = candidate_health.candidate_config(
+                None,
+                work / "c25",
+                require_startup_surface_health=True,
+            )
+        self.assertFalse(historical_cfg["startup_feedback_enabled"])
+        self.assertTrue(c25_cfg["startup_feedback_enabled"])
+
+    def test_c25_surface_health_is_bound_from_builder_to_evidence(self) -> None:
+        feature = "c25-player-surface-health-v1"
+        for path in (
+            PLAYER_RUNTIME_BUILDER_PATH,
+            UPDATECTL_PATH,
+            PLAYER_RUNTIME_RELEASE_GATE_PATH,
+            PLAYER_RUNTIME_EVIDENCE_GATE_PATH,
+            PLAYER_RUNTIME_COLDBOOT_PATH,
+        ):
+            self.assertIn(feature, path.read_text(encoding="utf-8"), str(path))
+        builder = PLAYER_RUNTIME_BUILDER_PATH.read_text(encoding="utf-8")
+        self.assertIn('python3 "$STATIC_GATE"', builder)
 
     def test_lab_thaw_wrapper_is_guarded_and_m6_based(self) -> None:
         thaw = LAB_THAW_PATH.read_text(encoding="utf-8")

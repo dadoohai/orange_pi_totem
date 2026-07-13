@@ -222,6 +222,10 @@ def player_reports_loading_content(player_status: dict[str, Any] | None) -> bool
     startup_phase = string_value(player_status, "startup_phase")
     feedback_state = string_value(player_status, "startup_feedback_state")
     content_state = string_value(player_status, "content_state")
+    public_surface_state = string_value(player_status, "public_surface_state")
+
+    if public_surface_state == "loading_content":
+        return True
 
     loading_values = {
         "player_starting",
@@ -245,7 +249,10 @@ def player_reports_error(player_status: dict[str, Any] | None) -> bool:
     playback_state = string_value(player_status, "playback_state")
     player_state = string_value(player_status, "player_state")
     error_code = string_value(player_status, "error_code")
+    public_surface_state = string_value(player_status, "public_surface_state")
 
+    if public_surface_state == "player_error":
+        return True
     if playback_state in {"error", "failed", "fatal"}:
         return True
     if player_state in {"error", "failed", "fatal"}:
@@ -261,11 +268,14 @@ def player_reports_content_unavailable(player_status: dict[str, Any] | None) -> 
     player_state = string_value(player_status, "player_state")
     content_state = string_value(player_status, "content_state")
     playlist_update_state = string_value(player_status, "playlist_update_state")
+    public_surface_state = string_value(player_status, "public_surface_state")
     try:
         consecutive_failures = int(player_status.get("consecutive_failures") or 0)
     except (TypeError, ValueError):
         consecutive_failures = 0
 
+    if public_surface_state == "content_unavailable":
+        return True
     if playback_state in {"error", "failed", "fatal", "recovering"}:
         return True
     if player_state in {"error", "failed", "fatal", "error_player_start"}:
@@ -273,7 +283,10 @@ def player_reports_content_unavailable(player_status: dict[str, Any] | None) -> 
     if content_state in {
         "all_media_temporarily_blocked",
         "api_error_retrying",
+        "content_unavailable",
+        "error_no_content",
         "invalid_playlist_timeline",
+        "media_frame_not_ready",
         "media_load_failed",
         "media_path_mismatch",
         "offline_no_content",
@@ -596,6 +609,26 @@ def run_self_test() -> None:
         player_status=unavailable,
         state_override=None,
     )["state"] == "content_unavailable"
+    assert build_status(
+        launcher_status=launcher_running,
+        player_status=dict(
+            loading,
+            public_surface_state="content_unavailable",
+            content_state="content_unavailable",
+            error_code=None,
+        ),
+        state_override=None,
+    )["state"] == "content_unavailable"
+    assert build_status(
+        launcher_status=launcher_running,
+        player_status=dict(
+            loading,
+            public_surface_state="player_error",
+            content_state="player_recovering",
+            error_code="player_recovering",
+        ),
+        state_override=None,
+    )["state"] == "player_error"
     stale = build_status(
         launcher_status=launcher_running,
         player_status=playing,

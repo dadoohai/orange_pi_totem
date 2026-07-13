@@ -33,6 +33,7 @@ import totem_updatectl as updatectl
 
 LAB_ENV = "C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY"
 SCHEMA = "dadooh.c18.player_runtime.candidate_health.v1"
+STARTUP_SURFACE_HEALTH_FEATURE = "c25-player-surface-health-v1"
 WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 GPU_FAULT_RE = re.compile(
     r"panfrost.*(fault|hang|reset|error)|gpu sched timeout|JOB_BUS_FAULT|Unhandled Page fault|BO has no sgt",
@@ -253,7 +254,22 @@ def cleanup_candidate_ipc_path(cfg: dict[str, Any], work_root: Path) -> None:
         pass
 
 
-def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, Any]:
+def manifest_requires_startup_surface_health(manifest: dict[str, Any] | None) -> bool:
+    if not isinstance(manifest, dict):
+        return False
+    requires = manifest.get("requires")
+    if not isinstance(requires, dict):
+        return False
+    features = requires.get("updater_features")
+    return isinstance(features, list) and STARTUP_SURFACE_HEALTH_FEATURE in features
+
+
+def candidate_config(
+    template_path: Path | None,
+    work_dir: Path,
+    *,
+    require_startup_surface_health: bool = False,
+) -> dict[str, Any]:
     template = read_json_object(template_path)
     cfg = {key: template[key] for key in SAFE_TEMPLATE_KEYS if key in template}
     runtime_dir = work_dir / "runtime"
@@ -277,7 +293,7 @@ def candidate_config(template_path: Path | None, work_dir: Path) -> dict[str, An
         "mpv_path": WRAPPER,
         "hwdec": cfg.get("hwdec") or "auto",
         "mpv_debug_events": True,
-        "startup_feedback_enabled": False,
+        "startup_feedback_enabled": require_startup_surface_health,
     }
     cfg.update(overrides)
     return cfg
@@ -537,6 +553,7 @@ def run_candidate_health(
     interval_sec: float = 1.0,
     startup_wait_sec: float = 5.0,
     panfrost_fault_policy: str = "absolute",
+    require_startup_surface_health: bool = False,
 ) -> dict[str, Any]:
     if panfrost_fault_policy not in {"absolute", "delta"}:
         raise ValueError("panfrost_fault_policy must be absolute or delta")
@@ -550,7 +567,11 @@ def run_candidate_health(
         pass
 
     config_path = work_root / "candidate-config.json"
-    cfg = candidate_config(config_template, work_root)
+    cfg = candidate_config(
+        config_template,
+        work_root,
+        require_startup_surface_health=require_startup_surface_health,
+    )
     write_json(config_path, cfg)
     normalized_canary = normalize_canary_media(canary_media)
     if normalized_canary is not None:
@@ -687,6 +708,25 @@ def run_candidate_health(
     except OSError:
         result["candidate_launch_stderr_tail"] = []
     result["candidate_teardown"] = teardown
+    try:
+        final_status = read_json_object(Path(str(cfg["status_file"])))
+    except Exception:
+        final_status = {}
+    result["candidate_startup_surface_health_required"] = require_startup_surface_health
+    if require_startup_surface_health:
+        startup_surface_ready = (
+            final_status.get("startup_feedback_ever_presented") is True
+            and final_status.get("startup_feedback_local_evidence")
+            == "mpv_path_vo_frame_available"
+        )
+        result.setdefault("checks", {})[
+            "candidate_startup_surface_local_evidence"
+        ] = startup_surface_ready
+        if not startup_surface_ready:
+            reasons = result.setdefault("failure_reasons", [])
+            if "candidate_startup_surface_local_evidence" not in reasons:
+                reasons.append("candidate_startup_surface_local_evidence")
+            result["passed"] = False
     result.setdefault("checks", {})["candidate_teardown_gpu_fault_delta_zero"] = teardown.get("gpu_faults_delta") == 0
     result.setdefault("checks", {})["candidate_teardown_process_stopped_cleanly"] = teardown.get("process_stopped_cleanly") is True
     result.setdefault("counters", {})["candidate_teardown_gpu_faults_delta"] = teardown.get("gpu_faults_delta")
@@ -737,6 +777,7 @@ def main(argv: list[str]) -> int:
             interval_sec=args.interval_sec,
             startup_wait_sec=args.startup_wait_sec,
             panfrost_fault_policy=args.panfrost_fault_policy,
+            require_startup_surface_health=manifest_requires_startup_surface_health(manifest),
         )
     except Exception as exc:
         result = {

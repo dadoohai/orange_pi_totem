@@ -103,6 +103,7 @@ DEFAULT_CONFIG = {
     "mpv_watchdog_ping_failures_before_restart": 1,
     "mpv_watchdog_grace_after_load_sec": 0,
     "mpv_watchdog_grace_after_restart_sec": 0,
+    "mpv_recovery_max_attempts": 3,
     "media_load_retry_cooldown_sec": 60,
     "media_probe_enabled": True,
     "media_probe_ffprobe_path": "/usr/bin/ffprobe",
@@ -901,6 +902,8 @@ class StatusState:
             "startup_feedback_visible": False,
             "startup_feedback_display": "none",
             "startup_feedback_message": "Iniciando player",
+            "startup_feedback_ever_presented": False,
+            "startup_feedback_local_evidence": None,
             "content_state": "unknown",
             "first_frame_ready": False,
             "first_content_load_accepted": False,
@@ -908,6 +911,12 @@ class StatusState:
             "blocked_media_count": 0,
             "last_render_ok": None,
             "last_render_error": None,
+            "first_frame_evidence": None,
+            "public_surface_state": "loading_content",
+            "public_surface_presented_state": None,
+            "public_surface_generation": None,
+            "public_surface_evidence": None,
+            "error_code": None,
         }
         self.start_time = time.time()
 
@@ -932,11 +941,87 @@ STARTUP_FEEDBACK_MESSAGES = {
     "error_player_start": ("Dadooh", "Player indisponivel", "O sistema tentara reiniciar."),
 }
 
+PUBLIC_SURFACE_PRESETS = {
+    "loading_content": {
+        "title": "Carregando conteúdo",
+        "message": "Estamos preparando as mídias para exibição.",
+        "hint": "Isso pode levar alguns instantes.",
+        "status": "Preparando conteúdo",
+        "accent": "#22d3ee",
+        "kind": "progress",
+        "title_size": 58,
+    },
+    "content_unavailable": {
+        "title": "Conteúdo ainda não disponível",
+        "message": "O totem continuará verificando automaticamente.",
+        "hint": "Se a mensagem persistir, acione o suporte.",
+        "status": "Tentando novamente",
+        "accent": "#f59e0b",
+        "kind": "recovery",
+        "title_size": 44,
+    },
+    "player_error": {
+        "title": "Recuperando a exibição",
+        "message": "Tentaremos retomar a exibição automaticamente.",
+        "hint": "Se a mensagem persistir, acione o suporte.",
+        "status": "Recuperação automática",
+        "accent": "#f59e0b",
+        "kind": "recovery",
+        "title_size": 54,
+    },
+}
+
+CONTENT_UNAVAILABLE_STATES = {
+    "all_media_temporarily_blocked",
+    "api_error_retrying",
+    "invalid_playlist_timeline",
+    "media_frame_not_ready",
+    "media_load_failed",
+    "media_path_mismatch",
+    "offline_no_content",
+}
+
+CONTENT_UNAVAILABLE_PLAYLIST_STATES = {
+    "download_incomplete_retaining_last_known_good",
+    "empty_playlist_applied",
+    "offline_no_content",
+}
+
 
 def public_startup_state(value: object) -> str:
     state = str(value or "").strip().lower()
     if state in STARTUP_FEEDBACK_MESSAGES or state == "playing":
         return state
+    return "waiting_for_content"
+
+
+def public_surface_for_feedback(value: object) -> str:
+    state = public_startup_state(value)
+    if state == "error_no_content":
+        return "content_unavailable"
+    if state == "error_player_start":
+        return "player_error"
+    return "loading_content"
+
+
+def desired_startup_feedback_state(snapshot: Dict[str, Optional[object]]) -> Optional[str]:
+    if snapshot.get("first_frame_ready") is True or snapshot.get("playback_state") == "playing":
+        return None
+    if snapshot.get("error_code") in {"player_recovering", "player_start_failed"}:
+        return "error_player_start"
+    if snapshot.get("player_state") in {"error", "failed", "fatal"}:
+        return "error_player_start"
+
+    content_state = str(snapshot.get("content_state") or "")
+    playlist_state = str(snapshot.get("playlist_update_state") or "")
+    if content_state in CONTENT_UNAVAILABLE_STATES or playlist_state in CONTENT_UNAVAILABLE_PLAYLIST_STATES:
+        return "error_no_content"
+    try:
+        failures = int(snapshot.get("consecutive_failures") or 0)
+    except (TypeError, ValueError):
+        failures = 0
+    if failures > 0 and not snapshot.get("current_item"):
+        return "error_no_content"
     return "waiting_for_content"
 
 
@@ -963,38 +1048,123 @@ def update_waiting_status(
     )
 
 
-def startup_feedback_svg_path(cfg: Dict) -> str:
+def startup_feedback_svg_path(cfg: Dict, state: str = "waiting_for_content") -> str:
     runtime_dir = cfg.get("runtime_dir") or default_runtime_dir()
-    return os.path.join(str(runtime_dir), "startup-feedback.svg")
+    surface_state = public_surface_for_feedback(state)
+    return os.path.join(str(runtime_dir), f"startup-feedback-{surface_state}.svg")
 
 
 def build_startup_feedback_svg(state: str, *, width: int = 1280, height: int = 720) -> str:
-    safe_state = public_startup_state(state)
-    title, message, hint = STARTUP_FEEDBACK_MESSAGES.get(
-        safe_state, STARTUP_FEEDBACK_MESSAGES["waiting_for_content"]
-    )
-    escaped_state = html.escape(safe_state)
+    surface_state = public_surface_for_feedback(state)
+    preset = PUBLIC_SURFACE_PRESETS[surface_state]
+    title = html.escape(str(preset["title"]))
+    message = html.escape(str(preset["message"]))
+    hint = html.escape(str(preset["hint"]))
+    status_label = html.escape(str(preset["status"]).upper())
+    accent = str(preset["accent"])
+    title_size = int(preset["title_size"])
+    if height > width:
+        portrait_copy = {
+            "loading_content": {
+                "title_lines": ("Carregando", "conteúdo"),
+                "message_lines": ("Estamos preparando as mídias", "para exibição."),
+                "hint_lines": ("Isso pode levar alguns instantes.",),
+            },
+            "content_unavailable": {
+                "title_lines": ("Conteúdo ainda não", "disponível"),
+                "message_lines": ("O totem continuará verificando", "automaticamente."),
+                "hint_lines": ("Se a mensagem persistir,", "acione o suporte."),
+            },
+            "player_error": {
+                "title_lines": ("Recuperando", "a exibição"),
+                "message_lines": ("Tentaremos retomar a exibição", "automaticamente."),
+                "hint_lines": ("Se a mensagem persistir,", "acione o suporte."),
+            },
+        }[surface_state]
+        title_markup = "".join(
+            f'<text x="56" y="{236 + index * 62}" font-family="Arial, DejaVu Sans, sans-serif" font-size="52" font-weight="700" fill="#f8fafc">{html.escape(line)}</text>'
+            for index, line in enumerate(portrait_copy["title_lines"])
+        )
+        message_markup = "".join(
+            f'<text x="56" y="{394 + index * 42}" font-family="Arial, DejaVu Sans, sans-serif" font-size="27" fill="#cbd5e1">{html.escape(line)}</text>'
+            for index, line in enumerate(portrait_copy["message_lines"])
+        )
+        hint_markup = "".join(
+            f'<text x="56" y="{500 + index * 34}" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" fill="#9aa4b2">{html.escape(line)}</text>'
+            for index, line in enumerate(portrait_copy["hint_lines"])
+        )
+        if preset["kind"] == "progress":
+            portrait_visual = f"""
+    <circle cx="360" cy="800" r="78" fill="none" stroke="#3a4652" stroke-width="8"/>
+    <circle cx="360" cy="800" r="78" fill="none" stroke="{accent}" stroke-width="8" stroke-dasharray="76 414" stroke-linecap="round" transform="rotate(-90 360 800)"/>
+    <circle cx="338" cy="800" r="6" fill="{accent}"/><circle cx="360" cy="800" r="6" fill="{accent}"/><circle cx="382" cy="800" r="6" fill="{accent}"/>
+    <text x="360" y="938" font-family="Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#f8fafc">Preparando</text>"""
+        else:
+            side_label = "Verificando" if surface_state == "content_unavailable" else "Recuperando"
+            portrait_visual = f"""
+    <circle cx="360" cy="800" r="78" fill="none" stroke="#3a4652" stroke-width="8"/>
+    <circle cx="360" cy="800" r="78" fill="none" stroke="{accent}" stroke-width="8" stroke-dasharray="116 374" stroke-linecap="round" transform="rotate(-90 360 800)"/>
+    <circle cx="360" cy="800" r="18" fill="{accent}"/>
+    <text x="360" y="938" font-family="Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#f8fafc">{side_label}</text>"""
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 720 1280" role="img" aria-label="Dadooh: {title}" data-visual-system="c25-visible-state-ui.v1">
+  <rect width="720" height="1280" fill="#090c10"/>
+  <rect x="0" y="0" width="720" height="8" fill="{accent}"/>
+  <rect x="0" y="1206" width="720" height="74" fill="#0d1116"/>
+  <text x="56" y="72" font-family="Arial, DejaVu Sans, sans-serif" font-size="30" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <line x1="194" y1="44" x2="194" y2="78" stroke="#3a4652"/>
+  <text x="218" y="70" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#9aa4b2">Exibição digital</text>
+  <text x="56" y="154" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="{accent}">{status_label}</text>
+  {title_markup}
+  {message_markup}
+  {hint_markup}
+  <rect x="56" y="574" width="88" height="5" rx="2" fill="{accent}"/>
+  <rect x="56" y="620" width="608" height="430" rx="8" fill="#12171d" stroke="#2a333d"/>
+  <rect x="56" y="620" width="6" height="430" rx="3" fill="{accent}"/>
+  {portrait_visual}
+</svg>
+"""
+    if preset["kind"] == "progress":
+        side_visual = f"""
+    <circle cx="1064" cy="344" r="78" fill="none" stroke="#3a4652" stroke-width="8"/>
+    <circle cx="1064" cy="344" r="78" fill="none" stroke="{accent}" stroke-width="8" stroke-dasharray="76 414" stroke-linecap="round" transform="rotate(-90 1064 344)"/>
+    <circle cx="1042" cy="344" r="6" fill="{accent}"/><circle cx="1064" cy="344" r="6" fill="{accent}"/><circle cx="1086" cy="344" r="6" fill="{accent}"/>
+    <text x="1064" y="482" font-family="Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#f8fafc">Preparando</text>"""
+    else:
+        side_label = "Verificando" if surface_state == "content_unavailable" else "Recuperando"
+        side_visual = f"""
+    <circle cx="1064" cy="344" r="78" fill="none" stroke="#3a4652" stroke-width="8"/>
+    <circle cx="1064" cy="344" r="78" fill="none" stroke="{accent}" stroke-width="8" stroke-dasharray="116 374" stroke-linecap="round" transform="rotate(-90 1064 344)"/>
+    <circle cx="1064" cy="344" r="18" fill="{accent}"/>
+    <text x="1064" y="482" font-family="Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#f8fafc">{side_label}</text>"""
     return f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 1280 720" role="img" aria-label="Dadooh carregando conteudo">
-  <rect width="1280" height="720" fill="#101318"/>
-  <rect x="0" y="0" width="1280" height="10" fill="#22c55e"/>
-  <path d="M0 602 L1280 520 L1280 720 L0 720 Z" fill="#151923"/>
-  <text x="72" y="104" font-family="Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="700" fill="#f8fafc">{html.escape(title)}</text>
-  <text x="72" y="218" font-family="Arial, DejaVu Sans, sans-serif" font-size="64" font-weight="700" fill="#f8fafc">{html.escape(message)}</text>
-  <text x="76" y="276" font-family="Arial, DejaVu Sans, sans-serif" font-size="28" fill="#cbd5e1">{html.escape(hint)}</text>
-  <rect x="76" y="344" width="392" height="54" rx="8" fill="#111827" stroke="#374151"/>
-  <text x="104" y="379" font-family="Arial, DejaVu Sans Mono, monospace" font-size="22" font-weight="700" fill="#86efac">STATUS: {escaped_state}</text>
-  <text x="76" y="646" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#7d8796">Estado publico seguro. Nenhum dado privado exibido.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 1280 720" role="img" aria-label="Dadooh: {title}" data-visual-system="c25-visible-state-ui.v1">
+  <rect width="1280" height="720" fill="#090c10"/>
+  <rect x="0" y="0" width="1280" height="8" fill="{accent}"/>
+  <rect x="0" y="646" width="1280" height="74" fill="#0d1116"/>
+  <text x="72" y="76" font-family="Arial, DejaVu Sans, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <line x1="220" y1="48" x2="220" y2="82" stroke="#3a4652"/>
+  <text x="246" y="74" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#9aa4b2">Exibição digital</text>
+  <text x="72" y="160" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="{accent}">{status_label}</text>
+  <text x="72" y="242" font-family="Arial, DejaVu Sans, sans-serif" font-size="{title_size}" font-weight="700" fill="#f8fafc">{title}</text>
+  <text x="72" y="328" font-family="Arial, DejaVu Sans, sans-serif" font-size="29" fill="#cbd5e1">{message}</text>
+  <text x="72" y="400" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" fill="#9aa4b2">{hint}</text>
+  <rect x="72" y="466" width="96" height="5" rx="2" fill="{accent}"/>
+  <rect x="884" y="132" width="324" height="442" rx="8" fill="#12171d" stroke="#2a333d"/>
+  <rect x="884" y="132" width="6" height="442" rx="3" fill="{accent}"/>
+  {side_visual}
 </svg>
 """
 
 
 def write_startup_feedback_svg(cfg: Dict, state: str = "waiting_for_content") -> str:
-    target = startup_feedback_svg_path(cfg)
+    target = startup_feedback_svg_path(cfg, state)
+    rotation = normalize_rotation(str(cfg.get("rotation_deg") or 0))
+    width, height = (720, 1280) if rotation in {90, 270} else (1280, 720)
     os.makedirs(os.path.dirname(target), exist_ok=True)
     tmp_path = f"{target}.tmp"
     with open(tmp_path, "w", encoding="utf-8") as fh:
-        fh.write(build_startup_feedback_svg(state))
+        fh.write(build_startup_feedback_svg(state, width=width, height=height))
     os.replace(tmp_path, target)
     try:
         os.chmod(target, 0o600)
@@ -1007,42 +1177,132 @@ def show_startup_feedback(mpv: "MPVController", cfg: Dict, status: StatusState, 
     if not cfg.get("startup_feedback_enabled", True):
         return False
     feedback_state = public_startup_state(state)
+    surface_state = public_surface_for_feedback(feedback_state)
     try:
         path = write_startup_feedback_svg(cfg, feedback_state)
-        ok = mpv.load_file(path, alias=f"startup-feedback:{feedback_state}")
+        expected_generation = mpv.generation()
+        loaded = mpv.load_file(path, alias=f"startup-feedback:{feedback_state}")
+        ok = loaded and mpv.wait_for_local_frame_evidence(
+            path,
+            expected_generation=expected_generation,
+            require_progress=False,
+        )
+        with mpv.process_guard():
+            ok = bool(
+                ok
+                and mpv.generation() == expected_generation
+                and mpv.wait_for_current_path(path, timeout=0.15)
+            )
+            observed_generation = mpv.generation()
     except Exception as exc:
         logging.warning("Startup feedback render failed state=%s error=%s", feedback_state, exc)
         status.update(
             startup_feedback_visible=False,
             startup_feedback_display="failed",
             startup_feedback_state=feedback_state,
+            public_surface_state=surface_state,
+            public_surface_presented_state=None,
+            public_surface_generation=None,
+            public_surface_evidence=None,
         )
         return False
+    previous = status.snapshot()
+    if surface_state == "player_error":
+        player_state = "recovering"
+        playback_state = "recovering"
+        content_state = "player_recovering"
+        error_code: Optional[str] = "player_recovering"
+    elif surface_state == "content_unavailable":
+        player_state = "waiting_for_media"
+        playback_state = "waiting_for_media"
+        content_state = "content_unavailable"
+        error_code = None
+    else:
+        player_state = feedback_state
+        playback_state = "waiting_for_content"
+        content_state = "loading_content"
+        error_code = None
     status.update(
-        player_state=feedback_state,
-        playback_state="waiting_for_content",
+        player_state=player_state,
+        playback_state=playback_state,
         startup_phase=feedback_state,
         startup_feedback_state=feedback_state,
         startup_feedback_visible=bool(ok),
         startup_feedback_display="mpv_placeholder" if ok else "failed",
         startup_feedback_message=STARTUP_FEEDBACK_MESSAGES[feedback_state][1],
-        content_state=feedback_state,
+        content_state=content_state,
         first_frame_ready=False,
         first_content_load_accepted=False,
-        black_screen_risk_reason=None if ok else "startup_feedback_failed",
+        black_screen_risk_reason=(
+            previous.get("black_screen_risk_reason") if ok else "startup_feedback_failed"
+        ),
+        public_surface_state=surface_state,
+        public_surface_presented_state=surface_state if ok else None,
+        public_surface_generation=observed_generation if ok else None,
+        public_surface_evidence="mpv_path_vo_frame_available" if ok else None,
+        first_frame_evidence=None,
+        error_code=error_code,
+        startup_feedback_ever_presented=bool(
+            ok or previous.get("startup_feedback_ever_presented") is True
+        ),
+        startup_feedback_local_evidence=(
+            "mpv_path_vo_frame_available"
+            if ok
+            else previous.get("startup_feedback_local_evidence")
+        ),
     )
     return bool(ok)
 
 
+def show_startup_feedback_once(mpv: "MPVController", cfg: Dict, status: StatusState, state: str) -> bool:
+    feedback_state = public_startup_state(state)
+    surface_state = public_surface_for_feedback(feedback_state)
+    snapshot = status.snapshot()
+    expected_path = startup_feedback_svg_path(cfg, feedback_state)
+    if (
+        snapshot.get("startup_feedback_visible") is True
+        and snapshot.get("public_surface_presented_state") == surface_state
+        and snapshot.get("public_surface_generation") == mpv.generation()
+        and mpv.wait_for_current_path(expected_path, timeout=0.15)
+    ):
+        return True
+    return show_startup_feedback(mpv, cfg, status, feedback_state)
+
+
 def mark_player_error(status: StatusState, reason: str) -> None:
     status.update(
-        player_state="error_player_start",
+        player_state="error",
         playback_state="error",
         startup_phase="error_player_start",
         startup_feedback_state="error_player_start",
         content_state="error_no_content",
         first_frame_ready=False,
+        first_frame_evidence=None,
         black_screen_risk_reason=reason,
+        public_surface_state="player_error",
+        public_surface_presented_state=None,
+        public_surface_generation=None,
+        public_surface_evidence=None,
+        error_code="player_start_failed",
+    )
+
+
+def mark_player_recovering(status: StatusState, reason: str) -> None:
+    status.update(
+        player_state="recovering",
+        playback_state="recovering",
+        startup_phase="error_player_start",
+        startup_feedback_state="error_player_start",
+        content_state="player_recovering",
+        first_frame_ready=False,
+        first_frame_evidence=None,
+        first_content_load_accepted=False,
+        black_screen_risk_reason=reason,
+        public_surface_state="player_error",
+        public_surface_presented_state=None,
+        public_surface_generation=None,
+        public_surface_evidence=None,
+        error_code="player_recovering",
     )
 
 
@@ -2107,6 +2367,9 @@ class MPVController:
     def generation(self) -> int:
         return self._generation
 
+    def process_guard(self):
+        return self._lock
+
     def _next_request_id(self) -> int:
         with self._request_id_lock:
             self._request_id += 1
@@ -2504,6 +2767,106 @@ class MPVController:
                     self._generation,
                     self.pid() or "none",
                     timeout,
+                    self._current_log_file or "none",
+                )
+                return False
+            time.sleep(0.05)
+
+    def wait_for_local_frame_evidence(
+        self,
+        path: str,
+        timeout: Optional[float] = None,
+        *,
+        expected_generation: Optional[int] = None,
+        require_progress: bool = True,
+    ) -> bool:
+        if timeout is None:
+            timeout = self._load_verify_timeout()
+        if expected_generation is None:
+            expected_generation = self.generation()
+        deadline = time.monotonic() + max(float(timeout), 0.0)
+        last_evidence: Dict[str, object] = {}
+        baseline_frame: Optional[float] = None
+        baseline_captured = False
+        while True:
+            generation_before = self.generation()
+            observed_path = self.current_path(timeout=min(self._ipc_timeout(), 0.35))
+            vo_configured = self.get_property("vo-configured", timeout=min(self._ipc_timeout(), 0.35))
+            frame_number = self.get_property("estimated-frame-number", timeout=min(self._ipc_timeout(), 0.35))
+            video_params = self.get_property("video-params", timeout=min(self._ipc_timeout(), 0.35))
+            observed_path_after = self.current_path(timeout=min(self._ipc_timeout(), 0.35))
+            generation_after = self.generation()
+            generation_stable = (
+                generation_before == expected_generation == generation_after
+            )
+            path_ready = (
+                mpv_media_paths_match(path, observed_path)
+                and mpv_media_paths_match(path, observed_path_after)
+            )
+            try:
+                video_ready = (
+                    isinstance(video_params, dict)
+                    and int(video_params.get("w") or 0) > 0
+                    and int(video_params.get("h") or 0) > 0
+                )
+            except (TypeError, ValueError):
+                video_ready = False
+            current_frame = (
+                float(frame_number)
+                if isinstance(frame_number, (int, float))
+                and not isinstance(frame_number, bool)
+                and float(frame_number) >= 0
+                else None
+            )
+            frame_advanced = False
+            frame_available = current_frame is not None
+            if path_ready and vo_configured is True and video_ready:
+                if not baseline_captured and current_frame is not None:
+                    baseline_frame = current_frame
+                    baseline_captured = True
+                elif baseline_captured:
+                    frame_advanced = (
+                        current_frame is not None
+                        and baseline_frame is not None
+                        and current_frame > baseline_frame
+                    )
+            last_evidence = {
+                "expected_generation": expected_generation,
+                "generation_before": generation_before,
+                "generation_after": generation_after,
+                "generation_stable": generation_stable,
+                "path_ready": path_ready,
+                "vo_configured": vo_configured is True,
+                "video_ready": video_ready,
+                "frame_baseline_captured": baseline_captured,
+                "frame_advanced": frame_advanced,
+            }
+            frame_requirement_met = frame_advanced if require_progress else frame_available
+            if (
+                generation_stable
+                and path_ready
+                and vo_configured is True
+                and video_ready
+                and frame_requirement_met
+            ):
+                return True
+            if not generation_stable:
+                logging.warning(
+                    "MPV generation changed during local frame evidence alias=%s expected_generation=%d generation_before=%d generation_after=%d",
+                    media_alias(path),
+                    expected_generation,
+                    generation_before,
+                    generation_after,
+                )
+                return False
+            if time.monotonic() >= deadline:
+                logging.warning(
+                    "MPV local frame evidence timeout alias=%s generation=%d pid=%s timeout_sec=%.2f evidence=%s log_file=%s",
+                    media_alias(path),
+                    self._generation,
+                    self.pid() or "none",
+                    timeout,
+                    last_evidence,
                     self._current_log_file or "none",
                 )
                 return False
@@ -3229,9 +3592,15 @@ def telemetry_worker(
         status_snapshot = status.snapshot()
         failures = int(status_snapshot.get("consecutive_failures") or 0)
         content_stale = bool(status_snapshot.get("content_stale"))
+        player_error_code = str(status_snapshot.get("error_code") or "")
         hb_status = "ok"
         error_message = None
-        if failures >= 3:
+        if player_error_code.startswith("player_"):
+            hb_status = "error"
+            error_message = str(
+                status_snapshot.get("black_screen_risk_reason") or player_error_code
+            )
+        elif failures >= 3:
             hb_status = "error"
             error_message = str(status_snapshot.get("last_poll_error") or "")
         elif failures > 0:
@@ -3246,8 +3615,20 @@ def telemetry_worker(
             status_snapshot,
             heartbeat_type="healthcheck",
             status=hb_status,
-            error_code="media_fetch_failed" if failures > 0 else "content_stale" if content_stale else None,
-            error_message=error_message if failures > 0 or content_stale else None,
+            error_code=(
+                player_error_code
+                if player_error_code.startswith("player_")
+                else "media_fetch_failed"
+                if failures > 0
+                else "content_stale"
+                if content_stale
+                else None
+            ),
+            error_message=(
+                error_message
+                if player_error_code.startswith("player_") or failures > 0 or content_stale
+                else None
+            ),
             notes="healthcheck",
             uptime_seconds=int(time.time() - status.start_time),
         )
@@ -3442,6 +3823,72 @@ def cleanup_worker(
             time.sleep(0.2)
 
 
+def publish_playing_status(
+    status: StatusState,
+    mpv: MPVController,
+    item: MediaItem,
+    next_item: Optional[MediaItem],
+    *,
+    expected_generation: int,
+    item_index: int,
+    playlist_size: int,
+    item_duration_ms: int,
+    offset_ms: int,
+    blocked_media_count: int,
+) -> bool:
+    with mpv.process_guard():
+        if (
+            mpv.generation() != expected_generation
+            or not mpv.wait_for_current_path(item.path, timeout=0.15)
+        ):
+            return False
+        status.update(
+            player_state="playing",
+            playback_state="playing",
+            startup_phase="playing",
+            startup_feedback_state="playing",
+            startup_feedback_visible=False,
+            startup_feedback_display="player",
+            content_state="playing",
+            first_frame_ready=True,
+            first_frame_evidence="mpv_path_vo_frame_progress",
+            first_content_load_accepted=True,
+            black_screen_risk_reason=None,
+            public_surface_state="media",
+            public_surface_presented_state="media",
+            public_surface_generation=expected_generation,
+            public_surface_evidence="mpv_path_vo_frame_progress",
+            error_code=None,
+            blocked_media_count=blocked_media_count,
+            last_render_ok=iso_now(),
+            last_render_error=None,
+            current_index=item_index % playlist_size,
+            current_item={
+                "url": item.url,
+                "path": item.path,
+                "source_path": item.source_path,
+                "duration_ms": item_duration_ms,
+                "campaign_id": item.campaign_id,
+                "campaign_name": item.campaign_name,
+                "started_at": iso_now(),
+                "offset_ms": offset_ms,
+            },
+            next_item=(
+                {
+                    "url": next_item.url,
+                    "path": next_item.path,
+                    "source_path": next_item.source_path,
+                    "duration_ms": next_item.duration_ms,
+                    "campaign_id": next_item.campaign_id,
+                    "campaign_name": next_item.campaign_name,
+                }
+                if next_item is not None
+                else None
+            ),
+        )
+    return True
+
+
 def playback_loop(
     cfg: Dict,
     cfg_lock: threading.Lock,
@@ -3450,13 +3897,14 @@ def playback_loop(
     mpv: MPVController,
     cache_index: CacheIndex,
     stop_event: threading.Event,
-) -> None:
+) -> Optional[str]:
     idx = 0
     offset_ms = 0
     last_version = -1
     preloaded_path: Optional[str] = None
     last_mpv_generation = -1
     blocked_media_until: Dict[str, float] = {}
+    consecutive_mpv_recovery_failures = 0
 
     boot_wall_ts = time.time()
     boot_mono_ts = time.monotonic()
@@ -3528,7 +3976,32 @@ def playback_loop(
         status.update(sync_mode="disabled")
 
     while not stop_event.is_set():
+        cfg_snapshot = config_snapshot(cfg, cfg_lock)
         items, version = state.get()
+        mpv.ensure_running()
+        if not mpv.is_running():
+            consecutive_mpv_recovery_failures += 1
+            max_recovery_attempts = max(int(cfg_snapshot.get("mpv_recovery_max_attempts") or 0), 1)
+            mark_player_recovering(status, "mpv_start_failed")
+            logging.error(
+                "MPV recovery start failed attempt=%d max_attempts=%d generation=%d",
+                consecutive_mpv_recovery_failures,
+                max_recovery_attempts,
+                mpv.generation(),
+            )
+            if consecutive_mpv_recovery_failures >= max_recovery_attempts:
+                mark_player_error(status, "mpv_recovery_exhausted")
+                write_status_once(cfg_snapshot, status)
+                return "mpv_recovery_exhausted"
+            time.sleep(1)
+            continue
+        consecutive_mpv_recovery_failures = 0
+        if mpv.generation() != last_mpv_generation:
+            if last_mpv_generation >= 0 and items:
+                mark_player_recovering(status, "mpv_generation_changed_between_items")
+                show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+            last_mpv_generation = mpv.generation()
+            preloaded_path = None
         if not items:
             status.update(
                 playback_state="waiting_for_media",
@@ -3538,9 +4011,14 @@ def playback_loop(
                 startup_feedback_visible=bool(status.snapshot().get("startup_feedback_visible")),
                 content_state="waiting_for_playlist",
                 first_frame_ready=False,
+                first_frame_evidence=None,
                 black_screen_risk_reason="playlist_empty",
                 blocked_media_count=0,
+                error_code=None,
             )
+            feedback_state = desired_startup_feedback_state(status.snapshot())
+            if feedback_state is not None:
+                show_startup_feedback_once(mpv, cfg_snapshot, status, feedback_state)
             time.sleep(1)
             continue
 
@@ -3555,6 +4033,7 @@ def playback_loop(
                 first_frame_ready=False,
                 black_screen_risk_reason="invalid_playlist_timeline",
             )
+            show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
             time.sleep(1)
             continue
 
@@ -3572,10 +4051,10 @@ def playback_loop(
                 black_screen_risk_reason="all_media_temporarily_blocked",
                 blocked_media_count=blocked_count,
             )
+            show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
             time.sleep(1)
             continue
 
-        cfg_snapshot = config_snapshot(cfg, cfg_lock)
         sync_enabled = bool(cfg_snapshot.get("sync_enabled", True))
         drift_threshold_ms = int(cfg_snapshot.get("sync_drift_threshold_ms") or 300)
         hard_resync_ms = int(cfg_snapshot.get("sync_hard_resync_ms") or 1200)
@@ -3636,10 +4115,6 @@ def playback_loop(
         item_alias = media_alias(item.path, item.url)
         load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
 
-        mpv.ensure_running()
-        if mpv.generation() != last_mpv_generation:
-            last_mpv_generation = mpv.generation()
-            preloaded_path = None
         reuse_preloaded = (
             preloaded_path == item.path
             and offset_ms <= 0
@@ -3653,12 +4128,16 @@ def playback_loop(
                 startup_feedback_state="preparing_first_frame",
                 content_state="content_ready",
                 first_frame_ready=False,
+                first_frame_evidence=None,
                 first_content_load_accepted=False,
                 black_screen_risk_reason=None,
             )
             if not mpv.load_file(item.path, alias=item_alias):
                 logging.warning("Failed to load media, restarting MPV: %s", load_context)
                 mpv.restart(reason=f"media_load_failed:{item_alias}")
+                mark_player_recovering(status, "media_load_failed")
+                if mpv.is_running():
+                    show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
                 load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
                 if not mpv.load_file(item.path, alias=item_alias):
                     cooldown_sec = max(int(cfg_snapshot.get("media_load_retry_cooldown_sec") or 0), 5)
@@ -3675,8 +4154,14 @@ def playback_loop(
                         startup_feedback_state="error_player_start",
                         content_state="media_load_failed",
                         first_frame_ready=False,
+                        first_frame_evidence=None,
                         first_content_load_accepted=False,
                         black_screen_risk_reason="media_load_failed",
+                        public_surface_state="player_error",
+                        public_surface_presented_state=None,
+                        public_surface_generation=None,
+                        public_surface_evidence=None,
+                        error_code="player_recovering",
                         blocked_media_count=len(blocked_media_until),
                         last_render_error=f"{iso_now()} failed_to_load:{item.path}",
                     )
@@ -3704,6 +4189,9 @@ def playback_loop(
                 load_context,
             )
             mpv.restart(reason=f"media_path_mismatch:{item_alias}")
+            mark_player_recovering(status, "media_path_mismatch")
+            if mpv.is_running():
+                show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
             load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
             if mpv.load_file(item.path, alias=item_alias):
                 apply_item_offset(mpv, item, offset_ms)
@@ -3723,8 +4211,14 @@ def playback_loop(
                 startup_feedback_state="error_player_start",
                 content_state="media_path_mismatch",
                 first_frame_ready=False,
+                first_frame_evidence=None,
                 first_content_load_accepted=False,
                 black_screen_risk_reason="media_path_mismatch",
+                public_surface_state="player_error",
+                public_surface_presented_state=None,
+                public_surface_generation=None,
+                public_surface_evidence=None,
+                error_code="player_recovering",
                 blocked_media_count=len(blocked_media_until),
                 last_render_error=f"{iso_now()} current_path_mismatch:{item.path}",
                 current_index=None,
@@ -3736,47 +4230,75 @@ def playback_loop(
             time.sleep(0.2)
             continue
 
+        media_generation = mpv.generation()
+        if not mpv.wait_for_local_frame_evidence(
+            item.path,
+            expected_generation=media_generation,
+            require_progress=True,
+        ):
+            if mpv.generation() != media_generation:
+                mark_player_recovering(status, "mpv_generation_changed_during_frame_evidence")
+                preloaded_path = None
+                if mpv.is_running():
+                    last_mpv_generation = mpv.generation()
+                    show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+                time.sleep(0.2)
+                continue
+            cooldown_sec = max(int(cfg_snapshot.get("media_load_retry_cooldown_sec") or 0), 5)
+            blocked_media_until[item.path] = time.time() + cooldown_sec
+            blocked_count_after = sum(
+                1 for media in items if blocked_media_until.get(media.path, 0.0) > time.time()
+            )
+            logging.warning(
+                "MPV local frame evidence missing; media entering cooldown: %s cooldown_sec=%d",
+                load_context,
+                cooldown_sec,
+            )
+            status.update(
+                player_state="waiting_for_media",
+                playback_state="recovering",
+                startup_phase="error_no_content",
+                startup_feedback_state="error_no_content",
+                content_state="media_frame_not_ready",
+                first_frame_ready=False,
+                first_frame_evidence=None,
+                first_content_load_accepted=False,
+                black_screen_risk_reason="media_frame_not_ready",
+                blocked_media_count=blocked_count_after,
+                last_render_error=f"{iso_now()} local_frame_not_ready:{item.path}",
+                current_index=None,
+                current_item=None,
+                next_item=None,
+            )
+            show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
+            idx += 1
+            offset_ms = 0
+            time.sleep(0.2)
+            continue
+
         if next_item is not None and cfg_snapshot.get("preload_next"):
             mpv.append_file(next_item.path)
-
-        status.update(
-            player_state="playing",
-            playback_state="playing",
-            startup_phase="playing",
-            startup_feedback_state="playing",
-            startup_feedback_visible=False,
-            startup_feedback_display="player",
-            content_state="playing",
-            first_frame_ready=True,
-            first_content_load_accepted=True,
-            black_screen_risk_reason=None,
+        if not publish_playing_status(
+            status,
+            mpv,
+            item,
+            next_item,
+            expected_generation=media_generation,
+            item_index=idx,
+            playlist_size=len(items),
+            item_duration_ms=item_duration_ms,
+            offset_ms=offset_ms,
             blocked_media_count=len(blocked_media_until),
-            last_render_ok=iso_now(),
-            last_render_error=None,
-            current_index=idx % len(items),
-            current_item={
-                "url": item.url,
-                "path": item.path,
-                "source_path": item.source_path,
-                "duration_ms": item_duration_ms,
-                "campaign_id": item.campaign_id,
-                "campaign_name": item.campaign_name,
-                "started_at": iso_now(),
-                "offset_ms": offset_ms,
-            },
-            next_item=(
-                {
-                    "url": next_item.url,
-                    "path": next_item.path,
-                    "source_path": next_item.source_path,
-                    "duration_ms": next_item.duration_ms,
-                    "campaign_id": next_item.campaign_id,
-                    "campaign_name": next_item.campaign_name,
-                }
-                if next_item is not None
-                else None
-            ),
-        )
+        ):
+            mark_player_recovering(status, "mpv_generation_changed_before_status_publish")
+            preloaded_path = None
+            if mpv.is_running():
+                last_mpv_generation = mpv.generation()
+                show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+            time.sleep(0.2)
+            continue
+        last_mpv_generation = media_generation
+        consecutive_mpv_recovery_failures = 0
         cache_index.touch(item)
 
         logging.info(
@@ -3793,11 +4315,36 @@ def playback_loop(
         remaining_ms = max(item_duration_ms - offset_ms, 1)
         current_cycle_start_ms = cycle_start_ms[idx]
         hard_resync_requested = False
+        mpv_recovery_requested = False
 
         while not stop_event.is_set():
             now_mono = time.monotonic()
             elapsed_ms = int((now_mono - item_started_mono) * 1000)
             if elapsed_ms >= remaining_ms:
+                break
+
+            observed_generation = mpv.generation()
+            if not mpv.is_running():
+                mpv.ensure_running()
+                observed_generation = mpv.generation()
+            if observed_generation != last_mpv_generation or not mpv.is_running():
+                previous_generation = last_mpv_generation
+                progressed_ms = min(offset_ms + elapsed_ms, max(item_duration_ms - 1, 0))
+                offset_ms = progressed_ms
+                preloaded_path = None
+                mark_player_recovering(status, "mpv_generation_changed")
+                if mpv.is_running():
+                    last_mpv_generation = observed_generation
+                    show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+                logging.warning(
+                    "MPV generation changed during playback; retrying current media alias=%s previous_generation=%d generation=%d offset_ms=%d running=%s",
+                    item_alias,
+                    previous_generation,
+                    observed_generation,
+                    offset_ms,
+                    mpv.is_running(),
+                )
+                mpv_recovery_requested = True
                 break
 
             check_reason: Optional[str] = None
@@ -3875,6 +4422,10 @@ def playback_loop(
             time.sleep(0.2)
 
         if hard_resync_requested:
+            continue
+
+        if mpv_recovery_requested:
+            time.sleep(0.2)
             continue
 
         if sync_enabled and pending_soft_resync:
@@ -4010,6 +4561,7 @@ def main() -> int:
         elif requests is None:
             logging.error("requests indisponivel e nenhuma midia offline disponivel.")
         mark_player_error(status, "no_content")
+        write_status_once(cfg, status)
         return 2
     if not api_polling_enabled:
         status.update(last_poll_error=f"{iso_now()} polling_disabled")
@@ -4049,7 +4601,7 @@ def main() -> int:
         mark_player_error(status, "mpv_start_failed")
         write_status_once(cfg, status)
         return 3
-    show_startup_feedback(mpv, cfg, status, "waiting_for_content")
+    show_startup_feedback_once(mpv, cfg, status, "waiting_for_content")
     write_status_once(cfg, status)
 
     threads: List[threading.Thread] = []
@@ -4091,15 +4643,16 @@ def main() -> int:
     config_server = ConfigServer(cfg, cfg_lock, config_path, mpv, poll_now_event)
     config_server.start()
 
+    playback_failure: Optional[str] = None
     try:
-        playback_loop(cfg, cfg_lock, state, status, mpv, cache_index, stop_event)
+        playback_failure = playback_loop(cfg, cfg_lock, state, status, mpv, cache_index, stop_event)
     finally:
         stop_event.set()
         for thread in threads:
             thread.join(timeout=5)
         mpv.stop()
 
-    return 0
+    return 3 if playback_failure else 0
 
 
 if __name__ == "__main__":

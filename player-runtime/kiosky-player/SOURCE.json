@@ -18,6 +18,8 @@
     "C22 media integrity rejects empty, malformed and first-frame-undecodable cache/download artifacts before playlist adoption and rebuilds invalid image sidecars.",
     "C22 playlist adoption keeps the last-known-good content on API/download failure and exposes stale, pending and failed-media state locally and in additive telemetry fields.",
     "C23 prevents cyclic MPV IPC backpressure by avoiding an unread persistent client in fresh-IPC mode and requiring a bounded request/response connection for each control command.",
+    "C25B gives the MPV-owned surface public loading, content-unavailable and player-recovery states in landscape and portrait without introducing a second DRM owner.",
+    "C25B binds media readiness to one MPV generation, path, configured VO, video parameters and observed frame progress; persistent MPV recovery failure exits to the image-bound launcher fallback.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -60,12 +62,27 @@
       "field": "poller/status/telemetry",
       "from": "a successful API poll can obscure empty, incomplete or partial playlist adoption",
       "to": "last-known-good playback is retained and stale/partial adoption remains explicit"
+    },
+    {
+      "field": "MPVController.wait_for_local_frame_evidence/playback status",
+      "from": "path acceptance alone can publish first_frame_ready",
+      "to": "one stable MPV generation, matching path, configured VO, video parameters and observed frame progress are required"
+    },
+    {
+      "field": "startup feedback/public surface",
+      "from": "one legacy landscape placeholder with path-only acceptance",
+      "to": "C25 public loading, unavailable and recovery surfaces with landscape/portrait layout and local VO/frame evidence"
+    },
+    {
+      "field": "playback MPV recovery",
+      "from": "a permanently unavailable MPV can keep the Python player alive indefinitely",
+      "to": "recovery is generation-aware and bounded before a non-zero exit returns visual ownership to the launcher"
     }
   ],
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5"
+    "sha256": "c116c2e20a8e9e40a7f4bf2934bfa7590754883aa019eaf43f2078372c3efc2c"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",
