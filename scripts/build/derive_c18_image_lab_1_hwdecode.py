@@ -20,11 +20,14 @@ rebuild, no apt, no board, no card). It copies the hardware-validated C17.4.2 im
     (artifact_private/final_image=false/not_for_production); production identity
     requires --image-profile production.
 
-It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB/BSP,
-real config, media/cache, or secrets.
+It does NOT touch kernel/U-Boot/DTB/BSP, real config, or media/cache. Production
+derivation disables the old overlayroot path and reads one external support
+credential only to replace the root hash; the plaintext is never copied into the image.
 """
 from __future__ import annotations
-import argparse, atexit, hashlib, json, os, shutil, subprocess, sys, tarfile, tempfile
+import argparse, atexit, hashlib, hmac, json, math, os, re, shutil, stat, subprocess, sys, tarfile, tempfile
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,6 +45,7 @@ VERSION = str(CURRENT_GOLDEN["image_version"])
 OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                    f"6.12.58-{TAG}_minimal.img")
 OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
+OUT_READY = Path(str(OUT_IMAGE) + ".ready.json")
 
 BUNDLE = Path("/tmp/ffbuild/bundle")
 FFMPEG_CLI = Path("/tmp/ffbuild/ffmpeg.stripped")
@@ -59,6 +63,9 @@ PRODUCTION_IDENTITY_UNIT_SOURCE = (
 PRODUCTION_SSH_DROPIN_SOURCE = (
     REPO_ROOT / "scripts" / "board" / "systemd" / "ssh-production-identity.conf"
 )
+PRODUCTION_CREDENTIAL_GENERATOR_SOURCE = (
+    REPO_ROOT / "scripts" / "build" / "generate_c18_production_support_credential.py"
+)
 PRODUCTION_SETTINGS_POLICY_SOURCE = (
     REPO_ROOT / "scripts" / "board" / "totem_settings_production_apply_policy.py"
 )
@@ -71,8 +78,8 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-10"
-PRODUCTION_VERSION = "c18.image-prod.10"
+PRODUCTION_TAG = "c18-hwdecode-prod-11"
+PRODUCTION_VERSION = "c18.image-prod.11"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -90,6 +97,24 @@ PRODUCTION_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_production_apply_pol
 PRODUCTION_LAB_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_lab_apply_policy.sh"
 PRODUCTION_ARMBIAN_ENV = "/boot/armbianEnv.txt"
 KIOSKY_PLAYER_COMMIT_MARKER = "/opt/totem/kiosky-player/.kiosky_player_commit"
+PRODUCTION_SHADOW_PATHS = ("/etc/shadow", "/etc/shadow-")
+PRODUCTION_SUPPORT_PASSWORD_MIN_LENGTH = 48
+PRODUCTION_SUPPORT_PASSWORD_MAX_LENGTH = 128
+PRODUCTION_SUPPORT_PASSWORD_MIN_UNIQUE_CHARS = 20
+PRODUCTION_SUPPORT_PASSWORD_MIN_SYMBOL_DISTRIBUTION = 4.25
+PRODUCTION_CREDENTIAL_PROVENANCE_SCHEMA = "dadooh.c18.production_support_credential_provenance.v1"
+PRODUCTION_OPENSSL = Path("/usr/bin/openssl")
+PRODUCTION_OPENSSL_SHA256 = "724acbe911513d13f52bae0b8969b20336cd8618fc67898a6bf7847bf1a270ad"
+PRODUCTION_OPENSSL_VERSION_PREFIX = "OpenSSL 3.0.13 "
+PRODUCTION_DEBUGFS = Path("/usr/sbin/debugfs")
+PRODUCTION_DEBUGFS_SHA256 = "1e83118cc9582afcad2711fbb7f40f56668adccb386d988cb6d9ad5c2d001049"
+PRODUCTION_E2FSCK = Path("/usr/sbin/e2fsck")
+PRODUCTION_E2FSCK_SHA256 = "c69c6315f602d389821b3a1dab1308618616259400f2cf5d997243c4a83c284c"
+PRODUCTION_E2FSPROGS_VERSION_PREFIX = "1.47.0"
+PRODUCTION_ZEROFREE = Path("/home/builder/.local/libexec/dadooh/zerofree")
+PRODUCTION_ZEROFREE_SHA256 = "42f959837e7c5fab212e7e0034392f59edbecd729c9413b5e241751af82f562a"
+PRODUCTION_OUTPUT_MIN_FREE_BYTES = 12 * 1024 * 1024 * 1024
+PRODUCTION_WSL_HOST_MIN_FREE_BYTES = 8 * 1024 * 1024 * 1024
 PRODUCTION_OVERLAYROOT_PATHS = (
     "/etc/overlayroot.conf",
     "/etc/overlayroot.conf.c12-image-lab-base",
@@ -258,6 +283,130 @@ def sh(cmd):
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
 
+def validate_production_ext4_tools() -> dict:
+    tools = (
+        ("debugfs", PRODUCTION_DEBUGFS, PRODUCTION_DEBUGFS_SHA256),
+        ("e2fsck", PRODUCTION_E2FSCK, PRODUCTION_E2FSCK_SHA256),
+    )
+    metadata = {}
+    for name, expected_path, expected_sha256 in tools:
+        resolved = shutil.which(name)
+        if not resolved or Path(resolved).resolve() != expected_path.resolve():
+            raise SystemExit(f"BLOCKED: pinned {name} path mismatch")
+        if not expected_path.is_file() or not os.access(expected_path, os.X_OK):
+            raise SystemExit(f"BLOCKED: pinned {name} is unavailable")
+        if base.file_sha256(expected_path) != expected_sha256:
+            raise SystemExit(f"BLOCKED: pinned {name} hash mismatch")
+        version = sh([str(expected_path), "-V"])
+        if version.returncode != 0 or PRODUCTION_E2FSPROGS_VERSION_PREFIX not in version.stdout:
+            raise SystemExit(f"BLOCKED: pinned {name} version mismatch")
+        metadata[name] = {
+            "path": str(expected_path),
+            "sha256": expected_sha256,
+            "version": version.stdout.splitlines()[0].strip(),
+        }
+    return metadata
+
+
+def require_free_space(path: Path, minimum_bytes: int, *, label: str) -> int:
+    free_bytes = shutil.disk_usage(path).free
+    if free_bytes < minimum_bytes:
+        raise SystemExit(
+            f"BLOCKED: insufficient {label} free space; "
+            f"required={minimum_bytes} available={free_bytes}"
+        )
+    return free_bytes
+
+
+def debugfs_batch_errors(output: str) -> list[str]:
+    current_command = "<none>"
+    errors = []
+    suspicious = (
+        "error",
+        "failed",
+        "file not found",
+        "no such file",
+        "couldn't",
+        "already exists",
+        "directory not empty",
+        "not a directory",
+        "unknown request",
+        "invalid argument",
+    )
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if line.startswith("debugfs: "):
+            current_command = line.removeprefix("debugfs: ").strip()
+            continue
+        lower = line.lower()
+        if not line or not any(token in lower for token in suspicious):
+            continue
+        command = current_command.split(maxsplit=1)[0] if current_command else ""
+        expected_missing_delete = (
+            command in {"rm", "rmdir"}
+            and ("file not found" in lower or "no such file" in lower)
+        )
+        expected_existing_directory = command == "mkdir" and "directory already exists" in lower
+        if expected_missing_delete or expected_existing_directory:
+            continue
+        errors.append(f"{current_command}: {line}")
+    return errors
+
+
+def run_debugfs_batch_strict(rootfs: Path, commands: list[str], work_dir: Path) -> str:
+    command_file = work_dir / "debugfs.production.commands"
+    command_file.write_text("\n".join(commands) + "\n", encoding="utf-8")
+    result = subprocess.run(
+        [str(PRODUCTION_DEBUGFS), "-w", "-f", str(command_file), str(rootfs)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    output = result.stdout or ""
+    errors = debugfs_batch_errors(output)
+    if result.returncode != 0 or errors:
+        detail = "\n".join(errors[:30])
+        raise SystemExit(
+            f"BLOCKED: production debugfs batch failed rc={result.returncode}"
+            + (f"\n{detail}" if detail else "")
+        )
+    return output
+
+
+def atomic_write(path: Path, data: bytes, *, mode: int = 0o644) -> None:
+    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temp_path = Path(temp_name)
+    try:
+        os.fchmod(fd, mode)
+        with os.fdopen(fd, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temp_path, path)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def publish_file_exclusive(source: Path, target: Path) -> None:
+    os.link(source, target)
+    source.unlink()
+
+
+def publish_bytes_exclusive(target: Path, data: bytes, *, mode: int = 0o644) -> None:
+    fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+    temp_path = Path(temp_name)
+    try:
+        os.fchmod(fd, mode)
+        with os.fdopen(fd, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        os.link(temp_path, target)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
 def sanitize_production_armbian_env(text: str) -> str:
     lines = []
     removed = 0
@@ -280,12 +429,15 @@ def sanitize_production_armbian_env(text: str) -> str:
 
 
 def resolve_zerofree(explicit: str | None) -> Path:
-    candidate = Path(explicit) if explicit else Path(shutil.which("zerofree") or "")
+    candidate = Path(explicit) if explicit else PRODUCTION_ZEROFREE
     if not candidate.is_file() or not os.access(candidate, os.X_OK):
         raise SystemExit(
             "BLOCKED: zerofree is required for production images; install it or pass --zerofree"
         )
-    return candidate.resolve()
+    candidate = candidate.resolve()
+    if base.file_sha256(candidate) != PRODUCTION_ZEROFREE_SHA256:
+        raise SystemExit("BLOCKED: pinned zerofree hash mismatch")
+    return candidate
 
 
 def run_zerofree_scan(tool: Path, filesystem: Path) -> tuple[subprocess.CompletedProcess[str], str]:
@@ -294,6 +446,208 @@ def run_zerofree_scan(tool: Path, filesystem: Path) -> tuple[subprocess.Complete
     summaries = [line.strip() for line in normalized.splitlines() if "/" in line]
     summary = summaries[-1] if summaries else ""
     return result, summary
+
+
+def debugfs_read_bytes(rootfs: Path, path: str, *, allow_empty: bool = False) -> bytes:
+    result = subprocess.run(
+        [str(PRODUCTION_DEBUGFS), "-R", f"cat {path}", str(rootfs)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode != 0 or (not result.stdout and not allow_empty):
+        raise SystemExit(f"BLOCKED: failed to read required image file {path}")
+    return result.stdout
+
+
+def read_private_build_input(path: Path, *, max_bytes: int) -> bytes:
+    candidate = Path(os.path.abspath(path.expanduser()))
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(candidate, flags)
+    except OSError as exc:
+        raise SystemExit("BLOCKED: private production build input is unavailable") from exc
+    try:
+        actual_path = Path(os.readlink(f"/proc/self/fd/{fd}")).resolve()
+        if actual_path == REPO_ROOT or REPO_ROOT in actual_path.parents:
+            raise SystemExit("BLOCKED: private production build input must stay outside the source repo")
+        parent_stat = actual_path.parent.stat()
+        if parent_stat.st_uid != os.getuid() or stat.S_IMODE(parent_stat.st_mode) & 0o077:
+            raise SystemExit("BLOCKED: private production build input directory must be private to the build user")
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise SystemExit("BLOCKED: private production build input must be a regular file")
+        if before.st_nlink != 1:
+            raise SystemExit("BLOCKED: private production build input must not have hardlinks")
+        if stat.S_IMODE(before.st_mode) != 0o600:
+            raise SystemExit("BLOCKED: private production build input file mode must be 0600")
+        if before.st_uid != os.getuid():
+            raise SystemExit("BLOCKED: private production build input must be owned by the build user")
+        with os.fdopen(fd, "rb", closefd=False) as private_file:
+            raw = private_file.read(max_bytes + 1)
+        after = os.fstat(fd)
+        identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_mode, before.st_uid)
+        identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_mode, after.st_uid)
+        if identity_after != identity_before:
+            raise SystemExit("BLOCKED: private production build input changed while being read")
+    finally:
+        os.close(fd)
+    if len(raw) > max_bytes:
+        raise SystemExit("BLOCKED: private production build input exceeds size policy")
+    return raw
+
+
+def load_production_support_password(path: Path) -> str:
+    raw = read_private_build_input(path, max_bytes=PRODUCTION_SUPPORT_PASSWORD_MAX_LENGTH + 2)
+    if raw.count(b"\n") != 1 or not raw.endswith(b"\n"):
+        raise SystemExit("BLOCKED: production support credential must contain exactly one newline-terminated value")
+    try:
+        password = raw[:-1].decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise SystemExit("BLOCKED: production support credential must be printable ASCII") from exc
+    if not (PRODUCTION_SUPPORT_PASSWORD_MIN_LENGTH <= len(password) <= PRODUCTION_SUPPORT_PASSWORD_MAX_LENGTH):
+        raise SystemExit("BLOCKED: production support credential length is outside policy")
+    if any(ord(char) < 33 or ord(char) > 126 for char in password):
+        raise SystemExit("BLOCKED: production support credential contains whitespace or control characters")
+    classes = (
+        bool(re.search(r"[a-z]", password)),
+        bool(re.search(r"[A-Z]", password)),
+        bool(re.search(r"[0-9]", password)),
+        bool(re.search(r"[^A-Za-z0-9]", password)),
+    )
+    if not all(classes):
+        raise SystemExit("BLOCKED: production support credential must include four character classes")
+    if len(set(password)) < PRODUCTION_SUPPORT_PASSWORD_MIN_UNIQUE_CHARS:
+        raise SystemExit("BLOCKED: production support credential has insufficient symbol diversity")
+    counts = Counter(password)
+    symbol_distribution = -sum(
+        (count / len(password)) * math.log2(count / len(password))
+        for count in counts.values()
+    )
+    if symbol_distribution < PRODUCTION_SUPPORT_PASSWORD_MIN_SYMBOL_DISTRIBUTION:
+        raise SystemExit("BLOCKED: production support credential symbol distribution is outside policy")
+    for period in range(1, len(password) // 2 + 1):
+        if password == (password[:period] * ((len(password) + period - 1) // period))[:len(password)]:
+            raise SystemExit("BLOCKED: production support credential is a repeated pattern")
+    return password
+
+
+def validate_production_credential_provenance(path: Path, password: str) -> dict:
+    raw = read_private_build_input(path, max_bytes=4096)
+    if password.encode("ascii") in raw:
+        raise SystemExit("BLOCKED: production credential provenance contains plaintext")
+    try:
+        provenance = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SystemExit("BLOCKED: production support credential provenance is invalid") from exc
+    expected = {
+        "schema": PRODUCTION_CREDENTIAL_PROVENANCE_SCHEMA,
+        "generator": "python-secrets.token_urlsafe",
+        "random_source": "os_csprng_via_python_secrets",
+        "random_bytes": 48,
+        "credential_length": len(password),
+        "credential_sha256": hashlib.sha256(password.encode("ascii")).hexdigest(),
+        "generator_file_sha256": base.file_sha256(PRODUCTION_CREDENTIAL_GENERATOR_SOURCE),
+        "plaintext_embedded_in_provenance": False,
+    }
+    expected_keys = {*expected, "generated_at_utc"}
+    if not isinstance(provenance, dict) or set(provenance) != expected_keys:
+        raise SystemExit("BLOCKED: production credential provenance has unexpected fields")
+    if any(provenance.get(key) != value for key, value in expected.items()):
+        raise SystemExit("BLOCKED: production support credential provenance does not match the credential")
+    try:
+        generated_at = datetime.strptime(
+            str(provenance["generated_at_utc"]),
+            "%Y-%m-%dT%H:%M:%SZ",
+        ).replace(tzinfo=timezone.utc)
+    except ValueError as exc:
+        raise SystemExit("BLOCKED: production support credential provenance timestamp is invalid") from exc
+    if generated_at > datetime.now(timezone.utc):
+        raise SystemExit("BLOCKED: production support credential provenance timestamp is invalid")
+    return {
+        "schema": provenance["schema"],
+        "generator": provenance["generator"],
+        "random_source": provenance["random_source"],
+        "random_bytes": provenance["random_bytes"],
+        "credential_length": provenance["credential_length"],
+        "generator_file_sha256": provenance["generator_file_sha256"],
+        "generated_at_utc": provenance["generated_at_utc"],
+    }
+
+
+def derive_production_root_password_hash(password: str, *, tag: str, repo_commit: str) -> tuple[str, dict]:
+    if not PRODUCTION_OPENSSL.is_file() or not os.access(PRODUCTION_OPENSSL, os.X_OK):
+        raise SystemExit("BLOCKED: pinned openssl is unavailable")
+    if base.file_sha256(PRODUCTION_OPENSSL) != PRODUCTION_OPENSSL_SHA256:
+        raise SystemExit("BLOCKED: pinned openssl hash mismatch")
+    version = subprocess.run(
+        [str(PRODUCTION_OPENSSL), "version"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if version.returncode != 0 or not version.stdout.startswith(PRODUCTION_OPENSSL_VERSION_PREFIX):
+        raise SystemExit("BLOCKED: pinned openssl version mismatch")
+    salt = hashlib.sha256(f"dadooh-c18\0{tag}\0{repo_commit}".encode("utf-8")).hexdigest()[:16]
+    result = subprocess.run(
+        [str(PRODUCTION_OPENSSL), "passwd", "-6", "-salt", salt, "-stdin"],
+        input=password + "\n",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    password_hash = result.stdout.strip()
+    expected_pattern = rf"\$6\${re.escape(salt)}\$[./A-Za-z0-9]{{86}}"
+    if result.returncode != 0 or not re.fullmatch(expected_pattern, password_hash):
+        raise SystemExit("BLOCKED: failed to derive production root password hash")
+    return password_hash, {
+        "path": str(PRODUCTION_OPENSSL),
+        "sha256": PRODUCTION_OPENSSL_SHA256,
+        "version": version.stdout.strip(),
+        "scheme": "sha512-crypt",
+    }
+
+
+def root_password_hash_from_shadow(shadow_text: str) -> str:
+    root_lines = [line for line in shadow_text.splitlines() if line.startswith("root:")]
+    if len(root_lines) != 1:
+        raise SystemExit("BLOCKED: expected exactly one root account in /etc/shadow")
+    fields = root_lines[0].split(":")
+    if len(fields) != 9 or not fields[1]:
+        raise SystemExit("BLOCKED: malformed root account in /etc/shadow")
+    return fields[1]
+
+
+def replace_root_password_hash(shadow_text: str, password_hash: str) -> str:
+    root_password_hash_from_shadow(shadow_text)
+    result = []
+    replaced = 0
+    for line in shadow_text.splitlines():
+        if line.startswith("root:"):
+            fields = line.split(":")
+            fields[1] = password_hash
+            line = ":".join(fields)
+            replaced += 1
+        result.append(line)
+    if replaced != 1:
+        raise SystemExit("BLOCKED: root password hash replacement was not unique")
+    return "\n".join(result) + "\n"
+
+
+def file_contains_bytes(path: Path, needle: bytes, *, chunk_size: int = 4 * 1024 * 1024) -> bool:
+    if not needle:
+        raise ValueError("needle must not be empty")
+    overlap = len(needle) - 1
+    tail = b""
+    with path.open("rb") as source:
+        while chunk := source.read(chunk_size):
+            candidate = tail + chunk
+            if needle in candidate:
+                return True
+            tail = candidate[-overlap:] if overlap else b""
+    return False
 
 
 def git_text(*args: str) -> str:
@@ -461,6 +815,16 @@ def production_seed_sensitive_fields(seed_data: dict) -> set[str]:
     return fields
 
 
+def production_identity_init_contract_valid(script_text: str) -> bool:
+    return (
+        "ssh-keygen -A" in script_text
+        and "identity_complete" in script_text
+        and "storage_contract=root_ext4_rw" in script_text
+        and 'MARKER="${ROOT_PREFIX}/var/lib/dadooh/production-identity-initialized"'
+        in script_text
+    )
+
+
 def validate_production_player_runtime_authorization() -> dict:
     try:
         auth = json.loads(PLAYER_RUNTIME_PRODUCTION_AUTH.read_text(encoding="utf-8"))
@@ -511,24 +875,34 @@ def validate_production_player_runtime_authorization() -> dict:
 
 def validate_candidate_identity(tag: str, version: str, marker: str,
                                 *, image_profile: str = "lab") -> None:
-    if "/" in tag or tag.startswith(".") or ".." in Path(tag).parts:
-        raise SystemExit(f"BLOCKED: unsafe image tag {tag!r}")
+    suffix_pattern = r"[a-z0-9]+(?:-[a-z0-9]+)*"
     if image_profile == "production":
-        if not tag.startswith("c18-hwdecode-prod-"):
-            raise SystemExit("BLOCKED: production image tag must start with c18-hwdecode-prod-")
-        if not version.startswith("c18.image-prod."):
-            raise SystemExit("BLOCKED: production image version must start with c18.image-prod.")
+        match = re.fullmatch(rf"c18-hwdecode-prod-({suffix_pattern})", tag)
+        profile_name = "prod"
     else:
-        if not tag.startswith("c18-hwdecode-lab-"):
-            raise SystemExit("BLOCKED: image tag must start with c18-hwdecode-lab-")
-        if not version.startswith("c18.image-lab."):
-            raise SystemExit("BLOCKED: image version must start with c18.image-lab.")
-    if not marker.startswith("/etc/dadooh/") or "/" in marker.removeprefix("/etc/dadooh/"):
-        raise SystemExit("BLOCKED: image marker must be an /etc/dadooh/<file> path")
+        match = re.fullmatch(rf"c18-hwdecode-lab-({suffix_pattern})", tag)
+        profile_name = "lab"
+    if not match:
+        raise SystemExit(f"BLOCKED: unsafe {image_profile} image tag {tag!r}")
+    suffix = match.group(1)
+    expected_version = f"c18.image-{profile_name}.{suffix}"
+    expected_marker = f"/etc/dadooh/{tag}-image"
+    if version != expected_version:
+        raise SystemExit(
+            f"BLOCKED: image version must match tag exactly; expected {expected_version!r}"
+        )
+    if marker != expected_marker:
+        raise SystemExit(
+            f"BLOCKED: image marker must match tag exactly; expected {expected_marker!r}"
+        )
+    if image_profile == "production" and (
+        tag != PRODUCTION_TAG or version != PRODUCTION_VERSION or marker != PRODUCTION_MARKER
+    ):
+        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod11 release")
 
 
 def main():
-    global TAG, VERSION, OUT_IMAGE, OUT_SHA, MARKER
+    global TAG, VERSION, OUT_IMAGE, OUT_SHA, OUT_READY, MARKER
     ap = argparse.ArgumentParser(allow_abbrev=False)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--image-tag", help="explicit candidate image tag; defaults to current-golden.json")
@@ -537,6 +911,16 @@ def main():
     ap.add_argument("--image-profile", choices=("lab", "production"), default="lab")
     ap.add_argument("--totem-core-profile", choices=("homologation", "production"))
     ap.add_argument("--zerofree", help="zerofree executable required for production image hygiene")
+    ap.add_argument(
+        "--production-root-password-file",
+        type=Path,
+        help="external mode-0600 credential required for production images",
+    )
+    ap.add_argument(
+        "--production-root-password-provenance-file",
+        type=Path,
+        help="external mode-0600 CSPRNG provenance required for the production credential",
+    )
     ap.add_argument("--allow-dirty", action="store_true", help="allow exploratory builds from a dirty repo")
     args = ap.parse_args()
     totem_core_profile = args.totem_core_profile or (
@@ -546,8 +930,14 @@ def main():
         raise SystemExit("BLOCKED: production image requires totem-core production profile")
     if args.image_profile == "lab" and totem_core_profile == "production":
         raise SystemExit("BLOCKED: production totem-core profile requires --image-profile production")
+    if args.image_profile == "lab" and (
+        args.production_root_password_file or args.production_root_password_provenance_file
+    ):
+        raise SystemExit("BLOCKED: production root credential cannot be used by a lab image")
     repo = repo_identity()
-    if repo["repo_dirty"] and not args.allow_dirty:
+    if args.image_profile == "production" and args.allow_dirty:
+        raise SystemExit("BLOCKED: production images never allow dirty source trees")
+    if repo["repo_dirty"] and (args.image_profile == "production" or not args.allow_dirty):
         raise SystemExit("BLOCKED: source repo dirty; commit first or pass --allow-dirty for exploratory builds")
     production_player_runtime_authorization = (
         validate_production_player_runtime_authorization()
@@ -555,6 +945,11 @@ def main():
         else {"passed": "n/a", "result_claim": "not_required_for_homologation_image"}
     )
     zerofree_tool = resolve_zerofree(args.zerofree) if args.image_profile == "production" else None
+    production_ext4_tools = (
+        validate_production_ext4_tools()
+        if args.image_profile == "production"
+        else {"debugfs": {"path": shutil.which("debugfs") or "missing"}, "e2fsck": {"path": shutil.which("e2fsck") or "missing"}}
+    )
 
     if args.image_tag:
         TAG = args.image_tag
@@ -564,6 +959,7 @@ def main():
         OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                            f"6.12.58-{TAG}_minimal.img")
         OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
+        OUT_READY = Path(str(OUT_IMAGE) + ".ready.json")
     elif args.image_profile == "production":
         TAG = PRODUCTION_TAG
         VERSION = PRODUCTION_VERSION
@@ -572,9 +968,31 @@ def main():
         OUT_IMAGE = ARM / (f"Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_"
                            f"6.12.58-{TAG}_minimal.img")
         OUT_SHA = Path(str(OUT_IMAGE) + ".sha256")
+        OUT_READY = Path(str(OUT_IMAGE) + ".ready.json")
     elif args.image_version or args.image_marker:
         raise SystemExit("BLOCKED: --image-version/--image-marker require --image-tag")
     round_name = image_round_name(TAG)
+
+    production_root_password_hash = "n/a"
+    production_root_password_tool = {"scheme": "n/a"}
+    production_credential_provenance = {"schema": "n/a"}
+    if args.image_profile == "production":
+        if not args.production_root_password_file or not args.production_root_password_provenance_file:
+            raise SystemExit("BLOCKED: production image requires credential and CSPRNG provenance files")
+        support_password = load_production_support_password(args.production_root_password_file)
+        production_credential_provenance = validate_production_credential_provenance(
+            args.production_root_password_provenance_file,
+            support_password,
+        )
+        production_root_password_hash, production_root_password_tool = (
+            derive_production_root_password_hash(
+                support_password,
+                tag=TAG,
+                repo_commit=repo["repo_commit"],
+            )
+        )
+    else:
+        support_password = ""
 
     log = []
     def L(m): print(m); log.append(m)
@@ -592,6 +1010,7 @@ def main():
         PRODUCTION_IDENTITY_SCRIPT_SOURCE,
         PRODUCTION_IDENTITY_UNIT_SOURCE,
         PRODUCTION_SSH_DROPIN_SOURCE,
+        PRODUCTION_CREDENTIAL_GENERATOR_SOURCE,
         PRODUCTION_SETTINGS_POLICY_SOURCE,
         PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE,
     ):
@@ -613,12 +1032,36 @@ def main():
         if production_settings_policy_test.returncode != 0:
             raise SystemExit("BLOCKED: production settings policy self-test failed")
         L(f"zerofree={zerofree_tool}")
-    if (OUT_IMAGE.exists() or OUT_SHA.exists()) and not args.force:
-        raise SystemExit(f"output exists (use --force): {OUT_IMAGE}")
+    if OUT_IMAGE.exists() or OUT_SHA.exists() or OUT_READY.exists():
+        if args.image_profile == "production" or not args.force:
+            raise SystemExit(f"output exists (production never overwrites; lab may use --force): {OUT_IMAGE}")
+    configured_out_dir = os.environ.get("C18_OUT_DIR")
+    if args.image_profile == "production" and not configured_out_dir:
+        raise SystemExit("BLOCKED: production build requires an explicit C18_OUT_DIR for evidence")
+    configured_out_path = Path(configured_out_dir).expanduser().resolve() if configured_out_dir else None
+    if args.image_profile == "production":
+        assert configured_out_path is not None
+        if configured_out_path.exists():
+            raise SystemExit("BLOCKED: production evidence directory already exists")
+        require_free_space(
+            OUT_IMAGE.parent,
+            PRODUCTION_OUTPUT_MIN_FREE_BYTES,
+            label="production output filesystem",
+        )
+        wsl_host = Path("/mnt/c")
+        if wsl_host.is_dir():
+            require_free_space(
+                wsl_host,
+                PRODUCTION_WSL_HOST_MIN_FREE_BYTES,
+                label="Windows host volume",
+            )
     L(f"base_image={BASE_IMAGE.name}")
     L(f"out_image={OUT_IMAGE.name}")
 
     work = Path(tempfile.mkdtemp(prefix="c18-hwdecode-lab-"))
+    out_dir = configured_out_path if configured_out_path is not None else work
+    if args.image_profile == "production" and out_dir == work:
+        raise SystemExit("BLOCKED: production evidence directory must be outside the ephemeral workdir")
     rootfs = work / "rootfs.ext4"
     tmp_fd, tmp_name = tempfile.mkstemp(
         prefix=f".{OUT_IMAGE.name}.",
@@ -628,6 +1071,12 @@ def main():
     os.close(tmp_fd)
     build_image = Path(tmp_name)
     build_sha = Path(str(build_image) + ".sha256")
+    promotion_state = {
+        "image_created": False,
+        "sha_created": False,
+        "ready_created": False,
+        "evidence_complete": False,
+    }
 
     def cleanup_temp_artifacts():
         for leftover in (build_sha, build_image):
@@ -636,12 +1085,22 @@ def main():
                     leftover.unlink()
             except OSError as exc:
                 print(f"WARN: failed to remove temp artifact {leftover}: {exc}", file=sys.stderr)
+        if args.image_profile == "production" and not promotion_state["evidence_complete"]:
+            if promotion_state["ready_created"]:
+                OUT_READY.unlink(missing_ok=True)
+            if promotion_state["sha_created"]:
+                OUT_SHA.unlink(missing_ok=True)
+            if promotion_state["image_created"]:
+                OUT_IMAGE.unlink(missing_ok=True)
+        if args.image_profile == "production":
+            shutil.rmtree(work, ignore_errors=True)
 
     atexit.register(cleanup_temp_artifacts)
 
     # ---- copy base -> candidate, extract rootfs ----
     L("copy base image -> temp output ...")
     shutil.copy2(BASE_IMAGE, build_image)
+    os.chmod(build_image, 0o600 if args.image_profile == "production" else 0o660)
     off, length = base.parse_mbr_linux_partition(build_image)
     L(f"linux partition offset={off} length={length}")
     base.copy_range(build_image, rootfs, offset=off, length=length)
@@ -666,13 +1125,20 @@ def main():
     player_runtime_baseline = validate_player_runtime_baseline_package()
     kiosk_tmp = work / "kiosk.py"; kiosk_tmp.write_text(kiosk_snapshot, encoding="utf-8")
 
-    seed_orig = work / "private-values.seed.orig.json"
-    base.debugfs(rootfs, f"dump {HOMOLOGATION_SEED} {seed_orig}")
-    if not seed_orig.exists():
-        raise SystemExit(f"BLOCKED: homologation seed missing at {HOMOLOGATION_SEED}")
-    seed_data = json.loads(seed_orig.read_text(encoding="utf-8"))
+    production_known_private_residues: dict[str, bytes] = {}
+    try:
+        seed_raw = debugfs_read_bytes(rootfs, HOMOLOGATION_SEED)
+        seed_data = json.loads(seed_raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"BLOCKED: homologation seed invalid at {HOMOLOGATION_SEED}") from exc
     if not isinstance(seed_data, dict):
         raise SystemExit("BLOCKED: homologation seed root is not an object")
+    if args.image_profile == "production":
+        production_known_private_residues["homologation_seed_original"] = seed_raw
+        for key in production_seed_sensitive_fields(seed_data):
+            value = seed_data.get(key)
+            if isinstance(value, str) and value:
+                production_known_private_residues[f"seed_field:{key}"] = value.encode("utf-8")
     seed_data["mpv_path"] = WRAPPER
     if args.image_profile == "production":
         for key in production_seed_sensitive_fields(seed_data):
@@ -683,18 +1149,55 @@ def main():
 
     production_armbian_env_tmp = work / "armbianEnv.production.txt"
     kiosky_commit_tmp = work / ".kiosky_player_commit"
+    production_shadow_entries: dict[str, dict] = {}
+    production_base_root_password_hashes: set[str] = set()
     if args.image_profile == "production":
-        production_armbian_env_orig = work / "armbianEnv.orig.txt"
-        base.debugfs(rootfs, f"dump {PRODUCTION_ARMBIAN_ENV} {production_armbian_env_orig}")
-        if not production_armbian_env_orig.is_file():
-            raise SystemExit(f"BLOCKED: production boot environment missing at {PRODUCTION_ARMBIAN_ENV}")
+        for host_key_path in PRODUCTION_EMBEDDED_SSH_HOST_KEYS:
+            if base.stat_file(rootfs, host_key_path).get("present"):
+                production_known_private_residues[f"ssh_host_key:{host_key_path}"] = (
+                    debugfs_read_bytes(rootfs, host_key_path)
+                )
+        try:
+            production_armbian_env_original = debugfs_read_bytes(
+                rootfs,
+                PRODUCTION_ARMBIAN_ENV,
+            ).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise SystemExit(f"BLOCKED: production boot environment invalid at {PRODUCTION_ARMBIAN_ENV}") from exc
         production_armbian_env_tmp.write_text(
-            sanitize_production_armbian_env(
-                production_armbian_env_orig.read_text(encoding="utf-8")
-            ),
+            sanitize_production_armbian_env(production_armbian_env_original),
             encoding="utf-8",
         )
         kiosky_commit_tmp.write_text(PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT + "\n", encoding="utf-8")
+        for index, shadow_path in enumerate(PRODUCTION_SHADOW_PATHS):
+            shadow_stat = base.stat_file(rootfs, shadow_path)
+            if not shadow_stat.get("present"):
+                raise SystemExit(f"BLOCKED: production base image lacks {shadow_path}")
+            if shadow_stat.get("uid") != 0 or "gid" not in shadow_stat or "mode" not in shadow_stat:
+                raise SystemExit(f"BLOCKED: production base image ownership is invalid for {shadow_path}")
+            shadow_mode = int(shadow_stat["mode"]) & 0o777
+            shadow_gid = int(shadow_stat["gid"])
+            if shadow_mode not in (0o600, 0o640):
+                raise SystemExit(f"BLOCKED: production base image mode is outside policy for {shadow_path}")
+            try:
+                shadow_text = debugfs_read_bytes(rootfs, shadow_path).decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise SystemExit(f"BLOCKED: invalid encoding in {shadow_path}") from exc
+            old_root_hash = root_password_hash_from_shadow(shadow_text)
+            if hmac.compare_digest(old_root_hash, production_root_password_hash):
+                raise SystemExit(f"BLOCKED: production root password hash was not rotated in {shadow_path}")
+            shadow_tmp = work / f"shadow.production.{index}"
+            shadow_tmp.write_text(
+                replace_root_password_hash(shadow_text, production_root_password_hash),
+                encoding="utf-8",
+            )
+            os.chmod(shadow_tmp, 0o600)
+            production_shadow_entries[shadow_path] = {
+                "tmp": shadow_tmp,
+                "mode": shadow_mode,
+                "gid": shadow_gid,
+            }
+            production_base_root_password_hashes.add(old_root_hash)
 
     # ---- wrapper + marker temp files ----
     wrap_tmp = work / "totem-mpv-hwdecode"; wrap_tmp.write_text(WRAPPER_SH, encoding="utf-8")
@@ -751,7 +1254,9 @@ def main():
         f"production_private_lab_inputs_removed={str(args.image_profile == 'production').lower()}",
         f"production_free_space_zeroed={str(args.image_profile == 'production').lower()}",
         f"production_ssh_host_keys_generated_on_device={str(args.image_profile == 'production').lower()}",
-        f"production_shared_root_password_access_risk_accepted={str(args.image_profile == 'production').lower()}",
+        f"production_shared_support_credential_rotated={str(args.image_profile == 'production').lower()}",
+        f"production_support_credential_csprng_provenance={str(args.image_profile == 'production').lower()}",
+        f"production_per_device_credentials_pending={str(args.image_profile == 'production').lower()}",
         f"production_settings_policy_embedded={str(args.image_profile == 'production').lower()}",
         f"production_lab_settings_policy_removed={str(args.image_profile == 'production').lower()}",
         "panfrost_rebind_service=installed",
@@ -823,6 +1328,9 @@ def main():
         put(str(PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE), PRODUCTION_OPEN_SETTINGS_UNIT, "0644")
         put(str(production_armbian_env_tmp), PRODUCTION_ARMBIAN_ENV, "0644")
         put(str(kiosky_commit_tmp), KIOSKY_PLAYER_COMMIT_MARKER, "0644")
+        for shadow_path, shadow_entry in production_shadow_entries.items():
+            put(str(shadow_entry["tmp"]), shadow_path, f"{shadow_entry['mode']:04o}")
+            cmds.append(f"set_inode_field {shadow_path} gid {shadow_entry['gid']}")
         cmds.append(f"rm {PRODUCTION_IDENTITY_WANTS}")
         cmds.append(f"symlink {PRODUCTION_IDENTITY_WANTS} {PRODUCTION_IDENTITY_UNIT}")
         for path in (
@@ -834,13 +1342,24 @@ def main():
         cmds.append("rmdir /data/state/totem-read-only-image-lab")
 
     L(f"debugfs commands: {len(cmds)} (stack libs real={len(real_files)} symlink={len(symlinks)})")
-    out = base.debugfs_batch(rootfs, cmds, work)
-    bad = [ln for ln in out.splitlines() if "rror" in ln.lower() and "Errno 2" not in ln
-           and "while trying to delete" not in ln.lower()]
-    if bad:
-        L("debugfs stderr (filtered):")
-        for ln in bad[:30]:
-            L("  " + ln)
+    out = (
+        run_debugfs_batch_strict(rootfs, cmds, work)
+        if args.image_profile == "production"
+        else base.debugfs_batch(rootfs, cmds, work)
+    )
+    for shadow_entry in production_shadow_entries.values():
+        shadow_tmp = shadow_entry["tmp"]
+        if shadow_tmp.exists():
+            shadow_tmp.write_bytes(b"\0" * shadow_tmp.stat().st_size)
+            shadow_tmp.unlink()
+    if args.image_profile != "production":
+        bad = [ln for ln in out.splitlines() if "rror" in ln.lower() and "Errno 2" not in ln
+               and "while trying to delete" not in ln.lower()]
+        if bad:
+            L("debugfs stderr (filtered):")
+            for ln in bad[:30]:
+                L("  " + ln)
+            raise SystemExit("BLOCKED: unexpected debugfs errors while deriving image")
 
     # ---- embed OTA-ready totem-core current/fallback/wrapper layout ----
     totem_core_embed = totem_core_image_embed.write_totem_core_embed(
@@ -848,6 +1367,9 @@ def main():
         work,
         REPO_ROOT,
         profile=totem_core_profile,
+        debugfs_batch_runner=(
+            run_debugfs_batch_strict if args.image_profile == "production" else None
+        ),
     )
     L(
         "totem-core embedded "
@@ -856,9 +1378,13 @@ def main():
     )
 
     # ---- filesystem consistency and production free-space hygiene ----
-    fsck_prepare = sh(["e2fsck", "-f", "-p", str(rootfs)])
+    e2fsck_tool = PRODUCTION_E2FSCK if args.image_profile == "production" else Path("e2fsck")
+    fsck_prepare = sh([str(e2fsck_tool), "-f", "-p", str(rootfs)])
     if fsck_prepare.returncode not in (0, 1):
         raise SystemExit(f"BLOCKED: e2fsck preparation failed rc={fsck_prepare.returncode}")
+    L(f"e2fsck preparation rc={fsck_prepare.returncode}")
+    if fsck_prepare.stdout.strip():
+        L("e2fsck preparation output:\n" + fsck_prepare.stdout.strip())
 
     zerofree_summary = "n/a"
     zerofree_tool_sha256 = "n/a"
@@ -876,7 +1402,7 @@ def main():
             )
         L(f"zerofree verification={zerofree_summary}")
 
-    fsck = sh(["e2fsck", "-f", "-n", str(rootfs)])
+    fsck = sh([str(e2fsck_tool), "-f", "-n", str(rootfs)])
     fsck_clean = fsck.returncode == 0
     if not fsck_clean:
         raise SystemExit(f"BLOCKED: final e2fsck failed rc={fsck.returncode}")
@@ -885,6 +1411,36 @@ def main():
     # ---- write rootfs back into the image ----
     base.write_range(build_image, rootfs, offset=off)
     L("rootfs written back into temp output image")
+
+    production_root_password_plaintext_absent = "n/a"
+    production_old_root_password_hashes_absent = "n/a"
+    production_known_private_residues_absent = "n/a"
+    if args.image_profile == "production":
+        production_root_password_plaintext_absent = not file_contains_bytes(
+            build_image,
+            support_password.encode("ascii"),
+        )
+        support_password = ""
+        if not production_root_password_plaintext_absent:
+            raise SystemExit("BLOCKED: production support credential plaintext found in image bytes")
+        production_old_root_password_hashes_absent = all(
+            not file_contains_bytes(build_image, old_hash.encode("ascii"))
+            for old_hash in production_base_root_password_hashes
+        )
+        if not production_old_root_password_hashes_absent:
+            raise SystemExit("BLOCKED: inherited root password verifier survived in image bytes")
+        production_known_private_residues_absent = all(
+            not file_contains_bytes(build_image, payload)
+            for payload in production_known_private_residues.values()
+            if payload
+        )
+        if not production_known_private_residues_absent:
+            raise SystemExit("BLOCKED: known private base-image residue survived in image bytes")
+        production_base_root_password_hashes.clear()
+        production_known_private_residues.clear()
+        L("production support credential plaintext scan=absent")
+        L("inherited root password verifier scan=absent")
+        L("known private base-image residue scan=absent")
 
     # ---- candidate sha256 (do not publish .sha256 before validation passes) ----
     sha = base.file_sha256(build_image)
@@ -909,11 +1465,11 @@ def main():
     service_launcher_now = base.cat_file(vroot, "/opt/totem/bin/kiosky_service_launcher.sh") or ""
     totem_launcher_now = base.cat_file(vroot, "/opt/totem/bin/totem-kiosky-launcher.sh") or ""
     kiosky_dropin_now = base.cat_file(vroot, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf") or ""
-    seed_verify_file = work / "private-values.seed.verify.json"
-    base.debugfs(vroot, f"dump {HOMOLOGATION_SEED} {seed_verify_file}")
-    seed_verify = json.loads(seed_verify_file.read_text(encoding="utf-8")) if seed_verify_file.exists() else {}
-    machine_id_verify_file = work / "machine-id.verify"
-    base.debugfs(vroot, f"dump /etc/machine-id {machine_id_verify_file}")
+    try:
+        seed_verify = json.loads(debugfs_read_bytes(vroot, HOMOLOGATION_SEED).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        seed_verify = {}
+    machine_id_verify = debugfs_read_bytes(vroot, "/etc/machine-id", allow_empty=True)
     production_identity_script_now = base.cat_file(vroot, PRODUCTION_IDENTITY_SCRIPT) or ""
     production_identity_unit_now = base.cat_file(vroot, PRODUCTION_IDENTITY_UNIT) or ""
     production_ssh_dropin_now = base.cat_file(vroot, PRODUCTION_SSH_DROPIN) or ""
@@ -926,6 +1482,18 @@ def main():
         if kiosky_commit_verify_file.is_file()
         else ""
     )
+    production_root_password_hashes_now: dict[str, str] = {}
+    production_shadow_stats_now: dict[str, dict] = {}
+    if args.image_profile == "production":
+        for shadow_path in PRODUCTION_SHADOW_PATHS:
+            try:
+                shadow_text_now = debugfs_read_bytes(vroot, shadow_path).decode("utf-8")
+                production_root_password_hashes_now[shadow_path] = root_password_hash_from_shadow(
+                    shadow_text_now
+                )
+            except UnicodeDecodeError:
+                production_root_password_hashes_now[shadow_path] = ""
+            production_shadow_stats_now[shadow_path] = base.stat_file(vroot, shadow_path)
     verify_zerofree_summary = "n/a"
     verify_free_space_zeroed = "n/a"
     if args.image_profile == "production":
@@ -1093,7 +1661,10 @@ def main():
             else "n/a"
         ),
         "production_overlayroot_disabled": (
-            "overlayroot=" not in production_armbian_env_now
+            present(PRODUCTION_ARMBIAN_ENV)
+            and "rootdev=" in production_armbian_env_now
+            and "rootfstype=ext4" in production_armbian_env_now
+            and "overlayroot=" not in production_armbian_env_now
             and all(not present(path) for path in PRODUCTION_OVERLAYROOT_PATHS)
             if args.image_profile == "production"
             else "n/a"
@@ -1110,17 +1681,49 @@ def main():
             else "n/a"
         ),
         "production_machine_id_is_empty": (
-            machine_id_verify_file.is_file() and machine_id_verify_file.stat().st_size == 0
+            present("/etc/machine-id") and len(machine_id_verify) == 0
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_root_password_hash_replaced": (
+            production_old_root_password_hashes_absent is True
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_root_password_matches_external_credential": (
+            set(production_root_password_hashes_now) == set(PRODUCTION_SHADOW_PATHS)
+            and all(
+                hmac.compare_digest(password_hash, production_root_password_hash)
+                for password_hash in production_root_password_hashes_now.values()
+            )
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_root_password_plaintext_absent": production_root_password_plaintext_absent,
+        "production_old_root_password_hashes_absent": production_old_root_password_hashes_absent,
+        "production_known_private_residues_absent": production_known_private_residues_absent,
+        "production_credential_csprng_provenance_valid": (
+            production_credential_provenance.get("schema") == PRODUCTION_CREDENTIAL_PROVENANCE_SCHEMA
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_shadow_permissions_preserved": (
+            set(production_shadow_stats_now) == set(PRODUCTION_SHADOW_PATHS)
+            and all(
+                production_shadow_stats_now[path].get("present") is True
+                and production_shadow_stats_now[path].get("uid") == 0
+                and production_shadow_stats_now[path].get("gid") == production_shadow_entries[path]["gid"]
+                and (int(production_shadow_stats_now[path].get("mode", 0)) & 0o777)
+                == production_shadow_entries[path]["mode"]
+                for path in PRODUCTION_SHADOW_PATHS
+            )
             if args.image_profile == "production"
             else "n/a"
         ),
         "production_identity_init_script_present": (
             present(PRODUCTION_IDENTITY_SCRIPT)
             and execu(PRODUCTION_IDENTITY_SCRIPT)
-            and "ssh-keygen -A" in production_identity_script_now
-            and "identity_complete" in production_identity_script_now
-            and "storage_contract=root_ext4_rw" in production_identity_script_now
-            and 'MARKER="/var/lib/dadooh/production-identity-initialized"' in production_identity_script_now
+            and production_identity_init_contract_valid(production_identity_script_now)
             if args.image_profile == "production"
             else "n/a"
         ),
@@ -1176,15 +1779,10 @@ def main():
         os.chmod(build_image, 0o640 if args.image_profile == "production" else 0o660)
         build_sha.write_text(f"{sha}  {OUT_IMAGE.name}\n", encoding="utf-8")
         os.chmod(build_sha, 0o644)
-        os.replace(build_image, OUT_IMAGE)
-        os.replace(build_sha, OUT_SHA)
-        artifact_promoted = True
-        L(f"promoted_image={OUT_IMAGE.name}")
-        L(f"promoted_sha256={OUT_SHA.name}")
     else:
         L("offline validation failed; final image/sha256 not promoted")
 
-    image_bytes = OUT_IMAGE.stat().st_size if artifact_promoted else build_image.stat().st_size
+    image_bytes = build_image.stat().st_size
     manifest = {
         "round": round_name, "image_tag": TAG, "image_version": VERSION,
         "image_profile": args.image_profile,
@@ -1193,6 +1791,8 @@ def main():
         "image_file": str(OUT_IMAGE), "image_sha256": sha,
         "image_bytes": image_bytes,
         "artifact_promoted": artifact_promoted,
+        "artifact_ready_required": args.image_profile == "production",
+        "artifact_ready_file": str(OUT_READY) if args.image_profile == "production" else "n/a",
         "artifact_private": args.image_profile != "production",
         "final_image": args.image_profile == "production",
         "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
@@ -1206,9 +1806,14 @@ def main():
         "production_free_space_zeroed": v["production_free_space_zeroed"],
         "production_zerofree_summary": verify_zerofree_summary,
         "production_zerofree_tool_sha256": zerofree_tool_sha256,
-        "artifact_file_mode": (
-            oct(OUT_IMAGE.stat().st_mode & 0o777) if artifact_promoted else "not_promoted"
-        ),
+        "production_ext4_tools": production_ext4_tools,
+        "production_root_password_tool": production_root_password_tool,
+        "production_credential_provenance": production_credential_provenance,
+        "production_root_password_plaintext_absent": v["production_root_password_plaintext_absent"],
+        "production_old_root_password_hashes_absent": v["production_old_root_password_hashes_absent"],
+        "production_known_private_residues_absent": v["production_known_private_residues_absent"],
+        "external_forensic_audit_required": args.image_profile == "production",
+        "artifact_file_mode": oct(build_image.stat().st_mode & 0o777) if offline_ok else "not_promoted",
         "build_host": "x86_64 dev sandbox (rootless debugfs derive; no Armbian/kernel rebuild)",
         "sysroot_source": "Debian Bookworm arm64 .debs (glibc 2.36) — prior C18.RUNTIME PoC",
         "hwdecode_stack_built": True, "stack_reused_from": "C18.RUNTIME B1..B9 (hardware-proven)",
@@ -1258,7 +1863,7 @@ def main():
         "panfrost_rebind_service": True,
         "kiosk_py_compiles": v["kiosk_py_compiles"],
         "hw_validated_live": "C18.IMAGE-LAB.2 on board 2026-06-01: hwdec-current=v4l2request, media_load_failed=0, playing H.264, mpv stable, CPU low",
-        "ready_for_manual_card_flash": offline_ok,
+        "ready_for_manual_card_flash": offline_ok and args.image_profile != "production",
         "ready_for_c18_image_lab_2_clean_board_validation": offline_ok,
         "ready_for_c18_production_candidate_validation": offline_ok if args.image_profile == "production" else False,
         "hardware_validation_required": True,
@@ -1270,22 +1875,94 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-9 (blocked pre-flash: deleted lab secrets and SSH keys "
-            "recoverable from unallocated ext4 blocks; overlayroot path ambiguous; artifact mode 0777)"
+            "c18-hwdecode-prod-10 (blocked pre-flash: inherited four-digit root password "
+            "was recoverable by a short offline brute-force audit)"
         )
         manifest["production_access_nonclaim"] = (
-            "shared root password SSH access remains enabled by explicit first-scale risk acceptance; "
-            "per-device credentials remain roadmap"
+            "CSPRNG-generated shared support password SSH access remains enabled by explicit "
+            "first-scale risk acceptance; per-device credentials remain roadmap"
         )
+    if args.image_profile == "production":
+        if validate_binary_build_inputs() != binary_build_inputs:
+            raise SystemExit("BLOCKED: binary image inputs changed during construction")
+        if validate_player_runtime_baseline_package() != player_runtime_baseline:
+            raise SystemExit("BLOCKED: player-runtime baseline changed during construction")
+        repo_after_build = repo_identity()
+        if repo_after_build != repo or repo_after_build["repo_dirty"]:
+            raise SystemExit("BLOCKED: production source tree changed during image construction")
+        out_dir.mkdir(parents=True, exist_ok=False)
+        atomic_write(
+            out_dir / "build_manifest.json",
+            (json.dumps(manifest, indent=2) + "\n").encode("utf-8"),
+        )
+        atomic_write(
+            out_dir / "offline_validation.json",
+            (json.dumps(v, indent=2) + "\n").encode("utf-8"),
+        )
+        atomic_write(out_dir / "build.log", ("\n".join(log) + "\n").encode("utf-8"))
+        if offline_ok:
+            publish_file_exclusive(build_image, OUT_IMAGE)
+            promotion_state["image_created"] = True
+            publish_file_exclusive(build_sha, OUT_SHA)
+            promotion_state["sha_created"] = True
+            artifact_promoted = True
+            manifest["artifact_promoted"] = True
+            manifest["artifact_file_mode"] = oct(OUT_IMAGE.stat().st_mode & 0o777)
+            L(f"promoted_image={OUT_IMAGE.name}")
+            L(f"promoted_sha256={OUT_SHA.name}")
+            atomic_write(
+                out_dir / "build_manifest.json",
+                (json.dumps(manifest, indent=2) + "\n").encode("utf-8"),
+            )
+            atomic_write(out_dir / "build.log", ("\n".join(log) + "\n").encode("utf-8"))
+            ready = {
+                "schema": "dadooh.c18.production_image_artifact_ready.v1",
+                "image_tag": TAG,
+                "image_version": VERSION,
+                "image_file": str(OUT_IMAGE),
+                "image_sha256": sha,
+                "sha256_file": str(OUT_SHA),
+                "repo_commit": repo["repo_commit"],
+                "repo_tree": repo["repo_tree"],
+                "build_manifest_sha256": base.file_sha256(out_dir / "build_manifest.json"),
+                "offline_validation_sha256": base.file_sha256(out_dir / "offline_validation.json"),
+                "build_log_sha256": base.file_sha256(out_dir / "build.log"),
+                "evidence_directory": str(out_dir),
+                "external_forensic_audit_required": True,
+                "ready_for_manual_card_flash": False,
+            }
+            publish_bytes_exclusive(
+                OUT_READY,
+                (json.dumps(ready, indent=2) + "\n").encode("utf-8"),
+            )
+            promotion_state["ready_created"] = True
+        promotion_state["evidence_complete"] = True
+    else:
+        if offline_ok:
+            os.replace(build_image, OUT_IMAGE)
+            promotion_state["image_created"] = True
+            os.replace(build_sha, OUT_SHA)
+            promotion_state["sha_created"] = True
+            artifact_promoted = True
+            manifest["artifact_promoted"] = True
+            manifest["artifact_file_mode"] = oct(OUT_IMAGE.stat().st_mode & 0o777)
+            L(f"promoted_image={OUT_IMAGE.name}")
+            L(f"promoted_sha256={OUT_SHA.name}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for target in {work, out_dir}:
+            atomic_write(
+                target / "build_manifest.json",
+                (json.dumps(manifest, indent=2) + "\n").encode("utf-8"),
+            )
+            atomic_write(
+                target / "offline_validation.json",
+                (json.dumps(v, indent=2) + "\n").encode("utf-8"),
+            )
+            atomic_write(target / "build.log", ("\n".join(log) + "\n").encode("utf-8"))
+        promotion_state["evidence_complete"] = True
     print(f"\n=== {round_name} RESULT ===")
     print(json.dumps(manifest, indent=2))
-    out_dir = Path(os.environ.get("C18_OUT_DIR", str(work)))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for target in {work, out_dir}:
-        (target / "build_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-        (target / "offline_validation.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
-        (target / "build.log").write_text("\n".join(log) + "\n", encoding="utf-8")
-    print(f"\nWORKDIR={work}")
+    print(f"\nWORKDIR={'ephemeral_removed_on_exit' if args.image_profile == 'production' else work}")
     print(f"OFFLINE_VALIDATION_PASSED={offline_ok}")
     return 0 if offline_ok else 3
 

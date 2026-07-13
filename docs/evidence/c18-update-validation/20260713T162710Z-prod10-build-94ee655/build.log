@@ -1,0 +1,13 @@
+zerofree=/tmp/zerofree-bin/usr/sbin/zerofree
+base_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img
+out_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-10_minimal.img
+copy base image -> temp output ...
+linux partition offset=4194304 length=1967128576
+debugfs commands: 221 (stack libs real=11 symlink=21)
+totem-core embedded version=c25.3-reference-image-20260713-562939e files=18
+zerofree verification=0/58530/480256
+e2fsck rc=0 (clean)
+rootfs written back into temp output image
+sha256=fb1ba57e0ac2cffdd74169c96b57cde03cccd8b576c9628642a6f51621cc8026
+promoted_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-10_minimal.img
+promoted_sha256=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-10_minimal.img.sha256

@@ -2,7 +2,6 @@
 Description=Dadooh production device identity initialization
 After=local-fs.target
 Before=ssh.service sshd.service
-ConditionPathExists=!/var/lib/dadooh/production-identity-initialized
 
 [Service]
 Type=oneshot

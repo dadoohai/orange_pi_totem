@@ -235,9 +235,9 @@ encerramento do wizard. Esses itens formam a rodada prod8; nao reabrem a prova
 mecanica M5 do auto-pull C22.
 
 Risco de primeira escala explicitamente aceito: acesso SSH por senha root
-compartilhada permanece; credencial por device fica no M6. Isso nao autoriza
-embutir Wi-Fi, senha em plaintext, identidade de laboratorio ou chaves SSH
-reutilizadas entre placas.
+compartilhada de alta entropia permanece; credencial por device fica no M6.
+Isso nao autoriza senha curta ou plaintext, Wi-Fi, identidade de laboratorio ou
+chaves SSH reutilizadas entre placas.
 
 ### M6 - Robustez De Frota
 
@@ -319,10 +319,13 @@ Enquanto nada mudar, a ordem de execucao e:
 1. Preservar C25 como entrada validada, sem reabrir microajustes salvo regressao
    ou blocker novo. C25A e o alvo C25B exato estao comprovados na placa em
    `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
-2. A candidata `prod9` consolidou C25A, C25B e hooks image-bound, mas foi
-   bloqueada pela auditoria forense antes do flash. Construir sua sucessora com
-   higiene de blocos livres, overlayroot explicitamente desativado, identidade
-   SSH persistente e proveniencia correta; repetir o aceite off-board.
+2. `prod9` foi bloqueada por residuos forenses; `prod10` corrigiu essa higiene,
+   mas uma auditoria independente quebrou em segundos a senha root curta herdada
+   da base. Construir e auditar `prod11` com credencial forte externa ao Git,
+   blocos livres zerados, overlayroot desativado, identidade SSH persistente e
+   proveniencia correta. O build deve partir de commit limpo, fechar o conjunto
+   imagem/hash/evidencia com marcador final e ainda passar auditoria forense
+   antes de qualquer flash.
 3. Publicar depois do aceite local somente os alvos remotos exatos; provar os
    timers de `totem-core` e `player-runtime`, no-op, rollback e restauracao.
 4. Auditar a corrida e promover a sucessora a referencia apenas se o E2E estiver

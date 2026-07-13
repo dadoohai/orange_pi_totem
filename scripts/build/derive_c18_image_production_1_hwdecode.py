@@ -16,6 +16,9 @@ import derive_c18_image_lab_1_hwdecode as base
 DEFAULTS = {
     "--image-profile": "production",
     "--totem-core-profile": "production",
+    "--production-root-password-file": "/home/builder/.config/dadooh-secrets/c18-production-support-password.txt",
+    "--production-root-password-provenance-file": "/home/builder/.config/dadooh-secrets/c18-production-support-password.txt.provenance.json",
+    "--zerofree": "/home/builder/.local/libexec/dadooh/zerofree",
 }
 
 

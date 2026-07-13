@@ -8,6 +8,7 @@ operator-created policy file or on the legacy kiosky-player update service.
 from __future__ import annotations
 
 import importlib.util
+import base64
 import hashlib
 import json
 import os
@@ -39,6 +40,9 @@ DERIVE_C17_7_PATH = REPO_ROOT / "scripts" / "build" / "derive_c17_7_totem_core_e
 DERIVE_C18_IMAGE_PATH = REPO_ROOT / "scripts" / "build" / "derive_c18_image_lab_1_hwdecode.py"
 DERIVE_C18_PRODUCTION_IMAGE_PATH = (
     REPO_ROOT / "scripts" / "build" / "derive_c18_image_production_1_hwdecode.py"
+)
+PRODUCTION_CREDENTIAL_GENERATOR_PATH = (
+    REPO_ROOT / "scripts" / "build" / "generate_c18_production_support_credential.py"
 )
 BUILD_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "build_kiosky_player_release_package.sh"
 PUBLISH_PLAYER_PATH = REPO_ROOT / "scripts" / "deploy" / "publish_kiosky_player_github_release.sh"
@@ -505,13 +509,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("argparse.ArgumentParser(allow_abbrev=False)", derive)
         self.assertIn("production image requires totem-core production profile", derive)
         self.assertIn("production totem-core profile requires --image-profile production", derive)
+        self.assertIn("production images never allow dirty source trees", derive)
+        self.assertIn("production source tree changed during image construction", derive)
+        self.assertIn("production candidate identity must match the pinned prod11 release", derive)
+        self.assertIn("binary image inputs changed during construction", derive)
         self.assertIn("production_image=true", derive)
         self.assertIn("artifact_private=false", derive)
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-10"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.10"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-11"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.11"', derive)
         self.assertIn("validate_player_runtime_baseline_package", derive)
         self.assertIn("validate_binary_build_inputs", derive)
         self.assertIn('BASE_IMAGE_SHA256 = "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af"', derive)
@@ -531,7 +539,29 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("production_overlayroot_disabled", derive)
         self.assertIn("production_free_space_zeroed", derive)
         self.assertIn("production_kiosky_commit_marker_matches_c25b", derive)
+        self.assertIn("production_root_password_hash_replaced", derive)
+        self.assertIn("production_root_password_matches_external_credential", derive)
+        self.assertIn("production_shadow_permissions_preserved", derive)
+        self.assertIn("private production build input file mode must be 0600", derive)
+        self.assertIn("production_support_credential_csprng_provenance", derive)
+        self.assertIn('PRODUCTION_SHADOW_PATHS = ("/etc/shadow", "/etc/shadow-")', derive)
+        self.assertIn("production_old_root_password_hashes_absent", derive)
+        self.assertIn("production_known_private_residues_absent", derive)
+        self.assertNotIn("production_root_password_hash_fingerprint", derive)
+        self.assertNotIn("production_shared_root_password_access_risk_accepted", derive)
         self.assertIn("zerofree is required for production images", derive)
+        self.assertIn("pinned zerofree hash mismatch", derive)
+        self.assertIn("PRODUCTION_DEBUGFS_SHA256", derive)
+        self.assertIn("PRODUCTION_E2FSCK_SHA256", derive)
+        self.assertIn("validate_production_ext4_tools", derive)
+        self.assertIn("run_debugfs_batch_strict", derive)
+        self.assertIn("debugfs_batch_runner=(", derive)
+        self.assertIn("runner = debugfs_batch_runner or base.debugfs_batch", EMBED_PATH.read_text(encoding="utf-8"))
+        self.assertIn("artifact_ready_required", derive)
+        self.assertIn("dadooh.c18.production_image_artifact_ready.v1", derive)
+        self.assertIn("publish_file_exclusive", derive)
+        self.assertIn("external_forensic_audit_required", derive)
+        self.assertIn('"ready_for_manual_card_flash": offline_ok and args.image_profile != "production"', derive)
         self.assertIn("os.chmod(build_image, 0o640", derive)
         self.assertIn('"/root/.not_logged_in_yet"', derive)
         self.assertIn('"/etc/dadooh/c13-homologation-private-seed"', derive)
@@ -548,8 +578,27 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertTrue(production_settings_unit.is_file())
         self.assertIn("ssh-keygen -A", identity_script.read_text(encoding="utf-8"))
         self.assertIn("identity_complete", identity_script.read_text(encoding="utf-8"))
+        self.assertIn("repair_incomplete_pair", identity_script.read_text(encoding="utf-8"))
+        self.assertNotIn(
+            "rm -f /etc/ssh/ssh_host_rsa_key /etc/ssh/ssh_host_rsa_key.pub",
+            identity_script.read_text(encoding="utf-8"),
+        )
         self.assertIn("storage_contract=root_ext4_rw", identity_script.read_text(encoding="utf-8"))
+        self.assertIn(
+            'MARKER="${ROOT_PREFIX}/var/lib/dadooh/production-identity-initialized"',
+            identity_script.read_text(encoding="utf-8"),
+        )
+        identity_self_test = subprocess.run(
+            [str(identity_script), "--self-test"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(identity_self_test.returncode, 0, identity_self_test.stderr)
+        self.assertIn("self-test ok", identity_self_test.stdout)
         self.assertIn("Before=ssh.service sshd.service", identity_unit.read_text(encoding="utf-8"))
+        self.assertNotIn("ConditionPathExists", identity_unit.read_text(encoding="utf-8"))
         self.assertIn("Requires=totem-production-identity-init.service", identity_dropin.read_text(encoding="utf-8"))
         self.assertIn("totem_settings_production_apply_policy.py --write", production_settings_unit.read_text(encoding="utf-8"))
         self.assertIn("TOTEM_VISUAL_WIZARD_PAIRING_MODE=production", production_settings_unit.read_text(encoding="utf-8"))
@@ -558,9 +607,184 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("artifact_private; not_for_production", derive)
         self.assertIn('"--image-profile": "production"', wrapper)
         self.assertIn('"--totem-core-profile": "production"', wrapper)
+        self.assertIn('"--production-root-password-file":', wrapper)
+        self.assertIn('"--production-root-password-provenance-file":', wrapper)
+        self.assertIn('"--zerofree":', wrapper)
         self.assertNotIn('"--image-version":', wrapper)
         self.assertNotIn('"--image-tag":', wrapper)
         self.assertIn("production builder cannot select lab image profile", wrapper)
+        credential_generator = PRODUCTION_CREDENTIAL_GENERATOR_PATH.read_text(encoding="utf-8")
+        self.assertIn("credential output must stay outside the source repo", credential_generator)
+
+    def test_c18_production_image_credential_policy_is_fail_closed(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "derive_c18_image_credential_policy_test",
+            DERIVE_C18_IMAGE_PATH,
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        identity_script = (
+            REPO_ROOT / "scripts" / "board" / "totem_production_identity_init.sh"
+        ).read_text(encoding="utf-8")
+        self.assertTrue(module.production_identity_init_contract_valid(identity_script))
+        legacy_marker_script = identity_script.replace(
+            'MARKER="${ROOT_PREFIX}/var/lib/dadooh/production-identity-initialized"',
+            'MARKER="/var/lib/dadooh/production-identity-initialized"',
+        )
+        self.assertNotEqual(legacy_marker_script, identity_script)
+        self.assertFalse(module.production_identity_init_contract_valid(legacy_marker_script))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            credential = root / "support-password"
+            password = "Aa9!" + base64.urlsafe_b64encode(
+                hashlib.sha384(b"c18-production-credential-test-fixture").digest()
+            ).decode("ascii").rstrip("=")
+            credential.write_text(password + "\n", encoding="ascii")
+            credential.chmod(0o600)
+            self.assertEqual(module.load_production_support_password(credential), password)
+
+            provenance_path = root / "support-password.provenance.json"
+            provenance = {
+                "schema": module.PRODUCTION_CREDENTIAL_PROVENANCE_SCHEMA,
+                "generated_at_utc": "2026-01-01T00:00:00Z",
+                "generator": "python-secrets.token_urlsafe",
+                "generator_file_sha256": module.base.file_sha256(
+                    module.PRODUCTION_CREDENTIAL_GENERATOR_SOURCE
+                ),
+                "random_source": "os_csprng_via_python_secrets",
+                "random_bytes": 48,
+                "credential_length": len(password),
+                "credential_sha256": hashlib.sha256(password.encode("ascii")).hexdigest(),
+                "plaintext_embedded_in_provenance": False,
+            }
+            provenance_path.write_text(json.dumps(provenance) + "\n", encoding="utf-8")
+            provenance_path.chmod(0o600)
+            validated_provenance = module.validate_production_credential_provenance(
+                provenance_path,
+                password,
+            )
+            self.assertEqual(validated_provenance["random_bytes"], 48)
+
+            provenance_with_plaintext = dict(provenance, credential_copy=password)
+            provenance_path.write_text(json.dumps(provenance_with_plaintext) + "\n", encoding="utf-8")
+            provenance_path.chmod(0o600)
+            with self.assertRaises(SystemExit):
+                module.validate_production_credential_provenance(provenance_path, password)
+            invalid_timestamp = dict(provenance, generated_at_utc="2026-19-39T29:59:59Z")
+            provenance_path.write_text(json.dumps(invalid_timestamp) + "\n", encoding="utf-8")
+            provenance_path.chmod(0o600)
+            with self.assertRaises(SystemExit):
+                module.validate_production_credential_provenance(provenance_path, password)
+            provenance_path.write_text(json.dumps(provenance) + "\n", encoding="utf-8")
+            provenance_path.chmod(0o600)
+
+            first_hash, first_tool = module.derive_production_root_password_hash(
+                password,
+                tag="c18-hwdecode-prod-test",
+                repo_commit="a" * 40,
+            )
+            second_hash, second_tool = module.derive_production_root_password_hash(
+                password,
+                tag="c18-hwdecode-prod-test",
+                repo_commit="a" * 40,
+            )
+            self.assertEqual(first_hash, second_hash)
+            self.assertEqual(first_tool, second_tool)
+            self.assertEqual(first_tool["sha256"], module.PRODUCTION_OPENSSL_SHA256)
+            self.assertTrue(first_hash.startswith("$6$"))
+
+            shadow = "root:$6$old$hash:20000:0:99999:7:::\nuser:!:20000:0:99999:7:::\n"
+            replaced = module.replace_root_password_hash(shadow, first_hash)
+            self.assertEqual(module.root_password_hash_from_shadow(replaced), first_hash)
+            self.assertNotIn("$6$old$hash", replaced)
+
+            binary = root / "binary"
+            binary.write_bytes(b"before" + password.encode("ascii") + b"after")
+            self.assertTrue(module.file_contains_bytes(binary, password.encode("ascii"), chunk_size=7))
+            self.assertFalse(module.file_contains_bytes(binary, b"not-present", chunk_size=7))
+
+            credential.write_text("1234\n", encoding="ascii")
+            credential.chmod(0o600)
+            with self.assertRaises(SystemExit):
+                module.load_production_support_password(credential)
+
+            credential.write_text(("Aa9!" * 16) + "\n", encoding="ascii")
+            credential.chmod(0o600)
+            with self.assertRaises(SystemExit):
+                module.load_production_support_password(credential)
+
+            credential.write_text(password + "\n", encoding="ascii")
+            credential.chmod(0o644)
+            with self.assertRaises(SystemExit):
+                module.load_production_support_password(credential)
+
+            credential.chmod(0o600)
+            hardlink = root / "credential-hardlink"
+            os.link(credential, hardlink)
+            with self.assertRaises(SystemExit):
+                module.load_production_support_password(credential)
+            hardlink.unlink()
+
+            link = root / "credential-link"
+            link.symlink_to(credential)
+            with self.assertRaises(SystemExit):
+                module.load_production_support_password(link)
+
+            module.validate_candidate_identity(
+                "c18-hwdecode-prod-11",
+                "c18.image-prod.11",
+                "/etc/dadooh/c18-hwdecode-prod-11-image",
+                image_profile="production",
+            )
+            with self.assertRaises(SystemExit):
+                module.validate_candidate_identity(
+                    "c18-hwdecode-prod-11",
+                    "c18.image-prod.12",
+                    "/etc/dadooh/c18-hwdecode-prod-11-image",
+                    image_profile="production",
+                )
+            with self.assertRaises(SystemExit):
+                module.validate_candidate_identity(
+                    "c18-hwdecode-prod-12",
+                    "c18.image-prod.12",
+                    "/etc/dadooh/c18-hwdecode-prod-12-image",
+                    image_profile="production",
+                )
+            with self.assertRaises(SystemExit):
+                module.validate_candidate_identity(
+                    "c18-hwdecode-prod-11",
+                    "c18.image-prod.11",
+                    "/etc/dadooh/c18-hwdecode-prod-11-image\nrm /etc/shadow",
+                    image_profile="production",
+                )
+
+            allowed_debugfs = (
+                "debugfs: rm /missing\n"
+                "rm: File not found by ext2_lookup while trying to resolve filename\n"
+            )
+            blocked_debugfs = (
+                "debugfs: write /missing /target\n"
+                "write: No such file or directory\n"
+            )
+            self.assertEqual(module.debugfs_batch_errors(allowed_debugfs), [])
+            self.assertTrue(module.debugfs_batch_errors(blocked_debugfs))
+
+            promotion_source = root / "candidate.img.tmp"
+            promotion_target = root / "candidate.img"
+            promotion_source.write_bytes(b"candidate")
+            promotion_target.write_bytes(b"existing")
+            with self.assertRaises(FileExistsError):
+                module.publish_file_exclusive(promotion_source, promotion_target)
+            self.assertEqual(promotion_target.read_bytes(), b"existing")
+            self.assertTrue(promotion_source.exists())
+            promotion_target.unlink()
+            module.publish_file_exclusive(promotion_source, promotion_target)
+            self.assertEqual(promotion_target.read_bytes(), b"candidate")
+            self.assertFalse(promotion_source.exists())
 
     def test_totem_core_ota_payload_excludes_player_launcher(self) -> None:
         build = BUILD_CORE_PATH.read_text(encoding="utf-8")

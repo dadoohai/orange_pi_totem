@@ -41,11 +41,12 @@ Hoje a C18 tem dois caminhos reais:
   autorizacao presa por hashes.
 
 Estado de distribuicao vigente: `prod8` + C23 continua sendo a referencia
-aceita em placa. A primeira candidata consolidada, `prod9`, foi bloqueada antes
-da gravacao: auditoria forense recuperou segredos apagados nos blocos livres da
-imagem base e encontrou configuracao antiga de overlayroot ainda ambigua. Ela
-virou evidencia negativa. A sucessora deve corrigir a higiene antes de repetir
-o aceite off-board e chegar a placa.
+aceita em placa. `prod9` foi bloqueada antes da gravacao por residuos em blocos
+livres e overlayroot ambiguo. `prod10` corrigiu integralmente essa higiene, mas
+tambem foi bloqueada antes do flash: a senha root curta herdada da base foi
+quebrada em segundos por auditoria offline. A proxima candidata e `prod11`, com
+credencial forte externa ao Git e prova byte a byte de que o plaintext nao foi
+embutido.
 
 O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
@@ -125,25 +126,37 @@ Fila atual para consolidacao:
   validados e reversiveis na placa de homologacao. O alvo C25B final e
   `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com playback,
   `content_unavailable`, recuperacao, rollback e reaplicacao comprovados. Ele
-  foi incorporado, junto com o launcher/updater correspondentes, na candidata
-  `prod9`, mas permanece sem publicacao remota e sem claim de distribuicao ate
-  o aceite da imagem na placa. Contrato e evidencias estao em
+  foi incorporado, junto com o launcher/updater correspondentes, em `prod9` e
+  `prod10`, ambas bloqueadas antes do flash por achados forenses distintos. O
+  mesmo conjunto segue para `prod11`, ainda sem publicacao remota ou claim de
+  distribuicao ate o aceite da imagem na placa. Contrato e evidencias estao em
   `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md` e
   `docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
 - Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
   uso por rodada, preservando o QA C19/C20.
 - Retomar a matriz de compatibilidade de display quando as telas alvo estiverem
   disponiveis; ate la, manter apenas diagnostico read-only.
-- A candidata `prod9` foi gerada no commit `c06fd9b`, SHA256
+- `prod9` foi gerada no commit `c06fd9b`, SHA256
   `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`,
   com core consolidado C25.3 e autorizacao C25B exact-target. Passou gate
   `82/82` e validacao offline `54/54`, mas a varredura inicial cobria somente
   arquivos alocados. A auditoria independente recuperou dados apagados em
   blocos livres e bloqueou a imagem antes do flash. Evidencia negativa em
   `docs/evidence/c18-update-validation/20260713T155142Z-prod9-build-c06fd9b/`.
-- O pendente agora e construir a sucessora higienizada, repetir as auditorias,
-  grava-la do zero e fechar auto-pull/no-op/rollback dos alvos remotos exatos
-  antes de torna-la a nova referencia de distribuicao.
+- `prod10`, commit `94ee655`, SHA256
+  `fb1ba57e0ac2cffdd74169c96b57cde03cccd8b576c9628642a6f51621cc8026`,
+  eliminou os residuos e zerou 58530/58530 blocos livres, mas a auditoria
+  quebrou a senha root curta herdada em cerca de 17 segundos. Tambem foi
+  bloqueada antes do flash. Evidencia negativa em
+  `docs/evidence/c18-update-validation/20260713T162710Z-prod10-build-94ee655/`.
+- O pendente agora e construir `prod11` com credencial forte, repetir as
+  auditorias, grava-la do zero e fechar auto-pull/no-op/rollback dos alvos
+  remotos exatos antes de torna-la a nova referencia de distribuicao.
+  Seu construtor de producao recusa arvore suja, identidade de candidata
+  divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
+  erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
+  quando o marcador `.ready.json` e publicado por ultimo, sem autorizar flash:
+  a auditoria forense externa continua obrigatoria.
 - A convergencia C24 e o controle assinado de novos players ficam no roadmap
   conforme a decisao 198.
 
@@ -363,9 +376,15 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - `prod8` + C23 segue como baseline de producao comprovado.
 - `prod9` esta **bloqueada e nao deve ser gravada**. Seu SHA256 e
   `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`.
-- construir e auditar a sucessora com espaco livre ext4 zerado, overlayroot
-  antigo removido, identidade SSH persistente, proveniencia correta e modo de
-  arquivo restrito;
+- `prod10` tambem esta **bloqueada e nao deve ser gravada**. Ela resolveu os
+  residuos forenses do prod9, mas manteve uma senha root herdada de quatro
+  digitos; seu SHA256 e
+  `fb1ba57e0ac2cffdd74169c96b57cde03cccd8b576c9628642a6f51621cc8026`;
+- construir e auditar `prod11` com credencial de suporte forte externa ao Git,
+  hash substituido em `/etc/shadow` e `/etc/shadow-`, plaintext e verificador
+  antigo ausentes de todos os bytes da imagem, espaco livre ext4 zerado,
+  overlayroot removido, identidade SSH persistente, proveniencia correta e modo
+  de arquivo restrito;
 - gravar a sucessora do zero e validar boot, wizard/QR, gravacao da configuracao,
   retorno a midia, playback e estados C25;
 - publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar
@@ -373,14 +392,15 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - gerar/promover o core consolidado em `stable` e provar o timer de
   `totem-core`, evitando que a stable antiga tente downgrade sobre a imagem;
 - executar auditoria final e, somente com essas provas verdes, substituir
-  `prod8` por `prod9` como imagem de referencia;
+  `prod8` por `prod11` como imagem de referencia;
 - manter futuras evolucoes separadas: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player. Grupos, dashboard e kill
   switch continuam roadmap M6 e nao bloqueiam a primeira escala aceita.
 
-Risco aceito para esta primeira escala: SSH root por senha compartilhada
-permanece para suporte; credencial por device e M6. A excecao nao permite senha
-plaintext, Wi-Fi/identidade de lab ou host keys reutilizadas na imagem.
+Risco aceito para esta primeira escala: SSH root por uma senha compartilhada de
+alta entropia permanece para suporte; credencial por device e M6. A excecao nao
+permite senha curta, plaintext, Wi-Fi/identidade de lab ou host keys reutilizadas
+na imagem.
 
 Hardenings nao bloqueantes apontados pela auditoria do marco anterior de
 `totem-core` auto-pull:

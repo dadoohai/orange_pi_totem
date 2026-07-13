@@ -11,7 +11,7 @@ import tarfile
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import derive_c15_2_1_homolog_image as base
 
@@ -302,8 +302,14 @@ def _player_runtime_authorization_matches_expected(
     return embedded.get("business_decision") == expected.get("business_decision")
 
 
-def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
-                           *, profile: str = "homologation") -> dict[str, Any]:
+def write_totem_core_embed(
+    rootfs: Path,
+    work_dir: Path,
+    repo_root: Path,
+    *,
+    profile: str = "homologation",
+    debugfs_batch_runner: Callable[[Path, list[str], Path], str] | None = None,
+) -> dict[str, Any]:
     """Embed C17.6 totem-core as image current + /opt fallback/wrappers."""
     profile_config = resolve_totem_core_embed_profile(profile)
     manifest_path = repo_root / "scripts/board/totem_appliance_manifest.json"
@@ -556,7 +562,8 @@ def write_totem_core_embed(rootfs: Path, work_dir: Path, repo_root: Path,
         ]
     )
 
-    output = base.debugfs_batch(rootfs, commands, work_dir)
+    runner = debugfs_batch_runner or base.debugfs_batch
+    output = runner(rootfs, commands, work_dir)
     return {
         "totem_core_current_version": TOTEM_CORE_VERSION,
         "totem_core_embed_profile": profile,

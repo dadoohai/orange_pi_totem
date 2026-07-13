@@ -1,0 +1,33 @@
+{
+  "schema": "dadooh.c18.production_image_forensic_blocker.v1",
+  "candidate": {
+    "image_tag": "c18-hwdecode-prod-10",
+    "image_version": "c18.image-prod.10",
+    "image_sha256": "fb1ba57e0ac2cffdd74169c96b57cde03cccd8b576c9628642a6f51621cc8026",
+    "repo_commit": "94ee655c0593d27d191db0203c81f216aa47c4ae"
+  },
+  "positive_findings": {
+    "free_ext4_blocks_zeroed": true,
+    "free_ext4_blocks_checked": 58530,
+    "old_lab_secret_oracles_absent": true,
+    "filesystem_slack_zeroed": true,
+    "journal_clean": true,
+    "overlayroot_disabled": true,
+    "c25a_c25b_composition_exact": true
+  },
+  "blocker": {
+    "category": "weak_inherited_root_support_password",
+    "root_account_active": true,
+    "password_authentication_available": true,
+    "offline_four_digit_search_succeeded": true,
+    "observed_search_seconds": 17.362,
+    "plaintext_recorded": false
+  },
+  "decision": {
+    "flash_allowed": false,
+    "distribution_allowed": false,
+    "image_removed": true,
+    "production_reference_unchanged": "c18-hwdecode-prod-8",
+    "next_candidate": "c18-hwdecode-prod-11"
+  }
+}

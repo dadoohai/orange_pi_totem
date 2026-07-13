@@ -9,10 +9,10 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_but_prod9_image_candidate_blocked_pre_flash
+status=c25_validated_prod9_and_prod10_blocked_prod11_pending
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
-launcher_retry_hook_embedded_in_blocked_prod9=true
+launcher_retry_hook_preserved_in_candidate_chain=true
 c25b_player_runtime_package=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
 c25b_apply_rollback_reapply=passed
 c25b_live_mpv_recovery_surface=passed
@@ -26,6 +26,8 @@ writer_mutating_e2e=not_repeated_in_this_round
 remote_targets_not_yet_promoted=true
 next_reference_image_successor_pending=true
 prod9_board_acceptance=blocked_do_not_flash
+prod10_board_acceptance=blocked_do_not_flash
+prod11_board_acceptance=pending_build_and_forensic_audit
 ```
 
 ## Contrato Publico V1
@@ -392,3 +394,36 @@ sucessora deve zerar e verificar todo o espaco livre, desativar explicitamente
 o overlayroot nao shipado, preservar identidade SSH entre reboots, corrigir a
 proveniencia e restringir os modos do artefato. Evidencia negativa:
 `docs/evidence/c18-update-validation/20260713T155142Z-prod9-build-c06fd9b/`.
+
+## Checkpoint Prod10 - Higiene Verde, Credencial Bloqueada - 2026-07-13
+
+O prod10 corrigiu os bloqueios forenses do prod9: todos os blocos livres e
+slacks inspecionados estavam zerados, os residuos exatos do prod9 desapareceram,
+overlayroot ficou desativado, a identidade SSH passou a nascer na placa e a
+composicao C25A/C25B permaneceu presa aos hashes corretos.
+
+Uma auditoria independente encontrou outro blocker antes do flash: a conta root
+continuava ativa com a senha curta herdada da imagem base, quebrada em cerca de
+17 segundos por busca offline. Nenhuma placa recebeu o prod10.
+
+```text
+candidate_image=c18-hwdecode-prod-10
+image_sha256=fb1ba57e0ac2cffdd74169c96b57cde03cccd8b576c9628642a6f51621cc8026
+image_repo_commit=94ee655c0593d27d191db0203c81f216aa47c4ae
+free_blocks_zeroed=58530_of_58530
+forensic_old_lab_residues=absent
+root_support_password_strength=blocked_inherited_short_password
+board_flash=blocked_do_not_flash
+distribution_reference=still_prod8
+next_candidate=c18-hwdecode-prod-11
+```
+
+O prod11 deve substituir o hash root durante o build a partir de uma credencial
+forte guardada fora do Git, recusar arquivo frouxo ou senha fraca, preservar as
+permissoes e substituir o verificador tanto em `/etc/shadow` quanto no backup
+`/etc/shadow-`, provar que nem o plaintext nem o hash antigo aparecem na imagem
+e repetir a auditoria forense completa. O construtor tambem deve recusar fonte
+suja, identidade divergente e falha silenciosa de ferramenta; seu marcador final
+fecha imagem, hash e evidencias, mas nao substitui o aceite forense para flash.
+Evidencia negativa:
+`docs/evidence/c18-update-validation/20260713T162710Z-prod10-build-94ee655/`.
