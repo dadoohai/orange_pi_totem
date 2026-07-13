@@ -317,7 +317,8 @@ pausada ou rebaixada.
 Enquanto nada mudar, a ordem de execucao e:
 
 1. Priorizar melhorias visiveis de wizard, jornada de configuracao, status e
-   transicoes que caibam em `totem-core`.
+   transicoes que caibam em `totem-core`. A rodada ativa e C25, registrada em
+   `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 2. Fechar o E2E real do pacote acumulado e gerar a proxima imagem de referencia
    quando o conjunto estiver maduro.
 3. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e

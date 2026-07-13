@@ -116,7 +116,9 @@ Fila atual para consolidacao:
   disponivel.
 - Melhorar os estados que o usuario ve fora da midia: abertura/saida de
   settings, carregando conteudo, config pendente, sem midia e erro recuperavel,
-  sem expor diagnostico tecnico.
+  sem expor diagnostico tecnico. A fatia C25A concluiu implementacao e auditoria
+  off-board; contrato, escopo e aceite HDMI pendente estao em
+  `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 - Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
   uso por rodada, preservando o QA C19/C20.
 - Retomar a matriz de compatibilidade de display quando as telas alvo estiverem

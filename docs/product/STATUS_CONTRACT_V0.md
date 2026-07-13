@@ -4,6 +4,10 @@ Status: contrato publico proposto para Fase A. Nao implementa mudancas.
 
 Data: 2026-05-01
 
+Nota vigente: este documento preserva o contrato historico v0. O contrato
+implementado pela rodada C25 e `totem-status.v1`, registrado em
+`docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
+
 ## Objetivo
 
 Definir um JSON sanitizado para representar o estado agregado do appliance. O

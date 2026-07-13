@@ -489,6 +489,19 @@ wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
 de referencia. Mudancas de player-runtime, MPV/kernel/display baixo nivel,
 midia/config/cache e politica de OTA continuam fora deste pacote UX.
 
+## Rodada C25 - Estados Visiveis
+
+C25 continua o acumulo por `totem-core` com um contrato visual verdadeiro para
+config pendente, inicio, carregamento, ausencia de conteudo e recuperacao. A
+rodada tambem corrige a ordem perceptiva do writer: `Pronto para salvar` antes
+da gravacao e `Configuracao salva` somente depois do sucesso.
+
+Fonte da rodada: `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
+
+Estado: implementacao e QA off-board concluidos para C25A; aceite HDMI, pacote
+consolidado e inclusao do hook de launcher na proxima imagem continuam
+pendentes. Estados dinamicos enquanto o player vive permanecem na fatia C25B.
+
 ## Primeiras Rodadas Recomendadas
 
 1. V0: corrigir a sobreposicao painel/preview na orientacao.
