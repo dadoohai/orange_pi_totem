@@ -40,7 +40,9 @@ MESSAGES = {
     "loading_content": ("Dadooh", "Carregando conteudo"),
     "setup": ("Dadooh", "Abrindo configuracao"),
     "saving": ("Dadooh", "Salvando configuracao"),
-    "config_pending": ("Dadooh", ("Configuracao pendente", "Pressione F10")),
+    "complete": ("Dadooh", "Configuracao salva"),
+    "save_failed": ("Dadooh", ("Configuracao nao salva", "Voltando com seguranca")),
+    "config_pending": ("Dadooh", ("Configuracao pendente", "Segure F10 por 5 segundos")),
     "shutdown": (
         "Desligamento seguro",
         (
@@ -52,7 +54,7 @@ MESSAGES = {
     ),
 }
 
-PREVIEW_MODES = ("boot", "player", "loading_content", "config_pending", "setup", "saving")
+PREVIEW_MODES = ("boot", "player", "loading_content", "config_pending", "setup", "saving", "complete", "save_failed")
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
     "bg": (11, 18, 32),
@@ -72,6 +74,14 @@ SVG_VISUAL = {
     "text": "#f8fafc",
     "text_muted": "#cbd5e1",
     "border": "#2f3d4a",
+}
+MODE_ACCENTS = {
+    "complete": (34, 197, 94),
+    "save_failed": (245, 158, 11),
+}
+MODE_SVG_ACCENTS = {
+    "complete": "#22c55e",
+    "save_failed": "#f59e0b",
 }
 
 ORIENTATIONS = {
@@ -301,7 +311,14 @@ class FramebufferSplash:
             return tuple(str(line) for line in message if str(line).strip())
         return (str(message),)
 
-    def render(self, title: str, message: str | tuple[str, ...], *, rotation_deg: int = 0) -> None:
+    def render(
+        self,
+        title: str,
+        message: str | tuple[str, ...],
+        *,
+        rotation_deg: int = 0,
+        accent: tuple[int, int, int] = VISUAL["accent"],
+    ) -> None:
         ctx = self.render_context(rotation_deg)
         source_w = int(ctx["source_w"])
         source_h = int(ctx["source_h"])
@@ -312,10 +329,10 @@ class FramebufferSplash:
         panel_h = max(300, int(source_h * 0.44))
         panel_x = (source_w - panel_w) // 2
         panel_y = max(72, (source_h - panel_h) // 2 - 8)
-        self.draw_logical_rect(0, 0, source_w, top_bar, VISUAL["accent"], ctx)
+        self.draw_logical_rect(0, 0, source_w, top_bar, accent, ctx)
         self.draw_logical_rect(0, source_h - footer_h, source_w, footer_h, VISUAL["footer"], ctx)
         self.draw_logical_rect(panel_x, panel_y, panel_w, panel_h, VISUAL["surface"], ctx)
-        self.draw_logical_rect(panel_x, panel_y, max(8, source_w // 160), panel_h, VISUAL["accent"], ctx)
+        self.draw_logical_rect(panel_x, panel_y, max(8, source_w // 160), panel_h, accent, ctx)
         title_scale = max(3, min(4, source_w // 300))
         message_scale = max(2, min(3, source_w // 420))
         title_width = len(title) * (self.font.width + 1) * title_scale
@@ -399,6 +416,7 @@ def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
     rotation = normalize_rotation_deg(rotation_deg)
     source_w, source_h, layout_mode = source_size_for_rotation(rotation)
     message_lines = FramebufferSplash.normalized_lines(message)
+    accent = MODE_SVG_ACCENTS.get(mode, SVG_VISUAL["accent"])
     panel_w = int(source_w * 0.64)
     panel_h = max(300, int(source_h * 0.44))
     panel_x = (source_w - panel_w) // 2
@@ -417,10 +435,10 @@ def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{source_w}" height="{source_h}" viewBox="0 0 {source_w} {source_h}" data-display-rotation-deg="{rotation}" data-layout-mode="{layout_mode}" role="img" aria-label="Dadooh splash preview {escape_text(mode)}">
   <rect width="{source_w}" height="{source_h}" fill="{SVG_VISUAL["bg"]}"/>
-  <rect x="0" y="0" width="{source_w}" height="12" fill="{SVG_VISUAL["accent"]}"/>
+  <rect x="0" y="0" width="{source_w}" height="12" fill="{accent}"/>
   <rect x="0" y="{source_h - 72}" width="{source_w}" height="72" fill="{SVG_VISUAL["footer"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="{panel_w}" height="{panel_h}" rx="8" fill="{SVG_VISUAL["surface"]}" stroke="{SVG_VISUAL["border"]}"/>
-  <rect x="{panel_x}" y="{panel_y}" width="9" height="{panel_h}" rx="4" fill="{SVG_VISUAL["accent"]}"/>
+  <rect x="{panel_x}" y="{panel_y}" width="9" height="{panel_h}" rx="4" fill="{accent}"/>
   <text x="{source_w // 2}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="{title_size}" font-weight="700" text-anchor="middle" fill="{SVG_VISUAL["text"]}">{escape_text(title)}</text>
   {' '.join(line_parts)}
 </svg>
@@ -486,7 +504,7 @@ def render_mode(
         wait_for_framebuffer(wait_framebuffer_sec)
         renderer = FramebufferSplash(font_path)
         try:
-            renderer.render(title, message, rotation_deg=rotation)
+            renderer.render(title, message, rotation_deg=rotation, accent=MODE_ACCENTS.get(mode, VISUAL["accent"]))
         finally:
             renderer.close()
         payload["rendered"] = True
@@ -519,9 +537,11 @@ def run_self_test() -> None:
         assert payload["network_identifiers_published"] is False
     assert "reboot" in MESSAGES
     assert "shutdown" in MESSAGES
-    for mode in ("boot", "player", "loading_content", "setup", "saving", "config_pending"):
+    for mode in ("boot", "player", "loading_content", "setup", "saving", "complete", "save_failed", "config_pending"):
         assert mode in MESSAGES
-    assert "Pressione F10" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["config_pending"][1]))
+    assert "Segure F10 por 5 segundos" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["config_pending"][1]))
+    assert MODE_SVG_ACCENTS["complete"] in build_preview_svg("complete")
+    assert MODE_SVG_ACCENTS["save_failed"] in build_preview_svg("save_failed")
     assert "remova e reconecte" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["shutdown"][1]))
     preview_dir = require_tmp_dir("/tmp/dadooh-c10-5-splash-self-test/preview")
     preview_payload = write_preview_screens(preview_dir, rotation_deg=90)

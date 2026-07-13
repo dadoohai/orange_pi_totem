@@ -213,6 +213,8 @@ cat > "$STAGE_DIR/health/totem-core-health.json" <<JSON
     "python3 bin/totem_wifi_nm_adapter.py --self-test",
     "python3 bin/totem_visual_splash.py --self-test",
     "python3 bin/totem_status_render_preview.py --self-test",
+    "python3 bin/totem_status_aggregate.py --self-test",
+    "bash bin/totem_status_renderer.sh --self-test",
     "python3 bin/totem_config_contract_validate.py --self-test",
     "python3 bin/totem_qr_pairing_client.py --self-test",
     "python3 bin/totem_settings_production_apply_policy.py --self-test",
@@ -330,6 +332,8 @@ manifest = {
         "wifi_adapter_self_test",
         "splash_self_test",
         "status_preview_self_test",
+        "status_aggregate_self_test",
+        "status_renderer_self_test",
         "config_contract_self_test",
         "bash_syntax",
         "restore_order_static"

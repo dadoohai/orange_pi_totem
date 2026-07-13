@@ -120,6 +120,19 @@ TEST_COMMANDS = (
     ("totem_config_writer_real_self_test", ["python3", "scripts/board/totem_config_writer_real.py", "--self-test"]),
     ("totem_visual_setup_writer_handoff_self_test", ["python3", "scripts/board/totem_visual_setup_writer_handoff.py", "--self-test"]),
     ("totem_status_render_preview_self_test", ["python3", "scripts/board/totem_status_render_preview.py", "--self-test"]),
+    ("totem_status_aggregate_self_test", ["python3", "scripts/board/totem_status_aggregate.py", "--self-test"]),
+    ("totem_status_renderer_self_test", ["bash", "scripts/board/totem_status_renderer.sh", "--self-test"]),
+    ("launcher_status_integration_smoke", ["bash", "scripts/board/smoke_launcher_status_integration.sh"]),
+    (
+        "c25_visible_state_gallery",
+        [
+            "python3",
+            "scripts/qa/generate_ui_ux_gallery.py",
+            "--out-dir",
+            "/tmp/c18-ota-release-gate-ui-gallery",
+            "--clean-output",
+        ],
+    ),
     ("totem_qr_pairing_client_self_test", ["python3", "scripts/board/totem_qr_pairing_client.py", "--self-test"]),
     ("totem_settings_production_apply_policy_self_test", ["python3", "scripts/board/totem_settings_production_apply_policy.py", "--self-test"]),
     ("totem_appliance_status_snapshot_self_test", ["python3", "scripts/board/totem_appliance_status_snapshot.py", "--self-test"]),
@@ -277,6 +290,7 @@ SYSTEM_IMAGE_DIFF_PATHS = {
     "scripts/board/totem_updatectl.py",
     "scripts/board/totem_update_policy*",
     "scripts/board/totem_appliance_manifest.json",
+    "scripts/board/install_totem_appliance.sh",
     "scripts/board/systemd/",
     "scripts/build/totem_core_image_embed.py",
     "scripts/build/derive_",
@@ -292,6 +306,7 @@ MEDIA_SYSTEM_DIFF_PATHS = {
     "scripts/board/setup_totem_media_groups.sh",
 }
 FIELD_DATA_DIFF_PATHS = {
+    "scripts/board/totem_appliance_status_snapshot.py",
     "app-integration/config*",
     "app-integration/seed*",
     "app-integration/media*",

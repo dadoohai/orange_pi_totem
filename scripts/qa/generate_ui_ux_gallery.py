@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -54,6 +55,7 @@ BOARD_DIR = _board_dir_from_source(_source_from_argv(sys.argv[1:]))
 sys.path.insert(0, str(BOARD_DIR))
 
 import totem_setup_visual_wizard as wizard  # noqa: E402
+import totem_status_render_preview as status_preview  # noqa: E402
 import totem_visual_splash as splash  # noqa: E402
 
 
@@ -83,6 +85,8 @@ SPLASH_ORDER = (
     "player",
     "setup",
     "saving",
+    "complete",
+    "save_failed",
     "config_pending",
     "reboot",
     "shutdown",
@@ -581,12 +585,16 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
         (
             "wizard.review",
             "Pronto para concluir",
-            "Confira antes de concluir.",
-            "Enter conclui | Cima menu | Esc volta",
+            "Continue para a confirmacao final.",
+            "Enter continua | Cima menu | Esc volta",
             "",
             "",
             "",
-            ["Wi-Fi definido.", "Ambiente informado.", "Tela escolhida."],
+            [
+                "A configuracao final ainda nao foi salva.",
+                "O Wi-Fi selecionado pode ja estar ativo.",
+                "Esc volta.",
+            ],
         ),
         (
             "wizard.review_pending",
@@ -607,16 +615,6 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             "",
             "",
             ["Gravacao controlada.", "Sem desligar.", "Player volta ao final."],
-        ),
-        (
-            "wizard.complete",
-            "Concluido",
-            "Configuracao pronta.",
-            "Enter sai",
-            "",
-            "",
-            "",
-            ["Fluxo concluido.", "Player volta ao final.", "Sem dados privados."],
         ),
         (
             "wizard.cancel",
@@ -659,9 +657,10 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 }
             )
         if screen_id == "wizard.review":
+            svg_kwargs["panel_title"] = "Antes de salvar"
             svg_kwargs["extra_svg"] = wizard.summary_rows_svg(
                 [
-                    ("Tela", "Paisagem (Confirmado)"),
+                    ("Tela", "Retrato (Confirmado)"),
                     ("Wi-Fi", "Wi-Fi atual"),
                     ("Ambiente", "Validado"),
                 ],
@@ -695,12 +694,19 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                     "wizard.review": "Revisar escolhas antes de gravar.",
                     "wizard.review_pending": "Bloquear conclusao enquanto faltam etapas obrigatorias.",
                     "wizard.saving": "Indicar operacao ocupada de salvamento.",
-                    "wizard.complete": "Encerrar fluxo com sucesso.",
                     "wizard.cancel": "Encerrar fluxo por cancelamento explicito.",
                     "wizard.error": "Recuperar de erro sem salvar.",
                 }[screen_id],
-                operator_task="Aguardar." if screen_id.endswith("saving") else "Confirmar o proximo passo.",
-                primary_action="Aguardar" if screen_id.endswith("saving") else ("Enter volta" if is_error else "Enter"),
+                operator_task=(
+                    "Continuar para a confirmacao final."
+                    if screen_id == "wizard.review"
+                    else ("Aguardar." if screen_id.endswith("saving") else "Confirmar o proximo passo.")
+                ),
+                primary_action=(
+                    "Enter continua"
+                    if screen_id == "wizard.review"
+                    else ("Aguardar" if screen_id.endswith("saving") else ("Enter volta" if is_error else "Enter"))
+                ),
                 secondary_action=(
                     "Esc cancela"
                     if is_error
@@ -710,10 +716,9 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 system_state=screen_id.replace(".", "_"),
                 next_step_expected={
                     "wizard.environment": "Ir para revisao.",
-                    "wizard.review": "Salvar ou voltar.",
+                    "wizard.review": "Abrir a confirmacao final ou voltar.",
                     "wizard.review_pending": "Corrigir primeira pendencia ou abrir menu de etapas.",
                     "wizard.saving": "Concluir e restaurar player.",
-                    "wizard.complete": "Sair para player.",
                     "wizard.cancel": "Restaurar player.",
                     "wizard.error": "Voltar para escolha anterior.",
                 }[screen_id],
@@ -788,7 +793,7 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
             "confusion_risk": "low",
             "title": "Configuracao pendente",
             "subtitle": "O totem precisa ser configurado.",
-            "items": ["Pressione F10 no teclado local.", "O player inicia apos concluir."],
+            "items": ["Segure F10 por 5 segundos.", "O player inicia apos concluir."],
             "footer": "F10 abre configuracao",
             "accent": "#f59e0b",
             "status_feedback": True,
@@ -1276,6 +1281,175 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
         )
 
 
+def add_c25_actual_runtime_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> None:
+    for state, preset in status_preview.STATE_PRESETS.items():
+        kind = str(preset["kind"])
+        primary_action = "Aguardar"
+        secondary_action = "Suporte se persistir"
+        if kind == "action":
+            primary_action = str(preset.get("action_label") or "Continuar")
+            secondary_action = "Nenhuma"
+        elif kind == "complete":
+            primary_action = "Nenhuma"
+            secondary_action = "Nenhuma"
+        add_screen(
+            specs,
+            gallery_dir,
+            ScreenSpec(
+                screen_id=f"runtime.actual.{state}",
+                journey="runtime",
+                screen_type="c25_runtime_actual",
+                orientation="landscape",
+                function="Mostrar o estado real reduzido do produto.",
+                operator_task=primary_action,
+                primary_action=primary_action,
+                secondary_action=secondary_action,
+                message_main=str(preset["title"]),
+                system_state=state,
+                next_step_expected="Convergir automaticamente para a próxima condição real.",
+                confusion_risk="high" if kind == "recovery" else "low",
+                dependencies=["totem_status_render_preview.py", "totem_status_aggregate.py"],
+                dynamic_feedback_needed=kind in {"progress", "recovery"},
+                error_state_needed=kind == "recovery",
+                preview_covered=True,
+                title=str(preset["title"]),
+                subtitle=str(preset["message"]),
+                body_items=[str(preset["hint"])],
+                footer=str(preset["status"]),
+                option_text=[],
+                status_feedback=True,
+                back_applicable=False,
+                error_recovery_available=kind == "recovery",
+            ),
+            status_preview.build_svg(
+                state=state,
+                message=str(preset["message"]),
+                action_hint=str(preset["hint"]),
+                device_label="Totem",
+                width=1280,
+                height=720,
+            ),
+        )
+        add_screen(
+            specs,
+            gallery_dir,
+            ScreenSpec(
+                screen_id=f"runtime.actual.{state}.portrait",
+                journey="runtime",
+                screen_type="c25_runtime_actual",
+                orientation="portrait",
+                function="Mostrar o estado real reduzido do produto em tela vertical.",
+                operator_task=primary_action,
+                primary_action=primary_action,
+                secondary_action=secondary_action,
+                message_main=str(preset["title"]),
+                system_state=state,
+                next_step_expected="Convergir automaticamente para a próxima condição real.",
+                confusion_risk="high" if kind == "recovery" else "low",
+                dependencies=["totem_status_render_preview.py", "totem_status_aggregate.py"],
+                dynamic_feedback_needed=kind in {"progress", "recovery"},
+                error_state_needed=kind == "recovery",
+                preview_covered=True,
+                title=str(preset["title"]),
+                subtitle=str(preset["message"]),
+                body_items=[str(preset["hint"])],
+                footer=str(preset["status"]),
+                option_text=[],
+                status_feedback=True,
+                back_applicable=False,
+                error_recovery_available=kind == "recovery",
+            ),
+            status_preview.build_svg(
+                state=state,
+                message=str(preset["message"]),
+                action_hint=str(preset["hint"]),
+                device_label="Totem",
+                width=720,
+                height=1280,
+            ),
+        )
+
+    original_apply_context = wizard.APPLY_CONTEXT
+    try:
+        wizard.APPLY_CONTEXT = "real-write"
+        ready_to_save_svg = wizard.build_completion_screen_svg(
+            {"state": "config_candidate_ready", "validation": {"rotation_degrees": 0}}
+        )
+    finally:
+        wizard.APPLY_CONTEXT = original_apply_context
+    add_screen(
+        specs,
+        gallery_dir,
+        ScreenSpec(
+            screen_id="runtime.actual.ready_to_save",
+            journey="wizard",
+            screen_type="c25_runtime_actual",
+            orientation="landscape",
+            function="Separar validacao concluida de gravacao concluida.",
+            operator_task="Confirmar a gravacao final.",
+            primary_action="Enter salva",
+            secondary_action="Esc cancela",
+            message_main="Pronto para salvar",
+            system_state="ready_to_save",
+            next_step_expected="Writer controlado e resultado real.",
+            confusion_risk="low",
+            dependencies=["totem_setup_visual_wizard.py", "totem_open_settings_session.sh"],
+            dynamic_feedback_needed=False,
+            error_state_needed=True,
+            preview_covered=True,
+            title="Pronto para salvar",
+            subtitle="Confirme para gravar a configuracao final.",
+            body_items=["Validacao concluida.", "Ainda nao foi salva.", "Esc cancela sem gravar."],
+            footer="Enter salva | Esc cancela",
+            option_text=[],
+            status_feedback=True,
+            back_applicable=True,
+            error_recovery_available=True,
+        ),
+        ready_to_save_svg,
+    )
+
+    original_apply_context = wizard.APPLY_CONTEXT
+    try:
+        wizard.APPLY_CONTEXT = "real-write"
+        ready_to_save_portrait_svg = wizard.build_completion_screen_svg(
+            {"state": "config_candidate_ready", "validation": {"rotation_degrees": 90}}
+        )
+    finally:
+        wizard.APPLY_CONTEXT = original_apply_context
+    add_screen(
+        specs,
+        gallery_dir,
+        ScreenSpec(
+            screen_id="runtime.actual.ready_to_save.portrait",
+            journey="wizard",
+            screen_type="c25_runtime_actual",
+            orientation="portrait",
+            function="Provar a confirmacao final real na orientacao escolhida.",
+            operator_task="Confirmar a gravacao final.",
+            primary_action="Enter salva",
+            secondary_action="Esc cancela",
+            message_main="Pronto para salvar",
+            system_state="ready_to_save",
+            next_step_expected="Writer controlado e resultado real.",
+            confusion_risk="low",
+            dependencies=["totem_setup_visual_wizard.py", "totem_open_settings_session.sh"],
+            dynamic_feedback_needed=False,
+            error_state_needed=True,
+            preview_covered=True,
+            title="Pronto para salvar",
+            subtitle="Confirme para gravar a configuracao final.",
+            body_items=["Validacao concluida.", "Ainda nao foi salva.", "Esc cancela sem gravar."],
+            footer="Enter salva | Esc cancela",
+            option_text=[],
+            status_feedback=True,
+            back_applicable=True,
+            error_recovery_available=True,
+        ),
+        ready_to_save_portrait_svg,
+    )
+
+
 def compute_metrics(specs: list[ScreenSpec]) -> list[dict[str, Any]]:
     metrics: list[dict[str, Any]] = []
     for spec in specs:
@@ -1590,8 +1764,20 @@ def transition_inventory() -> list[dict[str, Any]]:
             "future_test_required": "hdmi_capture_or_camera_for_flicker",
         },
         {
-            "transition_id": "transition.wizard_to_saving",
+            "transition_id": "transition.wizard_review_to_final_confirmation",
             "from_state": "wizard_review_confirmed",
+            "to_state": "ready_to_save",
+            "function": "Separar revisao concluida de gravacao concluida.",
+            "feedback_screen": "runtime.actual.ready_to_save.portrait",
+            "dynamic_feedback_needed": False,
+            "risk_dead_moment": "low",
+            "risk_reason": "Wizard exige uma confirmacao final antes de entregar ao writer.",
+            "covered_by_preview": True,
+            "future_test_required": "none",
+        },
+        {
+            "transition_id": "transition.final_confirmation_to_saving",
+            "from_state": "ready_to_save",
             "to_state": "saving_feedback",
             "function": "Indicar escrita/aplicacao controlada.",
             "feedback_screen": "splash.saving",
@@ -1602,14 +1788,50 @@ def transition_inventory() -> list[dict[str, Any]]:
             "future_test_required": "none",
         },
         {
-            "transition_id": "transition.saving_to_player",
+            "transition_id": "transition.saving_to_complete",
             "from_state": "saving_feedback",
+            "to_state": "save_complete_feedback",
+            "function": "Confirmar sucesso somente depois do writer verde.",
+            "feedback_screen": "splash.complete",
+            "dynamic_feedback_needed": True,
+            "risk_dead_moment": "low",
+            "risk_reason": "Sessao mostra sucesso somente apos gravacao e validacao final.",
+            "covered_by_preview": True,
+            "future_test_required": "none",
+        },
+        {
+            "transition_id": "transition.saving_to_save_failed",
+            "from_state": "saving_feedback",
+            "to_state": "save_failed_feedback",
+            "function": "Informar falha recuperavel sem declarar configuracao salva.",
+            "feedback_screen": "splash.save_failed",
+            "dynamic_feedback_needed": True,
+            "risk_dead_moment": "low",
+            "risk_reason": "Falha do writer possui retorno visual proprio antes da restauracao.",
+            "covered_by_preview": True,
+            "future_test_required": "none",
+        },
+        {
+            "transition_id": "transition.save_complete_to_player",
+            "from_state": "save_complete_feedback",
             "to_state": "player_start",
-            "function": "Restaurar feedback e voltar ao player.",
+            "function": "Restaurar o launcher com a nova configuracao validada.",
             "feedback_screen": "splash.player",
             "dynamic_feedback_needed": True,
             "risk_dead_moment": "medium",
-            "risk_reason": "C15.1.5 corrigiu render duplicado; percepcao final ainda nao foi capturada em video.",
+            "risk_reason": "A transicao real entre proprietarios visuais ainda requer inspecao HDMI.",
+            "covered_by_preview": True,
+            "future_test_required": "hdmi_capture_or_camera",
+        },
+        {
+            "transition_id": "transition.save_failed_to_preserved_state",
+            "from_state": "save_failed_feedback",
+            "to_state": "player_or_config_pending",
+            "function": "Restaurar o launcher conforme a configuracao anterior preservada.",
+            "feedback_screen": "splash.player or splash.config_pending",
+            "dynamic_feedback_needed": True,
+            "risk_dead_moment": "medium",
+            "risk_reason": "O destino depende de existir uma configuracao anterior valida e requer inspecao HDMI.",
             "covered_by_preview": True,
             "future_test_required": "hdmi_capture_or_camera",
         },
@@ -1630,12 +1852,12 @@ def transition_inventory() -> list[dict[str, Any]]:
             "from_state": "player_error",
             "to_state": "public_error_or_config_pending",
             "function": "Mostrar erro recuperavel sem expor detalhe tecnico privado.",
-            "feedback_screen": "future_error_state",
+            "feedback_screen": "runtime.actual.player_error",
             "dynamic_feedback_needed": True,
             "risk_dead_moment": "medium",
-            "risk_reason": "Erro amigavel especifico do player nao foi redesenhado nesta rodada.",
-            "covered_by_preview": False,
-            "future_test_required": "future_player_error_fixture",
+            "risk_reason": "Coberto pelo launcher depois da saida; erro com processo vivo pertence ao player-runtime.",
+            "covered_by_preview": True,
+            "future_test_required": "hdmi_capture_after_player_exit",
         },
     ]
 
@@ -1869,29 +2091,65 @@ def render_pngs(gallery_dir: pathlib.Path) -> dict[str, Any]:
     failed = 0
     for svg_path in sorted(gallery_dir.glob("*.svg")):
         png_path = svg_path.with_suffix(".png")
+        post_cmd: list[str] | None = None
+        raw_png_path: pathlib.Path | None = None
+        chrome_profile: pathlib.Path | None = None
         if converter_name == "rsvg-convert":
             cmd = [converter_path, str(svg_path), "-o", str(png_path)]
         elif converter_name == "inkscape":
             cmd = [converter_path, str(svg_path), "--export-filename", str(png_path)]
         elif converter_name == "chrome":
             width, height = svg_dimensions(svg_path)
+            cropper = shutil.which("convert")
+            chrome_profile = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-gallery-chrome-"))
+            screenshot_path = png_path
+            window_height = height
+            if cropper:
+                raw_png_path = png_path.with_suffix(".raw.png")
+                screenshot_path = raw_png_path
+                # Chrome's CLI screenshot includes an 87px non-content band on
+                # this headless host. Render a taller viewport and crop only
+                # raster pixels so the resulting PNG matches the SVG canvas.
+                window_height = height + 87
+                post_cmd = [
+                    cropper,
+                    str(raw_png_path),
+                    "-crop",
+                    f"{width}x{height}+0+0",
+                    "+repage",
+                    str(png_path),
+                ]
             cmd = [
                 converter_path,
                 "--headless",
                 "--no-sandbox",
                 "--disable-gpu",
                 "--hide-scrollbars",
-                f"--window-size={width},{height}",
-                f"--screenshot={png_path}",
+                f"--user-data-dir={chrome_profile}",
+                f"--window-size={width},{window_height}",
+                f"--screenshot={screenshot_path}",
                 f"file://{svg_path.resolve()}",
             ]
         else:
             cmd = [converter_path, str(svg_path), str(png_path)]
         try:
             result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=8, check=False)
+            if result.returncode == 0 and post_cmd is not None:
+                result = subprocess.run(
+                    post_cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=8,
+                    check=False,
+                )
         except Exception:
             failed += 1
             continue
+        finally:
+            if chrome_profile is not None:
+                shutil.rmtree(chrome_profile, ignore_errors=True)
+            if raw_png_path is not None:
+                raw_png_path.unlink(missing_ok=True)
         if result.returncode == 0 and png_path.exists() and png_path.stat().st_size > 0:
             png_count += 1
         else:
@@ -1926,12 +2184,18 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
     add_splash_screens(specs, gallery_dir)
     add_wizard_screens(specs, gallery_dir)
     add_c16_2_state_screens(specs, gallery_dir)
+    add_c25_actual_runtime_state_screens(specs, gallery_dir)
 
     metrics = compute_metrics(specs)
     rubric = [score_spec(spec, metric) for spec, metric in zip(specs, metrics)]
     backlog = build_backlog(metrics, rubric)
     interaction = run_interaction_stress()
     png_status = render_pngs(gallery_dir)
+    png_render_complete = bool(
+        png_status["svg_count"] > 0
+        and png_status["png_count"] == png_status["svg_count"]
+        and png_status["png_render_failures"] == 0
+    )
 
     inventory = [asdict(spec) for spec in specs]
     atomic_write_json(out_dir / "screen-inventory.json", inventory)
@@ -1960,6 +2224,17 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
         "gallery_generated": True,
         "gallery_screen_count": len(specs),
         "c16_2_state_gallery_generated": True,
+        "c25_actual_runtime_state_gallery_generated": True,
+        "c25_actual_runtime_state_count": len(
+            [
+                spec
+                for spec in specs
+                if spec.screen_id.startswith("runtime.actual.") and "ready_to_save" not in spec.screen_id
+            ]
+        ),
+        "c25_actual_wizard_state_count": len(
+            [spec for spec in specs if spec.screen_id.startswith("runtime.actual.ready_to_save")]
+        ),
         "visual_metrics_generated": True,
         "journey_analysis_generated": True,
         "transition_inventory_generated": True,
@@ -1980,9 +2255,12 @@ def generate(out_dir: pathlib.Path) -> dict[str, Any]:
         "p2_items_count": p_counts["P2"],
         "p3_items_count": p_counts["P3"],
         "png_render_available": png_status["png_render_available"],
+        "png_render_complete": png_render_complete,
+        "png_render_failures": png_status["png_render_failures"],
         "png_render_count": png_status["png_count"],
-        "ready_for_image_rebuild": p_counts["P0"] == 0,
-        "ready_for_c16_player_audit": p_counts["P0"] == 0,
+        "ready_for_image_rebuild": False,
+        "ready_for_image_rebuild_reason": "external_visual_review_and_hdmi_acceptance_required",
+        "ready_for_c16_player_audit": p_counts["P0"] == 0 and png_render_complete,
         "secrets_published": False,
         "apt_update_executed": False,
         "apt_upgrade_executed": False,
@@ -2010,6 +2288,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate offline UI/UX review artifacts.")
     parser.add_argument("--out-dir", required=True, help="Evidence run output directory.")
     parser.add_argument(
+        "--clean-output",
+        action="store_true",
+        help="Remove an existing output directory first. Allowed only for a direct child of /tmp.",
+    )
+    parser.add_argument(
         "--source",
         type=pathlib.Path,
         default=None,
@@ -2021,9 +2304,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     out_dir = pathlib.Path(args.out_dir)
+    if args.clean_output:
+        resolved = out_dir.resolve(strict=False)
+        if resolved.parent != pathlib.Path("/tmp").resolve() or resolved.name in {"", ".", ".."}:
+            raise RuntimeError("--clean-output requires an output directory directly under /tmp")
+        shutil.rmtree(resolved, ignore_errors=True)
     summary = generate(out_dir)
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0
+    return 0 if not summary["major_ui_blockers_found"] and summary["png_render_complete"] else 1
 
 
 if __name__ == "__main__":

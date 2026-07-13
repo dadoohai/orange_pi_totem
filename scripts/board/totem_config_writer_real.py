@@ -795,7 +795,12 @@ def run_writer(
 
         status["phase"] = "completed"
         status["result"] = "passed"
-        write_status_artifacts(out_dir, status)
+        try:
+            write_status_artifacts(out_dir, status)
+        except OSError:
+            # The active config is already atomically written and revalidated.
+            # Losing local evidence must not be reported to the user as a failed write.
+            print("warning: config_saved_status_artifact_unavailable", file=sys.stderr)
         return status
     except Exception:
         if dest is not None and status["phase"] not in {"completed", "rollback"}:
@@ -1055,6 +1060,27 @@ def run_self_test() -> None:
             assert_true(file_mode(path) == PRIVATE_FILE_MODE, f"{name} mode should be 600")
             content = path.read_text(encoding="utf-8")
             assert_true(synthetic["api_key"] not in content, "synthetic api_key leaked to status/summary")
+
+        evidence_failure_dest = root / "evidence-failure" / "config.json"
+        original_write_status_artifacts = globals()["write_status_artifacts"]
+        try:
+            def fail_status_artifacts(_out_dir: pathlib.Path, _status: dict[str, Any]) -> None:
+                raise OSError("synthetic evidence write failure")
+
+            globals()["write_status_artifacts"] = fail_status_artifacts
+            evidence_failure_status = run_writer(
+                candidate_raw=str(candidate),
+                dest_raw=str(evidence_failure_dest),
+                backup_dir_raw=str(root / "evidence-failure-backups"),
+                out_dir_raw=str(root / "out-evidence-failure"),
+            )
+        finally:
+            globals()["write_status_artifacts"] = original_write_status_artifacts
+        assert_true(evidence_failure_status["result"] == "passed", "evidence failure must not undo valid config")
+        assert_true(
+            load_json_file(evidence_failure_dest, label="evidence failure active config") == synthetic,
+            "evidence failure must preserve the validated active config",
+        )
 
         replacement = build_synthetic_candidate()
         replacement["station_id"] = "STATION_ALPHA_002"

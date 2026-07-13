@@ -560,7 +560,9 @@ def info_panel(
     panel_width = layout.width - (layout.margin_x * 2) if layout.portrait else 240
     panel_y = panel_y if panel_y is not None else (760 if layout.portrait else 230)
     panel_height = min(300 if layout.portrait else 330, max(190, layout.height - panel_y - 104))
-    text_width = 50 if layout.portrait else 24
+    # The framebuffer renderer uses a fixed-width PSF font. Twenty columns keep
+    # both text lines inside the compact landscape panel at the real glyph width.
+    text_width = 50 if layout.portrait else 20
     y = panel_y + 58
     bullet_parts = []
     for item in items[:MAX_PANEL_ITEMS]:
@@ -3519,11 +3521,8 @@ def review_and_confirm(
     focused_step = 3
     while True:
         if APPLY_CONTEXT == "real-write":
-            if HOMOLOGATION_MODE:
-                subtitle = "Salvar aplica a configuracao nesta placa."
-            else:
-                subtitle = "Salvar aplica as mudancas."
-            primary = "Enter salva"
+            subtitle = "Continue para a confirmacao final."
+            primary = "Enter continua"
         elif APPLY_CONTEXT == "dry-run":
             subtitle = "Concluir valida sem aplicar."
             primary = "Enter valida"
@@ -3531,8 +3530,12 @@ def review_and_confirm(
             subtitle = "Concluir prepara a candidata."
             primary = "Enter prepara candidata"
         title = "Pronto para concluir"
-        panel_title = "Seguranca"
-        panel_items = ["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."]
+        panel_title = "Antes de salvar"
+        panel_items = [
+            "A configuracao final ainda nao foi salva.",
+            "O Wi-Fi selecionado pode ja estar ativo.",
+            "Esc volta.",
+        ]
         if not ready:
             title = "Pendencias antes de concluir"
             subtitle = "Complete os itens pendentes antes de salvar."
@@ -4394,42 +4397,49 @@ def run_environment_pairing(
     return run_mock_environment_pairing(display, out_dir, layout_rotation_deg=layout_rotation_deg)
 
 
-def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
+def build_completion_screen_svg(status: dict[str, Any]) -> str:
     rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
     if APPLY_CONTEXT == "real-write":
-        subtitle = "Ao sair, a configuracao sera salva."
+        title = "Pronto para salvar"
+        subtitle = "Confirme para gravar a configuracao final."
+        footer = "Enter salva | Esc cancela"
         panel_items = [
-            "Validacao privada.",
-            "Writer controlado.",
-            "Player volta ao final.",
+            "Tela, Wi-Fi e ambiente revisados.",
+            "A configuracao final ainda nao foi salva.",
+            "Esc cancela sem gravar.",
         ]
     elif APPLY_CONTEXT == "dry-run":
-        subtitle = "Candidata gerada para validacao."
+        title = "Pronto para validar"
+        subtitle = "Ao continuar, a candidata sera validada."
+        footer = "Enter continua"
         panel_items = [
             "Dry-run privado.",
             "Writer bloqueado.",
             "Nada aplicado.",
         ]
     else:
+        title = "Candidata preparada"
         subtitle = "Candidata temporaria pronta."
+        footer = "Enter sai"
         panel_items = [
             f"Estado: {status['state']}",
             "Writer bloqueado.",
             "Nada aplicado.",
         ]
-    display.show(
-        "06-complete",
-        build_screen_svg(
-            active_step=4,
-            title="Concluido" if APPLY_CONTEXT in {"real-write", "dry-run"} else "Candidata preparada",
-            subtitle=subtitle,
-            footer="Enter sai",
-            panel_title="Resultado",
-            panel_items=panel_items,
-            accent="#22c55e",
-            layout_rotation_deg=rotation_deg,
-        ),
+    return build_screen_svg(
+        active_step=4,
+        title=title,
+        subtitle=subtitle,
+        footer=footer,
+        panel_title="Confirmacao final" if APPLY_CONTEXT == "real-write" else "Proximo passo",
+        panel_items=panel_items,
+        accent="#22d3ee" if APPLY_CONTEXT == "real-write" else "#94a3b8",
+        layout_rotation_deg=rotation_deg,
     )
+
+
+def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
+    display.show("06-complete", build_completion_screen_svg(status))
     wait_enter_or_cancel()
 
 
@@ -4939,14 +4949,8 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
     )
     display.show(
         "06-complete",
-        build_screen_svg(
-            active_step=4,
-            title="Concluido",
-            subtitle="Configuracao pronta.",
-            footer="Enter sai",
-            panel_items=["Fluxo concluido.", "Player volta ao final.", "Sem dados privados."],
-            accent="#22c55e",
-            layout_rotation_deg=90,
+        build_completion_screen_svg(
+            {"state": "config_candidate_ready", "validation": {"rotation_degrees": 90}}
         ),
     )
 
@@ -5113,11 +5117,11 @@ def run_scripted(
         "06-complete-scripted",
         build_screen_svg(
             active_step=4,
-            title="Concluido",
-            subtitle="Configuracao pronta.",
+            title="Candidata preparada",
+            subtitle="Candidata temporaria pronta.",
             footer="Fim do modo scripted",
-            panel_items=["Fluxo concluido.", "Sem writer.", "Sem config real."],
-            accent="#22c55e",
+            panel_items=["Validacao concluida.", "Sem writer.", "Nada aplicado."],
+            accent="#22d3ee",
             layout_rotation_deg=int(rotation["rotation_deg"]),
         ),
     )
@@ -5230,6 +5234,25 @@ def run_self_test() -> None:
         assert_true(MAX_PANEL_ITEMS == 3, "operator panels should stay limited to three items")
         panel_limit_svg = info_panel(["one", "two", "three", "four"])
         assert_true("four" not in panel_limit_svg, "operator panel should not render more than three items")
+        original_apply_context = globals()["APPLY_CONTEXT"]
+        try:
+            globals()["APPLY_CONTEXT"] = "real-write"
+            completion_svg = build_completion_screen_svg(
+                {"state": "config_candidate_ready", "validation": {"rotation_degrees": 0}}
+            )
+            assert_true("Pronto para salvar" in completion_svg, "real write should stop before claiming success")
+            assert_true("ainda nao foi salva" in completion_svg, "real write should disclose the pending write")
+            assert_true("Enter salva" in completion_svg, "final confirmation should name the write action")
+            assert_true("Esc cancela" in completion_svg, "final confirmation should disclose cancel")
+            assert_true("Configuracao salva" not in completion_svg, "wizard should not claim writer success")
+            globals()["APPLY_CONTEXT"] = "candidate"
+            candidate_svg = build_completion_screen_svg(
+                {"state": "config_candidate_ready", "validation": {"rotation_degrees": 0}}
+            )
+            assert_true("Candidata preparada" in candidate_svg, "candidate mode should stay explicitly non-writing")
+            assert_true("Nada aplicado" in candidate_svg, "candidate mode should disclose that nothing changed")
+        finally:
+            globals()["APPLY_CONTEXT"] = original_apply_context
         assert_true(
             len(wrap_text("one two three four five six seven", width=8, max_lines=1)) == 1,
             "wizard subtitles should be constrained to one visual line",

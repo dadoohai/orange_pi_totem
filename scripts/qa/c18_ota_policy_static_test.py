@@ -3808,6 +3808,17 @@ exec "$C18_REAL_PYTHON3" "$@"
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
 
+    def test_settings_session_cleans_private_artifacts_on_every_exit(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        on_exit = session[session.index("on_exit() {") : session.index("\non_term()", session.index("on_exit() {"))]
+        self.assertIn("cleanup_private_artifacts", on_exit)
+        self.assertLess(on_exit.index("cleanup_private_artifacts"), on_exit.index("write_final_status"))
+        post_write = session[
+            session.index('REAL_CONFIG_WRITTEN="true"') : session.index("cleanup_private_artifacts || true", session.index('REAL_CONFIG_WRITTEN="true"'))
+        ]
+        self.assertIn("if ! write_public_orientation_from_candidate", post_write)
+        self.assertIn("if write_private_settings_context", post_write)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

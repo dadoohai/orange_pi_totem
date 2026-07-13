@@ -1161,6 +1161,7 @@ on_exit() {
   c15_trace "on_exit_begin rc=$rc"
   c1523_phase "session_cleanup_start rc=$rc"
   kill_visual_if_running || true
+  cleanup_private_artifacts || true
   cleanup_apply_policy || true
   cleanup_trigger_request || true
   cleanup_session_lock || true
@@ -1393,15 +1394,26 @@ if [ "$SETUP_CANCELLED" != "true" ] && [ "$APPLY_MODE" = "real-write" ]; then
   c1523_phase "writer_done writer_rc=$WRITER_RC"
   c1523_phase "writer_result writer_rc=$WRITER_RC"
   if [ "$WRITER_RC" != "0" ]; then
+    show_transition save_failed "$SELECTED_ROTATION_DEG" || true
+    sleep 2
     echo "writer_failed" >&2
     exit 47
   fi
   REAL_CONFIG_WRITTEN="true"
-  write_public_orientation_from_candidate
-  write_private_settings_context "$WIZARD_OUT_DIR/config.candidate.json" visual_wizard_saved
-  PRIVATE_SETTINGS_CONTEXT_UPDATED="true"
+  if ! write_public_orientation_from_candidate; then
+    echo "warning: public_orientation_update_deferred" >&2
+    c1523_phase "post_write_metadata_warning kind=public_orientation"
+  fi
+  if write_private_settings_context "$WIZARD_OUT_DIR/config.candidate.json" visual_wizard_saved; then
+    PRIVATE_SETTINGS_CONTEXT_UPDATED="true"
+  else
+    echo "warning: private_settings_context_update_deferred" >&2
+    c1523_phase "post_write_metadata_warning kind=private_settings_context"
+  fi
   cleanup_private_artifacts || true
   cleanup_apply_policy || true
+  show_transition complete "$SELECTED_ROTATION_DEG" || true
+  sleep 1
 fi
 if [ "$EXPECTED_RESULT" = "dry_run_passed" ] && [ "$APPLY_MODE" != "dry-run" ]; then
   echo "expected_dry_run_not_observed" >&2

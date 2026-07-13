@@ -1,8 +1,13 @@
 {
-  "schema_version": 1,
+  "status_schema_version": "kiosky-player-status.v2",
   "updated_at": "2026-05-01T12:03:00Z",
   "playback_state": "playing",
+  "player_state": "playing",
   "mpv_running": true,
+  "first_frame_ready": true,
+  "current_item": {
+    "path": "/home/builder/totem-os/orange_pi_totem/scripts/board/testdata/status_aggregate/player-running.json"
+  },
   "playlist_size": 3,
   "consecutive_failures": 0,
   "blocked_media_count": 0
