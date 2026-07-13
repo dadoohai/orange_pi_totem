@@ -32,9 +32,13 @@ public_rollback_probe=rc44
 - Governed rollback made C23 current; settled C23 health passed. Governed
   linked-previous reapply then restored the exact C25B package after candidate
   health passed.
-- Final service health passed 44 checks across 40 samples and two proven motion
+- Final service health passed 45 checks across 40 samples and two proven motion
   episodes, with no tolerated or failed episode, media-load failure, MPV
   restart, service restart or new Panfrost fault.
+- Candidate, rollback-target and final-service evidence all had IPC success
+  from the first sample. The validator separately rejects startup IPC outage
+  beyond six samples or six seconds, any timeout and any non-missing-socket
+  startup error.
 - An observation window ending at the first frame of a new episode was rejected
   as inconclusive. A complete subsequent window passed, preserving fail-closed
   behavior.

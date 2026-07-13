@@ -289,13 +289,13 @@ package=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
 package_source_commit=54308e4a09ef693dbfb3d6b31ce9626908ca0c16
 package_payload_sha256=b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d
 release_gate=passed
-candidate_health=46_checks_clean
+candidate_health=47_checks_clean
 controlled_mpv_recovery=passed
 recovery_surface_status_and_mpv_path=passed
 content_unavailable_surface_status_mpv_vo_frame=passed
 rollback_to_c23=passed
 linked_previous_reapply=passed
-final_live_health=40_samples_44_checks_clean
+final_live_health=40_samples_45_checks_clean
 inconclusive_episode_negative=correctly_rejected
 public_player_runtime_freeze=rc44
 stable_promotion=not_authorized
@@ -336,6 +336,13 @@ zero episodio tolerado, zero falha de midia, zero restart e zero novo evento
 Panfrost. Uma janela encerrada no primeiro quadro de um episodio foi
 corretamente recusada; a janela completa seguinte passou. Isso prova que o
 avaliador nao transforma observacao inconclusiva em verde.
+
+A auditoria adversarial final encontrou que erros IPC anteriores ao primeiro
+sucesso nao tinham limite. O avaliador agora aceita somente `missing_socket`
+de startup por no maximo seis amostras e seis segundos; timeout, outro erro,
+tempo invalido ou espera maior reprovam. A evidencia real foi recalculada com
+essa regra: candidato, C23 apos rollback e servico final tiveram sucesso desde
+a primeira amostra.
 
 Veredito: C25B esta aceita para homologacao funcional e reversivel. O pacote
 continua fora de `stable` e do auto-pull publico. A proxima imagem de referencia

@@ -36,7 +36,8 @@
   },
   "schema": "dadooh.c25.player_runtime.final_package_identity.v1",
   "validation": {
+    "playback_fixture_tests": 100,
     "player_runtime_release_gate": "passed",
-    "validator_commit": "af85a60"
+    "validator_commit": "a4a8c35"
   }
 }

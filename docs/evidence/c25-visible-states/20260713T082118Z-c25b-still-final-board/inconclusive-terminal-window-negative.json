@@ -1,5 +1,6 @@
 {
   "checks": {
+    "ipc_startup_bounded": true,
     "motion_frame_progress_ok": false,
     "playback_progressed": false,
     "terminal_playback_healthy": true,
@@ -7,6 +8,7 @@
   },
   "claim": "inconclusive_terminal_episode_rejected_fail_closed",
   "counters": {
+    "ipc_startup_samples_before_first_success": 0,
     "motion_media_episodes": 4,
     "motion_media_failed_episodes": 1,
     "samples": 28,

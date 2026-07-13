@@ -14,11 +14,11 @@
     "tree_sha256": "a7baf69dc249c39b2f6f8653873171fa8d799c814acbe8bc95c3eeed2c7136fc",
     "version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
   },
-  "recorded_at_utc": "2026-07-13T08:37:08Z",
+  "recorded_at_utc": "2026-07-13T09:28:32Z",
   "schema": "dadooh.c25.player_runtime.final_validation.v1",
   "tests": [
     {
-      "count": 95,
+      "count": 100,
       "name": "playback_deep_health_fixtures",
       "passed": true
     },
@@ -43,5 +43,5 @@
       "passed": true
     }
   ],
-  "validated_repo_head": "361886e743aac7e7dc1f6c17c0ff0716ceffe8e9"
+  "validated_repo_head": "0b2cfff6cdd878323bf0ed78a9f289a631d6b712"
 }
