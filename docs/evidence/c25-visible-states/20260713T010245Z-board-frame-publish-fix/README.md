@@ -27,7 +27,7 @@ anterior permanece intacto.
 
 - self-test no host e na placa: passou;
 - policy static: `68/68`;
-- gate global limpo: `82/82`;
+- gate global ligado ao manifesto e payload exatos: `82/82`;
 - sandbox apply/rollback/fallback/lock: passou;
 - apply governado na placa: `rc=0`;
 - policy original `stable`: restaurada com o mesmo SHA-256;
