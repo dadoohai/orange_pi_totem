@@ -59,6 +59,7 @@
       "python3",
       "mpv",
       "ffmpeg",
+      "ffprobe",
       "nmcli"
     ],
     "required_debian_packages": [
@@ -988,7 +989,12 @@
     ],
     "image_fixed_player_files": [
       "kiosky_service_launcher.sh",
-      "totem-kiosky-launcher.sh"
+      "totem-kiosky-launcher.sh",
+      "totem_player_status_mpv_watchdog.py",
+      "c18_player_runtime_candidate_health.py",
+      "c18_playback_health_collect.py",
+      "c18_playback_health_summary.py",
+      "totem_updatectl.py"
     ],
     "splash_service_uses_totem_core_wrapper": true,
     "fallback_available_without_data_current": true,
@@ -998,6 +1004,6 @@
     ],
     "clean_card_validation_required_before_batch": true,
     "ready_for_c17_7_clean_card_validation": true,
-    "c18_started": false
+    "c18_started": true
   }
 }

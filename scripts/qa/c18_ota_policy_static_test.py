@@ -393,6 +393,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("player_runtime_update_timer_matches_profile", embed)
         self.assertIn("validate_totem_core_release_provenance", embed)
         self.assertIn("totem_core_embed_payload_source_mismatch", embed)
+        self.assertIn("_dump_sha256", embed)
+        self.assertIn("_source_exact", embed)
         self.assertIn("TOTEM_CORE_SOURCE_COMMIT", embed)
         self.assertIn("return _dump_text(rootfs, path).strip()", embed)
 
@@ -511,6 +513,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-9"', derive)
         self.assertIn('PRODUCTION_VERSION = "c18.image-prod.9"', derive)
         self.assertIn("validate_player_runtime_baseline_package", derive)
+        self.assertIn("validate_binary_build_inputs", derive)
+        self.assertIn('BASE_IMAGE_SHA256 = "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af"', derive)
+        self.assertIn('HWD_STACK_BUNDLE_SHA256 = "96e0ce3ff34edced247e2deca03e0d848bd3b26142d56267e95ef295bb071967"', derive)
         self.assertIn('"system_ffmpeg_present"', derive)
         self.assertIn('"system_ffprobe_present"', derive)
         self.assertIn('"c25_surface_fonts_present"', derive)

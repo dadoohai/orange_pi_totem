@@ -594,6 +594,15 @@ def _dump_text(rootfs: Path, path: str) -> str:
         return out_path.read_text(encoding="utf-8", errors="replace")
 
 
+def _dump_sha256(rootfs: Path, path: str) -> str:
+    with tempfile.TemporaryDirectory(prefix="totem-core-hash-") as tmp:
+        out_path = Path(tmp) / "dump.bin"
+        base.debugfs(rootfs, f"dump {path} {out_path}")
+        if not out_path.is_file():
+            return ""
+        return base.file_sha256(out_path)
+
+
 def _symlink_target(rootfs: Path, path: str) -> str:
     out = base.debugfs(rootfs, f"stat {path}")
     if "File not found" in out or "couldn't" in out.lower() or "no such" in out.lower():
@@ -748,13 +757,29 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
     for core_file in CORE_FILES:
         checks[f"totem_core_release_{core_file}"] = _has_exec(rootfs, f"{release_root}/bin/{core_file}")
         checks[f"totem_core_fallback_{core_file}"] = _has_exec(rootfs, f"/opt/totem/core-fallback/bin/{core_file}")
+        source_sha = base.file_sha256(repo_root / "scripts" / "board" / core_file)
+        checks[f"totem_core_release_{core_file}_source_exact"] = (
+            _dump_sha256(rootfs, f"{release_root}/bin/{core_file}") == source_sha
+        )
+        checks[f"totem_core_fallback_{core_file}_source_exact"] = (
+            _dump_sha256(rootfs, f"/opt/totem/core-fallback/bin/{core_file}") == source_sha
+        )
         wrapper = base.cat_file(rootfs, f"/opt/totem/bin/{core_file}") or ""
         checks[f"totem_core_wrapper_{core_file}"] = "TOTEM_CORE_EXEC_WRAPPER" in wrapper
     for player_file in IMAGE_FIXED_PLAYER_FILES:
         wrapper = base.cat_file(rootfs, f"/opt/totem/bin/{player_file}") or ""
         checks[f"image_fixed_player_{player_file}"] = _has_exec(rootfs, f"/opt/totem/bin/{player_file}")
+        checks[f"image_fixed_player_{player_file}_source_exact"] = (
+            _dump_sha256(rootfs, f"/opt/totem/bin/{player_file}")
+            == base.file_sha256(repo_root / "scripts" / "board" / player_file)
+        )
         checks[f"image_fixed_player_{player_file}_not_totem_core_wrapper"] = "TOTEM_CORE_EXEC_WRAPPER" not in wrapper
         checks[f"totem_core_release_excludes_{player_file}"] = not _is_file(rootfs, f"{release_root}/bin/{player_file}")
+    for source_rel, target in IMAGE_FIXED_PLAYER_SYSTEMD_FILES:
+        checks[f"image_fixed_player_systemd_{Path(source_rel).name}_source_exact"] = (
+            _dump_sha256(rootfs, target)
+            == base.file_sha256(repo_root / "scripts" / "board" / source_rel)
+        )
     return {
         "ok": all(checks.values()),
         "checks": checks,

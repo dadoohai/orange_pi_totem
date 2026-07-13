@@ -24,7 +24,7 @@ It does NOT touch C12/read-only/overlayroot/CONFIG_OVERLAY_FS, kernel/U-Boot/DTB
 real config, media/cache, or secrets.
 """
 from __future__ import annotations
-import argparse, atexit, json, os, shutil, subprocess, sys, tarfile, tempfile
+import argparse, atexit, hashlib, json, os, shutil, subprocess, sys, tarfile, tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -133,6 +133,9 @@ C25_SURFACE_FONTS = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
 )
+BASE_IMAGE_SHA256 = "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af"
+HWD_STACK_BUNDLE_SHA256 = "96e0ce3ff34edced247e2deca03e0d848bd3b26142d56267e95ef295bb071967"
+FFMPEG_CLI_SHA256 = "cfbfa5a9938b0933437241bab89373b93bb1bfd5f87f9881c068b522a0fc6e16"
 PLAYER_RUNTIME_REQUIRED_PATCHES = {
     "DEFAULT_CONFIG.mpv_path": ("mpv", WRAPPER),
     "MPVController._stop_locked": (
@@ -364,6 +367,40 @@ def validate_player_runtime_baseline_package() -> dict:
     }
 
 
+def deterministic_tree_sha256(root: Path) -> str:
+    items: list[dict[str, object]] = []
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            items.append({"path": relative, "type": "symlink", "target": os.readlink(path)})
+        elif path.is_file():
+            items.append({
+                "path": relative,
+                "type": "file",
+                "size": path.stat().st_size,
+                "sha256": base.file_sha256(path),
+            })
+    canonical = (json.dumps(items, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def validate_binary_build_inputs() -> dict[str, str]:
+    actual = {
+        "base_image_sha256": base.file_sha256(BASE_IMAGE),
+        "hwdecode_bundle_sha256": deterministic_tree_sha256(BUNDLE),
+        "ffmpeg_cli_sha256": base.file_sha256(FFMPEG_CLI),
+    }
+    expected = {
+        "base_image_sha256": BASE_IMAGE_SHA256,
+        "hwdecode_bundle_sha256": HWD_STACK_BUNDLE_SHA256,
+        "ffmpeg_cli_sha256": FFMPEG_CLI_SHA256,
+    }
+    mismatches = [key for key in expected if actual.get(key) != expected[key]]
+    if mismatches:
+        raise SystemExit("BLOCKED: unrecognized binary image input: " + ",".join(mismatches))
+    return actual
+
+
 def production_seed_sensitive_fields(seed_data: dict) -> set[str]:
     fields = set(PRODUCTION_SEED_IDENTITY_FIELDS)
     for key in seed_data:
@@ -512,6 +549,7 @@ def main():
     ):
         if not p.exists():
             raise SystemExit(f"BLOCKED: missing_input {p}")
+    binary_build_inputs = validate_binary_build_inputs()
     if args.image_profile == "production":
         production_settings_unit_source = PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE.read_text(encoding="utf-8")
         if (
@@ -630,6 +668,8 @@ def main():
         f"player_runtime_baseline_version={PLAYER_RUNTIME_BASELINE_VERSION}",
         f"player_runtime_baseline_payload_sha256={PLAYER_RUNTIME_BASELINE_PAYLOAD_SHA256}",
         "c25_visible_product_states_embedded=true",
+        f"base_image_sha256={binary_build_inputs['base_image_sha256']}",
+        f"hwdecode_bundle_sha256={binary_build_inputs['hwdecode_bundle_sha256']}",
         "player_runtime_reconcile_available=true",
         "player_runtime_lab_thaw_guard=true",
         "player_runtime_gate_semantic_mpv_args=true",
@@ -1043,6 +1083,7 @@ def main():
         "player_runtime_kiosk_source": str(PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)),
         "player_runtime_kiosk_sha256": kiosk_snapshot_sha,
         "player_runtime_baseline_package": player_runtime_baseline,
+        "binary_build_inputs": binary_build_inputs,
         "player_runtime_snapshot_governed": True,
         "player_runtime_verified_marker_required": v["totem_kiosky_launcher_requires_verified_marker"],
         "player_runtime_reconcile_available": v["player_runtime_updatectl_reconcile_available"],
