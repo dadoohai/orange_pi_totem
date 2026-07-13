@@ -46,8 +46,9 @@ livres e overlayroot ambiguo. `prod10` corrigiu integralmente essa higiene, mas
 tambem foi bloqueada antes do flash: a senha root curta herdada da base foi
 quebrada em segundos por auditoria offline. `prod11` corrigiu a credencial e
 passou a composicao offline, mas foi bloqueada porque o primeiro boot tinha dois
-geradores sucessivos de host keys SSH. A proxima candidata e `prod12`, que deve
-desativar somente a regeneracao redundante do Armbian.
+geradores sucessivos de host keys SSH. `prod12` corrigiu esse conflito, passou
+quatro auditorias independentes e esta autorizada somente para um flash fisico
+controlado. `prod8` continua sendo a referencia ate o E2E terminar.
 
 O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
@@ -157,9 +158,15 @@ Fila atual para consolidacao:
   `armbian-firstrun` apagando-as e recriando-as depois. Nenhuma placa recebeu a
   imagem. Evidencia negativa em
   `docs/evidence/c18-update-validation/20260713T191534Z-prod11-build-777e1fd/`.
-- O pendente agora e construir `prod12`, repetir as
-  auditorias, grava-la do zero e fechar auto-pull/no-op/rollback dos alvos
-  remotos exatos antes de torna-la a nova referencia de distribuicao.
+- `prod12`, commit `cb89485`, SHA256
+  `4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262`,
+  passou gate `82/82`, validacao offline `66/66` e quatro auditorias
+  independentes sem blocker. Esta autorizada para um unico flash controlado.
+  Evidencia em
+  `docs/evidence/c18-update-validation/20260713T200707Z-prod12-build-cb89485/`.
+- O pendente agora e grava-la do zero e fechar boot, expansao do rootfs,
+  identidade SSH persistente e auto-pull/no-op/rollback dos alvos remotos
+  exatos antes de torna-la a nova referencia de distribuicao.
   Seu construtor de producao recusa arvore suja, identidade de candidata
   divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
   erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
@@ -392,9 +399,9 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   credencial e higiene, mas recriaria a identidade SSH duas vezes no primeiro
   boot; seu SHA256 e
   `675b9c9f8c3eb1bcbd90b5fa8fe398841d05d3d55a24d7df36b4ac571ec58922`;
-- construir e auditar `prod12` preservando a credencial forte e toda a higiene,
-  desativando a regeneracao SSH redundante do Armbian e mantendo ativa a
-  expansao automatica do rootfs;
+- `prod12` foi construida e auditada preservando a credencial forte e toda a
+  higiene, desativando a regeneracao SSH redundante do Armbian e mantendo ativa
+  a expansao automatica do rootfs;
 - gravar a sucessora do zero e validar boot, wizard/QR, gravacao da configuracao,
   retorno a midia, playback e estados C25;
 - publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar

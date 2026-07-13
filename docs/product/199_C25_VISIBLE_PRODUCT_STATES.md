@@ -9,7 +9,7 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_prod9_prod10_prod11_blocked_prod12_pending
+status=c25_validated_prod12_audited_pending_controlled_board_flash
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_preserved_in_candidate_chain=true
@@ -28,7 +28,7 @@ next_reference_image_successor_pending=true
 prod9_board_acceptance=blocked_do_not_flash
 prod10_board_acceptance=blocked_do_not_flash
 prod11_board_acceptance=blocked_do_not_flash
-prod12_board_acceptance=pending_build_and_forensic_audit
+prod12_board_acceptance=approved_for_one_controlled_flash_pending_board_e2e
 ```
 
 ## Contrato Publico V1
@@ -455,8 +455,33 @@ distribution_reference=still_prod8
 next_candidate=c18-hwdecode-prod-12
 ```
 
-O prod12 deve usar o controle oficial
+O prod12 foi definido para usar o controle oficial
 `OPENSSHD_REGENERATE_HOST_KEYS=false`, mantendo as demais tarefas do primeiro
 boot do Armbian e deixando somente o inicializador Dadooh como dono da identidade
-SSH. Build e auditoria forense devem ser repetidos antes do flash. Evidencia:
+SSH. Este checkpoint registra o blocker do prod11; o resultado da sucessora esta
+no checkpoint seguinte. Evidencia:
 `docs/evidence/c18-update-validation/20260713T191534Z-prod11-build-777e1fd/`.
+
+## Checkpoint Prod12 - Auditoria Verde, Placa Pendente - 2026-07-13
+
+O prod12 foi construido no commit `cb89485` e corrige somente o conflito de
+identidade SSH do prod11. Quatro revisoes independentes do artefato real nao
+encontraram blocker: o inicializador Dadooh e o unico dono efetivo das host
+keys, o SSH espera por ele, o restante do firstrun foi preservado e a expansao
+automatica do rootfs continua habilitada.
+
+```text
+candidate_image=c18-hwdecode-prod-12
+image_sha256=4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262
+image_repo_commit=cb894852c81d82ecad9320bb24accac81f1827b6
+release_gate=82_of_82
+offline_validation=66_of_66
+independent_reviews=4_go_0_blockers
+board_flash=approved_for_one_controlled_validation
+distribution_reference=still_prod8
+```
+
+O aceite fisico exige boot limpo, rootfs expandido, fingerprint SSH estavel
+apos segundo reboot, wizard/QR/configuracao, playback/C25 e
+auto-pull/no-op/rollback. Evidencia:
+`docs/evidence/c18-update-validation/20260713T200707Z-prod12-build-cb89485/`.

@@ -320,12 +320,10 @@ Enquanto nada mudar, a ordem de execucao e:
    ou blocker novo. C25A e o alvo C25B exato estao comprovados na placa em
    `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 2. `prod9`, `prod10` e `prod11` foram bloqueadas antes do flash por achados
-   independentes. O prod11 fechou higiene e credencial, mas revelou dupla
-   regeneracao de host keys no primeiro boot. Construir e auditar `prod12`
-   desativando somente a regeneracao SSH redundante do Armbian e preservando sua
-   expansao automatica do rootfs. O build deve partir de commit limpo, fechar o
-   conjunto imagem/hash/evidencia com marcador final e ainda passar auditoria
-   forense antes de qualquer flash.
+   independentes. `prod12` foi construida em `cb89485`, passou gate `82/82`,
+   validacao offline `66/66` e quatro auditorias independentes sem blocker. O
+   proximo marco e um unico flash controlado do SHA256 `4bef1f...8262`, seguido
+   de boot, expansao do rootfs, persistencia da identidade SSH e E2E do produto.
 3. Publicar depois do aceite local somente os alvos remotos exatos; provar os
    timers de `totem-core` e `player-runtime`, no-op, rollback e restauracao.
 4. Auditar a corrida e promover a sucessora a referencia apenas se o E2E estiver

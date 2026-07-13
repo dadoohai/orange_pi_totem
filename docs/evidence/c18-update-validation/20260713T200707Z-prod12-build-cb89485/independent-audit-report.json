@@ -1,0 +1,89 @@
+{
+  "schema": "dadooh.c18.production_image.independent_audit_report.v1",
+  "record_type": "central_compilation_of_independent_read_only_reviews",
+  "recorded_at_utc": "2026-07-13T20:50:56Z",
+  "image_tag": "c18-hwdecode-prod-12",
+  "image_sha256": "4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262",
+  "source_commit": "cb894852c81d82ecad9320bb24accac81f1827b6",
+  "source_tree": "9a94115ab6268e71eda12c26ffe2356462116cd5",
+  "reviews": [
+    {
+      "review_id": "artifact_forensics",
+      "agent_session_id": "019f5d1a-81e2-7d23-945a-082edf84acdc",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "artifact_chain_ext4_hygiene_and_private_residue_scan",
+      "material_findings": [
+        "image_hash_size_mode_and_artifact_bindings_recomputed",
+        "filesystem_clean_and_58530_of_58530_free_blocks_zeroed",
+        "embedded_host_keys_authorized_keys_machine_id_and_known_private_residues_absent",
+        "root_shadow_and_shadow_backup_match_and_do_not_use_inherited_verifier",
+        "production_firstrun_disables_armbian_host_key_regeneration",
+        "rootfs_resize_remains_enabled"
+      ],
+      "non_claims": [
+        "external_credential_plaintext_not_read_by_this_reviewer",
+        "not_a_board_boot_test"
+      ]
+    },
+    {
+      "review_id": "first_boot_semantics",
+      "agent_session_id": "019f5d1a-8222-78a1-b1f6-41c98448b4be",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "systemd_ssh_identity_firstrun_and_rootfs_resize",
+      "material_findings": [
+        "dadooh_identity_init_is_the_single_effective_host_key_owner",
+        "ssh_requires_and_runs_after_identity_init",
+        "armbian_firstrun_remains_enabled_without_regenerating_keys",
+        "unit_wants_execstart_shell_syntax_and_systemd_graph_are_operable",
+        "rootfs_resize_is_enabled_and_has_no_disable_marker"
+      ],
+      "non_blocking_findings": [
+        "physical_flash_must_confirm_resize_outcome",
+        "a_second_boot_may_be_required_if_resize_requests_it",
+        "legacy_fstab_double_comma_is_normalized_by_findmnt"
+      ]
+    },
+    {
+      "review_id": "prod11_prod12_delta",
+      "agent_session_id": "019f5d1a-8294-7c13-9f9d-7558ce5925db",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "full_rootfs_delta_and_regression_classification",
+      "paths_compared": 35573,
+      "unexpected_differences": 0,
+      "material_findings": [
+        "boot_region_partition_geometry_kernel_dtb_and_initrd_preserved",
+        "only_expected_content_and_metadata_differences_found",
+        "functional_boot_delta_is_armbian_host_key_regeneration_true_to_false",
+        "totem_core_payload_and_digest_preserved",
+        "root_account_rotation_preserved_shadow_metadata_and_other_accounts",
+        "rootfs_resize_and_dadooh_identity_init_preserved"
+      ]
+    },
+    {
+      "review_id": "pre_flash_governance",
+      "agent_session_id": "019f5d1a-8334-7cc1-bd4b-8c8c86c47c0e",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "release_gates_default_deny_claims_and_accepted_risk_boundary",
+      "material_findings": [
+        "source_release_gate_82_of_82_and_static_policy_69_of_69_passed",
+        "offline_validation_66_of_66_passed",
+        "ready_marker_remains_default_deny_until_external_decision",
+        "prod11_blocker_and_prod8_reference_are_honestly_preserved",
+        "accepted_risks_did_not_expand",
+        "no_distribution_or_broad_production_claim_present"
+      ]
+    }
+  ],
+  "overall_verdict": "go_for_one_controlled_flash",
+  "blockers": [],
+  "broad_production_approved": false,
+  "distribution_reference_approved": false
+}

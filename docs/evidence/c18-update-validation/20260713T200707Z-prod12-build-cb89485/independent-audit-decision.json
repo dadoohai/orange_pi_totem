@@ -1,0 +1,62 @@
+{
+  "schema": "dadooh.c18.production_image.independent_audit_decision.v1",
+  "image_tag": "c18-hwdecode-prod-12",
+  "image_version": "c18.image-prod.12",
+  "image_sha256": "4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262",
+  "image_bytes": 1971322880,
+  "source_commit": "cb894852c81d82ecad9320bb24accac81f1827b6",
+  "source_tree": "9a94115ab6268e71eda12c26ffe2356462116cd5",
+  "approved_for_board_flash": true,
+  "approved_flash_count": 1,
+  "approved_for_broad_production": false,
+  "approved_as_distribution_reference": false,
+  "review_count": 4,
+  "review_scope": "read_only_real_image_artifact_for_controlled_board_flash",
+  "blockers": [],
+  "artifact_bindings": {
+    "artifact_ready_sha256": "796e0add48f3188f979c4f4e450a0d180f2778729f1d0873f31449e535ad43fb",
+    "build_manifest_sha256": "7d57a3f990e0936e9913e33d54af772ad75a089ae630c496318117c224c57f99",
+    "offline_validation_sha256": "41248edb66b317fbdc848ca5dedcb8c52e8ce8457ff82775ac5db73911593c6a",
+    "build_log_sha256": "e8d2aca477bd5220d6c8b2b2c420d32ca147fd099234fc468d13bc6e439fbb14",
+    "source_release_gate_sha256": "7e06d8b797ddc65f31cd7ec6e8b4d34b902c40fd1b82de32127aa54e4bfb118b",
+    "independent_audit_report_sha256": "21c64b001b63cc39890177d1307ca4f64d3d59b7c802b747eb7a56626c6223ec"
+  },
+  "verified": {
+    "source_release_gate": "82/82",
+    "offline_validation": "66/66",
+    "static_policy_tests": "69/69",
+    "filesystem_clean": true,
+    "free_ext4_blocks_zeroed": "58530/58530",
+    "embedded_ssh_host_keys_absent": true,
+    "machine_id_empty": true,
+    "inherited_private_residues_absent": true,
+    "root_password_verifier_rotated": true,
+    "armbian_host_key_regeneration_disabled": true,
+    "single_effective_ssh_identity_owner": true,
+    "ssh_waits_for_identity": true,
+    "armbian_firstrun_preserved": true,
+    "rootfs_auto_expand_enabled": true,
+    "prod11_to_prod12_unexpected_differences": 0
+  },
+  "physical_acceptance_required": [
+    "first_boot_completed_without_failed_units",
+    "rootfs_expanded_to_card_capacity",
+    "ssh_host_keys_and_identity_marker_created",
+    "ssh_fingerprint_stable_after_second_reboot",
+    "wizard_qr_configuration_and_persistence_passed",
+    "player_playback_and_c25_visible_states_passed",
+    "exact_target_autopull_noop_and_rollback_passed"
+  ],
+  "accepted_non_blocking_risks": [
+    "shared_high_entropy_support_password",
+    "exact_target_player_runtime_without_per_device_signature_enforcement"
+  ],
+  "non_claims": [
+    "not_board_first_boot_validated",
+    "not_rootfs_expansion_physically_validated",
+    "not_ssh_identity_persistence_physically_validated",
+    "not_prod12_e2e_validated",
+    "not_distribution_reference",
+    "not_broad_production_rollout_approved"
+  ]
+}
