@@ -1428,6 +1428,16 @@ def wait_enter_or_cancel() -> None:
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
+def read_advertised_action(*allowed_keys: str) -> str:
+    allowed = set(allowed_keys)
+    while True:
+        key = read_key()
+        if key in allowed:
+            return key
+        if key in {"q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
 def adjacent_navigable_step(step: int, delta: int) -> int:
     steps = list(NAVIGABLE_STEPS)
     if step not in steps:
@@ -2836,11 +2846,9 @@ def collect_wifi_credentials(
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    key = read_key()
-    if key in {"back", "escape"}:
+    key = read_advertised_action("enter", "b", "B", "back", "escape")
+    if key in {"b", "B", "back", "escape"}:
         return None
-    if key != "enter":
-        raise VisualWizardAbort("setup visual cancelado pelo operador")
 
     selection_metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected_network)
     psk = read_text_field(
@@ -2879,11 +2887,9 @@ def collect_wifi_credentials(
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    key = read_key()
-    if key in {"back", "escape"}:
+    key = read_advertised_action("enter", "b", "B", "back", "escape")
+    if key in {"b", "B", "back", "escape"}:
         return None
-    if key != "enter":
-        raise VisualWizardAbort("setup visual cancelado pelo operador")
     return write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk), selection_metadata
 
 
@@ -3014,12 +3020,10 @@ def run_wifi_persistent(
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    key = read_key()
-    if key in {"back", "escape"}:
+    key = read_advertised_action("enter", "b", "B", "back", "escape")
+    if key in {"b", "B", "back", "escape"}:
         return None
-    if key == "enter":
-        return network
-    raise VisualWizardAbort("setup visual cancelado pelo operador")
+    return network
 
 
 def resolve_network_scripted(network_step: str) -> dict[str, Any]:
@@ -3595,7 +3599,10 @@ def review_and_confirm(
             return ready
         if key in {"b", "B", "back", "escape"}:
             return False
-        raise VisualWizardAbort("setup visual cancelado pelo operador")
+        if key in {"q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+        # Unsupported keys must not turn an otherwise valid review into a cancel.
+        continue
 
 
 def show_environment_validation_status(
@@ -3621,7 +3628,7 @@ def show_environment_validation_status(
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    return read_key()
+    return read_advertised_action("enter", "b", "B", "back", "escape")
 
 
 def run_environment_preflight(
@@ -4207,12 +4214,11 @@ def run_mock_environment_pairing(
                 layout_rotation_deg=layout_rotation_deg,
             ),
         )
-        key = read_key()
+        key = read_advertised_action("enter", "b", "B", "back", "escape")
         if key == "enter":
             return environment_id, environment_preflight_pairing_authorized()
         if key in {"b", "B", "back", "escape"}:
             return None
-        raise VisualWizardAbort("setup visual cancelado pelo operador")
 
     title_by_state = {
         "pending": "Aguardando autorizacao",
@@ -4331,12 +4337,11 @@ def run_real_environment_pairing(
                     layout_rotation_deg=layout_rotation_deg,
                 ),
             )
-            key = read_key()
+            key = read_advertised_action("enter", "b", "B", "back", "escape")
             if key == "enter":
                 return environment_id, environment_preflight_pairing_authorized()
             if key in {"b", "B", "back", "escape"}:
                 return None
-            raise VisualWizardAbort("setup visual cancelado pelo operador")
         if (
             state == "expired"
             and renewal_count < PAIRING_REAL_MAX_RENEWALS
@@ -4545,7 +4550,7 @@ def run_visual_wizard(
                                     layout_rotation_deg=layout_rotation_deg,
                                 ),
                             )
-                            key = read_key()
+                            key = read_advertised_action("enter", "b", "B", "back", "escape")
                             if key == "enter":
                                 continue
                             raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -5269,6 +5274,45 @@ def run_self_test() -> None:
         except VisualWizardStepJump as exc:
             step_jump_ok = exc.step == 3 and exc.focus_area == "content"
         assert_true(step_jump_ok, "enter on another focused step should jump to that step")
+        original_action_read_key = globals()["read_key"]
+        try:
+            action_keys = iter(("right", "tab", "down", "enter"))
+            globals()["read_key"] = lambda timeout_sec=None: next(action_keys)
+            assert_true(
+                read_advertised_action("enter", "back", "escape") == "enter",
+                "single-action prompts should ignore unsupported keys before Enter",
+            )
+            action_keys = iter(("left", "pageup", "escape"))
+            assert_true(
+                read_advertised_action("enter", "back", "escape") == "escape",
+                "single-action prompts should preserve the advertised Escape action",
+            )
+            globals()["read_key"] = lambda timeout_sec=None: "q"
+            assert_raises(
+                lambda: read_advertised_action("enter", "back", "escape"),
+                "explicit Q should preserve the global abort shortcut",
+            )
+        finally:
+            globals()["read_key"] = original_action_read_key
+        original_review_read_key = globals()["read_key"]
+        review_display = VisualDisplay(root / "review-key-contract", enabled=False)
+        review_keys = iter(("right", "tab", "down", "enter"))
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: next(review_keys)
+            review_confirmed = review_and_confirm(
+                review_display,
+                primary_environment_id,
+                resolve_display_selection("landscape"),
+                network_defaults(),
+                environment_preflight=environment_preflight_pairing_authorized(),
+            )
+        finally:
+            globals()["read_key"] = original_review_read_key
+            review_display.stop()
+        assert_true(
+            review_confirmed,
+            "unsupported review keys should be ignored until an explicit action is received",
+        )
         navigation_state = initial_wizard_state(270, "")
         assert_true(navigation_state.rotation_status == "default", "initial orientation should be a default")
         assert_true(not wizard_can_commit(navigation_state), "empty navigation state should not commit")

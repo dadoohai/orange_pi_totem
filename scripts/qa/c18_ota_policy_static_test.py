@@ -4143,6 +4143,11 @@ exec "$C18_REAL_PYTHON3" "$@"
         on_exit = session[session.index("on_exit() {") : session.index("\non_term()", session.index("on_exit() {"))]
         self.assertIn("cleanup_private_artifacts", on_exit)
         self.assertLess(on_exit.index("cleanup_private_artifacts"), on_exit.index("write_final_status"))
+        cleanup = session[
+            session.index("cleanup_private_artifacts() {") : session.index("\ncleanup_apply_policy()", session.index("cleanup_private_artifacts() {"))
+        ]
+        self.assertIn('$WIZARD_OUT_DIR/qr-pairing/private-values.json', cleanup)
+        self.assertIn('rm -f -- "$pairing_private_values"', cleanup)
         post_write = session[
             session.index('REAL_CONFIG_WRITTEN="true"') : session.index("cleanup_private_artifacts || true", session.index('REAL_CONFIG_WRITTEN="true"'))
         ]

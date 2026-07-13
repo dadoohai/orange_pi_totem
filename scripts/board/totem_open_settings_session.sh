@@ -837,6 +837,7 @@ PY
 }
 
 cleanup_private_artifacts() {
+  local pairing_private_values="$WIZARD_OUT_DIR/qr-pairing/private-values.json"
   if [ -f "$HANDOFF_OUT_DIR/config.candidate.private.json" ]; then
     rm -f "$HANDOFF_OUT_DIR/config.candidate.private.json" || true
   fi
@@ -852,6 +853,12 @@ cleanup_private_artifacts() {
   if [ "$PAIRING_PRIVATE_VALUES_USED" = "true" ]; then
     rm -f "$PRIVATE_VALUES" || true
     if [ ! -e "$PRIVATE_VALUES" ]; then
+      PRIVATE_SOURCE_TEMP_REMOVED="true"
+    fi
+  fi
+  if [ -e "$pairing_private_values" ] || [ -L "$pairing_private_values" ]; then
+    rm -f -- "$pairing_private_values" || true
+    if [ ! -e "$pairing_private_values" ] && [ ! -L "$pairing_private_values" ]; then
       PRIVATE_SOURCE_TEMP_REMOVED="true"
     fi
   fi
