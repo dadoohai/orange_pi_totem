@@ -1510,6 +1510,12 @@ def show_startup_feedback_once(mpv: "MPVController", cfg: Dict, status: StatusSt
             require_progress=False,
         )
     ):
+        status.update(
+            black_screen_risk_reason=None,
+            public_surface_evidence="mpv_path_vo_frame_available",
+            startup_feedback_ever_presented=True,
+            startup_feedback_local_evidence="mpv_path_vo_frame_available",
+        )
         return True
     return show_startup_feedback(mpv, cfg, status, feedback_state)
 
@@ -1800,6 +1806,12 @@ def is_supported_media_path(path: str, allow_bin: bool = False) -> bool:
 
 def is_still_image_item(item: MediaItem) -> bool:
     return is_image_path(item.path) or bool(item.source_path and is_image_path(item.source_path))
+
+
+def media_frame_evidence_policy(item: MediaItem) -> Tuple[bool, str]:
+    if is_still_image_item(item):
+        return False, "mpv_path_vo_frame_available"
+    return True, "mpv_path_vo_frame_progress"
 
 
 def probe_media_file(cfg: Dict, path: str, *, required_codec: str = "") -> Tuple[bool, str]:
@@ -4233,6 +4245,7 @@ def publish_playing_status(
     offset_ms: int,
     blocked_media_count: int,
 ) -> bool:
+    _require_progress, frame_evidence = media_frame_evidence_policy(item)
     with mpv.process_guard():
         if (
             mpv.generation() != expected_generation
@@ -4248,13 +4261,13 @@ def publish_playing_status(
             startup_feedback_display="player",
             content_state="playing",
             first_frame_ready=True,
-            first_frame_evidence="mpv_path_vo_frame_progress",
+            first_frame_evidence=frame_evidence,
             first_content_load_accepted=True,
             black_screen_risk_reason=None,
             public_surface_state="media",
             public_surface_presented_state="media",
             public_surface_generation=expected_generation,
-            public_surface_evidence="mpv_path_vo_frame_progress",
+            public_surface_evidence=frame_evidence,
             error_code=None,
             blocked_media_count=blocked_media_count,
             last_render_ok=iso_now(),
@@ -4683,10 +4696,11 @@ def playback_loop(
             continue
 
         media_generation = mpv.generation()
+        require_frame_progress, _frame_evidence = media_frame_evidence_policy(item)
         if not mpv.wait_for_local_frame_evidence(
             item.path,
             expected_generation=media_generation,
-            require_progress=True,
+            require_progress=require_frame_progress,
         ):
             if mpv.generation() != media_generation:
                 preloaded_path = None

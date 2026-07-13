@@ -42,7 +42,7 @@ STATUS_AGGREGATE_PATH = REPO_ROOT / "scripts" / "board" / "totem_status_aggregat
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "61776bfc7647f27a1e0612c703a01574d047889e8682138f530853aee8af0055"
+EXPECTED_SNAPSHOT_SHA256 = "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -281,6 +281,50 @@ class FakeGenerationRecoveryMPV:
         return 1234
 
 
+class FakeStillFrameMPV:
+    def __init__(self) -> None:
+        self.load_calls: list[str] = []
+        self.frame_require_progress: list[bool] = []
+
+    def ensure_running(self) -> None:
+        return None
+
+    def is_running(self) -> bool:
+        return True
+
+    def generation(self) -> int:
+        return 1
+
+    def wait_for_current_path(self, _path: str, timeout: float | None = None) -> bool:
+        return True
+
+    def wait_for_local_frame_evidence(self, path: str, **kwargs: object) -> bool:
+        if "startup-feedback" in path:
+            return True
+        require_progress = bool(kwargs.get("require_progress", True))
+        self.frame_require_progress.append(require_progress)
+        return not require_progress
+
+    def process_guard(self):
+        return contextlib.nullcontext()
+
+    def load_file(self, path: str, alias: str = "") -> bool:
+        self.load_calls.append(f"{path}|{alias}")
+        return True
+
+    def seek_absolute(self, _seconds: float) -> bool:
+        return True
+
+    def set_property(self, _name: str, _value: object) -> bool:
+        return True
+
+    def append_file(self, _path: str) -> bool:
+        return True
+
+    def pid(self) -> int:
+        return 1234
+
+
 class StopOnMismatchStatus:
     def __init__(self, stop_event: threading.Event) -> None:
         self.start_time = time.time()
@@ -308,6 +352,13 @@ class StopOnRecoveredStatus(StopOnMismatchStatus):
         if kwargs.get("error_code") == "player_recovering":
             self.saw_recovery = True
         if self.saw_recovery and kwargs.get("content_state") == "playing":
+            self.stop_event.set()
+
+
+class StopOnPlayingStatus(StopOnMismatchStatus):
+    def update(self, **kwargs: object) -> None:
+        super().update(**kwargs)
+        if kwargs.get("content_state") == "playing":
             self.stop_event.set()
 
 
@@ -596,6 +647,13 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             self.assertIsNone(status.snapshot().get("black_screen_risk_reason"))
             self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_media"))
             self.assertEqual(len(mpv.load_calls), 1)
+            status.update(black_screen_risk_reason="api_playlist_wait")
+            self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_content"))
+            self.assertIsNone(status.snapshot().get("black_screen_risk_reason"))
+            self.assertEqual(
+                status.snapshot().get("public_surface_evidence"),
+                "mpv_path_vo_frame_available",
+            )
             mpv.current_path_matches = False
             self.assertFalse(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_content"))
             self.assertEqual(len(mpv.load_calls), 2)
@@ -643,6 +701,13 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         }
         controller.get_property = lambda name, **_kwargs: static_frame.get(name)
         self.assertFalse(controller.wait_for_local_frame_evidence("/data/media/a.mp4", timeout=0.06))
+        self.assertTrue(
+            controller.wait_for_local_frame_evidence(
+                "/data/media/a.mp4",
+                timeout=0,
+                require_progress=False,
+            )
+        )
 
         clock_only = dict(static_frame, **{"estimated-frame-number": None})
         controller.get_property = lambda name, **_kwargs: clock_only.get(name)
@@ -1055,6 +1120,53 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             and snapshot.get("public_surface_evidence") == "mpv_path_vo_frame_available"
         )
         self.assertLess(recovery_without_surface, recovery_with_surface)
+
+    def test_playback_loop_accepts_single_frame_still_sidecar_without_progress(self) -> None:
+        kiosk = load_kiosk_module()
+        stop_event = threading.Event()
+        status = StopOnPlayingStatus(stop_event)
+        state = kiosk.PlaylistState()
+        item = kiosk.MediaItem(
+            url="cache://current.png",
+            duration_ms=1000,
+            path="/data/media/current.png.h264.mp4",
+            campaign_id="campaign-1",
+            campaign_name="Campaign 1",
+            source_path="/data/media/current.png",
+        )
+        self.assertTrue(kiosk.is_still_image_item(item))
+        self.assertEqual(
+            kiosk.media_frame_evidence_policy(item),
+            (False, "mpv_path_vo_frame_available"),
+        )
+        self.assertTrue(state.update([item], "fixture"))
+        with tempfile.TemporaryDirectory(prefix="c18-still-frame-policy-") as tmp:
+            cfg = {
+                "state_dir": tmp,
+                "runtime_dir": tmp,
+                "startup_feedback_enabled": True,
+                "sync_enabled": False,
+                "preload_next": False,
+            }
+            mpv = FakeStillFrameMPV()
+            result = kiosk.playback_loop(
+                cfg,
+                threading.Lock(),
+                state,
+                status,
+                mpv,
+                kiosk.CacheIndex(cfg),
+                stop_event,
+            )
+
+        self.assertIsNone(result)
+        self.assertEqual(mpv.frame_require_progress, [False])
+        self.assertEqual(status.snapshot().get("content_state"), "playing")
+        self.assertEqual(
+            status.snapshot().get("first_frame_evidence"),
+            "mpv_path_vo_frame_available",
+        )
+        self.assertNotEqual(status.snapshot().get("content_state"), "media_frame_not_ready")
 
     def test_playback_loop_exits_after_bounded_mpv_recovery_failures(self) -> None:
         kiosk = load_kiosk_module()
