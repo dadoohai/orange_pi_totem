@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-11. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-13. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -114,11 +114,11 @@ Fila atual para consolidacao:
 - Fechar na versao atual a jornada real completa: Wi-Fi, QR, ambiente, escrita,
   conclusao e retorno ao player, com captura visual quando o HDMI estiver
   disponivel.
-- Melhorar os estados que o usuario ve fora da midia: abertura/saida de
-  settings, carregando conteudo, config pendente, sem midia e erro recuperavel,
-  sem expor diagnostico tecnico. A fatia C25A concluiu implementacao e auditoria
-  off-board; contrato, escopo e aceite HDMI pendente estao em
-  `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
+- Estados visiveis C25A (`totem-core`) e C25B (`player-runtime`) estao
+  validados e reversiveis na placa de homologacao. C25B permanece fora de
+  `stable` e do auto-pull publico; o proximo marco e incorpora-la, junto com o
+  launcher/updater correspondentes, na nova imagem de referencia. Contrato e
+  evidencias estao em `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 - Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
   uso por rodada, preservando o QA C19/C20.
 - Retomar a matriz de compatibilidade de display quando as telas alvo estiverem

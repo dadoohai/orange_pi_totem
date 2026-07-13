@@ -498,9 +498,10 @@ da gravacao e `Configuracao salva` somente depois do sucesso.
 
 Fonte da rodada: `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 
-Estado: implementacao e QA off-board concluidos para C25A; aceite HDMI, pacote
-consolidado e inclusao do hook de launcher na proxima imagem continuam
-pendentes. Estados dinamicos enquanto o player vive permanecem na fatia C25B.
+Estado: C25A (`totem-core`) e C25B (`player-runtime`) foram validados na placa
+de homologacao com rollback. O pacote consolidado e a inclusao do hook de
+launcher, updater e snapshots na proxima imagem continuam pendentes. C25B nao
+foi promovida para `stable` nem liberada para auto-pull publico.
 
 ## Primeiras Rodadas Recomendadas
 

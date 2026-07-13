@@ -9,10 +9,13 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25a_totem_core_validated_on_homologation_board
+status=c25a_totem_core_and_c25b_player_runtime_validated_on_homologation_board
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_requires_next_image=true
+c25b_player_runtime_package=c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8
+c25b_apply_rollback_reapply=passed
+c25b_live_mpv_recovery_surface=passed
 offline_tests=passed
 generated_visual_review=passed
 board_framebuffer_flow_validation=passed
@@ -272,3 +275,50 @@ o aceite perceptivo por camera continuam fatias separadas e rastreadas.
 
 Evidencia:
 `docs/evidence/c25-visible-states/20260713T010245Z-board-frame-publish-fix/`.
+
+## Checkpoint C25B - Estados Dinamicos No Player - 2026-07-13
+
+Estado atual:
+
+```text
+c25b_player_owned_live_states=validated_on_homologation_board
+package=c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8
+package_source_commit=8ce9bb8f4a3bcb2873c229ef6791008eca1b57c2
+package_payload_sha256=962346c2fd9df78a555ae767ab4562161c307ce9a4497c63ee38c4c5608f5cff
+release_gate=passed
+candidate_health=45_of_45_clean
+controlled_mpv_recovery=passed
+recovery_surface_status_and_mpv_path=passed
+rollback_to_c23=passed
+linked_previous_reapply=passed
+final_live_health=30_of_30_clean
+stable_promotion=not_authorized
+public_player_autopull=not_enabled_for_this_target
+next_reference_image=pending
+```
+
+O MPV de producao rejeitou o primeiro formato SVG; a fatia foi corrigida para
+H.264 de um quadro, gerado atomicamente e validado antes do uso. A primeira
+tentativa H.264 tambem revelou uma contradicao real: a superficie estava
+visivel, mas o status ainda carregava o risco antigo de tela preta. A correcao
+passou a limpar esse risco somente depois da prova local de quadro.
+
+Um teste controlado de saida do MPV encontrou a ultima lacuna: a tela de
+recuperacao era criada apenas depois da falha e sua prova podia desaparecer no
+intervalo do writer de status. O player agora preaquece essa superficie atras
+da tela de carregamento, registra `recovering` imediatamente e persiste a prova
+assim que o MPV apresenta o quadro.
+
+Na placa, a superficie `player_error` foi observada no status e diretamente no
+caminho ativo do MPV; a midia voltou sem restart do servico e sem novo evento
+Panfrost. O pacote final foi rollbackado para C23, teve saude verde, e voltou
+pelo caminho explicito de reaplicacao do `previous` verificado. Uma tentativa
+comum de reaplicar foi corretamente negada com rc=45.
+
+Veredito: C25B esta aceita para homologacao funcional e reversivel. O pacote
+continua fora de `stable` e do auto-pull publico. A proxima imagem de referencia
+deve incorporar este snapshot, o updater e o launcher correspondentes antes de
+qualquer claim de distribuicao ampla.
+
+Evidencia:
+`docs/evidence/c25-visible-states/20260713T062512Z-c25b-player-h264-governed/`.

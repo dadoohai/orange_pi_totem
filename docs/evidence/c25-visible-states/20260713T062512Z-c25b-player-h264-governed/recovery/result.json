@@ -1,0 +1,733 @@
+{
+  "after_mpv_count": 1,
+  "before_mpv_count": 1,
+  "final_status": {
+    "black_screen_risk_reason": null,
+    "content_state": "playing",
+    "error_code": null,
+    "first_frame_ready": true,
+    "mpv_running": true,
+    "playback_state": "playing",
+    "player_state": "playing",
+    "public_surface_evidence": "mpv_path_vo_frame_progress",
+    "public_surface_generation": 2,
+    "public_surface_presented_state": "media",
+    "public_surface_state": "media",
+    "startup_feedback_ever_presented": true,
+    "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+    "startup_feedback_state": "playing",
+    "startup_feedback_visible": false
+  },
+  "mpv_pid_changed": true,
+  "observed_recovery_surface": true,
+  "observed_recovery_surface_in_mpv": true,
+  "panfrost_faults_delta": 0,
+  "passed": true,
+  "quit_response": "{\"data\":null,\"request_id\":0,\"error\":\"success\"}",
+  "samples": [
+    {
+      "mpv_pids": [
+        312569
+      ],
+      "mpv_surface": {
+        "error": "ConnectionRefusedError",
+        "result": "error"
+      },
+      "rel_sec": 0.0,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 1,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "error": "TimeoutError",
+        "result": "error"
+      },
+      "rel_sec": 0.3,
+      "status": {
+        "black_screen_risk_reason": "mpv_generation_changed",
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": null,
+        "public_surface_generation": null,
+        "public_surface_presented_state": null,
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "error": "TimeoutError",
+        "result": "error"
+      },
+      "rel_sec": 0.749,
+      "status": {
+        "black_screen_risk_reason": "mpv_generation_changed",
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": null,
+        "public_surface_generation": null,
+        "public_surface_presented_state": null,
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "none",
+        "result": "success"
+      },
+      "rel_sec": 1.198,
+      "status": {
+        "black_screen_risk_reason": "mpv_generation_changed",
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": null,
+        "public_surface_generation": null,
+        "public_surface_presented_state": null,
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "player_error",
+        "result": "success"
+      },
+      "rel_sec": 1.495,
+      "status": {
+        "black_screen_risk_reason": "mpv_generation_changed",
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": null,
+        "public_surface_generation": null,
+        "public_surface_presented_state": null,
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "player_error",
+        "result": "success"
+      },
+      "rel_sec": 1.832,
+      "status": {
+        "black_screen_risk_reason": "mpv_generation_changed",
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": null,
+        "public_surface_generation": null,
+        "public_surface_presented_state": null,
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 2.175,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 2.527,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 2.831,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 3.129,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 3.474,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 3.776,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 4.078,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "player_recovering",
+        "error_code": "player_recovering",
+        "first_frame_ready": false,
+        "mpv_running": true,
+        "playback_state": "recovering",
+        "player_state": "recovering",
+        "public_surface_evidence": "mpv_path_vo_frame_available",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "player_error",
+        "public_surface_state": "player_error",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "error_player_start",
+        "startup_feedback_visible": true
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 4.379,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 4.68,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 4.982,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 5.298,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 5.601,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 5.904,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 6.206,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 6.508,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 6.81,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 7.112,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 7.443,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 7.745,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    },
+    {
+      "mpv_pids": [
+        313046
+      ],
+      "mpv_surface": {
+        "path_kind": "media",
+        "result": "success"
+      },
+      "rel_sec": 8.045,
+      "status": {
+        "black_screen_risk_reason": null,
+        "content_state": "playing",
+        "error_code": null,
+        "first_frame_ready": true,
+        "mpv_running": true,
+        "playback_state": "playing",
+        "player_state": "playing",
+        "public_surface_evidence": "mpv_path_vo_frame_progress",
+        "public_surface_generation": 2,
+        "public_surface_presented_state": "media",
+        "public_surface_state": "media",
+        "startup_feedback_ever_presented": true,
+        "startup_feedback_local_evidence": "mpv_path_vo_frame_available",
+        "startup_feedback_state": "playing",
+        "startup_feedback_visible": false
+      }
+    }
+  ],
+  "schema": "dadooh.c25.player_runtime.mpv_recovery_probe.v1",
+  "service_nrestarts_delta": 0
+}

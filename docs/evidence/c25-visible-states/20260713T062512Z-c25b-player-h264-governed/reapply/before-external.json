@@ -1,0 +1,26 @@
+{
+  "current_kiosk_sha256": "7b79c5d08c7131b69fc4fd3fe632fe25338110841d7ad28e80bfcad0a2e38de5",
+  "current_link": "releases/c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+  "label": "before",
+  "mpv_count": 1,
+  "panfrost_fault_lines": 2,
+  "previous_link": "releases/c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8",
+  "service_active": "active",
+  "service_nrestarts": "0",
+  "state_current_version": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+  "state_previous_version": "c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8",
+  "status": {
+    "black_screen_risk_reason": null,
+    "content_state": "playing",
+    "error_code": null,
+    "first_frame_evidence": null,
+    "first_frame_ready": true,
+    "playback_state": "playing",
+    "player_state": "playing",
+    "public_surface_evidence": null,
+    "public_surface_presented_state": null,
+    "public_surface_state": null,
+    "startup_feedback_ever_presented": null,
+    "startup_feedback_local_evidence": null
+  }
+}

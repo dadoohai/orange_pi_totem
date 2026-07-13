@@ -1,0 +1,43 @@
+{
+  "channel": "homologation",
+  "component": "player-runtime",
+  "created_at_utc": "2026-07-13T06:14:45Z",
+  "entrypoint": "kiosk.py",
+  "health_checks": [
+    "player_runtime_release_gate",
+    "playback_deep_health",
+    "marker_identity_match"
+  ],
+  "lab_variant": "",
+  "payload": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8.tar.gz",
+  "payload_bytes": 36610,
+  "payload_sha256": "962346c2fd9df78a555ae767ab4562161c307ce9a4497c63ee38c4c5608f5cff",
+  "requires": {
+    "base_image_min": "c17.4.2",
+    "deep_health_schema": "dadooh.c18.playback.deep_health.v1",
+    "device": "orangepizero3",
+    "device_track": "c18-hwdecode",
+    "gpu_context": "drm",
+    "hwdec": "v4l2request-copy",
+    "media_stack_id": "c18-hwdecode-v4l2request-copy",
+    "mpv_wrapper": "/opt/totem/bin/totem-mpv-hwdecode",
+    "updater_features": [
+      "c18-freeze-kiosky-player-v1",
+      "c18-rollback-reapply-v1",
+      "c18-safe-payload-v1",
+      "c18-track-v1",
+      "c18-player-runtime-verify-then-promote-v1",
+      "c25-player-surface-health-v1"
+    ],
+    "vo": "gpu"
+  },
+  "schema": "dadooh.totem.update.v1",
+  "source_branch": "foundation-v0.1",
+  "source_commit": "8ce9bb8f4a3bcb2873c229ef6791008eca1b57c2",
+  "source_dirty": false,
+  "source_repo": "dadoohai/orange_pi_totem",
+  "updates": [
+    "kiosk.py"
+  ],
+  "version": "c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8"
+}
