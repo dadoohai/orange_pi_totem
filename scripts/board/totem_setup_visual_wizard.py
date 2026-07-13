@@ -929,6 +929,7 @@ class FramebufferSVGRenderer:
         self.font = PSFFont(font_path)
         self.fb_file = self.fb_path.open("r+b", buffering=0)
         self.fb = mmap.mmap(self.fb_file.fileno(), self.stride * self.height, access=mmap.ACCESS_WRITE)
+        self.draw_target: mmap.mmap | bytearray = self.fb
 
     def close(self) -> None:
         try:
@@ -962,7 +963,7 @@ class FramebufferSVGRenderer:
         row = self.pixel_bytes(color) * (x1 - x0)
         for py in range(y0, y1):
             offset = py * self.stride + x0 * 4
-            self.fb[offset : offset + len(row)] = row
+            self.draw_target[offset : offset + len(row)] = row
 
     def render_context(self, svg: str) -> dict[str, float | int]:
         match = SVG_RE.search(svg)
@@ -1070,38 +1071,45 @@ class FramebufferSVGRenderer:
             cursor_x += (self.font.width + 1) * scale
 
     def render(self, svg: str) -> None:
-        ctx = self.render_context(svg)
-        self.draw_physical_rect(0, 0, self.width, self.height, (15, 23, 42))
-        for match in RECT_RE.finditer(svg):
-            attrs = parse_attrs(match.group(1))
-            color = parse_color(attrs.get("fill"))
-            if color is None:
-                continue
-            self.draw_logical_rect(
-                parse_float(attrs.get("x")),
-                parse_float(attrs.get("y")),
-                parse_float(attrs.get("width")),
-                parse_float(attrs.get("height")),
-                color,
-                ctx,
-            )
-        for match in TEXT_RE.finditer(svg):
-            attrs = parse_attrs(match.group(1))
-            color = parse_color(attrs.get("fill")) or (255, 255, 255)
-            font_size = parse_float(attrs.get("font-size"), 20.0)
-            x = parse_float(attrs.get("x"))
-            y = parse_float(attrs.get("y"))
-            body = match.group(2)
-            tspans = TSPAN_RE.findall(body)
-            if tspans:
-                current_y = y
-                for tspan_attrs_raw, tspan_text in tspans:
-                    tspan_attrs = parse_attrs(tspan_attrs_raw)
-                    current_y += parse_float(tspan_attrs.get("dy"), 0.0)
-                    self.draw_text(parse_float(tspan_attrs.get("x"), x), current_y, tspan_text, font_size, color, ctx)
-            else:
-                self.draw_text(x, y, body, font_size, color, ctx)
-        self.fb.flush()
+        frame = bytearray(self.stride * self.height)
+        previous_target = self.draw_target
+        self.draw_target = frame
+        try:
+            ctx = self.render_context(svg)
+            self.draw_physical_rect(0, 0, self.width, self.height, (15, 23, 42))
+            for match in RECT_RE.finditer(svg):
+                attrs = parse_attrs(match.group(1))
+                color = parse_color(attrs.get("fill"))
+                if color is None:
+                    continue
+                self.draw_logical_rect(
+                    parse_float(attrs.get("x")),
+                    parse_float(attrs.get("y")),
+                    parse_float(attrs.get("width")),
+                    parse_float(attrs.get("height")),
+                    color,
+                    ctx,
+                )
+            for match in TEXT_RE.finditer(svg):
+                attrs = parse_attrs(match.group(1))
+                color = parse_color(attrs.get("fill")) or (255, 255, 255)
+                font_size = parse_float(attrs.get("font-size"), 20.0)
+                x = parse_float(attrs.get("x"))
+                y = parse_float(attrs.get("y"))
+                body = match.group(2)
+                tspans = TSPAN_RE.findall(body)
+                if tspans:
+                    current_y = y
+                    for tspan_attrs_raw, tspan_text in tspans:
+                        tspan_attrs = parse_attrs(tspan_attrs_raw)
+                        current_y += parse_float(tspan_attrs.get("dy"), 0.0)
+                        self.draw_text(parse_float(tspan_attrs.get("x"), x), current_y, tspan_text, font_size, color, ctx)
+                else:
+                    self.draw_text(x, y, body, font_size, color, ctx)
+            self.fb[:] = frame
+            self.fb.flush()
+        finally:
+            self.draw_target = previous_target
 
 
 class VisualDisplay:
@@ -5155,7 +5163,56 @@ def assert_artifact_permissions(out_dir: pathlib.Path) -> None:
         assert_true(file_mode(path) == setup.PRIVATE_FILE_MODE, f"{path.name} should be 0600")
 
 
+def assert_framebuffer_backbuffer_contract() -> None:
+    class FlushableBuffer(bytearray):
+        def __init__(self, initial: bytes) -> None:
+            super().__init__(initial)
+            self.flush_count = 0
+
+        def flush(self) -> None:
+            self.flush_count += 1
+
+    renderer = object.__new__(FramebufferSVGRenderer)
+    renderer.width = 4
+    renderer.height = 2
+    renderer.stride = 16
+    renderer.fb = FlushableBuffer(b"\x7f" * (renderer.stride * renderer.height))
+    renderer.draw_target = renderer.fb
+    initial_frame = bytes(renderer.fb)
+    original_draw_text = renderer.draw_text
+    failure_injected = False
+
+    def fail_mid_frame(*_args: Any, **_kwargs: Any) -> None:
+        nonlocal failure_injected
+        failure_injected = True
+        raise VisualWizardError("synthetic render failure")
+
+    renderer.draw_text = fail_mid_frame
+    failing_svg = '<svg width="4" height="2"><text x="0" y="1">fail</text></svg>'
+    try:
+        renderer.render(failing_svg)
+    except VisualWizardError as exc:
+        assert_true(str(exc) == "synthetic render failure", "framebuffer test should observe the injected failure")
+    else:
+        raise AssertionError("synthetic framebuffer render should fail")
+    assert_true(failure_injected, "framebuffer test must reach the injected mid-frame failure")
+    assert_true(bytes(renderer.fb) == initial_frame, "failed render must preserve the complete visible frame")
+    assert_true(renderer.draw_target is renderer.fb, "failed render must restore the live framebuffer target")
+    assert_true(renderer.fb.flush_count == 0, "failed render must not flush a partial frame")
+
+    renderer.draw_text = original_draw_text
+    complete_svg = '<svg width="4" height="2"><rect x="0" y="0" width="4" height="2" fill="#ff0000"/></svg>'
+    renderer.render(complete_svg)
+    assert_true(
+        bytes(renderer.fb) == FramebufferSVGRenderer.pixel_bytes((255, 0, 0)) * 8,
+        "successful render should publish one complete frame",
+    )
+    assert_true(renderer.fb.flush_count == 1, "successful render should flush exactly once")
+    assert_true(renderer.draw_target is renderer.fb, "successful render must restore the live framebuffer target")
+
+
 def run_self_test() -> None:
+    assert_framebuffer_backbuffer_contract()
     assert_raises(lambda: require_tmp_dir("/var/tmp/dadooh-c9-9"), "out-dir outside /tmp should fail")
     assert_raises(lambda: validate_environment_id("bad environment"), "environment with space should fail")
     assert_raises(lambda: validate_environment_id("api_key"), "api_key-like environment should fail")
