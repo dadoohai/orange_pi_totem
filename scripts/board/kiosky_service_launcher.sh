@@ -21,6 +21,7 @@ TOTEM_STATUS_OUT_DIR="${TOTEM_STATUS_OUT_DIR:-/tmp/dadooh-status}"
 TOTEM_PLAYER_STATUS_FILE="${TOTEM_PLAYER_STATUS_FILE:-/tmp/kiosky-status.json}"
 TOTEM_STATUS_RENDERER="${TOTEM_STATUS_RENDERER:-/opt/totem/bin/totem_status_renderer.sh}"
 TOTEM_STATUS_SVG="${TOTEM_STATUS_SVG:-/tmp/dadooh-status/status.svg}"
+TOTEM_STATUS_JSON="${TOTEM_STATUS_JSON:-$TOTEM_STATUS_OUT_DIR/status.json}"
 TOTEM_VISUAL_SPLASH="${TOTEM_VISUAL_SPLASH:-/opt/totem/bin/totem_visual_splash.py}"
 TOTEM_PLAYER_STATUS_MPV_WATCHDOG="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG:-/opt/totem/bin/totem_player_status_mpv_watchdog.py}"
 TOTEM_PLAYER_STATUS_MPV_WATCHDOG_ENABLED="${TOTEM_PLAYER_STATUS_MPV_WATCHDOG_ENABLED:-1}"
@@ -43,6 +44,7 @@ TOTEM_SETUP_LOCAL_MAX_RUNS="${TOTEM_SETUP_LOCAL_MAX_RUNS:-1}"
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="${TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC:-2}"
 TOTEM_STATUS_REFRESH_SEC="${TOTEM_STATUS_REFRESH_SEC:-5}"
 TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="${TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC:-3}"
+TOTEM_STATUS_RENDERER_START_GRACE_SEC="${TOTEM_STATUS_RENDERER_START_GRACE_SEC:-1}"
 DISPLAY_RETRY_SEC="${KIOSKY_DISPLAY_RETRY_SEC:-5}"
 CONFIG_RETRY_SEC="${KIOSKY_CONFIG_RETRY_SEC:-5}"
 APP_RESTART_SEC="${KIOSKY_APP_RESTART_SEC:-5}"
@@ -115,6 +117,7 @@ DISPLAY_LOG_INTERVAL_SEC="$(positive_integer_or_default "$DISPLAY_LOG_INTERVAL_S
 TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" 2)"
 TOTEM_STATUS_REFRESH_SEC="$(positive_integer_or_default "$TOTEM_STATUS_REFRESH_SEC" 5)"
 TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC="$(positive_integer_or_default "$TOTEM_STATUS_RENDERER_STOP_TIMEOUT_SEC" 3)"
+TOTEM_STATUS_RENDERER_START_GRACE_SEC="$(positive_integer_or_default "$TOTEM_STATUS_RENDERER_START_GRACE_SEC" 1)"
 TOTEM_SETUP_LOCAL_TTY="$(positive_integer_or_default "$TOTEM_SETUP_LOCAL_TTY" 2)"
 TOTEM_SETUP_LOCAL_MAX_RUNS="$(positive_integer_or_default "$TOTEM_SETUP_LOCAL_MAX_RUNS" 1)"
 TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC="$(positive_integer_or_default "$TOTEM_PLAYER_STATUS_MPV_WATCHDOG_INTERVAL_SEC" 1)"
@@ -173,12 +176,12 @@ run_status_aggregator() {
 
   if [ ! -x "$TOTEM_STATUS_AGGREGATOR" ]; then
     warn_status_aggregator "status_aggregator_unavailable"
-    return 0
+    return 1
   fi
 
   if ! command -v timeout >/dev/null 2>&1; then
     warn_status_aggregator "status_aggregator_timeout_unavailable"
-    return 0
+    return 1
   fi
 
   timeout "$TOTEM_STATUS_AGGREGATOR_TIMEOUT_SEC" "$TOTEM_STATUS_AGGREGATOR" \
@@ -189,11 +192,17 @@ run_status_aggregator() {
 
   if [ "$rc" -eq 124 ]; then
     warn_status_aggregator "status_aggregator_timeout"
+    return 1
   elif [ "$rc" -ne 0 ]; then
     warn_status_aggregator "status_aggregator_failed rc=$rc"
+    return 1
   fi
 
   return 0
+}
+
+invalidate_status_artifacts() {
+  rm -f -- "$TOTEM_STATUS_SVG" "$TOTEM_STATUS_JSON" 2>/dev/null || true
 }
 
 status_target() {
@@ -247,7 +256,12 @@ write_status() {
   chmod 0600 "$tmp" 2>/dev/null || true
   if mv "$tmp" "$target" 2>/dev/null; then
     LAST_STATUS_FILE="$target"
-    run_status_aggregator "$target"
+    if ! run_status_aggregator "$target"; then
+      if ! stop_status_renderer; then
+        warn_status_renderer "status_renderer_stop_failed_after_aggregation_failure"
+      fi
+      invalidate_status_artifacts
+    fi
   else
     rm -f "$tmp"
   fi
@@ -367,15 +381,15 @@ stop_status_renderer() {
 start_status_renderer() {
   if settings_session_active; then
     c17_4_trace "status_renderer_blocked_by_settings_session"
-    return 0
+    return 1
   fi
 
   if ! display_connected; then
-    return 0
+    return 1
   fi
 
   if process_alive "$CHILD_PID"; then
-    return 0
+    return 1
   fi
 
   if [ -n "$STATUS_RENDERER_PID" ]; then
@@ -387,16 +401,23 @@ start_status_renderer() {
   fi
 
   if [ ! -r "$TOTEM_STATUS_SVG" ] || [ ! -f "$TOTEM_STATUS_SVG" ]; then
-    return 0
+    return 1
   fi
 
   if [ ! -x "$TOTEM_STATUS_RENDERER" ]; then
     warn_status_renderer "status_renderer_unavailable"
-    return 0
+    return 1
   fi
 
   "$TOTEM_STATUS_RENDERER" "$TOTEM_STATUS_SVG" >/dev/null 2>&1 &
   STATUS_RENDERER_PID="$!"
+  sleep "$TOTEM_STATUS_RENDERER_START_GRACE_SEC"
+  if ! process_alive "$STATUS_RENDERER_PID"; then
+    wait "$STATUS_RENDERER_PID" 2>/dev/null || true
+    STATUS_RENDERER_PID=""
+    warn_status_renderer "status_renderer_start_failed"
+    return 1
+  fi
   log "status_renderer_started pid=$STATUS_RENDERER_PID"
   return 0
 }
@@ -801,6 +822,12 @@ run_app_once() {
 
   log "app_exited exit_code=$rc"
   write_status "app_exited" "true" "$rc"
+  # Keep a truthful recovery surface visible during the retry delay. The next
+  # run_app_once call must still stop this renderer before starting the player.
+  if ! run_status_aggregator "$LAST_STATUS_FILE" || ! start_status_renderer; then
+    invalidate_status_artifacts
+    show_public_splash "player"
+  fi
   sleep_interruptible "$APP_RESTART_SEC"
 }
 

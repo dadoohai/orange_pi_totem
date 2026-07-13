@@ -100,7 +100,7 @@ import sys
 with open(sys.argv[1], "r", encoding="utf-8") as handle:
     status = json.load(handle)
 
-assert status["schema_version"] == "totem-status.v0"
+assert status["schema_version"] == "totem-status.v1"
 assert status["state"] == "display_missing"
 assert status["display_connected"] is False
 assert status["error_code"] == "DISPLAY_MISSING"
@@ -123,7 +123,7 @@ import sys
 with open(sys.argv[1], "r", encoding="utf-8") as handle:
     status = json.load(handle)
 
-assert status["schema_version"] == "totem-status.v0"
+assert status["schema_version"] == "totem-status.v1"
 assert status["state"] == "config_missing"
 assert status["display_connected"] is True
 assert status["config_state"] == "missing"
@@ -143,6 +143,25 @@ if [ "$(renderer_start_count)" -ne 1 ]; then
   exit 1
 fi
 
+TOTEM_STATUS_AGGREGATOR="$TMP_DIR/missing-aggregator-hot"
+write_status "config_missing" "true" >/dev/null
+if [ -e "$TOTEM_RENDERER_FAKE_ACTIVE" ]; then
+  printf 'expected active stale renderer to stop when aggregation later fails\n' >&2
+  exit 1
+fi
+if [ -e "$TOTEM_STATUS_SVG" ] || [ -e "$TOTEM_STATUS_JSON" ]; then
+  printf 'expected active stale status artifacts to be invalidated when aggregation later fails\n' >&2
+  exit 1
+fi
+
+TOTEM_STATUS_AGGREGATOR="$SCRIPT_DIR/totem_status_aggregate.py"
+write_status "config_missing" "true" >/dev/null
+start_status_renderer
+if [ "$(renderer_start_count)" -ne 2 ]; then
+  printf 'expected renderer fake to recover after aggregation returns\n' >&2
+  exit 1
+fi
+
 stop_status_renderer
 if [ -e "$TOTEM_RENDERER_FAKE_ACTIVE" ]; then
   printf 'expected renderer fake to stop cleanly\n' >&2
@@ -152,7 +171,7 @@ fi
 : >"$TOTEM_RENDERER_FAKE_LOG"
 FAKE_DISPLAY_CONNECTED=0
 write_status "display_missing" "false"
-start_status_renderer
+start_status_renderer || true
 sleep 1
 if [ "$(renderer_start_count)" -ne 0 ]; then
   printf 'expected renderer fake not to start when display is missing\n' >&2
@@ -188,6 +207,7 @@ if [ -z "$term_line" ] || [ -z "$app_line" ] || [ "$term_line" -ge "$app_line" ]
   printf 'expected renderer stop event before app fake start\n' >&2
   exit 1
 fi
+stop_status_renderer
 
 reset_launcher_state
 write_valid_config
@@ -244,6 +264,21 @@ if [ ! -e "$normal_app" ]; then
   printf 'expected normal valid config path to call app fake\n' >&2
   exit 1
 fi
+if [ ! -e "$TOTEM_RENDERER_FAKE_ACTIVE" ]; then
+  printf 'expected recovery renderer to cover app retry delay\n' >&2
+  exit 1
+fi
+python3 - "$TOTEM_STATUS_OUT_DIR/status.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    status = json.load(handle)
+
+assert status["state"] == "player_error"
+assert status["error_code"] == "PLAYER_EXITED"
+PY
+stop_status_renderer
 
 TOTEM_STATUS_AGGREGATOR="$TMP_DIR/missing-aggregator"
 warning_output="$(write_status "running" "true")"
@@ -257,6 +292,71 @@ case "$warning_output" in
 esac
 
 test -s "$KIOSKY_LAUNCHER_STATUS_FILE"
+
+reset_launcher_state
+: >"$TOTEM_RENDERER_FAKE_LOG"
+rm -f "$KIOSKY_CONFIG_PATH"
+printf '<svg>stale-player-running</svg>\n' >"$TOTEM_STATUS_SVG"
+printf '{"state":"player_running"}\n' >"$TOTEM_STATUS_JSON"
+handle_connected_display >/dev/null || true
+if [ -e "$TOTEM_RENDERER_FAKE_ACTIVE" ] || [ "$(renderer_start_count)" -ne 0 ]; then
+  printf 'expected config-missing path not to render stale status after aggregation failure\n' >&2
+  exit 1
+fi
+if [ -e "$TOTEM_STATUS_SVG" ] || [ -e "$TOTEM_STATUS_JSON" ]; then
+  printf 'expected config-missing path to invalidate stale status artifacts\n' >&2
+  exit 1
+fi
+
+reset_launcher_state
+: >"$TOTEM_RENDERER_FAKE_LOG"
+write_valid_config
+printf '<svg>stale-player-running</svg>\n' >"$TOTEM_STATUS_SVG"
+printf '{"state":"player_running"}\n' >"$TOTEM_STATUS_JSON"
+APP_CMD=(/bin/true)
+APP_RESTART_SEC=1
+run_app_once >/dev/null
+if [ -e "$TOTEM_RENDERER_FAKE_ACTIVE" ] || [ "$(renderer_start_count)" -ne 0 ]; then
+  printf 'expected stale recovery SVG not to start when aggregation fails\n' >&2
+  exit 1
+fi
+if [ -e "$TOTEM_STATUS_SVG" ]; then
+  printf 'expected stale recovery SVG to be invalidated when aggregation fails\n' >&2
+  exit 1
+fi
+if [ -e "$TOTEM_STATUS_JSON" ]; then
+  printf 'expected stale recovery JSON to be invalidated when aggregation fails\n' >&2
+  exit 1
+fi
+
+reset_launcher_state
+TOTEM_STATUS_AGGREGATOR="$SCRIPT_DIR/totem_status_aggregate.py"
+quick_exit_renderer="$TMP_DIR/quick-exit-status-renderer"
+cat >"$quick_exit_renderer" <<'SH'
+#!/usr/bin/env sh
+exit 23
+SH
+chmod 0755 "$quick_exit_renderer"
+TOTEM_STATUS_RENDERER="$quick_exit_renderer"
+write_valid_config
+printf '<svg>stale-player-error</svg>\n' >"$TOTEM_STATUS_SVG"
+APP_CMD=(/bin/true)
+APP_RESTART_SEC=1
+run_app_once >/dev/null
+if [ -n "$STATUS_RENDERER_PID" ]; then
+  printf 'expected immediately failed renderer pid to be cleared\n' >&2
+  exit 1
+fi
+if [ -e "$TOTEM_STATUS_SVG" ]; then
+  printf 'expected failed recovery renderer not to leave stale status SVG\n' >&2
+  exit 1
+fi
+if [ -e "$TOTEM_STATUS_JSON" ]; then
+  printf 'expected failed recovery renderer not to leave stale status JSON\n' >&2
+  exit 1
+fi
+
+TOTEM_STATUS_RENDERER="$TMP_DIR/fake-status-renderer"
 
 slow_aggregator="$TMP_DIR/slow-aggregator"
 cat >"$slow_aggregator" <<'SH'
