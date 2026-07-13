@@ -919,7 +919,13 @@ def main():
     production_ssh_dropin_now = base.cat_file(vroot, PRODUCTION_SSH_DROPIN) or ""
     production_open_settings_unit_now = base.cat_file(vroot, PRODUCTION_OPEN_SETTINGS_UNIT) or ""
     production_armbian_env_now = base.cat_file(vroot, PRODUCTION_ARMBIAN_ENV) or ""
-    kiosky_commit_marker_now = (base.cat_file(vroot, KIOSKY_PLAYER_COMMIT_MARKER) or "").strip()
+    kiosky_commit_verify_file = work / "kiosky-player-commit.verify"
+    base.debugfs(vroot, f"dump {KIOSKY_PLAYER_COMMIT_MARKER} {kiosky_commit_verify_file}")
+    kiosky_commit_marker_now = (
+        kiosky_commit_verify_file.read_text(encoding="utf-8").strip()
+        if kiosky_commit_verify_file.is_file()
+        else ""
+    )
     verify_zerofree_summary = "n/a"
     verify_free_space_zeroed = "n/a"
     if args.image_profile == "production":
