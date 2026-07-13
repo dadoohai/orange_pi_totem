@@ -390,8 +390,8 @@ PY
 }
 
 umask 077
-mkdir -p "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$(dirname "$LOCK_DIR")" "$REQUEST_DIR"
-chmod 700 "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$REQUEST_DIR" 2>/dev/null || true
+mkdir -p "$(dirname "$LOCK_DIR")" "$REQUEST_DIR"
+chmod 700 "$REQUEST_DIR" 2>/dev/null || true
 chmod 755 "$(dirname "$LOCK_DIR")" 2>/dev/null || true
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "settings_session_already_running" >&2
@@ -399,6 +399,47 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
 fi
 chmod 755 "$LOCK_DIR" 2>/dev/null || true
 c17_4_trace "session_lock_acquired"
+
+# Fixed /tmp paths are reused by systemd, so every lock owner needs fresh evidence.
+if ! python3 - "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" <<'PY'
+import os
+import pathlib
+import shutil
+import sys
+
+allowed_roots = tuple(pathlib.Path(raw).resolve() for raw in ("/tmp", "/run"))
+paths = [pathlib.Path(raw) for raw in sys.argv[1:]]
+resolved_paths = []
+for path in paths:
+    if not path.is_absolute() or path in allowed_roots or path.is_symlink():
+        raise SystemExit("session_scratch_path_invalid")
+    resolved = path.resolve(strict=False)
+    if not any(root in resolved.parents for root in allowed_roots):
+        raise SystemExit("session_scratch_path_outside_allowed_roots")
+    if any(parent.is_symlink() for parent in path.parents if parent not in allowed_roots):
+        raise SystemExit("session_scratch_parent_symlink")
+    resolved_paths.append(resolved)
+
+if len(set(resolved_paths)) != len(resolved_paths):
+    raise SystemExit("session_scratch_paths_not_distinct")
+for index, path in enumerate(resolved_paths):
+    for other in resolved_paths[index + 1 :]:
+        if path in other.parents or other in path.parents:
+            raise SystemExit("session_scratch_paths_overlap")
+
+for path in paths:
+    if path.exists():
+        if not path.is_dir():
+            raise SystemExit("session_scratch_not_directory")
+        shutil.rmtree(path)
+    path.mkdir(mode=0o700, parents=True)
+    os.chmod(path, 0o700)
+PY
+then
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+  echo "session_scratch_reset_failed" >&2
+  exit 24
+fi
 
 for unit in "${GETTY_UNITS[@]}"; do
   GETTY_ACTIVE["$unit"]="$(systemctl is-active "$unit" 2>/dev/null || true)"

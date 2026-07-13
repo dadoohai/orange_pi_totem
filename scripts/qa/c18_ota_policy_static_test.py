@@ -4154,6 +4154,70 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertIn("if ! write_public_orientation_from_candidate", post_write)
         self.assertIn("if write_private_settings_context", post_write)
 
+    def test_settings_session_resets_reused_scratch_without_following_symlinks(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        marker = "# Fixed /tmp paths are reused by systemd, so every lock owner needs fresh evidence."
+        marker_index = session.index(marker)
+        code_start = session.index("<<'PY'\n", marker_index) + len("<<'PY'\n")
+        code_end = session.index("\nPY\nthen", code_start)
+        reset_code = session[code_start:code_end]
+        self.assertLess(session.index('mkdir "$LOCK_DIR"'), marker_index)
+        self.assertLess(marker_index, session.index('for unit in "${GETTY_UNITS[@]}"'))
+
+        with tempfile.TemporaryDirectory(prefix="c20-session-scratch-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            scratch = [root / name for name in ("session", "wizard", "handoff", "writer")]
+            for path in scratch:
+                path.mkdir()
+                (path / "stale.json").write_text("{}\n", encoding="utf-8")
+                (path / ".hidden-stale").write_text("stale\n", encoding="utf-8")
+            reset = subprocess.run(
+                [sys.executable, "-", *(str(path) for path in scratch)],
+                input=reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(reset.returncode, 0, reset.stderr)
+            for path in scratch:
+                self.assertEqual(list(path.iterdir()), [])
+                self.assertEqual(path.stat().st_mode & 0o777, 0o700)
+
+            outside = root / "outside"
+            outside.mkdir()
+            sentinel = outside / "sentinel"
+            sentinel.write_text("keep\n", encoding="utf-8")
+            linked = root / "linked"
+            linked.symlink_to(outside, target_is_directory=True)
+            rejected = subprocess.run(
+                [sys.executable, "-", str(linked), *(str(path) for path in scratch[1:])],
+                input=reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep\n")
+
+            overlap = subprocess.run(
+                [
+                    sys.executable,
+                    "-",
+                    str(scratch[0]),
+                    str(scratch[0] / "child"),
+                    str(scratch[2]),
+                    str(scratch[3]),
+                ],
+                input=reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(overlap.returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
