@@ -20,6 +20,7 @@
     "C23 prevents cyclic MPV IPC backpressure by avoiding an unread persistent client in fresh-IPC mode and requiring a bounded request/response connection for each control command.",
     "C25B gives the MPV-owned surface public loading, content-unavailable and player-recovery states in landscape and portrait without introducing a second DRM owner.",
     "C25B binds media readiness to one MPV generation, path, configured VO, video parameters and observed frame progress; persistent MPV recovery failure exits to the image-bound launcher fallback.",
+    "C25B renders public states as atomic one-frame H.264 assets because the production MPV build does not decode SVG; the governed SVG remains design evidence only.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -74,6 +75,11 @@
       "to": "C25 public loading, unavailable and recovery surfaces with landscape/portrait layout and local VO/frame evidence"
     },
     {
+      "field": "startup feedback/MPV transport",
+      "from": "direct SVG load, unsupported by the production MPV decoder set",
+      "to": "versioned one-frame H.264 generated atomically by the image-bound ffmpeg and verified before load"
+    },
+    {
       "field": "playback MPV recovery",
       "from": "a permanently unavailable MPV can keep the Python player alive indefinitely",
       "to": "recovery is generation-aware and bounded before a non-zero exit returns visual ownership to the launcher"
@@ -82,7 +88,7 @@
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "c116c2e20a8e9e40a7f4bf2934bfa7590754883aa019eaf43f2078372c3efc2c"
+    "sha256": "d7853308c112de5fc6b26f90d5c095fb837ab2716bf28e1657ec1212c1c8f62e"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

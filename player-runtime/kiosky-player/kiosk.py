@@ -116,6 +116,8 @@ DEFAULT_CONFIG = {
     "status_file": "",
     "status_interval_sec": 5,
     "startup_feedback_enabled": True,
+    "startup_feedback_render_timeout_sec": 8,
+    "startup_feedback_max_attempts": 3,
     "cleanup_interval_sec": 1800,
     "sync_enabled": True,
     "sync_drift_threshold_ms": 300,
@@ -904,6 +906,7 @@ class StatusState:
             "startup_feedback_message": "Iniciando player",
             "startup_feedback_ever_presented": False,
             "startup_feedback_local_evidence": None,
+            "startup_feedback_failure_count": 0,
             "content_state": "unknown",
             "first_frame_ready": False,
             "first_content_load_accepted": False,
@@ -970,6 +973,10 @@ PUBLIC_SURFACE_PRESETS = {
         "title_size": 54,
     },
 }
+
+C25_PUBLIC_SURFACE_VIDEO_SCHEMA = "c25-visible-state-h264.v1"
+PUBLIC_SURFACE_FONT_REGULAR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+PUBLIC_SURFACE_FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 CONTENT_UNAVAILABLE_STATES = {
     "all_media_temporarily_blocked",
@@ -1052,6 +1059,162 @@ def startup_feedback_svg_path(cfg: Dict, state: str = "waiting_for_content") -> 
     runtime_dir = cfg.get("runtime_dir") or default_runtime_dir()
     surface_state = public_surface_for_feedback(state)
     return os.path.join(str(runtime_dir), f"startup-feedback-{surface_state}.svg")
+
+
+def startup_feedback_video_path(cfg: Dict, state: str = "waiting_for_content") -> str:
+    runtime_dir = cfg.get("runtime_dir") or default_runtime_dir()
+    surface_state = public_surface_for_feedback(state)
+    rotation = normalize_rotation(str(cfg.get("rotation_deg") or 0))
+    width, height = (720, 1280) if rotation in {90, 270} else (1280, 720)
+    revision = C25_PUBLIC_SURFACE_VIDEO_SCHEMA.replace(".", "-")
+    renderer_contract = "\n".join(
+        (
+            C25_PUBLIC_SURFACE_VIDEO_SCHEMA,
+            str(width),
+            str(height),
+            build_startup_feedback_video_filter(state, width=width, height=height),
+            "libx264|veryfast|crf=18|yuv420p|frames=1|audio=none",
+        )
+    )
+    renderer_sha = hashlib.sha256(renderer_contract.encode("utf-8")).hexdigest()[:16]
+    return os.path.join(
+        str(runtime_dir),
+        f"startup-feedback-{revision}-{surface_state}-{renderer_sha}-{width}x{height}.mp4",
+    )
+
+
+def ffmpeg_filter_escape(value: object) -> str:
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace("'", "\\'")
+        .replace(":", "\\:")
+        .replace(",", "\\,")
+        .replace("%", "\\%")
+    )
+
+
+def build_startup_feedback_video_filter(
+    state: str,
+    *,
+    width: int = 1280,
+    height: int = 720,
+) -> str:
+    surface_state = public_surface_for_feedback(state)
+    preset = PUBLIC_SURFACE_PRESETS[surface_state]
+    accent = str(preset["accent"]).lstrip("#")
+    regular = ffmpeg_filter_escape(PUBLIC_SURFACE_FONT_REGULAR)
+    bold = ffmpeg_filter_escape(PUBLIC_SURFACE_FONT_BOLD)
+
+    def box(x: int, y: int, w: int, h: int, color: str, thickness: str = "fill") -> str:
+        return f"drawbox=x={x}:y={y}:w={w}:h={h}:color=0x{color}:t={thickness}"
+
+    def text(
+        value: object,
+        x: int,
+        y: int,
+        size: int,
+        color: str,
+        *,
+        weight: str = "regular",
+    ) -> str:
+        font = bold if weight == "bold" else regular
+        return (
+            f"drawtext=fontfile='{font}':text='{ffmpeg_filter_escape(value)}':"
+            f"x={x}:y={y}:fontsize={size}:fontcolor=0x{color}"
+        )
+
+    filters: List[str] = []
+    if height > width:
+        copy = {
+            "loading_content": {
+                "title": ("Carregando", "conteúdo"),
+                "message": ("Estamos preparando as mídias", "para exibição."),
+                "hint": ("Isso pode levar alguns instantes.",),
+                "side": "Preparando",
+            },
+            "content_unavailable": {
+                "title": ("Conteúdo ainda não", "disponível"),
+                "message": ("O totem continuará verificando", "automaticamente."),
+                "hint": ("Se a mensagem persistir,", "acione o suporte."),
+                "side": "Verificando",
+            },
+            "player_error": {
+                "title": ("Recuperando", "a exibição"),
+                "message": ("Tentaremos retomar a exibição", "automaticamente."),
+                "hint": ("Se a mensagem persistir,", "acione o suporte."),
+                "side": "Recuperando",
+            },
+        }[surface_state]
+        filters.extend(
+            [
+                box(0, 0, 720, 8, accent),
+                box(0, 1206, 720, 74, "0d1116"),
+                text("Dadooh", 56, 40, 30, "f8fafc", weight="bold"),
+                box(194, 44, 2, 34, "3a4652"),
+                text("Exibição digital", 218, 50, 17, "9aa4b2"),
+                text(str(preset["status"]).upper(), 56, 130, 18, accent, weight="bold"),
+            ]
+        )
+        filters.extend(
+            text(line, 56, 196 + index * 62, 52, "f8fafc", weight="bold")
+            for index, line in enumerate(copy["title"])
+        )
+        filters.extend(
+            text(line, 56, 366 + index * 42, 27, "cbd5e1")
+            for index, line in enumerate(copy["message"])
+        )
+        filters.extend(
+            text(line, 56, 472 + index * 34, 21, "9aa4b2")
+            for index, line in enumerate(copy["hint"])
+        )
+        filters.extend(
+            [
+                box(56, 574, 88, 5, accent),
+                box(56, 620, 608, 430, "12171d"),
+                box(56, 620, 608, 430, "2a333d", "2"),
+                box(56, 620, 6, 430, accent),
+                box(280, 720, 160, 160, "3a4652", "7"),
+            ]
+        )
+        if surface_state == "loading_content":
+            filters.extend(
+                box(x, 792, 14, 14, accent) for x in (322, 353, 384)
+            )
+        else:
+            filters.append(box(343, 783, 34, 34, accent))
+        filters.append(text(copy["side"], 270, 916, 25, "f8fafc", weight="bold"))
+        return ",".join(filters)
+
+    side_label = {
+        "loading_content": "Preparando",
+        "content_unavailable": "Verificando",
+        "player_error": "Recuperando",
+    }[surface_state]
+    filters.extend(
+        [
+            box(0, 0, 1280, 8, accent),
+            box(0, 646, 1280, 74, "0d1116"),
+            text("Dadooh", 72, 42, 32, "f8fafc", weight="bold"),
+            box(220, 48, 2, 34, "3a4652"),
+            text("Exibição digital", 246, 52, 18, "9aa4b2"),
+            text(str(preset["status"]).upper(), 72, 138, 19, accent, weight="bold"),
+            text(preset["title"], 72, 190, int(preset["title_size"]), "f8fafc", weight="bold"),
+            text(preset["message"], 72, 298, 29, "cbd5e1"),
+            text(preset["hint"], 72, 374, 22, "9aa4b2"),
+            box(72, 466, 96, 5, accent),
+            box(884, 132, 324, 442, "12171d"),
+            box(884, 132, 324, 442, "2a333d", "2"),
+            box(884, 132, 6, 442, accent),
+            box(984, 238, 160, 160, "3a4652", "7"),
+        ]
+    )
+    if surface_state == "loading_content":
+        filters.extend(box(x, 310, 14, 14, accent) for x in (1026, 1057, 1088))
+    else:
+        filters.append(box(1047, 301, 34, 34, accent))
+    filters.append(text(side_label, 972, 448, 25, "f8fafc", weight="bold"))
+    return ",".join(filters)
 
 
 def build_startup_feedback_svg(state: str, *, width: int = 1280, height: int = 720) -> str:
@@ -1162,7 +1325,12 @@ def write_startup_feedback_svg(cfg: Dict, state: str = "waiting_for_content") ->
     rotation = normalize_rotation(str(cfg.get("rotation_deg") or 0))
     width, height = (720, 1280) if rotation in {90, 270} else (1280, 720)
     os.makedirs(os.path.dirname(target), exist_ok=True)
-    tmp_path = f"{target}.tmp"
+    tmp_fd, tmp_path = tempfile.mkstemp(
+        prefix=f".{os.path.basename(target)}.",
+        suffix=".tmp.mp4",
+        dir=os.path.dirname(target),
+    )
+    os.close(tmp_fd)
     with open(tmp_path, "w", encoding="utf-8") as fh:
         fh.write(build_startup_feedback_svg(state, width=width, height=height))
     os.replace(tmp_path, target)
@@ -1173,13 +1341,86 @@ def write_startup_feedback_svg(cfg: Dict, state: str = "waiting_for_content") ->
     return target
 
 
+def write_startup_feedback_video(cfg: Dict, state: str = "waiting_for_content") -> str:
+    target = startup_feedback_video_path(cfg, state)
+    rotation = normalize_rotation(str(cfg.get("rotation_deg") or 0))
+    width, height = (720, 1280) if rotation in {90, 270} else (1280, 720)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    if os.path.isfile(target) and (safe_getsize(target) or 0) > 0:
+        valid, _reason = probe_startup_feedback_video(cfg, target, width=width, height=height)
+        if valid:
+            return target
+
+    for font_path in (PUBLIC_SURFACE_FONT_REGULAR, PUBLIC_SURFACE_FONT_BOLD):
+        if not os.path.isfile(font_path):
+            raise RuntimeError("public surface font unavailable")
+    tmp_path = f"{target}.tmp"
+    ffmpeg_path = str(cfg.get("image_transcode_ffmpeg_path") or "/usr/bin/ffmpeg")
+    timeout_sec = min(
+        max(int(cfg.get("startup_feedback_render_timeout_sec") or 0), 2),
+        10,
+    )
+    command = [
+        ffmpeg_path,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=0x090c10:s={width}x{height}:r=25:d=1",
+        "-vf",
+        build_startup_feedback_video_filter(state, width=width, height=height),
+        "-frames:v",
+        "1",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        tmp_path,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout_sec,
+        )
+        if result.returncode != 0 or (safe_getsize(tmp_path) or 0) <= 0:
+            raise RuntimeError("public surface video render failed")
+        valid, reason = probe_startup_feedback_video(cfg, tmp_path, width=width, height=height)
+        if not valid:
+            raise RuntimeError(f"public surface video invalid:{reason}")
+        os.replace(tmp_path, target)
+        os.chmod(target, 0o600)
+        return target
+    except Exception:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def show_startup_feedback(mpv: "MPVController", cfg: Dict, status: StatusState, state: str) -> bool:
     if not cfg.get("startup_feedback_enabled", True):
         return False
     feedback_state = public_startup_state(state)
     surface_state = public_surface_for_feedback(feedback_state)
     try:
-        path = write_startup_feedback_svg(cfg, feedback_state)
+        path = write_startup_feedback_video(cfg, feedback_state)
         expected_generation = mpv.generation()
         loaded = mpv.load_file(path, alias=f"startup-feedback:{feedback_state}")
         ok = loaded and mpv.wait_for_local_frame_evidence(
@@ -1258,12 +1499,18 @@ def show_startup_feedback_once(mpv: "MPVController", cfg: Dict, status: StatusSt
     feedback_state = public_startup_state(state)
     surface_state = public_surface_for_feedback(feedback_state)
     snapshot = status.snapshot()
-    expected_path = startup_feedback_svg_path(cfg, feedback_state)
+    expected_path = startup_feedback_video_path(cfg, feedback_state)
+    expected_generation = mpv.generation()
     if (
         snapshot.get("startup_feedback_visible") is True
         and snapshot.get("public_surface_presented_state") == surface_state
-        and snapshot.get("public_surface_generation") == mpv.generation()
-        and mpv.wait_for_current_path(expected_path, timeout=0.15)
+        and snapshot.get("public_surface_generation") == expected_generation
+        and mpv.wait_for_local_frame_evidence(
+            expected_path,
+            timeout=0.2,
+            expected_generation=expected_generation,
+            require_progress=False,
+        )
     ):
         return True
     return show_startup_feedback(mpv, cfg, status, feedback_state)
@@ -1635,6 +1882,92 @@ def probe_media_file(cfg: Dict, path: str, *, required_codec: str = "") -> Tuple
         return False, f"first_frame_decode_exception:{type(exc).__name__}"
     if int(getattr(decode_result, "returncode", 1)) != 0:
         return False, "first_frame_decode_failed"
+    return True, "ok"
+
+
+def probe_startup_feedback_video(
+    cfg: Dict,
+    path: str,
+    *,
+    width: int,
+    height: int,
+) -> Tuple[bool, str]:
+    strict_cfg = dict(cfg)
+    strict_cfg["media_probe_enabled"] = True
+    valid, reason = probe_media_file(strict_cfg, path, required_codec="h264")
+    if not valid:
+        return False, reason
+
+    ffprobe_path = str(strict_cfg.get("media_probe_ffprobe_path") or "/usr/bin/ffprobe")
+    timeout_sec = min(
+        max(int(strict_cfg.get("startup_feedback_render_timeout_sec") or 0), 2),
+        10,
+    )
+    command = [
+        ffprobe_path,
+        "-v",
+        "error",
+        "-count_frames",
+        "-show_entries",
+        "stream=codec_type,codec_name,width,height,pix_fmt,nb_read_frames",
+        "-of",
+        "json",
+        path,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout_sec,
+        )
+    except FileNotFoundError:
+        return False, "ffprobe_missing"
+    except subprocess.TimeoutExpired:
+        return False, "surface_contract_probe_timeout"
+    except Exception as exc:
+        return False, f"surface_contract_probe_exception:{type(exc).__name__}"
+    if int(getattr(result, "returncode", 1)) != 0:
+        return False, "surface_contract_probe_rejected"
+    try:
+        stdout = getattr(result, "stdout", b"") or b""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+        payload = json.loads(stdout or "{}")
+    except Exception:
+        return False, "surface_contract_probe_invalid_json"
+    streams = payload.get("streams") if isinstance(payload, dict) else None
+    if not isinstance(streams, list):
+        return False, "surface_contract_streams_missing"
+    video_streams = [
+        stream
+        for stream in streams
+        if isinstance(stream, dict) and stream.get("codec_type") == "video"
+    ]
+    if len(video_streams) != 1:
+        return False, "surface_contract_video_stream_count"
+    if any(
+        isinstance(stream, dict) and stream.get("codec_type") == "audio"
+        for stream in streams
+    ):
+        return False, "surface_contract_audio_present"
+    video = video_streams[0]
+    try:
+        dimensions_match = (
+            int(video.get("width") or 0) == width
+            and int(video.get("height") or 0) == height
+        )
+    except (TypeError, ValueError):
+        dimensions_match = False
+    if video.get("codec_name") != "h264":
+        return False, "surface_contract_codec_mismatch"
+    if not dimensions_match:
+        return False, "surface_contract_dimensions_mismatch"
+    if video.get("pix_fmt") != "yuv420p":
+        return False, "surface_contract_pixel_format_mismatch"
+    if str(video.get("nb_read_frames") or "") != "1":
+        return False, "surface_contract_frame_count_mismatch"
     return True, "ok"
 
 
@@ -3905,6 +4238,34 @@ def playback_loop(
     last_mpv_generation = -1
     blocked_media_until: Dict[str, float] = {}
     consecutive_mpv_recovery_failures = 0
+    consecutive_surface_failures = 0
+
+    def public_surface_recovery_exhausted(
+        presented: bool,
+        current_cfg: Dict,
+        reason: str,
+    ) -> bool:
+        nonlocal consecutive_surface_failures
+        if presented:
+            consecutive_surface_failures = 0
+            status.update(startup_feedback_failure_count=0)
+            return False
+        consecutive_surface_failures += 1
+        max_attempts = max(int(current_cfg.get("startup_feedback_max_attempts") or 0), 1)
+        status.update(startup_feedback_failure_count=consecutive_surface_failures)
+        logging.error(
+            "Public surface unavailable attempt=%d max_attempts=%d reason=%s generation=%d",
+            consecutive_surface_failures,
+            max_attempts,
+            reason,
+            mpv.generation(),
+        )
+        if consecutive_surface_failures < max_attempts:
+            return False
+        mark_player_error(status, "public_surface_recovery_exhausted")
+        status.update(startup_feedback_failure_count=consecutive_surface_failures)
+        write_status_once(current_cfg, status)
+        return True
 
     boot_wall_ts = time.time()
     boot_mono_ts = time.monotonic()
@@ -4017,8 +4378,12 @@ def playback_loop(
                 error_code=None,
             )
             feedback_state = desired_startup_feedback_state(status.snapshot())
-            if feedback_state is not None:
-                show_startup_feedback_once(mpv, cfg_snapshot, status, feedback_state)
+            presented = bool(
+                feedback_state is not None
+                and show_startup_feedback_once(mpv, cfg_snapshot, status, feedback_state)
+            )
+            if public_surface_recovery_exhausted(presented, cfg_snapshot, "playlist_empty"):
+                return "public_surface_recovery_exhausted"
             time.sleep(1)
             continue
 
@@ -4033,7 +4398,13 @@ def playback_loop(
                 first_frame_ready=False,
                 black_screen_risk_reason="invalid_playlist_timeline",
             )
-            show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
+            presented = show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
+            if public_surface_recovery_exhausted(
+                presented,
+                cfg_snapshot,
+                "invalid_playlist_timeline",
+            ):
+                return "public_surface_recovery_exhausted"
             time.sleep(1)
             continue
 
@@ -4051,9 +4422,19 @@ def playback_loop(
                 black_screen_risk_reason="all_media_temporarily_blocked",
                 blocked_media_count=blocked_count,
             )
-            show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
+            presented = show_startup_feedback_once(mpv, cfg_snapshot, status, "error_no_content")
+            if public_surface_recovery_exhausted(
+                presented,
+                cfg_snapshot,
+                "all_media_temporarily_blocked",
+            ):
+                return "public_surface_recovery_exhausted"
             time.sleep(1)
             continue
+
+        if consecutive_surface_failures:
+            consecutive_surface_failures = 0
+            status.update(startup_feedback_failure_count=0)
 
         sync_enabled = bool(cfg_snapshot.get("sync_enabled", True))
         drift_threshold_ms = int(cfg_snapshot.get("sync_drift_threshold_ms") or 300)

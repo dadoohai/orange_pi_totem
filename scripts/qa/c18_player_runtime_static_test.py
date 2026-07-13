@@ -42,7 +42,7 @@ STATUS_AGGREGATE_PATH = REPO_ROOT / "scripts" / "board" / "totem_status_aggregat
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "c116c2e20a8e9e40a7f4bf2934bfa7590754883aa019eaf43f2078372c3efc2c"
+EXPECTED_SNAPSHOT_SHA256 = "d7853308c112de5fc6b26f90d5c095fb837ab2716bf28e1657ec1212c1c8f62e"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -79,6 +79,23 @@ def load_status_aggregate_module():
         return module
     finally:
         sys.path.remove(board_dir)
+
+
+@contextlib.contextmanager
+def stub_startup_surface_video(kiosk):
+    original = kiosk.write_startup_feedback_video
+
+    def write_stub(cfg: dict, state: str = "waiting_for_content") -> str:
+        path = Path(kiosk.startup_feedback_video_path(cfg, state))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"c25-test-surface")
+        return str(path)
+
+    kiosk.write_startup_feedback_video = write_stub
+    try:
+        yield
+    finally:
+        kiosk.write_startup_feedback_video = original
 
 
 class FakeProc:
@@ -191,6 +208,15 @@ class FakeSurfaceMPV:
 
     def generation(self) -> int:
         return self.current_generation
+
+    def ensure_running(self) -> None:
+        return None
+
+    def is_running(self) -> bool:
+        return True
+
+    def pid(self) -> int:
+        return 1234
 
     def load_file(self, path: str, alias: str = "") -> bool:
         self.load_calls.append(f"{path}|{alias}")
@@ -378,6 +404,160 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             self.assertIn('viewBox="0 0 720 1280"', portrait_svg)
             self.assertIn(expected_title.split()[0], portrait_svg)
             self.assertNotRegex(portrait_svg.lower(), r"\b(api|cache|internet|playlist|mpv)\b")
+            video_filter = kiosk.build_startup_feedback_video_filter(state)
+            self.assertIn(expected_title, video_filter)
+            self.assertNotRegex(video_filter.lower(), r"\b(api|cache|internet|playlist|mpv)\b")
+
+    def test_public_surface_video_builder_emits_atomic_h264_contract(self) -> None:
+        kiosk = load_kiosk_module()
+        with tempfile.TemporaryDirectory(prefix="c18-public-surface-video-") as tmp:
+            cfg = {
+                "runtime_dir": tmp,
+                "rotation_deg": 0,
+                "startup_feedback_render_timeout_sec": 999,
+            }
+            commands: list[list[str]] = []
+            timeouts: list[object] = []
+            original_run = kiosk.subprocess.run
+            original_probe = kiosk.probe_startup_feedback_video
+
+            class Result:
+                returncode = 0
+                stdout = b""
+                stderr = b""
+
+            def fake_run(command: list[str], **_kwargs: object) -> Result:
+                commands.append(command)
+                timeouts.append(_kwargs.get("timeout"))
+                Path(command[-1]).write_bytes(b"h264-mp4")
+                return Result()
+
+            kiosk.subprocess.run = fake_run
+            kiosk.probe_startup_feedback_video = lambda *_args, **_kwargs: (True, "ok")
+            try:
+                path = kiosk.write_startup_feedback_video(cfg, "waiting_for_content")
+                cached = kiosk.write_startup_feedback_video(cfg, "waiting_for_content")
+            finally:
+                kiosk.subprocess.run = original_run
+                kiosk.probe_startup_feedback_video = original_probe
+
+        self.assertEqual(path, cached)
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(timeouts, [10])
+        command = commands[0]
+        self.assertIn("libx264", command)
+        self.assertIn("-frames:v", command)
+        self.assertIn("drawtext=", command[command.index("-vf") + 1])
+        self.assertIn("c25-visible-state-h264-v1", path)
+        self.assertTrue(path.endswith("-1280x720.mp4"))
+
+    def test_public_surface_cache_identity_tracks_renderer_contract(self) -> None:
+        kiosk = load_kiosk_module()
+        cfg = {"runtime_dir": "/tmp/c18-surface-identity", "rotation_deg": 0}
+        state_paths = {
+            kiosk.startup_feedback_video_path(cfg, state)
+            for state in ("waiting_for_content", "error_no_content", "error_player_start")
+        }
+        self.assertEqual(len(state_paths), 3)
+        original_title = kiosk.PUBLIC_SURFACE_PRESETS["loading_content"]["title"]
+        first = kiosk.startup_feedback_video_path(cfg, "waiting_for_content")
+        try:
+            kiosk.PUBLIC_SURFACE_PRESETS["loading_content"]["title"] = "Copy alterada"
+            second = kiosk.startup_feedback_video_path(cfg, "waiting_for_content")
+        finally:
+            kiosk.PUBLIC_SURFACE_PRESETS["loading_content"]["title"] = original_title
+        self.assertNotEqual(first, second)
+
+    def test_public_surface_probe_is_strict_even_when_media_probe_is_disabled(self) -> None:
+        kiosk = load_kiosk_module()
+        forced_probe_values: list[object] = []
+        original_probe = kiosk.probe_media_file
+        original_run = kiosk.subprocess.run
+
+        class Result:
+            returncode = 0
+            stdout = json.dumps(
+                {
+                    "streams": [
+                        {
+                            "codec_type": "video",
+                            "codec_name": "h264",
+                            "width": 1280,
+                            "height": 720,
+                            "pix_fmt": "yuv420p",
+                            "nb_read_frames": "1",
+                        }
+                    ]
+                }
+            ).encode("utf-8")
+            stderr = b""
+
+        def fake_probe(cfg: dict, *_args: object, **_kwargs: object) -> tuple[bool, str]:
+            forced_probe_values.append(cfg.get("media_probe_enabled"))
+            return True, "ok"
+
+        kiosk.probe_media_file = fake_probe
+        kiosk.subprocess.run = lambda *_args, **_kwargs: Result()
+        try:
+            valid, reason = kiosk.probe_startup_feedback_video(
+                {"media_probe_enabled": False},
+                "/tmp/c18-surface.mp4",
+                width=1280,
+                height=720,
+            )
+        finally:
+            kiosk.probe_media_file = original_probe
+            kiosk.subprocess.run = original_run
+
+        self.assertTrue(valid, reason)
+        self.assertEqual(forced_probe_values, [True])
+
+    def test_public_surface_probe_rejects_contract_mismatches(self) -> None:
+        kiosk = load_kiosk_module()
+        original_probe = kiosk.probe_media_file
+        original_run = kiosk.subprocess.run
+        payload: dict[str, object] = {}
+
+        class Result:
+            returncode = 0
+            stderr = b""
+
+            @property
+            def stdout(self) -> bytes:
+                return json.dumps(payload).encode("utf-8")
+
+        kiosk.probe_media_file = lambda *_args, **_kwargs: (True, "ok")
+        kiosk.subprocess.run = lambda *_args, **_kwargs: Result()
+        valid_video = {
+            "codec_type": "video",
+            "codec_name": "h264",
+            "width": 1280,
+            "height": 720,
+            "pix_fmt": "yuv420p",
+            "nb_read_frames": "1",
+        }
+        cases = {
+            "surface_contract_dimensions_mismatch": [{**valid_video, "width": 640}],
+            "surface_contract_pixel_format_mismatch": [{**valid_video, "pix_fmt": "yuv444p"}],
+            "surface_contract_frame_count_mismatch": [{**valid_video, "nb_read_frames": "2"}],
+            "surface_contract_audio_present": [valid_video, {"codec_type": "audio"}],
+        }
+        try:
+            for expected_reason, streams in cases.items():
+                with self.subTest(expected_reason=expected_reason):
+                    payload.clear()
+                    payload["streams"] = streams
+                    valid, reason = kiosk.probe_startup_feedback_video(
+                        {},
+                        "/tmp/c18-surface.mp4",
+                        width=1280,
+                        height=720,
+                    )
+                    self.assertFalse(valid)
+                    self.assertEqual(reason, expected_reason)
+        finally:
+            kiosk.probe_media_file = original_probe
+            kiosk.subprocess.run = original_run
 
     def test_desired_public_surface_preserves_media_and_stratifies_failures(self) -> None:
         kiosk = load_kiosk_module()
@@ -401,7 +581,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_public_surface_is_loaded_once_per_state_and_mpv_generation(self) -> None:
         kiosk = load_kiosk_module()
-        with tempfile.TemporaryDirectory(prefix="c18-public-surface-") as tmp:
+        with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(prefix="c18-public-surface-") as tmp:
             cfg = {"runtime_dir": tmp, "startup_feedback_enabled": True}
             status = kiosk.StatusState()
             mpv = FakeSurfaceMPV()
@@ -512,7 +692,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         kiosk = load_kiosk_module()
         aggregate = load_status_aggregate_module()
         launcher = {"state": "running", "display_connected": True, "last_app_exit_code": None}
-        with tempfile.TemporaryDirectory(prefix="c18-public-truth-") as tmp:
+        with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(prefix="c18-public-truth-") as tmp:
             cfg = {"runtime_dir": tmp, "startup_feedback_enabled": True}
             status = kiosk.StatusState()
             mpv = FakeSurfaceMPV()
@@ -769,9 +949,12 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             campaign_name="Campaign 1",
         )
         self.assertTrue(state.update([item], "fixture"))
-        with tempfile.TemporaryDirectory(prefix="c18-playback-cache-index-") as tmp:
+        with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(
+            prefix="c18-playback-cache-index-"
+        ) as tmp:
             cfg = {
                 "state_dir": tmp,
+                "runtime_dir": tmp,
                 "sync_enabled": False,
                 "preload_next": False,
                 "media_load_retry_cooldown_sec": 5,
@@ -802,7 +985,7 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             campaign_name="Campaign 1",
         )
         self.assertTrue(state.update([item], "fixture"))
-        with tempfile.TemporaryDirectory(prefix="c18-generation-recovery-") as tmp:
+        with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(prefix="c18-generation-recovery-") as tmp:
             cfg = {
                 "state_dir": tmp,
                 "runtime_dir": tmp,
@@ -882,6 +1065,40 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertEqual(failure, "mpv_recovery_exhausted")
         self.assertEqual(mpv.ensure_calls, 2)
         self.assertEqual(status.snapshot().get("black_screen_risk_reason"), "mpv_recovery_exhausted")
+
+    def test_empty_playlist_exits_when_public_surface_cannot_be_presented(self) -> None:
+        kiosk = load_kiosk_module()
+        state = kiosk.PlaylistState()
+        with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(
+            prefix="c18-empty-surface-fail-"
+        ) as tmp:
+            cfg = {
+                "state_dir": tmp,
+                "runtime_dir": tmp,
+                "sync_enabled": False,
+                "startup_feedback_max_attempts": 2,
+            }
+            status = kiosk.StatusState()
+            mpv = FakeSurfaceMPV()
+            mpv.current_path_matches = False
+            original_sleep = kiosk.time.sleep
+            kiosk.time.sleep = lambda _seconds: None
+            try:
+                failure = kiosk.playback_loop(
+                    cfg,
+                    threading.Lock(),
+                    state,
+                    status,
+                    mpv,
+                    kiosk.CacheIndex(cfg),
+                    threading.Event(),
+                )
+            finally:
+                kiosk.time.sleep = original_sleep
+
+        self.assertEqual(failure, "public_surface_recovery_exhausted")
+        self.assertEqual(status.snapshot().get("player_state"), "error")
+        self.assertEqual(status.snapshot().get("startup_feedback_failure_count"), 2)
 
     def test_still_image_prepare_creates_h264_sidecar_for_c18_mpv(self) -> None:
         kiosk = load_kiosk_module()

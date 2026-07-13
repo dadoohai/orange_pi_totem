@@ -656,7 +656,10 @@ def validate_payload(payload: Path) -> dict[str, Any]:
     return {
         "kiosk_py_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
         "tree_sha256": tree,
-        "requires_c25_player_surface_health": 'data-visual-system="c25-visible-state-ui.v1"' in source,
+        "requires_c25_player_surface_health": (
+            'data-visual-system="c25-visible-state-ui.v1"' in source
+            or 'C25_PUBLIC_SURFACE_VIDEO_SCHEMA = "c25-visible-state-h264.v1"' in source
+        ),
     }
 
 
