@@ -932,7 +932,7 @@ def evaluate(
         for episode, local_ok in zip(still_episodes, still_episode_local_ok)
         if local_ok
     )
-    motion_tolerated_boundary_indexes: list[int] = []
+    motion_tolerance_candidates: list[tuple[int, int]] = []
     for index, (episode, stats, local_ok) in enumerate(
         zip(motion_episodes, motion_episode_stats, motion_episode_local_ok)
     ):
@@ -944,20 +944,51 @@ def evaluate(
             id(later) in proven_content_episode_ids for later in episodes[position + 1 :]
         )
         if position == 0 and later_proven:
-            motion_tolerated_boundary_indexes.append(index)
+            motion_tolerance_candidates.append((index, position))
             continue
         if (
             episode.get("start_reason") == "key_change"
             and later_proven
         ):
-            motion_tolerated_boundary_indexes.append(index)
+            motion_tolerance_candidates.append((index, position))
             continue
         if (
             episode.get("start_reason")
             in {"ipc_interruption", "sequence_gap", "frame_reset", "kind_change"}
             and later_proven
         ):
-            motion_tolerated_boundary_indexes.append(index)
+            motion_tolerance_candidates.append((index, position))
+    proven_positions = sorted(
+        all_episode_positions[episode_id]
+        for episode_id in proven_content_episode_ids
+    )
+    tolerance_groups: dict[tuple[int | None, int], list[int]] = {}
+    for motion_index, position in motion_tolerance_candidates:
+        previous_proven = next((value for value in reversed(proven_positions) if value < position), None)
+        next_proven = next(value for value in proven_positions if value > position)
+        tolerance_groups.setdefault((previous_proven, next_proven), []).append(motion_index)
+    motion_tolerated_boundary_indexes: list[int] = []
+    for indexes in tolerance_groups.values():
+        if len(indexes) == 1:
+            motion_tolerated_boundary_indexes.append(indexes[0])
+            continue
+        grouped_episodes = [motion_episodes[index] for index in indexes]
+        grouped_frames = [
+            frame
+            for episode in grouped_episodes
+            for frame in episode_coherent_frames(episode)
+        ]
+        ipc_bridge_ok = (
+            len(indexes) <= MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS + 1
+            and len({episode.get("key") for episode in grouped_episodes}) == 1
+            and all(
+                episode.get("start_reason") == "ipc_interruption"
+                for episode in grouped_episodes[1:]
+            )
+            and int(sustained_progress_stats(grouped_frames)["positive_steps"]) >= 1
+        )
+        if ipc_bridge_ok:
+            motion_tolerated_boundary_indexes.extend(indexes)
     motion_failed_indexes = [
         index
         for index in range(len(motion_episodes))

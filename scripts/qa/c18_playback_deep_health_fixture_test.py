@@ -1754,6 +1754,35 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 0)
         self.assertEqual(result["counters"]["motion_media_failed_episodes"], 1)
 
+    def test_repeated_frame_resets_cannot_compose_tolerated_singletons(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=1, kind="motion_media", alias="motion-a", frame="0"),
+            self.typed_row(template, seq=2, kind="motion_media", alias="motion-a", frame="30"),
+        ]
+        rows.extend(
+            self.typed_row(
+                template,
+                seq=seq,
+                kind="motion_media",
+                alias="motion-b",
+                frame=str(10 - seq),
+            )
+            for seq in range(3, 8)
+        )
+        rows.extend(
+            [
+                self.typed_row(template, seq=8, kind="motion_media", alias="motion-c", frame="0"),
+                self.typed_row(template, seq=9, kind="motion_media", alias="motion-c", frame="30"),
+            ]
+        )
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "motion_frame_progress_ok")
+        self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 0)
+        self.assertEqual(result["counters"]["motion_media_failed_episodes"], 5)
+
     def test_mixed_playlist_rejects_still_without_frame(self) -> None:
         fixture = self.with_case()
         template = fixture.rows()[0]
