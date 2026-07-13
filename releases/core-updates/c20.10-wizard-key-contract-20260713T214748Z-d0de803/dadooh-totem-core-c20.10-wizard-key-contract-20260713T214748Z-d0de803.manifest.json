@@ -1,0 +1,49 @@
+{
+  "channel": "homologation",
+  "component": "totem-core",
+  "created_at": "2026-07-13T21:47:49Z",
+  "created_at_utc": "2026-07-13T21:47:49Z",
+  "entrypoint": "bin/totem_setup_visual_wizard.py",
+  "health_checks": [
+    "wizard_self_test",
+    "wifi_adapter_self_test",
+    "splash_self_test",
+    "status_preview_self_test",
+    "status_aggregate_self_test",
+    "status_renderer_self_test",
+    "config_contract_self_test",
+    "bash_syntax",
+    "restore_order_static"
+  ],
+  "payload": "dadooh-totem-core-c20.10-wizard-key-contract-20260713T214748Z-d0de803.tar.gz",
+  "payload_bytes": 172897,
+  "payload_sha256": "2a5d9dcb2cd245f6d499a23fe9982891f5bf1acaa485e70938ec84a604903e37",
+  "required_base_image_min": "c17.4.2",
+  "requires": {
+    "base_image_min": "c17.4.2",
+    "device": "orangepizero3",
+    "device_track": "c18-hwdecode",
+    "updater_features": [
+      "c18-freeze-kiosky-player-v1",
+      "c18-rollback-reapply-v1",
+      "c18-safe-payload-v1",
+      "c18-track-v1"
+    ]
+  },
+  "schema": "dadooh.totem.update.v1",
+  "source_branch": "foundation-v0.1",
+  "source_commit": "d0de8034b682c07a07412b517b7dd4e0ee619f0a",
+  "source_dirty": false,
+  "source_repo": "dadoohai/orange_pi_totem",
+  "stable_promotion_evidence_sha256": "",
+  "updates": [
+    "wizard",
+    "splash",
+    "status",
+    "settings-session",
+    "wifi-adapter",
+    "config-contract",
+    "firstboot"
+  ],
+  "version": "c20.10-wizard-key-contract-20260713T214748Z-d0de803"
+}
