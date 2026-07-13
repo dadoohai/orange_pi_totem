@@ -84,7 +84,7 @@ SAMPLE_FIELDS = (
 )
 
 PUBLIC_SURFACE_BASENAME_RE = re.compile(
-    r"^startup-feedback-c25-visible-state-h264-v1-(?:loading_content|player_error)-[0-9a-f]{16}-[0-9]+x[0-9]+\.mp4$"
+    r"^startup-feedback-c25-visible-state-h264-v1-(?:loading_content|content_unavailable|player_error)-[0-9a-f]{16}-[0-9]+x[0-9]+\.mp4$"
 )
 STILL_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp")
 
@@ -112,19 +112,26 @@ def safe_path_alias(value: Any) -> str:
     return f"<filename:{sha1_short(value)}>"
 
 
-def classify_current_path(value: Any, current_item: dict[str, Any] | None = None) -> str:
+def classify_current_path(
+    value: Any,
+    current_item: dict[str, Any] | None = None,
+    next_item: dict[str, Any] | None = None,
+) -> str:
     """Return a non-sensitive playback evidence class for the active MPV path."""
     if not isinstance(value, str) or not value:
-        return ""
+        return "unclassified_media"
     basename = Path(value).name.lower()
+    path_alias = safe_path_alias(value)
+    for item in (current_item, next_item):
+        sanitized_item = item if isinstance(item, dict) else {}
+        if sanitized_item.get("path_alias") != path_alias:
+            continue
+        if sanitized_item.get("media_kind") == "still_image":
+            return "still_image_sidecar"
+        return "motion_media"
     if value.startswith("/tmp/") and PUBLIC_SURFACE_BASENAME_RE.fullmatch(basename):
         return "public_surface"
-    item = current_item if isinstance(current_item, dict) else {}
-    if item.get("path_alias") != safe_path_alias(value):
-        return "unclassified_media"
-    if item.get("media_kind") == "still_image":
-        return "still_image_sidecar"
-    return "motion_media"
+    return "unclassified_media"
 
 
 def scalar(value: Any) -> str:
@@ -366,6 +373,7 @@ def collect_samples(out_dir: Path,
         ipc_result, ipc_error, values, ipc_elapsed_ms, prop_errors = ipc_query_many(ipc_path, ipc_timeout_sec)
         status = sanitize_status(status_path)
         current_item = status.get("current_item") if isinstance(status.get("current_item"), dict) else {}
+        next_item = status.get("next_item") if isinstance(status.get("next_item"), dict) else {}
         current_alias = safe_path_alias(values.get("path")) or safe_path_alias(values.get("filename"))
         status_current_alias = str(current_item.get("alias") or "")
         status_path_alias = str(current_item.get("path_alias") or "")
@@ -380,7 +388,7 @@ def collect_samples(out_dir: Path,
             "ipc_elapsed_ms": str(ipc_elapsed_ms),
             "current_alias": current_alias,
             "path_alias": safe_path_alias(values.get("path")),
-            "current_path_kind": classify_current_path(values.get("path"), current_item),
+            "current_path_kind": classify_current_path(values.get("path"), current_item, next_item),
             "filename_alias": safe_path_alias(values.get("filename")),
             "time_pos": scalar(values.get("time-pos")),
             "duration": scalar(values.get("duration")),

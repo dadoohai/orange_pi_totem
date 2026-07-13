@@ -558,7 +558,7 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertEqual(result["counters"]["status_mpv_transition_lag_runs"], 1)
         self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
 
-    def test_accepts_single_terminal_status_mpv_transition_lag_sample(self) -> None:
+    def test_terminal_status_mpv_lag_is_aligned_but_not_playback_proof(self) -> None:
         fixture = self.with_case()
         self.write_status_mpv_alignment_rows(
             fixture,
@@ -575,8 +575,9 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         )
 
         result = fixture.result()
-        self.assertTrue(result["passed"])
-        self.assertEqual(result["failure_reasons"], [])
+        self.assertFalse(result["passed"])
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertFalse(result["checks"]["motion_frame_progress_ok"])
         self.assertEqual(result["counters"]["status_mpv_transition_lag_runs"], 1)
         self.assertEqual(result["counters"]["status_mpv_terminal_transition_lag_runs"], 1)
 
@@ -1332,12 +1333,19 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             ),
             "public_surface",
         )
+        self.assertEqual(
+            collector.classify_current_path(
+                "/tmp/private/startup-feedback-c25-visible-state-h264-v1-content_unavailable-0123456789abcdef-1280x720.mp4"
+            ),
+            "public_surface",
+        )
         still_path = "/data/media/private-campaign.png.h264.mp4"
         still_item = collector.sanitize_item({"path": still_path, "source_path": "/data/media/private-campaign.png"})
         self.assertEqual(collector.classify_current_path(still_path, still_item), "still_image_sidecar")
         motion_path = "/data/media/private-campaign.mp4"
         motion_item = collector.sanitize_item({"path": motion_path})
         self.assertEqual(collector.classify_current_path(motion_path, motion_item), "motion_media")
+        self.assertEqual(collector.classify_current_path(motion_path, {}, motion_item), "motion_media")
         self.assertEqual(collector.classify_current_path(motion_path, {}), "unclassified_media")
         spoof_path = "/data/media/real-video.png.h264.mp4"
         spoof_item = collector.sanitize_item({"path": spoof_path})
@@ -1349,7 +1357,13 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             collector.classify_current_path(f"/data/media/{surface_name}", {}),
             "unclassified_media",
         )
-        self.assertEqual(collector.classify_current_path(""), "")
+        surface_collision = f"/tmp/private/{surface_name}"
+        surface_collision_item = collector.sanitize_item({"path": surface_collision})
+        self.assertEqual(
+            collector.classify_current_path(surface_collision, surface_collision_item),
+            "motion_media",
+        )
+        self.assertEqual(collector.classify_current_path(""), "unclassified_media")
 
     def test_public_surface_warmup_does_not_fail_advancing_motion_media(self) -> None:
         fixture = self.with_case()
@@ -1442,6 +1456,303 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
 
         result = self.assert_fails_with(fixture, "playback_progressed")
         self.assertEqual(result["counters"]["unclassified_media_samples"], len(rows))
+
+    def test_current_schema_missing_mpv_path_fails_closed(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            row["current_path_kind"] = ""
+            row["path_alias"] = ""
+            row["filename_alias"] = ""
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["checks"]["unclassified_media_bounded_to_startup"])
+        self.assertEqual(result["counters"]["unclassified_media_samples"], len(rows))
+
+    def test_unclassified_media_after_content_fails_closed(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=index, kind="motion_media", alias="motion", frame=str(index * 30))
+            for index in range(1, 4)
+        ]
+        rows.append(
+            self.typed_row(template, seq=4, kind="unclassified_media", alias="unknown", frame="120")
+        )
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "unclassified_media_bounded_to_startup")
+        self.assertEqual(result["counters"]["unclassified_media_samples"], 1)
+
+    def test_bounded_unclassified_startup_before_proven_content_is_allowed(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(
+                template,
+                seq=1,
+                kind="public_surface",
+                alias="surface",
+                frame="0",
+                status_aligned=False,
+            )
+        ]
+        for seq in range(2, 7):
+            row = self.typed_row(
+                template,
+                seq=seq,
+                kind="unclassified_media",
+                alias="candidate-warmup",
+                frame=str((seq - 2) * 15),
+                status_aligned=False,
+            )
+            row["status_playback_state"] = "waiting_for_content"
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["playback_state"] = "waiting_for_content"
+            snapshot["current_item"] = None
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            rows.append(row)
+        rows.extend(
+            self.typed_row(template, seq=seq, kind="motion_media", alias="motion", frame=str(seq * 30))
+            for seq in range(7, 11)
+        )
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertTrue(result["checks"]["unclassified_media_bounded_to_startup"])
+
+    def test_two_sample_motion_episode_with_progress_is_proven(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(
+                template,
+                seq=index,
+                kind="motion_media",
+                alias="motion-a",
+                frame=str(index * 30),
+                playlist_size=2,
+            )
+            for index in range(1, 4)
+        ]
+        rows.extend(
+            self.typed_row(
+                template,
+                seq=4 + offset,
+                kind="motion_media",
+                alias="motion-b",
+                frame=frame,
+                playlist_size=2,
+            )
+            for offset, frame in enumerate(("120", "150"))
+        )
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["counters"]["motion_media_proven_episodes"], 2)
+
+    def test_one_sample_motion_after_sequence_gap_fails_closed(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=index, kind="motion_media", alias="motion", frame=str(index * 30))
+            for index in range(1, 4)
+        ]
+        rows.append(
+            self.typed_row(template, seq=5, kind="motion_media", alias="motion", frame="120")
+        )
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "motion_frame_progress_ok")
+        self.assertEqual(result["counters"]["motion_media_failed_episodes"], 1)
+
+    def test_terminal_one_sample_motion_after_normal_transition_fails_closed(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(
+                template,
+                seq=index,
+                kind="motion_media",
+                alias="motion-a",
+                frame=str(index * 30),
+                playlist_size=2,
+            )
+            for index in range(1, 4)
+        ]
+        rows.append(
+            self.typed_row(
+                template,
+                seq=4,
+                kind="motion_media",
+                alias="motion-b",
+                frame="120",
+                playlist_size=2,
+            )
+        )
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "motion_frame_progress_ok")
+        self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 0)
+
+    def test_terminal_ipc_interruption_fails_terminal_health(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        for row in rows:
+            row.setdefault("ipc_error", "")
+        terminal = rows[-1].copy()
+        terminal["seq"] = str(len(rows) + 1)
+        terminal["rel_sec"] = str(float(rows[-1]["rel_sec"]) + 1)
+        terminal["ipc_result"] = "error"
+        terminal["ipc_error"] = "missing_socket"
+        terminal["estimated_frame_number"] = ""
+        terminal["hwdec_current"] = ""
+        terminal["vo_configured"] = ""
+        rows.append(terminal)
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertTrue(result["checks"]["ipc_stable_after_success"])
+        self.assertFalse(result["checks"]["terminal_sample_success"])
+        self.assertFalse(result["checks"]["terminal_playback_healthy"])
+
+    def test_short_motion_after_surface_is_tolerated_only_after_later_proof(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=index, kind="motion_media", alias="motion-a", frame=str(index * 30))
+            for index in range(1, 4)
+        ]
+        rows.append(
+            self.typed_row(
+                template,
+                seq=4,
+                kind="public_surface",
+                alias="surface",
+                frame="0",
+                status_aligned=False,
+            )
+        )
+        rows.append(
+            self.typed_row(template, seq=5, kind="motion_media", alias="motion-b", frame="30")
+        )
+        rows.extend(
+            self.typed_row(template, seq=seq, kind="motion_media", alias="motion-c", frame=str(seq * 30))
+            for seq in range(6, 9)
+        )
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 1)
+        self.assertTrue(result["checks"]["public_surface_recovery_ok"])
+
+    def test_short_motion_between_proven_stills_is_bounded(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=1, kind="still_image_sidecar", alias="still-a", frame="0"),
+            self.typed_row(template, seq=2, kind="motion_media", alias="brief-motion", frame="30"),
+            self.typed_row(template, seq=3, kind="still_image_sidecar", alias="still-b", frame="0"),
+        ]
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 1)
+
+    def test_invalid_frame_numbers_never_count_as_local_evidence(self) -> None:
+        for invalid in ("-1", "nan", "inf"):
+            with self.subTest(invalid=invalid):
+                fixture = self.with_case()
+                rows = fixture.rows()
+                for row in rows:
+                    row["current_path_kind"] = "still_image_sidecar"
+                    row["estimated_frame_number"] = invalid
+                    row["video_params_json"] = VALID_VIDEO_PARAMS
+                fixture.write_rows(rows)
+
+                result = self.assert_fails_with(fixture, "estimated_frame_values_valid")
+                self.assertIn("still_frame_availability_ok", result["failure_reasons"])
+
+    def test_invalid_motion_frame_sample_fails_even_with_other_progress(self) -> None:
+        fixture = self.with_case()
+        rows = fixture.rows()
+        rows[-1]["estimated_frame_number"] = "inf"
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "estimated_frame_values_valid")
+        self.assertEqual(result["counters"]["invalid_frame_number_samples"], 1)
+
+    def test_episode_local_evidence_must_exist_in_one_sample(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=index, kind="still_image_sidecar", alias="still", frame="")
+            for index in range(1, 5)
+        ]
+        rows[0]["estimated_frame_number"] = "0"
+        rows[0]["hwdec_current"] = ""
+        rows[0]["vo_configured"] = "false"
+        rows[0]["video_params_json"] = "{}"
+        rows[1]["hwdec_current"] = "v4l2request-copy"
+        rows[1]["vo_configured"] = "false"
+        rows[1]["video_params_json"] = "{}"
+        rows[2]["hwdec_current"] = ""
+        rows[2]["vo_configured"] = "true"
+        rows[2]["video_params_json"] = "{}"
+        rows[3]["hwdec_current"] = ""
+        rows[3]["vo_configured"] = "false"
+        rows[3]["video_params_json"] = VALID_VIDEO_PARAMS
+        fixture.write_rows(rows)
+
+        self.assert_fails_with(fixture, "still_frame_availability_ok")
+
+    def test_motion_progress_uses_only_locally_complete_samples(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=1, kind="motion_media", alias="motion", frame="0"),
+            self.typed_row(template, seq=2, kind="motion_media", alias="motion", frame="30"),
+        ]
+        rows[0]["hwdec_current"] = ""
+        rows[0]["vo_configured"] = "false"
+        rows[0]["video_params_json"] = "{}"
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "motion_frame_progress_ok")
+        self.assertEqual(result["counters"]["motion_media_proven_episodes"], 0)
+
+    def test_long_episode_cannot_collapse_into_one_tolerated_sample(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=1, kind="motion_media", alias="motion-a", frame="0"),
+            self.typed_row(template, seq=2, kind="motion_media", alias="motion-a", frame="30"),
+        ]
+        for seq in range(3, 9):
+            row = self.typed_row(template, seq=seq, kind="motion_media", alias="motion-b", frame="0")
+            if seq > 3:
+                row["hwdec_current"] = ""
+                row["vo_configured"] = "false"
+                row["video_params_json"] = "{}"
+            rows.append(row)
+        rows.extend(
+            [
+                self.typed_row(template, seq=9, kind="motion_media", alias="motion-c", frame="0"),
+                self.typed_row(template, seq=10, kind="motion_media", alias="motion-c", frame="30"),
+            ]
+        )
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "motion_frame_progress_ok")
+        self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 0)
+        self.assertEqual(result["counters"]["motion_media_failed_episodes"], 1)
 
     def test_mixed_playlist_rejects_still_without_frame(self) -> None:
         fixture = self.with_case()
@@ -1556,6 +1867,33 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         result = self.assert_fails_with(fixture, "public_surface_availability_ok")
         self.assertTrue(result["checks"]["playback_progressed"])
         self.assertEqual(result["counters"]["public_surface_failed_episodes"], 1)
+
+    def test_terminal_public_surface_requires_proven_content_recovery(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=index, kind="motion_media", alias="motion", frame=str(index * 30))
+            for index in range(1, 4)
+        ]
+        surface = self.typed_row(
+            template,
+            seq=4,
+            kind="public_surface",
+            alias="recovery",
+            frame="0",
+            status_aligned=False,
+        )
+        surface["status_playback_state"] = "recovering"
+        snapshot = json.loads(surface["status_snapshot_json"])
+        snapshot["playback_state"] = "recovering"
+        surface["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+        rows.append(surface)
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["checks"]["public_surface_recovery_ok"])
+        self.assertFalse(result["checks"]["terminal_playback_healthy"])
 
     def test_rejects_status_failure_and_missing_transition(self) -> None:
         fixture = self.with_case()

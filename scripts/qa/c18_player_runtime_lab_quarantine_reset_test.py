@@ -1312,7 +1312,7 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             self.assertTrue(result["passed"])
             self.assertTrue(evidence["reevaluated_passed"])
             self.assertEqual(evidence["surface_sample_count"], 2)
-            self.assertEqual(evidence["motion_sample_count"], 4)
+            self.assertEqual(evidence["motion_sample_count"], 5)
 
     def test_surface_warmup_retry_rejects_actual_motion_stall(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

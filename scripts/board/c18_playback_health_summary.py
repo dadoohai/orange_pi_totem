@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,8 @@ MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 TRANSIENT_MISSING_SOCKET_LONG_RUN_SAMPLE_WINDOW = 180
 MAX_TRANSIENT_MISSING_SOCKET_LONG_RUN_CAP = 6
+MAX_STARTUP_UNCLASSIFIED_MEDIA_SAMPLES = 6
+MAX_STARTUP_UNCLASSIFIED_MEDIA_SECONDS = 6.0
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
 WATCHDOG_RECOVERY_ACTIONS = {"realign_mpv_to_status", "terminate_player_child"}
 
@@ -65,9 +68,15 @@ def as_float(value: Any) -> float | None:
     if value in (None, ""):
         return None
     try:
-        return float(value)
+        parsed = float(value)
     except Exception:
         return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def as_frame_number(value: Any) -> float | None:
+    parsed = as_float(value)
+    return parsed if parsed is not None and parsed >= 0 else None
 
 
 def as_bool_string(value: Any) -> str:
@@ -567,11 +576,13 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
 
 
 def playback_evidence_kind(row: dict[str, str]) -> str:
+    if "current_path_kind" not in row:
+        # Evidence collected before this field existed predates C25 surfaces.
+        return "motion_media"
     kind = str(row.get("current_path_kind") or "")
     if kind in {"public_surface", "still_image_sidecar", "motion_media", "unclassified_media"}:
         return kind
-    # Evidence collected before this field existed keeps the strict legacy rule.
-    return "motion_media"
+    return "unclassified_media"
 
 
 def valid_video_dimensions(row: dict[str, str]) -> bool:
@@ -594,6 +605,7 @@ def playback_evidence_episodes(rows: list[dict[str, str]]) -> list[dict[str, Any
     current: dict[str, Any] | None = None
     previous_seq: int | None = None
     previous_frame: float | None = None
+    pending_start_reason = "window_start"
 
     def flush() -> None:
         nonlocal current
@@ -601,45 +613,128 @@ def playback_evidence_episodes(rows: list[dict[str, str]]) -> list[dict[str, Any
             episodes.append(current)
             current = None
 
-    for row in rows:
+    for row_index, row in enumerate(rows):
         kind = playback_evidence_kind(row)
         if row.get("ipc_result") != "success" or kind == "unclassified_media":
             flush()
             previous_seq = None
             previous_frame = None
+            pending_start_reason = (
+                "unclassified_media" if kind == "unclassified_media" else "ipc_interruption"
+            )
             continue
         key = mpv_item_key(row) or playback_item_key(row)
-        frame = as_float(row.get("estimated_frame_number"))
+        frame = as_frame_number(row.get("estimated_frame_number"))
         seq = as_int(row.get("seq"))
         sequence_gap = previous_seq is not None and seq > 0 and seq != previous_seq + 1
         frame_reset = frame is not None and previous_frame is not None and frame < previous_frame
-        if current is not None and (
-            current["kind"] != kind
-            or current["key"] != key
-            or sequence_gap
-            or frame_reset
-        ):
+        split_reason = ""
+        if current is not None:
+            if sequence_gap:
+                split_reason = "sequence_gap"
+            elif current["kind"] != kind:
+                split_reason = "kind_change"
+            elif current["key"] != key:
+                split_reason = "key_change"
+            elif frame_reset:
+                split_reason = "frame_reset"
+        if split_reason:
             flush()
+            pending_start_reason = split_reason
         if current is None:
-            current = {"kind": kind, "key": key, "rows": [], "frames": []}
+            current = {
+                "kind": kind,
+                "key": key,
+                "rows": [],
+                "frames": [],
+                "start_index": row_index,
+                "end_index": row_index,
+                "start_reason": pending_start_reason,
+            }
+            pending_start_reason = "continuation"
         current["rows"].append(row)
         current["frames"].append(frame)
+        current["end_index"] = row_index
         previous_seq = seq if seq > 0 else None
         previous_frame = frame
     flush()
     return episodes
 
 
+def row_local_evidence(row: dict[str, str], *, typed: bool) -> bool:
+    return (
+        as_frame_number(row.get("estimated_frame_number")) is not None
+        and row.get("hwdec_current") == EXPECTED_HWDEC
+        and as_bool_string(row.get("vo_configured")) == "true"
+        and (not typed or valid_video_dimensions(row))
+    )
+
+
 def episode_local_evidence(episode: dict[str, Any]) -> bool:
     rows = episode.get("rows") if isinstance(episode.get("rows"), list) else []
     if not rows:
         return False
-    frame_available = any(as_float(row.get("estimated_frame_number")) is not None for row in rows)
-    hwdec_available = any(row.get("hwdec_current") == EXPECTED_HWDEC for row in rows)
-    vo_available = any(as_bool_string(row.get("vo_configured")) == "true" for row in rows)
     typed = any(bool(row.get("current_path_kind")) for row in rows)
-    dimensions_available = any(valid_video_dimensions(row) for row in rows) if typed else True
-    return frame_available and hwdec_available and vo_available and dimensions_available
+    return any(row_local_evidence(row, typed=typed) for row in rows)
+
+
+def episode_coherent_frames(episode: dict[str, Any]) -> list[float | None]:
+    rows = episode.get("rows") if isinstance(episode.get("rows"), list) else []
+    typed = any(bool(row.get("current_path_kind")) for row in rows)
+    return [
+        as_frame_number(row.get("estimated_frame_number"))
+        if row_local_evidence(row, typed=typed)
+        else None
+        for row in rows
+    ]
+
+
+def sanitized_status_snapshot(row: dict[str, str]) -> dict[str, Any]:
+    raw = row.get("status_snapshot_json") or ""
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def startup_unclassified_media_ok(rows: list[dict[str, str]]) -> bool:
+    unclassified = [
+        (index, row)
+        for index, row in enumerate(rows)
+        if row.get("ipc_result") == "success"
+        and playback_evidence_kind(row) == "unclassified_media"
+    ]
+    if not unclassified:
+        return True
+    first_content_index = next(
+        (
+            index
+            for index, row in enumerate(rows)
+            if row.get("ipc_result") == "success"
+            and playback_evidence_kind(row) in {"motion_media", "still_image_sidecar"}
+        ),
+        None,
+    )
+    if first_content_index is None or len(unclassified) > MAX_STARTUP_UNCLASSIFIED_MEDIA_SAMPLES:
+        return False
+    if any(index >= first_content_index for index, _row in unclassified):
+        return False
+    rel_values = [as_float(row.get("rel_sec")) for _index, row in unclassified]
+    rel_values = [value for value in rel_values if value is not None]
+    if len(rel_values) != len(unclassified):
+        return False
+    if max(rel_values) - min(rel_values) > MAX_STARTUP_UNCLASSIFIED_MEDIA_SECONDS:
+        return False
+    allowed_states = {"", "player_starting", "waiting_for_content", "waiting_for_media"}
+    for _index, row in unclassified:
+        snapshot = sanitized_status_snapshot(row)
+        state = str(snapshot.get("playback_state") or row.get("status_playback_state") or "").lower()
+        if state not in allowed_states or bool(snapshot.get("current_item")):
+            return False
+    return True
 
 
 def present_count(values: list[float | None]) -> int:
@@ -736,7 +831,7 @@ def evaluate(
                 vo_configured_unexpected_samples += 1
 
             time_values.append(as_float(row.get("time_pos")))
-            frame_value = as_float(row.get("estimated_frame_number"))
+            frame_value = as_frame_number(row.get("estimated_frame_number"))
             frame_values.append(frame_value)
 
         if status_has_failure(row, target_mode):
@@ -805,29 +900,69 @@ def evaluate(
     still_image_rows = [row for row in success_rows if playback_evidence_kind(row) == "still_image_sidecar"]
     motion_media_rows = [row for row in success_rows if playback_evidence_kind(row) == "motion_media"]
     unclassified_media_rows = [row for row in success_rows if playback_evidence_kind(row) == "unclassified_media"]
-    still_frame_values = [as_float(row.get("estimated_frame_number")) for row in still_image_rows]
-    motion_episode_stats = [sustained_progress_stats(episode["frames"]) for episode in motion_episodes]
+    invalid_frame_number_rows = [
+        row
+        for row in success_rows
+        if row.get("estimated_frame_number") not in (None, "")
+        and as_frame_number(row.get("estimated_frame_number")) is None
+    ]
+    still_frame_values = [as_frame_number(row.get("estimated_frame_number")) for row in still_image_rows]
+    motion_episode_stats = [sustained_progress_stats(episode_coherent_frames(episode)) for episode in motion_episodes]
     evaluable_segment_stats = [stats for stats in motion_episode_stats if int(stats["sample_count"]) >= 3]
     short_segment_stats = [stats for stats in motion_episode_stats if 0 < int(stats["sample_count"]) < 3]
     motion_episode_local_ok = [episode_local_evidence(episode) for episode in motion_episodes]
+    still_episode_local_ok = [episode_local_evidence(episode) for episode in still_episodes]
+    public_surface_episode_local_ok = [episode_local_evidence(episode) for episode in public_surface_episodes]
     motion_proven_indexes = [
         index
         for index, (episode, stats, local_ok) in enumerate(
             zip(motion_episodes, motion_episode_stats, motion_episode_local_ok)
         )
-        if local_ok and int(stats["sample_count"]) >= 3 and bool(stats["passed"])
+        if local_ok and (
+            (int(stats["sample_count"]) >= 3 and bool(stats["passed"]))
+            or (int(stats["sample_count"]) == 2 and int(stats["positive_steps"]) >= 1)
+        )
     ]
+    all_episode_positions = {id(episode): index for index, episode in enumerate(episodes)}
+    proven_content_episode_ids = {
+        id(motion_episodes[index]) for index in motion_proven_indexes
+    }
+    proven_content_episode_ids.update(
+        id(episode)
+        for episode, local_ok in zip(still_episodes, still_episode_local_ok)
+        if local_ok
+    )
+    motion_tolerated_boundary_indexes: list[int] = []
+    for index, (episode, stats, local_ok) in enumerate(
+        zip(motion_episodes, motion_episode_stats, motion_episode_local_ok)
+    ):
+        episode_rows = episode.get("rows") if isinstance(episode.get("rows"), list) else []
+        if not local_ok or len(episode_rows) != 1 or int(stats["sample_count"]) != 1:
+            continue
+        position = all_episode_positions[id(episode)]
+        later_proven = any(
+            id(later) in proven_content_episode_ids for later in episodes[position + 1 :]
+        )
+        if position == 0 and later_proven:
+            motion_tolerated_boundary_indexes.append(index)
+            continue
+        if (
+            episode.get("start_reason") == "key_change"
+            and later_proven
+        ):
+            motion_tolerated_boundary_indexes.append(index)
+            continue
+        if (
+            episode.get("start_reason")
+            in {"ipc_interruption", "sequence_gap", "frame_reset", "kind_change"}
+            and later_proven
+        ):
+            motion_tolerated_boundary_indexes.append(index)
     motion_failed_indexes = [
         index
-        for index, (episode, stats, local_ok) in enumerate(
-            zip(motion_episodes, motion_episode_stats, motion_episode_local_ok)
-        )
-        if (
-            int(stats["sample_count"]) >= 3 and (not local_ok or not bool(stats["passed"]))
-        ) or (
-            int(stats["sample_count"]) == 2
-            and (not local_ok or int(stats["positive_steps"]) == 0)
-        )
+        for index in range(len(motion_episodes))
+        if index not in motion_proven_indexes
+        and index not in motion_tolerated_boundary_indexes
     ]
     failed_segment_stats = [motion_episode_stats[index] for index in motion_failed_indexes]
     short_failed_segment_stats = [
@@ -835,12 +970,33 @@ def evaluate(
         for index in motion_failed_indexes
         if int(motion_episode_stats[index]["sample_count"]) < 3
     ]
-    still_episode_local_ok = [episode_local_evidence(episode) for episode in still_episodes]
-    public_surface_episode_local_ok = [episode_local_evidence(episode) for episode in public_surface_episodes]
     still_frame_available = bool(still_episodes) and all(still_episode_local_ok)
     motion_frame_progress_ok = not motion_failed_indexes
     still_frame_availability_ok = all(still_episode_local_ok)
     public_surface_availability_ok = all(public_surface_episode_local_ok)
+    unclassified_media_bounded_to_startup = startup_unclassified_media_ok(rows)
+    proven_content_episodes = [motion_episodes[index] for index in motion_proven_indexes]
+    proven_content_episodes.extend(
+        episode
+        for episode, local_ok in zip(still_episodes, still_episode_local_ok)
+        if local_ok
+    )
+    public_surface_recovery_ok = all(
+        any(
+            int(content_episode.get("start_index", -1)) > int(surface_episode.get("end_index", -1))
+            for content_episode in proven_content_episodes
+        )
+        for surface_episode in public_surface_episodes
+    )
+    terminal_row = rows[-1] if rows else {}
+    terminal_sample_success = terminal_row.get("ipc_result") == "success"
+    terminal_snapshot = sanitized_status_snapshot(terminal_row)
+    terminal_playback_state = str(
+        terminal_snapshot.get("playback_state")
+        or terminal_row.get("status_playback_state")
+        or ""
+    ).lower()
+    terminal_playback_healthy = terminal_sample_success and terminal_playback_state == "playing"
     content_playback_observed = bool(motion_proven_indexes) or (
         bool(still_episodes) and still_frame_availability_ok
     )
@@ -888,10 +1044,15 @@ def evaluate(
         "vo_configured_present": vo_configured_true_samples > 0,
         "vo_configured_no_unexpected": vo_configured_unexpected_samples == 0,
         "estimated_frame_present": estimated_frame_present,
+        "estimated_frame_values_valid": not invalid_frame_number_rows,
         "content_playback_observed": content_playback_observed,
         "motion_frame_progress_ok": motion_frame_progress_ok,
         "still_frame_availability_ok": still_frame_availability_ok,
         "public_surface_availability_ok": public_surface_availability_ok,
+        "unclassified_media_bounded_to_startup": unclassified_media_bounded_to_startup,
+        "public_surface_recovery_ok": public_surface_recovery_ok,
+        "terminal_sample_success": terminal_sample_success,
+        "terminal_playback_healthy": terminal_playback_healthy,
         "playback_progressed": frame_progressed,
         "status_no_failures": status_failure_samples == 0,
         "transitions_observed_when_required": transition_ok,
@@ -998,6 +1159,7 @@ def evaluate(
             "estimated_frame_failed_segments": len(failed_segment_stats),
             "motion_media_episodes": len(motion_episodes),
             "motion_media_proven_episodes": len(motion_proven_indexes),
+            "motion_media_tolerated_boundary_episodes": len(motion_tolerated_boundary_indexes),
             "motion_media_failed_episodes": len(motion_failed_indexes),
             "still_image_episodes": len(still_episodes),
             "still_image_failed_episodes": len([ok for ok in still_episode_local_ok if not ok]),
@@ -1010,6 +1172,10 @@ def evaluate(
             "still_image_frame_available": still_frame_available,
             "motion_media_samples": len(motion_media_rows),
             "unclassified_media_samples": len(unclassified_media_rows),
+            "invalid_frame_number_samples": len(invalid_frame_number_rows),
+            "unclassified_media_max_startup_samples": MAX_STARTUP_UNCLASSIFIED_MEDIA_SAMPLES,
+            "unclassified_media_max_startup_seconds": MAX_STARTUP_UNCLASSIFIED_MEDIA_SECONDS,
+            "terminal_playback_state": terminal_playback_state,
             "status_failure_samples": status_failure_samples,
             "nrestarts_delta": nrestarts_delta,
             "mpv_count": mpv_count,
