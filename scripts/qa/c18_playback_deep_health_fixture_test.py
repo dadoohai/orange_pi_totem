@@ -149,6 +149,47 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             rows[index]["vo_configured"] = ""
         fixture.write_rows(rows)
 
+    def write_initial_ipc_rows(
+        self,
+        fixture: Fixture,
+        errors: list[tuple[str, str]],
+        *,
+        interval_sec: float = 1.0,
+    ) -> None:
+        content_rows = fixture.rows()
+        for row in content_rows:
+            row.setdefault("ipc_error", "")
+        startup_rows: list[dict[str, str]] = []
+        template = content_rows[0]
+        for offset, (result, error) in enumerate(errors):
+            row = template.copy()
+            row["seq"] = str(offset + 1)
+            row["rel_sec"] = str(offset * interval_sec)
+            row["ipc_result"] = result
+            row["ipc_error"] = error
+            row["current_alias"] = ""
+            row["path_alias"] = ""
+            row["filename_alias"] = ""
+            row["time_pos"] = ""
+            row["estimated_frame_number"] = ""
+            row["hwdec_current"] = ""
+            row["vo_configured"] = ""
+            row["video_params_json"] = "{}"
+            row["status_playback_state"] = "player_starting"
+            row["status_current_alias"] = ""
+            row["status_path_alias"] = ""
+            row["status_current_index"] = ""
+            snapshot = json.loads(row["status_snapshot_json"])
+            snapshot["playback_state"] = "player_starting"
+            snapshot["current_item"] = None
+            snapshot["next_item"] = None
+            row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+            startup_rows.append(row)
+        for offset, row in enumerate(content_rows, start=len(startup_rows) + 1):
+            row["seq"] = str(offset)
+            row["rel_sec"] = str((offset - 1) * interval_sec)
+        fixture.write_rows(startup_rows + content_rows)
+
     def write_long_run_ipc_error_rows(self, fixture: Fixture, indexes: list[int], reason: str) -> None:
         source_rows = fixture.rows()
         rows = []
@@ -255,6 +296,68 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         rows[1]["ipc_result"] = "timeout"
         fixture.write_rows(rows)
         self.assert_fails_with(fixture, "ipc_stable_after_success")
+
+    def test_accepts_bounded_initial_missing_socket_before_success(self) -> None:
+        fixture = self.with_case()
+        self.write_initial_ipc_rows(
+            fixture,
+            [("error", "missing_socket"), ("error", "missing_socket")],
+        )
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertTrue(result["checks"]["ipc_startup_bounded"])
+        self.assertEqual(result["counters"]["ipc_startup_samples_before_first_success"], 2)
+
+    def test_rejects_unbounded_initial_missing_socket_before_success(self) -> None:
+        fixture = self.with_case()
+        self.write_initial_ipc_rows(
+            fixture,
+            [("error", "missing_socket")] * 7,
+        )
+
+        result = self.assert_fails_with(fixture, "ipc_startup_bounded")
+        self.assertEqual(result["counters"]["ipc_startup_samples_before_first_success"], 7)
+
+    def test_rejects_initial_timeout_or_non_missing_socket_error(self) -> None:
+        for initial in (("timeout", "socket_timeout"), ("error", "ConnectionRefusedError")):
+            with self.subTest(initial=initial):
+                fixture = self.with_case()
+                self.write_initial_ipc_rows(fixture, [initial])
+                self.assert_fails_with(fixture, "ipc_startup_bounded")
+
+    def test_rejects_slow_initial_missing_socket_before_success(self) -> None:
+        fixture = self.with_case()
+        self.write_initial_ipc_rows(
+            fixture,
+            [("error", "missing_socket"), ("error", "missing_socket")],
+            interval_sec=4.0,
+        )
+
+        result = self.assert_fails_with(fixture, "ipc_startup_bounded")
+        self.assertGreater(result["counters"]["ipc_startup_span_seconds"], 6.0)
+
+    def test_rejects_invalid_initial_ipc_timing(self) -> None:
+        for timing in ("non_finite", "negative", "descending"):
+            with self.subTest(timing=timing):
+                fixture = self.with_case()
+                self.write_initial_ipc_rows(
+                    fixture,
+                    [("error", "missing_socket"), ("error", "missing_socket")],
+                )
+                rows = fixture.rows()
+                if timing == "non_finite":
+                    rows[0]["rel_sec"] = "nan"
+                elif timing == "negative":
+                    rows[0]["rel_sec"] = "-2"
+                    rows[1]["rel_sec"] = "-1"
+                    rows[2]["rel_sec"] = "0"
+                else:
+                    rows[0]["rel_sec"] = "1"
+                    rows[1]["rel_sec"] = "0"
+                    rows[2]["rel_sec"] = "2"
+                fixture.write_rows(rows)
+                self.assert_fails_with(fixture, "ipc_startup_bounded")
 
     def test_accepts_single_transient_missing_socket_after_success(self) -> None:
         fixture = self.with_case()

@@ -396,6 +396,10 @@ entre amostras diferentes falham fechados. Superficie publica de loading/erro
 nao conta como conteudo e precisa ser seguida por conteudo comprovado. Evidencia
 inconclusiva so pode ser tolerada nos limites explicitos de startup/transicao;
 a amostra terminal deve ter IPC verde e estado `playing`.
+Antes do primeiro sucesso IPC, somente `missing_socket` de startup e tolerado,
+limitado a seis amostras e seis segundos. Timeout, outro erro ou espera maior
+reprovam a janela; o primeiro sucesso nao apaga uma indisponibilidade inicial
+prolongada.
 
 Evidencia de ensaio `player-runtime` precisa ser inspecionavel e sanitizada.
 Antes de versionar qualquer rodada, rodar

@@ -31,6 +31,8 @@ MAX_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 MAX_CONSECUTIVE_TRANSIENT_MISSING_SOCKET_AFTER_SUCCESS = 2
 TRANSIENT_MISSING_SOCKET_LONG_RUN_SAMPLE_WINDOW = 180
 MAX_TRANSIENT_MISSING_SOCKET_LONG_RUN_CAP = 6
+MAX_STARTUP_MISSING_SOCKET_SAMPLES = 6
+MAX_STARTUP_MISSING_SOCKET_SECONDS = 6.0
 MAX_STARTUP_UNCLASSIFIED_MEDIA_SAMPLES = 6
 MAX_STARTUP_UNCLASSIFIED_MEDIA_SECONDS = 6.0
 PANFROST_FAULT_POLICIES = {"absolute", "delta"}
@@ -773,6 +775,45 @@ def evaluate(
     watchdog = read_optional_json(watchdog_path)
 
     success_rows = [row for row in rows if row.get("ipc_result") == "success"]
+    first_success_index = next(
+        (index for index, row in enumerate(rows) if row.get("ipc_result") == "success"),
+        None,
+    )
+    startup_ipc_rows = rows[:first_success_index] if first_success_index is not None else rows
+    startup_ipc_missing_socket = len(
+        [
+            row
+            for row in startup_ipc_rows
+            if row.get("ipc_result") == "error" and row.get("ipc_error") == "missing_socket"
+        ]
+    )
+    startup_ipc_timeouts = len(
+        [row for row in startup_ipc_rows if row.get("ipc_result") == "timeout"]
+    )
+    startup_ipc_other_errors = (
+        len(startup_ipc_rows) - startup_ipc_missing_socket - startup_ipc_timeouts
+    )
+    startup_ipc_span_seconds = 0.0
+    startup_ipc_timing_valid = True
+    if startup_ipc_rows and first_success_index is not None:
+        startup_timing_rows = startup_ipc_rows + [rows[first_success_index]]
+        startup_rel_values = [as_float(row.get("rel_sec")) for row in startup_timing_rows]
+        startup_ipc_timing_valid = (
+            all(value is not None and value >= 0 for value in startup_rel_values)
+            and all(
+                current is not None and following is not None and following >= current
+                for current, following in zip(startup_rel_values, startup_rel_values[1:])
+            )
+        )
+        if startup_ipc_timing_valid:
+            startup_ipc_span_seconds = startup_rel_values[-1] - startup_rel_values[0]
+    ipc_startup_bounded = (
+        first_success_index is not None
+        and len(startup_ipc_rows) <= MAX_STARTUP_MISSING_SOCKET_SAMPLES
+        and startup_ipc_missing_socket == len(startup_ipc_rows)
+        and startup_ipc_timing_valid
+        and startup_ipc_span_seconds <= MAX_STARTUP_MISSING_SOCKET_SECONDS
+    )
     seen_success = False
     ipc_timeout_after_success = 0
     ipc_error_after_success = 0
@@ -1073,6 +1114,7 @@ def evaluate(
     checks = {
         "samples_present": len(rows) > 0,
         "ipc_success_present": len(success_rows) > 0,
+        "ipc_startup_bounded": ipc_startup_bounded,
         "ipc_stable_after_success": ipc_stable_after_success,
         "hwdec_expected_present": hwdec_expected_samples > 0,
         "hwdec_no_unexpected": hwdec_unexpected_samples == 0,
@@ -1133,6 +1175,13 @@ def evaluate(
         "counters": {
             "samples": len(rows),
             "ipc_success": len(success_rows),
+            "ipc_startup_samples_before_first_success": len(startup_ipc_rows),
+            "ipc_startup_missing_socket": startup_ipc_missing_socket,
+            "ipc_startup_timeouts": startup_ipc_timeouts,
+            "ipc_startup_other_errors": startup_ipc_other_errors,
+            "ipc_startup_span_seconds": startup_ipc_span_seconds,
+            "ipc_startup_max_allowed_samples": MAX_STARTUP_MISSING_SOCKET_SAMPLES,
+            "ipc_startup_max_allowed_seconds": MAX_STARTUP_MISSING_SOCKET_SECONDS,
             "ipc_timeout_after_first_success": ipc_timeout_after_success,
             "ipc_error_after_first_success": ipc_error_after_success,
             "ipc_missing_socket_after_first_success": ipc_missing_socket_after_success,
