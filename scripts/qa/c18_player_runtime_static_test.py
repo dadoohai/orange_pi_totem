@@ -42,7 +42,7 @@ STATUS_AGGREGATE_PATH = REPO_ROOT / "scripts" / "board" / "totem_status_aggregat
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "d21527801d3982c1ca1f925d28ee6c7fc4da09b1cc96c19d70d4dc7148a9db25"
+EXPECTED_SNAPSHOT_SHA256 = "61776bfc7647f27a1e0612c703a01574d047889e8682138f530853aee8af0055"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -606,6 +606,20 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "error_no_content"))
             self.assertEqual(len(mpv.load_calls), 4)
 
+    def test_initial_surface_prewarms_recovery_without_replacing_visible_frame(self) -> None:
+        kiosk = load_kiosk_module()
+        with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(prefix="c18-public-prewarm-") as tmp:
+            cfg = {"runtime_dir": tmp, "startup_feedback_enabled": True}
+            status = kiosk.StatusState()
+            mpv = FakeSurfaceMPV()
+            self.assertTrue(kiosk.show_initial_feedback_and_prewarm_recovery(mpv, cfg, status))
+            self.assertEqual(len(mpv.load_calls), 1)
+            self.assertEqual(
+                mpv.load_calls[0].split("|", 1)[0],
+                kiosk.startup_feedback_video_path(cfg, "waiting_for_content"),
+            )
+            self.assertTrue(Path(kiosk.startup_feedback_video_path(cfg, "error_player_start")).is_file())
+
     def test_local_frame_evidence_rejects_path_only_and_accepts_vo_frame(self) -> None:
         kiosk = load_kiosk_module()
         controller = kiosk.MPVController(
@@ -1002,7 +1016,21 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
                 "preload_next": False,
             }
             mpv = FakeGenerationRecoveryMPV()
-            kiosk.playback_loop(cfg, threading.Lock(), state, status, mpv, kiosk.CacheIndex(cfg), stop_event)
+            persisted: list[dict[str, object]] = []
+            original_write_status_once = kiosk.write_status_once
+            kiosk.write_status_once = lambda _cfg, current: persisted.append(current.snapshot()) or True
+            try:
+                kiosk.playback_loop(
+                    cfg,
+                    threading.Lock(),
+                    state,
+                    status,
+                    mpv,
+                    kiosk.CacheIndex(cfg),
+                    stop_event,
+                )
+            finally:
+                kiosk.write_status_once = original_write_status_once
 
         self.assertEqual(mpv.current_generation, 2)
         self.assertEqual(mpv.frame_checks, 2)
@@ -1013,6 +1041,20 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         self.assertEqual(status.snapshot().get("public_surface_presented_state"), "media")
         self.assertEqual(status.snapshot().get("public_surface_generation"), 2)
         self.assertIsNone(status.snapshot().get("error_code"))
+        recovery_without_surface = next(
+            index
+            for index, snapshot in enumerate(persisted)
+            if snapshot.get("playback_state") == "recovering"
+            and snapshot.get("public_surface_presented_state") is None
+        )
+        recovery_with_surface = next(
+            index
+            for index, snapshot in enumerate(persisted)
+            if snapshot.get("playback_state") == "recovering"
+            and snapshot.get("public_surface_presented_state") == "player_error"
+            and snapshot.get("public_surface_evidence") == "mpv_path_vo_frame_available"
+        )
+        self.assertLess(recovery_without_surface, recovery_with_surface)
 
     def test_playback_loop_exits_after_bounded_mpv_recovery_failures(self) -> None:
         kiosk = load_kiosk_module()

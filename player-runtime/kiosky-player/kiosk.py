@@ -1514,6 +1514,21 @@ def show_startup_feedback_once(mpv: "MPVController", cfg: Dict, status: StatusSt
     return show_startup_feedback(mpv, cfg, status, feedback_state)
 
 
+def show_initial_feedback_and_prewarm_recovery(
+    mpv: "MPVController",
+    cfg: Dict,
+    status: StatusState,
+) -> bool:
+    presented = show_startup_feedback_once(mpv, cfg, status, "waiting_for_content")
+    if not presented:
+        return False
+    try:
+        write_startup_feedback_video(cfg, "error_player_start")
+    except Exception as exc:
+        logging.warning("Recovery surface prewarm failed error=%s", exc)
+    return True
+
+
 def mark_player_error(status: StatusState, reason: str) -> None:
     status.update(
         player_state="error",
@@ -4034,6 +4049,21 @@ def write_status_once(cfg: Dict, status: StatusState) -> bool:
     return write_status_snapshot(status_path, status)
 
 
+def present_player_recovery_surface(
+    mpv: MPVController,
+    cfg: Dict,
+    status: StatusState,
+    reason: str,
+) -> bool:
+    mark_player_recovering(status, reason)
+    write_status_once(cfg, status)
+    if not mpv.is_running():
+        return False
+    presented = show_startup_feedback_once(mpv, cfg, status, "error_player_start")
+    write_status_once(cfg, status)
+    return presented
+
+
 def status_writer(cfg: Dict, cfg_lock: threading.Lock, status: StatusState, stop_event: threading.Event) -> None:
     cfg_snapshot = config_snapshot(cfg, cfg_lock)
     if not cfg_snapshot.get("status_file"):
@@ -4373,11 +4403,18 @@ def playback_loop(
     while not stop_event.is_set():
         cfg_snapshot = config_snapshot(cfg, cfg_lock)
         items, version = state.get()
+        if not mpv.is_running():
+            present_player_recovery_surface(
+                mpv,
+                cfg_snapshot,
+                status,
+                "mpv_process_unavailable_between_items",
+            )
         mpv.ensure_running()
         if not mpv.is_running():
             consecutive_mpv_recovery_failures += 1
             max_recovery_attempts = max(int(cfg_snapshot.get("mpv_recovery_max_attempts") or 0), 1)
-            mark_player_recovering(status, "mpv_start_failed")
+            present_player_recovery_surface(mpv, cfg_snapshot, status, "mpv_start_failed")
             logging.error(
                 "MPV recovery start failed attempt=%d max_attempts=%d generation=%d",
                 consecutive_mpv_recovery_failures,
@@ -4393,8 +4430,12 @@ def playback_loop(
         consecutive_mpv_recovery_failures = 0
         if mpv.generation() != last_mpv_generation:
             if last_mpv_generation >= 0 and items:
-                mark_player_recovering(status, "mpv_generation_changed_between_items")
-                show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+                present_player_recovery_surface(
+                    mpv,
+                    cfg_snapshot,
+                    status,
+                    "mpv_generation_changed_between_items",
+                )
             last_mpv_generation = mpv.generation()
             preloaded_path = None
         if not items:
@@ -4550,9 +4591,7 @@ def playback_loop(
             if not mpv.load_file(item.path, alias=item_alias):
                 logging.warning("Failed to load media, restarting MPV: %s", load_context)
                 mpv.restart(reason=f"media_load_failed:{item_alias}")
-                mark_player_recovering(status, "media_load_failed")
-                if mpv.is_running():
-                    show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+                present_player_recovery_surface(mpv, cfg_snapshot, status, "media_load_failed")
                 load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
                 if not mpv.load_file(item.path, alias=item_alias):
                     cooldown_sec = max(int(cfg_snapshot.get("media_load_retry_cooldown_sec") or 0), 5)
@@ -4604,9 +4643,7 @@ def playback_loop(
                 load_context,
             )
             mpv.restart(reason=f"media_path_mismatch:{item_alias}")
-            mark_player_recovering(status, "media_path_mismatch")
-            if mpv.is_running():
-                show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+            present_player_recovery_surface(mpv, cfg_snapshot, status, "media_path_mismatch")
             load_context = media_load_log_context(item, idx % len(items), item_duration_ms, mpv)
             if mpv.load_file(item.path, alias=item_alias):
                 apply_item_offset(mpv, item, offset_ms)
@@ -4652,11 +4689,15 @@ def playback_loop(
             require_progress=True,
         ):
             if mpv.generation() != media_generation:
-                mark_player_recovering(status, "mpv_generation_changed_during_frame_evidence")
                 preloaded_path = None
                 if mpv.is_running():
                     last_mpv_generation = mpv.generation()
-                    show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+                present_player_recovery_surface(
+                    mpv,
+                    cfg_snapshot,
+                    status,
+                    "mpv_generation_changed_during_frame_evidence",
+                )
                 time.sleep(0.2)
                 continue
             cooldown_sec = max(int(cfg_snapshot.get("media_load_retry_cooldown_sec") or 0), 5)
@@ -4705,11 +4746,15 @@ def playback_loop(
             offset_ms=offset_ms,
             blocked_media_count=len(blocked_media_until),
         ):
-            mark_player_recovering(status, "mpv_generation_changed_before_status_publish")
             preloaded_path = None
             if mpv.is_running():
                 last_mpv_generation = mpv.generation()
-                show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+            present_player_recovery_surface(
+                mpv,
+                cfg_snapshot,
+                status,
+                "mpv_generation_changed_before_status_publish",
+            )
             time.sleep(0.2)
             continue
         last_mpv_generation = media_generation
@@ -4740,6 +4785,12 @@ def playback_loop(
 
             observed_generation = mpv.generation()
             if not mpv.is_running():
+                present_player_recovery_surface(
+                    mpv,
+                    cfg_snapshot,
+                    status,
+                    "mpv_process_unavailable",
+                )
                 mpv.ensure_running()
                 observed_generation = mpv.generation()
             if observed_generation != last_mpv_generation or not mpv.is_running():
@@ -4747,10 +4798,14 @@ def playback_loop(
                 progressed_ms = min(offset_ms + elapsed_ms, max(item_duration_ms - 1, 0))
                 offset_ms = progressed_ms
                 preloaded_path = None
-                mark_player_recovering(status, "mpv_generation_changed")
                 if mpv.is_running():
                     last_mpv_generation = observed_generation
-                    show_startup_feedback_once(mpv, cfg_snapshot, status, "error_player_start")
+                present_player_recovery_surface(
+                    mpv,
+                    cfg_snapshot,
+                    status,
+                    "mpv_generation_changed",
+                )
                 logging.warning(
                     "MPV generation changed during playback; retrying current media alias=%s previous_generation=%d generation=%d offset_ms=%d running=%s",
                     item_alias,
@@ -5016,7 +5071,7 @@ def main() -> int:
         mark_player_error(status, "mpv_start_failed")
         write_status_once(cfg, status)
         return 3
-    show_startup_feedback_once(mpv, cfg, status, "waiting_for_content")
+    show_initial_feedback_and_prewarm_recovery(mpv, cfg, status)
     write_status_once(cfg, status)
 
     threads: List[threading.Thread] = []
