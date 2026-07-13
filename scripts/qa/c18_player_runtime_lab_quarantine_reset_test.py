@@ -226,6 +226,8 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
         *,
         total_mpv_count: int = 2,
         ipc_success: int = 30,
+        c25_surface_shape: bool = False,
+        include_drm_marker: bool = True,
     ) -> Path:
         health_dir = root / "failed-canary-display-contention-health"
         (health_dir / "health").mkdir(parents=True, exist_ok=True)
@@ -236,9 +238,14 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             "observed_tree_sha256": identity["tree_sha256"],
             "canary_media_used": True,
             "passed": False,
-            "failure_reasons": sorted(reset.SETUP_CONTENTION_FAILURE_REASONS),
+            "failure_reasons": sorted(
+                reset.C25_SURFACE_DISPLAY_CONTENTION_FAILURE_REASONS
+                if c25_surface_shape
+                else reset.SETUP_CONTENTION_FAILURE_REASONS
+            ),
+            "candidate_startup_surface_health_required": c25_surface_shape,
             "checks": {
-                "service_active": True,
+                "service_active": not c25_surface_shape,
                 "media_load_failed_zero": True,
                 "panfrost_faults_delta_zero": True,
                 "ext4_errors_zero": True,
@@ -246,24 +253,35 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             },
             "counters": {
                 "playlist_size_max": 1,
-                "mpv_count": 1,
-                "total_mpv_count": total_mpv_count,
+                "mpv_count": 0 if c25_surface_shape else 1,
+                "total_mpv_count": 1 if c25_surface_shape else total_mpv_count,
                 "ipc_success": ipc_success,
+                "hwdec_expected_samples": 0,
+                "vo_configured_true_samples": 0,
                 "media_load_failed": 0,
                 "status_failure_samples": 0,
             },
             "candidate_teardown": {
                 "gpu_faults_delta": 0,
                 "stop": {
-                    "method": "sigterm",
-                    "returncode": 0,
+                    "method": "none" if c25_surface_shape else "sigterm",
+                    "returncode": 3 if c25_surface_shape else 0,
                 },
             },
         }, sort_keys=True) + "\n", encoding="utf-8")
         (health_dir / "health" / "deep-health-process.json").write_text(json.dumps({
-            "mpv_count": 1,
-            "total_mpv_count": total_mpv_count,
+            "mpv_count": 0 if c25_surface_shape else 1,
+            "total_mpv_count": 1 if c25_surface_shape else total_mpv_count,
         }, sort_keys=True) + "\n", encoding="utf-8")
+        (health_dir / "mpv-g001.log").write_text(
+            (
+                "Failed to acquire DRM master: Permission denied\n"
+                "Error opening/initializing the selected video_out (--vo) device.\n"
+                if include_drm_marker
+                else "video output unavailable\n"
+            ),
+            encoding="utf-8",
+        )
         return health_dir
 
     def write_harness_ipc_drm_retry_evidence(
@@ -1022,6 +1040,69 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
             self.assertIn("canary_display_contention_total_mpv_not_contended", result["blockers"])
             self.assertIn("target_quarantine_reason_not_allowed", result["blockers"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_canary_display_contention_retry_accepts_c25_surface_failure_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-c25-surface-contention")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.C25_SURFACE_DISPLAY_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_canary_display_contention_evidence(
+                root,
+                identity,
+                c25_surface_shape=True,
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-c25-surface-contention-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            evidence = result["canary_display_contention_retry_evidence"]
+            self.assertEqual(evidence["failure_shape"], "c25_surface_contention")
+            self.assertTrue(evidence["drm_master_permission_denied"])
+
+    def test_canary_display_contention_retry_rejects_c25_shape_without_drm_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-c25-surface-no-drm")
+            data_root = root / "data"
+            out = root / "out"
+            reason = ",".join(sorted(reset.C25_SURFACE_DISPLAY_CONTENTION_FAILURE_REASONS))
+            self.seed_state(data_root, out, [{**identity, "reason": reason}])
+            health_dir = self.write_canary_display_contention_evidence(
+                root,
+                identity,
+                c25_surface_shape=True,
+                include_drm_marker=False,
+            )
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_canary_display_contention_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-c25-surface-contention-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("canary_display_contention_drm_marker_missing", result["blockers"])
             self.assertEqual(result["removed_count"], 0)
 
     def test_canary_display_contention_retry_rejects_generic_quarantine_reason(self) -> None:

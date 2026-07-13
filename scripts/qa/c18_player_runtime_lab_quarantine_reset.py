@@ -67,6 +67,20 @@ SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS = {
 SETUP_CONTENTION_ALLOWED_FAILURE_REASONS = (
     SETUP_CONTENTION_FAILURE_REASONS | SETUP_CONTENTION_OPTIONAL_ABSOLUTE_FAULT_REASONS
 )
+C25_SURFACE_DISPLAY_CONTENTION_FAILURE_REASONS = {
+    "candidate_startup_surface_local_evidence",
+    "candidate_teardown_process_stopped_cleanly",
+    "estimated_frame_present",
+    "hwdec_expected_present",
+    "ipc_stable_after_success",
+    "mpv_path_c18_stack",
+    "playback_progressed",
+    "service_active",
+    "single_mpv",
+    "status_no_failures",
+    "vo_configured_no_unexpected",
+    "vo_configured_present",
+}
 NO_CANARY_FAILURE_REASONS = {
     "candidate_teardown_process_stopped_cleanly",
     "estimated_frame_present",
@@ -485,11 +499,21 @@ def canary_display_contention_retry_evidence(
         process = read_json(process_path)
     except Exception as exc:
         return False, [f"canary_display_contention_process_read_failed:{type(exc).__name__}"], details
+    try:
+        combined_logs = "\n".join(
+            path.read_text(encoding="utf-8", errors="replace")
+            for path in sorted(candidate_health_dir.glob("mpv*.log"))
+        )
+    except Exception as exc:
+        return False, [f"canary_display_contention_log_read_failed:{type(exc).__name__}"], details
 
     failures = set(str(item) for item in (result.get("failure_reasons") or []))
     counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
     checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
     teardown = result.get("candidate_teardown") if isinstance(result.get("candidate_teardown"), dict) else {}
+    stop = teardown.get("stop") if isinstance(teardown.get("stop"), dict) else {}
+    legacy_shape = failures == SETUP_CONTENTION_FAILURE_REASONS
+    c25_surface_shape = failures == C25_SURFACE_DISPLAY_CONTENTION_FAILURE_REASONS
     details.update({
         "candidate_version": result.get("candidate_version"),
         "failure_reasons": sorted(failures),
@@ -502,6 +526,15 @@ def canary_display_contention_retry_evidence(
         "status_failure_samples": counters.get("status_failure_samples"),
         "gpu_faults_delta": teardown.get("gpu_faults_delta"),
         "service_active": checks.get("service_active"),
+        "failure_shape": (
+            "legacy_canary_contention"
+            if legacy_shape
+            else "c25_surface_contention" if c25_surface_shape else "unexpected"
+        ),
+        "drm_master_permission_denied": "Failed to acquire DRM master: Permission denied" in combined_logs,
+        "video_out_permission_denied": "Error opening/initializing the selected video_out" in combined_logs,
+        "stop_method": stop.get("method"),
+        "stop_returncode": stop.get("returncode"),
     })
     if result.get("candidate_version") != identity.get("version"):
         blockers.append("canary_display_contention_candidate_version_mismatch")
@@ -513,14 +546,30 @@ def canary_display_contention_retry_evidence(
         blockers.append("canary_display_contention_result_not_failed")
     if result.get("canary_media_used") is not True:
         blockers.append("canary_display_contention_canary_missing")
-    if failures != SETUP_CONTENTION_FAILURE_REASONS:
+    if not legacy_shape and not c25_surface_shape:
         blockers.append("canary_display_contention_failure_reasons_mismatch")
     if int(counters.get("playlist_size_max") or 0) < 1:
         blockers.append("canary_display_contention_playlist_missing")
-    if int(counters.get("mpv_count") or 0) != 1:
-        blockers.append("canary_display_contention_candidate_mpv_missing")
-    if int(counters.get("total_mpv_count") or 0) < 2 or int(process.get("total_mpv_count") or 0) < 2:
-        blockers.append("canary_display_contention_total_mpv_not_contended")
+    if legacy_shape:
+        if int(counters.get("mpv_count") or 0) != 1:
+            blockers.append("canary_display_contention_candidate_mpv_missing")
+        if int(counters.get("total_mpv_count") or 0) < 2 or int(process.get("total_mpv_count") or 0) < 2:
+            blockers.append("canary_display_contention_total_mpv_not_contended")
+        if checks.get("service_active") is not True:
+            blockers.append("canary_display_contention_service_not_active")
+    elif c25_surface_shape:
+        if result.get("candidate_startup_surface_health_required") is not True:
+            blockers.append("canary_display_contention_c25_surface_not_required")
+        if int(counters.get("hwdec_expected_samples") or 0) != 0:
+            blockers.append("canary_display_contention_c25_hwdec_seen")
+        if int(counters.get("vo_configured_true_samples") or 0) != 0:
+            blockers.append("canary_display_contention_c25_vo_seen")
+        if "Failed to acquire DRM master: Permission denied" not in combined_logs:
+            blockers.append("canary_display_contention_drm_marker_missing")
+        if "Error opening/initializing the selected video_out" not in combined_logs:
+            blockers.append("canary_display_contention_video_out_marker_missing")
+        if stop.get("method") != "none" or stop.get("returncode") != 3:
+            blockers.append("canary_display_contention_c25_exit_shape")
     if int(counters.get("ipc_success") or 0) <= 0:
         blockers.append("canary_display_contention_no_ipc_success")
     if int(counters.get("media_load_failed") or 0) != 0 or checks.get("media_load_failed_zero") is not True:
@@ -529,8 +578,6 @@ def canary_display_contention_retry_evidence(
         blockers.append("canary_display_contention_gpu_fault_delta_seen")
     if checks.get("ext4_errors_zero") is not True or checks.get("mmc_timeout_reset_zero") is not True:
         blockers.append("canary_display_contention_storage_fault_seen")
-    if checks.get("service_active") is not True:
-        blockers.append("canary_display_contention_service_not_active")
     if teardown.get("gpu_faults_delta") not in (0, None):
         blockers.append("canary_display_contention_teardown_gpu_fault_delta")
     return not blockers, blockers, details
@@ -721,7 +768,10 @@ def quarantine_reason_allowed(entry: dict[str, Any],
     if reset_scope == NO_CANARY_SCOPE:
         return no_canary_retry_ok and set(reason.split(",")) == NO_CANARY_FAILURE_REASONS
     if reset_scope == CANARY_DISPLAY_CONTENTION_SCOPE:
-        return canary_display_contention_ok and set(reason.split(",")) == SETUP_CONTENTION_FAILURE_REASONS
+        return canary_display_contention_ok and set(reason.split(",")) in (
+            SETUP_CONTENTION_FAILURE_REASONS,
+            C25_SURFACE_DISPLAY_CONTENTION_FAILURE_REASONS,
+        )
     if reset_scope == HARNESS_IPC_DRM_SCOPE:
         return harness_ipc_drm_retry_ok and set(reason.split(",")) == HARNESS_IPC_DRM_FAILURE_REASONS
     if reset_scope == STARTUP_STATUS_SCOPE:
