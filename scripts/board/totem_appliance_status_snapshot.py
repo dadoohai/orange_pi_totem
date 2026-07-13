@@ -39,6 +39,8 @@ PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 MAX_STATUS_FILE_BYTES = 64 * 1024
 MAX_SAFE_STRING_LEN = 80
+PUBLIC_STATUS_SCHEMA = "totem-status.v1"
+PUBLIC_STATUS_MAX_AGE_SEC = 120
 
 PUBLIC_STATUS_REL = pathlib.Path("tmp/dadooh-status/status.json")
 PLAYER_STATUS_REL = pathlib.Path("tmp/kiosky-status.json")
@@ -49,24 +51,41 @@ PUBLIC_STATES = {
     "display_missing",
     "config_missing",
     "starting_player",
+    "loading_content",
+    "content_unavailable",
     "player_running",
     "player_error",
     "maintenance_placeholder",
 }
 CONFIG_STATES = {"unknown", "missing", "invalid", "valid"}
-PLAYER_STATES = {"unknown", "not_started", "starting", "running", "error", "stopped"}
+PLAYER_STATES = {"unknown", "not_started", "starting", "loading", "running", "recovering", "error", "stopped"}
 SERVICE_STATES = {"unknown", "inactive", "activating", "active", "failed"}
 PLAYBACK_STATES = {
     "unknown",
     "idle",
     "playing",
     "buffering",
+    "player_starting",
+    "waiting_for_content",
+    "waiting_for_media",
+    "waiting_sync_anchor",
+    "preparing_first_frame",
+    "starting",
+    "recovering",
     "paused",
     "stopped",
     "error",
     "failed",
 }
 ERROR_CODE_RE = re.compile(r"^[A-Z0-9_:-]{1,64}$")
+PUBLIC_ERROR_CODES = {
+    "DISPLAY_MISSING",
+    "CONFIG_MISSING",
+    "CONTENT_UNAVAILABLE",
+    "PLAYER_EXITED",
+    "PLAYER_STATUS_STALE",
+    "PLAYER_STATUS_INVALID",
+}
 TIMESTAMP_RE = re.compile(r"^[0-9T:+_.Z -]{1,64}$")
 
 SENSITIVE_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -276,6 +295,9 @@ def sanitize_error_code(
     if not ERROR_CODE_RE.fullmatch(text):
         warning_add(warnings, "FIELD_OUTSIDE_ALLOWLIST")
         return None
+    if text not in PUBLIC_ERROR_CODES:
+        warning_add(warnings, "FIELD_OUTSIDE_ALLOWLIST")
+        return None
     return text
 
 
@@ -298,6 +320,19 @@ def sanitize_timestamp(
         warning_add(warnings, "FIELD_OUTSIDE_ALLOWLIST")
         return None
     return text
+
+
+def public_status_timestamp_is_fresh(value: Any, *, now: _datetime.datetime) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = _datetime.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if parsed.tzinfo is None:
+        return False
+    age = (now - parsed.astimezone(_datetime.timezone.utc)).total_seconds()
+    return -60 <= age <= PUBLIC_STATUS_MAX_AGE_SEC
 
 
 def sanitize_bool(value: Any) -> bool | str:
@@ -379,6 +414,17 @@ def build_snapshot(root: pathlib.Path) -> dict[str, Any]:
     public_display_connected: bool | str = "unknown"
     public_error_code: str | None = None
     public_updated_at: str | None = None
+
+    now = _datetime.datetime.now(_datetime.timezone.utc)
+    if public_status is not None:
+        if public_status.get("schema_version") != PUBLIC_STATUS_SCHEMA:
+            warning_add(warnings, "PUBLIC_STATUS_SCHEMA_INVALID")
+            public_status_state = "invalid"
+            public_status = None
+        elif not public_status_timestamp_is_fresh(public_status.get("updated_at"), now=now):
+            warning_add(warnings, "PUBLIC_STATUS_STALE")
+            public_status_state = "invalid"
+            public_status = None
 
     if public_status is not None:
         public_state = sanitize_string(
@@ -627,8 +673,8 @@ def create_persistent_selftest_root() -> None:
     write_json_fixture(
         SELFTEST_ROOT / PUBLIC_STATUS_REL,
         {
-            "schema_version": "totem-status.v0",
-            "updated_at": "2026-05-02T00:00:00Z",
+            "schema_version": "totem-status.v1",
+            "updated_at": utc_timestamp(),
             "state": "player_running",
             "display_connected": True,
             "config_state": "valid",
@@ -658,13 +704,14 @@ def create_persistent_selftest_root() -> None:
 def run_self_test() -> int:
     with tempfile.TemporaryDirectory(prefix="dadooh-c7-selftest-", dir="/tmp") as tmp:
         base = pathlib.Path(tmp)
+        fresh_timestamp = utc_timestamp()
 
         root, out = make_case_root(base, "public-clean")
         write_json_fixture(
             root / PUBLIC_STATUS_REL,
             {
                 "schema_version": "totem-status.v0",
-                "updated_at": "2026-05-02T00:00:00Z",
+                "updated_at": fresh_timestamp,
                 "state": "config_missing",
                 "display_connected": True,
                 "config_state": "missing",
@@ -675,7 +722,8 @@ def run_self_test() -> int:
         )
         run_snapshot(root_raw=str(root), out_dir_raw=str(out))
         data = load_output_json(out)
-        assert data["public_state"] == "config_missing"
+        assert data["public_state"] == "unknown"
+        assert "PUBLIC_STATUS_SCHEMA_INVALID" in data["warnings"]
         assert data["c18_governance"]["schema"] == C18_GOVERNANCE_SCHEMA
         assert data["c18_governance"]["responsibility"] == "field-data"
         assert data["c18_governance"]["result_claim"] == C18_RESULT_CLAIM
@@ -683,6 +731,26 @@ def run_self_test() -> int:
         assert data["c18_governance"]["not_ota_release_payload"] is True
         assert data["c18_governance"]["not_h2_or_production_readiness"] is True
         assert data["privacy_scan"] == "ok"
+        assert_no_private_output(out)
+
+        root, out = make_case_root(base, "public-v1-recovery")
+        write_json_fixture(
+            root / PUBLIC_STATUS_REL,
+            {
+                "schema_version": "totem-status.v1",
+                "updated_at": fresh_timestamp,
+                "state": "content_unavailable",
+                "display_connected": True,
+                "config_state": "valid",
+                "player_state": "recovering",
+                "service_state": "active",
+                "error_code": "CONTENT_UNAVAILABLE",
+            },
+        )
+        run_snapshot(root_raw=str(root), out_dir_raw=str(out))
+        data = load_output_json(out)
+        assert data["public_state"] == "content_unavailable"
+        assert data["public_player_state"] == "recovering"
         assert_no_private_output(out)
 
         root, out = make_case_root(base, "player-clean")
@@ -734,6 +802,8 @@ def run_self_test() -> int:
         write_json_fixture(
             root / PUBLIC_STATUS_REL,
             {
+                "schema_version": "totem-status.v1",
+                "updated_at": fresh_timestamp,
                 "state": "https://private.invalid/status",
                 "display_connected": True,
                 "config_state": "valid",
@@ -754,6 +824,23 @@ def run_self_test() -> int:
         assert data["privacy_scan"] == "failed"
         assert data["public_state"] == "unknown"
         assert data["playback_state"] == "unknown"
+        assert_no_private_output(out)
+
+        root, out = make_case_root(base, "public-stale")
+        write_json_fixture(
+            root / PUBLIC_STATUS_REL,
+            {
+                "schema_version": "totem-status.v1",
+                "updated_at": "2000-01-01T00:00:00Z",
+                "state": "player_running",
+                "error_code": "PLAYER_EXITED",
+            },
+        )
+        run_snapshot(root_raw=str(root), out_dir_raw=str(out))
+        data = load_output_json(out)
+        assert data["public_state"] == "unknown"
+        assert data["public_error_code"] is None
+        assert "PUBLIC_STATUS_STALE" in data["warnings"]
         assert_no_private_output(out)
 
         root, out = make_case_root(base, "config-metadata")
