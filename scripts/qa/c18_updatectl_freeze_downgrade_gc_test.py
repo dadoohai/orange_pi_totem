@@ -11,6 +11,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -29,12 +30,18 @@ spec.loader.exec_module(updatectl)
 
 def configure_temp(root: Path, component: str = "totem-core") -> None:
     data_root = root / "data"
+    run_root = root / "run"
+    run_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    run_root.chmod(0o700)
     updatectl.DATA_ROOT = data_root
     updatectl.UPDATES_DIR = data_root / "updates"
     updatectl.POLICY_FILE = updatectl.UPDATES_DIR / "policy.json"
     updatectl.LOG_DIR = data_root / "logs"
     updatectl.LOG_FILE = updatectl.LOG_DIR / "totem-update.log"
     updatectl.TOKEN_FILE = data_root / "secrets" / "github-release-token"
+    updatectl.UPDATE_LOCK_FILE = run_root / "totem-updatectl.lock"
+    updatectl.SETTINGS_LOCK = run_root / "settings-session.lock"
+    updatectl.SETTINGS_REQUEST_FILE = run_root / "settings-request.json"
     updatectl.configure_component(component)
 
 
@@ -259,6 +266,17 @@ class InjectedPowerCut(BaseException):
 
 
 class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.settings_service_state = mock.patch.object(
+            updatectl,
+            "_systemd_unit_state",
+            return_value="inactive",
+        )
+        self.settings_service_state.start()
+
+    def tearDown(self) -> None:
+        self.settings_service_state.stop()
+
     def test_kiosky_player_apply_local_is_frozen_before_manifest_read(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -326,6 +344,540 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             rc = updatectl.cmd_apply_player_runtime_authorized(args)
             self.assertEqual(rc, 44)
             self.assertFalse(updatectl.STATE_FILE.exists())
+
+    def test_core_autopull_defers_before_network_when_settings_owns_device(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            settings_lock = root / "run" / "settings.lock"
+            settings_lock.mkdir(parents=True)
+            settings_lock.chmod(0o755)
+            request_file = root / "run" / "request.json"
+            update_lock = root / "run" / "updatectl.lock"
+            update_lock.touch(mode=0o600)
+            with update_lock.open("a+") as lock_fh:
+                updatectl.fcntl.flock(lock_fh.fileno(), updatectl.fcntl.LOCK_EX | updatectl.fcntl.LOCK_NB)
+                with (
+                    mock.patch.object(updatectl, "SETTINGS_LOCK", settings_lock),
+                    mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", request_file),
+                    mock.patch.object(updatectl, "UPDATE_LOCK_FILE", update_lock),
+                    mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                    mock.patch.object(
+                        updatectl,
+                        "_gh_select_latest_release",
+                        side_effect=AssertionError("network selection must not run"),
+                    ),
+                ):
+                    rc = updatectl.cmd_apply_github_latest(
+                        argparse.Namespace(component="totem-core", repo="dadoohai/example", dry_run=False)
+                    )
+            self.assertEqual(rc, 40)
+            self.assertFalse(updatectl.INCOMING_DIR.exists())
+
+    def test_core_autopull_fails_closed_when_canonical_update_lock_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            non_directory = root / "not-a-directory"
+            non_directory.write_text("blocked\n", encoding="utf-8")
+            with (
+                mock.patch.object(updatectl, "UPDATE_LOCK_FILE", non_directory / "updatectl.lock"),
+                mock.patch.object(
+                    updatectl,
+                    "_gh_select_latest_release",
+                    side_effect=AssertionError("network selection must not run"),
+                ),
+            ):
+                rc = updatectl.cmd_apply_github_latest(
+                    argparse.Namespace(component="totem-core", repo="dadoohai/example", dry_run=False)
+                )
+            self.assertEqual(rc, updatectl.RC_UPDATE_LOCK_UNAVAILABLE)
+            self.assertEqual(updatectl.RC_UPDATE_LOCK_UNAVAILABLE, 52)
+
+    def test_update_lock_validation_never_creates_missing_or_symlinked_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            missing_parent = root / "missing" / "nested"
+            updatectl.UPDATE_LOCK_FILE = missing_parent / "updatectl.lock"
+            with updatectl._update_lock("missing-parent-probe") as locked:
+                self.assertFalse(locked)
+                self.assertEqual(locked.reason, "unavailable")
+            self.assertFalse((root / "missing").exists())
+
+            outside = root / "outside"
+            outside.mkdir(mode=0o700)
+            symlink_parent = root / "symlink-parent"
+            symlink_parent.symlink_to(outside, target_is_directory=True)
+            updatectl.UPDATE_LOCK_FILE = symlink_parent / "updatectl.lock"
+            with updatectl._update_lock("symlink-parent-probe") as locked:
+                self.assertFalse(locked)
+                self.assertEqual(locked.reason, "untrusted")
+            self.assertEqual(list(outside.iterdir()), [])
+
+    def test_core_autopull_hard_fails_before_network_when_settings_state_is_untrusted(self) -> None:
+        for state in ("unknown", "failed"):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "totem-core")
+                with (
+                    mock.patch.object(updatectl, "_systemd_unit_state", return_value=state),
+                    mock.patch.object(
+                        updatectl,
+                        "_gh_select_latest_release",
+                        side_effect=AssertionError("network selection must not run"),
+                    ),
+                ):
+                    rc = updatectl.cmd_apply_github_latest(
+                        argparse.Namespace(component="totem-core", repo="dadoohai/example", dry_run=False)
+                    )
+                self.assertEqual(rc, updatectl.RC_COMPONENT_GUARD_UNAVAILABLE)
+                self.assertEqual(updatectl.RC_COMPONENT_GUARD_UNAVAILABLE, 51)
+                self.assertFalse(updatectl.INCOMING_DIR.exists())
+
+    def test_core_autopull_rejects_symlink_canonical_lock_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            target = root / "lock-target"
+            target.write_text("sentinel\n", encoding="utf-8")
+            target.chmod(0o644)
+            symlink = root / "updatectl.lock"
+            symlink.symlink_to(target)
+            updatectl.SETTINGS_LOCK.mkdir(mode=0o700)
+            with (
+                mock.patch.object(updatectl, "UPDATE_LOCK_FILE", symlink),
+                mock.patch.object(
+                    updatectl,
+                    "_gh_select_latest_release",
+                    side_effect=AssertionError("network selection must not run"),
+                ),
+            ):
+                rc = updatectl.cmd_apply_github_latest(
+                    argparse.Namespace(component="totem-core", repo="dadoohai/example", dry_run=False)
+                )
+            self.assertEqual(rc, updatectl.RC_UPDATE_LOCK_UNAVAILABLE)
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel\n")
+            self.assertEqual(target.stat().st_mode & 0o777, 0o644)
+
+    def test_player_runtime_autopull_defers_before_auth_or_network_when_settings_owns_device(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            settings_lock = root / "run" / "settings.lock"
+            settings_lock.mkdir(parents=True)
+            settings_lock.chmod(0o755)
+            request_file = root / "run" / "request.json"
+            update_lock = root / "run" / "updatectl.lock"
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "missing-auth.json"),
+                dry_run=False,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            update_lock.touch(mode=0o600)
+            with update_lock.open("a+") as lock_fh:
+                updatectl.fcntl.flock(lock_fh.fileno(), updatectl.fcntl.LOCK_EX | updatectl.fcntl.LOCK_NB)
+                with (
+                    mock.patch.object(updatectl, "SETTINGS_LOCK", settings_lock),
+                    mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", request_file),
+                    mock.patch.object(updatectl, "UPDATE_LOCK_FILE", update_lock),
+                    mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                    mock.patch.object(
+                        updatectl,
+                        "_load_player_runtime_production_authorization",
+                        side_effect=AssertionError("authorization must not be consumed"),
+                    ),
+                    mock.patch.object(
+                        updatectl,
+                        "_gh_release_by_tag",
+                        side_effect=AssertionError("network selection must not run"),
+                    ),
+                ):
+                    rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, 40)
+            self.assertFalse(updatectl.INCOMING_DIR.exists())
+
+    def test_player_runtime_missing_public_exact_target_is_retryable_defer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            settings_lock = root / "run" / "missing-settings.lock"
+            request_file = root / "run" / "missing-request.json"
+            update_lock = root / "run" / "updatectl.lock"
+            auth = {
+                "repo": "dadoohai/orange_pi_totem",
+                "tag_name": "player-runtime-exact-unpublished",
+            }
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "authorization.json"),
+                dry_run=False,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            with (
+                mock.patch.object(updatectl, "SETTINGS_LOCK", settings_lock),
+                mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", request_file),
+                mock.patch.object(updatectl, "UPDATE_LOCK_FILE", update_lock),
+                mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                mock.patch.object(updatectl, "_load_player_runtime_production_authorization", return_value=auth),
+                mock.patch.object(
+                    updatectl,
+                    "_gh_release_by_tag",
+                    side_effect=updatectl.HttpError(404, "Not Found", "github-release-tag"),
+                ),
+                mock.patch.object(updatectl, "_load_device_token", return_value=None),
+                mock.patch.object(updatectl, "_gh_repo_publicly_accessible", return_value=True),
+            ):
+                rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, updatectl.RC_PLAYER_RUNTIME_EXACT_TARGET_UNAVAILABLE)
+            self.assertEqual(updatectl.RC_PLAYER_RUNTIME_EXACT_TARGET_UNAVAILABLE, 50)
+            self.assertEqual(list(updatectl.INCOMING_DIR.rglob("*")), [])
+
+    def test_player_runtime_missing_repo_is_not_treated_as_unpublished_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            auth = {"repo": "dadoohai/orange_pi_totem", "tag_name": "missing-target"}
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "authorization.json"),
+                dry_run=False,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            with (
+                mock.patch.object(updatectl, "SETTINGS_LOCK", root / "missing-settings.lock"),
+                mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", root / "missing-request.json"),
+                mock.patch.object(updatectl, "UPDATE_LOCK_FILE", root / "updatectl.lock"),
+                mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                mock.patch.object(updatectl, "_load_player_runtime_production_authorization", return_value=auth),
+                mock.patch.object(
+                    updatectl,
+                    "_gh_release_by_tag",
+                    side_effect=updatectl.HttpError(404, "Not Found", "github-release-tag"),
+                ),
+                mock.patch.object(updatectl, "_load_device_token", return_value=None),
+                mock.patch.object(updatectl, "_gh_repo_publicly_accessible", return_value=False),
+            ):
+                rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, 20)
+
+    def test_player_runtime_asset_404_is_hard_error_after_release_resolves(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            auth = {"repo": "dadoohai/orange_pi_totem", "tag_name": "published-broken-assets"}
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "authorization.json"),
+                dry_run=False,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            release = {"draft": False, "prerelease": False, "tag_name": auth["tag_name"]}
+            manifest_asset = {"name": "dadooh-player-runtime-broken.manifest.json"}
+            payload_asset = {"name": "dadooh-player-runtime-broken.tar.gz"}
+            with (
+                mock.patch.object(updatectl, "SETTINGS_LOCK", root / "missing-settings.lock"),
+                mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", root / "missing-request.json"),
+                mock.patch.object(updatectl, "UPDATE_LOCK_FILE", root / "updatectl.lock"),
+                mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                mock.patch.object(updatectl, "_load_player_runtime_production_authorization", return_value=auth),
+                mock.patch.object(updatectl, "_gh_release_by_tag", return_value=release),
+                mock.patch.object(updatectl, "_gh_pick_assets", return_value=(manifest_asset, payload_asset)),
+                mock.patch.object(
+                    updatectl,
+                    "_download_manifest_asset",
+                    side_effect=updatectl.HttpError(404, "Not Found", "manifest-asset"),
+                ),
+                mock.patch.object(updatectl, "_load_device_token", return_value=None),
+            ):
+                rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, 20)
+
+    def test_player_runtime_authenticated_404_remains_hard_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "authorization.json"),
+                dry_run=False,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            auth = {"repo": "dadoohai/orange_pi_totem", "tag_name": "missing-authenticated-target"}
+            with (
+                mock.patch.object(updatectl, "SETTINGS_LOCK", root / "missing-settings.lock"),
+                mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", root / "missing-request.json"),
+                mock.patch.object(updatectl, "UPDATE_LOCK_FILE", root / "updatectl.lock"),
+                mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                mock.patch.object(updatectl, "_load_player_runtime_production_authorization", return_value=auth),
+                mock.patch.object(
+                    updatectl,
+                    "_gh_release_by_tag",
+                    side_effect=updatectl.HttpError(404, "Not Found", "github-release-tag"),
+                ),
+                mock.patch.object(updatectl, "_load_device_token", return_value="device-token-present"),
+            ):
+                rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, 20)
+
+    def test_player_runtime_release_lookup_uses_one_token_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            auth = {"repo": "dadoohai/orange_pi_totem", "tag_name": "missing-authenticated-target"}
+            args = argparse.Namespace(
+                repo="",
+                tag="",
+                authorization=str(root / "authorization.json"),
+                dry_run=False,
+                duration_sec=0.1,
+                interval_sec=0.1,
+                startup_wait_sec=0.1,
+                panfrost_fault_policy="absolute",
+            )
+            with (
+                mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                mock.patch.object(updatectl, "_load_player_runtime_production_authorization", return_value=auth),
+                mock.patch.object(
+                    updatectl,
+                    "_gh_release_by_tag",
+                    side_effect=updatectl.HttpError(404, "Not Found", "github-release-tag"),
+                ) as release_lookup,
+                mock.patch.object(updatectl, "_load_device_token", side_effect=["request-token", None]) as load_token,
+                mock.patch.object(
+                    updatectl,
+                    "_gh_repo_publicly_accessible",
+                    side_effect=AssertionError("authenticated lookup must not be reclassified"),
+                ),
+            ):
+                rc = updatectl.cmd_apply_player_runtime_authorized(args)
+            self.assertEqual(rc, 20)
+            self.assertEqual(load_token.call_count, 1)
+            self.assertEqual(release_lookup.call_args.kwargs.get("device_token"), "request-token")
+
+    def test_public_repository_probe_is_forced_unauthenticated_and_non_private(self) -> None:
+        with mock.patch.object(
+            updatectl,
+            "_http_get_json",
+            return_value={"full_name": "dadoohai/orange_pi_totem", "private": False},
+        ) as get_json:
+            self.assertTrue(updatectl._gh_repo_publicly_accessible("dadoohai/orange_pi_totem"))
+        self.assertIsNone(get_json.call_args.kwargs.get("device_token"))
+        with mock.patch.object(
+            updatectl,
+            "_http_get_json",
+            return_value={"full_name": "dadoohai/orange_pi_totem", "private": True},
+        ):
+            self.assertFalse(updatectl._gh_repo_publicly_accessible("dadoohai/orange_pi_totem"))
+
+    def test_component_guard_blocks_request_and_active_settings_service(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            settings_lock = root / "run" / "missing.lock"
+            request_file = root / "run" / "request.json"
+            request_file.parent.mkdir(parents=True, exist_ok=True)
+            request_file.write_text("{}\n", encoding="utf-8")
+            request_file.chmod(0o600)
+            with (
+                mock.patch.object(updatectl, "SETTINGS_LOCK", settings_lock),
+                mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", request_file),
+                mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+            ):
+                self.assertEqual(updatectl._component_apply_guard(), (False, "settings_request_present"))
+                request_file.unlink()
+                with mock.patch.object(updatectl, "_systemd_unit_state", return_value="activating"):
+                    self.assertEqual(
+                        updatectl._component_apply_guard(),
+                        (False, "open_settings_service_activating"),
+                    )
+                with mock.patch.object(updatectl, "_systemd_unit_state", return_value="unknown"):
+                    self.assertEqual(
+                        updatectl._component_apply_guard(),
+                        (False, "open_settings_service_unknown"),
+                    )
+                    self.assertEqual(
+                        updatectl._component_apply_guard_rc("open_settings_service_unknown"),
+                        updatectl.RC_COMPONENT_GUARD_UNAVAILABLE,
+                    )
+                self.assertEqual(updatectl._component_apply_guard_rc("settings_request_present"), 40)
+                self.assertEqual(updatectl._component_apply_guard_rc("open_settings_service_activating"), 40)
+
+    def test_component_guard_rejects_dangling_or_wrong_type_markers(self) -> None:
+        cases = (
+            ("settings-lock-symlink", "settings_session_lock_untrusted"),
+            ("settings-request-symlink", "settings_request_untrusted"),
+        )
+        for marker_kind, expected_reason in cases:
+            with self.subTest(marker_kind=marker_kind), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                configure_temp(root, "totem-core")
+                settings_lock = root / "run" / "settings.lock"
+                request_file = root / "run" / "request.json"
+                if marker_kind == "settings-lock-symlink":
+                    settings_lock.symlink_to(root / "missing-settings-target")
+                else:
+                    request_file.symlink_to(root / "missing-request-target")
+                with (
+                    mock.patch.object(updatectl, "SETTINGS_LOCK", settings_lock),
+                    mock.patch.object(updatectl, "SETTINGS_REQUEST_FILE", request_file),
+                    mock.patch.object(updatectl, "_systemd_unit_state", return_value="inactive"),
+                ):
+                    self.assertEqual(
+                        updatectl._component_apply_guard(),
+                        (False, expected_reason),
+                    )
+                    rc = updatectl.cmd_apply_local(
+                        argparse.Namespace(
+                            component="totem-core",
+                            manifest=str(root / "missing-manifest.json"),
+                            payload="",
+                        )
+                    )
+                self.assertEqual(rc, updatectl.RC_COMPONENT_GUARD_UNAVAILABLE)
+                self.assertFalse(updatectl.UPDATES_DIR.exists())
+
+    def test_manual_apply_paths_defer_before_local_or_network_io_during_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl.SETTINGS_LOCK.mkdir(mode=0o700)
+
+            local_rc = updatectl.cmd_apply_local(
+                argparse.Namespace(
+                    component="totem-core",
+                    manifest=str(root / "missing-manifest.json"),
+                    payload="",
+                )
+            )
+            with mock.patch.object(
+                updatectl,
+                "_http_download",
+                side_effect=AssertionError("network must not run during settings"),
+            ):
+                url_rc = updatectl.cmd_apply_manifest_url(
+                    argparse.Namespace(
+                        component="totem-core",
+                        url="https://example.invalid/manifest.json",
+                    )
+                )
+
+            self.assertEqual(local_rc, 40)
+            self.assertEqual(url_rc, 40)
+            self.assertFalse(updatectl.UPDATES_DIR.exists())
+
+    def test_rollback_and_authorized_reconcile_defer_without_mutation_during_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "totem-core")
+            updatectl._ensure_dirs()
+            current = updatectl.RELEASES_DIR / "core-current"
+            current.mkdir(parents=True)
+            updatectl._atomic_symlink("releases/core-current", updatectl.CURRENT_LINK)
+            updatectl._write_state({
+                "schema": updatectl.SCHEMA_STATE,
+                "component": "totem-core",
+                "current": {"version": "core-current"},
+                "previous": None,
+            })
+            state_before = updatectl.STATE_FILE.read_bytes()
+            updatectl.SETTINGS_LOCK.mkdir(mode=0o700)
+
+            rc = updatectl.cmd_rollback(argparse.Namespace(component="totem-core"))
+
+            self.assertEqual(rc, 40)
+            self.assertEqual(updatectl._read_symlink_target(updatectl.CURRENT_LINK), "releases/core-current")
+            self.assertEqual(updatectl.STATE_FILE.read_bytes(), state_before)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            updatectl.SETTINGS_LOCK.mkdir(mode=0o700)
+            args = argparse.Namespace(
+                authorization=str(root / "missing-authorization.json"),
+                reason="unit-settings-guard",
+                quarantine_current=True,
+            )
+            with mock.patch.object(
+                updatectl,
+                "_load_player_runtime_production_authorization",
+                side_effect=AssertionError("authorization must not be consumed"),
+            ):
+                rc = updatectl.cmd_rollback_player_runtime_authorized(args)
+            self.assertEqual(rc, 40)
+            self.assertFalse(updatectl.UPDATES_DIR.exists())
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            configure_temp(root, "player-runtime")
+            updatectl.SETTINGS_LOCK.mkdir(mode=0o700)
+            old_env = os.environ.get(updatectl.PLAYER_RUNTIME_RECONCILE_ENV)
+            try:
+                os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = "1"
+                rc = updatectl.cmd_reconcile(
+                    argparse.Namespace(
+                        component="player-runtime",
+                        allow_player_runtime_maintenance=True,
+                    )
+                )
+            finally:
+                if old_env is None:
+                    os.environ.pop(updatectl.PLAYER_RUNTIME_RECONCILE_ENV, None)
+                else:
+                    os.environ[updatectl.PLAYER_RUNTIME_RECONCILE_ENV] = old_env
+            self.assertEqual(rc, 40)
+            self.assertFalse(updatectl.UPDATES_DIR.exists())
+
+    def test_systemd_unit_state_requires_loaded_unit_and_reachable_bus(self) -> None:
+        self.settings_service_state.stop()
+        try:
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="LoadState=loaded\nActiveState=inactive\n",
+                stderr="",
+            )
+            with mock.patch.object(updatectl, "_systemctl", return_value=completed):
+                self.assertEqual(updatectl._systemd_unit_state("totem-open-settings.service"), "inactive")
+
+            missing = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="LoadState=not-found\nActiveState=inactive\n",
+                stderr="",
+            )
+            with mock.patch.object(updatectl, "_systemctl", return_value=missing):
+                self.assertEqual(
+                    updatectl._systemd_unit_state("totem-open-settings.service"),
+                    "unavailable_not-found",
+                )
+
+            bus_failed = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="bus unavailable")
+            with mock.patch.object(updatectl, "_systemctl", return_value=bus_failed):
+                self.assertEqual(updatectl._systemd_unit_state("totem-open-settings.service"), "unknown")
+        finally:
+            self.settings_service_state.start()
 
     def test_player_runtime_authorization_is_manifest_and_release_gate_hash_bound(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2197,6 +2749,17 @@ class C18CandidateSetupFailNoQuarantineTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.ch = _load_candidate_health()
+
+    def setUp(self) -> None:
+        self.settings_service_state = mock.patch.object(
+            updatectl,
+            "_systemd_unit_state",
+            return_value="inactive",
+        )
+        self.settings_service_state.start()
+
+    def tearDown(self) -> None:
+        self.settings_service_state.stop()
 
     def _apply_with_hook(self, root: Path, version: str, hook):
         configure_temp(root, "player-runtime")

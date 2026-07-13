@@ -3066,7 +3066,7 @@ def build_visual_status(
     environment_preflight: EnvironmentPreflight | None = None,
 ) -> dict[str, Any]:
     preflight_status = preflight_public_status(environment_preflight)
-    return {
+    status = {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": generated_at,
         "state": "candidate_ready",
@@ -3191,6 +3191,10 @@ def build_visual_status(
             "raw_logs_written": False,
         },
     }
+    settings_session_id = os.environ.get("TOTEM_SETTINGS_SESSION_ID", "").strip()
+    if settings_session_id:
+        status["settings_session_id"] = settings_session_id
+    return status
 
 
 def build_visual_summary(status: dict[str, Any]) -> str:

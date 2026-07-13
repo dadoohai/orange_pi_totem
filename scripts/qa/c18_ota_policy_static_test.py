@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import importlib.util
 import base64
+import fcntl
 import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -29,6 +31,9 @@ PRODUCTION_POLICY_PATH = REPO_ROOT / "scripts" / "board" / "totem_update_policy_
 SERVICE_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.service"
 PRODUCTION_SERVICE_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.production.service"
 PRODUCTION_TIMER_PATH = REPO_ROOT / "scripts" / "board" / "systemd" / "totem-update-agent.production.timer"
+PLAYER_RUNTIME_PRODUCTION_SERVICE_PATH = (
+    REPO_ROOT / "scripts" / "board" / "systemd" / "totem-player-runtime-update-agent.production.service"
+)
 MANIFEST_PATH = REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json"
 EMBED_PATH = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
 BUILD_CORE_PATH = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
@@ -272,6 +277,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
 
     def test_production_update_agent_profile_targets_only_totem_core(self) -> None:
         service = PRODUCTION_SERVICE_PATH.read_text(encoding="utf-8")
+        player_service = PLAYER_RUNTIME_PRODUCTION_SERVICE_PATH.read_text(encoding="utf-8")
         timer = PRODUCTION_TIMER_PATH.read_text(encoding="utf-8")
         self.assertIn("production core auto-pull", service)
         self.assertIn("apply-github-latest --component totem-core --repo dadoohai/orange_pi_totem", service)
@@ -280,6 +286,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("player-runtime", service.split("ExecStart=", 1)[1])
         self.assertNotIn("kiosky-player", service.split("ExecStart=", 1)[1])
         self.assertNotIn("dadoohai/kiosky-player", service + timer)
+        self.assertIn("SuccessExitStatus=40", service)
+        self.assertIn("SuccessExitStatus=40 50", player_service)
+        self.assertNotIn("SuccessExitStatus=40 51", service)
+        self.assertNotIn("SuccessExitStatus=40 50 51", player_service)
+        self.assertNotIn("SuccessExitStatus=40 52", service)
+        self.assertNotIn("SuccessExitStatus=40 50 52", player_service)
 
     def test_totem_core_production_timer_validation_is_wired(self) -> None:
         collector = TOTEM_CORE_PRODUCTION_TIMER_COLLECT_PATH.read_text(encoding="utf-8")
@@ -4166,13 +4178,25 @@ exec "$C18_REAL_PYTHON3" "$@"
 
         with tempfile.TemporaryDirectory(prefix="c20-session-scratch-", dir="/tmp") as raw_root:
             root = Path(raw_root)
-            scratch = [root / name for name in ("session", "wizard", "handoff", "writer")]
+            scratch = [
+                root / name
+                for name in ("session", "wizard", "handoff", "writer", "private")
+            ]
+            protected = [
+                root / "protected" / "settings.lock",
+                root / "protected" / "request",
+                root / "protected" / "request" / "apply-policy.json",
+                root / "protected" / "updatectl.lock",
+            ]
             for path in scratch:
-                path.mkdir()
+                path.mkdir(mode=0o700)
+                path.chmod(0o700)
                 (path / "stale.json").write_text("{}\n", encoding="utf-8")
                 (path / ".hidden-stale").write_text("stale\n", encoding="utf-8")
+            stale_private_values = scratch[4] / "private-values.json"
+            stale_private_values.write_text('{"api_key":"stale"}\n', encoding="utf-8")
             reset = subprocess.run(
-                [sys.executable, "-", *(str(path) for path in scratch)],
+                [sys.executable, "-", *(str(path) for path in scratch), *(str(path) for path in protected)],
                 input=reset_code,
                 text=True,
                 stdout=subprocess.PIPE,
@@ -4191,7 +4215,13 @@ exec "$C18_REAL_PYTHON3" "$@"
             linked = root / "linked"
             linked.symlink_to(outside, target_is_directory=True)
             rejected = subprocess.run(
-                [sys.executable, "-", str(linked), *(str(path) for path in scratch[1:])],
+                [
+                    sys.executable,
+                    "-",
+                    str(linked),
+                    *(str(path) for path in scratch[1:]),
+                    *(str(path) for path in protected),
+                ],
                 input=reset_code,
                 text=True,
                 stdout=subprocess.PIPE,
@@ -4209,6 +4239,8 @@ exec "$C18_REAL_PYTHON3" "$@"
                     str(scratch[0] / "child"),
                     str(scratch[2]),
                     str(scratch[3]),
+                    str(scratch[4]),
+                    *(str(path) for path in protected),
                 ],
                 input=reset_code,
                 text=True,
@@ -4217,6 +4249,389 @@ exec "$C18_REAL_PYTHON3" "$@"
                 check=False,
             )
             self.assertNotEqual(overlap.returncode, 0)
+
+            victim = root / "victim"
+            victim.mkdir(mode=0o700)
+            victim.chmod(0o700)
+            victim_sentinel = victim / "sentinel"
+            victim_sentinel.write_text("keep\n", encoding="utf-8")
+            traversal = root / "unused" / ".." / "victim"
+            traversal_rejected = subprocess.run(
+                [
+                    sys.executable,
+                    "-",
+                    str(traversal),
+                    *(str(path) for path in scratch[1:]),
+                    *(str(path) for path in protected),
+                ],
+                input=reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(traversal_rejected.returncode, 0)
+            self.assertEqual(victim_sentinel.read_text(encoding="utf-8"), "keep\n")
+
+            protected_overlap = subprocess.run(
+                [
+                    sys.executable,
+                    "-",
+                    str(protected[1]),
+                    *(str(path) for path in scratch[1:]),
+                    *(str(path) for path in protected),
+                ],
+                input=reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(protected_overlap.returncode, 0)
+
+            bindlike = scratch[0] / "bindlike"
+            bindlike.mkdir(mode=0o700)
+            bindlike_sentinel = bindlike / "sentinel"
+            bindlike_sentinel.write_text("keep\n", encoding="utf-8")
+            mountinfo = root / "mountinfo"
+            mountinfo.write_text(
+                f"100 99 0:42 / {bindlike} rw,relatime - ext4 /dev/root rw\n",
+                encoding="utf-8",
+            )
+            mount_aware_reset_code = reset_code.replace(
+                'pathlib.Path("/proc/self/mountinfo")',
+                f"pathlib.Path({str(mountinfo)!r})",
+            )
+            self.assertNotEqual(mount_aware_reset_code, reset_code)
+            mount_rejected = subprocess.run(
+                [sys.executable, "-", *(str(path) for path in scratch), *(str(path) for path in protected)],
+                input=mount_aware_reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(mount_rejected.returncode, 0)
+            self.assertEqual(bindlike_sentinel.read_text(encoding="utf-8"), "keep\n")
+
+            ancestor_sentinel = scratch[0] / "ancestor-sentinel"
+            ancestor_sentinel.write_text("keep\n", encoding="utf-8")
+            mountinfo.write_text(
+                f"101 99 0:43 / {root} rw,relatime - ext4 /dev/root rw\n",
+                encoding="utf-8",
+            )
+            ancestor_mount_rejected = subprocess.run(
+                [sys.executable, "-", *(str(path) for path in scratch), *(str(path) for path in protected)],
+                input=mount_aware_reset_code,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(ancestor_mount_rejected.returncode, 0)
+            self.assertEqual(ancestor_sentinel.read_text(encoding="utf-8"), "keep\n")
+
+        self.assertNotIn('rm -rf "$(dirname "$PRIVATE_VALUES")"', session)
+        self.assertNotIn('rm -rf "$LOCK_DIR"', session)
+        self.assertIn("candidate_is_current_session_ready", session)
+        self.assertIn('wizard_unexpected_exit:$WIZARD_RC', session)
+
+    def test_settings_candidate_attestation_is_bound_to_current_session(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        function_start = session.index("candidate_is_current_session_ready() {")
+        function_end = session.index("\nwrite_public_orientation_from_candidate()", function_start)
+        candidate_guard = session[function_start:function_end]
+
+        with tempfile.TemporaryDirectory(prefix="c20-session-attestation-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            candidate = root / "config.candidate.json"
+            status = root / "setup-status.json"
+            candidate.write_text('{"environment_id":"candidate"}\n', encoding="utf-8")
+            status.write_text(
+                json.dumps({
+                    "state": "candidate_ready",
+                    "settings_session_id": "session-current",
+                    "guardrails": {"candidate_generated": True},
+                }) + "\n",
+                encoding="utf-8",
+            )
+
+            def run_guard(session_id: str) -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    ["bash"],
+                    input=(
+                        "set -euo pipefail\n"
+                        f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
+                        f"SETTINGS_SESSION_ID={shlex.quote(session_id)}\n"
+                        f"{candidate_guard}\n"
+                        "candidate_is_current_session_ready\n"
+                    ),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+
+            self.assertEqual(run_guard("session-current").returncode, 0)
+            self.assertNotEqual(run_guard("session-stale").returncode, 0)
+            self.assertNotEqual(run_guard("").returncode, 0)
+
+            status_payload = json.loads(status.read_text(encoding="utf-8"))
+            status_payload["guardrails"]["candidate_generated"] = False
+            status.write_text(json.dumps(status_payload) + "\n", encoding="utf-8")
+            self.assertNotEqual(run_guard("session-current").returncode, 0)
+
+    def test_settings_policy_rejects_external_tmp_private_values(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        function_start = session.index("load_apply_policy() {")
+        code_start = session.index("<<'PY'\n", function_start) + len("<<'PY'\n")
+        code_end = session.index("\nPY\n  )", code_start)
+        policy_parser = session[code_start:code_end]
+
+        with tempfile.TemporaryDirectory(prefix="c20-external-private-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            private_dir = root / "stale-private"
+            private_dir.mkdir(mode=0o700)
+            private_values = private_dir / "private-values.json"
+            private_values.write_text(
+                '{"api_key":"stale","api_url":"https://example.invalid"}\n',
+                encoding="utf-8",
+            )
+            private_values.chmod(0o600)
+            policy_path = root / "apply-policy.json"
+            policy_path.write_text(
+                json.dumps({
+                    "mode": "real-write",
+                    "private_source": "tmp-file",
+                    "private_values_path": str(private_values),
+                    "real_write_confirmed": True,
+                }) + "\n",
+                encoding="utf-8",
+            )
+            policy_path.chmod(0o600)
+
+            rejected = subprocess.run(
+                [
+                    sys.executable,
+                    "-",
+                    str(policy_path),
+                    str(root / "session-private" / "private-values.json"),
+                ],
+                input=policy_parser,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("apply_policy_private_source_invalid", rejected.stderr)
+
+    def test_settings_qr_private_values_are_bound_to_current_pairing_dir(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        function_start = session.index("select_qr_pairing_private_values_if_available() {")
+        code_start = session.index("<<'PY'\n", function_start) + len("<<'PY'\n")
+        code_end = session.index("\nPY\n  )", code_start)
+        pairing_parser = session[code_start:code_end]
+
+        with tempfile.TemporaryDirectory(prefix="c20-qr-private-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            pairing_dir = root / "wizard" / "qr-pairing"
+            pairing_dir.mkdir(mode=0o700, parents=True)
+            pairing_dir.chmod(0o700)
+            expected_private = pairing_dir / "private-values.json"
+            external_dir = root / "stale-private"
+            external_dir.mkdir(mode=0o700)
+            external_dir.chmod(0o700)
+            external_private = external_dir / "private-values.json"
+            private_payload = {
+                "api_url": "https://example.invalid",
+                "api_key": "fixture",
+                "environment_id": "environment-fixture",
+            }
+            for path in (expected_private, external_private):
+                path.write_text(json.dumps(private_payload) + "\n", encoding="utf-8")
+                path.chmod(0o600)
+            result_path = pairing_dir / "pairing-result.public.json"
+
+            def run_parser(private_path: Path) -> subprocess.CompletedProcess[str]:
+                result_path.write_text(
+                    json.dumps({
+                        "passed": True,
+                        "state": "authorized",
+                        "private_values_path": str(private_path),
+                    }) + "\n",
+                    encoding="utf-8",
+                )
+                return subprocess.run(
+                    [sys.executable, "-", str(result_path), str(expected_private)],
+                    input=pairing_parser,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+
+            accepted = run_parser(expected_private)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            self.assertIn(f"PRIVATE_VALUES={expected_private}", accepted.stdout)
+
+            rejected = run_parser(external_private)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("pairing_private_values_not_session_owned", rejected.stderr)
+            self.assertTrue(external_private.is_file())
+
+    def test_settings_session_rc8_requires_attested_candidate(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        guard_start = session.index('if [ -f "$WIZARD_OUT_DIR/setup-failed.json" ]; then')
+        guard_end = session.index(
+            'if [ "$SETUP_CANCELLED" != "true" ]; then\n  # util-linux',
+            guard_start,
+        )
+        guard = session[guard_start:guard_end]
+        with tempfile.TemporaryDirectory(prefix="c20-rc8-guard-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            rejected = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
+                    "SETUP_CANCELLED=false\n"
+                    "WIZARD_RC=8\n"
+                    "candidate_is_current_session_ready() { return 1; }\n"
+                    f"{guard}\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(rejected.returncode, 44, rejected.stderr)
+            self.assertIn("wizard_rc8_without_attested_candidate", rejected.stderr)
+
+            (root / "config.candidate.json").write_text("{}\n", encoding="utf-8")
+            accepted = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
+                    "SETUP_CANCELLED=false\n"
+                    "WIZARD_RC=8\n"
+                    "candidate_is_current_session_ready() { return 0; }\n"
+                    f"{guard}\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+
+    def test_settings_session_defers_while_update_lock_is_held(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        holder_marker = 'exec /usr/bin/python3 /dev/fd/3 "$UPDATE_LOCK_FILE" "$$" 3<<\'PY\''
+        lock_index = session.index(holder_marker)
+        reset_index = session.index("# Fixed /tmp paths are reused by systemd")
+        self.assertLess(session.index('mkdir "$LOCK_DIR"'), lock_index)
+        self.assertLess(lock_index, reset_index)
+        self.assertNotIn("UPDATE_FALLBACK_LOCK_FILE", session)
+        self.assertIn("os.O_CLOEXEC | os.O_NOFOLLOW", session)
+        self.assertIn("info.st_nlink != 1", session)
+        self.assertNotIn('chmod 600 "$UPDATE_LOCK_FILE"', session)
+
+        code_start = session.index("<<'PY'\n", lock_index) + len("<<'PY'\n")
+        code_end = session.index("\nPY\n}", code_start)
+        lock_holder_code = session[code_start:code_end]
+        with tempfile.TemporaryDirectory(prefix="c20-update-lock-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            lock_path = root / "updatectl.lock"
+            lock_path.touch()
+            lock_path.chmod(0o600)
+            holder_script = root / "holder.py"
+            holder_script.write_text(lock_holder_code, encoding="utf-8")
+            with lock_path.open("r+", encoding="utf-8") as handle:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                blocked = subprocess.run(
+                    [sys.executable, str(holder_script), str(lock_path), str(os.getpid())],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(blocked.returncode, 0, blocked.stderr)
+                self.assertEqual(blocked.stdout.strip(), "BUSY")
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+            holder = subprocess.Popen(
+                [sys.executable, str(holder_script), str(lock_path), str(os.getpid())],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                assert holder.stdout is not None
+                self.assertEqual(holder.stdout.readline().strip(), "LOCKED")
+                with lock_path.open("r+", encoding="utf-8") as handle:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            finally:
+                holder.terminate()
+                holder.wait(timeout=5)
+                if holder.stdout is not None:
+                    holder.stdout.close()
+                if holder.stderr is not None:
+                    holder.stderr.close()
+
+            target = root / "lock-target"
+            target.write_text("sentinel\n", encoding="utf-8")
+            target.chmod(0o644)
+            symlink = root / "lock-symlink"
+            symlink.symlink_to(target)
+            rejected = subprocess.run(
+                [sys.executable, str(holder_script), str(symlink), str(os.getpid())],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertTrue(rejected.stdout.startswith("ERROR:"))
+            self.assertEqual(target.stat().st_mode & 0o777, 0o644)
+
+    def test_settings_signal_handlers_preserve_failure_status(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        self.assertIn('on_term() { c15_trace "trap_signal=TERM"; on_exit 143; }', session)
+        self.assertIn('on_int()  { c15_trace "trap_signal=INT";  on_exit 130; }', session)
+        self.assertIn('on_hup()  { c15_trace "trap_signal=HUP";  on_exit 129; }', session)
+        bootstrap_trap = session.index("trap bootstrap_exit EXIT")
+        lock_create = session.index('if ! mkdir "$LOCK_DIR"')
+        self.assertLess(bootstrap_trap, lock_create)
+
+        function_start = session.index("cleanup_update_lock() {")
+        function_end = session.index("# Protect the session marker", function_start)
+        functions = session[function_start:function_end]
+        with tempfile.TemporaryDirectory(prefix="c20-bootstrap-signal-", dir="/tmp") as raw_root:
+            lock_dir = Path(raw_root) / "settings-session.lock"
+            proc = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"LOCK_DIR={shlex.quote(str(lock_dir))}\n"
+                    'UPDATE_LOCK_HOLDER_ACTIVE_PID=""\n'
+                    f"{functions}\n"
+                    "trap bootstrap_exit EXIT\n"
+                    "trap bootstrap_term TERM\n"
+                    "trap bootstrap_int INT\n"
+                    "trap bootstrap_hup HUP\n"
+                    'mkdir "$LOCK_DIR"\n'
+                    "kill -TERM $$\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 143, proc.stderr)
+            self.assertFalse(lock_dir.exists())
 
 
 if __name__ == "__main__":

@@ -130,14 +130,37 @@ def replace_symlink(target: str | Path, link: Path) -> None:
 
 
 def sandbox_env(sandbox: Path) -> dict[str, str]:
+    run_root = sandbox / "run"
+    tmp_root = sandbox / "tmp"
+    for path in (sandbox, run_root, tmp_root):
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path.chmod(0o700)
+    fake_systemctl = tmp_root / "sandbox-systemctl"
+    fake_systemctl.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -eu\n"
+        "case \"${1:-}:${2:-}\" in\n"
+        "  show:totem-open-settings.service) printf 'LoadState=loaded\\nActiveState=inactive\\n'; exit 0 ;;\n"
+        "  is-active:*) printf 'active\\n'; exit 0 ;;\n"
+        "  show:*) printf '0\\n'; exit 0 ;;\n"
+        "  restart:*|start:*|stop:*) exit 0 ;;\n"
+        "  *) printf 'sandbox-systemctl unsupported: %s\\n' \"$*\" >&2; exit 1 ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_systemctl.chmod(0o700)
     env = os.environ.copy()
     env.update(
         {
             "TOTEM_DATA_ROOT": str(sandbox / "data"),
             "TOTEM_SETTINGS_SESSION_LOCK": str(sandbox / "run" / "totem" / "settings-session.lock"),
+            "TOTEM_SETTINGS_REQUEST_FILE": str(sandbox / "run" / "dadooh-settings" / "request.json"),
+            "TOTEM_UPDATE_LOCK_FILE": str(sandbox / "run" / "totem-updatectl.lock"),
+            "TOTEM_SIMULATION": "1",
+            "TOTEM_TEST_SYSTEMCTL_BIN": str(fake_systemctl),
             "TOTEM_HEALTH_GRACE_SECONDS": "0",
             "TOTEM_HEALTH_CHECK_TIMEOUT_S": "5",
-            "TMPDIR": str(sandbox / "tmp"),
+            "TMPDIR": str(tmp_root),
             "PYTHONDONTWRITEBYTECODE": "1",
             "TOTEM_CORE_CURRENT": str(sandbox / "data" / "core" / "totem" / "current" / "bin"),
             "TOTEM_CORE_FALLBACK": str(sandbox / "opt" / "totem" / "core-fallback" / "bin"),
@@ -445,8 +468,10 @@ def main() -> int:
     sandbox = args.sandbox.resolve()
     evidence_dir = (args.evidence_dir or (RUNS_DIR / f"{timestamp()}-{RUN_NAME}")).resolve()
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    sandbox.mkdir(parents=True, exist_ok=True)
-    (sandbox / "tmp").mkdir(parents=True, exist_ok=True)
+    sandbox.mkdir(mode=0o700, parents=True, exist_ok=True)
+    sandbox.chmod(0o700)
+    (sandbox / "tmp").mkdir(mode=0o700, parents=True, exist_ok=True)
+    (sandbox / "tmp").chmod(0o700)
     env = sandbox_env(sandbox)
 
     blockers: list[str] = []
@@ -525,11 +550,12 @@ def main() -> int:
         lock_path = sandbox / "run" / "totem" / "settings-session.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         current_before_blocked_apply = current_target(sandbox)
-        lock_path.write_text("sandbox-settings-session\n", encoding="utf-8")
+        lock_path.mkdir(mode=0o755)
+        lock_path.chmod(0o755)
         blocked_proc = run_updatectl_apply(manifest, env)
         settings_blocked = blocked_proc.returncode == 40
         current_after_blocked_apply = current_target(sandbox)
-        lock_path.unlink(missing_ok=True)
+        lock_path.rmdir()
         final_proc = run_updatectl_apply(manifest, env)
         final_apply_passed = final_proc.returncode == 0
         settings_lock_guard_passed = (

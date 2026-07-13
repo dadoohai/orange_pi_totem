@@ -21,10 +21,14 @@ PrivateTmp=true
 NoNewPrivileges=true
 
 TimeoutStartSec=600
+SuccessExitStatus=40
 
 # Exit codes from totem-updatectl:
 #   0 success ; 10 auto-rolled-back (still treated as failure for restart logic)
 #   20 GitHub access blocked (private/forbidden) ; 21+ other errors
+#   40 deferred while the local settings session owns the device
+#   51 hard failure: settings/systemd guard state could not be trusted
+#   52 hard failure: canonical update lock unavailable or untrusted
 # The timer retries on the next OnUnitActiveSec window.
 RestartPreventExitStatus=10 20
 

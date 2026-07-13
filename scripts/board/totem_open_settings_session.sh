@@ -19,6 +19,9 @@ ACTIVE_CONFIG_PRIVATE_SOURCE_CONFIRMED="false"
 LOCAL_OPERATOR_SAVE_CONFIRMED="false"
 PRIVATE_SETTINGS_CONTEXT_PATH="/data/state/totem-settings/last-settings.json"
 LOCK_DIR="/run/totem/settings-session.lock"
+UPDATE_LOCK_FILE="${TOTEM_UPDATE_LOCK_FILE:-/run/totem-updatectl.lock}"
+UPDATE_LOCK_HOLDER_ACTIVE_PID=""
+SETTINGS_SESSION_ID=""
 RESTORE_GETTY_AFTER_SETTINGS="${TOTEM_RESTORE_GETTY_AFTER_SETTINGS:-0}"
 TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
 PAIRING_PRIVATE_VALUES_USED="false"
@@ -191,13 +194,29 @@ case "$WRITER_OUT_DIR" in
     ;;
 esac
 case "$PRIVATE_VALUES" in
-  /tmp/*)
+  /tmp/*/*)
     ;;
   *)
-    echo "error: --private-values must be under /tmp" >&2
+    echo "error: --private-values must use a dedicated directory under /tmp" >&2
     exit 2
     ;;
 esac
+if ! python3 - "$PRIVATE_VALUES" <<'PY'
+import os
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if str(path) != os.path.normpath(str(path)) or path != path.resolve(strict=False):
+    raise SystemExit("private_values_path_not_normalized")
+if pathlib.Path("/tmp") not in path.parents or path.parent == pathlib.Path("/tmp"):
+    raise SystemExit("private_values_path_not_dedicated")
+PY
+then
+  echo "error: --private-values path is unsafe" >&2
+  exit 2
+fi
+PRIVATE_VALUES_DIR="$(dirname -- "$PRIVATE_VALUES")"
 case "$APPLY_POLICY_PATH" in
   /tmp/*|/run/*)
     ;;
@@ -389,6 +408,32 @@ os.chmod(target, 0o600)
 PY
 }
 
+cleanup_update_lock() {
+  if [ -n "$UPDATE_LOCK_HOLDER_ACTIVE_PID" ]; then
+    kill -TERM "$UPDATE_LOCK_HOLDER_ACTIVE_PID" 2>/dev/null || true
+    wait "$UPDATE_LOCK_HOLDER_ACTIVE_PID" 2>/dev/null || true
+    UPDATE_LOCK_HOLDER_ACTIVE_PID=""
+  fi
+}
+
+bootstrap_exit() {
+  local rc="${1:-$?}"
+  trap - EXIT INT TERM HUP
+  cleanup_update_lock
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+  exit "$rc"
+}
+bootstrap_term() { bootstrap_exit 143; }
+bootstrap_int()  { bootstrap_exit 130; }
+bootstrap_hup()  { bootstrap_exit 129; }
+
+# Protect the session marker from the first mutating operation onward. The
+# complete cleanup handler replaces these traps before the player is stopped.
+trap bootstrap_exit EXIT
+trap bootstrap_term TERM
+trap bootstrap_int  INT
+trap bootstrap_hup  HUP
+
 umask 077
 mkdir -p "$(dirname "$LOCK_DIR")" "$REQUEST_DIR"
 chmod 700 "$REQUEST_DIR" 2>/dev/null || true
@@ -400,44 +445,217 @@ fi
 chmod 755 "$LOCK_DIR" 2>/dev/null || true
 c17_4_trace "session_lock_acquired"
 
-# Fixed /tmp paths are reused by systemd, so every lock owner needs fresh evidence.
-if ! python3 - "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" <<'PY'
+coproc UPDATE_LOCK_HOLDER {
+  exec /usr/bin/python3 /dev/fd/3 "$UPDATE_LOCK_FILE" "$$" 3<<'PY'
+import fcntl
 import os
 import pathlib
+import stat
+import sys
+import time
+
+path = pathlib.Path(sys.argv[1])
+parent_pid = int(sys.argv[2])
+try:
+    if (
+        not path.is_absolute()
+        or str(path) != os.path.normpath(str(path))
+        or path.parent.resolve(strict=True) != path.parent
+    ):
+        raise RuntimeError("lock_path_invalid")
+    parent_info = path.parent.stat()
+    if (
+        not stat.S_ISDIR(parent_info.st_mode)
+        or parent_info.st_uid != os.geteuid()
+        or stat.S_IMODE(parent_info.st_mode) & 0o022
+    ):
+        raise RuntimeError("lock_parent_untrusted")
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise RuntimeError("lock_nofollow_unavailable")
+    fd = os.open(
+        path,
+        os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
+        0o600,
+    )
+    info = os.fstat(fd)
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_nlink != 1:
+        raise RuntimeError("lock_file_untrusted")
+    os.fchmod(fd, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("BUSY", flush=True)
+        raise SystemExit(0)
+    print("LOCKED", flush=True)
+    while os.getppid() == parent_pid:
+        time.sleep(0.2)
+except Exception as exc:
+    print(f"ERROR:{type(exc).__name__}", flush=True)
+    raise SystemExit(1)
+PY
+}
+UPDATE_LOCK_HOLDER_ACTIVE_PID="$UPDATE_LOCK_HOLDER_PID"
+UPDATE_LOCK_STATUS_FD="${UPDATE_LOCK_HOLDER[0]}"
+UPDATE_LOCK_INPUT_FD="${UPDATE_LOCK_HOLDER[1]}"
+exec {UPDATE_LOCK_INPUT_FD}>&-
+UPDATE_LOCK_STATUS=""
+IFS= read -r UPDATE_LOCK_STATUS <&"$UPDATE_LOCK_STATUS_FD" || true
+exec {UPDATE_LOCK_STATUS_FD}<&-
+if [ "$UPDATE_LOCK_STATUS" != "LOCKED" ]; then
+  cleanup_update_lock
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+  if [ "$UPDATE_LOCK_STATUS" = "BUSY" ]; then
+    echo "settings_deferred_update_active" >&2
+  else
+    echo "settings_update_lock_unavailable" >&2
+  fi
+  exit 25
+fi
+
+# Fixed /tmp paths are reused by systemd, so every lock owner needs fresh evidence.
+if ! python3 - \
+  "$OUT_DIR" "$WIZARD_OUT_DIR" "$HANDOFF_OUT_DIR" "$WRITER_OUT_DIR" "$PRIVATE_VALUES_DIR" \
+  "$LOCK_DIR" "$REQUEST_DIR" "$APPLY_POLICY_PATH" "$UPDATE_LOCK_FILE" <<'PY'
+import os
+import pathlib
+import re
 import shutil
+import stat
 import sys
 
 allowed_roots = tuple(pathlib.Path(raw).resolve() for raw in ("/tmp", "/run"))
-paths = [pathlib.Path(raw) for raw in sys.argv[1:]]
-resolved_paths = []
-for path in paths:
-    if not path.is_absolute() or path in allowed_roots or path.is_symlink():
-        raise SystemExit("session_scratch_path_invalid")
-    resolved = path.resolve(strict=False)
-    if not any(root in resolved.parents for root in allowed_roots):
-        raise SystemExit("session_scratch_path_outside_allowed_roots")
-    if any(parent.is_symlink() for parent in path.parents if parent not in allowed_roots):
-        raise SystemExit("session_scratch_parent_symlink")
-    resolved_paths.append(resolved)
+scratch_paths = [pathlib.Path(raw) for raw in sys.argv[1:6]]
+protected_paths = [pathlib.Path(raw) for raw in sys.argv[6:]]
+euid = os.geteuid()
+mount_escape = re.compile(r"\\([0-7]{3})")
 
-if len(set(resolved_paths)) != len(resolved_paths):
+
+def decode_mount_field(raw: str) -> str:
+    return mount_escape.sub(lambda match: chr(int(match.group(1), 8)), raw)
+
+
+def current_mount_points() -> set[pathlib.Path]:
+    mountinfo = pathlib.Path("/proc/self/mountinfo")
+    try:
+        lines = mountinfo.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise SystemExit("session_mountinfo_unavailable") from exc
+    points = set()
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 6 or "-" not in fields:
+            raise SystemExit("session_mountinfo_invalid")
+        point = pathlib.Path(decode_mount_field(fields[4]))
+        if point.is_absolute():
+            points.add(point)
+    return points
+
+
+def reject_mount_boundary(path: pathlib.Path) -> None:
+    for mount_point in current_mount_points():
+        if mount_point == path or path in mount_point.parents:
+            raise SystemExit("session_scratch_mount_boundary")
+        if (
+            mount_point in path.parents
+            and mount_point not in allowed_roots
+            and any(root in mount_point.parents for root in allowed_roots)
+        ):
+            raise SystemExit("session_scratch_mount_ancestor")
+
+
+def normalized_allowed(path: pathlib.Path, *, label: str) -> pathlib.Path:
+    raw = str(path)
+    if not path.is_absolute() or raw != os.path.normpath(raw):
+        raise SystemExit(f"{label}_path_not_normalized")
+    resolved = path.resolve(strict=False)
+    if path != resolved or path in allowed_roots:
+        raise SystemExit(f"{label}_path_invalid")
+    if not any(root in path.parents for root in allowed_roots):
+        raise SystemExit(f"{label}_path_outside_allowed_roots")
+    return path
+
+
+scratch_paths = [normalized_allowed(path, label="session_scratch") for path in scratch_paths]
+protected_paths = [normalized_allowed(path, label="session_protected") for path in protected_paths]
+if len(set(scratch_paths)) != len(scratch_paths):
     raise SystemExit("session_scratch_paths_not_distinct")
-for index, path in enumerate(resolved_paths):
-    for other in resolved_paths[index + 1 :]:
+for index, path in enumerate(scratch_paths):
+    for other in scratch_paths[index + 1 :]:
         if path in other.parents or other in path.parents:
             raise SystemExit("session_scratch_paths_overlap")
+    for protected in protected_paths:
+        if path == protected or path in protected.parents or protected in path.parents:
+            raise SystemExit("session_scratch_overlaps_protected_path")
 
-for path in paths:
+
+def validate_existing_ancestors(path: pathlib.Path) -> None:
+    for parent in path.parents:
+        if parent in allowed_roots:
+            return
+        if not parent.exists() or parent.is_symlink():
+            raise SystemExit("session_scratch_parent_invalid")
+        info = parent.stat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != euid or stat.S_IMODE(info.st_mode) & 0o022:
+            raise SystemExit("session_scratch_parent_untrusted")
+    raise SystemExit("session_scratch_parent_outside_allowed_roots")
+
+
+def clear_scratch(path: pathlib.Path) -> None:
     if path.exists():
-        if not path.is_dir():
-            raise SystemExit("session_scratch_not_directory")
-        shutil.rmtree(path)
-    path.mkdir(mode=0o700, parents=True)
-    os.chmod(path, 0o700)
+        validate_existing_ancestors(path)
+        info = path.stat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != euid or stat.S_IMODE(info.st_mode) != 0o700:
+            raise SystemExit("session_scratch_root_untrusted")
+    else:
+        nearest = path.parent
+        while not nearest.exists():
+            nearest = nearest.parent
+        validate_existing_ancestors(nearest / "placeholder")
+        path.mkdir(mode=0o700, parents=True)
+        os.chmod(path, 0o700)
+    if path.is_symlink():
+        raise SystemExit("session_scratch_root_link_or_mount")
+    reject_mount_boundary(path)
+    if not shutil.rmtree.avoids_symlink_attacks:
+        raise SystemExit("session_scratch_platform_not_symlink_safe")
+
+    flags = os.O_RDONLY | os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    root_fd = os.open(path, flags)
+    try:
+        root_info = os.fstat(root_fd)
+        root_view = pathlib.Path(f"/proc/self/fd/{root_fd}")
+        for current, directories, files in os.walk(root_view, topdown=True, followlinks=False):
+            current_path = pathlib.Path(current)
+            for name in [*directories, *files]:
+                entry = current_path / name
+                if entry.lstat().st_dev != root_info.st_dev:
+                    raise SystemExit("session_scratch_cross_device_entry")
+        for name in os.listdir(root_fd):
+            entry_info = os.stat(name, dir_fd=root_fd, follow_symlinks=False)
+            if stat.S_ISDIR(entry_info.st_mode):
+                shutil.rmtree(name, dir_fd=root_fd)
+            else:
+                os.unlink(name, dir_fd=root_fd)
+    finally:
+        os.close(root_fd)
+
+for scratch_path in scratch_paths:
+    clear_scratch(scratch_path)
 PY
 then
   rmdir "$LOCK_DIR" 2>/dev/null || true
   echo "session_scratch_reset_failed" >&2
+  exit 24
+fi
+SETTINGS_SESSION_ID="$(python3 - <<'PY'
+import secrets
+print(secrets.token_hex(16))
+PY
+)"
+if [ -z "$SETTINGS_SESSION_ID" ]; then
+  echo "settings_session_id_unavailable" >&2
   exit 24
 fi
 
@@ -669,7 +887,7 @@ mode = data.get("mode", "candidate-only")
 if mode not in {"candidate-only", "dry-run", "real-write"}:
     raise SystemExit("apply_policy_mode_invalid")
 private_source = data.get("private_source", "none")
-if private_source not in {"none", "tmp-file", "active-config", "homologation-seed"}:
+if private_source not in {"none", "active-config", "homologation-seed"}:
     raise SystemExit("apply_policy_private_source_invalid")
 private_values = data.get("private_values_path") or default_private
 if private_source == "homologation-seed":
@@ -677,8 +895,19 @@ if private_source == "homologation-seed":
         raise SystemExit("apply_policy_private_values_invalid")
     if not bool(data.get("homologation_seed", False)):
         raise SystemExit("apply_policy_homologation_seed_not_marked")
-elif not isinstance(private_values, str) or not private_values.startswith("/tmp/"):
-    raise SystemExit("apply_policy_private_values_invalid")
+else:
+    if not isinstance(private_values, str):
+        raise SystemExit("apply_policy_private_values_invalid")
+    if private_source in {"none", "active-config"} and private_values != default_private:
+        raise SystemExit("apply_policy_private_values_not_session_owned")
+    private_path = pathlib.Path(private_values)
+    if (
+        str(private_path) != os.path.normpath(str(private_path))
+        or private_path != private_path.resolve(strict=False)
+        or pathlib.Path("/tmp") not in private_path.parents
+        or private_path.parent == pathlib.Path("/tmp")
+    ):
+        raise SystemExit("apply_policy_private_values_invalid")
 real_confirmed = bool(data.get("real_write_confirmed", False))
 dry_confirmed = bool(data.get("dry_run_confirmed", False))
 source_confirmed = bool(data.get("active_config_private_source_confirmed", False))
@@ -718,13 +947,19 @@ import stat
 import sys
 target = pathlib.Path(sys.argv[1])
 active = pathlib.Path("/data/config/config.json")
-if not str(target).startswith("/tmp/"):
+if (
+    str(target) != os.path.normpath(str(target))
+    or target != target.resolve(strict=False)
+    or pathlib.Path("/tmp") not in target.parents
+    or target.parent == pathlib.Path("/tmp")
+):
     raise SystemExit("private_values_target_not_tmp")
 if target.is_symlink():
     raise SystemExit("private_values_target_symlink")
 target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-if stat.S_IMODE(target.parent.stat().st_mode) != 0o700:
-    target.parent.chmod(0o700)
+parent_info = target.parent.stat()
+if parent_info.st_uid != os.geteuid() or stat.S_IMODE(parent_info.st_mode) != 0o700:
+    raise SystemExit("private_values_parent_untrusted")
 with active.open("r", encoding="utf-8") as handle:
     config = json.load(handle)
 payload = {}
@@ -744,20 +979,32 @@ PY
 
 validate_private_values_metadata() {
   if [ "$POLICY_PRIVATE_SOURCE" = "none" ]; then
+    if [ -e "$PRIVATE_VALUES" ] || [ -L "$PRIVATE_VALUES" ]; then
+      echo "unexpected_private_values_for_none_source" >&2
+      return 1
+    fi
     return 0
   fi
   python3 - "$PRIVATE_VALUES" <<'PY'
+import os
 import pathlib
 import stat
 import sys
 path = pathlib.Path(sys.argv[1])
-is_tmp = str(path).startswith("/tmp/")
+is_tmp = pathlib.Path("/tmp") in path.parents and path.parent != pathlib.Path("/tmp")
 is_seed = str(path) == "/data/state/totem-settings/private-values.seed.json"
-if (not is_tmp and not is_seed) or path.is_symlink() or not path.exists():
+if (
+    (not is_tmp and not is_seed)
+    or str(path) != os.path.normpath(str(path))
+    or path != path.resolve(strict=False)
+    or path.is_symlink()
+    or not path.exists()
+):
     raise SystemExit("private_values_not_ready")
 if path.parent.is_symlink():
     raise SystemExit("private_values_parent_symlink")
-if stat.S_IMODE(path.parent.stat().st_mode) & 0o077:
+parent_info = path.parent.stat()
+if parent_info.st_uid != os.geteuid() or stat.S_IMODE(parent_info.st_mode) != 0o700:
     raise SystemExit("private_values_parent_permissive")
 mode = stat.S_IMODE(path.stat().st_mode)
 if mode & 0o077 or not (mode & 0o600):
@@ -774,14 +1021,16 @@ select_qr_pairing_private_values_if_available() {
     return 0
   fi
   eval "$(
-    python3 - "$result_path" <<'PY'
+    python3 - "$result_path" "$WIZARD_OUT_DIR/qr-pairing/private-values.json" <<'PY'
 import json
+import os
 import pathlib
 import shlex
 import stat
 import sys
 
 result_path = pathlib.Path(sys.argv[1])
+expected_private_path = pathlib.Path(sys.argv[2])
 if result_path.is_symlink() or result_path.parent.is_symlink():
     raise SystemExit("pairing_result_symlink")
 try:
@@ -796,7 +1045,14 @@ raw_private = result.get("private_values_path")
 if not isinstance(raw_private, str) or not raw_private.strip():
     raise SystemExit("pairing_private_values_missing")
 private_path = pathlib.Path(raw_private)
-if private_path.is_symlink() or private_path.parent.is_symlink():
+if private_path != expected_private_path:
+    raise SystemExit("pairing_private_values_not_session_owned")
+if (
+    str(private_path) != os.path.normpath(str(private_path))
+    or private_path.is_symlink()
+    or private_path.parent.is_symlink()
+    or private_path.parent == pathlib.Path("/tmp")
+):
     raise SystemExit("pairing_private_values_symlink")
 try:
     resolved = private_path.resolve(strict=True)
@@ -806,9 +1062,10 @@ if not str(resolved).startswith("/tmp/"):
     raise SystemExit("pairing_private_values_not_tmp")
 if not resolved.is_file():
     raise SystemExit("pairing_private_values_not_file")
-parent_mode = stat.S_IMODE(resolved.parent.stat().st_mode)
+parent_info = resolved.parent.stat()
+parent_mode = stat.S_IMODE(parent_info.st_mode)
 file_mode = stat.S_IMODE(resolved.stat().st_mode)
-if parent_mode & 0o077:
+if parent_info.st_uid != os.geteuid() or parent_mode != 0o700:
     raise SystemExit("pairing_private_values_parent_permissive")
 if file_mode & 0o077 or not (file_mode & 0o600):
     raise SystemExit("pairing_private_values_file_permissive")
@@ -844,6 +1101,32 @@ try:
     print(value)
 except Exception:
     print("unknown")
+PY
+}
+
+candidate_is_current_session_ready() {
+  python3 - "$WIZARD_OUT_DIR/config.candidate.json" "$WIZARD_OUT_DIR/setup-status.json" "$SETTINGS_SESSION_ID" <<'PY'
+import json
+import pathlib
+import sys
+
+candidate = pathlib.Path(sys.argv[1])
+status_path = pathlib.Path(sys.argv[2])
+expected_session_id = sys.argv[3]
+for path in (candidate, status_path):
+    if path.is_symlink() or not path.is_file():
+        raise SystemExit("current_session_candidate_artifact_missing")
+try:
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit("current_session_status_invalid") from exc
+if not isinstance(status, dict) or status.get("state") != "candidate_ready":
+    raise SystemExit("current_session_status_not_ready")
+if not expected_session_id or status.get("settings_session_id") != expected_session_id:
+    raise SystemExit("current_session_id_mismatch")
+guardrails = status.get("guardrails")
+if not isinstance(guardrails, dict) or guardrails.get("candidate_generated") is not True:
+    raise SystemExit("current_session_candidate_not_attested")
 PY
 }
 
@@ -886,7 +1169,12 @@ cleanup_private_artifacts() {
     PRIVATE_CANDIDATE_REMOVED="true"
   fi
   if [ "$POLICY_PRIVATE_SOURCE" = "active-config" ]; then
-    rm -rf "$(dirname "$PRIVATE_VALUES")" || true
+    local private_parent
+    private_parent="$(dirname -- "$PRIVATE_VALUES")"
+    rm -f -- "$PRIVATE_VALUES" || true
+    case "$private_parent" in
+      /tmp/?*) rmdir -- "$private_parent" 2>/dev/null || true ;;
+    esac
     if [ ! -e "$PRIVATE_VALUES" ]; then
       PRIVATE_SOURCE_TEMP_REMOVED="true"
     fi
@@ -925,7 +1213,7 @@ cleanup_trigger_request() {
 cleanup_session_lock() {
   case "$LOCK_DIR" in
     /run/*|/tmp/*)
-      rm -rf "$LOCK_DIR" || true
+      rmdir -- "$LOCK_DIR" 2>/dev/null || true
       ;;
     *)
       rmdir "$LOCK_DIR" 2>/dev/null || true
@@ -1204,7 +1492,7 @@ c1523_phase() {
 c15_trace "session_sh_start argv=$# pid=$$ ppid=$PPID"
 
 on_exit() {
-  rc="$?"
+  rc="${1:-$?}"
   trap - EXIT INT TERM HUP
   c15_trace "on_exit_begin rc=$rc"
   c1523_phase "session_cleanup_start rc=$rc"
@@ -1217,13 +1505,14 @@ on_exit() {
   restore_service || true
   write_final_status || true
   restore_getty || true
+  cleanup_update_lock
   c1523_phase "session_done rc=$rc"
   c15_trace "on_exit_done rc=$rc"
   exit "$rc"
 }
-on_term() { c15_trace "trap_signal=TERM rc=$?"; on_exit; }
-on_int()  { c15_trace "trap_signal=INT rc=$?";  on_exit; }
-on_hup()  { c15_trace "trap_signal=HUP rc=$?";  on_exit; }
+on_term() { c15_trace "trap_signal=TERM"; on_exit 143; }
+on_int()  { c15_trace "trap_signal=INT";  on_exit 130; }
+on_hup()  { c15_trace "trap_signal=HUP";  on_exit 129; }
 trap on_exit EXIT
 trap on_term TERM
 trap on_int  INT
@@ -1313,13 +1602,13 @@ c1523_phase "wizard_started"
 set +e
 if [ "$MODE" = "preview" ]; then
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" \
       --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
+    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   c15_trace "openvt_started pid=$OPENVT_PID"
@@ -1351,6 +1640,27 @@ if [ -f "$WIZARD_OUT_DIR/setup-cancelled.json" ] || [ "$WIZARD_RC" = "130" ]; th
   c15_trace "wizard_cancelled_restore_path"
 fi
 
+if [ -f "$WIZARD_OUT_DIR/setup-failed.json" ]; then
+  echo "wizard_failed_current_session" >&2
+  exit 46
+fi
+if [ "$SETUP_CANCELLED" != "true" ] && [ "$WIZARD_RC" = "8" ]; then
+  if [ ! -f "$WIZARD_OUT_DIR/config.candidate.json" ] || ! candidate_is_current_session_ready; then
+    echo "wizard_rc8_without_attested_candidate" >&2
+    exit 44
+  fi
+fi
+if [ "$SETUP_CANCELLED" != "true" ]; then
+  # util-linux openvt on the target can return 8 after a completed VT handoff.
+  case "$WIZARD_RC" in
+    0|8) ;;
+    *)
+      echo "wizard_unexpected_exit:$WIZARD_RC" >&2
+      exit 46
+      ;;
+  esac
+fi
+
 if [ "$SETUP_CANCELLED" = "true" ]; then
   case "$EXPECTED_RESULT" in
     any|cancelled)
@@ -1375,6 +1685,10 @@ if [ "$EXPECTED_RESULT" = "candidate_ready" ] && [ ! -f "$WIZARD_OUT_DIR/config.
   exit 44
 fi
 if [ -f "$WIZARD_OUT_DIR/config.candidate.json" ]; then
+  if ! candidate_is_current_session_ready; then
+    echo "candidate_not_attested_by_current_session" >&2
+    exit 44
+  fi
   SELECTED_ROTATION_DEG="$(selected_rotation_from_candidate)"
 fi
 

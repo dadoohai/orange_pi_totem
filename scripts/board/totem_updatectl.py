@@ -169,8 +169,13 @@ TOKEN_FILE = Path(os.environ.get("TOTEM_DEVICE_GITHUB_TOKEN_FILE",
 SERVICE_NAME = os.environ.get("TOTEM_KIOSKY_SERVICE", "kiosky-player.service")
 SETTINGS_LOCK = Path(os.environ.get("TOTEM_SETTINGS_SESSION_LOCK",
                                     "/run/totem/settings-session.lock"))
+SETTINGS_REQUEST_FILE = Path(os.environ.get("TOTEM_SETTINGS_REQUEST_FILE",
+                                            "/run/dadooh-settings/request.json"))
 OPEN_SETTINGS_SERVICE = os.environ.get("TOTEM_OPEN_SETTINGS_SERVICE",
                                        "totem-open-settings.service")
+SYSTEMCTL_BIN = Path("/bin/systemctl")
+if os.environ.get("TOTEM_SIMULATION") == "1" and DATA_ROOT != Path("/data"):
+    SYSTEMCTL_BIN = Path(os.environ.get("TOTEM_TEST_SYSTEMCTL_BIN", str(SYSTEMCTL_BIN)))
 
 GITHUB_API = "https://api.github.com"
 GITHUB_RELEASE_PAGE_LIMIT = 10
@@ -178,6 +183,9 @@ HTTP_TIMEOUT_S = 30
 DOWNLOAD_TIMEOUT_S = 300
 USER_AGENT = "dadooh-totem-updatectl/0.2 (+orangepizero3)"
 PLAYER_RUNTIME_RELEASE_GATE_ASSET = "c18-player-runtime-release-gate.json"
+RC_PLAYER_RUNTIME_EXACT_TARGET_UNAVAILABLE = 50
+RC_COMPONENT_GUARD_UNAVAILABLE = 51
+RC_UPDATE_LOCK_UNAVAILABLE = 52
 
 HEALTH_GRACE_SECONDS = int(os.environ.get("TOTEM_HEALTH_GRACE_SECONDS", "12"))
 HEALTH_CHECK_TIMEOUT_S = int(os.environ.get("TOTEM_HEALTH_CHECK_TIMEOUT_S", "30"))
@@ -256,29 +264,68 @@ def configure_component(component: str) -> None:
         )
 
 
+class _UpdateLockResult:
+    __slots__ = ("acquired", "reason")
+
+    def __init__(self, acquired: bool, reason: str) -> None:
+        self.acquired = acquired
+        self.reason = reason
+
+    def __bool__(self) -> bool:
+        return self.acquired
+
+
 @contextlib.contextmanager
 def _update_lock(operation: str):
     """Serialize mutating update operations across components."""
     lock_path = UPDATE_LOCK_FILE
-    fallback_path = UPDATES_DIR / "updatectl.lock"
     fh = None
     try:
         try:
-            lock_path.parent.mkdir(parents=True, exist_ok=True)
-            fh = lock_path.open("a+")
-        except OSError:
-            fallback_path.parent.mkdir(parents=True, exist_ok=True)
-            fh = fallback_path.open("a+")
-            lock_path = fallback_path
+            if lock_path.parent.resolve(strict=True) != lock_path.parent:
+                raise RuntimeError("update_lock_parent_symlink")
+            parent_info = lock_path.parent.stat()
+            if (
+                not stat.S_ISDIR(parent_info.st_mode)
+                or parent_info.st_uid != os.geteuid()
+                or stat.S_IMODE(parent_info.st_mode) & 0o022
+            ):
+                raise RuntimeError("update_lock_parent_untrusted")
+            if not hasattr(os, "O_NOFOLLOW"):
+                raise RuntimeError("update_lock_nofollow_unavailable")
+            fd = os.open(
+                lock_path,
+                os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
+                0o600,
+            )
+            try:
+                info = os.fstat(fd)
+                if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_nlink != 1:
+                    raise RuntimeError("update_lock_file_untrusted")
+                os.fchmod(fd, 0o600)
+                fh = os.fdopen(fd, "a+")
+            except Exception:
+                os.close(fd)
+                raise
+        except OSError as e:
+            log("ERROR", "update_lock_unavailable", operation=operation, lock=str(lock_path), err_type=type(e).__name__)
+            print(f"update_lock_unavailable:{operation}", file=sys.stderr)
+            yield _UpdateLockResult(False, "unavailable")
+            return
+        except RuntimeError as e:
+            log("ERROR", "update_lock_untrusted", operation=operation, lock=str(lock_path), reason=str(e))
+            print(f"update_lock_untrusted:{operation}", file=sys.stderr)
+            yield _UpdateLockResult(False, "untrusted")
+            return
         try:
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             log("WARN", "update_lock_busy", operation=operation, lock=str(lock_path))
             print(f"update_lock_busy:{operation}", file=sys.stderr)
-            yield False
+            yield _UpdateLockResult(False, "busy")
             return
         log("INFO", "update_lock_acquired", operation=operation, lock=str(lock_path))
-        yield True
+        yield _UpdateLockResult(True, "acquired")
     finally:
         if fh is not None:
             try:
@@ -355,6 +402,9 @@ class HttpError(RuntimeError):
         self.url_safe = url_safe
 
 
+_AUTO_DEVICE_TOKEN = object()
+
+
 def _load_device_token() -> Optional[str]:
     try:
         if TOKEN_FILE.is_file():
@@ -366,11 +416,16 @@ def _load_device_token() -> Optional[str]:
     return None
 
 
-def _build_request(url: str, accept: str = "application/json") -> urllib.request.Request:
+def _build_request(
+    url: str,
+    accept: str = "application/json",
+    *,
+    device_token: Any = _AUTO_DEVICE_TOKEN,
+) -> urllib.request.Request:
     req = urllib.request.Request(url)
     req.add_header("User-Agent", USER_AGENT)
     req.add_header("Accept", accept)
-    token = _load_device_token()
+    token = _load_device_token() if device_token is _AUTO_DEVICE_TOKEN else device_token
     if token:
         req.add_header("Authorization", f"Bearer {token}")
     return req
@@ -383,8 +438,12 @@ def _safe_url(url: str) -> str:
     return url
 
 
-def _http_get_json(url: str) -> Any:
-    req = _build_request(url, accept="application/vnd.github+json")
+def _http_get_json(url: str, *, device_token: Any = _AUTO_DEVICE_TOKEN) -> Any:
+    req = _build_request(
+        url,
+        accept="application/vnd.github+json",
+        device_token=device_token,
+    )
     try:
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
             body = resp.read()
@@ -1909,13 +1968,31 @@ def _download_manifest_asset(asset: Dict[str, Any], dest_dir: Path) -> Path:
     return dest
 
 
-def _gh_release_by_tag(repo: str, tag: str) -> Dict[str, Any]:
+def _gh_release_by_tag(
+    repo: str,
+    tag: str,
+    *,
+    device_token: Any = _AUTO_DEVICE_TOKEN,
+) -> Dict[str, Any]:
     safe_tag = urllib.parse.quote(tag, safe="")
     url = f"{GITHUB_API}/repos/{repo}/releases/tags/{safe_tag}"
-    data = _http_get_json(url)
+    data = _http_get_json(url, device_token=device_token)
     if not isinstance(data, dict):
         raise RuntimeError("unexpected /releases/tags response shape")
     return data
+
+
+def _gh_repo_publicly_accessible(repo: str) -> bool:
+    """Confirm that an unauthenticated tag 404 came from a public repository."""
+    data = _http_get_json(f"{GITHUB_API}/repos/{repo}", device_token=None)
+    if not isinstance(data, dict):
+        raise RuntimeError("unexpected repository response shape")
+    full_name = data.get("full_name")
+    return (
+        isinstance(full_name, str)
+        and full_name.casefold() == repo.casefold()
+        and data.get("private") is False
+    )
 
 
 def _gh_asset_by_name(rel: Dict[str, Any], name: str) -> Dict[str, Any]:
@@ -1975,7 +2052,7 @@ def _gh_select_latest_release(repo: str,
 # ----------------------------------------------------------------------------
 
 def _systemctl(*args: str, check: bool = False) -> subprocess.CompletedProcess:
-    cmd = ["/bin/systemctl"] + list(args)
+    cmd = [str(SYSTEMCTL_BIN)] + list(args)
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           text=True, check=check)
 
@@ -2050,23 +2127,90 @@ def _service_health_check() -> Tuple[bool, str]:
 
 
 def _systemd_unit_state(unit: str) -> str:
-    r = _systemctl("is-active", unit)
-    return (r.stdout or "").strip() or "unknown"
+    r = _systemctl("show", unit, "--property=LoadState", "--property=ActiveState")
+    if r.returncode != 0:
+        return "unknown"
+    fields: Dict[str, str] = {}
+    for line in (r.stdout or "").splitlines():
+        key, separator, value = line.partition("=")
+        if separator:
+            fields[key.strip()] = value.strip()
+    load_state = fields.get("LoadState")
+    active_state = fields.get("ActiveState")
+    if load_state != "loaded":
+        return f"unavailable_{load_state or 'unknown'}"
+    return active_state or "unknown"
 
 
-def _totem_core_apply_guard() -> Tuple[bool, str]:
-    """Block totem-core apply while settings/writer visual session owns the device."""
-    if COMPONENT != "totem-core":
-        return True, "not totem-core"
-    if SETTINGS_LOCK.exists():
+def _runtime_guard_marker_state(path: Path, *, expected: str) -> str:
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "absent"
+    except OSError:
+        return "untrusted"
+    if stat.S_ISLNK(info.st_mode) or info.st_uid != os.geteuid():
+        return "untrusted"
+    if expected == "directory":
+        if not stat.S_ISDIR(info.st_mode):
+            return "untrusted"
+    elif expected == "file":
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            return "untrusted"
+    else:
+        raise ValueError(f"unsupported marker type: {expected}")
+    if stat.S_IMODE(info.st_mode) & 0o022:
+        return "untrusted"
+    return "present"
+
+
+def _component_apply_guard() -> Tuple[bool, str]:
+    """Block mutable OTA while the settings/writer visual session owns the device."""
+    if COMPONENT not in {"totem-core", "player-runtime"}:
+        return True, "component_does_not_share_settings_surface"
+    settings_lock_state = _runtime_guard_marker_state(SETTINGS_LOCK, expected="directory")
+    if settings_lock_state == "untrusted":
+        return False, "settings_session_lock_untrusted"
+    if settings_lock_state == "present":
         return False, "settings_session_lock_present"
     state = _systemd_unit_state(OPEN_SETTINGS_SERVICE)
-    if state in {"active", "activating"}:
+    if state != "inactive":
         return False, f"open_settings_service_{state}"
-    request_file = Path("/run/dadooh-settings/request.json")
-    if request_file.exists():
+    settings_request_state = _runtime_guard_marker_state(SETTINGS_REQUEST_FILE, expected="file")
+    if settings_request_state == "untrusted":
+        return False, "settings_request_untrusted"
+    if settings_request_state == "present":
         return False, "settings_request_present"
     return True, "settings_session_inactive"
+
+
+def _component_apply_guard_rc(reason: str) -> int:
+    if reason in {"settings_session_lock_present", "settings_request_present"}:
+        return 40
+    if reason in {
+        "open_settings_service_active",
+        "open_settings_service_activating",
+        "open_settings_service_deactivating",
+        "open_settings_service_reloading",
+    }:
+        return 40
+    return RC_COMPONENT_GUARD_UNAVAILABLE
+
+
+def _update_lock_contention_rc(lock_result: _UpdateLockResult) -> int:
+    """Treat contention owned by the settings transaction as a normal defer."""
+    if lock_result.reason != "busy":
+        return RC_UPDATE_LOCK_UNAVAILABLE
+    settings_lock_state = _runtime_guard_marker_state(SETTINGS_LOCK, expected="directory")
+    settings_request_state = _runtime_guard_marker_state(SETTINGS_REQUEST_FILE, expected="file")
+    if "untrusted" in {settings_lock_state, settings_request_state}:
+        return RC_COMPONENT_GUARD_UNAVAILABLE
+    if COMPONENT in {"totem-core", "player-runtime"} and "present" in {
+        settings_lock_state,
+        settings_request_state,
+    }:
+        return 40
+    return 49
 
 
 def _run_health_cmd(args: List[str], timeout_s: int = 45) -> Tuple[bool, str]:
@@ -2262,6 +2406,12 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
                                        player_runtime_policy_override: Optional[Dict[str, Any]] = None,
                                        player_runtime_production_authorized: bool = False) -> int:
     """Internal apply path. Tests may call this for frozen components."""
+    ok, reason = _component_apply_guard()
+    if not ok:
+        guard_rc = _component_apply_guard_rc(reason)
+        log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=reason, rc=guard_rc)
+        return guard_rc
+
     if COMPONENT == "player-runtime":
         if not PLAYER_RUNTIME_LAB_THAW_ENABLED and not player_runtime_production_authorized:
             raise RuntimeError("player-runtime unfrozen apply requires explicit lab thaw guard")
@@ -2275,11 +2425,6 @@ def _apply_from_manifest_path_unfrozen(manifest_path: Path, payload_url: Optiona
         )
 
     started_at = _utcnow_iso()
-
-    ok, reason = _totem_core_apply_guard()
-    if not ok:
-        log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=reason)
-        return 40
 
     try:
         with manifest_path.open("r", encoding="utf-8") as f:
@@ -3257,7 +3402,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     policy = _load_update_policy()
     cur_link = _read_symlink_target(CURRENT_LINK)
     prev_link = _read_symlink_target(PREVIOUS_LINK)
-    guard_ok, guard_reason = _totem_core_apply_guard()
+    guard_ok, guard_reason = _component_apply_guard()
     out = {
         "schema": SCHEMA_STATE,
         "component": COMPONENT,
@@ -3295,7 +3440,7 @@ def cmd_self_test(args: argparse.Namespace) -> int:
         checks["service_unit_known"] = True
         checks["fallback_bin_exists"] = Path("/opt/totem/core-fallback/bin").is_dir()
         checks["settings_lock_guard_available"] = True
-        guard_ok, _ = _totem_core_apply_guard()
+        guard_ok, _ = _component_apply_guard()
         checks["settings_lock_guard_clear"] = guard_ok
     else:
         checks["service_unit_known"] = True
@@ -3397,7 +3542,7 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
     if not args.dry_run and not getattr(args, "_update_lock_held", False):
         with _update_lock(f"apply-github-latest:{COMPONENT}") as locked:
             if not locked:
-                return 49
+                return _update_lock_contention_rc(locked)
             args._update_lock_held = True
             try:
                 return cmd_apply_github_latest(args)
@@ -3407,6 +3552,11 @@ def cmd_apply_github_latest(args: argparse.Namespace) -> int:
         frozen_rc = _block_frozen_apply()
         if frozen_rc is not None:
             return frozen_rc
+        guard_ok, guard_reason = _component_apply_guard()
+        if not guard_ok:
+            guard_rc = _component_apply_guard_rc(guard_reason)
+            log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+            return guard_rc
     _ensure_dirs()
     tmp = None
     if args.dry_run:
@@ -3473,12 +3623,18 @@ def cmd_apply_player_runtime_authorized(args: argparse.Namespace) -> int:
     if not args.dry_run and not getattr(args, "_update_lock_held", False):
         with _update_lock("apply-player-runtime-authorized") as locked:
             if not locked:
-                return 49
+                return _update_lock_contention_rc(locked)
             args._update_lock_held = True
             try:
                 return cmd_apply_player_runtime_authorized(args)
             finally:
                 args._update_lock_held = False
+    if not args.dry_run:
+        guard_ok, guard_reason = _component_apply_guard()
+        if not guard_ok:
+            guard_rc = _component_apply_guard_rc(guard_reason)
+            log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+            return guard_rc
     auth_path = Path(args.authorization or PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE)
     try:
         auth = _load_player_runtime_production_authorization(auth_path)
@@ -3504,8 +3660,35 @@ def cmd_apply_player_runtime_authorized(args: argparse.Namespace) -> int:
             log("ERROR", "player_runtime_authorized_stage_prepare_failed", err=str(e))
             return 45
     try:
+        lookup_token = _load_device_token()
         try:
-            rel = _gh_release_by_tag(repo, tag)
+            rel = _gh_release_by_tag(repo, tag, device_token=lookup_token)
+        except HttpError as e:
+            if e.code == 404 and lookup_token is None:
+                try:
+                    repo_accessible = _gh_repo_publicly_accessible(repo)
+                except Exception as repo_error:
+                    log(
+                        "ERROR",
+                        "player_runtime_authorized_repo_probe_failed",
+                        repo=repo,
+                        err_type=type(repo_error).__name__,
+                    )
+                    print("GITHUB_REPOSITORY_NOT_PUBLICLY_VERIFIED", file=sys.stderr)
+                    return 20
+                if repo_accessible:
+                    print("PLAYER_RUNTIME_EXACT_TARGET_NOT_AVAILABLE", file=sys.stderr)
+                    log("WARN", "player_runtime_exact_target_deferred", repo=repo, tag=tag)
+                    return RC_PLAYER_RUNTIME_EXACT_TARGET_UNAVAILABLE
+            print("GITHUB_RELEASE_NOT_ACCESSIBLE_FROM_DEVICE", file=sys.stderr)
+            log("ERROR", "player_runtime_authorized_github_release_error", code=e.code, repo=repo, tag=tag)
+            return 20 if e.code in {403, 404} else 21
+        except Exception as e:
+            log("ERROR", "player_runtime_authorized_release_lookup_failed", err=str(e))
+            print(f"player_runtime_authorized_release_lookup_failed:{e}", file=sys.stderr)
+            return 45
+
+        try:
             if rel.get("draft"):
                 raise RuntimeError("player_runtime_authorized_release_is_draft")
             if rel.get("prerelease") and not bool(auth.get("allow_prerelease", False)):
@@ -3532,14 +3715,15 @@ def cmd_apply_player_runtime_authorized(args: argparse.Namespace) -> int:
             if not isinstance(payload_url, str) or not payload_url:
                 raise RuntimeError("player_runtime_payload_url_missing")
         except HttpError as e:
-            if e.code == 404:
-                print("PRIVATE_RELEASE_REQUIRES_DEVICE_TOKEN" if not _load_device_token()
-                      else "GITHUB_RELEASE_ASSET_NOT_ACCESSIBLE_FROM_DEVICE",
-                      file=sys.stderr)
-                log("ERROR", "player_runtime_authorized_github_404", repo=repo, tag=tag)
-                return 20
-            log("ERROR", "player_runtime_authorized_github_http_error", code=e.code, reason=e.reason)
-            return 21
+            print("GITHUB_RELEASE_ASSET_NOT_ACCESSIBLE_FROM_DEVICE", file=sys.stderr)
+            log(
+                "ERROR",
+                "player_runtime_authorized_github_asset_error",
+                code=e.code,
+                repo=repo,
+                tag=tag,
+            )
+            return 20 if e.code in {403, 404} else 21
         except Exception as e:
             log("ERROR", "player_runtime_authorized_selection_failed", err=str(e))
             print(f"player_runtime_authorized_selection_failed:{e}", file=sys.stderr)
@@ -3593,7 +3777,7 @@ def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     if not getattr(args, "_update_lock_held", False):
         with _update_lock(f"apply-manifest-url:{COMPONENT}") as locked:
             if not locked:
-                return 49
+                return _update_lock_contention_rc(locked)
             args._update_lock_held = True
             try:
                 return cmd_apply_manifest_url(args)
@@ -3602,6 +3786,11 @@ def cmd_apply_manifest_url(args: argparse.Namespace) -> int:
     frozen_rc = _block_frozen_apply()
     if frozen_rc is not None:
         return frozen_rc
+    guard_ok, guard_reason = _component_apply_guard()
+    if not guard_ok:
+        guard_rc = _component_apply_guard_rc(guard_reason)
+        log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+        return guard_rc
     _ensure_dirs()
     manifest_url = args.url
     log("INFO", "fetching_manifest", url=_safe_url(manifest_url))
@@ -3645,7 +3834,7 @@ def cmd_apply_local(args: argparse.Namespace) -> int:
     if not getattr(args, "_update_lock_held", False):
         with _update_lock(f"apply-local:{COMPONENT}") as locked:
             if not locked:
-                return 49
+                return _update_lock_contention_rc(locked)
             args._update_lock_held = True
             try:
                 return cmd_apply_local(args)
@@ -3654,6 +3843,11 @@ def cmd_apply_local(args: argparse.Namespace) -> int:
     frozen_rc = _block_frozen_apply()
     if frozen_rc is not None:
         return frozen_rc
+    guard_ok, guard_reason = _component_apply_guard()
+    if not guard_ok:
+        guard_rc = _component_apply_guard_rc(guard_reason)
+        log("WARN", "apply_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+        return guard_rc
     _ensure_dirs()
     manifest_path = Path(args.manifest)
     if not manifest_path.is_file() or manifest_path.is_symlink():
@@ -3686,7 +3880,7 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     if not getattr(args, "_update_lock_held", False):
         with _update_lock(f"rollback:{COMPONENT}") as locked:
             if not locked:
-                return 49
+                return _update_lock_contention_rc(locked)
             args._update_lock_held = True
             try:
                 return cmd_rollback(args)
@@ -3697,6 +3891,11 @@ def cmd_rollback(args: argparse.Namespace) -> int:
         print(f"component_frozen_for_ota: {COMPONENT}: {frozen_reason}", file=sys.stderr)
         log("WARN", "rollback_blocked_component_frozen", component=COMPONENT, reason=frozen_reason)
         return 44
+    guard_ok, guard_reason = _component_apply_guard()
+    if not guard_ok:
+        guard_rc = _component_apply_guard_rc(guard_reason)
+        log("WARN", "rollback_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+        return guard_rc
     if COMPONENT == "player-runtime":
         _ensure_dirs()
         rc = _rollback_player_runtime_unfrozen()
@@ -3803,12 +4002,17 @@ def cmd_rollback_player_runtime_authorized(args: argparse.Namespace) -> int:
     if not getattr(args, "_update_lock_held", False):
         with _update_lock("rollback-player-runtime-authorized") as locked:
             if not locked:
-                return 49
+                return _update_lock_contention_rc(locked)
             args._update_lock_held = True
             try:
                 return cmd_rollback_player_runtime_authorized(args)
             finally:
                 args._update_lock_held = False
+    guard_ok, guard_reason = _component_apply_guard()
+    if not guard_ok:
+        guard_rc = _component_apply_guard_rc(guard_reason)
+        log("WARN", "rollback_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+        return guard_rc
     auth_path = Path(args.authorization or PLAYER_RUNTIME_PRODUCTION_AUTOPULL_AUTH_FILE)
     try:
         auth = _load_player_runtime_production_authorization(auth_path)
@@ -3885,7 +4089,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         if not getattr(args, "_update_lock_held", False):
             with _update_lock("reconcile:player-runtime") as locked:
                 if not locked:
-                    return 49
+                    return _update_lock_contention_rc(locked)
                 args._update_lock_held = True
                 try:
                     return cmd_reconcile(args)
@@ -3901,6 +4105,11 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
             )
             log("WARN", "reconcile_blocked_component_frozen", component=COMPONENT)
             return 44
+        guard_ok, guard_reason = _component_apply_guard()
+        if not guard_ok:
+            guard_rc = _component_apply_guard_rc(guard_reason)
+            log("WARN", "reconcile_blocked_by_component_guard", component=COMPONENT, reason=guard_reason, rc=guard_rc)
+            return guard_rc
         _ensure_dirs()
         rc, result = _reconcile_player_runtime_state(allow_maintenance=True)
         print(json.dumps(result, indent=2, sort_keys=True))
