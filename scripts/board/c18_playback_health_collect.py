@@ -60,6 +60,7 @@ SAMPLE_FIELDS = (
     "ipc_elapsed_ms",
     "current_alias",
     "path_alias",
+    "current_path_kind",
     "filename_alias",
     "time_pos",
     "duration",
@@ -81,6 +82,11 @@ SAMPLE_FIELDS = (
     "status_mpv_running",
     "status_snapshot_json",
 )
+
+PUBLIC_SURFACE_BASENAME_RE = re.compile(
+    r"^startup-feedback-c25-visible-state-h264-v1-(?:loading_content|player_error)-[0-9a-f]{16}-[0-9]+x[0-9]+\.mp4$"
+)
+STILL_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp")
 
 
 def sha1_short(value: Any) -> str:
@@ -104,6 +110,21 @@ def safe_path_alias(value: Any) -> str:
     if value.startswith("/"):
         return f"<local-path:{sha1_short(value)}>"
     return f"<filename:{sha1_short(value)}>"
+
+
+def classify_current_path(value: Any, current_item: dict[str, Any] | None = None) -> str:
+    """Return a non-sensitive playback evidence class for the active MPV path."""
+    if not isinstance(value, str) or not value:
+        return ""
+    basename = Path(value).name.lower()
+    if value.startswith("/tmp/") and PUBLIC_SURFACE_BASENAME_RE.fullmatch(basename):
+        return "public_surface"
+    item = current_item if isinstance(current_item, dict) else {}
+    if item.get("path_alias") != safe_path_alias(value):
+        return "unclassified_media"
+    if item.get("media_kind") == "still_image":
+        return "still_image_sidecar"
+    return "motion_media"
 
 
 def scalar(value: Any) -> str:
@@ -187,10 +208,19 @@ def sanitize_item(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {}
     path = value.get("path") if isinstance(value.get("path"), str) else ""
+    source_path = value.get("source_path") if isinstance(value.get("source_path"), str) else ""
     url = value.get("url") if isinstance(value.get("url"), str) else ""
+    source_is_image = Path(source_path).suffix.lower() in STILL_IMAGE_EXTENSIONS
+    path_is_image = Path(path).suffix.lower() in STILL_IMAGE_EXTENSIONS
+    exact_sidecar = bool(source_is_image and path == f"{source_path}.h264.mp4")
     out: dict[str, Any] = {
         "alias": media_alias(path, url),
         "path_alias": safe_path_alias(path),
+        "media_kind": (
+            "still_image"
+            if path_is_image or exact_sidecar
+            else "motion_media"
+        ),
     }
     for key in ("duration_ms", "offset_ms"):
         if isinstance(value.get(key), (int, float, str)):
@@ -350,6 +380,7 @@ def collect_samples(out_dir: Path,
             "ipc_elapsed_ms": str(ipc_elapsed_ms),
             "current_alias": current_alias,
             "path_alias": safe_path_alias(values.get("path")),
+            "current_path_kind": classify_current_path(values.get("path"), current_item),
             "filename_alias": safe_path_alias(values.get("filename")),
             "time_pos": scalar(values.get("time-pos")),
             "duration": scalar(values.get("duration")),

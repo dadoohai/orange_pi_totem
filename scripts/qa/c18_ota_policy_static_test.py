@@ -2591,7 +2591,10 @@ exec "$C18_REAL_PYTHON3" "$@"
 
         summary = (REPO_ROOT / "scripts" / "board" / "c18_playback_health_summary.py").read_text(encoding="utf-8")
         self.assertIn("def sustained_progress_stats(", summary)
-        self.assertIn("def frame_progress_segments(", summary)
+        self.assertIn("def playback_evidence_episodes(", summary)
+        self.assertIn('"content_playback_observed"', summary)
+        self.assertIn('"public_surface_availability_ok"', summary)
+        self.assertIn('"still_frame_availability_ok"', summary)
         self.assertIn("MIN_FRAME_PROGRESS_DELTAS", summary)
         self.assertIn("MAX_TRAILING_NONPROGRESS_DELTAS", summary)
         self.assertIn("estimated_frame_trailing_nonprogress_steps", summary)

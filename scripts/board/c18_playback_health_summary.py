@@ -566,31 +566,80 @@ def status_mpv_alignment_stats(rows: list[dict[str, str]]) -> dict[str, int | fl
     }
 
 
-def frame_progress_segments(rows: list[dict[str, str]]) -> list[list[float | None]]:
-    segments: list[list[float | None]] = []
-    current_key: str | None = None
-    current_segment: list[float | None] = []
+def playback_evidence_kind(row: dict[str, str]) -> str:
+    kind = str(row.get("current_path_kind") or "")
+    if kind in {"public_surface", "still_image_sidecar", "motion_media", "unclassified_media"}:
+        return kind
+    # Evidence collected before this field existed keeps the strict legacy rule.
+    return "motion_media"
+
+
+def valid_video_dimensions(row: dict[str, str]) -> bool:
+    raw = row.get("video_params_json") or ""
+    if not raw:
+        return False
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return False
+    if not isinstance(data, dict):
+        return False
+    width = as_float(data.get("dw")) or as_float(data.get("w"))
+    height = as_float(data.get("dh")) or as_float(data.get("h"))
+    return bool(width and width > 0 and height and height > 0)
+
+
+def playback_evidence_episodes(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    episodes: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    previous_seq: int | None = None
     previous_frame: float | None = None
 
-    for row in rows:
-        # Frame counters come from MPV; the public status can lag a media switch.
-        key = mpv_item_key(row) or playback_item_key(row)
-        frame_value = as_float(row.get("estimated_frame_number"))
-        reset = (
-            frame_value is not None
-            and previous_frame is not None
-            and frame_value < previous_frame
-        )
-        if current_segment and (key != current_key or reset):
-            segments.append(current_segment)
-            current_segment = []
-        current_key = key
-        current_segment.append(frame_value)
-        previous_frame = frame_value
+    def flush() -> None:
+        nonlocal current
+        if current is not None:
+            episodes.append(current)
+            current = None
 
-    if current_segment:
-        segments.append(current_segment)
-    return segments
+    for row in rows:
+        kind = playback_evidence_kind(row)
+        if row.get("ipc_result") != "success" or kind == "unclassified_media":
+            flush()
+            previous_seq = None
+            previous_frame = None
+            continue
+        key = mpv_item_key(row) or playback_item_key(row)
+        frame = as_float(row.get("estimated_frame_number"))
+        seq = as_int(row.get("seq"))
+        sequence_gap = previous_seq is not None and seq > 0 and seq != previous_seq + 1
+        frame_reset = frame is not None and previous_frame is not None and frame < previous_frame
+        if current is not None and (
+            current["kind"] != kind
+            or current["key"] != key
+            or sequence_gap
+            or frame_reset
+        ):
+            flush()
+        if current is None:
+            current = {"kind": kind, "key": key, "rows": [], "frames": []}
+        current["rows"].append(row)
+        current["frames"].append(frame)
+        previous_seq = seq if seq > 0 else None
+        previous_frame = frame
+    flush()
+    return episodes
+
+
+def episode_local_evidence(episode: dict[str, Any]) -> bool:
+    rows = episode.get("rows") if isinstance(episode.get("rows"), list) else []
+    if not rows:
+        return False
+    frame_available = any(as_float(row.get("estimated_frame_number")) is not None for row in rows)
+    hwdec_available = any(row.get("hwdec_current") == EXPECTED_HWDEC for row in rows)
+    vo_available = any(as_bool_string(row.get("vo_configured")) == "true" for row in rows)
+    typed = any(bool(row.get("current_path_kind")) for row in rows)
+    dimensions_available = any(valid_video_dimensions(row) for row in rows) if typed else True
+    return frame_available and hwdec_available and vo_available and dimensions_available
 
 
 def present_count(values: list[float | None]) -> int:
@@ -728,9 +777,15 @@ def evaluate(
     unique_aliases = len(aliases)
     status_unique_aliases = len(status_aliases)
     mpv_unique_aliases = len(mpv_aliases)
-    transition_ok = not transition_required or unique_aliases >= 2
+    episodes = playback_evidence_episodes(rows)
+    motion_episodes = [episode for episode in episodes if episode["kind"] == "motion_media"]
+    still_episodes = [episode for episode in episodes if episode["kind"] == "still_image_sidecar"]
+    public_surface_episodes = [episode for episode in episodes if episode["kind"] == "public_surface"]
+    content_episodes = motion_episodes + still_episodes
+    content_aliases = {episode["key"] for episode in content_episodes if episode.get("key")}
+    transition_ok = not transition_required or len(content_aliases) >= 2
     alignment_stats = status_mpv_alignment_stats(rows)
-    status_advanced_without_mpv = status_unique_aliases >= 2 and mpv_unique_aliases < 2
+    status_advanced_without_mpv = status_unique_aliases >= 2 and len(content_aliases) < 2
     status_mpv_path_aligned = (
         (not transition_required or alignment_stats["comparable_samples"] > 0)
         and not status_advanced_without_mpv
@@ -739,35 +794,71 @@ def evaluate(
         and alignment_stats["terminal_transition_lag_runs"] <= 1
     )
     time_pos_progressed = progressed(time_values)
-    estimated_frame_present = present_count(frame_values) >= 2
+    content_frame_values = [
+        frame
+        for episode in content_episodes
+        for frame in episode.get("frames", [])
+    ]
+    estimated_frame_present = present_count(content_frame_values) >= 1
     frame_progress_stats = sustained_progress_stats(frame_values)
-    frame_segments = frame_progress_segments(success_rows)
-    if frame_segments:
-        segment_stats = [sustained_progress_stats(values) for values in frame_segments]
-        evaluable_segment_stats = [stats for stats in segment_stats if int(stats["sample_count"]) >= 3]
-        short_segment_stats = [stats for stats in segment_stats if 0 < int(stats["sample_count"]) < 3]
-        short_failed_segment_stats = [
-            stats
-            for stats in short_segment_stats
-            if int(stats["pair_count"]) > 0 and int(stats["positive_steps"]) == 0
-        ]
-        if evaluable_segment_stats:
-            failed_segment_stats = [
-                stats for stats in evaluable_segment_stats if not bool(stats["passed"])
-            ] + short_failed_segment_stats
-            best_segment = failed_segment_stats[0] if failed_segment_stats else evaluable_segment_stats[-1]
-            frame_progressed = not failed_segment_stats
-        else:
-            best_segment = segment_stats[-1]
-            failed_segment_stats = short_failed_segment_stats or [best_segment]
-            frame_progressed = False
+    public_surface_rows = [row for row in success_rows if playback_evidence_kind(row) == "public_surface"]
+    still_image_rows = [row for row in success_rows if playback_evidence_kind(row) == "still_image_sidecar"]
+    motion_media_rows = [row for row in success_rows if playback_evidence_kind(row) == "motion_media"]
+    unclassified_media_rows = [row for row in success_rows if playback_evidence_kind(row) == "unclassified_media"]
+    still_frame_values = [as_float(row.get("estimated_frame_number")) for row in still_image_rows]
+    motion_episode_stats = [sustained_progress_stats(episode["frames"]) for episode in motion_episodes]
+    evaluable_segment_stats = [stats for stats in motion_episode_stats if int(stats["sample_count"]) >= 3]
+    short_segment_stats = [stats for stats in motion_episode_stats if 0 < int(stats["sample_count"]) < 3]
+    motion_episode_local_ok = [episode_local_evidence(episode) for episode in motion_episodes]
+    motion_proven_indexes = [
+        index
+        for index, (episode, stats, local_ok) in enumerate(
+            zip(motion_episodes, motion_episode_stats, motion_episode_local_ok)
+        )
+        if local_ok and int(stats["sample_count"]) >= 3 and bool(stats["passed"])
+    ]
+    motion_failed_indexes = [
+        index
+        for index, (episode, stats, local_ok) in enumerate(
+            zip(motion_episodes, motion_episode_stats, motion_episode_local_ok)
+        )
+        if (
+            int(stats["sample_count"]) >= 3 and (not local_ok or not bool(stats["passed"]))
+        ) or (
+            int(stats["sample_count"]) == 2
+            and (not local_ok or int(stats["positive_steps"]) == 0)
+        )
+    ]
+    failed_segment_stats = [motion_episode_stats[index] for index in motion_failed_indexes]
+    short_failed_segment_stats = [
+        motion_episode_stats[index]
+        for index in motion_failed_indexes
+        if int(motion_episode_stats[index]["sample_count"]) < 3
+    ]
+    still_episode_local_ok = [episode_local_evidence(episode) for episode in still_episodes]
+    public_surface_episode_local_ok = [episode_local_evidence(episode) for episode in public_surface_episodes]
+    still_frame_available = bool(still_episodes) and all(still_episode_local_ok)
+    motion_frame_progress_ok = not motion_failed_indexes
+    still_frame_availability_ok = all(still_episode_local_ok)
+    public_surface_availability_ok = all(public_surface_episode_local_ok)
+    content_playback_observed = bool(motion_proven_indexes) or (
+        bool(still_episodes) and still_frame_availability_ok
+    )
+    frame_progressed = (
+        content_playback_observed
+        and motion_frame_progress_ok
+        and still_frame_availability_ok
+    )
+    if failed_segment_stats:
+        best_segment = failed_segment_stats[0]
+    elif motion_proven_indexes:
+        best_segment = motion_episode_stats[motion_proven_indexes[-1]]
+    elif motion_episode_stats:
+        best_segment = motion_episode_stats[-1]
+    elif still_frame_values:
+        best_segment = sustained_progress_stats(still_frame_values)
     else:
-        frame_progressed = bool(frame_progress_stats["passed"])
         best_segment = frame_progress_stats
-        evaluable_segment_stats = []
-        short_segment_stats = []
-        short_failed_segment_stats = []
-        failed_segment_stats = [] if frame_progressed else [frame_progress_stats]
 
     panfrost_faults_zero = panfrost_faults == 0
     panfrost_faults_delta_required = panfrost_fault_policy == "delta"
@@ -797,6 +888,10 @@ def evaluate(
         "vo_configured_present": vo_configured_true_samples > 0,
         "vo_configured_no_unexpected": vo_configured_unexpected_samples == 0,
         "estimated_frame_present": estimated_frame_present,
+        "content_playback_observed": content_playback_observed,
+        "motion_frame_progress_ok": motion_frame_progress_ok,
+        "still_frame_availability_ok": still_frame_availability_ok,
+        "public_surface_availability_ok": public_surface_availability_ok,
         "playback_progressed": frame_progressed,
         "status_no_failures": status_failure_samples == 0,
         "transitions_observed_when_required": transition_ok,
@@ -858,7 +953,8 @@ def evaluate(
             "status_unique_aliases": status_unique_aliases,
             "mpv_unique_aliases": mpv_unique_aliases,
             "status_transitions_observed": status_unique_aliases >= 2,
-            "mpv_media_transitions_observed": mpv_unique_aliases >= 2,
+            "mpv_media_transitions_observed": len(content_aliases) >= 2,
+            "mpv_content_unique_aliases": len(content_aliases),
             "status_mpv_comparable_samples": alignment_stats["comparable_samples"],
             "status_mpv_mismatch_samples": alignment_stats["mismatch_samples"],
             "status_mpv_max_allowed_mismatch_samples": alignment_stats["max_allowed_mismatch_samples"],
@@ -900,6 +996,20 @@ def evaluate(
             "estimated_frame_evaluable_segments": len(evaluable_segment_stats),
             "estimated_frame_short_segments": len(short_segment_stats),
             "estimated_frame_failed_segments": len(failed_segment_stats),
+            "motion_media_episodes": len(motion_episodes),
+            "motion_media_proven_episodes": len(motion_proven_indexes),
+            "motion_media_failed_episodes": len(motion_failed_indexes),
+            "still_image_episodes": len(still_episodes),
+            "still_image_failed_episodes": len([ok for ok in still_episode_local_ok if not ok]),
+            "public_surface_episodes": len(public_surface_episodes),
+            "public_surface_failed_episodes": len(
+                [ok for ok in public_surface_episode_local_ok if not ok]
+            ),
+            "public_surface_samples": len(public_surface_rows),
+            "still_image_sidecar_samples": len(still_image_rows),
+            "still_image_frame_available": still_frame_available,
+            "motion_media_samples": len(motion_media_rows),
+            "unclassified_media_samples": len(unclassified_media_rows),
             "status_failure_samples": status_failure_samples,
             "nrestarts_delta": nrestarts_delta,
             "mpv_count": mpv_count,

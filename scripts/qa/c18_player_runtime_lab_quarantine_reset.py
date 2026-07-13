@@ -10,6 +10,7 @@ thaw the public updater CLI, publish, fetch, apply, rollback, or touch symlinks.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import subprocess
@@ -25,6 +26,7 @@ sys.path.insert(0, str(BOARD_DIR))
 sys.path.insert(0, str(QA_DIR))
 
 import c18_player_runtime_release_gate as release_gate
+import c18_playback_health_collect as playback_collect
 import c18_playback_health_summary as playback_health
 import totem_updatectl as updatectl
 
@@ -42,6 +44,7 @@ RESET_SCOPES = {
     "lab_canary_display_contention_retry",
     "lab_harness_ipc_drm_retry",
     "lab_candidate_startup_status_retry",
+    "lab_c25_surface_warmup_retry",
     "lab_prior_panfrost_absolute_retry",
     "h2_rollback_arm_timeout_previous_linked",
 }
@@ -52,6 +55,7 @@ NO_CANARY_SCOPE = "lab_no_canary_retry"
 CANARY_DISPLAY_CONTENTION_SCOPE = "lab_canary_display_contention_retry"
 HARNESS_IPC_DRM_SCOPE = "lab_harness_ipc_drm_retry"
 STARTUP_STATUS_SCOPE = "lab_candidate_startup_status_retry"
+SURFACE_WARMUP_SCOPE = "lab_c25_surface_warmup_retry"
 PRIOR_PANFROST_ABSOLUTE_SCOPE = "lab_prior_panfrost_absolute_retry"
 SETUP_CONTENTION_FAILURE_REASONS = {
     "hwdec_expected_present",
@@ -105,6 +109,7 @@ HARNESS_IPC_DRM_FAILURE_REASONS = {
     "vo_configured_present",
 }
 STARTUP_STATUS_FAILURE_REASONS = {"status_no_failures"}
+SURFACE_WARMUP_FAILURE_REASONS = {"playback_progressed"}
 PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS = {
     "panfrost_faults_zero",
     "panfrost_faults_clean_for_policy",
@@ -753,6 +758,150 @@ def startup_status_retry_evidence(candidate_health_dir: Path | None, identity: d
     return not blockers, blockers, details
 
 
+def surface_warmup_retry_evidence(
+    candidate_health_dir: Path | None,
+    identity: dict[str, Any],
+) -> tuple[bool, list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    details: dict[str, Any] = {"candidate_health_dir": str(candidate_health_dir) if candidate_health_dir else None}
+    if candidate_health_dir is None:
+        return False, ["surface_warmup_evidence_missing"], details
+
+    result_path = candidate_health_dir / "candidate-health-result.json"
+    samples_path = candidate_health_dir / "health" / "playback-samples.tsv"
+    try:
+        result = read_json(result_path)
+        with samples_path.open("r", encoding="utf-8", newline="") as fh:
+            reader = csv.DictReader(fh, delimiter="\t")
+            rows = list(reader)
+            fieldnames = list(reader.fieldnames or [])
+    except Exception as exc:
+        return False, [f"surface_warmup_evidence_read_failed:{type(exc).__name__}"], details
+
+    surface_files = sorted(
+        (candidate_health_dir / "runtime").glob("startup-feedback-c25-visible-state-*.mp4")
+    )
+    surface_aliases = {playback_collect.safe_path_alias(str(path)) for path in surface_files}
+    surface_rows = [row for row in rows if row.get("path_alias") in surface_aliases]
+    motion_rows = [
+        row
+        for row in rows
+        if row.get("ipc_result") == "success" and row.get("path_alias") not in surface_aliases
+    ]
+    for row in rows:
+        row["current_path_kind"] = (
+            "public_surface"
+            if row.get("path_alias") in surface_aliases
+            else "motion_media" if row.get("ipc_result") == "success" else ""
+        )
+    if "current_path_kind" not in fieldnames:
+        fieldnames.append("current_path_kind")
+
+    expected = result.get("expected") if isinstance(result.get("expected"), dict) else {}
+    panfrost_policy = str(expected.get("panfrost_fault_policy") or "")
+    try:
+        with tempfile.TemporaryDirectory(prefix="c18-surface-warmup-reevaluate-") as tmp:
+            corrected_samples = Path(tmp) / "playback-samples.tsv"
+            with corrected_samples.open("w", encoding="utf-8", newline="") as fh:
+                writer = csv.DictWriter(fh, delimiter="\t", fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+            reevaluated = playback_health.evaluate(
+                samples_path=corrected_samples,
+                systemd_path=candidate_health_dir / "health" / "deep-health-systemd.json",
+                process_path=candidate_health_dir / "health" / "deep-health-process.json",
+                kernel_path=candidate_health_dir / "health" / "deep-health-kernel.json",
+                player_counters_path=candidate_health_dir / "health" / "deep-health-player-counters.json",
+                watchdog_path=(
+                    candidate_health_dir / "health" / "deep-health-watchdog.json"
+                    if (candidate_health_dir / "health" / "deep-health-watchdog.json").exists()
+                    else None
+                ),
+                panfrost_fault_policy=panfrost_policy,
+            )
+    except Exception as exc:
+        return False, [f"surface_warmup_reevaluate_failed:{type(exc).__name__}"], details
+
+    failures = set(str(item) for item in (result.get("failure_reasons") or []))
+    checks = result.get("checks") if isinstance(result.get("checks"), dict) else {}
+    counters = result.get("counters") if isinstance(result.get("counters"), dict) else {}
+    false_checks = sorted(key for key, value in checks.items() if value is False)
+    teardown = result.get("candidate_teardown") if isinstance(result.get("candidate_teardown"), dict) else {}
+    stop = teardown.get("stop") if isinstance(teardown.get("stop"), dict) else {}
+    surface_shape_ok = bool(surface_rows) and all(
+        row.get("ipc_result") == "success"
+        and playback_health.as_float(row.get("estimated_frame_number")) is not None
+        and 0 < (playback_health.as_float(row.get("duration")) or 0) <= 0.1
+        for row in surface_rows
+    )
+    reevaluated_counters = (
+        reevaluated.get("counters") if isinstance(reevaluated.get("counters"), dict) else {}
+    )
+    details.update({
+        "candidate_version": result.get("candidate_version"),
+        "failure_reasons": sorted(failures),
+        "false_checks": false_checks,
+        "surface_file_count": len(surface_files),
+        "surface_sample_count": len(surface_rows),
+        "motion_sample_count": len(motion_rows),
+        "surface_shape_ok": surface_shape_ok,
+        "panfrost_fault_policy": panfrost_policy,
+        "reevaluated_passed": reevaluated.get("passed"),
+        "reevaluated_failure_reasons": reevaluated.get("failure_reasons"),
+        "reevaluated_motion_samples": reevaluated_counters.get("motion_media_samples"),
+        "reevaluated_surface_samples": reevaluated_counters.get("public_surface_samples"),
+        "reevaluated_frame_progressed": reevaluated_counters.get("estimated_frame_progressed"),
+        "gpu_faults_delta": teardown.get("gpu_faults_delta"),
+        "stop_method": stop.get("method"),
+        "stop_returncode": stop.get("returncode"),
+    })
+    if result.get("candidate_version") != identity.get("version"):
+        blockers.append("surface_warmup_candidate_version_mismatch")
+    if result.get("observed_kiosk_py_sha256") != identity.get("kiosk_py_sha256"):
+        blockers.append("surface_warmup_kiosk_identity_mismatch")
+    if result.get("observed_tree_sha256") != identity.get("tree_sha256"):
+        blockers.append("surface_warmup_tree_identity_mismatch")
+    if result.get("passed") is not False:
+        blockers.append("surface_warmup_result_not_failed")
+    if failures != SURFACE_WARMUP_FAILURE_REASONS or false_checks != ["playback_progressed"]:
+        blockers.append("surface_warmup_failure_shape_mismatch")
+    if result.get("canary_media_used") is not True:
+        blockers.append("surface_warmup_canary_missing")
+    if result.get("candidate_startup_surface_health_required") is not True:
+        blockers.append("surface_warmup_surface_not_required")
+    if checks.get("candidate_startup_surface_local_evidence") is not True:
+        blockers.append("surface_warmup_local_surface_evidence_missing")
+    if not surface_files or not surface_shape_ok:
+        blockers.append("surface_warmup_surface_samples_not_exact")
+    if len(motion_rows) < 3:
+        blockers.append("surface_warmup_motion_samples_insufficient")
+    if panfrost_policy != "delta":
+        blockers.append("surface_warmup_panfrost_policy_not_delta")
+    if int(counters.get("media_load_failed") or 0) != 0 or int(counters.get("mpv_restart") or 0) != 0:
+        blockers.append("surface_warmup_player_failures_seen")
+    if int(counters.get("nrestarts_delta") or 0) != 0:
+        blockers.append("surface_warmup_service_restart_seen")
+    if checks.get("panfrost_faults_delta_zero") is not True:
+        blockers.append("surface_warmup_gpu_fault_delta_seen")
+    if checks.get("ext4_errors_zero") is not True or checks.get("mmc_timeout_reset_zero") is not True:
+        blockers.append("surface_warmup_storage_fault_seen")
+    if teardown.get("passed") is not True or teardown.get("process_stopped_cleanly") is not True:
+        blockers.append("surface_warmup_teardown_not_clean")
+    if teardown.get("gpu_faults_delta") != 0:
+        blockers.append("surface_warmup_teardown_gpu_fault_delta")
+    if stop.get("method") != "sigterm" or stop.get("returncode") != 0:
+        blockers.append("surface_warmup_candidate_exit_shape")
+    if reevaluated.get("passed") is not True:
+        blockers.append("surface_warmup_reevaluated_not_passing")
+    if int(reevaluated_counters.get("public_surface_samples") or 0) != len(surface_rows):
+        blockers.append("surface_warmup_surface_classification_mismatch")
+    if int(reevaluated_counters.get("motion_media_samples") or 0) != len(motion_rows):
+        blockers.append("surface_warmup_motion_classification_mismatch")
+    if reevaluated_counters.get("estimated_frame_progressed") is not True:
+        blockers.append("surface_warmup_motion_not_progressing")
+    return not blockers, blockers, details
+
+
 def quarantine_reason_allowed(entry: dict[str, Any],
                               *,
                               reset_scope: str,
@@ -761,6 +910,7 @@ def quarantine_reason_allowed(entry: dict[str, Any],
                               canary_display_contention_ok: bool,
                               harness_ipc_drm_retry_ok: bool,
                               startup_status_retry_ok: bool,
+                              surface_warmup_retry_ok: bool,
                               prior_panfrost_absolute_ok: bool) -> bool:
     reason = str(entry.get("reason") or "")
     if reset_scope == SETUP_CONTENTION_SCOPE:
@@ -776,6 +926,8 @@ def quarantine_reason_allowed(entry: dict[str, Any],
         return harness_ipc_drm_retry_ok and set(reason.split(",")) == HARNESS_IPC_DRM_FAILURE_REASONS
     if reset_scope == STARTUP_STATUS_SCOPE:
         return startup_status_retry_ok and set(reason.split(",")) == STARTUP_STATUS_FAILURE_REASONS
+    if reset_scope == SURFACE_WARMUP_SCOPE:
+        return surface_warmup_retry_ok and set(reason.split(",")) == SURFACE_WARMUP_FAILURE_REASONS
     if reset_scope == PRIOR_PANFROST_ABSOLUTE_SCOPE:
         return prior_panfrost_absolute_ok and set(reason.split(",")) == PRIOR_PANFROST_ABSOLUTE_FAILURE_REASONS
     return reason in ALLOWED_QUARANTINE_REASONS
@@ -790,6 +942,7 @@ def matches_target(entry: dict[str, Any],
                    canary_display_contention_ok: bool,
                    harness_ipc_drm_retry_ok: bool,
                    startup_status_retry_ok: bool,
+                   surface_warmup_retry_ok: bool,
                    prior_panfrost_absolute_ok: bool) -> bool:
     return identity_matches_target(entry, identity) and quarantine_reason_allowed(
         entry,
@@ -799,6 +952,7 @@ def matches_target(entry: dict[str, Any],
         canary_display_contention_ok=canary_display_contention_ok,
         harness_ipc_drm_retry_ok=harness_ipc_drm_retry_ok,
         startup_status_retry_ok=startup_status_retry_ok,
+        surface_warmup_retry_ok=surface_warmup_retry_ok,
         prior_panfrost_absolute_ok=prior_panfrost_absolute_ok,
     )
 
@@ -899,6 +1053,10 @@ def main(argv: list[str]) -> int:
         args.failed_candidate_health_dir,
         identity,
     ) if args.reset_scope == STARTUP_STATUS_SCOPE else (False, [], {})
+    surface_warmup_ok, surface_warmup_blockers, surface_warmup_details = surface_warmup_retry_evidence(
+        args.failed_candidate_health_dir,
+        identity,
+    ) if args.reset_scope == SURFACE_WARMUP_SCOPE else (False, [], {})
     prior_panfrost_ok, prior_panfrost_blockers, prior_panfrost_details = prior_panfrost_absolute_retry_evidence(
         args.failed_candidate_health_dir,
         identity,
@@ -929,6 +1087,7 @@ def main(argv: list[str]) -> int:
             canary_display_contention_ok=canary_display_contention_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
             startup_status_retry_ok=startup_status_ok,
+            surface_warmup_retry_ok=surface_warmup_ok,
             prior_panfrost_absolute_ok=prior_panfrost_ok,
         )
     ]
@@ -942,6 +1101,7 @@ def main(argv: list[str]) -> int:
             canary_display_contention_ok=canary_display_contention_ok,
             harness_ipc_drm_retry_ok=harness_ipc_drm_ok,
             startup_status_retry_ok=startup_status_ok,
+            surface_warmup_retry_ok=surface_warmup_ok,
             prior_panfrost_absolute_ok=prior_panfrost_ok,
         )
     ]
@@ -959,6 +1119,7 @@ def main(argv: list[str]) -> int:
     blockers.extend(canary_display_contention_blockers)
     blockers.extend(harness_ipc_drm_blockers)
     blockers.extend(startup_status_blockers)
+    blockers.extend(surface_warmup_blockers)
     blockers.extend(prior_panfrost_blockers)
     if blockers:
         still_quarantined, quarantine_reason = updatectl._player_runtime_is_quarantined(identity, state)
@@ -983,6 +1144,7 @@ def main(argv: list[str]) -> int:
             "canary_display_contention_retry_evidence": canary_display_contention_details,
             "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
             "startup_status_retry_evidence": startup_status_details,
+            "surface_warmup_retry_evidence": surface_warmup_details,
             "prior_panfrost_absolute_retry_evidence": prior_panfrost_details,
             "still_quarantined": still_quarantined,
             "quarantine_reason": quarantine_reason,
@@ -1098,6 +1260,7 @@ def main(argv: list[str]) -> int:
         "canary_display_contention_retry_evidence": canary_display_contention_details,
         "harness_ipc_drm_retry_evidence": harness_ipc_drm_details,
         "startup_status_retry_evidence": startup_status_details,
+        "surface_warmup_retry_evidence": surface_warmup_details,
         "prior_panfrost_absolute_retry_evidence": prior_panfrost_details,
         "reverted": reverted,
         "still_quarantined": still_quarantined,

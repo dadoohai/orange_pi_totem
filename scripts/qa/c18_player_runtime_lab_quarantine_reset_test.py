@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import importlib.util
 import contextlib
+import csv
 import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -341,6 +343,123 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             encoding="utf-8",
         )
         return health_dir
+
+    def write_surface_warmup_evidence(
+        self,
+        root: Path,
+        identity: dict,
+        *,
+        freeze_motion: bool = False,
+    ) -> Path:
+        candidate_dir = root / "failed-surface-warmup-health"
+        health_dir = candidate_dir / "health"
+        fixture_dir = REPO_ROOT / "scripts" / "board" / "testdata" / "c18_playback_health" / "pass"
+        shutil.copytree(fixture_dir, health_dir)
+        runtime_dir = candidate_dir / "runtime"
+        runtime_dir.mkdir(parents=True)
+        surface_path = runtime_dir / "startup-feedback-c25-visible-state-loading-test.mp4"
+        surface_path.write_bytes(b"surface")
+        surface_alias = reset.playback_collect.safe_path_alias(str(surface_path))
+
+        samples_path = health_dir / "playback-samples.tsv"
+        with samples_path.open("r", encoding="utf-8", newline="") as fh:
+            base_rows = list(csv.DictReader(fh, delimiter="\t"))
+        rows: list[dict[str, str]] = []
+        for index in range(2):
+            row = base_rows[0].copy()
+            row["seq"] = str(index + 1)
+            row["rel_sec"] = str(index)
+            row["current_alias"] = surface_alias
+            row["path_alias"] = surface_alias
+            row["duration"] = "0.04"
+            row["estimated_frame_number"] = "0"
+            row["status_current_alias"] = ""
+            row["status_path_alias"] = ""
+            row["status_current_index"] = ""
+            row["video_params_json"] = json.dumps({"dw": 1280, "dh": 720}, separators=(",", ":"))
+            rows.append(row)
+        for index, source in enumerate(base_rows, start=3):
+            row = source.copy()
+            row["seq"] = str(index)
+            row["rel_sec"] = str(index - 1)
+            row["duration"] = "30.0"
+            row["video_params_json"] = json.dumps({"dw": 1280, "dh": 720}, separators=(",", ":"))
+            if freeze_motion:
+                row["estimated_frame_number"] = "99"
+            rows.append(row)
+        with samples_path.open("w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(fh, delimiter="\t", fieldnames=list(rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(rows)
+
+        (health_dir / "systemd.json").replace(health_dir / "deep-health-systemd.json")
+        systemd = json.loads((health_dir / "deep-health-systemd.json").read_text(encoding="utf-8"))
+        systemd["target_mode"] = "candidate"
+        (health_dir / "deep-health-systemd.json").write_text(json.dumps(systemd) + "\n", encoding="utf-8")
+        (health_dir / "process.json").replace(health_dir / "deep-health-process.json")
+        process = json.loads((health_dir / "deep-health-process.json").read_text(encoding="utf-8"))
+        process["process_filter"] = "input-ipc-server"
+        (health_dir / "deep-health-process.json").write_text(json.dumps(process) + "\n", encoding="utf-8")
+        (health_dir / "kernel.json").replace(health_dir / "deep-health-kernel.json")
+        kernel = json.loads((health_dir / "deep-health-kernel.json").read_text(encoding="utf-8"))
+        kernel.update({"panfrost_faults_start": 0, "panfrost_faults_delta": 0})
+        (health_dir / "deep-health-kernel.json").write_text(json.dumps(kernel) + "\n", encoding="utf-8")
+        (health_dir / "player-counters.json").replace(health_dir / "deep-health-player-counters.json")
+
+        true_checks = {
+            "samples_present": True,
+            "ipc_success_present": True,
+            "ipc_stable_after_success": True,
+            "hwdec_expected_present": True,
+            "hwdec_no_unexpected": True,
+            "vo_configured_present": True,
+            "vo_configured_no_unexpected": True,
+            "estimated_frame_present": True,
+            "playback_progressed": False,
+            "status_no_failures": True,
+            "transitions_observed_when_required": True,
+            "status_mpv_path_aligned": True,
+            "service_active": True,
+            "nrestarts_delta_present": True,
+            "nrestarts_stable": True,
+            "single_mpv": True,
+            "candidate_process_filtered": True,
+            "mpv_path_c18_stack": True,
+            "media_load_failed_present": True,
+            "media_load_failed_zero": True,
+            "mpv_restart_present": True,
+            "mpv_restart_zero": True,
+            "panfrost_faults_delta_present": True,
+            "panfrost_faults_delta_zero": True,
+            "ext4_errors_zero": True,
+            "mmc_timeout_reset_zero": True,
+            "candidate_startup_surface_local_evidence": True,
+            "candidate_teardown_process_stopped_cleanly": True,
+            "candidate_teardown_gpu_fault_delta_zero": True,
+        }
+        (candidate_dir / "candidate-health-result.json").write_text(json.dumps({
+            "candidate_version": identity["version"],
+            "observed_kiosk_py_sha256": identity["kiosk_py_sha256"],
+            "observed_tree_sha256": identity["tree_sha256"],
+            "canary_media_used": True,
+            "candidate_startup_surface_health_required": True,
+            "passed": False,
+            "failure_reasons": ["playback_progressed"],
+            "expected": {"panfrost_fault_policy": "delta"},
+            "checks": true_checks,
+            "counters": {
+                "media_load_failed": 0,
+                "mpv_restart": 0,
+                "nrestarts_delta": 0,
+            },
+            "candidate_teardown": {
+                "passed": True,
+                "process_stopped_cleanly": True,
+                "gpu_faults_delta": 0,
+                "stop": {"method": "sigterm", "returncode": 0},
+            },
+        }, sort_keys=True) + "\n", encoding="utf-8")
+        return candidate_dir
 
     def test_guard_blocks_without_env_and_flag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1164,6 +1283,62 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
             result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
             self.assertIn("target_linked_active", result["blockers"])
             self.assertEqual(result["active_links"], ["current"])
+            self.assertEqual(result["removed_count"], 0)
+
+    def test_surface_warmup_retry_removes_exact_false_negative(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-surface-warmup")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(data_root, out, [{**identity, "reason": "playback_progressed"}])
+            health_dir = self.write_surface_warmup_evidence(root, identity)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_c25_surface_warmup_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-c25-surface-warmup-retry",
+            ])
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(reset.updatectl._quarantine_entries(reset.updatectl._read_state()), [])
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            evidence = result["surface_warmup_retry_evidence"]
+            self.assertTrue(result["passed"])
+            self.assertTrue(evidence["reevaluated_passed"])
+            self.assertEqual(evidence["surface_sample_count"], 2)
+            self.assertEqual(evidence["motion_sample_count"], 4)
+
+    def test_surface_warmup_retry_rejects_actual_motion_stall(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, payload, identity = self.make_package(root, "runtime-reset-surface-motion-stall")
+            data_root = root / "data"
+            out = root / "out"
+            self.seed_state(data_root, out, [{**identity, "reason": "playback_progressed"}])
+            health_dir = self.write_surface_warmup_evidence(root, identity, freeze_motion=True)
+
+            rc = self.run_reset([
+                "--lab-only-quarantine-reset",
+                "--manifest", str(manifest),
+                "--payload", str(payload),
+                "--data-root", str(data_root),
+                "--output-dir", str(out),
+                "--reset-scope", "lab_c25_surface_warmup_retry",
+                "--failed-candidate-health-dir", str(health_dir),
+                "--reason", "unit-c25-surface-warmup-retry",
+            ])
+
+            self.assertEqual(rc, 1)
+            self.assertEqual(len(reset.updatectl._quarantine_entries(reset.updatectl._read_state())), 1)
+            result = json.loads((out / "quarantine-reset.json").read_text(encoding="utf-8"))
+            self.assertIn("surface_warmup_reevaluated_not_passing", result["blockers"])
+            self.assertIn("surface_warmup_motion_not_progressing", result["blockers"])
             self.assertEqual(result["removed_count"], 0)
 
     def test_harness_ipc_drm_retry_removes_matching_quarantine_with_evidence(self) -> None:
