@@ -9,13 +9,14 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=off_board_ready_for_hdmi_homologation
+status=c25a_totem_core_accepted_on_homologation_board
 scope=totem-core_plus_image_bound_launcher_hook
 totem_core_subset_packagable=true
 launcher_retry_hook_requires_next_image=true
 offline_tests=passed
 generated_visual_review=passed
-hdmi_final_acceptance=pending
+hdmi_c25a_visual_acceptance=passed
+writer_mutating_e2e=not_repeated_in_this_round
 package_not_yet_promoted=true
 next_reference_image_pending=true
 ```
@@ -173,3 +174,51 @@ Proxima ordem objetiva:
 4. aplicar a candidata `totem-core` em homologacao e validar na tela real;
 5. registrar C25A como aceita ou fazer rollback;
 6. manter C25B (`player-runtime` com processo vivo) como proxima fatia governada.
+
+## Checkpoint De Aceite C25A Na Placa - 2026-07-13
+
+Estado atual:
+
+```text
+c25a_totem_core=accepted_on_homologation_board
+package=c25.1-visible-states-20260713T001600Z-7f204d7
+package_source_commit=7f204d725d4d10d4add85909a1a6d0fc99b23fd8
+package_payload_sha256=4407e407bae3badf041e109215cb16e15af6b70563f71c238c4d580ee95f1178
+release_gate=82_of_82_clean
+board_apply=passed
+wizard_navigation_and_cancel=passed_on_real_board
+incomplete_review_block=passed_on_real_board
+writer_state_layout=passed_on_real_framebuffer
+player_return=passed
+policy_restore=byte_identical
+rollback_target=c21.11-qr-pairing-20260712T021729Z-4068839
+stable_promotion=not_authorized
+image_bound_launcher_hook=pending_reference_image
+c25b_player_owned_live_states=pending_separate_slice
+```
+
+O pacote `totem-core` foi aplicado pelo updater governado. A placa abriu o
+wizard real, navegou ate a Revisao, recusou conclusao incompleta, cancelou sem
+salvar e voltou a reproduzir midia. As telas de confirmacao, gravacao, sucesso
+e falha foram inspecionadas no framebuffer real e ficaram legiveis, sem corte
+ou sobreposicao.
+
+Para nao alterar novamente uma configuracao funcional, esta sessao nao repetiu
+uma escrita real de Wi-Fi/ambiente. Portanto, o resultado confirma a navegacao,
+os guardrails, o retorno ao player e o layout fisico dos estados do writer; nao
+cria uma nova claim de writer E2E mutante.
+
+A policy temporariamente aberta para `homologation` foi restaurada byte a byte
+para `stable`, o timer ficou ativo, o servico voltou ativo e o rollback para
+C21.11 permanece disponivel. C25A fica aceita na bancada, sem promocao publica.
+
+Evidencia:
+`docs/evidence/c25-visible-states/20260713T003029Z-board-hdmi-acceptance/`.
+
+Proxima ordem objetiva:
+
+1. consolidar o hook image-bound na proxima imagem de referencia;
+2. tratar C25B como fatia separada de `player-runtime` para estados visiveis
+   enquanto o player possui a tela;
+3. promover C25A somente dentro do fluxo OTA governado, sem inferir que o
+   aceite desta placa valida automaticamente uma nova imagem.
