@@ -7,7 +7,14 @@ umask 077
 MARKER="/var/lib/dadooh/production-identity-initialized"
 MARKER_TMP="${MARKER}.tmp"
 
-if [ -s "$MARKER" ]; then
+identity_complete() {
+  [ -s "$MARKER" ] \
+    && [ -s /etc/ssh/ssh_host_rsa_key ] \
+    && [ -s /etc/ssh/ssh_host_ecdsa_key ] \
+    && [ -s /etc/ssh/ssh_host_ed25519_key ]
+}
+
+if identity_complete; then
   exit 0
 fi
 
@@ -25,6 +32,9 @@ do
 done
 
 install -d -m 0755 -o root -g root /var/lib/dadooh
-printf 'schema=dadooh.production.identity.v1\nssh_host_keys_generated=true\n' > "$MARKER_TMP"
+printf '%s\n' \
+  'schema=dadooh.production.identity.v1' \
+  'ssh_host_keys_generated=true' \
+  'storage_contract=root_ext4_rw' > "$MARKER_TMP"
 chmod 0644 "$MARKER_TMP"
 mv -f "$MARKER_TMP" "$MARKER"

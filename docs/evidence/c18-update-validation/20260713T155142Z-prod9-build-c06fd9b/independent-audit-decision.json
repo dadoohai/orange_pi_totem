@@ -1,0 +1,37 @@
+{
+  "schema": "dadooh.c18.production_image_independent_audit_decision.v1",
+  "audited_image_sha256": "4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050",
+  "decision": "blocked_do_not_flash",
+  "passed": false,
+  "blockers": [
+    "deleted_lab_secrets_recoverable_from_unallocated_ext4_blocks",
+    "deleted_ssh_host_keys_recoverable_from_unallocated_ext4_blocks",
+    "overlayroot_tmpfs_present_but_unshipped_and_runtime_behavior_not_bound",
+    "ssh_identity_would_be_volatile_if_overlayroot_activated",
+    "artifact_image_mode_was_0777",
+    "no_hardware_e2e_bound_to_this_image_sha256"
+  ],
+  "scope_corrections": [
+    "source_release_gate_82_of_82_is_not_an_image_artifact_acceptance_gate",
+    "allocated_file_privacy_scan_did_not_cover_unallocated_blocks",
+    "production_image_marker_did_not_prove_hardware_acceptance"
+  ],
+  "verified_non_blocking_facts": [
+    "image_sha256_and_size_match_build_manifest",
+    "c25_3_core_files_match_governed_package",
+    "c25b_player_fallback_matches_exact_package",
+    "player_authorization_is_exact_target_and_disables_latest_and_downgrade",
+    "rootfs_is_structurally_clean",
+    "no_allocated_real_station_or_environment_configuration",
+    "no_preforged_player_runtime_current_previous_or_verified_marker"
+  ],
+  "next_candidate_requirements": [
+    "zero_and_verify_all_unallocated_ext4_blocks",
+    "remove_overlayroot_activation_and_lab_residue_from_production_image",
+    "prove_ssh_host_identity_persists_across_reboot",
+    "replace_stale_player_source_metadata",
+    "restrict_image_and_sidecar_file_modes",
+    "repeat_independent_forensic_and_composition_audits",
+    "only_then_request_clean_card_hardware_acceptance"
+  ]
+}

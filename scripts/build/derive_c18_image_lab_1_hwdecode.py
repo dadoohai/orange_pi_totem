@@ -71,8 +71,8 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-9"
-PRODUCTION_VERSION = "c18.image-prod.9"
+PRODUCTION_TAG = "c18-hwdecode-prod-10"
+PRODUCTION_VERSION = "c18.image-prod.10"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -88,6 +88,14 @@ PRODUCTION_SSH_DROPIN = "/etc/systemd/system/ssh.service.d/10-dadooh-production-
 PRODUCTION_OPEN_SETTINGS_UNIT = "/etc/systemd/system/totem-open-settings.service"
 PRODUCTION_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_production_apply_policy.py"
 PRODUCTION_LAB_SETTINGS_POLICY = "/opt/totem/bin/totem_settings_lab_apply_policy.sh"
+PRODUCTION_ARMBIAN_ENV = "/boot/armbianEnv.txt"
+KIOSKY_PLAYER_COMMIT_MARKER = "/opt/totem/kiosky-player/.kiosky_player_commit"
+PRODUCTION_OVERLAYROOT_PATHS = (
+    "/etc/overlayroot.conf",
+    "/etc/overlayroot.conf.c12-image-lab-base",
+    "/etc/dadooh/c12-overlayfs-kernel-policy",
+    "/etc/initramfs-tools/hooks/dadooh-c12-overlayroot-marker",
+)
 PRODUCTION_FORBIDDEN_LAB_PATHS = (
     "/root/.not_logged_in_yet",
     "/etc/dadooh/image-lab-firstboot-autoconfig.present",
@@ -248,6 +256,44 @@ SOURCES = {
 
 def sh(cmd):
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+
+def sanitize_production_armbian_env(text: str) -> str:
+    lines = []
+    removed = 0
+    for line in text.splitlines():
+        if line.startswith("extraargs="):
+            key, value = line.split("=", 1)
+            tokens = value.split()
+            kept = [token for token in tokens if not token.startswith("overlayroot=")]
+            removed += len(tokens) - len(kept)
+            line = f"{key}={' '.join(kept)}"
+        lines.append(line)
+    if removed != 1:
+        raise SystemExit(
+            f"BLOCKED: expected exactly one overlayroot boot argument in base image, found {removed}"
+        )
+    result = "\n".join(lines) + "\n"
+    if "overlayroot=" in result:
+        raise SystemExit("BLOCKED: overlayroot boot argument survived production sanitization")
+    return result
+
+
+def resolve_zerofree(explicit: str | None) -> Path:
+    candidate = Path(explicit) if explicit else Path(shutil.which("zerofree") or "")
+    if not candidate.is_file() or not os.access(candidate, os.X_OK):
+        raise SystemExit(
+            "BLOCKED: zerofree is required for production images; install it or pass --zerofree"
+        )
+    return candidate.resolve()
+
+
+def run_zerofree_scan(tool: Path, filesystem: Path) -> tuple[subprocess.CompletedProcess[str], str]:
+    result = sh([str(tool), "-n", "-v", str(filesystem)])
+    normalized = result.stdout.replace("\r", "\n")
+    summaries = [line.strip() for line in normalized.splitlines() if "/" in line]
+    summary = summaries[-1] if summaries else ""
+    return result, summary
 
 
 def git_text(*args: str) -> str:
@@ -490,6 +536,7 @@ def main():
     ap.add_argument("--image-marker", help="explicit candidate marker path; defaults to /etc/dadooh/<image-tag>-image")
     ap.add_argument("--image-profile", choices=("lab", "production"), default="lab")
     ap.add_argument("--totem-core-profile", choices=("homologation", "production"))
+    ap.add_argument("--zerofree", help="zerofree executable required for production image hygiene")
     ap.add_argument("--allow-dirty", action="store_true", help="allow exploratory builds from a dirty repo")
     args = ap.parse_args()
     totem_core_profile = args.totem_core_profile or (
@@ -507,6 +554,7 @@ def main():
         if args.image_profile == "production"
         else {"passed": "n/a", "result_claim": "not_required_for_homologation_image"}
     )
+    zerofree_tool = resolve_zerofree(args.zerofree) if args.image_profile == "production" else None
 
     if args.image_tag:
         TAG = args.image_tag
@@ -564,6 +612,7 @@ def main():
         )
         if production_settings_policy_test.returncode != 0:
             raise SystemExit("BLOCKED: production settings policy self-test failed")
+        L(f"zerofree={zerofree_tool}")
     if (OUT_IMAGE.exists() or OUT_SHA.exists()) and not args.force:
         raise SystemExit(f"output exists (use --force): {OUT_IMAGE}")
     L(f"base_image={BASE_IMAGE.name}")
@@ -632,6 +681,21 @@ def main():
     seed_tmp = work / "private-values.seed.json"
     seed_tmp.write_text(json.dumps(seed_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
+    production_armbian_env_tmp = work / "armbianEnv.production.txt"
+    kiosky_commit_tmp = work / ".kiosky_player_commit"
+    if args.image_profile == "production":
+        production_armbian_env_orig = work / "armbianEnv.orig.txt"
+        base.debugfs(rootfs, f"dump {PRODUCTION_ARMBIAN_ENV} {production_armbian_env_orig}")
+        if not production_armbian_env_orig.is_file():
+            raise SystemExit(f"BLOCKED: production boot environment missing at {PRODUCTION_ARMBIAN_ENV}")
+        production_armbian_env_tmp.write_text(
+            sanitize_production_armbian_env(
+                production_armbian_env_orig.read_text(encoding="utf-8")
+            ),
+            encoding="utf-8",
+        )
+        kiosky_commit_tmp.write_text(PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT + "\n", encoding="utf-8")
+
     # ---- wrapper + marker temp files ----
     wrap_tmp = work / "totem-mpv-hwdecode"; wrap_tmp.write_text(WRAPPER_SH, encoding="utf-8")
     marker_tmp = work / "marker"
@@ -651,7 +715,10 @@ def main():
         *marker_scope_lines,
         "base_image_line=c17.4.2", "c17_7_used_as_base=false",
         "kernel_touched=false", "u_boot_touched=false", "dtb_touched=false",
-        "c12_readonly_touched=false",
+        f"c12_readonly_touched={str(args.image_profile == 'production').lower()}",
+        f"c12_readonly_blocked={str(args.image_profile == 'production').lower()}",
+        f"production_rootfs_mode={'ext4_rw' if args.image_profile == 'production' else 'n/a'}",
+        f"production_overlayroot_disabled={str(args.image_profile == 'production').lower()}",
         "hwdecode_stack=cedrus_v4l2request",
         f"ffmpeg={SOURCES['ffmpeg_source']}@{SOURCES['ffmpeg_commit']}",
         f"mpv={SOURCES['mpv_source']}@{SOURCES['mpv_commit']}",
@@ -681,7 +748,8 @@ def main():
         f"player_runtime_kiosk_source={PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)}",
         f"player_runtime_kiosk_sha256={kiosk_snapshot_sha}",
         "homologation_seed_mpv_path=totem-mpv-hwdecode",
-        f"production_lab_artifacts_removed={str(args.image_profile == 'production').lower()}",
+        f"production_private_lab_inputs_removed={str(args.image_profile == 'production').lower()}",
+        f"production_free_space_zeroed={str(args.image_profile == 'production').lower()}",
         f"production_ssh_host_keys_generated_on_device={str(args.image_profile == 'production').lower()}",
         f"production_shared_root_password_access_risk_accepted={str(args.image_profile == 'production').lower()}",
         f"production_settings_policy_embedded={str(args.image_profile == 'production').lower()}",
@@ -753,9 +821,15 @@ def main():
         put(str(PRODUCTION_IDENTITY_UNIT_SOURCE), PRODUCTION_IDENTITY_UNIT, "0644")
         put(str(PRODUCTION_SSH_DROPIN_SOURCE), PRODUCTION_SSH_DROPIN, "0644")
         put(str(PRODUCTION_OPEN_SETTINGS_UNIT_SOURCE), PRODUCTION_OPEN_SETTINGS_UNIT, "0644")
+        put(str(production_armbian_env_tmp), PRODUCTION_ARMBIAN_ENV, "0644")
+        put(str(kiosky_commit_tmp), KIOSKY_PLAYER_COMMIT_MARKER, "0644")
         cmds.append(f"rm {PRODUCTION_IDENTITY_WANTS}")
         cmds.append(f"symlink {PRODUCTION_IDENTITY_WANTS} {PRODUCTION_IDENTITY_UNIT}")
-        for path in (*PRODUCTION_FORBIDDEN_LAB_PATHS, *PRODUCTION_EMBEDDED_SSH_HOST_KEYS):
+        for path in (
+            *PRODUCTION_FORBIDDEN_LAB_PATHS,
+            *PRODUCTION_EMBEDDED_SSH_HOST_KEYS,
+            *PRODUCTION_OVERLAYROOT_PATHS,
+        ):
             cmds.append(f"rm {path}")
         cmds.append("rmdir /data/state/totem-read-only-image-lab")
 
@@ -781,10 +855,32 @@ def main():
         f"files={totem_core_embed['totem_core_files_embedded']}"
     )
 
-    # ---- fsck consistency check (read-only) ----
+    # ---- filesystem consistency and production free-space hygiene ----
+    fsck_prepare = sh(["e2fsck", "-f", "-p", str(rootfs)])
+    if fsck_prepare.returncode not in (0, 1):
+        raise SystemExit(f"BLOCKED: e2fsck preparation failed rc={fsck_prepare.returncode}")
+
+    zerofree_summary = "n/a"
+    zerofree_tool_sha256 = "n/a"
+    if args.image_profile == "production":
+        assert zerofree_tool is not None
+        zerofree_tool_sha256 = base.file_sha256(zerofree_tool)
+        scrub = sh([str(zerofree_tool), str(rootfs)])
+        if scrub.returncode != 0:
+            raise SystemExit(f"BLOCKED: zerofree failed rc={scrub.returncode}")
+        scrub_scan, zerofree_summary = run_zerofree_scan(zerofree_tool, rootfs)
+        if scrub_scan.returncode != 0 or not zerofree_summary.startswith("0/"):
+            raise SystemExit(
+                "BLOCKED: ext4 free-space verification failed: "
+                f"rc={scrub_scan.returncode} summary={zerofree_summary!r}"
+            )
+        L(f"zerofree verification={zerofree_summary}")
+
     fsck = sh(["e2fsck", "-f", "-n", str(rootfs)])
-    fsck_clean = fsck.returncode in (0,)  # 0=clean; non-zero would indicate problems
-    L(f"e2fsck rc={fsck.returncode} ({'clean' if fsck_clean else 'CHECK'})")
+    fsck_clean = fsck.returncode == 0
+    if not fsck_clean:
+        raise SystemExit(f"BLOCKED: final e2fsck failed rc={fsck.returncode}")
+    L("e2fsck rc=0 (clean)")
 
     # ---- write rootfs back into the image ----
     base.write_range(build_image, rootfs, offset=off)
@@ -822,6 +918,16 @@ def main():
     production_identity_unit_now = base.cat_file(vroot, PRODUCTION_IDENTITY_UNIT) or ""
     production_ssh_dropin_now = base.cat_file(vroot, PRODUCTION_SSH_DROPIN) or ""
     production_open_settings_unit_now = base.cat_file(vroot, PRODUCTION_OPEN_SETTINGS_UNIT) or ""
+    production_armbian_env_now = base.cat_file(vroot, PRODUCTION_ARMBIAN_ENV) or ""
+    kiosky_commit_marker_now = (base.cat_file(vroot, KIOSKY_PLAYER_COMMIT_MARKER) or "").strip()
+    verify_zerofree_summary = "n/a"
+    verify_free_space_zeroed = "n/a"
+    if args.image_profile == "production":
+        assert zerofree_tool is not None
+        verify_scrub_scan, verify_zerofree_summary = run_zerofree_scan(zerofree_tool, vroot)
+        verify_free_space_zeroed = (
+            verify_scrub_scan.returncode == 0 and verify_zerofree_summary.startswith("0/")
+        )
     totem_core_validation = totem_core_image_embed.validate_totem_core_embed(vroot, profile=totem_core_profile)
     libs_present = {e: present(f"{HWDIR}/lib/{e}") for e in real_files}
     player_runtime_gate = sh([
@@ -980,6 +1086,18 @@ def main():
             if args.image_profile == "production"
             else "n/a"
         ),
+        "production_overlayroot_disabled": (
+            "overlayroot=" not in production_armbian_env_now
+            and all(not present(path) for path in PRODUCTION_OVERLAYROOT_PATHS)
+            if args.image_profile == "production"
+            else "n/a"
+        ),
+        "production_free_space_zeroed": verify_free_space_zeroed,
+        "production_kiosky_commit_marker_matches_c25b": (
+            kiosky_commit_marker_now == PLAYER_RUNTIME_BASELINE_SOURCE_COMMIT
+            if args.image_profile == "production"
+            else "n/a"
+        ),
         "production_ssh_host_keys_not_embedded": (
             all(not present(path) for path in PRODUCTION_EMBEDDED_SSH_HOST_KEYS)
             if args.image_profile == "production"
@@ -994,6 +1112,9 @@ def main():
             present(PRODUCTION_IDENTITY_SCRIPT)
             and execu(PRODUCTION_IDENTITY_SCRIPT)
             and "ssh-keygen -A" in production_identity_script_now
+            and "identity_complete" in production_identity_script_now
+            and "storage_contract=root_ext4_rw" in production_identity_script_now
+            and 'MARKER="/var/lib/dadooh/production-identity-initialized"' in production_identity_script_now
             if args.image_profile == "production"
             else "n/a"
         ),
@@ -1046,7 +1167,9 @@ def main():
     offline_ok = all(x is True or x == "n/a" for x in v.values())
     artifact_promoted = False
     if offline_ok:
+        os.chmod(build_image, 0o640 if args.image_profile == "production" else 0o660)
         build_sha.write_text(f"{sha}  {OUT_IMAGE.name}\n", encoding="utf-8")
+        os.chmod(build_sha, 0o644)
         os.replace(build_image, OUT_IMAGE)
         os.replace(build_sha, OUT_SHA)
         artifact_promoted = True
@@ -1069,7 +1192,17 @@ def main():
         "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
         "base_image": BASE_IMAGE.name,
         "kernel_touched": False, "kernel_rebuild_executed": False,
-        "u_boot_touched": False, "dtb_touched": False, "c12_readonly_touched": False,
+        "u_boot_touched": False, "dtb_touched": False,
+        "c12_readonly_touched": args.image_profile == "production",
+        "c12_readonly_blocked": args.image_profile == "production",
+        "production_rootfs_mode": "ext4_rw" if args.image_profile == "production" else "n/a",
+        "production_overlayroot_disabled": v["production_overlayroot_disabled"],
+        "production_free_space_zeroed": v["production_free_space_zeroed"],
+        "production_zerofree_summary": verify_zerofree_summary,
+        "production_zerofree_tool_sha256": zerofree_tool_sha256,
+        "artifact_file_mode": (
+            oct(OUT_IMAGE.stat().st_mode & 0o777) if artifact_promoted else "not_promoted"
+        ),
         "build_host": "x86_64 dev sandbox (rootless debugfs derive; no Armbian/kernel rebuild)",
         "sysroot_source": "Debian Bookworm arm64 .debs (glibc 2.36) — prior C18.RUNTIME PoC",
         "hwdecode_stack_built": True, "stack_reused_from": "C18.RUNTIME B1..B9 (hardware-proven)",
@@ -1131,7 +1264,8 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-5 (blocked: inherited lab firstboot credentials, markers and SSH host keys)"
+            "c18-hwdecode-prod-9 (blocked pre-flash: deleted lab secrets and SSH keys "
+            "recoverable from unallocated ext4 blocks; overlayroot path ambiguous; artifact mode 0777)"
         )
         manifest["production_access_nonclaim"] = (
             "shared root password SSH access remains enabled by explicit first-scale risk acceptance; "

@@ -319,11 +319,15 @@ Enquanto nada mudar, a ordem de execucao e:
 1. Preservar C25 como entrada validada, sem reabrir microajustes salvo regressao
    ou blocker novo. C25A e o alvo C25B exato estao comprovados na placa em
    `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
-2. Fechar o E2E real do conjunto acumulado e gerar a proxima imagem de
-   referencia com C25A, C25B e os hooks image-bound correspondentes.
-3. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
+2. A candidata `prod9` consolidou C25A, C25B e hooks image-bound, mas foi
+   bloqueada pela auditoria forense antes do flash. Construir sua sucessora com
+   higiene de blocos livres, overlayroot explicitamente desativado, identidade
+   SSH persistente e proveniencia correta; repetir o aceite off-board.
+3. Publicar depois do aceite local somente os alvos remotos exatos; provar os
+   timers de `totem-core` e `player-runtime`, no-op, rollback e restauracao.
+4. Auditar a corrida e promover a sucessora a referencia apenas se o E2E estiver
+   verde. Ate la, `prod8` + C23 continua sendo o baseline de producao.
+5. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
    criterio de pausa.
-4. Preservar M2/M3/M5 como baseline: `totem-core` auto-pull, imagem gravavel e
-   C23 exact-target funcional.
-5. Retomar M8 somente pelos gatilhos registrados na decisao 198.
-6. Evoluir grupos, dashboard e telemetria conforme escala e incidentes reais.
+6. Retomar M8 somente pelos gatilhos registrados na decisao 198.
+7. Evoluir grupos, dashboard e telemetria conforme escala e incidentes reais.

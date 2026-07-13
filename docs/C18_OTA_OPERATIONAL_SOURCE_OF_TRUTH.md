@@ -40,6 +40,13 @@ Hoje a C18 tem dois caminhos reais:
   continuos limpos. Qualquer alvo futuro continua bloqueado ate nova
   autorizacao presa por hashes.
 
+Estado de distribuicao vigente: `prod8` + C23 continua sendo a referencia
+aceita em placa. A primeira candidata consolidada, `prod9`, foi bloqueada antes
+da gravacao: auditoria forense recuperou segredos apagados nos blocos livres da
+imagem base e encontrou configuracao antiga de overlayroot ainda ambigua. Ela
+virou evidencia negativa. A sucessora deve corrigir a higiene antes de repetir
+o aceite off-board e chegar a placa.
+
 O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
 para roadmap. A prioridade atual volta a ser produto visivel por `totem-core`,
@@ -118,17 +125,25 @@ Fila atual para consolidacao:
   validados e reversiveis na placa de homologacao. O alvo C25B final e
   `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com playback,
   `content_unavailable`, recuperacao, rollback e reaplicacao comprovados. Ele
-  permanece fora de `stable` e do auto-pull publico; o proximo marco e
-  incorpora-lo, junto com o launcher/updater correspondentes, na nova imagem
-  de referencia. Contrato e evidencias estao em
+  foi incorporado, junto com o launcher/updater correspondentes, na candidata
+  `prod9`, mas permanece sem publicacao remota e sem claim de distribuicao ate
+  o aceite da imagem na placa. Contrato e evidencias estao em
   `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md` e
   `docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
 - Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
   uso por rodada, preservando o QA C19/C20.
 - Retomar a matriz de compatibilidade de display quando as telas alvo estiverem
   disponiveis; ate la, manter apenas diagnostico read-only.
-- Depois desse conjunto, gerar a nova imagem de referencia com C21.11 e as
-  melhorias acumuladas como baseline.
+- A candidata `prod9` foi gerada no commit `c06fd9b`, SHA256
+  `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`,
+  com core consolidado C25.3 e autorizacao C25B exact-target. Passou gate
+  `82/82` e validacao offline `54/54`, mas a varredura inicial cobria somente
+  arquivos alocados. A auditoria independente recuperou dados apagados em
+  blocos livres e bloqueou a imagem antes do flash. Evidencia negativa em
+  `docs/evidence/c18-update-validation/20260713T155142Z-prod9-build-c06fd9b/`.
+- O pendente agora e construir a sucessora higienizada, repetir as auditorias,
+  grava-la do zero e fechar auto-pull/no-op/rollback dos alvos remotos exatos
+  antes de torna-la a nova referencia de distribuicao.
 - A convergencia C24 e o controle assinado de novos players ficam no roadmap
   conforme a decisao 198.
 
@@ -345,14 +360,20 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## O que falta para producao automatizada/ampla
 
-- construir e auditar `prod-7` com updater/autorizacao C22, sem estado lab e
-  com o wizard usando politica de producao: **fechado off-board** no SHA256
-  `c82c69341b4e1306899ae149d25a0c8953b42ee081291928adee8614d5b5b0b7`;
-- sincronizar branch/tag remotas e publicar os tres assets C22 sem mover
-  `latest`: **fechado** em 2026-07-10, com re-download e hashes conferidos;
-- gravar a imagem na placa e preparar C21 como estado anterior controlado;
-- provar o timer adotando C22, no-op sem mutacao, rollback autorizado e
-  restauracao C22 com playback real;
+- `prod8` + C23 segue como baseline de producao comprovado.
+- `prod9` esta **bloqueada e nao deve ser gravada**. Seu SHA256 e
+  `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`.
+- construir e auditar a sucessora com espaco livre ext4 zerado, overlayroot
+  antigo removido, identidade SSH persistente, proveniencia correta e modo de
+  arquivo restrito;
+- gravar a sucessora do zero e validar boot, wizard/QR, gravacao da configuracao,
+  retorno a midia, playback e estados C25;
+- publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar
+  timer, apply, no-op, rollback e restauracao com playback real;
+- gerar/promover o core consolidado em `stable` e provar o timer de
+  `totem-core`, evitando que a stable antiga tente downgrade sobre a imagem;
+- executar auditoria final e, somente com essas provas verdes, substituir
+  `prod8` por `prod9` como imagem de referencia;
 - manter futuras evolucoes separadas: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player. Grupos, dashboard e kill
   switch continuam roadmap M6 e nao bloqueiam a primeira escala aceita.

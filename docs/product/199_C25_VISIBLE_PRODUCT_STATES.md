@@ -9,10 +9,10 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25a_totem_core_and_c25b_player_runtime_validated_on_homologation_board
+status=c25_validated_but_prod9_image_candidate_blocked_pre_flash
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
-launcher_retry_hook_requires_next_image=true
+launcher_retry_hook_embedded_in_blocked_prod9=true
 c25b_player_runtime_package=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
 c25b_apply_rollback_reapply=passed
 c25b_live_mpv_recovery_surface=passed
@@ -23,8 +23,9 @@ generated_visual_review=passed
 board_framebuffer_flow_validation=passed
 hdmi_camera_flicker_acceptance=pending
 writer_mutating_e2e=not_repeated_in_this_round
-package_not_yet_promoted=true
-next_reference_image_pending=true
+remote_targets_not_yet_promoted=true
+next_reference_image_successor_pending=true
+prod9_board_acceptance=blocked_do_not_flash
 ```
 
 ## Contrato Publico V1
@@ -354,3 +355,40 @@ Evidencia:
 
 Evidencia final que substitui a claim do pacote intermediario:
 `docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
+
+## Checkpoint Prod9 - Consolidacao Bloqueada - 2026-07-13
+
+Estado atual:
+
+```text
+reference_image=c18-hwdecode-prod-9
+reference_image_version=c18.image-prod.9
+image_sha256=4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050
+image_repo_commit=c06fd9b510457f6721be6307aceba3bd1f83c492
+embedded_core=c25.3-reference-image-20260713-562939e
+embedded_player_fallback=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+source_release_gate=82_of_82_clean
+offline_image_validation=54_of_54
+direct_allocated_rootfs_audit=passed_but_incomplete
+forensic_unallocated_block_audit=failed
+board_flash=blocked_do_not_flash
+remote_c25b_publication=pending
+totem_core_stable_alignment=pending
+distribution_reference=still_prod8_until_board_e2e
+```
+
+O prod9 fechou corretamente a composicao que antes estava pendente: C25A,
+C25B, launcher, updater, dependencias de midia e autorizacao exact-target foram
+presos a hashes na mesma imagem. Essa parte permanece aproveitavel.
+
+Entretanto, a primeira inspecao verificou somente arquivos alocados. A auditoria
+forense independente recuperou configuracao, credenciais de lab e antigas
+chaves SSH em blocos ext4 livres. Tambem encontrou o caminho antigo
+`overlayroot=tmpfs` ainda ambiguo, identidade SSH potencialmente volatil, marker
+de proveniencia antigo e modo `0777` no arquivo de imagem.
+
+Prod9 foi bloqueada antes do flash e removida do caminho normal `.img`. A
+sucessora deve zerar e verificar todo o espaco livre, desativar explicitamente
+o overlayroot nao shipado, preservar identidade SSH entre reboots, corrigir a
+proveniencia e restringir os modos do artefato. Evidencia negativa:
+`docs/evidence/c18-update-validation/20260713T155142Z-prod9-build-c06fd9b/`.

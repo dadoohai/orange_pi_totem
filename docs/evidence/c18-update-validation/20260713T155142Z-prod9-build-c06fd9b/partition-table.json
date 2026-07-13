@@ -1,0 +1,17 @@
+{
+   "partitiontable": {
+      "label": "dos",
+      "id": "0xb023c9b3",
+      "device": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-9_minimal.img",
+      "unit": "sectors",
+      "sectorsize": 512,
+      "partitions": [
+         {
+            "node": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-9_minimal.img1",
+            "start": 8192,
+            "size": 3842048,
+            "type": "83"
+         }
+      ]
+   }
+}
