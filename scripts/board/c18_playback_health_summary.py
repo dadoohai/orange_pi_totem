@@ -615,13 +615,17 @@ def playback_evidence_episodes(rows: list[dict[str, str]]) -> list[dict[str, Any
 
     for row_index, row in enumerate(rows):
         kind = playback_evidence_kind(row)
-        if row.get("ipc_result") != "success" or kind == "unclassified_media":
+        if row.get("ipc_result") != "success":
             flush()
             previous_seq = None
             previous_frame = None
-            pending_start_reason = (
-                "unclassified_media" if kind == "unclassified_media" else "ipc_interruption"
-            )
+            pending_start_reason = "ipc_interruption"
+            continue
+        if kind == "unclassified_media":
+            flush()
+            previous_seq = None
+            previous_frame = None
+            pending_start_reason = "unclassified_media"
             continue
         key = mpv_item_key(row) or playback_item_key(row)
         frame = as_frame_number(row.get("estimated_frame_number"))

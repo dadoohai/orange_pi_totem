@@ -1666,6 +1666,39 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 1)
 
+    def test_bounded_ipc_bridge_accepts_collector_shaped_missing_socket_rows(self) -> None:
+        fixture = self.with_case()
+        template = fixture.rows()[0]
+        rows = [
+            self.typed_row(template, seq=1, kind="motion_media", alias="motion-a", frame="0"),
+            self.typed_row(template, seq=2, kind="motion_media", alias="motion-a", frame="30"),
+            self.typed_row(template, seq=3, kind="motion_media", alias="motion-b", frame="0"),
+            self.typed_row(template, seq=4, kind="unclassified_media", alias="motion-b", frame=""),
+            self.typed_row(template, seq=5, kind="motion_media", alias="motion-b", frame="1"),
+            self.typed_row(template, seq=6, kind="unclassified_media", alias="motion-b", frame=""),
+            self.typed_row(template, seq=7, kind="motion_media", alias="motion-b", frame="2"),
+            self.typed_row(template, seq=8, kind="motion_media", alias="motion-c", frame="0"),
+            self.typed_row(template, seq=9, kind="motion_media", alias="motion-c", frame="30"),
+        ]
+        for row in rows:
+            row.setdefault("ipc_error", "")
+        for index in (3, 5):
+            rows[index]["ipc_result"] = "error"
+            rows[index]["ipc_error"] = "missing_socket"
+            rows[index]["current_alias"] = ""
+            rows[index]["path_alias"] = ""
+            rows[index]["filename_alias"] = ""
+            rows[index]["hwdec_current"] = ""
+            rows[index]["vo_configured"] = ""
+            rows[index]["video_params_json"] = "{}"
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertTrue(result["checks"]["ipc_stable_after_success"])
+        self.assertEqual(result["counters"]["motion_media_tolerated_boundary_episodes"], 3)
+        self.assertEqual(result["counters"]["motion_media_failed_episodes"], 0)
+
     def test_invalid_frame_numbers_never_count_as_local_evidence(self) -> None:
         for invalid in ("-1", "nan", "inf"):
             with self.subTest(invalid=invalid):
