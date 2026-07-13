@@ -1892,16 +1892,18 @@ def probe_startup_feedback_video(
     width: int,
     height: int,
 ) -> Tuple[bool, str]:
-    strict_cfg = dict(cfg)
-    strict_cfg["media_probe_enabled"] = True
-    valid, reason = probe_media_file(strict_cfg, path, required_codec="h264")
-    if not valid:
-        return False, reason
+    try:
+        if not os.path.isfile(path):
+            return False, "file_missing"
+        if (safe_getsize(path) or 0) <= 0:
+            return False, "file_empty"
+    except OSError:
+        return False, "file_stat_failed"
 
-    ffprobe_path = str(strict_cfg.get("media_probe_ffprobe_path") or "/usr/bin/ffprobe")
+    ffprobe_path = str(cfg.get("media_probe_ffprobe_path") or "/usr/bin/ffprobe")
     timeout_sec = min(
-        max(int(strict_cfg.get("startup_feedback_render_timeout_sec") or 0), 2),
-        10,
+        max(int(cfg.get("startup_feedback_render_timeout_sec") or 0), 2),
+        4,
     )
     command = [
         ffprobe_path,
@@ -1968,6 +1970,40 @@ def probe_startup_feedback_video(
         return False, "surface_contract_pixel_format_mismatch"
     if str(video.get("nb_read_frames") or "") != "1":
         return False, "surface_contract_frame_count_mismatch"
+
+    ffmpeg_path = str(cfg.get("media_probe_ffmpeg_path") or "/usr/bin/ffmpeg")
+    decode_command = [
+        ffmpeg_path,
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        path,
+        "-map",
+        "0:v:0",
+        "-frames:v",
+        "1",
+        "-f",
+        "null",
+        "-",
+    ]
+    try:
+        decode_result = subprocess.run(
+            decode_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout_sec,
+        )
+    except FileNotFoundError:
+        return False, "ffmpeg_missing"
+    except subprocess.TimeoutExpired:
+        return False, "surface_first_frame_decode_timeout"
+    except Exception as exc:
+        return False, f"surface_first_frame_decode_exception:{type(exc).__name__}"
+    if int(getattr(decode_result, "returncode", 1)) != 0:
+        return False, "surface_first_frame_decode_failed"
     return True, "ok"
 
 

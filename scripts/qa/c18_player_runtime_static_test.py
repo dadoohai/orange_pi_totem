@@ -42,7 +42,7 @@ STATUS_AGGREGATE_PATH = REPO_ROOT / "scripts" / "board" / "totem_status_aggregat
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "d7853308c112de5fc6b26f90d5c095fb837ab2716bf28e1657ec1212c1c8f62e"
+EXPECTED_SNAPSHOT_SHA256 = "1f957c8cdd8e6f491fad0ecbd12ad7604dfc91585c5384317b4efa38c2f130bc"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -470,9 +470,9 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
 
     def test_public_surface_probe_is_strict_even_when_media_probe_is_disabled(self) -> None:
         kiosk = load_kiosk_module()
-        forced_probe_values: list[object] = []
-        original_probe = kiosk.probe_media_file
         original_run = kiosk.subprocess.run
+        commands: list[list[str]] = []
+        timeouts: list[object] = []
 
         class Result:
             returncode = 0
@@ -492,29 +492,34 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             ).encode("utf-8")
             stderr = b""
 
-        def fake_probe(cfg: dict, *_args: object, **_kwargs: object) -> tuple[bool, str]:
-            forced_probe_values.append(cfg.get("media_probe_enabled"))
-            return True, "ok"
+        def fake_run(command: list[str], **kwargs: object) -> Result:
+            commands.append(command)
+            timeouts.append(kwargs.get("timeout"))
+            return Result()
 
-        kiosk.probe_media_file = fake_probe
-        kiosk.subprocess.run = lambda *_args, **_kwargs: Result()
+        kiosk.subprocess.run = fake_run
         try:
-            valid, reason = kiosk.probe_startup_feedback_video(
-                {"media_probe_enabled": False},
-                "/tmp/c18-surface.mp4",
-                width=1280,
-                height=720,
-            )
+            with tempfile.NamedTemporaryFile(suffix=".mp4") as surface:
+                surface.write(b"h264")
+                surface.flush()
+                valid, reason = kiosk.probe_startup_feedback_video(
+                    {
+                        "media_probe_enabled": False,
+                        "startup_feedback_render_timeout_sec": 999,
+                    },
+                    surface.name,
+                    width=1280,
+                    height=720,
+                )
         finally:
-            kiosk.probe_media_file = original_probe
             kiosk.subprocess.run = original_run
 
         self.assertTrue(valid, reason)
-        self.assertEqual(forced_probe_values, [True])
+        self.assertEqual(len(commands), 2)
+        self.assertEqual(timeouts, [4, 4])
 
     def test_public_surface_probe_rejects_contract_mismatches(self) -> None:
         kiosk = load_kiosk_module()
-        original_probe = kiosk.probe_media_file
         original_run = kiosk.subprocess.run
         payload: dict[str, object] = {}
 
@@ -526,7 +531,6 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
             def stdout(self) -> bytes:
                 return json.dumps(payload).encode("utf-8")
 
-        kiosk.probe_media_file = lambda *_args, **_kwargs: (True, "ok")
         kiosk.subprocess.run = lambda *_args, **_kwargs: Result()
         valid_video = {
             "codec_type": "video",
@@ -547,16 +551,18 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
                 with self.subTest(expected_reason=expected_reason):
                     payload.clear()
                     payload["streams"] = streams
-                    valid, reason = kiosk.probe_startup_feedback_video(
-                        {},
-                        "/tmp/c18-surface.mp4",
-                        width=1280,
-                        height=720,
-                    )
+                    with tempfile.NamedTemporaryFile(suffix=".mp4") as surface:
+                        surface.write(b"h264")
+                        surface.flush()
+                        valid, reason = kiosk.probe_startup_feedback_video(
+                            {},
+                            surface.name,
+                            width=1280,
+                            height=720,
+                        )
                     self.assertFalse(valid)
                     self.assertEqual(reason, expected_reason)
         finally:
-            kiosk.probe_media_file = original_probe
             kiosk.subprocess.run = original_run
 
     def test_desired_public_surface_preserves_media_and_stratifies_failures(self) -> None:
