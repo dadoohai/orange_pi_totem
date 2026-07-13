@@ -42,7 +42,7 @@ STATUS_AGGREGATE_PATH = REPO_ROOT / "scripts" / "board" / "totem_status_aggregat
 CURRENT_GOLDEN_PATH = REPO_ROOT / "docs" / "evidence" / "c18-update-validation" / "current-golden.json"
 CURRENT_GOLDEN = json.loads(CURRENT_GOLDEN_PATH.read_text(encoding="utf-8"))
 C18_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-EXPECTED_SNAPSHOT_SHA256 = "1f957c8cdd8e6f491fad0ecbd12ad7604dfc91585c5384317b4efa38c2f130bc"
+EXPECTED_SNAPSHOT_SHA256 = "d21527801d3982c1ca1f925d28ee6c7fc4da09b1cc96c19d70d4dc7148a9db25"
 EXPECTED_UPSTREAM_SHA256 = "38ecb0de3bfa4367d3ed61a173d2eb3210659026b8104f5c058881ca84470072"
 
 
@@ -590,8 +590,10 @@ class C18PlayerRuntimeStaticTest(unittest.TestCase):
         with stub_startup_surface_video(kiosk), tempfile.TemporaryDirectory(prefix="c18-public-surface-") as tmp:
             cfg = {"runtime_dir": tmp, "startup_feedback_enabled": True}
             status = kiosk.StatusState()
+            status.update(black_screen_risk_reason="waiting_for_content")
             mpv = FakeSurfaceMPV()
             self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_content"))
+            self.assertIsNone(status.snapshot().get("black_screen_risk_reason"))
             self.assertTrue(kiosk.show_startup_feedback_once(mpv, cfg, status, "waiting_for_media"))
             self.assertEqual(len(mpv.load_calls), 1)
             mpv.current_path_matches = False

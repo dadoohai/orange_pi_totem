@@ -21,6 +21,7 @@
     "C25B gives the MPV-owned surface public loading, content-unavailable and player-recovery states in landscape and portrait without introducing a second DRM owner.",
     "C25B binds media readiness to one MPV generation, path, configured VO, video parameters and observed frame progress; persistent MPV recovery failure exits to the image-bound launcher fallback.",
     "C25B renders public states as atomic one-frame H.264 assets because the production MPV build does not decode SVG; the governed SVG remains design evidence only.",
+    "C25B clears black-screen risk only after MPV-owned local frame evidence confirms that the public surface is visible.",
     "kiosky-player OTA remains frozen until a C18-aware player-runtime contract and hardware gate exist."
   ],
   "patches": [
@@ -88,7 +89,7 @@
   "schema": "dadooh.c18.player_runtime.source.v1",
   "snapshot": {
     "path": "player-runtime/kiosky-player/kiosk.py",
-    "sha256": "1f957c8cdd8e6f491fad0ecbd12ad7604dfc91585c5384317b4efa38c2f130bc"
+    "sha256": "d21527801d3982c1ca1f925d28ee6c7fc4da09b1cc96c19d70d4dc7148a9db25"
   },
   "upstream": {
     "commit": "c25659aff200d9aac1720e60e60794c432c79393",

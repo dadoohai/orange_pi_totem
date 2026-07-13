@@ -1474,9 +1474,7 @@ def show_startup_feedback(mpv: "MPVController", cfg: Dict, status: StatusState, 
         content_state=content_state,
         first_frame_ready=False,
         first_content_load_accepted=False,
-        black_screen_risk_reason=(
-            previous.get("black_screen_risk_reason") if ok else "startup_feedback_failed"
-        ),
+        black_screen_risk_reason=None if ok else "startup_feedback_failed",
         public_surface_state=surface_state,
         public_surface_presented_state=surface_state if ok else None,
         public_surface_generation=observed_generation if ok else None,
