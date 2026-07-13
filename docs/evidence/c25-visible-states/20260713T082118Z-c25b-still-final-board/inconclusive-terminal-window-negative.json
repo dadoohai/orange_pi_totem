@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "motion_frame_progress_ok": false,
+    "playback_progressed": false,
+    "terminal_playback_healthy": true,
+    "terminal_sample_success": true
+  },
+  "claim": "inconclusive_terminal_episode_rejected_fail_closed",
+  "counters": {
+    "motion_media_episodes": 4,
+    "motion_media_failed_episodes": 1,
+    "samples": 28,
+    "terminal_playback_state": "playing"
+  },
+  "failure_reasons": [
+    "motion_frame_progress_ok",
+    "playback_progressed"
+  ],
+  "passed": false,
+  "schema": "dadooh.c18.playback.deep_health.v1"
+}

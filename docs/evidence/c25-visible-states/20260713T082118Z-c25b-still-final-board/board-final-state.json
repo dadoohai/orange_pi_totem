@@ -1,0 +1,20 @@
+{
+  "collected_at_utc": "2026-07-13T08:20:32Z",
+  "current": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "exact_package_quarantined": false,
+  "non_claims": [
+    "not_stable",
+    "not_public_autopull",
+    "not_public_thaw",
+    "not_reference_image"
+  ],
+  "passed": true,
+  "previous": "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c",
+  "public_rollback_probe": {
+    "returncode": 44,
+    "state_unchanged": true
+  },
+  "schema": "dadooh.c25.player_runtime.final_board_state.v1",
+  "service_active": true,
+  "service_nrestarts": 0
+}

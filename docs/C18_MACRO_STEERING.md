@@ -316,11 +316,11 @@ pausada ou rebaixada.
 
 Enquanto nada mudar, a ordem de execucao e:
 
-1. Priorizar melhorias visiveis de wizard, jornada de configuracao, status e
-   transicoes que caibam em `totem-core`. A rodada ativa e C25, registrada em
+1. Preservar C25 como entrada validada, sem reabrir microajustes salvo regressao
+   ou blocker novo. C25A e o alvo C25B exato estao comprovados na placa em
    `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
-2. Fechar o E2E real do pacote acumulado e gerar a proxima imagem de referencia
-   quando o conjunto estiver maduro.
+2. Fechar o E2E real do conjunto acumulado e gerar a proxima imagem de
+   referencia com C25A, C25B e os hooks image-bound correspondentes.
 3. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
    criterio de pausa.
 4. Preservar M2/M3/M5 como baseline: `totem-core` auto-pull, imagem gravavel e

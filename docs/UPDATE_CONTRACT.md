@@ -387,6 +387,16 @@ No modo `candidate`, `last_poll_error` so pode ser tolerado quando o status
 sanitizado indicar explicitamente `polling_disabled`; erro generico presente
 continua falha de health.
 
+Desde C25, o tipo sanitizado do item separa video em movimento de quadro
+estatico. Video exige pelo menos duas amostras localmente coerentes com avanco
+positivo de frame. Quadro estatico nao precisa inventar movimento, mas exige no
+mesmo instante frame valido, `v4l2request-copy`, VO configurado e dimensoes
+validas. Tipo ausente, desconhecido, frame invalido ou evidencia distribuida
+entre amostras diferentes falham fechados. Superficie publica de loading/erro
+nao conta como conteudo e precisa ser seguida por conteudo comprovado. Evidencia
+inconclusiva so pode ser tolerada nos limites explicitos de startup/transicao;
+a amostra terminal deve ter IPC verde e estado `playing`.
+
 Evidencia de ensaio `player-runtime` precisa ser inspecionavel e sanitizada.
 Antes de versionar qualquer rodada, rodar
 `scripts/qa/c18_player_runtime_evidence_gate.py --run-dir <dir>`. O gate aceita

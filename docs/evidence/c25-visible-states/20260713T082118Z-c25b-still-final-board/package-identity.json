@@ -1,0 +1,42 @@
+{
+  "component": "player-runtime",
+  "manifest": {
+    "channel": "homologation",
+    "payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+    "source_commit": "54308e4a09ef693dbfb3d6b31ce9626908ca0c16",
+    "updater_features": [
+      "c18-freeze-kiosky-player-v1",
+      "c18-rollback-reapply-v1",
+      "c18-safe-payload-v1",
+      "c18-track-v1",
+      "c18-player-runtime-verify-then-promote-v1",
+      "c25-player-surface-health-v1"
+    ],
+    "version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
+  },
+  "non_claims": [
+    "not_stable",
+    "not_public_autopull",
+    "not_public_thaw",
+    "not_reference_image"
+  ],
+  "package": {
+    "channel": "homologation",
+    "component": "player-runtime",
+    "manifest": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json",
+    "payload": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.tar.gz",
+    "payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+    "source_commit": "54308e4a09ef693dbfb3d6b31ce9626908ca0c16"
+  },
+  "passed": true,
+  "payload": {
+    "kiosk_py_sha256": "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0",
+    "requires_c25_player_surface_health": true,
+    "tree_sha256": "a7baf69dc249c39b2f6f8653873171fa8d799c814acbe8bc95c3eeed2c7136fc"
+  },
+  "schema": "dadooh.c25.player_runtime.final_package_identity.v1",
+  "validation": {
+    "player_runtime_release_gate": "passed",
+    "validator_commit": "af85a60"
+  }
+}

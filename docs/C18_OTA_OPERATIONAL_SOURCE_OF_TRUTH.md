@@ -115,10 +115,14 @@ Fila atual para consolidacao:
   conclusao e retorno ao player, com captura visual quando o HDMI estiver
   disponivel.
 - Estados visiveis C25A (`totem-core`) e C25B (`player-runtime`) estao
-  validados e reversiveis na placa de homologacao. C25B permanece fora de
-  `stable` e do auto-pull publico; o proximo marco e incorpora-la, junto com o
-  launcher/updater correspondentes, na nova imagem de referencia. Contrato e
-  evidencias estao em `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
+  validados e reversiveis na placa de homologacao. O alvo C25B final e
+  `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com playback,
+  `content_unavailable`, recuperacao, rollback e reaplicacao comprovados. Ele
+  permanece fora de `stable` e do auto-pull publico; o proximo marco e
+  incorpora-lo, junto com o launcher/updater correspondentes, na nova imagem
+  de referencia. Contrato e evidencias estao em
+  `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md` e
+  `docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
 - Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
   uso por rodada, preservando o QA C19/C20.
 - Retomar a matriz de compatibilidade de display quando as telas alvo estiverem

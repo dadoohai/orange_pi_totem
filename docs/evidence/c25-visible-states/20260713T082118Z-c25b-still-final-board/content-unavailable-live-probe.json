@@ -1,0 +1,46 @@
+{
+  "claim": "content_unavailable_presented_by_exact_candidate_and_service_restored",
+  "lifecycle": {
+    "checks": {
+      "probe_exit_zero": true,
+      "service_nrestarts_unchanged": true,
+      "service_restored_active": true
+    },
+    "observed": {
+      "nrestarts_delta": 0,
+      "service_active_after": "active"
+    },
+    "passed": true,
+    "schema": "dadooh.c25.content_unavailable.lifecycle.v1"
+  },
+  "live_probe": {
+    "checks": {
+      "black_screen_risk_cleared": true,
+      "candidate_mpv_running": true,
+      "content_unavailable_presented": true,
+      "frame_available": true,
+      "hwdecode_expected": true,
+      "status_state_exact": true,
+      "surface_contract_name_exact": true,
+      "surface_path_current": true,
+      "video_dimensions_valid": true,
+      "video_output_configured": true
+    },
+    "observed": {
+      "content_state": "content_unavailable",
+      "frame_available": true,
+      "hwdecode_expected": true,
+      "playback_state": "waiting_for_media",
+      "public_surface_evidence": "mpv_path_vo_frame_available",
+      "public_surface_presented_state": "content_unavailable",
+      "public_surface_state": "content_unavailable",
+      "surface_basename": "startup-feedback-c25-visible-state-h264-v1-content_unavailable-f253623d3979a85b-1280x720.mp4",
+      "video_dimensions_valid": true,
+      "video_output_configured": true
+    },
+    "passed": true,
+    "schema": "dadooh.c25.content_unavailable.live_probe.v1"
+  },
+  "passed": true,
+  "schema": "dadooh.c25.content_unavailable.final_evidence.v1"
+}

@@ -1,0 +1,19 @@
+{
+  "after_mpv_count": 1,
+  "before_mpv_count": 1,
+  "final_status": {
+    "black_screen_risk_reason": null,
+    "content_state": "playing",
+    "first_frame_ready": true,
+    "playback_state": "playing",
+    "public_surface_evidence": "mpv_path_vo_frame_progress",
+    "public_surface_presented_state": "media"
+  },
+  "mpv_pid_changed": true,
+  "observed_recovery_surface": true,
+  "observed_recovery_surface_in_mpv": true,
+  "panfrost_faults_delta": 0,
+  "passed": true,
+  "schema": "dadooh.c25.player_runtime.mpv_recovery_probe.v1",
+  "service_nrestarts_delta": 0
+}

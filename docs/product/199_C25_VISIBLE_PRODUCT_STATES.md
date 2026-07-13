@@ -13,9 +13,11 @@ status=c25a_totem_core_and_c25b_player_runtime_validated_on_homologation_board
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_requires_next_image=true
-c25b_player_runtime_package=c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8
+c25b_player_runtime_package=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
 c25b_apply_rollback_reapply=passed
 c25b_live_mpv_recovery_surface=passed
+c25b_live_content_unavailable_surface=passed
+c25b_episode_health_fail_closed=passed
 offline_tests=passed
 generated_visual_review=passed
 board_framebuffer_flow_validation=passed
@@ -282,16 +284,19 @@ Estado atual:
 
 ```text
 c25b_player_owned_live_states=validated_on_homologation_board
-package=c18.player-runtime-homolog-20260713-c25b-recovery-8ce9bb8
-package_source_commit=8ce9bb8f4a3bcb2873c229ef6791008eca1b57c2
-package_payload_sha256=962346c2fd9df78a555ae767ab4562161c307ce9a4497c63ee38c4c5608f5cff
+package=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+package_source_commit=54308e4a09ef693dbfb3d6b31ce9626908ca0c16
+package_payload_sha256=b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d
 release_gate=passed
-candidate_health=45_of_45_clean
+candidate_health=46_checks_clean
 controlled_mpv_recovery=passed
 recovery_surface_status_and_mpv_path=passed
+content_unavailable_surface_status_mpv_vo_frame=passed
 rollback_to_c23=passed
 linked_previous_reapply=passed
-final_live_health=30_of_30_clean
+final_live_health=40_samples_44_checks_clean
+inconclusive_episode_negative=correctly_rejected
+public_player_runtime_freeze=rc44
 stable_promotion=not_authorized
 public_player_autopull=not_enabled_for_this_target
 next_reference_image=pending
@@ -315,6 +320,22 @@ Panfrost. O pacote final foi rollbackado para C23, teve saude verde, e voltou
 pelo caminho explicito de reaplicacao do `previous` verificado. Uma tentativa
 comum de reaplicar foi corretamente negada com rc=45.
 
+A rodada seguinte encontrou um caso diferente de video: midia estatica pode
+manter o mesmo numero de quadro e nao deve ser tratada como video travado. O
+pacote final separa midia em movimento de quadro estatico sem relaxar a prova:
+video exige progresso local e quadro estatico exige quadro, HW decode, saida e
+dimensoes validos no mesmo instante. Evidencia incompleta ou desconhecida
+continua reprovando.
+
+O estado `content_unavailable` foi provocado de forma controlada no candidato
+exato e observado no status e no caminho real do MPV, com quadro, VO e
+`v4l2request-copy` presentes. O servico foi restaurado ativo sem restart. A
+janela final do servico teve 40 amostras, dois episodios de video comprovados,
+zero episodio tolerado, zero falha de midia, zero restart e zero novo evento
+Panfrost. Uma janela encerrada no primeiro quadro de um episodio foi
+corretamente recusada; a janela completa seguinte passou. Isso prova que o
+avaliador nao transforma observacao inconclusiva em verde.
+
 Veredito: C25B esta aceita para homologacao funcional e reversivel. O pacote
 continua fora de `stable` e do auto-pull publico. A proxima imagem de referencia
 deve incorporar este snapshot, o updater e o launcher correspondentes antes de
@@ -322,3 +343,6 @@ qualquer claim de distribuicao ampla.
 
 Evidencia:
 `docs/evidence/c25-visible-states/20260713T062512Z-c25b-player-h264-governed/`.
+
+Evidencia final que substitui a claim do pacote intermediario:
+`docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
