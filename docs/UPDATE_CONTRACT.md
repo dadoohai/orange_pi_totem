@@ -735,7 +735,9 @@ qualquer alvo futuro permanecem bloqueados.
 Essa excecao usa `scripts/deploy/publish_player_runtime_exact_target_release.sh`,
 que publica somente os tres assets exatos, exige tag remota apontando ao
 `source_commit`, usa `--verify-tag --latest=false` e verifica o resultado
-remoto. A imagem production valida a autorizacao contra os artefatos antes do
+remoto. Para um release que ja existe, `--verify-existing` baixa e confere os
+tres hashes e comprova que `latest` nao mudou, sem republicar. A imagem
+production valida a autorizacao contra os artefatos antes do
 build; remove firstboot, Wi-Fi/identidade/marcadores de laboratorio e host keys
 herdadas; e gera chaves SSH unicas no primeiro boot. A prova de placa exige
 timer real, no-op sem mutacao, rollback e restauracao com restart e health,

@@ -17,6 +17,7 @@ import copy
 import datetime as dt
 import hashlib
 import json
+import os
 import re
 import sys
 import tempfile
@@ -33,6 +34,7 @@ import c18_player_runtime_production_autopull_authorization_gate as authorizatio
 
 
 COLLECT_SCHEMA = "dadooh.c18.player_runtime.production_autopull_collect.v1"
+COLLECT_ADOPTION_SCHEMA = "dadooh.c18.player_runtime.production_autopull_collect.adoption.v1"
 GATE_SCHEMA = "dadooh.c18.player_runtime.production_autopull_evidence_gate.v2"
 AUTH_SCHEMA = "dadooh.c18.player_runtime.production_autopull_authorization.v1"
 MANIFEST_SCHEMA = "dadooh.totem.update.v1"
@@ -49,9 +51,16 @@ DEFAULT_EXPECTED_UPDATER_SHA256 = hashlib.sha256(
 ).hexdigest()
 DEFAULT_TARGET_VERSION = "c18.player-runtime-homolog-20260710-c23-ipc-fe4347c"
 DEFAULT_BASELINE_VERSION = "c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63"
+DEFAULT_BASELINE_PAYLOAD_SHA256 = "1a8a6779b40dae1a2dac2ad86eb5d5f7b19f3245a681bb02e1d202a1ee9af497"
 DEFAULT_ROLLBACK_REASON = "production_authorized_rollback"
 DEFAULT_MIN_CONTINUOUS_RESTORED_SEC = 600.0
 PHASES = ("pre", "post_apply", "noop", "rollback", "restored")
+ROUNDTRIP_MODES = ("data-previous-roundtrip", "image-fallback-reapply")
+IMAGE_FALLBACK_APP_DIR = "/opt/totem/kiosky-player"
+DATA_CURRENT_APP_DIR = "/data/player-runtime/current"
+DATA_RELEASES_DIR = "/data/player-runtime/releases"
+PRODUCTION_UPDATECTL_PATH = "/opt/totem/bin/totem-updatectl"
+PRODUCTION_IMAGE_MARKER_DIR = "/etc/dadooh"
 REQUIRED_NON_CLAIMS = (
     "this_gate_does_not_fetch_github",
     "this_gate_does_not_apply_player_runtime",
@@ -140,6 +149,17 @@ def canonical_json_sha256(data: dict[str, Any]) -> str:
     return sha256_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
 
 
+def parse_key_value(text: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        fields[key.strip()] = value.strip()
+    return fields
+
+
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -171,6 +191,21 @@ def truthy_marker(value: Any) -> bool:
 
 def false_or_absent(value: Any) -> bool:
     return value in (None, "", False, "false", "False", "0", 0)
+
+
+def normalize_app_dir(value: Any) -> str:
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    return os.path.normpath(value.strip())
+
+
+def classify_kiosky_app_dir(value: Any) -> str:
+    normalized = normalize_app_dir(value)
+    if normalized == IMAGE_FALLBACK_APP_DIR:
+        return "image_fallback"
+    if normalized == DATA_CURRENT_APP_DIR:
+        return "data_current"
+    return "unknown"
 
 
 def basename_version(value: Any) -> str | None:
@@ -239,6 +274,13 @@ def state_file_data(snapshot: dict[str, Any]) -> dict[str, Any]:
     return as_dict(as_dict(as_dict(snapshot.get("state")).get("state_file")).get("data"))
 
 
+def combined_quarantine_entries(data: dict[str, Any]) -> list[Any]:
+    entries: list[Any] = []
+    for key in ("quarantine", "quarantined_identities"):
+        entries.extend(as_list(data.get(key)))
+    return entries
+
+
 def state_entry(snapshot: dict[str, Any], key: str) -> dict[str, Any]:
     summary = state_summary(snapshot)
     entry = summary.get(key)
@@ -251,6 +293,45 @@ def state_entry(snapshot: dict[str, Any], key: str) -> dict[str, Any]:
 def link_target(snapshot: dict[str, Any], key: str) -> str:
     link = as_dict(as_dict(snapshot.get("state")).get(f"{key}_symlink"))
     return str_field(link.get("target"))
+
+
+def link_snapshot(snapshot: dict[str, Any], key: str) -> dict[str, Any]:
+    return as_dict(as_dict(snapshot.get("state")).get(f"{key}_symlink"))
+
+
+def link_absent(snapshot: dict[str, Any], key: str) -> bool:
+    link = link_snapshot(snapshot, key)
+    if not link:
+        return False
+    return (
+        link.get("exists") is False
+        and link.get("is_symlink") is False
+        and not str_field(link.get("target"))
+        and not str_field(link.get("resolved_path"))
+    )
+
+
+def validate_link_absent(snapshot: dict[str, Any], phase: str, key: str, blockers: list[str]) -> None:
+    if not link_absent(snapshot, key):
+        blockers.append(f"{phase}_{key}_link_not_absent")
+    if (
+        state_summary(snapshot).get(key) is not None
+        or state_file_data(snapshot).get(key) is not None
+        or entry_or_link_version(snapshot, key) is not None
+    ):
+        blockers.append(f"{phase}_{key}_state_not_absent")
+
+
+def validate_current_link_target(snapshot: dict[str, Any], phase: str, expected_version: str, blockers: list[str]) -> None:
+    link = link_snapshot(snapshot, "current")
+    if link.get("is_symlink") is not True:
+        blockers.append(f"{phase}_current_link_not_symlink")
+    if basename_version(link_target(snapshot, "current")) != expected_version:
+        blockers.append(f"{phase}_current_link_not_target_c22")
+    if link.get("resolved_path") != f"{DATA_RELEASES_DIR}/{expected_version}":
+        blockers.append(f"{phase}_current_link_resolved_path_mismatch")
+    if state_entry(snapshot, "current").get("version") != expected_version:
+        blockers.append(f"{phase}_current_state_not_target_c22")
 
 
 def entry_or_link_version(snapshot: dict[str, Any], key: str) -> str | None:
@@ -286,6 +367,62 @@ def current_or_previous_mentions(snapshot: dict[str, Any], version: str) -> bool
     return any(isinstance(link, str) and basename_version(link) == version for link in links)
 
 
+def adoption_probe(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return as_dict(snapshot.get("player_adoption"))
+
+
+def validate_player_adoption(
+    snapshot: dict[str, Any],
+    phase: str,
+    expected_classification: str,
+    blockers: list[str],
+) -> None:
+    adoption = adoption_probe(snapshot)
+    if not adoption:
+        blockers.append(f"{phase}_player_adoption_missing")
+        return
+    if adoption.get("schema") != COLLECT_ADOPTION_SCHEMA:
+        blockers.append(f"{phase}_player_adoption_schema")
+    if adoption.get("unit") != "kiosky-player.service":
+        blockers.append(f"{phase}_player_adoption_unit_mismatch")
+    main_pid = adoption.get("main_pid")
+    if not isinstance(main_pid, int) or isinstance(main_pid, bool) or main_pid <= 0:
+        blockers.append(f"{phase}_player_adoption_main_pid_invalid")
+    systemd_player = as_dict(as_dict(as_dict(snapshot.get("systemd")).get("player")).get("show"))
+    player_service = as_dict(as_dict(snapshot.get("player_service")).get("show"))
+    observed_pids: list[int] = []
+    for label, value in (
+        ("systemd_player", systemd_player.get("MainPID")),
+        ("player_service", player_service.get("MainPID")),
+    ):
+        try:
+            observed = int(str(value or "0"))
+        except ValueError:
+            observed = 0
+        if observed <= 0:
+            blockers.append(f"{phase}_{label}_main_pid_invalid")
+        else:
+            observed_pids.append(observed)
+    if isinstance(main_pid, int) and not isinstance(main_pid, bool):
+        if any(observed != main_pid for observed in observed_pids):
+            blockers.append(f"{phase}_player_adoption_main_pid_mismatch")
+    classification = str_field(adoption.get("classification"))
+    if classification not in {"image_fallback", "data_current", "unknown", "read_error"}:
+        blockers.append(f"{phase}_player_adoption_classification_invalid")
+    app_dir = adoption.get("kiosky_app_dir")
+    derived = classify_kiosky_app_dir(app_dir)
+    if classification != "read_error" and derived != classification:
+        blockers.append(f"{phase}_player_adoption_classification_app_dir_mismatch")
+    if classification != expected_classification:
+        blockers.append(
+            f"{phase}_player_adoption_expected_{expected_classification}_got_{classification or 'missing'}"
+        )
+    if classification != "read_error" and derived != expected_classification:
+        blockers.append(
+            f"{phase}_player_adoption_app_dir_expected_{expected_classification}_got_{derived}"
+        )
+
+
 def validate_state_consistency(snapshot: dict[str, Any], phase: str, blockers: list[str]) -> None:
     summary = state_summary(snapshot)
     state_file = as_dict(as_dict(snapshot.get("state")).get("state_file"))
@@ -306,7 +443,10 @@ def validate_state_consistency(snapshot: dict[str, Any], phase: str, blockers: l
     for key in ("current", "previous", "last_operation"):
         if summary.get(key) != state_data.get(key):
             blockers.append(f"{phase}_state_summary_{key}_mismatch")
-    if as_list(summary.get("quarantine")) != as_list(state_data.get("quarantine")):
+    for key in ("quarantine", "quarantined_identities"):
+        if key in state_data and not isinstance(state_data.get(key), list):
+            blockers.append(f"{phase}_state_{key}_not_list")
+    if as_list(summary.get("quarantine")) != combined_quarantine_entries(state_data):
         blockers.append(f"{phase}_state_summary_quarantine_mismatch")
     for key in ("current", "previous"):
         entry = summary.get(key)
@@ -484,9 +624,13 @@ def validate_publication(
         blockers.append("publication_evidence_schema")
     if publication.get("passed") is not True or publication.get("published") is not True:
         blockers.append("publication_evidence_not_passed")
+    mode = publication.get("mode")
+    if mode not in {"publish", "verify-existing"}:
+        blockers.append("publication_evidence_mode_invalid")
+    expected_would_publish = mode == "publish"
+    if publication.get("would_publish") is not expected_would_publish:
+        blockers.append("publication_evidence_would_publish_invalid")
     required_remote_claims = {
-        "mode": "publish",
-        "would_publish": True,
         "manifest_channel": CHANNEL,
         "authorization_gate": "passed",
         "remote_source_commit_present": True,
@@ -537,7 +681,62 @@ def validate_publication(
     }
     if actual_assets != expected_assets:
         blockers.append("publication_evidence_asset_hashes_mismatch")
+    if mode == "verify-existing":
+        verification = as_dict(publication.get("verification"))
+        required_verification = {
+            "operation": "verify-existing",
+            "created_release": False,
+            "downloaded_asset_count": 3,
+            "remote_tag": authorization.get("tag_name"),
+            "remote_target_commitish": target.get("source_commit"),
+            "remote_is_draft": False,
+            "remote_is_prerelease": False,
+        }
+        for key, value in required_verification.items():
+            if verification.get(key) != value:
+                blockers.append(f"publication_evidence_verification_{key}_mismatch")
+        downloaded = verification.get("downloaded_assets")
+        if not isinstance(downloaded, list) or len(downloaded) != 3:
+            blockers.append("publication_evidence_verification_downloaded_assets_not_exact_three")
+            downloaded = []
+        downloaded_assets = {
+            str(item.get("name")): str(item.get("sha256"))
+            for item in downloaded
+            if isinstance(item, dict)
+        }
+        if downloaded_assets != expected_assets:
+            blockers.append("publication_evidence_verification_downloaded_asset_hashes_mismatch")
     return publication
+
+
+def validate_image_marker_file_binding(
+    marker: dict[str, Any],
+    *,
+    phase: str,
+    expected_image_tag: str,
+    expected_marker_sha256: str,
+    blockers: list[str],
+) -> None:
+    expected_path = f"{PRODUCTION_IMAGE_MARKER_DIR}/{expected_image_tag}-image"
+    if marker.get("path") != expected_path:
+        blockers.append(f"{phase}_production_image_marker_path_mismatch")
+    if marker.get("is_file") is not True or marker.get("is_symlink") is not False:
+        blockers.append(f"{phase}_production_image_marker_not_regular")
+    if marker.get("read_error") is not None or marker.get("raw_text_error") is not None:
+        blockers.append(f"{phase}_production_image_marker_read_error")
+    raw_text = marker.get("raw_text")
+    if not isinstance(raw_text, str) or not raw_text:
+        blockers.append(f"{phase}_production_image_marker_raw_text_missing")
+        return
+    raw_sha256 = sha256_text(raw_text)
+    if marker.get("bytes") != len(raw_text.encode("utf-8")):
+        blockers.append(f"{phase}_production_image_marker_bytes_mismatch")
+    if marker.get("raw_sha256") != raw_sha256 or marker.get("sha256") != raw_sha256:
+        blockers.append(f"{phase}_production_image_marker_raw_sha256_mismatch")
+    if raw_sha256 != expected_marker_sha256:
+        blockers.append(f"{phase}_production_image_marker_expected_sha256_mismatch")
+    if parse_key_value(raw_text) != as_dict(marker.get("fields")):
+        blockers.append(f"{phase}_production_image_marker_raw_fields_mismatch")
 
 
 def validate_snapshot_common(
@@ -546,11 +745,13 @@ def validate_snapshot_common(
     phase: str,
     expected_image_tag: str,
     expected_image_version: str,
+    expected_image_marker_sha256: str,
     expected_updater_sha256: str,
     authorization_sha256: str,
     authorization_data: dict[str, Any],
     max_player_restarts: int,
     require_freeze_probe: bool,
+    strict_image_binding: bool,
     blockers: list[str],
 ) -> None:
     if not snapshot:
@@ -571,10 +772,24 @@ def validate_snapshot_common(
         blockers.append(f"{phase}_production_marker_not_for_production_true")
     if not false_or_absent(marker_fields.get("not_for_distribution")):
         blockers.append(f"{phase}_production_marker_not_for_distribution_true")
+    if strict_image_binding:
+        validate_image_marker_file_binding(
+            marker,
+            phase=phase,
+            expected_image_tag=expected_image_tag,
+            expected_marker_sha256=expected_image_marker_sha256,
+            blockers=blockers,
+        )
 
     updater = as_dict(snapshot.get("updater"))
     if updater.get("sha256") != expected_updater_sha256:
         blockers.append(f"{phase}_updater_sha256_mismatch")
+    if strict_image_binding:
+        paths = as_dict(snapshot.get("paths"))
+        if paths.get("updatectl") != PRODUCTION_UPDATECTL_PATH:
+            blockers.append(f"{phase}_updatectl_path_mismatch")
+        if updater.get("path") != PRODUCTION_UPDATECTL_PATH:
+            blockers.append(f"{phase}_updater_snapshot_path_mismatch")
 
     auth = as_dict(snapshot.get("authorization"))
     if auth.get("sha256") != authorization_sha256:
@@ -619,6 +834,16 @@ def validate_snapshot_common(
         blockers.append(f"{phase}_freeze_probe_missing")
     if freeze.get("ran") is True and freeze.get("returncode") != 44:
         blockers.append(f"{phase}_freeze_probe_rc_not_44")
+    if strict_image_binding and freeze.get("ran") is True:
+        if freeze.get("expected_returncode") != 44:
+            blockers.append(f"{phase}_freeze_probe_expected_rc_not_44")
+        if freeze.get("cmd") != [
+            PRODUCTION_UPDATECTL_PATH,
+            "rollback",
+            "--component",
+            "player-runtime",
+        ]:
+            blockers.append(f"{phase}_freeze_probe_command_mismatch")
 
 
 def timer_last_trigger(snapshot: dict[str, Any]) -> str:
@@ -629,6 +854,29 @@ def timer_last_trigger(snapshot: dict[str, Any]) -> str:
 def service_invocation(snapshot: dict[str, Any]) -> str:
     service = as_dict(as_dict(snapshot.get("systemd")).get("service"))
     return str_field(as_dict(service.get("show")).get("InvocationID"))
+
+
+def player_service_invocation_fields(snapshot: dict[str, Any]) -> tuple[str, str]:
+    systemd_player = as_dict(as_dict(as_dict(snapshot.get("systemd")).get("player")).get("show"))
+    player_service = as_dict(as_dict(snapshot.get("player_service")).get("show"))
+    return (
+        str_field(systemd_player.get("InvocationID")),
+        str_field(player_service.get("InvocationID")),
+    )
+
+
+def validate_player_service_invocation(snapshot: dict[str, Any], phase: str, blockers: list[str]) -> str:
+    systemd_invocation, player_service_invocation = player_service_invocation_fields(snapshot)
+    if not systemd_invocation and not player_service_invocation:
+        blockers.append(f"{phase}_player_service_invocation_missing")
+        return ""
+    if (
+        systemd_invocation
+        and player_service_invocation
+        and systemd_invocation != player_service_invocation
+    ):
+        blockers.append(f"{phase}_player_service_invocation_mismatch")
+    return systemd_invocation or player_service_invocation
 
 
 def validate_timer_execution(
@@ -696,7 +944,7 @@ def validate_health_green(snapshot: dict[str, Any], phase: str, blockers: list[s
     if health_block.get("ran") is not True:
         blockers.append(f"{phase}_deep_health_not_collected")
         return
-    if health_block.get("returncode") not in (0, None):
+    if health_block.get("returncode") != 0:
         blockers.append(f"{phase}_deep_health_collector_rc_nonzero")
     evidence_path = snapshot.get("_evidence_path")
     artifact_dir_name = health_block.get("artifact_dir_name")
@@ -935,11 +1183,209 @@ def validate_current_marker(snapshot: dict[str, Any], phase: str, target: dict[s
         blockers.append(f"{phase}_current_marker_deep_health_not_passed")
 
 
+def validate_current_marker_file_binding(
+    snapshot: dict[str, Any],
+    phase: str,
+    blockers: list[str],
+) -> None:
+    marker_snapshot = as_dict(as_dict(snapshot.get("state")).get("current_release_marker"))
+    current_resolved_path = str_field(link_snapshot(snapshot, "current").get("resolved_path"))
+    expected_marker_path = (
+        f"{current_resolved_path}/.release_verified.json"
+        if current_resolved_path
+        else ""
+    )
+    if marker_snapshot.get("path") != expected_marker_path:
+        blockers.append(f"{phase}_current_marker_path_mismatch")
+    if marker_snapshot.get("exists") is not True or marker_snapshot.get("is_file") is not True:
+        blockers.append(f"{phase}_current_marker_not_regular")
+    if marker_snapshot.get("is_symlink") is not False:
+        blockers.append(f"{phase}_current_marker_symlink_or_unknown")
+    if marker_snapshot.get("json_error") is not None:
+        blockers.append(f"{phase}_current_marker_json_error")
+    if marker_snapshot.get("raw_text_error") is not None:
+        blockers.append(f"{phase}_current_marker_raw_text_error")
+    raw_text = marker_snapshot.get("raw_text")
+    if not isinstance(raw_text, str) or not raw_text:
+        blockers.append(f"{phase}_current_marker_raw_text_missing")
+        return
+    raw_bytes = raw_text.encode("utf-8")
+    if marker_snapshot.get("bytes") != len(raw_bytes):
+        blockers.append(f"{phase}_current_marker_bytes_mismatch")
+    if marker_snapshot.get("sha256") != sha256_text(raw_text):
+        blockers.append(f"{phase}_current_marker_raw_sha256_mismatch")
+    try:
+        parsed = json.loads(raw_text)
+    except Exception:
+        blockers.append(f"{phase}_current_marker_raw_json_invalid")
+        return
+    data = as_dict(marker_snapshot.get("data"))
+    if not isinstance(parsed, dict) or parsed != data:
+        blockers.append(f"{phase}_current_marker_raw_data_mismatch")
+    if marker_snapshot.get("canonical_json_sha256") != canonical_json_sha256(data):
+        blockers.append(f"{phase}_current_marker_canonical_sha256_mismatch")
+
+
 def validate_pre(snapshot: dict[str, Any], *, baseline_version: str, target_version: str, blockers: list[str]) -> None:
     if current_version(snapshot) != baseline_version:
         blockers.append("pre_current_not_baseline_c21")
     if current_or_previous_mentions(snapshot, target_version):
         blockers.append("pre_target_c22_linked_before_apply")
+
+
+def expected_authorized_source(authorization: dict[str, Any]) -> str:
+    tag = str_field(authorization.get("tag_name"))
+    return f"github-authorized:{authorization.get('repo')}:{tag}"
+
+
+def validate_image_marker_baseline(
+    snapshot: dict[str, Any],
+    *,
+    baseline_version: str,
+    baseline_payload_sha256: str,
+    blockers: list[str],
+) -> None:
+    marker_fields = as_dict(as_dict(snapshot.get("image_marker")).get("fields"))
+    if marker_fields.get("player_runtime_baseline_version") != baseline_version:
+        blockers.append("pre_image_marker_baseline_version_mismatch")
+    if marker_fields.get("player_runtime_baseline_payload_sha256") != baseline_payload_sha256:
+        blockers.append("pre_image_marker_baseline_payload_sha256_mismatch")
+
+
+def validate_no_data_runtime(snapshot: dict[str, Any], phase: str, blockers: list[str]) -> None:
+    validate_link_absent(snapshot, phase, "current", blockers)
+    validate_link_absent(snapshot, phase, "previous", blockers)
+
+
+def validate_exact_target_current(
+    snapshot: dict[str, Any],
+    phase: str,
+    *,
+    target: dict[str, Any],
+    authorization: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    target_version = str_field(target.get("version"))
+    validate_current_link_target(snapshot, phase, target_version, blockers)
+    if current_version(snapshot) != target_version:
+        blockers.append(f"{phase}_current_not_target_c22")
+    expected_identity = {
+        "version": target.get("version"),
+        "payload_sha256": target.get("payload_sha256"),
+        "kiosk_py_sha256": target.get("kiosk_py_sha256"),
+        "tree_sha256": target.get("tree_sha256"),
+    }
+    if release_identity(snapshot, "current") != expected_identity:
+        blockers.append(f"{phase}_current_identity_mismatch")
+    if str_field(state_entry(snapshot, "current").get("source")) != expected_authorized_source(authorization):
+        blockers.append(f"{phase}_current_source_missing_github_tag")
+    validate_current_marker(snapshot, phase, target, blockers)
+    validate_current_marker_file_binding(snapshot, phase, blockers)
+
+
+def validate_apply_success_journal(
+    snapshot: dict[str, Any],
+    phase: str,
+    authorization: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    text = journal_text(snapshot)
+    tag = str_field(authorization.get("tag_name"))
+    if (
+        not any(token in text for token in PLAYER_RUNTIME_APPLY_SUCCESS_JOURNAL_TOKENS)
+        or tag not in text
+    ):
+        blockers.append(f"{phase}_apply_journal_missing_apply_success")
+
+
+def validate_exact_source_apply_operation(
+    snapshot: dict[str, Any],
+    *,
+    phase: str,
+    target: dict[str, Any],
+    authorization: dict[str, Any],
+    previous_snapshot: dict[str, Any],
+    disallowed_state_snapshots: tuple[dict[str, Any], ...],
+    blockers: list[str],
+) -> None:
+    last = as_dict(state_summary(snapshot).get("last_operation") or state_file_data(snapshot).get("last_operation"))
+    if last.get("type") != "apply":
+        blockers.append(f"{phase}_last_operation_type_not_apply")
+    if last.get("status") != "success":
+        blockers.append(f"{phase}_last_operation_status_not_success")
+    if last.get("version") != target.get("version"):
+        blockers.append(f"{phase}_last_operation_version_mismatch")
+    if str_field(last.get("source")) != expected_authorized_source(authorization):
+        blockers.append(f"{phase}_last_operation_source_mismatch")
+    validate_new_operation_after_snapshot(
+        snapshot,
+        phase=phase,
+        previous_snapshot=previous_snapshot,
+        disallowed_state_snapshots=disallowed_state_snapshots,
+        blockers=blockers,
+    )
+
+
+def validate_distinct_service_invocation(
+    snapshot: dict[str, Any],
+    *,
+    phase: str,
+    prior_snapshots: tuple[dict[str, Any], ...],
+    blockers: list[str],
+) -> None:
+    invocation = service_invocation(snapshot)
+    prior_invocations = {
+        value
+        for value in (service_invocation(item) for item in prior_snapshots)
+        if value
+    }
+    if not invocation or invocation in prior_invocations:
+        blockers.append(f"{phase}_service_invocation_not_new")
+
+
+def validate_pre_image_fallback(
+    snapshot: dict[str, Any],
+    *,
+    baseline_version: str,
+    baseline_payload_sha256: str,
+    blockers: list[str],
+) -> None:
+    validate_no_data_runtime(snapshot, "pre", blockers)
+    validate_image_marker_baseline(
+        snapshot,
+        baseline_version=baseline_version,
+        baseline_payload_sha256=baseline_payload_sha256,
+        blockers=blockers,
+    )
+
+
+def validate_post_apply_image_fallback(
+    snapshot: dict[str, Any],
+    *,
+    pre_snapshot: dict[str, Any],
+    target: dict[str, Any],
+    authorization: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    validate_exact_target_current(
+        snapshot,
+        "post_apply",
+        target=target,
+        authorization=authorization,
+        blockers=blockers,
+    )
+    validate_link_absent(snapshot, "post_apply", "previous", blockers)
+    validate_exact_source_apply_operation(
+        snapshot,
+        phase="post_apply",
+        target=target,
+        authorization=authorization,
+        previous_snapshot=pre_snapshot,
+        disallowed_state_snapshots=(pre_snapshot,),
+        blockers=blockers,
+    )
+    validate_service_success(snapshot, "post_apply", blockers)
+    validate_health_green(snapshot, "post_apply", blockers)
 
 
 def validate_post_apply(
@@ -1083,6 +1529,35 @@ def validate_rollback(
     validate_health_green(snapshot, "rollback", blockers)
 
 
+def validate_rollback_image_fallback(
+    snapshot: dict[str, Any],
+    *,
+    previous_snapshot: dict[str, Any],
+    expected_reason: str,
+    blockers: list[str],
+) -> None:
+    validate_no_data_runtime(snapshot, "rollback", blockers)
+    last = as_dict(state_summary(snapshot).get("last_operation") or state_file_data(snapshot).get("last_operation"))
+    if last.get("type") != "rollback":
+        blockers.append("rollback_last_operation_type_not_rollback")
+    if last.get("status") != "success":
+        blockers.append("rollback_last_operation_status_not_success")
+    if last.get("rolled_back_to") != "image_fallback":
+        blockers.append("rollback_last_operation_target_not_image_fallback")
+    reason = str_field(last.get("rollback_reason"))
+    if reason != expected_reason and expected_reason not in journal_text(snapshot):
+        blockers.append("rollback_not_authorized_reason")
+    validate_authorized_rollback_activation(snapshot, "rollback", blockers)
+    validate_new_operation_after_snapshot(
+        snapshot,
+        phase="rollback",
+        previous_snapshot=previous_snapshot,
+        disallowed_state_snapshots=(previous_snapshot,),
+        blockers=blockers,
+    )
+    validate_health_green(snapshot, "rollback", blockers)
+
+
 def validate_restored(
     snapshot: dict[str, Any],
     *,
@@ -1121,8 +1596,51 @@ def validate_restored(
         blockers.append("restored_target_c22_quarantined")
 
 
+def validate_restored_image_fallback(
+    snapshot: dict[str, Any],
+    *,
+    pre_snapshot: dict[str, Any],
+    rollback_snapshot: dict[str, Any],
+    post_apply_snapshot: dict[str, Any],
+    noop_snapshot: dict[str, Any],
+    target: dict[str, Any],
+    authorization: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    validate_exact_target_current(
+        snapshot,
+        "restored",
+        target=target,
+        authorization=authorization,
+        blockers=blockers,
+    )
+    validate_link_absent(snapshot, "restored", "previous", blockers)
+    validate_exact_source_apply_operation(
+        snapshot,
+        phase="restored",
+        target=target,
+        authorization=authorization,
+        previous_snapshot=rollback_snapshot,
+        disallowed_state_snapshots=(rollback_snapshot, post_apply_snapshot),
+        blockers=blockers,
+    )
+    validate_distinct_service_invocation(
+        snapshot,
+        phase="restored",
+        prior_snapshots=(pre_snapshot, post_apply_snapshot, noop_snapshot, rollback_snapshot),
+        blockers=blockers,
+    )
+    validate_apply_success_journal(snapshot, "restored", authorization, blockers)
+    validate_service_success(snapshot, "restored", blockers)
+    validate_health_green(snapshot, "restored", blockers)
+
+
 def target_is_quarantined(snapshot: dict[str, Any], target: dict[str, Any]) -> bool:
-    for entry in as_list(state_summary(snapshot).get("quarantine")):
+    entries = [
+        *as_list(state_summary(snapshot).get("quarantine")),
+        *combined_quarantine_entries(state_file_data(snapshot)),
+    ]
+    for entry in entries:
         if not isinstance(entry, dict):
             continue
         if entry.get("version") == target.get("version"):
@@ -1134,8 +1652,69 @@ def target_is_quarantined(snapshot: dict[str, Any], target: dict[str, Any]) -> b
     return False
 
 
+def validate_target_never_quarantined(
+    snapshots: dict[str, dict[str, Any]],
+    *,
+    target: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    for phase, snapshot in snapshots.items():
+        if target_is_quarantined(snapshot, target):
+            blockers.append(f"{phase}_target_c22_quarantined")
+
+
+def validate_image_fallback_adoption(
+    snapshots: dict[str, dict[str, Any]],
+    blockers: list[str],
+) -> None:
+    expected = {
+        "pre": "image_fallback",
+        "post_apply": "data_current",
+        "noop": "data_current",
+        "rollback": "image_fallback",
+        "restored": "data_current",
+    }
+    for phase, classification in expected.items():
+        validate_player_adoption(snapshots[phase], phase, classification, blockers)
+
+
+def validate_image_fallback_player_invocations(
+    snapshots: dict[str, dict[str, Any]],
+    blockers: list[str],
+) -> None:
+    invocations = {
+        phase: validate_player_service_invocation(snapshot, phase, blockers)
+        for phase, snapshot in snapshots.items()
+    }
+    if (
+        invocations["noop"]
+        and invocations["post_apply"]
+        and invocations["noop"] != invocations["post_apply"]
+    ):
+        blockers.append("noop_player_service_invocation_changed")
+    forbidden_prior_phases = {
+        "post_apply": ("pre",),
+        "rollback": ("pre", "post_apply", "noop"),
+        "restored": ("pre", "post_apply", "noop", "rollback"),
+    }
+    for phase, prior_phases in forbidden_prior_phases.items():
+        prior_invocations = {
+            invocations[prior_phase]
+            for prior_phase in prior_phases
+            if invocations[prior_phase]
+        }
+        if invocations[phase] and invocations[phase] in prior_invocations:
+            blockers.append(f"{phase}_player_service_invocation_not_new")
+
+
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     blockers: list[str] = []
+    image_fallback_mode = args.roundtrip_mode == "image-fallback-reapply"
+    require_freeze_probe = args.require_freeze_probe or image_fallback_mode
+    if image_fallback_mode and not is_sha256(args.baseline_payload_sha256):
+        blockers.append("baseline_payload_sha256_invalid")
+    if image_fallback_mode and not is_sha256(args.expected_image_marker_sha256):
+        blockers.append("expected_image_marker_sha256_invalid")
     authorization_result = authorization_gate.evaluate(
         args.authorization,
         manifest=args.manifest,
@@ -1177,11 +1756,13 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             phase=phase,
             expected_image_tag=args.expected_image_tag,
             expected_image_version=args.expected_image_version,
+            expected_image_marker_sha256=args.expected_image_marker_sha256,
             expected_updater_sha256=args.expected_updater_sha256,
             authorization_sha256=authorization_sha,
             authorization_data=authorization,
             max_player_restarts=args.max_player_restarts,
-            require_freeze_probe=args.require_freeze_probe,
+            require_freeze_probe=require_freeze_probe,
+            strict_image_binding=image_fallback_mode,
             blockers=blockers,
         )
         validate_state_consistency(snapshot, phase, blockers)
@@ -1195,43 +1776,90 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         blockers,
     )
 
-    validate_pre(
-        snapshots["pre"],
-        baseline_version=args.baseline_version,
-        target_version=args.target_version,
-        blockers=blockers,
-    )
-    validate_post_apply(
-        snapshots["post_apply"],
-        baseline_version=args.baseline_version,
-        target=target,
-        authorization=authorization,
-        blockers=blockers,
-    )
-    validate_noop(snapshots["noop"], post_apply=snapshots["post_apply"], blockers=blockers)
-    validate_rollback(
-        snapshots["rollback"],
-        previous_snapshot=snapshots["noop"],
-        baseline_version=args.baseline_version,
-        target_version=args.target_version,
-        expected_reason=args.expected_rollback_reason,
-        blockers=blockers,
-    )
-    validate_restored(
-        snapshots["restored"],
-        rollback_snapshot=snapshots["rollback"],
-        post_apply_snapshot=snapshots["post_apply"],
-        baseline_version=args.baseline_version,
-        target=target,
-        expected_reason=args.expected_rollback_reason,
-        blockers=blockers,
-    )
+    if image_fallback_mode:
+        validate_pre_image_fallback(
+            snapshots["pre"],
+            baseline_version=args.baseline_version,
+            baseline_payload_sha256=args.baseline_payload_sha256,
+            blockers=blockers,
+        )
+        validate_post_apply_image_fallback(
+            snapshots["post_apply"],
+            pre_snapshot=snapshots["pre"],
+            target=target,
+            authorization=authorization,
+            blockers=blockers,
+        )
+        validate_noop(snapshots["noop"], post_apply=snapshots["post_apply"], blockers=blockers)
+        validate_exact_target_current(
+            snapshots["noop"],
+            "noop",
+            target=target,
+            authorization=authorization,
+            blockers=blockers,
+        )
+        validate_link_absent(snapshots["noop"], "noop", "previous", blockers)
+        validate_rollback_image_fallback(
+            snapshots["rollback"],
+            previous_snapshot=snapshots["noop"],
+            expected_reason=args.expected_rollback_reason,
+            blockers=blockers,
+        )
+        validate_restored_image_fallback(
+            snapshots["restored"],
+            pre_snapshot=snapshots["pre"],
+            rollback_snapshot=snapshots["rollback"],
+            post_apply_snapshot=snapshots["post_apply"],
+            noop_snapshot=snapshots["noop"],
+            target=target,
+            authorization=authorization,
+            blockers=blockers,
+        )
+        validate_target_never_quarantined(snapshots, target=target, blockers=blockers)
+        validate_image_fallback_adoption(snapshots, blockers)
+        validate_image_fallback_player_invocations(snapshots, blockers)
+    else:
+        validate_pre(
+            snapshots["pre"],
+            baseline_version=args.baseline_version,
+            target_version=args.target_version,
+            blockers=blockers,
+        )
+        validate_post_apply(
+            snapshots["post_apply"],
+            baseline_version=args.baseline_version,
+            target=target,
+            authorization=authorization,
+            blockers=blockers,
+        )
+        validate_noop(snapshots["noop"], post_apply=snapshots["post_apply"], blockers=blockers)
+        validate_rollback(
+            snapshots["rollback"],
+            previous_snapshot=snapshots["noop"],
+            baseline_version=args.baseline_version,
+            target_version=args.target_version,
+            expected_reason=args.expected_rollback_reason,
+            blockers=blockers,
+        )
+        validate_restored(
+            snapshots["restored"],
+            rollback_snapshot=snapshots["rollback"],
+            post_apply_snapshot=snapshots["post_apply"],
+            baseline_version=args.baseline_version,
+            target=target,
+            expected_reason=args.expected_rollback_reason,
+            blockers=blockers,
+        )
     validate_distinct_health_evidence(snapshots, blockers)
     mechanics_blockers = list(blockers)
     cleanliness_blockers: list[str] = []
+    min_continuous_restored_sec = args.min_continuous_restored_sec
+    if image_fallback_mode and min_continuous_restored_sec < DEFAULT_MIN_CONTINUOUS_RESTORED_SEC:
+        cleanliness_blockers.append("continuous_restored_min_duration_below_strict_600")
+        min_continuous_restored_sec = DEFAULT_MIN_CONTINUOUS_RESTORED_SEC
     continuous_playback = validate_continuous_restored_health(
         snapshots["restored"],
-        args.min_continuous_restored_sec,
+        min_continuous_restored_sec,
         cleanliness_blockers,
     )
     blockers.extend(cleanliness_blockers)
@@ -1268,12 +1896,15 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "expected": {
             "image_tag": args.expected_image_tag,
             "image_version": args.expected_image_version,
+            "image_marker_sha256": args.expected_image_marker_sha256,
             "updater_sha256": args.expected_updater_sha256,
             "target_version": args.target_version,
             "baseline_version": args.baseline_version,
+            "baseline_payload_sha256": args.baseline_payload_sha256,
+            "roundtrip_mode": args.roundtrip_mode,
             "max_player_restarts": args.max_player_restarts,
-            "require_freeze_probe": args.require_freeze_probe,
-            "min_continuous_restored_sec": args.min_continuous_restored_sec,
+            "require_freeze_probe": require_freeze_probe,
+            "min_continuous_restored_sec": min_continuous_restored_sec,
         },
         "target": target,
         "authorization_sha256": authorization_sha,
@@ -1397,7 +2028,7 @@ def fixture_snapshot(
     phase: str,
     *,
     artifacts: dict[str, Any],
-    current: str,
+    current: str | None,
     previous: str | None,
     source: str,
     last_operation: dict[str, Any] | None = None,
@@ -1417,14 +2048,16 @@ def fixture_snapshot(
             finished_at = f"2026-07-10T12:0{phase_index - 1}:30Z"
         last_operation.setdefault("started_at_utc", started_at)
         last_operation.setdefault("finished_at_utc", finished_at)
-    current_marker_data = marker_for(current, target)
-    current_entry = {
-        "version": current,
-        "payload_sha256": current_marker_data["payload_sha256"],
-        "source": source,
-        "kiosk_py_sha256": current_marker_data["kiosk_py_sha256"],
-        "tree_sha256": current_marker_data["tree_sha256"],
-    }
+    current_marker_data = marker_for(current, target) if current is not None else {}
+    current_entry = None
+    if current is not None:
+        current_entry = {
+            "version": current,
+            "payload_sha256": current_marker_data["payload_sha256"],
+            "source": source,
+            "kiosk_py_sha256": current_marker_data["kiosk_py_sha256"],
+            "tree_sha256": current_marker_data["tree_sha256"],
+        }
     previous_entry = None
     if previous is not None:
         previous_marker = marker_for(previous, target)
@@ -1444,21 +2077,47 @@ def fixture_snapshot(
     if state_salt:
         state_data["fixture_salt"] = state_salt
     state_text = json.dumps(state_data, sort_keys=True)
+    current_marker_text = (
+        json.dumps(current_marker_data, indent=2, sort_keys=True) + "\n"
+        if current is not None
+        else ""
+    )
+    player_pid = 1234 + phase_index
+    player_invocation = f"player-invocation-{phase}"
     last_trigger = "n/a" if phase == "pre" else "Fri 2026-07-10 12:01:00 UTC"
+    image_marker_fields = {
+        "image_tag": DEFAULT_EXPECTED_IMAGE_TAG,
+        "image_version": DEFAULT_EXPECTED_IMAGE_VERSION,
+        "artifact_private": "false",
+        "final_image": "true",
+        "player_runtime_baseline_version": DEFAULT_BASELINE_VERSION,
+        "player_runtime_baseline_payload_sha256": DEFAULT_BASELINE_PAYLOAD_SHA256,
+    }
+    image_marker_text = "".join(
+        f"{key}={value}\n" for key, value in image_marker_fields.items()
+    )
     return {
         "schema": COLLECT_SCHEMA,
         "phase": phase,
         "collected_at_utc": collected_at,
         "image_marker": {
+            "path": f"{PRODUCTION_IMAGE_MARKER_DIR}/{DEFAULT_EXPECTED_IMAGE_TAG}-image",
             "exists": True,
-            "fields": {
-                "image_tag": DEFAULT_EXPECTED_IMAGE_TAG,
-                "image_version": DEFAULT_EXPECTED_IMAGE_VERSION,
-                "artifact_private": "false",
-                "final_image": "true",
-            },
+            "is_file": True,
+            "is_symlink": False,
+            "bytes": len(image_marker_text.encode("utf-8")),
+            "sha256": sha256_text(image_marker_text),
+            "read_error": None,
+            "raw_text": image_marker_text,
+            "raw_text_error": None,
+            "raw_sha256": sha256_text(image_marker_text),
+            "fields": image_marker_fields,
         },
-        "updater": {"sha256": DEFAULT_EXPECTED_UPDATER_SHA256},
+        "paths": {"updatectl": PRODUCTION_UPDATECTL_PATH},
+        "updater": {
+            "path": PRODUCTION_UPDATECTL_PATH,
+            "sha256": DEFAULT_EXPECTED_UPDATER_SHA256,
+        },
         "authorization": {
             "sha256": artifacts["authorization_sha256"],
             "data": artifacts["authorization_data"],
@@ -1488,12 +2147,51 @@ def fixture_snapshot(
                 },
                 "journal": {"lines": [journal_line]},
             },
-            "player": {"journal": {"lines": []}},
+            "player": {
+                "show": {
+                    "MainPID": str(player_pid),
+                    "InvocationID": player_invocation,
+                },
+                "journal": {"lines": []},
+            },
         },
-        "player_service": {"active_raw": "active", "nrestarts": "0", "show": {"NRestarts": "0"}},
+        "player_service": {
+            "active_raw": "active",
+            "nrestarts": "0",
+            "show": {
+                "NRestarts": "0",
+                "MainPID": str(player_pid),
+                "InvocationID": player_invocation,
+            },
+        },
+        "player_adoption": {
+            "schema": COLLECT_ADOPTION_SCHEMA,
+            "unit": "kiosky-player.service",
+            "main_pid": player_pid,
+            "kiosky_app_dir": DATA_CURRENT_APP_DIR if current is not None else IMAGE_FALLBACK_APP_DIR,
+            "classification": "data_current" if current is not None else "image_fallback",
+        },
         "state": {
-            "current_symlink": {"target": f"releases/{current}"},
-            "previous_symlink": {"target": f"releases/{previous}" if previous else ""},
+            "current_symlink": (
+                {
+                    "exists": True,
+                    "is_symlink": True,
+                    "target": f"releases/{current}",
+                    "resolved_path": f"{DATA_RELEASES_DIR}/{current}",
+                }
+                if current is not None
+                else {"exists": False, "is_symlink": False, "target": None, "resolved_path": None}
+            ),
+            "previous_symlink": (
+                {
+                    "exists": True,
+                    "is_symlink": True,
+                    "target": f"releases/{previous}",
+                    "resolved_path": f"{DATA_RELEASES_DIR}/{previous}",
+                }
+                if previous is not None
+                else {"exists": False, "is_symlink": False, "target": None, "resolved_path": None}
+            ),
             "state_file": {
                 "exists": True,
                 "is_file": True,
@@ -1503,10 +2201,29 @@ def fixture_snapshot(
                 "canonical_json_sha256": canonical_json_sha256(state_data),
                 "data": state_data,
             },
-            "current_release_marker": {
-                "sha256": sha256_text(json.dumps(current_marker_data, sort_keys=True)),
-                "data": current_marker_data,
-            },
+            "current_release_marker": (
+                {
+                    "path": f"{DATA_RELEASES_DIR}/{current}/.release_verified.json",
+                    "exists": True,
+                    "is_file": True,
+                    "is_symlink": False,
+                    "bytes": len(current_marker_text.encode("utf-8")),
+                    "sha256": sha256_text(current_marker_text),
+                    "json_error": None,
+                    "canonical_json_sha256": canonical_json_sha256(current_marker_data),
+                    "raw_text": current_marker_text,
+                    "raw_text_error": None,
+                    "data": current_marker_data,
+                }
+                if current is not None
+                else {
+                    "path": None,
+                    "exists": False,
+                    "sha256": None,
+                    "data": {},
+                    "json_error": "current_not_linked",
+                }
+            ),
             "summary": {
                 "current": current_entry,
                 "previous": previous_entry,
@@ -1519,22 +2236,37 @@ def fixture_snapshot(
             "returncode": 0,
             "summary": valid_health(600 if phase == "restored" else 4),
         },
-        "freeze_probe": {"ran": True, "returncode": 44},
+        "freeze_probe": {
+            "ran": True,
+            "cmd": [
+                PRODUCTION_UPDATECTL_PATH,
+                "rollback",
+                "--component",
+                "player-runtime",
+            ],
+            "expected_returncode": 44,
+            "returncode": 44,
+        },
     }
 
 
-def fixture_run(root: Path) -> tuple[argparse.Namespace, dict[str, Path], dict[str, Any]]:
+def fixture_run(
+    root: Path,
+    *,
+    roundtrip_mode: str = "data-previous-roundtrip",
+) -> tuple[argparse.Namespace, dict[str, Path], dict[str, Any]]:
     artifacts = fixture_artifacts(root)
     target_version = DEFAULT_TARGET_VERSION
     baseline = DEFAULT_BASELINE_VERSION
     auth = artifacts["authorization_data"]
+    authorized_source = f"github-authorized:{auth['repo']}:{auth['tag_name']}"
     post = fixture_snapshot(
         "post_apply",
         artifacts=artifacts,
         current=target_version,
-        previous=baseline,
-        source=f"github-authorized:{auth['repo']}:{auth['tag_name']}",
-        last_operation={"type": "apply", "status": "success", "version": target_version, "source": f"github-authorized:{auth['repo']}:{auth['tag_name']}"},
+        previous=None if roundtrip_mode == "image-fallback-reapply" else baseline,
+        source=authorized_source,
+        last_operation={"type": "apply", "status": "success", "version": target_version, "source": authorized_source},
         journal_line=f"INFO apply_success tag={auth['tag_name']}",
     )
     noop = copy.deepcopy(post)
@@ -1542,51 +2274,99 @@ def fixture_run(root: Path) -> tuple[argparse.Namespace, dict[str, Path], dict[s
     noop["collected_at_utc"] = "2026-07-10T12:02:00Z"
     noop["systemd"]["service"]["show"]["InvocationID"] = "invocation-noop"
     noop["systemd"]["service"]["journal"]["lines"] = ["INFO player_runtime_apply_noop_already_current"]
-    snapshots = {
-        "pre": fixture_snapshot(
-            "pre",
-            artifacts=artifacts,
-            current=baseline,
-            previous=None,
-            source="fixture-baseline",
-            last_operation={"type": "apply", "status": "success", "version": baseline},
-        ),
-        "post_apply": post,
-        "noop": noop,
-        "rollback": fixture_snapshot(
-            "rollback",
-            artifacts=artifacts,
-            current=baseline,
-            previous=target_version,
-            source="player_runtime_rollback",
-            last_operation={
-                "type": "rollback",
-                "status": "success",
-                "rollback_reason": DEFAULT_ROLLBACK_REASON,
-                "rolled_back_to": baseline,
-                "service_restart_performed": True,
-                "service_health_passed": True,
-            },
-            journal_line="INFO rollback-player-runtime-authorized",
-        ),
-        "restored": fixture_snapshot(
-            "restored",
-            artifacts=artifacts,
-            current=target_version,
-            previous=baseline,
-            source="player_runtime_rollback",
-            last_operation={
-                "type": "rollback",
-                "status": "success",
-                "rollback_reason": DEFAULT_ROLLBACK_REASON,
-                "rolled_back_to": target_version,
-                "service_restart_performed": True,
-                "service_health_passed": True,
-            },
-            journal_line="INFO rollback-player-runtime-authorized",
-            state_salt="restored",
-        ),
-    }
+    if roundtrip_mode == "image-fallback-reapply":
+        snapshots = {
+            "pre": fixture_snapshot(
+                "pre",
+                artifacts=artifacts,
+                current=None,
+                previous=None,
+                source="image_fallback",
+                last_operation=None,
+            ),
+            "post_apply": post,
+            "noop": noop,
+            "rollback": fixture_snapshot(
+                "rollback",
+                artifacts=artifacts,
+                current=None,
+                previous=None,
+                source="image_fallback",
+                last_operation={
+                    "type": "rollback",
+                    "status": "success",
+                    "rollback_reason": DEFAULT_ROLLBACK_REASON,
+                    "rolled_back_to": "image_fallback",
+                    "service_restart_performed": True,
+                    "service_health_passed": True,
+                },
+                journal_line="INFO rollback-player-runtime-authorized rolled_back_to=image_fallback",
+            ),
+            "restored": fixture_snapshot(
+                "restored",
+                artifacts=artifacts,
+                current=target_version,
+                previous=None,
+                source=authorized_source,
+                last_operation={
+                    "type": "apply",
+                    "status": "success",
+                    "version": target_version,
+                    "source": authorized_source,
+                },
+                journal_line=f"INFO apply_success tag={auth['tag_name']}",
+                state_salt="restored",
+            ),
+        }
+        snapshots["rollback"]["systemd"]["service"]["show"]["InvocationID"] = (
+            noop["systemd"]["service"]["show"]["InvocationID"]
+        )
+    else:
+        snapshots = {
+            "pre": fixture_snapshot(
+                "pre",
+                artifacts=artifacts,
+                current=baseline,
+                previous=None,
+                source="fixture-baseline",
+                last_operation={"type": "apply", "status": "success", "version": baseline},
+            ),
+            "post_apply": post,
+            "noop": noop,
+            "rollback": fixture_snapshot(
+                "rollback",
+                artifacts=artifacts,
+                current=baseline,
+                previous=target_version,
+                source="player_runtime_rollback",
+                last_operation={
+                    "type": "rollback",
+                    "status": "success",
+                    "rollback_reason": DEFAULT_ROLLBACK_REASON,
+                    "rolled_back_to": baseline,
+                    "service_restart_performed": True,
+                    "service_health_passed": True,
+                },
+                journal_line="INFO rollback-player-runtime-authorized",
+            ),
+            "restored": fixture_snapshot(
+                "restored",
+                artifacts=artifacts,
+                current=target_version,
+                previous=baseline,
+                source="player_runtime_rollback",
+                last_operation={
+                    "type": "rollback",
+                    "status": "success",
+                    "rollback_reason": DEFAULT_ROLLBACK_REASON,
+                    "rolled_back_to": target_version,
+                    "service_restart_performed": True,
+                    "service_health_passed": True,
+                },
+                journal_line="INFO rollback-player-runtime-authorized",
+                state_salt="restored",
+            ),
+        }
     paths: dict[str, Path] = {}
     for phase, payload in snapshots.items():
         path = root / f"{phase}.json"
@@ -1650,9 +2430,12 @@ def fixture_run(root: Path) -> tuple[argparse.Namespace, dict[str, Path], dict[s
         restored=paths["restored"],
         expected_image_tag=DEFAULT_EXPECTED_IMAGE_TAG,
         expected_image_version=DEFAULT_EXPECTED_IMAGE_VERSION,
+        expected_image_marker_sha256=snapshots["pre"]["image_marker"]["raw_sha256"],
         expected_updater_sha256=DEFAULT_EXPECTED_UPDATER_SHA256,
         target_version=DEFAULT_TARGET_VERSION,
         baseline_version=DEFAULT_BASELINE_VERSION,
+        baseline_payload_sha256=DEFAULT_BASELINE_PAYLOAD_SHA256,
+        roundtrip_mode=roundtrip_mode,
         expected_rollback_reason=DEFAULT_ROLLBACK_REASON,
         max_player_restarts=0,
         require_freeze_probe=True,
@@ -1678,14 +2461,35 @@ def refresh_fixture_health(paths: dict[str, Path], phase: str) -> None:
     write_json(paths[phase], snapshot)
 
 
+def reseal_snapshot_state(snapshot: dict[str, Any]) -> None:
+    state_file = as_dict(as_dict(snapshot.get("state")).get("state_file"))
+    state_data = as_dict(state_file.get("data"))
+    state_text = json.dumps(state_data, sort_keys=True)
+    state_file["sha256"] = sha256_text(state_text)
+    state_file["canonical_json_sha256"] = canonical_json_sha256(state_data)
+
+
+def set_snapshot_player_invocation(snapshot: dict[str, Any], invocation: str) -> None:
+    snapshot["systemd"]["player"]["show"]["InvocationID"] = invocation
+    snapshot["player_service"]["show"]["InvocationID"] = invocation
+
+
 class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
-    def run_fixture(self, mutator: Any | None = None) -> dict[str, Any]:
+    def run_fixture(
+        self,
+        mutator: Any | None = None,
+        *,
+        roundtrip_mode: str = "data-previous-roundtrip",
+    ) -> dict[str, Any]:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            args, paths, artifacts = fixture_run(root)
+            args, paths, artifacts = fixture_run(root, roundtrip_mode=roundtrip_mode)
             if mutator is not None:
                 mutator(args, paths, artifacts)
             return evaluate(args)
+
+    def run_image_fixture(self, mutator: Any | None = None) -> dict[str, Any]:
+        return self.run_fixture(mutator, roundtrip_mode="image-fallback-reapply")
 
     def test_valid_five_phase_fixture_passes(self) -> None:
         result = self.run_fixture()
@@ -1696,6 +2500,379 @@ class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
             result["continuous_playback"]["duration_sec"],
             DEFAULT_MIN_CONTINUOUS_RESTORED_SEC,
         )
+
+    def test_image_fallback_reapply_fixture_passes(self) -> None:
+        result = self.run_image_fixture()
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+        self.assertEqual(result["expected"]["roundtrip_mode"], "image-fallback-reapply")
+        self.assertTrue(result["expected"]["require_freeze_probe"])
+        self.assertTrue(is_sha256(result["expected"]["image_marker_sha256"]))
+        self.assertGreaterEqual(
+            result["continuous_playback"]["duration_sec"],
+            DEFAULT_MIN_CONTINUOUS_RESTORED_SEC,
+        )
+
+    def test_image_fallback_missing_links_violation_denies(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            data["state"]["current_symlink"] = {
+                "exists": True,
+                "is_symlink": True,
+                "target": f"releases/{DEFAULT_TARGET_VERSION}",
+                "resolved_path": f"/data/player-runtime/releases/{DEFAULT_TARGET_VERSION}",
+            }
+            write_json(paths["pre"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_current_link_not_absent", result["blockers"])
+
+    def test_image_fallback_wrong_marker_baseline_denies(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            fields = data["image_marker"]["fields"]
+            fields["player_runtime_baseline_version"] = "wrong-baseline"
+            fields["player_runtime_baseline_payload_sha256"] = "0" * 64
+            write_json(paths["pre"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_image_marker_baseline_version_mismatch", result["blockers"])
+        self.assertIn("pre_image_marker_baseline_payload_sha256_mismatch", result["blockers"])
+
+    def test_image_fallback_post_apply_must_be_adopted_from_data_current(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            data["player_adoption"]["kiosky_app_dir"] = IMAGE_FALLBACK_APP_DIR
+            data["player_adoption"]["classification"] = "image_fallback"
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "post_apply_player_adoption_expected_data_current_got_image_fallback",
+            result["blockers"],
+        )
+
+    def test_image_fallback_post_apply_requires_new_exact_apply_operation(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            last = data["state"]["summary"]["last_operation"]
+            last["type"] = "rollback"
+            last["source"] = "fixture-stale-operation"
+            data["state"]["state_file"]["data"]["last_operation"] = copy.deepcopy(last)
+            reseal_snapshot_state(data)
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_last_operation_type_not_apply", result["blockers"])
+        self.assertIn("post_apply_last_operation_source_mismatch", result["blockers"])
+
+    def test_image_fallback_adoption_requires_real_player_unit_and_pid(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            data["player_adoption"]["unit"] = "other.service"
+            data["player_adoption"]["main_pid"] = 0
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_player_adoption_unit_mismatch", result["blockers"])
+        self.assertIn("post_apply_player_adoption_main_pid_invalid", result["blockers"])
+
+    def test_image_fallback_adoption_pid_must_match_systemd_player(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            data["systemd"]["player"]["show"]["MainPID"] = "999999"
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_player_adoption_main_pid_mismatch", result["blockers"])
+
+    def test_image_fallback_rollback_must_adopt_image_fallback(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            data["player_adoption"]["kiosky_app_dir"] = DATA_CURRENT_APP_DIR
+            data["player_adoption"]["classification"] = "data_current"
+            write_json(paths["rollback"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "rollback_player_adoption_expected_image_fallback_got_data_current",
+            result["blockers"],
+        )
+
+    def test_image_fallback_restored_cannot_masquerade_as_rollback_or_same_invocation(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            rollback = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            restored = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            restored["systemd"]["service"]["show"]["InvocationID"] = rollback["systemd"]["service"]["show"]["InvocationID"]
+            last = restored["state"]["summary"]["last_operation"]
+            last["type"] = "rollback"
+            last["rolled_back_to"] = DEFAULT_TARGET_VERSION
+            restored["state"]["state_file"]["data"]["last_operation"] = copy.deepcopy(last)
+            reseal_snapshot_state(restored)
+            write_json(paths["restored"], restored)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("restored_last_operation_type_not_apply", result["blockers"])
+        self.assertIn("restored_service_invocation_not_new", result["blockers"])
+
+    def test_image_fallback_restored_invocation_cannot_reuse_post_apply(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            post_apply = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            restored = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            restored["systemd"]["service"]["show"]["InvocationID"] = (
+                post_apply["systemd"]["service"]["show"]["InvocationID"]
+            )
+            write_json(paths["restored"], restored)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("restored_service_invocation_not_new", result["blockers"])
+
+    def test_image_fallback_rollback_allows_stale_update_agent_invocation(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            noop = json.loads(paths["noop"].read_text(encoding="utf-8"))
+            rollback = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            rollback["systemd"]["service"]["show"]["InvocationID"] = (
+                noop["systemd"]["service"]["show"]["InvocationID"]
+            )
+            write_json(paths["rollback"], rollback)
+
+        result = self.run_image_fixture(mutate)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+
+    def test_image_fallback_rollback_requires_fresh_player_invocation_from_noop(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            noop = json.loads(paths["noop"].read_text(encoding="utf-8"))
+            rollback = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            noop_player_invocation = noop["systemd"]["player"]["show"]["InvocationID"]
+            set_snapshot_player_invocation(rollback, noop_player_invocation)
+            write_json(paths["rollback"], rollback)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("rollback_player_service_invocation_not_new", result["blockers"])
+
+    def test_image_fallback_rollback_player_invocation_cannot_reuse_pre(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            rollback = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            set_snapshot_player_invocation(
+                rollback,
+                pre["systemd"]["player"]["show"]["InvocationID"],
+            )
+            write_json(paths["rollback"], rollback)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("rollback_player_service_invocation_not_new", result["blockers"])
+
+    def test_image_fallback_noop_preserves_player_invocation(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            noop = json.loads(paths["noop"].read_text(encoding="utf-8"))
+            set_snapshot_player_invocation(noop, "player-invocation-unexpected-noop-restart")
+            write_json(paths["noop"], noop)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("noop_player_service_invocation_changed", result["blockers"])
+
+    def test_image_fallback_apply_and_reapply_require_fresh_player_invocations(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            post_apply = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            rollback = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            restored = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            set_snapshot_player_invocation(
+                post_apply,
+                pre["systemd"]["player"]["show"]["InvocationID"],
+            )
+            set_snapshot_player_invocation(
+                restored,
+                rollback["systemd"]["player"]["show"]["InvocationID"],
+            )
+            write_json(paths["post_apply"], post_apply)
+            write_json(paths["restored"], restored)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_player_service_invocation_not_new", result["blockers"])
+        self.assertIn("restored_player_service_invocation_not_new", result["blockers"])
+
+    def test_image_fallback_restored_player_invocation_cannot_reuse_post_apply(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            post_apply = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            restored = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            set_snapshot_player_invocation(
+                restored,
+                post_apply["systemd"]["player"]["show"]["InvocationID"],
+            )
+            write_json(paths["restored"], restored)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("restored_player_service_invocation_not_new", result["blockers"])
+
+    def test_image_fallback_current_marker_file_must_match_snapshot_data(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            restored = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            restored["state"]["current_release_marker"]["sha256"] = "0" * 64
+            write_json(paths["restored"], restored)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("restored_current_marker_raw_sha256_mismatch", result["blockers"])
+
+    def test_image_fallback_current_marker_path_must_follow_current_symlink(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            restored = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            restored["state"]["current_release_marker"]["path"] = (
+                f"{DATA_RELEASES_DIR}/wrong-target/.release_verified.json"
+            )
+            write_json(paths["restored"], restored)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("restored_current_marker_path_mismatch", result["blockers"])
+
+    def test_image_fallback_current_symlink_resolved_path_must_be_exact_target(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            post_apply = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            wrong_resolved_path = f"{DATA_RELEASES_DIR}/{DEFAULT_BASELINE_VERSION}"
+            post_apply["state"]["current_symlink"]["resolved_path"] = wrong_resolved_path
+            post_apply["state"]["current_release_marker"]["path"] = (
+                f"{wrong_resolved_path}/.release_verified.json"
+            )
+            write_json(paths["post_apply"], post_apply)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_current_link_resolved_path_mismatch", result["blockers"])
+
+    def test_image_fallback_target_quarantine_denies_any_phase(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            quarantine = [{"payload_sha256": artifacts["target"]["payload_sha256"]}]
+            data["state"]["summary"]["quarantine"] = quarantine
+            data["state"]["state_file"]["data"]["quarantine"] = copy.deepcopy(quarantine)
+            reseal_snapshot_state(data)
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_target_c22_quarantined", result["blockers"])
+
+    def test_image_fallback_legacy_quarantine_alias_denies_target(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            legacy_quarantine = [{"version": artifacts["target"]["version"]}]
+            state_data = data["state"]["state_file"]["data"]
+            state_data["quarantined_identities"] = legacy_quarantine
+            data["state"]["summary"]["quarantine"] = [
+                *state_data["quarantine"],
+                *legacy_quarantine,
+            ]
+            reseal_snapshot_state(data)
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_target_c22_quarantined", result["blockers"])
+
+    def test_image_fallback_missing_final_health_denies(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["restored"].read_text(encoding="utf-8"))
+            data["playback_deep_health"] = {"ran": False, "reason": "missing_final_health_fixture"}
+            write_json(paths["restored"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("restored_deep_health_not_collected", result["blockers"])
+
+    def test_image_fallback_short_final_health_denies(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            watchdog_path = paths["restored"].parent / "restored-deep-health" / "deep-health-watchdog.json"
+            watchdog = json.loads(watchdog_path.read_text(encoding="utf-8"))
+            watchdog["collection_finished_at_utc"] = "2026-07-10T12:04:30Z"
+            write_json(watchdog_path, watchdog)
+            refresh_fixture_health(paths, "restored")
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("continuous_restored_duration_too_short", result["blockers"])
+
+    def test_image_fallback_freeze_rc44_is_mandatory(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            pre["freeze_probe"] = {"ran": False}
+            write_json(paths["pre"], pre)
+            rollback = json.loads(paths["rollback"].read_text(encoding="utf-8"))
+            rollback["freeze_probe"] = {"ran": True, "returncode": 0}
+            write_json(paths["rollback"], rollback)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_freeze_probe_missing", result["blockers"])
+        self.assertIn("rollback_freeze_probe_rc_not_44", result["blockers"])
+
+    def test_image_fallback_freeze_probe_is_bound_to_public_command(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            pre["freeze_probe"]["cmd"] = ["/tmp/fake-updatectl", "rollback"]
+            pre["freeze_probe"]["expected_returncode"] = 0
+            write_json(paths["pre"], pre)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_freeze_probe_command_mismatch", result["blockers"])
+        self.assertIn("pre_freeze_probe_expected_rc_not_44", result["blockers"])
+
+    def test_image_fallback_image_marker_requires_path_raw_and_expected_hash(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            marker = pre["image_marker"]
+            marker["path"] = "/tmp/forged-image-marker"
+            marker["raw_text"] += "\n"
+            marker["bytes"] = len(marker["raw_text"].encode("utf-8"))
+            marker["sha256"] = sha256_text(marker["raw_text"])
+            marker["raw_sha256"] = marker["sha256"]
+            write_json(paths["pre"], pre)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_production_image_marker_path_mismatch", result["blockers"])
+        self.assertIn("pre_production_image_marker_expected_sha256_mismatch", result["blockers"])
+
+    def test_image_fallback_image_marker_rejects_forged_raw_hash(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            pre["image_marker"]["raw_sha256"] = "0" * 64
+            write_json(paths["pre"], pre)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_production_image_marker_raw_sha256_mismatch", result["blockers"])
+
+    def test_image_fallback_absent_links_reject_empty_state_residue(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            pre = json.loads(paths["pre"].read_text(encoding="utf-8"))
+            pre["state"]["summary"]["current"] = {}
+            pre["state"]["summary"]["previous"] = {}
+            pre["state"]["state_file"]["data"]["current"] = {}
+            pre["state"]["state_file"]["data"]["previous"] = {}
+            reseal_snapshot_state(pre)
+            write_json(paths["pre"], pre)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("pre_current_state_not_absent", result["blockers"])
+        self.assertIn("pre_previous_state_not_absent", result["blockers"])
 
     def test_short_restored_window_preserves_mechanics_but_blocks_product_cleanliness(self) -> None:
         def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
@@ -1929,6 +3106,16 @@ class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
             result["blockers"],
         )
 
+    def test_deep_health_requires_explicit_zero_collector_returncode(self) -> None:
+        def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(paths["post_apply"].read_text(encoding="utf-8"))
+            data["playback_deep_health"]["returncode"] = None
+            write_json(paths["post_apply"], data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn("post_apply_deep_health_collector_rc_nonzero", result["blockers"])
+
     def test_deep_health_requires_collector_sidecars(self) -> None:
         def mutate(_args: argparse.Namespace, paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
             health_dir = paths["post_apply"].parent / "post_apply-deep-health"
@@ -1981,6 +3168,45 @@ class ProductionAutopullEvidenceGateSelfTest(unittest.TestCase):
         self.assertIn("publication_evidence_asset_hashes_mismatch", result["blockers"])
         self.assertIn("publication_evidence_latest_drift", result["blockers"])
 
+    def test_verified_existing_publication_evidence_passes(self) -> None:
+        def mutate(args: argparse.Namespace, _paths: dict[str, Path], artifacts: dict[str, Any]) -> None:
+            data = json.loads(args.publication_evidence.read_text(encoding="utf-8"))
+            data["mode"] = "verify-existing"
+            data["would_publish"] = False
+            data["verification"] = {
+                "operation": "verify-existing",
+                "created_release": False,
+                "downloaded_asset_count": 3,
+                "downloaded_assets": copy.deepcopy(data["assets"]),
+                "remote_tag": artifacts["authorization_data"]["tag_name"],
+                "remote_target_commitish": artifacts["target"]["source_commit"],
+                "remote_is_draft": False,
+                "remote_is_prerelease": False,
+            }
+            write_json(args.publication_evidence, data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertTrue(result["passed"], msg=json.dumps(result, indent=2, sort_keys=True))
+        self.assertEqual(result["publication_evidence"]["mode"], "verify-existing")
+
+    def test_publish_evidence_cannot_masquerade_as_verified_existing(self) -> None:
+        def mutate(args: argparse.Namespace, _paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
+            data = json.loads(args.publication_evidence.read_text(encoding="utf-8"))
+            data["mode"] = "verify-existing"
+            data["would_publish"] = False
+            write_json(args.publication_evidence, data)
+
+        result = self.run_image_fixture(mutate)
+        self.assertFalse(result["passed"])
+        self.assertIn(
+            "publication_evidence_verification_operation_mismatch",
+            result["blockers"],
+        )
+        self.assertIn(
+            "publication_evidence_verification_downloaded_asset_hashes_mismatch",
+            result["blockers"],
+        )
+
     def test_publication_evidence_requires_successful_remote_publish_claims(self) -> None:
         def mutate(args: argparse.Namespace, _paths: dict[str, Path], _artifacts: dict[str, Any]) -> None:
             data = json.loads(args.publication_evidence.read_text(encoding="utf-8"))
@@ -2017,9 +3243,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--restored", type=Path)
     parser.add_argument("--expected-image-tag", default=DEFAULT_EXPECTED_IMAGE_TAG)
     parser.add_argument("--expected-image-version", default=DEFAULT_EXPECTED_IMAGE_VERSION)
+    parser.add_argument("--expected-image-marker-sha256", default="")
     parser.add_argument("--expected-updater-sha256", default=DEFAULT_EXPECTED_UPDATER_SHA256)
     parser.add_argument("--target-version", default=DEFAULT_TARGET_VERSION)
     parser.add_argument("--baseline-version", default=DEFAULT_BASELINE_VERSION)
+    parser.add_argument("--baseline-payload-sha256", default=DEFAULT_BASELINE_PAYLOAD_SHA256)
+    parser.add_argument("--roundtrip-mode", choices=ROUNDTRIP_MODES, default="data-previous-roundtrip")
     parser.add_argument("--expected-rollback-reason", default=DEFAULT_ROLLBACK_REASON)
     parser.add_argument("--max-player-restarts", type=int, default=0)
     parser.add_argument("--require-freeze-probe", action="store_true")

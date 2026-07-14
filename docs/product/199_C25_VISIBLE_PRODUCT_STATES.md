@@ -9,7 +9,7 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_prod13_preflash_approved_board_e2e_pending
+status=c25_validated_prod14_prebuild_validation_in_progress
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_preserved_in_candidate_chain=true
@@ -23,13 +23,13 @@ generated_visual_review=passed
 board_framebuffer_flow_validation=passed
 hdmi_camera_flicker_acceptance=pending
 writer_mutating_e2e=passed_on_prod12_c20_12
-remote_targets_not_yet_promoted=true
-next_reference_image=prod13_built_audited_board_e2e_pending
+c25b_exact_release_published_without_latest=true
+next_reference_image=prod14_prebuild_validation
 prod9_board_acceptance=blocked_do_not_flash
 prod10_board_acceptance=blocked_do_not_flash
 prod11_board_acceptance=blocked_do_not_flash
 prod12_board_acceptance=physical_base_passed_not_distribution_reference
-prod13_board_acceptance=one_controlled_flash_approved_not_distribution_reference
+prod13_board_acceptance=board_validated_timer_candidate_rejected_not_distribution_reference
 ```
 
 ## Contrato Publico V1
@@ -539,3 +539,44 @@ O unico proximo passo desta imagem e o flash controlado seguido de boot,
 expansao, identidade SSH em dois boots, wizard/QR/writer, playback, timers,
 no-op, rollback e restauracao. Evidencia:
 `docs/evidence/c18-update-validation/20260714T045929Z-prod13-build-61e3abd/`.
+
+## Checkpoint Prod13 Em Placa E Sucessor Prod14 - 2026-07-14
+
+A prod13 foi gravada e fechou boot, expansao, identidade SSH, wizard, QR,
+gravacao, retorno ao player e playback real. O timer de `totem-core` recusou a
+release antiga por downgrade e o guard de settings adiou ambos os updaters sem
+alterar estado. O release C25B exato foi publicado sem mover `latest`.
+
+Na primeira aplicacao pelo timer real, o player candidato foi rejeitado com
+`rc=11`. A rejeicao foi fail-closed: nenhuma versao ruim virou current, o
+release foi removido, a identidade ficou em quarantine e o player embutido foi
+restaurado. A evidencia mostrou que o candidato estava tocando com HW decode e
+frames avancando; somente a classificacao inicial de status chegou depois da
+espera de cinco segundos.
+
+Uma repeticao com `--startup-wait-sec 8` confirmou a correcao do warm-up. A
+repeticao amarrada a arvore C25B exata revelou ainda que o canario de dez
+segundos podia reiniciar no ultimo instante da coleta e produzir um segmento
+curto sem prova. Com o canario cobrindo toda a janela de avaliacao, a arvore
+C25B exata passou preservando todos os limites estritos, com zero falha,
+restart, erro de storage ou fault novo de GPU.
+
+```text
+board_image=c18-hwdecode-prod-13
+boot_wizard_playback=passed
+c25b_exact_release=published_without_latest
+timer_download_and_verification=passed
+candidate_5s_result=fail_closed_false_negative
+candidate_8s_exact_windowbound_result=passed_strict
+prod13_distribution_reference=false
+next_candidate=c18-hwdecode-prod-14
+distribution_reference=still_prod8_until_prod14_e2e
+```
+
+A prod14 deve alterar somente a identidade da imagem, a espera inicial da unit
+production para oito segundos e a duracao isolada do canario para cobrir o
+proprio health. C20.14, C25B, kernel, boot e pilha de video permanecem fixos. O
+aceite exige timer/apply/no-op, rollback para o player embutido, reapply, freeze
+publico `rc=44`, reboot e health final de 600 segundos.
+Evidencia da causa:
+`docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.

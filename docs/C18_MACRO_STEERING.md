@@ -319,22 +319,30 @@ Enquanto nada mudar, a ordem de execucao e:
 1. Preservar C25 como entrada validada, sem reabrir microajustes salvo regressao
    ou blocker novo. C25A e o alvo C25B exato estao comprovados na placa em
    `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
-2. O flash controlado da `prod12` aconteceu. A placa confirmou a identidade
-   `c18.image-prod.12`, rootfs expandido, wizard/QR/configuracao, retorno ao
-   player e playback. A corrida revelou hardenings reais de sessao de settings;
-   o sucessor C20.14 foi aplicado, rollbackado, reaplicado e validado apos reboot
-   sem regressao. Evidencia:
-   `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
-3. `prod13` foi construida como sucessora estreita de `prod12`: identidade,
-   `totem-core` C20.14 exato e integracao image-bound do guard transacional.
-   Quatro auditorias do artefato encontraram zero delta inesperado e autorizaram
-   somente um flash controlado. Evidencia:
-   `docs/evidence/c18-update-validation/20260714T045929Z-prod13-build-61e3abd/`.
-4. Gravar exatamente a prod13 auditada e fechar boot, expansao, identidade SSH
-   persistente, wizard/QR/writer, playback, timers exatos, no-op, rollback e
-   restauracao. Somente o E2E verde substitui `prod8` + C23 como referencia de
-   distribuicao.
-5. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
-   criterio de pausa.
-6. Retomar M8 somente pelos gatilhos registrados na decisao 198.
-7. Evoluir grupos, dashboard e telemetria conforme escala e incidentes reais.
+2. `prod12` e C20.14 permanecem historico fechado: flash, wizard, playback,
+   apply, rollback, reapply e reboot passaram sem regressao.
+3. `prod13` foi construida, auditada e gravada. Boot, expansao, identidade SSH,
+   wizard/QR/configuracao, retorno ao player, playback, timers, bloqueio de
+   downgrade e guard de settings passaram. O alvo C25B exato tambem foi
+   publicado sem mover `latest`.
+4. O timer real da `prod13` encontrou um falso negativo estreito: o candidato
+   tocava com HW decode e frames avancando, mas o health iniciou antes da
+   publicacao inicial do status. A rejeicao foi fail-closed e colocou o alvo em
+   quarantine. A arvore exata passou com espera inicial de oito segundos e o
+   canario cobrindo toda a janela de health, sem afrouxar nenhum limite.
+   Evidencia:
+   `docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.
+5. Nao promover `prod13`. Construir e auditar a sucessora estreita `prod14`,
+   alterando somente identidade, a espera production de cinco para oito
+   segundos e a exposicao isolada do canario para cobrir a propria janela.
+   C20.14, C25B, kernel, boot e pilha de video ficam fixos. O endurecimento
+   pre-build do coletor/gate foi fechado e reauditado; ainda nao constitui a
+   prova fisica da prod14.
+6. Gravar `prod14` e provar na placa: timer real, apply exato, no-op, rollback
+   para o player embutido, reapply exato, freeze publico `rc=44`, reboot e
+   playback estrito final. Somente esse E2E verde pode substituir `prod8` + C23
+   como referencia de distribuicao.
+7. Alinhar a release `totem-core stable` ao core embutido e provar seu timer,
+   rollback e restauracao sem downgrade.
+8. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
+   criterio de pausa. Retomar M8 somente pelos gatilhos da decisao 198.

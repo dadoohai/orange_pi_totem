@@ -12,7 +12,10 @@ ConditionPathExists=/data/updates/player-runtime-production-autopull.json
 [Service]
 Type=oneshot
 User=root
-ExecStart=/opt/totem/bin/totem-updatectl apply-player-runtime-authorized --authorization /data/updates/player-runtime-production-autopull.json
+# C25 took about twelve seconds from process launch to classified content status
+# on the production board. Wait eight seconds so the remaining transition stays
+# within the existing strict six-second candidate-health startup bound.
+ExecStart=/opt/totem/bin/totem-updatectl apply-player-runtime-authorized --authorization /data/updates/player-runtime-production-autopull.json --startup-wait-sec 8
 
 # Best-effort isolation; /data must remain writable so updater can stage payloads.
 ProtectSystem=full

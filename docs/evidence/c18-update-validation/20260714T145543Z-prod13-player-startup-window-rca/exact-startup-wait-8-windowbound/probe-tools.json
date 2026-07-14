@@ -1,0 +1,13 @@
+{
+  "candidate_health_sha256": "99bd756c8c0e83f8f1acbded654aea9cc135b12fca8dabea9b75507d9ffedda9",
+  "collector_sha256": "1c03ad0162cf7b90ad43de467619b61b3d4a304f31540b323eaa736249034f1a",
+  "mode": "isolated_exact_release_probe",
+  "schema": "dadooh.c18.player_runtime.candidate_probe_tools.v1",
+  "summary_sha256": "dc9ca13555a2f4b394bde864fd3bdcaa96e661c17ab26789b2a302e25b188813",
+  "target_manifest_sha256": "d3199e34a42e992ec40567b0a7c9620c73bfab4979454c7024d1bea74e83e55d",
+  "target_payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+  "target_release_gate_sha256": "f03fa5e295530459dbb0d0b324186567a3a82b8f5f6aeb9fcba8b7dad38a250f",
+  "target_tree_sha256": "a7baf69dc249c39b2f6f8653873171fa8d799c814acbe8bc95c3eeed2c7136fc",
+  "target_version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "updatectl_sha256": "3c39aa4dcda793eb52a9eeebbe6c03e38d1a8c2080c8814ea938ae21e559b282"
+}

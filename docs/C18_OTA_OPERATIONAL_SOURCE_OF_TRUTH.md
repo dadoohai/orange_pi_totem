@@ -47,8 +47,13 @@ geracao de host keys SSH. `prod12` corrigiu a cadeia, passou quatro auditorias e
 foi gravada na placa. Ela confirmou boot, rootfs expandido, wizard/QR/config,
 retorno ao player e serviu de base fisica para fechar o `totem-core` C20.14.
 Como C20.14 nasceu de achados dessa corrida e foi aplicado por OTA depois do
-flash, `prod12` nao vira a referencia final: a sucessora estreita `prod13` deve
-embuti-lo e repetir o E2E final antes de substituir `prod8` + C23.
+flash, `prod12` nao virou a referencia final. A sucessora `prod13` o embutiu,
+foi gravada e fechou boot, wizard e playback, mas o timer do player revelou que
+a espera de cinco segundos iniciava o health antes do status estar pronto. A
+rejeicao foi segura. A prova exata confirmou a espera de oito segundos e tambem
+amarrou a exposicao do canario a toda a janela, evitando uma falsa recusa no
+instante de repeticao. Por isso a referencia continua `prod8` + C23 ate o E2E
+da sucessora estreita `prod14`.
 
 O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
@@ -171,17 +176,35 @@ Fila atual para consolidacao:
   foi construida e auditada como sucessora estreita: identidade nova, core
   C20.14 e guard transacional image-bound. Boot region, kernel, initrd, DTB,
   U-Boot, player-runtime e pilha de midia ficaram identicos a prod12; nenhum
-  delta inesperado foi encontrado. A decisao autoriza somente um flash
-  controlado. Evidencia:
+  delta inesperado foi encontrado. O flash controlado passou boot, expansao,
+  SSH, wizard/QR/writer, playback, timers, bloqueio de downgrade e guard de
+  settings. O alvo C25B exato foi publicado sem mover `latest`. Evidencia de
+  build:
   `docs/evidence/c18-update-validation/20260714T045929Z-prod13-build-61e3abd/`.
-  O flash deve repetir boot, expansao, identidade SSH, wizard/QR/writer,
-  playback, timer/no-op/rollback dos alvos exatos e restauracao antes da
-  promocao como referencia.
+- O timer real da prod13 baixou e verificou C25B, mas rejeitou o candidato
+  porque o health comecou antes da primeira publicacao de status. O candidato
+  tinha HW decode, frames avancando e zero restart/fault. A repeticao exata com
+  espera de oito segundos e canario cobrindo toda a janela passou todos os
+  checks sem mudar limites. A prod13 nao sera promovida. Evidencia:
+  `docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.
+- A proxima candidata e `prod14`, limitada a identidade nova,
+  `--startup-wait-sec 8` na unit production e ao canario isolado cobrindo toda
+  a janela de health. Depois de build/auditoria, seu E2E
+  deve provar timer, apply, no-op, rollback para o fallback da imagem, reapply,
+  `rc=44`, reboot e playback estrito final.
   O construtor de producao recusa arvore suja, identidade de candidata
   divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
   erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
   quando o marcador `.ready.json` e publicado por ultimo, sem autorizar flash:
   a auditoria forense externa continua obrigatoria.
+- Antes do build da prod14, o coletor e o gate de evidencia foram endurecidos
+  contra reutilizacao de health antigo, invocacao de player reaproveitada,
+  quarantine no alias legado, marker/freeze sem vinculo exato e residuos `{}`.
+  Os testes passaram `12/12` e `54/54`; a reauditoria adversarial nao encontrou
+  brecha restante nesse escopo. A rota exact-target ganhou
+  `--verify-existing` para baixar e conferir o release C25B ja publicado sem
+  republicar nem mover `latest`. Isso e governanca pre-build, nao evidencia E2E
+  da prod14.
 - A convergencia C24 e o controle assinado de novos players ficam no roadmap
   conforme a decisao 198.
 
@@ -412,12 +435,16 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - `prod12` foi construida, auditada e gravada preservando a credencial forte e
   toda a higiene. A placa confirmou a expansao do rootfs e o produto real; os
   refinamentos C20.13/C20.14 surgidos nessa corrida foram validados por OTA;
-- `prod13` foi construida e auditada com identidade nova, core C20.14 embutido
-  e o guard transacional image-bound; esta autorizada apenas para um flash;
-- gravar prod13 do zero e validar boot, identidade SSH, wizard/QR, gravacao da
-  configuracao, retorno a midia, playback e estados C25;
-- publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar
-  timer, apply, no-op, rollback e restauracao com playback real;
+- `prod13` foi construida, auditada e gravada. Boot, identidade SSH, wizard/QR,
+  configuracao, retorno a midia e playback passaram. O timer baixou e verificou
+  C25B, mas o health iniciou antes do status ficar pronto; a rejeicao foi segura
+  e `prod13` nao deve ser promovida;
+- os tres assets exatos de C25B foram publicados sem mover `latest`. A arvore
+  exata passou na placa com oito segundos de espera e um canario que cobre toda
+  a observacao, sem afrouxar os limites do health;
+- fechar gates e auditoria de pre-build, construir/auditar `prod14` e grava-la
+  do zero. Provar timer, apply exato, no-op, rollback para o player embutido,
+  reapply, freeze `rc=44`, reboot e playback estrito final;
 - gerar/promover o core consolidado em `stable` e provar o timer de
   `totem-core`, evitando que a stable antiga tente downgrade sobre a imagem;
 - executar auditoria final e, somente com essas provas verdes, substituir

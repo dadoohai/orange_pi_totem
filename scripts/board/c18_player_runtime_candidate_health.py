@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import pwd
 import re
@@ -189,9 +190,34 @@ def normalize_canary_media(raw_path: Path | None) -> Path | None:
     return resolved
 
 
-def write_canary_playlist(cfg: dict[str, Any], canary_media: Path) -> None:
+def canary_exposure_duration_ms(
+    cfg: dict[str, Any],
+    *,
+    duration_sec: float,
+    interval_sec: float,
+    startup_wait_sec: float,
+) -> int:
+    default_ms = int(cfg.get("default_duration_ms") or 10000)
+    observation_sec = (
+        max(startup_wait_sec, 0.0)
+        + max(duration_sec, 0.1)
+        + (2 * max(interval_sec, 0.1))
+    )
+    return max(default_ms, math.ceil(observation_sec * 1000))
+
+
+def write_canary_playlist(
+    cfg: dict[str, Any],
+    canary_media: Path,
+    *,
+    duration_ms: int | None = None,
+) -> None:
     state_dir = Path(str(cfg["state_dir"]))
     state_dir.mkdir(parents=True, exist_ok=True)
+    exposure_duration_ms = max(
+        int(cfg.get("default_duration_ms") or 10000),
+        int(duration_ms or 0),
+    )
     payload = {
         "version": 1,
         "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -199,7 +225,7 @@ def write_canary_playlist(cfg: dict[str, Any], canary_media: Path) -> None:
         "playlist": [
             {
                 "url": "",
-                "duration_ms": int(cfg.get("default_duration_ms") or 10000),
+                "duration_ms": exposure_duration_ms,
                 "path": str(canary_media),
                 "campaign_id": "c18-canary",
                 "campaign_name": "C18 canary",
@@ -575,7 +601,16 @@ def run_candidate_health(
     write_json(config_path, cfg)
     normalized_canary = normalize_canary_media(canary_media)
     if normalized_canary is not None:
-        write_canary_playlist(cfg, normalized_canary)
+        write_canary_playlist(
+            cfg,
+            normalized_canary,
+            duration_ms=canary_exposure_duration_ms(
+                cfg,
+                duration_sec=duration_sec,
+                interval_sec=interval_sec,
+                startup_wait_sec=startup_wait_sec,
+            ),
+        )
 
     env = minimal_candidate_env(work_root)
     run_user = candidate_run_user()

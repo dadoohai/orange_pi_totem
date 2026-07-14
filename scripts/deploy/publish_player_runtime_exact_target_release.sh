@@ -5,6 +5,9 @@
 # assets for one hash-bound player-runtime homologation target. It does not
 # create or push tags, promote stable, select latest, publish extra evidence,
 # enable broad latest auto-pull, or silently create draft/prerelease releases.
+# Modes: --prepare-only validates an unpublished target; --verify-existing
+# downloads and verifies an already published target without mutation;
+# --publish creates the exact release under the explicit publication guard.
 
 set -euo pipefail
 
@@ -23,6 +26,7 @@ while [[ $# -gt 0 ]]; do
     --authorization=*) AUTHORIZATION="${arg#*=}" ;;
     --authorization) shift; AUTHORIZATION="${1:-}" ;;
     --prepare-only) MODE="prepare-only" ;;
+    --verify-existing) MODE="verify-existing" ;;
     --publish) MODE="publish" ;;
     -h|--help)
       sed -n '2,18p' "$0"
@@ -282,7 +286,13 @@ PY
 
 command -v gh >/dev/null 2>&1 || die "gh CLI not installed"
 
+RELEASE_EXISTS=0
 if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+  RELEASE_EXISTS=1
+fi
+if [[ "$MODE" == "verify-existing" ]]; then
+  [[ "$RELEASE_EXISTS" -eq 1 ]] || die "release with tag '$TAG' does not exist on $REPO"
+elif [[ "$RELEASE_EXISTS" -eq 1 ]]; then
   die "release with tag '$TAG' already exists on $REPO"
 fi
 
@@ -350,6 +360,109 @@ print(json.dumps({
     "latest_before": latest_before,
     "latest_after": latest_before,
     "published": False,
+    "non_claims": [
+        "this_route_does_not_promote_stable",
+        "this_route_does_not_update_latest",
+        "this_route_does_not_create_or_push_tags",
+        "this_route_does_not_publish_extra_assets",
+        "this_route_does_not_enable_broad_latest_autopull",
+        "this_route_does_not_create_draft_or_prerelease",
+    ],
+}, indent=2, sort_keys=True))
+PY
+  exit 0
+fi
+
+if [[ "$MODE" == "verify-existing" ]]; then
+  gh release view "$TAG" --repo "$REPO" \
+    --json tagName,isDraft,isPrerelease,targetCommitish,assets >"$ASSETS_JSON_TMP" \
+    || die "existing release could not be inspected"
+  python3 - "$ASSETS_JSON_TMP" "$TAG" "$SOURCE_COMMIT" "$(basename "$MANIFEST")" "$(basename "$PAYLOAD")" "$(basename "$RELEASE_GATE")" <<'PY' \
+    || die "existing release metadata/assets do not match the exact target"
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+tag = sys.argv[2]
+source_commit = sys.argv[3]
+expected = sorted(sys.argv[4:7])
+if data.get("tagName") != tag:
+    raise SystemExit("tagName mismatch")
+if data.get("isDraft") is not False:
+    raise SystemExit("existing release is draft")
+if data.get("isPrerelease") is not False:
+    raise SystemExit("existing release is prerelease")
+if data.get("targetCommitish") != source_commit:
+    raise SystemExit("targetCommitish mismatch")
+assets = data.get("assets")
+if not isinstance(assets, list):
+    raise SystemExit("assets must be a list")
+names = sorted(item.get("name") for item in assets if isinstance(item, dict))
+if names != expected:
+    raise SystemExit(f"asset names mismatch: {names!r} != {expected!r}")
+PY
+
+  VERIFY_DIR="$(mktemp -d -t c18-player-runtime-exact-download-XXXXXX)"
+  for asset in "${ASSETS[@]}"; do
+    gh release download "$TAG" --repo "$REPO" --dir "$VERIFY_DIR" --clobber --pattern "$(basename "$asset")" >/dev/null \
+      || die "failed to download existing asset $(basename "$asset") for hash verification"
+    downloaded="$VERIFY_DIR/$(basename "$asset")"
+    [[ -f "$downloaded" && "$(sha256_file "$downloaded")" == "$(sha256_file "$asset")" ]] \
+      || die "existing asset sha256 mismatch for $(basename "$asset")"
+  done
+
+  LATEST_AFTER="$(latest_tag)"
+  [[ "$LATEST_AFTER" == "$LATEST_BEFORE" ]] \
+    || die "latest release drifted during exact target verification: before='${LATEST_BEFORE:-none}' after='${LATEST_AFTER:-none}'"
+  RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
+
+  python3 - "$REPO" "$TAG" "$VERSION" "$SOURCE_COMMIT" "$RELEASE_URL" "$LATEST_BEFORE" "$LATEST_AFTER" \
+    "$MANIFEST" "$PAYLOAD" "$RELEASE_GATE" \
+    "$MANIFEST_SHA" "$PAYLOAD_SHA" "$RELEASE_GATE_SHA" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+repo, tag, version, source_commit, release_url, latest_before, latest_after = sys.argv[1:8]
+asset_paths = [Path(value) for value in sys.argv[8:11]]
+asset_hashes = sys.argv[11:14]
+print(json.dumps({
+    "schema": "dadooh.c18.player_runtime.exact_target_publication_result.v1",
+    "passed": True,
+    "mode": "verify-existing",
+    "would_publish": False,
+    "published": True,
+    "repo": repo,
+    "tag": tag,
+    "version": version,
+    "target_source_commit": source_commit,
+    "manifest_channel": "homologation",
+    "release_url": release_url,
+    "asset_count": 3,
+    "assets": [
+        {"name": path.name, "sha256": sha}
+        for path, sha in zip(asset_paths, asset_hashes)
+    ],
+    "authorization_gate": "passed",
+    "remote_source_commit_present": True,
+    "remote_exact_tag_verified": True,
+    "release_exists": True,
+    "latest_before": latest_before,
+    "latest_after": latest_after,
+    "verification": {
+        "operation": "verify-existing",
+        "created_release": False,
+        "downloaded_asset_count": 3,
+        "downloaded_assets": [
+            {"name": path.name, "sha256": sha}
+            for path, sha in zip(asset_paths, asset_hashes)
+        ],
+        "remote_tag": tag,
+        "remote_target_commitish": source_commit,
+        "remote_is_draft": False,
+        "remote_is_prerelease": False,
+    },
     "non_claims": [
         "this_route_does_not_promote_stable",
         "this_route_does_not_update_latest",

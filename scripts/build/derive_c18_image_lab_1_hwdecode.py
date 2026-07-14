@@ -78,16 +78,16 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-13"
-PRODUCTION_VERSION = "c18.image-prod.13"
+PRODUCTION_TAG = "c18-hwdecode-prod-14"
+PRODUCTION_VERSION = "c18.image-prod.14"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
-PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-12"
-PRODUCTION_PREDECESSOR_SHA256 = "4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262"
+PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-13"
+PRODUCTION_PREDECESSOR_SHA256 = "4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e"
 PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"
 PRODUCTION_SUCCESSOR_SCOPE = (
-    "image_identity_prod13",
-    "totem_core_c20_14",
-    "settings_update_transaction_guard",
+    "image_identity_prod14",
+    "player_runtime_candidate_startup_wait_8s",
+    "player_runtime_canary_covers_health_window",
 )
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -965,7 +965,7 @@ def validate_candidate_identity(tag: str, version: str, marker: str,
     if image_profile == "production" and (
         tag != PRODUCTION_TAG or version != PRODUCTION_VERSION or marker != PRODUCTION_MARKER
     ):
-        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod13 release")
+        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod14 release")
 
 
 def main():
@@ -2059,8 +2059,8 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-12 (board-validated base; superseded before distribution "
-            "because C20.14 settings stop hardening was applied after flash)"
+            "c18-hwdecode-prod-13 (board-validated base; superseded before distribution "
+            "because the exact-target candidate health window started before status warm-up)"
         )
         manifest["production_access_nonclaim"] = (
             "CSPRNG-generated shared support password SSH access remains enabled by explicit "

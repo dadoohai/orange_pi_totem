@@ -1,0 +1,15 @@
+6be5b728514b852d8a0a2e56b59be825133f49995eb97383562f405d56fdcdb5  ./candidate-config.json
+9c885522ae04541d07acd6513aa389e1b20b3d7c48b2e9a68cd788c814257702  ./candidate-health-result.json
+45fd2f9df187bc411dc80df5c4c4844ac00f4dd69bc69453f1893a5d143433d6  ./candidate-stderr.txt
+254eae41eaa42bb0f6700da5feee5ed0346e7791809a0c0dbbb47900b898589e  ./candidate-teardown-kernel.json
+79083b3aaa8e474cba7792cd5f9cf2db52f7e2e7ea21ae4e42167c0da04fe8eb  ./health/deep-health-kernel.json
+4b407cef0b96e40382f4d49d5152e28aa58b794a9b04ea1007a0ce6354554563  ./health/deep-health-player-counters.json
+9d9cfb6b12f1ad70cb5191f990b331246b460840266cd009b382fc7650a838e7  ./health/deep-health-process.json
+5ce729fba6d798676557a30e2d68c0f3420bffdbf13ba72b3507f6390ef8ea30  ./health/deep-health-systemd.json
+ac79b585f30dc54f0d8f0bbc973100570d8ec02ca8cbc4f835df93da2e2dfe25  ./health/deep-health-watchdog.json
+e10a8b109e28490aa61bdd610cd687f6d8515b5a9720170a1e2bda749a150075  ./health/playback-deep-health-public.json
+b6d09b2b78313cc21409fe72cf1df497af2c458d26bf8b1bf2094e90f59fb8cb  ./health/playback-samples.tsv
+334ba5b3aa8b3d04513f1665f9e6f002cae3ba1fb23af9ff41c7d7e9734fda7a  ./health/status-samples.ndjson
+0f64e08f26e563adc81f2ee656d03314587a247c73beba6cbb3f27d1f4b1a833  ./probe-tools.json
+05193b9b19e4314e148e2e19b37ff1a8ed000967e3a8ad7484c2cd898ee54f10  ./state/playlist_last.json
+be6a96bcea1d463dde635df1c07b2f639a0b445e3d9970ace239951b25d94050  ./status.json

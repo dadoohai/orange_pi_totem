@@ -289,6 +289,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("dadoohai/kiosky-player", service + timer)
         self.assertIn("SuccessExitStatus=40", service)
         self.assertIn("SuccessExitStatus=40 50", player_service)
+        self.assertIn(
+            "apply-player-runtime-authorized --authorization "
+            "/data/updates/player-runtime-production-autopull.json --startup-wait-sec 8",
+            player_service,
+        )
+        self.assertNotIn("--startup-wait-sec 5", player_service)
         self.assertNotIn("SuccessExitStatus=40 51", service)
         self.assertNotIn("SuccessExitStatus=40 50 51", player_service)
         self.assertNotIn("SuccessExitStatus=40 52", service)
@@ -407,6 +413,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("PLAYER_RUNTIME_AUTH_TARGET", embed)
         self.assertIn("player_runtime_authorization_matches_profile", embed)
         self.assertIn("player_runtime_update_agent_service_matches_profile", embed)
+        self.assertIn('"--startup-wait-sec 8" in player_runtime_service', embed)
         self.assertIn("player_runtime_update_timer_matches_profile", embed)
         self.assertIn("validate_totem_core_release_provenance", embed)
         self.assertIn("totem_core_embed_payload_source_mismatch", embed)
@@ -547,27 +554,28 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("production totem-core profile requires --image-profile production", derive)
         self.assertIn("production images never allow dirty source trees", derive)
         self.assertIn("production source tree changed during image construction", derive)
-        self.assertIn("production candidate identity must match the pinned prod13 release", derive)
+        self.assertIn("production candidate identity must match the pinned prod14 release", derive)
         self.assertIn("binary image inputs changed during construction", derive)
         self.assertIn("production_image=true", derive)
         self.assertIn("artifact_private=false", derive)
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-13"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.13"', derive)
-        self.assertIn('PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-12"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-14"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.14"', derive)
+        self.assertIn('PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-13"', derive)
         self.assertIn(
-            'PRODUCTION_PREDECESSOR_SHA256 = "4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262"',
+            'PRODUCTION_PREDECESSOR_SHA256 = "4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e"',
             derive,
         )
         self.assertIn(
             'PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"',
             derive,
         )
-        self.assertIn('"settings_update_transaction_guard"', derive)
+        self.assertIn('"player_runtime_candidate_startup_wait_8s"', derive)
+        self.assertIn('"player_runtime_canary_covers_health_window"', derive)
         self.assertIn('"production_successor_scope"', derive)
-        self.assertIn("c18-hwdecode-prod-12 (board-validated base", derive)
+        self.assertIn("c18-hwdecode-prod-13 (board-validated base", derive)
         self.assertIn("validate_player_runtime_baseline_package", derive)
         self.assertIn("validate_binary_build_inputs", derive)
         self.assertIn('BASE_IMAGE_SHA256 = "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af"', derive)
@@ -790,30 +798,30 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 module.load_production_support_password(link)
 
             module.validate_candidate_identity(
-                "c18-hwdecode-prod-13",
-                "c18.image-prod.13",
-                "/etc/dadooh/c18-hwdecode-prod-13-image",
+                "c18-hwdecode-prod-14",
+                "c18.image-prod.14",
+                "/etc/dadooh/c18-hwdecode-prod-14-image",
                 image_profile="production",
             )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
-                    "c18-hwdecode-prod-13",
-                    "c18.image-prod.12",
-                    "/etc/dadooh/c18-hwdecode-prod-13-image",
-                    image_profile="production",
-                )
-            with self.assertRaises(SystemExit):
-                module.validate_candidate_identity(
-                    "c18-hwdecode-prod-12",
-                    "c18.image-prod.12",
-                    "/etc/dadooh/c18-hwdecode-prod-12-image",
+                    "c18-hwdecode-prod-14",
+                    "c18.image-prod.13",
+                    "/etc/dadooh/c18-hwdecode-prod-14-image",
                     image_profile="production",
                 )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
                     "c18-hwdecode-prod-13",
                     "c18.image-prod.13",
-                    "/etc/dadooh/c18-hwdecode-prod-13-image\nrm /etc/shadow",
+                    "/etc/dadooh/c18-hwdecode-prod-13-image",
+                    image_profile="production",
+                )
+            with self.assertRaises(SystemExit):
+                module.validate_candidate_identity(
+                    "c18-hwdecode-prod-14",
+                    "c18.image-prod.14",
+                    "/etc/dadooh/c18-hwdecode-prod-14-image\nrm /etc/shadow",
                     image_profile="production",
                 )
 

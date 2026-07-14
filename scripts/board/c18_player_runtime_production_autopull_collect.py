@@ -24,6 +24,7 @@ from typing import Any
 
 
 SCHEMA = "dadooh.c18.player_runtime.production_autopull_collect.v1"
+ADOPTION_SCHEMA = "dadooh.c18.player_runtime.production_autopull_collect.adoption.v1"
 PHASES = ("pre", "post_apply", "noop", "rollback", "restored")
 DEFAULT_DATA_ROOT = Path("/data")
 DEFAULT_UPDATECTL = Path("/opt/totem/bin/totem-updatectl")
@@ -33,6 +34,8 @@ DEFAULT_EXPECTED_IMAGE_TAG = "c18-hwdecode-prod-8"
 DEFAULT_TIMER_UNIT = "totem-player-runtime-update-agent.timer"
 DEFAULT_SERVICE_UNIT = "totem-player-runtime-update-agent.service"
 DEFAULT_PLAYER_UNIT = "kiosky-player.service"
+IMAGE_FALLBACK_APP_DIR = "/opt/totem/kiosky-player"
+DATA_CURRENT_APP_DIR = "/data/player-runtime/current"
 MARKER_NAME = ".release_verified.json"
 
 
@@ -160,13 +163,12 @@ def file_snapshot(path: Path, *, parse_json: bool = False) -> dict[str, Any]:
 
 def image_marker_snapshot(path: Path) -> dict[str, Any]:
     raw, error = read_text(path)
-    return {
-        "path": str(path),
-        "exists": raw is not None,
-        "read_error": error,
-        "raw_sha256": sha256_text(raw) if raw is not None else None,
-        "fields": parse_key_value(raw or ""),
-    }
+    snapshot = file_snapshot(path)
+    snapshot["raw_text"] = raw
+    snapshot["raw_text_error"] = error
+    snapshot["raw_sha256"] = sha256_text(raw) if raw is not None else None
+    snapshot["fields"] = parse_key_value(raw or "")
+    return snapshot
 
 
 def systemctl_value(*args: str) -> dict[str, Any]:
@@ -192,6 +194,72 @@ def systemctl_show(unit: str, props: list[str]) -> dict[str, str]:
     if result["stderr"]:
         values["_stderr_tail"] = str(result["stderr"])[-1000:]
     return values
+
+
+def normalize_app_dir(value: str | None) -> str:
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    return os.path.normpath(value.strip())
+
+
+def classify_kiosky_app_dir(value: str | None) -> str:
+    normalized = normalize_app_dir(value)
+    if normalized == IMAGE_FALLBACK_APP_DIR:
+        return "image_fallback"
+    if normalized == DATA_CURRENT_APP_DIR:
+        return "data_current"
+    return "unknown"
+
+
+def selected_environ_keys(raw: bytes, keys: set[str]) -> dict[str, str]:
+    wanted = {key.encode("utf-8") for key in keys}
+    selected: dict[str, str] = {}
+    for item in raw.split(b"\0"):
+        if b"=" not in item:
+            continue
+        key, value = item.split(b"=", 1)
+        if key not in wanted:
+            continue
+        selected[key.decode("utf-8", errors="replace")] = value.decode("utf-8", errors="replace")
+    return selected
+
+
+def player_main_pid(player_snapshot: dict[str, Any]) -> int | None:
+    show = player_snapshot.get("show")
+    if not isinstance(show, dict):
+        return None
+    try:
+        pid = int(str(show.get("MainPID") or "0"))
+    except ValueError:
+        return None
+    return pid if pid > 0 else None
+
+
+def player_adoption_probe(player_snapshot: dict[str, Any], *, unit: str) -> dict[str, Any]:
+    pid = player_main_pid(player_snapshot)
+    out: dict[str, Any] = {
+        "schema": ADOPTION_SCHEMA,
+        "unit": unit,
+        "main_pid": pid,
+        "kiosky_app_dir": None,
+        "classification": "unknown",
+    }
+    if pid is None:
+        out["diagnostic"] = "main_pid_missing"
+        return out
+    try:
+        raw = (Path("/proc") / str(pid) / "environ").read_bytes()
+    except Exception as exc:
+        out["classification"] = "read_error"
+        out["read_error_type"] = type(exc).__name__
+        return out
+    selected = selected_environ_keys(raw, {"KIOSKY_APP_DIR"})
+    app_dir = selected.get("KIOSKY_APP_DIR")
+    out["kiosky_app_dir"] = app_dir
+    out["classification"] = classify_kiosky_app_dir(app_dir)
+    if app_dir is None:
+        out["diagnostic"] = "kiosky_app_dir_missing"
+    return out
 
 
 def journal_tail(unit: str, lines: int) -> dict[str, Any]:
@@ -267,7 +335,21 @@ def release_marker_snapshot(current_link: dict[str, Any]) -> dict[str, Any]:
             "data": {},
             "json_error": "current_not_linked",
         }
-    return file_snapshot(Path(resolved) / MARKER_NAME, parse_json=True)
+    marker_path = Path(resolved) / MARKER_NAME
+    snapshot = file_snapshot(marker_path, parse_json=True)
+    raw_text, raw_error = read_text(marker_path)
+    snapshot["raw_text"] = raw_text
+    snapshot["raw_text_error"] = raw_error
+    return snapshot
+
+
+def combined_quarantine_entries(state_data: dict[str, Any]) -> list[Any]:
+    entries: list[Any] = []
+    for key in ("quarantine", "quarantined_identities"):
+        value = state_data.get(key)
+        if isinstance(value, list):
+            entries.extend(value)
+    return entries
 
 
 def collect_state(data_root: Path) -> dict[str, Any]:
@@ -289,7 +371,7 @@ def collect_state(data_root: Path) -> dict[str, Any]:
             "current": state_data.get("current"),
             "previous": state_data.get("previous"),
             "last_operation": state_data.get("last_operation"),
-            "quarantine": state_data.get("quarantine") or state_data.get("quarantined_identities") or [],
+            "quarantine": combined_quarantine_entries(state_data),
         },
     }
 
@@ -325,6 +407,29 @@ def collect_deep_health(args: argparse.Namespace) -> dict[str, Any]:
     if not script.is_file():
         return {"ran": False, "reason": "collector_missing", "script": str(script)}
     out_dir = deep_health_output_dir(args)
+    if out_dir.is_symlink():
+        return {
+            "ran": False,
+            "reason": "deep_health_output_dir_symlink",
+            "output_dir": str(out_dir),
+        }
+    if out_dir.exists():
+        if not out_dir.is_dir():
+            return {
+                "ran": False,
+                "reason": "deep_health_output_path_not_directory",
+                "output_dir": str(out_dir),
+            }
+        try:
+            output_dir_not_empty = next(out_dir.iterdir(), None) is not None
+        except OSError:
+            output_dir_not_empty = True
+        if output_dir_not_empty:
+            return {
+                "ran": False,
+                "reason": "deep_health_output_dir_not_empty",
+                "output_dir": str(out_dir),
+            }
     cmd = deep_health_command(args, script=script, out_dir=out_dir)
     result = run_cmd(cmd, timeout=max(int(float(args.deep_health_duration_sec) + 90), 120))
     summary = parse_json_from_text(str(result["stdout"]))
@@ -377,6 +482,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     timer = unit_snapshot(args.timer_unit, lines=args.journal_lines)
     service = unit_snapshot(args.service_unit, lines=args.journal_lines)
     player = unit_snapshot(args.player_unit, lines=args.journal_lines)
+    adoption = player_adoption_probe(player, unit=args.player_unit)
     return {
         "schema": SCHEMA,
         "phase": args.phase,
@@ -408,6 +514,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
             "nrestarts": player.get("show", {}).get("NRestarts"),
             "show": player.get("show", {}),
         },
+        "player_adoption": adoption,
         "state": state,
         "playback_deep_health": collect_deep_health(args),
         "freeze_probe": collect_freeze_probe(args),
@@ -459,6 +566,72 @@ class CollectSelfTest(unittest.TestCase):
         )
         self.assertEqual(cmd[cmd.index("--target-mode") + 1], "service")
         self.assertNotIn("--match-process-ipc", cmd)
+
+    def test_adoption_classification_distinguishes_image_and_data(self) -> None:
+        self.assertEqual(classify_kiosky_app_dir("/opt/totem/kiosky-player"), "image_fallback")
+        self.assertEqual(classify_kiosky_app_dir("/data/player-runtime/current"), "data_current")
+        self.assertEqual(classify_kiosky_app_dir("/data/player-runtime/releases/v1"), "unknown")
+
+    def test_selected_environ_keys_omits_unrequested_values(self) -> None:
+        selected = selected_environ_keys(
+            b"SECRET_TOKEN=not-for-output\0KIOSKY_APP_DIR=/data/player-runtime/current\0",
+            {"KIOSKY_APP_DIR"},
+        )
+        self.assertEqual(selected, {"KIOSKY_APP_DIR": "/data/player-runtime/current"})
+        self.assertNotIn("SECRET_TOKEN", selected)
+
+    def test_release_marker_snapshot_binds_raw_file_to_parsed_data(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            release = Path(tmp) / "release"
+            release.mkdir()
+            marker_path = release / MARKER_NAME
+            marker = {"schema": "fixture", "version": "v1"}
+            raw = json.dumps(marker, indent=2, sort_keys=True) + "\n"
+            marker_path.write_text(raw, encoding="utf-8")
+            snapshot = release_marker_snapshot({"resolved_path": str(release)})
+        self.assertEqual(snapshot["raw_text"], raw)
+        self.assertEqual(snapshot["sha256"], sha256_text(raw))
+        self.assertEqual(snapshot["data"], marker)
+        self.assertEqual(snapshot["canonical_json_sha256"], canonical_json_sha256(marker))
+
+    def test_image_marker_snapshot_binds_raw_file_and_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "c18-image"
+            raw = "image_tag=c18\nfinal_image=true\n"
+            path.write_text(raw, encoding="utf-8")
+            snapshot = image_marker_snapshot(path)
+        self.assertEqual(snapshot["path"], str(path))
+        self.assertTrue(snapshot["is_file"])
+        self.assertFalse(snapshot["is_symlink"])
+        self.assertEqual(snapshot["raw_text"], raw)
+        self.assertEqual(snapshot["raw_sha256"], sha256_text(raw))
+        self.assertEqual(snapshot["fields"], {"image_tag": "c18", "final_image": "true"})
+
+    def test_quarantine_summary_combines_canonical_and_legacy_aliases(self) -> None:
+        state = {
+            "quarantine": [{"version": "canonical"}],
+            "quarantined_identities": [{"version": "legacy"}],
+        }
+        self.assertEqual(
+            combined_quarantine_entries(state),
+            [{"version": "canonical"}, {"version": "legacy"}],
+        )
+
+    def test_deep_health_refuses_nonempty_output_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "phase-deep-health"
+            out_dir.mkdir()
+            (out_dir / "playback-deep-health-public.json").write_text(
+                '{"passed":true}\n', encoding="utf-8"
+            )
+            args = argparse.Namespace(
+                skip_deep_health=False,
+                deep_health_output_dir=out_dir,
+                output=None,
+            )
+            result = collect_deep_health(args)
+        self.assertFalse(result["ran"])
+        self.assertEqual(result["reason"], "deep_health_output_dir_not_empty")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

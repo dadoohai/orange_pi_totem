@@ -390,6 +390,9 @@ PY
                   done
                   mkdir -p "$out_dir"
                   cp "$C18_RELEASE_DIR/$pattern" "$out_dir/$pattern"
+                  if [[ "${C18_DOWNLOAD_TAMPER:-0}" == "1" ]]; then
+                    printf 'tampered\n' >> "$out_dir/$pattern"
+                  fi
                   exit 0
                 fi
 
@@ -415,6 +418,11 @@ PY
                     "C18_LATEST_DRIFT": overrides.get("latest_drift", "0"),
                     "C18_LATEST_FAIL": overrides.get("latest_fail", "0"),
                     "C18_RELEASE_DRAFT": overrides.get("release_draft", "0"),
+                    "C18_RELEASE_PRERELEASE": overrides.get("release_prerelease", "0"),
+                    "C18_RELEASE_EXISTS": overrides.get("release_exists", "0"),
+                    "C18_EXTRA_ASSET": overrides.get("extra_asset", "0"),
+                    "C18_DOWNLOAD_TAMPER": overrides.get("download_tamper", "0"),
+                    "C18_TARGET_COMMITISH": overrides.get("target_commitish", source_commit),
                     "C18_AUTH_MODE": auth_mode,
                 }
             )
@@ -539,6 +547,72 @@ PY
             result = self.run_publisher(fx, "--publish")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("ALLOW_C18_PLAYER_RUNTIME_EXACT_TARGET_PUBLICATION=1", result.stdout + result.stderr)
+
+    def test_verify_existing_requires_existing_release(self) -> None:
+        with self.fixture() as fx:
+            result = self.run_publisher(fx, "--verify-existing")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("does not exist", result.stdout + result.stderr)
+
+    def test_verify_existing_revalidates_without_creating_release(self) -> None:
+        with self.fixture(release_exists="1") as fx:
+            result = self.run_publisher(fx, "--verify-existing")
+            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+            data = self.load_stdout_json(result)
+            self.assertEqual(data["mode"], "verify-existing")
+            self.assertFalse(data["would_publish"])
+            self.assertTrue(data["published"])
+            self.assertTrue(data["release_exists"])
+            self.assertEqual(data["target_source_commit"], fx["source_commit"])
+            self.assertEqual(data["latest_before"], "totem-core-stable")
+            self.assertEqual(data["latest_after"], data["latest_before"])
+            self.assertEqual(
+                data["assets"],
+                [
+                    {"name": fx["manifest"].name, "sha256": _sha256(fx["manifest"])},
+                    {"name": fx["payload"].name, "sha256": _sha256(fx["payload"])},
+                    {"name": fx["release_gate"].name, "sha256": _sha256(fx["release_gate"])},
+                ],
+            )
+            self.assertEqual(data["verification"]["operation"], "verify-existing")
+            self.assertFalse(data["verification"]["created_release"])
+            self.assertEqual(data["verification"]["downloaded_asset_count"], 3)
+            self.assertEqual(data["verification"]["downloaded_assets"], data["assets"])
+            self.assertEqual(data["verification"]["remote_tag"], data["tag"])
+            self.assertEqual(
+                data["verification"]["remote_target_commitish"],
+                fx["source_commit"],
+            )
+            self.assertFalse(data["verification"]["remote_is_draft"])
+            self.assertFalse(data["verification"]["remote_is_prerelease"])
+            self.assertFalse(fx["gh_capture"].exists())
+
+    def test_verify_existing_rejects_draft_or_extra_asset(self) -> None:
+        for overrides in (
+            {"release_exists": "1", "release_draft": "1"},
+            {"release_exists": "1", "release_prerelease": "1"},
+            {"release_exists": "1", "target_commitish": "b" * 40},
+            {"release_exists": "1", "extra_asset": "1"},
+        ):
+            with self.subTest(overrides=overrides), self.fixture(**overrides) as fx:
+                result = self.run_publisher(fx, "--verify-existing")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "existing release metadata/assets do not match",
+                    result.stdout + result.stderr,
+                )
+
+    def test_verify_existing_rejects_download_hash_mismatch(self) -> None:
+        with self.fixture(release_exists="1", download_tamper="1") as fx:
+            result = self.run_publisher(fx, "--verify-existing")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("existing asset sha256 mismatch", result.stdout + result.stderr)
+
+    def test_verify_existing_rejects_latest_drift(self) -> None:
+        with self.fixture(release_exists="1", latest_drift="1") as fx:
+            result = self.run_publisher(fx, "--verify-existing")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("latest release drifted", result.stdout + result.stderr)
 
     def test_publish_command_uses_verify_tag_latest_false_and_exact_assets(self) -> None:
         with self.fixture(allow_publish="1") as fx:

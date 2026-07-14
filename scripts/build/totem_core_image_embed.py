@@ -706,6 +706,7 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
             (
                 "apply-player-runtime-authorized" in player_runtime_service
                 and PLAYER_RUNTIME_AUTH_TARGET in player_runtime_service
+                and "--startup-wait-sec 8" in player_runtime_service
                 and "apply-github-latest" not in player_runtime_service
             )
             if profile == "production"

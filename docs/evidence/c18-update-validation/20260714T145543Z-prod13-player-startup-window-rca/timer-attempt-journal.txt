@@ -1,0 +1,13 @@
+
+2026-07-14T14:55:43+0000 orangepizero3 systemd[1]: Starting totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull)...
+2026-07-14T14:55:44+0000 orangepizero3 totem-updatectl[11557]: 2026-07-14T14:55:44Z INFO update_lock_acquired operation=apply-player-runtime-authorized lock=/run/totem-updatectl.lock
+2026-07-14T14:55:44+0000 orangepizero3 totem-updatectl[11557]: 2026-07-14T14:55:44Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json dest=/data/updates/incoming/player-runtime/authorized-select-1784040944/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json
+2026-07-14T14:56:28+0000 orangepizero3 totem-updatectl[11557]: 2026-07-14T14:56:28Z INFO release_cleanup_ok path=/data/player-runtime/releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+2026-07-14T14:56:28+0000 orangepizero3 totem-updatectl[11557]: 2026-07-14T14:56:28Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+2026-07-14T14:56:28+0000 orangepizero3 totem-updatectl[11557]: 2026-07-14T14:56:28Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/authorized-select-1784040944
+2026-07-14T14:56:28+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Main process exited, code=exited, status=11/n/a
+2026-07-14T14:56:28+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Failed with result 'exit-code'.
+2026-07-14T14:56:28+0000 orangepizero3 systemd[1]: Failed to start totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull).
+2026-07-14T14:56:28+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Consumed 14.717s CPU time.
+
+__EXPECT_EXIT_CODE__=0

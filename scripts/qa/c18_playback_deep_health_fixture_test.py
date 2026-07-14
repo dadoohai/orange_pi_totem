@@ -1386,6 +1386,76 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             public_config = json.dumps(cfg, sort_keys=True)
             self.assertNotIn(str(canary), public_config)
 
+    def test_candidate_health_canary_outlives_observation_window(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-canary-window-") as tmp:
+            root = Path(tmp)
+            canary = root / "clip.mp4"
+            canary.write_bytes(b"not-a-real-video-for-playlist-shape")
+            cfg = candidate_health.candidate_config(None, root / "work")
+            duration_ms = candidate_health.canary_exposure_duration_ms(
+                cfg,
+                duration_sec=30,
+                interval_sec=1,
+                startup_wait_sec=8,
+            )
+
+            self.assertEqual(duration_ms, 40000)
+            candidate_health.write_canary_playlist(
+                cfg,
+                canary.resolve(),
+                duration_ms=duration_ms,
+            )
+            state = json.loads(
+                (Path(cfg["state_dir"]) / "playlist_last.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(state["playlist"][0]["duration_ms"], 40000)
+
+            cfg["default_duration_ms"] = 45000
+            self.assertEqual(
+                candidate_health.canary_exposure_duration_ms(
+                    cfg,
+                    duration_sec=30,
+                    interval_sec=1,
+                    startup_wait_sec=8,
+                ),
+                45000,
+            )
+
+    def test_candidate_health_run_path_uses_window_bound_canary_duration(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="c18-candidate-canary-callsite-") as tmp:
+            root = Path(tmp)
+            release = root / "release"
+            release.mkdir()
+            canary = root / "clip.mp4"
+            canary.write_bytes(b"not-a-real-video-for-playlist-shape")
+            identity = {
+                "version": "fixture",
+                "payload_sha256": "0" * 64,
+                "kiosk_py_sha256": "1" * 64,
+                "tree_sha256": "2" * 64,
+            }
+            with (
+                mock.patch.object(candidate_health, "write_canary_playlist") as write_playlist,
+                mock.patch.object(
+                    candidate_health,
+                    "candidate_run_user",
+                    side_effect=RuntimeError("stop-after-canary-playlist"),
+                ),
+                self.assertRaisesRegex(RuntimeError, "stop-after-canary-playlist"),
+            ):
+                candidate_health.run_candidate_health(
+                    release,
+                    identity,
+                    canary_media=canary,
+                    output_dir=root / "work",
+                    duration_sec=30,
+                    interval_sec=1,
+                    startup_wait_sec=8,
+                )
+
+            self.assertEqual(write_playlist.call_count, 1)
+            self.assertEqual(write_playlist.call_args.kwargs["duration_ms"], 40000)
+
     def test_candidate_health_canary_rejects_private_or_unsupported_paths(self) -> None:
         with tempfile.TemporaryDirectory(prefix="c18-candidate-canary-") as tmp:
             root = Path(tmp)

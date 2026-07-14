@@ -1,48 +1,70 @@
-# C18 M5 player-runtime production auto-pull
+# C18 player-runtime production auto-pull
 
 Objetivo: provar separadamente que uma imagem production busca e adota o alvo
 exato autorizado, consegue voltar/restaurar e permanece limpa em playback por
 uma janela continua que cubra falhas tardias, sem abrir `latest`.
 
-## Alvo
+## Alvo atual - prod14
 
-- version: `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`
-- tag: `player-runtime-c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`
+- version: `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`
+- payload SHA256:
+  `b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d`
+- tag:
+  `player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`
 - autorizacao: `scripts/board/player_runtime_production_autopull.json`
-- imagem prevista: `c18-hwdecode-prod-8` / `c18.image-prod.8`
-- baseline de bancada: bridge rollback-safe
-  `c18.player-runtime-homolog-20260703-baseline-bridge-8ac1c63`
+- imagem prevista: `c18-hwdecode-prod-14` / `c18.image-prod.14`
+- baseline: o mesmo C25B embutido na imagem, adotado por
+  `/opt/totem/kiosky-player` sem links em `/data/player-runtime`;
+- modo do gate: `image-fallback-reapply`.
 
-C21 `c18.player-runtime-homolog-20260709-image-transcode-50919f5` foi rejeitado
-corretamente pelo health de candidato durante a preparacao desta rodada. Ele
-permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
+A prod13 provou download/verificacao reais, mas iniciou o health antes da
+publicacao inicial do status. A espera production agora e oito segundos e o
+canario isolado cobre warm-up, observacao e duas coletas de margem sem reiniciar
+no meio da avaliacao. Os limites do health permanecem inalterados. A quarantine
+dessa tentativa nao e limpa: a gravacao da prod14 inicia a topologia final sem
+herdar esse estado.
 
 ## Ordem
 
 1. Gate global verde, repo limpo e imagem production offline validada.
-2. Branch e tag no remoto; publisher exact-target em `--prepare-only` verde.
-3. Publicar somente manifest, payload e release gate com `--latest=false` e
-   salvar o JSON final do publisher como evidencia de publicacao.
-4. Gravar a imagem e, com o timer parado apenas durante o setup da bancada,
-   deixar o bridge rollback-safe como `current` e C23 fora de
-   `current/previous`.
-5. Ligar o timer e coletar `pre` e `post_apply`.
-6. Rodar novamente a unit para provar `noop` sem alterar state/symlinks.
-7. Rodar `rollback-player-runtime-authorized` para o bridge e coletar
-   `rollback`.
-8. Rodar o mesmo rollback autorizado outra vez para restaurar C23 e coletar
-   `restored` com `--deep-health-duration-sec 600`. Depois do restore terminar,
-   aguardar o status declarar `playback_state=playing`, `mpv_running=true` e um
-   `current_item` presente; somente entao iniciar a janela continua.
+2. Confirmar branch, tag e os tres assets exatos ja publicados com o publisher
+   exact-target em `--verify-existing`.
+3. Salvar a evidencia dessa verificacao C25B, inclusive hashes baixados e
+   `latest` inalterado. O bloco `verification` deve registrar zero criacao de
+   release, tres assets baixados, tag/commit exatos e draft/prerelease falsos.
+   Nao republicar o release que ja existe.
+4. Gravar a prod14. Antes do timer, provar que `current` e `previous` estao
+   ausentes e que o launcher adotou o C25B embutido da imagem.
+5. Coletar `pre`, ligar o timer real e coletar `post_apply` depois que C25B for
+   adotado por `/data/player-runtime/current`.
+   O perfil production aguarda 8 segundos antes da janela estrita de health do
+   candidato. O canario dura pelo menos toda essa espera, a observacao e duas
+   coletas de margem. Esse desenho cobre a publicacao inicial do status sem
+   criar um segmento terminal curto e sem alterar os
+   limites do deep-health nem aceitar candidato sem reproducao real.
+6. Rodar novamente a unit para provar `noop` sem alterar state/symlinks nem
+   reiniciar o player.
+7. Rodar `rollback-player-runtime-authorized` para o fallback da imagem e
+   coletar `rollback`. `current` e `previous` devem voltar a ficar ausentes e o
+   processo deve expor `KIOSKY_APP_DIR=/opt/totem/kiosky-player`.
+8. Restaurar C25B por uma nova execucao do apply exato, nao por um segundo
+   rollback. Coletar `restored` com `--deep-health-duration-sec 600`. Depois do
+   restore, aguardar status `playing`, MPV ativo e item atual antes de iniciar a
+   janela continua.
 9. Copiar cada snapshot junto de seu diretorio `<fase>-deep-health`, sem
-   separar os arquivos ou alterar nomes.
+   separar os arquivos ou alterar nomes. Cada fase usa um diretorio novo e
+   vazio; o coletor recusa reutilizar um diretorio que ja contenha evidencia.
 10. Rodar `c18_player_runtime_production_autopull_evidence_gate.py` sobre as
-   cinco coletas, a evidencia de publicacao e os quatro artefatos exatos; depois
-   commitar a evidencia com arvore limpa.
+   cinco coletas, a evidencia de publicacao e os quatro artefatos exatos, com:
+   `--roundtrip-mode image-fallback-reapply`, identidade prod14 e baseline
+   version/payload C25B explicitos. Passar tambem
+   `--expected-image-marker-sha256` com o SHA256 obtido da extracao offline da
+   imagem prod14 auditada, nunca recalculado a partir da propria coleta da
+   placa. Depois commitar a evidencia com arvore limpa.
 
 ## Resultado exigido
 
-- C23 veio da tag GitHub exata e tem hashes/marker corretos;
+- C25B veio da tag GitHub exata e tem hashes/marker corretos;
 - o trigger do timer ocorreu depois do pre e a unit teve nova invocacao para o
   apply e para o no-op;
 - os arquivos reais de amostras/deep-health acompanham cada fase e seus hashes
@@ -56,16 +78,23 @@ permanece em quarantine e nao deve ser perdoado nem usado como baseline M5.
 - no-op nao muda state, current ou previous;
 - rollback reinicia e verifica o player antes de reportar sucesso;
 - CLI generico de player-runtime continua bloqueado com `rc=44`;
+- o probe `rc=44` executa o caminho publico exato
+  `/opt/totem/bin/totem-updatectl rollback --component player-runtime`;
+- o marcador production e arquivo regular no caminho esperado e seu conteudo
+  bruto bate com o hash previamente extraido da imagem auditada;
 - timer de `totem-core` continua independente;
-- estado final: C23 `current`, bridge `previous`, alvo fora de quarantine;
-- C21 rejeitado continua em quarantine, sem contaminar o round-trip aprovado.
+- rollback realmente adotou o player embutido da imagem, nao apenas removeu
+  symlinks;
+- restauracao foi um novo apply e uma nova invocacao, nao um rollback
+  mascarado;
+- estado final: C25B `current`, `previous` ausente e alvo fora de quarantine.
 
 Non-claims: nao e `latest` amplo, stable de qualquer pacote futuro, rollout por
 grupos, assinatura consumida no device ou atualizacao de media-system. O gate
 offline detecta evidencia ausente/inconsistente, mas nao torna artefatos
 coerentemente fabricados resistentes a adulteracao sem attestation no device.
 
-## Historico e execucao atual
+## Historico
 
 Mecanica C22 fechada em 2026-07-10 na imagem prod7. O timer real aplicou C22 a
 partir do bridge, o no-op nao alterou estado, o rollback voltou ao bridge e a
@@ -78,9 +107,12 @@ janelas. A reavaliacao atual preserva `mechanics_passed=true`, mas bloqueia
 somente 30 segundos. Essa separacao e o requisito continuo formam o schema v2
 do gate. C23 e a recaptura continua de 10 minutos fecham essa claim.
 
-C23 ja passou apply/rollback local e duas observacoes continuas de 10 minutos,
-mas isso nao substitui o auto-pull remoto a partir da prod8. A execucao atual
-deve repetir o round-trip acima usando a autorizacao C23 embutida na imagem.
+C23 fechou o auto-pull remoto na prod8 em modo legado
+`data-previous-roundtrip`, com bridge real como `previous`. O modo continua
+disponivel para novas coletas nessa topologia. Os snapshots C23 sao registros
+historicos imutaveis e hoje reprovam sob a semantica mais nova do gate de
+autorizacao; nao devem ser reclassificados nem usados para descrever a topologia
+limpa da prod14.
 
 Evidencia:
 `docs/evidence/c18-update-validation/20260710T190539Z-prod7-m5-production-autopull-c22/`.
