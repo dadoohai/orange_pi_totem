@@ -336,6 +336,9 @@ if [[ -n "$REMOTE_TAG_REFS" ]]; then
 else
   GH_ARGS+=( --target "$SOURCE_COMMIT" )
 fi
+if [[ "$CHANNEL" == "stable" ]]; then
+  GH_ARGS+=( --latest )
+fi
 [[ "$PRERELEASE" == "yes" ]] && GH_ARGS+=( --prerelease )
 [[ "$DRAFT" -eq 1 ]] && GH_ARGS+=( --draft )
 

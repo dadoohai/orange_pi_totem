@@ -1381,6 +1381,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("publish_assets  =", publish)
         self.assertIn("stable_server_side_assets =", publish)
         self.assertIn('log "calling: gh ${GH_ARGS[*]} -- <validated-assets>"', publish)
+        self.assertIn('if [[ "$CHANNEL" == "stable" ]]; then\n  GH_ARGS+=( --latest )', publish)
         core_gate = TOTEM_CORE_STABLE_PROMOTION_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("dadooh.c18.totem_core_stable_promotion.v1", core_gate)
         self.assertIn("EVIDENCE_ALLOWED_FIELDS", core_gate)
