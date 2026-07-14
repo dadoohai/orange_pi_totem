@@ -1,0 +1,69 @@
+pre_status:
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.12-settings-transaction-20260713T235714Z-bfb0d04",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.10-wizard-key-contract-20260713T214748Z-d0de803",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-14T01:00:46Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-13T23:57:14Z",
+      "path": "/data/core/totem/releases/c20.12-settings-transaction-20260713T235714Z-bfb0d04",
+      "payload_sha256": "75d757e41a8d8fb0031e99a2ee95f9895381ca37678962f76d3280a1786e2c02",
+      "source": "local:dadooh-totem-core-c20.12-settings-transaction-20260713T235714Z-bfb0d04.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "bfb0d04489ac4251908ba27396bd8ed37bead3f8",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.12-settings-transaction-20260713T235714Z-bfb0d04"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-14T01:00:52Z",
+      "source": "local:dadooh-totem-core-c20.12-settings-transaction-20260713T235714Z-bfb0d04.manifest.json",
+      "started_at_utc": "2026-07-14T01:00:40Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.12-settings-transaction-20260713T235714Z-bfb0d04"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-13T21:53:01Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-13T21:47:49Z",
+      "path": "/data/core/totem/releases/c20.10-wizard-key-contract-20260713T214748Z-d0de803",
+      "payload_sha256": "2a5d9dcb2cd245f6d499a23fe9982891f5bf1acaa485e70938ec84a604903e37",
+      "source": "local:dadooh-totem-core-c20.10-wizard-key-contract-20260713T214748Z-d0de803.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "d0de8034b682c07a07412b517b7dd4e0ee619f0a",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.10-wizard-key-contract-20260713T214748Z-d0de803"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-13T20:08:23Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+rollback:
+2026-07-14T01:36:59Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-14T01:37:11Z INFO manual_rollback_ok rolled_to=c20.10-wizard-key-contract-20260713T214748Z-d0de803
+{
+  "rollback": "ok",
+  "rolled_to": "c20.10-wizard-key-contract-20260713T214748Z-d0de803"
+}
+rollback_rc=0

@@ -1,0 +1,11 @@
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /tmp/c20.12-settings-transaction/policy.before.json
+temporary_policy=homologation True
+2026-07-14T01:39:02Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-14T01:39:02Z INFO apply_start source=local:dadooh-totem-core-c20.12-settings-transaction-20260713T235714Z-bfb0d04.manifest.json manifest=/tmp/c20.12-settings-transaction/dadooh-totem-core-c20.12-settings-transaction-20260713T235714Z-bfb0d04.manifest.json
+2026-07-14T01:39:02Z INFO local_payload_staged bytes=176012 sha256=75d757e41a8d8fb0031e99a2ee95f9895381ca37678962f76d3280a1786e2c02
+2026-07-14T01:39:02Z WARN release_dir_exists_will_overwrite path=/data/core/totem/releases/c20.12-settings-transaction-20260713T235714Z-bfb0d04
+2026-07-14T01:39:09Z INFO totem_core_health_check_starting
+2026-07-14T01:39:15Z INFO apply_success version=c20.12-settings-transaction-20260713T235714Z-bfb0d04
+2026-07-14T01:39:15Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c20.12-settings-transaction-20260713T235714Z-bfb0d04
+apply_rc=0

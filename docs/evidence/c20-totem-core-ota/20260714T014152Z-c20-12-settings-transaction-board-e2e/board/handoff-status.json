@@ -1,0 +1,114 @@
+{
+  "contract_validation": {
+    "placeholder_findings_cleared": true,
+    "private_allow_mock": {
+      "credential_placeholder_detected": false,
+      "credential_present": true,
+      "environment_identifier_format_valid": true,
+      "invalid_fields_count": 0,
+      "missing_fields_count": 0,
+      "path_findings_count": 7,
+      "placeholder_findings_count": 0,
+      "station_identifier_optional_format_valid": true,
+      "valid": true
+    },
+    "private_real_dry_run": {
+      "credential_placeholder_detected": false,
+      "credential_present": true,
+      "environment_identifier_format_valid": true,
+      "invalid_fields_count": 0,
+      "missing_fields_count": 0,
+      "path_findings_count": 7,
+      "placeholder_findings_count": 0,
+      "station_identifier_optional_format_valid": true,
+      "valid": true
+    },
+    "private_real_dry_run_passed": true,
+    "source_allow_mock": {
+      "credential_placeholder_detected": true,
+      "credential_present": true,
+      "environment_identifier_format_valid": true,
+      "invalid_fields_count": 0,
+      "missing_fields_count": 0,
+      "path_findings_count": 7,
+      "placeholder_findings_count": 2,
+      "station_identifier_optional_format_valid": true,
+      "valid": true
+    },
+    "validator": "totem_config_contract_validate.py"
+  },
+  "guardrails": {
+    "backend_called": false,
+    "enable_real_write_used": false,
+    "hotspot_created": false,
+    "mpv_called": false,
+    "network_external_access": false,
+    "player_started": false,
+    "player_stopped": false,
+    "portal_created": false,
+    "real_config_read": false,
+    "real_config_written": false,
+    "service_changed": false,
+    "systemctl_called": false,
+    "wifi_changed": false,
+    "writer_called": false,
+    "writes_only_under_tmp": true
+  },
+  "phase": "private_candidate_ready_for_writer",
+  "privacy": {
+    "credential_value_written_to_status": false,
+    "credential_value_written_to_summary": false,
+    "endpoint_value_written_to_status": false,
+    "endpoint_value_written_to_summary": false,
+    "environment_identifier_raw_written_to_status": false,
+    "environment_identifier_raw_written_to_summary": false,
+    "network_identifiers_written": false,
+    "private_candidate_copied_to_status": false,
+    "private_candidate_copied_to_summary": false,
+    "private_values_copied_to_status": false,
+    "private_values_copied_to_summary": false,
+    "raw_logs_written": false
+  },
+  "private_candidate": {
+    "contains_private_values": true,
+    "copied_to_status": false,
+    "copied_to_summary": false,
+    "extra_fields_count": 19,
+    "file": "config.candidate.private.json",
+    "required_contract_fields_present_count": 14,
+    "written_under_tmp": true
+  },
+  "private_inputs": {
+    "credential_present": true,
+    "endpoint_present": true,
+    "environment_identifier_from_private_values_used": false,
+    "file_mode_0600": true,
+    "optional_station_identifier_provided": false,
+    "parent_mode_0700": true,
+    "read_from_tmp": true,
+    "values_written_to_public_artifacts": false
+  },
+  "result": "passed",
+  "schema_version": "dadooh-c10.0-visual-setup-writer-handoff.v1",
+  "source_candidate": {
+    "allow_mock_valid": true,
+    "copied_to_status": false,
+    "copied_to_summary": false,
+    "environment_identifier_present": true,
+    "environment_identifier_raw_written": false,
+    "read_from_tmp": true,
+    "rotation_degrees_present": true,
+    "values_written_to_public_artifacts": false
+  },
+  "writer_handoff": {
+    "candidate_ready_for_real_write": true,
+    "candidate_ready_for_writer_validation": true,
+    "enable_real_write_used": false,
+    "future_writer_must_preserve_backup_and_rollback": true,
+    "future_writer_must_validate_again": true,
+    "future_writer_requires_human_approval": true,
+    "future_writer_requires_service_blocked": true,
+    "writer_real_mode_called": false,
+    "writer_simulated_write_called": false
+  }
+}

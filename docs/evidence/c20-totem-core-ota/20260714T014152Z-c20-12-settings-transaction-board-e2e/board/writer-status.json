@@ -1,0 +1,74 @@
+{
+  "artifacts": {
+    "summary": "summary.txt",
+    "writer_status": "writer-status.json"
+  },
+  "backup": {
+    "created": false,
+    "mode": null,
+    "previous_config_existed": false
+  },
+  "generated_at_utc": "2026-07-14T01:30:47.461525Z",
+  "guardrails": {
+    "backup_dir_under_tmp": false,
+    "candidate_from_data_or_opt_refused": true,
+    "candidate_from_home_or_repo_refused_in_real_mode": true,
+    "data_written": true,
+    "dest_under_tmp": false,
+    "mpv_called": false,
+    "network_access": false,
+    "nmcli_called": false,
+    "out_dir_under_tmp": true,
+    "post_write_active_config_read": true,
+    "real_config_read": false,
+    "systemctl_called": false,
+    "writes_only_under_tmp": false
+  },
+  "mode": "c6.2.2-real-write-guarded",
+  "phase": "completed",
+  "privacy": {
+    "api_key_value_written_to_status": false,
+    "api_key_value_written_to_summary": false,
+    "backup_content_copied_to_output": false,
+    "candidate_config_copied_to_output": false
+  },
+  "real_write": {
+    "backup_dir_approved": true,
+    "backup_dir_exact_match": true,
+    "candidate_private_tmp": true,
+    "dest_exact_match": true,
+    "enabled": true,
+    "expected_active_config_mode": "640",
+    "expected_group": "totem",
+    "expected_owner": "root",
+    "human_approved_real_write": true,
+    "service_stop_confirmed_by_operator": true
+  },
+  "result": "passed",
+  "rollback": {
+    "active_removed_without_backup": false,
+    "attempted": false,
+    "backup_available": false,
+    "restored": false,
+    "restored_valid": false
+  },
+  "schema_version": "dadooh-c6.2.2-config-writer-real-guardrails.v1",
+  "validation": {
+    "api_key_present": true,
+    "contract_mode": "real-dry-run",
+    "invalid_fields_count": 0,
+    "missing_fields_count": 0,
+    "placeholder_detected": false,
+    "placeholder_findings_count": 0,
+    "post_write_valid": true,
+    "pre_write_valid": true
+  },
+  "write": {
+    "active_config_mode": "640",
+    "active_config_written": true,
+    "atomic_rename_completed": true,
+    "attempted": true,
+    "fsync_directory_completed": true,
+    "fsync_file_completed": true
+  }
+}
