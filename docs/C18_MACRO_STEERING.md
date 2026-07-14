@@ -339,9 +339,9 @@ Enquanto nada mudar, a ordem de execucao e:
 6. O `totem-core` foi alinhado pela stable monotonicamente superior C21.12. O
    timer real aplicou a release, e no-op, rollback, restauracao e reboot final
    passaram sem restart do player.
-7. Rodada atual: auditar independentemente a evidencia final e, sem blocker,
-   promover `prod14` + C25B + C21.12 a referencia de distribuicao no lugar de
-   `prod8` + C23.
-8. Depois do fechamento, atacar a maior frente visivel: jornada de ativacao e
+7. Tres auditorias independentes e o gate global fecharam sem blocker.
+   `prod14` + C25B + C21.12 substitui `prod8` + C23 como referencia de
+   distribuicao.
+8. Rodada atual: atacar a maior frente visivel, a jornada de ativacao e os
    estados do produto, mantendo M4 minimo em paralelo. Retomar M8 somente pelos
    gatilhos da decisao 198.

@@ -22,6 +22,9 @@ Resultado: a imagem `c18-hwdecode-prod-14` completou o roundtrip real de
   IPC, panfrost, MMC ou ext4;
 - as tres chaves publicas SSH mantiveram os mesmos hashes antes e depois do
   reboot, e a configuracao privada continuou presente com modo `0640`.
+- o gate global passou em `a676ff9` com repo limpo, e tres auditorias
+  independentes xhigh deram GO sem blocker: evidencia offline, placa viva e
+  coerencia macro.
 
 ## Diagnosticos preservados
 
@@ -63,3 +66,5 @@ nao e apresentado como gate final verde.
 - `final-state.json`: estado final sanitizado;
 - `operation-summary.json`: resumo estruturado da campanha;
 - `remote-assets.sha256`: hashes dos seis assets publicados.
+- `independent-final-audit.md`: sintese dos tres pareceres independentes;
+- `final-release-gate-summary.json`: resultado estruturado do gate global.

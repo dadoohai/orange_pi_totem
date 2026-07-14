@@ -40,18 +40,17 @@ Hoje a C18 tem dois caminhos reais:
   real, no-op, rollback, reaplicacao e 600 segundos continuos limpos. Qualquer
   alvo futuro continua bloqueado ate nova autorizacao presa por hashes.
 
-Estado de distribuicao: `prod8` + C23 permanece a referencia aceita enquanto a
-auditoria final da sucessora termina. A `prod14` ja completou na placa o E2E
-fisico dos dois componentes, o reboot final e a reproducao estrita; se a
-auditoria independente nao encontrar blocker, ela substitui a `prod8` como
-referencia. `prod9`, `prod10`, `prod11` e `prod13` continuam bloqueadas pelos
-achados registrados no historico abaixo; `prod12` permanece bancada
-intermediaria, nao imagem final.
+Estado de distribuicao vigente: `prod14` + C25B + C21.12 e a referencia aceita.
+A candidata completou na placa o E2E fisico dos dois componentes, reboot final,
+reproducao estrita, gate global e tres auditorias independentes sem blocker.
+`prod8` + C23 passa a ser a referencia anterior. `prod9`, `prod10`, `prod11` e
+`prod13` continuam bloqueadas pelos achados registrados no historico abaixo;
+`prod12` permanece bancada intermediaria, nao imagem final.
 
 O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
-para roadmap. A prioridade imediata e concluir a auditoria da `prod14` e depois
-voltar ao produto visivel e a jornada de ativacao. M4 continua em paralelo;
+para roadmap. A prioridade volta ao produto visivel e a jornada de ativacao,
+incluindo o caso recuperavel que uma vez exigiu `F5`. M4 continua em paralelo;
 grupos, dashboard e telemetria seguem no roadmap.
 
 ## Repositorio de entrega
@@ -427,9 +426,10 @@ limpo" ou "manifest stable de player-runtime".
 Negativos de pacote/hash/canal continuam cobertos por gates offline e pelo
 release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
-## O que falta para producao automatizada/ampla
+## Estado da referencia e pendencias
 
-- `prod8` + C23 segue como baseline de producao comprovado.
+- `prod14` + C25B + C21.12 e a referencia de producao comprovada. `prod8` + C23
+  permanece somente como referencia anterior;
 - `prod9` esta **bloqueada e nao deve ser gravada**. Seu SHA256 e
   `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`.
 - `prod10` tambem esta **bloqueada e nao deve ser gravada**. Ela resolveu os
@@ -454,8 +454,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   para o player embutido, reapply, freeze `rc=44`, reboot e playback estrito;
 - o core consolidado foi promovido como stable C21.12 e concluiu timer real,
   no-op, rollback e restauracao sem downgrade;
-- concluir a auditoria final e, somente sem blocker, substituir
-  `prod8` pela sucessora aprovada como imagem de referencia;
+- gate global e tres auditorias independentes terminaram sem blocker; a
+  `prod14` substitui a `prod8` como imagem de referencia;
 - manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
   `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
   encerrada por esse caso;
@@ -487,7 +487,7 @@ rollback.
 
 Leitura pratica:
 
-- depois da auditoria final, novas placas devem sair com a `prod14`, C25B como
+- novas placas devem sair com a `prod14`, C25B como
   fallback/target exato do player e C21.12 como stable atual do core;
 - `totem-core` e o auto-pull padrao para wizard e produto; apply remoto, no-op,
   rollback, restauracao e reboot estao provados na placa;
@@ -507,7 +507,7 @@ Resultado dessa decisao: a linha de producao pragmatica foi materializada:
 3. timer real aplicando update remoto, no-op, rollback e restauracao;
 4. especificacao curta para devs e fabrica;
 5. ponte publica exact-target para C25B, com rollback e health real;
-6. auditoria final como ultimo gate para trocar a referencia aceita.
+6. auditoria final concluida; `prod14` e a referencia aceita.
 
 ## Historico V3/M5 - C22/prod7
 
@@ -811,6 +811,6 @@ podemos escolher entre:
    rollbackado, restaurado e persistido no reboot.
 8. M5 fechado para o alvo exato C25B: timer, no-op, rollback, reaplicacao e
    playback estrito passaram sem autorizar futuros alvos por inferencia.
-9. Rodada atual: auditoria independente final da evidencia combinada.
-10. Sem blocker, promover `prod14` + C25B + C21.12 como referencia e voltar a
-    prioridade para ativacao/estados visiveis, mantendo M4 minimo em paralelo.
+9. Auditoria independente final fechada com tres pareceres GO e zero blocker.
+10. Rodada atual: `prod14` + C25B + C21.12 e a referencia; a prioridade volta a
+    ativacao/estados visiveis, mantendo M4 minimo em paralelo.

@@ -102,6 +102,14 @@
     "player_service_active": true,
     "player_service_restarts": 0
   },
+  "final_audit": {
+    "offline_evidence_verdict": "go",
+    "live_board_verdict": "go",
+    "macro_claim_verdict": "go",
+    "global_release_gate_passed": true,
+    "blockers": [],
+    "decision": "promoted_as_distribution_reference"
+  },
   "diagnostics": {
     "post_reboot_operation_gate_passed": false,
     "post_reboot_operation_gate_blockers": [

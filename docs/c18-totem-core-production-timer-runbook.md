@@ -164,7 +164,7 @@ de estado/player.
 - `noop-summary.json` e hashes antes/depois;
 - `post-rollback-summary.json`;
 - `restored-summary.json`;
-- `post-reboot-summary.json`;
+- `post-reboot-core-summary.json` e `post-reboot-player.json`;
 - resultado do `c18_totem_core_production_timer_evidence_gate.py`;
 - verificacao dos seis assets remotos;
 - `README.md`, `SHA256SUMS` e non-claims.

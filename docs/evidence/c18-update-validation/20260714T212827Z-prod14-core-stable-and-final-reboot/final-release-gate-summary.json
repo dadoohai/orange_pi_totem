@@ -1,0 +1,25 @@
+{
+  "schema": "dadooh.c18.final_release_gate_execution.v1",
+  "executed_at_utc": "2026-07-14T21:46:28Z",
+  "command": [
+    "python3",
+    "scripts/qa/c18_ota_release_gate.py",
+    "--json"
+  ],
+  "returncode": 0,
+  "gate_schema": "dadooh.c18.ota.release_gate.v1",
+  "passed": true,
+  "repo": {
+    "head": "a676ff95518db4e1c66eda2c06962437507e23ab",
+    "tree": "8129f3788913af2458e5c498a7bdf04abb58cdae",
+    "dirty": false
+  },
+  "guardrails": {
+    "apt_used": false,
+    "github_used": false,
+    "media_read": false,
+    "pip_used": false,
+    "secrets_read": false,
+    "ssh_used": false
+  }
+}

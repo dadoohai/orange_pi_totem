@@ -1,12 +1,14 @@
-ca897dc82c020b5034dfc26e35fb680fb05406abc83f4943473f03a200c2b77c  ./README.md
+4db232c63f77b78a28fd9089e029972052c0c36e87978c5edf94477730861679  ./README.md
 e1ac8e76f3a8cc8b5e8bdd49c55a2f1062e02be9f40bd19d2d1fd2db5384054d  ./diagnostic-post-reboot-operation-gate.json
 d9394c599db89a1f845653161ac8b3e994caa236a578f445bd8f5d937f71e6a1  ./final-reboot-command.txt
+1a950b8eeb58cadcc3e5922d847a4475d6afe8d0a087650ccd647ac0a80b2e79  ./final-release-gate-summary.json
 4739ea2fdbae7749201055ab0b87a8c09097e51b5d2d579945306114cb059c05  ./final-ssh-ready.txt
 49f89ebc13c66fe5c0b5969e87668be3226040fc5f492982c7d90466c66a3f1d  ./final-state.json
+abe2c4217d4c89c9aedb68e63142815b0be9412361d44f19f46906920143b847  ./independent-final-audit.md
 8c9a462df6a1987cf4ef2b767ccae601d7ca215a7c4ec50981e943d7d5c817ed  ./noop-after.txt
 6f5603e5d079a8e7c734a779e2424a224e8e828b96e898f3e656df978eea5705  ./noop-before.txt
 14fbdf51b67dd8ed0d242aff121f3fd0d850c9399eb0d3dc40939b80742f4b5b  ./noop-summary.json
-3bf20f736976da14cf4d4c3c530d745bad673d6b2778920a7c2dfbd364ede701  ./operation-summary.json
+462509584e24e5c59aaf097b6d1c1ac05cc8749bff1cb75ce2573e3f2953d117  ./operation-summary.json
 219d2180eb8336ae970f92e9a03ce2970258c4c3f1659c7d94a5989561b05533  ./post-reboot-core-summary.json
 ca2ad5ce71b82660a8ef04d51655102d947ac65d6d090f558ac4f4bb35b1a295  ./post-reboot-player-deep-health/deep-health-kernel.json
 4b407cef0b96e40382f4d49d5152e28aa58b794a9b04ea1007a0ce6354554563  ./post-reboot-player-deep-health/deep-health-player-counters.json
