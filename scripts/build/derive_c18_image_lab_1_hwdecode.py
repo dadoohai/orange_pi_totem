@@ -78,8 +78,8 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-12"
-PRODUCTION_VERSION = "c18.image-prod.12"
+PRODUCTION_TAG = "c18-hwdecode-prod-13"
+PRODUCTION_VERSION = "c18.image-prod.13"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -957,7 +957,7 @@ def validate_candidate_identity(tag: str, version: str, marker: str,
     if image_profile == "production" and (
         tag != PRODUCTION_TAG or version != PRODUCTION_VERSION or marker != PRODUCTION_MARKER
     ):
-        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod12 release")
+        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod13 release")
 
 
 def main():
@@ -2037,8 +2037,8 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-11 (blocked pre-flash: Armbian first-run would regenerate "
-            "Dadooh SSH host keys after ssh.service started)"
+            "c18-hwdecode-prod-12 (board-validated base; superseded before distribution "
+            "because C20.14 settings stop hardening was applied after flash)"
         )
         manifest["production_access_nonclaim"] = (
             "CSPRNG-generated shared support password SSH access remains enabled by explicit "
