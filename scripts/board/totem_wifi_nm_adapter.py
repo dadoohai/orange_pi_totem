@@ -50,6 +50,7 @@ ALLOWED_READ_ONLY_COMMANDS = {
     ("nmcli", "-t", "-f", "RUNNING", "general"),
     ("nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"),
     ("nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"),
+    ("nmcli", "-t", "-f", "NAME", "connection", "show", "--active"),
     ("nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"),
     ("nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "yes"),
 }
@@ -751,6 +752,25 @@ def dedicated_profile_present(
         return True
     if result.status == "failed":
         return False
+    return UNKNOWN
+
+
+def dedicated_profile_active(
+    *,
+    profile_name: str,
+    timeout_sec: int,
+    command_runner: Callable[[list[str], int], CommandResult] = run_read_only_command,
+) -> bool | str:
+    profile_name = require_allowed_profile_name(profile_name)
+    args = ["nmcli", "-t", "-f", "NAME", "connection", "show", "--active"]
+    result = command_runner(args, timeout_sec)
+    if result.status == "ok":
+        active_names = {
+            split_nmcli_terse(line)[0]
+            for line in result.stdout.splitlines()
+            if line.strip() and split_nmcli_terse(line)
+        }
+        return profile_name in active_names
     return UNKNOWN
 
 
@@ -1843,6 +1863,32 @@ def run_self_test() -> None:
     parsed_active = parse_active_connections(active_fixture)
     assert_true(parsed_active["ethernet_active"] is True, "active ethernet should be detected")
     assert_true(parsed_active["wifi_active"] is True, "active wifi should be detected")
+    active_name_command = ["nmcli", "-t", "-f", "NAME", "connection", "show", "--active"]
+    assert_true(
+        dedicated_profile_active(
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            timeout_sec=2,
+            command_runner=lambda args, timeout: CommandResult(
+                "ok",
+                f"ethernet-default\n{DEFAULT_PERSISTENT_PROFILE_NAME}\n",
+            )
+            if args == active_name_command
+            else CommandResult("failed"),
+        )
+        is True,
+        "dedicated profile should be recognized only when active",
+    )
+    assert_true(
+        dedicated_profile_active(
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            timeout_sec=2,
+            command_runner=lambda args, timeout: CommandResult("ok", "ethernet-default\n")
+            if args == active_name_command
+            else CommandResult("failed"),
+        )
+        is False,
+        "saved but inactive dedicated profile should fail closed",
+    )
 
     wifi_list_fixture = "\n".join(
         [

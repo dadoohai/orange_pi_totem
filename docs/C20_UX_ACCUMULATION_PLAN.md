@@ -493,6 +493,33 @@ wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
 de referencia. Mudancas de player-runtime, MPV/kernel/display baixo nivel,
 midia/config/cache e politica de OTA continuam fora deste pacote UX.
 
+## Rodada C20.15 - Reentrada e leitura operacional
+
+Objetivo: corrigir tres atritos visiveis sem ampliar o escopo do wizard:
+
+- mostrar data/hora de Sao Paulo, mantendo sistema e logs da placa em UTC;
+- distinguir no resumo o que esta confirmado, pendente ou bloqueado;
+- ao reabrir configuracoes, manter ambiente e Wi-Fi somente quando o estado
+  ativo da sessao e o perfil dedicado existente e ativo comprovarem isso.
+
+Regras de seguranca:
+
+- contexto persistente antigo pode preencher campos, mas nao provar estado
+  ativo nem dispensar validacao;
+- mudanca de ambiente continua exigindo o preflight normal;
+- ausencia ou incerteza sobre o perfil Wi-Fi falha fechada e volta ao fluxo de
+  configuracao;
+- a leitura do perfil e read-only; a rodada nao altera rede, API, player,
+  updater, kernel ou imagem.
+
+Estado em 2026-07-14: implementacao e testes offline verdes; replay completo do
+teclado passou 9 cenarios e 24 assercoes, com telas de pendencia e reentrada
+inspecionadas visualmente. Duas auditorias independentes fecharam sem blocker
+depois de exigir prova de Wi-Fi ativo e capturas completas. Empacotamento exato
+e E2E governado na placa ainda sao os gates para considerar esta rodada
+consolidada. `prod14` + C25B + C21.12 permanece a referencia de distribuicao e
+rollback.
+
 ## Rodada C25 - Estados Visiveis
 
 C25 continua o acumulo por `totem-core` com um contrato visual verdadeiro para

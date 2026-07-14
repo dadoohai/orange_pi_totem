@@ -345,3 +345,8 @@ Enquanto nada mudar, a ordem de execucao e:
 8. Rodada atual: atacar a maior frente visivel, a jornada de ativacao e os
    estados do produto, mantendo M4 minimo em paralelo. Retomar M8 somente pelos
    gatilhos da decisao 198.
+9. Proximo incremento estreito do wizard: exibir a hora de Sao Paulo sem mudar
+   o relogio UTC da placa, diferenciar pendencias no resumo e preservar o
+   ambiente/Wi-Fi que ainda estejam comprovadamente ativos ao reabrir as
+   configuracoes. O incremento e `totem-core`; `prod14` + C25B + C21.12 continua
+   sendo a referencia de retorno ate o E2E governado na placa ficar verde.

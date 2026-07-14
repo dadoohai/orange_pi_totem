@@ -31,6 +31,7 @@ SCENARIOS = [
     "environment_edit_middle",
     "wifi_wrong_password_fake",
     "api_unavailable_fake",
+    "reopen_configured",
     "cancel_flow",
 ]
 
@@ -253,9 +254,9 @@ def review_screen() -> str:
         panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
         extra_svg=wizard.summary_rows_svg(
             [
-                ("Tela", "Retrato para direita (Confirmado)"),
-                ("Wi-Fi", "Bancada"),
-                ("Ambiente", "Validado"),
+                ("Tela", "Retrato para direita (Confirmado)", "confirmed"),
+                ("Wi-Fi", "Bancada", "confirmed"),
+                ("Ambiente", "Validado", "confirmed"),
             ],
             layout_rotation_deg=90,
         ),
@@ -292,14 +293,58 @@ def review_pending_screen(state: Any) -> str:
         panel_items=["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
         extra_svg=wizard.summary_rows_svg(
             [
-                ("Tela", f"{state.rotation['label']} ({wizard.step_status_label(state, 0)})"),
-                ("Wi-Fi", wizard.network_review_note(state.network, state.network_status)),
-                ("Ambiente", wizard.environment_review_note(state.environment_id, state.environment_preflight)),
+                ("Tela", f"{state.rotation['label']} ({wizard.step_status_label(state, 0)})", "neutral"),
+                ("Wi-Fi", wizard.network_review_note(state.network, state.network_status), "pending"),
+                (
+                    "Ambiente",
+                    wizard.environment_review_note(
+                        state.environment_id,
+                        state.environment_preflight,
+                        state.environment_status,
+                    ),
+                    "pending",
+                ),
             ],
             layout_rotation_deg=int(state.rotation["rotation_deg"]),
         ),
         layout_rotation_deg=int(state.rotation["rotation_deg"]),
         accent="#f59e0b",
+    )
+
+
+def review_retained_screen(state: Any) -> str:
+    return wizard.build_screen_svg(
+        active_step=3,
+        title="Pronto para concluir",
+        subtitle="Concluir prepara a candidata.",
+        footer="Enter prepara candidata | Cima menu | Esc volta",
+        panel_title="Antes de salvar",
+        panel_items=[
+            "A configuracao final ainda nao foi salva.",
+            "O Wi-Fi selecionado pode ja estar ativo.",
+            "Esc volta.",
+        ],
+        extra_svg=wizard.summary_rows_svg(
+            [
+                ("Tela", f"{state.rotation['label']} ({wizard.step_status_label(state, 0)})", "neutral"),
+                (
+                    "Wi-Fi",
+                    wizard.network_review_note(state.network, state.network_status),
+                    "confirmed",
+                ),
+                (
+                    "Ambiente",
+                    wizard.environment_review_note(
+                        state.environment_id,
+                        state.environment_preflight,
+                        state.environment_status,
+                    ),
+                    "confirmed",
+                ),
+            ],
+            layout_rotation_deg=int(state.rotation["rotation_deg"]),
+        ),
+        layout_rotation_deg=int(state.rotation["rotation_deg"]),
     )
 
 
@@ -476,6 +521,68 @@ def replay_api_unavailable(r: Replay) -> None:
     r.assert_true(scenario, "operator_confirmation_recorded", confirmed.confirmed_by_operator)
 
 
+def replay_reopen_configured(r: Replay) -> None:
+    scenario = "reopen_configured"
+    context_dir = r.out_dir / "private-context"
+    context_dir.mkdir(mode=0o700)
+    context_path = context_dir / "last-settings.json"
+    context_path.write_text(
+        json.dumps(
+            {
+                "schema_version": wizard.PRIVATE_SETTINGS_CONTEXT_SCHEMA,
+                "updated_at": wizard.utc_timestamp(),
+                "source": "active_config_prefill",
+                "environment_id": TEST_ENV_UUID,
+                "rotation_deg": 0,
+                "network_step": "wifi_persistent",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    context_path.chmod(0o600)
+    context = wizard.load_private_settings_context(context_path)
+    original_profile_probe = wizard.dedicated_profile_present
+    original_active_probe = wizard.dedicated_profile_active
+    try:
+        wizard.dedicated_profile_present = lambda: True
+        wizard.dedicated_profile_active = lambda: True
+        network = wizard.retained_network_from_context(context)
+    finally:
+        wizard.dedicated_profile_present = original_profile_probe
+        wizard.dedicated_profile_active = original_active_probe
+        context_path.unlink()
+        context_dir.rmdir()
+    state = wizard.initial_wizard_state(
+        int(context.get("rotation_deg", 0)),
+        str(context.get("environment_id", "")),
+        retain_existing_environment=wizard.private_context_is_applied(context),
+        initial_network=network,
+    )
+    r.screen(
+        scenario,
+        "review",
+        "05-review-retained",
+        review_retained_screen(state),
+        "enter",
+        "keep_existing_configuration",
+    )
+    status = wizard.build_visual_status(
+        "2026-07-14T00:00:00Z",
+        state.rotation,
+        state.environment_id,
+        state.network,
+        {},
+        environment_preflight=state.environment_preflight,
+    )
+    r.assert_true(scenario, "reopens_directly_on_review", wizard.initial_wizard_step(state) == 3)
+    r.assert_true(scenario, "existing_configuration_can_commit", wizard.wizard_can_commit(state))
+    r.assert_true(scenario, "environment_is_retained_without_remote_preflight", state.environment_preflight is None)
+    r.assert_true(scenario, "backend_not_called_for_retained_environment", not status["guardrails"]["backend_called"])
+    r.assert_true(scenario, "network_not_changed", not state.network["network_changed"])
+    r.assert_true(scenario, "wifi_probe_is_reported", status["guardrails"]["nmcli_called"])
+
+
 def replay_cancel_flow(r: Replay) -> None:
     scenario = "cancel_flow"
     r.screen(scenario, "welcome", "01-welcome", wizard.build_screen_svg(
@@ -498,6 +605,7 @@ SCENARIO_RUNNERS: dict[str, Callable[[Replay], None]] = {
     "environment_edit_middle": replay_environment_edit_middle,
     "wifi_wrong_password_fake": replay_wifi_wrong_password,
     "api_unavailable_fake": replay_api_unavailable,
+    "reopen_configured": replay_reopen_configured,
     "cancel_flow": replay_cancel_flow,
 }
 

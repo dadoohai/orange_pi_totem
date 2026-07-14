@@ -10,6 +10,7 @@ the writer.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import fcntl
 import gzip
 import html
@@ -37,6 +38,7 @@ from typing import Any
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 sys.dont_write_bytecode = True
@@ -102,6 +104,8 @@ MAX_PANEL_ITEMS = 3
 CLOCK_IMPLAUSIBLE_LABEL = "Hora nao ajustada"
 CLOCK_MIN_PLAUSIBLE_YEAR = 2024
 CLOCK_MAX_PLAUSIBLE_YEAR = 2100
+DISPLAY_TIMEZONE_NAME = "America/Sao_Paulo"
+ACTIVE_SETTINGS_CONTEXT_MAX_AGE_SEC = 300
 TEXT_INPUT_MIN_RENDER_INTERVAL_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_RENDER_INTERVAL_SEC", "0.10"))
 TEXT_INPUT_REPEAT_DRAIN_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_REPEAT_DRAIN_SEC", "0.035"))
 TEXT_INPUT_MAX_DRAIN_KEYS = int(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_MAX_DRAIN_KEYS", "80"))
@@ -153,6 +157,7 @@ VISUAL = {
     "accent_soft": "#164e63",
     "success": "#22c55e",
     "warning": "#f59e0b",
+    "danger": "#ef4444",
     "footer": "#050b14",
 }
 
@@ -166,6 +171,8 @@ PUBLIC_ORIENTATION_PATH = pathlib.Path("/data/state/totem-display/orientation.js
 PRIVATE_SETTINGS_CONTEXT_PATH = pathlib.Path(
     os.environ.get("TOTEM_VISUAL_WIZARD_PRIVATE_SETTINGS_CONTEXT", "/data/state/totem-settings/last-settings.json")
 )
+PRIVATE_SETTINGS_CONTEXT_SCHEMA = "dadooh-private-settings-context.v1"
+TRUSTED_PRIVATE_SETTINGS_CONTEXT_SOURCES = frozenset({"active_config_prefill"})
 PRIVATE_VALUES_SEED_PATH = pathlib.Path(
     os.environ.get("TOTEM_VISUAL_WIZARD_PRIVATE_VALUES_SEED", "/data/state/totem-settings/private-values.seed.json")
 )
@@ -435,11 +442,29 @@ def svg_lines(
     )
 
 
-def local_datetime_label(now: time.struct_time | None = None) -> str:
-    current = now if now is not None else time.localtime()
-    if current.tm_year < CLOCK_MIN_PLAUSIBLE_YEAR or current.tm_year > CLOCK_MAX_PLAUSIBLE_YEAR:
+def local_datetime_label(now: time.struct_time | dt.datetime | None = None) -> str:
+    if isinstance(now, time.struct_time):
+        year, month, day, hour, minute = now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min
+    else:
+        try:
+            display_timezone = ZoneInfo(DISPLAY_TIMEZONE_NAME)
+        except (ZoneInfoNotFoundError, ValueError):
+            return CLOCK_IMPLAUSIBLE_LABEL
+        current = now if isinstance(now, dt.datetime) else dt.datetime.now(dt.timezone.utc)
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=display_timezone)
+        else:
+            current = current.astimezone(display_timezone)
+        year, month, day, hour, minute = (
+            current.year,
+            current.month,
+            current.day,
+            current.hour,
+            current.minute,
+        )
+    if year < CLOCK_MIN_PLAUSIBLE_YEAR or year > CLOCK_MAX_PLAUSIBLE_YEAR:
         return CLOCK_IMPLAUSIBLE_LABEL
-    return f"{current.tm_mday:02d}/{current.tm_mon:02d}/{current.tm_year:04d} {current.tm_hour:02d}:{current.tm_min:02d}"
+    return f"{day:02d}/{month:02d}/{year:04d} {hour:02d}:{minute:02d}"
 
 
 def header_note_label(clock_label: object = _CLOCK_LABEL_AUTO) -> str:
@@ -623,7 +648,11 @@ def field_panel(label: str, value_hint: str, note: str, *, layout_rotation_deg: 
 """
 
 
-def summary_rows_svg(rows: list[tuple[str, str]], *, layout_rotation_deg: int = 0) -> str:
+def summary_rows_svg(
+    rows: list[tuple[str, str] | tuple[str, str, str]],
+    *,
+    layout_rotation_deg: int = 0,
+) -> str:
     layout = screen_layout(layout_rotation_deg)
     x = layout.margin_x
     y = 292 if layout.portrait else 282
@@ -631,13 +660,24 @@ def summary_rows_svg(rows: list[tuple[str, str]], *, layout_rotation_deg: int = 
     row_height = 82 if layout.portrait else 76
     gap = 12
     parts = []
-    for index, (label, value) in enumerate(rows[:4]):
+    state_colors = {
+        "confirmed": VISUAL["success"],
+        "pending": VISUAL["warning"],
+        "blocked": VISUAL["danger"],
+        "neutral": VISUAL["text_dim"],
+    }
+    for index, row in enumerate(rows[:4]):
+        label, value = row[:2]
+        state = row[2] if len(row) == 3 else "neutral"
         row_y = y + index * (row_height + gap)
+        state_color = state_colors.get(state, VISUAL["text_dim"])
         parts.append(
+            f'<g data-summary-state="{state}">'
             f'<rect x="{x}" y="{row_y}" width="{width}" height="{row_height}" rx="8" fill="{VISUAL["surface"]}" stroke="{VISUAL["border"]}" stroke-width="2"/>'
-            f'<rect x="{x}" y="{row_y}" width="8" height="{row_height}" rx="4" fill="{VISUAL["accent"]}"/>'
+            f'<rect x="{x}" y="{row_y}" width="8" height="{row_height}" rx="4" fill="{state_color}"/>'
             f'<text x="{x + 32}" y="{row_y + 32}" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="{VISUAL["text_dim"]}">{escape_text(label)}</text>'
-            f'{svg_lines(value, x=x + 32, y=row_y + 62, size=22, fill=VISUAL["text"], width=42 if layout.portrait else 34, line_gap=26, max_lines=1, weight=700)}'
+            f'{svg_lines(value, x=x + 32, y=row_y + 62, size=22, fill=state_color, width=42 if layout.portrait else 34, line_gap=26, max_lines=1, weight=700)}'
+            f'</g>'
         )
     return "\n  ".join(parts)
 
@@ -2437,12 +2477,22 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
-def initial_wizard_state(initial_rotation_deg: int, initial_environment_id: str) -> WizardState:
+def initial_wizard_state(
+    initial_rotation_deg: int,
+    initial_environment_id: str,
+    *,
+    retain_existing_environment: bool = False,
+    initial_network: dict[str, Any] | None = None,
+) -> WizardState:
+    environment_id = str(initial_environment_id or "")
     return WizardState(
         rotation=rotation_selection_from_degrees(initial_rotation_deg),
         rotation_status="default",
-        environment_id=str(initial_environment_id or ""),
-        environment_status="pending",
+        network=initial_network,
+        network_status="retained" if initial_network is not None else "pending",
+        environment_id=environment_id,
+        environment_preflight=None,
+        environment_status="retained" if retain_existing_environment and environment_id else "pending",
     )
 
 
@@ -2469,12 +2519,20 @@ def network_review_note(network: dict[str, Any] | None, status: str = "pending")
     }.get(str(network.get("network_step", "")), "Rede")
     if status == "default":
         return f"{base} (default)"
+    if status == "retained":
+        return f"{base} (mantido)"
     return base
 
 
-def environment_review_note(environment_id: str, preflight: EnvironmentPreflight | None) -> str:
+def environment_review_note(
+    environment_id: str,
+    preflight: EnvironmentPreflight | None,
+    status: str = "pending",
+) -> str:
     if not str(environment_id or "").strip():
         return "Pendente"
+    if status == "retained":
+        return "Ambiente atual (mantido)"
     if preflight is None:
         return "Precisa validar"
     if preflight.content_empty:
@@ -2484,14 +2542,33 @@ def environment_review_note(environment_id: str, preflight: EnvironmentPreflight
     return "Validado"
 
 
+def should_keep_existing_environment(
+    current_environment_id: str,
+    selected_environment_id: str,
+    status: str,
+) -> bool:
+    return status == "retained" and current_environment_id == selected_environment_id
+
+
+def environment_is_ready(state: WizardState) -> bool:
+    return bool(
+        state.environment_id.strip()
+        and (state.environment_status == "retained" or state.environment_preflight is not None)
+    )
+
+
 def wizard_can_commit(state: WizardState) -> bool:
-    return bool(state.network is not None and state.environment_id.strip() and state.environment_preflight is not None)
+    return bool(state.network is not None and environment_is_ready(state))
+
+
+def initial_wizard_step(state: WizardState) -> int:
+    return 3 if wizard_can_commit(state) else 0
 
 
 def first_incomplete_step(state: WizardState) -> int:
     if state.network is None:
         return 1
-    if not state.environment_id.strip() or state.environment_preflight is None:
+    if not environment_is_ready(state):
         return 2
     return 3
 
@@ -2506,6 +2583,8 @@ def step_status_label(state: WizardState, step: int) -> str:
     if step == 2:
         if not state.environment_id.strip():
             return "Pendente"
+        if state.environment_status == "retained":
+            return "Mantido"
         if state.environment_preflight is None:
             return "Precisa validar"
         return "Validado"
@@ -2524,10 +2603,23 @@ def dedicated_profile_present() -> bool | str:
         return "unknown"
 
 
+def dedicated_profile_active() -> bool | str:
+    try:
+        return wifi_adapter.dedicated_profile_active(
+            profile_name=WIFI_PERSISTENT_PROFILE_NAME,
+            timeout_sec=WIFI_TIMEOUT_SEC,
+        )
+    except Exception:
+        return "unknown"
+
+
 def use_configured_wifi_network() -> dict[str, Any]:
     present = dedicated_profile_present()
     if present is not True:
         raise VisualWizardError("wifi dedicado nao encontrado")
+    active = dedicated_profile_active()
+    if active is not True:
+        raise VisualWizardError("wifi dedicado nao esta ativo")
     return network_defaults(
         network_step="existing_configured_wifi",
         label="Wi-Fi ja configurado",
@@ -2537,7 +2629,22 @@ def use_configured_wifi_network() -> dict[str, Any]:
         read_only_check=True,
         dedicated_profile_present_final=True,
         dedicated_profile_persistent=True,
+        commands_executed=True,
+        nmcli_called=True,
     )
+
+
+def private_context_is_applied(context: dict[str, Any]) -> bool:
+    return context.get("source") in TRUSTED_PRIVATE_SETTINGS_CONTEXT_SOURCES
+
+
+def retained_network_from_context(context: dict[str, Any]) -> dict[str, Any] | None:
+    if not private_context_is_applied(context) or context.get("network_step") != "existing_configured_wifi":
+        return None
+    try:
+        return use_configured_wifi_network()
+    except VisualWizardError:
+        return None
 
 
 def prepare_wifi_secrets_dir(raw_path: str = DEFAULT_WIFI_SECRETS_DIR) -> pathlib.Path:
@@ -3427,6 +3534,25 @@ def require_private_settings_context_path(raw_path: str) -> pathlib.Path:
     return path
 
 
+def active_settings_context_is_trusted(path: pathlib.Path, data: dict[str, Any]) -> bool:
+    if data.get("source") != "active_config_prefill":
+        return False
+    try:
+        file_stat = path.stat()
+        parent_stat = path.parent.stat()
+        updated_at = dt.datetime.strptime(str(data.get("updated_at", "")), "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=dt.timezone.utc
+        )
+    except (OSError, TypeError, ValueError):
+        return False
+    if file_stat.st_uid != os.geteuid() or parent_stat.st_uid != os.geteuid():
+        return False
+    if stat.S_IMODE(parent_stat.st_mode) != setup.PRIVATE_DIR_MODE:
+        return False
+    age_sec = (dt.datetime.now(dt.timezone.utc) - updated_at).total_seconds()
+    return -5 <= age_sec <= ACTIVE_SETTINGS_CONTEXT_MAX_AGE_SEC
+
+
 def load_private_settings_context(path: pathlib.Path) -> dict[str, Any]:
     try:
         if path.is_symlink() or path.parent.is_symlink() or not path.exists():
@@ -3438,7 +3564,11 @@ def load_private_settings_context(path: pathlib.Path) -> dict[str, Any]:
         return {}
     if not isinstance(data, dict):
         return {}
+    if data.get("schema_version") != PRIVATE_SETTINGS_CONTEXT_SCHEMA:
+        return {}
     context: dict[str, Any] = {}
+    if active_settings_context_is_trusted(path, data):
+        context["source"] = "active_config_prefill"
     raw_environment = data.get("environment_id")
     if isinstance(raw_environment, str) and raw_environment.strip():
         try:
@@ -3447,7 +3577,7 @@ def load_private_settings_context(path: pathlib.Path) -> dict[str, Any]:
             pass
     if "rotation_deg" in data:
         context["rotation_deg"] = normalize_rotation_deg(data.get("rotation_deg", 0))
-    if data.get("network_step") == "existing_configured_wifi":
+    if data.get("network_step") in {"existing_configured_wifi", "wifi_persistent"}:
         context["network_step"] = "existing_configured_wifi"
     return context
 
@@ -3576,13 +3706,17 @@ def review_and_confirm(
     network: dict[str, Any] | None,
     *,
     environment_preflight: EnvironmentPreflight | None = None,
+    environment_status: str = "confirmed",
     rotation_status: str = "confirmed",
     network_status: str = "confirmed",
     initial_focus_area: str = "content",
-) -> bool:
-    ready = bool(network is not None and environment_id.strip() and environment_preflight is not None)
+) -> bool | None:
+    environment_ready = bool(
+        environment_id.strip() and (environment_status == "retained" or environment_preflight is not None)
+    )
+    ready = bool(network is not None and environment_ready)
     network_note = network_review_note(network, network_status)
-    environment_note = environment_review_note(environment_id, environment_preflight)
+    environment_note = environment_review_note(environment_id, environment_preflight, environment_status)
     focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = 3
     while True:
@@ -3624,9 +3758,17 @@ def review_and_confirm(
                 panel_items=panel_items,
                 extra_svg=summary_rows_svg(
                     [
-                        ("Tela", f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})'),
-                        ("Wi-Fi", network_note),
-                        ("Ambiente", environment_note),
+                        (
+                            "Tela",
+                            f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})',
+                            "confirmed" if rotation_status == "confirmed" else "neutral",
+                        ),
+                        ("Wi-Fi", network_note, "confirmed" if network is not None else "pending"),
+                        (
+                            "Ambiente",
+                            environment_note,
+                            "confirmed" if environment_ready else "pending",
+                        ),
                     ],
                     layout_rotation_deg=int(rotation["rotation_deg"]),
                 ),
@@ -3636,7 +3778,7 @@ def review_and_confirm(
         key = read_key()
         if focus_area == "steps":
             if key in {"b", "B", "back", "escape"}:
-                return False
+                return None
             if key in {"q", "Q"}:
                 raise VisualWizardAbort("setup visual cancelado pelo operador")
             focus_area, focused_step = handle_step_focus_key(
@@ -3652,7 +3794,7 @@ def review_and_confirm(
         if key == "enter":
             return ready
         if key in {"b", "B", "back", "escape"}:
-            return False
+            return None
         if key in {"q", "Q"}:
             raise VisualWizardAbort("setup visual cancelado pelo operador")
         # Unsupported keys must not turn an otherwise valid review into a cancel.
@@ -4522,8 +4664,13 @@ def run_visual_wizard(
     private_context = load_private_settings_context(private_settings_context_path) if private_settings_context_path else {}
     initial_rotation_deg = initial_rotation_from_context(private_context)
     initial_environment_id = str(private_context.get("environment_id", ""))
-    state = initial_wizard_state(initial_rotation_deg, initial_environment_id)
-    active_step = 0
+    state = initial_wizard_state(
+        initial_rotation_deg,
+        initial_environment_id,
+        retain_existing_environment=private_context_is_applied(private_context),
+        initial_network=retained_network_from_context(private_context),
+    )
+    active_step = initial_wizard_step(state)
     entry_focus_area = "content"
     try:
         with RawKeyboard():
@@ -4686,6 +4833,16 @@ def run_visual_wizard(
                             state.environment_preflight = None
                             state.environment_status = "pending"
                         state.environment_id = environment_id
+                        if should_keep_existing_environment(
+                            state.environment_id,
+                            environment_id,
+                            state.environment_status,
+                        ):
+                            c1523_phase("environment_existing_kept")
+                            state.environment_status = "retained"
+                            active_step = 3
+                            entry_focus_area = "content"
+                            continue
                         environment_preflight = run_environment_preflight(
                             display,
                             environment_id,
@@ -4706,6 +4863,7 @@ def run_visual_wizard(
                             state.rotation,
                             state.network,
                             environment_preflight=state.environment_preflight,
+                            environment_status=state.environment_status,
                             rotation_status=state.rotation_status,
                             network_status=state.network_status,
                             initial_focus_area=entry_focus_area,
@@ -4721,7 +4879,7 @@ def run_visual_wizard(
                             )
                             show_complete(display, status)
                             return status
-                        active_step = first_incomplete_step(state) if not wizard_can_commit(state) else 2
+                        active_step = 2 if confirmed is None else first_incomplete_step(state)
                         entry_focus_area = "content"
                         continue
 
@@ -4760,9 +4918,9 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             panel_items=["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."],
             extra_svg=summary_rows_svg(
                 [
-                    ("Tela", "Paisagem (Default)"),
-                    ("Wi-Fi", "Pendente"),
-                    ("Ambiente", "Pendente"),
+                    ("Tela", "Paisagem (Default)", "neutral"),
+                    ("Wi-Fi", "Pendente", "pending"),
+                    ("Ambiente", "Pendente", "pending"),
                 ],
                 layout_rotation_deg=0,
             ),
@@ -5005,9 +5163,9 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
             extra_svg=summary_rows_svg(
                 [
-                    ("Tela", "Retrato para direita"),
-                    ("Wi-Fi", "Wi-Fi configurado"),
-                    ("Ambiente", "Informado"),
+                    ("Tela", "Retrato para direita", "confirmed"),
+                    ("Wi-Fi", "Wi-Fi configurado", "confirmed"),
+                    ("Ambiente", "Informado", "confirmed"),
                 ],
                 layout_rotation_deg=90,
             ),
@@ -5367,6 +5525,21 @@ def run_self_test() -> None:
             review_confirmed,
             "unsupported review keys should be ignored until an explicit action is received",
         )
+        review_escape_display = VisualDisplay(root / "review-escape-contract", enabled=False)
+        original_review_escape_key = globals()["read_key"]
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: "escape"
+            review_escape = review_and_confirm(
+                review_escape_display,
+                primary_environment_id,
+                resolve_display_selection("landscape"),
+                network_defaults(),
+                environment_preflight=environment_preflight_pairing_authorized(),
+            )
+        finally:
+            globals()["read_key"] = original_review_escape_key
+            review_escape_display.stop()
+        assert_true(review_escape is None, "Escape on review should be distinct from Enter correcting pending items")
         navigation_state = initial_wizard_state(270, "")
         assert_true(navigation_state.rotation_status == "default", "initial orientation should be a default")
         assert_true(not wizard_can_commit(navigation_state), "empty navigation state should not commit")
@@ -5386,6 +5559,22 @@ def run_self_test() -> None:
         )
         assert_true(wizard_can_commit(navigation_state), "validated navigation state should commit")
         assert_true(first_incomplete_step(navigation_state) == 3, "ready state should land on review")
+        summary_state_probe = summary_rows_svg(
+            [
+                ("Tela", "Paisagem", "confirmed"),
+                ("Wi-Fi", "Pendente", "pending"),
+                ("Ambiente", "Bloqueado", "blocked"),
+            ]
+        )
+        assert_true('data-summary-state="confirmed"' in summary_state_probe, "summary should mark confirmed rows")
+        assert_true('data-summary-state="pending"' in summary_state_probe, "summary should mark pending rows")
+        assert_true(VISUAL["success"] in summary_state_probe, "confirmed summary rows should be green")
+        assert_true(VISUAL["warning"] in summary_state_probe, "pending summary rows should be amber")
+        assert_true(VISUAL["danger"] in summary_state_probe, "blocked summary rows should be red")
+        assert_true(
+            'data-summary-state="neutral"' in summary_rows_svg([("Legado", "Compativel")]),
+            "two-column summary callers should remain compatible",
+        )
         assert_true(MAX_PANEL_ITEMS == 3, "operator panels should stay limited to three items")
         panel_limit_svg = info_panel(["one", "two", "three", "four"])
         assert_true("four" not in panel_limit_svg, "operator panel should not render more than three items")
@@ -5416,6 +5605,10 @@ def run_self_test() -> None:
         assert_true(
             local_datetime_label(time.struct_time((2026, 7, 8, 16, 45, 0, 2, 190, -1))) == fixed_clock,
             "wizard clock should render local date and minute without seconds",
+        )
+        assert_true(
+            local_datetime_label(dt.datetime(2026, 7, 8, 19, 45, tzinfo=dt.timezone.utc)) == fixed_clock,
+            "wizard clock should convert UTC to the product display timezone",
         )
         assert_true(
             local_datetime_label(time.struct_time((1970, 1, 1, 0, 0, 0, 3, 1, -1))) == CLOCK_IMPLAUSIBLE_LABEL,
@@ -5885,10 +6078,12 @@ def run_self_test() -> None:
         context_path = require_private_settings_context_path(str(root / "private-context" / "last-settings.json"))
         context_path.parent.mkdir(parents=True, mode=setup.PRIVATE_DIR_MODE)
         context_payload = {
-            "schema_version": "dadooh-private-settings-context.v1",
+            "schema_version": PRIVATE_SETTINGS_CONTEXT_SCHEMA,
+            "updated_at": utc_timestamp(),
+            "source": "active_config_prefill",
             "environment_id": context_environment_id,
             "rotation_deg": 270,
-            "network_step": "existing_configured_wifi",
+            "network_step": "wifi_persistent",
         }
         context_path.write_text(json.dumps(context_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         context_path.chmod(setup.PRIVATE_FILE_MODE)
@@ -5896,6 +6091,89 @@ def run_self_test() -> None:
         assert_true(loaded_context["environment_id"] == context_environment_id, "private context should load environment")
         assert_true(loaded_context["rotation_deg"] == 270, "private context should load rotation")
         assert_true(loaded_context["network_step"] == "existing_configured_wifi", "private context should load network step")
+        assert_true(private_context_is_applied(loaded_context), "active config snapshot should be trusted as applied")
+        retained_network = network_defaults(
+            network_step="existing_configured_wifi",
+            dedicated_profile_present_final=True,
+            dedicated_profile_persistent=True,
+        )
+        retained_state = initial_wizard_state(
+            270,
+            context_environment_id,
+            retain_existing_environment=True,
+            initial_network=retained_network,
+        )
+        assert_true(wizard_can_commit(retained_state), "applied environment and Wi-Fi should reopen as ready")
+        assert_true(initial_wizard_step(retained_state) == 3, "fully retained setup should reopen on review")
+        assert_true(retained_state.network_status == "retained", "existing Wi-Fi should be marked retained")
+        assert_true(
+            environment_review_note(
+                retained_state.environment_id,
+                retained_state.environment_preflight,
+                retained_state.environment_status,
+            )
+            == "Ambiente atual (mantido)",
+            "existing environment should be visibly retained",
+        )
+        assert_true(
+            should_keep_existing_environment(
+                context_environment_id,
+                context_environment_id,
+                retained_state.environment_status,
+            ),
+            "unchanged applied environment should not require a remote revalidation",
+        )
+        assert_true(
+            not should_keep_existing_environment(
+                context_environment_id,
+                primary_environment_id,
+                retained_state.environment_status,
+            ),
+            "changed environment should still require validation",
+        )
+        original_dedicated_profile_present = globals()["dedicated_profile_present"]
+        original_dedicated_profile_active = globals()["dedicated_profile_active"]
+        try:
+            globals()["dedicated_profile_present"] = lambda: False
+            globals()["dedicated_profile_active"] = lambda: True
+            assert_true(
+                retained_network_from_context(loaded_context) is None,
+                "missing Wi-Fi profile should not be claimed as retained",
+            )
+            globals()["dedicated_profile_present"] = lambda: True
+            globals()["dedicated_profile_active"] = lambda: False
+            assert_true(
+                retained_network_from_context(loaded_context) is None,
+                "inactive Wi-Fi profile should not be claimed as retained",
+            )
+            globals()["dedicated_profile_active"] = lambda: True
+            retained_network_probe = retained_network_from_context(loaded_context)
+            assert_true(
+                retained_network_probe is not None,
+                "present persistent Wi-Fi profile should reopen as retained",
+            )
+            assert_true(
+                retained_network_probe["nmcli_called"] and retained_network_probe["commands_executed"],
+                "retained Wi-Fi probe should report its read-only nmcli command",
+            )
+        finally:
+            globals()["dedicated_profile_present"] = original_dedicated_profile_present
+            globals()["dedicated_profile_active"] = original_dedicated_profile_active
+        stale_context = dict(loaded_context, source="visual_wizard_saved")
+        assert_true(
+            not private_context_is_applied(stale_context),
+            "persistent last-settings snapshot should prefill but not prove active configuration",
+        )
+        stale_path = require_private_settings_context_path(str(root / "stale-context" / "last-settings.json"))
+        stale_path.parent.mkdir(parents=True, mode=setup.PRIVATE_DIR_MODE)
+        stale_payload = dict(context_payload, updated_at="2020-01-01T00:00:00Z")
+        stale_path.write_text(json.dumps(stale_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        stale_path.chmod(setup.PRIVATE_FILE_MODE)
+        stale_loaded = load_private_settings_context(stale_path)
+        assert_true(
+            not private_context_is_applied(stale_loaded),
+            "stale active-config snapshots should not bypass environment validation",
+        )
         public_orientation_path = root / "public-orientation-priority" / "orientation.json"
         public_orientation_path.parent.mkdir(parents=True, mode=setup.PRIVATE_DIR_MODE)
         public_orientation_path.write_text(

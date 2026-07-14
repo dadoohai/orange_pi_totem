@@ -435,7 +435,7 @@ payload = {
     "environment_id": environment_id.strip(),
     "rotation_deg": rotation,
     "orientation_label": orientation_label,
-    "network_step": data.get("setup_network_step", "existing_configured_wifi"),
+    "network_step": data.get("setup_network_step", "unknown"),
 }
 tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
 tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
