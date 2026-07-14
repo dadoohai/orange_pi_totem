@@ -12,6 +12,8 @@ uma janela continua que cubra falhas tardias, sem abrir `latest`.
 - tag:
   `player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`
 - autorizacao: `scripts/board/player_runtime_production_autopull.json`
+- verificacao remota existente:
+  `docs/evidence/c18-update-validation/20260714T171607Z-c25b-existing-release-verification/publication-verification.json`
 - imagem prevista: `c18-hwdecode-prod-14` / `c18.image-prod.14`
 - baseline: o mesmo C25B embutido na imagem, adotado por
   `/opt/totem/kiosky-player` sem links em `/data/player-runtime`;

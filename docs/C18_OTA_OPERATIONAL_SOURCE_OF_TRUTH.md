@@ -203,8 +203,9 @@ Fila atual para consolidacao:
   Os testes passaram `12/12` e `54/54`; a reauditoria adversarial nao encontrou
   brecha restante nesse escopo. A rota exact-target ganhou
   `--verify-existing` para baixar e conferir o release C25B ja publicado sem
-  republicar nem mover `latest`. Isso e governanca pre-build, nao evidencia E2E
-  da prod14.
+  republicar nem mover `latest`; a execucao real passou e esta em
+  `docs/evidence/c18-update-validation/20260714T171607Z-c25b-existing-release-verification/`.
+  Isso e governanca pre-build, nao evidencia E2E da prod14.
 - A convergencia C24 e o controle assinado de novos players ficam no roadmap
   conforme a decisao 198.
 

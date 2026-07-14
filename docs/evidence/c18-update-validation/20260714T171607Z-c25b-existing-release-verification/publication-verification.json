@@ -1,0 +1,65 @@
+{
+  "asset_count": 3,
+  "assets": [
+    {
+      "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json",
+      "sha256": "d3199e34a42e992ec40567b0a7c9620c73bfab4979454c7024d1bea74e83e55d"
+    },
+    {
+      "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.tar.gz",
+      "sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d"
+    },
+    {
+      "name": "c18-player-runtime-release-gate.json",
+      "sha256": "f03fa5e295530459dbb0d0b324186567a3a82b8f5f6aeb9fcba8b7dad38a250f"
+    }
+  ],
+  "authorization_gate": "passed",
+  "latest_after": "totem-core-c21.11-qr-pairing-20260712T021729Z-4068839",
+  "latest_before": "totem-core-c21.11-qr-pairing-20260712T021729Z-4068839",
+  "manifest_channel": "homologation",
+  "mode": "verify-existing",
+  "non_claims": [
+    "this_route_does_not_promote_stable",
+    "this_route_does_not_update_latest",
+    "this_route_does_not_create_or_push_tags",
+    "this_route_does_not_publish_extra_assets",
+    "this_route_does_not_enable_broad_latest_autopull",
+    "this_route_does_not_create_draft_or_prerelease"
+  ],
+  "passed": true,
+  "published": true,
+  "release_exists": true,
+  "release_url": "https://github.com/dadoohai/orange_pi_totem/releases/tag/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "remote_exact_tag_verified": true,
+  "remote_source_commit_present": true,
+  "repo": "dadoohai/orange_pi_totem",
+  "schema": "dadooh.c18.player_runtime.exact_target_publication_result.v1",
+  "tag": "player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "target_source_commit": "54308e4a09ef693dbfb3d6b31ce9626908ca0c16",
+  "verification": {
+    "created_release": false,
+    "downloaded_asset_count": 3,
+    "downloaded_assets": [
+      {
+        "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json",
+        "sha256": "d3199e34a42e992ec40567b0a7c9620c73bfab4979454c7024d1bea74e83e55d"
+      },
+      {
+        "name": "dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.tar.gz",
+        "sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d"
+      },
+      {
+        "name": "c18-player-runtime-release-gate.json",
+        "sha256": "f03fa5e295530459dbb0d0b324186567a3a82b8f5f6aeb9fcba8b7dad38a250f"
+      }
+    ],
+    "operation": "verify-existing",
+    "remote_is_draft": false,
+    "remote_is_prerelease": false,
+    "remote_tag": "player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+    "remote_target_commitish": "54308e4a09ef693dbfb3d6b31ce9626908ca0c16"
+  },
+  "version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "would_publish": false
+}
