@@ -142,6 +142,44 @@ print(len(pids))
 PY
 }
 
+restore_tty_text_mode() {
+  [ -e "$TTY_DEVICE" ] || return 0
+  python3 - "$TTY_DEVICE" <<'PY'
+import fcntl
+import os
+import sys
+
+KDSETMODE = 0x4B3A
+KD_TEXT = 0x00
+fd = os.open(sys.argv[1], os.O_RDWR | os.O_NOCTTY)
+try:
+    fcntl.ioctl(fd, KDSETMODE, KD_TEXT)
+finally:
+    os.close(fd)
+PY
+  if command -v timeout >/dev/null 2>&1; then
+    timeout -k 0.2s 1.0s /usr/bin/stty -F "$TTY_DEVICE" sane >/dev/null 2>&1 || true
+  else
+    /usr/bin/stty -F "$TTY_DEVICE" sane >/dev/null 2>&1 || true
+  fi
+  if [ -x "$TTY_GUARD" ]; then
+    "$TTY_GUARD" --quiet --tty "$REMOTE_TTY" >/dev/null 2>&1 || true
+  fi
+}
+
+cleanup_private_session_artifacts() {
+  local path
+  for path in \
+    /tmp/dadooh-c10-6-2-private/private-values.json \
+    /tmp/dadooh-c10-6-2-private/last-settings.json \
+    /tmp/dadooh-c10-6-2-handoff/config.candidate.private.json \
+    /tmp/dadooh-c10-6-2-visual-wizard/qr-pairing/private-values.json
+  do
+    rm -f -- "$path" 2>/dev/null || true
+  done
+  rmdir /tmp/dadooh-c10-6-2-private 2>/dev/null || true
+}
+
 show_transition() {
   local mode="$1"
   if [ -e "$TTY_DEVICE" ]; then
@@ -235,5 +273,7 @@ fi
 rm -f "$REQUEST_DIR/request.json" 2>/dev/null || true
 rm -rf "$LOCK_DIR" 2>/dev/null || true
 visual_killed_count="$(kill_leftover_visuals || printf '0\n')"
+cleanup_private_session_artifacts || true
+restore_tty_text_mode || true
 restore_product_state || true
 write_status false "$visual_killed_count"

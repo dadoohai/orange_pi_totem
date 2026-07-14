@@ -217,6 +217,8 @@ then
   exit 2
 fi
 PRIVATE_VALUES_DIR="$(dirname -- "$PRIVATE_VALUES")"
+INITIAL_PRIVATE_VALUES_PATH="$PRIVATE_VALUES"
+WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH="$PRIVATE_SETTINGS_CONTEXT_PATH"
 case "$APPLY_POLICY_PATH" in
   /tmp/*|/run/*)
     ;;
@@ -362,10 +364,34 @@ run_tty_command() {
   fi
 }
 
+restore_tty_console_mode() {
+  if [ ! -e "$TTY_DEVICE" ]; then
+    return 0
+  fi
+  python3 - "$TTY_DEVICE" <<'PY'
+import fcntl
+import os
+import sys
+
+KDSETMODE = 0x4B3A
+KD_TEXT = 0x00
+fd = os.open(sys.argv[1], os.O_RDWR | os.O_NOCTTY)
+try:
+    fcntl.ioctl(fd, KDSETMODE, KD_TEXT)
+finally:
+    os.close(fd)
+PY
+  run_short /usr/bin/stty -F "$TTY_DEVICE" sane
+  if [ -x "$TTY_GUARD" ]; then
+    run_short "$TTY_GUARD" --quiet --tty "$REMOTE_TTY"
+  fi
+}
+
 write_private_settings_context() {
   local source_json="$1"
   local context_source="$2"
-  python3 - "$source_json" "$PRIVATE_SETTINGS_CONTEXT_PATH" "$context_source" <<'PY'
+  local target_path="${3:-$PRIVATE_SETTINGS_CONTEXT_PATH}"
+  python3 - "$source_json" "$target_path" "$context_source" <<'PY'
 import json
 import os
 import pathlib
@@ -378,8 +404,16 @@ target = pathlib.Path(sys.argv[2])
 context_source = sys.argv[3]
 if target.is_symlink():
     raise SystemExit("private_context_symlink")
-if str(target) != "/data/state/totem-settings/last-settings.json" and not str(target).startswith("/tmp/"):
+allowed_persistent = pathlib.Path("/data/state/totem-settings/last-settings.json")
+raw_target = str(target)
+if raw_target != os.path.normpath(raw_target):
+    raise SystemExit("private_context_path_not_normalized")
+if target != allowed_persistent and pathlib.Path("/tmp") not in target.parents:
     raise SystemExit("private_context_path_invalid")
+if target.name != "last-settings.json":
+    raise SystemExit("private_context_filename_invalid")
+if target.parent.is_symlink() or target.parent != target.parent.resolve(strict=False):
+    raise SystemExit("private_context_parent_invalid")
 data = json.loads(source.read_text(encoding="utf-8"))
 environment_id = data.get("environment_id")
 if not isinstance(environment_id, str) or not environment_id.strip():
@@ -740,6 +774,7 @@ wait_player_running() {
 show_transition() {
   local mode="$1"
   local rotation="${2:-}"
+  restore_tty_console_mode || true
   command -v chvt >/dev/null 2>&1 && run_short chvt "$REMOTE_TTY"
   if [ -x "$TTY_GUARD" ]; then
     run_short "$TTY_GUARD" --clear --tty "$REMOTE_TTY"
@@ -1162,34 +1197,32 @@ PY
 
 cleanup_private_artifacts() {
   local pairing_private_values="$WIZARD_OUT_DIR/qr-pairing/private-values.json"
+  if [ "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" != "$PRIVATE_SETTINGS_CONTEXT_PATH" ]; then
+    rm -f -- "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" || true
+  fi
   if [ -f "$HANDOFF_OUT_DIR/config.candidate.private.json" ]; then
     rm -f "$HANDOFF_OUT_DIR/config.candidate.private.json" || true
   fi
   if [ ! -e "$HANDOFF_OUT_DIR/config.candidate.private.json" ]; then
     PRIVATE_CANDIDATE_REMOVED="true"
   fi
-  if [ "$POLICY_PRIVATE_SOURCE" = "active-config" ]; then
-    local private_parent
-    private_parent="$(dirname -- "$PRIVATE_VALUES")"
-    rm -f -- "$PRIVATE_VALUES" || true
-    case "$private_parent" in
-      /tmp/?*) rmdir -- "$private_parent" 2>/dev/null || true ;;
-    esac
-    if [ ! -e "$PRIVATE_VALUES" ]; then
-      PRIVATE_SOURCE_TEMP_REMOVED="true"
-    fi
-  fi
+  local initial_private_parent
+  initial_private_parent="$(dirname -- "$INITIAL_PRIVATE_VALUES_PATH")"
+  case "$INITIAL_PRIVATE_VALUES_PATH" in
+    /tmp/?*) rm -f -- "$INITIAL_PRIVATE_VALUES_PATH" || true ;;
+  esac
+  case "$initial_private_parent" in
+    /tmp/?*) rmdir -- "$initial_private_parent" 2>/dev/null || true ;;
+  esac
   if [ "$PAIRING_PRIVATE_VALUES_USED" = "true" ]; then
     rm -f "$PRIVATE_VALUES" || true
-    if [ ! -e "$PRIVATE_VALUES" ]; then
-      PRIVATE_SOURCE_TEMP_REMOVED="true"
-    fi
   fi
   if [ -e "$pairing_private_values" ] || [ -L "$pairing_private_values" ]; then
     rm -f -- "$pairing_private_values" || true
-    if [ ! -e "$pairing_private_values" ] && [ ! -L "$pairing_private_values" ]; then
-      PRIVATE_SOURCE_TEMP_REMOVED="true"
-    fi
+  fi
+  if [ ! -e "$INITIAL_PRIVATE_VALUES_PATH" ] && [ ! -L "$INITIAL_PRIVATE_VALUES_PATH" ] \
+    && [ ! -e "$pairing_private_values" ] && [ ! -L "$pairing_private_values" ]; then
+    PRIVATE_SOURCE_TEMP_REMOVED="true"
   fi
 }
 
@@ -1497,6 +1530,7 @@ on_exit() {
   c15_trace "on_exit_begin rc=$rc"
   c1523_phase "session_cleanup_start rc=$rc"
   kill_visual_if_running || true
+  restore_tty_console_mode || true
   cleanup_private_artifacts || true
   cleanup_apply_policy || true
   cleanup_trigger_request || true
@@ -1537,8 +1571,10 @@ if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
   prepare_private_values_from_active_config_if_requested
   validate_private_values_metadata
   if [ "$POLICY_PRIVATE_SOURCE" = "active-config" ] && [ -f /data/config/config.json ]; then
-    write_private_settings_context /data/config/config.json active_config_prefill || true
-    if [ -f "$PRIVATE_SETTINGS_CONTEXT_PATH" ]; then
+    WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH="$PRIVATE_VALUES_DIR/last-settings.json"
+    write_private_settings_context \
+      /data/config/config.json active_config_prefill "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" || true
+    if [ -f "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" ]; then
       PRIVATE_SETTINGS_CONTEXT_SEEDED="true"
     fi
   fi
@@ -1603,13 +1639,13 @@ set +e
 if [ "$MODE" = "preview" ]; then
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
-      --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" \
+      --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" \
       --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
   setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
     env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
-      --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
+      --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   c15_trace "openvt_started pid=$OPENVT_PID"
   start_monotonic="$(monotonic_seconds)"
@@ -1632,6 +1668,7 @@ else
   fi
 fi
 set -e
+restore_tty_console_mode || true
 c15_trace "after_wizard WIZARD_RC=$WIZARD_RC"
 
 SETUP_CANCELLED="false"

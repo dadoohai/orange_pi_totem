@@ -10,6 +10,7 @@ the writer.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import gzip
 import html
 import json
@@ -112,6 +113,9 @@ MPV_VIDEO_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_MPV_VIDEO_MODE", "drm").str
 DOUBLE_LOAD_PER_SCREEN = os.environ.get("TOTEM_VISUAL_WIZARD_DOUBLE_LOAD_PER_SCREEN", "1") != "0"
 RENDERER_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_RENDERER", "framebuffer").strip().lower()
 PSF_FONT_PATH = os.environ.get("TOTEM_VISUAL_WIZARD_PSF_FONT", "/usr/share/consolefonts/Lat15-Fixed18.psf.gz")
+KDSETMODE = 0x4B3A
+KD_TEXT = 0x00
+KD_GRAPHICS = 0x01
 APPLY_CONTEXT = os.environ.get("TOTEM_VISUAL_WIZARD_APPLY_CONTEXT", "candidate").strip().lower()
 HOMOLOGATION_MODE = os.environ.get("TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE", "false").strip().lower() in {
     "1",
@@ -1123,9 +1127,60 @@ class VisualDisplay:
         self.sequence = 0
         self.request_id = 0
         self.framebuffer: FramebufferSVGRenderer | None = None
+        self.console_fd: int | None = None
+        self.console_graphics_mode = False
+        self.previous_signal_handlers: dict[int, Any] = {}
         prepare_private_dir(self.screens_dir)
-        if enabled and RENDERER_MODE == "framebuffer":
-            self.framebuffer = FramebufferSVGRenderer()
+        try:
+            if enabled:
+                for signum in (signal.SIGTERM, signal.SIGHUP):
+                    self.previous_signal_handlers[signum] = signal.getsignal(signum)
+                    signal.signal(signum, self._abort_on_termination)
+            if enabled and RENDERER_MODE == "framebuffer":
+                self.console_fd = sys.stdin.fileno()
+                self.console_graphics_mode = True
+                fcntl.ioctl(self.console_fd, KDSETMODE, KD_GRAPHICS)
+                self.framebuffer = FramebufferSVGRenderer()
+        except Exception as exc:
+            self._restore_console_and_signals()
+            if isinstance(exc, VisualWizardError):
+                raise
+            raise VisualWizardError("framebuffer_console_ownership_failed") from exc
+
+    @staticmethod
+    def _abort_on_termination(signum: int, frame: Any) -> None:
+        del signum, frame
+        raise VisualWizardAbort("setup visual interrompido")
+
+    def _restore_console_and_signals(self) -> None:
+        previous_signal_handlers = dict(self.previous_signal_handlers)
+        for signum in previous_signal_handlers:
+            signal.signal(signum, signal.SIG_IGN)
+        if self.console_graphics_mode and self.console_fd is not None:
+            try:
+                fcntl.ioctl(self.console_fd, KDSETMODE, KD_TEXT)
+            except OSError:
+                pass
+        self.console_graphics_mode = False
+        self.console_fd = None
+        for signum, previous in previous_signal_handlers.items():
+            signal.signal(signum, previous)
+        self.previous_signal_handlers.clear()
+
+    def _stop_mpv_process(self) -> None:
+        process = self.process
+        self.process = None
+        if process is not None and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+        try:
+            self.ipc_path.unlink()
+        except FileNotFoundError:
+            pass
 
     def mpv_video_args(self) -> list[str]:
         if MPV_VIDEO_MODE == "drm":
@@ -1240,7 +1295,7 @@ class VisualDisplay:
             self.framebuffer.render(svg)
             return path
         if RESTART_MPV_PER_SCREEN:
-            self.stop()
+            self._stop_mpv_process()
             self.ensure_started(path)
             if PRESENT_SETTLE_SEC > 0:
                 time.sleep(PRESENT_SETTLE_SEC)
@@ -1249,7 +1304,7 @@ class VisualDisplay:
             self.ensure_started(path)
         else:
             if not self.send_command(["loadfile", str(path), "replace"]):
-                self.stop()
+                self._stop_mpv_process()
                 self.ensure_started(path)
             elif DOUBLE_LOAD_PER_SCREEN:
                 self.wait_for_loaded_path(path)
@@ -1260,22 +1315,13 @@ class VisualDisplay:
         return path
 
     def stop(self) -> None:
-        process = self.process
-        self.process = None
-        if process is not None and process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=3)
         try:
-            self.ipc_path.unlink()
-        except FileNotFoundError:
-            pass
-        if self.framebuffer is not None:
-            self.framebuffer.close()
-            self.framebuffer = None
+            self._stop_mpv_process()
+            if self.framebuffer is not None:
+                self.framebuffer.close()
+                self.framebuffer = None
+        finally:
+            self._restore_console_and_signals()
 
 
 class RawKeyboard:
@@ -1283,7 +1329,11 @@ class RawKeyboard:
         self.fd = sys.stdin.fileno()
         self.previous = termios.tcgetattr(self.fd)
         tty.setraw(self.fd)
-        termios.tcflush(self.fd, termios.TCIFLUSH)
+        try:
+            termios.tcflush(self.fd, termios.TCIFLUSH)
+        except Exception as exc:
+            termios.tcsetattr(self.fd, termios.TCSANOW, self.previous)
+            raise VisualWizardError("keyboard_console_setup_failed") from exc
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:

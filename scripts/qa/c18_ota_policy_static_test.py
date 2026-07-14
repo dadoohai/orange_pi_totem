@@ -21,6 +21,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -4165,6 +4166,278 @@ exec "$C18_REAL_PYTHON3" "$@"
         ]
         self.assertIn("if ! write_public_orientation_from_candidate", post_write)
         self.assertIn("if write_private_settings_context", post_write)
+
+    def test_settings_active_config_prefill_is_session_scoped_until_commit(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        prefill = session[
+            session.index('if [ "$POLICY_PRIVATE_SOURCE" = "active-config"') :
+            session.index("c15_trace \"before_getty_stop\"")
+        ]
+        self.assertIn(
+            'WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH="$PRIVATE_VALUES_DIR/last-settings.json"',
+            prefill,
+        )
+        self.assertIn(
+            'active_config_prefill "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH"',
+            prefill,
+        )
+        self.assertNotIn(
+            "write_private_settings_context /data/config/config.json active_config_prefill || true",
+            prefill,
+        )
+        wizard_launch = session[
+            session.index("c15_trace \"before_openvt\"") :
+            session.index('SETUP_CANCELLED="false"')
+        ]
+        self.assertEqual(
+            wizard_launch.count('--private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH"'),
+            2,
+        )
+        cleanup = session[
+            session.index("cleanup_private_artifacts() {") :
+            session.index("\ncleanup_apply_policy()", session.index("cleanup_private_artifacts() {"))
+        ]
+        self.assertIn('rm -f -- "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH"', cleanup)
+
+        function_start = session.index("write_private_settings_context() {")
+        function_end = session.index("\ncleanup_update_lock()", function_start)
+        function_source = session[function_start:function_end]
+        with tempfile.TemporaryDirectory(prefix="c20-settings-context-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            active = root / "active.json"
+            candidate = root / "candidate.json"
+            persistent = root / "persistent" / "last-settings.json"
+            ephemeral = root / "session" / "last-settings.json"
+            active.write_text(
+                json.dumps({"environment_id": "11111111-2222-4333-8444-555555555555", "rotation_deg": 90}),
+                encoding="utf-8",
+            )
+            candidate.write_text(
+                json.dumps({"environment_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", "rotation_deg": 180}),
+                encoding="utf-8",
+            )
+            original = b'{"sentinel":"unchanged-until-commit"}\n'
+            persistent.parent.mkdir(mode=0o700)
+            persistent.write_bytes(original)
+            proc = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"PRIVATE_SETTINGS_CONTEXT_PATH={shlex.quote(str(persistent))}\n"
+                    f"{function_source}\n"
+                    f"write_private_settings_context {shlex.quote(str(active))} active_config_prefill {shlex.quote(str(ephemeral))}\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(persistent.read_bytes(), original)
+            self.assertEqual(json.loads(ephemeral.read_text(encoding="utf-8"))["source"], "active_config_prefill")
+            consumer = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "scripts/board/totem_setup_visual_wizard.py"),
+                    "--scripted",
+                    "--out-dir",
+                    str(root / "wizard-out"),
+                    "--private-settings-context-path",
+                    str(ephemeral),
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(consumer.returncode, 0, consumer.stderr)
+
+            commit = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"PRIVATE_SETTINGS_CONTEXT_PATH={shlex.quote(str(persistent))}\n"
+                    f"{function_source}\n"
+                    f"write_private_settings_context {shlex.quote(str(candidate))} visual_wizard_saved\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(commit.returncode, 0, commit.stderr)
+            committed = json.loads(persistent.read_text(encoding="utf-8"))
+            self.assertEqual(committed["source"], "visual_wizard_saved")
+            self.assertEqual(committed["environment_id"], "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")
+
+            outside = root / "outside"
+            outside.mkdir()
+            linked_parent = root / "linked-parent"
+            linked_parent.symlink_to(outside, target_is_directory=True)
+            rejected = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"PRIVATE_SETTINGS_CONTEXT_PATH={shlex.quote(str(persistent))}\n"
+                    f"{function_source}\n"
+                    f"write_private_settings_context {shlex.quote(str(active))} active_config_prefill "
+                    f"{shlex.quote(str(linked_parent / 'last-settings.json'))}\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertFalse((outside / "last-settings.json").exists())
+
+    def test_settings_private_cleanup_removes_initial_and_qr_sources(self) -> None:
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        function_start = session.index("cleanup_private_artifacts() {")
+        function_end = session.index("\ncleanup_apply_policy()", function_start)
+        cleanup_source = session[function_start:function_end]
+        with tempfile.TemporaryDirectory(prefix="c20-private-cleanup-", dir="/tmp") as raw_root:
+            root = Path(raw_root)
+            initial = root / "initial" / "private-values.json"
+            qr = root / "wizard" / "qr-pairing" / "private-values.json"
+            context = root / "initial" / "last-settings.json"
+            handoff = root / "handoff" / "config.candidate.private.json"
+            for path in (initial, qr, context, handoff):
+                path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                path.write_text('{"synthetic":"private"}\n', encoding="utf-8")
+                path.chmod(0o600)
+            proc = subprocess.run(
+                ["bash"],
+                input=(
+                    "set -euo pipefail\n"
+                    f"WIZARD_OUT_DIR={shlex.quote(str(root / 'wizard'))}\n"
+                    f"HANDOFF_OUT_DIR={shlex.quote(str(root / 'handoff'))}\n"
+                    f"WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH={shlex.quote(str(context))}\n"
+                    f"PRIVATE_SETTINGS_CONTEXT_PATH={shlex.quote(str(root / 'persistent' / 'last-settings.json'))}\n"
+                    f"INITIAL_PRIVATE_VALUES_PATH={shlex.quote(str(initial))}\n"
+                    f"PRIVATE_VALUES={shlex.quote(str(qr))}\n"
+                    "PAIRING_PRIVATE_VALUES_USED=true\n"
+                    "PRIVATE_CANDIDATE_REMOVED=false\n"
+                    "PRIVATE_SOURCE_TEMP_REMOVED=false\n"
+                    f"{cleanup_source}\n"
+                    "cleanup_private_artifacts\n"
+                    "test \"$PRIVATE_CANDIDATE_REMOVED\" = true\n"
+                    "test \"$PRIVATE_SOURCE_TEMP_REMOVED\" = true\n"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            for path in (initial, qr, context, handoff):
+                self.assertFalse(path.exists(), str(path))
+
+    def test_settings_framebuffer_console_ownership_is_restored(self) -> None:
+        wizard = (REPO_ROOT / "scripts/board/totem_setup_visual_wizard.py").read_text(encoding="utf-8")
+        display_source = wizard[wizard.index("class VisualDisplay:") : wizard.index("\nclass RawKeyboard:")]
+        self.assertIn("import fcntl", wizard)
+        self.assertIn("KDSETMODE = 0x4B3A", wizard)
+        self.assertIn('if enabled and RENDERER_MODE == "framebuffer":', display_source)
+        self.assertIn("fcntl.ioctl(self.console_fd, KDSETMODE, KD_GRAPHICS)", display_source)
+        self.assertIn("fcntl.ioctl(self.console_fd, KDSETMODE, KD_TEXT)", display_source)
+        self.assertLess(display_source.index("KD_GRAPHICS"), display_source.index("KD_TEXT"))
+        self.assertIn("signal.SIGTERM", display_source)
+        self.assertIn("signal.SIGHUP", display_source)
+        restart_branch = display_source[
+            display_source.index("if RESTART_MPV_PER_SCREEN:") :
+            display_source.index("if self.process is None:")
+        ]
+        self.assertIn("self._stop_mpv_process()", restart_branch)
+        self.assertNotIn("self.stop()", restart_branch)
+
+        board_dir = REPO_ROOT / "scripts" / "board"
+        module_name = "totem_visual_wizard_console_policy_test"
+        spec = importlib.util.spec_from_file_location(module_name, board_dir / "totem_setup_visual_wizard.py")
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        sys.path.insert(0, str(board_dir))
+        try:
+            spec.loader.exec_module(module)
+            ioctl_events: list[tuple[int, int, int]] = []
+            signal_events: list[tuple[int, Any]] = []
+
+            class FakeFramebuffer:
+                def __init__(self) -> None:
+                    self.closed = False
+
+                def close(self) -> None:
+                    self.closed = True
+
+            def fake_ioctl(fd: int, request: int, mode: int) -> None:
+                ioctl_events.append((fd, request, mode))
+
+            def fake_signal(signum: int, handler: Any) -> None:
+                signal_events.append((signum, handler))
+
+            with tempfile.TemporaryDirectory(prefix="c20-console-owner-", dir="/tmp") as raw_root:
+                with (
+                    mock.patch.object(module, "RENDERER_MODE", "framebuffer"),
+                    mock.patch.object(module, "FramebufferSVGRenderer", FakeFramebuffer),
+                    mock.patch.object(module.sys, "stdin", SimpleNamespace(fileno=lambda: 73)),
+                    mock.patch.object(module.fcntl, "ioctl", side_effect=fake_ioctl),
+                    mock.patch.object(module.signal, "getsignal", side_effect=lambda signum: f"previous-{signum}"),
+                    mock.patch.object(module.signal, "signal", side_effect=fake_signal),
+                ):
+                    display = module.VisualDisplay(Path(raw_root) / "framebuffer", enabled=True)
+                    self.assertEqual(ioctl_events, [(73, module.KDSETMODE, module.KD_GRAPHICS)])
+                    with self.assertRaises(module.VisualWizardAbort):
+                        display._abort_on_termination(module.signal.SIGTERM, None)
+                    display.stop()
+                    self.assertEqual(ioctl_events[-1], (73, module.KDSETMODE, module.KD_TEXT))
+                    display.stop()
+
+                ioctl_events.clear()
+                with (
+                    mock.patch.object(module, "RENDERER_MODE", "mpv"),
+                    mock.patch.object(module, "PRESENT_SETTLE_SEC", 0),
+                    mock.patch.object(module.sys, "stdin", SimpleNamespace(fileno=lambda: 73)),
+                    mock.patch.object(module.fcntl, "ioctl", side_effect=fake_ioctl),
+                    mock.patch.object(module.signal, "getsignal", side_effect=lambda signum: f"previous-{signum}"),
+                    mock.patch.object(module.signal, "signal", side_effect=fake_signal),
+                ):
+                    display = module.VisualDisplay(Path(raw_root) / "mpv", enabled=True)
+                    with mock.patch.object(display, "ensure_started") as ensure_started:
+                        display.show("fallback", "<svg></svg>")
+                    ensure_started.assert_called_once()
+                    self.assertEqual(len(display.previous_signal_handlers), 2)
+                    display.stop()
+                    self.assertEqual(ioctl_events, [])
+
+                with (
+                    mock.patch.object(module, "RENDERER_MODE", "framebuffer"),
+                    mock.patch.object(module.sys, "stdin", SimpleNamespace(fileno=lambda: 73)),
+                    mock.patch.object(module.fcntl, "ioctl", side_effect=OSError("synthetic ioctl failure")),
+                    mock.patch.object(module.signal, "getsignal", side_effect=lambda signum: f"previous-{signum}"),
+                    mock.patch.object(module.signal, "signal", side_effect=fake_signal),
+                ):
+                    with self.assertRaises(module.VisualWizardError):
+                        module.VisualDisplay(Path(raw_root) / "failure", enabled=True)
+        finally:
+            sys.path.remove(str(board_dir))
+            sys.modules.pop(module_name, None)
+
+        cleanup = (REPO_ROOT / "scripts/board/totem_open_settings_cleanup.sh").read_text(encoding="utf-8")
+        self.assertIn("restore_tty_text_mode() {", cleanup)
+        self.assertIn("fcntl.ioctl(fd, KDSETMODE, KD_TEXT)", cleanup)
+        final_cleanup = cleanup[cleanup.index('visual_killed_count="') :]
+        self.assertLess(final_cleanup.index("kill_leftover_visuals"), final_cleanup.index("restore_tty_text_mode"))
+        self.assertLess(final_cleanup.index("restore_tty_text_mode"), final_cleanup.index("restore_product_state"))
+
+        session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
+        on_exit = session[session.index("on_exit() {") : session.index("\non_term()")]
+        self.assertLess(on_exit.index("kill_visual_if_running"), on_exit.index("restore_tty_console_mode"))
+        self.assertLess(on_exit.index("restore_tty_console_mode"), on_exit.index("restore_service"))
+        after_wizard = session[session.index("set -e\nrestore_tty_console_mode") : session.index('SETUP_CANCELLED="false"')]
+        self.assertIn("restore_tty_console_mode || true", after_wizard)
 
     def test_settings_session_resets_reused_scratch_without_following_symlinks(self) -> None:
         session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
