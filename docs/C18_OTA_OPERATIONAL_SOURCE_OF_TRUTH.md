@@ -710,6 +710,11 @@ Estado em 2026-07-09:
 
 Decisoes e riscos ainda vivos:
 
+- na ativacao da `prod14` em 2026-07-14, o portal chegou a `Codigo recebido`
+  e `Conta verificada`, mas permaneceu em `Carregando autorizacao` antes da
+  escolha de ambiente; recarregar a pagina com `F5` retomou o fluxo. O caso e
+  recuperavel e nao bloqueou o onboarding, mas permanece pendente de RCA no
+  front para evitar que o usuario precise descobrir esse contorno;
 - para o primeiro slice, ativacao por ambiente e aceitavel se a UI disser isso
   claramente; vinculacao forte por `station_id` fica como decisao/endurcimento
   seguinte ou deve ser feita agora se o produto exigir identidade por totem;
