@@ -86,21 +86,42 @@ COLLECT="$E2E/c18_player_runtime_production_autopull_collect.py"
 TAG=c18-hwdecode-prod-14
 MARKER=/etc/dadooh/c18-hwdecode-prod-14-image
 
-wait_for_player_ready() {
-  python3 - <<'PY'
+wait_for_new_player_ready() {
+  python3 - "$1" "$2" <<'PY'
 import json
+import subprocess
+import sys
 import time
 from pathlib import Path
 
+previous_invocation = sys.argv[1]
+previous_started_at = sys.argv[2]
 status_path = Path("/tmp/kiosky-status.json")
 deadline = time.monotonic() + 60
 while time.monotonic() < deadline:
+    invocation = subprocess.run(
+        [
+            "systemctl",
+            "show",
+            "kiosky-player.service",
+            "-p",
+            "InvocationID",
+            "--value",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
     try:
         status = json.loads(status_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         status = {}
     if (
-        status.get("playback_state") == "playing"
+        invocation
+        and invocation != previous_invocation
+        and status.get("started_at")
+        and status.get("started_at") != previous_started_at
+        and status.get("playback_state") == "playing"
         and status.get("mpv_running") is True
         and isinstance(status.get("current_item"), dict)
         and status["current_item"]
@@ -119,6 +140,18 @@ PRE_TRIGGER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["
   "$E2E/pre.json")"
 PRE_SERVICE_INVOCATION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["systemd"]["service"]["show"]["InvocationID"])' \
   "$E2E/pre.json")"
+PRE_PLAYER_INVOCATION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["systemd"]["player"]["show"]["InvocationID"])' \
+  "$E2E/pre.json")"
+PRE_STATUS_STARTED_AT="$(python3 -c 'import json; print(json.load(open("/tmp/kiosky-status.json")).get("started_at", ""))')"
+[ -n "$PRE_PLAYER_INVOCATION" ] && [ -n "$PRE_STATUS_STARTED_AT" ] || {
+  echo "pre_player_identity_missing" >&2
+  exit 1
+}
+[ "$(systemctl show totem-player-runtime-update-agent.timer \
+  -p LastTriggerUSec --value)" = "$PRE_TRIGGER" ] || {
+  echo "timer_triggered_before_wait_setup" >&2
+  exit 1
+}
 while [ "$(systemctl show totem-player-runtime-update-agent.timer \
   -p LastTriggerUSec --value)" = "$PRE_TRIGGER" ]; do sleep 1; done
 while :; do
@@ -136,7 +169,7 @@ while :; do
     *) break ;;
   esac
 done
-wait_for_player_ready
+wait_for_new_player_ready "$PRE_PLAYER_INVOCATION" "$PRE_STATUS_STARTED_AT"
 python3 "$COLLECT" --phase post_apply --output "$E2E/post_apply.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/post_apply-deep-health"
@@ -146,16 +179,34 @@ python3 "$COLLECT" --phase noop --output "$E2E/noop.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/noop-deep-health"
 
+BEFORE_ROLLBACK_PLAYER_INVOCATION="$(systemctl show kiosky-player.service \
+  -p InvocationID --value)"
+BEFORE_ROLLBACK_STATUS_STARTED_AT="$(python3 -c 'import json; print(json.load(open("/tmp/kiosky-status.json")).get("started_at", ""))')"
+[ -n "$BEFORE_ROLLBACK_PLAYER_INVOCATION" ] && \
+  [ -n "$BEFORE_ROLLBACK_STATUS_STARTED_AT" ] || {
+  echo "rollback_player_identity_missing" >&2
+  exit 1
+}
 /opt/totem/bin/totem-updatectl rollback-player-runtime-authorized \
   --authorization /data/updates/player-runtime-production-autopull.json \
   --reason production_authorized_rollback
-wait_for_player_ready
+wait_for_new_player_ready "$BEFORE_ROLLBACK_PLAYER_INVOCATION" \
+  "$BEFORE_ROLLBACK_STATUS_STARTED_AT"
 python3 "$COLLECT" --phase rollback --output "$E2E/rollback.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/rollback-deep-health"
 
+BEFORE_RESTORE_PLAYER_INVOCATION="$(systemctl show kiosky-player.service \
+  -p InvocationID --value)"
+BEFORE_RESTORE_STATUS_STARTED_AT="$(python3 -c 'import json; print(json.load(open("/tmp/kiosky-status.json")).get("started_at", ""))')"
+[ -n "$BEFORE_RESTORE_PLAYER_INVOCATION" ] && \
+  [ -n "$BEFORE_RESTORE_STATUS_STARTED_AT" ] || {
+  echo "restore_player_identity_missing" >&2
+  exit 1
+}
 systemctl start totem-player-runtime-update-agent.service
-wait_for_player_ready
+wait_for_new_player_ready "$BEFORE_RESTORE_PLAYER_INVOCATION" \
+  "$BEFORE_RESTORE_STATUS_STARTED_AT"
 python3 "$COLLECT" --phase restored --output "$E2E/restored.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-duration-sec 600 \
