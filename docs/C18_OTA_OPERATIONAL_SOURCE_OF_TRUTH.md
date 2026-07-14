@@ -187,11 +187,18 @@ Fila atual para consolidacao:
   espera de oito segundos e canario cobrindo toda a janela passou todos os
   checks sem mudar limites. A prod13 nao sera promovida. Evidencia:
   `docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.
-- A proxima candidata e `prod14`, limitada a identidade nova,
+- A candidata `prod14`, SHA256
+  `3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682`,
+  foi construida no commit `59a1b7c` e auditada como sucessora estreita,
+  limitada a identidade nova,
   `--startup-wait-sec 8` na unit production e ao canario isolado cobrindo toda
-  a janela de health. Depois de build/auditoria, seu E2E
-  deve provar timer, apply, no-op, rollback para o fallback da imagem, reapply,
-  `rc=44`, reboot e playback estrito final.
+  a janela de health. Duas comparacoes independentes do rootfs real confirmaram
+  boot region, kernel, initrd, DTB, U-Boot, C20.14, C25B e pilha de midia
+  preservados, sem delta inesperado. O marcador interno foi extraido da imagem
+  e tem SHA256
+  `ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2`.
+  Seu E2E ainda deve provar timer, apply, no-op, rollback para o fallback da
+  imagem, reapply, `rc=44`, reboot e playback estrito final.
   O construtor de producao recusa arvore suja, identidade de candidata
   divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
   erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
@@ -205,7 +212,9 @@ Fila atual para consolidacao:
   `--verify-existing` para baixar e conferir o release C25B ja publicado sem
   republicar nem mover `latest`; a execucao real passou e esta em
   `docs/evidence/c18-update-validation/20260714T171607Z-c25b-existing-release-verification/`.
-  Isso e governanca pre-build, nao evidencia E2E da prod14.
+  Isso e governanca pre-build, nao evidencia E2E da prod14. Evidencia de build
+  e auditoria pre-flash:
+  `docs/evidence/c18-update-validation/20260714T173015Z-prod14-build-59a1b7c/`.
 - A convergencia C24 e o controle assinado de novos players ficam no roadmap
   conforme a decisao 198.
 
@@ -443,9 +452,9 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - os tres assets exatos de C25B foram publicados sem mover `latest`. A arvore
   exata passou na placa com oito segundos de espera e um canario que cobre toda
   a observacao, sem afrouxar os limites do health;
-- fechar gates e auditoria de pre-build, construir/auditar `prod14` e grava-la
-  do zero. Provar timer, apply exato, no-op, rollback para o player embutido,
-  reapply, freeze `rc=44`, reboot e playback estrito final;
+- gates, build e auditoria pre-flash da `prod14` estao fechados. Grava-la uma
+  unica vez do zero e provar timer, apply exato, no-op, rollback para o player
+  embutido, reapply, freeze `rc=44`, reboot e playback estrito final;
 - gerar/promover o core consolidado em `stable` e provar o timer de
   `totem-core`, evitando que a stable antiga tente downgrade sobre a imagem;
 - executar auditoria final e, somente com essas provas verdes, substituir

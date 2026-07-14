@@ -332,12 +332,11 @@ Enquanto nada mudar, a ordem de execucao e:
    canario cobrindo toda a janela de health, sem afrouxar nenhum limite.
    Evidencia:
    `docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.
-5. Nao promover `prod13`. Construir e auditar a sucessora estreita `prod14`,
-   alterando somente identidade, a espera production de cinco para oito
-   segundos e a exposicao isolada do canario para cobrir a propria janela.
-   C20.14, C25B, kernel, boot e pilha de video ficam fixos. O endurecimento
-   pre-build do coletor/gate foi fechado e reauditado; ainda nao constitui a
-   prova fisica da prod14.
+5. Nao promover `prod13`. A sucessora estreita `prod14` foi construida e
+   auditada: somente identidade, espera production de oito segundos, canario
+   cobrindo a janela e rotacao controlada da credencial mudaram. C20.14, C25B,
+   kernel, boot e pilha de video ficaram fixos; nenhum delta inesperado foi
+   encontrado. Isso ainda nao constitui a prova fisica da prod14.
 6. Gravar `prod14` e provar na placa: timer real, apply exato, no-op, rollback
    para o player embutido, reapply exato, freeze publico `rc=44`, reboot e
    playback estrito final. Somente esse E2E verde pode substituir `prod8` + C23

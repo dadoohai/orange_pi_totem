@@ -1,0 +1,16 @@
+{
+  "schema": "dadooh.c18.production_image_artifact_ready.v1",
+  "image_tag": "c18-hwdecode-prod-14",
+  "image_version": "c18.image-prod.14",
+  "image_file": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-14_minimal.img",
+  "image_sha256": "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682",
+  "sha256_file": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-14_minimal.img.sha256",
+  "repo_commit": "59a1b7c4774ec0cd487405f4205a526abf18b899",
+  "repo_tree": "e434fb6716d13d077759e4ce86153fcd87a620ca",
+  "build_manifest_sha256": "1cfeac8e7bef68b0feec4bfe70059ce3944363732ad5c545b7bec725556f9130",
+  "offline_validation_sha256": "41248edb66b317fbdc848ca5dedcb8c52e8ce8457ff82775ac5db73911593c6a",
+  "build_log_sha256": "3bd5323579e8d84a576fd84cac66f04ea350f95695c81f9451d20c60341609e1",
+  "evidence_directory": "/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260714T173015Z-prod14-build-59a1b7c",
+  "external_forensic_audit_required": true,
+  "ready_for_manual_card_flash": false
+}

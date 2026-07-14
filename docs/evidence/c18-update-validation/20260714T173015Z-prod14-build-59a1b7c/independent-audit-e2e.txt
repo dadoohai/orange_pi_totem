@@ -1,0 +1,36 @@
+Auditoria somente leitura concluída. Não editei arquivos, não toquei placa/remotos e não reexecutei gates.
+
+**Findings**
+
+**Alta - evidência atual ainda não prova E2E pós-flash.**
+O pacote prod14 é candidato, não prova operacional: o manifesto declara `card_written: false`, `board_touched: false`, `ssh_used: false`, `hardware_validation_required: true` e `ready_for_manual_card_flash: false` em [build_manifest.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c18-update-validation/20260714T173015Z-prod14-build-59a1b7c/build_manifest.json:446). O source of truth também diz que prod14 só substitui prod8+C23 depois do E2E físico em [C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md](/home/builder/totem-os/orange_pi_totem/docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md:190). Qualquer claim de “prod14 validada” antes desse run é prematuro.
+
+**Média - o gate de autopull não prova boot/config completo sozinho.**
+Ele prova marcador de imagem, policy, timer, serviço player, adoção, apply/noop/rollback/reapply e saúde do player. Não vi no runbook/gate uma fase dedicada para wizard/config writer/identidade SSH/rootfs pós-flash nem uma fase pós-reboot final. Se “boot/config” e “reboot + playback final” são critérios de aceitação, precisam entrar no caminho operacional junto do gate, senão “gate passou” vira claim mais amplo do que a evidência.
+
+**Média - execução prod14 é sensível a defaults legados.**
+O gate e o collector ainda têm defaults prod8/C23; prod14 só é provada com overrides explícitos. O runbook avisa isso em [c18-player-runtime-production-autopull-runbook.md](/home/builder/totem-os/orange_pi_totem/docs/c18-player-runtime-production-autopull-runbook.md:31), mas uma execução sem `--expected-image-tag c18-hwdecode-prod-14`, `--expected-image-version c18.image-prod.14`, `--roundtrip-mode image-fallback-reapply` e alvo/baseline C25B provaria a coisa errada ou falharia de forma confusa.
+
+**Média - falta materializar o SHA offline do marcador de imagem.**
+O gate exige `--expected-image-marker-sha256` no modo image-fallback, e isso deve vir da extração offline da imagem prod14, não do board já flashado. O manifesto tem SHA da imagem, mas não vi o SHA do arquivo `/etc/dadooh/c18-hwdecode-prod-14-image` registrado no diretório prod14. Sem ele, falta a amarração forte entre “esta placa” e “a imagem auditada”.
+
+**Baixa - runbook está correto em intenção, mas deixa comandos críticos implícitos.**
+“Ligar timer real”, “rodar unit novamente”, “rollback autorizado” e “reapply exact” estão descritos, mas não viram comandos canônicos. O gate deve rejeitar vários desvios, mas isso aumenta risco operacional de repetir rodada inválida.
+
+**Falsa rejeição C25B**
+
+O risco principal foi endereçado no código: unidade production com `--startup-wait-sec 8`, canário cobrindo a janela de saúde e gate exigindo saúde faseada/600s final. Isso reduz bem a chance de repetir a rejeição falsa. O risco restante é operacional: começar health cedo, usar defaults errados ou confundir rollback/reapply. O gate tem boas defesas contra isso, desde que os artefatos sejam coletados na ordem certa.
+
+**Caminho mínimo E2E pós-flash**
+
+1. Antes do flash, registrar SHA da imagem prod14 e SHA offline de `/etc/dadooh/c18-hwdecode-prod-14-image`.
+2. Flashar prod14 e provar boot/config mínimo: marcador prod14 com SHA esperado, sem config real embutida, identidade/runtime inicial corretos, player adotando image fallback C25B, sem `current`/`previous` em `/data`.
+3. Coletar `pre` antes do timer real.
+4. Deixar o timer real aplicar C25B exato e coletar `post_apply`.
+5. Rodar a unit novamente para noop e coletar `noop`, comprovando ausência de mutação.
+6. Executar rollback público/autorizado rc44 para image fallback e coletar `rollback`.
+7. Reaplicar C25B exato, esperar playback estável, coletar `restored` com 600s.
+8. Rodar o evidence gate com overrides prod14/C25B e `--roundtrip-mode image-fallback-reapply`.
+9. Se a aceitação exigir reboot final, rebootar depois do restored e coletar health/boot marker final separado; o gate atual de cinco fases não força essa etapa por conta própria.
+
+Com esses cuidados, prod14 + runbook/gate conseguem provar o escopo player-runtime/update sem regressão observável na janela definida. Sem boot/config separado, SHA offline do marker e overrides explícitos, a prova fica incompleta.

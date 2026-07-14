@@ -1,0 +1,18 @@
+**Findings**
+- **BLOCKER, provenance/runbook:** a árvore atual não está limpa para o passo de flash controlado. `git status -sb` mostrou `foundation-v0.1...origin/foundation-v0.1 [ahead 2]` e o diretório `docs/evidence/c18-update-validation/20260714T173015Z-prod14-build-59a1b7c/` inteiro está não rastreado. `git ls-files` para esse diretório não retorna nada. Isso conflita com o runbook que exige “repo limpo” antes de gravar prod14: [docs/c18-player-runtime-production-autopull-runbook.md](/home/builder/totem-os/orange_pi_totem/docs/c18-player-runtime-production-autopull-runbook.md:31).
+
+- **Médio, artifact-ready pode virar falso-verde se lido errado:** o `.ready.json` existe e seus hashes batem, mas ele declara `external_forensic_audit_required=true` e `ready_for_manual_card_flash=false`. O próprio documento operacional diz que o conjunto completo com `.ready.json` “sem autorizar flash” ainda exige auditoria forense externa: [docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md](/home/builder/totem-os/orange_pi_totem/docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md:190). A candidata está pronta para `production_candidate_validation`, não para tratar o `.ready` como autorização autônoma de flash.
+
+- **Baixo/limitação de auditoria:** os gates Python que desempacotam payload não puderam ser rerodados integralmente neste sandbox somente leitura porque precisam de diretório temporário gravável. Compensei com validações adversariais em streaming do tarball e hashes reais, mas isso não é uma reexecução completa desses gates.
+
+**Provas Limpas**
+- `repo_commit` e `repo_tree` do manifesto batem com `HEAD`: `59a1b7c4774ec0cd487405f4205a526abf18b899` / `e434fb6716d13d077759e4ce86153fcd87a620ca`.
+- Imagem real: `1971322880` bytes, modo `640`, SHA256 calculado `3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682`; `sha256sum -c` deu `OK`.
+- `.ready.json` referencia hashes que batem: manifest `1cfeac8e...`, offline `41248edb...`, log `3bd53235...`.
+- Ext4: partição única em `start=8192`, offset `4194304`; `blkid` confirma ext4. Parser independente leu superbloco limpo e varreu `58513` blocos livres: `0` blocos livres não zerados.
+- Rootfs real: marker prod14 presente, `kiosk.py` SHA `7b67003a...`, commit marker C25B `54308e4...`, autorização embutida SHA `285b15c5...`, service com `--startup-wait-sec 8`.
+- Higiene de credencial: `/etc/machine-id` vazio, host keys SSH ausentes, seed sensível em branco, `/etc/shadow` e `/etc/shadow-` presentes modo `0640`, root hash em esquema `$6$` e igual nos dois arquivos. Não expus hash nem plaintext.
+- C25B exato: assets locais batem com manifest/payload/release-gate (`d3199e34...`, `b6e1a58...`, `f03fa5e...`); tarball contém só `kiosk.py` e seu SHA bate. Tag local anotada faz peel para `54308e4a09ef693dbfb3d6b31ce9626908ca0c16`. Evidência remota versionada `publication-verification.json` passou `SHA256SUMS`.
+
+**Conclusão**
+Há blocker para flash controlado se o critério vigente inclui o runbook literalmente: repo limpo/provenance selada ainda não está satisfeito. Não encontrei blocker de integridade no artefato local, SHA, rootfs, C25B exato, higiene ext4 ou ausência de exposição de credencial.

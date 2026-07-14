@@ -9,7 +9,7 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_prod14_prebuild_validation_in_progress
+status=c25_validated_prod14_preflash_audit_passed
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_preserved_in_candidate_chain=true
@@ -24,7 +24,7 @@ board_framebuffer_flow_validation=passed
 hdmi_camera_flicker_acceptance=pending
 writer_mutating_e2e=passed_on_prod12_c20_12
 c25b_exact_release_published_without_latest=true
-next_reference_image=prod14_prebuild_validation
+next_reference_image=prod14_board_e2e
 prod9_board_acceptance=blocked_do_not_flash
 prod10_board_acceptance=blocked_do_not_flash
 prod11_board_acceptance=blocked_do_not_flash
@@ -580,3 +580,23 @@ aceite exige timer/apply/no-op, rollback para o player embutido, reapply, freeze
 publico `rc=44`, reboot e health final de 600 segundos.
 Evidencia da causa:
 `docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.
+
+## Checkpoint Prod14 Pre-Flash - 2026-07-14
+
+A prod14 foi construida no commit `59a1b7c`, SHA256
+`3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682`.
+O gate de source passou `84/84` e a validacao offline `66/66`. Duas auditorias
+do rootfs real confirmaram que as unicas mudancas funcionais sao a espera de
+oito segundos e o canario cobrindo a janela. Boot, kernel, initrd, DTB, U-Boot,
+C20.14, C25B e pilha de video ficaram identicos; nao houve delta inesperado.
+
+```text
+pre_flash_decision=one_controlled_flash_only
+distribution_reference=still_prod8_until_prod14_board_e2e
+broad_production_approved=false
+image_marker_sha256=ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2
+```
+
+O proximo passo e somente o flash controlado e o E2E fisico descrito no
+runbook. Evidencia:
+`docs/evidence/c18-update-validation/20260714T173015Z-prod14-build-59a1b7c/`.

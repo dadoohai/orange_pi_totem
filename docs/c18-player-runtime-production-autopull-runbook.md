@@ -64,6 +64,81 @@ herdar esse estado.
    imagem prod14 auditada, nunca recalculado a partir da propria coleta da
    placa. Depois commitar a evidencia com arvore limpa.
 
+## Invocacao canonica prod14
+
+O operador deve copiar o coletor atual para um diretorio novo da placa e usar
+sempre estes parametros. Nao usar os defaults historicos prod8/C23:
+
+```bash
+E2E=/tmp/c18-prod14-e2e
+COLLECT="$E2E/c18_player_runtime_production_autopull_collect.py"
+TAG=c18-hwdecode-prod-14
+MARKER=/etc/dadooh/c18-hwdecode-prod-14-image
+
+python3 "$COLLECT" --phase pre --output "$E2E/pre.json" \
+  --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
+  --deep-health-output-dir "$E2E/pre-deep-health"
+
+systemctl start totem-player-runtime-update-agent.service
+python3 "$COLLECT" --phase post_apply --output "$E2E/post_apply.json" \
+  --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
+  --deep-health-output-dir "$E2E/post-apply-deep-health"
+
+systemctl start totem-player-runtime-update-agent.service
+python3 "$COLLECT" --phase noop --output "$E2E/noop.json" \
+  --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
+  --deep-health-output-dir "$E2E/noop-deep-health"
+
+/opt/totem/bin/totem-updatectl rollback-player-runtime-authorized \
+  --authorization /data/updates/player-runtime-production-autopull.json \
+  --reason production_authorized_rollback
+python3 "$COLLECT" --phase rollback --output "$E2E/rollback.json" \
+  --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
+  --deep-health-output-dir "$E2E/rollback-deep-health"
+
+systemctl start totem-player-runtime-update-agent.service
+python3 "$COLLECT" --phase restored --output "$E2E/restored.json" \
+  --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
+  --deep-health-duration-sec 600 \
+  --deep-health-output-dir "$E2E/restored-deep-health"
+```
+
+Cada comando deve terminar com `rc=0`; nao reutilizar diretorios. Antes dessa
+sequencia, validar boot, expansao, identidade SSH, wizard/configuracao e player
+embutido sem links `current`/`previous`. Depois do gate das cinco fases, fazer
+um reboot separado e repetir marcador, adocao e playback estrito. O gate local
+deve receber explicitamente todos os arquivos acima, identidade prod14,
+target/baseline C25B, `--roundtrip-mode image-fallback-reapply`,
+`--require-freeze-probe` e `--min-continuous-restored-sec 600`. A invocacao
+local completa e:
+
+```bash
+RUN=/path/to/copied-prod14-e2e
+REL=releases/player-runtime/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+PUB=docs/evidence/c18-update-validation/20260714T171607Z-c25b-existing-release-verification/publication-verification.json
+
+python3 scripts/qa/c18_player_runtime_production_autopull_evidence_gate.py \
+  --authorization scripts/board/player_runtime_production_autopull.json \
+  --publication-evidence "$PUB" \
+  --manifest "$REL/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json" \
+  --payload "$REL/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.tar.gz" \
+  --release-gate "$REL/c18-player-runtime-release-gate.json" \
+  --pre "$RUN/pre.json" --post-apply "$RUN/post_apply.json" \
+  --noop "$RUN/noop.json" --rollback "$RUN/rollback.json" \
+  --restored "$RUN/restored.json" \
+  --expected-image-tag c18-hwdecode-prod-14 \
+  --expected-image-version c18.image-prod.14 \
+  --expected-image-marker-sha256 ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2 \
+  --expected-updater-sha256 3c39aa4dcda793eb52a9eeebbe6c03e38d1a8c2080c8814ea938ae21e559b282 \
+  --target-version c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4 \
+  --baseline-version c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4 \
+  --baseline-payload-sha256 b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d \
+  --roundtrip-mode image-fallback-reapply \
+  --expected-rollback-reason production_authorized_rollback \
+  --max-player-restarts 0 --require-freeze-probe \
+  --min-continuous-restored-sec 600 --json
+```
+
 ## Resultado exigido
 
 - C25B veio da tag GitHub exata e tem hashes/marker corretos;

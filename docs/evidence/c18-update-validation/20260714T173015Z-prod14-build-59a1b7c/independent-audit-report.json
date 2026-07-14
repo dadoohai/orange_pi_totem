@@ -1,0 +1,93 @@
+{
+  "schema": "dadooh.c18.production_image.independent_audit_report.v1",
+  "record_type": "central_compilation_of_independent_read_only_reviews",
+  "recorded_at_utc": "2026-07-14T17:59:05Z",
+  "image_tag": "c18-hwdecode-prod-14",
+  "image_sha256": "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682",
+  "source_commit": "59a1b7c4774ec0cd487405f4205a526abf18b899",
+  "source_tree": "e434fb6716d13d077759e4ce86153fcd87a620ca",
+  "reviews": [
+    {
+      "review_id": "real_image_delta_primary",
+      "agent_session_id": "019f61b5-3f57-7832-a6bd-0388a10c3563",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "full_rootfs_boot_and_residue_delta",
+      "material_findings": [
+        "prepartition_boot_region_identical",
+        "kernel_initrd_dtb_uboot_c20_14_c25b_and_media_stack_identical",
+        "only_two_functional_file_deltas_match_source",
+        "root_credential_rotation_isolated_and_permissions_preserved",
+        "zero_unexpected_content_or_permission_delta",
+        "filesystem_clean_and_no_deleted_inodes"
+      ]
+    },
+    {
+      "review_id": "real_image_delta_secondary",
+      "agent_session_id": "019f61b6-f5aa-7600-9abb-ca162a6379b8",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "independent_direct_ext4_inventory_and_boot_comparison",
+      "material_findings": [
+        "partition_geometry_and_raw_boot_bytes_identical",
+        "candidate_health_and_systemd_unit_match_source",
+        "autopull_remains_exact_target_and_allow_latest_false",
+        "host_keys_machine_id_and_staging_residue_absent"
+      ]
+    },
+    {
+      "review_id": "artifact_evidence_chain",
+      "agent_session_id": "019f61b6-f5b2-7d03-a1f9-f7ad8a80770f",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "integrity_green_commit_required_before_flash",
+      "scope": "artifact_hash_provenance_ext4_hygiene_credential_and_c25b_chain",
+      "material_findings": [
+        "image_and_ready_hash_chain_recomputed",
+        "source_commit_and_tree_exact",
+        "all_free_ext4_blocks_zeroed",
+        "credential_plaintext_and_ssh_host_keys_absent",
+        "c25b_local_and_remote_evidence_hashes_exact"
+      ],
+      "raised_concerns": [
+        "build_evidence_was_untracked_during_review",
+        "artifact_ready_is_intentionally_not_a_flash_authorization"
+      ]
+    },
+    {
+      "review_id": "post_flash_e2e_semantics",
+      "agent_session_id": "019f61b6-f59a-7de0-a465-85c1fc07a666",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_after_marker_binding_and_canonical_commands",
+      "scope": "boot_config_apply_noop_rollback_reapply_freeze_reboot_and_health",
+      "material_findings": [
+        "five_phase_gate_is_sufficient_for_player_runtime_roundtrip",
+        "startup_wait_and_window_bound_address_false_rejection",
+        "boot_config_and_post_gate_reboot_must_remain_separate_acceptance_steps"
+      ],
+      "raised_concerns": [
+        "legacy_defaults_must_be_overridden",
+        "offline_image_marker_sha_required",
+        "critical_operator_commands_were_implicit"
+      ]
+    }
+  ],
+  "central_resolution": {
+    "untracked_evidence": "resolved_only_by_committing_this_complete_evidence_set_and_requiring_clean_status_before_flash",
+    "artifact_ready_false": "intentional_default_deny_overridden_only_by_this_separate_one_flash_decision",
+    "marker_binding": "direct_ext4_extraction_recorded_in_image-marker-binding.json",
+    "legacy_defaults": "all_prod14_c25b_overrides_are_explicit_in_the_runbook",
+    "operator_commands": "canonical_five_phase_board_and_offline_gate_commands_added_to_the_runbook",
+    "boot_config_reboot_scope": "kept_as_separate_physical_acceptance_before_and_after_the_five_phase_gate",
+    "overall_verdict": "go_for_one_controlled_flash_after_evidence_commit_and_clean_status"
+  },
+  "pre_commit_blockers": [
+    "build_evidence_not_tracked"
+  ],
+  "post_commit_blockers": [],
+  "broad_production_approved": false,
+  "distribution_reference_approved": false
+}

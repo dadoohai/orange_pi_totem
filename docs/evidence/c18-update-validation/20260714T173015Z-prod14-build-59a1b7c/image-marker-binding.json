@@ -1,0 +1,17 @@
+{
+  "schema": "dadooh.c18.production_image.marker_binding.v1",
+  "recorded_at_utc": "2026-07-14T17:56:30Z",
+  "extraction_mode": "read_only_ext4_direct",
+  "image_tag": "c18-hwdecode-prod-14",
+  "image_version": "c18.image-prod.14",
+  "image_sha256": "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682",
+  "marker_path": "/etc/dadooh/c18-hwdecode-prod-14-image",
+  "marker_bytes": 3530,
+  "marker_sha256": "ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2",
+  "player_runtime_baseline_version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "player_runtime_baseline_payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+  "player_runtime_kiosk_sha256": "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0",
+  "c25_visible_product_states_embedded": true,
+  "board_derived": false,
+  "passed": true
+}

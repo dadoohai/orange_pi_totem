@@ -1,0 +1,36 @@
+**Findings**
+
+**Blocker:** nenhum encontrado.
+
+**Non-blocker / atenção operacional:** `/etc/shadow` e `/etc/shadow-` mudaram somente no hash do usuário `root`; todos os demais usuários permanecem bloqueados e os campos de aging são iguais. Prova: inspeção sanitizada mostrou `root` `sha512crypt` com digest do hash diferente, e `daemon`, `sshd`, `totem` etc. como `locked` em ambas. Isso é explicável por rehash/salt de credential de produção, mas a equivalência da senha não é provável só pela imagem.
+
+**Informativo:** o delta real de conteúdo é estreito:
+- `/etc/systemd/system/totem-player-runtime-update-agent.service`: adiciona `--startup-wait-sec 8`.
+- `/opt/totem/bin/c18_player_runtime_candidate_health.py`: ajusta duração do canário para cobrir `startup_wait_sec`.
+- `/data/core/totem/state.json`: só `updated_at`, de `2026-07-14T05:01:01Z` para `2026-07-14T17:32:45Z`.
+- marcador interno troca `/etc/dadooh/c18-hwdecode-prod-13-image` por `/etc/dadooh/c18-hwdecode-prod-14-image`.
+- `mtime` de 142 paths foi renovado por rebuild; conteúdo/mode/uid/gid permanecem iguais.
+
+**Provas principais**
+
+- Repo local: `git rev-parse HEAD` = `59a1b7c4774ec0cd487405f4205a526abf18b899`.
+- Layout: `sfdisk -d` nas duas imagens retornou MBR DOS `label-id 0xb023c9b3`, partição `type=83`, `start=8192`, `size=3842048`.
+- Boot/u-boot/pre-rootfs: `cmp -n 4194304 prod13.img prod14.img` retornou rc 0; SHA256 da região pré-partição em ambas = `df5f16256529660e38a747b71c971979de26e45677d52b842320b5c8718d066f`.
+- Kernel/initrd/dtb: hashes iguais por leitura ext4 direta:
+  - `/boot/vmlinuz-6.12.58-current-sunxi64` = `5e17e81d...52df3ee`
+  - `/boot/initrd.img-6.12.58-current-sunxi64` = `e7a0602c...1f5c2b9`
+  - `/boot/uInitrd-6.12.58-current-sunxi64` = `3312ca50...de817e0`
+  - DTB Orange Pi Zero3 = `bc073037...23dddad`
+  - `/boot/boot.scr` = `f0e59bfd...8d74338`
+- Rootfs completo: leitor ext4 por offset, sem mount/loop, achou `35573` paths em cada imagem; `added=1`, `removed=1`, `changed=147`.
+- Os dois arquivos de código alterados na imagem batem com o repo:
+  - imagem `/opt/totem/bin/c18_player_runtime_candidate_health.py` = `99bd756c...ffedda9`; `sha256sum scripts/board/c18_player_runtime_candidate_health.py` igual.
+  - imagem `totem-player-runtime-update-agent.service` = `3fc34f00...3670df4d`; `sha256sum scripts/board/systemd/totem-player-runtime-update-agent.production.service` igual.
+- Serviços/políticas: timers e wants preservados; autopull continua exact-target, `allow_latest=false`, tag `player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`; `totem-core` policy inalterada e restrita.
+- Identidade/resíduos: `/etc/hostname` igual (`orangepizero3`), `/etc/machine-id` vazio em ambas, sem host keys em `/etc/ssh`; `/tmp` e `/var/tmp` vazios; staging `/data/updates/incoming/*` vazio. Logs apt/dpkg e sample keys do pacote OpenVPN existem, mas são conteúdo pré-existente, não delta prod14.
+
+**Veredito**
+
+Não-blocker para flash controlado na única placa de homologação. O delta binário/rootfs entre prod13 e prod14 está limitado, explicado pelo hardening de validação do player runtime C25/prod14, pelo marcador de versão e por metadados de rebuild. Não encontrei mudança em boot region, u-boot, kernel, initrd, DTB, runtime embarcado, política de atualização, identidade base ou permissões que bloqueie o flash pré-homologação.
+
+Limitação: o teste estático `PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa/c18_ota_policy_static_test.py` não pôde validar no sandbox porque cria `tempfile` e o filesystem está somente leitura.
