@@ -25,6 +25,9 @@ SETTINGS_SESSION_ID=""
 RESTORE_GETTY_AFTER_SETTINGS="${TOTEM_RESTORE_GETTY_AFTER_SETTINGS:-0}"
 TOTEM_C17_4_FIRSTBOOT_TRACE_DIR="${TOTEM_C17_4_FIRSTBOOT_TRACE_DIR:-/data/state/totem-debug/c17-4-firstboot}"
 PAIRING_PRIVATE_VALUES_USED="false"
+OPENVT_PID=""
+SIGNAL_STOP="false"
+SIGNAL_STOP_REASON="none"
 
 usage() {
   cat <<'USAGE'
@@ -847,6 +850,29 @@ restore_service() {
   fi
 }
 
+stop_openvt_if_running() {
+  local pid="${OPENVT_PID:-}"
+  [ -n "$pid" ] || return 0
+
+  if kill -0 -- "-$pid" 2>/dev/null || kill -0 "$pid" 2>/dev/null; then
+    c15_trace "openvt_stop_begin pid=$pid"
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    for _ in $(seq 1 10); do
+      if ! kill -0 -- "-$pid" 2>/dev/null && ! kill -0 "$pid" 2>/dev/null; then
+        break
+      fi
+      sleep 0.1
+    done
+    if kill -0 -- "-$pid" 2>/dev/null || kill -0 "$pid" 2>/dev/null; then
+      c15_trace "openvt_stop_escalate pid=$pid"
+      kill -KILL -- "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
+    fi
+  fi
+  wait "$pid" 2>/dev/null || true
+  OPENVT_PID=""
+  c15_trace "openvt_stop_done pid=$pid"
+}
+
 kill_visual_if_running() {
   python3 - "$VISUAL" "$WIZARD_OUT_DIR" "$$" "$BASHPID" <<'PY'
 import os
@@ -1271,13 +1297,19 @@ release_session_lock_for_restore() {
 }
 
 write_final_status() {
-  if [ -e "$LOCK_DIR" ]; then
+  local player_wait_mode="${1:-wait-player}"
+  if [ "$player_wait_mode" = "skip-player-wait" ]; then
+    c15_trace "write_final_status_skip_player_wait signal_stop=$SIGNAL_STOP"
+    c1523_phase "write_final_status_skip_player_wait signal_stop=$SIGNAL_STOP"
+  elif [ -e "$LOCK_DIR" ]; then
     c15_trace "write_final_status_skip_wait_session_lock_present"
     c1523_phase "write_final_status_skip_wait_session_lock_present"
   else
     wait_player_running || true
   fi
   env \
+    FINAL_STATUS_PLAYER_WAIT_MODE="$player_wait_mode" \
+    SIGNAL_STOP_REASON="$SIGNAL_STOP_REASON" \
     SERVICE_RESTORE_START_MODE="$SERVICE_RESTORE_START_MODE" \
     SERVICE_RESTORE_START_RC="$SERVICE_RESTORE_START_RC" \
     SERVICE_RESULT_AFTER="$(systemctl show kiosky-player.service -p Result --value 2>/dev/null || true)" \
@@ -1452,6 +1484,8 @@ payload = {
         else None
     ),
     "service_restore_enqueued": service_restore_attempted and os.environ.get("SERVICE_RESTORE_START_RC") == "0",
+    "final_status_player_wait_mode": os.environ.get("FINAL_STATUS_PLAYER_WAIT_MODE", "wait-player"),
+    "signal_stop_reason": os.environ.get("SIGNAL_STOP_REASON", "none"),
     "service_result_after": os.environ.get("SERVICE_RESULT_AFTER") or "unknown",
     "service_exec_main_status_after": os.environ.get("SERVICE_EXEC_MAIN_STATUS_AFTER") or "unknown",
     "service_active": service_active,
@@ -1526,9 +1560,14 @@ c15_trace "session_sh_start argv=$# pid=$$ ppid=$PPID"
 
 on_exit() {
   rc="${1:-$?}"
+  final_status_mode="wait-player"
   trap - EXIT INT TERM HUP
   c15_trace "on_exit_begin rc=$rc"
   c1523_phase "session_cleanup_start rc=$rc"
+  if [ "$SIGNAL_STOP" = "true" ]; then
+    final_status_mode="skip-player-wait"
+  fi
+  stop_openvt_if_running || true
   kill_visual_if_running || true
   restore_tty_console_mode || true
   cleanup_private_artifacts || true
@@ -1537,16 +1576,16 @@ on_exit() {
   cleanup_session_lock || true
   c17_4_trace "session_lock_released"
   restore_service || true
-  write_final_status || true
+  write_final_status "$final_status_mode" || true
   restore_getty || true
   cleanup_update_lock
   c1523_phase "session_done rc=$rc"
   c15_trace "on_exit_done rc=$rc"
   exit "$rc"
 }
-on_term() { c15_trace "trap_signal=TERM"; on_exit 143; }
-on_int()  { c15_trace "trap_signal=INT";  on_exit 130; }
-on_hup()  { c15_trace "trap_signal=HUP";  on_exit 129; }
+on_term() { SIGNAL_STOP="true"; SIGNAL_STOP_REASON="TERM"; c15_trace "trap_signal=TERM"; on_exit 0; }
+on_int()  { SIGNAL_STOP="true"; SIGNAL_STOP_REASON="INT";  c15_trace "trap_signal=INT";  on_exit 130; }
+on_hup()  { SIGNAL_STOP="true"; SIGNAL_STOP_REASON="HUP";  c15_trace "trap_signal=HUP";  on_exit 129; }
 trap on_exit EXIT
 trap on_term TERM
 trap on_int  INT
@@ -1660,12 +1699,14 @@ else
     sleep 3
     kill -KILL "-$OPENVT_PID" 2>/dev/null || kill -KILL "$OPENVT_PID" 2>/dev/null || true
     kill_visual_if_running || true
+    wait "$OPENVT_PID" 2>/dev/null || true
     WIZARD_RC="124"
   else
     wait "$OPENVT_PID"
     WIZARD_RC="$?"
     c15_trace "openvt_exited WIZARD_RC=$WIZARD_RC"
   fi
+  OPENVT_PID=""
 fi
 set -e
 restore_tty_console_mode || true

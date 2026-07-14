@@ -4434,8 +4434,26 @@ exec "$C18_REAL_PYTHON3" "$@"
 
         session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
         on_exit = session[session.index("on_exit() {") : session.index("\non_term()")]
+        final_status = session[session.index("write_final_status() {") : session.index("\nimport json\n", session.index("write_final_status() {"))]
+        fast_status = final_status[
+            final_status.index('if [ "$player_wait_mode" = "skip-player-wait" ]; then') :
+            final_status.index('elif [ -e "$LOCK_DIR" ]; then')
+        ]
+        openvt_stop = session[session.index("stop_openvt_if_running() {") : session.index("\n}\n\nkill_visual_if_running()")]
+        signal_handlers = session[session.index("on_term()") : session.index("\ntrap on_exit EXIT")]
+        self.assertLess(on_exit.index("stop_openvt_if_running"), on_exit.index("kill_visual_if_running"))
         self.assertLess(on_exit.index("kill_visual_if_running"), on_exit.index("restore_tty_console_mode"))
         self.assertLess(on_exit.index("restore_tty_console_mode"), on_exit.index("restore_service"))
+        self.assertIn('final_status_mode="skip-player-wait"', on_exit)
+        self.assertIn('write_final_status "$final_status_mode"', on_exit)
+        self.assertNotIn("wait_player_running", fast_status)
+        self.assertIn('FINAL_STATUS_PLAYER_WAIT_MODE="$player_wait_mode"', final_status)
+        self.assertIn('SIGNAL_STOP_REASON="$SIGNAL_STOP_REASON"', final_status)
+        self.assertEqual(signal_handlers.count('SIGNAL_STOP="true"'), 3)
+        self.assertIn("for _ in $(seq 1 10)", openvt_stop)
+        self.assertIn("sleep 0.1", openvt_stop)
+        self.assertLess(openvt_stop.index("kill -TERM"), openvt_stop.index("kill -KILL"))
+        self.assertIn('wait "$pid"', openvt_stop)
         after_wizard = session[session.index("set -e\nrestore_tty_console_mode") : session.index('SETUP_CANCELLED="false"')]
         self.assertIn("restore_tty_console_mode || true", after_wizard)
 
@@ -4870,11 +4888,33 @@ exec "$C18_REAL_PYTHON3" "$@"
             self.assertTrue(rejected.stdout.startswith("ERROR:"))
             self.assertEqual(target.stat().st_mode & 0o777, 0o644)
 
+    def test_settings_service_stop_probe_proves_fast_path(self) -> None:
+        probe = (REPO_ROOT / "scripts/qa/c20_board_settings_stop_probe.sh").read_text(encoding="utf-8")
+        self.assertIn('MAX_STOP_MS="${MAX_STOP_MS:-15000}"', probe)
+        self.assertIn('grep -q "phase=trap_signal=TERM"', probe)
+        self.assertIn('grep -q "phase=openvt_stop_done"', probe)
+        self.assertIn('grep -q "phase=write_final_status_skip_player_wait"', probe)
+        self.assertIn('grep -q "phase=on_exit_done rc=0"', probe)
+        self.assertIn('payload.get("final_status_player_wait_mode") == "skip-player-wait"', probe)
+        self.assertIn('payload.get("signal_stop_reason") == "TERM"', probe)
+        self.assertIn('payload.get("service_restore_enqueued") is True', probe)
+        self.assertIn('grep -qx "Result=success"', probe)
+        self.assertIn('! grep -Eqi "timed out|result \'timeout\'|SIGKILL"', probe)
+        self.assertIn('cmp "$OUT/config.before.sha256" "$OUT/config.after.sha256"', probe)
+        self.assertIn('cmp "$OUT/context.before.sha256" "$OUT/context.after.sha256"', probe)
+        self.assertGreaterEqual(probe.count('[ ! -e "$APPLY_POLICY" ]'), 2)
+        self.assertIn('rm -f -- "$APPLY_POLICY"', probe)
+        self.assertIn('[ "$initial_settings_state" = inactive ]', probe)
+        self.assertIn('[ "$getty1_active" = inactive ]', probe)
+        self.assertIn('[ "$getty1_enabled" = disabled ]', probe)
+        self.assertIn('[ "$getty2_active" = inactive ]', probe)
+        self.assertIn('[ "$getty2_enabled" = disabled ]', probe)
+
     def test_settings_signal_handlers_preserve_failure_status(self) -> None:
         session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
-        self.assertIn('on_term() { c15_trace "trap_signal=TERM"; on_exit 143; }', session)
-        self.assertIn('on_int()  { c15_trace "trap_signal=INT";  on_exit 130; }', session)
-        self.assertIn('on_hup()  { c15_trace "trap_signal=HUP";  on_exit 129; }', session)
+        self.assertIn('on_term() { SIGNAL_STOP="true"; SIGNAL_STOP_REASON="TERM"; c15_trace "trap_signal=TERM"; on_exit 0; }', session)
+        self.assertIn('on_int()  { SIGNAL_STOP="true"; SIGNAL_STOP_REASON="INT";  c15_trace "trap_signal=INT";  on_exit 130; }', session)
+        self.assertIn('on_hup()  { SIGNAL_STOP="true"; SIGNAL_STOP_REASON="HUP";  c15_trace "trap_signal=HUP";  on_exit 129; }', session)
         bootstrap_trap = session.index("trap bootstrap_exit EXIT")
         lock_create = session.index('if ! mkdir "$LOCK_DIR"')
         self.assertLess(bootstrap_trap, lock_create)

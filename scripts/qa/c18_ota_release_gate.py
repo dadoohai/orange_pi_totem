@@ -61,6 +61,7 @@ PY_COMPILE_TARGETS = (
     "scripts/sim/run_player_runtime_sandbox.py",
     "scripts/sim/run_player_fault_campaign.py",
     "scripts/qa/c18_ota_policy_static_test.py",
+    "scripts/qa/c17_4_1_restore_order_static_check.py",
     "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py",
     "scripts/qa/c18_player_runtime_static_test.py",
     "scripts/qa/c22_player_fault_campaign_test.py",
@@ -140,6 +141,7 @@ TEST_COMMANDS = (
     ("c18_display_profile_baseline_collect_self_test", ["python3", "scripts/board/c18_display_profile_baseline_collect.py", "--self-test"]),
     ("c18_display_profile_baseline_gate_self_test", ["python3", "scripts/qa/c18_display_profile_baseline_gate.py", "--self-test"]),
     ("c18_ota_policy_static", ["python3", "scripts/qa/c18_ota_policy_static_test.py"]),
+    ("c17_4_1_restore_order_static", ["python3", "scripts/qa/c17_4_1_restore_order_static_check.py"]),
     ("c18_updatectl_freeze_downgrade_gc", ["python3", "scripts/qa/c18_updatectl_freeze_downgrade_gc_test.py"]),
     ("c18_player_runtime_static", ["python3", "scripts/qa/c18_player_runtime_static_test.py"]),
     ("c22_player_fault_campaign", ["python3", "scripts/qa/c22_player_fault_campaign_test.py"]),
@@ -201,6 +203,7 @@ TEST_COMMANDS = (
     ("player_runtime_sandbox", ["python3", "scripts/sim/run_player_runtime_sandbox.py", "--json"]),
 )
 BASH_SYNTAX_TARGETS = (
+    "scripts/qa/c20_board_settings_stop_probe.sh",
     "scripts/board/totem_production_identity_init.sh",
     "scripts/board/kiosky_playback_observer_probe.sh",
     "scripts/board/kiosky_service_observer_probe.sh",
