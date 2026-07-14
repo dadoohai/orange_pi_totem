@@ -35,10 +35,14 @@ herdar esse estado.
    `latest` inalterado. O bloco `verification` deve registrar zero criacao de
    release, tres assets baixados, tag/commit exatos e draft/prerelease falsos.
    Nao republicar o release que ja existe.
-4. Gravar a prod14. Antes do timer, provar que `current` e `previous` estao
-   ausentes e que o launcher adotou o C25B embutido da imagem.
-5. Coletar `pre`, ligar o timer real e coletar `post_apply` depois que C25B for
-   adotado por `/data/player-runtime/current`.
+4. Gravar a prod14. Antes do primeiro disparo, provar que `current` e
+   `previous` estao ausentes e que o launcher adotou o C25B embutido da
+   imagem. O timer deve estar `enabled` e `active` durante a coleta `pre`; se
+   foi pausado para concluir o primeiro setup, reativa-lo antes dessa coleta.
+5. Coletar `pre`, registrar `LastTriggerUSec` e aguardar o disparo real do
+   timer. Nao iniciar a service manualmente no primeiro apply. Coletar
+   `post_apply` somente depois que `LastTriggerUSec` mudar, a service terminar
+   com sucesso e C25B for adotado por `/data/player-runtime/current`.
    O perfil production aguarda 8 segundos antes da janela estrita de health do
    candidato. O canario dura pelo menos toda essa espera, a observacao e duas
    coletas de margem. Esse desenho cobre a publicacao inicial do status sem
@@ -67,7 +71,14 @@ herdar esse estado.
 ## Invocacao canonica prod14
 
 O operador deve copiar o coletor atual para um diretorio novo da placa e usar
-sempre estes parametros. Nao usar os defaults historicos prod8/C23:
+tambem os dois modulos irmaos usados pelo deep-health. Os tres arquivos devem
+ficar juntos no mesmo diretorio:
+
+- `c18_player_runtime_production_autopull_collect.py`;
+- `c18_playback_health_collect.py`;
+- `c18_playback_health_summary.py`.
+
+Usar sempre estes parametros. Nao usar os defaults historicos prod8/C23:
 
 ```bash
 E2E=/tmp/c18-prod14-e2e
@@ -79,10 +90,15 @@ python3 "$COLLECT" --phase pre --output "$E2E/pre.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/pre-deep-health"
 
-systemctl start totem-player-runtime-update-agent.service
+PRE_TRIGGER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["systemd"]["timer"]["show"]["LastTriggerUSec"])' \
+  "$E2E/pre.json")"
+while [ "$(systemctl show totem-player-runtime-update-agent.timer \
+  -p LastTriggerUSec --value)" = "$PRE_TRIGGER" ]; do sleep 1; done
+while systemctl is-active --quiet \
+  totem-player-runtime-update-agent.service; do sleep 1; done
 python3 "$COLLECT" --phase post_apply --output "$E2E/post_apply.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
-  --deep-health-output-dir "$E2E/post-apply-deep-health"
+  --deep-health-output-dir "$E2E/post_apply-deep-health"
 
 systemctl start totem-player-runtime-update-agent.service
 python3 "$COLLECT" --phase noop --output "$E2E/noop.json" \
