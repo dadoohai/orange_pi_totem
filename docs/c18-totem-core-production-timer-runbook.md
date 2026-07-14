@@ -14,13 +14,13 @@ verificada antes de tocar o timer da placa.
 - Image SHA256:
   `3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682`
 - Release:
-  `totem-core-c20.15-prod14-stable-alignment-20260714T201642Z-0cfe704`
+  `totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`
 - Versao:
-  `c20.15-prod14-stable-alignment-20260714T201642Z-0cfe704`
+  `c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`
 - Payload SHA256:
-  `ab46032fd80c37a43ee7edf2b3e3d34f1b7e17a91b457c82b7965e37a5dc0f38`
+  `b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292`
 - Source commit:
-  `0cfe704a598904b192036583a4ea5ac9571d0ba8`
+  `766b1eadbc4b69dd92a81e468e29d816c7feffc9`
 - Rollback esperado:
   `c20.14-settings-stop-hardening-20260714T034217Z-22bd473`
 
@@ -61,7 +61,7 @@ atual passou para a versao esperada. Entao coletar:
 ```sh
 ssh root@<IP> 'python3 /tmp/c18_totem_core_production_timer_collect.py \
   --expected-image-tag c18-hwdecode-prod-14 \
-  --expected-release-tag totem-core-c20.15-prod14-stable-alignment-20260714T201642Z-0cfe704 \
+  --expected-release-tag totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
   --probe-frozen-player-runtime \
   --output /tmp/c18-core-post-timer.json'
 scp root@<IP>:/tmp/c18-core-post-timer.json \
@@ -75,11 +75,11 @@ python3 scripts/qa/c18_totem_core_production_timer_evidence_gate.py \
   --summary docs/evidence/c18-update-validation/<RUN>/post-timer-summary.json \
   --expected-image-tag c18-hwdecode-prod-14 \
   --expected-image-version c18.image-prod.14 \
-  --expected-release-tag totem-core-c20.15-prod14-stable-alignment-20260714T201642Z-0cfe704 \
-  --expected-version c20.15-prod14-stable-alignment-20260714T201642Z-0cfe704 \
+  --expected-release-tag totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
+  --expected-version c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
   --expected-rollback-version c20.14-settings-stop-hardening-20260714T034217Z-22bd473 \
-  --expected-payload-sha256 ab46032fd80c37a43ee7edf2b3e3d34f1b7e17a91b457c82b7965e37a5dc0f38 \
-  --expected-source-commit 0cfe704a598904b192036583a4ea5ac9571d0ba8 \
+  --expected-payload-sha256 b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292 \
+  --expected-source-commit 766b1eadbc4b69dd92a81e468e29d816c7feffc9 \
   --json
 ```
 
@@ -103,7 +103,7 @@ Somente depois de a aplicacao e o no-op passarem:
 ssh root@<IP> '/opt/totem/bin/totem-updatectl rollback --component totem-core'
 ssh root@<IP> 'python3 /tmp/c18_totem_core_production_timer_collect.py \
   --expected-image-tag c18-hwdecode-prod-14 \
-  --expected-release-tag totem-core-c20.15-prod14-stable-alignment-20260714T201642Z-0cfe704 \
+  --expected-release-tag totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
   --probe-frozen-player-runtime \
   --output /tmp/c18-core-post-rollback.json'
 scp root@<IP>:/tmp/c18-core-post-rollback.json \
@@ -116,7 +116,7 @@ Repetir o gate anterior adicionando:
 --rollback-summary docs/evidence/c18-update-validation/<RUN>/post-rollback-summary.json
 ```
 
-O rollback deve tornar C20.14 atual e manter C20.15 como `previous`, com
+O rollback deve tornar C20.14 atual e manter C21.12 como `previous`, com
 self-test e player verdes.
 
 ## 4. Restauracao
@@ -128,7 +128,7 @@ ssh root@<IP> 'systemctl start totem-update-agent.service'
 ```
 
 Coletar `restored-summary.json` e rodar o gate de resumo sem
-`--rollback-summary`. C20.15 deve voltar a `current`, C20.14 deve ficar como
+`--rollback-summary`. C21.12 deve voltar a `current`, C20.14 deve ficar como
 `previous`, o timer deve permanecer ativo e o freeze publico de
 `player-runtime` deve continuar em `rc=44`.
 
@@ -138,7 +138,7 @@ Com os dois componentes restaurados, confirmar os dois timers habilitados e
 ativos, reiniciar uma vez e recoletar o estado. O fechamento exige:
 
 - marker prod14 e configuracao persistidos;
-- `totem-core` C20.15 atual e self-test verde;
+- `totem-core` C21.12 atual e self-test verde;
 - `player-runtime` C25B atual e freeze publico `rc=44`;
 - player ativo, MPV em hardware decode e conteudo avancando;
 - zero units falhadas e nenhum item em quarentena;
