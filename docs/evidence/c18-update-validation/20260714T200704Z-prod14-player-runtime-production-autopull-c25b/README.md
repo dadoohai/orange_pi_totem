@@ -23,11 +23,11 @@ Resultado: gate offline verde, com `mechanics_passed=true`,
   acao de watchdog, falha panfrost, MMC ou ext4;
 - freeze publico de `player-runtime` permaneceu em `rc=44` nas cinco fases.
 
-O baseline embutido e o alvo remoto possuem a mesma versao e os mesmos bytes.
-A prova e material por verificar o caminho remoto e a topologia: timer real,
-download e hashes exatos, origem GitHub autorizada, promocao para `/data`,
-`no-op`, retorno ao `/opt` da imagem e reaplicacao. Ela nao clama uma mudanca
-funcional entre baseline e alvo.
+A imagem declara C25B como baseline e o alvo remoto e a release C25B exata. A
+prova material verifica o caminho remoto e a topologia: timer real, download e
+hashes exatos da release, origem GitHub autorizada, promocao para `/data`,
+`no-op`, retorno ao `/opt` da imagem e reaplicacao. Ela nao clama equivalencia
+byte a byte de toda a arvore embarcada nem mudanca funcional entre os alvos.
 
 ## Diagnostico preservado
 
