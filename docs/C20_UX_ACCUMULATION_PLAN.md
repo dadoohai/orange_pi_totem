@@ -504,9 +504,10 @@ Fonte da rodada: `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 
 Estado: C25A (`totem-core`) e C25B (`player-runtime`) foram validados na placa
 com rollback e incorporados na prod12. Os hardenings de settings posteriores
-foram acumulados no C20.14. A pendencia e embutir esse core final na prod13 e
-repetir o E2E da imagem; C25B nao foi promovida para `stable` nem liberada como
-novo alvo de auto-pull publico.
+foram acumulados no C20.14. Esse core foi embutido na prod13, que passou a
+auditoria pre-flash sem delta inesperado. A pendencia e repetir o E2E na imagem
+gravada; C25B nao foi promovida para `stable` nem liberada como novo alvo de
+auto-pull publico.
 
 ## Primeiras Rodadas Recomendadas
 

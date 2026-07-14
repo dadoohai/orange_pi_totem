@@ -161,6 +161,6 @@ Pacote final desta rodada:
 Evidencia:
 `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
 
-O RC esta fechado para entrar na prod13. Permanecem fora desta claim a promocao
-`stable`, publicacao remota e o aceite da prod13 antes de build, auditoria e
-flash controlado.
+O RC entrou na prod13 e a imagem passou build e auditoria pre-flash. Permanecem
+fora desta claim a promocao `stable`, publicacao remota e o aceite fisico da
+prod13 antes do flash controlado e do E2E na placa.

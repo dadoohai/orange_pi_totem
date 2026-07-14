@@ -295,5 +295,5 @@ contexto e policy foram preservados.
 Evidencia:
 `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
 
-Proximo marco: embutir o pacote exato na prod13 e repetir o E2E da imagem
-gravada do zero. Isso nao promove C20.14 para `stable` por inferencia.
+O pacote exato foi embutido e auditado na prod13. Proximo marco: repetir o E2E
+na imagem gravada do zero. Isso nao promove C20.14 para `stable` por inferencia.

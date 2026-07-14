@@ -1,0 +1,91 @@
+{
+  "schema": "dadooh.c18.production_image.independent_audit_report.v1",
+  "record_type": "central_compilation_of_independent_read_only_reviews",
+  "recorded_at_utc": "2026-07-14T05:20:35Z",
+  "image_tag": "c18-hwdecode-prod-13",
+  "image_sha256": "4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e",
+  "source_commit": "61e3abd9f78b229bb61125417494c669b0e60f57",
+  "source_tree": "e0970f37ddd2634393e32ef10ed0763cffec031c",
+  "reviews": [
+    {
+      "review_id": "artifact_forensics",
+      "agent_session_id": "019f5f02-8b11-7c52-8187-2ccf673ca812",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "artifact_claims_verified_flash_decision_deferred",
+      "scope": "artifact_chain_ext4_hygiene_and_private_residue_scan",
+      "material_findings": [
+        "image_and_evidence_hash_chain_recomputed",
+        "filesystem_clean_and_58513_of_58513_free_blocks_zeroed",
+        "70255397_tail_slack_bytes_scanned_and_zeroed",
+        "zero_deleted_inodes",
+        "active_ssh_keys_authorized_keys_and_machine_id_absent",
+        "shadow_and_shadow_backup_have_same_sha512_crypt_verifier"
+      ],
+      "raised_concerns": [
+        "external_password_was_not_read_by_this_reviewer",
+        "public_openvpn_sample_keys_exist_under_usr_share_doc",
+        "ready_marker_remains_default_deny"
+      ]
+    },
+    {
+      "review_id": "prod12_prod13_delta",
+      "agent_session_id": "019f5f02-8b73-75e2-9055-876bb9d97f6a",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "full_rootfs_delta_and_regression_classification",
+      "content_delta_entries": 52,
+      "unexpected_differences": 0,
+      "material_findings": [
+        "partition_geometry_and_prepartition_boot_region_identical",
+        "kernel_initrd_dtb_uboot_player_runtime_and_media_stack_identical",
+        "c20_14_core_and_transaction_guard_match_declared_scope",
+        "root_verifier_rotation_and_identity_delta_are_expected",
+        "no_uid_gid_mode_or_acl_drift"
+      ]
+    },
+    {
+      "review_id": "first_boot_runtime_semantics",
+      "agent_session_id": "019f5f02-8c37-72f3-9c3b-cc453b245f24",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "systemd_identity_resize_settings_timers_and_player_baseline",
+      "material_findings": [
+        "rootfs_resize_enabled",
+        "single_effective_ssh_identity_owner_and_ssh_ordering_preserved",
+        "armbian_host_key_regeneration_disabled",
+        "production_settings_policy_and_transaction_deferral_present",
+        "totem_core_stable_timer_and_player_runtime_exact_target_timer_enabled",
+        "v4l2request_copy_player_baseline_preserved"
+      ]
+    },
+    {
+      "review_id": "pre_flash_governance",
+      "agent_session_id": "019f5f02-8d27-7220-b3ea-9b2508917722",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "verdict": "go_for_one_controlled_flash",
+      "scope": "claims_default_deny_provenance_and_post_flash_boundary",
+      "material_findings": [
+        "ready_marker_remains_default_deny",
+        "prod13_provenance_and_successor_scope_are_bound",
+        "c20_14_package_provenance_is_exact",
+        "player_runtime_is_exact_target_and_not_latest",
+        "no_distribution_or_broad_production_claim"
+      ]
+    }
+  ],
+  "central_resolution": {
+    "external_root_password_match": "verified_true_without_outputting_secret_or_verifier",
+    "openvpn_sample_key_classification": "unchanged_public_package_examples_in_usr_share_doc_not_active_product_credentials",
+    "openvpn_active_config": "absent",
+    "active_private_key_residue": "absent",
+    "ready_marker_false": "intentional_default_deny_overridden_only_by_separate_one_flash_decision",
+    "overall_verdict": "go_for_one_controlled_flash"
+  },
+  "blockers": [],
+  "broad_production_approved": false,
+  "distribution_reference_approved": false
+}

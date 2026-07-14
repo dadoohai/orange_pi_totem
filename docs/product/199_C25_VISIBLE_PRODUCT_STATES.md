@@ -9,7 +9,7 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_on_prod12_c20_14_ready_for_prod13
+status=c25_validated_prod13_preflash_approved_board_e2e_pending
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_preserved_in_candidate_chain=true
@@ -24,11 +24,12 @@ board_framebuffer_flow_validation=passed
 hdmi_camera_flicker_acceptance=pending
 writer_mutating_e2e=passed_on_prod12_c20_12
 remote_targets_not_yet_promoted=true
-next_reference_image=prod13_pending_build_audit_and_board_e2e
+next_reference_image=prod13_built_audited_board_e2e_pending
 prod9_board_acceptance=blocked_do_not_flash
 prod10_board_acceptance=blocked_do_not_flash
 prod11_board_acceptance=blocked_do_not_flash
 prod12_board_acceptance=physical_base_passed_not_distribution_reference
+prod13_board_acceptance=one_controlled_flash_approved_not_distribution_reference
 ```
 
 ## Contrato Publico V1
@@ -518,3 +519,23 @@ player-runtime, a pilha de midia, kernel, DTB, U-Boot e base permanecem fixos. A
 imagem ainda exige auditoria e um E2E fisico final.
 Evidencia:
 `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+
+## Checkpoint Prod13 Pre-Flash - 2026-07-14
+
+A prod13 foi construida no commit `61e3abd`, SHA256
+`4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e`.
+A validacao offline passou `66/66`; quatro auditorias do artefato real
+confirmaram ext4 e espaco livre limpos, identidade privada ausente e zero delta
+inesperado contra prod12. Boot region, kernel, initrd, DTB, U-Boot,
+player-runtime e pilha de midia permaneceram identicos.
+
+```text
+pre_flash_decision=one_controlled_flash_only
+distribution_reference=still_prod8_until_prod13_board_e2e
+broad_production_approved=false
+```
+
+O unico proximo passo desta imagem e o flash controlado seguido de boot,
+expansao, identidade SSH em dois boots, wizard/QR/writer, playback, timers,
+no-op, rollback e restauracao. Evidencia:
+`docs/evidence/c18-update-validation/20260714T045929Z-prod13-build-61e3abd/`.

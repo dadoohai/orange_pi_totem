@@ -166,12 +166,17 @@ Fila atual para consolidacao:
   `docs/evidence/c18-update-validation/20260713T200707Z-prod12-build-cb89485/`
   e
   `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
-- O pendente agora e construir `prod13` como sucessora estreita de prod12,
-  mudando identidade, core embutido para C20.14 e a integracao image-bound que
-  impede settings e updater de mutarem estado ao mesmo tempo. Depois da auditoria
-  do artefato, um flash controlado deve repetir boot, expansao, identidade SSH,
-  wizard/QR/writer, playback, timer/no-op/rollback dos alvos exatos e
-  restauracao antes da promocao como referencia.
+- `prod13`, commit `61e3abd`, SHA256
+  `4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e`,
+  foi construida e auditada como sucessora estreita: identidade nova, core
+  C20.14 e guard transacional image-bound. Boot region, kernel, initrd, DTB,
+  U-Boot, player-runtime e pilha de midia ficaram identicos a prod12; nenhum
+  delta inesperado foi encontrado. A decisao autoriza somente um flash
+  controlado. Evidencia:
+  `docs/evidence/c18-update-validation/20260714T045929Z-prod13-build-61e3abd/`.
+  O flash deve repetir boot, expansao, identidade SSH, wizard/QR/writer,
+  playback, timer/no-op/rollback dos alvos exatos e restauracao antes da
+  promocao como referencia.
   O construtor de producao recusa arvore suja, identidade de candidata
   divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
   erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
@@ -407,8 +412,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - `prod12` foi construida, auditada e gravada preservando a credencial forte e
   toda a higiene. A placa confirmou a expansao do rootfs e o produto real; os
   refinamentos C20.13/C20.14 surgidos nessa corrida foram validados por OTA;
-- construir e auditar `prod13`, sucessora da prod12 com identidade nova, core
-  C20.14 embutido e o guard transacional image-bound correspondente;
+- `prod13` foi construida e auditada com identidade nova, core C20.14 embutido
+  e o guard transacional image-bound; esta autorizada apenas para um flash;
 - gravar prod13 do zero e validar boot, identidade SSH, wizard/QR, gravacao da
   configuracao, retorno a midia, playback e estados C25;
 - publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar

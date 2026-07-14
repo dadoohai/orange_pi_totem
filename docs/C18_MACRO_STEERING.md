@@ -325,14 +325,15 @@ Enquanto nada mudar, a ordem de execucao e:
    o sucessor C20.14 foi aplicado, rollbackado, reaplicado e validado apos reboot
    sem regressao. Evidencia:
    `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
-3. Construir `prod13` como sucessora estreita de `prod12`: mudar a identidade,
-   embutir o `totem-core` C20.14 exato e incluir a integracao image-bound
-   necessaria para impedir concorrencia entre settings e updater. Nao reabrir
-   player-runtime, MPV/ffmpeg, kernel, DTB, U-Boot, base ou credenciais.
-4. Auditar o artefato prod13 e fazer um unico flash controlado. Fechar boot,
-   expansao, identidade SSH persistente, wizard/QR/writer, playback, timers
-   exatos, no-op, rollback e restauracao. Somente o E2E verde substitui
-   `prod8` + C23 como referencia de distribuicao.
+3. `prod13` foi construida como sucessora estreita de `prod12`: identidade,
+   `totem-core` C20.14 exato e integracao image-bound do guard transacional.
+   Quatro auditorias do artefato encontraram zero delta inesperado e autorizaram
+   somente um flash controlado. Evidencia:
+   `docs/evidence/c18-update-validation/20260714T045929Z-prod13-build-61e3abd/`.
+4. Gravar exatamente a prod13 auditada e fechar boot, expansao, identidade SSH
+   persistente, wizard/QR/writer, playback, timers exatos, no-op, rollback e
+   restauracao. Somente o E2E verde substitui `prod8` + C23 como referencia de
+   distribuicao.
 5. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
    criterio de pausa.
 6. Retomar M8 somente pelos gatilhos registrados na decisao 198.
