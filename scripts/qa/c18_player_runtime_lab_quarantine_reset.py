@@ -198,29 +198,79 @@ def public_cli_freeze(data_root: Path, action: str) -> dict[str, Any]:
         "PYTHONDONTWRITEBYTECODE": "1",
         "TOTEM_DATA_ROOT": str(data_root),
     }
-    cmd = [sys.executable, str(BOARD_DIR / "totem_updatectl.py")]
-    if action == "apply":
-        missing = Path(tempfile.gettempdir()) / "c18-player-runtime-missing.manifest.json"
-        cmd.extend(["apply-local", str(missing), "--component", COMPONENT])
-    elif action == "rollback":
-        cmd.extend(["rollback", "--component", COMPONENT])
-    elif action == "reconcile":
-        cmd.extend(["reconcile", "--component", COMPONENT])
-    else:
-        raise RuntimeError(f"unsupported public freeze action: {action}")
-    proc = subprocess.run(
-        cmd,
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-        timeout=30,
-    )
-    return {
-        "returncode": proc.returncode,
-        "frozen": proc.returncode == 44,
-    }
+    runtime_tmp: tempfile.TemporaryDirectory[str] | None = None
+    if not path_is_under(data_root, Path("/data")):
+        runtime_tmp = tempfile.TemporaryDirectory(
+            prefix="c18-quarantine-reset-runtime-",
+            dir=str(data_root.parent),
+        )
+        runtime_root = Path(runtime_tmp.name)
+        runtime_root.chmod(0o700)
+        settings_lock = runtime_root / "totem" / "settings-session.lock"
+        settings_request = runtime_root / "dadooh-settings" / "request.json"
+        settings_lock.parent.mkdir(mode=0o700)
+        settings_request.parent.mkdir(mode=0o700)
+        fake_systemctl = runtime_root / "systemctl"
+        fake_systemctl.write_text(
+            "#!/usr/bin/env bash\n"
+            "set -eu\n"
+            "case \"${1:-}:${2:-}\" in\n"
+            "  show:totem-open-settings.service) printf 'LoadState=loaded\\nActiveState=inactive\\n'; exit 0 ;;\n"
+            "  is-active:*) printf 'active\\n'; exit 0 ;;\n"
+            "  show:*) printf '0\\n'; exit 0 ;;\n"
+            "  restart:*|start:*|stop:*) exit 0 ;;\n"
+            "  *) exit 1 ;;\n"
+            "esac\n",
+            encoding="utf-8",
+        )
+        fake_systemctl.chmod(0o700)
+        env.update({
+            "TOTEM_SETTINGS_SESSION_LOCK": str(settings_lock),
+            "TOTEM_SETTINGS_REQUEST_FILE": str(settings_request),
+            "TOTEM_UPDATE_LOCK_FILE": str(runtime_root / "totem-updatectl.lock"),
+            "TOTEM_KIOSKY_SERVICE": "kiosky-player.service",
+            "TOTEM_OPEN_SETTINGS_SERVICE": "totem-open-settings.service",
+            "TOTEM_SIMULATION": "1",
+            "TOTEM_TEST_SYSTEMCTL_BIN": str(fake_systemctl),
+        })
+    manifest_probe_tmp: tempfile.TemporaryDirectory[str] | None = None
+    try:
+        cmd = [sys.executable, str(BOARD_DIR / "totem_updatectl.py")]
+        if action == "apply":
+            manifest_probe_tmp = tempfile.TemporaryDirectory(prefix="c18-public-freeze-probe-")
+            missing = Path(manifest_probe_tmp.name) / "missing.manifest.json"
+            cmd.extend(["apply-local", str(missing), "--component", COMPONENT])
+            expected_denial = f"component_frozen_for_ota: {COMPONENT}:"
+        elif action == "rollback":
+            cmd.extend(["rollback", "--component", COMPONENT])
+            expected_denial = f"component_frozen_for_ota: {COMPONENT}:"
+        elif action == "reconcile":
+            cmd.extend(["reconcile", "--component", COMPONENT])
+            expected_denial = "player_runtime_reconcile_guard_required:"
+        else:
+            raise RuntimeError(f"unsupported public freeze action: {action}")
+        proc = subprocess.run(
+            cmd,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            timeout=30,
+        )
+        combined_output = f"{proc.stdout}\n{proc.stderr}"
+        denial_present = expected_denial in combined_output
+        return {
+            "returncode": proc.returncode,
+            "frozen": proc.returncode == 44 and denial_present,
+            "expected_denial": expected_denial,
+            "expected_denial_present": denial_present,
+        }
+    finally:
+        if manifest_probe_tmp is not None:
+            manifest_probe_tmp.cleanup()
+        if runtime_tmp is not None:
+            runtime_tmp.cleanup()
 
 
 def guarded_paths(args: argparse.Namespace, work_dir: Path, data_root: Path) -> tuple[bool, str]:

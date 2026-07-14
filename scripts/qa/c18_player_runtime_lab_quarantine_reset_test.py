@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -74,6 +75,53 @@ class C18PlayerRuntimeLabQuarantineResetTest(unittest.TestCase):
                 os.environ.pop(reset.LAB_ENV, None)
             else:
                 os.environ[reset.LAB_ENV] = old_lab
+
+    def test_public_cli_freeze_requires_action_specific_denial(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp) / "data"
+            for action in ("apply", "rollback", "reconcile"):
+                with self.subTest(action=action):
+                    proc = mock.Mock(returncode=44, stdout="", stderr="unrelated_rc44\n")
+                    with mock.patch.object(reset.subprocess, "run", return_value=proc):
+                        result = reset.public_cli_freeze(data_root, action)
+                    self.assertFalse(result["frozen"])
+                    self.assertFalse(result["expected_denial_present"])
+
+    def test_public_cli_freeze_isolates_non_device_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data_root = root / "data"
+            proc = mock.Mock(
+                returncode=44,
+                stdout="",
+                stderr="component_frozen_for_ota: player-runtime: test\n",
+            )
+            with mock.patch.object(reset.subprocess, "run", return_value=proc) as run_mock:
+                result = reset.public_cli_freeze(data_root, "rollback")
+            env = run_mock.call_args.kwargs["env"]
+            self.assertTrue(result["frozen"])
+            self.assertEqual(env["TOTEM_SIMULATION"], "1")
+            for key in (
+                "TOTEM_SETTINGS_SESSION_LOCK",
+                "TOTEM_SETTINGS_REQUEST_FILE",
+                "TOTEM_UPDATE_LOCK_FILE",
+                "TOTEM_TEST_SYSTEMCTL_BIN",
+            ):
+                self.assertTrue(Path(env[key]).resolve().is_relative_to(root.resolve()))
+
+    def test_public_cli_freeze_keeps_device_runtime_real(self) -> None:
+        proc = mock.Mock(
+            returncode=44,
+            stdout="",
+            stderr="component_frozen_for_ota: player-runtime: test\n",
+        )
+        with mock.patch.object(reset.subprocess, "run", return_value=proc) as run_mock:
+            result = reset.public_cli_freeze(Path("/data"), "rollback")
+        env = run_mock.call_args.kwargs["env"]
+        self.assertTrue(result["frozen"])
+        self.assertNotIn("TOTEM_SIMULATION", env)
+        self.assertNotIn("TOTEM_UPDATE_LOCK_FILE", env)
+        self.assertFalse(reset.path_is_under(Path("/datax"), Path("/data")))
 
     def write_setup_contention_evidence(
         self,
