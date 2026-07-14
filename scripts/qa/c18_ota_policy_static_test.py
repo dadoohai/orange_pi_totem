@@ -3841,6 +3841,11 @@ exec "$C18_REAL_PYTHON3" "$@"
             with self.assertRaisesRegex(RuntimeError, "unsupported_updater_features"):
                 module.load_manifest(manifest_path)
 
+    def test_release_gate_allows_full_visual_gallery_to_finish(self) -> None:
+        gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn('"c25_visible_state_gallery": 420', gate)
+        self.assertIn("timeout=TEST_TIMEOUTS.get(name, 180)", gate)
+
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn("totem_config_contract_self_test", gate)

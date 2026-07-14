@@ -202,6 +202,11 @@ TEST_COMMANDS = (
     ("c18_runtime_3_release_perms", ["python3", "scripts/qa/c18_runtime_3_release_perms_test.py"]),
     ("player_runtime_sandbox", ["python3", "scripts/sim/run_player_runtime_sandbox.py", "--json"]),
 )
+TEST_TIMEOUTS = {
+    # Rendering 76 isolated SVG states through headless Chrome takes about
+    # 4m20s on the reference WSL host; keep the criterion, allow it to finish.
+    "c25_visible_state_gallery": 420,
+}
 BASH_SYNTAX_TARGETS = (
     "scripts/qa/c20_board_settings_stop_probe.sh",
     "scripts/board/totem_production_identity_init.sh",
@@ -1495,7 +1500,7 @@ def main() -> int:
         step_cmd = list(cmd)
         if name == "player_runtime_sandbox":
             step_cmd.extend(["--sandbox", tempfile.mkdtemp(prefix="c18-player-runtime-sandbox-")])
-        steps.append(run_step(name, step_cmd))
+        steps.append(run_step(name, step_cmd, timeout=TEST_TIMEOUTS.get(name, 180)))
     data_evidence_steps, data_evidence_summary = player_runtime_decisive_data_evidence_steps(args)
     steps.extend(data_evidence_steps)
     for index, powerloss_dir in enumerate(args.player_runtime_powerloss_evidence_dir or [], 1):
