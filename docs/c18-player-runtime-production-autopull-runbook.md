@@ -86,16 +86,57 @@ COLLECT="$E2E/c18_player_runtime_production_autopull_collect.py"
 TAG=c18-hwdecode-prod-14
 MARKER=/etc/dadooh/c18-hwdecode-prod-14-image
 
+wait_for_player_ready() {
+  python3 - <<'PY'
+import json
+import time
+from pathlib import Path
+
+status_path = Path("/tmp/kiosky-status.json")
+deadline = time.monotonic() + 60
+while time.monotonic() < deadline:
+    try:
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        status = {}
+    if (
+        status.get("playback_state") == "playing"
+        and status.get("mpv_running") is True
+        and isinstance(status.get("current_item"), dict)
+        and status["current_item"]
+    ):
+        raise SystemExit(0)
+    time.sleep(1)
+raise SystemExit("player_not_ready_after_60s")
+PY
+}
+
 python3 "$COLLECT" --phase pre --output "$E2E/pre.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/pre-deep-health"
 
 PRE_TRIGGER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["systemd"]["timer"]["show"]["LastTriggerUSec"])' \
   "$E2E/pre.json")"
+PRE_SERVICE_INVOCATION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["systemd"]["service"]["show"]["InvocationID"])' \
+  "$E2E/pre.json")"
 while [ "$(systemctl show totem-player-runtime-update-agent.timer \
   -p LastTriggerUSec --value)" = "$PRE_TRIGGER" ]; do sleep 1; done
-while systemctl is-active --quiet \
-  totem-player-runtime-update-agent.service; do sleep 1; done
+while :; do
+  CURRENT_SERVICE_INVOCATION="$(systemctl show \
+    totem-player-runtime-update-agent.service -p InvocationID --value)"
+  [ -n "$CURRENT_SERVICE_INVOCATION" ] && \
+    [ "$CURRENT_SERVICE_INVOCATION" != "$PRE_SERVICE_INVOCATION" ] && break
+  sleep 1
+done
+while :; do
+  SERVICE_STATE="$(systemctl show totem-player-runtime-update-agent.service \
+    -p ActiveState --value)"
+  case "$SERVICE_STATE" in
+    active|activating|deactivating|reloading) sleep 1 ;;
+    *) break ;;
+  esac
+done
+wait_for_player_ready
 python3 "$COLLECT" --phase post_apply --output "$E2E/post_apply.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/post_apply-deep-health"
@@ -108,11 +149,13 @@ python3 "$COLLECT" --phase noop --output "$E2E/noop.json" \
 /opt/totem/bin/totem-updatectl rollback-player-runtime-authorized \
   --authorization /data/updates/player-runtime-production-autopull.json \
   --reason production_authorized_rollback
+wait_for_player_ready
 python3 "$COLLECT" --phase rollback --output "$E2E/rollback.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-output-dir "$E2E/rollback-deep-health"
 
 systemctl start totem-player-runtime-update-agent.service
+wait_for_player_ready
 python3 "$COLLECT" --phase restored --output "$E2E/restored.json" \
   --expected-image-tag "$TAG" --marker-path "$MARKER" --probe-freeze \
   --deep-health-duration-sec 600 \
