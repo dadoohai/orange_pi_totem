@@ -107,6 +107,13 @@ def sandbox_env(sandbox: Path) -> dict[str, str]:
         {
             "PYTHONDONTWRITEBYTECODE": "1",
             "TOTEM_DATA_ROOT": str(sandbox / "data"),
+            "TOTEM_SETTINGS_SESSION_LOCK": str(sandbox / "run" / "totem" / "settings-session.lock"),
+            "TOTEM_SETTINGS_REQUEST_FILE": str(sandbox / "run" / "dadooh-settings" / "request.json"),
+            "TOTEM_UPDATE_LOCK_FILE": str(sandbox / "run" / "totem-updatectl.lock"),
+            "TOTEM_KIOSKY_SERVICE": "kiosky-player.service",
+            "TOTEM_OPEN_SETTINGS_SERVICE": "totem-open-settings.service",
+            "TOTEM_SIMULATION": "1",
+            "TOTEM_TEST_SYSTEMCTL_BIN": str(sandbox / "tmp" / "sandbox-systemctl"),
             "TOTEM_HEALTH_GRACE_SECONDS": "0",
             "TOTEM_HEALTH_CHECK_TIMEOUT_S": "5",
             "TMPDIR": str(sandbox / "tmp"),
@@ -122,6 +129,12 @@ def configure_updatectl_paths(sandbox: Path, component: str = COMPONENT) -> None
     updatectl.LOG_DIR = updatectl.DATA_ROOT / "logs"
     updatectl.LOG_FILE = updatectl.LOG_DIR / "totem-update.log"
     updatectl.TOKEN_FILE = updatectl.DATA_ROOT / "secrets" / "github-release-token"
+    updatectl.SETTINGS_LOCK = sandbox / "run" / "totem" / "settings-session.lock"
+    updatectl.SETTINGS_REQUEST_FILE = sandbox / "run" / "dadooh-settings" / "request.json"
+    updatectl.UPDATE_LOCK_FILE = sandbox / "run" / "totem-updatectl.lock"
+    updatectl.SERVICE_NAME = "kiosky-player.service"
+    updatectl.OPEN_SETTINGS_SERVICE = "totem-open-settings.service"
+    updatectl.SYSTEMCTL_BIN = sandbox / "tmp" / "sandbox-systemctl"
     updatectl.configure_component(component)
 
 
@@ -136,8 +149,26 @@ def reset_sandbox(sandbox: Path) -> None:
         sandbox / "tmp" / "packages",
         sandbox / "tmp" / "health",
         sandbox / "tmp" / "launcher",
+        sandbox / "run" / "totem",
+        sandbox / "run" / "dadooh-settings",
     ):
         path.mkdir(parents=True, exist_ok=True)
+    for private_root in (sandbox, sandbox / "run", sandbox / "tmp"):
+        private_root.chmod(0o700)
+    fake_systemctl = sandbox / "tmp" / "sandbox-systemctl"
+    fake_systemctl.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -eu\n"
+        "case \"${1:-}:${2:-}\" in\n"
+        "  show:totem-open-settings.service) printf 'LoadState=loaded\\nActiveState=inactive\\n'; exit 0 ;;\n"
+        "  is-active:*) printf 'active\\n'; exit 0 ;;\n"
+        "  show:*) printf '0\\n'; exit 0 ;;\n"
+        "  restart:*|start:*|stop:*) exit 0 ;;\n"
+        "  *) printf 'sandbox-systemctl unsupported: %s\\n' \"$*\" >&2; exit 1 ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_systemctl.chmod(0o700)
 
 
 def write_policy(sandbox: Path) -> None:
@@ -399,6 +430,20 @@ def main() -> int:
     manifest_hook_error, payload_hook_error = build_player_runtime_package(sandbox, "sandbox-hook-error", "hook-error")
     manifest_mutating, payload_mutating = build_player_runtime_package(sandbox, "sandbox-mutating", "mutating")
 
+    settings_lock = sandbox / "run" / "totem" / "settings-session.lock"
+    settings_lock.mkdir(mode=0o755)
+    settings_blocked_ok, settings_blocked_reason = apply_player_runtime_offline(
+        sandbox,
+        manifest=manifest_a,
+        payload=payload_a,
+    )
+    settings_guard_no_runtime_mutation = (
+        not (sandbox / "data" / "player-runtime" / "state.json").exists()
+        and not (sandbox / "data" / "player-runtime" / "current").exists()
+        and not (sandbox / "data" / "player-runtime" / "releases" / "sandbox-a").exists()
+    )
+    settings_lock.rmdir()
+
     apply_a_ok, apply_a_reason = apply_player_runtime_offline(sandbox, manifest=manifest_a, payload=payload_a)
     current_after_a = readlink(sandbox / "data" / "player-runtime" / "current")
     launcher_after_a = probe_launcher_source(sandbox, data_dir=sandbox / "data" / "player-runtime" / "current")
@@ -527,6 +572,11 @@ def main() -> int:
                     and external_package_reason == "applied"
                     and external_package_current == f"releases/{external_package_version}"
                 )
+            ),
+            "settings_session_blocks_apply_without_runtime_mutation": (
+                not settings_blocked_ok
+                and settings_blocked_reason.startswith("rc=40:")
+                and settings_guard_no_runtime_mutation
             ),
             "apply_a_offline_passed": apply_a_ok and apply_a_reason == "applied" and current_after_a == expected_a,
             "launcher_data_source_passed": launcher_after_a == str(sandbox / "data" / "player-runtime" / "current"),
