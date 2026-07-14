@@ -512,7 +512,9 @@ distribution_reference=still_prod8_until_prod13_e2e
 ```
 
 Como C20.14 foi aplicado depois da gravacao, prod12 nao e promovida como imagem
-final. A prod13 deve ser uma derivacao estreita da prod12, mudando apenas a
-identidade e o core embutido, seguida de auditoria e um E2E fisico final.
+final. A prod13 deve ser uma sucessora estreita da prod12: identidade nova, core
+C20.14 embutido e integracao image-bound do guard entre settings e updater. O
+player-runtime, a pilha de midia, kernel, DTB, U-Boot e base permanecem fixos. A
+imagem ainda exige auditoria e um E2E fisico final.
 Evidencia:
 `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.

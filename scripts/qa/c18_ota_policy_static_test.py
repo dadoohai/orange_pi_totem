@@ -556,6 +556,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("profile=totem_core_profile", derive)
         self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-13"', derive)
         self.assertIn('PRODUCTION_VERSION = "c18.image-prod.13"', derive)
+        self.assertIn('PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-12"', derive)
+        self.assertIn(
+            'PRODUCTION_PREDECESSOR_SHA256 = "4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262"',
+            derive,
+        )
+        self.assertIn(
+            'PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"',
+            derive,
+        )
+        self.assertIn('"settings_update_transaction_guard"', derive)
+        self.assertIn('"production_successor_scope"', derive)
         self.assertIn("c18-hwdecode-prod-12 (board-validated base", derive)
         self.assertIn("validate_player_runtime_baseline_package", derive)
         self.assertIn("validate_binary_build_inputs", derive)

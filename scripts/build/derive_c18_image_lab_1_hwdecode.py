@@ -11,8 +11,8 @@ rebuild, no apt, no board, no card). It copies the hardware-validated C17.4.2 im
     --hwdec=v4l2request-copy, override-last) and LD_LIBRARY_PATH scoped to the stack;
   * points the embedded player (DEFAULT_CONFIG mpv_path in /opt/totem/kiosky-player/
     kiosk.py) at that wrapper — preserving IPC/playlist/duration/sync/rotation logic;
-  * injects the R4 updater-perms fix (foundation totem_updatectl.py), which C17.4.2
-    predates;
+  * injects the current governed updater (foundation totem_updatectl.py), which
+    includes the settings/update transaction guard that C17.4.2 predates;
   * embeds the C17.6 totem-core update layout so wizard/core fixes are OTA-ready
     from first boot (/data/core/totem current release, /opt fallback scripts and
     wrappers);
@@ -81,6 +81,14 @@ MARKER = str(CURRENT_GOLDEN["image_marker_path"])
 PRODUCTION_TAG = "c18-hwdecode-prod-13"
 PRODUCTION_VERSION = "c18.image-prod.13"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
+PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-12"
+PRODUCTION_PREDECESSOR_SHA256 = "4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262"
+PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"
+PRODUCTION_SUCCESSOR_SCOPE = (
+    "image_identity_prod13",
+    "totem_core_c20_14",
+    "settings_update_transaction_guard",
+)
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
 PANFROST_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-panfrost-rebind.service"
@@ -1953,6 +1961,20 @@ def main():
         "artifact_ready_file": str(OUT_READY) if args.image_profile == "production" else "n/a",
         "artifact_private": args.image_profile != "production",
         "final_image": args.image_profile == "production",
+        "production_predecessor_tag": (
+            PRODUCTION_PREDECESSOR_TAG if args.image_profile == "production" else "n/a"
+        ),
+        "production_predecessor_sha256": (
+            PRODUCTION_PREDECESSOR_SHA256 if args.image_profile == "production" else "n/a"
+        ),
+        "production_successor_scope": (
+            list(PRODUCTION_SUCCESSOR_SCOPE) if args.image_profile == "production" else "n/a"
+        ),
+        "production_image_bound_transaction_commit": (
+            PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT
+            if args.image_profile == "production"
+            else "n/a"
+        ),
         "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
         "base_image": BASE_IMAGE.name,
         "kernel_touched": False, "kernel_rebuild_executed": False,
