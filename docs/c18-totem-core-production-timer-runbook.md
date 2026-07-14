@@ -55,6 +55,12 @@ pode ser iniciada manualmente:
 ssh root@<IP> 'systemctl enable --now totem-update-agent.timer'
 ```
 
+Se o timer for habilitado depois que `OnBootSec` ja passou, o systemd pode
+mostra-lo como `active (elapsed)` e sem proximo disparo. Isso nao prova o timer
+e nao autoriza iniciar o primeiro apply manualmente. Registrar o diagnostico e
+reiniciar a placa com o timer ja habilitado; depois do boot, aguardar o disparo
+real e confirmar `LastTriggerUSec` novo.
+
 Confirmar que `LastTriggerUSec` avancou, o journal cita a tag exata e o estado
 atual passou para a versao esperada. Entao coletar:
 
@@ -143,6 +149,13 @@ ativos, reiniciar uma vez e recoletar o estado. O fechamento exige:
 - player ativo, MPV em hardware decode e conteudo avancando;
 - zero units falhadas e nenhum item em quarentena;
 - repositorio limpo e evidencia commitada.
+
+O gate `c18_totem_core_production_timer_evidence_gate.py` valida uma operacao e
+depende do journal do apply/no-op no boot atual. Nao apresenta-lo como gate de
+reboot: depois da reinicializacao, ele deve ficar apenas como diagnostico se o
+journal anterior nao estiver disponivel. O fechamento pos-reboot usa o resumo
+persistido do core, os gates verdes coletados antes do reboot e uma nova prova
+de estado/player.
 
 ## Evidencia Minima
 

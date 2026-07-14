@@ -332,16 +332,16 @@ Enquanto nada mudar, a ordem de execucao e:
    canario cobrindo toda a janela de health, sem afrouxar nenhum limite.
    Evidencia:
    `docs/evidence/c18-update-validation/20260714T145543Z-prod13-player-startup-window-rca/`.
-5. Nao promover `prod13`. A sucessora estreita `prod14` foi construida e
-   auditada: somente identidade, espera production de oito segundos, canario
-   cobrindo a janela e rotacao controlada da credencial mudaram. C20.14, C25B,
-   kernel, boot e pilha de video ficaram fixos; nenhum delta inesperado foi
-   encontrado. Isso ainda nao constitui a prova fisica da prod14.
-6. Gravar `prod14` e provar na placa: timer real, apply exato, no-op, rollback
-   para o player embutido, reapply exato, freeze publico `rc=44`, reboot e
-   playback estrito final. Somente esse E2E verde pode substituir `prod8` + C23
-   como referencia de distribuicao.
-7. Alinhar a release `totem-core stable` ao core embutido e provar seu timer,
-   rollback e restauracao sem downgrade.
-8. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
-   criterio de pausa. Retomar M8 somente pelos gatilhos da decisao 198.
+5. Nao promover `prod13`. A sucessora estreita `prod14` foi construida,
+   auditada e gravada. Seu player C25B concluiu timer real, apply, no-op,
+   rollback ao fallback, reaplicacao e 600 segundos limpos, com freeze publico
+   `rc=44` preservado.
+6. O `totem-core` foi alinhado pela stable monotonicamente superior C21.12. O
+   timer real aplicou a release, e no-op, rollback, restauracao e reboot final
+   passaram sem restart do player.
+7. Rodada atual: auditar independentemente a evidencia final e, sem blocker,
+   promover `prod14` + C25B + C21.12 a referencia de distribuicao no lugar de
+   `prod8` + C23.
+8. Depois do fechamento, atacar a maior frente visivel: jornada de ativacao e
+   estados do produto, mantendo M4 minimo em paralelo. Retomar M8 somente pelos
+   gatilhos da decisao 198.

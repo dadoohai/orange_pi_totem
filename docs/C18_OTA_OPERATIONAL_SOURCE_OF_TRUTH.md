@@ -33,33 +33,26 @@ rollback se necessario.
 
 Hoje a C18 tem dois caminhos reais:
 
-- `totem-core`: auto-pull de producao provado em imagem C18 gravada do zero;
-- `player-runtime`: auto-pull de producao fechado somente para o alvo exato C23
-  `c18.player-runtime-homolog-20260710-c23-ipc-fe4347c`. A prod8 foi gravada do
-  zero e provou timer remoto, no-op, rollback, restauracao e 600 segundos
-  continuos limpos. Qualquer alvo futuro continua bloqueado ate nova
-  autorizacao presa por hashes.
+- `totem-core`: auto-pull stable C21.12 provado na `prod14` por timer real,
+  no-op, rollback, restauracao e reboot;
+- `player-runtime`: auto-pull de producao fechado somente para o alvo exato
+  C25B `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com timer
+  real, no-op, rollback, reaplicacao e 600 segundos continuos limpos. Qualquer
+  alvo futuro continua bloqueado ate nova autorizacao presa por hashes.
 
-Estado de distribuicao vigente: `prod8` + C23 continua sendo a referencia
-aceita. `prod9`, `prod10` e `prod11` foram bloqueadas antes da gravacao por,
-respectivamente, residuos em blocos livres, credencial root curta e dupla
-geracao de host keys SSH. `prod12` corrigiu a cadeia, passou quatro auditorias e
-foi gravada na placa. Ela confirmou boot, rootfs expandido, wizard/QR/config,
-retorno ao player e serviu de base fisica para fechar o `totem-core` C20.14.
-Como C20.14 nasceu de achados dessa corrida e foi aplicado por OTA depois do
-flash, `prod12` nao virou a referencia final. A sucessora `prod13` o embutiu,
-foi gravada e fechou boot, wizard e playback, mas o timer do player revelou que
-a espera de cinco segundos iniciava o health antes do status estar pronto. A
-rejeicao foi segura. A prova exata confirmou a espera de oito segundos e tambem
-amarrou a exposicao do canario a toda a janela, evitando uma falsa recusa no
-instante de repeticao. Por isso a referencia continua `prod8` + C23 ate o E2E
-da sucessora estreita `prod14`.
+Estado de distribuicao: `prod8` + C23 permanece a referencia aceita enquanto a
+auditoria final da sucessora termina. A `prod14` ja completou na placa o E2E
+fisico dos dois componentes, o reboot final e a reproducao estrita; se a
+auditoria independente nao encontrar blocker, ela substitui a `prod8` como
+referencia. `prod9`, `prod10`, `prod11` e `prod13` continuam bloqueadas pelos
+achados registrados no historico abaixo; `prod12` permanece bancada
+intermediaria, nao imagem final.
 
-O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
+O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
-para roadmap. A prioridade atual volta a ser produto visivel por `totem-core`,
-fechamento E2E do conjunto acumulado e nova imagem de referencia. M4 continua
-em paralelo; grupos, dashboard e telemetria seguem no roadmap.
+para roadmap. A prioridade imediata e concluir a auditoria da `prod14` e depois
+voltar ao produto visivel e a jornada de ativacao. M4 continua em paralelo;
+grupos, dashboard e telemetria seguem no roadmap.
 
 ## Repositorio de entrega
 
@@ -72,8 +65,8 @@ empacotamento e o snapshot governado do player em
 O repo `kiosky-player`, branch `appliance-v0.1`, sera a fonte editavel do
 comportamento depois da convergencia C24. Ele nao publica direto para placas.
 Toda entrega para cliente continua passando por um snapshot de commit exato na
-frente `player-runtime` do fluxo C18. Ate a convergencia fechar, o snapshot C23
-continua sendo a verdade funcional em producao.
+frente `player-runtime` do fluxo C18. Ate a convergencia fechar, o snapshot
+C25B e a verdade funcional da candidata `prod14`.
 
 Nota de nome: em runtime o servico ainda pode se chamar `kiosky-player.service`.
 Isso nao torna `kiosky-player` uma rota de release C18. O launcher C18 deve
@@ -85,7 +78,7 @@ imagem/fallback quando nao houver.
 | Frente | O que entra | Caminho permitido agora |
 | --- | --- | --- |
 | `totem-core` | wizard, splash, status, writer, helpers, validadores, settings e UX operacional da placa | auto-pull de producao fechado; dry-run, apply, timer e rollback provados |
-| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | auto-pull production fechado para C23 exato; futuros alvos exigem nova autorizacao hash-bound |
+| `player-runtime` | `kiosk.py`, comportamento do player, timing, sync, duracao, playlist, flags de MPV no player | auto-pull production fechado para C25B exato; futuros alvos exigem nova autorizacao hash-bound |
 | `kiosky-player` legado | rota historica do player | nao usar como caminho de release C18 |
 | `media-system` | MPV, ffmpeg, hwdecode, kernel, DTB, U-Boot, BSP, imagem base | nova imagem + homologacao, nao OTA comum |
 | `field-data` | midia, config real, cache, playlist, estado local | fluxo operacional de dados, nao release de software |
@@ -99,7 +92,7 @@ imagem/fallback quando nao houver.
    cache, systemd, kernel ou updater novo.
 3. `player-runtime` nao pode carregar MPV/ffmpeg/kernel/midia/config/cache; o
    pacote atual e deliberadamente estreito.
-4. Auto-pull de `totem-core` e de `player-runtime` C23 estao provados; isso nao
+4. Auto-pull de `totem-core` C21.12 e de `player-runtime` C25B estao provados; isso nao
    autoriza `latest` amplo nem futuros pacotes de player por inferencia.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
@@ -197,8 +190,13 @@ Fila atual para consolidacao:
   preservados, sem delta inesperado. O marcador interno foi extraido da imagem
   e tem SHA256
   `ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2`.
-  Seu E2E ainda deve provar timer, apply, no-op, rollback para o fallback da
-  imagem, reapply, `rc=44`, reboot e playback estrito final.
+  Seu E2E provou timer, apply, no-op, rollback para o fallback da imagem,
+  reapply, `rc=44`, reboot e playback estrito final. O timer real do core
+  aplicou a stable C21.12, tambem passou no-op, rollback e restauracao. As
+  evidencias estao em
+  `docs/evidence/c18-update-validation/20260714T200704Z-prod14-player-runtime-production-autopull-c25b/`
+  e
+  `docs/evidence/c18-update-validation/20260714T212827Z-prod14-core-stable-and-final-reboot/`.
   O construtor de producao recusa arvore suja, identidade de candidata
   divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
   erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
@@ -452,13 +450,15 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - os tres assets exatos de C25B foram publicados sem mover `latest`. A arvore
   exata passou na placa com oito segundos de espera e um canario que cobre toda
   a observacao, sem afrouxar os limites do health;
-- gates, build e auditoria pre-flash da `prod14` estao fechados. Grava-la uma
-  unica vez do zero e provar timer, apply exato, no-op, rollback para o player
-  embutido, reapply, freeze `rc=44`, reboot e playback estrito final;
-- gerar/promover o core consolidado em `stable` e provar o timer de
-  `totem-core`, evitando que a stable antiga tente downgrade sobre a imagem;
-- executar auditoria final e, somente com essas provas verdes, substituir
+- a `prod14` foi gravada do zero e concluiu timer, apply exato, no-op, rollback
+  para o player embutido, reapply, freeze `rc=44`, reboot e playback estrito;
+- o core consolidado foi promovido como stable C21.12 e concluiu timer real,
+  no-op, rollback e restauracao sem downgrade;
+- concluir a auditoria final e, somente sem blocker, substituir
   `prod8` pela sucessora aprovada como imagem de referencia;
+- manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
+  `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
+  encerrada por esse caso;
 - manter futuras evolucoes separadas: `totem-core` para wizard/core e
   `player-runtime` para comportamento do player. Grupos, dashboard e kill
   switch continuam roadmap M6 e nao bloqueiam a primeira escala aceita.
@@ -487,14 +487,12 @@ rollback.
 
 Leitura pratica:
 
-- novas placas devem sair com a nova imagem de producao contendo o C22 como
-  fallback e autorizacao exact-target C22; a prova de atualizacao usa C21 como
-  estado anterior apenas na bancada;
-- `totem-core` deve ser o primeiro auto-pull padrao, porque ja tem apply remoto,
-  health, rollback e escopo estreito provados na placa;
-- `player-runtime` entra agora no objetivo de auto-pull, mas nao por
-  reaproveitamento cego do harness de laboratorio: precisa de caminho publico
-  pinado/hash-bound, health real, rollback e criterio claro de thaw;
+- depois da auditoria final, novas placas devem sair com a `prod14`, C25B como
+  fallback/target exato do player e C21.12 como stable atual do core;
+- `totem-core` e o auto-pull padrao para wizard e produto; apply remoto, no-op,
+  rollback, restauracao e reboot estao provados na placa;
+- `player-runtime` esta fechado para C25B por caminho pinado/hash-bound, health
+  real e rollback. Futuros alvos continuam exigindo autorizacao exata;
 - como ainda nao ha infraestrutura real de grupos, dashboard ou monitoramento
   de frota, a primeira producao deve assumir rollout simples/global e registrar
   isso como risco aceito, com inventario manual e procedimento de emergencia;
@@ -502,21 +500,20 @@ Leitura pratica:
   kill-switch e telemetria ficam no roadmap de robustez, nao como bloqueio para
   a primeira entrega se a decisao de negocio for avancar.
 
-Consequencia: o proximo trabalho nao e mais provar homologacao assistida. E
-materializar uma linha de producao pragmatica:
+Resultado dessa decisao: a linha de producao pragmatica foi materializada:
 
-1. imagem de producao C18, sem marcador `not_for_production`;
+1. imagem `prod14`, sem marcador `not_for_production`;
 2. policy de producao e timer habilitado para auto-pull de `totem-core`;
-3. teste real do timer aplicando update remoto e rollbackando;
+3. timer real aplicando update remoto, no-op, rollback e restauracao;
 4. especificacao curta para devs e fabrica;
-5. ponte publica segura para auto-pull de `player-runtime`, agora exigida pelo
-   cliente e assumida como proximo marco.
+5. ponte publica exact-target para C25B, com rollback e health real;
+6. auditoria final como ultimo gate para trocar a referencia aceita.
 
 ## Historico V3/M5 - C22/prod7
 
 Esta secao preserva a rodada que abriu a mecanica production exact-target em
-C22/prod7. O estado vigente e seu fechamento C23/prod8 estao no topo deste
-documento e na evidencia de 2026-07-11; este historico nao e a rodada atual.
+C22/prod7. O estado vigente esta no topo deste documento; este historico nao e
+a rodada atual.
 
 Decisao: avancar com auto-pull de `player-runtime` em producao pragmatica,
 assumindo risco de negocio e preservando as barreiras tecnicas que evitam
@@ -809,13 +806,11 @@ podemos escolher entre:
 3. Corrigir textos historicos que confundam publicacao com consumo em placa.
 4. Marco 1 (`totem-core` remoto) fechado.
 5. Marco 2 (`player-runtime` remoto) fechado.
-6. Marco 3: imagem producao C18 gerada offline e validada por manifesto.
-7. Marco 4: `totem-core stable` publicado e validado por apply/rollback lab.
-8. Marco anterior: imagem producao bootada e timer real de `totem-core` provado
-   com rollback.
-9. M5 fechado para o alvo exato C23; nao reabrir sua prova por causa de um
-   pacote futuro.
-10. C25A e o alvo exato C25B validados e reversiveis em homologacao.
-11. Rodada atual: consolidar o conjunto C25 e os hooks image-bound na proxima
-    imagem de referencia, mantendo M4 minimo em paralelo. C25B nao herda
-    `stable` ou auto-pull de C23 por inferencia.
+6. Marco 3 fechado: imagem `prod14` gerada, auditada offline e gravada.
+7. Marco 4 fechado: `totem-core` C21.12 stable publicado, aplicado pelo timer,
+   rollbackado, restaurado e persistido no reboot.
+8. M5 fechado para o alvo exato C25B: timer, no-op, rollback, reaplicacao e
+   playback estrito passaram sem autorizar futuros alvos por inferencia.
+9. Rodada atual: auditoria independente final da evidencia combinada.
+10. Sem blocker, promover `prod14` + C25B + C21.12 como referencia e voltar a
+    prioridade para ativacao/estados visiveis, mantendo M4 minimo em paralelo.

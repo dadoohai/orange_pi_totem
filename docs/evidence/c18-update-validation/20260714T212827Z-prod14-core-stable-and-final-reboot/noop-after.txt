@@ -1,0 +1,10 @@
+captured_at=2026-07-14T21:17:36Z
+20bbef4ae907329e56611de72f83e1fa071e07f8715b54d6d28fb207bf07244b  /data/core/totem/state.json
+current=releases/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea
+previous=releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473
+NRestarts=0
+ActiveState=active
+InvocationID=b8f512764e4041799a8d8b869d61518e
+Result=success
+ExecMainStatus=0
+InvocationID=d887443a5c4b4668ad91229a94bf8cfb

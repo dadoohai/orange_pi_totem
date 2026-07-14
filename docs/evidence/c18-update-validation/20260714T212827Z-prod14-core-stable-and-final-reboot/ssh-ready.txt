@@ -1,0 +1,6 @@
+
+ssh_ready_at=2026-07-14T21:04:33Z
+boot_id=b5c0a039-dc4f-41a3-86dc-802176b3297c
+running
+
+__EXPECT_EXIT_CODE__=0

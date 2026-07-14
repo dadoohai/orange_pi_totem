@@ -1,0 +1,53 @@
+{
+  "schema": "dadooh.c18.prod14_final_state.v1",
+  "collected_at_utc": "2026-07-14T21:27:23Z",
+  "boot_id": "d6deaf9e-ac58-443c-97a3-173d0f33d56c",
+  "image": {
+    "tag": "c18-hwdecode-prod-14",
+    "version": "c18.image-prod.14",
+    "marker_path": "/etc/dadooh/c18-hwdecode-prod-14-image",
+    "marker_sha256": "ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2"
+  },
+  "ssh_public_host_key_sha256": {
+    "ecdsa": "db0bd89a082d62902aea4f22b7b0a6ec010410933cd09a0382c005854fa14737",
+    "ed25519": "e504adc6f81be30a76a3846339aeacaa4fcdf07b653b9eb8aee4dbc02d338c57",
+    "rsa": "fd18a9c5680458e42d3d616715f9af4fd1fbfb74df5b65f8834d32baf7bc83d9",
+    "same_as_pre_reboot": true
+  },
+  "configuration": {
+    "path": "/data/config/config.json",
+    "exists": true,
+    "mode": "0640",
+    "owner": "root",
+    "group": "totem",
+    "bytes": 1485,
+    "sha256": "46448082bbb8e7af26c1e89045e192964cd40d225b905c353f9ed58182b85578",
+    "contents_recorded": false
+  },
+  "totem_core": {
+    "current": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "previous": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "timer_enabled": true,
+    "timer_active": true,
+    "self_test_returncode": 0
+  },
+  "player_runtime": {
+    "current": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+    "previous_absent": true,
+    "timer_enabled": true,
+    "timer_active": true,
+    "public_freeze_rc": 44
+  },
+  "player": {
+    "service_active": true,
+    "service_substate": "running",
+    "service_restarts": 0,
+    "invocation_id": "1dde16c039df4e49816c733c75a3e7b0",
+    "mpv_hwdec": "v4l2request-copy",
+    "mpv_vo": "gpu",
+    "mpv_gpu_context": "drm",
+    "deep_health_passed": true
+  },
+  "failed_systemd_units": 0,
+  "sensitive_values_recorded": false
+}

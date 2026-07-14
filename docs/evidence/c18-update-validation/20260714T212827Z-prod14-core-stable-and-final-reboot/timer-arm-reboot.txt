@@ -1,0 +1,6 @@
+
+reboot_requested_at=2026-07-14T21:03:59Z
+pre_reboot_boot_id=277bd7f1-bbd0-4097-bd48-33a8df90d317
+
+__EXPECT_EXIT_CODE__=0
+reboot_command_rc=0

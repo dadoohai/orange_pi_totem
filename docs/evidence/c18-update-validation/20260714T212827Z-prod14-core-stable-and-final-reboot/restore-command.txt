@@ -1,0 +1,5 @@
+
+restore_started_at=2026-07-14T21:19:05Z
+restore_service_rc=0
+
+__EXPECT_EXIT_CODE__=0

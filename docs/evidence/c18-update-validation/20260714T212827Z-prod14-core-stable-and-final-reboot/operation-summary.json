@@ -1,0 +1,122 @@
+{
+  "schema": "dadooh.c21.prod14_core_stable_and_final_reboot.v1",
+  "collected_at_utc": "2026-07-14T21:28:27Z",
+  "image": {
+    "tag": "c18-hwdecode-prod-14",
+    "version": "c18.image-prod.14",
+    "sha256": "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682",
+    "marker_sha256": "ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2"
+  },
+  "release": {
+    "tag": "totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "version": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "channel": "stable",
+    "source_commit": "766b1eadbc4b69dd92a81e468e29d816c7feffc9",
+    "payload_sha256": "b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292",
+    "published_at_utc": "2026-07-14T21:01:37Z",
+    "is_latest": true,
+    "asset_count": 6,
+    "remote_assets_match_local": true
+  },
+  "precondition": {
+    "current_version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "previous_version": null,
+    "totem_core_timer_temporarily_disabled_for_isolation": true,
+    "player_service_active": true,
+    "player_service_restarts": 0,
+    "player_runtime_public_freeze_rc": 44
+  },
+  "timer_arm": {
+    "enabled_after_on_boot_window_elapsed": true,
+    "immediate_state": "active_elapsed_without_trigger",
+    "manual_apply_used_for_first_application": false,
+    "rebooted_with_timer_enabled": true,
+    "new_boot_id": "b5c0a039-dc4f-41a3-86dc-802176b3297c",
+    "real_trigger_at_utc": "2026-07-14T21:16:30Z"
+  },
+  "apply": {
+    "entrypoint": "totem-update-agent.timer",
+    "current_version": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "previous_version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "self_test_returncode": 0,
+    "evidence_gate_passed": true
+  },
+  "noop": {
+    "entrypoint": "totem-update-agent.service",
+    "state_sha256_before": "20bbef4ae907329e56611de72f83e1fa071e07f8715b54d6d28fb207bf07244b",
+    "state_sha256_after": "20bbef4ae907329e56611de72f83e1fa071e07f8715b54d6d28fb207bf07244b",
+    "current_previous_and_player_invocation_unchanged": true,
+    "journal_result": "apply_noop_already_current"
+  },
+  "rollback": {
+    "entrypoint": "totem-updatectl rollback --component totem-core",
+    "returncode": 0,
+    "current_version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "previous_version": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "self_test_returncode": 0,
+    "evidence_gate_passed": true
+  },
+  "restore": {
+    "entrypoint": "totem-update-agent.service",
+    "returncode": 0,
+    "current_version": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "previous_version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "self_test_returncode": 0,
+    "evidence_gate_passed": true
+  },
+  "final_reboot": {
+    "requested_at_utc": "2026-07-14T21:20:48Z",
+    "ssh_ready_at_utc": "2026-07-14T21:21:21Z",
+    "boot_id": "d6deaf9e-ac58-443c-97a3-173d0f33d56c",
+    "core_current_persisted": true,
+    "player_current_persisted": true,
+    "ssh_public_host_keys_persisted": true,
+    "configuration_present": true,
+    "failed_systemd_units": 0
+  },
+  "post_reboot_playback": {
+    "duration_sec": 60,
+    "samples": 52,
+    "passed": true,
+    "motion_media_episodes": 4,
+    "motion_media_failed_episodes": 0,
+    "mpv_media_transitions_observed": true,
+    "hwdec_expected": "v4l2request-copy",
+    "hwdec_expected_samples": 52,
+    "hwdec_unexpected_samples": 0,
+    "media_load_failed": 0,
+    "mpv_restart": 0,
+    "service_restarts_delta": 0,
+    "ipc_errors_after_first_success": 0,
+    "panfrost_faults": 0,
+    "mmc_timeout_reset": 0,
+    "ext4_errors": 0
+  },
+  "final_state": {
+    "totem_core_timer_enabled": true,
+    "totem_core_timer_active": true,
+    "player_runtime_timer_enabled": true,
+    "player_runtime_timer_active": true,
+    "player_runtime_version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+    "player_runtime_public_freeze_rc": 44,
+    "player_service_active": true,
+    "player_service_restarts": 0
+  },
+  "diagnostics": {
+    "post_reboot_operation_gate_passed": false,
+    "post_reboot_operation_gate_blockers": [
+      "service_journal_missing_expected_release_tag",
+      "service_journal_missing_apply_success_or_noop"
+    ],
+    "classification": "not_applicable_after_boot_boundary",
+    "applicable_apply_rollback_restore_gates_passed": true
+  },
+  "non_claims": [
+    "does_not_authorize_future_player_runtime_targets",
+    "does_not_enable_broad_player_latest",
+    "does_not_prove_rollout_groups_or_device_side_signature",
+    "does_not_update_media_system_or_field_data",
+    "does_not_resolve_portal_activation_f5_issue",
+    "does_not_claim_post_reboot_operation_journal_gate_green"
+  ]
+}

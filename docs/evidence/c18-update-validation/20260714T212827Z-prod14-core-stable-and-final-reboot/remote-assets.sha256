@@ -1,0 +1,6 @@
+271e34e9040541ae23a8dbc5bce37e9ee64d124c982f2d9d3c2433fc138238fe  c18-ota-release-gate.json
+1cfeac8e7bef68b0feec4bfe70059ce3944363732ad5c545b7bec725556f9130  c18-production-image-build-manifest.json
+41248edb66b317fbdc848ca5dedcb8c52e8ce8457ff82775ac5db73911593c6a  c18-production-image-offline-validation.json
+eef0ad7bf1937207b50bb4a1368ebef7e0adea11815f3fbf46a3fe397431f8ed  c18-stable-promotion-evidence.json
+8b373b4f5de77ea75e5341e792e6b49f96497f299867e967548cf4fdb9e1a483  dadooh-totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea.manifest.json
+b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292  dadooh-totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea.tar.gz

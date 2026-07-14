@@ -1,0 +1,226 @@
+{
+  "collected_at_utc": "2026-07-14T21:17:09Z",
+  "expected": {
+    "image_tag": "c18-hwdecode-prod-14",
+    "release_tag": "totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea"
+  },
+  "image_marker": {
+    "exists": true,
+    "fields": {
+      "artifact_private": "false",
+      "base_image_line": "c17.4.2",
+      "base_image_sha256": "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af",
+      "c12_readonly_blocked": "true",
+      "c12_readonly_touched": "true",
+      "c17_4_trace_dir": "/run/totem/c17-4-firstboot",
+      "c17_7_used_as_base": "false",
+      "c25_visible_product_states_embedded": "true",
+      "dtb_touched": "false",
+      "ffmpeg": "github.com/Kwiboo/FFmpeg@2af4006",
+      "final_image": "true",
+      "hardware_validation_required": "true",
+      "homologation_seed_mpv_path": "totem-mpv-hwdecode",
+      "hwdecode_bundle_sha256": "96e0ce3ff34edced247e2deca03e0d848bd3b26142d56267e95ef295bb071967",
+      "hwdecode_stack": "cedrus_v4l2request",
+      "image_tag": "c18-hwdecode-prod-14",
+      "image_version": "c18.image-prod.14",
+      "kernel_touched": "false",
+      "mpv": "github.com/Kwiboo/mpv@8670d2e",
+      "panfrost_rebind_service": "installed",
+      "player_hwdec": "v4l2request-copy vo=gpu gpu_context=drm",
+      "player_runtime_baseline_payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+      "player_runtime_baseline_version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+      "player_runtime_boot_state_evidence_gate": "true",
+      "player_runtime_fault_injection_gate": "true",
+      "player_runtime_gate_semantic_mpv_args": "true",
+      "player_runtime_kiosk_sha256": "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0",
+      "player_runtime_kiosk_source": "player-runtime/kiosky-player/kiosk.py",
+      "player_runtime_lab_thaw_guard": "true",
+      "player_runtime_launcher_fixed_by_image": "true",
+      "player_runtime_ota_still_frozen": "true",
+      "player_runtime_reconcile_available": "true",
+      "player_runtime_reconcile_corrupt_state_fail_closed": "true",
+      "player_runtime_verified_marker_required": "true",
+      "production_armbian_host_key_regeneration_disabled": "true",
+      "production_free_space_zeroed": "true",
+      "production_image": "true",
+      "production_lab_settings_policy_removed": "true",
+      "production_overlayroot_disabled": "true",
+      "production_per_device_credentials_pending": "true",
+      "production_private_lab_inputs_removed": "true",
+      "production_rootfs_auto_expand_enabled": "true",
+      "production_rootfs_mode": "ext4_rw",
+      "production_settings_policy_embedded": "true",
+      "production_shared_support_credential_rotated": "true",
+      "production_ssh_host_keys_generated_on_device": "true",
+      "production_support_credential_csprng_provenance": "true",
+      "r4_updater_perms": "injected",
+      "supersedes": "c18-hwdecode-lab-1 (kiosk.py banner SyntaxError) & 1b (--no-osc fatal on no-Lua mpv) & 1c (zero-copy panfrost js faults on portrait media) & 1d (playback stable, totem-core OTA layout missing from image) & 1g (player launcher still inside totem-core boundary) & 1h (homologation seed reset mpv_path to stock mpv) & 1i (player-runtime path still split from launcher default) & 1j (golden delivery, before player-runtime thaw foundation) & 1l (golden delivery, before post-audit deep-health/freeze/docs lock) & 1n (golden delivery before guarded reconcile/evidence-gate hardening) & 1o (golden delivery before audit-ready persistent /data trial tooling) & 1p (boot reconcile ran as totem, so /data/player-runtime hygiene was non-effective) & 1q (golden delivery before multi-segment deep-health gate and persistent-trial abort cleanup) & 1r (golden delivery before cold-boot/power-loss pre-hardening gates) & 1s (golden delivery before boot-state evidence and crash-boundary gates) & 1t (golden delivery before post-M6 reconcile freeze hardware proof) & 1u (golden delivery before physical power-loss/soak/server-side gates)",
+      "totem_core_current_embedded": "true",
+      "totem_core_current_version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+      "totem_core_embed_profile": "production",
+      "totem_core_excludes_kiosky_service_launcher": "true",
+      "totem_update_policy_embedded": "true",
+      "totem_update_timer_enabled": "true",
+      "u_boot_touched": "false"
+    },
+    "path": "/etc/dadooh/c18-hwdecode-prod-14-image",
+    "raw_sha256": "ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2",
+    "read_error": null
+  },
+  "non_claims": [
+    "does_not_thaw_player_runtime",
+    "does_not_update_media_system",
+    "does_not_publish_release"
+  ],
+  "player_runtime_freeze_probe": {
+    "cmd": [
+      "/opt/totem/bin/totem-updatectl",
+      "rollback",
+      "--component",
+      "player-runtime"
+    ],
+    "ran": true,
+    "returncode": 44,
+    "stderr_tail": "2026-07-14T21:17:09Z INFO update_lock_acquired operation=rollback:player-runtime lock=/run/totem-updatectl.lock\ncomponent_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware\n2026-07-14T21:17:09Z WARN rollback_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware\n",
+    "stdout_tail": ""
+  },
+  "player_service": {
+    "active_raw": "active",
+    "nrestarts": "0",
+    "unit": "kiosky-player.service"
+  },
+  "policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "schema": "dadooh.totem.update.policy.v1"
+  },
+  "policy_error": null,
+  "policy_path": "/data/updates/policy.json",
+  "schema": "dadooh.c18.totem_core.production_timer_collect.v1",
+  "service": {
+    "journal_returncode": 0,
+    "journal_tail": [
+      "Jul 14 21:16:30 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...",
+      "Jul 14 21:16:31 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:31Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock",
+      "Jul 14 21:16:31 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:31Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea/dadooh-totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea.manifest.json dest=/data/updates/incoming/totem-core/github-select-1784063791/totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea/dadooh-totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea.manifest.json",
+      "Jul 14 21:16:32 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:32Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea manifest=/data/updates/incoming/totem-core/github-select-1784063791/totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea/dadooh-totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea.manifest.json",
+      "Jul 14 21:16:32 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:32Z INFO downloading_payload version=c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea dest=/data/updates/incoming/totem-core/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea/dadooh-totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea.tar.gz",
+      "Jul 14 21:16:33 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:33Z INFO payload_downloaded bytes=177472 sha256=b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292",
+      "Jul 14 21:16:41 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:41Z INFO totem_core_health_check_starting",
+      "Jul 14 21:16:48 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:48Z INFO apply_success version=c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+      "Jul 14 21:16:48 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:48Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+      "Jul 14 21:16:48 orangepizero3 totem-updatectl[4468]: 2026-07-14T21:16:48Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784063791",
+      "Jul 14 21:16:48 orangepizero3 systemd[1]: totem-update-agent.service: Deactivated successfully.",
+      "Jul 14 21:16:48 orangepizero3 systemd[1]: Finished totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).",
+      "Jul 14 21:16:48 orangepizero3 systemd[1]: totem-update-agent.service: Consumed 16.164s CPU time."
+    ],
+    "show": {
+      "ActiveState": "inactive",
+      "ExecMainStatus": "0",
+      "Result": "success",
+      "TriggeredBy": "totem-update-agent.timer",
+      "_returncode": "0"
+    },
+    "unit": "totem-update-agent.service"
+  },
+  "timer": {
+    "active_raw": "active",
+    "enabled_raw": "enabled",
+    "journal_returncode": 0,
+    "journal_tail": [
+      "Jul 14 21:04:04 orangepizero3 systemd[1]: Started totem-update-agent.timer - Dadooh Totem Update Timer (production core auto-pull)."
+    ],
+    "show": {
+      "LastTriggerUSec": "Tue 2026-07-14 21:16:30 UTC",
+      "LastTriggerUSecMonotonic": "12min 21.487772s",
+      "NextElapseUSecRealtime": "",
+      "Result": "success",
+      "Unit": "totem-update-agent.service",
+      "_returncode": "0"
+    },
+    "unit": "totem-update-agent.timer"
+  },
+  "totem_core_self_test": {
+    "checks": {
+      "component_base_exists": true,
+      "data_root_writable": true,
+      "fallback_bin_exists": true,
+      "log_dir_writable": true,
+      "python_stdlib_only": true,
+      "service_unit_known": true,
+      "settings_lock_guard_available": true,
+      "settings_lock_guard_clear": true,
+      "systemctl_present": true,
+      "updates_dir_exists": true
+    },
+    "self_test": true
+  },
+  "totem_core_self_test_raw_tail": "{\n  \"checks\": {\n    \"component_base_exists\": true,\n    \"data_root_writable\": true,\n    \"fallback_bin_exists\": true,\n    \"log_dir_writable\": true,\n    \"python_stdlib_only\": true,\n    \"service_unit_known\": true,\n    \"settings_lock_guard_available\": true,\n    \"settings_lock_guard_clear\": true,\n    \"systemctl_present\": true,\n    \"updates_dir_exists\": true\n  },\n  \"self_test\": true\n}\n",
+  "totem_core_self_test_returncode": 0,
+  "totem_core_status": {
+    "component": "totem-core",
+    "component_apply_guard_ok": true,
+    "component_apply_guard_reason": "settings_session_inactive",
+    "component_base": "/data/core/totem",
+    "current_symlink_target": "releases/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "data_root": "/data",
+    "previous_symlink_target": "releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "schema": "dadooh.totem.update.state.v1",
+    "service_active": true,
+    "state": {
+      "component": "totem-core",
+      "current": {
+        "applied_at_utc": "2026-07-14T21:16:41Z",
+        "channel": "stable",
+        "manifest_created_at_utc": "2026-07-14T20:43:15Z",
+        "path": "/data/core/totem/releases/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+        "payload_sha256": "b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292",
+        "source": "github:dadoohai/orange_pi_totem:totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+        "source_branch": "foundation-v0.1",
+        "source_commit": "766b1eadbc4b69dd92a81e468e29d816c7feffc9",
+        "source_repo": "dadoohai/orange_pi_totem",
+        "version": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea"
+      },
+      "last_operation": {
+        "finished_at_utc": "2026-07-14T21:16:48Z",
+        "source": "github:dadoohai/orange_pi_totem:totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+        "started_at_utc": "2026-07-14T21:16:32Z",
+        "status": "success",
+        "type": "apply",
+        "version": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea"
+      },
+      "previous": {
+        "manifest_created_at_utc": "2026-07-14T03:42:24Z",
+        "path": "releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+        "payload_sha256": "0653f62863420dcbcdaf051a744484f6a3986850b3da23903311fe2b30056761",
+        "source": "image_embed",
+        "source_branch": "foundation-v0.1",
+        "source_commit": "22bd473d2e3e1d026647d6e174f7d9da880c4e8f",
+        "source_repo": "dadoohai/orange_pi_totem",
+        "version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473"
+      },
+      "schema": "dadooh.totem.update.state.v1",
+      "updated_at": "2026-07-14T17:32:45Z"
+    },
+    "token_file_present": false,
+    "update_policy": {
+      "allow_downgrade": false,
+      "allow_prerelease": false,
+      "allowed_components": [
+        "totem-core"
+      ],
+      "device_channel": "stable",
+      "device_track": "c18-hwdecode",
+      "policy_source": "file",
+      "schema": "dadooh.totem.update.policy.v1"
+    }
+  },
+  "totem_core_status_raw_tail": "{\n  \"component\": \"totem-core\",\n  \"component_apply_guard_ok\": true,\n  \"component_apply_guard_reason\": \"settings_session_inactive\",\n  \"component_base\": \"/data/core/totem\",\n  \"current_symlink_target\": \"releases/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea\",\n  \"data_root\": \"/data\",\n  \"previous_symlink_target\": \"releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473\",\n  \"schema\": \"dadooh.totem.update.state.v1\",\n  \"service_active\": true,\n  \"state\": {\n    \"component\": \"totem-core\",\n    \"current\": {\n      \"applied_at_utc\": \"2026-07-14T21:16:41Z\",\n      \"channel\": \"stable\",\n      \"manifest_created_at_utc\": \"2026-07-14T20:43:15Z\",\n      \"path\": \"/data/core/totem/releases/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea\",\n      \"payload_sha256\": \"b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292\",\n      \"source\": \"github:dadoohai/orange_pi_totem:totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea\",\n      \"source_branch\": \"foundation-v0.1\",\n      \"source_commit\": \"766b1eadbc4b69dd92a81e468e29d816c7feffc9\",\n      \"source_repo\": \"dadoohai/orange_pi_totem\",\n      \"version\": \"c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea\"\n    },\n    \"last_operation\": {\n      \"finished_at_utc\": \"2026-07-14T21:16:48Z\",\n      \"source\": \"github:dadoohai/orange_pi_totem:totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea\",\n      \"started_at_utc\": \"2026-07-14T21:16:32Z\",\n      \"status\": \"success\",\n      \"type\": \"apply\",\n      \"version\": \"c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea\"\n    },\n    \"previous\": {\n      \"manifest_created_at_utc\": \"2026-07-14T03:42:24Z\",\n      \"path\": \"releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473\",\n      \"payload_sha256\": \"0653f62863420dcbcdaf051a744484f6a3986850b3da23903311fe2b30056761\",\n      \"source\": \"image_embed\",\n      \"source_branch\": \"foundation-v0.1\",\n      \"source_commit\": \"22bd473d2e3e1d026647d6e174f7d9da880c4e8f\",\n      \"source_repo\": \"dadoohai/orange_pi_totem\",\n      \"version\": \"c20.14-settings-stop-hardening-20260714T034217Z-22bd473\"\n    },\n    \"schema\": \"dadooh.totem.update.state.v1\",\n    \"updated_at\": \"2026-07-14T17:32:45Z\"\n  },\n  \"token_file_present\": false,\n  \"update_policy\": {\n    \"allow_downgrade\": false,\n    \"allow_prerelease\": false,\n    \"allowed_components\": [\n      \"totem-core\"\n    ],\n    \"device_channel\": \"stable\",\n    \"device_track\": \"c18-hwdecode\",\n    \"policy_source\": \"file\",\n    \"schema\": \"dadooh.totem.update.policy.v1\"\n  }\n}\n",
+  "totem_core_status_returncode": 0
+}

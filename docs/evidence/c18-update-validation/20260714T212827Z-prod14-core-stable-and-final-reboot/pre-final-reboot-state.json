@@ -1,0 +1,35 @@
+{
+  "schema": "dadooh.c18.prod14_pre_final_reboot_state.v1",
+  "collected_at_utc": "2026-07-14T21:20:27Z",
+  "boot_id": "b5c0a039-dc4f-41a3-86dc-802176b3297c",
+  "image_marker_sha256": "ef56eec47a977bb4f0d8d3f50a7934ae0ac5b1219fa52eaccb76f8483c4fb8f2",
+  "ssh_public_host_key_sha256": {
+    "ecdsa": "db0bd89a082d62902aea4f22b7b0a6ec010410933cd09a0382c005854fa14737",
+    "ed25519": "e504adc6f81be30a76a3846339aeacaa4fcdf07b653b9eb8aee4dbc02d338c57",
+    "rsa": "fd18a9c5680458e42d3d616715f9af4fd1fbfb74df5b65f8834d32baf7bc83d9"
+  },
+  "totem_core": {
+    "current": "c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea",
+    "previous": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "payload_sha256": "b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292",
+    "source_commit": "766b1eadbc4b69dd92a81e468e29d816c7feffc9",
+    "timer_enabled": true,
+    "timer_active": true
+  },
+  "player_runtime": {
+    "current": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+    "previous": null,
+    "payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+    "timer_enabled": true,
+    "timer_active": true
+  },
+  "player": {
+    "service_active": true,
+    "service_substate": "running",
+    "service_restarts": 0,
+    "invocation_id": "b8f512764e4041799a8d8b869d61518e"
+  },
+  "failed_systemd_units": 0,
+  "raw_media_status_recorded": false,
+  "sensitive_values_recorded": false
+}
