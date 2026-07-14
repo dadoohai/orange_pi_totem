@@ -1,6 +1,6 @@
 # C18 Macro Steering
 
-Estado inicial: 2026-07-05.
+Estado inicial: 2026-07-05. Atualizado em 2026-07-14.
 
 Este documento e o cerne direcionador da fase atual. Ele existe para impedir que
 rodadas longas, auditorias e tarefas tecnicas desviem o trabalho do objetivo de
@@ -319,15 +319,19 @@ Enquanto nada mudar, a ordem de execucao e:
 1. Preservar C25 como entrada validada, sem reabrir microajustes salvo regressao
    ou blocker novo. C25A e o alvo C25B exato estao comprovados na placa em
    `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
-2. `prod9`, `prod10` e `prod11` foram bloqueadas antes do flash por achados
-   independentes. `prod12` foi construida em `cb89485`, passou gate `82/82`,
-   validacao offline `66/66` e quatro auditorias independentes sem blocker. O
-   proximo marco e um unico flash controlado do SHA256 `4bef1f...8262`, seguido
-   de boot, expansao do rootfs, persistencia da identidade SSH e E2E do produto.
-3. Publicar depois do aceite local somente os alvos remotos exatos; provar os
-   timers de `totem-core` e `player-runtime`, no-op, rollback e restauracao.
-4. Auditar a corrida e promover a sucessora a referencia apenas se o E2E estiver
-   verde. Ate la, `prod8` + C23 continua sendo o baseline de producao.
+2. O flash controlado da `prod12` aconteceu. A placa confirmou a identidade
+   `c18.image-prod.12`, rootfs expandido, wizard/QR/configuracao, retorno ao
+   player e playback. A corrida revelou hardenings reais de sessao de settings;
+   o sucessor C20.14 foi aplicado, rollbackado, reaplicado e validado apos reboot
+   sem regressao. Evidencia:
+   `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+3. Construir `prod13` como derivacao estreita de `prod12`: mudar somente a
+   identidade e embutir o `totem-core` C20.14 exato. Nao reabrir player-runtime,
+   MPV/ffmpeg, kernel, DTB, U-Boot, base ou credenciais.
+4. Auditar o artefato prod13 e fazer um unico flash controlado. Fechar boot,
+   expansao, identidade SSH persistente, wizard/QR/writer, playback, timers
+   exatos, no-op, rollback e restauracao. Somente o E2E verde substitui
+   `prod8` + C23 como referencia de distribuicao.
 5. Fechar o minimo de M4 em paralelo: inventario, rollback owner, emergencia e
    criterio de pausa.
 6. Retomar M8 somente pelos gatilhos registrados na decisao 198.

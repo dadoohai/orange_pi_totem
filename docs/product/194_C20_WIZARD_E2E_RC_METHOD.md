@@ -146,3 +146,21 @@ Usar a evidencia C20.8 como base do RC e escolher a proxima acao por valor:
    de Wi-Fi/config entra agora ou se o criterio segue `candidate-only`;
 3. se houver nova melhoria visual, entrar somente se mover clareza/uso real e
    repetir o ritual E2E sem regressao.
+
+## Status Atual Do RC - 2026-07-14
+
+O metodo foi aplicado ate o pacote C20.14. A jornada mutante real passou na
+prod12 com QR, writer e retorno ao player; cancelamento preservou configuracao;
+parada externa da unit ficou limitada e limpa; apply, rollback e reaplicacao
+mantiveram current/previous coerentes. O reboot final terminou com um unico MPV,
+hardware decode esperado e health verde.
+
+Pacote final desta rodada:
+`c20.14-settings-stop-hardening-20260714T034217Z-22bd473`.
+
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+
+O RC esta fechado para entrar na prod13. Permanecem fora desta claim a promocao
+`stable`, publicacao remota e o aceite da prod13 antes de build, auditoria e
+flash controlado.

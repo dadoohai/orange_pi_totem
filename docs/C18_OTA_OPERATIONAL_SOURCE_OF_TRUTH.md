@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-13. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-14. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -41,14 +41,14 @@ Hoje a C18 tem dois caminhos reais:
   autorizacao presa por hashes.
 
 Estado de distribuicao vigente: `prod8` + C23 continua sendo a referencia
-aceita em placa. `prod9` foi bloqueada antes da gravacao por residuos em blocos
-livres e overlayroot ambiguo. `prod10` corrigiu integralmente essa higiene, mas
-tambem foi bloqueada antes do flash: a senha root curta herdada da base foi
-quebrada em segundos por auditoria offline. `prod11` corrigiu a credencial e
-passou a composicao offline, mas foi bloqueada porque o primeiro boot tinha dois
-geradores sucessivos de host keys SSH. `prod12` corrigiu esse conflito, passou
-quatro auditorias independentes e esta autorizada somente para um flash fisico
-controlado. `prod8` continua sendo a referencia ate o E2E terminar.
+aceita. `prod9`, `prod10` e `prod11` foram bloqueadas antes da gravacao por,
+respectivamente, residuos em blocos livres, credencial root curta e dupla
+geracao de host keys SSH. `prod12` corrigiu a cadeia, passou quatro auditorias e
+foi gravada na placa. Ela confirmou boot, rootfs expandido, wizard/QR/config,
+retorno ao player e serviu de base fisica para fechar o `totem-core` C20.14.
+Como C20.14 nasceu de achados dessa corrida e foi aplicado por OTA depois do
+flash, `prod12` nao vira a referencia final: a sucessora estreita `prod13` deve
+embuti-lo e repetir o E2E final antes de substituir `prod8` + C23.
 
 O M5 nao deve ser reaberto: C23 esta provado. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
@@ -118,21 +118,21 @@ Regra pratica:
 
 Fila atual para consolidacao:
 
-- C19/C20 e o QR C21 ja foram consolidados e publicados no `totem-core`
-  C21.11. Nao aguardam outro pacote para funcionar; aguardam apenas entrar como
-  baseline da proxima imagem de referencia.
-- Fechar na versao atual a jornada real completa: Wi-Fi, QR, ambiente, escrita,
-  conclusao e retorno ao player, com captura visual quando o HDMI estiver
-  disponivel.
+- C19/C20, QR C21 e os estados C25A foram acumulados no `totem-core` ate o
+  pacote C20.14
+  `c20.14-settings-stop-hardening-20260714T034217Z-22bd473`. O pacote passou
+  gate `84/84`, apply governado, parada forcada limitada, cancelamento normal,
+  rollback, reaplicacao e reboot com health final verde na placa prod12. Ele e
+  agora a entrada exata da prod13; ainda nao e uma release `stable` remota.
+- A jornada real de wizard, QR, ambiente, escrita e retorno ao player passou na
+  prod12. C20.13 e C20.14 fecharam os residuos de ownership/cleanup descobertos
+  ao interromper a sessao por systemd, sem mascarar a causa.
 - Estados visiveis C25A (`totem-core`) e C25B (`player-runtime`) estao
-  validados e reversiveis na placa de homologacao. O alvo C25B final e
-  `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com playback,
-  `content_unavailable`, recuperacao, rollback e reaplicacao comprovados. Ele
-  foi incorporado, junto com o launcher/updater correspondentes, em `prod9`,
-  `prod10` e `prod11`, todos bloqueados antes do flash por achados distintos. O
-  mesmo conjunto segue para `prod12`, ainda sem publicacao remota ou claim de
-  distribuicao ate o aceite da imagem na placa. Contrato e evidencias estao em
-  `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md` e
+  validados e reversiveis. O alvo C25B final
+  `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4` foi incorporado
+  na prod12 e executa como baseline da imagem; sua publicacao/auto-pull futuro
+  continua exigindo o alvo exato e autorizacao presa por hashes. Contrato e
+  evidencias estao em `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md` e
   `docs/evidence/c25-visible-states/20260713T082118Z-c25b-still-final-board/`.
 - Continuar novas melhorias de wizard/status por `totem-core`, uma vertical de
   uso por rodada, preservando o QA C19/C20.
@@ -160,14 +160,18 @@ Fila atual para consolidacao:
   `docs/evidence/c18-update-validation/20260713T191534Z-prod11-build-777e1fd/`.
 - `prod12`, commit `cb89485`, SHA256
   `4bef1f398635f66202c280b33206c4f7e84503c9d0f8734888a5821bae9d8262`,
-  passou gate `82/82`, validacao offline `66/66` e quatro auditorias
-  independentes sem blocker. Esta autorizada para um unico flash controlado.
-  Evidencia em
-  `docs/evidence/c18-update-validation/20260713T200707Z-prod12-build-cb89485/`.
-- O pendente agora e grava-la do zero e fechar boot, expansao do rootfs,
-  identidade SSH persistente e auto-pull/no-op/rollback dos alvos remotos
-  exatos antes de torna-la a nova referencia de distribuicao.
-  Seu construtor de producao recusa arvore suja, identidade de candidata
+  passou gate `82/82`, validacao offline `66/66`, quatro auditorias e foi
+  gravada. A placa confirmou o marker `c18.image-prod.12`, rootfs ext4
+  expandido e o E2E de produto usado para fechar C20.14. Evidencias:
+  `docs/evidence/c18-update-validation/20260713T200707Z-prod12-build-cb89485/`
+  e
+  `docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+- O pendente agora e construir `prod13` como derivacao estreita de prod12,
+  mudando somente identidade e core embutido para C20.14. Depois da auditoria
+  do artefato, um flash controlado deve repetir boot, expansao, identidade SSH,
+  wizard/QR/writer, playback, timer/no-op/rollback dos alvos exatos e
+  restauracao antes da promocao como referencia.
+  O construtor de producao recusa arvore suja, identidade de candidata
   divergente, ferramentas ext4 diferentes das fixadas, espaco insuficiente e
   erro de `debugfs`. Imagem, hash e evidencias so formam um conjunto completo
   quando o marcador `.ready.json` e publicado por ultimo, sem autorizar flash:
@@ -399,11 +403,13 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   credencial e higiene, mas recriaria a identidade SSH duas vezes no primeiro
   boot; seu SHA256 e
   `675b9c9f8c3eb1bcbd90b5fa8fe398841d05d3d55a24d7df36b4ac571ec58922`;
-- `prod12` foi construida e auditada preservando a credencial forte e toda a
-  higiene, desativando a regeneracao SSH redundante do Armbian e mantendo ativa
-  a expansao automatica do rootfs;
-- gravar a sucessora do zero e validar boot, wizard/QR, gravacao da configuracao,
-  retorno a midia, playback e estados C25;
+- `prod12` foi construida, auditada e gravada preservando a credencial forte e
+  toda a higiene. A placa confirmou a expansao do rootfs e o produto real; os
+  refinamentos C20.13/C20.14 surgidos nessa corrida foram validados por OTA;
+- construir e auditar `prod13`, derivada da prod12 somente com identidade nova
+  e o core C20.14 embutido;
+- gravar prod13 do zero e validar boot, identidade SSH, wizard/QR, gravacao da
+  configuracao, retorno a midia, playback e estados C25;
 - publicar somente os tres assets exatos de C25B, sem mover `latest`, e provar
   timer, apply, no-op, rollback e restauracao com playback real;
 - gerar/promover o core consolidado em `stable` e provar o timer de

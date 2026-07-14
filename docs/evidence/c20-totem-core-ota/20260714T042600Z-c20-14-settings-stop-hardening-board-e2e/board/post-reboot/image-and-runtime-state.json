@@ -1,0 +1,25 @@
+{
+  "schema": "dadooh.c20.image_runtime_state.v1",
+  "collected_at_utc": "2026-07-14T04:31:02Z",
+  "image": {
+    "tag": "c18-hwdecode-prod-12",
+    "version": "c18.image-prod.12",
+    "marker_path": "/etc/dadooh/c18-hwdecode-prod-12-image",
+    "marker_sha256": "d131023e5c72e5df3e1d8611272e23428e5a10a9e9324b775c9dcd2928fc7f2a",
+    "rootfs_source": "/dev/mmcblk0p1",
+    "rootfs_type": "ext4",
+    "rootfs_size": "28.9G",
+    "rootfs_available": "26.9G"
+  },
+  "boot_context": "post_controlled_reboot",
+  "totem_core": {
+    "current": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+    "previous": "c20.13-settings-session-hardening-20260714T023435Z-868e328"
+  },
+  "runtime": {
+    "player_service": "active",
+    "settings_service": "inactive",
+    "mpv_process_count": 1,
+    "current_boot_gpu_fault_count": 0
+  }
+}

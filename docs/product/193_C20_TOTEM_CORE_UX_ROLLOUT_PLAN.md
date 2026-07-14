@@ -278,3 +278,22 @@ Pendente para RC completo:
   ou segue como nao-blocker operacional;
 - gerar pacote consolidado ou seguir para a proxima melhoria apenas se mover o
   uso real.
+
+## Fechamento C20.14 - 2026-07-14
+
+O RC evoluiu alem da primeira auditoria C20.8. Na placa prod12, C20.12 fechou o
+fluxo real de QR, writer, conclusao/cancelamento e retorno ao player. A corrida
+revelou ownership transitorio e uma parada da unit que excedia o timeout do
+systemd; C20.13 e C20.14 corrigiram a causa em duas iteracoes verificadas.
+
+O pacote final acumulado desta rodada e
+`c20.14-settings-stop-hardening-20260714T034217Z-22bd473`. Ele passou gate
+`84/84`, apply governado, stop em `8467 ms` com `Result=success`, cancelamento
+normal, rollback, reaplicacao e reboot com playback final verde. Configuracao,
+contexto e policy foram preservados.
+
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+
+Proximo marco: embutir o pacote exato na prod13 e repetir o E2E da imagem
+gravada do zero. Isso nao promove C20.14 para `stable` por inferencia.

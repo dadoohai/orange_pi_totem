@@ -1,0 +1,61 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c20.13-settings-session-hardening-20260714T023435Z-868e328",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-14T04:15:49Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-14T03:42:24Z",
+      "path": "/data/core/totem/releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473",
+      "payload_sha256": "0653f62863420dcbcdaf051a744484f6a3986850b3da23903311fe2b30056761",
+      "source": "local:dadooh-totem-core-c20.14-settings-stop-hardening-20260714T034217Z-22bd473.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "22bd473d2e3e1d026647d6e174f7d9da880c4e8f",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-14T04:15:56Z",
+      "source": "local:dadooh-totem-core-c20.14-settings-stop-hardening-20260714T034217Z-22bd473.manifest.json",
+      "started_at_utc": "2026-07-14T04:15:42Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c20.14-settings-stop-hardening-20260714T034217Z-22bd473"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-14T04:15:40Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-14T02:34:35Z",
+      "path": "/data/core/totem/releases/c20.13-settings-session-hardening-20260714T023435Z-868e328",
+      "payload_sha256": "46bb823e731429767990e47bce607738c2c1b1b36b17f30cd6c7df3d839cd24a",
+      "source": "local:dadooh-totem-core-c20.13-settings-session-hardening-20260714T023435Z-868e328.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "868e328a28c3249c89525768365797db749bfdf0",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c20.13-settings-session-hardening-20260714T023435Z-868e328",
+      "via": "manual_rollback"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-13T20:08:23Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

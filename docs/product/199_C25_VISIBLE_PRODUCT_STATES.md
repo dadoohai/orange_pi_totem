@@ -9,7 +9,7 @@ sem desktop, Chromium, rede extra ou diagnostico tecnico na tela.
 ## Estado Da Rodada
 
 ```text
-status=c25_validated_prod12_audited_pending_controlled_board_flash
+status=c25_validated_on_prod12_c20_14_ready_for_prod13
 scope=totem-core_with_image_bound_and_player_runtime_slices_tracked_separately
 totem_core_subset_packagable=true
 launcher_retry_hook_preserved_in_candidate_chain=true
@@ -22,13 +22,13 @@ offline_tests=passed
 generated_visual_review=passed
 board_framebuffer_flow_validation=passed
 hdmi_camera_flicker_acceptance=pending
-writer_mutating_e2e=not_repeated_in_this_round
+writer_mutating_e2e=passed_on_prod12_c20_12
 remote_targets_not_yet_promoted=true
-next_reference_image_successor_pending=true
+next_reference_image=prod13_pending_build_audit_and_board_e2e
 prod9_board_acceptance=blocked_do_not_flash
 prod10_board_acceptance=blocked_do_not_flash
 prod11_board_acceptance=blocked_do_not_flash
-prod12_board_acceptance=approved_for_one_controlled_flash_pending_board_e2e
+prod12_board_acceptance=physical_base_passed_not_distribution_reference
 ```
 
 ## Contrato Publico V1
@@ -485,3 +485,34 @@ O aceite fisico exige boot limpo, rootfs expandido, fingerprint SSH estavel
 apos segundo reboot, wizard/QR/configuracao, playback/C25 e
 auto-pull/no-op/rollback. Evidencia:
 `docs/evidence/c18-update-validation/20260713T200707Z-prod12-build-cb89485/`.
+
+## Checkpoint Prod12 Em Placa E Sucessor C20.14 - 2026-07-14
+
+A prod12 foi gravada e confirmou na placa o marker `c18.image-prod.12`, rootfs
+ext4 expandido, wizard/QR/configuracao real, retorno ao player e playback. A
+corrida real revelou residuos de ownership e parada da sessao de settings que
+nao eram visiveis na auditoria offline.
+
+C20.13 fechou a posse transacional; C20.14 corrigiu a parada pelo systemd sem
+mascarar o problema. O pacote C20.14 passou stop abaixo de 15 segundos,
+cancelamento normal, rollback, reaplicacao e reboot com health final verde. A
+configuracao e o contexto foram preservados e nenhum fault GPU novo apareceu.
+
+```text
+board_image=c18-hwdecode-prod-12
+board_image_version=c18.image-prod.12
+totem_core_current=c20.14-settings-stop-hardening-20260714T034217Z-22bd473
+totem_core_previous=c20.13-settings-session-hardening-20260714T023435Z-868e328
+release_gate=84_of_84
+service_stop=passed_8467ms_result_success
+rollback_reapply=passed
+post_reboot_health=passed
+next_candidate=c18-hwdecode-prod-13
+distribution_reference=still_prod8_until_prod13_e2e
+```
+
+Como C20.14 foi aplicado depois da gravacao, prod12 nao e promovida como imagem
+final. A prod13 deve ser uma derivacao estreita da prod12, mudando apenas a
+identidade e o core embutido, seguida de auditoria e um E2E fisico final.
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.

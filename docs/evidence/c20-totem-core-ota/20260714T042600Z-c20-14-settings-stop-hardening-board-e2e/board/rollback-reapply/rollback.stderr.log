@@ -1,0 +1,2 @@
+2026-07-14T04:15:26Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-14T04:15:40Z INFO manual_rollback_ok rolled_to=c20.13-settings-session-hardening-20260714T023435Z-868e328

@@ -1,0 +1,2 @@
+2026-07-14T03:17:26+0000 orangepizero3 kernel: panfrost 1800000.gpu: Unhandled Page fault in AS0 at VA 0x000000000B1D4000
+2026-07-14T03:17:26+0000 orangepizero3 kernel: panfrost 1800000.gpu: js fault, js=0, status=JOB_BUS_FAULT, head=0xb174880, tail=0xb174880

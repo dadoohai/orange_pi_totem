@@ -472,17 +472,21 @@ O metodo final esta registrado em:
 
 ## Pacote Acumulado Atual
 
-Estado: C20.1-C20.9 aplicados e validados incrementalmente na placa por
-`totem-core`.
+Estado em 2026-07-14: o acumulo chegou ao C20.14 e foi validado na placa prod12
+por `totem-core`.
 
-Current observado apos C20.9:
-`releases/c20.9-wifi-step-copy-20260708T060338Z-34a9537`.
+Current final:
+`releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473`.
 
-Rollback imediato:
-`releases/c20.8-clock-all-steps-20260708T045317Z-661c582`.
+Rollback imediato exercitado:
+`releases/c20.13-settings-session-hardening-20260714T023435Z-868e328`.
 
 Ultimo pacote/evidencia:
-`docs/evidence/c20-totem-core-ota/20260708T061500Z-c20-9-wifi-step-copy-board-apply/`.
+`docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+
+O C20.14 passou release gate `84/84`, stop limitado pelo systemd, cancelamento
+normal, rollback, reaplicacao e reboot com playback final verde. Ele e a entrada
+exata para a imagem prod13; nao e uma promocao `stable` remota.
 
 Intencao macro: continuar acumulando apenas melhorias fechadas e reversiveis do
 wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
@@ -499,9 +503,10 @@ da gravacao e `Configuracao salva` somente depois do sucesso.
 Fonte da rodada: `docs/product/199_C25_VISIBLE_PRODUCT_STATES.md`.
 
 Estado: C25A (`totem-core`) e C25B (`player-runtime`) foram validados na placa
-de homologacao com rollback. O pacote consolidado e a inclusao do hook de
-launcher, updater e snapshots na proxima imagem continuam pendentes. C25B nao
-foi promovida para `stable` nem liberada para auto-pull publico.
+com rollback e incorporados na prod12. Os hardenings de settings posteriores
+foram acumulados no C20.14. A pendencia e embutir esse core final na prod13 e
+repetir o E2E da imagem; C25B nao foi promovida para `stable` nem liberada como
+novo alvo de auto-pull publico.
 
 ## Primeiras Rodadas Recomendadas
 
