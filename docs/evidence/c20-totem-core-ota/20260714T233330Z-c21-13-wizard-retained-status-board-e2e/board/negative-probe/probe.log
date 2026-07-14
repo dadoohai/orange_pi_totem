@@ -1,0 +1,9 @@
+2026-07-14T23:25:53+00:00 c20_e2e_probe_start artifact_dir=/tmp/c21-13-visual-e2e
+2026-07-14T23:25:54+00:00 RUN /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-preclean
+2026-07-14T23:25:55+00:00 RC 0 :: /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-preclean
+2026-07-14T23:25:55+00:00 RUN systemctl reset-failed totem-open-settings.service
+2026-07-14T23:25:56+00:00 RC 0 :: systemctl reset-failed totem-open-settings.service
+2026-07-14T23:25:56+00:00 RUN systemctl start kiosky-player.service
+2026-07-14T23:25:56+00:00 RC 0 :: systemctl start kiosky-player.service
+2026-07-14T23:25:56+00:00 start_open_settings_service
+2026-07-14T23:26:28+00:00 wizard_not_seen

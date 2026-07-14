@@ -1,0 +1,12 @@
+{
+  "candidate_version": "c21.13-wizard-retained-status-20260714T231059Z-81d64ee",
+  "config_context_policy_hashes_preserved": true,
+  "passed": true,
+  "player_active_final": true,
+  "player_restart_count_unchanged": true,
+  "public_player_runtime_changed": false,
+  "reapply_restored_candidate": true,
+  "rollback_restored_previous_current": true,
+  "schema": "dadooh.c20.15.board_e2e.v1",
+  "timers_preserved": true
+}

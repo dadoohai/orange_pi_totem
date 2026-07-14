@@ -1,0 +1,4 @@
+dedicated_profile_present=False
+dedicated_profile_active=False
+retained_network_ready=False
+missing_or_inactive_profile_failed_closed=true

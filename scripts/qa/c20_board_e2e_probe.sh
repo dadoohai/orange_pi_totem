@@ -82,8 +82,10 @@ wait_for_review_screen() {
 }
 
 wait_for_settings_exit() {
-  for _ in $(seq 1 30); do
-    if ! pgrep -af "totem_setup_visual_wizard.py" >/dev/null 2>&1; then
+  for _ in $(seq 1 90); do
+    service_state="$(systemctl is-active totem-open-settings.service 2>/dev/null || true)"
+    if ! pgrep -af "totem_setup_visual_wizard.py" >/dev/null 2>&1 \
+      && [ "$service_state" = "inactive" ]; then
       return 0
     fi
     sleep 1
@@ -107,7 +109,7 @@ run /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-preclea
 run systemctl reset-failed totem-open-settings.service || true
 run systemctl start kiosky-player.service || true
 rm -rf "$WIZARD_DIR" "$SESSION_DIR"
-mkdir -p "$WIZARD_DIR" "$SESSION_DIR"
+install -d -m 0700 "$WIZARD_DIR" "$SESSION_DIR"
 
 status_snapshot "01-clean"
 

@@ -472,21 +472,22 @@ O metodo final esta registrado em:
 
 ## Pacote Acumulado Atual
 
-Estado em 2026-07-14: o acumulo chegou ao C20.14 e foi validado na placa prod12
-por `totem-core`.
+Estado em 2026-07-14: o acumulo chegou ao C20.15/C21.13 e foi validado na placa
+prod14 por `totem-core`.
 
-Current final:
-`releases/c20.14-settings-stop-hardening-20260714T034217Z-22bd473`.
+Candidata acumulada atual:
+`releases/core-updates/c21.13-wizard-retained-status-20260714T231059Z-81d64ee`.
 
 Rollback imediato exercitado:
-`releases/c20.13-settings-session-hardening-20260714T023435Z-868e328`.
+`releases/core-updates/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`.
 
 Ultimo pacote/evidencia:
-`docs/evidence/c20-totem-core-ota/20260714T042600Z-c20-14-settings-stop-hardening-board-e2e/`.
+`docs/evidence/c20-totem-core-ota/20260714T233330Z-c21-13-wizard-retained-status-board-e2e/`.
 
-O C20.14 passou release gate `84/84`, stop limitado pelo systemd, cancelamento
-normal, rollback, reaplicacao e reboot com playback final verde. Ele e a entrada
-exata para a imagem prod13; nao e uma promocao `stable` remota.
+O C21.13 passou release gate `84/84`, apply, rollback, reaplicacao, reentrada
+visual real, cancelamento e playback final verde, sem restart do player. Ele e
+uma candidata de `totem-core` em homologacao; nao substitui C21.12 como stable
+nem muda a imagem oficial por inferencia.
 
 Intencao macro: continuar acumulando apenas melhorias fechadas e reversiveis do
 wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
@@ -512,13 +513,19 @@ Regras de seguranca:
 - a leitura do perfil e read-only; a rodada nao altera rede, API, player,
   updater, kernel ou imagem.
 
-Estado em 2026-07-14: implementacao e testes offline verdes; replay completo do
-teclado passou 9 cenarios e 24 assercoes, com telas de pendencia e reentrada
-inspecionadas visualmente. Duas auditorias independentes fecharam sem blocker
-depois de exigir prova de Wi-Fi ativo e capturas completas. Empacotamento exato
-e E2E governado na placa ainda sao os gates para considerar esta rodada
-consolidada. `prod14` + C25B + C21.12 permanece a referencia de distribuicao e
-rollback.
+Estado em 2026-07-14: rodada fechada como a candidata homologation
+`c21.13-wizard-retained-status-20260714T231059Z-81d64ee`. O replay passou 9
+cenarios e 24 assercoes; release gate `84/84`, sandbox, duas auditorias
+independentes, apply, rollback, reaplicacao e E2E visual real passaram. O
+player voltou saudavel, sem restart. A placa da rodada nao possuia perfil Wi-Fi
+dedicado ativo: por isso, o hardware comprovou o caminho fail-closed e o caminho
+positivo de retencao ficou comprovado por self-test/replay. O ambiente atual foi
+mantido no fluxo real. Evidencia:
+`docs/evidence/c20-totem-core-ota/20260714T233330Z-c21-13-wizard-retained-status-board-e2e/`.
+
+Conclusao funcional: os tres itens estao fechados. C21.13 permanece candidata
+acumulada de homologacao; `prod14` + C25B + C21.12 permanece a referencia de
+distribuicao e rollback ate promocao explicita.
 
 ## Rodada C25 - Estados Visiveis
 

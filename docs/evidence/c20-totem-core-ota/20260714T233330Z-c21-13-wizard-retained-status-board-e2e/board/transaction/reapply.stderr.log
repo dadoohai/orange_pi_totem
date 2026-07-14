@@ -1,0 +1,7 @@
+2026-07-14T23:24:20Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-14T23:24:20Z INFO apply_start source=local:dadooh-totem-core-c21.13-wizard-retained-status-20260714T231059Z-81d64ee.manifest.json manifest=/tmp/c21.13-wizard-retained-status-20260714T231059Z-81d64ee/dadooh-totem-core-c21.13-wizard-retained-status-20260714T231059Z-81d64ee.manifest.json
+2026-07-14T23:24:20Z INFO local_payload_staged bytes=180187 sha256=b6a4ee0f33e0ded8247d4096dab890ef10e0f230548eefcf675ed577945a6132
+2026-07-14T23:24:20Z WARN release_dir_exists_will_overwrite path=/data/core/totem/releases/c21.13-wizard-retained-status-20260714T231059Z-81d64ee
+2026-07-14T23:24:27Z INFO totem_core_health_check_starting
+2026-07-14T23:24:34Z INFO apply_success version=c21.13-wizard-retained-status-20260714T231059Z-81d64ee
+2026-07-14T23:24:34Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c21.13-wizard-retained-status-20260714T231059Z-81d64ee

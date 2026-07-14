@@ -1,0 +1,2 @@
+display_timezone=America/Sao_Paulo
+display_time_matches=true

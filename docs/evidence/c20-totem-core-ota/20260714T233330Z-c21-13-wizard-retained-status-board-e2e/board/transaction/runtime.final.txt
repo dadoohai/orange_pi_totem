@@ -1,0 +1,10 @@
+utc=2026-07-14T23:24:35Z
+timezone=Etc/UTC
+player_active=active
+player_restarts=0
+settings_active=inactive
+core_timer_active=active
+core_timer_enabled=enabled
+hdmi=connected
+wifi_profile_present=false
+wifi_profile_active=false
