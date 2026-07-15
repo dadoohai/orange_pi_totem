@@ -11,8 +11,15 @@ sample/time bounds, one forward alias, motion/decode evidence before and after,
 monotonic frames and sustained progress. It never reclassifies the unknown rows
 as content evidence.
 
-Independent re-audit verdict: zero blockers. The reviewer reproduced the two
-original attacks and confirmed they now fail. Invalid sequence, regressive,
-negative, missing or over-limit timing, missing/frozen/reset frames, invalid
-local evidence, status-ahead, terminal and oversized runs also failed. The
-fixture suite passed `105/105`; no audit changes were made.
+Independent re-audit verdict after the first remediation: zero blockers within
+that audit scope. The reviewer reproduced the two original attacks and
+confirmed they failed. Invalid sequence, regressive, negative, missing or
+over-limit timing, missing/frozen/reset frames, invalid local evidence,
+status-ahead, terminal and oversized runs also failed. The fixture suite then
+passed `105/105`; no audit changes were made.
+
+A later independent final-behavior audit widened the adversarial boundary and
+found that the aligned samples immediately before and after the unknown run
+were not included in sequence/time continuity validation. That later finding,
+its correction and the final zero-blocker re-audit are recorded in
+`03-final-behavior-audit.md`.

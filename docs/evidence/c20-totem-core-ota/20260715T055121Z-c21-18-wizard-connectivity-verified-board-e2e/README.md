@@ -44,10 +44,12 @@ under `board/health/transition-classification-negative/`.
 
 The summary contract was reconciled narrowly: only a forward, contiguous,
 bounded transition with alignment before and after, one new alias, valid local
-decode evidence and sustained frame progress is accepted. A terminal or
-non-progressing run remains denied. The unchanged raw board artifacts were
-re-evaluated in `board/health/transition-classification-reconciled.json` and
-passed with three explicitly accounted transition samples.
+decode evidence and sustained frame progress is accepted. Sequence and timing
+must also remain contiguous across both aligned boundary samples. A terminal,
+detached or non-progressing run remains denied. The unchanged raw board
+artifacts were re-evaluated in
+`board/health/transition-classification-reconciled.json` and passed with three
+explicitly accounted transition samples.
 
 `c18_playback_health_summary.py` is image-fixed and deliberately excluded from
 `totem-core`. This correction is therefore a required input to the next
@@ -60,3 +62,7 @@ reference image; C21.18 did not silently replace the board copy.
 - C21.16 and C21.17 were superseded before board apply and never promoted.
 - Real Wi-Fi apply child-process lifecycle remains separately recorded for
   future hardening; this read-only indicator does not execute that path.
+- The harness `child_count` column inspects only the leader task and is
+  informational. Bounded probe-process evidence comes from the exact
+  `probe_pid` samples (three distinct, non-overlapping processes), together
+  with the thread, FD, RSS and cleanup checks.

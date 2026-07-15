@@ -539,8 +539,10 @@ Contrato funcional:
   forte;
 - internet usa `OK`, `!`, `X` ou `?`, com cor e simbolo para nao depender so de
   cor;
-- o transporte positivo exige uma unica rota IPv4 default preferida cuja
-  interface tambem esteja conectada e ativa no NetworkManager;
+- Ethernet ou Wi-Fi local pode ser mostrado quando a interface esta conectada
+  e ativa, mesmo sem rota; nesse caso a reachability continua `?`;
+- `OK` ou `!` exige uma unica rota IPv4 default preferida cuja interface
+  tambem esteja conectada e ativa no NetworkManager;
 - `OK` exige `HEAD` 200 na URL fixa de health do servico Dadooh, sem proxy,
   redirect, autenticacao, cookie, query ou identificador da placa;
 - `!` significa rota verificada mas servico Dadooh inacessivel; `X` significa
@@ -607,10 +609,11 @@ segundos e terminou com o player ativo, tocando e sem restart.
 Uma coleta de playback encontrou tres amostras classificadas como desconhecidas
 durante uma troca curta, embora frames, HW decode e alinhamento final estivessem
 verdes. O RCA mostrou conflito entre dois checks do summary. O gate passou a
-aceitar somente a transicao forward delimitada, progressiva e recuperada, e
-continua negando transicao terminal ou sem progresso. Os mesmos dados brutos
-foram reavaliados com resultado verde; a evidencia negativa original foi
-preservada.
+aceitar somente a transicao forward delimitada, progressiva e recuperada, com
+sequencia e tempo continuos inclusive nas duas amostras alinhadas que delimitam
+a troca. Continua negando transicao terminal, destacada ou sem progresso. Os
+mesmos dados brutos foram reavaliados com resultado verde; a evidencia negativa
+original foi preservada.
 
 O summary e uma ferramenta fixa da imagem, deliberadamente excluida do pacote
 `totem-core`. A correcao fica registrada como entrada obrigatoria da proxima
