@@ -110,6 +110,7 @@ CONNECTIVITY_INDICATOR_TIMEOUT_SEC = 1
 CONNECTIVITY_INDICATOR_START = "<!-- dadooh-connectivity-indicator:start -->"
 CONNECTIVITY_INDICATOR_END = "<!-- dadooh-connectivity-indicator:end -->"
 MAX_SCREEN_ARTIFACTS = 64
+MAX_MPV_IPC_REQUEST_ID = 2_147_483_647
 ACTIVE_SETTINGS_CONTEXT_MAX_AGE_SEC = 300
 TEXT_INPUT_MIN_RENDER_INTERVAL_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_RENDER_INTERVAL_SEC", "0.10"))
 TEXT_INPUT_REPEAT_DRAIN_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_REPEAT_DRAIN_SEC", "0.035"))
@@ -1462,8 +1463,7 @@ class VisualDisplay:
     def ipc_request(self, command: list[Any], *, timeout_sec: float = 1.0) -> dict[str, Any] | None:
         if not self.enabled or self.process is None or self.process.poll() is not None:
             return None
-        self.request_id += 1
-        request_id = self.request_id
+        request_id = self.next_request_id()
         payload = json.dumps({"command": command, "request_id": request_id}).encode("utf-8") + b"\n"
         deadline = time.monotonic() + timeout_sec
         buffer = b""
@@ -1493,6 +1493,10 @@ class VisualDisplay:
         except OSError:
             return None
         return None
+
+    def next_request_id(self) -> int:
+        self.request_id = (self.request_id % MAX_MPV_IPC_REQUEST_ID) + 1
+        return self.request_id
 
     def send_command(self, command: list[Any]) -> bool:
         response = self.ipc_request(command, timeout_sec=1.0)
@@ -6056,6 +6060,8 @@ def run_self_test() -> None:
 
             bounded_root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c20-screen-ring-", dir="/tmp"))
             bounded_display = VisualDisplay(bounded_root, enabled=False)
+            bounded_display.request_id = MAX_MPV_IPC_REQUEST_ID
+            assert_true(bounded_display.next_request_id() == 1, "MPV request IDs should wrap at a fixed bound")
             for index in range(MAX_SCREEN_ARTIFACTS + 7):
                 bounded_display.show(
                     f"screen-{index}",

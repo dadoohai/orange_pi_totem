@@ -552,17 +552,18 @@ Contrato 24/7:
   arquivos temporarios;
 - os SVGs temporarios da sessao usam anel fixo de 64 arquivos.
 
-Estado em 2026-07-15: rodada fechada como candidata homologation
-`c21.14-wizard-connectivity-20260715T003032Z-4835ca8`. Auditorias independentes,
-self-tests, replay de 9 cenarios/24 assercoes, policy static `81/81`, release
-gate `84/84`, sandbox, apply, rollback, reaplicacao, captura visual real e
-deep-health passaram. A politica stable bloqueou corretamente o primeiro apply
-homologation; o harness de bancada restaurou policy e timer depois de cada
-operacao. Configuracao, contexto e policy terminaram byte-identicos, com player
-ativo e zero restart. Evidencia:
+Estado em 2026-07-15: a candidata homologation
+`c21.14-wizard-connectivity-20260715T003032Z-4835ca8` passou self-tests, replay,
+policy static `81/81`, release gate `84/84`, sandbox, apply, rollback,
+reaplicacao, captura visual real e deep-health. A auditoria final do estado
+commitado, porem, encontrou dois blockers: falso `online` sem rota default e
+contador IPC sem teto. C21.14 foi supersedida sem promocao. A correcao exige
+rota verificada, contador circular e um unico orcamento de tempo para toda a
+coleta. Evidencia historica:
 `docs/evidence/c20-totem-core-ota/20260715T005134Z-c21-14-wizard-connectivity-board-e2e/`.
 
-C21.14 passa a ser a candidata acumulada atual. C21.12 continua stable de
+A nova identidade corrigida ainda precisa de pacote e roundtrip. Enquanto isso,
+C21.13 continua a candidata acumulada aprovada, C21.12 continua stable de
 retorno e `prod14` continua a imagem de referencia; nao houve publicacao nem
 promocao por inferencia.
 

@@ -17,6 +17,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from typing import Any, Callable
 
@@ -179,7 +180,7 @@ def assert_read_only_command(args: list[str]) -> None:
         raise AdapterError("command is not in the C9.5 read-only allowlist")
 
 
-def run_read_only_command(args: list[str], timeout_sec: int) -> CommandResult:
+def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
     assert_read_only_command(args)
     try:
         completed = subprocess.run(
@@ -808,11 +809,20 @@ def classify_device_category(device_name: str) -> str:
 def collect_connectivity_indicator(
     *,
     timeout_sec: int = 2,
-    command_runner: Callable[[list[str], int], CommandResult] = run_read_only_command,
+    command_runner: Callable[[list[str], float], CommandResult] = run_read_only_command,
     file_reader: Callable[[pathlib.Path], tuple[str, bool]] = read_text_if_present,
     nmcli_path: str | None = None,
+    monotonic_clock: Callable[[], float] = time.monotonic,
 ) -> dict[str, Any]:
     """Collect one bounded, privacy-safe network snapshot for local UI."""
+
+    deadline = monotonic_clock() + max(0.05, float(timeout_sec))
+
+    def run_snapshot_command(args: list[str]) -> CommandResult:
+        remaining = deadline - monotonic_clock()
+        if remaining <= 0:
+            return CommandResult("timeout")
+        return command_runner(args, max(0.05, remaining))
 
     if nmcli_path is None:
         nmcli_path = shutil.which("nmcli")
@@ -840,25 +850,22 @@ def collect_connectivity_indicator(
     cached_connectivity = UNKNOWN
 
     if nmcli_available:
-        device_result = command_runner(
-            ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"],
-            timeout_sec,
+        device_result = run_snapshot_command(
+            ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]
         )
         checks["device_status"] = device_result.status
         if device_result.status == "ok":
             device_status = parse_device_status(device_result.stdout)
 
-        active_result = command_runner(
-            ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"],
-            timeout_sec,
+        active_result = run_snapshot_command(
+            ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]
         )
         checks["active_connections"] = active_result.status
         if active_result.status == "ok":
             active_connections = parse_active_connections(active_result.stdout)
 
-        connectivity_result = command_runner(
-            ["nmcli", "-t", "-f", "CONNECTIVITY", "general"],
-            timeout_sec,
+        connectivity_result = run_snapshot_command(
+            ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]
         )
         checks["connectivity_cached"] = connectivity_result.status
         if connectivity_result.status == "ok":
@@ -876,6 +883,7 @@ def collect_connectivity_indicator(
     wifi_devices = set(device_status.get("wifi_connected_devices") or []) & set(
         active_connections.get("wifi_active_devices") or []
     )
+    route_verified = bool(route_device and (route_device in ethernet_devices or route_device in wifi_devices))
     if route_ambiguous:
         transport = UNKNOWN
     elif route_device in ethernet_devices:
@@ -900,9 +908,8 @@ def collect_connectivity_indicator(
 
     wifi_signal = UNKNOWN
     if nmcli_available and transport == "wifi":
-        signal_result = command_runner(
-            ["nmcli", "-t", "-f", "DEVICE,IN-USE,SIGNAL", "device", "wifi", "list", "--rescan", "no"],
-            timeout_sec,
+        signal_result = run_snapshot_command(
+            ["nmcli", "-t", "-f", "DEVICE,IN-USE,SIGNAL", "device", "wifi", "list", "--rescan", "no"]
         )
         checks["active_wifi_signal"] = signal_result.status
         if signal_result.status == "ok":
@@ -913,7 +920,7 @@ def collect_connectivity_indicator(
 
     if transport == "none":
         internet = "offline"
-    elif transport == UNKNOWN:
+    elif transport == UNKNOWN or not route_verified:
         internet = UNKNOWN
     elif cached_connectivity == "full":
         internet = "online"
@@ -2307,6 +2314,42 @@ def run_self_test() -> None:
             disconnected_indicator["internet"] == "offline",
             "stale cached full state must not override an absent transport",
         )
+
+        def active_wifi_without_route_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
+                return CommandResult("ok", "wlan0:wifi:connected\n")
+            if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
+                return CommandResult("ok", "802-11-wireless:wlan0\n")
+            if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
+                return CommandResult("ok", "full\n")
+            if args == [
+                "nmcli",
+                "-t",
+                "-f",
+                "DEVICE,IN-USE,SIGNAL",
+                "device",
+                "wifi",
+                "list",
+                "--rescan",
+                "no",
+            ]:
+                return CommandResult("ok", "wlan0:*:77\n")
+            return CommandResult("failed")
+
+        active_without_route_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=active_wifi_without_route_runner,
+            file_reader=lambda path: ("Iface Destination Gateway Flags\n", True),
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(
+            active_without_route_indicator["transport"] == "wifi",
+            "an active Wi-Fi link may still identify its local transport without a route",
+        )
+        assert_true(
+            active_without_route_indicator["internet"] == UNKNOWN,
+            "cached full must not show online without a verified default route",
+        )
         stale_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
             command_runner=disconnected_runner,
@@ -2355,6 +2398,26 @@ def run_self_test() -> None:
         assert_true(
             ambiguous_route_indicator["internet"] == UNKNOWN,
             "multiple default-route devices should not inherit cached full connectivity",
+        )
+        budget_clock = [0.0]
+        budget_timeouts: list[float] = []
+
+        def budget_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            budget_timeouts.append(timeout_sec)
+            budget_clock[0] += 0.4
+            return fake_runner(args, 1)
+
+        collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=budget_runner,
+            file_reader=wifi_reader,
+            nmcli_path="/usr/bin/nmcli",
+            monotonic_clock=lambda: budget_clock[0],
+        )
+        assert_true(len(budget_timeouts) == 3, "expired snapshot budget should skip later commands")
+        assert_true(
+            budget_timeouts[0] <= 1.0 and budget_timeouts[-1] <= 0.21,
+            "all network commands should share one total refresh budget",
         )
         local_networks, local_list_status = list_wifi_networks_for_local_ui(
             timeout_sec=1,

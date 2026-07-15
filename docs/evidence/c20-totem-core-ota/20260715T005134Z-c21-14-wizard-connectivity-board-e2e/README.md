@@ -9,9 +9,10 @@
 - payload SHA-256:
   `f324098458e0c50e472af0902f9216ef82d4c99dc1c1975976f3af07f186a8f6`.
 
-## Resultado
+## Resultado da placa
 
-`passed=true`. O wizard mostra um indicador discreto ao lado da hora:
+O roundtrip de bancada terminou com `passed=true`. O wizard mostra um indicador
+discreto ao lado da hora:
 
 - Ethernet ou Wi-Fi e a intensidade do Wi-Fi;
 - `OK` para internet disponivel, `!` para limitado/portal, `X` para offline e
@@ -32,6 +33,13 @@ terminaram com os mesmos hashes, timer ativo e zero restart do player.
 A captura real confirmou `Ethernet + OK`, data/hora de Sao Paulo, navegacao ate
 Revisao, cancelamento e retorno ao player. O deep-health final passou com um
 MPV, hardware decode esperado, frames avancando e zero restart.
+
+## Veredito final
+
+`superseded_after_final_audit`. Uma auditoria independente posterior encontrou
+dois blockers antes de qualquer promocao: o cache `full` podia mostrar `OK`
+quando nao havia rota default atual, e o identificador IPC crescia sem teto. A
+correcao deve sair com nova identidade imutavel; C21.14 nao deve ser promovida.
 
 ## Contrato 24/7
 
@@ -54,9 +62,10 @@ verificacao; o roundtrip usou o payload correto.
 
 O estado de internet vem do cache do NetworkManager; nao e speedtest nem probe
 externo em tempo real. O caminho Wi-Fi positivo foi coberto por testes e galeria,
-mas a placa desta rodada estava em Ethernet. C21.14 e candidata de homologacao:
-nao promove stable, nao publica release e nao altera player-runtime, imagem,
-kernel, midia ou configuracao do cliente.
+mas a placa desta rodada estava em Ethernet. C21.14 foi uma candidata de
+homologacao exercitada e depois supersedida: nao promove stable, nao publica
+release e nao altera player-runtime, imagem, kernel, midia ou configuracao do
+cliente.
 
 ## Conteudo
 

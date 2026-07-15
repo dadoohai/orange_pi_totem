@@ -26,3 +26,23 @@ Um snapshot e substituido em memoria; nao existem fila, thread ou historico. O
 fallback usa dois slots e as telas temporarias usam anel de 64 arquivos.
 
 Nenhum auditor editou o repositorio ou a placa.
+
+## Auditoria final do estado commitado
+
+Veredito: reprovado, dois blockers.
+
+1. Sem rota default, uma unica conexao ativa ainda podia herdar o estado
+   `full` cacheado e mostrar internet `online`.
+2. O contador de request IPC do fallback MPV crescia sem teto enquanto o
+   processo permanecesse aberto.
+
+Riscos nao bloqueantes: a leitura sequencial podia consumir ate quatro timeouts
+e a captura fisica cobriu somente paisagem com Ethernet. O auditor confirmou
+self-tests, policy static `81/81`, pacote byte-identico ao commit, hashes,
+roundtrip da placa, ausencia de segredo e ausencia de overclaim stable.
+
+Decisao central: os dois blockers foram aceitos. C21.14 ficou imutavel e
+supersedida; a correcao exige nova candidata. O primeiro passa a exigir rota
+default verificada para qualquer estado positivo. O segundo usa contador
+circular fixo. O mesmo ajuste limita toda a coleta a um unico orcamento de
+tempo, eliminando a composicao de quatro timeouts.
