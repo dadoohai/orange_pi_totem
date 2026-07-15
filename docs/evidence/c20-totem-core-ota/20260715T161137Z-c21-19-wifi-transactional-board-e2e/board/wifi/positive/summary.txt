@@ -1,0 +1,42 @@
+Dadooh C9.6 wifi apply
+
+schema_version: dadooh-c9.6-wifi-controlled-apply.v1
+generated_at_utc: 2026-07-15T15:29:06Z
+mode: apply
+preflight_apply_allowed: true
+ssh_path_category: ethernet
+ssh_path_risk_acknowledged: false
+local_console_confirmed: false
+apply_requires_local_recovery: false
+wifi_profile_created: true
+wifi_profile_replaced: true
+wifi_activation_attempted: true
+wifi_activation_result: success
+failure_category: none
+ip_acquired: True
+wifi_link_ready: true
+default_route_present: True
+connectivity_check: not_checked
+rollback_status: not_attempted
+previous_profile_restored: false
+profile_retained: true
+persistent_product_wifi: true
+dedicated_profile_persistent: true
+autoconnect_enabled: true
+profile_source_retained_during_activation: true
+secrets_file_cleanup: true
+
+Guardrails:
+network_changed: true
+real_config_read: false
+real_config_written: false
+writer_called: false
+service_changed: false
+player_changed: false
+mpv_changed: false
+hotspot_created: false
+portal_created: false
+reboot_called: false
+network_details_published: false
+address_details_published: false
+credential_values_published: false

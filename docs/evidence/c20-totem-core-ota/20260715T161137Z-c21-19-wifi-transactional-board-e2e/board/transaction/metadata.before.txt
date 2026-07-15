@@ -1,0 +1,4 @@
+0:995 640 1485 1784122959 /data/config/config.json
+0:0 600 285 1784122960 /data/state/totem-settings/last-settings.json
+0:0 644 217 1784050365 /data/updates/policy.json
+0:0 600 278 1784125539 /etc/NetworkManager/system-connections/dadooh-c9-8-wifi-persistent.nmconnection

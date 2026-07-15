@@ -1,0 +1,9 @@
+{
+  "autoconnect": true,
+  "contains_psk": false,
+  "contains_ssid_value": false,
+  "profile_mode": "600",
+  "schema": "dadooh.c21.wifi_profile.sanitized_proof.v1",
+  "ssid_bytes": 13,
+  "ssid_trailing_spaces": 2
+}

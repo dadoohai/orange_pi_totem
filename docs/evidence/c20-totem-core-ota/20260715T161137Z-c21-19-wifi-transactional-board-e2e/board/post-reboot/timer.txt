@@ -1,0 +1,5 @@
+NEXT                        LEFT      LAST                        PASSED       UNIT                     ACTIVATES
+Wed 2026-07-15 16:21:16 UTC 9min left Wed 2026-07-15 14:39:03 UTC 1h 32min ago totem-update-agent.timer totem-update-agent.service
+
+1 timers listed.
+Pass --all to see loaded but inactive timers, too.

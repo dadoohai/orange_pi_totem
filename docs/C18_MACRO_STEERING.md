@@ -389,3 +389,14 @@ Enquanto nada mudar, a ordem de execucao e:
     C21.12/prod14 continua a referencia publica e de retorno; nao houve stable,
     imagem nova ou promocao por inferencia. Evidencia:
     `docs/evidence/c20-totem-core-ota/20260715T055121Z-c21-18-wizard-connectivity-verified-board-e2e/`.
+14. A frente de Wi-Fi persistente foi fechada na candidata C21.19. O perfil
+    agora e substituido de forma transacional: conexao real com SSID contendo
+    espacos finais foi mantida; uma rede inexistente restaurou byte a byte o
+    perfil anterior. Stable bloqueou o prerelease, e apply, rollback para
+    C21.18, reaplicacao, fluxo visual sem salvar e reboot passaram. A placa
+    terminou com C21.19 current, C21.18 previous, timer stable ativo, Ethernet
+    e Wi-Fi conectados e player sem restart. O ajuste estreito do summary de
+    playback em `c075a55` e fixo de imagem e entra na proxima referencia; ele
+    nao foi incluido por inferencia no pacote. C21.12/prod14 continua a
+    referencia publica. Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260715T161137Z-c21-19-wifi-transactional-board-e2e/`.

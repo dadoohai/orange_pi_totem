@@ -1,0 +1,4 @@
+e9c80ebdb7c7d213f0aff837e9a60aad435234014ce4b73f5bb6dba76977bd30  /data/config/config.json
+b509d0df563ca36cf7be98a320148829d9b4439be666c8ef2ca8ed1f13ab50d0  /data/state/totem-settings/last-settings.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+d1330736d4a5a4ba03046bf29daf7c1dfd295189bfecaec7879ceb30c4114c41  /etc/NetworkManager/system-connections/dadooh-c9-8-wifi-persistent.nmconnection

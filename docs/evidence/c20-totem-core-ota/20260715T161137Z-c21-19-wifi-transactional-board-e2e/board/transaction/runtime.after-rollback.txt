@@ -1,0 +1,12 @@
+utc=2026-07-15T15:25:49Z
+boot_id=0625ed4a-28df-4bdc-813a-0caae8ed2ae5
+current=/data/core/totem/releases/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18
+previous=/data/core/totem/releases/c21.19-wifi-transactional-20260715T145334Z-a214648
+player_active=active
+player_restarts=0
+settings_active=inactive
+core_timer_active=inactive
+core_timer_enabled=disabled
+ethernet_state=100 (connected)
+wifi_state=100 (connected)
+wifi_profile_active=dadooh-c9-8-wifi-persistent

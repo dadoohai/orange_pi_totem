@@ -1,0 +1,70 @@
+2026-07-15T16:01:05+00:00
+kiosky-player=active
+open-settings=inactive
+settings-trigger=active
+ethernet=100 (connected)
+wifi=100 (connected)
+e9c80ebdb7c7d213f0aff837e9a60aad435234014ce4b73f5bb6dba76977bd30  /data/config/config.json
+b509d0df563ca36cf7be98a320148829d9b4439be666c8ef2ca8ed1f13ab50d0  /data/state/totem-settings/last-settings.json
+d1330736d4a5a4ba03046bf29daf7c1dfd295189bfecaec7879ceb30c4114c41  /etc/NetworkManager/system-connections/dadooh-c9-8-wifi-persistent.nmconnection
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.19-wifi-transactional-20260715T145334Z-a214648",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-15T15:25:58Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T14:53:40Z",
+      "path": "/data/core/totem/releases/c21.19-wifi-transactional-20260715T145334Z-a214648",
+      "payload_sha256": "c9f743106203fb87809ce5f36f13b115bcf1fb553b1ba825ec8f40c918f706cf",
+      "source": "local:dadooh-totem-core-c21.19-wifi-transactional-20260715T145334Z-a214648.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "a214648540cf8a11791cffdb9d25bf7d57196f01",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.19-wifi-transactional-20260715T145334Z-a214648"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-15T15:26:06Z",
+      "source": "local:dadooh-totem-core-c21.19-wifi-transactional-20260715T145334Z-a214648.manifest.json",
+      "started_at_utc": "2026-07-15T15:25:51Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.19-wifi-transactional-20260715T145334Z-a214648"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-15T15:25:49Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T04:55:34Z",
+      "path": "/data/core/totem/releases/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18",
+      "payload_sha256": "c408e671d130470b978e8246a4fa522ef16c831777202eac8c6ab14b716dbcfa",
+      "source": "local:dadooh-totem-core-c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "3bdbd1868693c3ffabcb7a5183c3a05b001d9c46",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18",
+      "via": "manual_rollback"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-14T17:32:45Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

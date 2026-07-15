@@ -1,0 +1,47 @@
+{
+  "artifact_id": "20260715T161137Z-c21-19-wifi-transactional-board-e2e",
+  "board_final": {
+    "current": "c21.19-wifi-transactional-20260715T145334Z-a214648",
+    "ethernet_connected": true,
+    "player_active": true,
+    "player_restarts": 0,
+    "previous": "c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18",
+    "settings_inactive": true,
+    "stable_policy_restored": true,
+    "timer_enabled_and_active": true,
+    "wifi_connected": true
+  },
+  "candidate": {
+    "channel": "homologation",
+    "component": "totem-core",
+    "payload_sha256": "c9f743106203fb87809ce5f36f13b115bcf1fb553b1ba825ec8f40c918f706cf",
+    "source_commit": "a214648540cf8a11791cffdb9d25bf7d57196f01",
+    "version": "c21.19-wifi-transactional-20260715T145334Z-a214648"
+  },
+  "checks": {
+    "exact_whitespace_ssid_persisted": true,
+    "failed_activation_restored_previous_profile": true,
+    "generic_release_gate_84_of_84": true,
+    "governed_visual_cancel_without_persistent_write": true,
+    "package_release_gate_84_of_84": true,
+    "playback_reconciliation_fail_closed": true,
+    "post_reboot_playback_clean": true,
+    "profile_mode_0600_and_autoconnect": true,
+    "reboot_preserved_candidate_and_previous": true,
+    "roundtrip_apply_rollback_reapply": true,
+    "stable_policy_blocked_prerelease": true
+  },
+  "image_fixed_follow_up": {
+    "next_reference_image_must_embed_commit": "c075a55",
+    "totem_core_payload_contains_playback_summary": false
+  },
+  "non_claims": [
+    "not_a_stable_promotion",
+    "not_a_public_release",
+    "not_a_new_reference_image",
+    "not_a_physical_f10_retest",
+    "not_proof_of_every_field_access_point_or_rf_condition"
+  ],
+  "passed": true,
+  "schema": "dadooh.c20.wifi_transaction_candidate_closure.v1"
+}

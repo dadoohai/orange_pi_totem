@@ -1,0 +1,9 @@
+uinput_sequence_sent count=1
+f10_uinput_wizard_seen=false
+entry_method=controlled_systemd_service
+wizard_seen=true
+uinput_sequence_sent count=2
+uinput_sequence_sent count=1
+cancel_exited=true
+persistent_hashes_unchanged=true
+result=passed

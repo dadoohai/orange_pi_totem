@@ -814,3 +814,8 @@ podemos escolher entre:
 9. Auditoria independente final fechada com tres pareceres GO e zero blocker.
 10. Rodada atual: `prod14` + C25B + C21.12 e a referencia; a prioridade volta a
     ativacao/estados visiveis, mantendo M4 minimo em paralelo.
+11. C21.19 fecha em homologacao o Wi-Fi persistente transacional: pacote exato,
+    bloqueio stable, apply/rollback/reapply, conexao real, restauracao em falha,
+    fluxo visual sem escrita, reboot e playback passaram. A referencia publica
+    continua `prod14` + C25B + C21.12. O summary `c075a55` fica marcado como
+    entrada obrigatoria da proxima imagem, nao como parte do pacote C21.19.

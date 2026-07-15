@@ -472,21 +472,21 @@ O metodo final esta registrado em:
 
 ## Pacote Acumulado Atual
 
-Estado em 2026-07-15: C20.16 foi fechada na candidata C21.18 depois de tres
-candidatas intermediarias bloqueadas ou supersedidas antes de promocao.
+Estado em 2026-07-15: a frente seguinte fechou Wi-Fi persistente transacional
+na candidata C21.19, acumulada sobre C21.18.
 
 Candidata acumulada atual:
-`releases/core-updates/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18`.
+`releases/core-updates/c21.19-wifi-transactional-20260715T145334Z-a214648`.
 
 Referencia stable de distribuicao e retorno:
 `releases/core-updates/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`.
 
 Ultimo pacote/evidencia:
-`docs/evidence/c20-totem-core-ota/20260715T055121Z-c21-18-wizard-connectivity-verified-board-e2e/`.
+`docs/evidence/c20-totem-core-ota/20260715T161137Z-c21-19-wifi-transactional-board-e2e/`.
 
-O C21.18 passou dois release gates `84/84`, bloqueio de prerelease pela policy
-stable, apply, rollback para C21.13, reaplicacao, fluxo visual real,
-cancelamento sem writer/rede e playback preservado sem restart. Ele e a
+O C21.19 passou os gates `84/84`, bloqueio de prerelease pela policy stable,
+apply, rollback para C21.18, reaplicacao, Wi-Fi positivo e negativo real,
+cancelamento visual sem escrita e reboot com playback preservado. Ele e a
 candidata acumulada de `totem-core` em homologacao; nao substitui C21.12 como
 stable nem muda a imagem oficial por inferencia.
 
@@ -622,6 +622,37 @@ imagem de referencia; C21.18 nao altera esse binario na placa por inferencia.
 Estado final da bancada: current C21.18, previous C21.13, policy/timer stable
 restaurados e player ativo. C21.12 continua stable de retorno e `prod14`
 continua imagem de referencia ate decisao explicita de promocao ou nova imagem.
+
+## Rodada C20.17 - Wi-Fi persistente transacional
+
+Objetivo: tornar a configuracao Wi-Fi real segura para reentrada e falhas de
+campo sem perder a conectividade anterior.
+
+Contrato fechado:
+
+- SSID e senha preservam exatamente os bytes informados, inclusive espacos nas
+  bordas;
+- o perfil antigo permanece disponivel durante a tentativa;
+- somente ativacao com IPv4 confirma sucesso e retencao do novo perfil;
+- falha de ativacao ou IP restaura o perfil anterior exato;
+- primeira configuracao falha nao deixa perfil parcial;
+- se a fonte anterior nao puder ser preservada, a operacao falha fechada;
+- status e UI distinguem tentativa, sucesso e restauracao sem expor segredo;
+- Ethernet de recuperacao, player, config real e servicos fora da rede nao sao
+  modificados pelo adaptador.
+
+Estado: fechado na candidata homologation
+`c21.19-wifi-transactional-20260715T145334Z-a214648`. O roundtrip OTA real,
+rede positiva com SSID de espacos finais, falha sintetica com restauracao,
+fluxo visual sem salvar e reboot final passaram. A placa terminou com C21.19
+current, C21.18 previous, policy/timer stable restaurados, dois links ativos e
+player sem restart. Evidencia:
+`docs/evidence/c20-totem-core-ota/20260715T161137Z-c21-19-wifi-transactional-board-e2e/`.
+
+O RCA gerou tambem o commit image-fixed `c075a55`, que reconhece somente uma
+ponte final desconhecida em transicao encadeada de playback quando ha prova
+completa de limites, decode, sequencia, tempo e progresso. Ele nao pertence ao
+payload `totem-core` e deve entrar na proxima imagem de referencia.
 
 ## Rodada C25 - Estados Visiveis
 
