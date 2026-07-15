@@ -23,4 +23,25 @@ closure results are recorded below after execution.
 
 ## Closure
 
-Pending final clean-tree gate execution.
+Closure commit `0bd521198a20c77309afc14b0004fdefe85278b9` was clean, with
+tree `b611c5fff6f1e9098785164abcb10628b5d04d71`. On that exact state:
+
+- the corrected playback fixture passed `106/106`;
+- regenerating the summary from the unchanged raw board inputs with Panfrost
+  `delta` policy produced the identical SHA-256
+  `03a823e264a2dd771528026983be95f02fc866bed2d7034e9b1fd818c3b3e4fa` and a
+  green result;
+- the exact-package release gate passed `84/84`, including package identity,
+  sandbox apply/rollback and clean initial/final guards;
+- the generic release gate passed `84/84` with the same clean HEAD/tree;
+- the gates were run serially because their legacy smoke tests share fixed
+  temporary paths; a deliberately discarded parallel attempt demonstrated
+  that the gates are not concurrency-safe but did not modify the repository or
+  package.
+
+The refreshed gate JSON files are committed in `gates/`. Evidence hashes were
+regenerated and verified after this closure record.
+
+Final verdict: zero package, governance or playback-evidence blockers for
+C21.18 as a homologation-only accumulated `totem-core` candidate. This does not
+promote stable or create a new reference image.

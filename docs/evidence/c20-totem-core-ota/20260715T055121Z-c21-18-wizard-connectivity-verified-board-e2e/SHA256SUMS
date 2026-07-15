@@ -1,9 +1,9 @@
-06948f8ebe01bcb9692ce0973bcdb4bf62e5239a416239836d3927e315dfeff6  ./README.md
+6d5ae106289872d1b57a782420c36cf4f8bcf2af8a4432afa40e1c36d252555b  ./README.md
 332c3afbea6532a2f620bc860b2a56cda9bccab31e164f1369d34b6eb3d56295  ./audits/00-board-harness-audit.md
 63bf874fb4d16dd74074eefa0f1d2a26426d5671fccc27f2e3bd32a21fef17f4  ./audits/01-playback-summary-rca.md
 a9ddf514e9c9b64e5127fa8be610d4b4d1c741b2f6719368e6bd3b11f552f61b  ./audits/02-playback-summary-reaudit.md
 d6b85851d1d4b35055b2bb545fc7bdfd28ec8b35ee6bf8a66e53dfc7084dfebd  ./audits/03-final-behavior-audit.md
-36e9eae1964893cb19d8e759ef930989a4815402fae009bb2064ab91bfc296a5  ./audits/04-final-package-audit.md
+5111d17f20afe4dbc4fd7803522b2684371bf0a65529428af4a674860336f785  ./audits/04-final-package-audit.md
 6c6a1e755e35be888551b45bb1b8ffef24950705fa5df29723555910cac17b46  ./board/final-live-state.txt
 92e61cc46113245a7981e9cf6f97132652fc7ca37a904f2f2a8c3d2d3708d011  ./board/health/transition-classification-negative/deep-health-kernel.json
 4b407cef0b96e40382f4d49d5152e28aa58b794a9b04ea1007a0ce6354554563  ./board/health/transition-classification-negative/deep-health-player-counters.json
@@ -95,8 +95,8 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./board/visual
 92ce1f8d7f67f4ee7d57abab22331d5228a4942c62a9aecb6790abced9ac265b  ./board/visual/state.after.txt
 c855978143c65b2895769fa37a5784dcc69cdfce23124c157eb822b8b9c252f9  ./board/visual/state.before.txt
 832756dc858774b3eff3c01443ad231db893297c094d4af6bacaa330dd840555  ./board/visual/wizard-process.txt
-d93d15c9cc3370e51cf9fd49aa496581535300ce16d7345b12e01617b8bf66cc  ./gates/generic-release-gate.json
-99fefc3dac174491653c3f83a8cb4c13ddc19576e6fc43896f35954b7de36bbb  ./gates/package-release-gate.json
+70ecb986231b97109e16723e1ce069ec49e5e39a6d9f27c779e835e9816c636c  ./gates/generic-release-gate.json
+cef52724f67c022fcf72b2f7af7073b8b427ec5f022b9ff8643654764265372c  ./gates/package-release-gate.json
 02e038edbbad92c536f495ff88e91870c61059a881d11401125633a48b936e71  ./gates/static-policy-tests.txt
 b9d04d5ab8f3a787e76afbfe4aab91b59eb041b610820e168998b718e5943018  ./gates/wizard-replay-assertions.json
 e09f022a8f681d513d99ce6fff91b1338030fe8a6de0726524e5761e86d11358  ./gates/wizard-replay-summary.json

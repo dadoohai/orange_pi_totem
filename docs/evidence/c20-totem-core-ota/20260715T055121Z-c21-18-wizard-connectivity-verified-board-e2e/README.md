@@ -19,7 +19,8 @@ soak.
 
 ## Results
 
-- Generic and exact-package release gates: `84/84`, zero failures.
+- Generic and exact-package release gates: `84/84`, zero failures, rerun
+  serially on clean closure commit `0bd5211`.
 - Stable policy rejected prerelease apply with rc `41`.
 - Governed apply, rollback to C21.13 and reapply: rc `0`.
 - Final board: current C21.18, previous C21.13, stable policy/timer restored,
