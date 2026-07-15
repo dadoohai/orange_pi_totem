@@ -706,6 +706,117 @@ def sanitized_status_snapshot(row: dict[str, str]) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _bounded_forward_unclassified_indexes(
+    rows: list[dict[str, str]],
+    events: list[dict[str, Any]],
+    start: int,
+    end: int,
+) -> set[int]:
+    """Accept only a final unknown hop in a proven forward status lag."""
+
+    if not _status_mpv_is_forward_status_lag(events, start, end):
+        return set()
+    if start <= 0 or end >= len(events):
+        return set()
+
+    before = events[start - 1]
+    after = events[end]
+    run = events[start:end]
+    run_rows = [rows[int(event["row_index"])] for event in run]
+    unknown_offsets = [
+        offset
+        for offset, row in enumerate(run_rows)
+        if playback_evidence_kind(row) == "unclassified_media"
+    ]
+    if len(unknown_offsets) != 1:
+        return set()
+    if unknown_offsets != list(range(unknown_offsets[0], len(run_rows))):
+        return set()
+    if any(
+        playback_evidence_kind(row) not in {"motion_media", "unclassified_media"}
+        for row in run_rows
+    ):
+        return set()
+
+    before_row = rows[int(before["row_index"])]
+    after_row = rows[int(after["row_index"])]
+    if playback_evidence_kind(before_row) != "motion_media":
+        return set()
+    if playback_evidence_kind(after_row) != "motion_media":
+        return set()
+    if not row_local_evidence(before_row, typed=True):
+        return set()
+    if not all(row_local_evidence(row, typed=True) for row in run_rows):
+        return set()
+    if not row_local_evidence(after_row, typed=True):
+        return set()
+
+    unknown_events = [run[offset] for offset in unknown_offsets]
+    final_alias = after["mpv_alias"]
+    if not final_alias or any(event["mpv_alias"] != final_alias for event in unknown_events):
+        return set()
+
+    proof_events = list(unknown_events)
+    recovery_events: list[dict[str, Any]] = []
+    cursor = end
+    while cursor < len(events) and len(recovery_events) < MIN_FRAME_PROGRESS_DELTAS + 1:
+        event = events[cursor]
+        previous = proof_events[-1]
+        row = rows[int(event["row_index"])]
+        if int(event["row_index"]) != int(previous["row_index"]) + 1:
+            break
+        if not event["aligned"] or event["mpv_alias"] != final_alias:
+            break
+        if playback_evidence_kind(row) != "motion_media":
+            break
+        if not row_local_evidence(row, typed=True):
+            break
+        proof_events.append(event)
+        recovery_events.append(event)
+        cursor += 1
+        proof_frames = [
+            as_frame_number(rows[int(value["row_index"])].get("estimated_frame_number"))
+            for value in proof_events
+        ]
+        if sustained_progressed(proof_frames):
+            break
+
+    proof_rows = [rows[int(event["row_index"])] for event in proof_events]
+    boundary_rows = [
+        rows[int(event["row_index"])]
+        for event in [before, *run, *recovery_events]
+    ]
+    sequences = [as_int(row.get("seq")) for row in boundary_rows]
+    if any(value <= 0 for value in sequences) or any(
+        current != previous + 1 for previous, current in zip(sequences, sequences[1:])
+    ):
+        return set()
+    rel_seconds = [as_float(row.get("rel_sec")) for row in boundary_rows]
+    if any(value is None or value < 0 for value in rel_seconds):
+        return set()
+    valid_rel_seconds = [float(value) for value in rel_seconds if value is not None]
+    if any(
+        current <= previous
+        for previous, current in zip(valid_rel_seconds, valid_rel_seconds[1:])
+    ):
+        return set()
+    proof_rel_seconds = [as_float(row.get("rel_sec")) for row in proof_rows]
+    if any(value is None for value in proof_rel_seconds):
+        return set()
+    valid_proof_rel_seconds = [float(value) for value in proof_rel_seconds if value is not None]
+    if max(valid_proof_rel_seconds) - min(valid_proof_rel_seconds) > MAX_STATUS_MPV_TRANSITION_LAG_SECONDS:
+        return set()
+    frames = [as_frame_number(row.get("estimated_frame_number")) for row in proof_rows]
+    valid_frames = [float(value) for value in frames if value is not None]
+    if len(valid_frames) != len(frames) or any(
+        current < previous for previous, current in zip(valid_frames, valid_frames[1:])
+    ):
+        return set()
+    if not sustained_progressed(frames):
+        return set()
+    return {int(event["row_index"]) for event in unknown_events}
+
+
 def bounded_transition_unclassified_indexes(rows: list[dict[str, str]]) -> set[int]:
     """Return typed unknown rows proven to be a bounded forward transition.
 
@@ -749,6 +860,9 @@ def bounded_transition_unclassified_indexes(rows: list[dict[str, str]]) -> set[i
         ):
             index += 1
         end = index
+        accepted.update(
+            _bounded_forward_unclassified_indexes(rows, events, start, end)
+        )
         if not _status_mpv_is_bounded_transition_lag(events, start, end):
             continue
 

@@ -1700,6 +1700,175 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
             3,
         )
 
+    def test_accepts_final_unclassified_hop_in_proven_forward_chain(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+            ],
+        )
+        rows = fixture.rows()
+        for row in rows:
+            row["current_path_kind"] = "motion_media"
+            row["video_params_json"] = VALID_VIDEO_PARAMS
+        rows[7]["current_path_kind"] = "unclassified_media"
+        fixture.write_rows(rows)
+
+        result = fixture.result()
+        self.assertTrue(result["passed"])
+        self.assertTrue(result["checks"]["status_mpv_path_aligned"])
+        self.assertTrue(result["checks"]["unclassified_media_bounded_to_startup"])
+        self.assertEqual(result["counters"]["status_mpv_unexplained_mismatch_runs"], 0)
+        self.assertEqual(
+            result["counters"]["unclassified_media_bounded_transition_samples"],
+            1,
+        )
+
+    def test_rejects_multiple_final_unclassified_hops_in_forward_chain(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+            ],
+        )
+        rows = fixture.rows()
+        for row in rows:
+            row["current_path_kind"] = "motion_media"
+            row["video_params_json"] = VALID_VIDEO_PARAMS
+        rows[5]["current_path_kind"] = "unclassified_media"
+        rows[6]["current_path_kind"] = "unclassified_media"
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "unclassified_media_bounded_to_startup")
+        self.assertEqual(
+            result["counters"]["unclassified_media_bounded_transition_samples"],
+            0,
+        )
+
+    def test_rejects_final_unclassified_hop_without_recovery_progress(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+            ],
+        )
+        rows = fixture.rows()
+        for row in rows:
+            row["current_path_kind"] = "motion_media"
+            row["video_params_json"] = VALID_VIDEO_PARAMS
+        rows[5]["current_path_kind"] = "unclassified_media"
+        for row in rows[5:8]:
+            row["estimated_frame_number"] = "180"
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "unclassified_media_bounded_to_startup")
+        self.assertEqual(
+            result["counters"]["unclassified_media_bounded_transition_samples"],
+            0,
+        )
+
+    def test_rejects_final_unclassified_hop_without_forward_or_local_proof(self) -> None:
+        for malformed in ("missing_next", "bad_hwdec", "vo_false", "missing_frame", "bad_dimensions"):
+            with self.subTest(malformed=malformed):
+                fixture = self.with_case()
+                self.write_status_mpv_alignment_rows(
+                    fixture,
+                    [
+                        ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                        ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                        ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                        ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                    ],
+                )
+                rows = fixture.rows()
+                for row in rows:
+                    row["current_path_kind"] = "motion_media"
+                    row["video_params_json"] = VALID_VIDEO_PARAMS
+                rows[5]["current_path_kind"] = "unclassified_media"
+                if malformed == "missing_next":
+                    for row in rows:
+                        snapshot = json.loads(row["status_snapshot_json"])
+                        snapshot.pop("next_item", None)
+                        row["status_snapshot_json"] = json.dumps(snapshot, separators=(",", ":"))
+                elif malformed == "bad_hwdec":
+                    rows[5]["hwdec_current"] = "no"
+                elif malformed == "vo_false":
+                    rows[5]["vo_configured"] = "false"
+                elif malformed == "missing_frame":
+                    rows[5]["estimated_frame_number"] = ""
+                else:
+                    rows[5]["video_params_json"] = "{}"
+                fixture.write_rows(rows)
+
+                result = self.assert_fails_with(fixture, "unclassified_media_bounded_to_startup")
+                self.assertEqual(
+                    result["counters"]["unclassified_media_bounded_transition_samples"],
+                    0,
+                )
+
+    def test_rejects_unclassified_hop_before_forward_chain_finishes(self) -> None:
+        fixture = self.with_case()
+        self.write_status_mpv_alignment_rows(
+            fixture,
+            [
+                ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-a", "<media-path:a>", "0", "<media-path:b>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-b", "<media-path:b>", "1", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+            ],
+        )
+        rows = fixture.rows()
+        for row in rows:
+            row["current_path_kind"] = "motion_media"
+            row["video_params_json"] = VALID_VIDEO_PARAMS
+        rows[1]["current_path_kind"] = "unclassified_media"
+        fixture.write_rows(rows)
+
+        result = self.assert_fails_with(fixture, "unclassified_media_bounded_to_startup")
+        self.assertEqual(
+            result["counters"]["unclassified_media_bounded_transition_samples"],
+            0,
+        )
+
     def test_rejects_unclassified_forward_transition_without_recovery(self) -> None:
         fixture = self.with_case()
         self.write_status_mpv_alignment_rows(
