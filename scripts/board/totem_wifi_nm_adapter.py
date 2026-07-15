@@ -53,7 +53,6 @@ PERSISTENT_PROFILE_PREFIXES = ("dadooh-c9-8-", "dadooh-product-wifi-")
 ALLOWED_READ_ONLY_COMMANDS = {
     ("ip", "-j", "-4", "route", "show", "table", "main", "default"),
     ("nmcli", "-t", "-f", "RUNNING", "general"),
-    ("nmcli", "-t", "-f", "CONNECTIVITY", "general"),
     ("nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"),
     ("nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"),
     ("nmcli", "-t", "-f", "NAME", "connection", "show", "--active"),
@@ -63,6 +62,7 @@ ALLOWED_READ_ONLY_COMMANDS = {
 }
 
 IP_ROUTE_DEFAULT_COMMAND = ["ip", "-j", "-4", "route", "show", "table", "main", "default"]
+NMCLI_DEVICE_CONNECTIVITY_FIELDS = "GENERAL.DEVICE,GENERAL.STATE,GENERAL.IP4-CONNECTIVITY"
 MAX_ROUTE_JSON_BYTES = 64 * 1024
 MAX_ROUTE_JSON_ENTRIES = 64
 MAX_READ_ONLY_COMMAND_OUTPUT_BYTES = 64 * 1024
@@ -186,8 +186,17 @@ def command_is_forbidden(args: list[str]) -> bool:
 def assert_read_only_command(args: list[str]) -> None:
     if command_is_forbidden(args):
         raise AdapterError("network modifying command blocked")
-    if tuple(args) not in ALLOWED_READ_ONLY_COMMANDS:
+    if tuple(args) not in ALLOWED_READ_ONLY_COMMANDS and not is_allowed_device_connectivity_command(args):
         raise AdapterError("command is not in the C9.5 read-only allowlist")
+
+
+def is_allowed_device_connectivity_command(args: list[str]) -> bool:
+    return (
+        len(args) == 7
+        and args[:6] == ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show"]
+        and bool(re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", args[6]))
+        and args[6] != "*"
+    )
 
 
 def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
@@ -577,15 +586,34 @@ def signal_bucket(raw_signal: str | int | None) -> str:
     return "weak"
 
 
-def parse_nmcli_connectivity(stdout: str) -> str:
-    lines = [raw_line.strip() for raw_line in stdout.splitlines() if raw_line.strip()]
-    if len(lines) != 1:
+def parse_nmcli_device_connectivity(stdout: str, *, expected_device: str) -> str:
+    expected_keys = {
+        "GENERAL.DEVICE",
+        "GENERAL.STATE",
+        "GENERAL.IP4-CONNECTIVITY",
+    }
+    values: dict[str, str] = {}
+    for raw_line in stdout.splitlines():
+        if not raw_line.strip():
+            continue
+        fields = split_nmcli_terse(raw_line)
+        if len(fields) != 2 or fields[0] not in expected_keys or fields[0] in values:
+            return UNKNOWN
+        values[fields[0]] = fields[1].strip()
+    if set(values) != expected_keys or values["GENERAL.DEVICE"] != expected_device:
         return UNKNOWN
-    fields = split_nmcli_terse(lines[0])
-    if len(fields) != 1:
+    if values["GENERAL.STATE"] != "100 (connected)":
         return UNKNOWN
-    value = fields[0].strip().lower()
-    return value if value in {"full", "limited", "portal", "none"} else UNKNOWN
+    connectivity_match = re.fullmatch(
+        r"([0-4]) \((unknown|none|portal|limited|full)\)",
+        values["GENERAL.IP4-CONNECTIVITY"],
+    )
+    if connectivity_match is None:
+        return UNKNOWN
+    code = int(connectivity_match.group(1))
+    label = connectivity_match.group(2)
+    expected_label = {0: "unknown", 1: "none", 2: "portal", 3: "limited", 4: "full"}[code]
+    return label if label == expected_label else UNKNOWN
 
 
 def parse_active_wifi_signal(stdout: str, *, expected_device: str = "") -> str:
@@ -1121,15 +1149,6 @@ def collect_connectivity_indicator(
         elif active_result.status == "ok":
             active_connections = parse_active_connections(active_result.stdout)
 
-        connectivity_result = run_snapshot_command(
-            ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]
-        )
-        checks["connectivity_cached"] = connectivity_result.status
-        if connectivity_result.status == "ok" and not command_result_stdout_is_bounded(connectivity_result):
-            checks["connectivity_cached"] = "too_large"
-        elif connectivity_result.status == "ok":
-            cached_connectivity = parse_nmcli_connectivity(connectivity_result.stdout)
-
     route_devices: list[str] = []
     if ip_path:
         route_result = run_snapshot_command(IP_ROUTE_DEFAULT_COMMAND)
@@ -1150,6 +1169,26 @@ def collect_connectivity_indicator(
         active_connections.get("wifi_active_devices") or []
     )
     route_verified = bool(route_device and (route_device in ethernet_devices or route_device in wifi_devices))
+    if nmcli_available and route_verified:
+        connectivity_result = run_snapshot_command(
+            [
+                "nmcli",
+                "-t",
+                "-f",
+                NMCLI_DEVICE_CONNECTIVITY_FIELDS,
+                "device",
+                "show",
+                route_device,
+            ]
+        )
+        checks["connectivity_cached"] = connectivity_result.status
+        if connectivity_result.status == "ok" and not command_result_stdout_is_bounded(connectivity_result):
+            checks["connectivity_cached"] = "too_large"
+        elif connectivity_result.status == "ok":
+            cached_connectivity = parse_nmcli_device_connectivity(
+                connectivity_result.stdout,
+                expected_device=route_device,
+            )
     if route_ambiguous:
         transport = UNKNOWN
     elif route_device in ethernet_devices:
@@ -2344,10 +2383,19 @@ def run_self_test() -> None:
         assert_raises(lambda command=command: assert_read_only_command(command), "modifier should be blocked")
 
     for command in (
-        ["nmcli", "-t", "-f", "CONNECTIVITY", "general"],
+        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "end0"],
         ["nmcli", "-t", "-f", "DEVICE,IN-USE,SIGNAL", "device", "wifi", "list", "--rescan", "no"],
     ):
         assert_read_only_command(command)
+    for command in (
+        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "*"],
+        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "x" * 16],
+        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "wlan0", "extra"],
+    ):
+        assert_raises(
+            lambda command=command: assert_read_only_command(command),
+            "dynamic device connectivity command must remain exact and bounded",
+        )
     assert_true(read_only_command_env()["LC_ALL"] == "C", "read-only nmcli output should use a stable locale")
     assert_true(
         split_nmcli_terse(r"wlan0:Wi\:Fi:connected") == ["wlan0", "Wi:Fi", "connected"],
@@ -2481,14 +2529,35 @@ def run_self_test() -> None:
     assert_true(public_wifi_meta["selected_network_signal_bucket"] == "strong", "selected bucket should be public")
     assert_true(public_wifi_meta["selected_network_security_present"] is True, "security presence should be public")
     assert_no_forbidden_values(json.dumps(public_wifi_meta, sort_keys=True))
-    assert_true(parse_nmcli_connectivity("full\n") == "full", "full connectivity should parse")
-    assert_true(parse_nmcli_connectivity("limited\n") == "limited", "limited connectivity should parse")
-    assert_true(parse_nmcli_connectivity("portal\n") == "portal", "portal connectivity should parse")
-    assert_true(parse_nmcli_connectivity("none\n") == "none", "offline connectivity should parse")
-    assert_true(parse_nmcli_connectivity("unexpected\n") == UNKNOWN, "unexpected connectivity should fail closed")
-    assert_true(parse_nmcli_connectivity("prefix:full\n") == UNKNOWN, "extra connectivity fields should fail closed")
-    assert_true(parse_nmcli_connectivity("full\nnone\n") == UNKNOWN, "multiple connectivity rows should fail closed")
-    assert_true(parse_nmcli_connectivity("full\\\n") == UNKNOWN, "malformed connectivity escape should fail closed")
+    device_connectivity_output_fixture = (
+        "GENERAL.DEVICE:wlan0\n"
+        "GENERAL.STATE:100 (connected)\n"
+        "GENERAL.IP4-CONNECTIVITY:4 (full)\n"
+    )
+    assert_true(
+        parse_nmcli_device_connectivity(device_connectivity_output_fixture, expected_device="wlan0") == "full",
+        "full connectivity for the selected device should parse",
+    )
+    assert_true(
+        parse_nmcli_device_connectivity(
+            device_connectivity_output_fixture.replace("4 (full)", "3 (limited)"),
+            expected_device="wlan0",
+        )
+        == "limited",
+        "limited connectivity for the selected device should parse",
+    )
+    for malformed_connectivity_fixture in (
+        device_connectivity_output_fixture.replace("wlan0", "eth0"),
+        device_connectivity_output_fixture.replace("4 (full)", "4 (limited)"),
+        device_connectivity_output_fixture.replace("100 (connected)", "30 (disconnected)"),
+        device_connectivity_output_fixture + "GENERAL.DEVICE:wlan0\n",
+        device_connectivity_output_fixture.replace("GENERAL.STATE:100 (connected)\n", ""),
+        device_connectivity_output_fixture.replace("GENERAL.DEVICE:wlan0", "GENERAL.DEVICE:wlan0:extra"),
+    ):
+        assert_true(
+            parse_nmcli_device_connectivity(malformed_connectivity_fixture, expected_device="wlan0") == UNKNOWN,
+            "malformed or mismatched device connectivity must fail closed",
+        )
     assert_true(
         parse_active_wifi_signal("wlan0: :91\nwlan0:*:68\n", expected_device="wlan0") == "medium",
         "active Wi-Fi signal should parse",
@@ -2668,13 +2737,21 @@ def run_self_test() -> None:
 
     fake_nm_state = {"profiles_loaded": set()}
 
+    def build_nmcli_device_connectivity_fixture(device: str, connectivity: str = "full") -> str:
+        code = {"unknown": 0, "none": 1, "portal": 2, "limited": 3, "full": 4}[connectivity]
+        return (
+            f"GENERAL.DEVICE:{device}\n"
+            "GENERAL.STATE:100 (connected)\n"
+            f"GENERAL.IP4-CONNECTIVITY:{code} ({connectivity})\n"
+        )
+
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
         if args == IP_ROUTE_DEFAULT_COMMAND:
             return CommandResult("ok", route_json_fixture)
         if args == ["nmcli", "-t", "-f", "RUNNING", "general"]:
             return CommandResult("ok", "running\n")
-        if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
-            return CommandResult("ok", "full\n")
+        if is_allowed_device_connectivity_command(args):
+            return CommandResult("ok", build_nmcli_device_connectivity_fixture(args[-1]))
         if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
             return CommandResult("ok", device_fixture)
         if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
@@ -2744,7 +2821,7 @@ def run_self_test() -> None:
         os.environ["PATH"] = f"{fake_bin_dir}:{previous_path or ''}"
         try:
             oversized_command_result = run_read_only_command(
-                ["nmcli", "-t", "-f", "CONNECTIVITY", "general"],
+                ["nmcli", "-t", "-f", "RUNNING", "general"],
                 1,
             )
         finally:
@@ -2890,8 +2967,6 @@ def run_self_test() -> None:
                 return CommandResult("ok", disconnected_device_fixture)
             if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
                 return CommandResult("ok", "")
-            if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
-                return CommandResult("ok", "full\n")
             return CommandResult("failed")
 
         disconnected_indicator = collect_connectivity_indicator(
@@ -2911,8 +2986,6 @@ def run_self_test() -> None:
                 return CommandResult("ok", "wlan0:wifi:connected\n")
             if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
                 return CommandResult("ok", "802-11-wireless:wlan0\n")
-            if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
-                return CommandResult("ok", "full\n")
             if args == [
                 "nmcli",
                 "-t",
@@ -2959,8 +3032,6 @@ def run_self_test() -> None:
                 return CommandResult("ok", oversized_nmcli_output + "wlan0:wifi:connected\n")
             if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
                 return CommandResult("ok", oversized_nmcli_output + "802-11-wireless:wlan0\n")
-            if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
-                return CommandResult("ok", oversized_nmcli_output + "full\n")
             if args == IP_ROUTE_DEFAULT_COMMAND:
                 return CommandResult("ok", wifi_route_json_fixture)
             return CommandResult("failed")
@@ -2975,6 +3046,30 @@ def run_self_test() -> None:
         assert_true(
             oversized_indicator["read_only_checks"]["device_status"] == "too_large",
             "oversized status input should be classified",
+        )
+
+        def oversized_device_connectivity_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_device_connectivity_command(args):
+                return CommandResult(
+                    "ok",
+                    oversized_nmcli_output + build_nmcli_device_connectivity_fixture(args[-1]),
+                )
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        oversized_device_connectivity_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=oversized_device_connectivity_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            oversized_device_connectivity_indicator["transport"] == "wifi"
+            and oversized_device_connectivity_indicator["internet"] == UNKNOWN,
+            "oversized per-device connectivity must preserve transport but fail internet closed",
+        )
+        assert_true(
+            oversized_device_connectivity_indicator["read_only_checks"]["connectivity_cached"] == "too_large",
+            "oversized per-device connectivity should be classified",
         )
         stale_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
@@ -2993,8 +3088,6 @@ def run_self_test() -> None:
                 return CommandResult("ok", mismatched_device_fixture)
             if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
                 return CommandResult("ok", mismatched_active_fixture)
-            if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
-                return CommandResult("ok", "full\n")
             return CommandResult("failed")
 
         mismatched_indicator = collect_connectivity_indicator(
@@ -3010,6 +3103,53 @@ def run_self_test() -> None:
         assert_true(
             mismatched_indicator["internet"] == UNKNOWN,
             "cached full must not override an exact interface mismatch",
+        )
+
+        dual_route_json_fixture = json.dumps(
+            [
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "wlan0", "metric": 50, "flags": []},
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 100, "flags": []},
+            ]
+        )
+        queried_connectivity_devices: list[str] = []
+
+        def dual_link_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_device_connectivity_command(args):
+                queried_connectivity_devices.append(args[-1])
+                connectivity = "limited" if args[-1] == "wlan0" else "full"
+                return CommandResult("ok", build_nmcli_device_connectivity_fixture(args[-1], connectivity))
+            return runner_with_route(fake_runner, dual_route_json_fixture)(args, timeout_sec)
+
+        dual_link_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=dual_link_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            dual_link_indicator["transport"] == "wifi" and dual_link_indicator["internet"] == "limited",
+            "internet state must come from the preferred route device, not another connected link",
+        )
+        assert_true(
+            queried_connectivity_devices == ["wlan0"],
+            "only the selected route device may authorize internet state",
+        )
+
+        def wrong_device_connectivity_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_device_connectivity_command(args):
+                return CommandResult("ok", build_nmcli_device_connectivity_fixture("eth0"))
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        wrong_device_connectivity_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=wrong_device_connectivity_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            wrong_device_connectivity_indicator["transport"] == "wifi"
+            and wrong_device_connectivity_indicator["internet"] == UNKNOWN,
+            "connectivity returned for another device must fail internet closed",
         )
         ambiguous_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
