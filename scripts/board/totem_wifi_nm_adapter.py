@@ -9,6 +9,7 @@ profile, timeout, rollback, and sanitized artifacts under /tmp.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import pathlib
@@ -49,6 +50,7 @@ ALLOWED_PROFILE_PREFIXES = ("dadooh-c9-6-", "dadooh-c9-8-", "dadooh-product-wifi
 PERSISTENT_PROFILE_PREFIXES = ("dadooh-c9-8-", "dadooh-product-wifi-")
 
 ALLOWED_READ_ONLY_COMMANDS = {
+    ("ip", "-j", "-4", "route", "show", "table", "main", "default"),
     ("nmcli", "-t", "-f", "RUNNING", "general"),
     ("nmcli", "-t", "-f", "CONNECTIVITY", "general"),
     ("nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"),
@@ -58,6 +60,10 @@ ALLOWED_READ_ONLY_COMMANDS = {
     ("nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"),
     ("nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "yes"),
 }
+
+IP_ROUTE_DEFAULT_COMMAND = ["ip", "-j", "-4", "route", "show", "table", "main", "default"]
+MAX_ROUTE_JSON_BYTES = 64 * 1024
+MAX_ROUTE_JSON_ENTRIES = 64
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -637,7 +643,9 @@ def parse_default_route_candidate(parts: list[str]) -> tuple[str, int] | None:
     if flags != f"{route_flags:04X}":
         return None
     decimal_fields = parts[4:7] + parts[8:11]
-    if any(not re.fullmatch(r"0|[1-9][0-9]*", value) for value in decimal_fields):
+    if any(len(value) > 20 or not re.fullmatch(r"0|[1-9][0-9]*", value) for value in decimal_fields):
+        return None
+    if len(parts[6]) > 10 or int(parts[6], 10) > 0xFFFFFFFF:
         return None
 
     rtf_up = 0x1
@@ -681,6 +689,62 @@ def default_route_devices_from_text(text: str) -> list[str]:
 def default_route_device_from_text(text: str) -> str:
     devices = default_route_devices_from_text(text)
     return devices[0] if len(devices) == 1 else ""
+
+
+def default_route_devices_from_ip_json(text: str) -> list[str]:
+    if not isinstance(text, str) or not text or len(text.encode("utf-8")) > MAX_ROUTE_JSON_BYTES:
+        return []
+    try:
+        routes = json.loads(text)
+    except (json.JSONDecodeError, UnicodeError):
+        return []
+    if not isinstance(routes, list) or not routes or len(routes) > MAX_ROUTE_JSON_ENTRIES:
+        return []
+
+    candidates: list[tuple[int, dict[str, Any]]] = []
+    for route in routes:
+        if not isinstance(route, dict) or route.get("dst") != "default":
+            return []
+        route_type = route.get("type", "unicast")
+        table = route.get("table", "main")
+        metric = route.get("metric", 0)
+        if not isinstance(route_type, str) or table not in {"main", 254}:
+            return []
+        if isinstance(metric, bool) or not isinstance(metric, int) or not 0 <= metric <= 0xFFFFFFFF:
+            return []
+        candidates.append((metric, route))
+
+    best_metric = min(metric for metric, _ in candidates)
+    best_routes = [route for metric, route in candidates if metric == best_metric]
+    if any(route.get("type", "unicast") != "unicast" for route in best_routes):
+        return []
+
+    devices: set[str] = set()
+    rejected_flags = {"dead", "linkdown", "unresolved"}
+    for route in best_routes:
+        device = route.get("dev")
+        scope = route.get("scope")
+        gateway = route.get("gateway")
+        flags = route.get("flags", [])
+        if not isinstance(device, str) or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device) or device == "*":
+            return []
+        if scope not in {None, "global", "link"}:
+            return []
+        if not isinstance(flags, list) or any(not isinstance(flag, str) for flag in flags):
+            return []
+        if rejected_flags.intersection(flags) or "nexthops" in route or "via" in route:
+            return []
+        if gateway is not None:
+            if not isinstance(gateway, str):
+                return []
+            try:
+                gateway_ip = ipaddress.IPv4Address(gateway)
+            except ipaddress.AddressValueError:
+                return []
+            if gateway_ip.is_unspecified or gateway_ip.is_loopback or gateway_ip.is_multicast:
+                return []
+        devices.add(device)
+    return sorted(devices)
 
 
 def detect_dns_from_text(text: str) -> bool | str:
@@ -842,8 +906,8 @@ def collect_connectivity_indicator(
     *,
     timeout_sec: int = 2,
     command_runner: Callable[[list[str], float], CommandResult] = run_read_only_command,
-    file_reader: Callable[[pathlib.Path], tuple[str, bool]] = read_text_if_present,
     nmcli_path: str | None = None,
+    ip_path: str | None = None,
     monotonic_clock: Callable[[], float] = time.monotonic,
 ) -> dict[str, Any]:
     """Collect one bounded, privacy-safe network snapshot for local UI."""
@@ -858,6 +922,8 @@ def collect_connectivity_indicator(
 
     if nmcli_path is None:
         nmcli_path = shutil.which("nmcli")
+    if ip_path is None:
+        ip_path = shutil.which("ip")
     nmcli_available = bool(nmcli_path)
     checks = {
         "device_status": "not_run",
@@ -903,9 +969,14 @@ def collect_connectivity_indicator(
         if connectivity_result.status == "ok":
             cached_connectivity = parse_nmcli_connectivity(connectivity_result.stdout)
 
-    route_text, route_available = file_reader(pathlib.Path("/proc/net/route"))
-    checks["default_route"] = "ok" if route_available else "unavailable"
-    route_devices = default_route_devices_from_text(route_text) if route_available else []
+    route_devices: list[str] = []
+    if ip_path:
+        route_result = run_snapshot_command(IP_ROUTE_DEFAULT_COMMAND)
+        checks["default_route"] = route_result.status
+        if route_result.status == "ok":
+            route_devices = default_route_devices_from_ip_json(route_result.stdout)
+    else:
+        checks["default_route"] = "unavailable"
     route_device = route_devices[0] if len(route_devices) == 1 else ""
     route_ambiguous = len(route_devices) > 1
 
@@ -2281,11 +2352,72 @@ def run_self_test() -> None:
         )
     wrong_header_fixture = route_fixture.replace("Iface", "Device", 1)
     assert_true(default_route_device_from_text(wrong_header_fixture) == "", "unexpected route header must fail closed")
+
+    route_json_fixture = json.dumps(
+        [{"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "protocol": "dhcp", "metric": 100, "flags": []}]
+    )
+    direct_route_json_fixture = json.dumps(
+        [{"dst": "default", "dev": "eth0", "protocol": "static", "scope": "link", "metric": 100, "flags": []}]
+    )
+    preferred_route_json_fixture = json.dumps(
+        [
+            {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 100, "flags": []},
+            {"dst": "default", "gateway": "192.0.2.1", "dev": "wlan0", "metric": 600, "flags": []},
+        ]
+    )
+    ambiguous_route_json_fixture = json.dumps(
+        [
+            {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 100, "flags": []},
+            {"dst": "default", "gateway": "192.0.2.1", "dev": "wlan0", "metric": 100, "flags": []},
+        ]
+    )
+    wifi_route_json_fixture = json.dumps(
+        [{"dst": "default", "gateway": "192.0.2.1", "dev": "wlan0", "metric": 100, "flags": []}]
+    )
+    assert_true(default_route_devices_from_ip_json(route_json_fixture) == ["eth0"], "typed default route should parse")
+    assert_true(
+        default_route_devices_from_ip_json(direct_route_json_fixture) == ["eth0"],
+        "typed on-link default route should parse",
+    )
+    assert_true(
+        default_route_devices_from_ip_json(preferred_route_json_fixture) == ["eth0"],
+        "typed route should select the lowest metric",
+    )
+    assert_true(
+        default_route_devices_from_ip_json(ambiguous_route_json_fixture) == ["eth0", "wlan0"],
+        "equal typed metrics should preserve ambiguity",
+    )
+    rejected_route_json_fixtures = [
+        "",
+        "{}",
+        "not-json",
+        json.dumps([{"type": "local", "dst": "default", "dev": "eth0", "metric": 0, "flags": []}]),
+        json.dumps([{"type": "blackhole", "dst": "default", "metric": 0, "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "*", "metric": 0, "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": -1, "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0x100000000, "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": True, "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "scope": "host", "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "table": "local", "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "127.0.0.1", "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "bad", "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": ["linkdown"]}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": [], "nexthops": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": [], "via": {"family": "inet6"}}]),
+        json.dumps([{"dst": "192.0.2.0/24", "dev": "eth0", "metric": 0, "flags": []}]),
+    ]
+    for rejected_fixture in rejected_route_json_fixtures:
+        assert_true(
+            default_route_devices_from_ip_json(rejected_fixture) == [],
+            f"untrusted typed route must fail closed: {rejected_fixture}",
+        )
     assert_true(detect_dns_from_text(resolver_fixture) is True, "resolver should be aggregated")
 
     fake_nm_state = {"profiles_loaded": set()}
 
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
+        if args == IP_ROUTE_DEFAULT_COMMAND:
+            return CommandResult("ok", route_json_fixture)
         if args == ["nmcli", "-t", "-f", "RUNNING", "general"]:
             return CommandResult("ok", "running\n")
         if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
@@ -2324,6 +2456,19 @@ def run_self_test() -> None:
             return CommandResult("ok", "deleted Fake product wifi\n")
         return CommandResult("failed")
 
+    def runner_with_route(
+        base_runner: Callable[[list[str], float], CommandResult],
+        route_json: str,
+        *,
+        route_status: str = "ok",
+    ) -> Callable[[list[str], float], CommandResult]:
+        def wrapped(args: list[str], timeout_sec: float) -> CommandResult:
+            if args == IP_ROUTE_DEFAULT_COMMAND:
+                return CommandResult(route_status, route_json if route_status == "ok" else "")
+            return base_runner(args, timeout_sec)
+
+        return wrapped
+
     def fake_reader(path: pathlib.Path) -> tuple[str, bool]:
         if str(path) == "/proc/net/route":
             return route_fixture, True
@@ -2351,8 +2496,8 @@ def run_self_test() -> None:
         indicator = collect_connectivity_indicator(
             timeout_sec=1,
             command_runner=fake_runner,
-            file_reader=fake_reader,
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(indicator["transport"] == "ethernet", "default Ethernet route should drive the indicator")
         assert_true(indicator["internet"] == "online", "cached full connectivity should show online")
@@ -2362,34 +2507,27 @@ def run_self_test() -> None:
 
         direct_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=fake_runner,
-            file_reader=lambda path: (direct_route_fixture, True),
+            command_runner=runner_with_route(fake_runner, direct_route_json_fixture),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(direct_indicator["transport"] == "ethernet", "an on-link default should select Ethernet")
         assert_true(direct_indicator["internet"] == "online", "cached full may confirm a valid on-link default")
 
         preferred_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=fake_runner,
-            file_reader=lambda path: (preferred_route_fixture, True),
+            command_runner=runner_with_route(fake_runner, preferred_route_json_fixture),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(preferred_indicator["transport"] == "ethernet", "the lowest route metric should select Ethernet")
         assert_true(preferred_indicator["internet"] == "online", "cached full may confirm the preferred default route")
 
-        wifi_route_fixture = route_fixture.replace("eth0", "wlan0")
-
-        def wifi_reader(path: pathlib.Path) -> tuple[str, bool]:
-            if str(path) == "/proc/net/route":
-                return wifi_route_fixture, True
-            return fake_reader(path)
-
         wifi_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=fake_runner,
-            file_reader=wifi_reader,
+            command_runner=runner_with_route(fake_runner, wifi_route_json_fixture),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(wifi_indicator["transport"] == "wifi", "default Wi-Fi route should drive the indicator")
         assert_true(wifi_indicator["wifi_signal"] == "medium", "active Wi-Fi signal should be bucketed")
@@ -2408,9 +2546,9 @@ def run_self_test() -> None:
 
         disconnected_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=disconnected_runner,
-            file_reader=lambda path: ("Iface Destination Gateway Flags\n", True),
+            command_runner=runner_with_route(disconnected_runner, "[]"),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(disconnected_indicator["transport"] == "none", "no active link should show no transport")
         assert_true(
@@ -2441,9 +2579,9 @@ def run_self_test() -> None:
 
         active_without_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=active_wifi_without_route_runner,
-            file_reader=lambda path: ("Iface Destination Gateway Flags\n", True),
+            command_runner=runner_with_route(active_wifi_without_route_runner, "[]"),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(
             active_without_route_indicator["transport"] == "wifi",
@@ -2453,23 +2591,22 @@ def run_self_test() -> None:
             active_without_route_indicator["internet"] == UNKNOWN,
             "cached full must not show online without a verified default route",
         )
-        for malformed_row in malformed_route_rows:
-            malformed_wifi_fixture = " ".join(PROC_NET_ROUTE_HEADER) + "\n" + malformed_row.replace("eth0", "wlan0", 1)
+        for rejected_route_json in rejected_route_json_fixtures:
             malformed_indicator = collect_connectivity_indicator(
                 timeout_sec=1,
-                command_runner=active_wifi_without_route_runner,
-                file_reader=lambda path, fixture=malformed_wifi_fixture: (fixture, True),
+                command_runner=runner_with_route(active_wifi_without_route_runner, rejected_route_json),
                 nmcli_path="/usr/bin/nmcli",
+                ip_path="/usr/sbin/ip",
             )
             assert_true(
                 malformed_indicator["internet"] == UNKNOWN,
-                f"malformed route must not promote cached full: {malformed_row}",
+                f"untrusted typed route must not promote cached full: {rejected_route_json}",
             )
         stale_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=disconnected_runner,
-            file_reader=lambda path: (route_fixture, True),
+            command_runner=runner_with_route(disconnected_runner, route_json_fixture),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(stale_route_indicator["transport"] == UNKNOWN, "stale route must not prove a transport")
         assert_true(stale_route_indicator["internet"] == UNKNOWN, "stale route plus cached full must not show online")
@@ -2488,9 +2625,9 @@ def run_self_test() -> None:
 
         mismatched_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=mismatched_runner,
-            file_reader=lambda path: (wifi_route_fixture, True),
+            command_runner=runner_with_route(mismatched_runner, wifi_route_json_fixture),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(
             mismatched_indicator["transport"] == UNKNOWN,
@@ -2502,9 +2639,9 @@ def run_self_test() -> None:
         )
         ambiguous_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=fake_runner,
-            file_reader=lambda path: (ambiguous_route_fixture, True),
+            command_runner=runner_with_route(fake_runner, ambiguous_route_json_fixture),
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
         )
         assert_true(
             ambiguous_route_indicator["transport"] == UNKNOWN,
@@ -2525,8 +2662,8 @@ def run_self_test() -> None:
         collect_connectivity_indicator(
             timeout_sec=1,
             command_runner=budget_runner,
-            file_reader=wifi_reader,
             nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
             monotonic_clock=lambda: budget_clock[0],
         )
         assert_true(len(budget_timeouts) == 3, "expired snapshot budget should skip later commands")
