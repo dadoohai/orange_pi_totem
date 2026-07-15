@@ -1699,7 +1699,9 @@ def read_key(timeout_sec: float | None = None) -> str:
             wait_sec = refresh_wait if wait_sec is None else min(wait_sec, refresh_wait)
         ready, _, _ = select.select([sys.stdin], [], [], wait_sec)
         if ready:
-            refresh_connectivity_if_due(time.monotonic())
+            now = time.monotonic()
+            if _CONNECTIVITY_REFRESH_CALLBACK is not None and now >= _CONNECTIVITY_NEXT_REFRESH_AT:
+                current_connectivity_snapshot(now)
             break
         now = time.monotonic()
         refresh_connectivity_if_due(now)
