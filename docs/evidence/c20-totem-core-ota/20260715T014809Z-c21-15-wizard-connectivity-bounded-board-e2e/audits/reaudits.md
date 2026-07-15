@@ -38,5 +38,16 @@ so the event must remain explicit and RCA must not be claimed.
 The recommended official settings stop probe was then run three times in
 addition to three wizard open/cancel cycles. No new Panfrost event occurred.
 This supports retaining the observation as residual risk rather than silently
-discarding it; the final committed package and evidence still require an
-independent closing audit.
+discarding it; it does not make the execution clean or provide an RCA.
+
+## Closing Audit Decision
+
+Two independent auditors reviewed commit `463823f`. The bounded-resource audit
+found no blocker for the narrow claim, while preserving the Panfrost event and
+the lab-only rollback target as residuals. The general adversarial audit found
+a new blocker in default-route parsing: routes without `RTF_UP` or with a
+nonzero mask were still accepted.
+
+The central review reproduced both malformed inputs and accepted the blocker.
+C21.15 is therefore blocked despite its successful board roundtrip. The full
+closing findings are recorded in `final-independent-audit.md`.

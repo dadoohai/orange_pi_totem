@@ -1,6 +1,6 @@
 # C21.15 Bounded Connectivity Board E2E
 
-Status: passed as a `totem-core` homologation candidate on 2026-07-15.
+Status: blocked and superseded after final independent audit on 2026-07-15.
 
 ## Identity
 
@@ -10,7 +10,7 @@ Status: passed as a `totem-core` homologation candidate on 2026-07-15.
 - manifest SHA256: `c5505532aa0990c9cb4ade87f3d441789d850d9507b6ba1a947e6a47d516fdcd`
 - board: `orangepizero3`, C18 prod14 reference image
 
-## Result
+## Board Result
 
 - generic and package-bound release gates: `84/84`;
 - stable policy rejected the prerelease with `rc=41` and no mutation;
@@ -25,6 +25,11 @@ Status: passed as a `totem-core` homologation candidate on 2026-07-15.
 - the final delta health window passed with HW decode, advancing frames, one
   MPV and no player restart.
 
+These checks prove the package transaction and the observed board session, but
+the final source audit found that malformed `/proc/net/route` rows could still
+produce a false `online` state. Therefore the overall candidate result is
+failed even though the board roundtrip passed.
+
 The board rollback target during this lab roundtrip was C21.14 because it was
 the immediate previous release on the board. C21.14 remains superseded and is
 not an approved stable fallback. C21.12 remains the distribution/stable return
@@ -34,10 +39,16 @@ reference until an explicit promotion decision.
 
 The final audit of C21.14 found two blockers before promotion: it could report
 `online` without a verified default route, and its MPV IPC request counter had
-no fixed bound. C21.15 requires the route for a positive internet state, wraps
-the counter, and applies one monotonic time budget to the entire read-only
-network collection. The same auditor reproduced the adversarial cases and
-reported zero blockers before this package was built.
+no fixed bound. C21.15 attempted to require the route for a positive internet
+state, wraps the counter, and applies one monotonic time budget to the entire
+read-only network collection. A source re-audit reproduced the original
+adversarial cases and reported zero blockers before this package was built.
+
+The closing independent audit then found two route rows not covered by that
+re-audit: a gateway route without `RTF_UP`, and a zero destination with a
+nonzero mask. Both were incorrectly accepted as a default route. The central
+review reproduced the finding and blocked C21.15. The corrected successor must
+require a complete active default route and repeat package plus board closure.
 
 ## 24/7 Boundaries
 
@@ -69,4 +80,5 @@ it does not claim an RCA or claim that the historical event cannot recur.
 - no new reference image;
 - no network mutation, rescan, speed test or external connectivity probe;
 - no change to player-runtime, media-system, field data or OTA policy;
-- no verified RCA for the preserved Panfrost event.
+- no verified RCA for the preserved Panfrost event;
+- not an approved accumulated homologation candidate.

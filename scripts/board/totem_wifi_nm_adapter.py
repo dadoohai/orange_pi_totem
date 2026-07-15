@@ -604,26 +604,29 @@ def wifi_selection_public_metadata(networks: list[dict[str, Any]], selected: dic
     }
 
 
+def valid_default_route_device(parts: list[str]) -> str:
+    if len(parts) < 8:
+        return ""
+    device, destination, gateway, flags = parts[:4]
+    mask = parts[7]
+    if destination != "00000000" or mask != "00000000":
+        return ""
+    try:
+        gateway_value = int(gateway, 16)
+        route_flags = int(flags, 16)
+    except ValueError:
+        return ""
+    required_flags = 0x1 | 0x2  # RTF_UP | RTF_GATEWAY
+    if gateway_value == 0 or route_flags & required_flags != required_flags:
+        return ""
+    return device.strip()
+
+
 def detect_default_route_from_text(text: str) -> bool | str:
     lines = text.splitlines()
     if len(lines) < 2:
         return False
-
-    for line in lines[1:]:
-        parts = line.split()
-        if len(parts) < 4:
-            continue
-        destination = parts[1]
-        flags = parts[3]
-        if destination != "00000000":
-            continue
-        try:
-            route_flags = int(flags, 16)
-        except ValueError:
-            continue
-        if route_flags & 0x2:
-            return True
-    return False
+    return any(valid_default_route_device(line.split()) for line in lines[1:])
 
 
 def default_route_devices_from_text(text: str) -> list[str]:
@@ -632,17 +635,9 @@ def default_route_devices_from_text(text: str) -> list[str]:
         return []
     devices: set[str] = set()
     for line in lines[1:]:
-        parts = line.split()
-        if len(parts) < 4 or parts[1] != "00000000":
-            continue
-        try:
-            route_flags = int(parts[3], 16)
-        except ValueError:
-            continue
-        if route_flags & 0x2:
-            device = parts[0].strip()
-            if device:
-                devices.add(device)
+        device = valid_default_route_device(line.split())
+        if device:
+            devices.add(device)
     return sorted(devices)
 
 
@@ -2191,6 +2186,29 @@ def run_self_test() -> None:
     )
     assert_true(detect_default_route_from_text(route_fixture) is True, "default route should be aggregated")
     assert_true(default_route_device_from_text(route_fixture) == "eth0", "default route device should parse")
+    route_without_up_fixture = route_fixture.replace("0003", "0002", 1)
+    assert_true(
+        detect_default_route_from_text(route_without_up_fixture) is False,
+        "a gateway route without RTF_UP must fail closed",
+    )
+    assert_true(
+        default_route_device_from_text(route_without_up_fixture) == "",
+        "a gateway route without RTF_UP must not identify a device",
+    )
+    non_default_mask_fixture = route_fixture.replace("00000000 0 0 0 #", "00FFFFFF 0 0 0 #", 1)
+    assert_true(
+        detect_default_route_from_text(non_default_mask_fixture) is False,
+        "a zero destination with a nonzero mask must fail closed",
+    )
+    assert_true(
+        default_route_device_from_text(non_default_mask_fixture) == "",
+        "a zero destination with a nonzero mask must not identify a device",
+    )
+    zero_gateway_fixture = route_fixture.replace("010200C0", "00000000", 1)
+    assert_true(
+        default_route_device_from_text(zero_gateway_fixture) == "",
+        "a gateway-flagged route with no gateway must fail closed",
+    )
     ambiguous_route_fixture = route_fixture + "\nwlan0 00000000 010200C0 0003 0 0 200 00000000 0 0 0"
     assert_true(
         default_route_device_from_text(ambiguous_route_fixture) == "",

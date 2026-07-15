@@ -26,12 +26,18 @@
   "timer_active_final": true,
   "production_policy_restored": true,
   "state_hashes_preserved": true,
-  "passed": true,
-  "claim": "homologation_candidate_board_e2e_passed_with_explicit_panfrost_residual",
+  "board_roundtrip_passed": true,
+  "final_independent_audit_passed": false,
+  "passed": false,
+  "claim": "homologation_candidate_blocked_after_board_e2e",
+  "blockers": [
+    "default_route_parser_accepts_inactive_or_nondefault_rows"
+  ],
   "non_claims": [
     "not_stable_promoted",
     "not_publicly_published",
     "not_new_reference_image",
-    "not_panfrost_rca_verified"
+    "not_panfrost_rca_verified",
+    "not_approved_homologation_candidate"
   ]
 }

@@ -472,11 +472,11 @@ O metodo final esta registrado em:
 
 ## Pacote Acumulado Atual
 
-Estado em 2026-07-15: o acumulo chegou ao C20.16/C21.15 e foi validado na placa
-prod14 por `totem-core`.
+Estado em 2026-07-15: C20.16 chegou a C21.15, mas a candidata foi bloqueada na
+auditoria final. O ultimo acumulo aprovado continua C20.15/C21.13.
 
 Candidata acumulada atual:
-`releases/core-updates/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26`.
+`releases/core-updates/c21.13-wizard-retained-status-20260714T231059Z-81d64ee`.
 
 Referencia stable de distribuicao e retorno:
 `releases/core-updates/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`.
@@ -484,11 +484,10 @@ Referencia stable de distribuicao e retorno:
 Ultimo pacote/evidencia:
 `docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
 
-O C21.15 passou release gate `84/84`, bloqueio da policy stable, apply,
-rollback, reaplicacao, fluxo visual real, cancelamento e playback final verde,
-sem restart do player. Ele substitui C21.14 como candidata acumulada de
-`totem-core` em homologacao; nao substitui C21.12 como stable nem muda a imagem
-oficial por inferencia.
+O C21.13 passou release gate `84/84`, apply, rollback, reaplicacao, fluxo visual
+real, cancelamento e playback final verde, sem restart do player. Ele continua
+a candidata acumulada de `totem-core` em homologacao; nao substitui C21.12 como
+stable nem muda a imagem oficial por inferencia.
 
 Intencao macro: continuar acumulando apenas melhorias fechadas e reversiveis do
 wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
@@ -560,11 +559,12 @@ e contador IPC sem teto. C21.14 foi supersedida sem promocao. Evidencia
 historica:
 `docs/evidence/c20-totem-core-ota/20260715T005134Z-c21-14-wizard-connectivity-board-e2e/`.
 
-A correcao foi fechada na candidata
-`c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26`: rota verificada
-para qualquer estado positivo, contador circular e um unico orcamento de tempo
-para toda a coleta. A reauditoria adversarial do codigo corrigido teve zero
-blockers. O pacote passou `84/84`, sandbox, bloqueio stable, apply, rollback,
+A primeira correcao foi empacotada na candidata
+`c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26`: ela pretendia
+exigir rota verificada para qualquer estado positivo, adicionou contador
+circular e um unico orcamento de tempo para toda a coleta. A reauditoria do
+codigo teve zero blockers. O pacote passou `84/84`, sandbox, bloqueio stable,
+apply, rollback,
 reaplicacao, E2E visual e health final na placa. A implementacao permanece
 limitada para uso 24/7: um snapshot substituivel, sem fila/historico/thread,
 arquivos temporarios fixos ou em anel e coleta read-only com prazo total.
@@ -575,9 +575,13 @@ oficiais de parada nao reproduziram o evento; o health delta final passou. O
 registro completo esta em:
 `docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
 
-C21.15 passa a candidata acumulada de homologacao. C21.12 continua stable de
-retorno e `prod14` continua a imagem de referencia; nao houve publicacao nem
-promocao por inferencia.
+A auditoria final encontrou um blocker adicional e o decisor central o
+reproduziu: linhas de rota sem `RTF_UP` ou com mascara nao-default ainda podiam
+produzir falso `online`. C21.15 foi bloqueada e supersedida sem promocao. A
+sucessora deve validar a linha completa, repetir pacote e roundtrip e passar
+nova auditoria independente. Enquanto isso, C21.13 continua candidata
+acumulada, C21.12 continua stable de retorno e `prod14` continua imagem de
+referencia.
 
 ## Rodada C25 - Estados Visiveis
 

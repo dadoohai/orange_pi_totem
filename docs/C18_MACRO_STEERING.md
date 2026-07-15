@@ -363,11 +363,14 @@ Enquanto nada mudar, a ordem de execucao e:
     de placa mas foi supersedida apos auditoria final. Os blockers foram falso
     `online` sem rota default e contador IPC sem teto. A correcao agora exige
     rota verificada, contador circular e orcamento total de leitura.
-12. A sucessora corrigida C21.15 passou reauditoria adversarial, release gate
+12. A sucessora C21.15 passou a validacao inicial, release gate
     `84/84`, sandbox, bloqueio stable, apply, rollback, reaplicacao, fluxo visual
-    real e health final na placa. Um evento Panfrost isolado foi preservado sem
-    RCA; seis ciclos adicionais nao o reproduziram. C21.15 passa a candidata
-    acumulada de homologacao. C21.12 continua stable de retorno e `prod14`
-    continua imagem de referencia ate decisao explicita de promocao/imagem.
+    real e health final na placa, mas foi bloqueada na auditoria final: linhas
+    de rota sem `RTF_UP` ou com mascara nao-default ainda podiam produzir falso
+    `online`. O achado foi reproduzido. Um evento Panfrost isolado tambem ficou
+    preservado sem RCA; seis ciclos adicionais nao o reproduziram. C21.13
+    continua a candidata acumulada de homologacao, C21.12 continua stable de
+    retorno e `prod14` continua imagem de referencia ate uma sucessora corrigida
+    passar todo o ciclo.
     Evidencia:
     `docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
