@@ -358,10 +358,11 @@ Enquanto nada mudar, a ordem de execucao e:
     retorno ate a proxima decisao explicita de stable/imagem. As proximas
     rodadas do wizard partem da C21.13 sem reabrir estes tres itens, salvo
     regressao comprovada.
-11. Rodada em fechamento: C20.16 adiciona um indicador discreto de Ethernet ou
-    Wi-Fi e estado de internet ao wizard. A leitura e read-only, falha fechada e
-    nao usa probe externo. O estado e substituido em memoria; refresh e telas
-    temporarias possuem limites fixos, sem crescimento 24/7. A implementacao e
-    as auditorias off-board estao verdes; falta o roundtrip governado da proxima
-    candidata `totem-core` e a captura real. Ate isso ocorrer, C21.13 continua a
-    candidata acumulada e C21.12 continua o stable de retorno.
+11. C20.16 foi fechado como a candidata
+    `c21.14-wizard-connectivity-20260715T003032Z-4835ca8`. O indicador discreto
+    de Ethernet ou Wi-Fi e internet e read-only, falha fechado e nao usa probe
+    externo. O estado e substituido em memoria; refresh e telas temporarias
+    possuem limites fixos, sem crescimento 24/7. Release gate `84/84`, sandbox,
+    apply, rollback, reaplicacao, captura real e deep-health passaram. C21.14
+    substitui C21.13 como candidata acumulada; C21.12 continua stable de retorno
+    e `prod14` continua imagem de referencia ate decisao explicita.

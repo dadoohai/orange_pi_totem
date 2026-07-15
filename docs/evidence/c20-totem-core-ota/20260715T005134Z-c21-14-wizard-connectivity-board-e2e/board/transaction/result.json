@@ -1,0 +1,17 @@
+{
+  "apply_policy_blocked_rc": 41,
+  "apply_rc": 0,
+  "candidate_version": "c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+  "config_context_policy_hashes_preserved": true,
+  "deep_health_passed": true,
+  "final_current_is_candidate": true,
+  "internet_indicator_live": "ethernet_online",
+  "passed": true,
+  "player_restart_count_unchanged": true,
+  "reapply_rc": 0,
+  "rollback_rc": 0,
+  "schema": "dadooh.c20.16.board_e2e.v1",
+  "stable_policy_restored": true,
+  "timer_active_final": true,
+  "visual_board_capture_passed": true
+}

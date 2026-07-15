@@ -1,0 +1,6 @@
+2026-07-15T00:46:18Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-15T00:46:18Z INFO apply_start source=local:dadooh-totem-core-c21.14-wizard-connectivity-20260715T003032Z-4835ca8.manifest.json manifest=/tmp/c21.14-wizard-connectivity-20260715T003032Z-4835ca8/dadooh-totem-core-c21.14-wizard-connectivity-20260715T003032Z-4835ca8.manifest.json
+2026-07-15T00:46:18Z INFO local_payload_staged bytes=186836 sha256=f324098458e0c50e472af0902f9216ef82d4c99dc1c1975976f3af07f186a8f6
+2026-07-15T00:46:25Z INFO totem_core_health_check_starting
+2026-07-15T00:46:33Z INFO apply_success version=c21.14-wizard-connectivity-20260715T003032Z-4835ca8
+2026-07-15T00:46:33Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c21.14-wizard-connectivity-20260715T003032Z-4835ca8

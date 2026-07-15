@@ -1,0 +1,34 @@
+2026-07-15T00:48:09+00:00 c20_e2e_probe_start artifact_dir=/tmp/c20-16-board-visual
+2026-07-15T00:48:10+00:00 RUN /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-preclean
+2026-07-15T00:48:12+00:00 RC 0 :: /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-preclean
+2026-07-15T00:48:12+00:00 RUN systemctl reset-failed totem-open-settings.service
+2026-07-15T00:48:12+00:00 RC 0 :: systemctl reset-failed totem-open-settings.service
+2026-07-15T00:48:12+00:00 RUN systemctl start kiosky-player.service
+2026-07-15T00:48:12+00:00 RC 0 :: systemctl start kiosky-player.service
+2026-07-15T00:48:13+00:00 start_open_settings_service
+2026-07-15T00:48:20+00:00 wizard_seen_at=7s
+343aeaa2b5e0eb4ac7ce0d67ebfe1170ce477de013b5f1acd89e47ea82d91651  /tmp/c20-16-board-visual/captures/01-opened.jpg
+2026-07-15T00:48:22+00:00 latest_screen 01-opened 0001-01-orientation.svg
+2026-07-15T00:48:22+00:00 navigate_to_review
+2026-07-15T00:48:22+00:00 RUN /tmp/c20_uinput_key_sequence.py --keys up,right,right,right --delay-sec 0.45
+uinput_sequence_sent count=4
+2026-07-15T00:48:24+00:00 RC 0 :: /tmp/c20_uinput_key_sequence.py --keys up,right,right,right --delay-sec 0.45
+8b5e732dde00d508ffb91aeca9e2dda6e8482940572732c7217ce5d97b46408c  /tmp/c20-16-board-visual/captures/02-review-attempt.jpg
+2026-07-15T00:48:27+00:00 latest_screen 02-review-attempt 0005-05-review.svg
+2026-07-15T00:48:27+00:00 enter_on_review_or_current
+2026-07-15T00:48:27+00:00 RUN /tmp/c20_uinput_key_sequence.py --keys enter --delay-sec 0.45
+uinput_sequence_sent count=1
+2026-07-15T00:48:28+00:00 RC 0 :: /tmp/c20_uinput_key_sequence.py --keys enter --delay-sec 0.45
+9674d5857959913b9f6c1557ab8553fd8de6c40da9dcf90843e0a974079d78d7  /tmp/c20-16-board-visual/captures/03-enter-after-review.jpg
+2026-07-15T00:48:31+00:00 latest_screen 03-enter-after-review 0006-05-review.svg
+2026-07-15T00:48:31+00:00 cancel_with_q
+2026-07-15T00:48:31+00:00 RUN /tmp/c20_uinput_key_sequence.py --keys q --delay-sec 0.45
+uinput_sequence_sent count=1
+2026-07-15T00:48:33+00:00 RC 0 :: /tmp/c20_uinput_key_sequence.py --keys q --delay-sec 0.45
+2026-07-15T00:49:02+00:00 RUN /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-final
+2026-07-15T00:49:04+00:00 RC 0 :: /opt/totem/bin/totem_open_settings_cleanup.sh --reason c20-e2e-probe-final
+2026-07-15T00:49:04+00:00 RUN systemctl reset-failed totem-open-settings.service
+2026-07-15T00:49:04+00:00 RC 0 :: systemctl reset-failed totem-open-settings.service
+2026-07-15T00:49:04+00:00 RUN systemctl start kiosky-player.service
+2026-07-15T00:49:04+00:00 RC 0 :: systemctl start kiosky-player.service
+2026-07-15T00:49:08+00:00 c20_e2e_probe_done
