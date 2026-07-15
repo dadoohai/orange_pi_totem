@@ -442,7 +442,17 @@ def parse_device_status(stdout: str) -> dict[str, Any]:
     wifi_active = False
     ethernet_connected_devices: set[str] = set()
     wifi_connected_devices: set[str] = set()
+    observed_devices: dict[str, tuple[str, bool]] = {}
     parsed = False
+
+    def unknown_status() -> dict[str, Any]:
+        return {
+            "wifi_device_present": UNKNOWN,
+            "ethernet_active": UNKNOWN,
+            "wifi_active": UNKNOWN,
+            "ethernet_connected_devices": [],
+            "wifi_connected_devices": [],
+        }
 
     for raw_line in stdout.splitlines():
         if not raw_line.strip():
@@ -452,23 +462,29 @@ def parse_device_status(stdout: str) -> dict[str, Any]:
             continue
         parsed = True
         device_name, device_type, state = fields[:3]
-        if type_is_wifi(device_type, device_name):
+        is_wifi = type_is_wifi(device_type, device_name)
+        is_ethernet = type_is_ethernet(device_type, device_name)
+        if not is_wifi and not is_ethernet:
+            continue
+        if is_wifi == is_ethernet or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device_name):
+            return unknown_status()
+        category = "wifi" if is_wifi else "ethernet"
+        connected = state_is_connected(state)
+        observed = observed_devices.get(device_name)
+        if observed is not None and observed != (category, connected):
+            return unknown_status()
+        observed_devices[device_name] = (category, connected)
+        if is_wifi:
             wifi_present = True
-            if state_is_connected(state):
+            if connected:
                 wifi_active = True
                 wifi_connected_devices.add(device_name)
-        if type_is_ethernet(device_type, device_name) and state_is_connected(state):
+        if is_ethernet and connected:
             ethernet_active = True
             ethernet_connected_devices.add(device_name)
 
     if not parsed:
-        return {
-            "wifi_device_present": UNKNOWN,
-            "ethernet_active": UNKNOWN,
-            "wifi_active": UNKNOWN,
-            "ethernet_connected_devices": [],
-            "wifi_connected_devices": [],
-        }
+        return unknown_status()
 
     return {
         "wifi_device_present": wifi_present,
@@ -484,7 +500,16 @@ def parse_active_connections(stdout: str) -> dict[str, Any]:
     wifi_active = False
     ethernet_active_devices: set[str] = set()
     wifi_active_devices: set[str] = set()
+    observed_devices: dict[str, str] = {}
     parsed = False
+
+    def unknown_connections() -> dict[str, Any]:
+        return {
+            "ethernet_active": UNKNOWN,
+            "wifi_active": UNKNOWN,
+            "ethernet_active_devices": [],
+            "wifi_active_devices": [],
+        }
 
     for raw_line in stdout.splitlines():
         if not raw_line.strip():
@@ -494,10 +519,21 @@ def parse_active_connections(stdout: str) -> dict[str, Any]:
             continue
         parsed = True
         connection_type, device_name = fields[:2]
-        if type_is_wifi(connection_type, device_name):
+        is_wifi = type_is_wifi(connection_type, device_name)
+        is_ethernet = type_is_ethernet(connection_type, device_name)
+        if not is_wifi and not is_ethernet:
+            continue
+        if is_wifi == is_ethernet or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device_name):
+            return unknown_connections()
+        category = "wifi" if is_wifi else "ethernet"
+        observed = observed_devices.get(device_name)
+        if observed is not None and observed != category:
+            return unknown_connections()
+        observed_devices[device_name] = category
+        if is_wifi:
             wifi_active = True
             wifi_active_devices.add(device_name)
-        if type_is_ethernet(connection_type, device_name):
+        if is_ethernet:
             ethernet_active = True
             ethernet_active_devices.add(device_name)
 
@@ -801,7 +837,10 @@ def default_route_devices_from_ip_json(text: str) -> list[str]:
             not isinstance(protocol, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", protocol)
         ):
             return []
-        if preferred_source is not None and not valid_ipv4_route_address(preferred_source):
+        if preferred_source is not None and not valid_ipv4_route_address(
+            preferred_source,
+            reject_reserved=True,
+        ):
             return []
         if gateway is not None:
             if scope == "link" or not valid_ipv4_route_address(gateway, reject_reserved=True):
@@ -2303,7 +2342,7 @@ def run_self_test() -> None:
         [
             "eth0:ethernet:connected:Fake product wifi",
             "wlan0:wifi:connected:FAKE-STORE-WIFI",
-            "aa\\:bb\\:cc\\:dd\\:ee\\:ff:wifi:disconnected:fake-token-value",
+            "wlan1:wifi:disconnected:fake-token-value",
         ]
     )
     parsed_device = parse_device_status(device_fixture)
@@ -2313,6 +2352,12 @@ def run_self_test() -> None:
     assert_true(
         parsed_device["wifi_connected_devices"] == ["wlan0"],
         "connected Wi-Fi identity should be retained for route coherence",
+    )
+    contradictory_device = parse_device_status("wlan0:wifi:disconnected\nwlan0:wifi:connected\n")
+    assert_true(
+        contradictory_device["wifi_active"] == UNKNOWN
+        and contradictory_device["wifi_connected_devices"] == [],
+        "contradictory device rows must fail closed",
     )
 
     active_fixture = "\n".join(
@@ -2327,6 +2372,12 @@ def run_self_test() -> None:
     assert_true(
         parsed_active["wifi_active_devices"] == ["wlan0"],
         "active Wi-Fi connection identity should be retained for route coherence",
+    )
+    contradictory_active = parse_active_connections("802-11-wireless:wlan0\n802-3-ethernet:wlan0\n")
+    assert_true(
+        contradictory_active["wifi_active"] == UNKNOWN
+        and contradictory_active["ethernet_active"] == UNKNOWN,
+        "contradictory active-connection rows must fail closed",
     )
     active_name_command = ["nmcli", "-t", "-f", "NAME", "connection", "show", "--active"]
     assert_true(
@@ -2528,6 +2579,18 @@ def run_self_test() -> None:
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "127.0.0.1", "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "bad", "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "255.255.255.255", "flags": []}]),
+        json.dumps(
+            [
+                {
+                    "dst": "default",
+                    "dev": "eth0",
+                    "metric": 0,
+                    "gateway": "192.0.2.1",
+                    "prefsrc": "255.255.255.255",
+                    "flags": [],
+                }
+            ]
+        ),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": ["linkdown"]}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": ["not-an-iproute-flag"]}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": [], "nexthops": []}]),
@@ -2722,6 +2785,22 @@ def run_self_test() -> None:
         assert_true(
             wifi_signal_timeout_indicator["wifi_signal"] == UNKNOWN,
             "signal timeout should fail closed only for the signal detail",
+        )
+
+        def contradictory_device_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
+                return CommandResult("ok", "wlan0:wifi:disconnected\nwlan0:wifi:connected\n")
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        contradictory_device_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=contradictory_device_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            contradictory_device_indicator["internet"] == UNKNOWN,
+            "contradictory device state must not authorize internet",
         )
 
         disconnected_device_fixture = "eth0:ethernet:disconnected\nwlan0:wifi:disconnected\n"
