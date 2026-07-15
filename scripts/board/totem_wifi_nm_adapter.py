@@ -410,15 +410,15 @@ def merge_tri_bool(*values: bool | str) -> bool | str:
 
 
 def type_is_ethernet(raw_type: str, device_name: str = "") -> bool:
+    del device_name
     lowered_type = raw_type.strip().lower()
-    lowered_device = device_name.strip().lower()
-    return lowered_type in {"ethernet", "802-3-ethernet"} or lowered_device.startswith(("eth", "en"))
+    return lowered_type in {"ethernet", "802-3-ethernet"}
 
 
 def type_is_wifi(raw_type: str, device_name: str = "") -> bool:
+    del device_name
     lowered_type = raw_type.strip().lower()
-    lowered_device = device_name.strip().lower()
-    return lowered_type in {"wifi", "802-11-wireless"} or lowered_device.startswith(("wl", "wlan"))
+    return lowered_type in {"wifi", "802-11-wireless"}
 
 
 def state_is_connected(raw_state: str) -> bool:
@@ -2359,6 +2359,12 @@ def run_self_test() -> None:
         and contradictory_device["wifi_connected_devices"] == [],
         "contradictory device rows must fail closed",
     )
+    virtual_named_like_wifi = parse_device_status("wlan0:dummy:connected\n")
+    assert_true(
+        virtual_named_like_wifi["wifi_active"] is False
+        and virtual_named_like_wifi["wifi_connected_devices"] == [],
+        "device names must not override the NetworkManager type",
+    )
 
     active_fixture = "\n".join(
         [
@@ -2378,6 +2384,12 @@ def run_self_test() -> None:
         contradictory_active["wifi_active"] == UNKNOWN
         and contradictory_active["ethernet_active"] == UNKNOWN,
         "contradictory active-connection rows must fail closed",
+    )
+    virtual_active_named_like_wifi = parse_active_connections("dummy:wlan0\n")
+    assert_true(
+        virtual_active_named_like_wifi["wifi_active"] is False
+        and virtual_active_named_like_wifi["wifi_active_devices"] == [],
+        "active software devices must not be inferred as Wi-Fi from their names",
     )
     active_name_command = ["nmcli", "-t", "-f", "NAME", "connection", "show", "--active"]
     assert_true(
@@ -2801,6 +2813,31 @@ def run_self_test() -> None:
         assert_true(
             contradictory_device_indicator["internet"] == UNKNOWN,
             "contradictory device state must not authorize internet",
+        )
+
+        virtual_route_json_fixture = json.dumps(
+            [
+                {"dst": "default", "dev": "wlan0", "scope": "link", "metric": 100, "flags": []},
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 600, "flags": []},
+            ]
+        )
+
+        def virtual_device_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
+                return CommandResult("ok", "wlan0:dummy:connected\neth0:ethernet:connected\n")
+            if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
+                return CommandResult("ok", "dummy:wlan0\n802-3-ethernet:eth0\n")
+            return runner_with_route(fake_runner, virtual_route_json_fixture)(args, timeout_sec)
+
+        virtual_device_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=virtual_device_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            virtual_device_indicator["internet"] == UNKNOWN,
+            "a software device named like Wi-Fi must not borrow global connectivity",
         )
 
         disconnected_device_fixture = "eth0:ethernet:disconnected\nwlan0:wifi:disconnected\n"
