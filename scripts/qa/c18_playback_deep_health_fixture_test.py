@@ -1773,6 +1773,63 @@ class C18PlaybackDeepHealthFixtureTest(unittest.TestCase):
                     0,
                 )
 
+    def test_rejects_unclassified_transition_with_invalid_boundaries(self) -> None:
+        malformed_cases = (
+            "before_seq_missing",
+            "after_seq_missing",
+            "detached_sequence",
+            "before_time_missing",
+            "after_time_missing",
+            "detached_timing",
+        )
+        for malformed in malformed_cases:
+            with self.subTest(malformed=malformed):
+                fixture = self.with_case()
+                self.write_status_mpv_alignment_rows(
+                    fixture,
+                    [
+                        ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:a>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                        ("media-a", "<media-path:a>", "0", "<media-path:c>"),
+                        ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                        ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                        ("media-c", "<media-path:c>", "2", "<media-path:c>"),
+                    ],
+                )
+                rows = fixture.rows()
+                for row in rows:
+                    row["current_path_kind"] = "motion_media"
+                    row["video_params_json"] = VALID_VIDEO_PARAMS
+                for row in rows[3:6]:
+                    row["current_path_kind"] = "unclassified_media"
+                if malformed == "before_seq_missing":
+                    rows[2]["seq"] = ""
+                elif malformed == "after_seq_missing":
+                    rows[6]["seq"] = ""
+                elif malformed == "detached_sequence":
+                    for offset, row in enumerate(rows[3:6], start=100):
+                        row["seq"] = str(offset)
+                elif malformed == "before_time_missing":
+                    rows[2]["rel_sec"] = ""
+                elif malformed == "after_time_missing":
+                    rows[6]["rel_sec"] = ""
+                else:
+                    for offset, row in enumerate(rows[3:6], start=1000):
+                        row["rel_sec"] = str(offset)
+                fixture.write_rows(rows)
+
+                result = self.assert_fails_with(
+                    fixture,
+                    "unclassified_media_bounded_to_startup",
+                )
+                self.assertEqual(
+                    result["counters"]["unclassified_media_bounded_transition_samples"],
+                    0,
+                )
+
     def test_bounded_unclassified_startup_before_proven_content_is_allowed(self) -> None:
         fixture = self.with_case()
         template = fixture.rows()[0]

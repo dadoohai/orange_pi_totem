@@ -782,12 +782,13 @@ def bounded_transition_unclassified_indexes(rows: list[dict[str, str]]) -> set[i
             continue
         if not all(row_local_evidence(row, typed=True) for row in run_rows):
             continue
-        sequences = [as_int(row.get("seq")) for row in run_rows]
+        bounded_rows = [before_row, *run_rows, after_row]
+        sequences = [as_int(row.get("seq")) for row in bounded_rows]
         if any(value <= 0 for value in sequences) or any(
             current != previous + 1 for previous, current in zip(sequences, sequences[1:])
         ):
             continue
-        rel_seconds = [as_float(row.get("rel_sec")) for row in run_rows]
+        rel_seconds = [as_float(row.get("rel_sec")) for row in bounded_rows]
         if any(value is None or value < 0 for value in rel_seconds):
             continue
         valid_rel_seconds = [float(value) for value in rel_seconds if value is not None]
