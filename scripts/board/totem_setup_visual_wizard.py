@@ -542,6 +542,7 @@ def refresh_connectivity_if_due(now_monotonic: float | None = None) -> bool:
     try:
         callback()
     except Exception:
+        _CONNECTIVITY_NEXT_REFRESH_AT = now + min(1.0, CONNECTIVITY_INDICATOR_REFRESH_SEC)
         return False
     return True
 
@@ -1523,11 +1524,12 @@ class VisualDisplay:
         )
         if refreshed_svg == self.current_svg:
             return False
-        self.current_svg = refreshed_svg
         if not self.enabled:
+            self.current_svg = refreshed_svg
             return True
         if self.framebuffer is not None:
             self.framebuffer.render(refreshed_svg)
+            self.current_svg = refreshed_svg
             return True
 
         self.refresh_slot = (self.refresh_slot + 1) % 2
@@ -1538,7 +1540,9 @@ class VisualDisplay:
         elif not self.send_command(["loadfile", str(path), "replace"]):
             self._stop_mpv_process()
             self.ensure_started(path)
-        self.wait_for_loaded_path(path)
+        if not self.wait_for_loaded_path(path):
+            raise VisualWizardError("connectivity_refresh_not_presented")
+        self.current_svg = refreshed_svg
         return True
 
     def show(self, screen_id: str, svg: str) -> pathlib.Path:
@@ -6043,6 +6047,56 @@ def run_self_test() -> None:
                 len(list(refresh_display.screens_dir.glob("*.svg"))) == 1,
                 "periodic refresh must not create an unbounded screen history",
             )
+
+            retry_root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c20-connectivity-retry-", dir="/tmp"))
+            retry_display = VisualDisplay(retry_root, enabled=False)
+            retry_display.show(
+                "retry-refresh",
+                build_screen_svg(
+                    active_step=1,
+                    title="Wi-Fi",
+                    subtitle="Escolha o Wi-Fi.",
+                    footer="Enter confirma",
+                    connectivity_snapshot={
+                        "transport": "ethernet",
+                        "wifi_signal": "unknown",
+                        "internet": "online",
+                    },
+                ),
+            )
+
+            class FailOnceFramebuffer:
+                def __init__(self) -> None:
+                    self.calls = 0
+
+                def render(self, svg: str) -> None:
+                    del svg
+                    self.calls += 1
+                    if self.calls == 1:
+                        raise OSError("synthetic framebuffer failure")
+
+            fail_once_framebuffer = FailOnceFramebuffer()
+            retry_display.enabled = True
+            retry_display.framebuffer = fail_once_framebuffer  # type: ignore[assignment]
+            try:
+                retry_display.refresh_connectivity_header()
+                raise AssertionError("synthetic render failure should propagate to the scheduler")
+            except OSError:
+                pass
+            assert_true(
+                'data-internet="online"' in retry_display.current_svg,
+                "failed presentation must not advance the displayed-state model",
+            )
+            assert_true(retry_display.refresh_connectivity_header(), "failed presentation should remain retryable")
+            assert_true(
+                'data-internet="offline"' in retry_display.current_svg,
+                "successful retry should commit the latest displayed state",
+            )
+            assert_true(fail_once_framebuffer.calls == 2, "transient presentation failure should retry exactly once")
+            retry_display.framebuffer = None
+            retry_display.enabled = False
+            shutil.rmtree(retry_root, ignore_errors=True)
+
             refresh_events: list[str] = []
             set_connectivity_refresh_callback(lambda: refresh_events.append("refresh"))
             scheduled_at = _CONNECTIVITY_NEXT_REFRESH_AT
