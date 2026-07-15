@@ -1,0 +1,15 @@
+{
+  "baseline_before_wifi_tests": {
+    "artifact": "board/transaction/hashes.final.txt",
+    "collected_at_utc": "2026-07-15T15:26:16Z",
+    "profile_sha256": "d1330736d4a5a4ba03046bf29daf7c1dfd295189bfecaec7879ceb30c4114c41"
+  },
+  "caveat": "No immediate before/after hash pair surrounds only the negative attempt; the interval includes the positive exact-profile apply followed by the negative rollback.",
+  "hashes_equal": true,
+  "post_negative_and_reboot": {
+    "artifact": "board/post-reboot/state.txt",
+    "collected_at_utc": "2026-07-15T16:11:37Z",
+    "profile_sha256": "d1330736d4a5a4ba03046bf29daf7c1dfd295189bfecaec7879ceb30c4114c41"
+  },
+  "schema": "dadooh.c21.wifi_profile.rollback_hash_proof.v1"
+}

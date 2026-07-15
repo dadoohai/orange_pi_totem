@@ -23,6 +23,7 @@
     "failed_activation_restored_previous_profile": true,
     "generic_release_gate_84_of_84": true,
     "governed_visual_cancel_without_persistent_write": true,
+    "independent_final_audits_zero_blockers": true,
     "package_release_gate_84_of_84": true,
     "playback_reconciliation_fail_closed": true,
     "post_reboot_playback_clean": true,

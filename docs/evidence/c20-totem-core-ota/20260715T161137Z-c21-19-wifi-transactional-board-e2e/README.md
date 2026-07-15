@@ -64,6 +64,13 @@ summary independently passed the clean post-reboot collection.
   captive portal, RF condition or driver failure in the field.
 - C21.19 was applied locally under temporary homologation policy. It was not
   published or consumed by the public stable timer.
+- The updater state's legacy `updated_at` value is stale and is not used as a
+  temporal proof. Boot ID, operation timestamps and live state carry that
+  claim.
+- The negative Wi-Fi run did not capture an immediate profile hash pair around
+  the rollback. Exact restoration is supported by the adapter rollback result,
+  byte-copy tests and the identical baseline/post-negative-reboot profile hash;
+  `board/wifi/failure/profile-hash-proof.json` records this bounded caveat.
 - No credential, SSID value, API key, IP address or raw NetworkManager profile
   is included in this evidence.
 

@@ -1,0 +1,250 @@
+[
+  {
+    "bounded": 1,
+    "expectation_ok": true,
+    "failure_reasons": [],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "accept_single_final_unclassified_hop",
+    "passed": true,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": true,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "unclassified_media_bounded_to_startup"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_two_final_unclassified_hops",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 2,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "motion_frame_progress_ok",
+      "unclassified_media_bounded_to_startup",
+      "playback_progressed"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": false,
+    "mpv_restart_zero": true,
+    "name": "reject_unclassified_before_chain_finishes",
+    "passed": false,
+    "playback_progressed": false,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "unclassified_media_bounded_to_startup",
+      "transitions_observed_when_required",
+      "status_mpv_path_aligned"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_status_advanced_without_mpv",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": true,
+    "status_mpv_path_aligned": false,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 1
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "unclassified_media_bounded_to_startup"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_terminal_unclassified_transition",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 1,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "unclassified_media_bounded_to_startup"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_missing_frame_on_recovery_row",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "vo_configured_no_unexpected",
+      "unclassified_media_bounded_to_startup"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_vo_false_on_unknown_row",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "unclassified_media_bounded_to_startup"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_ipc_row_gap_before_recovery",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "motion_frame_progress_ok",
+      "unclassified_media_bounded_to_startup",
+      "playback_progressed"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": false,
+    "mpv_restart_zero": true,
+    "name": "reject_sequence_gap_before_recovery",
+    "passed": false,
+    "playback_progressed": false,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "unclassified_media_bounded_to_startup"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": true,
+    "name": "reject_frame_reset_inside_recovery_proof",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 0,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "motion_frame_progress_ok",
+      "unclassified_media_bounded_to_startup",
+      "playback_progressed"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": true,
+    "motion_frame_progress_ok": false,
+    "mpv_restart_zero": true,
+    "name": "reject_no_recovery_progress",
+    "passed": false,
+    "playback_progressed": false,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": false,
+    "unexplained_runs": 0
+  },
+  {
+    "bounded": 1,
+    "expectation_ok": true,
+    "failure_reasons": [
+      "mpv_restart_zero",
+      "mmc_timeout_reset_zero"
+    ],
+    "forward_runs": 0,
+    "mmc_timeout_reset_zero": false,
+    "motion_frame_progress_ok": true,
+    "mpv_restart_zero": false,
+    "name": "reject_reset_sidecars_even_with_valid_unclassified_hop",
+    "passed": false,
+    "playback_progressed": true,
+    "status_advanced_without_mpv": false,
+    "status_mpv_path_aligned": true,
+    "terminal_runs": 0,
+    "unclassified": 1,
+    "unclassified_media_bounded_to_startup": true,
+    "unexplained_runs": 0
+  }
+]
