@@ -458,8 +458,8 @@ def parse_device_status(stdout: str) -> dict[str, Any]:
         if not raw_line.strip():
             continue
         fields = split_nmcli_terse(raw_line)
-        if len(fields) < 3:
-            continue
+        if len(fields) != 3:
+            return unknown_status()
         parsed = True
         device_name, device_type, state = fields[:3]
         is_wifi = type_is_wifi(device_type, device_name)
@@ -515,8 +515,8 @@ def parse_active_connections(stdout: str) -> dict[str, Any]:
         if not raw_line.strip():
             continue
         fields = split_nmcli_terse(raw_line)
-        if len(fields) < 2:
-            continue
+        if len(fields) != 2:
+            return unknown_connections()
         parsed = True
         connection_type, device_name = fields[:2]
         is_wifi = type_is_wifi(connection_type, device_name)
@@ -2340,9 +2340,9 @@ def run_self_test() -> None:
 
     device_fixture = "\n".join(
         [
-            "eth0:ethernet:connected:Fake product wifi",
-            "wlan0:wifi:connected:FAKE-STORE-WIFI",
-            "wlan1:wifi:disconnected:fake-token-value",
+            "eth0:ethernet:connected",
+            "wlan0:wifi:connected",
+            "wlan1:wifi:disconnected",
         ]
     )
     parsed_device = parse_device_status(device_fixture)
@@ -2365,11 +2365,16 @@ def run_self_test() -> None:
         and virtual_named_like_wifi["wifi_connected_devices"] == [],
         "device names must not override the NetworkManager type",
     )
+    malformed_device = parse_device_status("wlan0:wifi:connected:disconnected\n")
+    assert_true(
+        malformed_device["wifi_active"] == UNKNOWN,
+        "device rows with extra or missing fields must fail closed",
+    )
 
     active_fixture = "\n".join(
         [
-            "802-3-ethernet:eth0:Fake product wifi",
-            "802-11-wireless:wlan0:FAKE-STORE-WIFI",
+            "802-3-ethernet:eth0",
+            "802-11-wireless:wlan0",
         ]
     )
     parsed_active = parse_active_connections(active_fixture)
@@ -2390,6 +2395,11 @@ def run_self_test() -> None:
         virtual_active_named_like_wifi["wifi_active"] is False
         and virtual_active_named_like_wifi["wifi_active_devices"] == [],
         "active software devices must not be inferred as Wi-Fi from their names",
+    )
+    malformed_active = parse_active_connections("wifi:wlan0:ethernet\n")
+    assert_true(
+        malformed_active["wifi_active"] == UNKNOWN,
+        "active-connection rows with extra or missing fields must fail closed",
     )
     active_name_command = ["nmcli", "-t", "-f", "NAME", "connection", "show", "--active"]
     assert_true(
