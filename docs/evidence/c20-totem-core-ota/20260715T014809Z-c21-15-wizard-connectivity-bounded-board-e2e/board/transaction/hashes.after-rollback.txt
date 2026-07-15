@@ -1,0 +1,3 @@
+e9c80ebdb7c7d213f0aff837e9a60aad435234014ce4b73f5bb6dba76977bd30  /data/config/config.json
+7b6cb5f53b12eb113515d818c361089f1c1af8f002d8b6540676f1ef8e590bcc  /data/state/totem-settings/last-settings.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json

@@ -1,6 +1,6 @@
 # C20 UX Accumulation Plan
 
-Estado: 2026-07-07.
+Estado: 2026-07-15.
 
 Objetivo: evoluir a experiencia visual e operacional do produto em rodadas
 pequenas de `totem-core`, validando cada uma na placa e acumulando o conjunto
@@ -472,22 +472,23 @@ O metodo final esta registrado em:
 
 ## Pacote Acumulado Atual
 
-Estado em 2026-07-14: o acumulo chegou ao C20.15/C21.13 e foi validado na placa
+Estado em 2026-07-15: o acumulo chegou ao C20.16/C21.15 e foi validado na placa
 prod14 por `totem-core`.
 
 Candidata acumulada atual:
-`releases/core-updates/c21.13-wizard-retained-status-20260714T231059Z-81d64ee`.
+`releases/core-updates/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26`.
 
-Rollback imediato exercitado:
+Referencia stable de distribuicao e retorno:
 `releases/core-updates/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`.
 
 Ultimo pacote/evidencia:
-`docs/evidence/c20-totem-core-ota/20260714T233330Z-c21-13-wizard-retained-status-board-e2e/`.
+`docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
 
-O C21.13 passou release gate `84/84`, apply, rollback, reaplicacao, reentrada
-visual real, cancelamento e playback final verde, sem restart do player. Ele e
-uma candidata de `totem-core` em homologacao; nao substitui C21.12 como stable
-nem muda a imagem oficial por inferencia.
+O C21.15 passou release gate `84/84`, bloqueio da policy stable, apply,
+rollback, reaplicacao, fluxo visual real, cancelamento e playback final verde,
+sem restart do player. Ele substitui C21.14 como candidata acumulada de
+`totem-core` em homologacao; nao substitui C21.12 como stable nem muda a imagem
+oficial por inferencia.
 
 Intencao macro: continuar acumulando apenas melhorias fechadas e reversiveis do
 wizard/status/splash em `totem-core`, depois gravar o conjunto na proxima imagem
@@ -552,18 +553,29 @@ Contrato 24/7:
   arquivos temporarios;
 - os SVGs temporarios da sessao usam anel fixo de 64 arquivos.
 
-Estado em 2026-07-15: a candidata homologation
-`c21.14-wizard-connectivity-20260715T003032Z-4835ca8` passou self-tests, replay,
-policy static `81/81`, release gate `84/84`, sandbox, apply, rollback,
-reaplicacao, captura visual real e deep-health. A auditoria final do estado
-commitado, porem, encontrou dois blockers: falso `online` sem rota default e
-contador IPC sem teto. C21.14 foi supersedida sem promocao. A correcao exige
-rota verificada, contador circular e um unico orcamento de tempo para toda a
-coleta. Evidencia historica:
+Estado em 2026-07-15: a primeira candidata homologation
+`c21.14-wizard-connectivity-20260715T003032Z-4835ca8` passou a validacao inicial,
+mas a auditoria final encontrou dois blockers: falso `online` sem rota default
+e contador IPC sem teto. C21.14 foi supersedida sem promocao. Evidencia
+historica:
 `docs/evidence/c20-totem-core-ota/20260715T005134Z-c21-14-wizard-connectivity-board-e2e/`.
 
-A nova identidade corrigida ainda precisa de pacote e roundtrip. Enquanto isso,
-C21.13 continua a candidata acumulada aprovada, C21.12 continua stable de
+A correcao foi fechada na candidata
+`c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26`: rota verificada
+para qualquer estado positivo, contador circular e um unico orcamento de tempo
+para toda a coleta. A reauditoria adversarial do codigo corrigido teve zero
+blockers. O pacote passou `84/84`, sandbox, bloqueio stable, apply, rollback,
+reaplicacao, E2E visual e health final na placa. A implementacao permanece
+limitada para uso 24/7: um snapshot substituivel, sem fila/historico/thread,
+arquivos temporarios fixos ou em anel e coleta read-only com prazo total.
+
+Um evento Panfrost observado perto da primeira sessao visual foi preservado e
+nao recebeu RCA por inferencia. Tres novos ciclos do wizard e tres probes
+oficiais de parada nao reproduziram o evento; o health delta final passou. O
+registro completo esta em:
+`docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
+
+C21.15 passa a candidata acumulada de homologacao. C21.12 continua stable de
 retorno e `prod14` continua a imagem de referencia; nao houve publicacao nem
 promocao por inferencia.
 

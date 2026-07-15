@@ -1,0 +1,13 @@
+NRestarts=0
+Id=kiosky-player.service
+ActiveState=active
+UnitFileState=enabled
+
+NRestarts=0
+Id=totem-open-settings.service
+ActiveState=inactive
+UnitFileState=static
+
+Id=totem-update-agent.timer
+ActiveState=active
+UnitFileState=enabled

@@ -1,0 +1,1 @@
+player=active settings=inactive mpv=1 getty1=inactive/disabled getty2=inactive/disabled

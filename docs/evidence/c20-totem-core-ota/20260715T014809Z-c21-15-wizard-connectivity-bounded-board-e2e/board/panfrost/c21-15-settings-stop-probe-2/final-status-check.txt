@@ -1,0 +1,3 @@
+final_status_player_wait_mode=skip-player-wait
+signal_stop_reason=TERM
+service_restore_enqueued=true

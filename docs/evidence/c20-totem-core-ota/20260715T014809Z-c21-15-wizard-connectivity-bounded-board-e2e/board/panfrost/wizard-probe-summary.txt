@@ -1,0 +1,8 @@
+initial_fault_events=2
+cycle=1 wizard_seen=true before=2 after_open=2 after_close=2
+cycle=2 wizard_seen=true before=2 after_open=2 after_close=2
+cycle=3 wizard_seen=true before=2 after_open=2 after_close=2
+final_fault_events=2
+delta_fault_events=0
+player_active=active
+player_restarts=0

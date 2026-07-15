@@ -1,0 +1,79 @@
+---00-pre
+2026-07-15T01:33:03+00:00
+kiosky-player=active
+open-settings-active=inactive
+open-settings-failed=inactive
+---processes
+  45002   44941 Sl   python3         /usr/bin/python3 /data/player-runtime/current/kiosk.py --config /data/config/config.json
+  45018   44941 S    python3         /usr/bin/python3 /opt/totem/bin/totem_player_status_mpv_watchdog.py --config /data/config/config.json --status /tmp/kiosky-status.json --state-file /data/state/kiosky-player/status-mpv-watchdog.json --pid 45002 --interval-sec 1 --max-mismatch-sec 6 --min-status-advances 2 --post-realign-wait-sec 4
+  45126   45002 Rsl  mpv             /opt/totem/hwdecode/bin/mpv --fs --force-window=yes --idle=yes --keep-open=yes --no-terminal --loop-file=inf --image-display-duration=inf --osd-level=0 --input-ipc-server=/tmp/kiosky/mpv.sock --vo=gpu --gpu-context=drm --ao=null --no-input-default-bindings --video-rotate=0 --input-conf=/tmp/kiosky/hotkeys.conf --input-vo-keyboard=yes --hwdec=auto --vo=gpu --gpu-context=drm --hwdec=v4l2request-copy
+---locks
+/run/dadooh-settings:
+total 12
+drwx------  2 root root 100 Jul 15 01:33 .
+drwxr-xr-x 28 root root 740 Jul 15 01:33 ..
+-rw-------  1 root root 717 Jul 15 00:49 open-settings-cleanup-status.json
+-rw-------  1 root root 476 Jul 15 01:33 summary.txt
+-rw-------  1 root root 605 Jul 15 01:33 trigger-status.json
+---totem-core-status
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-15T01:31:59Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T01:15:39Z",
+      "path": "/data/core/totem/releases/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26",
+      "payload_sha256": "3e84358d6745b31e3232680b8d3e10c1048e5e81f8b7fca921e05dbd5deaefea",
+      "source": "local:dadooh-totem-core-c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "0c08a26ec1be2d1bd5973b56ac47f48e4f4f0167",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-15T01:32:06Z",
+      "source": "local:dadooh-totem-core-c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26.manifest.json",
+      "started_at_utc": "2026-07-15T01:31:52Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-15T01:31:49Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T00:30:33Z",
+      "path": "/data/core/totem/releases/c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+      "payload_sha256": "f324098458e0c50e472af0902f9216ef82d4c99dc1c1975976f3af07f186a8f6",
+      "source": "local:dadooh-totem-core-c21.14-wizard-connectivity-20260715T003032Z-4835ca8.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "4835ca8520370582f273cd0afd53b032dcc48fb3",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+      "via": "manual_rollback"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-14T17:32:45Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

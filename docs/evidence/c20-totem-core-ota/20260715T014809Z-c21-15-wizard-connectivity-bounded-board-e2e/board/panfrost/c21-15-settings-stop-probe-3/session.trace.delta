@@ -1,0 +1,17 @@
+2026-07-15T01:45:28.375923472 pid=61506 phase=session_sh_start argv=0 pid=61506 ppid=1
+2026-07-15T01:45:29.079768737 pid=61506 phase=before_getty_stop
+2026-07-15T01:45:29.216226571 pid=61506 phase=before_show_transition_1
+2026-07-15T01:45:30.005628838 pid=61506 phase=after_show_transition_1 INITIAL_SERVICE_ACTIVE=active
+2026-07-15T01:45:30.010478475 pid=61506 phase=before_systemctl_stop_kiosky
+2026-07-15T01:45:31.053784738 pid=61506 phase=after_systemctl_stop_kiosky
+2026-07-15T01:45:31.219076976 pid=61506 phase=after_drain_wait counts=0,0,0,0
+2026-07-15T01:45:31.379171659 pid=61506 phase=before_show_transition_2
+2026-07-15T01:45:32.068799890 pid=61506 phase=after_show_transition_2
+2026-07-15T01:45:32.229607658 pid=61506 phase=before_openvt
+2026-07-15T01:45:32.273109265 pid=61506 phase=openvt_started pid=61702
+2026-07-15T01:45:32.283927833 pid=61506 phase=openvt_timeout_clock=monotonic start=15874 deadline=23074
+2026-07-15T01:45:34.055970255 pid=61506 phase=trap_signal=TERM
+2026-07-15T01:45:34.061164768 pid=61506 phase=on_exit_begin rc=0
+2026-07-15T01:45:34.068447953 pid=61506 phase=openvt_stop_done pid=61702
+2026-07-15T01:45:37.951613628 pid=61506 phase=write_final_status_skip_player_wait signal_stop=true
+2026-07-15T01:45:40.165225756 pid=61506 phase=on_exit_done rc=0

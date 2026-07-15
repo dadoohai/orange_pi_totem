@@ -1,6 +1,6 @@
 # C18 Macro Steering
 
-Estado inicial: 2026-07-05. Atualizado em 2026-07-14.
+Estado inicial: 2026-07-05. Atualizado em 2026-07-15.
 
 Este documento e o cerne direcionador da fase atual. Ele existe para impedir que
 rodadas longas, auditorias e tarefas tecnicas desviem o trabalho do objetivo de
@@ -362,6 +362,12 @@ Enquanto nada mudar, a ordem de execucao e:
     `c21.14-wizard-connectivity-20260715T003032Z-4835ca8`, que passou o roundtrip
     de placa mas foi supersedida apos auditoria final. Os blockers foram falso
     `online` sem rota default e contador IPC sem teto. A correcao agora exige
-    rota verificada, contador circular e orcamento total de leitura. Ate a nova
-    identidade passar pacote e placa, C21.13 continua a candidata acumulada;
-    C21.12 continua stable de retorno e `prod14` continua imagem de referencia.
+    rota verificada, contador circular e orcamento total de leitura.
+12. A sucessora corrigida C21.15 passou reauditoria adversarial, release gate
+    `84/84`, sandbox, bloqueio stable, apply, rollback, reaplicacao, fluxo visual
+    real e health final na placa. Um evento Panfrost isolado foi preservado sem
+    RCA; seis ciclos adicionais nao o reproduziram. C21.15 passa a candidata
+    acumulada de homologacao. C21.12 continua stable de retorno e `prod14`
+    continua imagem de referencia ate decisao explicita de promocao/imagem.
+    Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
